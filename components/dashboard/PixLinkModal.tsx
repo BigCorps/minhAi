@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
-import { X, Copy, Check, ExternalLink, Link, ChevronDown, Zap } from 'lucide-react';
+import { X, Copy, Check, ExternalLink, Link, ChevronDown, Zap, MessageCircle, AlertCircle } from 'lucide-react';
 
 interface Company {
   id: string;
   name: string;
   slug: string;
+  whatsapp_number?: string | null;
 }
 
 interface Props {
@@ -32,14 +33,12 @@ export default function PixLinkModal({ onClose }: Props) {
     loadCompanies();
   }, []);
 
-  // Fechar com Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // Fechar dropdown ao clicar fora
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -50,7 +49,6 @@ export default function PixLinkModal({ onClose }: Props) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Resetar estado ao trocar de aba
   useEffect(() => {
     setValor('');
     setCopied(false);
@@ -61,7 +59,7 @@ export default function PixLinkModal({ onClose }: Props) {
     if (!user) return;
     const { data } = await supabase
       .from('companies')
-      .select('id, name, slug')
+      .select('id, name, slug, whatsapp_number')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('name');
@@ -71,7 +69,6 @@ export default function PixLinkModal({ onClose }: Props) {
     }
   }
 
-  // URLs geradas conforme a aba ativa
   const baseUrlPix = selectedCompany
     ? `https://minhai.app/pix/${selectedCompany.slug}`
     : '';
@@ -84,9 +81,22 @@ export default function PixLinkModal({ onClose }: Props) {
     : '';
   const fullUrlPay = valor && parseFloat(valor) > 0
     ? `${baseUrlPay}/${valor}`
-    : '';  // pay sem valor não faz sentido — cobrança precisa de valor
+    : '';
 
   const fullUrl = activeTab === 'pix' ? fullUrlPix : fullUrlPay;
+
+  // Número formatado para exibição e link wa.me
+  const rawWhatsapp = selectedCompany?.whatsapp_number?.replace(/\D/g, '') ?? '';
+  const whatsappWithDDI = rawWhatsapp
+    ? rawWhatsapp.startsWith('55') ? rawWhatsapp : `55${rawWhatsapp}`
+    : '';
+  const whatsappFormatted = rawWhatsapp
+    ? selectedCompany!.whatsapp_number!
+    : null;
+  const notifyNumber = `+${whatsappWithDDI}`;
+  const waLink = whatsappWithDDI
+    ? `https://wa.me/${whatsappWithDDI}?text=Ol%C3%A1%2C+quero+receber+notifica%C3%A7%C3%B5es+de+pagamento`
+    : null;
 
   function copy() {
     if (!fullUrl) return;
@@ -100,7 +110,7 @@ export default function PixLinkModal({ onClose }: Props) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm"
     >
-      <div className="w-full max-w-[460px] rounded-2xl border shadow-2xl bg-white dark:bg-slate-900 border-gray-200 dark:border-white/10">
+      <div className="w-full max-w-[460px] rounded-2xl border shadow-2xl bg-white dark:bg-slate-900 border-gray-200 dark:border-white/10 max-h-[90vh] overflow-y-auto">
 
         {/* Header */}
         <div className="flex items-start justify-between p-6 pb-5 border-b border-gray-100 dark:border-white/10">
@@ -244,6 +254,72 @@ export default function PixLinkModal({ onClose }: Props) {
               }`}>
                 {fullUrl}
               </p>
+            </div>
+          )}
+
+          {/* ── Aviso de notificação WhatsApp ─────────────────────────────── */}
+          {selectedCompany && (
+            <div className={`rounded-xl p-4 border ${
+              whatsappWithDDI
+                ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/40'
+                : 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/40'
+            }`}>
+              <div className="flex items-start gap-3">
+                <div className={`mt-0.5 shrink-0 ${whatsappWithDDI ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {whatsappWithDDI
+                    ? <MessageCircle className="w-4 h-4" />
+                    : <AlertCircle className="w-4 h-4" />
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs font-semibold mb-1 ${
+                    whatsappWithDDI
+                      ? 'text-green-800 dark:text-green-300'
+                      : 'text-amber-800 dark:text-amber-300'
+                  }`}>
+                    {whatsappWithDDI
+                      ? 'Notificações WhatsApp configuradas'
+                      : 'WhatsApp não configurado'}
+                  </p>
+
+                  {whatsappWithDDI ? (
+                    <>
+                      <p className="text-xs text-green-700 dark:text-green-400 mb-2">
+                        Ao confirmar um PIX, você receberá uma notificação no{' '}
+                        <span className="font-semibold">{whatsappFormatted}</span>.
+                      </p>
+                      {/* Aviso de janela 24h */}
+                      <div className="rounded-lg bg-green-100 dark:bg-green-900/20 px-3 py-2">
+                        <p className="text-xs text-green-800 dark:text-green-300">
+                          ⚠️ <strong>Importante:</strong> Para receber a notificação, você precisa ter mandado uma mensagem para o número do assistente nas últimas 24h.{' '}
+                          {waLink && (
+                            <a
+                              href={waLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline underline-offset-2 font-semibold hover:text-green-900 dark:hover:text-green-200"
+                            >
+                              Clique aqui para abrir a conversa →
+                            </a>
+                          )}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs text-amber-700 dark:text-amber-400 mb-2">
+                        Configure o número de WhatsApp do assistente para receber notificações de pagamento.
+                      </p>
+                      <a
+                        href="/dashboard/functions"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-amber-800 dark:text-amber-300 underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-200"
+                      >
+                        Configurar em Funções → QR Code WhatsApp →
+                      </a>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 

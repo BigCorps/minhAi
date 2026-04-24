@@ -840,7 +840,7 @@ async function loadGoogleEvents(companyId: string) {
                       ) : gbpLocations.length === 0 ? (
                         <div className="text-center py-8">
                           <p className="text-gray-500 dark:text-gray-400 mb-2">Nenhuma localização encontrada.</p>
-                          <p className="text-xs text-gray-400">Certifique-se de ter um perfil no Google Meu Negócio e o scope <code>business.manage</code> autorizado.</p>
+                          <p className="text-xs text-gray-400">Certifique-se de ter um perfil no Google Meu Negócio vinculado a esse email.</p>
                         </div>
                       ) : (
                         <div className="space-y-2">

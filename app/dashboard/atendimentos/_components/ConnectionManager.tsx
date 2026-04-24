@@ -438,6 +438,7 @@ export function ConnectionManager({
       <EmbeddedSignupButton
         companyId={selectedCompanyId}
         userId={userId}
+        mode="coexistence"
         onSuccess={handleSignupSuccess}
         onError={handleSignupError}
         onLoading={setIsConnecting}
@@ -552,6 +553,7 @@ export function ConnectionManager({
                             <EmbeddedSignupButton
                               companyId={conn.company_id}
                               userId={userId}
+                              mode="coexistence"
                               onSuccess={(result) => {
                                 if (result.display_phone_number) {
                                   notify(`📱 WhatsApp ${result.display_phone_number} conectado!`, 'success');

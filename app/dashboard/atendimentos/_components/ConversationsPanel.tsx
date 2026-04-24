@@ -11,6 +11,8 @@ import {
   MessageSquare, Phone, Instagram, Facebook, RefreshCw,
   CreditCard, MapPin, Building2, AlertCircle, User,
   Pencil, Check, Search, Filter, MessageCircle,
+  CheckCircle2, XCircle, Pause, Play, Smartphone,
+  Camera, Users, ChevronRight, Circle,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
@@ -74,6 +76,10 @@ function Notifications({ items, onDismiss }: { items: Notification[]; onDismiss:
       {items.map((n) => (
         <div key={n.id} className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-sm text-white max-w-xs
           ${n.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+          {n.type === 'success'
+            ? <CheckCircle2 className="h-4 w-4 shrink-0 opacity-90" />
+            : <XCircle      className="h-4 w-4 shrink-0 opacity-90" />
+          }
           <span className="flex-1">{n.message}</span>
           <button onClick={() => onDismiss(n.id)}><X className="h-4 w-4 opacity-70 hover:opacity-100" /></button>
         </div>
@@ -127,7 +133,7 @@ function ConversationCard({
               <User className="h-3 w-3 text-gray-400 shrink-0" />
               <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayName}</span>
               {conv.custom_name && (
-                <span className="text-xs text-blue-500 shrink-0" title="Nome personalizado">✏️</span>
+                <Pencil className="h-3 w-3 text-blue-500 shrink-0" title="Nome personalizado" />
               )}
             </div>
           </div>
@@ -229,8 +235,8 @@ function QuickMessageBar({
       );
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Erro ao enviar');
-      onDone('✅ Mensagem enviada');
-    } catch (e: any) { onDone('❌ ' + e.message); }
+      onDone('Mensagem enviada');
+    } catch (e: any) { onDone('Erro: ' + e.message); }
     finally { setLoading(false); }
   }
 
@@ -305,8 +311,8 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
       );
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Erro');
-      onDone(`✅ Função "${fnDef.label}" executada`);
-    } catch (e: any) { onDone('❌ ' + e.message); }
+      onDone(`Função "${fnDef.label}" executada`);
+    } catch (e: any) { onDone('Erro: ' + e.message); }
     finally { setLoading(false); }
   }
 
@@ -320,8 +326,8 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
       if (error) throw error;
       setNameSaved(true);
       setTimeout(() => setNameSaved(false), 2000);
-      onDone('✅ Nome salvo');
-    } catch (e: any) { onDone('❌ ' + e.message); }
+      onDone('Nome salvo');
+    } catch (e: any) { onDone('Erro: ' + e.message); }
     finally { setLoading(false); }
   }
 
@@ -574,9 +580,9 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
             : c
         )
       );
-      notify(newPaused ? '⏸️ Assistente pausado' : '▶️ Assistente retomado');
+      notify(newPaused ? 'Assistente pausado' : 'Assistente retomado');
     } catch (e: any) {
-      notify('❌ ' + e.message, 'error');
+      notify('Erro: ' + e.message, 'error');
     } finally {
       setTogglingPause(null);
     }
@@ -619,7 +625,7 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
           connection={getConnection(activeModal)!}
           onClose={() => setActiveModal(null)}
           onDone={(msg) => {
-            notify(msg, msg.startsWith('❌') ? 'error' : 'success');
+            notify(msg, msg.startsWith('Erro') ? 'error' : 'success');
             setActiveModal(null);
             loadConversations();
           }}
@@ -637,8 +643,10 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {conversations.length} conversa{conversations.length !== 1 ? 's' : ''}
                 {pausedCount > 0 && (
-                  <span className="ml-1.5 text-yellow-600 dark:text-yellow-400 font-medium">
-                    · {pausedCount} pausada{pausedCount !== 1 ? 's' : ''}
+                  <span className="ml-1.5 text-yellow-600 dark:text-yellow-400 font-medium inline-flex items-center gap-1">
+                    <span className="mx-0.5">·</span>
+                    <PauseCircle className="h-3 w-3" />
+                    {pausedCount} pausada{pausedCount !== 1 ? 's' : ''}
                   </span>
                 )}
               </p>
@@ -696,23 +704,23 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
         {/* Filtros */}
         <div className="flex gap-1.5 px-4 py-3 overflow-x-auto">
           {([
-            { key: 'all',       label: 'Todas'    },
-            { key: 'paused',    label: '⏸ Pausadas' },
-            { key: 'active',    label: '🟢 Ativas'  },
-            { key: 'whatsapp',  label: '📱 WhatsApp' },
-            { key: 'instagram', label: '📸 Instagram' },
-            { key: 'facebook',  label: '👥 Facebook'  },
-          ] as { key: Filter; label: string }[]).map(({ key, label }) => (
+            { key: 'all',       label: 'Todas',     icon: MessageCircle },
+            { key: 'paused',    label: 'Pausadas',   icon: PauseCircle   },
+            { key: 'active',    label: 'Ativas',     icon: PlayCircle    },
+            { key: 'whatsapp',  label: 'WhatsApp',   icon: Phone         },
+            { key: 'instagram', label: 'Instagram',  icon: Instagram     },
+            { key: 'facebook',  label: 'Facebook',   icon: Facebook      },
+          ] as { key: Filter; label: string; icon: React.ElementType }[]).map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition whitespace-nowrap
+              className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition whitespace-nowrap
                 ${filter === key
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/20'
                 }`}
             >
-              {label}
+              <Icon className="h-3 w-3" />{label}
             </button>
           ))}
         </div>
@@ -764,7 +772,7 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
                       conv={conv}
                       connection={connection}
                       onDone={(msg) => {
-                        notify(msg, msg.startsWith('❌') ? 'error' : 'success');
+                        notify(msg, msg.startsWith('Erro') ? 'error' : 'success');
                         setQuickMsgConv(null);
                       }}
                       onCancel={() => setQuickMsgConv(null)}

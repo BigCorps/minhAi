@@ -144,7 +144,7 @@ export default function FAQSection({ theme = 'dark' }: FAQSectionProps) {
             Ainda tem dúvidas?
           </p>
           <a
-            href="https://wa.me/5511987311425"
+            href="https://wa.me/5511926828418"
             target="_blank"
             rel="noopener noreferrer"
             className={`inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full border text-xs sm:text-sm font-semibold transition-all hover:scale-105 ${

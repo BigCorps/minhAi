@@ -122,7 +122,6 @@ export const metadata: Metadata = {
 
   // ── Verificação Google Search Console ───────────────────────────────────────
   // Já verificado via google90ae1b639a70083d.html — linha abaixo é opcional
-  // verification: { google: 'SEU_CODIGO_AQUI' },
 
   // ── Ícones ──────────────────────────────────────────────────────────────────
   icons: {
@@ -258,7 +257,7 @@ const jsonLd = {
       contactPoint: [
         {
           '@type': 'ContactPoint',
-          telephone: '+55-11-98731-1425',
+          telephone: '+55-11-92682-8418',
           contactType: 'customer service',
           availableLanguage: 'Portuguese',
           contactOption: 'TollFree',

@@ -66,7 +66,7 @@ const PLANOS = [
     descricao: 'Para empresas com alto volume e necessidades específicas.',
     destaque: false,
     cta: 'Falar com a Equipe',
-    ctaHref: 'https://wa.me/5511987311425',
+    ctaHref: 'https://wa.me/5511926828418',
     recursos: [
       'Tudo do plano Profissional',
       'Onboarding dedicado',

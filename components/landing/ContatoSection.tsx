@@ -118,7 +118,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
           </a>
 
           {/* WhatsApp */}
-          <a href="https://wa.me/5511987311425" target="_blank" rel="noopener noreferrer"
+          <a href="https://wa.me/5511926828418" target="_blank" rel="noopener noreferrer"
             className={`group flex flex-col items-center justify-center gap-1.5 sm:gap-2 px-3 py-3 sm:py-4 rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
               isDark ? 'bg-slate-800/30 border-white/5 hover:border-green-500/30 hover:bg-slate-800/50' : 'bg-white/70 border-gray-100 hover:border-green-200 hover:bg-white shadow-sm'
             }`}>

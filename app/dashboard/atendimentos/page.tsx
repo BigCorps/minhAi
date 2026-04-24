@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { ConnectionManager } from './_components/ConnectionManager';
 import { QuickActionsPanel } from './_components/QuickActionsPanel';
+import { ConversationsPanel } from './_components/ConversationsPanel';
 import { createClient } from '@/lib/supabase-browser';
-import { HelpCircle, X, ExternalLink, Smartphone, Monitor, ChevronRight, Share2, Zap } from 'lucide-react';
+import { HelpCircle, X, ExternalLink, MessageCircle, Smartphone, Monitor, ChevronRight, Share2, Zap } from 'lucide-react';
 import { useAssistant } from '@/contexts/AssistantContext';
 
 interface Company {
@@ -107,8 +108,8 @@ export default function AtendimentosPage() {
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                       }`}
                     >
-                      <Zap className="w-4 h-4" />
-                      Ações Rápidas
+                      <MessageCircle className="w-4 h-4" />
+                      Conversas
                     </button>
                   </div>
                 </div>
@@ -124,7 +125,7 @@ export default function AtendimentosPage() {
                   />
                 )}
                 {hasConnections && activeTab === 'actions' && (
-                  <QuickActionsPanel selectedCompanyId={selectedCompanyId} />
+                  <ConversationsPanel selectedCompanyId={selectedCompanyId} />
                 )}
               </div>
             </>

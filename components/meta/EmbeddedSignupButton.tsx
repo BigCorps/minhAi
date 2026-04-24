@@ -118,22 +118,27 @@ export default function EmbeddedSignupButton({
   // ── 1. Carregar o Facebook JS SDK ────────────────────────────────────────
 
   useEffect(() => {
-    // Evitar carregar duas vezes
-    if (document.getElementById('facebook-jssdk')) {
-      if (window.FB) setSdkReady(true);
-      return;
-    }
-
-    window.fbAsyncInit = () => {
+    const initSDK = () => {
       window.FB.init({
         appId:            META_APP_ID,
         autoLogAppEvents: true,
         xfbml:            true,
-        version:          'v25.0',  // Graph API version mais recente
+        version:          'v25.0',
       });
       setSdkReady(true);
       console.log('[EmbeddedSignup] FB SDK inicializado');
     };
+
+    // Se o SDK já está carregado, só re-inicializar
+    if (window.FB) {
+      initSDK();
+      return;
+    }
+
+    // Evitar carregar o script duas vezes
+    if (document.getElementById('facebook-jssdk')) return;
+
+    window.fbAsyncInit = initSDK;
 
     const script       = document.createElement('script');
     script.id          = 'facebook-jssdk';
@@ -257,6 +262,12 @@ export default function EmbeddedSignupButton({
     setLoading(true);
     onLoading?.(true);
 
+    const featureType = mode === 'coexistence'
+      ? 'whatsapp_business_app_onboarding'
+      : '';
+
+    console.log(`[EmbeddedSignup] Lançando FB.login — mode: ${mode}, featureType: "${featureType}"`);
+
     // CRÍTICO: FB.login() NÃO aceita callback async.
     // Usamos função síncrona + Promise separada.
     window.FB.login(
@@ -292,12 +303,8 @@ export default function EmbeddedSignupButton({
         override_default_response_type: true,
         extras: {
           setup:              {},
-          // Coexistence: permite que cliente use o mesmo número do WA Business App
-          // Cloud: fluxo padrão com WABA novo
-          featureType:        mode === 'coexistence'
-            ? 'whatsapp_business_app_onboarding'
-            : '',
-          sessionInfoVersion: '3',  // obrigatório para session logging
+          featureType,
+          sessionInfoVersion: '3',
         },
       }
     );

@@ -203,8 +203,8 @@ export default function EmbeddedSignupButton({
       console.warn('[EmbeddedSignup] ⚠️ waba_id ou phone_number_id ausentes — salvando sem WhatsApp');
     }
 
-    const state       = `${userId}:${companyId}:${crypto.randomUUID().substring(0, 8)}`;
     const redirectUri = `${window.location.origin}/auth/callback/facebook`;
+    const state       = `${userId}:${companyId}:${crypto.randomUUID().substring(0, 8)}`;
 
     const response = await fetch(`${SUPABASE_URL}/functions/v1/exchange-meta-code`, {
       method:  'POST',
@@ -268,10 +268,33 @@ export default function EmbeddedSignupButton({
 
     console.log(`[EmbeddedSignup] Lançando FB.login — mode: ${mode}, featureType: "${featureType}"`);
 
-    // CRÍTICO: FB.login() NÃO aceita callback async.
-    // Usamos função síncrona + Promise separada.
+    // FB.login NÃO aceita callback async — usar função síncrona
+    // O v4 mostra uma tela final "Continuar para configuração" — o callback
+    // só dispara quando o usuário clica nesse botão ou fecha o popup.
+    // Se o popup abrir como aba (Edge/Safari), monitoramos via polling.
+    let popupClosed = false;
+    const popupCheckInterval = setInterval(() => {
+      // Verificar se o message event já trouxe os dados mas o callback não disparou
+      if (waEventRef.current?.event?.startsWith('FINISH') && !popupClosed) {
+        popupClosed = true;
+        clearInterval(popupCheckInterval);
+        console.log('[EmbeddedSignup] ✅ Dados detectados via message event — processando sem callback');
+        // Gerar um code fake não funciona — precisamos do code real do authResponse
+        // Neste caso, notificar o usuário para fechar o popup
+        setLoading(false);
+        onLoading?.(false);
+        onError('Feche a janela do Facebook que abriu e tente novamente. O popup foi aberto como aba separada.');
+      }
+    }, 1000);
+
+    setTimeout(() => {
+      clearInterval(popupCheckInterval);
+    }, 120_000);
+
     window.FB.login(
       (response: any) => {
+        clearInterval(popupCheckInterval);
+        popupClosed = true;
         if (response.authResponse?.code) {
           const code = response.authResponse.code;
           console.log('[EmbeddedSignup] ✅ Code recebido — TTL: 30s');

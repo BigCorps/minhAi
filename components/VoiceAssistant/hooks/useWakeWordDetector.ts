@@ -17,11 +17,14 @@ const END_COMMANDS = [
  * Inicializa e reconfigura o WakeWordDetector sempre que a wake word mudar.
  * Gera variações automáticas e inclui fallbacks padrão.
  */
-export function useWakeWordDetector(companyWakeWord: string) {
+export function useWakeWordDetector(companyWakeWord: string, wakeWordEnabled: boolean = true) {
   const wakeWordDetectorRef = useRef<WakeWordDetector | null>(null);
 
   useEffect(() => {
-    if (!companyWakeWord) return;
+    if (!companyWakeWord || !wakeWordEnabled) {
+      wakeWordDetectorRef.current = null;
+      return;
+    }
 
     console.log('🎯 Inicializando WakeWordDetector — wake word:', companyWakeWord);
 

@@ -438,11 +438,13 @@ useEffect(() => {
   }, [companyId]);
 
   // ── Auto-start ────────────────────────────────────────────
-  useEffect(() => {
+useEffect(() => {
     if (!companyWakeWord || !permissionGranted) return;
+    // Se wake word desativada, não inicia escuta automática
+    if (!wakeWordEnabled) return;
     const timer = setTimeout(() => { handleStart(); }, 800);
     return () => clearTimeout(timer);
-  }, [companyWakeWord, permissionGranted]);
+  }, [companyWakeWord, permissionGranted, wakeWordEnabled]);
 
   // ── Google Speech ─────────────────────────────────────────
   async function startGoogleSpeech() {
@@ -1907,6 +1909,7 @@ const handleTextMessage = async (message: string) => {
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
     const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
+    if (!wakeWordEnabled) return 'Clique no microfone ou digite para interagir.';
     return primaryWakeWord ? `diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
   };
 
@@ -2079,9 +2082,11 @@ const handleTextMessage = async (message: string) => {
               <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                 {getStatusMessage()}
               </p>
-              <p className={`text-sm ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
-                Utilize a palavra de ativação apenas no modo voz.
-              </p>
+              {wakeWordEnabled && (
+                <p className={`text-sm ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
+                  Utilize a palavra de ativação apenas no modo voz.
+                </p>
+              )}
             </div>
 
             {error && (

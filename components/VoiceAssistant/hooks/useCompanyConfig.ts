@@ -9,6 +9,8 @@ import { createClient } from '@/lib/supabase-browser';
 interface CompanyConfig {
   wakeWord: string;
   greeting: string;
+  avatarType: 'face' | 'orb';
+  wakeWordEnabled: boolean;
 }
 
 /**
@@ -22,6 +24,8 @@ export function useCompanyConfig(
 ): CompanyConfig {
   const [wakeWord, setWakeWord] = useState(wakeWordProp || 'gerente');
   const [greeting, setGreeting] = useState(greetingProp || 'Oi! Como posso ajudar?');
+  const [avatarType, setAvatarType] = useState<'face' | 'orb'>('face');
+  const [wakeWordEnabled, setWakeWordEnabled] = useState(true);
 
   useEffect(() => {
     async function loadCompanyConfig() {
@@ -31,7 +35,7 @@ export function useCompanyConfig(
         const supabase = createClient();
         const { data, error } = await supabase
           .from('companies')
-          .select('wake_word, greeting_message')
+          .select('wake_word, greeting_message, assistant_avatar_type, wake_word_enabled')
           .eq('id', companyId)
           .single();
 
@@ -46,6 +50,8 @@ export function useCompanyConfig(
 
           setWakeWord(wakeWordFromDb);
           setGreeting(greetingFromDb);
+          setAvatarType((data.assistant_avatar_type as 'face' | 'orb') ?? 'face');
+          setWakeWordEnabled(data.wake_word_enabled ?? true);
 
           console.log('✅ Config carregada — Wake word:', wakeWordFromDb);
         }
@@ -57,5 +63,5 @@ export function useCompanyConfig(
     loadCompanyConfig();
   }, [companyId, wakeWordProp, greetingProp]);
 
-  return { wakeWord, greeting };
+  return { wakeWord, greeting, avatarType, wakeWordEnabled };
 }

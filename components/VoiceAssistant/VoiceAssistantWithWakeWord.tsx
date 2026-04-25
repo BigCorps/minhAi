@@ -1953,7 +1953,7 @@ const handleTextMessage = async (message: string) => {
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
     const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
-    if (!wakeWordEnabled) return 'Use o microfone ou digite para interagir.';
+    if (!wakeWordEnabled) return 'Clique no microfone ou digite para interagir.';
     return primaryWakeWord ? `diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
   };
 
@@ -2127,6 +2127,8 @@ onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
             )}
 
             <div className="text-center w-full mt-4">
+              {/* No modo full sem wake word, a frase grande já é suficiente — esconde o subtexto e o label "clique em mim" */}
+
                 <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                   {getStatusMessage()}
                 </p>

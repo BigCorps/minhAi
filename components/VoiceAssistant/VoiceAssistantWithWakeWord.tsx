@@ -2027,7 +2027,7 @@ onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
 
         <div className="text-center px-4 max-w-md">
           <p className={`text-lg sm:text-xl md:text-2xl font-bold mb-2 whitespace-nowrap ${theme === 'dark' ? 'text-white/50' : 'text-gray-900/50'}`}>
-            {getStatusMessage()}
+            {getStatusMessage(true)
           </p>
           <div className={`mt-2 transition-all duration-300 ${(repromptWarning || noiseWarning) ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             <span className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${

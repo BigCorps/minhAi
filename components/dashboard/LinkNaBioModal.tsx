@@ -32,6 +32,18 @@ interface ContactData {
   youtube_channel_url: string;
 }
 
+interface GbpContactData {
+  phone: string | null;
+  website: string | null;
+  whatsapp: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  youtube: string | null;
+  tiktok: string | null;
+  twitter: string | null;
+  linkedin: string | null;
+}
+
 interface LinkNaBioModalProps {
   companyId: string;
   slug: string;
@@ -49,6 +61,7 @@ const DARK = {
   success: '#34d399', successBg: 'rgba(52,211,153,0.12)',
   accent: '#60a5fa', accentBg: 'rgba(59,130,246,0.15)',
   overlay: 'rgba(0,0,0,0.75)',
+  warn: '#fbbf24', warnBg: 'rgba(251,191,36,0.1)',
 };
 
 const LIGHT = {
@@ -60,22 +73,32 @@ const LIGHT = {
   success: '#059669', successBg: '#f0fdf4',
   accent: '#2563eb', accentBg: '#eff6ff',
   overlay: 'rgba(0,0,0,0.5)',
+  warn: '#d97706', warnBg: '#fffbeb',
 };
 
 // ── Campos de contato mapeados ────────────────────────────────
 
-const CONTACT_FIELDS: { key: keyof ContactData; label: string; placeholder: string; prefix?: string }[] = [
-  { key: 'whatsapp_number',  label: 'WhatsApp',    placeholder: '5511999999999',        prefix: 'wa.me/' },
-  { key: 'instagram_username', label: 'Instagram', placeholder: 'nome_usuario',          prefix: 'instagram.com/' },
-  { key: 'facebook',         label: 'Facebook',    placeholder: 'https://facebook.com/...' },
-  { key: 'website',          label: 'Site',        placeholder: 'https://seusite.com.br' },
-  { key: 'email_contato',    label: 'E-mail',      placeholder: 'contato@empresa.com.br', prefix: 'mailto:' },
-  { key: 'telefone_fixo',    label: 'Telefone',    placeholder: '11 3333-4444',           prefix: 'tel:' },
-  { key: 'tiktok',           label: 'TikTok',      placeholder: 'nome_usuario',           prefix: 'tiktok.com/@' },
-  { key: 'twitter',          label: 'X / Twitter', placeholder: 'nome_usuario',           prefix: 'twitter.com/' },
-  { key: 'linkedin',         label: 'LinkedIn',    placeholder: 'https://linkedin.com/...' },
-  { key: 'youtube_channel_url', label: 'YouTube',  placeholder: 'https://youtube.com/@...' },
+const CONTACT_FIELDS: {
+  key: keyof ContactData;
+  label: string;
+  placeholder: string;
+  prefix?: string;
+  gbpKey?: keyof GbpContactData;
+}[] = [
+  { key: 'whatsapp_number',    label: 'WhatsApp',    placeholder: '5511999999999',          prefix: 'wa.me/',         gbpKey: 'whatsapp' },
+  { key: 'instagram_username', label: 'Instagram',   placeholder: 'nome_usuario',           prefix: 'instagram.com/', gbpKey: 'instagram' },
+  { key: 'facebook',           label: 'Facebook',    placeholder: 'https://facebook.com/...', gbpKey: 'facebook' },
+  { key: 'website',            label: 'Site',        placeholder: 'https://seusite.com.br',   gbpKey: 'website' },
+  { key: 'email_contato',      label: 'E-mail',      placeholder: 'contato@empresa.com.br', prefix: 'mailto:' },
+  { key: 'telefone_fixo',      label: 'Telefone',    placeholder: '11 3333-4444',           prefix: 'tel:',           gbpKey: 'phone' },
+  { key: 'tiktok',             label: 'TikTok',      placeholder: 'nome_usuario',           prefix: 'tiktok.com/@',   gbpKey: 'tiktok' },
+  { key: 'twitter',            label: 'X / Twitter', placeholder: 'nome_usuario',           prefix: 'twitter.com/',   gbpKey: 'twitter' },
+  { key: 'linkedin',           label: 'LinkedIn',    placeholder: 'https://linkedin.com/...', gbpKey: 'linkedin' },
+  { key: 'youtube_channel_url',label: 'YouTube',     placeholder: 'https://youtube.com/@...', gbpKey: 'youtube' },
 ];
+
+// Apenas os campos que têm mapeamento GBP
+const GBP_SYNCABLE_FIELDS = CONTACT_FIELDS.filter(f => f.gbpKey);
 
 // ── Ícones SVG inline ─────────────────────────────────────────
 
@@ -139,18 +162,31 @@ const Ico = {
   ),
 };
 
+// ── Google Logo SVG ───────────────────────────────────────────
+
+function GoogleLogo({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+  );
+}
+
 // ── Input helper ──────────────────────────────────────────────
 
-function Field({ label, value, onChange, placeholder, prefix, p }: {
+function Field({ label, value, onChange, placeholder, prefix, p, highlight }: {
   label: string; value: string; onChange: (v: string) => void;
-  placeholder: string; prefix?: string; p: typeof DARK;
+  placeholder: string; prefix?: string; p: typeof DARK; highlight?: boolean;
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <label style={{ fontSize: 11, fontWeight: 600, color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+      <label style={{ fontSize: 11, fontWeight: 600, color: highlight ? p.warn : p.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
         {label}
       </label>
-      <div style={{ display: 'flex', alignItems: 'center', borderRadius: 8, border: `1px solid ${p.inputBorder}`, background: p.input, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', borderRadius: 8, border: `1px solid ${highlight ? p.warn + '60' : p.inputBorder}`, background: p.input, overflow: 'hidden' }}>
         {prefix && (
           <span style={{ padding: '0 8px', fontSize: 11, color: p.textMuted, whiteSpace: 'nowrap', borderRight: `1px solid ${p.inputBorder}`, height: '100%', display: 'flex', alignItems: 'center' }}>
             {prefix}
@@ -192,7 +228,7 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3500);
   };
 
   // ────────────────────────────────────────────────────────
@@ -301,7 +337,7 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
     setChecking(false);
   };
 
-  // ── Bio / descrição da empresa ───────────────────────────
+  // ── Bio ───────────────────────────────────────────────────
   const [bio, setBio] = useState('');
   const [loadingBio, setLoadingBio] = useState(true);
   const [savingBio, setSavingBio] = useState(false);
@@ -348,16 +384,16 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
       .eq('id', companyId).single();
     if (data) {
       setContact({
-        whatsapp_number:    data.whatsapp_number    ?? '',
-        instagram_username: data.instagram_username ?? '',
-        website:            data.website            ?? '',
-        facebook:           data.facebook           ?? '',
-        email_contato:      data.email_contato      ?? '',
-        telefone_fixo:      data.telefone_fixo      ?? '',
-        tiktok:             data.tiktok             ?? '',
-        twitter:            data.twitter            ?? '',
-        linkedin:           data.linkedin           ?? '',
-        youtube_channel_url:data.youtube_channel_url?? '',
+        whatsapp_number:     data.whatsapp_number     ?? '',
+        instagram_username:  data.instagram_username  ?? '',
+        website:             data.website             ?? '',
+        facebook:            data.facebook            ?? '',
+        email_contato:       data.email_contato       ?? '',
+        telefone_fixo:       data.telefone_fixo       ?? '',
+        tiktok:              data.tiktok              ?? '',
+        twitter:             data.twitter             ?? '',
+        linkedin:            data.linkedin            ?? '',
+        youtube_channel_url: data.youtube_channel_url ?? '',
       });
     }
     setLoadingContact(false);
@@ -387,8 +423,127 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
     }).eq('id', companyId);
     setSavingContact(false);
     if (error) showToast('Erro ao salvar contatos.', 'error');
-    else { showToast('Contatos salvos! A página já foi atualizada.'); setContactDirty(false); }
+    else { showToast('Contatos salvos!'); setContactDirty(false); }
   };
+
+  // ────────────────────────────────────────────────────────
+  // GBP SYNC
+  // ────────────────────────────────────────────────────────
+
+  const [showGbpSync, setShowGbpSync]   = useState(false);
+  const [gbpLoading, setGbpLoading]     = useState(false);
+  const [gbpData, setGbpData]           = useState<GbpContactData | null>(null);
+  const [gbpSyncing, setGbpSyncing]     = useState(false);
+  const [gbpToast, setGbpToast]         = useState('');
+  const [gbpDirection, setGbpDirection] = useState<'google_to_minhai' | 'minhai_to_google' | null>(null);
+
+  // Mapeamento minhAi → GBP
+  function getMinhAiValue(gbpKey: keyof GbpContactData): string {
+    const field = GBP_SYNCABLE_FIELDS.find(f => f.gbpKey === gbpKey);
+    if (!field) return '';
+    return contact[field.key] || '';
+  }
+
+  function getGbpValue(gbpKey: keyof GbpContactData): string {
+    return gbpData?.[gbpKey] || '';
+  }
+
+  async function loadGbpData() {
+    setGbpLoading(true);
+    setGbpData(null);
+    setGbpDirection(null);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/gbp-sync-info`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ company_id: companyId, action: 'read' }),
+        }
+      );
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      if (json.google) {
+        setGbpData(json.google);
+      } else {
+        setGbpToast('Nenhuma localização do Google vinculada. Configure em Serviços Google → Meu Negócio.');
+        setTimeout(() => setGbpToast(''), 5000);
+        setShowGbpSync(false);
+      }
+    } catch (err: any) {
+      setGbpToast(err.message || 'Erro ao conectar com o Google.');
+      setTimeout(() => setGbpToast(''), 4000);
+      setShowGbpSync(false);
+    } finally {
+      setGbpLoading(false);
+    }
+  }
+
+  async function applyGbpSync() {
+    if (!gbpDirection || !gbpData) return;
+    setGbpSyncing(true);
+    try {
+      if (gbpDirection === 'google_to_minhai') {
+        // Mapear GBP → minhAi
+        const update: Partial<ContactData> = {};
+        for (const field of GBP_SYNCABLE_FIELDS) {
+          const gbpVal = getGbpValue(field.gbpKey!);
+          if (gbpVal) update[field.key] = gbpVal;
+        }
+        if (Object.keys(update).length > 0) {
+          await supabase.from('companies').update({
+            ...update,
+            updated_at: new Date().toISOString(),
+          }).eq('id', companyId);
+          setContact(prev => ({ ...prev, ...update }));
+          setContactDirty(false);
+        }
+        setGbpToast('✓ Dados do Google aplicados no minhAi!');
+      } else {
+        // Mapear minhAi → GBP
+        const data: Record<string, string> = {};
+        for (const field of GBP_SYNCABLE_FIELDS) {
+          const minhaiVal = getMinhAiValue(field.gbpKey!);
+          if (minhaiVal) data[field.gbpKey!] = minhaiVal;
+        }
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/gbp-sync-info`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({ company_id: companyId, action: 'write', data }),
+          }
+        );
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        setGbpToast('✓ Dados do minhAi enviados para o Google!');
+      }
+      setTimeout(() => {
+        setGbpToast('');
+        setShowGbpSync(false);
+      }, 2500);
+    } catch (err: any) {
+      setGbpToast('Erro: ' + (err.message || 'Tente novamente.'));
+      setTimeout(() => setGbpToast(''), 4000);
+    } finally {
+      setGbpSyncing(false);
+    }
+  }
+
+  // Campos com divergência
+  const divergentFields = gbpData
+    ? GBP_SYNCABLE_FIELDS.filter(f => {
+        const minhai = getMinhAiValue(f.gbpKey!);
+        const google = getGbpValue(f.gbpKey!);
+        return minhai !== google && (minhai !== '' || google !== '');
+      })
+    : [];
 
   // ─────────────────────────────────────────────────────────
   // RENDER
@@ -443,14 +598,34 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
             </div>
           </div>
 
-          {/* Abas */}
-          <div style={{ display: 'flex', gap: 0 }}>
+          {/* Abas + botão Google */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
             <button style={tabStyle(tab === 'links')} onClick={() => setTab('links')}>
               Bio / Links
             </button>
             <button style={tabStyle(tab === 'contato')} onClick={() => setTab('contato')}>
               Contato
             </button>
+
+            {/* Botão Sincronizar Google — só na aba Contato */}
+            {tab === 'contato' && (
+              <button
+                onClick={() => { setShowGbpSync(true); loadGbpData(); }}
+                style={{
+                  marginLeft: 'auto', marginRight: 2, marginBottom: 4,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '5px 10px',
+                  border: `1px solid ${p.border}`,
+                  borderRadius: 8, background: p.surface,
+                  cursor: 'pointer', fontSize: 11, fontWeight: 600,
+                  color: p.textMuted, flexShrink: 0,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <GoogleLogo size={13} />
+                Sincronizar
+              </button>
+            )}
           </div>
         </div>
 
@@ -460,7 +635,6 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
           {/* ── ABA LINKS ── */}
           {tab === 'links' && (
             <>
-              {/* Formulário inline */}
               {showForm && (
                 <div style={{ background: p.surface, border: `1px solid ${p.borderFocus}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
                   <p style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 600, color: p.accent }}>
@@ -482,7 +656,6 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
                 </div>
               )}
 
-              {/* Bio da empresa */}
               {!showForm && (
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ fontSize: 11, fontWeight: 600, color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
@@ -495,27 +668,15 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
                       <textarea
                         value={bio}
                         onChange={e => { setBio(e.target.value); setBioDirty(true); }}
-                        placeholder="Escreva uma breve descrição da sua empresa para aparecer na página de links..."
-                        rows={3}
-                        maxLength={300}
-                        style={{
-                          width: '100%', padding: '10px 12px',
-                          borderRadius: 10, border: `1px solid ${bioDirty ? p.borderFocus : p.inputBorder}`,
-                          background: p.input, color: p.text,
-                          fontSize: 13, lineHeight: 1.5,
-                          resize: 'vertical', outline: 'none',
-                          boxSizing: 'border-box', fontFamily: 'inherit',
-                          transition: 'border-color 0.15s',
-                        }}
+                        placeholder="Escreva uma breve descrição da sua empresa..."
+                        rows={3} maxLength={300}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${bioDirty ? p.borderFocus : p.inputBorder}`, background: p.input, color: p.text, fontSize: 13, lineHeight: 1.5, resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
                       />
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
                         <span style={{ fontSize: 11, color: p.textMuted }}>{bio.length}/300 caracteres</span>
                         {bioDirty && (
-                          <button
-                            onClick={handleSaveBio}
-                            disabled={savingBio}
-                            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, border: 'none', background: p.accent, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: savingBio ? 0.7 : 1 }}
-                          >
+                          <button onClick={handleSaveBio} disabled={savingBio}
+                            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, border: 'none', background: p.accent, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: savingBio ? 0.7 : 1 }}>
                             <Ico.Save s={12} c="#fff" />
                             {savingBio ? 'Salvando...' : 'Salvar bio'}
                           </button>
@@ -526,7 +687,6 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
                 </div>
               )}
 
-              {/* Lista */}
               {loadingLinks ? (
                 <div style={{ textAlign: 'center', padding: '32px 0', color: p.textMuted, fontSize: 14 }}>Carregando...</div>
               ) : links.length === 0 ? (
@@ -646,10 +806,185 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
         </div>
       </div>
 
-      {/* Toast */}
+      {/* Toast principal */}
       {toast && (
         <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', padding: '10px 20px', borderRadius: 10, background: toast.type === 'success' ? p.successBg : p.dangerBg, border: `1px solid ${toast.type === 'success' ? p.success : p.danger}`, color: toast.type === 'success' ? p.success : p.danger, fontSize: 13, fontWeight: 600, zIndex: 10000, whiteSpace: 'nowrap' }}>
           {toast.msg}
+        </div>
+      )}
+
+      {/* ── Modal de Sync GBP ── */}
+      {showGbpSync && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 10001, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={() => setShowGbpSync(false)}
+        >
+          <div
+            style={{ background: p.bg, borderRadius: 18, width: '100%', maxWidth: 520, maxHeight: '85vh', overflowY: 'auto', border: `1px solid ${p.border}`, boxShadow: '0 30px 70px rgba(0,0,0,0.4)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 10, position: 'sticky', top: 0, background: p.bg, zIndex: 1 }}>
+              <GoogleLogo size={20} />
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: p.text }}>Sincronizar com Google Meu Negócio</p>
+                <p style={{ margin: 0, fontSize: 11, color: p.textMuted }}>
+                  {gbpData ? `${divergentFields.length} campo${divergentFields.length !== 1 ? 's' : ''} com diferenças` : 'Buscando dados...'}
+                </p>
+              </div>
+              <button onClick={() => setShowGbpSync(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                <Ico.X s={16} c={p.textMuted} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '16px 20px' }}>
+
+              {/* Loading */}
+              {gbpLoading && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '32px 0', color: p.textMuted, fontSize: 13 }}>
+                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    style={{ animation: 'gbp-spin 1s linear infinite' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Buscando dados do Google Meu Negócio...
+                  <style>{`@keyframes gbp-spin { to { transform: rotate(360deg); } }`}</style>
+                </div>
+              )}
+
+              {!gbpLoading && gbpData && (
+                <>
+                  {/* Escolha de direção */}
+                  <p style={{ margin: '0 0 12px', fontSize: 12, color: p.textMuted }}>
+                    Escolha a direção da sincronização:
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+                    {([
+                      {
+                        key: 'google_to_minhai' as const,
+                        emoji: '🌐 → 📱',
+                        title: 'Google → minhAi',
+                        desc: 'Puxar dados do Google e aplicar aqui',
+                      },
+                      {
+                        key: 'minhai_to_google' as const,
+                        emoji: '📱 → 🌐',
+                        title: 'minhAi → Google',
+                        desc: 'Enviar dados daqui para o Google',
+                      },
+                    ]).map(opt => (
+                      <button
+                        key={opt.key}
+                        onClick={() => setGbpDirection(gbpDirection === opt.key ? null : opt.key)}
+                        style={{
+                          padding: '12px 10px', borderRadius: 12,
+                          border: `2px solid ${gbpDirection === opt.key ? p.accent : p.border}`,
+                          background: gbpDirection === opt.key ? p.accentBg : p.surface,
+                          cursor: 'pointer', textAlign: 'center',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <div style={{ fontSize: 22, marginBottom: 4 }}>{opt.emoji}</div>
+                        <p style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: gbpDirection === opt.key ? p.accent : p.text }}>{opt.title}</p>
+                        <p style={{ margin: 0, fontSize: 10, color: p.textMuted, lineHeight: 1.3 }}>{opt.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Tabela comparativa */}
+                  <div style={{ borderRadius: 12, border: `1px solid ${p.border}`, overflow: 'hidden', marginBottom: 16 }}>
+                    {/* Cabeçalho */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 1fr', background: p.surface, padding: '8px 12px', borderBottom: `1px solid ${p.border}` }}>
+                      <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: p.textMuted, textTransform: 'uppercase' }}>Campo</p>
+                      <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase' }}>minhAi</p>
+                      <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: '#34d399', textTransform: 'uppercase' }}>Google</p>
+                    </div>
+
+                    {GBP_SYNCABLE_FIELDS.map(field => {
+                      const minhaiVal = getMinhAiValue(field.gbpKey!);
+                      const googleVal = getGbpValue(field.gbpKey!);
+                      const isDiff = minhaiVal !== googleVal && (minhaiVal !== '' || googleVal !== '');
+                      const isEmpty = !minhaiVal && !googleVal;
+
+                      if (isEmpty) return null;
+
+                      return (
+                        <div
+                          key={field.key}
+                          style={{
+                            display: 'grid', gridTemplateColumns: '100px 1fr 1fr',
+                            padding: '8px 12px',
+                            borderBottom: `1px solid ${p.border}`,
+                            background: isDiff ? p.warnBg : 'transparent',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            {isDiff && <span style={{ fontSize: 10 }}>⚡</span>}
+                            <span style={{ fontSize: 11, color: isDiff ? p.warn : p.textMuted, fontWeight: isDiff ? 600 : 400 }}>{field.label}</span>
+                          </div>
+                          <p style={{ margin: 0, fontSize: 11, color: p.text, wordBreak: 'break-all', paddingRight: 8 }}>
+                            {minhaiVal || <span style={{ color: p.textMuted, fontStyle: 'italic' }}>vazio</span>}
+                          </p>
+                          <p style={{ margin: 0, fontSize: 11, color: p.text, wordBreak: 'break-all' }}>
+                            {googleVal || <span style={{ color: p.textMuted, fontStyle: 'italic' }}>vazio</span>}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {divergentFields.length === 0 && (
+                    <div style={{ padding: '12px 16px', borderRadius: 10, background: p.successBg, border: `1px solid ${p.success}30`, marginBottom: 16 }}>
+                      <p style={{ margin: 0, fontSize: 12, color: p.success, fontWeight: 600 }}>
+                        ✓ Todos os campos estão iguais nos dois lados!
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Botão aplicar */}
+                  <button
+                    onClick={applyGbpSync}
+                    disabled={gbpSyncing || !gbpDirection}
+                    style={{
+                      width: '100%', padding: '12px 0', borderRadius: 10,
+                      border: 'none', background: gbpDirection ? p.accent : p.surface,
+                      color: gbpDirection ? '#fff' : p.textMuted,
+                      fontSize: 13, fontWeight: 700, cursor: gbpDirection ? 'pointer' : 'not-allowed',
+                      opacity: gbpSyncing ? 0.7 : 1, transition: 'all 0.15s',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    }}
+                  >
+                    {gbpSyncing ? (
+                      <>
+                        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          style={{ animation: 'gbp-spin 1s linear infinite' }}>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Sincronizando...
+                      </>
+                    ) : gbpDirection ? (
+                      gbpDirection === 'google_to_minhai' ? '🌐 Aplicar dados do Google no minhAi' : '📱 Enviar dados do minhAi ao Google'
+                    ) : (
+                      'Selecione uma direção acima'
+                    )}
+                  </button>
+                </>
+              )}
+
+              {/* Toast do modal GBP */}
+              {gbpToast && (
+                <div style={{
+                  marginTop: 12, padding: '10px 14px', borderRadius: 10,
+                  background: gbpToast.startsWith('✓') ? p.successBg : p.dangerBg,
+                  border: `1px solid ${gbpToast.startsWith('✓') ? p.success : p.danger}30`,
+                  color: gbpToast.startsWith('✓') ? p.success : p.danger,
+                  fontSize: 12, fontWeight: 600, textAlign: 'center',
+                }}>
+                  {gbpToast}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

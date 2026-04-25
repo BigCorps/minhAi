@@ -2023,7 +2023,7 @@ onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
   ? (isMobile ? 'solte para enviar...' : 'clique novamente para enviar...')
   : isTranscribing
   ? 'transcrevendo...'
-  : (isMobile ? 'segure para falar ou' : 'clique para falar ou')}
+  : (isMobile ? 'segure para falar' : 'clique para falar')}
           </p>
         )}
 

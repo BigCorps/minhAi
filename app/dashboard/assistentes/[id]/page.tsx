@@ -298,8 +298,8 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     defaultValue={assistant.assistant_avatar_type ?? 'face'}
                     className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                   >
-                    <option value="face">🧠 Rosto (expressões animadas)</option>
-                    <option value="orb">🔮 Orbe (partículas animadas)</option>
+                    <option value="face">Rosto (expressões animadas)</option>
+                    <option value="orb">Orbe (formato abstrato)</option>
                   </select>
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     O Rosto exibe olhos e expressões. O Orbe é um modo mais minimalista e abstrato.

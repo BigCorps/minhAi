@@ -1953,7 +1953,8 @@ const handleTextMessage = async (message: string) => {
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
     const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
-    if (!wakeWordEnabled) return 'Clique no microfone ou digite para interagir.';
+    if (!wakeWordEnabled) return 'Use o microfone ou digite para interagir.';
+    if (isMaximized) return 'Aperte no orbe ou escolha uma opção.';
     return primaryWakeWord ? `diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
   };
 

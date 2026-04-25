@@ -1936,7 +1936,7 @@ const handleTextMessage = async (message: string) => {
     if (voiceRecorder.isRecording) return 'solte para enviar...';
     if (isTranscribing) return 'transcrevendo...';
     if (isPlayingAudio) return 'clique para parar';
-    return 'segure para falar ou';
+    return 'clique para falar ou';
   };
 
   const avatarIsHidden =

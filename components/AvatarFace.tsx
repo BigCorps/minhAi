@@ -30,7 +30,7 @@ interface AvatarFaceProps {
   onCopyQRCode?: () => void;
   onConfirmPix?: () => Promise<void>;
   onCancelPix?: () => Promise<void>;
-  avatarType?: 'face' | 'orb';
+  avatarType?: 'face' | 'orb' | null;
   printOnPayment?: boolean;
   hasActivePlan?: boolean;
   isWakeWordDetected?: boolean;
@@ -103,6 +103,7 @@ export function AvatarFace({
   const blinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const exprTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  if (avatarType === null) return null;
   const showFace = avatarType === 'face' && !isProcessing && !isSpeaking;
   const isActive = isSpeaking || isProcessing || isListening;
 

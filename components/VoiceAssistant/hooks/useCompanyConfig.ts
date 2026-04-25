@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase-browser';
 interface CompanyConfig {
   wakeWord: string;
   greeting: string;
-  avatarType: 'face' | 'orb';
+  avatarType: 'face' | 'orb' | null;
   wakeWordEnabled: boolean;
 }
 
@@ -24,7 +24,7 @@ export function useCompanyConfig(
 ): CompanyConfig {
   const [wakeWord, setWakeWord] = useState(wakeWordProp || 'gerente');
   const [greeting, setGreeting] = useState(greetingProp || 'Oi! Como posso ajudar?');
-  const [avatarType, setAvatarType] = useState<'face' | 'orb'>('face');
+  const [avatarType, setAvatarType] = useState<'face' | 'orb' | null>(null);
   const [wakeWordEnabled, setWakeWordEnabled] = useState(true);
 
   useEffect(() => {

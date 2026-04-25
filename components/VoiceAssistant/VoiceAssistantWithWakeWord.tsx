@@ -565,17 +565,43 @@ useEffect(() => {
     await voiceRecorder.startRecording();
   };
 
-  const handleMicButtonUp = async () => {
+const handleMicButtonUp = async () => {
     if (!voiceRecorder.isRecording) return;
     setIsListening(false);
     try {
       const audioBlob = await voiceRecorder.stopRecording();
-      await transcribeAndSetInput(audioBlob);
+      if (!wakeWordEnabled) {
+        // Wake word desativada: transcreve e processa direto sem passar pelo externalInput/useEffect
+        setIsTranscribing(true);
+        try {
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          const base64Audio = await new Promise<string>((resolve) => {
+            reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+          });
+          const response = await fetch('/api/voice/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audio: base64Audio }),
+          });
+          if (!response.ok) throw new Error('Erro na transcrição');
+          const { text } = await response.json();
+          if (text?.trim()) await handleTextMessage(text.trim());
+        } catch {
+          // silencioso
+        } finally {
+          setIsTranscribing(false);
+        }
+      } else {
+        await transcribeAndSetInput(audioBlob);
+      }
     } catch {
       // silencioso
     } finally {
       shouldProcessAudio.current = true;
-      setTimeout(async () => { if (isActiveRef.current) await startGoogleSpeech(); }, 300);
+      if (wakeWordEnabled) {
+        setTimeout(async () => { if (isActiveRef.current) await startGoogleSpeech(); }, 300);
+      }
     }
   };
 

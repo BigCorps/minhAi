@@ -353,12 +353,13 @@ useEffect(() => {
   }, [lastTranscript, lastResponse]);
 
   useEffect(() => {
-    if (isMaximized && externalInput) {
+    // No modo maximizado OU quando wake word está desativada (microfone manual é o único input de voz)
+    if ((isMaximized || !wakeWordEnabled) && externalInput) {
       setLastTranscript(externalInput);
       setExternalInput('');
       handleTextMessage(externalInput);
     }
-  }, [externalInput, isMaximized]);
+  }, [externalInput, isMaximized, wakeWordEnabled]);
 
   // ── Inicialização ─────────────────────────────────────────
   useEffect(() => {

@@ -1,7 +1,7 @@
-// components/VoiceAssistant/modals/SaleModeModal.tsx — v8 FINAL
+// components/VoiceAssistant/modals/SaleModeModal.tsx — v10
 //
 // VERSÃO HÍBRIDA: Suporta dois modos de renderização
-// 
+//
 // isFullscreen=false (padrão) → Modal normal dentro do VoiceAssistant
 //   - absolute inset-0 z-40 rounded-2xl
 //   - Sem header/footer
@@ -12,17 +12,25 @@
 //   - Com SlugHeader completo (pageType='vendas')
 //   - Com footer (contador)
 //   - Usado na página /vendas/[slug]
+//
+// Novidades v10 (merge v8 + v9):
+//   - Scanner de código de barras PDV (BarcodePdvModal) em ambos os modos
+//   - Cards colapsáveis em portrait (portraitExpanded)
+//   - Layout portrait melhorado (sem altura fixa h-[200px])
+//   - avatarNode / avatarLabel / gridAndCart / checkoutContent extraídos (sem duplicação)
+//   - Escape key respeita showPdvScanner
 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useTheme } from 'next-themes'; // ← FIX: importado para uso interno
+import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase-browser';
 import { CartProvider, useCart } from '@/hooks/useCart';
 import ProductGrid from './SaleModeModal/ProductGrid';
 import CartPanel from './SaleModeModal/CartPanel';
 import CheckoutFlow from './SaleModeModal/CheckoutFlow';
+import BarcodePdvModal from '@/components/assistant/BarcodePdvModal';
 import { AvatarFace } from '@/components/AvatarFace';
 import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
 import { listarProdutos, listarCategorias } from '@/lib/produtos-venda';
@@ -86,12 +94,10 @@ function SaleModeInner({
   quantidadeInicial,
   profile,
 }: SaleModeModalProps) {
-  // ← FIX: usar useTheme() para ler e alterar o tema em vez de depender só da prop
   const { resolvedTheme, setTheme } = useTheme();
   const effectiveTheme = (resolvedTheme ?? theme) as 'dark' | 'light';
   const isDark = effectiveTheme === 'dark';
 
-  // ← FIX: handler que efetivamente altera o tema global
   const handleToggleTheme = useCallback(() => {
     setTheme(effectiveTheme === 'dark' ? 'light' : 'dark');
   }, [effectiveTheme, setTheme]);
@@ -108,6 +114,17 @@ function SaleModeInner({
   const [isPortrait, setIsPortrait] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [metodosAtivos, setMetodosAtivos] = useState<string[]>([]);
+
+  // ── Scanner PDV ──────────────────────────────────────────────────────────
+  const [showPdvScanner, setShowPdvScanner] = useState(false);
+
+  const handleProductScanned = useCallback((produto: ProdutoVenda) => {
+    addItem(produto as any);
+  }, [addItem]);
+
+  // ── Cards colapsáveis em portrait (mobile) ───────────────────────────────
+  // null = ambos expandidos; 'avatar' | 'cart' = apenas um expandido
+  const [portraitExpanded, setPortraitExpanded] = useState<'avatar' | 'cart' | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -154,11 +171,11 @@ function SaleModeInner({
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !showCheckout) onClose();
+      if (e.key === 'Escape' && !showCheckout && !showPdvScanner) onClose();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose, showCheckout]);
+  }, [onClose, showCheckout, showPdvScanner]);
 
   useEffect(() => {
     async function loadMetodos() {
@@ -179,7 +196,6 @@ function SaleModeInner({
         (data ?? []).forEach((r: any) => {
           if (r.is_enabled) ativos.push(r.function_key);
         });
-
         setMetodosAtivos(ativos);
       } catch {
         setMetodosAtivos([]);
@@ -202,18 +218,326 @@ function SaleModeInner({
     setShowCheckout(true);
   }, [totalItens]);
 
+  // ── Avatar node (reutilizado nos dois layouts) ───────────────────────────
+  const avatarNode = (
+    <div
+      className="relative cursor-pointer select-none"
+      style={{ width: 80, height: 80 }}
+      onMouseDown={onMicDown}
+      onMouseUp={onMicUp}
+      onTouchStart={(e) => { e.preventDefault(); onMicDown?.(); }}
+      onTouchEnd={(e) => { e.preventDefault(); onMicUp?.(); }}
+    >
+      {isListening && (
+        <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-30 pointer-events-none" />
+      )}
+      <div className="w-full h-full overflow-hidden rounded-full">
+        <div style={{ transform: 'scale(0.417)', transformOrigin: 'top left', width: 192, height: 192, pointerEvents: 'none' }}>
+          <AvatarFace
+            isListening={isListening}
+            isSpeaking={isPlayingAudio}
+            isProcessing={isProcessing || isTranscribing}
+            theme={effectiveTheme}
+            qrCodeData={null}
+            pixConfirmationData={null}
+            onCloseQRCode={() => {}}
+            onCopyQRCode={() => {}}
+            onConfirmPix={() => {}}
+            onCancelPix={() => {}}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const avatarLabel = (
+    <p className={`text-[9px] text-center leading-tight ${isDark ? 'text-white/35' : 'text-gray-400'}`}>
+      {isListening ? 'Ouvindo...' : isTranscribing ? 'Transcrevendo...' : isProcessing || isPlayingAudio ? 'Processando...' : 'Segure para falar'}
+    </p>
+  );
+
+  // ── Conteúdo compartilhado: grid + carrinho ──────────────────────────────
+  const gridAndCart = isPortrait ? (
+    // ── PORTRAIT (mobile): produtos em cima, avatar+carrinho em baixo como botões colapsáveis ──
+    <>
+      {/* Produtos — ocupa o espaço restante */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <ProductGrid
+          produtos={produtos}
+          categorias={categorias}
+          loading={loadingProdutos}
+          theme={effectiveTheme}
+          produtoDestaque={produtoDestaque}
+          onProdutoDestaqueClear={() => setProdutoDestaque(null)}
+          hideBusca
+          onOpenBarcodeScanner={() => setShowPdvScanner(true)}
+        />
+      </div>
+
+      {/* Barra inferior: avatar + carrinho como cards-botão */}
+      <div className="flex-shrink-0 flex gap-2 pt-1">
+
+        {/* ── Card Avatar ── */}
+        <div className={`flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 ${
+          isDark ? 'bg-white/3 border-white/8' : 'bg-gray-50 border-gray-200'
+        } ${portraitExpanded === 'avatar' ? 'flex-1' : portraitExpanded === 'cart' ? 'w-14 flex-shrink-0' : 'w-[140px] flex-shrink-0'}`}>
+
+          {/* Cabeçalho clicável do card avatar */}
+          <button
+            className={`flex items-center gap-2 px-3 py-2 w-full transition-colors ${
+              isDark ? 'hover:bg-white/5 active:bg-white/8' : 'hover:bg-gray-100 active:bg-gray-150'
+            }`}
+            onClick={() => setPortraitExpanded(p => p === 'avatar' ? null : 'avatar')}
+          >
+            {/* Mini avatar sempre visível no header */}
+            <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 relative">
+              {isListening && <div className="absolute inset-0 rounded-full border border-red-500 animate-ping opacity-40 pointer-events-none" />}
+              <div style={{ transform: 'scale(0.146)', transformOrigin: 'top left', width: 192, height: 192, pointerEvents: 'none' }}>
+                <AvatarFace
+                  isListening={isListening}
+                  isSpeaking={isPlayingAudio}
+                  isProcessing={isProcessing || isTranscribing}
+                  theme={effectiveTheme}
+                  qrCodeData={null}
+                  pixConfirmationData={null}
+                  onCloseQRCode={() => {}}
+                  onCopyQRCode={() => {}}
+                  onConfirmPix={() => {}}
+                  onCancelPix={() => {}}
+                />
+              </div>
+            </div>
+            {portraitExpanded !== 'cart' && (
+              <span className={`text-[10px] font-medium truncate flex-1 text-left ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+                {isListening ? 'Ouvindo...' : isProcessing || isPlayingAudio ? 'Processando...' : 'Assistente'}
+              </span>
+            )}
+            <svg
+              className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 ${portraitExpanded === 'avatar' ? 'rotate-180' : ''} ${isDark ? 'text-white/30' : 'text-gray-400'}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+          </button>
+
+          {/* Conteúdo expandido do avatar */}
+          {portraitExpanded === 'avatar' && (
+            <div className="flex flex-col items-center gap-2 px-3 pb-3">
+              {/* Avatar centralizado */}
+              <div className="flex items-center justify-center w-full">
+                <div
+                  className="relative cursor-pointer select-none"
+                  style={{ width: 80, height: 80 }}
+                  onMouseDown={onMicDown}
+                  onMouseUp={onMicUp}
+                  onTouchStart={(e) => { e.preventDefault(); onMicDown?.(); }}
+                  onTouchEnd={(e) => { e.preventDefault(); onMicUp?.(); }}
+                >
+                  {isListening && (
+                    <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-30 pointer-events-none" />
+                  )}
+                  <div className="w-full h-full overflow-hidden rounded-full">
+                    <div style={{ transform: 'scale(0.417)', transformOrigin: 'top left', width: 192, height: 192, pointerEvents: 'none' }}>
+                      <AvatarFace
+                        isListening={isListening}
+                        isSpeaking={isPlayingAudio}
+                        isProcessing={isProcessing || isTranscribing}
+                        theme={effectiveTheme}
+                        qrCodeData={null}
+                        pixConfirmationData={null}
+                        onCloseQRCode={() => {}}
+                        onCopyQRCode={() => {}}
+                        onConfirmPix={() => {}}
+                        onCancelPix={() => {}}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {avatarLabel}
+              {onTextMessage && (
+                <div className="w-full">
+                  <TextInputChat
+                    onSendMessage={onTextMessage}
+                    isProcessing={isProcessing || isPlayingAudio || isTranscribing}
+                    theme={effectiveTheme}
+                    disabled={false}
+                    compact
+                  />
+                </div>
+              )}
+              {!isFullscreen && (
+                <button
+                  onClick={onClose}
+                  className={`text-[10px] ${isDark ? 'text-white/25 hover:text-white/50' : 'text-gray-300 hover:text-gray-500'}`}
+                >
+                  Fechar modo vendas
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Card Carrinho ── */}
+        <div className={`flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 ${
+          isDark ? 'bg-white/3 border-white/8' : 'bg-gray-50 border-gray-200'
+        } ${portraitExpanded === 'cart' ? 'flex-1' : portraitExpanded === 'avatar' ? 'w-14 flex-shrink-0' : 'flex-1'}`}>
+
+          {/* Cabeçalho clicável do carrinho */}
+          <button
+            className={`flex items-center gap-2 px-3 py-2 w-full transition-colors ${
+              isDark ? 'hover:bg-white/5 active:bg-white/8' : 'hover:bg-gray-100 active:bg-gray-150'
+            }`}
+            onClick={() => setPortraitExpanded(p => p === 'cart' ? null : 'cart')}
+          >
+            <svg className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-white/50' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            {portraitExpanded !== 'avatar' && (
+              <span className={`text-[10px] font-medium flex-1 text-left truncate ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+                Carrinho
+              </span>
+            )}
+            {totalItens > 0 && portraitExpanded !== 'avatar' && (
+              <span className="flex-shrink-0 bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                {totalItens}
+              </span>
+            )}
+            <svg
+              className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 ${portraitExpanded === 'cart' ? 'rotate-180' : ''} ${isDark ? 'text-white/30' : 'text-gray-400'}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+          </button>
+
+          {/* Conteúdo expandido do carrinho */}
+          {portraitExpanded === 'cart' && (
+            <div className="flex-1 min-h-0 overflow-hidden px-1 pb-2">
+              <CartPanel theme={effectiveTheme} onCheckout={handleCheckout} />
+            </div>
+          )}
+
+          {/* Resumo compacto quando não expandido */}
+          {portraitExpanded !== 'cart' && totalItens > 0 && (
+            <div
+              className="px-3 pb-2 cursor-pointer"
+              onClick={() => setPortraitExpanded('cart')}
+            >
+              <button
+                onClick={(e) => { e.stopPropagation(); handleCheckout(); }}
+                className="w-full py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-semibold transition-colors"
+              >
+                Finalizar pedido
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  ) : (
+    // ── LANDSCAPE / DESKTOP: layout original ──
+    <>
+      {/* Produtos */}
+      <div className="flex flex-col min-w-0 overflow-hidden flex-[7]">
+        <ProductGrid
+          produtos={produtos}
+          categorias={categorias}
+          loading={loadingProdutos}
+          theme={effectiveTheme}
+          produtoDestaque={produtoDestaque}
+          onProdutoDestaqueClear={() => setProdutoDestaque(null)}
+          hideBusca
+          onOpenBarcodeScanner={() => setShowPdvScanner(true)}
+        />
+      </div>
+
+      {/* Avatar + Carrinho */}
+      <div className="flex flex-col min-w-0 overflow-hidden gap-2 flex-[1.5]">
+        {/* Card do avatar */}
+        <div className={`rounded-2xl border flex flex-col items-center justify-center gap-1 pt-2 pb-2 px-2 relative flex-shrink-0 ${
+          isDark ? 'bg-white/3 border-white/8' : 'bg-gray-50 border-gray-200'
+        }`}>
+          {!isFullscreen && (
+            <button
+              onClick={onClose}
+              className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10 ${
+                isDark ? 'text-white/30 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+          {avatarNode}
+          {avatarLabel}
+          {onTextMessage && (
+            <div className="w-full mt-0.5">
+              <TextInputChat
+                onSendMessage={onTextMessage}
+                isProcessing={isProcessing || isPlayingAudio || isTranscribing}
+                theme={effectiveTheme}
+                disabled={false}
+                compact
+              />
+            </div>
+          )}
+        </div>
+
+        {/* CartPanel */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <CartPanel theme={effectiveTheme} onCheckout={handleCheckout} />
+        </div>
+      </div>
+    </>
+  );
+
+  // ── Checkout compartilhado ───────────────────────────────────────────────
+  const checkoutContent = (
+    <div className="flex-1 flex items-start justify-center overflow-y-auto pt-4 pb-20">
+      <div
+        className={`w-full max-w-sm rounded-2xl border p-5 ${
+          isDark ? 'bg-slate-800 border-white/10' : 'bg-white border-gray-200 shadow-xl'
+        }`}
+      >
+        <CheckoutFlow
+          companyId={companyId}
+          theme={effectiveTheme}
+          onClose={() => { setShowCheckout(false); onClose(); }}
+          playText={playText}
+          metodosAtivos={metodosAtivos.length > 0 ? metodosAtivos : undefined}
+          profile={profile}
+        />
+        <button
+          onClick={() => setShowCheckout(false)}
+          className={`w-full mt-3 py-2 rounded-xl text-xs transition-colors ${
+            isDark ? 'text-white/30 hover:text-white/60' : 'text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          ← Voltar ao carrinho
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── Scanner PDV (compartilhado pelos dois modos) ─────────────────────────
+  const pdvScanner = showPdvScanner && playText ? (
+    <BarcodePdvModal
+      companyId={companyId}
+      theme={effectiveTheme}
+      playText={playText}
+      onProductFound={handleProductScanned}
+      onClose={() => setShowPdvScanner(false)}
+    />
+  ) : null;
+
   // ============================================================
-  // MODO FULLSCREEN - Com SlugHeader completo
+  // MODO FULLSCREEN — Com SlugHeader completo
   // ============================================================
   if (isFullscreen && mounted) {
     const fullscreenContent = (
-      <div
-        className={`fixed inset-0 z-[200] flex flex-col overflow-hidden ${
-          isDark ? 'bg-slate-900' : 'bg-white'
-        }`}
-      >
-        {/* SLUGHEADER - pageType='vendas' faz o botão vendas virar botão assistente */}
-        {/* ← FIX: theme e onToggleTheme agora conectados ao next-themes */}
+      <div className={`fixed inset-0 z-[200] flex flex-col overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
         <SlugHeader
           company={{
             name: companyName,
@@ -237,151 +561,13 @@ function SaleModeInner({
           onClose={undefined}
         />
 
-        {/* CONTEÚDO */}
         <div className="flex-1 flex overflow-hidden px-3 py-3 pb-32 min-h-0 w-full gap-3">
-          <div
-            className={`flex-1 flex overflow-hidden gap-3 ${
-              isPortrait ? 'flex-col' : 'flex-row'
-            }`}
-          >
-            {showCheckout ? (
-              <div className="flex-1 flex items-start justify-center overflow-y-auto pt-4 pb-20">
-                <div
-                  className={`w-full max-w-sm rounded-2xl border p-5 ${
-                    isDark ? 'bg-slate-800 border-white/10' : 'bg-white border-gray-200 shadow-xl'
-                  }`}
-                >
-                  <CheckoutFlow
-                    companyId={companyId}
-                    theme={effectiveTheme}
-                    onClose={() => {
-                      setShowCheckout(false);
-                      onClose();
-                    }}
-                    playText={playText}
-                    metodosAtivos={metodosAtivos.length > 0 ? metodosAtivos : undefined}
-                    profile={profile}
-                  />
-                  <button
-                    onClick={() => setShowCheckout(false)}
-                    className={`w-full mt-3 py-2 rounded-xl text-xs transition-colors ${
-                      isDark ? 'text-white/30 hover:text-white/60' : 'text-gray-400 hover:text-gray-600'
-                    }`}
-                  >
-                    ← Voltar ao carrinho
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Produtos */}
-                <div
-                  className={`flex flex-col min-w-0 overflow-hidden ${
-                    isPortrait ? 'flex-1 min-h-0' : 'flex-[7]'
-                  }`}
-                >
-                  <ProductGrid
-                    produtos={produtos}
-                    categorias={categorias}
-                    loading={loadingProdutos}
-                    theme={effectiveTheme}
-                    produtoDestaque={produtoDestaque}
-                    onProdutoDestaqueClear={() => setProdutoDestaque(null)}
-                    hideBusca
-                  />
-                </div>
-
-                {/* Avatar + Carrinho */}
-                <div
-                  className={`flex min-w-0 overflow-hidden gap-2 ${
-                    isPortrait ? 'flex-row flex-shrink-0 h-[200px]' : 'flex-col flex-[1.5]'
-                  }`}
-                >
-                  {/* Card do avatar */}
-                  <div
-                    className={`rounded-2xl border flex flex-col items-center gap-1 pt-2 pb-2 px-2 ${
-                      isPortrait ? 'w-[160px] flex-shrink-0' : 'flex-shrink-0'
-                    } ${isDark ? 'bg-white/3 border-white/8' : 'bg-gray-50 border-gray-200'}`}
-                  >
-                    <div
-                      className="relative cursor-pointer select-none mt-1"
-                      style={{ width: 80, height: 80 }}
-                      onMouseDown={onMicDown}
-                      onMouseUp={onMicUp}
-                      onTouchStart={(e) => {
-                        e.preventDefault();
-                        onMicDown?.();
-                      }}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        onMicUp?.();
-                      }}
-                    >
-                      {isListening && (
-                        <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-30 pointer-events-none" />
-                      )}
-                      <div className="w-full h-full overflow-hidden rounded-full">
-                        <div
-                          style={{
-                            transform: 'scale(0.417)',
-                            transformOrigin: 'top left',
-                            width: 192,
-                            height: 192,
-                            pointerEvents: 'none',
-                          }}
-                        >
-                          <AvatarFace
-                            isListening={isListening}
-                            isSpeaking={isPlayingAudio}
-                            isProcessing={isProcessing || isTranscribing}
-                            theme={effectiveTheme}
-                            qrCodeData={null}
-                            pixConfirmationData={null}
-                            onCloseQRCode={() => {}}
-                            onCopyQRCode={() => {}}
-                            onConfirmPix={() => {}}
-                            onCancelPix={() => {}}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <p
-                      className={`text-[9px] text-center leading-tight ${
-                        isDark ? 'text-white/35' : 'text-gray-400'
-                      }`}
-                    >
-                      {isListening
-                        ? 'Ouvindo...'
-                        : isTranscribing
-                        ? 'Transcrevendo...'
-                        : isProcessing || isPlayingAudio
-                        ? 'Processando...'
-                        : 'Segure para falar'}
-                    </p>
-
-                    {onTextMessage && (
-                      <div className="w-full mt-0.5">
-                        <TextInputChat
-                          onSendMessage={onTextMessage}
-                          isProcessing={isProcessing || isPlayingAudio || isTranscribing}
-                          theme={effectiveTheme}
-                          disabled={false}
-                          compact
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* CartPanel */}
-                  <div className="flex-1 min-h-0 overflow-hidden">
-                    <CartPanel theme={effectiveTheme} onCheckout={handleCheckout} />
-                  </div>
-                </div>
-              </>
-            )}
+          <div className="flex-1 flex flex-col overflow-hidden gap-3">
+            {showCheckout ? checkoutContent : gridAndCart}
           </div>
         </div>
+
+        {pdvScanner}
       </div>
     );
 
@@ -389,173 +575,18 @@ function SaleModeInner({
   }
 
   // ============================================================
-  // MODO NORMAL - Modal dentro do VoiceAssistant (sem header/footer)
+  // MODO NORMAL — Modal dentro do VoiceAssistant (sem header/footer)
   // ============================================================
-  const normalContent = (
-    <div
-      className={`absolute inset-0 z-40 flex overflow-hidden rounded-2xl ${
-        isDark ? 'bg-slate-900' : 'bg-white'
-      }`}
-    >
-      <div
-        className={`flex-1 flex overflow-hidden px-3 py-3 min-h-0 w-full gap-3 ${
-          isPortrait ? 'flex-col' : 'flex-row'
-        }`}
-      >
-        {showCheckout ? (
-          <div className="flex-1 flex items-start justify-center overflow-y-auto pt-4">
-            <div
-              className={`w-full max-w-sm rounded-2xl border p-5 ${
-                isDark ? 'bg-slate-800 border-white/10' : 'bg-white border-gray-200 shadow-xl'
-              }`}
-            >
-              <CheckoutFlow
-                companyId={companyId}
-                theme={effectiveTheme}
-                onClose={() => {
-                  setShowCheckout(false);
-                  onClose();
-                }}
-                playText={playText}
-                metodosAtivos={metodosAtivos.length > 0 ? metodosAtivos : undefined}
-                profile={profile}
-              />
-              <button
-                onClick={() => setShowCheckout(false)}
-                className={`w-full mt-3 py-2 rounded-xl text-xs transition-colors ${
-                  isDark ? 'text-white/30 hover:text-white/60' : 'text-gray-400 hover:text-gray-600'
-                }`}
-              >
-                ← Voltar ao carrinho
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Produtos */}
-            <div
-              className={`flex flex-col min-w-0 overflow-hidden ${
-                isPortrait ? 'flex-1 min-h-0' : 'flex-[7]'
-              }`}
-            >
-              <ProductGrid
-                produtos={produtos}
-                categorias={categorias}
-                loading={loadingProdutos}
-                theme={effectiveTheme}
-                produtoDestaque={produtoDestaque}
-                onProdutoDestaqueClear={() => setProdutoDestaque(null)}
-                hideBusca
-              />
-            </div>
-
-            {/* Avatar + Carrinho */}
-            <div
-              className={`flex min-w-0 overflow-hidden gap-2 ${
-                isPortrait ? 'flex-row flex-shrink-0 h-[200px]' : 'flex-col flex-[1.5]'
-              }`}
-            >
-              {/* Card do avatar */}
-              <div
-                className={`rounded-2xl border flex flex-col items-center gap-1 pt-2 pb-2 px-2 relative ${
-                  isPortrait ? 'w-[160px] flex-shrink-0' : 'flex-shrink-0'
-                } ${isDark ? 'bg-white/3 border-white/8' : 'bg-gray-50 border-gray-200'}`}
-              >
-                <button
-                  onClick={onClose}
-                  className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10 ${
-                    isDark
-                      ? 'text-white/30 hover:text-white hover:bg-white/10'
-                      : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-
-                <div
-                  className="relative cursor-pointer select-none mt-1"
-                  style={{ width: 80, height: 80 }}
-                  onMouseDown={onMicDown}
-                  onMouseUp={onMicUp}
-                  onTouchStart={(e) => {
-                    e.preventDefault();
-                    onMicDown?.();
-                  }}
-                  onTouchEnd={(e) => {
-                    e.preventDefault();
-                    onMicUp?.();
-                  }}
-                >
-                  {isListening && (
-                    <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-30 pointer-events-none" />
-                  )}
-                  <div className="w-full h-full overflow-hidden rounded-full">
-                    <div
-                      style={{
-                        transform: 'scale(0.417)',
-                        transformOrigin: 'top left',
-                        width: 192,
-                        height: 192,
-                        pointerEvents: 'none',
-                      }}
-                    >
-                      <AvatarFace
-                        isListening={isListening}
-                        isSpeaking={isPlayingAudio}
-                        isProcessing={isProcessing || isTranscribing}
-                        theme={effectiveTheme}
-                        qrCodeData={null}
-                        pixConfirmationData={null}
-                        onCloseQRCode={() => {}}
-                        onCopyQRCode={() => {}}
-                        onConfirmPix={() => {}}
-                        onCancelPix={() => {}}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <p
-                  className={`text-[9px] text-center leading-tight ${
-                    isDark ? 'text-white/35' : 'text-gray-400'
-                  }`}
-                >
-                  {isListening
-                    ? 'Ouvindo...'
-                    : isTranscribing
-                    ? 'Transcrevendo...'
-                    : isProcessing || isPlayingAudio
-                    ? 'Processando...'
-                    : 'Segure para falar'}
-                </p>
-
-                {onTextMessage && (
-                  <div className="w-full mt-0.5">
-                    <TextInputChat
-                      onSendMessage={onTextMessage}
-                      isProcessing={isProcessing || isPlayingAudio || isTranscribing}
-                      theme={effectiveTheme}
-                      disabled={false}
-                      compact
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* CartPanel */}
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <CartPanel theme={effectiveTheme} onCheckout={handleCheckout} />
-              </div>
-            </div>
-          </>
-        )}
+  return (
+    <>
+      <div className={`absolute inset-0 z-40 flex flex-col overflow-hidden rounded-2xl ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
+        <div className="flex-1 flex flex-col overflow-hidden px-3 py-3 min-h-0 w-full gap-3">
+          {showCheckout ? checkoutContent : gridAndCart}
+        </div>
       </div>
-    </div>
+      {pdvScanner}
+    </>
   );
-
-  return normalContent;
 }
 
 export default function SaleModeModal(props: SaleModeModalProps) {

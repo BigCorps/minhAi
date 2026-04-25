@@ -1946,16 +1946,18 @@ const handleTextMessage = async (message: string) => {
       companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings,
     });
 
-  const getStatusMessage = () => {
-    if (!hasMicrophone) return 'Modo de voz indisponível';
-    if (!permissionGranted) return 'Aguardando permissão de voz...';
-    if (isTranscribing) return 'Transcrevendo...';
-    if (isPlayingAudio) return 'Falando...';
-    if (isProcessing) return 'Processando...';
-    const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
-    if (!wakeWordEnabled) return 'Pressione acima para interagir';
-    return primaryWakeWord ? `diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
-  };
+  const getStatusMessage = (maximized = false) => {
+  if (!hasMicrophone) return 'Modo de voz indisponível';
+  if (!permissionGranted) return 'Aguardando permissão de voz...';
+  if (isTranscribing) return 'Transcrevendo...';
+  if (isPlayingAudio) return 'Falando...';
+  if (isProcessing) return 'Processando...';
+  const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
+  if (!wakeWordEnabled) return maximized
+    ? 'Pressione o orbe para interagir'   // ← modo full
+    : 'Pressione o microfone para interagir';   // ← modo normal
+  return primaryWakeWord ? `diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
+};
 
   const getMicButtonColor = () => {
     if (voiceRecorder.isRecording || isPlayingAudio) return 'bg-red-500 animate-pulse';

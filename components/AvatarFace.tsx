@@ -103,7 +103,6 @@ export function AvatarFace({
   const blinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const exprTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  if (avatarType === null) return null;
   const showFace = avatarType === 'face' && !isProcessing && !isSpeaking;
   const isActive = isSpeaking || isProcessing || isListening;
 
@@ -576,6 +575,8 @@ export function AvatarFace({
         return 'M 68 136 Q 100 150 132 136';
     }
   };
+
+  if (avatarType === null) return <div className="relative w-full h-full" />;
 
   return (
     <div className={`relative w-full h-full flex items-center justify-center overflow-visible bg-transparent transition-all duration-500 ease-in-out ${isHidden ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'

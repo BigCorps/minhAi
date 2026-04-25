@@ -440,8 +440,14 @@ useEffect(() => {
   // ── Auto-start ────────────────────────────────────────────
 useEffect(() => {
     if (!companyWakeWord || !permissionGranted) return;
-    // Se wake word desativada, não inicia escuta automática
-    if (!wakeWordEnabled) return;
+    if (!wakeWordEnabled) {
+      // Sem wake word: não inicia escuta, mas libera o carrossel
+      const timer = setTimeout(() => {
+        setShowStartButton(false);
+        onAssistantStart?.();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
     const timer = setTimeout(() => { handleStart(); }, 800);
     return () => clearTimeout(timer);
   }, [companyWakeWord, permissionGranted, wakeWordEnabled]);
@@ -1971,7 +1977,7 @@ const handleTextMessage = async (message: string) => {
           />
         </div>
 
-        {!showStartButton && (
+        {!showStartButton && !(isMaximized && !wakeWordEnabled) && (
           <p className={`text-sm font-medium -mt-6 ${theme === 'dark' ? 'text-white/40' : 'text-gray-400'}`}>
             {voiceRecorder.isRecording ? 'solte para enviar...' : isTranscribing ? 'transcrevendo...' : 'clique em mim para falar ou'}
           </p>
@@ -2079,9 +2085,12 @@ const handleTextMessage = async (message: string) => {
             )}
 
             <div className="text-center w-full mt-4">
-              <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                {getStatusMessage()}
-              </p>
+              {/* No modo full sem wake word, a frase grande já é suficiente — esconde o subtexto e o label "clique em mim" */}
+              {!(isMaximized && !wakeWordEnabled) && (
+                <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                  {getStatusMessage()}
+                </p>
+              )}
               {wakeWordEnabled && (
                 <p className={`text-sm ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
                   Utilize a palavra de ativação apenas no modo voz.

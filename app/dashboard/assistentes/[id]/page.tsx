@@ -313,7 +313,7 @@ export default function EditarAssistentePage({ params }: PageProps) {
                       Ativação por palavra-chave
                     </label>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Quando desativado, o assistente inicia diretamente em modo de escuta contínua
+                      Quando desativado, o assistente inicia diretamente em modo de escuta contínua, funcionando como uma Alexa. (Não recomendado para ambientes com muito barulho).
                     </p>
                   </div>
                   <input

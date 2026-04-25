@@ -116,6 +116,9 @@ export function VoiceAssistantWithWakeWord({
   const [externalInput, setExternalInput] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
 
+  const [isRecordingToggle, setIsRecordingToggle] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
   // -- States de Destaque de Função (Inatividade) --
   const [showFeatureHighlight, setShowFeatureHighlight] = useState(false);
   const [highlightedFeature, setHighlightedFeature] = useState<{ function_name: string; short_description: string; function_category: string } | null>(null);
@@ -213,6 +216,13 @@ const { onlineProfiles } = useOnlinePresence({
 });
 const onlineProfilesRef = useRef(onlineProfiles);
 useEffect(() => { onlineProfilesRef.current = onlineProfiles; }, [onlineProfiles]);
+
+useEffect(() => {
+  const check = () => setIsMobile(window.matchMedia('(max-width: 768px)').matches);
+  check();
+  window.addEventListener('resize', check);
+  return () => window.removeEventListener('resize', check);
+}, []);
 
 // ── useEffect 1: login via evento (aba /cliente/slug) ────
 useEffect(() => {
@@ -558,16 +568,18 @@ useEffect(() => {
     if (e && isPlayingAudio) { e.preventDefault(); e.stopPropagation(); }
     if (isPlayingAudio) { stopEverything(); return; }
     if (!permissionGranted || isProcessing || isTranscribing) return;
-    resetInactivityTimer(); // Microfone pressionado = atividade real
-    shouldProcessAudio.current = false;
-    await stopGoogleSpeech();
-    setIsListening(true);
-    await voiceRecorder.startRecording();
-  };
+  resetInactivityTimer();
+  shouldProcessAudio.current = false;
+  await stopGoogleSpeech();
+  setIsListening(true);
+  setIsRecordingToggle(true);
+  await voiceRecorder.startRecording();
+};
 
 const handleMicButtonUp = async () => {
-    if (!voiceRecorder.isRecording) return;
-    setIsListening(false);
+  if (!voiceRecorder.isRecording) return;
+  setIsListening(false);
+  setIsRecordingToggle(false);
     try {
       const audioBlob = await voiceRecorder.stopRecording();
       if (!wakeWordEnabled) {
@@ -1956,13 +1968,13 @@ const handleTextMessage = async (message: string) => {
     return 'bg-green-400 animate-pulse';
   };
 
-  const getMicHintText = () => {
+const getMicHintText = () => {
     if (!hasMicrophone) return 'Microfone não detectado';
     if (!permissionGranted) return 'Permissão de voz necessária';
-    if (voiceRecorder.isRecording) return 'solte para enviar...';
+    if (voiceRecorder.isRecording) return isMobile ? 'solte para enviar...' : 'clique novamente para enviar...';
     if (isTranscribing) return 'transcrevendo...';
     if (isPlayingAudio) return 'clique para parar';
-    return 'clique para falar ou';
+    return isMobile ? 'segure para falar ou' : 'clique para falar ou';
   };
 
   const avatarIsHidden =
@@ -1976,10 +1988,10 @@ const handleTextMessage = async (message: string) => {
       <div className="flex flex-col items-center gap-2 md:gap-3 w-full">
         <div
           className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 cursor-pointer select-none"
-          onMouseDown={handleMicButtonDown}
-          onMouseUp={handleMicButtonUp}
-          onTouchStart={handleMicButtonDown}
-          onTouchEnd={handleMicButtonUp}
+onMouseDown={(e) => { if (!isMobile) { isRecordingToggle ? handleMicButtonUp() : handleMicButtonDown(e); } }}
+onMouseUp={(e) => { if (!isMobile) e.preventDefault(); }}
+onTouchStart={(e) => { if (isMobile) handleMicButtonDown(e); }}
+onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
         >
           {voiceRecorder.isRecording && (
             <div className="absolute inset-0 rounded-full border-4 border-red-500 animate-ping opacity-40 pointer-events-none z-10" />
@@ -2006,7 +2018,11 @@ const handleTextMessage = async (message: string) => {
 
         {!showStartButton && !(isMaximized && !wakeWordEnabled) && (
           <p className={`text-sm font-medium -mt-6 ${theme === 'dark' ? 'text-white/40' : 'text-gray-400'}`}>
-            {voiceRecorder.isRecording ? 'solte para enviar...' : isTranscribing ? 'transcrevendo...' : 'clique em mim para falar ou'}
+            {voiceRecorder.isRecording
+  ? (isMobile ? 'solte para enviar...' : 'clique novamente para enviar...')
+  : isTranscribing
+  ? 'transcrevendo...'
+  : (isMobile ? 'segure para falar ou' : 'clique para falar ou')}
           </p>
         )}
 
@@ -2087,10 +2103,10 @@ const handleTextMessage = async (message: string) => {
 
             <div className="relative flex items-center justify-center mt-2">
               <button
-                onMouseDown={handleMicButtonDown}
-                onMouseUp={handleMicButtonUp}
-                onTouchStart={handleMicButtonDown}
-                onTouchEnd={handleMicButtonUp}
+onMouseDown={(e) => { if (!isMobile) { isRecordingToggle ? handleMicButtonUp() : handleMicButtonDown(e); } }}
+onMouseUp={(e) => { if (!isMobile) e.preventDefault(); }}
+onTouchStart={(e) => { if (isMobile) handleMicButtonDown(e); }}
+onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
                 disabled={(!permissionGranted && hasMicrophone) || !hasMicrophone || showStartButton || isTranscribing}
                 className={`w-[102px] h-[102px] rounded-full ${getMicButtonColor()} flex items-center justify-center transition-all shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300/50 disabled:opacity-50 select-none`}
                 aria-label="Segurar para falar"

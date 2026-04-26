@@ -55,6 +55,7 @@ export interface SaleModeModalProps {
   onMicUp?: () => void;
   onTextMessage?: (msg: string) => Promise<void>;
   isFullscreen?: boolean;
+  footerHeight?: number;                  // ← altura do footer em px (default 32 = h-8)
   produtoInicial?: ProdutoVenda & { _opcoes_selecionadas?: any[]; _quantidade?: number };
   quantidadeInicial?: number;
   opcoesIniciais?: any[];
@@ -89,6 +90,7 @@ function SaleModeInner({
   onMicUp,
   onTextMessage,
   isFullscreen = false,
+  footerHeight = 32,                      // ← default h-8 do SlugFooter
   produtoInicial,
   quantidadeInicial,
   profile,
@@ -517,7 +519,10 @@ function SaleModeInner({
   // ============================================================
   if (isFullscreen && mounted) {
     const fullscreenContent = (
-      <div className={`fixed inset-0 z-[200] flex flex-col overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
+      <div
+        className={`fixed inset-x-0 top-0 z-[200] flex flex-col overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-white'}`}
+        style={{ bottom: footerHeight }}
+      >
         <SlugHeader
           company={{
             name: companyName,

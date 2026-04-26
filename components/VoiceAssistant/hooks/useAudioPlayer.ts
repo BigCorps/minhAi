@@ -15,9 +15,14 @@ interface UseAudioPlayerResult {
 /**
  * Gerencia reprodução de áudio TTS via /api/voice/tts.
  * Expõe playText() e stopAudioImmediately() para uso no componente principal.
+ *
+ * @param setIsPlayingAudio - setter de estado para controle de UI
+ * @param voiceName - nome da voz Google TTS (ex: 'pt-BR-Neural2-A').
+ *                   Opcional — fallback para masculina padrão na rota.
  */
 export function useAudioPlayer(
-  setIsPlayingAudio: (v: boolean) => void
+  setIsPlayingAudio: (v: boolean) => void,
+  voiceName?: string
 ): UseAudioPlayerResult {
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const feedbackAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -34,10 +39,13 @@ export function useAudioPlayer(
           currentAudioRef.current = null;
         }
 
+        const body: Record<string, string> = { text };
+        if (voiceName) body.voice = voiceName;
+
         const response = await fetch('/api/voice/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text }),
+          body: JSON.stringify(body),
         });
 
         if (!response.ok) throw new Error(`TTS ${response.status}`);

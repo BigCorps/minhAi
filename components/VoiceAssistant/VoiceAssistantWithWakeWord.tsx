@@ -306,45 +306,55 @@ useEffect(() => {
   const faqsRef = useRef<typeof faqs>([]);
   useEffect(() => { faqsRef.current = faqs; }, [faqs]);
 
-  // ── Lógica de Inatividade ────────────────────────────────
-  // onInactivity fica num ref para não recriar a cada render e não
-  // disparar o useEffect do hook (que reiniciaria o timer).
-  const onInactivityRef = useRef(async () => {});
-  useEffect(() => {
-    onInactivityRef.current = async () => {
-      if (activeModal || isSpeaking || isPlayingAudio || isProcessing || showFeatureHighlight) return;
+// ── Lógica de Inatividade ─────────────────────────────────
+const onInactivityRef = useRef(async () => {});
 
-if (inactivityAction === 'offers_panel') {
-  setActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
-  return;
-}
+const { resetTimer: resetInactivityTimer } = useInactivityDetector({
+  timeoutSeconds: inactivityTimeoutSeconds,
+  onInactivity: useCallback(() => onInactivityRef.current(), []),
+  onActivity: useCallback(() => {}, []),
+});
 
-      if (inactivityAction === 'restart') {
-        // Limpa estado e reinicia sessão sem recarregar a página
-        stopEverything();
-        setLastTranscript('');
-        setLastResponse('');
-        setShowLastConversation(false);
-        setSessionId(crypto.randomUUID());
-        resetInactivityTimer();
-        return;
-      }
+console.log('[Inatividade] timeout:', inactivityTimeoutSeconds, '| action:', inactivityAction);
 
-      // 'feature_highlight' — comportamento original
-      const feature = await getRandomActiveFunctionHighlight();
-      if (feature) {
-        setHighlightedFeature(feature);
-        setShowFeatureHighlight(true);
-        setTimeout(() => handleCloseFeatureHighlight(), 10000);
-      }
-    };
-  }); // sem deps → sempre atualizado, mas sem recriar o resetTimer
+// Agora onInactivityRef pode referenciar resetInactivityTimer com segurança
+useEffect(() => {
+  onInactivityRef.current = async () => {
+    if (activeModal || isSpeaking || isPlayingAudio || isProcessing || showFeatureHighlight) return;
 
-  const { resetTimer: resetInactivityTimer } = useInactivityDetector({
-    timeoutSeconds: inactivityTimeoutSeconds,
-    onInactivity: useCallback(() => onInactivityRef.current(), []),
-    onActivity: useCallback(() => {}, []),
-  });
+    if (inactivityAction === 'offers_panel') {
+      setActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
+      return;
+    }
+
+    if (inactivityAction === 'restart') {
+      stopEverything();
+      setLastTranscript('');
+      setLastResponse('');
+      setShowLastConversation(false);
+      setSessionId(crypto.randomUUID());
+      resetInactivityTimer(); // ← agora existe quando este código roda
+      return;
+    }
+
+    // 'feature_highlight' — comportamento original
+    const feature = await getRandomActiveFunctionHighlight();
+    if (feature) {
+      setHighlightedFeature(feature);
+      setShowFeatureHighlight(true);
+      setTimeout(() => handleCloseFeatureHighlight(), 10000);
+    }
+  };
+}); // sem deps — correto, sempre atualiza o ref
+
+// Reinicia o timer quando o timeout carrega do banco
+const prevTimeoutRef = useRef(inactivityTimeoutSeconds);
+useEffect(() => {
+  if (prevTimeoutRef.current !== inactivityTimeoutSeconds) {
+    prevTimeoutRef.current = inactivityTimeoutSeconds;
+    resetInactivityTimer();
+  }
+}, [inactivityTimeoutSeconds, resetInactivityTimer]);
 
   // ── Fase 4: Detector de presença via câmera ──────────────
   usePresenceDetector({

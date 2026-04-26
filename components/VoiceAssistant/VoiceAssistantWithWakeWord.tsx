@@ -30,6 +30,7 @@ import { findMatchingFAQLocal } from './utils/faqUtils';
 import { useInactivityDetector } from '@/hooks/useInactivityDetector';
 import { getRandomActiveFunctionHighlight } from '@/lib/function-highlights';
 import { FeatureHighlightModal } from './FeatureHighlightModal';
+import { usePresenceDetector } from '@/hooks/usePresenceDetector';
 
 // ── Tipos ──────────────────────────────────────────────────
 import {
@@ -159,6 +160,9 @@ export function VoiceAssistantWithWakeWord({
     greeting: companyGreeting,
     avatarType,
     wakeWordEnabled,
+    presenceGreetingEnabled,
+    inactivityTimeoutSeconds,
+    inactivityAction,
   } = useCompanyConfig(companyId, wakeWord, greetingMessage);
   const functionSettings = useFunctionSettings(companyId);
 
@@ -302,13 +306,43 @@ useEffect(() => {
   const faqsRef = useRef<typeof faqs>([]);
   useEffect(() => { faqsRef.current = faqs; }, [faqs]);
 
-  // ── Lógica de Inatividade (5 minutos) ────────────────────
+  // ── Lógica de Inatividade ────────────────────────────────
   // onInactivity fica num ref para não recriar a cada render e não
   // disparar o useEffect do hook (que reiniciaria o timer).
   const onInactivityRef = useRef(async () => {});
   useEffect(() => {
     onInactivityRef.current = async () => {
       if (activeModal || isSpeaking || isPlayingAudio || isProcessing || showFeatureHighlight) return;
+
+      if (inactivityAction === 'offers_panel') {
+        // Verifica se painel_ofertas está habilitado antes de abrir
+        const isEnabled = await checkIfFunctionIsEnabled(companyId, 'painel_ofertas');
+        if (isEnabled) {
+          setActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
+        } else {
+          // Fallback para feature_highlight se painel não estiver habilitado
+          const feature = await getRandomActiveFunctionHighlight();
+          if (feature) {
+            setHighlightedFeature(feature);
+            setShowFeatureHighlight(true);
+            setTimeout(() => handleCloseFeatureHighlight(), 10000);
+          }
+        }
+        return;
+      }
+
+      if (inactivityAction === 'restart') {
+        // Limpa estado e reinicia sessão sem recarregar a página
+        stopEverything();
+        setLastTranscript('');
+        setLastResponse('');
+        setShowLastConversation(false);
+        setSessionId(crypto.randomUUID());
+        resetInactivityTimer();
+        return;
+      }
+
+      // 'feature_highlight' — comportamento original
       const feature = await getRandomActiveFunctionHighlight();
       if (feature) {
         setHighlightedFeature(feature);
@@ -319,9 +353,21 @@ useEffect(() => {
   }); // sem deps → sempre atualizado, mas sem recriar o resetTimer
 
   const { resetTimer: resetInactivityTimer } = useInactivityDetector({
-    timeoutSeconds: 120,
+    timeoutSeconds: inactivityTimeoutSeconds,
     onInactivity: useCallback(() => onInactivityRef.current(), []),
     onActivity: useCallback(() => {}, []),
+  });
+
+  // ── Fase 4: Detector de presença via câmera ──────────────
+  usePresenceDetector({
+    enabled: presenceGreetingEnabled,
+    onPresenceDetected: useCallback(() => {
+      // Só saúda se o assistente estiver completamente ocioso
+      if (isPlayingAudio || isProcessing || isSpeaking || activeModal !== null) return;
+      const greeting = companyGreeting || greetingMessage || 'Olá! Como posso ajudar?';
+      playText(greeting).catch(() => {});
+      resetInactivityTimer();
+    }, [isPlayingAudio, isProcessing, isSpeaking, activeModal, companyGreeting, greetingMessage]),
   });
 
   const handleCloseFeatureHighlight = useCallback(() => {
@@ -1954,8 +2000,8 @@ const handleTextMessage = async (message: string) => {
   if (isProcessing) return 'Processando...';
   const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
   if (!wakeWordEnabled) return maximized
-    ? 'Pressione o orbe para interagir'   // ← modo full
-    : 'Pressione o microfone para interagir';   // ← modo normal
+    ? 'Pressione o orbe para interagir'
+    : 'Pressione o microfone para interagir';
   return primaryWakeWord ? `diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
 };
 
@@ -2129,8 +2175,6 @@ onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
             )}
 
             <div className="text-center w-full mt-4">
-              {/* No modo full sem wake word, a frase grande já é suficiente — esconde o subtexto e o label "clique em mim" */}
-
                 <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                   {getStatusMessage()}
                 </p>

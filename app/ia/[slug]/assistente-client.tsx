@@ -117,10 +117,10 @@ const handleKeyPress = (e: KeyboardEvent) => {
       setIsPortrait(window.innerHeight > window.innerWidth);
     };
 
-    const handleRequestKiosk = () => {
-      handleEnterKioskMode();
-    };
-    window.addEventListener('eai:requestKioskMode', handleRequestKiosk);
+     const handleRequestKiosk = () => {
+       handleEnterKioskMode();
+     };
+     window.addEventListener('eai:requestKioskMode', handleRequestKiosk);
     
     checkMobile();
     checkOrientation();
@@ -128,14 +128,15 @@ const handleKeyPress = (e: KeyboardEvent) => {
     window.addEventListener('resize', checkMobile);
     window.addEventListener('resize', checkOrientation);
     
-    return () => {
-      window.removeEventListener('resize', checkMobile);
-      window.removeEventListener('resize', checkOrientation);
-      window.removeEventListener('eai:requestKioskMode', handleRequestKiosk);
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
-    };
+     return () => {
+       window.removeEventListener('resize', checkMobile);
+       window.removeEventListener('resize', checkOrientation);
+       window.removeEventListener('eai:requestKioskMode', handleRequestKiosk);
+       window.removeEventListener('eai:requestExitKioskMode', handleRequestExitKiosk);  // ← NOVO
+       if (controlsTimeoutRef.current) {
+         clearTimeout(controlsTimeoutRef.current);
+       }
+     };
   }, []);
 
   useEffect(() => {

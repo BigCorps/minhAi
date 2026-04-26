@@ -19,28 +19,37 @@ export function useSwipe({
   const touchStartY = useRef<number>(0);
   const mouseStartX = useRef<number>(0);
   const isDragging = useRef<boolean>(false);
+  const isExcluded = useRef<boolean>(false); // ← novo
 
   useEffect(() => {
-    // Ignorar eventos em áreas específicas
-    const isInExcludedArea = (y: number): boolean => {
-      const viewportHeight = window.innerHeight;
-      // Primeiros 72px (header) e últimos 80px (carrossel)
-      return y < 72 || y > (viewportHeight - 80);
+    const isInExcludedElement = (target: EventTarget | null): boolean => {
+      if (!target) return false;
+      let el = target as HTMLElement;
+      while (el && el !== document.body) {
+        if (el.dataset?.noSwipe !== undefined) return true;
+        el = el.parentElement as HTMLElement;
+      }
+      return false;
     };
+
+    const isInHeader = (y: number): boolean => y < 72;
 
     // ===== TOUCH (Mobile) =====
     const handleTouchStart = (e: TouchEvent) => {
       const touch = e.touches[0];
-      if (isInExcludedArea(touch.clientY)) return;
-      
+      if (isInHeader(touch.clientY) || isInExcludedElement(e.target)) {
+        isExcluded.current = true;
+        return;
+      }
+      isExcluded.current = false;
       touchStartX.current = touch.clientX;
       touchStartY.current = touch.clientY;
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
-      const touch = e.changedTouches[0];
-      if (isInExcludedArea(touchStartY.current)) return;
+      if (isExcluded.current) return;
 
+      const touch = e.changedTouches[0];
       const deltaX = touch.clientX - touchStartX.current;
       const deltaY = Math.abs(touch.clientY - touchStartY.current);
 
@@ -56,17 +65,29 @@ export function useSwipe({
       }
     };
 
+    const handleTouchCancel = () => {
+      isExcluded.current = false;
+      touchStartX.current = 0;
+      touchStartY.current = 0;
+    };
+
     // ===== MOUSE (Desktop) =====
     const handleMouseDown = (e: MouseEvent) => {
-      if (isInExcludedArea(e.clientY)) return;
-      
+      if (isInHeader(e.clientY) || isInExcludedElement(e.target)) {
+        isExcluded.current = true;
+        return;
+      }
+      isExcluded.current = false;
       isDragging.current = true;
       mouseStartX.current = e.clientX;
     };
 
     const handleMouseUp = (e: MouseEvent) => {
-      if (!isDragging.current) return;
-      
+      if (!isDragging.current || isExcluded.current) {
+        isDragging.current = false;
+        return;
+      }
+
       const deltaX = e.clientX - mouseStartX.current;
 
       if (Math.abs(deltaX) > thresholdDesktop) {
@@ -82,11 +103,13 @@ export function useSwipe({
 
     const handleMouseLeave = () => {
       isDragging.current = false;
+      isExcluded.current = false;
     };
 
     // Adicionar listeners
     document.addEventListener('touchstart', handleTouchStart, { passive: false });
     document.addEventListener('touchend', handleTouchEnd, { passive: false });
+    document.addEventListener('touchcancel', handleTouchCancel);
     document.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('mouseleave', handleMouseLeave);
@@ -95,6 +118,7 @@ export function useSwipe({
     return () => {
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchcancel', handleTouchCancel);
       document.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('mouseleave', handleMouseLeave);

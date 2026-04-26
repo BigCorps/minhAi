@@ -64,6 +64,7 @@ export default function EditarAssistentePage({ params }: PageProps) {
       presence_greeting_enabled: formData.get('presence_greeting_enabled') === 'on',
       inactivity_timeout_seconds: isNaN(inactivitySeconds) ? 300 : Math.min(3600, Math.max(30, inactivitySeconds)),
       inactivity_action: formData.get('inactivity_action') as string,
+      tts_voice: formData.get('tts_voice') as string,
     };
 
     try {
@@ -286,6 +287,25 @@ export default function EditarAssistentePage({ params }: PageProps) {
                       defaultChecked={assistant.wake_word_enabled ?? true}
                       className="h-5 w-5 ml-4 shrink-0 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600"
                     />
+                  </div>
+
+                  {/* Voz do Assistente */}
+                  <div>
+                    <label htmlFor="tts_voice" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Voz do Assistente
+                    </label>
+                    <select
+                      id="tts_voice"
+                      name="tts_voice"
+                      defaultValue={assistant.tts_voice ?? 'pt-BR-Neural2-B'}
+                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
+                    >
+                      <option value="pt-BR-Neural2-B">Masculina Neural (padrão)</option>
+                      <option value="pt-BR-Neural2-A">Feminina Neural</option>
+                    </select>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Voz Neural de alta qualidade em português brasileiro.
+                    </p>
                   </div>
                 </div>
               </div>

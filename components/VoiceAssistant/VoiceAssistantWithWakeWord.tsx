@@ -133,8 +133,19 @@ export function VoiceAssistantWithWakeWord({
   const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
 
 useEffect(() => {
-  onModalChange?.(activeModal);
-}, [activeModal]);
+  if (showFeatureHighlight && highlightedFeature) {
+    onModalChange?.({
+      type: 'FeatureHighlightModal',
+      data: {
+        featureName: highlightedFeature.function_name,
+        featureDescription: highlightedFeature.short_description,
+        featureCategory: highlightedFeature.function_category,
+      },
+    });
+  } else {
+    onModalChange?.(activeModal);
+  }
+}, [activeModal, showFeatureHighlight, highlightedFeature]);
 
   // ── Sistema híbrido ───────────────────────────────────────
   const [commandProcessor, setCommandProcessor] = useState<VoiceCommandProcessor | null>(null);

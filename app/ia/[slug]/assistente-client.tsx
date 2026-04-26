@@ -1064,11 +1064,15 @@ const onClose = () => {
       )}
 
       {/* ── SEMPRE MONTADOS — nunca reinicializam ao trocar de modo ── */}
-      {assistantStarted && (
-        <div className={`fixed bottom-8 left-0 right-0 z-[55] transition-all duration-500 ease-in-out ${
-          isModalOpenState ? 'opacity-0 pointer-events-none translate-y-10' : 'opacity-100 translate-y-0'
-        }`}>
-          <CategoryCarousel
+
+{assistantStarted && (
+  <div
+    data-no-swipe  // ← adicionar
+    className={`fixed bottom-8 left-0 right-0 z-[55] transition-all duration-500 ease-in-out ${
+      isModalOpenState ? 'opacity-0 pointer-events-none translate-y-10' : 'opacity-100 translate-y-0'
+    }`}
+  >
+    <CategoryCarousel
             companyId={company.id}
             onFunctionClick={(functionKey) => {
               window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {

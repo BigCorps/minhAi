@@ -1,6 +1,5 @@
 // components/VoiceAssistant/modals/SaleModeModal/ProductGrid.tsx
-// v2 — clique em qualquer parte do card adiciona ao carrinho
-// Usa <img> nativo (não Next.js Image) pois clientes usam URLs de domínios externos variados
+// v3 — categorias centralizadas + scroll horizontal
 
 'use client';
 
@@ -97,61 +96,65 @@ export default function ProductGrid({
 
       {/* Pills de categoria + botão scanner */}
       {(categorias.length > 0 || onOpenBarcodeScanner) && (
-        <div className="flex-shrink-0 flex gap-1.5 flex-wrap items-center">
+        // ── Wrapper externo: centraliza o conteúdo e permite scroll horizontal ──
+        <div className="flex-shrink-0 flex justify-center overflow-x-auto">
+          <div className="flex gap-1.5 items-center flex-nowrap px-1 pb-0.5">
 
-          {/* ── Botão Scanner PDV ── */}
-          {onOpenBarcodeScanner && (
-            <button
-              onClick={onOpenBarcodeScanner}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors border flex-shrink-0 ${
-                isDark
-                  ? 'bg-blue-500/15 text-blue-400 border-blue-500/30 hover:bg-blue-500/25 hover:border-blue-500/50'
-                  : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
-              }`}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 5v14M7 5v14M11 5v14M15 5v4M15 15v4M19 5v4M19 15v4M15 11h4"/>
-              </svg>
-              Cód. Barras
-            </button>
-          )}
+            {/* ── Botão Scanner PDV ── */}
+            {onOpenBarcodeScanner && (
+              <button
+                onClick={onOpenBarcodeScanner}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors border flex-shrink-0 ${
+                  isDark
+                    ? 'bg-blue-500/15 text-blue-400 border-blue-500/30 hover:bg-blue-500/25 hover:border-blue-500/50'
+                    : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
+                }`}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 5v14M7 5v14M11 5v14M15 5v4M15 15v4M19 5v4M19 15v4M15 11h4"/>
+                </svg>
+                Cód. Barras
+              </button>
+            )}
 
-          {/* ── Pill "Todos" ── */}
-          {categorias.length > 0 && (
-            <button
-              onClick={() => setCategoria('')}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                categoria === ''
-                  ? isDark
-                    ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
-                    : 'bg-emerald-100 text-emerald-700 border border-emerald-300'
-                  : isDark
-                    ? 'bg-white/5 text-white/50 border border-white/10 hover:border-white/20'
-                    : 'bg-gray-100 text-gray-500 border border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              Todos
-            </button>
-          )}
+            {/* ── Pill "Todos" ── */}
+            {categorias.length > 0 && (
+              <button
+                onClick={() => setCategoria('')}
+                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  categoria === ''
+                    ? isDark
+                      ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                      : 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                    : isDark
+                      ? 'bg-white/5 text-white/50 border border-white/10 hover:border-white/20'
+                      : 'bg-gray-100 text-gray-500 border border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                Todos
+              </button>
+            )}
 
-          {/* ── Pills de categoria ── */}
-          {categorias.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCategoria(c)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                categoria === c
-                  ? isDark
-                    ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
-                    : 'bg-emerald-100 text-emerald-700 border border-emerald-300'
-                  : isDark
-                    ? 'bg-white/5 text-white/50 border border-white/10 hover:border-white/20'
-                    : 'bg-gray-100 text-gray-500 border border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              {c}
-            </button>
-          ))}
+            {/* ── Pills de categoria ── */}
+            {categorias.map((c) => (
+              <button
+                key={c}
+                onClick={() => setCategoria(c)}
+                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  categoria === c
+                    ? isDark
+                      ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                      : 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                    : isDark
+                      ? 'bg-white/5 text-white/50 border border-white/10 hover:border-white/20'
+                      : 'bg-gray-100 text-gray-500 border border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+
+          </div>
         </div>
       )}
 
@@ -210,7 +213,6 @@ export default function ProductGrid({
               const feedback = feedbacks[produto.id];
 
               return (
-                // ── Card clicável inteiro ──────────────────────────────────
                 <div
                   key={produto.id}
                   onClick={() => !semEstoque && handleAdd(produto)}
@@ -262,7 +264,6 @@ export default function ProductGrid({
                         </span>
                       </div>
                     )}
-                    {/* Flash de feedback no centro da imagem */}
                     {feedback && (
                       <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
                         <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
@@ -288,13 +289,11 @@ export default function ProductGrid({
                         {produto.descricao}
                       </p>
                     )}
-                    {/* Preço em linha própria, sem botão + ao lado */}
                     <span className={`text-[10px] font-bold block ${
                       isDark ? 'text-emerald-400' : 'text-emerald-600'
                     }`}>
                       {formatarPreco(produto.preco_venda)}
                     </span>
-
                     {produto.controla_estoque && produto.estoque_atual > 0 && produto.estoque_atual <= produto.estoque_minimo && (
                       <p className="text-[9px] text-amber-500 mt-0.5 font-medium">
                         ⚠ Últimas {produto.estoque_atual} un.

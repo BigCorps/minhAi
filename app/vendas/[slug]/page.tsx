@@ -12,6 +12,9 @@ import { requestMicrophonePermission } from '@/components/VoiceAssistant/utils/a
 import { usePresenceDetector } from '@/hooks/usePresenceDetector';
 import { useInactivityDetector } from '@/hooks/useInactivityDetector';
 import { getContextualRoute } from '@/lib/routing-utils';
+import { VoiceAssistantWithWakeWord } from '@/components/VoiceAssistant/VoiceAssistantWithWakeWord';
+import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
+import type { ActiveModal } from '@/components/VoiceAssistant/types';
 
 interface VendasPageProps {
   params: Promise<{ slug: string }>;
@@ -36,9 +39,17 @@ export default function VendasPage({ params }: VendasPageProps) {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState(false);
 
+  // ── Modal state — alimentado pelo VoiceAssistant oculto via onModalChange ─
+  const [vendaActiveModal, setVendaActiveModal] = useState<ActiveModal | null>(null);
+
   const voiceRecorder = useVoiceRecorder();
   const { currentAudioRef, playText } = useAudioPlayer(setIsPlayingAudio);
   const companyIdRef = useRef<string | null>(null);
+
+  // Handler do VoiceAssistant oculto — registrado via onTextMessage
+  const textMessageHandlerRef = useRef<
+    ((text: string) => Promise<{ text: string; functionKey?: string } | null>) | null
+  >(null);
 
   // ── Mounted + permissão de microfone ──────────────────────────────────────
   useEffect(() => {
@@ -49,10 +60,10 @@ export default function VendasPage({ params }: VendasPageProps) {
   }, []);
 
   // ── Detector de presença (modo vendas) ────────────────────────────────────
-  // Ativado apenas se presence_greeting_enabled = true no dashboard.
-  // Usa câmera frontal em background — não interfere com câmera do PDV.
   const onPresenceDetected = useCallback(() => {
     if (isPlayingAudio || isProcessing) return;
+    // Fecha painel de ofertas se estiver aberto
+    window.dispatchEvent(new CustomEvent('eai:presenceDetected'));
     const greeting = companyData?.greeting_message || 'Olá! Como posso ajudar você?';
     playText(greeting).catch(() => {});
   }, [isPlayingAudio, isProcessing, companyData?.greeting_message, playText]);
@@ -62,15 +73,21 @@ export default function VendasPage({ params }: VendasPageProps) {
     onPresenceDetected,
   });
 
+  // ── Detector de inatividade (modo vendas) ─────────────────────────────────
   const onInactivityVendas = useCallback(() => {
-  // No modo vendas, inatividade = voltar para o assistente
-  if (slug) router.push(getContextualRoute('ia', slug));
-}, [slug, router]);
+    const action = companyData?.inactivity_action ?? 'restart';
+    if (action === 'offers_panel') {
+      setVendaActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
+    } else {
+      // 'restart' e 'feature_highlight' voltam para o assistente no contexto de vendas
+      if (slug) router.push(getContextualRoute('ia', slug));
+    }
+  }, [companyData?.inactivity_action, companyId, slug, router]);
 
-useInactivityDetector({
-  timeoutSeconds: companyData?.inactivity_timeout_seconds ?? 300,
-  onInactivity: onInactivityVendas,
-});
+  useInactivityDetector({
+    timeoutSeconds: companyData?.inactivity_timeout_seconds ?? 300,
+    onInactivity: onInactivityVendas,
+  });
 
   // ── Await params ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -235,57 +252,27 @@ useInactivityDetector({
     }
   }, [voiceRecorder]);
 
-  // ── handleTextMessage ─────────────────────────────────────────────────────
+  // ── handleTextMessage — delega ao VoiceAssistant oculto ──────────────────
   const handleTextMessage = useCallback(async (message: string) => {
-   if (!message.trim()) return;
-   console.log('[Vendas] handleTextMessage chamado:', message);
-   console.log('[Vendas] textMessageHandlerRef.current:', textMessageHandlerRef.current);
-    const cId = companyIdRef.current;
-    if (!cId) return;
+    if (!message.trim()) return;
+    if (!textMessageHandlerRef.current) return;
 
     setIsProcessing(true);
     try {
-      const formData = new FormData();
-      formData.append('audio', new Blob([message], { type: 'text/plain' }), 'question.txt');
-      formData.append('companyId', cId);
-      formData.append('directQuestion', message);
-      formData.append('saleMode', 'true');
-
-      const response = await fetch('/api/voice/process', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Erro no processamento');
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      currentAudioRef.current = audio;
-      setIsPlayingAudio(true);
-
-      audio.onended = () => {
-        setIsPlayingAudio(false);
-        currentAudioRef.current = null;
-      };
-      audio.onerror = () => {
-        setIsPlayingAudio(false);
-        currentAudioRef.current = null;
-      };
-      audio.play().catch(() => {
-        setIsPlayingAudio(false);
-        currentAudioRef.current = null;
-      });
+      const result = await textMessageHandlerRef.current(message);
+      if (result?.text) {
+        await playText(result.text);
+      }
     } catch {
       // silencioso
     } finally {
       setIsProcessing(false);
     }
-  }, [currentAudioRef]);
+  }, [playText]);
 
-const handleClose = () => {
-  if (slug) router.push(getContextualRoute('ia', slug));
-};
+  const handleClose = () => {
+    if (slug) router.push(getContextualRoute('ia', slug));
+  };
 
   const theme = mounted ? (resolvedTheme as 'dark' | 'light' || 'dark') : 'dark';
 
@@ -312,7 +299,37 @@ const handleClose = () => {
 
   return (
     <div className="relative min-h-screen">
-      {/* SaleModeModal fullscreen — bottom-8 = altura do SlugFooter (h-8 = 32px) */}
+
+      {/* ── VoiceAssistant oculto — processa funções, FAQ, GROQ ─────────────
+          textMode=true: não usa TTS interno, retorna texto para handleTextMessage.
+          onModalChange: expõe activeModal para o VendasPage montar via ActionModals. */}
+      <div className="hidden">
+        <VoiceAssistantWithWakeWord
+          companyId={companyId}
+          companyName={companyData?.name ?? ''}
+          slug={slug}
+          wakeWord={companyData?.wake_word ?? ''}
+          greetingMessage={companyData?.greeting_message ?? ''}
+          theme={theme}
+          isMaximized={false}
+          textMode={true}
+          onTextMessage={(handler) => {
+            textMessageHandlerRef.current = handler;
+          }}
+          onModalChange={(modal) => setVendaActiveModal(modal)}
+        />
+      </div>
+
+      {/* ── ActionModals — renderiza modais abertos pelo VoiceAssistant oculto */}
+      <ActionModals
+        activeModal={vendaActiveModal}
+        onClose={() => setVendaActiveModal(null)}
+        theme={theme}
+        playText={playText}
+      />
+
+      {/* ── SaleModeModal fullscreen ─────────────────────────────────────────
+          bottom-8 = altura do SlugFooter (h-8 = 32px) */}
       <div className={`fixed inset-x-0 top-0 bottom-8 z-[50] ${
         theme === 'dark' ? 'bg-slate-900' : 'bg-gray-50'
       }`}>
@@ -343,7 +360,7 @@ const handleClose = () => {
         />
       </div>
 
-      {/* SlugFooter — fica acima do modal */}
+      {/* ── SlugFooter — fica acima do modal ─────────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 z-[310]">
         <SlugFooter
           theme={theme}

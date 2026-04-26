@@ -11,6 +11,7 @@ interface CompanyConfig {
   greeting: string;
   avatarType: 'face' | 'orb' | null;
   wakeWordEnabled: boolean;
+  ttsVoice: string;
   // ── Fase 4: comportamento do assistente ──
   presenceGreetingEnabled: boolean;
   inactivityTimeoutSeconds: number;
@@ -30,6 +31,7 @@ export function useCompanyConfig(
   const [greeting, setGreeting] = useState(greetingProp || 'Oi! Como posso ajudar?');
   const [avatarType, setAvatarType] = useState<'face' | 'orb' | null>(null);
   const [wakeWordEnabled, setWakeWordEnabled] = useState(true);
+  const [ttsVoice, setTtsVoice] = useState('pt-BR-Neural2-B');
   // Fase 4 — defaults espelham os defaults do banco (Fase 1)
   const [presenceGreetingEnabled, setPresenceGreetingEnabled] = useState(false);
   const [inactivityTimeoutSeconds, setInactivityTimeoutSeconds] = useState(300);
@@ -50,7 +52,8 @@ export function useCompanyConfig(
             wake_word_enabled,
             presence_greeting_enabled,
             inactivity_timeout_seconds,
-            inactivity_action
+            inactivity_action,
+            tts_voice
           `)
           .eq('id', companyId)
           .single();
@@ -68,6 +71,7 @@ export function useCompanyConfig(
           setGreeting(greetingFromDb);
           setAvatarType((data.assistant_avatar_type as 'face' | 'orb') ?? 'face');
           setWakeWordEnabled(data.wake_word_enabled ?? true);
+          setTtsVoice(data.tts_voice ?? 'pt-BR-Neural2-B');
 
           // Fase 4 — novos campos com fallback para defaults do banco
           setPresenceGreetingEnabled(data.presence_greeting_enabled ?? false);
@@ -91,6 +95,7 @@ export function useCompanyConfig(
     greeting,
     avatarType,
     wakeWordEnabled,
+    ttsVoice,
     presenceGreetingEnabled,
     inactivityTimeoutSeconds,
     inactivityAction,

@@ -94,6 +94,7 @@ export function VoiceAssistantWithWakeWord({
   onAssistantStart,
   hideDisabledFunctions = false,
   autoScroll = true,
+  onModalChange,        // ← ADICIONAR AQUI
   onTextMessage,
   textMode = false,
 }: VoiceAssistantProps & {
@@ -130,6 +131,10 @@ export function VoiceAssistantWithWakeWord({
 
   // ── State unificado de modal ──────────────────────────────
   const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
+
+useEffect(() => {
+  onModalChange?.(activeModal);
+}, [activeModal]);
 
   // ── Sistema híbrido ───────────────────────────────────────
   const [commandProcessor, setCommandProcessor] = useState<VoiceCommandProcessor | null>(null);

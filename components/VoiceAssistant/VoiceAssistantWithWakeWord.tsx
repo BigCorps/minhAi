@@ -357,23 +357,30 @@ useEffect(() => {
 }, [inactivityTimeoutSeconds, resetInactivityTimer]);
 
   // ── Fase 4: Detector de presença via câmera ──────────────
-  usePresenceDetector({
-    enabled: presenceGreetingEnabled,
-    onPresenceDetected: useCallback(() => {
-  // Fecha painel de ofertas ou dica de função se estiver aberto
-  if (activeModal?.type === 'PainelOfertasDisplay') {
-    setActiveModal(null);
-  }
-  if (showFeatureHighlight) {
+usePresenceDetector({
+  enabled: presenceGreetingEnabled,
+  onPresenceDetected: useCallback(() => {
+    // Fecha painel de ofertas ou dica de função se estiver aberto
+    if (activeModal?.type === 'PainelOfertasDisplay') {
+      setActiveModal(null);
+    }
+    if (showFeatureHighlight) {
+      setShowFeatureHighlight(false);
+      setHighlightedFeature(null);
+    }
+    // Só saúda se não estiver processando ou falando
+    if (isPlayingAudio || isProcessing || isSpeaking) return;
+    const greeting = companyGreeting || greetingMessage || 'Olá! Como posso ajudar?';
+    playText(greeting).catch(() => {});
+    resetInactivityTimer();
+  }, [isPlayingAudio, isProcessing, isSpeaking, activeModal, showFeatureHighlight, companyGreeting, greetingMessage]),
+});
+
+  const handleCloseFeatureHighlight = useCallback(() => {
     setShowFeatureHighlight(false);
     setHighlightedFeature(null);
-  }
-  // Só saúda se não estiver processando ou falando
-  if (isPlayingAudio || isProcessing || isSpeaking) return;
-  const greeting = companyGreeting || greetingMessage || 'Olá! Como posso ajudar?';
-  playText(greeting).catch(() => {});
-  resetInactivityTimer();
-}, [isPlayingAudio, isProcessing, isSpeaking, activeModal, showFeatureHighlight, companyGreeting, greetingMessage]),
+    resetInactivityTimer();
+  }, [resetInactivityTimer]);
 
   // ── Push-to-talk ───────────────────────────────────────────
   const voiceRecorder = useVoiceRecorder();

@@ -535,44 +535,40 @@ function SaleModeInner({
   // ============================================================
   // MODO FULLSCREEN — Com SlugHeader completo
   // ============================================================
-  if (isFullscreen && mounted) {
-    const fullscreenContent = (
-      <div className={`fixed inset-0 z-[200] flex flex-col overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
-        <SlugHeader
-          company={{
-            name: companyName,
-            logo_url: companyLogo,
-            assistant_role: assistantRole,
-            webapp_enabled: true,
-          }}
-          slug={slug}
-          pageType="vendas"
-          theme={effectiveTheme}
-          overlayMode={false}
-          isKioskMode={false}
-          isWakeLockActive={false}
-          isWakeLockSupported={false}
-          isPortrait={isPortrait}
-          showControls={false}
-          onEnterKioskMode={() => {}}
-          onToggleWakeLock={() => {}}
-          onToggleModoVenda={() => {}}
-          onToggleTheme={handleToggleTheme}
-          onClose={undefined}
-        />
+if (isFullscreen && mounted) {
+  const fullscreenContent = (
+    <div className={`fixed inset-0 z-[200] flex flex-col overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
+      <SlugHeader
+        company={{ name: companyName, logo_url: companyLogo, assistant_role: assistantRole, webapp_enabled: true }}
+        slug={slug}
+        pageType="vendas"
+        theme={effectiveTheme}
+        overlayMode={false}
+        isKioskMode={false}
+        isWakeLockActive={false}
+        isWakeLockSupported={false}
+        isPortrait={isPortrait}
+        showControls={false}
+        onEnterKioskMode={() => {}}
+        onToggleWakeLock={() => {}}
+        onToggleModoVenda={() => {}}
+        onToggleTheme={handleToggleTheme}
+        onClose={undefined}
+      />
 
-        <div className="flex-1 flex overflow-hidden px-3 py-3 pb-32 min-h-0 w-full gap-3">
-          <div className="flex-1 flex flex-col overflow-hidden gap-3">
-            {showCheckout ? checkoutContent : gridAndCart}
-          </div>
-        </div>
-
-        {pdvScanner}
+      {/* ↓ flex-row em landscape, flex-col em portrait. pb-3 no lugar do pb-32 */}
+      <div className={`flex-1 flex overflow-hidden px-3 py-3 pb-3 min-h-0 w-full gap-3 ${
+        isPortrait ? 'flex-col' : 'flex-row'
+      }`}>
+        {showCheckout ? checkoutContent : gridAndCart}
       </div>
-    );
 
-    return createPortal(fullscreenContent, document.body);
-  }
+      {pdvScanner}
+    </div>
+  );
+
+  return createPortal(fullscreenContent, document.body);
+}
 
   // ============================================================
   // MODO NORMAL — Modal dentro do VoiceAssistant (sem header/footer)

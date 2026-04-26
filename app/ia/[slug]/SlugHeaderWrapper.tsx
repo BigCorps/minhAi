@@ -2,7 +2,8 @@
 
 // ============================================================
 // app/ia/[slug]/SlugHeaderWrapper.tsx
-// Adicionado pageType 'cliente' ao tipo aceito
+// FIX: isKioskMode sincronizado via evento em TODOS os modos
+//      onExitKioskMode passado para SlugHeader (botão de saída)
 // ============================================================
 
 import { useState, useEffect } from 'react';
@@ -20,7 +21,7 @@ interface SlugHeaderWrapperProps {
     webapp_enabled?: boolean;
     modo_vendas_enabled?: boolean;
     modo_fila_enabled?: boolean;
-    modo_links_enabled?: boolean;  
+    modo_links_enabled?: boolean;
   };
   slug?: string;
   pageType?: 'ia' | 'vendas' | 'fila' | 'cliente' | 'link';
@@ -64,6 +65,7 @@ export default function SlugHeaderWrapper({
     checkOrientation();
     window.addEventListener('resize', checkOrientation);
 
+    // FIX: escuta a mudança de kiosk independente de qual página está
     const handleKioskChange = (e: CustomEvent) => {
       setIsKioskMode(e.detail?.active ?? false);
     };
@@ -96,8 +98,14 @@ export default function SlugHeaderWrapper({
     }
   };
 
+  // FIX: solicita ENTRADA no kiosk (abre modal de setup de senha)
   const handleEnterKioskMode = () => {
     window.dispatchEvent(new CustomEvent('eai:requestKioskMode'));
+  };
+
+  // FIX: solicita SAÍDA do kiosk (abre modal de verificação de senha)
+  const handleExitKioskMode = () => {
+    window.dispatchEvent(new CustomEvent('eai:requestExitKioskMode'));
   };
 
   const handleToggleModoVenda = () => {
@@ -132,6 +140,7 @@ export default function SlugHeaderWrapper({
         isPortrait={isPortrait}
         showControls={showControls}
         onEnterKioskMode={handleEnterKioskMode}
+        onExitKioskMode={handleExitKioskMode}   {/* FIX: botão de saída sempre disponível */}
         onToggleWakeLock={handleToggleWakeLock}
         onToggleModoVenda={handleToggleModoVenda}
         onToggleTheme={forceTheme ? undefined : handleToggleTheme}

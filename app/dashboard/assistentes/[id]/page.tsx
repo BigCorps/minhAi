@@ -65,6 +65,9 @@ export default function EditarAssistentePage({ params }: PageProps) {
       inactivity_timeout_seconds: isNaN(inactivitySeconds) ? 300 : Math.min(3600, Math.max(30, inactivitySeconds)),
       inactivity_action: formData.get('inactivity_action') as string,
       tts_voice: formData.get('tts_voice') as string,
+      modo_fila_enabled: formData.get('modo_fila_enabled') === 'on',
+      modo_vendas_enabled: formData.get('modo_vendas_enabled') === 'on',
+      modo_links_enabled: formData.get('modo_links_enabled') === 'on',
     };
 
     try {
@@ -300,8 +303,8 @@ export default function EditarAssistentePage({ params }: PageProps) {
                       defaultValue={assistant.tts_voice ?? 'pt-BR-Neural2-B'}
                       className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                     >
-                      <option value="pt-BR-Neural2-B">Masculina Neural (padrão)</option>
-                      <option value="pt-BR-Neural2-A">Feminina Neural</option>
+                      <option value="pt-BR-Neural2-B">Masculino</option>
+                      <option value="pt-BR-Neural2-A">Feminino</option>
                     </select>
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                       Voz Neural de alta qualidade em português brasileiro.
@@ -446,6 +449,89 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                       "Painel de ofertas" requer a função <strong>Painel de Ofertas</strong> habilitada e configurada.
                     </p>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Card: Módulos */}
+              <div className="bg-white/80 dark:bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-white">Módulos</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Ative ou desative os módulos disponíveis no assistente</p>
+                </div>
+                <div className="p-6 space-y-3">
+
+                  {/* Modo Fila */}
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 flex-shrink-0 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <div>
+                        <label htmlFor="modo_fila_enabled" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Modo Fila
+                        </label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Gerenciamento de fila de atendimento
+                        </p>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      id="modo_fila_enabled"
+                      name="modo_fila_enabled"
+                      defaultChecked={assistant.modo_fila_enabled ?? false}
+                      className="h-5 w-5 ml-4 shrink-0 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600"
+                    />
+                  </div>
+
+                  {/* Modo Vendas */}
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 flex-shrink-0 text-emerald-500 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      <div>
+                        <label htmlFor="modo_vendas_enabled" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Modo Vendas
+                        </label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Loja virtual e módulo de pedidos
+                        </p>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      id="modo_vendas_enabled"
+                      name="modo_vendas_enabled"
+                      defaultChecked={assistant.modo_vendas_enabled ?? false}
+                      className="h-5 w-5 ml-4 shrink-0 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600"
+                    />
+                  </div>
+
+                  {/* Link na Bio */}
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 flex-shrink-0 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                      <div>
+                        <label htmlFor="modo_links_enabled" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Link na Bio
+                        </label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Página pública de links da empresa
+                        </p>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      id="modo_links_enabled"
+                      name="modo_links_enabled"
+                      defaultChecked={assistant.modo_links_enabled ?? false}
+                      className="h-5 w-5 ml-4 shrink-0 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600"
+                    />
                   </div>
 
                 </div>

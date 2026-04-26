@@ -314,22 +314,10 @@ useEffect(() => {
     onInactivityRef.current = async () => {
       if (activeModal || isSpeaking || isPlayingAudio || isProcessing || showFeatureHighlight) return;
 
-      if (inactivityAction === 'offers_panel') {
-        // Verifica se painel_ofertas está habilitado antes de abrir
-        const isEnabled = await checkIfFunctionIsEnabled(companyId, 'painel_ofertas');
-        if (isEnabled) {
-          setActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
-        } else {
-          // Fallback para feature_highlight se painel não estiver habilitado
-          const feature = await getRandomActiveFunctionHighlight();
-          if (feature) {
-            setHighlightedFeature(feature);
-            setShowFeatureHighlight(true);
-            setTimeout(() => handleCloseFeatureHighlight(), 10000);
-          }
-        }
-        return;
-      }
+if (inactivityAction === 'offers_panel') {
+  setActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
+  return;
+}
 
       if (inactivityAction === 'restart') {
         // Limpa estado e reinicia sessão sem recarregar a página

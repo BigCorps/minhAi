@@ -127,7 +127,16 @@ useEffect(() => {
       handleTryExitKiosk();
     };
     window.addEventListener('eai:requestExitKioskMode', handleRequestExitKiosk);
-    
+
+    // FIX: SlugHeaderWrapper confirma saída do kiosk (funciona em qualquer página)
+    // Sincroniza o state do AssistenteClient quando a saída foi feita pelo wrapper
+    const handleKioskExitConfirmed = () => {
+      setIsKioskMode(false);
+      setKioskPassword(null);
+      setMode('padrao');
+    };
+    window.addEventListener('eai:kioskExitConfirmed', handleKioskExitConfirmed);
+  
     checkMobile();
     checkOrientation();
     
@@ -139,6 +148,7 @@ useEffect(() => {
       window.removeEventListener('resize', checkOrientation);
       window.removeEventListener('eai:requestKioskMode', handleRequestKiosk);
       window.removeEventListener('eai:requestExitKioskMode', handleRequestExitKiosk); // ← agora existe
+      window.removeEventListener('eai:kioskExitConfirmed', handleKioskExitConfirmed);
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
@@ -364,7 +374,11 @@ const onClose = () => {
     try {
       await document.documentElement.requestFullscreen();
       setIsKioskMode(true);
-      window.dispatchEvent(new CustomEvent('eai:kioskModeChange', { detail: { active: true } }));
+      // FIX: passa a senha no evento para o SlugHeaderWrapper poder verificar
+      // sem depender do AssistenteClient quando estiver em outra página
+      window.dispatchEvent(new CustomEvent('eai:kioskModeChange', {
+        detail: { active: true, password: passwordInput },
+      }));
       setZoomLevel(100);
       setAssistantStarted(false);
       showToastMessage('Modo Kiosk ativado!', 'success');

@@ -103,7 +103,7 @@ export default function BaseModal({
   
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 p-4"
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 p-4"
       onClick={closeOnBackdropClick ? onClose : undefined}
     >
       <div

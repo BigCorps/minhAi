@@ -140,7 +140,7 @@ export default function SlugHeaderWrapper({
         isPortrait={isPortrait}
         showControls={showControls}
         onEnterKioskMode={handleEnterKioskMode}
-        onExitKioskMode={handleExitKioskMode}   {/* FIX: botão de saída sempre disponível */}
+        onExitKioskMode={handleExitKioskMode}
         onToggleWakeLock={handleToggleWakeLock}
         onToggleModoVenda={handleToggleModoVenda}
         onToggleTheme={forceTheme ? undefined : handleToggleTheme}

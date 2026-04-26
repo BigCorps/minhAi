@@ -359,21 +359,19 @@ useEffect(() => {
   // ── Fase 4: Detector de presença via câmera ──────────────
 usePresenceDetector({
   enabled: presenceGreetingEnabled,
-  onPresenceDetected: useCallback(() => {
-    // Fecha painel de ofertas ou dica de função se estiver aberto
-    if (activeModal?.type === 'PainelOfertasDisplay') {
-      setActiveModal(null);
-    }
-    if (showFeatureHighlight) {
-      setShowFeatureHighlight(false);
-      setHighlightedFeature(null);
-    }
-    // Só saúda se não estiver processando ou falando
-    if (isPlayingAudio || isProcessing || isSpeaking) return;
-    const greeting = companyGreeting || greetingMessage || 'Olá! Como posso ajudar?';
-    playText(greeting).catch(() => {});
-    resetInactivityTimer();
-  }, [isPlayingAudio, isProcessing, isSpeaking, activeModal, showFeatureHighlight, companyGreeting, greetingMessage]),
+onPresenceDetected: useCallback(() => {
+  // Fecha painel de ofertas via evento global (evita stale closure no activeModal)
+  window.dispatchEvent(new CustomEvent('eai:presenceDetected'));
+  // Fecha dica de função se estiver aberta
+  if (showFeatureHighlight) {
+    setShowFeatureHighlight(false);
+    setHighlightedFeature(null);
+  }
+  if (isPlayingAudio || isProcessing || isSpeaking) return;
+  const greeting = companyGreeting || greetingMessage || 'Olá! Como posso ajudar?';
+  playText(greeting).catch(() => {});
+  resetInactivityTimer();
+}, [isPlayingAudio, isProcessing, isSpeaking, showFeatureHighlight, companyGreeting, greetingMessage]),
 });
 
   const handleCloseFeatureHighlight = useCallback(() => {

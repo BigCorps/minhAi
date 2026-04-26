@@ -2112,6 +2112,7 @@ onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
     );
   }
 
+  if (textMode) return null;
   // ── RENDER: NORMAL ────────────────────────────────────────
   return (
     <div className="w-full max-w-6xl mx-auto">

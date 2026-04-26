@@ -32,7 +32,7 @@ import { AvatarFace } from '@/components/AvatarFace';
 import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
 import { listarProdutos, listarCategorias } from '@/lib/produtos-venda';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
-import SlugHeader from '@/components/slug/SlugHeader';
+import SlugHeaderWrapper from '@/app/ia/[slug]/SlugHeaderWrapper';  // FIX: usa wrapper com kiosk/wakelock
 
 export interface SaleModeModalProps {
   companyId: string;
@@ -523,27 +523,20 @@ function SaleModeInner({
         className={`fixed inset-x-0 top-0 z-[200] flex flex-col overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-white'}`}
         style={{ bottom: footerHeight }}
       >
-        <SlugHeader
+        {/* FIX: SlugHeaderWrapper — kiosk, wake lock e navegação funcionam no modo vendas */}
+        <SlugHeaderWrapper
           company={{
+            id: companyId,
             name: companyName,
             logo_url: companyLogo,
             assistant_role: assistantRole,
             webapp_enabled: true,
+            modo_vendas_enabled: modo_vendas_enabled,
+            modo_fila_enabled: modo_fila_enabled,
           }}
           slug={slug}
           pageType="vendas"
-          theme={effectiveTheme}
           overlayMode={false}
-          isKioskMode={false}
-          isWakeLockActive={false}
-          isWakeLockSupported={false}
-          isPortrait={isPortrait}
-          showControls={false}
-          onEnterKioskMode={() => {}}
-          onToggleWakeLock={() => {}}
-          onToggleModoVenda={() => {}}
-          onToggleTheme={handleToggleTheme}
-          onClose={undefined}
         />
 
         {/* ── Fix v11: flex-row em landscape, flex-col em portrait. pb-3 no lugar do pb-32 ── */}

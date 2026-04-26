@@ -9,6 +9,7 @@ import SlugFooter from '@/components/slug/SlugFooter';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { useAudioPlayer } from '@/components/VoiceAssistant/hooks/useAudioPlayer';
 import { requestMicrophonePermission } from '@/components/VoiceAssistant/utils/audioUtils';
+import { usePresenceDetector } from '@/hooks/usePresenceDetector';
 
 interface VendasPageProps {
   params: Promise<{ slug: string }>;
@@ -37,14 +38,27 @@ export default function VendasPage({ params }: VendasPageProps) {
   const { currentAudioRef, playText } = useAudioPlayer(setIsPlayingAudio);
   const companyIdRef = useRef<string | null>(null);
 
-  // ── Mounted ───────────────────────────────────────────────────────────────
+  // ── Mounted + permissão de microfone ──────────────────────────────────────
   useEffect(() => {
     setMounted(true);
-    // Pedir permissão de microfone ao montar
     requestMicrophonePermission().then((result) => {
       setPermissionGranted(result.granted);
     });
   }, []);
+
+  // ── Detector de presença (modo vendas) ────────────────────────────────────
+  // Ativado apenas se presence_greeting_enabled = true no dashboard.
+  // Usa câmera frontal em background — não interfere com câmera do PDV.
+  const onPresenceDetected = useCallback(() => {
+    if (isPlayingAudio || isProcessing) return;
+    const greeting = companyData?.greeting_message || 'Olá! Como posso ajudar você?';
+    playText(greeting).catch(() => {});
+  }, [isPlayingAudio, isProcessing, companyData?.greeting_message, playText]);
+
+  usePresenceDetector({
+    enabled: companyData?.presence_greeting_enabled ?? false,
+    onPresenceDetected,
+  });
 
   // ── Await params ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -165,7 +179,6 @@ export default function VendasPage({ params }: VendasPageProps) {
 
   // ── Handlers de microfone ─────────────────────────────────────────────────
   const handleMicDown = useCallback(async () => {
-    // Se estiver tocando áudio, para
     if (isPlayingAudio) {
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
@@ -208,9 +221,9 @@ export default function VendasPage({ params }: VendasPageProps) {
     } finally {
       setIsTranscribing(false);
     }
-  }, [voiceRecorder]); // handleTextMessage adicionado abaixo via ref
+  }, [voiceRecorder]);
 
-  // ── handleTextMessage: envia texto para o backend de voz ──────────────────
+  // ── handleTextMessage ─────────────────────────────────────────────────────
   const handleTextMessage = useCallback(async (message: string) => {
     if (!message.trim()) return;
     const cId = companyIdRef.current;
@@ -295,18 +308,17 @@ export default function VendasPage({ params }: VendasPageProps) {
           companyName={companyData?.name}
           companyLogo={companyData?.logo_url}
           assistantRole={companyData?.assistant_role}
-          avatarType={companyData?.assistant_avatar_type}   // ← 'face' | 'orb'
+          avatarType={companyData?.assistant_avatar_type}
           modo_vendas_enabled={companyData?.modo_vendas_enabled ?? true}
           modo_fila_enabled={companyData?.modo_fila_enabled ?? false}
           isFullscreen={true}
-          footerHeight={32}               // ← h-8 do SlugFooter = 32px
+          footerHeight={32}
           onClose={handleClose}
           theme={theme}
-          playText={playText}                     // ← TTS real via useAudioPlayer
+          playText={playText}
           produtoInicial={produtoInicial}
           quantidadeInicial={quantidadeInicial}
           opcoesIniciais={opcoesIniciais}
-          // ── Props de voz conectadas ──────────────────────────
           isListening={isListening}
           isProcessing={isProcessing}
           isPlayingAudio={isPlayingAudio}

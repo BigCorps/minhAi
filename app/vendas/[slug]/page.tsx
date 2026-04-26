@@ -14,6 +14,7 @@ import { getContextualRoute } from '@/lib/routing-utils';
 import { VoiceAssistantWithWakeWord } from '@/components/VoiceAssistant/VoiceAssistantWithWakeWord';
 import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
 import type { ActiveModal } from '@/components/VoiceAssistant/types';
+import { FeatureHighlightModal } from '@/components/VoiceAssistant/FeatureHighlightModal';
 
 interface VendasPageProps {
   params: Promise<{ slug: string }>;
@@ -312,6 +313,17 @@ export default function VendasPage({ params }: VendasPageProps) {
         theme={theme}
         playText={playText}
       />
+
+{vendaActiveModal?.type === 'FeatureHighlightModal' && (
+  <FeatureHighlightModal
+    isOpen={true}
+    onClose={() => setVendaActiveModal(null)}
+    featureName={vendaActiveModal.data.featureName}
+    featureDescription={vendaActiveModal.data.featureDescription}
+    featureCategory={vendaActiveModal.data.featureCategory}
+    theme={theme}
+  />
+)}
 
       {/* ── SaleModeModal fullscreen ─────────────────────────────────────────
           bottom-8 = altura do SlugFooter (h-8 = 32px) */}

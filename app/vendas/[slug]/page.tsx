@@ -6,7 +6,6 @@ import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase-browser';
 import SaleModeModal from '@/components/VoiceAssistant/modals/SaleModeModal';
 import SlugFooter from '@/components/slug/SlugFooter';
-import CategoryCarousel from '@/components/assistant/CategoryCarousel';
 
 interface VendasPageProps {
   params: Promise<{ slug: string }>;
@@ -44,7 +43,7 @@ export default function VendasPage({ params }: VendasPageProps) {
 
     async function fetchCompany() {
       const supabase = createClient();
-      
+
       const { data, error } = await supabase
         .from('companies')
         .select('*')
@@ -76,10 +75,9 @@ export default function VendasPage({ params }: VendasPageProps) {
 
     if (!produtoId) return;
 
-    // Buscar dados do produto
     async function fetchProduto() {
       const supabase = createClient();
-      
+
       const { data: produto, error } = await supabase
         .from('produtos_venda')
         .select('*')
@@ -94,18 +92,15 @@ export default function VendasPage({ params }: VendasPageProps) {
 
       setProdutoInicial(produto);
       setQuantidadeInicial(quantidade ? parseInt(quantidade) : 1);
-      
-      // Parse opções se existirem
+
       if (opcoesJson) {
         try {
-          const opcoes = JSON.parse(opcoesJson);
-          setOpcoesIniciais(opcoes);
+          setOpcoesIniciais(JSON.parse(opcoesJson));
         } catch (e) {
           console.error('Erro ao parsear opções:', e);
         }
       }
 
-      // Limpar query params da URL (opcional, para ficar clean)
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, '', cleanUrl);
     }
@@ -114,50 +109,45 @@ export default function VendasPage({ params }: VendasPageProps) {
   }, [companyId]);
 
   // Detectar múltiplos itens via query param (fazer_pedido)
-useEffect(() => {
-  if (!companyId || typeof window === 'undefined') return;
+  useEffect(() => {
+    if (!companyId || typeof window === 'undefined') return;
 
-  const params = new URLSearchParams(window.location.search);
-  const itensJson = params.get('itens');
+    const params = new URLSearchParams(window.location.search);
+    const itensJson = params.get('itens');
 
-  if (!itensJson) return;
+    if (!itensJson) return;
 
-  async function buscarItens() {
-    try {
-      const itensBrutos = JSON.parse(itensJson);
-      const { buscarProdutoPorNome } = await import('@/lib/produtos-venda');
-      
-      const itensResolvidos: { produto: any; quantidade: number }[] = [];
-      
-      for (const item of itensBrutos) {
-        const produtos = await buscarProdutoPorNome(companyId, item.nome);
-        if (produtos.length > 0) {
-          itensResolvidos.push({ 
-            produto: produtos[0], 
-            quantidade: item.quantidade 
-          });
+    async function buscarItens() {
+      try {
+        const itensBrutos = JSON.parse(itensJson);
+        const { buscarProdutoPorNome } = await import('@/lib/produtos-venda');
+
+        const itensResolvidos: { produto: any; quantidade: number }[] = [];
+
+        for (const item of itensBrutos) {
+          const produtos = await buscarProdutoPorNome(companyId, item.nome);
+          if (produtos.length > 0) {
+            itensResolvidos.push({
+              produto: produtos[0],
+              quantidade: item.quantidade,
+            });
+          }
         }
-      }
 
-      if (itensResolvidos.length > 0) {
-        // Primeiro item vira produtoInicial
-        setProdutoInicial(itensResolvidos[0].produto);
-        setQuantidadeInicial(itensResolvidos[0].quantidade);
-        
-        // Itens adicionais ficam em state separado (para passar ao modal)
-        // Você pode criar um state adicional se quiser adicionar todos de vez
-      }
+        if (itensResolvidos.length > 0) {
+          setProdutoInicial(itensResolvidos[0].produto);
+          setQuantidadeInicial(itensResolvidos[0].quantidade);
+        }
 
-      // Limpar query params
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, '', cleanUrl);
-    } catch (e) {
-      console.error('Erro ao buscar itens:', e);
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
+      } catch (e) {
+        console.error('Erro ao buscar itens:', e);
+      }
     }
-  }
 
-  buscarItens();
-}, [companyId]);
+    buscarItens();
+  }, [companyId]);
 
   const handleClose = () => {
     if (slug) {
@@ -169,10 +159,8 @@ useEffect(() => {
     console.log('TTS:', text);
   };
 
-  // Tema resolvido
   const theme = mounted ? (resolvedTheme as 'dark' | 'light' || 'dark') : 'dark';
 
-  // Loading state
   if (loading || !slug || !mounted) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${
@@ -180,13 +168,11 @@ useEffect(() => {
       }`}>
         <div className="text-center">
           <div className={`w-16 h-16 border-4 rounded-full animate-spin mx-auto mb-4 ${
-            theme === 'dark' 
-              ? 'border-blue-500/30 border-t-blue-500' 
+            theme === 'dark'
+              ? 'border-blue-500/30 border-t-blue-500'
               : 'border-blue-600/30 border-t-blue-600'
-          }`}></div>
-          <div className={`text-lg ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
+          }`} />
+          <div className={`text-lg ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             Carregando...
           </div>
         </div>
@@ -194,13 +180,11 @@ useEffect(() => {
     );
   }
 
-  if (!companyId) {
-    return null;
-  }
+  if (!companyId) return null;
 
   return (
     <div className="relative min-h-screen">
-      {/* Modal - z-[50] para ficar abaixo do carousel */}
+      {/* SaleModeModal fullscreen — ocupa tudo, inclusive o espaço do footer */}
       <div className={`fixed inset-0 z-[50] ${
         theme === 'dark' ? 'bg-slate-900' : 'bg-gray-50'
       }`}>
@@ -222,24 +206,7 @@ useEffect(() => {
         />
       </div>
 
-      {/* CategoryCarousel - z-[300] para ficar acima de tudo */}
-      <div className="fixed bottom-8 left-0 right-0 z-[300] pointer-events-none">
-        <div className="pointer-events-auto">
-          <CategoryCarousel
-            companyId={companyId}
-            onFunctionClick={(functionKey) => {
-              window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
-                detail: { functionKey }
-              }));
-            }}
-            theme={theme}
-            hideDisabledFunctions={companyData?.hide_disabled_functions_carousel}
-            autoScroll={companyData?.carousel_auto_scroll}
-          />
-        </div>
-      </div>
-
-      {/* SlugFooter - z-[310] para ficar no topo */}
+      {/* SlugFooter — mantido, fica acima do modal */}
       <div className="fixed bottom-0 left-0 right-0 z-[310]">
         <SlugFooter
           theme={theme}

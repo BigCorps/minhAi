@@ -237,7 +237,9 @@ useInactivityDetector({
 
   // ── handleTextMessage ─────────────────────────────────────────────────────
   const handleTextMessage = useCallback(async (message: string) => {
-    if (!message.trim()) return;
+   if (!message.trim()) return;
+   console.log('[Vendas] handleTextMessage chamado:', message);
+   console.log('[Vendas] textMessageHandlerRef.current:', textMessageHandlerRef.current);
     const cId = companyIdRef.current;
     if (!cId) return;
 

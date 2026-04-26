@@ -201,7 +201,7 @@ export default function PainelOfertasDisplay({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black flex items-center justify-center cursor-none"
+      className="fixed inset-0 z-[300] bg-black flex items-center justify-center cursor-none"
       onClick={showControls}
       onMouseMove={showControls}
     >

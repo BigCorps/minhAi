@@ -255,6 +255,7 @@ return (
       {activeCategory && (
         <div
           ref={panelRef}
+          data-no-swipe
           className="z-[100]"
           style={getPanelPosition()}
         >

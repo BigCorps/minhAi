@@ -1,4 +1,4 @@
-// components/VoiceAssistant/modals/SaleModeModal.tsx — v10
+// components/VoiceAssistant/modals/SaleModeModal.tsx — v11
 //
 // VERSÃO HÍBRIDA: Suporta dois modos de renderização
 //
@@ -10,15 +10,12 @@
 // isFullscreen=true → Tela cheia via portal
 //   - fixed inset-0 z-[200] via createPortal
 //   - Com SlugHeader completo (pageType='vendas')
-//   - Com footer (contador)
 //   - Usado na página /vendas/[slug]
 //
-// Novidades v10 (merge v8 + v9):
-//   - Scanner de código de barras PDV (BarcodePdvModal) em ambos os modos
-//   - Cards colapsáveis em portrait (portraitExpanded)
-//   - Layout portrait melhorado (sem altura fixa h-[200px])
-//   - avatarNode / avatarLabel / gridAndCart / checkoutContent extraídos (sem duplicação)
-//   - Escape key respeita showPdvScanner
+// Novidades v11:
+//   - Prop avatarType passada para todos os AvatarFace (orbe vs avatar)
+//   - Fix layout fullscreen: flex-row/flex-col condicional por isPortrait
+//   - pb-32 → pb-3 (remove espaço do carrossel removido)
 
 'use client';
 
@@ -43,6 +40,7 @@ export interface SaleModeModalProps {
   companyName?: string;
   companyLogo?: string | null;
   assistantRole?: string;
+  avatarType?: string;                    // ← NOVO: orbe vs avatar
   modo_vendas_enabled?: boolean;
   modo_fila_enabled?: boolean;
   theme: 'dark' | 'light';
@@ -76,6 +74,7 @@ function SaleModeInner({
   companyName = 'Modo Vendas',
   companyLogo,
   assistantRole,
+  avatarType,                             // ← NOVO
   modo_vendas_enabled = true,
   modo_fila_enabled = false,
   theme,
@@ -123,7 +122,6 @@ function SaleModeInner({
   }, [addItem]);
 
   // ── Cards colapsáveis em portrait (mobile) ───────────────────────────────
-  // null = ambos expandidos; 'avatar' | 'cart' = apenas um expandido
   const [portraitExpanded, setPortraitExpanded] = useState<'avatar' | 'cart' | null>(null);
 
   useEffect(() => {
@@ -218,6 +216,22 @@ function SaleModeInner({
     setShowCheckout(true);
   }, [totalItens]);
 
+  // ── Prop compartilhada para todos os AvatarFace ──────────────────────────
+  // Centraliza as props fixas para não repetir em cada instância
+  const avatarFaceProps = {
+    isListening,
+    isSpeaking: isPlayingAudio,
+    isProcessing: isProcessing || isTranscribing,
+    theme: effectiveTheme,
+    avatarType,                           // ← NOVO: orbe vs avatar
+    qrCodeData: null,
+    pixConfirmationData: null,
+    onCloseQRCode: () => {},
+    onCopyQRCode: () => {},
+    onConfirmPix: () => {},
+    onCancelPix: () => {},
+  } as const;
+
   // ── Avatar node (reutilizado nos dois layouts) ───────────────────────────
   const avatarNode = (
     <div
@@ -233,18 +247,7 @@ function SaleModeInner({
       )}
       <div className="w-full h-full overflow-hidden rounded-full">
         <div style={{ transform: 'scale(0.417)', transformOrigin: 'top left', width: 192, height: 192, pointerEvents: 'none' }}>
-          <AvatarFace
-            isListening={isListening}
-            isSpeaking={isPlayingAudio}
-            isProcessing={isProcessing || isTranscribing}
-            theme={effectiveTheme}
-            qrCodeData={null}
-            pixConfirmationData={null}
-            onCloseQRCode={() => {}}
-            onCopyQRCode={() => {}}
-            onConfirmPix={() => {}}
-            onCancelPix={() => {}}
-          />
+          <AvatarFace {...avatarFaceProps} />
         </div>
       </div>
     </div>
@@ -293,18 +296,7 @@ function SaleModeInner({
             <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 relative">
               {isListening && <div className="absolute inset-0 rounded-full border border-red-500 animate-ping opacity-40 pointer-events-none" />}
               <div style={{ transform: 'scale(0.146)', transformOrigin: 'top left', width: 192, height: 192, pointerEvents: 'none' }}>
-                <AvatarFace
-                  isListening={isListening}
-                  isSpeaking={isPlayingAudio}
-                  isProcessing={isProcessing || isTranscribing}
-                  theme={effectiveTheme}
-                  qrCodeData={null}
-                  pixConfirmationData={null}
-                  onCloseQRCode={() => {}}
-                  onCopyQRCode={() => {}}
-                  onConfirmPix={() => {}}
-                  onCancelPix={() => {}}
-                />
+                <AvatarFace {...avatarFaceProps} />
               </div>
             </div>
             {portraitExpanded !== 'cart' && (
@@ -323,7 +315,6 @@ function SaleModeInner({
           {/* Conteúdo expandido do avatar */}
           {portraitExpanded === 'avatar' && (
             <div className="flex flex-col items-center gap-2 px-3 pb-3">
-              {/* Avatar centralizado */}
               <div className="flex items-center justify-center w-full">
                 <div
                   className="relative cursor-pointer select-none"
@@ -338,18 +329,7 @@ function SaleModeInner({
                   )}
                   <div className="w-full h-full overflow-hidden rounded-full">
                     <div style={{ transform: 'scale(0.417)', transformOrigin: 'top left', width: 192, height: 192, pointerEvents: 'none' }}>
-                      <AvatarFace
-                        isListening={isListening}
-                        isSpeaking={isPlayingAudio}
-                        isProcessing={isProcessing || isTranscribing}
-                        theme={effectiveTheme}
-                        qrCodeData={null}
-                        pixConfirmationData={null}
-                        onCloseQRCode={() => {}}
-                        onCopyQRCode={() => {}}
-                        onConfirmPix={() => {}}
-                        onCancelPix={() => {}}
-                      />
+                      <AvatarFace {...avatarFaceProps} />
                     </div>
                   </div>
                 </div>
@@ -521,7 +501,7 @@ function SaleModeInner({
     </div>
   );
 
-  // ── Scanner PDV (compartilhado pelos dois modos) ─────────────────────────
+  // ── Scanner PDV ──────────────────────────────────────────────────────────
   const pdvScanner = showPdvScanner && playText ? (
     <BarcodePdvModal
       companyId={companyId}
@@ -535,40 +515,45 @@ function SaleModeInner({
   // ============================================================
   // MODO FULLSCREEN — Com SlugHeader completo
   // ============================================================
-if (isFullscreen && mounted) {
-  const fullscreenContent = (
-    <div className={`fixed inset-0 z-[200] flex flex-col overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
-      <SlugHeader
-        company={{ name: companyName, logo_url: companyLogo, assistant_role: assistantRole, webapp_enabled: true }}
-        slug={slug}
-        pageType="vendas"
-        theme={effectiveTheme}
-        overlayMode={false}
-        isKioskMode={false}
-        isWakeLockActive={false}
-        isWakeLockSupported={false}
-        isPortrait={isPortrait}
-        showControls={false}
-        onEnterKioskMode={() => {}}
-        onToggleWakeLock={() => {}}
-        onToggleModoVenda={() => {}}
-        onToggleTheme={handleToggleTheme}
-        onClose={undefined}
-      />
+  if (isFullscreen && mounted) {
+    const fullscreenContent = (
+      <div className={`fixed inset-0 z-[200] flex flex-col overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
+        <SlugHeader
+          company={{
+            name: companyName,
+            logo_url: companyLogo,
+            assistant_role: assistantRole,
+            webapp_enabled: true,
+          }}
+          slug={slug}
+          pageType="vendas"
+          theme={effectiveTheme}
+          overlayMode={false}
+          isKioskMode={false}
+          isWakeLockActive={false}
+          isWakeLockSupported={false}
+          isPortrait={isPortrait}
+          showControls={false}
+          onEnterKioskMode={() => {}}
+          onToggleWakeLock={() => {}}
+          onToggleModoVenda={() => {}}
+          onToggleTheme={handleToggleTheme}
+          onClose={undefined}
+        />
 
-      {/* ↓ flex-row em landscape, flex-col em portrait. pb-3 no lugar do pb-32 */}
-      <div className={`flex-1 flex overflow-hidden px-3 py-3 pb-3 min-h-0 w-full gap-3 ${
-        isPortrait ? 'flex-col' : 'flex-row'
-      }`}>
-        {showCheckout ? checkoutContent : gridAndCart}
+        {/* ── Fix v11: flex-row em landscape, flex-col em portrait. pb-3 no lugar do pb-32 ── */}
+        <div className={`flex-1 flex overflow-hidden px-3 py-3 pb-3 min-h-0 w-full gap-3 ${
+          isPortrait ? 'flex-col' : 'flex-row'
+        }`}>
+          {showCheckout ? checkoutContent : gridAndCart}
+        </div>
+
+        {pdvScanner}
       </div>
+    );
 
-      {pdvScanner}
-    </div>
-  );
-
-  return createPortal(fullscreenContent, document.body);
-}
+    return createPortal(fullscreenContent, document.body);
+  }
 
   // ============================================================
   // MODO NORMAL — Modal dentro do VoiceAssistant (sem header/footer)

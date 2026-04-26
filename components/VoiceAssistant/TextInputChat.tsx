@@ -68,7 +68,7 @@ export default function TextInputChat({
   const isDisabled = isProcessing || isSending || disabled;
 
   return (
-    <form onSubmit={handleSubmit} className="w-full">
+    <form onSubmit={handleSubmit} className="w-full" data-no-swipe>
       <div className={`flex items-center gap-1.5 rounded-xl border transition-all ${
         compact ? 'p-1.5' : 'p-3'
       } ${

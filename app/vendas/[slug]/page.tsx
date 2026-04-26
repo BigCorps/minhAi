@@ -11,6 +11,7 @@ import { useAudioPlayer } from '@/components/VoiceAssistant/hooks/useAudioPlayer
 import { requestMicrophonePermission } from '@/components/VoiceAssistant/utils/audioUtils';
 import { usePresenceDetector } from '@/hooks/usePresenceDetector';
 import { useInactivityDetector } from '@/hooks/useInactivityDetector';
+import { getContextualRoute } from '@/lib/routing-utils';
 
 interface VendasPageProps {
   params: Promise<{ slug: string }>;
@@ -63,7 +64,7 @@ export default function VendasPage({ params }: VendasPageProps) {
 
   const onInactivityVendas = useCallback(() => {
   // No modo vendas, inatividade = voltar para o assistente
-  if (slug) router.push(`/ia/${slug}`);
+  if (slug) router.push(getContextualRoute('ia', slug));
 }, [slug, router]);
 
 useInactivityDetector({
@@ -280,9 +281,9 @@ useInactivityDetector({
     }
   }, [currentAudioRef]);
 
-  const handleClose = () => {
-    if (slug) router.push(`/ia/${slug}`);
-  };
+const handleClose = () => {
+  if (slug) router.push(getContextualRoute('ia', slug));
+};
 
   const theme = mounted ? (resolvedTheme as 'dark' | 'light' || 'dark') : 'dark';
 

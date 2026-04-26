@@ -34,6 +34,8 @@ interface SlugHeaderProps {
   isPortrait?: boolean;
   showControls?: boolean;
   onEnterKioskMode?: () => void;
+  /** NOVO: chamado quando o usuário quer SAIR do kiosk (abre overlay de senha) */
+  onExitKioskMode?: () => void;
   onToggleWakeLock?: () => void;
   onToggleModoVenda?: () => void;
   onToggleTheme?: () => void;
@@ -52,6 +54,7 @@ export default function SlugHeader({
   isPortrait = false,
   showControls = false,
   onEnterKioskMode,
+  onExitKioskMode,
   onToggleWakeLock,
   onToggleModoVenda,
   onToggleTheme,
@@ -59,16 +62,13 @@ export default function SlugHeader({
 }: SlugHeaderProps) {
   const router = useRouter();
 
-  // ── Profile: lê do hook + re-sincroniza ao ouvir eai:profileLogin/Logout ──
   const { profile: hookProfile } = useProfile(slug ?? '');
   const [profile, setProfile] = useState(hookProfile);
 
-  // Sincroniza quando o hook resolve (após Edge Function responder)
   useEffect(() => {
     setProfile(hookProfile);
   }, [hookProfile]);
 
-  // ✅ FIX: escuta eventos de login/logout para atualizar o avatar sem refresh
   useEffect(() => {
     const handleLogin = (e: CustomEvent) => {
       setProfile(e.detail ?? null);
@@ -89,16 +89,12 @@ export default function SlugHeader({
   const isLoggedIn = !!profile;
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  // ── Visibilidade dos botões de navegação ──────────────────
   const showAssistenteButton = pageType !== 'ia';
   const showVendasButton     = company.modo_vendas_enabled === true && pageType !== 'vendas';
   const showFilaButton       = company.modo_fila_enabled   === true && pageType !== 'fila';
-  // Botão cliente: se logado mostra avatar (sempre), se não logado mostra ícone user
-  // Na própria página /cliente não mostra (pois o logout está no dashboard)
   const showClienteButton    = pageType !== 'cliente';
   const showLinksButton      = company.modo_links_enabled === true && pageType !== 'link'; 
 
-  // ── Handlers ─────────────────────────────────────────────
   const handleNavigateToIA     = () => navigateContextual(router, 'ia',      slug);
   const handleNavigateToVendas = () => navigateContextual(router, 'vendas',  slug);
   const handleNavigateToFila   = () => navigateContextual(router, 'fila',    slug);
@@ -115,7 +111,6 @@ export default function SlugHeader({
   const getInitials = (name: string) =>
     name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
-  // ── Estilos ───────────────────────────────────────────────
   const icon       = overlayMode ? 'w-4 h-4' : 'w-5 h-5';
   const iconMobile = 'w-4 h-4';
 
@@ -146,7 +141,53 @@ export default function SlugHeader({
           : 'bg-black/5 border-black/10 text-black hover:bg-emerald-50 hover:border-emerald-300'
       }`;
 
-  // ── Badge verificado ──────────────────────────────────────
+  // ── Botão Kiosk helpers ───────────────────────────────────
+  const kioskEnterBtn = (size: 'normal' | 'overlay' | 'mobile') => {
+    if (size === 'overlay') {
+      return `p-2 rounded-full transition-all active:scale-95 ${
+        theme === 'dark'
+          ? 'bg-white/10 hover:bg-white/20 text-white'
+          : 'bg-black/10 hover:bg-black/20 text-black'
+      }`;
+    }
+    if (size === 'mobile') {
+      return `p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
+        theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
+      }`;
+    }
+    return btn();
+  };
+
+  const kioskExitBtn = (size: 'normal' | 'overlay' | 'mobile') => {
+    const ring = 'ring-2 ring-red-500/60';
+    if (size === 'overlay') {
+      return `p-2 rounded-full transition-all active:scale-95 ${ring} ${
+        theme === 'dark'
+          ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+          : 'bg-red-50 text-red-600 hover:bg-red-100'
+      }`;
+    }
+    return `p-2 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${ring} ${
+      theme === 'dark'
+        ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
+        : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+    }`;
+  };
+
+  const KioskSVGEnter = ({ sz }: { sz: string }) => (
+    <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+    </svg>
+  );
+
+  const KioskSVGExit = ({ sz }: { sz: string }) => (
+    <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+    </svg>
+  );
+
   const VerifiedBadge = ({ size = 'md' }: { size?: 'sm' | 'md' }) => {
     if (!company.webapp_enabled) return null;
     const wh     = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
@@ -164,14 +205,12 @@ export default function SlugHeader({
     );
   };
 
-  // ── Botões de navegação ───────────────────────────────────
   const NavigationButtons = ({ iconSize }: { iconSize?: string } = {}) => {
     const sz = iconSize ?? icon;
     if (!slug) return null;
 
     return (
       <>
-        {/* Assistente */}
         {showAssistenteButton && (
           <button onClick={handleNavigateToIA} className={btn()} title="Ir para Assistente">
             <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,7 +220,6 @@ export default function SlugHeader({
           </button>
         )}
 
-        {/* Vendas */}
         {showVendasButton && (
           <button onClick={handleNavigateToVendas} className={btn()} title="Ir para Vendas">
             <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,7 +229,6 @@ export default function SlugHeader({
           </button>
         )}
 
-        {/* Fila */}
         {showFilaButton && (
           <button onClick={handleNavigateToFila} className={btn()} title="Ir para Fila de Atendimento">
             <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,7 +238,6 @@ export default function SlugHeader({
           </button>
         )}
 
-        {/* Links */}
         {showLinksButton && (
           <button onClick={handleNavigateToLinks} className={btn()} title="Página de Links">
             <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,7 +247,6 @@ export default function SlugHeader({
           </button>
         )}
 
-        {/* Cliente / Avatar */}
         {showClienteButton && (
           <button
             onClick={handleClientesClick}
@@ -219,7 +254,6 @@ export default function SlugHeader({
             title={isLoggedIn ? `Meu Perfil (${profile!.nome})` : 'Fazer Login'}
           >
             {isLoggedIn ? (
-              // Avatar com iniciais — atualiza imediatamente via estado local
               <div className={`${sz} rounded-full flex items-center justify-center text-[10px] font-bold ${
                 theme === 'dark' ? 'bg-blue-500/30 text-blue-200' : 'bg-blue-100 text-blue-700'
               }`}
@@ -239,20 +273,27 @@ export default function SlugHeader({
     );
   };
 
-  // ── Grupos de botões ──────────────────────────────────────
+  // ── overlayButtons ────────────────────────────────────────
   const overlayButtons = (
     <div className={`flex items-center space-x-1 transition-all duration-300 ${
       showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
     }`}>
       <NavigationButtons />
+
+      {/* Kiosk enter — só quando NÃO está em kiosk */}
       {onEnterKioskMode && !isKioskMode && (
-        <button onClick={onEnterKioskMode} className={btn()} title="Ativar Modo Kiosk">
-          <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-          </svg>
+        <button onClick={onEnterKioskMode} className={kioskEnterBtn('overlay')} title="Ativar Modo Kiosk">
+          <KioskSVGEnter sz={icon} />
         </button>
       )}
+
+      {/* Kiosk exit — só quando está em kiosk */}
+      {isKioskMode && onExitKioskMode && (
+        <button onClick={onExitKioskMode} className={kioskExitBtn('overlay')} title="Sair do Modo Kiosk">
+          <KioskSVGExit sz={icon} />
+        </button>
+      )}
+
       {isWakeLockSupported && onToggleWakeLock && (
         <button onClick={onToggleWakeLock} className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
           title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}>
@@ -294,6 +335,7 @@ export default function SlugHeader({
     </div>
   );
 
+  // ── normalButtons ─────────────────────────────────────────
   const normalButtons = (
     <div className="flex items-center space-x-1">
       <NavigationButtons />
@@ -305,14 +347,21 @@ export default function SlugHeader({
           </svg>
         </button>
       )}
+
+      {/* Kiosk enter — só quando NÃO está em kiosk */}
       {onEnterKioskMode && !isKioskMode && (
-        <button onClick={onEnterKioskMode} className={btn()} title="Ativar Modo Kiosk">
-          <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-          </svg>
+        <button onClick={onEnterKioskMode} className={kioskEnterBtn('normal')} title="Ativar Modo Kiosk">
+          <KioskSVGEnter sz={icon} />
         </button>
       )}
+
+      {/* Kiosk exit — só quando está em kiosk */}
+      {isKioskMode && onExitKioskMode && (
+        <button onClick={onExitKioskMode} className={kioskExitBtn('normal')} title="Sair do Modo Kiosk">
+          <KioskSVGExit sz={icon} />
+        </button>
+      )}
+
       {isWakeLockSupported && onToggleWakeLock && (
         <button onClick={onToggleWakeLock} className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
           title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}>
@@ -347,7 +396,6 @@ export default function SlugHeader({
     </div>
   );
 
-  // ── Render ────────────────────────────────────────────────
   return (
     <header
       data-role="slug-header"
@@ -428,18 +476,20 @@ export default function SlugHeader({
             </div>
             <div className="flex items-center justify-center space-x-2">
               <NavigationButtons iconSize={iconMobile} />
-              {onEnterKioskMode && (
-                <button onClick={onEnterKioskMode}
-                  className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
-                    theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
-                  } ${isKioskMode ? 'ring-2 ring-red-500 ring-opacity-50' : ''}`}
-                  title="Modo Kiosk">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                  </svg>
+
+              {/* Kiosk enter mobile */}
+              {onEnterKioskMode && !isKioskMode && (
+                <button onClick={onEnterKioskMode} className={kioskEnterBtn('mobile')} title="Ativar Modo Kiosk">
+                  <KioskSVGEnter sz="w-4 h-4" />
                 </button>
               )}
+              {/* Kiosk exit mobile */}
+              {isKioskMode && onExitKioskMode && (
+                <button onClick={onExitKioskMode} className={kioskExitBtn('mobile')} title="Sair do Modo Kiosk">
+                  <KioskSVGExit sz="w-4 h-4" />
+                </button>
+              )}
+
               {onToggleModoVenda && !slug && (
                 <button onClick={onToggleModoVenda}
                   className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
@@ -492,14 +542,20 @@ export default function SlugHeader({
               showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
             }`}>
               <NavigationButtons />
+
+              {/* Kiosk enter overlay mobile */}
               {onEnterKioskMode && !isKioskMode && (
-                <button onClick={onEnterKioskMode} className={btn()} title="Modo Kiosk">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                  </svg>
+                <button onClick={onEnterKioskMode} className={kioskEnterBtn('overlay')} title="Modo Kiosk">
+                  <KioskSVGEnter sz="w-4 h-4" />
                 </button>
               )}
+              {/* Kiosk exit overlay mobile */}
+              {isKioskMode && onExitKioskMode && (
+                <button onClick={onExitKioskMode} className={kioskExitBtn('overlay')} title="Sair do Modo Kiosk">
+                  <KioskSVGExit sz="w-4 h-4" />
+                </button>
+              )}
+
               {isWakeLockSupported && onToggleWakeLock && (
                 <button onClick={onToggleWakeLock}
                   className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
@@ -534,7 +590,6 @@ export default function SlugHeader({
         )}
       </div>
 
-      {/* Modal de Login */}
       {showLoginModal && (
         <LoginClienteDisplay
           data={{ companyId: company.id, slug: slug ?? '', profile }}

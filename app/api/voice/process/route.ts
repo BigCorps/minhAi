@@ -70,10 +70,8 @@ function sanitizeInput(text: string): { safe: string; blocked: boolean; reason?:
     return { safe: '', blocked: false };
   }
 
-  // Truncar entradas muito longas (limite: 1000 chars para mensagem de voz)
   const truncated = text.slice(0, 1000);
 
-  // Verificar padrões de injeção
   for (const pattern of INJECTION_PATTERNS) {
     if (pattern.test(truncated)) {
       console.warn(`🚨 Prompt injection detectado: "${truncated.slice(0, 80)}..."`);
@@ -85,7 +83,6 @@ function sanitizeInput(text: string): { safe: string; blocked: boolean; reason?:
     }
   }
 
-  // Remover caracteres de controle e null bytes
   const cleaned = truncated
     .replace(/\0/g, '')
     .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
@@ -165,8 +162,6 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
   return bestMatch;
 }
 
-// ✅ Verificar hints confirmados — roda antes do FAQ e ChatGPT
-// Retorna function_key se bater com ≥60% das palavras do transcript salvo
 async function findMatchingHint(
   supabase: any,
   companyId: string,
@@ -205,6 +200,14 @@ async function findMatchingHint(
   }
 }
 
+// ─── Resolve voz TTS da empresa ───────────────────────────────────────────
+// Aceita apenas as duas vozes Neural pt-BR. Fallback para masculina.
+function resolveVoiceName(ttsVoice: string | null | undefined): string {
+  const allowed = [BRAZILIAN_VOICES.NEURAL_MALE, BRAZILIAN_VOICES.NEURAL_FEMALE];
+  if (ttsVoice && allowed.includes(ttsVoice as any)) return ttsVoice;
+  return BRAZILIAN_VOICES.NEURAL_MALE;
+}
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   console.log('\n=== 🎯 NOVA REQUISIÇÃO ===');
@@ -223,13 +226,18 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient();
 
+    // ── Busca company incluindo tts_voice ──────────────────────────────────
     const { data: company } = await supabase
       .from('companies')
-      .select('id, name, system_prompt, orcamento_prompt, greeting_message, welcome_message')
+      .select('id, name, system_prompt, orcamento_prompt, greeting_message, welcome_message, tts_voice')
       .eq('id', companyId)
       .single();
 
     if (!company) throw new Error('Company not found');
+
+    // Voz TTS resolvida uma vez — usada em todas as chamadas de síntese desta requisição
+    const voiceName = resolveVoiceName(company.tts_voice);
+    console.log(`🔊 Voz TTS: ${voiceName}`);
 
     const sessionId = formData.get('sessionId') as string | null;
     let currentSession: any = null;
@@ -269,55 +277,54 @@ export async function POST(request: NextRequest) {
       }
     }
 
-const rawMessage = directQuestion || '';
-const saleMode = formData.get('saleMode') === 'true';
+    const rawMessage = directQuestion || '';
+    const saleMode = formData.get('saleMode') === 'true';
 
-// ─── Sanitização ──────────────────────────────────────────────────────────
-const { safe: userMessage, blocked, reason } = sanitizeInput(rawMessage);
+    // ─── Sanitização ──────────────────────────────────────────────────────
+    const { safe: userMessage, blocked, reason } = sanitizeInput(rawMessage);
 
-if (!rawMessage) {
-  const errorAudio = await synthesizeSpeech({
-    text: 'Não consegui te ouvir. Pode repetir?',
-    voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
-    speakingRate: 1.2,
-    audioEncoding: 'MP3',
-  });
-  return new Response(new Uint8Array(errorAudio), {
-    headers: { 'Content-Type': 'audio/mpeg', 'X-Used-FAQ': 'false' },
-  });
-}
+    if (!rawMessage) {
+      const errorAudio = await synthesizeSpeech({
+        text: 'Não consegui te ouvir. Pode repetir?',
+        voiceName,
+        speakingRate: 1.2,
+        audioEncoding: 'MP3',
+      });
+      return new Response(new Uint8Array(errorAudio), {
+        headers: { 'Content-Type': 'audio/mpeg', 'X-Used-FAQ': 'false' },
+      });
+    }
 
-if (blocked) {
-  console.warn(`🚨 Mensagem bloqueada para company ${companyId}: ${reason}`);
+    if (blocked) {
+      console.warn(`🚨 Mensagem bloqueada para company ${companyId}: ${reason}`);
 
-  // Log silencioso para auditoria (sem cobrar créditos)
-  await supabase.from('assistant_function_logs').insert({
-    company_id: companyId,
-    function_key: 'security_block',
-    credits_consumed: 0,
-    metadata: {
-      reason,
-      input_preview: rawMessage.slice(0, 80),
-      blocked_at: new Date().toISOString(),
-    },
-  });
+      await supabase.from('assistant_function_logs').insert({
+        company_id: companyId,
+        function_key: 'security_block',
+        credits_consumed: 0,
+        metadata: {
+          reason,
+          input_preview: rawMessage.slice(0, 80),
+          blocked_at: new Date().toISOString(),
+        },
+      });
 
-  const blockedAudio = await synthesizeSpeech({
-    text: 'Não consigo processar essa solicitação.',
-    voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
-    speakingRate: 1.2,
-    audioEncoding: 'MP3',
-  });
-  return new Response(new Uint8Array(blockedAudio), {
-    headers: {
-      'Content-Type': 'audio/mpeg',
-      'X-Security-Block': 'true',
-      'X-Used-FAQ': 'false',
-    },
-  });
-}
+      const blockedAudio = await synthesizeSpeech({
+        text: 'Não consigo processar essa solicitação.',
+        voiceName,
+        speakingRate: 1.2,
+        audioEncoding: 'MP3',
+      });
+      return new Response(new Uint8Array(blockedAudio), {
+        headers: {
+          'Content-Type': 'audio/mpeg',
+          'X-Security-Block': 'true',
+          'X-Used-FAQ': 'false',
+        },
+      });
+    }
 
-console.log(`👂 "${userMessage}"`);
+    console.log(`👂 "${userMessage}"`);
 
     const useOrcamentoPrompt = formData.get('useOrcamentoPrompt') === 'true';
     console.log('📋 useOrcamentoPrompt:', useOrcamentoPrompt);
@@ -331,7 +338,7 @@ console.log(`👂 "${userMessage}"`);
 
         const hintAudio = await synthesizeSpeech({
           text: 'Um momento...',
-          voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
+          voiceName,
           speakingRate: 1.2,
           audioEncoding: 'MP3',
         });
@@ -357,11 +364,9 @@ console.log(`👂 "${userMessage}"`);
     let usedFAQ = false;
 
     if (matchingFAQ) {
-      // ✅ NOVO: FAQ com função vinculada — retornar como execução de função
       if (matchingFAQ.function_key) {
         console.log(`⚡ FAQ com função vinculada: ${matchingFAQ.function_key}`);
 
-        // Incrementar usage_count (non-blocking)
         supabase
           .from('faq_entries')
           .update({ usage_count: (matchingFAQ.usage_count || 0) + 1 })
@@ -379,11 +384,10 @@ console.log(`👂 "${userMessage}"`);
           },
         });
 
-        // Usar o answer da FAQ como fala introdutória antes de executar a função
         const introText = matchingFAQ.answer || 'Um momento...';
         const faqFunctionAudio = await synthesizeSpeech({
           text: introText,
-          voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
+          voiceName,
           speakingRate: 1.2,
           audioEncoding: 'MP3',
         });
@@ -410,7 +414,6 @@ console.log(`👂 "${userMessage}"`);
         return new Response(new Uint8Array(faqFunctionAudio), { headers: responseHeaders });
       }
 
-      // Comportamento original — FAQ sem função vinculada
       responseText = matchingFAQ.answer;
       usedFAQ = true;
       console.log('⚡ Usando FAQ');
@@ -512,9 +515,10 @@ Pergunta: ${userMessage}`;
       }, { headers: { 'X-Used-FAQ': String(usedFAQ) } });
     }
 
+    // ── Síntese final com voz da empresa ──────────────────────────────────
     const audioBuffer = await synthesizeSpeech({
       text: responseText,
-      voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
+      voiceName,
       speakingRate: 1.2,
       audioEncoding: 'MP3',
     });
@@ -550,7 +554,7 @@ Pergunta: ${userMessage}`;
     try {
       const errorAudio = await synthesizeSpeech({
         text: 'Desculpe, ocorreu um erro.',
-        voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
+        voiceName: BRAZILIAN_VOICES.NEURAL_MALE, // fallback seguro no catch
         speakingRate: 1.2,
         audioEncoding: 'MP3',
       });

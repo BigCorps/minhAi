@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import { detectSubdomainContext, getContextualRoute } from '@/lib/routing-utils';
-import SlugHeader from '@/components/slug/SlugHeader';
+import SlugHeaderWrapper from '@/app/ia/[slug]/SlugHeaderWrapper';  // FIX: wrapper com kiosk/wakelock
 import SlugFooter from '@/components/slug/SlugFooter';
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
@@ -237,8 +237,10 @@ export default function LinkClient({ company, links, slug }: Props) {
   return (
     <div style={{ minHeight: '100vh', background: palette.bg, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <SlugHeader
+      {/* FIX: SlugHeaderWrapper — kiosk, wake lock e navegação funcionam no modo link */}
+      <SlugHeaderWrapper
         company={{
+          id: company.id,
           name: company.name,
           logo_url: company.logo_url,
           assistant_role: company.assistant_role,
@@ -249,18 +251,7 @@ export default function LinkClient({ company, links, slug }: Props) {
         }}
         slug={slug}
         pageType="link"
-        theme={theme}
         overlayMode={false}
-        isKioskMode={false}
-        isWakeLockActive={false}
-        isWakeLockSupported={false}
-        isPortrait={false}
-        showControls={false}
-        onEnterKioskMode={() => {}}
-        onToggleWakeLock={() => {}}
-        onToggleModoVenda={() => {}}
-        onToggleTheme={handleToggleTheme}
-        onClose={undefined}
       />
 
       {/* Conteúdo principal */}

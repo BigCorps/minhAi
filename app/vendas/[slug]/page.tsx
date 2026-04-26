@@ -60,15 +60,18 @@ export default function VendasPage({ params }: VendasPageProps) {
   }, []);
 
   // ── Detector de inatividade (modo vendas) ─────────────────────────────────
-  const onInactivityVendas = useCallback(() => {
-    const action = companyData?.inactivity_action ?? 'restart';
-    if (action === 'offers_panel') {
-      setVendaActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
-    } else {
-      // 'restart' e 'feature_highlight' voltam para o assistente no contexto de vendas
-      if (slug) router.push(getContextualRoute('ia', slug));
-    }
-  }, [companyData?.inactivity_action, companyId, slug, router]);
+const onInactivityVendas = useCallback(() => {
+  const action = companyData?.inactivity_action ?? 'restart';
+  if (action === 'offers_panel') {
+    setVendaActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
+  } else if (action === 'feature_highlight') {
+    // Dispara a lógica de inatividade do VoiceAssistant oculto via evento
+    window.dispatchEvent(new CustomEvent('eai:triggerInactivity'));
+  } else {
+    // 'restart' — volta para o assistente
+    if (slug) router.push(getContextualRoute('ia', slug));
+  }
+}, [companyData?.inactivity_action, companyId, slug, router]);
 
   useInactivityDetector({
     timeoutSeconds: companyData?.inactivity_timeout_seconds ?? 300,

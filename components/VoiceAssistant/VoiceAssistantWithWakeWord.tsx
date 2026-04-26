@@ -2097,15 +2097,17 @@ onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
           {error && <p className={`text-xs sm:text-sm mt-2 ${theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'}`}>{error}</p>}
         </div>
 
-        <ActionModals
-          activeModal={activeModal}
-          onClose={handleCloseModal}
-          theme={theme}
-          onConfirmPix={handleConfirmPixLocal}
-          onCancelPix={handleCancelPixLocal}
-          playText={playText}
-          printConfig={printConfig} 
-        />
+{!textMode && (
+  <ActionModals
+    activeModal={activeModal}
+    onClose={handleCloseModal}
+    theme={theme}
+    onConfirmPix={handleConfirmPixLocal}
+    onCancelPix={handleCancelPixLocal}
+    playText={playText}
+    printConfig={printConfig}
+  />
+)}
       </div>
     );
   }
@@ -2337,15 +2339,17 @@ onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
         </div>
       </div>
 
-      <ActionModals
-        activeModal={activeModal}
-        onClose={handleCloseModal}
-        theme={theme}
-        onConfirmPix={handleConfirmPixLocal}
-        onCancelPix={handleCancelPixLocal}
-        playText={playText}
-        printConfig={printConfig} 
-      />
+{!textMode && (
+  <ActionModals
+    activeModal={activeModal}
+    onClose={handleCloseModal}
+    theme={theme}
+    onConfirmPix={handleConfirmPixLocal}
+    onCancelPix={handleCancelPixLocal}
+    playText={playText}
+    printConfig={printConfig}
+  />
+)}
     </div>
   );
 }

@@ -24,27 +24,29 @@ export function useInactivityDetector({
 
   // resetTimer só depende de timeoutSeconds — sempre recriado quando o
   // banco responde com o valor configurado no dashboard.
-  const resetTimer = useCallback(() => {
+const resetTimer = useCallback(() => {
+  console.log('[Timer] resetTimer chamado — timeout:', timeoutSeconds, 's');
+  if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+  timeoutRef.current = setTimeout(() => {
+    console.log('[Timer] DISPAROU após', timeoutSeconds, 's');
+    isInactiveRef.current = true;
+    onInactivityRef.current();
+  }, timeoutSeconds * 1000);
+
+  if (isInactiveRef.current) {
+    isInactiveRef.current = false;
+    onActivityRef.current?.();
+  }
+}, [timeoutSeconds]);
+
+useEffect(() => {
+  console.log('[Timer] useEffect rodou — timeout:', timeoutSeconds, 's');
+  resetTimer();
+  return () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
-    timeoutRef.current = setTimeout(() => {
-      isInactiveRef.current = true;
-      onInactivityRef.current();
-    }, timeoutSeconds * 1000);
-
-    if (isInactiveRef.current) {
-      isInactiveRef.current = false;
-      onActivityRef.current?.();
-    }
-  }, [timeoutSeconds]); // ← única dep: quando timeout muda, resetTimer muda
-
-  // Roda na montagem E sempre que timeoutSeconds muda (via resetTimer).
-  useEffect(() => {
-    resetTimer();
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, [resetTimer]); // resetTimer muda → useEffect roda → timer reinicia com novo valor
+  };
+}, [resetTimer]);
 
   return { resetTimer };
 }

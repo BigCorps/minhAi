@@ -1,6 +1,5 @@
 // components/VoiceAssistant/modals/SaleModeModal/ProductGrid.tsx
-// Grid de produtos — sem barra de busca quando hideBusca=true
-// Filtro por categoria permanece (pills compactos no topo)
+// v2 — clique em qualquer parte do card adiciona ao carrinho
 // Usa <img> nativo (não Next.js Image) pois clientes usam URLs de domínios externos variados
 
 'use client';
@@ -21,7 +20,7 @@ interface ProductGridProps {
   onProdutoDestaqueClear?: () => void;
   hideBusca?: boolean;
   termoBusca?: string;
-  onOpenBarcodeScanner?: () => void; // ← novo: abre o BarcodePdvModal
+  onOpenBarcodeScanner?: () => void;
 }
 
 export default function ProductGrid({
@@ -62,7 +61,6 @@ export default function ProductGrid({
       if (qtdAtual >= produto.estoque_atual) return;
     }
 
-    // Verifica se o produto tem opcionais configurados
     const supabase = createClient();
     const { data } = await supabase
       .from('produto_opcoes_grupos')
@@ -71,10 +69,8 @@ export default function ProductGrid({
       .limit(1);
 
     if (data && data.length > 0) {
-      // Tem opcionais — abre o modal de seleção
       setProdutoOpcionais({ produto, quantidade: 1 });
     } else {
-      // Sem opcionais — adiciona direto
       addItem(produto);
       setFeedbacks((prev) => ({ ...prev, [produto.id]: true }));
       setTimeout(() => setFeedbacks((prev) => ({ ...prev, [produto.id]: false })), 600);
@@ -214,14 +210,22 @@ export default function ProductGrid({
               const feedback = feedbacks[produto.id];
 
               return (
+                // ── Card clicável inteiro ──────────────────────────────────
                 <div
                   key={produto.id}
-                  className={`relative rounded-xl border transition-all duration-200 overflow-hidden ${
-                    semEstoque ? 'opacity-40' : ''
+                  onClick={() => !semEstoque && handleAdd(produto)}
+                  className={`relative rounded-xl border transition-all duration-200 overflow-hidden select-none ${
+                    semEstoque
+                      ? 'opacity-40 cursor-not-allowed'
+                      : 'cursor-pointer active:scale-95'
                   } ${
-                    isDark
-                      ? 'bg-white/4 border-white/8 hover:border-white/20'
-                      : 'bg-white border-gray-200 hover:border-gray-300 shadow-sm'
+                    feedback
+                      ? isDark
+                        ? 'border-emerald-500/60 bg-emerald-500/10'
+                        : 'border-emerald-400 bg-emerald-50'
+                      : isDark
+                        ? 'bg-white/4 border-white/8 hover:border-white/20 hover:bg-white/6'
+                        : 'bg-white border-gray-200 hover:border-emerald-300 hover:shadow-md shadow-sm'
                   }`}
                 >
                   {/* Badge qtd no carrinho */}
@@ -231,6 +235,7 @@ export default function ProductGrid({
                     </div>
                   )}
 
+                  {/* Imagem */}
                   <div className={`w-full aspect-[4/3] relative overflow-hidden ${
                     isDark ? 'bg-white/4' : 'bg-gray-50'
                   }`}>
@@ -257,6 +262,16 @@ export default function ProductGrid({
                         </span>
                       </div>
                     )}
+                    {/* Flash de feedback no centro da imagem */}
+                    {feedback && (
+                      <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Info */}
@@ -267,42 +282,18 @@ export default function ProductGrid({
                       {produto.nome}
                     </p>
                     {produto.descricao && (
-                      <p className={`text-[9px] truncate mb-1 ${
+                      <p className={`text-[9px] truncate mb-0.5 ${
                         isDark ? 'text-white/35' : 'text-gray-500'
                       }`}>
                         {produto.descricao}
                       </p>
                     )}
-                    <div className="flex items-center justify-between gap-1">
-                      <span className={`text-[10px] font-bold ${
-                        isDark ? 'text-emerald-400' : 'text-emerald-600'
-                      }`}>
-                        {formatarPreco(produto.preco_venda)}
-                      </span>
-                      <button
-                        onClick={() => handleAdd(produto)}
-                        disabled={semEstoque}
-                        className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90 ${
-                          feedback
-                            ? 'bg-emerald-500 scale-110'
-                            : semEstoque
-                              ? 'bg-gray-300/30 cursor-not-allowed'
-                              : isDark
-                                ? 'bg-white/8 hover:bg-emerald-500 text-white'
-                                : 'bg-gray-100 hover:bg-emerald-500 hover:text-white text-gray-700'
-                        }`}
-                      >
-                        {feedback ? (
-                          <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                          </svg>
-                        ) : (
-                          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
+                    {/* Preço em linha própria, sem botão + ao lado */}
+                    <span className={`text-[10px] font-bold block ${
+                      isDark ? 'text-emerald-400' : 'text-emerald-600'
+                    }`}>
+                      {formatarPreco(produto.preco_venda)}
+                    </span>
 
                     {produto.controla_estoque && produto.estoque_atual > 0 && produto.estoque_atual <= produto.estoque_minimo && (
                       <p className="text-[9px] text-amber-500 mt-0.5 font-medium">

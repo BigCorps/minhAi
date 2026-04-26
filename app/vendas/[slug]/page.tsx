@@ -43,7 +43,7 @@ export default function VendasPage({ params }: VendasPageProps) {
   const [vendaActiveModal, setVendaActiveModal] = useState<ActiveModal | null>(null);
 
   const voiceRecorder = useVoiceRecorder();
-  const { currentAudioRef, playText } = useAudioPlayer(setIsPlayingAudio);
+  const { currentAudioRef, playText } = useAudioPlayer(setIsPlayingAudio, companyData?.tts_voice);
   const companyIdRef = useRef<string | null>(null);
 
   // Handler do VoiceAssistant oculto — registrado via onTextMessage

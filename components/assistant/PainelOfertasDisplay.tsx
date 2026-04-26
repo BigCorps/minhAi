@@ -70,6 +70,15 @@ export default function PainelOfertasDisplay({
     }, 400);
   }, [images.length]);
 
+  // ── handleClose declarado antes dos useEffects ────────────────────────────
+  const handleClose = useCallback(() => {
+    if (hasClosedRef.current) return;
+    hasClosedRef.current = true;
+    window.speechSynthesis.cancel();
+    onClose();
+  }, [onClose]);
+
+  // ── Init: carrega config + imagens + listener de presença ─────────────────
   useEffect(() => {
     async function init() {
       const { data: settings } = await supabase
@@ -111,9 +120,7 @@ export default function PainelOfertasDisplay({
         if (content) { setQrContent(content); setQrLabel(label); }
       }
 
-      // ✅ Fix: montar imagens direto do config, sem chamar a edge function
-      // Os IDs e nomes já foram salvos pelo Picker — thumbnails do Drive
-      // funcionam publicamente para arquivos compartilhados "com o link"
+      // Monta imagens direto do config, sem chamar edge function
       const rawFileIds: any[] = cfg.file_ids || [];
 
       if (rawFileIds.length === 0) {
@@ -149,6 +156,11 @@ export default function PainelOfertasDisplay({
       playText('Não consegui carregar as ofertas.').catch(() => {});
       setLoading(false);
     });
+
+    // Fecha o painel quando presença é detectada pela câmera
+    const handlePresenceDetected = () => { handleClose(); };
+    window.addEventListener('eai:presenceDetected', handlePresenceDetected);
+    return () => window.removeEventListener('eai:presenceDetected', handlePresenceDetected);
   }, []);
 
   useEffect(() => {
@@ -167,13 +179,6 @@ export default function PainelOfertasDisplay({
     setControlsVisible(true);
     if (hideControlsRef.current) clearTimeout(hideControlsRef.current);
     hideControlsRef.current = setTimeout(() => setControlsVisible(false), 3000);
-  };
-
-  const handleClose = () => {
-    if (hasClosedRef.current) return;
-    hasClosedRef.current = true;
-    window.speechSynthesis.cancel();
-    onClose();
   };
 
   useModalVoiceClose(handleClose);
@@ -226,9 +231,9 @@ export default function PainelOfertasDisplay({
         />
       )}
 
-      {/* QR Code fixo — canto inferior esquerdo */}
-{qrContent && !loading && (
-  <div className="absolute top-6 right-6 flex flex-col items-center gap-1.5 z-20">
+      {/* QR Code fixo — canto superior direito */}
+      {qrContent && !loading && (
+        <div className="absolute top-6 right-6 flex flex-col items-center gap-1.5 z-20">
           <div className="rounded-xl overflow-hidden shadow-2xl border-2 border-white/20">
             <img src={buildQrUrl(qrContent)} alt="QR Code" width={96} height={96} className="block" />
           </div>
@@ -255,7 +260,7 @@ export default function PainelOfertasDisplay({
               <button onClick={goPrev} className="p-3 rounded-full bg-white/10 hover:bg-white/30 text-white transition">
                 <SkipBack className="w-6 h-6" />
               </button>
-              
+
               <div className="flex items-center gap-6">
                 <button onClick={() => setIsPlaying(p => !p)} className="p-5 rounded-full bg-orange-600 hover:bg-orange-700 text-white transition shadow-xl">
                   {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
@@ -267,15 +272,23 @@ export default function PainelOfertasDisplay({
                 <SkipForward className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="mt-6 h-1 bg-white/20 rounded-full w-full overflow-hidden">
-              <div className="h-full bg-orange-500 rounded-full" style={{ width: `${((currentIndex + 1) / images.length) * 100}%`, transition: 'width 0.5s ease' }} />
+              <div
+                className="h-full bg-orange-500 rounded-full"
+                style={{ width: `${((currentIndex + 1) / images.length) * 100}%`, transition: 'width 0.5s ease' }}
+              />
             </div>
           </div>
         </div>
       )}
 
-      <button onClick={handleClose} className={`absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <button
+        onClick={handleClose}
+        className={`absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition ${
+          controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      >
         <X className="w-5 h-5" />
       </button>
 

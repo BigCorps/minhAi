@@ -363,6 +363,13 @@ useEffect(() => {
   };
 }); // sem deps — correto, sempre atualiza o ref
 
+useEffect(() => {
+  if (!textMode) return;
+  const handler = () => onInactivityRef.current();
+  window.addEventListener('eai:triggerInactivity', handler);
+  return () => window.removeEventListener('eai:triggerInactivity', handler);
+}, [textMode]);
+
 // Reinicia o timer quando o timeout carrega do banco
 const prevTimeoutRef = useRef(inactivityTimeoutSeconds);
 useEffect(() => {

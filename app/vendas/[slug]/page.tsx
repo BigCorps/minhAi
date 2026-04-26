@@ -285,8 +285,8 @@ export default function VendasPage({ params }: VendasPageProps) {
 
   return (
     <div className="relative min-h-screen">
-      {/* SaleModeModal fullscreen */}
-      <div className={`fixed inset-0 z-[50] ${
+      {/* SaleModeModal fullscreen — bottom-8 = altura do SlugFooter (h-8 = 32px) */}
+      <div className={`fixed inset-x-0 top-0 bottom-8 z-[50] ${
         theme === 'dark' ? 'bg-slate-900' : 'bg-gray-50'
       }`}>
         <SaleModeModal
@@ -295,7 +295,7 @@ export default function VendasPage({ params }: VendasPageProps) {
           companyName={companyData?.name}
           companyLogo={companyData?.logo_url}
           assistantRole={companyData?.assistant_role}
-          avatarType={companyData?.avatar_type}   // ← orbe vs avatar
+          avatarType={companyData?.assistant_avatar_type}   // ← 'face' | 'orb'
           modo_vendas_enabled={companyData?.modo_vendas_enabled ?? true}
           modo_fila_enabled={companyData?.modo_fila_enabled ?? false}
           isFullscreen={true}

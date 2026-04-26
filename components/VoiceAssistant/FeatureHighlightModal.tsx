@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import BaseModal from '@/components/assistant/BaseModal';
 import { Lightbulb } from 'lucide-react';
 
@@ -38,6 +39,13 @@ export function FeatureHighlightModal({
   const categoryLabel = featureCategory
     ? (CATEGORY_NAMES[featureCategory] ?? featureCategory)
     : null;
+
+useEffect(() => {
+  if (!isOpen) return;
+  const handler = () => onClose();
+  window.addEventListener('eai:presenceDetected', handler);
+  return () => window.removeEventListener('eai:presenceDetected', handler);
+}, [isOpen, onClose]);
 
   return (
     <BaseModal

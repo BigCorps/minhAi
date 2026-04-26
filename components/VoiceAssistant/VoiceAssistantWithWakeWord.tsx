@@ -1970,6 +1970,7 @@ const handleTextMessage = async (message: string) => {
   // ── Registra handler externo ──────────────────────────────
   useEffect(() => {
     if (onTextMessage) {
+      console.log('[VoiceAssistant] registrando handler via onTextMessage');
       onTextMessage(async (text: string) => {
         return await handleTextMessageForText(text);
       });

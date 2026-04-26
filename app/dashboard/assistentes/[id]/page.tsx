@@ -137,7 +137,7 @@ export default function EditarAssistentePage({ params }: PageProps) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* ── COLUNA ESQUERDA ── */}
-            <div className="space-y-6">
+            <div className="flex flex-col gap-6">
 
               {/* Card: Identidade */}
               <div className="bg-white/80 dark:bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
@@ -236,12 +236,12 @@ export default function EditarAssistentePage({ params }: PageProps) {
               </div>
 
               {/* Card: Voz e Ativação */}
-              <div className="bg-white/80 dark:bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+              <div className="flex flex-col flex-1 bg-white/80 dark:bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
                   <h2 className="text-base font-semibold text-gray-900 dark:text-white">Voz e Ativação</h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Wake word e mensagem de saudação</p>
                 </div>
-                <div className="p-6 space-y-5">
+                <div className="flex flex-col flex-1 p-6 space-y-5">
 
                   {/* Palavras de Ativação */}
                   <div>
@@ -259,7 +259,7 @@ export default function EditarAssistentePage({ params }: PageProps) {
                   </div>
 
                   {/* Mensagem de Ativação */}
-                  <div>
+                  <div className="flex flex-col flex-1">
                     <label htmlFor="greeting_message" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Mensagem de Ativação *
                     </label>
@@ -269,7 +269,7 @@ export default function EditarAssistentePage({ params }: PageProps) {
                       required
                       rows={3}
                       defaultValue={assistant.greeting_message}
-                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition resize-none"
+                      className="flex-1 w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition resize-none"
                     />
                   </div>
 

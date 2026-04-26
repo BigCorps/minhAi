@@ -261,7 +261,7 @@ export default function EditarAssistentePage({ params }: PageProps) {
                   {/* Mensagem de Ativação */}
                   <div className="flex flex-col flex-1">
                     <label htmlFor="greeting_message" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Mensagem de Ativação *
+                      Mensagem de Saudação *
                     </label>
                     <textarea
                       id="greeting_message"

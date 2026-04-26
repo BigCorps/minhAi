@@ -299,6 +299,7 @@ export default function VendasPage({ params }: VendasPageProps) {
           modo_vendas_enabled={companyData?.modo_vendas_enabled ?? true}
           modo_fila_enabled={companyData?.modo_fila_enabled ?? false}
           isFullscreen={true}
+          footerHeight={32}               // ← h-8 do SlugFooter = 32px
           onClose={handleClose}
           theme={theme}
           playText={playText}                     // ← TTS real via useAudioPlayer

@@ -1,11 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase-browser';
 import SaleModeModal from '@/components/VoiceAssistant/modals/SaleModeModal';
 import SlugFooter from '@/components/slug/SlugFooter';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { useAudioPlayer } from '@/components/VoiceAssistant/hooks/useAudioPlayer';
+import { requestMicrophonePermission } from '@/components/VoiceAssistant/utils/audioUtils';
 
 interface VendasPageProps {
   params: Promise<{ slug: string }>;
@@ -23,12 +26,27 @@ export default function VendasPage({ params }: VendasPageProps) {
   const [quantidadeInicial, setQuantidadeInicial] = useState<number>(1);
   const [opcoesIniciais, setOpcoesIniciais] = useState<any[]>([]);
 
-  // Mounted state
+  // ── Estados de voz ────────────────────────────────────────────────────────
+  const [isListening, setIsListening] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [permissionGranted, setPermissionGranted] = useState(false);
+
+  const voiceRecorder = useVoiceRecorder();
+  const { currentAudioRef, playText } = useAudioPlayer(setIsPlayingAudio);
+  const companyIdRef = useRef<string | null>(null);
+
+  // ── Mounted ───────────────────────────────────────────────────────────────
   useEffect(() => {
     setMounted(true);
+    // Pedir permissão de microfone ao montar
+    requestMicrophonePermission().then((result) => {
+      setPermissionGranted(result.granted);
+    });
   }, []);
 
-  // Await params
+  // ── Await params ──────────────────────────────────────────────────────────
   useEffect(() => {
     async function unwrapParams() {
       const resolvedParams = await params;
@@ -37,13 +55,12 @@ export default function VendasPage({ params }: VendasPageProps) {
     unwrapParams();
   }, [params]);
 
-  // Fetch company data
+  // ── Fetch company data ────────────────────────────────────────────────────
   useEffect(() => {
     if (!slug) return;
 
     async function fetchCompany() {
       const supabase = createClient();
-
       const { data, error } = await supabase
         .from('companies')
         .select('*')
@@ -57,6 +74,7 @@ export default function VendasPage({ params }: VendasPageProps) {
       }
 
       setCompanyId(data.id);
+      companyIdRef.current = data.id;
       setCompanyData(data);
       setLoading(false);
     }
@@ -64,7 +82,7 @@ export default function VendasPage({ params }: VendasPageProps) {
     fetchCompany();
   }, [slug, router]);
 
-  // Detectar produto inicial via query params
+  // ── Detectar produto inicial via query params ─────────────────────────────
   useEffect(() => {
     if (!companyId || typeof window === 'undefined') return;
 
@@ -77,7 +95,6 @@ export default function VendasPage({ params }: VendasPageProps) {
 
     async function fetchProduto() {
       const supabase = createClient();
-
       const { data: produto, error } = await supabase
         .from('produtos_venda')
         .select('*')
@@ -108,7 +125,7 @@ export default function VendasPage({ params }: VendasPageProps) {
     fetchProduto();
   }, [companyId]);
 
-  // Detectar múltiplos itens via query param (fazer_pedido)
+  // ── Detectar múltiplos itens via query param (fazer_pedido) ──────────────
   useEffect(() => {
     if (!companyId || typeof window === 'undefined') return;
 
@@ -127,10 +144,7 @@ export default function VendasPage({ params }: VendasPageProps) {
         for (const item of itensBrutos) {
           const produtos = await buscarProdutoPorNome(companyId, item.nome);
           if (produtos.length > 0) {
-            itensResolvidos.push({
-              produto: produtos[0],
-              quantidade: item.quantidade,
-            });
+            itensResolvidos.push({ produto: produtos[0], quantidade: item.quantidade });
           }
         }
 
@@ -149,14 +163,101 @@ export default function VendasPage({ params }: VendasPageProps) {
     buscarItens();
   }, [companyId]);
 
-  const handleClose = () => {
-    if (slug) {
-      router.push(`/ia/${slug}`);
+  // ── Handlers de microfone ─────────────────────────────────────────────────
+  const handleMicDown = useCallback(async () => {
+    // Se estiver tocando áudio, para
+    if (isPlayingAudio) {
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+        setIsPlayingAudio(false);
+      }
+      return;
     }
-  };
+    if (!permissionGranted || isProcessing || isTranscribing) return;
 
-  const handlePlayText = async (text: string) => {
-    console.log('TTS:', text);
+    setIsListening(true);
+    await voiceRecorder.startRecording();
+  }, [isPlayingAudio, permissionGranted, isProcessing, isTranscribing, voiceRecorder, currentAudioRef]);
+
+  const handleMicUp = useCallback(async () => {
+    if (!voiceRecorder.isRecording) return;
+    setIsListening(false);
+
+    try {
+      const audioBlob = await voiceRecorder.stopRecording();
+      setIsTranscribing(true);
+
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      const base64Audio = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+      });
+
+      const response = await fetch('/api/voice/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio: base64Audio }),
+      });
+
+      if (!response.ok) throw new Error('Erro na transcrição');
+      const { text } = await response.json();
+      if (text?.trim()) await handleTextMessage(text.trim());
+    } catch {
+      // silencioso
+    } finally {
+      setIsTranscribing(false);
+    }
+  }, [voiceRecorder]); // handleTextMessage adicionado abaixo via ref
+
+  // ── handleTextMessage: envia texto para o backend de voz ──────────────────
+  const handleTextMessage = useCallback(async (message: string) => {
+    if (!message.trim()) return;
+    const cId = companyIdRef.current;
+    if (!cId) return;
+
+    setIsProcessing(true);
+    try {
+      const formData = new FormData();
+      formData.append('audio', new Blob([message], { type: 'text/plain' }), 'question.txt');
+      formData.append('companyId', cId);
+      formData.append('directQuestion', message);
+      formData.append('saleMode', 'true');
+
+      const response = await fetch('/api/voice/process', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Erro no processamento');
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      currentAudioRef.current = audio;
+      setIsPlayingAudio(true);
+
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+      };
+      audio.onerror = () => {
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+      };
+      audio.play().catch(() => {
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+      });
+    } catch {
+      // silencioso
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [currentAudioRef]);
+
+  const handleClose = () => {
+    if (slug) router.push(`/ia/${slug}`);
   };
 
   const theme = mounted ? (resolvedTheme as 'dark' | 'light' || 'dark') : 'dark';
@@ -184,7 +285,7 @@ export default function VendasPage({ params }: VendasPageProps) {
 
   return (
     <div className="relative min-h-screen">
-      {/* SaleModeModal fullscreen — ocupa tudo, inclusive o espaço do footer */}
+      {/* SaleModeModal fullscreen */}
       <div className={`fixed inset-0 z-[50] ${
         theme === 'dark' ? 'bg-slate-900' : 'bg-gray-50'
       }`}>
@@ -194,19 +295,28 @@ export default function VendasPage({ params }: VendasPageProps) {
           companyName={companyData?.name}
           companyLogo={companyData?.logo_url}
           assistantRole={companyData?.assistant_role}
+          avatarType={companyData?.avatar_type}   // ← orbe vs avatar
           modo_vendas_enabled={companyData?.modo_vendas_enabled ?? true}
           modo_fila_enabled={companyData?.modo_fila_enabled ?? false}
           isFullscreen={true}
           onClose={handleClose}
           theme={theme}
-          playText={handlePlayText}
+          playText={playText}                     // ← TTS real via useAudioPlayer
           produtoInicial={produtoInicial}
           quantidadeInicial={quantidadeInicial}
           opcoesIniciais={opcoesIniciais}
+          // ── Props de voz conectadas ──────────────────────────
+          isListening={isListening}
+          isProcessing={isProcessing}
+          isPlayingAudio={isPlayingAudio}
+          isTranscribing={isTranscribing}
+          onMicDown={handleMicDown}
+          onMicUp={handleMicUp}
+          onTextMessage={handleTextMessage}
         />
       </div>
 
-      {/* SlugFooter — mantido, fica acima do modal */}
+      {/* SlugFooter — fica acima do modal */}
       <div className="fixed bottom-0 left-0 right-0 z-[310]">
         <SlugFooter
           theme={theme}

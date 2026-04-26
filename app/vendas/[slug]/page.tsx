@@ -10,6 +10,7 @@ import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { useAudioPlayer } from '@/components/VoiceAssistant/hooks/useAudioPlayer';
 import { requestMicrophonePermission } from '@/components/VoiceAssistant/utils/audioUtils';
 import { usePresenceDetector } from '@/hooks/usePresenceDetector';
+import { useInactivityDetector } from '@/hooks/useInactivityDetector';
 
 interface VendasPageProps {
   params: Promise<{ slug: string }>;
@@ -59,6 +60,16 @@ export default function VendasPage({ params }: VendasPageProps) {
     enabled: companyData?.presence_greeting_enabled ?? false,
     onPresenceDetected,
   });
+
+  const onInactivityVendas = useCallback(() => {
+  // No modo vendas, inatividade = voltar para o assistente
+  if (slug) router.push(`/ia/${slug}`);
+}, [slug, router]);
+
+useInactivityDetector({
+  timeoutSeconds: companyData?.inactivity_timeout_seconds ?? 300,
+  onInactivity: onInactivityVendas,
+});
 
   // ── Await params ──────────────────────────────────────────────────────────
   useEffect(() => {

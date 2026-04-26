@@ -5,7 +5,7 @@
 export interface VoiceAssistantProps {
   companyId: string;
   companyName: string;
-  slug?: string; // ← adicionado
+  slug?: string;
   wakeWord: string;
   greetingMessage: string;
   theme?: 'dark' | 'light';
@@ -14,6 +14,7 @@ export interface VoiceAssistantProps {
   hideDisabledFunctions?: boolean;
   autoScroll?: boolean;
   textMode?: boolean;
+  onModalChange?: (modal: ActiveModal | null) => void;
 }
 export interface QRCodeData {
   type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook' | 'email' | 'linkedin' | 'tiktok' | 'twitter' | 'telefone';

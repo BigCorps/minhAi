@@ -360,19 +360,20 @@ useEffect(() => {
   usePresenceDetector({
     enabled: presenceGreetingEnabled,
     onPresenceDetected: useCallback(() => {
-      // Só saúda se o assistente estiver completamente ocioso
-      if (isPlayingAudio || isProcessing || isSpeaking || activeModal !== null) return;
-      const greeting = companyGreeting || greetingMessage || 'Olá! Como posso ajudar?';
-      playText(greeting).catch(() => {});
-      resetInactivityTimer();
-    }, [isPlayingAudio, isProcessing, isSpeaking, activeModal, companyGreeting, greetingMessage]),
-  });
-
-  const handleCloseFeatureHighlight = useCallback(() => {
+  // Fecha painel de ofertas ou dica de função se estiver aberto
+  if (activeModal?.type === 'PainelOfertasDisplay') {
+    setActiveModal(null);
+  }
+  if (showFeatureHighlight) {
     setShowFeatureHighlight(false);
     setHighlightedFeature(null);
-    resetInactivityTimer();
-  }, [resetInactivityTimer]);
+  }
+  // Só saúda se não estiver processando ou falando
+  if (isPlayingAudio || isProcessing || isSpeaking) return;
+  const greeting = companyGreeting || greetingMessage || 'Olá! Como posso ajudar?';
+  playText(greeting).catch(() => {});
+  resetInactivityTimer();
+}, [isPlayingAudio, isProcessing, isSpeaking, activeModal, showFeatureHighlight, companyGreeting, greetingMessage]),
 
   // ── Push-to-talk ───────────────────────────────────────────
   const voiceRecorder = useVoiceRecorder();

@@ -9,7 +9,6 @@ import SlugFooter from '@/components/slug/SlugFooter';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { useAudioPlayer } from '@/components/VoiceAssistant/hooks/useAudioPlayer';
 import { requestMicrophonePermission } from '@/components/VoiceAssistant/utils/audioUtils';
-import { usePresenceDetector } from '@/hooks/usePresenceDetector';
 import { useInactivityDetector } from '@/hooks/useInactivityDetector';
 import { getContextualRoute } from '@/lib/routing-utils';
 import { VoiceAssistantWithWakeWord } from '@/components/VoiceAssistant/VoiceAssistantWithWakeWord';
@@ -58,20 +57,6 @@ export default function VendasPage({ params }: VendasPageProps) {
       setPermissionGranted(result.granted);
     });
   }, []);
-
-  // ── Detector de presença (modo vendas) ────────────────────────────────────
-  const onPresenceDetected = useCallback(() => {
-    if (isPlayingAudio || isProcessing) return;
-    // Fecha painel de ofertas se estiver aberto
-    window.dispatchEvent(new CustomEvent('eai:presenceDetected'));
-    const greeting = companyData?.greeting_message || 'Olá! Como posso ajudar você?';
-    playText(greeting).catch(() => {});
-  }, [isPlayingAudio, isProcessing, companyData?.greeting_message, playText]);
-
-  usePresenceDetector({
-    enabled: companyData?.presence_greeting_enabled ?? false,
-    onPresenceDetected,
-  });
 
   // ── Detector de inatividade (modo vendas) ─────────────────────────────────
   const onInactivityVendas = useCallback(() => {

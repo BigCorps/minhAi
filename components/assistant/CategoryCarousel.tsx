@@ -58,7 +58,6 @@ export default function CategoryCarousel({
   hideDisabledFunctions = false,
   autoScroll = true,
 }: CategoryCarouselProps) {
-  // ✅ Usa o client singleton do projeto em vez de criar um novo a cada render
   const supabase = createClient();
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -68,16 +67,16 @@ export default function CategoryCarousel({
   const [clickedChipRect, setClickedChipRect] = useState<DOMRect | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-useEffect(() => {
-  const onOpen = () => setIsModalOpen(true);
-  const onClose = () => setIsModalOpen(false);
-  window.addEventListener('eai:modalOpen', onOpen);
-  window.addEventListener('eai:modalClose', onClose);
-  return () => {
-    window.removeEventListener('eai:modalOpen', onOpen);
-    window.removeEventListener('eai:modalClose', onClose);
-  };
-}, []);
+  useEffect(() => {
+    const onOpen = () => setIsModalOpen(true);
+    const onClose = () => setIsModalOpen(false);
+    window.addEventListener('eai:modalOpen', onOpen);
+    window.addEventListener('eai:modalClose', onClose);
+    return () => {
+      window.removeEventListener('eai:modalOpen', onOpen);
+      window.removeEventListener('eai:modalClose', onClose);
+    };
+  }, []);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -114,19 +113,16 @@ useEffect(() => {
         settings?.map((s) => [s.function_key, s.is_enabled]) || []
       );
 
-      // Marcar funções como enabled/disabled
       const processedFunctions = functions.map((fn) => ({
         ...fn,
         is_enabled_for_company: settingsMap.get(fn.function_key) ?? true,
       }));
 
-      // Filtrar funções desabilitadas se necessário
       let filteredFunctions = processedFunctions;
       if (hideDisabledFunctions) {
         filteredFunctions = processedFunctions.filter((fn) => fn.is_enabled_for_company);
       }
 
-      // Agrupar por categoria
       const grouped = CATEGORIES.map((cat) => {
         const categoryFunctions = filteredFunctions.filter(
           (fn) => fn.function_category === cat.key
@@ -196,7 +192,6 @@ useEffect(() => {
     setClickedChipRect(null);
   };
 
-  // Handlers centralizados de pause/resume
   const pauseAnimation = useCallback(() => {
     if (carouselRef.current && autoScroll) {
       carouselRef.current.style.animationPlayState = 'paused';
@@ -246,11 +241,11 @@ useEffect(() => {
     };
   };
 
-return (
-  <div className={`relative w-full transition-all duration-500 ease-in-out ${
-    isModalOpen ? 'opacity-0 scale-95 pointer-events-none translate-y-10' : 'opacity-100 scale-100 translate-y-0'
-  }`}>
-    
+  return (
+    <div className={`relative w-full transition-all duration-500 ease-in-out ${
+      isModalOpen ? 'opacity-0 scale-95 pointer-events-none translate-y-10' : 'opacity-100 scale-100 translate-y-0'
+    }`}>
+
       {/* Painel flutuante de funções */}
       {activeCategory && (
         <div
@@ -319,7 +314,8 @@ return (
       )}
 
       {/* Container do carrossel */}
-      <div className="w-full py-4 overflow-x-auto md:overflow-hidden no-scrollbar">
+      {/* ↓ overflow-hidden sempre ativo quando autoScroll, evita conflito com scroll nativo no mobile */}
+      <div className={`w-full py-4 no-scrollbar ${autoScroll ? 'overflow-hidden' : 'overflow-x-auto md:overflow-hidden'}`}>
         <div className="relative w-full">
           <div
             onMouseEnter={pauseAnimation}

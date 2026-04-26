@@ -84,7 +84,6 @@ export default function CategoryCarousel({
 
   const isDark = theme === 'dark';
 
-  // Detectar mobile
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -92,7 +91,6 @@ export default function CategoryCarousel({
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Carregar funções e agrupar por categoria
   useEffect(() => {
     async function loadFunctions() {
       const { data: functions } = await supabase
@@ -142,7 +140,6 @@ export default function CategoryCarousel({
     loadFunctions();
   }, [companyId, hideDisabledFunctions]);
 
-  // Click outside detection
   useEffect(() => {
     if (!activeCategory) return;
 
@@ -203,6 +200,22 @@ export default function CategoryCarousel({
       carouselRef.current.style.animationPlayState = 'running';
     }
   }, [activeCategory, autoScroll]);
+
+  // ↓ Bloqueia propagação dos eventos de touch para o useSwipe global
+  const handleTouchStartCarousel = useCallback((e: React.TouchEvent) => {
+    e.stopPropagation();
+    pauseAnimation();
+  }, [pauseAnimation]);
+
+  const handleTouchEndCarousel = useCallback((e: React.TouchEvent) => {
+    e.stopPropagation();
+    resumeAnimation();
+  }, [resumeAnimation]);
+
+  const handleTouchCancelCarousel = useCallback((e: React.TouchEvent) => {
+    e.stopPropagation();
+    resumeAnimation();
+  }, [resumeAnimation]);
 
   const styles = {
     panel: {
@@ -314,15 +327,15 @@ export default function CategoryCarousel({
       )}
 
       {/* Container do carrossel */}
-      {/* ↓ overflow-hidden sempre ativo quando autoScroll, evita conflito com scroll nativo no mobile */}
-      <div className={`w-full py-4 no-scrollbar ${autoScroll ? 'overflow-hidden' : 'overflow-x-auto md:overflow-hidden'}`}>
+      <div className="w-full py-4 overflow-x-auto md:overflow-hidden no-scrollbar">
         <div className="relative w-full">
+          {/* ↓ stopPropagation nos handlers de touch impede que o useSwipe global capture o gesto */}
           <div
             onMouseEnter={pauseAnimation}
             onMouseLeave={resumeAnimation}
-            onTouchStart={pauseAnimation}
-            onTouchEnd={resumeAnimation}
-            onTouchCancel={resumeAnimation}
+            onTouchStart={handleTouchStartCarousel}
+            onTouchEnd={handleTouchEndCarousel}
+            onTouchCancel={handleTouchCancelCarousel}
           >
             <div
               ref={carouselRef}

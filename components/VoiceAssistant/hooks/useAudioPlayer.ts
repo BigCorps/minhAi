@@ -2,8 +2,7 @@
 // hooks/useAudioPlayer.ts
 // Caminho: components/assistant/VoiceAssistant/hooks/useAudioPlayer.ts
 // ============================================================
-
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 
 interface UseAudioPlayerResult {
   currentAudioRef: React.MutableRefObject<HTMLAudioElement | null>;
@@ -26,6 +25,10 @@ export function useAudioPlayer(
 ): UseAudioPlayerResult {
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const feedbackAudioRef = useRef<HTMLAudioElement | null>(null);
+  // Ref garante que playText sempre lê o voiceName mais atual,
+  // mesmo que o banco ainda não tenha respondido na montagem
+  const voiceNameRef = useRef(voiceName);
+  useEffect(() => { voiceNameRef.current = voiceName; }, [voiceName]);
 
   async function playText(
     text: string,
@@ -40,7 +43,7 @@ export function useAudioPlayer(
         }
 
         const body: Record<string, string> = { text };
-        if (voiceName) body.voice = voiceName;
+        if (voiceNameRef.current) body.voice = voiceNameRef.current;
 
         const response = await fetch('/api/voice/tts', {
           method: 'POST',

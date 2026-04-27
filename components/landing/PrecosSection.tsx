@@ -312,14 +312,16 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
                   </div>
                 ))}
               </div>
-              
-                href="https://wa.me/5511926828418?text=Olá!%20Tenho%20interesse%20no%20Plano%20Full%20e%20gostaria%20de%20saber%20mais%20detalhes."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-shrink-0 py-1.5 px-4 rounded-lg text-[11px] font-bold bg-violet-600 text-white hover:bg-violet-500 transition-colors active:scale-95 whitespace-nowrap"
-              >
-                Falar com consultor
-              </a>
+            <button
+              onClick={() => window.open('https://wa.me/5511926828418?text=Olá!%20Tenho%20interesse%20no%20Plano%20Full%20e%20gostaria%20de%20saber%20mais%20detalhes.', '_blank')}
+              className={`flex-shrink-0 py-2 px-5 rounded-xl text-sm font-bold transition-all active:scale-95 whitespace-nowrap ${
+                isDark
+                  ? 'bg-violet-600 text-white hover:bg-violet-500'
+                  : 'bg-violet-600 text-white hover:bg-violet-700'
+              }`}
+            >
+              Falar com consultor
+            </button>
             </div>
 
             {/* ================================================

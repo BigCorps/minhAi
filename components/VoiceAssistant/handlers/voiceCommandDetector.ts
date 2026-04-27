@@ -35,6 +35,7 @@ interface DetectorDeps {
   playText: (text: string) => Promise<void>;
   sessionId: string | null;
   groqContextRef: React.MutableRefObject<string>;
+  fallbackMessageRef: React.MutableRefObject<string>; // após groqContextRef
   commandProcessor: VoiceCommandProcessor | null;
   pixStateRef: React.MutableRefObject<{ qrCodeData: any; pixConfirmationData: any } | null>;
   setActiveModal: (modal: ActiveModal | null) => void;
@@ -746,26 +747,19 @@ export async function detectVoiceCommand(
   }
 
   // ── GROQ: classificador de intenção como último recurso ───
-  if (!fromGroq) {
-    console.log('🤖 Consultando GROQ para classificação de intenção...');
-    const { classifyIntentWithGroq } = await import('@/lib/groq-intent-classifier');
-    const groqHandled = await classifyIntentWithGroq(transcript, {
-      companyId,
-      sessionId,
-      functionSettings,
-      playText,
-      setIsProcessing,
-      setActiveModal,
-      sessionId,
-      groqContextRef: deps.groqContextRef,
-      commandProcessor,
-      pixStateRef,
-      setQrCodeData,
-      setPixConfirmationData,
-      activeFunctionContextRef,
-    });
-    if (groqHandled) return true;
-  }
+if (!fromGroq) {
+  const chatgptEnabled = await checkIfFunctionIsEnabled(companyId, 'chatgpt');
+  const { classifyIntentWithGroq } = await import('@/lib/groq-intent-classifier');
+  const groqHandled = await classifyIntentWithGroq(transcript, {
+    companyId,
+    playText,
+    groqContextRef: deps.groqContextRef,
+    fallbackMessage: deps.fallbackMessageRef.current,
+    commandProcessor,
+    forceResponse: !chatgptEnabled,
+  });
+  if (groqHandled) return true;
+}
 
   console.log('❌ GROQ: intenção geral → GPT');
 

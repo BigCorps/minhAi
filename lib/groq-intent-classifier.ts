@@ -44,12 +44,7 @@ export async function classifyIntentWithGroq(
 let sessionContext = null;
 if (effectiveSessionId) {
   try {
-    // query igual, sem alteração
-  } catch (_e) { /* silencioso */ }
-}
-
-    let sessionContext = null;
-    try {
+   
       const supabase = createClient();
       const { data: sessionData } = await supabase
         .from('assistant_sessions')

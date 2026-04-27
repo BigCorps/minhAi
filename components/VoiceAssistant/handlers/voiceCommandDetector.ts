@@ -714,35 +714,74 @@ export async function detectVoiceCommand(
 
     if (result?.success || (fromGroq && result?.functionKey)) {
       const funcKey = result.functionKey || '';
-      const registryFunc = getFunctionByKey(funcKey);
 
-      if (registryFunc?.handler) {
-        await registryFunc.handler({
-          transcript: lowerTranscript,
-          companyId,
-          functionSettings,
-          playText,
-          setIsProcessing,
-          sessionId,
-          setActiveModal,
-        });
-      } else {
-        if (result.speechText) await playText(result.speechText);
-        if (result.modalData && result.modalType) {
-          setActiveModal({ type: result.modalType, data: result.modalData });
+      // ── Verificação de orçamento estruturado ──────────────
+      // "quanto custa X" genérico → GPT com contexto da empresa
+      // "me faz um orçamento de X" / "cotação de X" → handler do orçamento
+      if (funcKey === 'orcamento') {
+        const isStructuredBudget = /orçamento|orcamento|orçar|cotação|cotacao/.test(lowerTranscript);
+        if (!isStructuredBudget) {
+          console.log('💰 Orçamento genérico detectado → deixando cair para o GPT com contexto');
+          // Não executa o handler; cai para o GROQ → GPT abaixo
+        } else {
+          // Orçamento estruturado: executa normalmente
+          const registryFunc = getFunctionByKey(funcKey);
+          if (registryFunc?.handler) {
+            await registryFunc.handler({
+              transcript: lowerTranscript,
+              companyId,
+              functionSettings,
+              playText,
+              setIsProcessing,
+              sessionId,
+              setActiveModal,
+            });
+          } else {
+            if (result.speechText) await playText(result.speechText);
+            if (result.modalData && result.modalType) {
+              setActiveModal({ type: result.modalType, data: result.modalData });
+            }
+          }
+          activeFunctionContextRef.current = {
+            functionKey: funcKey,
+            activatedAt: Date.now(),
+            expiresIn: 5 * 60 * 1000,
+          };
+          await commandProcessor.registerUsage(funcKey);
+          return true;
         }
-      }
+      } else {
+        // ── Todas as outras funções do registry ──────────────
+        const registryFunc = getFunctionByKey(funcKey);
 
-      if (funcKey) {
-        activeFunctionContextRef.current = {
-          functionKey: funcKey,
-          activatedAt: Date.now(),
-          expiresIn: 5 * 60 * 1000,
-        };
-        await commandProcessor.registerUsage(funcKey);
-      }
+        if (registryFunc?.handler) {
+          await registryFunc.handler({
+            transcript: lowerTranscript,
+            companyId,
+            functionSettings,
+            playText,
+            setIsProcessing,
+            sessionId,
+            setActiveModal,
+          });
+        } else {
+          if (result.speechText) await playText(result.speechText);
+          if (result.modalData && result.modalType) {
+            setActiveModal({ type: result.modalType, data: result.modalData });
+          }
+        }
 
-      return true;
+        if (funcKey) {
+          activeFunctionContextRef.current = {
+            functionKey: funcKey,
+            activatedAt: Date.now(),
+            expiresIn: 5 * 60 * 1000,
+          };
+          await commandProcessor.registerUsage(funcKey);
+        }
+
+        return true;
+      }
     }
   }
 

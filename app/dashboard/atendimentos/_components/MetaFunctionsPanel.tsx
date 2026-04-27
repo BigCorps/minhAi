@@ -107,53 +107,35 @@ function MetaFunctionCard({
   onToggle: (enabled: boolean) => void;
 }) {
   const cat = CATEGORIES[fn.function_category];
-  const catColor = fn.color || cat?.color || '#6b7280';
-  const catName  = cat?.name || fn.function_category;
+  const catName = cat?.name || fn.function_category;
   const isShared = SHARED_FIELD_KEYS.has(fn.function_key);
 
   return (
-    <div className={`relative rounded-xl border transition-all
+    <div className={`rounded-xl border transition-all overflow-hidden
       ${isEnabled
         ? 'bg-white dark:bg-slate-800 border-blue-200 dark:border-blue-700/50 shadow-sm'
         : 'bg-white/60 dark:bg-slate-900/60 border-gray-200 dark:border-white/10'
       }`}
     >
-      {/* Barra de cor da categoria */}
-      <div
-        className="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl"
-        style={{ backgroundColor: catColor }}
-      />
-
-      <div className="p-4 pt-5">
+      <div className="p-4">
         {/* Linha superior: categoria + badge Meta */}
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5">
-            <span
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: catColor }}
-            />
-            <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              {catName}
-            </span>
-          </div>
+          <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            {catName}
+          </span>
           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
             Meta
           </span>
         </div>
 
-        {/* Ícone + nome */}
-        <div className="flex items-start gap-3 mb-3">
-          {fn.icon && (
-            <span className="text-xl leading-none mt-0.5">{fn.icon}</span>
-          )}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">
-              {fn.function_name}
-            </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
-              {fn.short_description || fn.description}
-            </p>
-          </div>
+        {/* Nome + descrição */}
+        <div className="mb-3">
+          <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">
+            {fn.function_name}
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
+            {fn.short_description || fn.description}
+          </p>
         </div>
 
         {/* Rodapé: créditos + toggle */}

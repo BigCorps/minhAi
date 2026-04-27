@@ -2184,21 +2184,86 @@ const PixForm = ({ settings, onChange }: any) => {
   );
 };
 
+// SUBSTITUIR o ChatGptForm atual por:
 const ChatGptForm = ({ settings, onChange }: any) => (
-  <div>
-    <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-      Prompt do Sistema (ChatGPT)
-    </label>
-    <textarea
-      rows={6}
-      placeholder="Ex: Você é um assistente de vendas. Seja sempre cordial e ajude o cliente a encontrar o melhor produto..."
-      value={settings.system_prompt || ''}
-      onChange={e => onChange('system_prompt', e.target.value)}
-      className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-    />
-    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-      Determine como o assistente deve responder. Seja específico para obter melhores resultados.
-    </p>
+  <div className="space-y-4">
+
+    {/* Vantagens com ChatGPT ativado */}
+    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+      <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2 flex items-center gap-2">
+        <Sparkles className="w-4 h-4" />
+        Com ChatGPT ativado, o assistente:
+      </h4>
+      <ul className="space-y-1 text-sm text-green-800 dark:text-green-200">
+        <li>✓ Responde perguntas gerais sobre qualquer assunto</li>
+        <li>✓ Conhece os produtos, horários e informações da empresa</li>
+        <li>✓ Conversa naturalmente com os clientes</li>
+        <li>✓ Responde dúvidas sobre serviços e preços</li>
+        <li>✓ Usa o prompt abaixo como personalidade e conhecimento base</li>
+      </ul>
+    </div>
+
+    {/* Prompt do sistema */}
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Prompt do Sistema
+      </label>
+      <textarea
+        rows={6}
+        placeholder="Ex: Você é um assistente de vendas. Seja sempre cordial e ajude o cliente a encontrar o melhor produto..."
+        value={settings.system_prompt || ''}
+        onChange={e => onChange('system_prompt', e.target.value)}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+      />
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Determine como o assistente deve responder. Seja específico para obter melhores resultados.
+      </p>
+    </div>
+
+    {/* Divisor */}
+    <div className="border-t border-gray-200 dark:border-white/10 pt-4">
+      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+        <AlertCircle className="w-4 h-4 text-amber-500" />
+        Mensagem quando ChatGPT estiver desativado
+      </h4>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+        Quando a função ChatGPT estiver desativada, o assistente (GROQ) responderá 
+        esta mensagem para perguntas que não são sobre funções do sistema.
+      </p>
+      <textarea
+        rows={3}
+        placeholder="Ex: Não tenho informações sobre isso. Entre em contato com a empresa para mais detalhes."
+        value={settings.groq_fallback_message || ''}
+        onChange={e => onChange('groq_fallback_message', e.target.value)}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+        maxLength={300}
+      />
+      <div className="flex items-center justify-between mt-1">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Deixe vazio para usar a mensagem padrão do sistema.
+        </p>
+        <span className="text-xs text-gray-400">
+          {(settings.groq_fallback_message || '').length}/300
+        </span>
+      </div>
+
+      {/* Preview da mensagem */}
+      {settings.groq_fallback_message && (
+        <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+          <p className="text-xs text-amber-800 dark:text-amber-200">
+            <strong>Preview:</strong> "{settings.groq_fallback_message}"
+          </p>
+        </div>
+      )}
+
+      {!settings.groq_fallback_message && (
+        <div className="mt-2 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-white/10">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            <strong>Mensagem padrão:</strong> "Não tenho informações sobre isso. Entre em contato com a empresa para mais detalhes."
+          </p>
+        </div>
+      )}
+    </div>
   </div>
 );
 
@@ -4664,7 +4729,7 @@ try {
 
       const { data, error } = await supabase
         .from('companies')
-.select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle, wifi_network_name, wifi_network_password, cardapio_url, cardapio_description, validar_cupom, qrcode_content, qrcode_label, manual_payment_enabled, print_price_per_page, print_max_pages_per_job, print_color_enabled, print_price_bw, print_price_color, printnode_computer_id, printnode_printer_id_bw, printnode_printer_id_color, thermal_printer_id, thermal_connection_type, youtube_channel_url, youtube_channel_name, youtube_channel_description, print_on_purchase, print_on_queue, print_on_payment, print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment')        .eq('id', companyId)
+        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, groq_fallback_message, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle, wifi_network_name, wifi_network_password, cardapio_url, cardapio_description, validar_cupom, qrcode_content, qrcode_label, manual_payment_enabled, print_price_per_page, print_max_pages_per_job, print_color_enabled, print_price_bw, print_price_color, printnode_computer_id, printnode_printer_id_bw, printnode_printer_id_color, thermal_printer_id, thermal_connection_type, youtube_channel_url, youtube_channel_name, youtube_channel_description, print_on_purchase, print_on_queue, print_on_payment, print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment')        .eq('id', companyId)
         .single();
 
       if (data) {

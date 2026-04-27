@@ -284,6 +284,31 @@ export class ThermalPrinterService {
     }
   }
 
+  async autoReconnect(): Promise<boolean> {
+  try {
+    // WebUSB — tenta reconectar dispositivo já autorizado
+    if ('usb' in navigator) {
+      const devices = await (navigator as any).usb.getDevices();
+      if (devices.length > 0) {
+        const printer: ThermalPrinter = {
+          id: `usb-${devices[0].vendorId}-${devices[0].productId}`,
+          name: devices[0].productName || 'Impressora USB',
+          type: 'usb',
+          device: devices[0],
+          connected: false,
+        };
+        await this.connectUSB(printer);
+        console.log('✅ Impressora USB reconectada automaticamente');
+        return true;
+      }
+    }
+    // WebBluetooth não suporta getDevices() sem permissão — não há auto-reconexão
+    return false;
+  } catch {
+    return false;
+  }
+}
+
   // ── Desconectar ───────────────────────────────────────────
   async disconnect(): Promise<void> {
     if (!this.connectedPrinter) return;
@@ -313,3 +338,8 @@ export class ThermalPrinterService {
 
 // ── Instância singleton ───────────────────────────────────
 export const thermalPrinterService = new ThermalPrinterService();
+
+// Auto-reconecta na inicialização se houver dispositivo previamente pareado
+if (typeof window !== 'undefined') {
+  thermalPrinterService.autoReconnect().catch(() => {});
+}

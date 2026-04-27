@@ -1,24 +1,32 @@
 'use client';
 // ARQUIVO: app/dashboard/atendimentos/page.tsx
+
 import { useState, useEffect } from 'react';
-import { ConnectionManager } from './_components/ConnectionManager';
-import { QuickActionsPanel } from './_components/QuickActionsPanel';
-import { ConversationsPanel } from './_components/ConversationsPanel';
-import { createClient } from '@/lib/supabase-browser';
-import { HelpCircle, X, ExternalLink, MessageCircle, Smartphone, Monitor, ChevronRight, Share2, Zap } from 'lucide-react';
+import { ConnectionManager }   from './_components/ConnectionManager';
+import { ConversationsPanel }  from './_components/ConversationsPanel';
+import { MetaFunctionsPanel }  from './_components/MetaFunctionsPanel';
+import { MetaCommentsPanel }   from './_components/MetaCommentsPanel';
+import { createClient }        from '@/lib/supabase-browser';
+import {
+  HelpCircle, X, ExternalLink, MessageCircle, Smartphone, Monitor,
+  ChevronRight, Share2, Zap, MessageSquare, Settings,
+} from 'lucide-react';
 import { useAssistant } from '@/contexts/AssistantContext';
 
-interface Company {
-  id: string;
-  name: string;
-  wake_word?: string;
-}
+type Tab = 'functions' | 'conversations' | 'comments' | 'connections';
+
+const TABS: { key: Tab; label: string; icon: React.ElementType; requiresConnection: boolean }[] = [
+  { key: 'functions',     label: 'Funções',      icon: Zap,            requiresConnection: true  },
+  { key: 'conversations', label: 'Conversas',    icon: MessageCircle,  requiresConnection: true  },
+  { key: 'comments',      label: 'Comentários',  icon: MessageSquare,  requiresConnection: true  },
+  { key: 'connections',   label: 'Conexões',     icon: Settings,       requiresConnection: false },
+];
 
 export default function AtendimentosPage() {
   const supabase = createClient();
   const { selectedAssistantId: selectedCompanyId } = useAssistant();
-  const [showHelp, setShowHelp] = useState(false);
-  const [activeTab, setActiveTab] = useState<'connections' | 'actions'>('connections');
+  const [showHelp, setShowHelp]           = useState(false);
+  const [activeTab, setActiveTab]         = useState<Tab>('connections');
   const [hasConnections, setHasConnections] = useState(false);
 
   // Verifica se há conexões Meta ativas para o assistente selecionado
@@ -36,6 +44,8 @@ export default function AtendimentosPage() {
         .limit(1);
       const connected = !!(data && data.length > 0);
       setHasConnections(connected);
+      // Se acabou de conectar, vai para Funções automaticamente
+      if (connected && activeTab === 'connections') setActiveTab('functions');
       if (!connected) setActiveTab('connections');
     }
     checkConnections();
@@ -54,18 +64,16 @@ export default function AtendimentosPage() {
                   Serviços Meta
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Configure seus assistentes ao WhatsApp, Instagram e Facebook.
+                  Configure seus assistentes para WhatsApp, Instagram e Facebook.
                 </p>
               </div>
-              <div className="flex flex-col items-end gap-2 shrink-0">
-                <button
-                  onClick={() => setShowHelp(true)}
-                  className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors border border-gray-300 dark:border-white/10 rounded-md px-3 py-2 hover:bg-gray-50 dark:hover:bg-white/5"
-                >
-                  <HelpCircle className="w-4 h-4" />
-                  Ajuda
-                </button>
-              </div>
+              <button
+                onClick={() => setShowHelp(true)}
+                className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors border border-gray-300 dark:border-white/10 rounded-md px-3 py-2 hover:bg-gray-50 dark:hover:bg-white/5 shrink-0"
+              >
+                <HelpCircle className="w-4 h-4" />
+                Ajuda
+              </button>
             </div>
           </div>
 
@@ -85,47 +93,54 @@ export default function AtendimentosPage() {
           {/* Conteúdo Principal */}
           {selectedCompanyId && (
             <>
-              {/* Tabs — só aparecem quando há conexão ativa */}
-              {hasConnections && (
-                <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-                  <div className="flex border-b border-gray-200 dark:border-white/10">
-                    <button
-                      onClick={() => setActiveTab('connections')}
-                      className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
-                        activeTab === 'connections'
-                          ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <Share2 className="w-4 h-4" />
-                      Conexões Meta
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('actions')}
-                      className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
-                        activeTab === 'actions'
-                          ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Conversas
-                    </button>
-                  </div>
+              {/* Tabs */}
+              <div className="mb-6 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+                <div className="flex border-b border-gray-200 dark:border-white/10">
+                  {TABS.map(({ key, label, icon: Icon, requiresConnection }) => {
+                    const disabled = requiresConnection && !hasConnections;
+                    const isActive = activeTab === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => !disabled && setActiveTab(key)}
+                        disabled={disabled}
+                        title={disabled ? 'Conecte uma conta Meta primeiro' : undefined}
+                        className={`flex-1 px-4 py-3 text-sm font-medium transition flex items-center justify-center gap-2
+                          ${isActive
+                            ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                            : disabled
+                              ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                          }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span className="hidden sm:inline">{label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
 
               {/* Conteúdo da aba */}
               <div className="space-y-6">
-                {(!hasConnections || activeTab === 'connections') && (
+                {activeTab === 'functions' && hasConnections && (
+                  <MetaFunctionsPanel selectedCompanyId={selectedCompanyId} />
+                )}
+                {activeTab === 'conversations' && hasConnections && (
+                  <ConversationsPanel selectedCompanyId={selectedCompanyId} />
+                )}
+                {activeTab === 'comments' && hasConnections && (
+                  <MetaCommentsPanel selectedCompanyId={selectedCompanyId} />
+                )}
+                {activeTab === 'connections' && (
                   <ConnectionManager
                     selectedCompanyId={selectedCompanyId}
                     onCompanyChange={() => {}}
-                    onConnectionsChange={setHasConnections}
+                    onConnectionsChange={(connected) => {
+                      setHasConnections(connected);
+                      if (connected) setActiveTab('functions');
+                    }}
                   />
-                )}
-                {hasConnections && activeTab === 'actions' && (
-                  <ConversationsPanel selectedCompanyId={selectedCompanyId} />
                 )}
               </div>
             </>
@@ -144,16 +159,13 @@ export default function AtendimentosPage() {
             className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative"
             onClick={e => e.stopPropagation()}
           >
-            {/* Botão Fechar */}
             <button
               onClick={() => setShowHelp(false)}
               className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors z-10"
-              aria-label="Fechar"
             >
               <X size={20} className="text-gray-600 dark:text-gray-400" />
             </button>
 
-            {/* Header */}
             <div className="p-6 border-b border-gray-200 dark:border-white/10 pr-14">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 Como configurar o Meta Business Suite
@@ -164,8 +176,6 @@ export default function AtendimentosPage() {
             </div>
 
             <div className="p-6 space-y-6">
-
-              {/* Intro */}
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-900 dark:text-blue-100">
                   O <strong>Meta Business Suite</strong> é a plataforma gratuita da Meta que centraliza
@@ -174,7 +184,6 @@ export default function AtendimentosPage() {
                 </p>
               </div>
 
-              {/* Via App */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Smartphone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -202,7 +211,6 @@ export default function AtendimentosPage() {
 
               <div className="border-t border-gray-200 dark:border-white/10" />
 
-              {/* Via Site */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Monitor className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -230,7 +238,6 @@ export default function AtendimentosPage() {
 
               <div className="border-t border-gray-200 dark:border-white/10" />
 
-              {/* FAQ */}
               <div>
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Dúvidas frequentes</h3>
                 <div className="space-y-2">
@@ -258,10 +265,8 @@ export default function AtendimentosPage() {
                   ))}
                 </div>
               </div>
-
             </div>
 
-            {/* Footer */}
             <div className="flex justify-end px-6 pb-6 pt-0">
               <button
                 onClick={() => setShowHelp(false)}
@@ -270,7 +275,6 @@ export default function AtendimentosPage() {
                 Entendido
               </button>
             </div>
-
           </div>
         </div>
       )}

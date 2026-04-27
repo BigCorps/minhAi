@@ -32,6 +32,16 @@ export default function LoginPage() {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setTheme(isDark ? 'dark' : 'light');
 
+    // ── Tratar erros vindos do callback OAuth ──────────────────────────────
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlError = searchParams.get('error');
+    if (urlError === 'auth_error') {
+      setError('Erro na autenticação. Tente novamente.');
+    } else if (urlError === 'callback_error') {
+      setError('Erro inesperado no login. Tente novamente.');
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     const safetyTimeout = setTimeout(() => {
       setIsCheckingBiometrics(false);
     }, 3000);
@@ -82,65 +92,65 @@ export default function LoginPage() {
     return () => clearTimeout(safetyTimeout);
   }, [supabase]);
 
-async function handleEmailAuth(e: React.FormEvent<HTMLFormElement>) {
-  e.preventDefault();
+  async function handleEmailAuth(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
 
-  const form = e.currentTarget; // captura ANTES de qualquer await
-  setLoading(true);
-  setError(null);
+    const form = e.currentTarget;
+    setLoading(true);
+    setError(null);
 
-  try {
-    const token = await getToken();
+    try {
+      const token = await getToken();
 
-    if (token) {
-      const { data: td, error: te } = await supabase.functions.invoke(
-        'validate-turnstile',
-        { body: { token } }
-      );
+      if (token) {
+        const { data: td, error: te } = await supabase.functions.invoke(
+          'validate-turnstile',
+          { body: { token } }
+        );
 
-      if (te || !td?.success) {
-        setError(td?.error || 'Verificação de segurança falhou. Tente novamente.');
-        return;
+        if (te || !td?.success) {
+          setError(td?.error || 'Verificação de segurança falhou. Tente novamente.');
+          return;
+        }
       }
-    }
 
-    const formData = new FormData(form);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const name = formData.get('name') as string;
+      const formData = new FormData(form);
+      const email    = formData.get('email') as string;
+      const password = formData.get('password') as string;
+      const name     = formData.get('name') as string;
 
-    if (mode === 'signup') {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { name } },
-      });
+      if (mode === 'signup') {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { name } },
+        });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      if (data.session) {
+        if (data.session) {
+          localStorage.setItem('lastLoggedInUser', email);
+          router.push('/dashboard');
+        } else {
+          alert('Cadastro realizado! Verifique seu email para confirmar.');
+          setMode('login');
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
         localStorage.setItem('lastLoggedInUser', email);
         router.push('/dashboard');
-      } else {
-        alert('Cadastro realizado! Verifique seu email para confirmar.');
-        setMode('login');
       }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-      localStorage.setItem('lastLoggedInUser', email);
-      router.push('/dashboard');
+    } catch (error: any) {
+      setError(error.message || 'Erro ao autenticar. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
-  } catch (error: any) {
-    setError(error.message || 'Erro ao autenticar. Tente novamente.');
-  } finally {
-    setLoading(false);
   }
-}
 
   async function handleBiometricLogin() {
     if (!biometricUserEmail) return;
@@ -222,9 +232,26 @@ async function handleEmailAuth(e: React.FormEvent<HTMLFormElement>) {
         provider: 'google',
         options: { redirectTo: `${window.location.origin}/auth/callback` },
       });
-      if (error) throw error;
+
+      if (error) {
+        // ── Conta já existe com email/senha ───────────────────────────────
+        if (
+          error.message.includes('already registered') ||
+          error.message.includes('already exists') ||
+          error.message.includes('user_already_exists')
+        ) {
+          setError(
+            'Este email já possui cadastro com senha. ' +
+            'Faça login com email e senha, depois acesse seu Perfil para vincular o Google.'
+          );
+        } else {
+          throw error;
+        }
+        // ─────────────────────────────────────────────────────────────────
+      }
     } catch (error: any) {
       setError(error.message || 'Erro ao fazer login com Google.');
+    } finally {
       setLoading(false);
     }
   }
@@ -300,7 +327,23 @@ async function handleEmailAuth(e: React.FormEvent<HTMLFormElement>) {
           {error && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              <div className="flex-1">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                {/* Dica extra quando o erro é de conta duplicada */}
+                {(error.includes('já possui cadastro') || error.includes('já tem cadastro')) && (
+                  <button
+                    onClick={() => {
+                      setError(null);
+                      setMode('login');
+                      // Scroll suave até o form caso esteja fora da tela
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="mt-2 text-xs font-semibold text-red-700 dark:text-red-300 underline underline-offset-2 hover:no-underline"
+                  >
+                    Ir para o login com email e senha →
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -444,16 +487,16 @@ async function handleEmailAuth(e: React.FormEvent<HTMLFormElement>) {
             </div>
 
             <div
-  ref={containerRef}
-  style={{
-    position: 'absolute',
-    left: '-9999px',
-    width: '1px',
-    height: '1px',
-    overflow: 'hidden',
-  }}
-  aria-hidden="true"
-/>
+              ref={containerRef}
+              style={{
+                position: 'absolute',
+                left: '-9999px',
+                width: '1px',
+                height: '1px',
+                overflow: 'hidden',
+              }}
+              aria-hidden="true"
+            />
 
             <button
               type="submit"

@@ -5913,15 +5913,16 @@ nosso_qrcode: {
     category: 'ai_assistant',
     responseType: 'voice',
     
-    voiceTriggers: [
-      'orçamento',
-      'fazer orçamento',
-      'quanto custa',
-      'preço',
-      'valor',
-      'cotação',
-      'orçar',
-    ],
+voiceTriggers: [
+  'orçamento',
+  'fazer orçamento',
+  'preciso de um orçamento',
+  'quero um orçamento',
+  'me faz um orçamento',
+  'cotação de serviço',
+  'orçar',
+  'gerar orçamento',
+],
     
     examplePhrases: [
       'Quanto custa [produto/serviço]?',

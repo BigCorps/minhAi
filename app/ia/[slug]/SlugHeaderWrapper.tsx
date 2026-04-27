@@ -197,6 +197,10 @@ export default function SlugHeaderWrapper({
     setShowExitOverlay(false);
     window.dispatchEvent(new CustomEvent('eai:modalClose'));
  
+    // Avisa o AssistenteClient ANTES de sair do fullscreen
+    // para que ele suspenda o handler de fullscreenchange (evita re-enter em touch)
+    window.dispatchEvent(new CustomEvent('eai:kioskWillExit'));
+
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
     } catch { /* silencioso */ }

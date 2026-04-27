@@ -231,9 +231,9 @@ export default function PainelOfertasDisplay({
         />
       )}
 
-      {/* QR Code fixo — canto superior direito */}
+      {/* QR Code fixo — canto inferior direito */}
       {qrContent && !loading && (
-        <div className="absolute top-6 right-6 flex flex-col items-center gap-1.5 z-20">
+        <div className="absolute bottom-6 right-6 flex flex-col items-center gap-1.5 z-20">
           <div className="rounded-xl overflow-hidden shadow-2xl border-2 border-white/20">
             <img src={buildQrUrl(qrContent)} alt="QR Code" width={96} height={96} className="block" />
           </div>
@@ -251,8 +251,9 @@ export default function PainelOfertasDisplay({
         </div>
       )}
 
+      {/* Player — parte inferior centralizado */}
       {!loading && images.length > 0 && (
-        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg transition-all duration-300 ${
+        <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-lg transition-all duration-300 ${
           controlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
         }`}>
           <div className="bg-black/50 backdrop-blur-md p-6 rounded-3xl shadow-2xl mx-4">

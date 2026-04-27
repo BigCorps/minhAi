@@ -316,7 +316,7 @@ useEffect(() => {
 
   return () => { supabase.removeChannel(channel); };
 }, [profile?.id, companyId]);
-  const groqContextRef = useGroqContext(companyId, profile);
+  const { groqContextRef, fallbackMessageRef } = useGroqContext(companyId, profile);
 
   // ── Ponto 2: Hook de FAQs ─────────────────────────────────
   const faqs = useFAQs(companyId);
@@ -1489,6 +1489,7 @@ case 'juntar_pdfs':
       setActiveModal,
       activeFunctionContextRef,
       groqContextRef,
+      fallbackMessageRef,
     });
 
     if (isCommand) {
@@ -1668,6 +1669,7 @@ const handleTextMessage = async (message: string) => {
         setActiveModal,
         activeFunctionContextRef,
         groqContextRef,
+        fallbackMessageRef,
       });
 
       if (isCommand) return;
@@ -1825,6 +1827,7 @@ const handleTextMessage = async (message: string) => {
         setActiveModal,
         activeFunctionContextRef: dummyContextRef,
         groqContextRef,
+        fallbackMessageRef,
       });
 
       if (isCommand) {

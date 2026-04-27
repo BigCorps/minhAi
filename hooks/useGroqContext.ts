@@ -13,7 +13,10 @@ export function useGroqContext(
   companyId: string,
   profile?: SlugProfileBasic | null
 ) {
-  const contextRef = useRef<string>('');
+  const groqContextRef = useRef<string>('');
+  const fallbackMessageRef = useRef<string>(
+    'Não tenho informações sobre isso. Entre em contato com a empresa.'
+  );
 
   useEffect(() => {
     if (!companyId) return;
@@ -29,21 +32,28 @@ export function useGroqContext(
 
       // 2. Funções habilitadas do banco para esta empresa
       const supabase = createClient();
-      const { data: enabled } = await supabase
-        .from('company_function_settings')
-        .select('function_key')
-        .eq('company_id', companyId)
-        .eq('is_enabled', true);
 
+      const [{ data: enabled }, { data: defaults }, { data: company }] = await Promise.all([
+        supabase
+          .from('company_function_settings')
+          .select('function_key')
+          .eq('company_id', companyId)
+          .eq('is_enabled', true),
+        supabase
+          .from('assistant_functions')
+          .select('function_key, default_enabled')
+          .eq('is_active', true),
+        supabase
+          .from('companies')
+          .select('groq_fallback_message')
+          .eq('id', companyId)
+          .single(),
+      ]);
+
+      // 3. Montar set de keys habilitadas
       const enabledKeys = new Set([
         ...(enabled?.map(r => r.function_key) ?? []),
       ]);
-
-      // 3. Buscar default_enabled do banco
-      const { data: defaults } = await supabase
-        .from('assistant_functions')
-        .select('function_key, default_enabled')
-        .eq('is_active', true);
 
       defaults?.forEach(r => {
         if (r.default_enabled) enabledKeys.add(r.function_key);
@@ -60,12 +70,20 @@ export function useGroqContext(
         ? `\nCliente logado: ${profile.nome}${profile.email ? ` (${profile.email})` : ''}${profile.identificador ? `, tel: ${profile.identificador}` : ''}`
         : '';
 
-      contextRef.current = functionLines + profileContext;
-      console.log(`✅ GROQ context carregado: ${enabledKeys.size} funções${profile ? ` | Cliente: ${profile.nome}` : ''}`);
+      groqContextRef.current = functionLines + profileContext;
+
+      // 6. Fallback message da empresa
+      fallbackMessageRef.current =
+        company?.groq_fallback_message ??
+        'Não tenho informações sobre isso. Entre em contato com a empresa.';
+
+      console.log(
+        `✅ GROQ context carregado: ${enabledKeys.size} funções${profile ? ` | Cliente: ${profile.nome}` : ''}`
+      );
     }
 
     buildContext();
   }, [companyId, profile]);
 
-  return contextRef;
+  return { groqContextRef, fallbackMessageRef };
 }

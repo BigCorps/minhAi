@@ -521,20 +521,32 @@ onPresenceDetected: useCallback(() => {
     initCommandProcessor();
   }, [companyId]);
 
-  // ── Auto-start ────────────────────────────────────────────
+// ── Auto-start (CORRIGIDO) ──────────────────────────────────
 useEffect(() => {
-    if (!companyWakeWord || !permissionGranted) return;
-    if (!wakeWordEnabled) {
-      // Sem wake word: não inicia escuta, mas libera o carrossel
-      const timer = setTimeout(() => {
-        setShowStartButton(false);
-        onAssistantStart?.();
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-    const timer = setTimeout(() => { handleStart(); }, 800);
+  if (!companyWakeWord) return;
+
+  // Sem microfone: libera o carrossel mas não inicia escuta de voz
+  if (!permissionGranted) {
+    const timer = setTimeout(() => {
+      setShowStartButton(false);
+      onAssistantStart?.();
+    }, 800);
     return () => clearTimeout(timer);
-  }, [companyWakeWord, permissionGranted, wakeWordEnabled]);
+  }
+
+  // Com microfone e sem wake word: inicia direto
+  if (!wakeWordEnabled) {
+    const timer = setTimeout(() => {
+      setShowStartButton(false);
+      onAssistantStart?.();
+    }, 800);
+    return () => clearTimeout(timer);
+  }
+
+  // Com microfone e wake word: aguarda detecção
+  const timer = setTimeout(() => { handleStart(); }, 800);
+  return () => clearTimeout(timer);
+}, [companyWakeWord, permissionGranted, wakeWordEnabled, onAssistantStart]);
 
   // ── Google Speech ─────────────────────────────────────────
   async function startGoogleSpeech() {

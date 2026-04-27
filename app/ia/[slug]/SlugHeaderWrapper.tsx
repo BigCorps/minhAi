@@ -77,6 +77,12 @@ export default function SlugHeaderWrapper({
   const [showExitOverlay, setShowExitOverlay] = useState(false);
   const [exitPasswordInput, setExitPasswordInput] = useState('');
   const [exitPasswordError, setExitPasswordError] = useState(false);
+
+  // mini-overlay de entrada do kiosk (próprio deste componente)
+  const [showSetupOverlay, setShowSetupOverlay] = useState(false);
+  const [setupPasswordInput, setSetupPasswordInput] = useState('');
+  const [setupPasswordError, setSetupPasswordError] = useState(false);
+
   const kioskPasswordRef = useRef<string | null>(null);
  
   const [toast, setToast] = useState<{
@@ -171,9 +177,46 @@ export default function SlugHeaderWrapper({
     }
   };
  
-  // Solicita entrada no kiosk → AssistenteClient cuida do setup de senha
+  // Entrada do kiosk — gerenciada aqui, funciona em qualquer página
   const handleEnterKioskMode = () => {
-    window.dispatchEvent(new CustomEvent('eai:requestKioskMode'));
+    setShowSetupOverlay(true);
+    window.dispatchEvent(new CustomEvent('eai:modalOpen'));
+  };
+
+  const handleConfirmSetup = async () => {
+    if (setupPasswordInput.length < 4) {
+      setSetupPasswordError(true);
+      setTimeout(() => setSetupPasswordError(false), 2000);
+      return;
+    }
+
+    const password = setupPasswordInput;
+    setSetupPasswordInput('');
+    setSetupPasswordError(false);
+    setShowSetupOverlay(false);
+    window.dispatchEvent(new CustomEvent('eai:modalClose'));
+
+    try {
+      await document.documentElement.requestFullscreen();
+    } catch (error) {
+      console.error('Erro ao ativar fullscreen:', error);
+      showToast('Erro ao ativar tela cheia. Permita em seu navegador.', 'error');
+      return;
+    }
+
+    setKioskActive(true, password);
+    // Sincroniza AssistenteClient caso esteja presente na página /ia
+    window.dispatchEvent(new CustomEvent('eai:kioskModeChange', {
+      detail: { active: true, password },
+    }));
+    showToast('Modo Kiosk ativado!', 'success');
+  };
+
+  const handleCancelSetup = () => {
+    setShowSetupOverlay(false);
+    setSetupPasswordInput('');
+    setSetupPasswordError(false);
+    window.dispatchEvent(new CustomEvent('eai:modalClose'));
   };
  
   // FIX 2: saída gerenciada aqui — funciona em qualquer página
@@ -257,6 +300,81 @@ export default function SlugHeaderWrapper({
         onClose={overlayMode ? onClose : undefined}
       />
  
+      {/* ── Mini-overlay de ENTRADA do kiosk ───────────────────── */}
+      {showSetupOverlay && (
+        <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm ${
+            theme === 'dark'
+              ? 'bg-slate-800 border border-white/10'
+              : 'bg-white border border-gray-200'
+          }`}>
+            <div className={`px-6 py-5 border-b flex items-center gap-3 ${
+              theme === 'dark' ? 'border-white/10 bg-blue-500/10' : 'border-gray-100 bg-blue-50'
+            }`}>
+              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+              </div>
+              <div>
+                <h3 className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                  Ativar Modo Kiosk
+                </h3>
+                <p className={`text-xs mt-0.5 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
+                  Defina uma senha para proteger a saída
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <input
+                type="password"
+                value={setupPasswordInput}
+                onChange={(e) => setSetupPasswordInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleConfirmSetup()}
+                autoFocus
+                placeholder="Mínimo 4 caracteres"
+                className={`w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-colors text-base ${
+                  setupPasswordError
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'focus:border-blue-500'
+                } ${
+                  theme === 'dark'
+                    ? 'bg-slate-700 border-white/10 text-white placeholder-white/30'
+                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                }`}
+              />
+              {setupPasswordError && (
+                <p className="text-red-500 text-sm flex items-center gap-1.5">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Senha deve ter no mínimo 4 caracteres
+                </p>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCancelSetup}
+                  className={`flex-1 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-white/5 hover:bg-white/10 text-white'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmSetup}
+                  className="flex-1 py-2.5 rounded-lg font-medium text-sm bg-blue-500 hover:bg-blue-600 text-white transition-colors active:scale-95"
+                >
+                  Ativar Kiosk
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Mini-overlay de saída do kiosk ──────────────────── */}
       {showExitOverlay && (
         <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">

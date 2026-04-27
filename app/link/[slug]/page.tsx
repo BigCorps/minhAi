@@ -17,7 +17,7 @@ export default async function LinkPage({ params }: Props) {
     .select(`
       id, name, slug, logo_url, webapp_logo_url, webapp_enabled,
       webapp_theme_color, assistant_role, brand_description,
-      modo_links_enabled,
+      modo_links_enabled, modo_vendas_enabled, modo_fila_enabled,
       whatsapp_number, instagram_username, website, facebook,
       email_contato, telefone_fixo, tiktok, twitter, linkedin,
       youtube_channel_url

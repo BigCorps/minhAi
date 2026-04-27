@@ -94,11 +94,6 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
           >
             Escolha o pacote ideal
           </h2>
-          <p className={`text-[11px] sm:text-xs max-w-md mx-auto transition-colors ${
-            isDark ? 'text-white/40' : 'text-gray-400'
-          }`}>
-            Planos mensais com acesso completo ou créditos avulsos sem expiração.
-          </p>
         </div>
 
         {/* Card Grátis */}
@@ -141,7 +136,7 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
                 <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 sm:mb-2 text-center ${
                   isDark ? 'text-blue-400/60' : 'text-blue-600/60'
                 }`}>
-                  Planos Mensais — inclui acesso às integrações
+                  Planos Mensais
                 </p>
 
                 {/* MOBILE: lista compacta */}
@@ -331,7 +326,7 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
               <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 sm:mb-2 text-center ${
                 isDark ? 'text-blue-400/60' : 'text-blue-600/60'
               }`}>
-                Pacotes de Créditos Avulsos — sem mensalidade
+                Pacotes de Créditos
               </p>
 
               {/* MOBILE: lista compacta */}
@@ -462,17 +457,6 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
             </div>
           </div>
         )}
-
-        {/* Info Banner */}
-        <div className="max-w-xl w-full flex-shrink-0">
-          <div className={`rounded-lg px-3 py-1.5 border text-center transition-colors ${
-            isDark ? 'bg-blue-500/5 border-blue-500/15' : 'bg-blue-50 border-blue-100'
-          }`}>
-            <p className={`text-[10px] ${isDark ? 'text-blue-300/60' : 'text-blue-600'}`}>
-              Créditos compartilhados automaticamente entre todos os seus assistentes.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );

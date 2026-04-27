@@ -7,6 +7,8 @@ interface ClassifierDeps {
   playText: (text: string) => Promise<void>;
   groqContextRef: React.MutableRefObject<string>;
   commandProcessor: any;
+  fallbackMessage?: string;
+  forceResponse?: boolean;
 }
 
 const GENERAL_CONVERSATION = [
@@ -64,10 +66,15 @@ export async function classifyIntentWithGroq(
     if (!response.ok) return false;
 
     const { response: groqResponse } = await response.json();
-    if (!groqResponse) {
-      console.log('💬 GROQ: conversa geral → GPT');
-      return false;
-    }
+if (!groqResponse) {
+  if (deps.forceResponse) {
+    await deps.playText(deps.fallbackMessage ?? 'Não tenho informações sobre isso.');
+    deps.commandProcessor?.saveUnrecognizedHint(transcript);
+    return true;
+  }
+  console.log('💬 GROQ: conversa geral → GPT');
+  return false;
+}
 
     console.log(`🤖 GROQ responde: "${groqResponse}"`);
     await deps.playText(groqResponse);

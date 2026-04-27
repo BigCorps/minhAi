@@ -43,6 +43,7 @@ export interface SaleModeModalProps {
   avatarType?: string;                    // ← NOVO: orbe vs avatar
   modo_vendas_enabled?: boolean;
   modo_fila_enabled?: boolean;
+  modo_links_enabled?: boolean;
   theme: 'dark' | 'light';
   onClose: () => void;
   playText?: (text: string) => Promise<void>;
@@ -78,6 +79,7 @@ function SaleModeInner({
   avatarType,                             // ← NOVO
   modo_vendas_enabled = true,
   modo_fila_enabled = false,
+  modo_links_enabled = false,
   theme,
   onClose,
   playText,
@@ -533,6 +535,7 @@ function SaleModeInner({
             webapp_enabled: true,
             modo_vendas_enabled: modo_vendas_enabled,
             modo_fila_enabled: modo_fila_enabled,
+            modo_links_enabled: modo_links_enabled,
           }}
           slug={slug}
           pageType="vendas"

@@ -39,7 +39,15 @@ export async function classifyIntentWithGroq(
     }
 
     // ── Fase 2: buscar contexto de memória ──
-    const effectiveSessionId = deps.sessionId ?? `groq-${deps.companyId}`;
+    const effectiveSessionId = deps.sessionId;
+
+let sessionContext = null;
+if (effectiveSessionId) {
+  try {
+    // query igual, sem alteração
+  } catch (_e) { /* silencioso */ }
+}
+
     let sessionContext = null;
     try {
       const supabase = createClient();

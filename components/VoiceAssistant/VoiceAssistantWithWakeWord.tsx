@@ -316,7 +316,7 @@ useEffect(() => {
 
   return () => { supabase.removeChannel(channel); };
 }, [profile?.id, companyId]);
-  const { groqContextRef, fallbackMessageRef } = useGroqContext(companyId, profile);
+  const { groqContextRef, gptContextRef, fallbackMessageRef } = useGroqContext(companyId, profile);
 
   // ── Ponto 2: Hook de FAQs ─────────────────────────────────
   const faqs = useFAQs(companyId);
@@ -1523,6 +1523,7 @@ case 'juntar_pdfs':
       }
       formData.append('directQuestion', questionText);
       if (sessionId) formData.append('sessionId', sessionId);
+      formData.append('companyContext', gptContextRef.current); // ← só isso
 
       let feedbackStarted = false;
       const feedbackTimeout = setTimeout(() => {
@@ -1691,6 +1692,7 @@ const handleTextMessage = async (message: string) => {
       formData.append('companyId', companyId);
       formData.append('directQuestion', message);
       if (sessionId) formData.append('sessionId', sessionId);
+      formData.append('companyContext', gptContextRef.current); // ← só isso
 
       const response = await fetch('/api/voice/process', { method: 'POST', body: formData });
 

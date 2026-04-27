@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ response: null });
     }
 
-    // Detecta se há perfil logado no contexto para personalizar respostas
+    // Detecta se ha perfil logado no contexto para personalizar respostas
     const hasProfile = functionsContext?.includes('Cliente logado:');
     const memoryBlock = sessionContext?.summary || sessionContext?.lastFunctions?.length > 0
       ? `\n\nCONTEXTO DESTA SESSÃO:\n${sessionContext.summary ? `- ${sessionContext.summary}` : ''}${sessionContext.lastFunctions?.length > 0 ? `\n- Funções usadas: ${sessionContext.lastFunctions.join(', ')}` : ''}`
@@ -47,29 +47,29 @@ ${functionsContext}
 Regras:
 - Responda em português brasileiro, de forma curta e natural (poucas frases)
 - Quando o cliente quiser algo que você tem, diga exatamente o que ele deve falar para ativar
-- Quando houver múltiplas opções relacionadas, liste APENAS as funções que têm relação DIRETA com o pedido — não faça associações indiretas ou por similaridade de tema
+- Quando houver múltiplas opções relacionadas, liste APENAS as funções que têm relação DIRETA com o pedido - não faça associações indiretas ou por similaridade de tema
 - Quando a pergunta for conversa geral sem relação com as funções, retorne null
-- NUNCA execute funções — apenas oriente o cliente sobre o que dizer
-- NUNCA sugira uma função porque ela menciona o tema indiretamente — só sugira se a função RESOLVE o pedido
+- NUNCA execute funções - apenas oriente o cliente sobre o que dizer
+- NUNCA sugira uma função porque ela menciona o tema indiretamente - só sugira se a função RESOLVE o pedido
 - Quando o usuário pedir algo que não existe nas funções disponíveis, identifique a função mais próxima e sugira diretamente: "Não tenho essa função, mas posso [nome da função]. Quer que eu faça isso? Diga '[trigger exato]'."
 - Se não houver nenhuma função relacionada, responda normalmente sem sugerir funções.
 - NUNCA invente funções que não estão na lista.
 ${hasProfile ? '- Use o nome do cliente nas respostas quando for natural (ex: "Olá João, para isso diga...")' : ''}
 
 ## Quando responder x quando retornar null:
-✅ Responde: "como faço para imprimir?", "tem como pagar por pix?", "como agendar?"
-❌ null: "quais cartões aceitam?", "quanto custa?", "tem pizza?", "qual o horário?"
+[OK] Responde: "como faço para imprimir?", "tem como pagar por pix?", "como agendar?"
+[X] null: "quais cartões aceitam?", "quanto custa?", "tem pizza?", "qual o horário?"
 
 Exemplos:
 "como imprimir?" -> "Diga 'impressão local' para sua impressora ou 'impressão remota' para envio automático."
 "quais cartões aceitam?" -> null
 "tem pizza?" -> null  
 "quanto custa?" -> null
-"como pagar?" -> "Para pagar via PIX diga 'gerar PIX de [valor]'. Para cartão diga 'tef crédito' ou 'tef débito'."`,
-"tudo bem?" -> "Tudo sim, como posso te ajudar hoje?'."
-"me conta sobre você" -> null,
-"o que é um cometa?" -> null
-"qual a capital da França?" -> null${memoryBlock}`,
+"como pagar?" -> "Para pagar via PIX diga 'gerar PIX de [valor]'. Para cartao diga 'tef credito' ou 'tef debito'."
+"tudo bem?" -> "Tudo sim, como posso te ajudar hoje?"
+"me conta sobre voce" -> null
+"o que e um cometa?" -> null
+"qual a capital da Franca?" -> null${memoryBlock}`,
         },
         {
           role: 'user',
@@ -87,7 +87,7 @@ Exemplos:
     return NextResponse.json({ response: text });
 
   } catch (err) {
-    console.error('❌ GROQ error:', err);
+    console.error('[X] GROQ error:', err);
     return NextResponse.json({ response: null });
   }
 }

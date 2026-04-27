@@ -29,27 +29,37 @@ export default function AtendimentosPage() {
   const [activeTab, setActiveTab]         = useState<Tab>('connections');
   const [hasConnections, setHasConnections] = useState(false);
 
-  // Verifica se há conexões Meta ativas para o assistente selecionado
-  useEffect(() => {
-    if (!selectedCompanyId) {
-      setHasConnections(false);
-      setActiveTab('connections');
-      return;
+const isInitialCheck = useRef(true);
+
+useEffect(() => {
+  if (!selectedCompanyId) {
+    setHasConnections(false);
+    setActiveTab('connections');
+    return;
+  }
+
+  // Marca como verificação inicial toda vez que o assistente muda
+  isInitialCheck.current = true;
+
+  async function checkConnections() {
+    const { data } = await supabase
+      .from('meta_connections')
+      .select('id')
+      .eq('company_id', selectedCompanyId)
+      .limit(1);
+
+    const connected = !!(data && data.length > 0);
+    setHasConnections(connected);
+
+    // Redireciona automaticamente APENAS no carregamento inicial do assistente
+    if (isInitialCheck.current) {
+      setActiveTab(connected ? 'functions' : 'connections');
+      isInitialCheck.current = false;
     }
-    async function checkConnections() {
-      const { data } = await supabase
-        .from('meta_connections')
-        .select('id')
-        .eq('company_id', selectedCompanyId)
-        .limit(1);
-      const connected = !!(data && data.length > 0);
-      setHasConnections(connected);
-      // Se acabou de conectar, vai para Funções automaticamente
-      if (connected && activeTab === 'connections') setActiveTab('functions');
-      if (!connected) setActiveTab('connections');
-    }
-    checkConnections();
-  }, [selectedCompanyId]);
+  }
+
+  checkConnections();
+}, [selectedCompanyId]); 
 
   return (
     <div className="min-h-screen bg-transparent">

@@ -6,6 +6,7 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   const next = requestUrl.searchParams.get('next') ?? '/dashboard';
+  const isLink = requestUrl.searchParams.get('link') === 'true';
 
   if (code) {
     try {
@@ -20,6 +21,22 @@ export async function GET(request: Request) {
 
       if (data.session) {
         console.log('✅ Sessão criada:', data.session.user.email);
+
+        // ── Se veio do fluxo de vinculação de conta, redireciona ao perfil ──
+        if (isLink) {
+          const response = NextResponse.redirect(
+            new URL('/dashboard/perfil?linked=google', requestUrl.origin)
+          );
+          response.cookies.set('lastLoggedInUser', data.session.user.email!, {
+            path: '/',
+            maxAge: 60 * 60 * 24 * 365,
+            sameSite: 'lax',
+            secure: true,
+          });
+          console.log('🔗 Conta Google vinculada para:', data.session.user.email);
+          return response;
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         const response = NextResponse.redirect(new URL(next, requestUrl.origin));
 

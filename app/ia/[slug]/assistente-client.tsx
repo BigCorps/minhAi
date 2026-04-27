@@ -257,7 +257,17 @@ const onClose = () => {
   }, [isKioskMode]);
 
   useEffect(() => {
-    if (!isKioskMode) return;
+    if (!isKioskMode) {
+      // Rede de segurança: garante limpeza dos estilos caso o usuário saia
+      // pelo Esc ou outro caminho que não passe pelo exitKioskMode
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+      return;
+    }
     
     const preventScroll = (e: Event) => {
       e.preventDefault();
@@ -430,13 +440,23 @@ const onClose = () => {
   // D. exitKioskMode - atualizado para usar setMode('padrao')
   const exitKioskMode = async () => {
     try {
+      // Só chama exitFullscreen se ainda estiver em fullscreen — evita rejeição da promessa
       if (document.fullscreenElement) {
         await document.exitFullscreen();
       }
     } catch (error) {
       console.error('Erro ao sair do fullscreen:', error);
     }
-    
+
+    // Remove explicitamente os bloqueios de CSS ANTES do setIsKioskMode
+    // para evitar janela onde o layout ainda está travado após o fullscreen sair
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    document.body.style.height = '';
+    document.body.style.touchAction = '';
+    document.documentElement.style.overflow = '';
+
     setIsKioskMode(false);
     window.dispatchEvent(new CustomEvent('eai:kioskModeChange', { detail: { active: false } }));
     setMode('padrao'); // D. era: setIsMaximized(false)

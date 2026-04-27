@@ -368,17 +368,17 @@ export default function CreditsPage() {
       {/* CARD PLANO FULL */}
           <div className={`rounded-2xl border px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4 transition-colors ${
             isDark
-              ? 'bg-gradient-to-r from-violet-900/30 to-purple-900/20 border-violet-500/20'
-              : 'bg-gradient-to-r from-violet-50 to-purple-50 border-violet-200'
+              ? 'bg-gradient-to-r from-lime-900/30 to-purple-900/20 border-lime-500/20'
+              : 'bg-gradient-to-r from-lime-50 to-purple-50 border-lime-200'
           }`}>
             <div className="flex items-center gap-3 flex-shrink-0">
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                isDark ? 'bg-violet-500/20' : 'bg-violet-100'
+                isDark ? 'bg-lime-500/20' : 'bg-lime-100'
               }`}>
-                <Sparkles className={`w-5 h-5 ${isDark ? 'text-violet-400' : 'text-violet-600'}`} />
+                <Sparkles className={`w-5 h-5 ${isDark ? 'text-lime-400' : 'text-lime-600'}`} />
               </div>
               <div>
-                <p className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-violet-400' : 'text-violet-700'}`}>
+                <p className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-lime-400' : 'text-lime-700'}`}>
                   Plano Full
                 </p>
                 <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -386,7 +386,7 @@ export default function CreditsPage() {
                 </p>
               </div>
             </div>
-            <div className={`hidden sm:block w-px self-stretch ${isDark ? 'bg-violet-500/20' : 'bg-violet-200'}`} />
+            <div className={`hidden sm:block w-px self-stretch ${isDark ? 'bg-lime-500/20' : 'bg-lime-200'}`} />
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 flex-1">
               {[
                 'Cores personalizadas do assistente',
@@ -398,7 +398,7 @@ export default function CreditsPage() {
                 'Suporte 24 horas',
               ].map((item) => (
                 <div key={item} className="flex items-center gap-1.5">
-                  <Check className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? 'text-violet-400' : 'text-violet-600'}`} />
+                  <Check className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? 'text-lime-400' : 'text-lime-600'}`} />
                   <span className={`text-xs ${isDark ? 'text-white/70' : 'text-gray-600'}`}>{item}</span>
                 </div>
               ))}
@@ -408,8 +408,8 @@ export default function CreditsPage() {
               onClick={() => window.open('https://wa.me/5511926828418?text=Olá!%20Tenho%20interesse%20no%20Plano%20Full%20e%20gostaria%20de%20saber%20mais%20detalhes.', '_blank')}
               className={`flex-shrink-0 py-2 px-5 rounded-xl text-sm font-bold transition-all active:scale-95 whitespace-nowrap ${
                 isDark
-                  ? 'bg-violet-600 text-white hover:bg-violet-500'
-                  : 'bg-violet-600 text-white hover:bg-violet-700'
+                  ? 'bg-lime-600 text-white hover:bg-lime-500'
+                  : 'bg-lime-600 text-white hover:bg-lime-700'
               }`}
             >
               Falar com consultor

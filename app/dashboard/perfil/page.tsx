@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { 
   User, Mail, Lock, Camera, Save, Loader2, 
   AlertCircle, CheckCircle2, Fingerprint, Trash2, 
-  Smartphone, ShieldCheck, Wallet, Key, Edit
+  Smartphone, ShieldCheck, Wallet, Key, Edit, Unlink
 } from 'lucide-react';
 import { startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser';
 
@@ -35,9 +35,25 @@ export default function PerfilPage() {
   const [isBiometrySupported, setIsBiometrySupported] = useState(false);
   const [registeringBiometry, setRegisteringBiometry] = useState(false);
 
+  // Google linking states
+  const [linkedIdentities, setLinkedIdentities] = useState<string[]>([]);
+  const [linkingGoogle, setLinkingGoogle] = useState(false);
+  const [unlinkingGoogle, setUnlinkingGoogle] = useState(false);
+
   const supabase = createClient();
 
   useEffect(() => {
+    // ── Feedback ao retornar do OAuth de vinculação ──────────────────────────
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('linked') === 'google') {
+      setMessage({ 
+        type: 'success', 
+        text: 'Conta Google vinculada com sucesso! Agora você pode entrar com Google ou email.' 
+      });
+      window.history.replaceState({}, '', '/dashboard/perfil');
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     async function loadData() {
       try {
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
@@ -45,6 +61,11 @@ export default function PerfilPage() {
         if (authUser) {
           setUser(authUser);
           setUserName(authUser.user_metadata?.name || '');
+
+          // ── Identidades vinculadas ─────────────────────────────────────────
+          const identities = authUser.identities?.map((i: any) => i.provider) || [];
+          setLinkedIdentities(identities);
+          // ──────────────────────────────────────────────────────────────────
           
           // Load user profile
           const { data: profileData, error: profileError } = await supabase
@@ -100,6 +121,61 @@ export default function PerfilPage() {
       );
     }
   }
+
+  // ── Vincular Google ────────────────────────────────────────────────────────
+  async function handleLinkGoogle() {
+    setLinkingGoogle(true);
+    setMessage(null);
+    try {
+      const { error } = await supabase.auth.linkIdentity({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?link=true`,
+        },
+      });
+      // Se chegou aqui sem erro, o redirect OAuth já aconteceu
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('Erro ao vincular Google:', error);
+      setMessage({ type: 'error', text: error.message || 'Erro ao vincular conta Google.' });
+      setLinkingGoogle(false);
+    }
+  }
+
+  // ── Desvincular Google ─────────────────────────────────────────────────────
+  async function handleUnlinkGoogle() {
+    if (!confirm('Tem certeza que deseja desvincular sua conta Google? Você continuará acessando apenas por email e senha.')) return;
+
+    // Garantir que o usuário tem senha antes de desvincular
+    // (evitar que fique sem nenhuma forma de login)
+    const hasEmailIdentity = linkedIdentities.includes('email');
+    if (!hasEmailIdentity) {
+      setMessage({ 
+        type: 'error', 
+        text: 'Não é possível desvincular: você não tem senha cadastrada. Cadastre uma senha primeiro.' 
+      });
+      return;
+    }
+
+    setUnlinkingGoogle(true);
+    setMessage(null);
+    try {
+      const googleIdentity = user.identities?.find((i: any) => i.provider === 'google');
+      if (!googleIdentity) throw new Error('Identidade Google não encontrada.');
+
+      const { error } = await supabase.auth.unlinkIdentity(googleIdentity);
+      if (error) throw error;
+
+      setLinkedIdentities(prev => prev.filter(p => p !== 'google'));
+      setMessage({ type: 'success', text: 'Conta Google desvinculada com sucesso.' });
+    } catch (error: any) {
+      console.error('Erro ao desvincular Google:', error);
+      setMessage({ type: 'error', text: error.message || 'Erro ao desvincular conta Google.' });
+    } finally {
+      setUnlinkingGoogle(false);
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   async function handleUpdateProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -183,7 +259,7 @@ export default function PerfilPage() {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) throw new Error('Usuário não autenticado.');
 
-      const SUPABASE_URL     = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
       const headers = {
@@ -263,8 +339,12 @@ export default function PerfilPage() {
     );
   }
 
-  const isGoogleUser = user?.app_metadata?.provider === 'google';
-  const hasPixKey    = !!profile?.withdrawal_pix_key;
+  const isGoogleUser      = user?.app_metadata?.provider === 'google';
+  const hasPixKey         = !!profile?.withdrawal_pix_key;
+  const isGoogleLinked    = linkedIdentities.includes('google');
+  const isEmailLinked     = linkedIdentities.includes('email');
+  // Conta puramente Google = só tem Google, sem email/senha
+  const isPureGoogleUser  = isGoogleUser && !isEmailLinked;
 
   return (
     <div className="min-h-screen bg-transparent py-8 px-4 sm:px-6 lg:px-8">
@@ -290,15 +370,69 @@ export default function PerfilPage() {
               <Mail className="w-4 h-4 mr-2" /> {user?.email}
             </p>
             <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
+              {/* Badge tipo de conta */}
               <span className="px-3 py-1 bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-xs font-bold uppercase tracking-wider">
                 {isGoogleUser ? 'Conta Google' : 'Conta E-mail'}
               </span>
+
+              {/* Badge Google vinculado (para contas email que vincularam Google) */}
+              {!isGoogleUser && isGoogleLinked && (
+                <span className="px-3 py-1 bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                  <svg className="w-3 h-3" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  Google Vinculado
+                </span>
+              )}
+
               {authenticators.length > 0 && (
                 <span className="px-3 py-1 bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-xs font-bold uppercase tracking-wider flex items-center">
                   <ShieldCheck className="w-3 h-3 mr-1" /> Biometria Ativa
                 </span>
               )}
             </div>
+
+            {/* ── Botão Vincular / Desvincular Google ────────────────────────── */}
+            {/* Só aparece para contas email (não para quem já É Google puro) */}
+            {!isGoogleUser && (
+              <div className="mt-4 flex justify-center md:justify-start">
+                {isGoogleLinked ? (
+                  <button
+                    onClick={handleUnlinkGoogle}
+                    disabled={unlinkingGoogle}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition text-sm font-medium disabled:opacity-50"
+                  >
+                    {unlinkingGoogle
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Unlink className="w-4 h-4" />
+                    }
+                    Desvincular Google
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleLinkGoogle}
+                    disabled={linkingGoogle}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-slate-800 transition text-sm font-medium text-gray-700 dark:text-gray-300 disabled:opacity-50"
+                  >
+                    {linkingGoogle ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                      </svg>
+                    )}
+                    {linkingGoogle ? 'Redirecionando...' : 'Vincular conta Google'}
+                  </button>
+                )}
+              </div>
+            )}
+            {/* ──────────────────────────────────────────────────────────────── */}
           </div>
         </div>
 
@@ -411,7 +545,7 @@ export default function PerfilPage() {
                   value={documentoTipo}
                   onChange={(e) => {
                     setDocumentoTipo(e.target.value as 'cpf' | 'cnpj');
-                    setDocumento(''); // limpa ao trocar tipo
+                    setDocumento('');
                   }}
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
                 >
@@ -510,8 +644,8 @@ export default function PerfilPage() {
 
         </div>
 
-        {/* Alterar Senha */}
-        {!isGoogleUser && (
+        {/* Alterar Senha — visível para conta email E para conta Google que vinculou email */}
+        {(!isGoogleUser || isEmailLinked) && (
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-red-100 dark:bg-red-500/10 rounded-lg">

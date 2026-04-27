@@ -1,7 +1,7 @@
 'use client';
 // ARQUIVO: app/dashboard/atendimentos/page.tsx
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ConnectionManager }   from './_components/ConnectionManager';
 import { ConversationsPanel }  from './_components/ConversationsPanel';
 import { MetaFunctionsPanel }  from './_components/MetaFunctionsPanel';

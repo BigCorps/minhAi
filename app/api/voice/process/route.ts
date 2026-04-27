@@ -106,6 +106,7 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     return null;
   }
 
+  const companyContext = formData.get('companyContext') as string | null;
   const questionNormalized = normalizeText(question);
   const questionWords = questionNormalized.split(' ').filter((w: string) => w.length > 2);
 
@@ -229,7 +230,7 @@ export async function POST(request: NextRequest) {
     // ── Busca company incluindo tts_voice ──────────────────────────────────
     const { data: company } = await supabase
       .from('companies')
-      .select('id, name, system_prompt, orcamento_prompt, greeting_message, welcome_message, tts_voice')
+      .select('id, name, system_prompt, orcamento_prompt, greeting_message, groq_fallback_message, welcome_message, tts_voice')
       .eq('id', companyId)
       .single();
 
@@ -442,15 +443,16 @@ Suas prioridades agora:
 4. Se mencionar um produto, confirme se está disponível e informe o preço.`
         : '';
 
-      const systemPrompt = useOrcamentoPrompt && company.orcamento_prompt
-        ? company.orcamento_prompt
-        : `${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}
+const systemPrompt = useOrcamentoPrompt && company.orcamento_prompt
+  ? company.orcamento_prompt
+  : `${companyContext ? `## Dados atuais da empresa:\n${companyContext}\n\n` : ''}${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}
 
 Regras:
 - Seja breve (máximo 2-3 frases)
 - Use linguagem natural
 - Português brasileiro
 - Se não souber, seja honesto
+- Use os dados da empresa acima para responder com precisão
 
 Pergunta: ${userMessage}`;
 

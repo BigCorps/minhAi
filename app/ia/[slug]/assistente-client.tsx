@@ -73,6 +73,7 @@ const navigateMode = (direction: 'left' | 'right') => {
   const [showKioskBadge, setShowKioskBadge] = useState(false);
   const badgeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const anyModalOpenRef = useRef(false);
+  const isExitingKioskRef = useRef(false);
   const [isModalOpenState, setIsModalOpenState] = useState(false);
   
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
@@ -232,6 +233,9 @@ const onClose = () => {
     if (!isKioskMode) return;
     
     const handleFullscreenChange = () => {
+      // Se estamos saindo intencionalmente via exitKioskMode, ignora o evento
+      if (isExitingKioskRef.current) return;
+
       if (isKioskMode && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {
           showToastMessage('⚠️ Digite a senha para sair', 'warning');
@@ -439,6 +443,7 @@ const onClose = () => {
 
   // D. exitKioskMode - atualizado para usar setMode('padrao')
   const exitKioskMode = async () => {
+    isExitingKioskRef.current = true; // avisa o fullscreenchange handler antes de sair
     try {
       // Só chama exitFullscreen se ainda estiver em fullscreen — evita rejeição da promessa
       if (document.fullscreenElement) {
@@ -447,6 +452,7 @@ const onClose = () => {
     } catch (error) {
       console.error('Erro ao sair do fullscreen:', error);
     }
+    isExitingKioskRef.current = false; // reset após sair do fullscreen
 
     // Remove explicitamente os bloqueios de CSS ANTES do setIsKioskMode
     // para evitar janela onde o layout ainda está travado após o fullscreen sair

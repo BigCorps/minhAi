@@ -271,6 +271,57 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
               </div>
             )}
 
+            {/* CARD PLANO FULL */}
+            <div className={`rounded-xl border px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors ${
+              isDark
+                ? 'bg-gradient-to-r from-violet-900/25 to-purple-900/15 border-violet-500/20'
+                : 'bg-gradient-to-r from-violet-50 to-purple-50 border-violet-200'
+            }`}>
+              <div className="flex items-center gap-2.5 flex-shrink-0">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  isDark ? 'bg-violet-500/20' : 'bg-violet-100'
+                }`}>
+                  <svg className={`w-4 h-4 ${isDark ? 'text-violet-400' : 'text-violet-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className={`text-[9px] font-bold uppercase tracking-widest leading-none mb-0.5 ${isDark ? 'text-violet-400' : 'text-violet-600'}`}>
+                    Plano Full
+                  </p>
+                  <p className={`text-[11px] font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                    Solução completa personalizada
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 flex-1">
+                {[
+                  'Cores personalizadas',
+                  'Antifraude',
+                  'PIX direto na conta',
+                  'Implementação',
+                  'Cadastro de produtos',
+                  'Configuração de totem',
+                  'Suporte 24h',
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-1">
+                    <svg className={`w-3 h-3 flex-shrink-0 ${isDark ? 'text-violet-400' : 'text-violet-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className={`text-[10px] ${isDark ? 'text-white/60' : 'text-gray-500'}`}>{item}</span>
+                  </div>
+                ))}
+              </div>
+              
+                href="https://wa.me/5511926828418?text=Olá!%20Tenho%20interesse%20no%20Plano%20Full%20e%20gostaria%20de%20saber%20mais%20detalhes."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 py-1.5 px-4 rounded-lg text-[11px] font-bold bg-violet-600 text-white hover:bg-violet-500 transition-colors active:scale-95 whitespace-nowrap"
+              >
+                Falar com consultor
+              </a>
+            </div>
+
             {/* ================================================
                 PACOTES DE CRÉDITOS
             ================================================ */}

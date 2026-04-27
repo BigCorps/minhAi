@@ -137,6 +137,14 @@ useEffect(() => {
       setMode('padrao');
     };
     window.addEventListener('eai:kioskExitConfirmed', handleKioskExitConfirmed);
+
+    // Quando SlugHeaderWrapper vai sair do fullscreen por conta própria (outras páginas),
+    // suspende o handler de fullscreenchange para não re-entrar em fullscreen em touch
+    const handleKioskWillExit = () => {
+      isExitingKioskRef.current = true;
+      setTimeout(() => { isExitingKioskRef.current = false; }, 1500);
+    };
+    window.addEventListener('eai:kioskWillExit', handleKioskWillExit);
   
     checkMobile();
     checkOrientation();
@@ -150,6 +158,7 @@ useEffect(() => {
       window.removeEventListener('eai:requestKioskMode', handleRequestKiosk);
       window.removeEventListener('eai:requestExitKioskMode', handleRequestExitKiosk); // ← agora existe
       window.removeEventListener('eai:kioskExitConfirmed', handleKioskExitConfirmed);
+      window.removeEventListener('eai:kioskWillExit', handleKioskWillExit);
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }

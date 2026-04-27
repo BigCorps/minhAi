@@ -21,6 +21,8 @@ interface CompanyData {
   assistant_role?: string | null;
   brand_description?: string | null;
   modo_links_enabled: boolean;
+  modo_vendas_enabled?: boolean;
+  modo_fila_enabled?: boolean;
   whatsapp_number?: string | null;
   instagram_username?: string | null;
   website?: string | null;
@@ -245,8 +247,8 @@ export default function LinkClient({ company, links, slug }: Props) {
           logo_url: company.logo_url,
           assistant_role: company.assistant_role,
           webapp_enabled: company.webapp_enabled,
-          modo_vendas_enabled: false,
-          modo_fila_enabled: false,
+          modo_vendas_enabled: company.modo_vendas_enabled ?? false,
+          modo_fila_enabled: company.modo_fila_enabled ?? false,
           modo_links_enabled: company.modo_links_enabled,
         }}
         slug={slug}

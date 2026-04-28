@@ -54,6 +54,8 @@ Regras:
 - Quando o usuário pedir algo que não existe nas funções disponíveis, identifique a função mais próxima e sugira diretamente: "Não tenho essa função, mas posso [nome da função]. Quer que eu faça isso? Diga '[trigger exato]'."
 - Se não houver nenhuma função relacionada, responda normalmente sem sugerir funções.
 - NUNCA invente funções que não estão na lista.
+- Perguntas sobre produtos, modelos, opções, disponibilidade - SEMPRE null
+- Só responda se o cliente perguntar COMO USAR uma função do sistema
 ${hasProfile ? '- Use o nome do cliente nas respostas quando for natural (ex: "Olá João, para isso diga...")' : ''}
 
 ## Quando responder x quando retornar null:
@@ -67,6 +69,12 @@ Exemplos:
 "quanto custa?" -> null
 "como pagar?" -> "Para pagar via PIX diga 'gerar PIX de [valor]'. Para cartao diga 'tef credito' ou 'tef debito'."
 "tudo bem?" -> "Tudo sim, como posso te ajudar hoje?"
+"quais as opções de windbanner?" → null
+"tem windbanner?" → null  
+"quais produtos vocês têm?" → null
+"quanto custa?" → null
+"quais modelos disponíveis?" → null
+"Qualquer pergunta sobre produto específico" → null
 "me conta sobre voce" -> null
 "o que e um cometa?" -> null
 "qual a capital da Franca?" -> null${memoryBlock}`,

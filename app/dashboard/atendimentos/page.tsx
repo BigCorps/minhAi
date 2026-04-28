@@ -13,13 +13,13 @@ import {
 } from 'lucide-react';
 import { useAssistant } from '@/contexts/AssistantContext';
 
-type Tab = 'functions' | 'conversations' | 'comments' | 'connections';
+type Tab = 'connections' | 'conversations' | 'comments' | 'functions';
 
 const TABS: { key: Tab; label: string; icon: React.ElementType; requiresConnection: boolean }[] = [
-  { key: 'functions',     label: 'Funções',      icon: Zap,            requiresConnection: true  },
+  { key: 'connections',   label: 'Conexões',     icon: Settings,       requiresConnection: false },
   { key: 'conversations', label: 'Conversas',    icon: MessageCircle,  requiresConnection: true  },
   { key: 'comments',      label: 'Comentários',  icon: MessageSquare,  requiresConnection: true  },
-  { key: 'connections',   label: 'Conexões',     icon: Settings,       requiresConnection: false },
+  { key: 'functions',     label: 'Funções',      icon: Zap,            requiresConnection: true  },
 ];
 
 export default function AtendimentosPage() {

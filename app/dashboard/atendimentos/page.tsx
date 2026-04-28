@@ -1,7 +1,7 @@
 'use client';
 // ARQUIVO: app/dashboard/atendimentos/page.tsx
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ConnectionManager }   from './_components/ConnectionManager';
 import { ConversationsPanel }  from './_components/ConversationsPanel';
 import { MetaFunctionsPanel }  from './_components/MetaFunctionsPanel';
@@ -29,27 +29,36 @@ export default function AtendimentosPage() {
   const [activeTab, setActiveTab]         = useState<Tab>('connections');
   const [hasConnections, setHasConnections] = useState(false);
 
-  // Verifica se há conexões Meta ativas para o assistente selecionado
-  useEffect(() => {
-    if (!selectedCompanyId) {
-      setHasConnections(false);
-      setActiveTab('connections');
-      return;
-    }
-    async function checkConnections() {
-      const { data } = await supabase
-        .from('meta_connections')
-        .select('id')
-        .eq('company_id', selectedCompanyId)
-        .limit(1);
-      const connected = !!(data && data.length > 0);
-      setHasConnections(connected);
-      // Se acabou de conectar, vai para Funções automaticamente
-      if (connected && activeTab === 'connections') setActiveTab('functions');
+// DEPOIS
+const hasInitialized = useRef(false);
+
+useEffect(() => {
+  hasInitialized.current = false;
+}, [selectedCompanyId]);
+
+useEffect(() => {
+  if (!selectedCompanyId) {
+    setHasConnections(false);
+    setActiveTab('connections');
+    return;
+  }
+  async function checkConnections() {
+    const { data } = await supabase
+      .from('meta_connections')
+      .select('id')
+      .eq('company_id', selectedCompanyId)
+      .limit(1);
+    const connected = !!(data && data.length > 0);
+    setHasConnections(connected);
+    // Só redireciona automaticamente na primeira carga
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
       if (!connected) setActiveTab('connections');
+      // Se tem conexão, mantém a aba atual (não força 'functions')
     }
-    checkConnections();
-  }, [selectedCompanyId]);
+  }
+  checkConnections();
+}, [selectedCompanyId]);
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -138,7 +147,6 @@ export default function AtendimentosPage() {
                     onCompanyChange={() => {}}
                     onConnectionsChange={(connected) => {
                       setHasConnections(connected);
-                      if (connected) setActiveTab('functions');
                     }}
                   />
                 )}

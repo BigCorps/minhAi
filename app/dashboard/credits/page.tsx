@@ -389,9 +389,7 @@ export default function CreditsPage() {
             <div className={`hidden sm:block w-px self-stretch ${isDark ? 'bg-lime-500/20' : 'bg-lime-200'}`} />
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 flex-1">
               {[
-                'Cores personalizadas do assistente',
                 'Validação antifraude',
-                'PIX direto na conta',
                 'Implementação incluída',
                 'Cadastro de produtos',
                 'Configuração de totem',

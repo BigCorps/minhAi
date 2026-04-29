@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Keyboard } from 'lucide-react';
+import VirtualKeyboard from '@/components/assistant/VirtualKeyboard';
 
 interface TextInputChatProps {
   onSendMessage: (message: string) => Promise<void>;
@@ -11,6 +12,9 @@ interface TextInputChatProps {
   onExternalValueConsumed?: () => void;
   /** Modo compacto: fonte menor, sem hint "Pressione Enter", padding reduzido */
   compact?: boolean;
+  /** Exibe teclado virtual (modo kiosk) */
+  showVirtualKeyboard?: boolean;
+  onVirtualKeyboardToggle?: () => void;
 }
 
 export default function TextInputChat({
@@ -21,6 +25,8 @@ export default function TextInputChat({
   externalValue,
   onExternalValueConsumed,
   compact = false,
+  showVirtualKeyboard = false,
+  onVirtualKeyboardToggle,
 }: TextInputChatProps) {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -66,6 +72,21 @@ export default function TextInputChat({
   };
 
   const isDisabled = isProcessing || isSending || disabled;
+
+  // ── Handlers do teclado virtual ──────────────────────────
+  const handleVirtualKey = (char: string) => {
+    if (message.length >= 500) return;
+    setMessage(prev => prev + char);
+  };
+
+  const handleVirtualBackspace = () => {
+    setMessage(prev => prev.slice(0, -1));
+  };
+
+  const handleVirtualEnter = () => {
+    if (!message.trim() || isDisabled) return;
+    handleSubmit({ preventDefault: () => {} } as any);
+  };
 
   return (
     <form onSubmit={handleSubmit} className="w-full" data-no-swipe>
@@ -114,6 +135,24 @@ export default function TextInputChat({
           </span>
         )}
 
+        {/* Botão toggle teclado virtual */}
+        {onVirtualKeyboardToggle && (
+          <button
+            type="button"
+            onClick={onVirtualKeyboardToggle}
+            className={`flex-shrink-0 rounded-lg transition-all p-2 ${
+              showVirtualKeyboard
+                ? 'bg-blue-600 text-white'
+                : theme === 'dark'
+                  ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+            title={showVirtualKeyboard ? 'Fechar teclado virtual' : 'Abrir teclado virtual'}
+          >
+            <Keyboard className="w-4 h-4" />
+          </button>
+        )}
+
         <button
           type="submit"
           disabled={!message.trim() || isDisabled}
@@ -134,13 +173,25 @@ export default function TextInputChat({
         </button>
       </div>
 
-      {/* Hint "Pressione Enter" — oculto no modo compacto */}
-      {!compact && (
+      {/* Hint "Pressione Enter" — oculto no modo compacto e quando teclado virtual está ativo */}
+      {!compact && !showVirtualKeyboard && (
         <p className={`text-xs text-center mt-2 ${
           theme === 'dark' ? 'text-slate-500' : 'text-gray-500'
         }`}>
           Pressione Enter para enviar
         </p>
+      )}
+
+      {/* Teclado virtual — fixo no bottom, fora do fluxo do form */}
+      {showVirtualKeyboard && (
+        <div className="fixed bottom-0 left-0 right-0 z-50">
+          <VirtualKeyboard
+            onKey={handleVirtualKey}
+            onBackspace={handleVirtualBackspace}
+            onEnter={handleVirtualEnter}
+            theme={theme}
+          />
+        </div>
       )}
     </form>
   );

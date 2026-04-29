@@ -22,6 +22,9 @@ interface FunctionCardProps {
     example_phrases?: string[];
     edit_modal_component?: string;
     default_enabled?: boolean;
+    // ── Badges ──────────────────────────────
+    enabled_meta?: boolean;
+    // enabled_gpt?: boolean; // GPT — ainda não implementado
   };
   isEnabled: boolean;
   stats: {
@@ -128,6 +131,42 @@ const CONFIGURABLE_FUNCTIONS = [
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];
 
+// ── Badge helper ───────────────────────────────────────────────────────────────
+function FunctionBadges({
+  fn,
+  compact = false,
+}: {
+  fn: FunctionCardProps['function'];
+  compact?: boolean;
+}) {
+  const hasBadge = fn.is_premium || fn.enabled_meta /* || fn.enabled_gpt */;
+  if (!hasBadge) return null;
+
+  const base = compact
+    ? 'text-[10px] font-semibold px-1.5 py-0.5 rounded-full'
+    : 'text-xs font-medium px-2 py-0.5 rounded-full';
+
+  return (
+    <div className="flex items-center gap-1 flex-shrink-0">
+      {fn.is_premium && (
+        <span className={`${base} bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300`}>
+          Premium
+        </span>
+      )}
+      {fn.enabled_meta && (
+        <span className={`${base} bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300`}>
+          Meta
+        </span>
+      )}
+      {/* fn.enabled_gpt && (
+        <span className={`${base} bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300`}>
+          GPT
+        </span>
+      ) */}
+    </div>
+  );
+}
+
 export default function FunctionCard({
   function: fn,
   isEnabled,
@@ -145,7 +184,7 @@ export default function FunctionCard({
   const categoryName = CATEGORY_NAMES[fn.function_category] || fn.function_category;
   const isSystemFunction = SYSTEM_FUNCTIONS.includes(fn.function_key);
 
-  // ── MODO LISTA: tudo numa única linha compacta ────────────────────────────
+  // ── MODO LISTA ────────────────────────────────────────────────────────────────
   if (viewMode === 'list') {
     return (
       <div
@@ -160,14 +199,13 @@ export default function FunctionCard({
             : 'bg-gray-50 dark:bg-slate-900/50 border-gray-200 dark:border-white/10'
         }`}
       >
-
         {/* Bolinha de categoria */}
         <div
           className="w-2.5 h-2.5 rounded-full flex-shrink-0"
           style={{ backgroundColor: fn.color || '#6B7280' }}
         />
 
-        {/* Categoria — pequena, fixa */}
+        {/* Categoria */}
         <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24 flex-shrink-0 truncate">
           {categoryName}
         </span>
@@ -177,12 +215,15 @@ export default function FunctionCard({
           {fn.function_name}
         </span>
 
-        {/* Descrição — cresce para preencher espaço disponível */}
+        {/* Badges — compact no modo lista */}
+        <FunctionBadges fn={fn} compact />
+
+        {/* Descrição */}
         <span className="text-sm text-gray-500 dark:text-gray-400 truncate flex-1 hidden sm:block">
           {fn.short_description}
         </span>
 
-        {/* Ações: badge sistema / toggle / config */}
+        {/* Ações */}
         <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
           {hasEditModal && onEdit && (
             <button
@@ -200,29 +241,26 @@ export default function FunctionCard({
             </button>
           )}
 
-        {/* Créditos */}
-        {fn.consumes_credits && (
-          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-            <CreditCard className="w-3.5 h-3.5 text-blue-500" />
-            <span className="font-medium">{fn.credits_per_use}©️</span>
-          </div>
-        )}
+          {fn.consumes_credits && (
+            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+              <CreditCard className="w-3.5 h-3.5 text-blue-500" />
+              <span className="font-medium">{fn.credits_per_use}©️</span>
+            </div>
+          )}
 
           {isSystemFunction ? (
             <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium">
               Padrão
             </span>
           ) : (
-
-<div onClick={(e) => e.stopPropagation()}>
-  <Switch
-    checked={isEnabled}
-    onCheckedChange={onToggle}
-    disabled={isUpdating}
-    aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
-  />
-</div>
-
+            <div onClick={(e) => e.stopPropagation()}>
+              <Switch
+                checked={isEnabled}
+                onCheckedChange={onToggle}
+                disabled={isUpdating}
+                aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
+              />
+            </div>
           )}
         </div>
 
@@ -235,7 +273,7 @@ export default function FunctionCard({
     );
   }
 
-  // ── MODO GRID: layout original ────────────────────────────────────────────
+  // ── MODO GRID ─────────────────────────────────────────────────────────────────
   return (
     <div
       onClick={() => {
@@ -249,18 +287,21 @@ export default function FunctionCard({
           : 'bg-gray-50 dark:bg-slate-900/50 border-gray-200 dark:border-white/10'
       }`}
     >
-
       <div className="flex-grow">
+        {/* Linha superior: categoria (esquerda) + badges (direita) */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div
-              className="w-3 h-3 rounded-full"
+              className="w-3 h-3 rounded-full flex-shrink-0"
               style={{ backgroundColor: fn.color || '#6B7280' }}
             />
             <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
               {categoryName}
             </span>
           </div>
+
+          {/* Badges: Premium, Meta, GPT */}
+          <FunctionBadges fn={fn} />
         </div>
 
         <h3 className="font-bold text-md text-gray-900 dark:text-white mb-1.5 truncate">
@@ -275,7 +316,6 @@ export default function FunctionCard({
         <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
           {fn.consumes_credits && (
             <>
-              {/* Ícone trocado pelo emoji */}
               <span className="text-base leading-none">©️</span>
               <span className="font-medium">
                 {fn.credits_per_use} crédito{fn.credits_per_use !== 1 ? 's' : ''}
@@ -302,15 +342,14 @@ export default function FunctionCard({
           )}
 
           {!isSystemFunction && (
-<div onClick={(e) => e.stopPropagation()}>
-  <Switch
-    checked={isEnabled}
-    onCheckedChange={onToggle}
-    disabled={isUpdating}
-    aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
-  />
-</div>
-
+            <div onClick={(e) => e.stopPropagation()}>
+              <Switch
+                checked={isEnabled}
+                onCheckedChange={onToggle}
+                disabled={isUpdating}
+                aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
+              />
+            </div>
           )}
 
           {isSystemFunction && (
@@ -319,7 +358,6 @@ export default function FunctionCard({
             </span>
           )}
         </div>
-
       </div>
 
       {isUpdating && (

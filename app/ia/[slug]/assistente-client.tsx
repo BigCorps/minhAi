@@ -944,6 +944,7 @@ const onClose = () => {
                 onAssistantStart={() => setAssistantStarted(true)}
                 hideDisabledFunctions={company.hide_disabled_functions_carousel}
                 autoScroll={company.carousel_auto_scroll}
+                isKioskMode={isKioskMode}
               />
             </div>
           </div>
@@ -1072,6 +1073,7 @@ const onClose = () => {
                   onAssistantStart={() => setAssistantStarted(true)}
                   hideDisabledFunctions={company.hide_disabled_functions_carousel}
                   autoScroll={company.carousel_auto_scroll}
+                  isKioskMode={isKioskMode}
                   onTextMessage={(handler) => {
                     textMessageHandlerRef.current = handler;
                   }}
@@ -1094,6 +1096,7 @@ const onClose = () => {
       onAssistantStart={() => setAssistantStarted(true)}
       hideDisabledFunctions={company.hide_disabled_functions_carousel}
       autoScroll={company.carousel_auto_scroll}
+      isKioskMode={isKioskMode}
       textMode={true}
       onTextMessage={(handler) => {
         textMessageHandlerRef.current = handler;
@@ -1138,6 +1141,7 @@ const onClose = () => {
             theme={theme}
             hideDisabledFunctions={company.hide_disabled_functions_carousel}
             autoScroll={company.carousel_auto_scroll}
+            isKioskMode={isKioskMode}
           />
         </div>
       )}

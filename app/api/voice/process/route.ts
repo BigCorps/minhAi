@@ -91,6 +91,8 @@ function sanitizeInput(text: string): { safe: string; blocked: boolean; reason?:
   return { safe: cleaned, blocked: false };
 }
 
+// ─── findMatchingFAQ: NÃO acessa formData — recebe apenas supabase + companyId + question ──
+
 async function findMatchingFAQ(supabase: any, companyId: string, question: string) {
   console.log('=== FAQ MATCHING ===');
   console.log('❓', question);
@@ -106,7 +108,6 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     return null;
   }
 
-  const companyContext = formData.get('companyContext') as string | null;
   const questionNormalized = normalizeText(question);
   const questionWords = questionNormalized.split(' ').filter((w: string) => w.length > 2);
 
@@ -202,7 +203,6 @@ async function findMatchingHint(
 }
 
 // ─── Resolve voz TTS da empresa ───────────────────────────────────────────
-// Aceita apenas as duas vozes Neural pt-BR. Fallback para masculina.
 function resolveVoiceName(ttsVoice: string | null | undefined): string {
   const allowed = [BRAZILIAN_VOICES.NEURAL_MALE, BRAZILIAN_VOICES.NEURAL_FEMALE];
   if (ttsVoice && allowed.includes(ttsVoice as any)) return ttsVoice;
@@ -221,22 +221,24 @@ export async function POST(request: NextRequest) {
     const directQuestion = formData.get('directQuestion') as string | null;
     const returnText = formData.get('returnText') === 'true';
 
+    // ✅ FIX PRINCIPAL: leitura de companyContext no escopo correto da rota
+    // Antes estava dentro de findMatchingFAQ() — escopo errado, sempre retornava null
+    const companyContext = formData.get('companyContext') as string | null;
+
     if (!audioFile || !companyId) {
       return NextResponse.json({ error: 'Áudio e ID obrigatórios' }, { status: 400 });
     }
 
     const supabase = createClient();
 
-    // ── Busca company incluindo tts_voice ──────────────────────────────────
     const { data: company } = await supabase
       .from('companies')
-      .select('id, name, system_prompt, orcamento_prompt, greeting_message, groq_fallback_message, welcome_message, tts_voice')
+      .select('id, name, system_prompt, orcamento_prompt, greeting_message, groq_fallback_message, welcome_message, tts_voice, assistant_role')
       .eq('id', companyId)
       .single();
 
     if (!company) throw new Error('Company not found');
 
-    // Voz TTS resolvida uma vez — usada em todas as chamadas de síntese desta requisição
     const voiceName = resolveVoiceName(company.tts_voice);
     console.log(`🔊 Voz TTS: ${voiceName}`);
 
@@ -281,7 +283,6 @@ export async function POST(request: NextRequest) {
     const rawMessage = directQuestion || '';
     const saleMode = formData.get('saleMode') === 'true';
 
-    // ─── Sanitização ──────────────────────────────────────────────────────
     const { safe: userMessage, blocked, reason } = sanitizeInput(rawMessage);
 
     if (!rawMessage) {
@@ -330,7 +331,7 @@ export async function POST(request: NextRequest) {
     const useOrcamentoPrompt = formData.get('useOrcamentoPrompt') === 'true';
     console.log('📋 useOrcamentoPrompt:', useOrcamentoPrompt);
 
-    // ✅ HINTS: Verificar antes do FAQ e ChatGPT (não roda para orçamento)
+    // ✅ Hints: verificar antes do FAQ e ChatGPT (não roda para orçamento)
     if (!useOrcamentoPrompt) {
       const matchedFunctionKey = await findMatchingHint(supabase, companyId, userMessage);
       if (matchedFunctionKey) {
@@ -434,29 +435,19 @@ export async function POST(request: NextRequest) {
     } else {
       console.log('🤖 Usando OpenAI GPT-4o-mini');
 
-      const saleModeContext = saleMode
-        ? `\n\nCONTEXTO ATUAL: O cliente está visualizando o CARDÁPIO/LOJA VIRTUAL.
-Suas prioridades agora:
-1. Responda perguntas sobre produtos, preços e disponibilidade de forma direta.
-2. Se o cliente perguntar algo não relacionado a produtos, responda brevemente e redirecione: "Posso te ajudar a escolher algo do cardápio?"
-3. Respostas curtas — o cliente está no processo de compra.
-4. Se mencionar um produto, confirme se está disponível e informe o preço.`
-        : '';
-
-const systemPrompt = useOrcamentoPrompt && company.orcamento_prompt
-  ? company.orcamento_prompt
-  : `${companyContext ? `## Dados atuais da empresa:\n${companyContext}\n\n` : ''}${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}
-
-Regras:
-- Seja breve (máximo 2-3 frases)
-- Use linguagem natural
-- Português brasileiro
-- Se não souber, seja honesto
-- Use os dados da empresa acima para responder com precisão
-
-Pergunta: ${userMessage}`;
+      // ✅ SYSTEM PROMPT CORRIGIDO
+      // companyContext agora é lido corretamente do formData (escopo da rota)
+      // e inclui produtos, FAQ, horários e dados da empresa do gptContextRef
+      const systemPrompt = buildSystemPrompt({
+        company,
+        companyContext,
+        userMessage,
+        saleMode,
+        useOrcamentoPrompt,
+      });
 
       console.log('📋 Usando prompt:', useOrcamentoPrompt ? 'ORÇAMENTO' : 'PADRÃO');
+      console.log(`📦 companyContext recebido: ${companyContext ? companyContext.length + ' chars' : 'VAZIO ⚠️'}`);
 
       responseText = await processWithGPT(userMessage, systemPrompt, conversationHistory);
       console.log(`🧠 Usando contexto de ${conversationHistory.length} mensagens`);
@@ -517,7 +508,6 @@ Pergunta: ${userMessage}`;
       }, { headers: { 'X-Used-FAQ': String(usedFAQ) } });
     }
 
-    // ── Síntese final com voz da empresa ──────────────────────────────────
     const audioBuffer = await synthesizeSpeech({
       text: responseText,
       voiceName,
@@ -556,7 +546,7 @@ Pergunta: ${userMessage}`;
     try {
       const errorAudio = await synthesizeSpeech({
         text: 'Desculpe, ocorreu um erro.',
-        voiceName: BRAZILIAN_VOICES.NEURAL_MALE, // fallback seguro no catch
+        voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
         speakingRate: 1.2,
         audioEncoding: 'MP3',
       });
@@ -567,4 +557,63 @@ Pergunta: ${userMessage}`;
       return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
     }
   }
+}
+
+// ─── buildSystemPrompt ────────────────────────────────────────────────────
+// Separado em função própria para clareza e fácil manutenção futura
+interface BuildSystemPromptParams {
+  company: {
+    name: string;
+    system_prompt?: string | null;
+    orcamento_prompt?: string | null;
+    assistant_role?: string | null;
+  };
+  companyContext: string | null;
+  userMessage: string;
+  saleMode: boolean;
+  useOrcamentoPrompt: boolean;
+}
+
+function buildSystemPrompt({
+  company,
+  companyContext,
+  userMessage,
+  saleMode,
+  useOrcamentoPrompt,
+}: BuildSystemPromptParams): string {
+
+  // Modo orçamento: usa prompt específico da empresa se disponível
+  if (useOrcamentoPrompt && company.orcamento_prompt) {
+    return company.orcamento_prompt;
+  }
+
+  const role = company.assistant_role || 'assistente virtual';
+  const basePrompt = company.system_prompt
+    ? company.system_prompt
+    : `Você é ${role} da empresa ${company.name}. Responda de forma clara, objetiva e educada.`;
+
+  // Bloco de contexto da empresa (produtos, FAQ, horários, endereço, etc.)
+  // Vem do gptContextRef do useGroqContext — montado no cliente com dados reais do banco
+  const contextBlock = companyContext
+    ? `\n\n## Dados atuais da empresa:\n${companyContext}`
+    : '';
+
+  // Contexto adicional para modo de venda
+  const saleModeBlock = saleMode
+    ? `\n\n## CONTEXTO ATUAL: O cliente está visualizando o CARDÁPIO/LOJA VIRTUAL.
+Suas prioridades agora:
+1. Responda perguntas sobre produtos, preços e disponibilidade de forma direta.
+2. Se o cliente perguntar algo não relacionado a produtos, responda brevemente e redirecione: "Posso te ajudar a escolher algo do cardápio?"
+3. Respostas curtas — o cliente está no processo de compra.
+4. Se mencionar um produto, confirme se está disponível e informe o preço.`
+    : '';
+
+  const rules = `\n\n## Regras de resposta:
+- Máximo 2-3 frases por resposta (será falado em voz alta)
+- Português brasileiro, linguagem natural e amigável
+- Use SOMENTE os dados da empresa acima para responder sobre produtos, preços, horários ou localização
+- Se não tiver a informação nos dados acima, diga honestamente que não tem essa informação no momento
+- NUNCA invente preços, horários ou produtos que não estejam listados`;
+
+  return `${basePrompt}${contextBlock}${saleModeBlock}${rules}`;
 }

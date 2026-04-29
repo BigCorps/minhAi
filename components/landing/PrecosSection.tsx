@@ -291,9 +291,7 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-1 flex-1">
                 {[
-                  'Cores personalizadas',
                   'Antifraude',
-                  'PIX direto na conta',
                   'Implementação',
                   'Cadastro de produtos',
                   'Configuração de totem',

@@ -32,6 +32,9 @@ interface AssistantFunction {
   display_order: number;
   edit_modal_component?: string;
   default_enabled?: boolean;
+  // ── Badges ──────────────────────────────
+  enabled_meta: boolean;
+  // enabled_gpt: boolean; // GPT — ainda não implementado
 }
 
 interface CompanyFunctionSetting {
@@ -135,12 +138,12 @@ function CategoryPillSelector({
     const firstRowCats = catBtns.filter((_, i) => categories[i].key === 'contact' || categories[i].key === 'video');
     const restCats = catBtns.filter((_, i) => categories[i].key !== 'contact' && categories[i].key !== 'video');
     return (
-      <div className="flex flex-col gap-0.5 w-full"> {/* Diminuído de gap-2 para 1.5 */}
-        <div className="grid grid-cols-3 gap-0.5"> {/* Diminuído de gap-2 para 1.5 */}
+      <div className="flex flex-col gap-0.5 w-full">
+        <div className="grid grid-cols-3 gap-0.5">
           {allBtn}
           {firstRowCats}
         </div>
-        <div className="grid grid-cols-3 gap-0.5"> {/* Diminuído de gap-2 para 1.5 */}
+        <div className="grid grid-cols-3 gap-0.5">
           {restCats}
         </div>
       </div>
@@ -311,9 +314,11 @@ async function handleSendSuggestion() {
   async function loadData(selectedCompanyId: string) {
     try {
       setLoading(true);
+
+      // ── Incluídos enabled_meta e enabled_gpt para renderizar os badges ──
       const { data: allFunctions, error: functionsError } = await supabase
         .from('assistant_functions')
-        .select('*, default_enabled')
+        .select('*, default_enabled, enabled_meta, enabled_gpt')
         .eq('is_active', true)
         .order('display_order');
       if (functionsError) console.error('Erro ao buscar funções:', functionsError);
@@ -391,17 +396,18 @@ async function handleSendSuggestion() {
         // Atualiza estado local sem recarregar tudo
         setProfilePermissions(prev => {
           const exists = prev.find(p => p.tipo === selectedTipo && p.function_key === functionKey);
-          if (exists) return prev.map(p =>
-            p.tipo === selectedTipo && p.function_key === functionKey ? { ...p, is_enabled: !currentlyEnabled } : p
-          );
+          if (exists) {
+            return prev.map(p =>
+              p.tipo === selectedTipo && p.function_key === functionKey
+                ? { ...p, is_enabled: !currentlyEnabled }
+                : p
+            );
+          }
           return [...prev, { tipo: selectedTipo, function_key: functionKey, is_enabled: !currentlyEnabled }];
         });
-        setUpdating(null);
-        return; // não precisa recarregar tudo
       }
     } catch (error) {
-      console.error('Erro ao atualizar:', error);
-      alert('Erro ao atualizar função. Tente novamente.');
+      console.error('Erro ao toggling função:', error);
     } finally {
       setUpdating(null);
     }
@@ -409,34 +415,31 @@ async function handleSendSuggestion() {
 
   function isFunctionEnabled(functionKey: string): boolean {
     if (selectedTipo === null) {
-      // Modo principal — comportamento original
       const setting = settings.find(s => s.function_key === functionKey);
       if (setting) return setting.is_enabled;
-      const func = functions.find(f => f.function_key === functionKey);
-      return func?.default_enabled ?? false;
+      // fallback: default_enabled
+      const fn = functions.find(f => f.function_key === functionKey);
+      return fn?.default_enabled ?? false;
+    } else {
+      const perm = profilePermissions.find(p => p.tipo === selectedTipo && p.function_key === functionKey);
+      if (perm) return perm.is_enabled;
+      return false;
     }
-    // Modo perfil — usa profile_type_permissions
-    return profilePermissions.find(
-      p => p.tipo === selectedTipo && p.function_key === functionKey
-    )?.is_enabled ?? false;
   }
 
   function getFunctionStats(functionKey: string) {
     const setting = settings.find(s => s.function_key === functionKey);
     return {
-      usageCount: setting?.usage_count || 0,
-      creditsConsumed: setting?.total_credits_consumed || 0,
-      lastUsed: setting?.last_used_at || null,
+      usageCount: setting?.usage_count ?? 0,
+      creditsConsumed: setting?.total_credits_consumed ?? 0,
+      lastUsed: setting?.last_used_at ?? null,
     };
   }
 
-function getFunctionCredits(functionKey: string): number {
-  const setting = settings.find(s => s.function_key === functionKey);
-  // Prioriza o valor customizado da empresa, cai no global se não existir
-  if (setting?.custom_credits_per_use != null) return setting.custom_credits_per_use;
-  const func = functions.find(f => f.function_key === functionKey);
-  return func?.credits_per_use ?? 0;
-}
+  function getFunctionCredits(functionKey: string): number {
+    const fn = functions.find(f => f.function_key === functionKey);
+    return fn?.credits_per_use ?? 0;
+  }
 
   function handleEdit(fn: AssistantFunction) {
     setEditingFunction(fn);
@@ -602,7 +605,7 @@ function getFunctionCredits(functionKey: string): number {
             </div>
           )}
 
-          {/* ── Com assistente selecionado ── */}
+          {/* ── Loading ── */}
           {loading && (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
@@ -659,6 +662,11 @@ function getFunctionCredits(functionKey: string): number {
                     />
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    <ProfileTypeSelector
+                      selectedTipo={selectedTipo}
+                      tiposDisponiveis={tiposDisponiveis}
+                      onSelect={setSelectedTipo}
+                    />
                     <StatusPillSelector
                       filterStatus={filterStatus}
                       onSetStatus={setFilterStatus}
@@ -716,8 +724,8 @@ function getFunctionCredits(functionKey: string): number {
                 </div>
               ) : (
                 <>
-                  {/* Mobile: Espaçamento reduzido entre cards */}
-                  <div className="sm:hidden flex flex-col gap-3"> {/* Trocado space-y-2 por gap-3 para consistência */}
+                  {/* Mobile */}
+                  <div className="sm:hidden flex flex-col gap-3">
                     {filteredFunctions.map(fn => {
                       const enabled = isFunctionEnabled(fn.function_key);
                       const stats = getFunctionStats(fn.function_key);
@@ -731,13 +739,13 @@ function getFunctionCredits(functionKey: string): number {
                           onEdit={() => handleEdit(fn)}
                           isUpdating={updating === fn.function_key}
                           theme={theme}
-                          viewMode="grid" // No mobile usamos o layout de card
+                          viewMode="grid"
                         />
                       );
                     })}
                   </div>
 
-                  {/* Desktop: Mantém o layout original de grid/lista */}
+                  {/* Desktop */}
                   <div className="hidden sm:block">
                     <div className={viewMode === 'list' ? 'space-y-2' : 'flex flex-col gap-6'}>
                       {renderCardList(viewMode)}

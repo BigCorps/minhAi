@@ -140,27 +140,33 @@ function FunctionBadges({
   fn: MetaFunction;
   compact?: boolean;
 }) {
-  const hasBadge = fn.is_premium || fn.enabled_meta /* || fn.enabled_gpt */;
-  if (!hasBadge) return null;
-
   const base = compact
     ? 'text-[10px] font-semibold px-1.5 py-0.5 rounded-full'
     : 'text-xs font-medium px-2 py-0.5 rounded-full';
 
   return (
     <div className="flex items-center gap-1 flex-shrink-0">
+      {/* Todas as funções funcionam na IA */}
+      <span className={`${base} bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300`}>
+        IA
+      </span>
+
+      {/* Disponível também nos serviços Meta */}
+      {fn.enabled_meta && (
+        <span className={`${base} bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300`}>
+          Meta
+        </span>
+      )}
+
+      {/* Requer plano pago */}
       {fn.is_premium && (
         <span className={`${base} bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300`}>
           Premium
         </span>
       )}
-      {fn.enabled_meta && (
-        <span className={`${base} bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300`}>
-          Meta
-        </span>
-      )}
+
       {/* fn.enabled_gpt && (
-        <span className={`${base} bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300`}>
+        <span className={`${base} bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300`}>
           GPT
         </span>
       ) */}

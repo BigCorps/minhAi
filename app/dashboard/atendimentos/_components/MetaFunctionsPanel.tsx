@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
-import { useTheme } from 'next-themes';
 import FunctionConfigModal from '@/components/dashboard/functions/FunctionConfigModal';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -351,8 +350,6 @@ interface MetaFunctionsPanelProps {
 }
 
 export default function MetaFunctionsPanel({ companyId }: MetaFunctionsPanelProps) {
-  const { resolvedTheme } = useTheme();
-
   const [functions, setFunctions]   = useState<MetaFunction[]>([]);
   const [enabled, setEnabled]       = useState<Record<string, boolean>>({});
   const [loading, setLoading]       = useState(true);

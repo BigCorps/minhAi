@@ -94,12 +94,15 @@ export function VoiceAssistantWithWakeWord({
   onAssistantStart,
   hideDisabledFunctions = false,
   autoScroll = true,
-  onModalChange,        // ← ADICIONAR AQUI
+  onModalChange,
   onTextMessage,
   textMode = false,
+  isKioskMode = false,
 }: VoiceAssistantProps & {
+  onModalChange?: (modal: any) => void;
   onTextMessage?: (handler: (text: string) => Promise<{ text: string; functionKey?: string } | null>) => void;
   textMode?: boolean;
+  isKioskMode?: boolean;
 }) {
 
   // ── States básicos ────────────────────────────────────────
@@ -117,9 +120,8 @@ export function VoiceAssistantWithWakeWord({
   );
   const [externalInput, setExternalInput] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
-
   const [isRecordingToggle, setIsRecordingToggle] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
 
   // -- States de Destaque de Função (Inatividade) --
   const [showFeatureHighlight, setShowFeatureHighlight] = useState(false);
@@ -184,45 +186,40 @@ useEffect(() => {
   const functionSettings = useFunctionSettings(companyId);
 
   // ── Config de impressão ───────────────────────────────────
-const [printConfig, setPrintConfig] = useState<{
-  print_on_purchase: boolean;
-  print_on_queue: boolean;
-  print_on_payment: boolean;
-  hasActivePlan: boolean;
-}>({ print_on_purchase: false, print_on_queue: false, print_on_payment: false, hasActivePlan: false });
+  const [printConfig, setPrintConfig] = useState<{
+    print_on_purchase: boolean;
+    print_on_queue: boolean;
+    print_on_payment: boolean;
+    hasActivePlan: boolean;
+  }>({ print_on_purchase: false, print_on_queue: false, print_on_payment: false, hasActivePlan: false });
 
-useEffect(() => {
-  if (!companyId) return;
-  async function loadPrintConfig() {
-    try {
-      const supabase = createClient();
-// Busca campos de impressão da company e verifica plano via edge
-// (a edge usa service role e ignora RLS — funciona em subdomínio e slug)
-const { data: company } = await supabase
-  .from('companies')
-  .select('print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment')
-  .eq('id', companyId)
-  .maybeSingle();
-
-const { data: planData } = await supabase.functions.invoke('check-plan', {
-  body: { companyId },
-});
-const active = planData?.hasActivePlan === true;
-
-setPrintConfig({
-  print_on_purchase: !!company?.print_auto_type_purchase,
-  print_on_queue:    !!company?.print_auto_type_queue,
-  print_on_payment:  !!company?.print_auto_type_payment,
-  hasActivePlan: active,
-});
-    } catch { /* silencioso */ }
-  }
-  loadPrintConfig();
-}, [companyId]);
-  
+  useEffect(() => {
+    if (!companyId) return;
+    async function loadPrintConfig() {
+      try {
+        const supabase = createClient();
+        const [{ data: company }, { data: credits }] = await Promise.all([
+          supabase.from('companies').select('print_on_purchase, print_on_queue, print_on_payment').eq('id', companyId).maybeSingle(),
+          supabase.from('credits').select('has_active_plan, plan_expires_at').eq('company_id', companyId).maybeSingle(),
+        ]);
+        const active =
+          credits?.has_active_plan === true &&
+          credits?.plan_expires_at != null &&
+          new Date(credits.plan_expires_at) > new Date();
+        setPrintConfig({
+          print_on_purchase: company?.print_on_purchase ?? false,
+          print_on_queue:    company?.print_on_queue    ?? false,
+          print_on_payment:  company?.print_on_payment  ?? false,
+          hasActivePlan: active,
+        });
+      } catch { /* silencioso */ }
+    }
+    loadPrintConfig();
+  }, [companyId]);
   const { noiseWarning, repromptWarning, handleVolumeChange, triggerRepromptWarning } = useNoiseWarning();
   const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(companyWakeWord, wakeWordEnabled);
   const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio, ttsVoice);
+  const isMobile = useIsMobile();
 const { profile, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? '');
 const profileRef = useRef(profile);
 useEffect(() => { profileRef.current = profile; }, [profile]);
@@ -236,13 +233,6 @@ const { onlineProfiles } = useOnlinePresence({
 });
 const onlineProfilesRef = useRef(onlineProfiles);
 useEffect(() => { onlineProfilesRef.current = onlineProfiles; }, [onlineProfiles]);
-
-useEffect(() => {
-  const check = () => setIsMobile(window.matchMedia('(max-width: 768px)').matches);
-  check();
-  window.addEventListener('resize', check);
-  return () => window.removeEventListener('resize', check);
-}, []);
 
 // ── useEffect 1: login via evento (aba /cliente/slug) ────
 useEffect(() => {
@@ -323,46 +313,44 @@ useEffect(() => {
   const faqsRef = useRef<typeof faqs>([]);
   useEffect(() => { faqsRef.current = faqs; }, [faqs]);
 
-// ── Lógica de Inatividade ─────────────────────────────────
-const onInactivityRef = useRef(async () => {});
+  // ── Lógica de Inatividade ─────────────────────────────────
+  // onInactivity fica num ref para não recriar a cada render e não
+  // disparar o useEffect do hook (que reiniciaria o timer).
+  const onInactivityRef = useRef(async () => {});
+  useEffect(() => {
+    onInactivityRef.current = async () => {
+      if (activeModal || isSpeaking || isPlayingAudio || isProcessing || showFeatureHighlight) return;
 
-const { resetTimer: resetInactivityTimer } = useInactivityDetector({
-  timeoutSeconds: inactivityTimeoutSeconds,
-  onInactivity: useCallback(() => onInactivityRef.current(), []),
-  onActivity: useCallback(() => {}, []),
-});
+      if (inactivityAction === 'offers_panel') {
+        setActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
+        return;
+      }
 
-console.log('[Inatividade] timeout:', inactivityTimeoutSeconds, '| action:', inactivityAction);
+      if (inactivityAction === 'restart') {
+        stopEverything();
+        setLastTranscript('');
+        setLastResponse('');
+        setShowLastConversation(false);
+        setSessionId(crypto.randomUUID());
+        resetInactivityTimer();
+        return;
+      }
 
-// Agora onInactivityRef pode referenciar resetInactivityTimer com segurança
-useEffect(() => {
-  onInactivityRef.current = async () => {
-    if (activeModal || isSpeaking || isPlayingAudio || isProcessing || showFeatureHighlight) return;
+      // 'feature_highlight' — comportamento padrão
+      const feature = await getRandomActiveFunctionHighlight();
+      if (feature) {
+        setHighlightedFeature(feature);
+        setShowFeatureHighlight(true);
+        setTimeout(() => handleCloseFeatureHighlight(), 10000);
+      }
+    };
+  }); // sem deps → sempre atualizado
 
-    if (inactivityAction === 'offers_panel') {
-      setActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
-      return;
-    }
-
-    if (inactivityAction === 'restart') {
-      stopEverything();
-      setLastTranscript('');
-      setLastResponse('');
-      setShowLastConversation(false);
-      setSessionId(crypto.randomUUID());
-      resetInactivityTimer(); // ← agora existe quando este código roda
-      return;
-    }
-
-    // 'feature_highlight' — comportamento original
-    const feature = await getRandomActiveFunctionHighlight();
-    if (feature) {
-      setHighlightedFeature(feature);
-      setShowFeatureHighlight(true);
-      setTimeout(() => handleCloseFeatureHighlight(), 10000);
-    }
-  };
-}); // sem deps — correto, sempre atualiza o ref
+  const { resetTimer: resetInactivityTimer } = useInactivityDetector({
+    timeoutSeconds: inactivityTimeoutSeconds ?? 120,
+    onInactivity: useCallback(() => onInactivityRef.current(), []),
+    onActivity: useCallback(() => {}, []),
+  });
 
 useEffect(() => {
   if (!textMode) return;
@@ -380,22 +368,20 @@ useEffect(() => {
   }
 }, [inactivityTimeoutSeconds, resetInactivityTimer]);
 
-  // ── Fase 4: Detector de presença via câmera ──────────────
+  // ── Detector de presença via câmera ──────────────────────
 usePresenceDetector({
   enabled: presenceGreetingEnabled,
-onPresenceDetected: useCallback(() => {
-  // Fecha painel de ofertas via evento global (evita stale closure no activeModal)
-  window.dispatchEvent(new CustomEvent('eai:presenceDetected'));
-  // Fecha dica de função se estiver aberta
-  if (showFeatureHighlight) {
-    setShowFeatureHighlight(false);
-    setHighlightedFeature(null);
-  }
-  if (isPlayingAudio || isProcessing || isSpeaking) return;
-  const greeting = companyGreeting || greetingMessage || 'Olá! Como posso ajudar?';
-  playText(greeting).catch(() => {});
-  resetInactivityTimer();
-}, [isPlayingAudio, isProcessing, isSpeaking, showFeatureHighlight, companyGreeting, greetingMessage]),
+  onPresenceDetected: useCallback(() => {
+    window.dispatchEvent(new CustomEvent('eai:presenceDetected'));
+    if (showFeatureHighlight) {
+      setShowFeatureHighlight(false);
+      setHighlightedFeature(null);
+    }
+    if (isPlayingAudio || isProcessing || isSpeaking) return;
+    const greeting = companyGreeting || greetingMessage || 'Olá! Como posso ajudar?';
+    playText(greeting).catch(() => {});
+    resetInactivityTimer();
+  }, [isPlayingAudio, isProcessing, isSpeaking, showFeatureHighlight, companyGreeting, greetingMessage]),
 });
 
   const handleCloseFeatureHighlight = useCallback(() => {
@@ -521,7 +507,7 @@ onPresenceDetected: useCallback(() => {
     initCommandProcessor();
   }, [companyId]);
 
-// ── Auto-start (CORRIGIDO) ──────────────────────────────────
+  // ── Auto-start ────────────────────────────────────────────
 useEffect(() => {
   if (!companyWakeWord) return;
 
@@ -653,22 +639,22 @@ useEffect(() => {
     if (e && isPlayingAudio) { e.preventDefault(); e.stopPropagation(); }
     if (isPlayingAudio) { stopEverything(); return; }
     if (!permissionGranted || isProcessing || isTranscribing) return;
-  resetInactivityTimer();
-  shouldProcessAudio.current = false;
-  await stopGoogleSpeech();
-  setIsListening(true);
-  setIsRecordingToggle(true);
-  await voiceRecorder.startRecording();
-};
+    resetInactivityTimer(); // Microfone pressionado = atividade real
+    shouldProcessAudio.current = false;
+    await stopGoogleSpeech();
+    setIsListening(true);
+    setIsRecordingToggle(true);
+    await voiceRecorder.startRecording();
+  };
 
-const handleMicButtonUp = async () => {
-  if (!voiceRecorder.isRecording) return;
-  setIsListening(false);
-  setIsRecordingToggle(false);
+  const handleMicButtonUp = async () => {
+    if (!voiceRecorder.isRecording) return;
+    setIsListening(false);
+    setIsRecordingToggle(false);
     try {
       const audioBlob = await voiceRecorder.stopRecording();
       if (!wakeWordEnabled) {
-        // Wake word desativada: transcreve e processa direto sem passar pelo externalInput/useEffect
+        // Sem wake word: transcreve e envia direto (bypassa externalInput)
         setIsTranscribing(true);
         try {
           const reader = new FileReader();
@@ -925,12 +911,14 @@ case 'solicitar_video_chamada':
 
 case 'gerar_senha':
   stopGoogleSpeech();
-setActiveModal({
-  type: 'GerarSenhaDisplay',
-  data: {
-    companyId,
-    slug,
-  },
+  setActiveModal({
+    type: 'GerarSenhaDisplay',
+    data: {
+      companyId,
+      slug,
+      printOnQueue: printConfig.print_on_queue,
+      hasActivePlan: printConfig.hasActivePlan,
+    },
   });
   playText('Gerando sua senha...').catch(() => {});
   break;
@@ -1523,7 +1511,7 @@ case 'juntar_pdfs':
       }
       formData.append('directQuestion', questionText);
       if (sessionId) formData.append('sessionId', sessionId);
-      formData.append('companyContext', gptContextRef.current); // ← só isso
+      formData.append('companyContext', gptContextRef.current);
 
       let feedbackStarted = false;
       const feedbackTimeout = setTimeout(() => {
@@ -1692,7 +1680,7 @@ const handleTextMessage = async (message: string) => {
       formData.append('companyId', companyId);
       formData.append('directQuestion', message);
       if (sessionId) formData.append('sessionId', sessionId);
-      formData.append('companyContext', gptContextRef.current); // ← só isso
+      formData.append('companyContext', gptContextRef.current);
 
       const response = await fetch('/api/voice/process', { method: 'POST', body: formData });
 
@@ -2006,7 +1994,6 @@ const handleTextMessage = async (message: string) => {
   // ── Registra handler externo ──────────────────────────────
   useEffect(() => {
     if (onTextMessage) {
-      console.log('[VoiceAssistant] registrando handler via onTextMessage');
       onTextMessage(async (text: string) => {
         return await handleTextMessageForText(text);
       });
@@ -2039,17 +2026,17 @@ const handleTextMessage = async (message: string) => {
     });
 
   const getStatusMessage = (maximized = false) => {
-  if (!hasMicrophone) return 'Modo de voz indisponível';
-  if (!permissionGranted) return 'Aguardando permissão de voz...';
-  if (isTranscribing) return 'Transcrevendo...';
-  if (isPlayingAudio) return 'Falando...';
-  if (isProcessing) return 'Processando...';
-  const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
-  if (!wakeWordEnabled) return maximized
-    ? 'Pressione o orbe para interagir'
-    : 'Pressione o microfone para interagir';
-  return primaryWakeWord ? `diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
-};
+    if (!hasMicrophone) return 'Modo de voz indisponível';
+    if (!permissionGranted) return 'Aguardando permissão de voz...';
+    if (isTranscribing) return 'Transcrevendo...';
+    if (isPlayingAudio) return 'Falando...';
+    if (isProcessing) return 'Processando...';
+    const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
+    if (!wakeWordEnabled) return maximized
+      ? 'Pressione o orbe para interagir'
+      : 'Pressione o microfone para interagir';
+    return primaryWakeWord ? `diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
+  };
 
   const getMicButtonColor = () => {
     if (voiceRecorder.isRecording || isPlayingAudio) return 'bg-red-500 animate-pulse';
@@ -2061,7 +2048,7 @@ const handleTextMessage = async (message: string) => {
     return 'bg-green-400 animate-pulse';
   };
 
-const getMicHintText = () => {
+  const getMicHintText = () => {
     if (!hasMicrophone) return 'Microfone não detectado';
     if (!permissionGranted) return 'Permissão de voz necessária';
     if (voiceRecorder.isRecording) return isMobile ? 'solte para enviar...' : 'clique novamente para enviar...';
@@ -2081,10 +2068,10 @@ const getMicHintText = () => {
       <div className="flex flex-col items-center gap-2 md:gap-3 w-full">
         <div
           className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 cursor-pointer select-none"
-onMouseDown={(e) => { if (!isMobile) { isRecordingToggle ? handleMicButtonUp() : handleMicButtonDown(e); } }}
-onMouseUp={(e) => { if (!isMobile) e.preventDefault(); }}
-onTouchStart={(e) => { if (isMobile) handleMicButtonDown(e); }}
-onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
+          onMouseDown={(e) => { if (!isMobile) { isRecordingToggle ? handleMicButtonUp() : handleMicButtonDown(e); } }}
+          onMouseUp={(e) => { if (!isMobile) e.preventDefault(); }}
+          onTouchStart={(e) => { if (isMobile) handleMicButtonDown(e); }}
+          onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
         >
           {voiceRecorder.isRecording && (
             <div className="absolute inset-0 rounded-full border-4 border-red-500 animate-ping opacity-40 pointer-events-none z-10" />
@@ -2133,17 +2120,17 @@ onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
           {error && <p className={`text-xs sm:text-sm mt-2 ${theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'}`}>{error}</p>}
         </div>
 
-{!textMode && (
-  <ActionModals
-    activeModal={activeModal}
-    onClose={handleCloseModal}
-    theme={theme}
-    onConfirmPix={handleConfirmPixLocal}
-    onCancelPix={handleCancelPixLocal}
-    playText={playText}
-    printConfig={printConfig}
-  />
-)}
+        {!textMode && (
+          <ActionModals
+            activeModal={activeModal}
+            onClose={handleCloseModal}
+            theme={theme}
+            onConfirmPix={handleConfirmPixLocal}
+            onCancelPix={handleCancelPixLocal}
+            playText={playText}
+            printConfig={printConfig}
+          />
+        )}
       </div>
     );
   }
@@ -2169,7 +2156,7 @@ onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
         <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-colors ${
           theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
         }`}>
-          <div className="relative h-96">
+          <div className={`relative ${showVirtualKeyboard ? "h-44" : "h-96"} transition-all duration-300`}>
             <AvatarFace
               isListening={isListening}
               isSpeaking={isPlayingAudio}
@@ -2192,17 +2179,17 @@ onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
         </div>
 
         {/* Card direito: Status / Microfone */}
-        <div className={`rounded-3xl shadow-2xl p-8 border transition-colors h-[448px] flex flex-col overflow-hidden ${
+        <div className={`rounded-3xl shadow-2xl p-8 border transition-colors ${showVirtualKeyboard ? "h-48" : "h-[448px]"} flex flex-col overflow-hidden transition-all duration-300 ${
           theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
         }`}>
           <div className="flex flex-col items-center flex-1 min-h-0">
 
             <div className="relative flex items-center justify-center mt-2">
               <button
-onMouseDown={(e) => { if (!isMobile) { isRecordingToggle ? handleMicButtonUp() : handleMicButtonDown(e); } }}
-onMouseUp={(e) => { if (!isMobile) e.preventDefault(); }}
-onTouchStart={(e) => { if (isMobile) handleMicButtonDown(e); }}
-onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
+                onMouseDown={(e) => { if (!isMobile) { isRecordingToggle ? handleMicButtonUp() : handleMicButtonDown(e); } }}
+                onMouseUp={(e) => { if (!isMobile) e.preventDefault(); }}
+                onTouchStart={(e) => { if (isMobile) handleMicButtonDown(e); }}
+                onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
                 disabled={(!permissionGranted && hasMicrophone) || !hasMicrophone || showStartButton || isTranscribing}
                 className={`w-[102px] h-[102px] rounded-full ${getMicButtonColor()} flex items-center justify-center transition-all shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300/50 disabled:opacity-50 select-none`}
                 aria-label="Segurar para falar"
@@ -2224,10 +2211,9 @@ onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
             )}
 
             <div className="text-center w-full mt-4">
-                <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  {getStatusMessage()}
-                </p>
-
+              <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                {getStatusMessage()}
+              </p>
               {wakeWordEnabled && (
                 <p className={`text-sm ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
                   Utilize a palavra de ativação apenas no modo voz.
@@ -2308,6 +2294,8 @@ onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
                   disabled={false}
                   externalValue={externalInput}
                   onExternalValueConsumed={() => setExternalInput('')}
+                  showVirtualKeyboard={showVirtualKeyboard}
+                  onVirtualKeyboardToggle={isKioskMode ? () => setShowVirtualKeyboard(v => !v) : undefined}
                 />
               </div>
             )}
@@ -2376,17 +2364,17 @@ onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
         </div>
       </div>
 
-{!textMode && (
-  <ActionModals
-    activeModal={activeModal}
-    onClose={handleCloseModal}
-    theme={theme}
-    onConfirmPix={handleConfirmPixLocal}
-    onCancelPix={handleCancelPixLocal}
-    playText={playText}
-    printConfig={printConfig}
-  />
-)}
+      {!textMode && (
+        <ActionModals
+          activeModal={activeModal}
+          onClose={handleCloseModal}
+          theme={theme}
+          onConfirmPix={handleConfirmPixLocal}
+          onCancelPix={handleCancelPixLocal}
+          playText={playText}
+          printConfig={printConfig}
+        />
+      )}
     </div>
   );
 }

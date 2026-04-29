@@ -4,7 +4,14 @@
 import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
-import FunctionConfigModal from '@/components/dashboard/functions/FunctionConfigModal';
+import dynamic from 'next/dynamic';
+
+// Dynamic import: evita que os dezenas de sub-imports do FunctionConfigModal
+// resolvam para undefined neste contexto de módulo diferente do page.tsx
+const FunctionConfigModal = dynamic(
+  () => import('@/components/dashboard/functions/FunctionConfigModal'),
+  { ssr: false }
+);
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 

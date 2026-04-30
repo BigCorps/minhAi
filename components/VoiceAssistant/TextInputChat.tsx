@@ -35,6 +35,18 @@ export default function TextInputChat({
   const [isSending, setIsSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // ✅ NOVO: Escutar evento de fechamento do teclado
+  useEffect(() => {
+    const handleKeyboardClose = () => {
+      if (showVirtualKeyboard && onVirtualKeyboardToggle) {
+        onVirtualKeyboardToggle();
+      }
+    };
+
+    window.addEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
+    return () => window.removeEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
+  }, [showVirtualKeyboard, onVirtualKeyboardToggle]);
+
   // Auto-focus no input quando não estiver processando (apenas desktop)
   useEffect(() => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);

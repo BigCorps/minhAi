@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Send } from 'lucide-react';
+import TextInputChat from '@/components/VoiceAssistant/TextInputChat'; // ✅ NOVO
 
 export interface TextMessage {
   id: string;
@@ -31,25 +32,40 @@ export default function TextAssistant({
   const [isRecording, setIsRecording] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
+  // ✅ NOVO: Estados para teclado virtual
+  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
   const isDark = theme === 'dark';
 
+  // ✅ NOVO: Listeners para eventos de teclado virtual
+  useEffect(() => {
+    const handleKeyboardOpen = () => {
+      setIsKeyboardOpen(true);
+      setShowVirtualKeyboard(true);
+    };
+    const handleKeyboardClose = () => {
+      setIsKeyboardOpen(false);
+      setShowVirtualKeyboard(false);
+    };
+    
+    window.addEventListener('eai:virtualKeyboardOpen', handleKeyboardOpen);
+    window.addEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
+    
+    return () => {
+      window.removeEventListener('eai:virtualKeyboardOpen', handleKeyboardOpen);
+      window.removeEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
+    };
+  }, []);
+
   // Scroll para o fim após cada mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isProcessing, isSending]);
-
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
-    }
-  }, [inputText]);
 
   // ── Gravação de áudio ──────────────────────────────────────────────────────
   const startRecording = async () => {
@@ -168,13 +184,6 @@ const handleSendMessage = async (overrideText?: string) => {
   }
 };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
   // ── Estilos ────────────────────────────────────────────────────────────────
   const styles = {
     container: {
@@ -207,7 +216,12 @@ const handleSendMessage = async (overrideText?: string) => {
   const busy = isSending || isProcessing;
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={styles.container}>
+    <div 
+      className={`fixed inset-0 flex flex-col transition-all duration-300 ${
+        isKeyboardOpen ? 'pb-[350px]' : 'pb-0'
+      }`}
+      style={styles.container}
+    >
       {/*
         Área de mensagens
         pt-[120px] mobile (header 2 linhas) / md:pt-[72px] desktop (header 1 linha)
@@ -219,7 +233,9 @@ const handleSendMessage = async (overrideText?: string) => {
         {messages.length === 0 && !busy && (
           <div className="flex flex-1 items-center justify-center">
             <p
-              className="text-xl font-bold text-center"
+              className={`text-xl font-bold text-center transition-all duration-300 ${
+                isKeyboardOpen ? 'scale-90 -translate-y-12' : 'scale-100'
+              }`}
               style={{ color: isDark ? 'rgb(226, 232, 240)' : 'rgb(30, 41, 59)' }}
             >
               Como Posso te Ajudar Hoje?
@@ -284,48 +300,24 @@ const handleSendMessage = async (overrideText?: string) => {
       </div>
 
       {/*
-        Input box — fica acima do carrossel (bottom-[136px])
+        Input box — usa TextInputChat para suporte ao teclado virtual
+        Posição ajusta quando teclado abre
       */}
       <div
-        className="fixed left-10 right-10 md:left-16 md:right-16 rounded-2xl shadow-xl backdrop-blur-xl z-40 px-3 py-3"
-        style={{ ...styles.inputContainer, bottom: '136px' }}
+        className={`fixed left-10 right-10 md:left-16 md:right-16 z-40 transition-all duration-300 ${
+          isKeyboardOpen ? 'bottom-[330px]' : 'bottom-[136px]'
+        }`}
       >
-        <div className="relative flex items-center gap-2">
-          <textarea
-            ref={textareaRef}
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={isRecording ? 'Ouvindo...' : 'Use o microfone ou digite sua mensagem...'}
-            disabled={busy || isRecording}
-            className="flex-1 resize-none rounded-xl px-4 py-3 text-sm border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
-            style={styles.textarea}
-            rows={1}
-          />
-
-          {inputText.trim() ? (
-            <button
-              onClick={() => handleSendMessage()}
-              disabled={busy}
-              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-r from-blue-500 to-green-500 text-white hover:scale-110 transition-transform disabled:opacity-50"
-              title="Enviar"
-            >
-              <Send className="h-4 w-4" />
-            </button>
-          ) : (
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              disabled={busy}
-              className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-lg transition-all hover:scale-110 disabled:opacity-50 ${
-                isRecording ? 'text-red-500' : ''
-              }`}
-              style={isRecording ? {} : { color: isDark ? 'rgb(148, 163, 184)' : 'rgb(100, 116, 139)' }}
-              title={isRecording ? 'Parar' : 'Gravar'}
-            >
-              {isRecording ? <MicOff className="h-4 w-4 animate-pulse" /> : <Mic className="h-4 w-4" />}
-            </button>
-          )}
-        </div>
+        <TextInputChat
+          onSendMessage={async (text) => {
+            await handleSendMessage(text);
+          }}
+          isProcessing={busy}
+          theme={theme}
+          showVirtualKeyboard={showVirtualKeyboard}
+          onVirtualKeyboardToggle={() => setShowVirtualKeyboard(v => !v)}
+          autoOpenKeyboard={true}
+        />
       </div>
     </div>
   );

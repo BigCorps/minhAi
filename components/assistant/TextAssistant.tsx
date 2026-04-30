@@ -225,9 +225,11 @@ const handleSendMessage = async (overrideText?: string) => {
       {/*
         Área de mensagens
         pt-[120px] mobile (header 2 linhas) / md:pt-[72px] desktop (header 1 linha)
-        pb cobre o input + carrossel + footer
+        pb aumenta quando teclado abre para dar espaço
       */}
-      <div className="flex-1 overflow-y-auto px-10 md:px-16 pt-[140px] pb-[220px] md:pt-[96px] flex flex-col">
+      <div className={`flex-1 overflow-y-auto px-10 md:px-16 pt-[140px] md:pt-[96px] flex flex-col transition-all duration-300 ${
+        isKeyboardOpen ? 'pb-[520px]' : 'pb-[220px]'
+      }`}>
 
         {/* Boas-vindas quando vazio */}
         {messages.length === 0 && !busy && (
@@ -301,11 +303,13 @@ const handleSendMessage = async (overrideText?: string) => {
 
       {/*
         Input box — usa TextInputChat para suporte ao teclado virtual
-        Posição ajusta quando teclado abre
+        Z-index aumenta quando teclado abre para ficar acima dele
       */}
       <div
-        className={`fixed left-10 right-10 md:left-16 md:right-16 z-40 transition-all duration-300 ${
-          isKeyboardOpen ? 'bottom-[330px]' : 'bottom-[136px]'
+        className={`fixed left-10 right-10 md:left-16 md:right-16 transition-all duration-300 ${
+          isKeyboardOpen 
+            ? 'bottom-[320px] z-[10000]'  // ✅ Acima do teclado
+            : 'bottom-[136px] z-40'
         }`}
       >
         <TextInputChat

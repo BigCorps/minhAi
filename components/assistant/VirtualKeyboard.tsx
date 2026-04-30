@@ -66,6 +66,11 @@ export default function VirtualKeyboard({
 
   const isDark = theme === 'dark';
 
+  // ✅ NOVO: Handler para fechar o teclado
+  const handleClose = () => {
+    window.dispatchEvent(new CustomEvent('eai:virtualKeyboardClose'));
+  };
+
   // ── Cores ─────────────────────────────────────────────────
   const bg       = isDark ? '#1e293b' : '#f1f5f9';
   const keyBg    = isDark ? '#334155' : '#ffffff';
@@ -148,11 +153,44 @@ export default function VirtualKeyboard({
         width: '100%',
         userSelect: 'none',
         WebkitUserSelect: 'none',
+        position: 'relative', // ✅ Para posicionar o botão X
       }}
       // Impede que o teclado virtual feche o teclado nativo
       onMouseDown={(e) => e.preventDefault()}
       onTouchStart={(e) => e.preventDefault()}
     >
+      {/* ✅ NOVO: Botão X para fechar o teclado */}
+      <button
+        onClick={handleClose}
+        style={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          width: 32,
+          height: 32,
+          borderRadius: '50%',
+          background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+          border: 'none',
+          color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)',
+          fontSize: 20,
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'background 0.2s',
+          zIndex: 10,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
+        }}
+      >
+        ✕
+      </button>
+
       {/* ── Popup de acentos ──────────────────────────────── */}
       {accentMenu && (
         <div style={{

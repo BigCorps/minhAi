@@ -96,7 +96,6 @@ export function VoiceAssistantWithWakeWord({
   autoScroll = true,
   onModalChange,
   onTextMessage,
-  console.log('🔍 DEBUG:', { 
   textMode = false,
   isKioskMode = false,
 }: VoiceAssistantProps & {

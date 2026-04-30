@@ -329,6 +329,7 @@ export default function SlugHeaderWrapper({
             <div className="px-6 py-5 space-y-4">
               <input
                 type="password"
+                inputMode="text"
                 value={setupPasswordInput}
                 onChange={(e) => setSetupPasswordInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleConfirmSetup()}
@@ -409,6 +410,7 @@ export default function SlugHeaderWrapper({
             <div className="px-6 py-5 space-y-4">
               <input
                 type="password"
+                inputMode="text"
                 value={exitPasswordInput}
                 onChange={(e) => setExitPasswordInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleConfirmExit()}

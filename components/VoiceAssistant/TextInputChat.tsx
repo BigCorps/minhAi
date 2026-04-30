@@ -12,7 +12,7 @@ interface TextInputChatProps {
   onExternalValueConsumed?: () => void;
   /** Modo compacto: fonte menor, sem hint "Pressione Enter", padding reduzido */
   compact?: boolean;
-  /** Exibe teclado virtual (modo kiosk) */
+  /** Exibe teclado virtual (modo kiosk) - CONTROLADO PELO PAI */
   showVirtualKeyboard?: boolean;
   onVirtualKeyboardToggle?: () => void;
 }
@@ -25,7 +25,7 @@ export default function TextInputChat({
   externalValue,
   onExternalValueConsumed,
   compact = false,
-  showVirtualKeyboard = false,
+  showVirtualKeyboard = false, // ← PROP controlado pelo pai
   onVirtualKeyboardToggle,
 }: TextInputChatProps) {
   const [message, setMessage] = useState('');

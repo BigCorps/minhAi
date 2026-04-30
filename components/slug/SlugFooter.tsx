@@ -13,6 +13,21 @@ export default function SlugFooter({ theme, slug, webapp_enabled, has_consulting
   const [time, setTime] = useState<string>('');
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false); // ✅ NOVO
+
+  // ✅ NOVO: Escutar eventos de abertura/fechamento do teclado
+  useEffect(() => {
+    const handleKeyboardOpen = () => setIsKeyboardOpen(true);
+    const handleKeyboardClose = () => setIsKeyboardOpen(false);
+    
+    window.addEventListener('eai:virtualKeyboardOpen', handleKeyboardOpen);
+    window.addEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
+    
+    return () => {
+      window.removeEventListener('eai:virtualKeyboardOpen', handleKeyboardOpen);
+      window.removeEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
+    };
+  }, []);
 
   useEffect(() => {
     const updateTime = () => {
@@ -128,8 +143,10 @@ export default function SlugFooter({ theme, slug, webapp_enabled, has_consulting
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-20 h-8 border-t backdrop-blur-xl"
-      style={styles.container}
+      className={`fixed bottom-0 left-0 right-0 h-8 border-t backdrop-blur-xl transition-transform duration-300 ${
+        isKeyboardOpen ? 'translate-y-full' : 'translate-y-0'
+      }`}
+      style={{ ...styles.container, zIndex: 20 }}
     >
       {/* Layout Desktop */}
       <div className="hidden md:flex h-full items-center justify-between px-4 text-xs">

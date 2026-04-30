@@ -506,7 +506,7 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
         </div>
 
         {/* Pills */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 justify-between sm:justify-center">
           <button
             onClick={() => setSelectedCategories([])}
             className={`${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}

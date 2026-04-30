@@ -123,6 +123,15 @@ export function VoiceAssistantWithWakeWord({
   const [isRecordingToggle, setIsRecordingToggle] = useState(false);
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
 
+// ✅ NOVO: Disparar eventos para componentes externos (footer, carrossel)
+useEffect(() => {
+  if (showVirtualKeyboard) {
+    window.dispatchEvent(new CustomEvent('eai:virtualKeyboardOpen'));
+  } else {
+    window.dispatchEvent(new CustomEvent('eai:virtualKeyboardClose'));
+  }
+}, [showVirtualKeyboard]);
+
   // -- States de Destaque de Função (Inatividade) --
   const [showFeatureHighlight, setShowFeatureHighlight] = useState(false);
   const [highlightedFeature, setHighlightedFeature] = useState<{ function_name: string; short_description: string; function_category: string } | null>(null);
@@ -2296,6 +2305,7 @@ const handleTextMessage = async (message: string) => {
                   onExternalValueConsumed={() => setExternalInput('')}
                   showVirtualKeyboard={showVirtualKeyboard}
                   onVirtualKeyboardToggle={isKioskMode ? () => setShowVirtualKeyboard(v => !v) : undefined}
+                  autoOpenKeyboard={isKioskMode} 
                 />
               </div>
             )}

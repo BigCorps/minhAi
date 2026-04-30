@@ -32,6 +32,16 @@ export default function TextInputChat({
   const [isSending, setIsSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // 🔍 DEBUG: Log dos props recebidos
+  useEffect(() => {
+    console.log('📱 TextInputChat - Props atualizados:', {
+      showVirtualKeyboard,
+      hasToggle: !!onVirtualKeyboardToggle,
+      isKioskMode: !!onVirtualKeyboardToggle,
+      compact,
+    });
+  }, [showVirtualKeyboard, onVirtualKeyboardToggle, compact]);
+
   // Auto-focus no input quando não estiver processando (apenas desktop)
   useEffect(() => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -139,7 +149,13 @@ export default function TextInputChat({
         {onVirtualKeyboardToggle && (
           <button
             type="button"
-            onClick={onVirtualKeyboardToggle}
+            onClick={() => {
+              console.log('🎹 TextInputChat - Botão toggle clicado!', { 
+                showVirtualKeyboard,
+                willBe: !showVirtualKeyboard,
+              });
+              onVirtualKeyboardToggle();
+            }}
             className={`flex-shrink-0 rounded-lg transition-all p-2 ${
               showVirtualKeyboard
                 ? 'bg-blue-600 text-white'
@@ -184,14 +200,20 @@ export default function TextInputChat({
 
       {/* Teclado virtual — fixo no bottom, fora do fluxo do form */}
       {showVirtualKeyboard && (
-        <div className="fixed bottom-0 left-0 right-0 z-50">
-          <VirtualKeyboard
-            onKey={handleVirtualKey}
-            onBackspace={handleVirtualBackspace}
-            onEnter={handleVirtualEnter}
-            theme={theme}
-          />
-        </div>
+        <>
+          {console.log('🎹 TextInputChat - Renderizando VirtualKeyboard!', { 
+            showVirtualKeyboard,
+            timestamp: new Date().toISOString(),
+          })}
+          <div className="fixed bottom-0 left-0 right-0 z-50">
+            <VirtualKeyboard
+              onKey={handleVirtualKey}
+              onBackspace={handleVirtualBackspace}
+              onEnter={handleVirtualEnter}
+              theme={theme}
+            />
+          </div>
+        </>
       )}
     </form>
   );

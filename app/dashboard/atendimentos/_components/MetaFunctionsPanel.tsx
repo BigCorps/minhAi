@@ -4,7 +4,8 @@
 import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
-
+import { useTheme } from 'next-themes';
+import FunctionConfigModal from '@/components/dashboard/functions/FunctionConfigModal';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -139,33 +140,27 @@ function FunctionBadges({
   fn: MetaFunction;
   compact?: boolean;
 }) {
+  const hasBadge = fn.is_premium || fn.enabled_meta /* || fn.enabled_gpt */;
+  if (!hasBadge) return null;
+
   const base = compact
     ? 'text-[10px] font-semibold px-1.5 py-0.5 rounded-full'
     : 'text-xs font-medium px-2 py-0.5 rounded-full';
 
   return (
     <div className="flex items-center gap-1 flex-shrink-0">
-      {/* Todas as funções funcionam na IA */}
-      <span className={`${base} bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300`}>
-        IA
-      </span>
-
-      {/* Disponível também nos serviços Meta */}
-      {fn.enabled_meta && (
-        <span className={`${base} bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300`}>
-          Meta
-        </span>
-      )}
-
-      {/* Requer plano pago */}
       {fn.is_premium && (
         <span className={`${base} bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300`}>
           Premium
         </span>
       )}
-
+      {fn.enabled_meta && (
+        <span className={`${base} bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300`}>
+          Meta
+        </span>
+      )}
       {/* fn.enabled_gpt && (
-        <span className={`${base} bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300`}>
+        <span className={`${base} bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300`}>
           GPT
         </span>
       ) */}
@@ -180,22 +175,27 @@ function MetaFunctionCard({
   isEnabled,
   isUpdating,
   onToggle,
+  onEdit,
   viewMode,
 }: {
   fn: MetaFunction;
   isEnabled: boolean;
   isUpdating: boolean;
   onToggle: () => void;
+  onEdit: () => void;
   viewMode: 'grid' | 'list';
 }) {
   const categoryName = CATEGORY_NAMES[fn.function_category] ?? fn.function_category;
-  const hasConfig = CONFIGURABLE_FUNCTIONS.includes(fn.function_key);
+  const hasEditModal = CONFIGURABLE_FUNCTIONS.includes(fn.function_key);
 
   // ── MODO LISTA ──────────────────────────────────────────────────────────────
   if (viewMode === 'list') {
     return (
       <div
+        onClick={() => { if (hasEditModal) onEdit(); }}
         className={`relative border rounded-xl px-4 py-2.5 transition-all duration-300 flex items-center gap-3 ${
+          hasEditModal ? 'cursor-pointer hover:bg-gray-100/50 dark:hover:bg-white/5' : ''
+        } ${
           isEnabled
             ? 'bg-white dark:bg-slate-900 shadow-sm border-gray-200 dark:border-white/10'
             : 'bg-gray-50 dark:bg-slate-900/50 border-gray-200 dark:border-white/10'
@@ -227,19 +227,19 @@ function MetaFunctionCard({
 
         {/* Ações */}
         <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-          {hasConfig && (
-            <a
-              href="/dashboard/functions"
-              onClick={e => e.stopPropagation()}
+          {hasEditModal && (
+            <button
+              onClick={e => { e.stopPropagation(); onEdit(); }}
               className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+              disabled={isUpdating}
               aria-label="Configurar função"
-              title="Configurar em Funções do Assistente"
+              title="Configurar função"
             >
               <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-            </a>
+            </button>
           )}
           {fn.consumes_credits && (
             <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
@@ -264,7 +264,10 @@ function MetaFunctionCard({
   // ── MODO GRID ───────────────────────────────────────────────────────────────
   return (
     <div
+      onClick={() => { if (hasEditModal) onEdit(); }}
       className={`relative border rounded-2xl p-4 transition-all duration-300 flex flex-col justify-between h-full ${
+        hasEditModal ? 'cursor-pointer hover:shadow-md' : ''
+      } ${
         isEnabled
           ? 'bg-white dark:bg-slate-900 shadow-sm border-gray-200 dark:border-white/10'
           : 'bg-gray-50 dark:bg-slate-900/50 border-gray-200 dark:border-white/10'
@@ -306,19 +309,19 @@ function MetaFunctionCard({
         </div>
 
         <div className="flex items-center gap-3">
-          {hasConfig && (
-            <a
-              href="/dashboard/functions"
-              onClick={e => e.stopPropagation()}
+          {hasEditModal && (
+            <button
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onEdit(); }}
               className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+              disabled={isUpdating}
               aria-label="Configurar função"
-              title="Configurar em Funções do Assistente"
+              title="Configurar função"
             >
               <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-            </a>
+            </button>
           )}
           <div onClick={e => e.stopPropagation()}>
             <SimpleSwitch checked={isEnabled} onChange={onToggle} disabled={isUpdating} />
@@ -338,16 +341,17 @@ function MetaFunctionCard({
 // ─── Main panel ───────────────────────────────────────────────────────────────
 
 interface MetaFunctionsPanelProps {
-  selectedCompanyId: string;
+  companyId: string;
 }
 
-export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProps) {
-  const companyId = selectedCompanyId;
+export default function MetaFunctionsPanel({ companyId }: MetaFunctionsPanelProps) {
+  const { resolvedTheme } = useTheme();
+
   const [functions, setFunctions]   = useState<MetaFunction[]>([]);
   const [enabled, setEnabled]       = useState<Record<string, boolean>>({});
   const [loading, setLoading]       = useState(true);
   const [updating, setUpdating]     = useState<string | null>(null);
-
+  const [editingFn, setEditingFn]   = useState<MetaFunction | null>(null);
 
   // Filtros — idênticos ao page.tsx
   const [searchQuery, setSearchQuery]           = useState('');
@@ -563,6 +567,7 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
               isEnabled={!!enabled[fn.function_key]}
               isUpdating={updating === fn.function_key}
               onToggle={() => handleToggle(fn.function_key)}
+              onEdit={() => setEditingFn(fn)}
               viewMode="list"
             />
           ))}
@@ -585,6 +590,7 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
                     isEnabled={!!enabled[fn.function_key]}
                     isUpdating={updating === fn.function_key}
                     onToggle={() => handleToggle(fn.function_key)}
+                    onEdit={() => setEditingFn(fn)}
                     viewMode="grid"
                   />
                 ))}
@@ -592,6 +598,22 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
             );
           })}
         </div>
+      )}
+
+      {/* ── Modal de config compartilhado com page.tsx ──────────────────────
+           Usa o mesmo FunctionConfigModal que as funções do assistente.
+           Quando o usuário salva aqui, a config é atualizada na tabela
+           `companies` — a mesma lida pelo assistente padrão. Configuração
+           única, refletida nos dois painéis automaticamente.
+      ──────────────────────────────────────────────────────────────────── */}
+      {editingFn && (
+        <FunctionConfigModal
+          isOpen={!!editingFn}
+          onClose={() => setEditingFn(null)}
+          functionData={editingFn}
+          companyId={companyId}
+          onUpdate={loadData}
+        />
       )}
     </div>
   );

@@ -2177,8 +2177,8 @@ const handleTextMessage = async (message: string) => {
         <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-colors ${
           theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
         }`}>
-          <div className={`relative ${showVirtualKeyboard ? "h-44" : "h-96"} transition-all duration-300 ${
-  isKeyboardOpen ? 'scale-75 -translate-y-4' : 'scale-100'
+          <div className={`relative h-96 transition-all duration-300 ${
+  isKeyboardOpen ? 'scale-[0.6]' : 'scale-100'
 }`}>
             <AvatarFace
               isListening={isListening}

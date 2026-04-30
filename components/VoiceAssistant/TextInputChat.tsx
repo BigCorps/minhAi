@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Keyboard } from 'lucide-react';
 import VirtualKeyboard from '@/components/assistant/VirtualKeyboard';
 
 interface TextInputChatProps {
@@ -15,8 +15,6 @@ interface TextInputChatProps {
   /** Exibe teclado virtual (modo kiosk) - CONTROLADO PELO PAI */
   showVirtualKeyboard?: boolean;
   onVirtualKeyboardToggle?: () => void;
-  /** Se true, abre teclado automaticamente ao focar no input (modo kiosk sem botão) */
-  autoOpenKeyboard?: boolean;
 }
 
 export default function TextInputChat({
@@ -27,25 +25,12 @@ export default function TextInputChat({
   externalValue,
   onExternalValueConsumed,
   compact = false,
-  showVirtualKeyboard = false,
+  showVirtualKeyboard = false, // ← PROP controlado pelo pai
   onVirtualKeyboardToggle,
-  autoOpenKeyboard = false,
 }: TextInputChatProps) {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // ✅ NOVO: Escutar evento de fechamento do teclado
-  useEffect(() => {
-    const handleKeyboardClose = () => {
-      if (showVirtualKeyboard && onVirtualKeyboardToggle) {
-        onVirtualKeyboardToggle();
-      }
-    };
-
-    window.addEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
-    return () => window.removeEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
-  }, [showVirtualKeyboard, onVirtualKeyboardToggle]);
 
   // Auto-focus no input quando não estiver processando (apenas desktop)
   useEffect(() => {
@@ -86,13 +71,6 @@ export default function TextInputChat({
     }
   };
 
-  // ✅ NOVO: Abrir teclado ao focar no input (modo kiosk sem botão)
-  const handleInputFocus = () => {
-    if (autoOpenKeyboard && onVirtualKeyboardToggle && !showVirtualKeyboard) {
-      onVirtualKeyboardToggle();
-    }
-  };
-
   const isDisabled = isProcessing || isSending || disabled;
 
   // ── Handlers do teclado virtual ──────────────────────────
@@ -126,7 +104,6 @@ export default function TextInputChat({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          onFocus={handleInputFocus} // ✅ NOVO
           disabled={isDisabled}
           placeholder={
             isProcessing
@@ -158,6 +135,24 @@ export default function TextInputChat({
           </span>
         )}
 
+        {/* Botão toggle teclado virtual */}
+        {onVirtualKeyboardToggle && (
+          <button
+            type="button"
+            onClick={onVirtualKeyboardToggle}
+            className={`flex-shrink-0 rounded-lg transition-all p-2 ${
+              showVirtualKeyboard
+                ? 'bg-blue-600 text-white'
+                : theme === 'dark'
+                  ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+            title={showVirtualKeyboard ? 'Fechar teclado virtual' : 'Abrir teclado virtual'}
+          >
+            <Keyboard className="w-4 h-4" />
+          </button>
+        )}
+
         <button
           type="submit"
           disabled={!message.trim() || isDisabled}
@@ -187,7 +182,7 @@ export default function TextInputChat({
         </p>
       )}
 
-      {/* Teclado virtual — z-index ALTO para ficar acima de tudo */}
+      {/* Teclado virtual — fixo no bottom, acima de tudo */}
       {showVirtualKeyboard && (
         <div className="fixed bottom-0 left-0 right-0 z-[9999]">
           <VirtualKeyboard

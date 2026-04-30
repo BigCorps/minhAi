@@ -15,6 +15,8 @@ interface TextInputChatProps {
   /** Exibe teclado virtual (modo kiosk) - CONTROLADO PELO PAI */
   showVirtualKeyboard?: boolean;
   onVirtualKeyboardToggle?: () => void;
+  /** Se true, abre teclado ao focar e NÃO mostra botão de toggle */
+  autoOpenKeyboard?: boolean;
 }
 
 export default function TextInputChat({
@@ -27,6 +29,7 @@ export default function TextInputChat({
   compact = false,
   showVirtualKeyboard = false, // ← PROP controlado pelo pai
   onVirtualKeyboardToggle,
+  autoOpenKeyboard = false,  // ✅ NOVO
 }: TextInputChatProps) {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -135,8 +138,8 @@ export default function TextInputChat({
           </span>
         )}
 
-        {/* Botão toggle teclado virtual */}
-        {onVirtualKeyboardToggle && (
+        {/* Botão toggle teclado virtual - SÓ aparece se NÃO for autoOpen */}
+        {onVirtualKeyboardToggle && !autoOpenKeyboard && (
           <button
             type="button"
             onClick={onVirtualKeyboardToggle}

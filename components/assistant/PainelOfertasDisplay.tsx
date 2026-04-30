@@ -205,6 +205,25 @@ export default function PainelOfertasDisplay({
       onClick={showControls}
       onMouseMove={showControls}
     >
+      {/* Overlay TOQUE PARA INICIAR — clique em qualquer lugar fecha */}
+      <div
+        className="absolute inset-0 z-[400] flex items-center justify-center cursor-pointer"
+        onClick={handleClose}
+      >
+        <div className="flex flex-col items-center gap-3 select-none">
+          <span
+            className="text-white/50 font-black tracking-[0.3em] uppercase"
+            style={{ fontSize: 'clamp(2rem, 6vw, 5rem)', textShadow: '0 0 40px rgba(255,255,255,0.15)' }}
+          >
+            TOQUE PARA INICIAR
+          </span>
+          <span className="text-white/25 text-sm tracking-widest uppercase animate-pulse">
+            toque em qualquer lugar
+          </span>
+        </div>
+      </div>
+      </div>{/* fim overlay TOQUE PARA INICIAR */}
+
       {loading && (
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />

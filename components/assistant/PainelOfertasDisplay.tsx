@@ -222,7 +222,7 @@ export default function PainelOfertasDisplay({
           </span>
         </div>
       </div>
-      </div>{/* fim overlay TOQUE PARA INICIAR */}
+      </div>
 
       {loading && (
         <div className="flex flex-col items-center gap-4">
@@ -314,7 +314,7 @@ export default function PainelOfertasDisplay({
 
       {controlsVisible && (
         <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/40 backdrop-blur-sm rounded-full text-white/50 text-xs">
-          🎤 "pausar" · "próximo" · "fechar"
+          "pausar" · "próximo" · "fechar"
         </div>
       )}
     </div>

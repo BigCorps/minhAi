@@ -233,6 +233,7 @@ export default function TextInputChat({
             onKey={handleVirtualKey}
             onBackspace={handleVirtualBackspace}
             onEnter={handleVirtualEnter}
+            onClose={onVirtualKeyboardToggle}
             theme={theme}
           />
         </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { VoiceAssistantWithWakeWord } from '@/components/VoiceAssistant/VoiceAssistantWithWakeWord';
-import CategoryCarousel from '@/components/assistant/CategoryCarousel';
+import CategoryCarouselWrapper from '@/components/assistant/CategoryCarouselWrapper';
 import TextAssistant from '@/components/assistant/TextAssistant';
 import SlugFooter from '@/components/slug/SlugFooter';
 import Link from 'next/link';
@@ -1147,7 +1147,7 @@ const onClose = () => {
       isModalOpenState ? 'opacity-0 pointer-events-none translate-y-10' : 'opacity-100 translate-y-0'
     }`}
   >
-    <CategoryCarousel
+    <CategoryCarouselWrapper
             companyId={company.id}
             onFunctionClick={(functionKey) => {
               window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
@@ -1157,7 +1157,6 @@ const onClose = () => {
             theme={theme}
             hideDisabledFunctions={company.hide_disabled_functions_carousel}
             autoScroll={company.carousel_auto_scroll}
-            isKioskMode={isKioskMode}
           />
         </div>
       )}

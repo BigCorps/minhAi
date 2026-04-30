@@ -17,6 +17,7 @@ interface VirtualKeyboardProps {
   onKey: (char: string) => void;
   onBackspace: () => void;
   onEnter: () => void;
+  onClose?: () => void;  // ✅ NOVO: Chamado quando clicar no X
   theme?: 'dark' | 'light';
 }
 
@@ -58,6 +59,7 @@ export default function VirtualKeyboard({
   onKey,
   onBackspace,
   onEnter,
+  onClose,  // ✅ NOVO
   theme = 'dark',
 }: VirtualKeyboardProps) {
   const [shift, setShift] = useState(false);
@@ -66,9 +68,10 @@ export default function VirtualKeyboard({
 
   const isDark = theme === 'dark';
 
-  // ✅ NOVO: Handler para fechar o teclado
+  // ✅ Handler para fechar o teclado
   const handleClose = () => {
-    window.dispatchEvent(new CustomEvent('eai:virtualKeyboardClose'));
+    onClose?.();  // Chama handler do pai PRIMEIRO
+    window.dispatchEvent(new CustomEvent('eai:virtualKeyboardClose'));  // Depois dispara evento
   };
 
   // ── Cores ─────────────────────────────────────────────────
@@ -161,6 +164,7 @@ export default function VirtualKeyboard({
     >
       {/* ✅ NOVO: Botão X para fechar o teclado */}
       <button
+        type="button"
         onClick={handleClose}
         style={{
           position: 'absolute',
@@ -201,6 +205,7 @@ export default function VirtualKeyboard({
         }}>
           {/* Letra base */}
           <button
+            type="button"
             style={{ ...keyStyle(), flex: 'none', width: 44, background: keyBg, fontWeight: 700 }}
             onMouseDown={(e) => { e.preventDefault(); handleKey(accentMenu.key); }}
             onTouchEnd={(e) => { e.preventDefault(); handleKey(accentMenu.key); }}
@@ -211,6 +216,7 @@ export default function VirtualKeyboard({
           {accentMenu.options.map((a) => (
             <button
               key={a}
+              type="button"
               style={{ ...keyStyle(true), flex: 'none', width: 44 }}
               onMouseDown={(e) => { e.preventDefault(); handleAccent(a); }}
               onTouchEnd={(e) => { e.preventDefault(); handleAccent(a); }}
@@ -220,6 +226,7 @@ export default function VirtualKeyboard({
           ))}
           {/* Cancelar */}
           <button
+            type="button"
             style={{ ...keyStyle(), flex: 'none', width: 44, background: specialBg, fontSize: 11 }}
             onMouseDown={(e) => { e.preventDefault(); setAccentMenu(null); }}
             onTouchEnd={(e) => { e.preventDefault(); setAccentMenu(null); }}
@@ -236,7 +243,7 @@ export default function VirtualKeyboard({
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
               {NUMBERS.slice(0, 5).map((n) => (
-                <button key={n} style={keyStyle()}
+                <button key={n} type="button" style={keyStyle()}
                   onMouseDown={(e) => { e.preventDefault(); handleKey(n); }}
                   onTouchEnd={(e) => { e.preventDefault(); handleKey(n); }}
                 >{n}</button>
@@ -244,7 +251,7 @@ export default function VirtualKeyboard({
             </div>
             <div style={{ display: 'flex', gap: 5 }}>
               {NUMBERS.slice(5).map((n) => (
-                <button key={n} style={keyStyle()}
+                <button key={n} type="button" style={keyStyle()}
                   onMouseDown={(e) => { e.preventDefault(); handleKey(n); }}
                   onTouchEnd={(e) => { e.preventDefault(); handleKey(n); }}
                 >{n}</button>
@@ -254,7 +261,7 @@ export default function VirtualKeyboard({
         ) : (
           // Linha de números compacta (sempre visível)
           NUMBERS.map((n) => (
-            <button key={n} style={keyStyle()}
+            <button key={n} type="button" style={keyStyle()}
               onMouseDown={(e) => { e.preventDefault(); handleKey(n); }}
               onTouchEnd={(e) => { e.preventDefault(); handleKey(n); }}
             >{n}</button>
@@ -271,6 +278,7 @@ export default function VirtualKeyboard({
           {row.map((key) => (
             <button
               key={key}
+              type="button"
               style={keyStyle(accentMenu?.key === key)}
               onMouseDown={(e) => { e.preventDefault(); handleKeyPress(key); }}
               onTouchEnd={(e) => { e.preventDefault(); handleKeyPress(key); }}
@@ -288,6 +296,7 @@ export default function VirtualKeyboard({
 
         {/* Shift */}
         <button
+          type="button"
           style={specialKeyStyle()}
           onMouseDown={(e) => { e.preventDefault(); setShift(!shift); setAccentMenu(null); }}
           onTouchEnd={(e) => { e.preventDefault(); setShift(!shift); setAccentMenu(null); }}
@@ -297,6 +306,7 @@ export default function VirtualKeyboard({
 
         {/* 123 / ABC */}
         <button
+          type="button"
           style={specialKeyStyle()}
           onMouseDown={(e) => { e.preventDefault(); setNumbers(!numbers); setAccentMenu(null); }}
           onTouchEnd={(e) => { e.preventDefault(); setNumbers(!numbers); setAccentMenu(null); }}
@@ -306,6 +316,7 @@ export default function VirtualKeyboard({
 
         {/* Espaço */}
         <button
+          type="button"
           style={{ ...keyStyle(), flex: 4, fontSize: 13, color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)' }}
           onMouseDown={(e) => { e.preventDefault(); handleKey(' '); }}
           onTouchEnd={(e) => { e.preventDefault(); handleKey(' '); }}
@@ -315,6 +326,7 @@ export default function VirtualKeyboard({
 
         {/* Backspace */}
         <button
+          type="button"
           style={specialKeyStyle()}
           onMouseDown={(e) => { e.preventDefault(); onBackspace(); setAccentMenu(null); }}
           onTouchEnd={(e) => { e.preventDefault(); onBackspace(); setAccentMenu(null); }}
@@ -324,6 +336,7 @@ export default function VirtualKeyboard({
 
         {/* Enter */}
         <button
+          type="button"
           style={{ ...specialKeyStyle(true), background: enterBg, color: '#fff' }}
           onMouseDown={(e) => { e.preventDefault(); onEnter(); setAccentMenu(null); }}
           onTouchEnd={(e) => { e.preventDefault(); onEnter(); setAccentMenu(null); }}

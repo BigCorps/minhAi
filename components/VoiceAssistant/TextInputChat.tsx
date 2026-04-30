@@ -51,6 +51,38 @@ export default function TextInputChat({
     }
   }, [externalValue]);
 
+  // ✅ NOVO: Abrir teclado automaticamente ao focar (modo kiosk)
+  useEffect(() => {
+    if (!autoOpenKeyboard || !inputRef.current) return;
+
+    const handleFocus = () => {
+      if (!showVirtualKeyboard && onVirtualKeyboardToggle) {
+        onVirtualKeyboardToggle();
+      }
+    };
+
+    const input = inputRef.current;
+    input.addEventListener('focus', handleFocus);
+
+    return () => {
+      input.removeEventListener('focus', handleFocus);
+    };
+  }, [autoOpenKeyboard, showVirtualKeyboard, onVirtualKeyboardToggle]);
+
+  // ✅ NOVO: Fechar teclado quando evento for disparado
+  useEffect(() => {
+    const handleClose = () => {
+      if (showVirtualKeyboard && onVirtualKeyboardToggle) {
+        onVirtualKeyboardToggle();
+      }
+    };
+
+    window.addEventListener('eai:virtualKeyboardClose', handleClose);
+    return () => {
+      window.removeEventListener('eai:virtualKeyboardClose', handleClose);
+    };
+  }, [showVirtualKeyboard, onVirtualKeyboardToggle]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedMessage = message.trim();

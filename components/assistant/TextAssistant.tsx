@@ -349,7 +349,7 @@ const handleSendMessage = async (overrideText?: string) => {
           isProcessing={busy}
           theme={theme}
           showVirtualKeyboard={showVirtualKeyboard}
-          onVirtualKeyboardToggle={() => setShowVirtualKeyboard(v => !v)}
+          onVirtualKeyboardToggle={isKioskMode ? undefined : () => setShowVirtualKeyboard(v => !v)}
           autoOpenKeyboard={isKioskMode}
         />
       </div>

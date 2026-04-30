@@ -140,6 +140,7 @@ export default function VirtualKeyboard({
 
   return (
     <div
+      data-virtual-keyboard  /* ✅ Marca este componente para exceção no KioskWrapper */
       style={{
         background: bg,
         borderTop: `1px solid ${borderColor}`,

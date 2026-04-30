@@ -122,7 +122,19 @@ export function VoiceAssistantWithWakeWord({
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isRecordingToggle, setIsRecordingToggle] = useState(false);
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
+useEffect(() => {
+  const handleKeyboardOpen = () => setIsKeyboardOpen(true);
+  const handleKeyboardClose = () => setIsKeyboardOpen(false);
+  window.addEventListener('eai:virtualKeyboardOpen', handleKeyboardOpen);
+  window.addEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
+  return () => {
+    window.removeEventListener('eai:virtualKeyboardOpen', handleKeyboardOpen);
+    window.removeEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
+  };
+}, []);
+  
 // ✅ NOVO: Disparar eventos para componentes externos (footer, carrossel)
 useEffect(() => {
   if (showVirtualKeyboard) {
@@ -2165,7 +2177,9 @@ const handleTextMessage = async (message: string) => {
         <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-colors ${
           theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
         }`}>
-          <div className={`relative ${showVirtualKeyboard ? "h-44" : "h-96"} transition-all duration-300`}>
+          <div className={`relative ${showVirtualKeyboard ? "h-44" : "h-96"} transition-all duration-300 ${
+  isKeyboardOpen ? 'scale-75 -translate-y-4' : 'scale-100'
+}`}>
             <AvatarFace
               isListening={isListening}
               isSpeaking={isPlayingAudio}

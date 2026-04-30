@@ -35,12 +35,42 @@ export default function TextAssistant({
   // ✅ NOVO: Estados para teclado virtual
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [isKioskMode, setIsKioskMode] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
   const isDark = theme === 'dark';
+
+  // ✅ Detectar modo kiosk do sessionStorage
+  useEffect(() => {
+    const checkKiosk = () => {
+      const kioskData = sessionStorage.getItem('eai:kioskMode');
+      if (kioskData) {
+        try {
+          const { active } = JSON.parse(kioskData);
+          setIsKioskMode(active === true);
+        } catch {
+          setIsKioskMode(false);
+        }
+      } else {
+        setIsKioskMode(false);
+      }
+    };
+
+    checkKiosk();
+
+    // Listener para mudanças no modo kiosk
+    const handleKioskChange = (e: CustomEvent) => {
+      setIsKioskMode(e.detail?.active === true);
+    };
+
+    window.addEventListener('eai:kioskModeChange', handleKioskChange as EventListener);
+    return () => {
+      window.removeEventListener('eai:kioskModeChange', handleKioskChange as EventListener);
+    };
+  }, []);
 
   // ✅ NOVO: Listeners para eventos de teclado virtual
   useEffect(() => {
@@ -320,7 +350,7 @@ const handleSendMessage = async (overrideText?: string) => {
           theme={theme}
           showVirtualKeyboard={showVirtualKeyboard}
           onVirtualKeyboardToggle={() => setShowVirtualKeyboard(v => !v)}
-          autoOpenKeyboard={true}
+          autoOpenKeyboard={isKioskMode}
         />
       </div>
     </div>

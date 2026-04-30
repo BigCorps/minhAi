@@ -1,4 +1,4 @@
-// components/dashboard/meta/MetaFunctionsPanel.tsx
+// app/dashboard/atendimentos/_components/MetaFunctionsPanel.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -78,6 +78,9 @@ const CONFIGURABLE_FUNCTIONS = [
   'procurar_produto','chamar_gerente','pre_atendimento','responder_pesquisa',
   'tef_debito','tef_credito',
 ];
+
+// Funções de sistema que aparecem com badge "Sempre ativo" ao invés de toggle
+const SYSTEM_FUNCTIONS_META = new Set(['meu_sistema']);
 
 // ─── Pill classes ─────────────────────────────────────────────────────────────
 
@@ -230,13 +233,14 @@ function ConfigRedirectModal({ onClose }: { onClose: () => void }) {
 
 // ─── MetaFunctionCard ─────────────────────────────────────────────────────────
 
-function MetaFunctionCard({ fn, isEnabled, isUpdating, onToggle, onConfigClick, viewMode }: {
+function MetaFunctionCard({ fn, isEnabled, isUpdating, onToggle, onConfigClick, viewMode, isSystemFunction }: {
   fn: MetaFunction;
   isEnabled: boolean;
   isUpdating: boolean;
   onToggle: () => void;
   onConfigClick: () => void;
   viewMode: 'grid' | 'list';
+  isSystemFunction: boolean;
 }) {
   const categoryName = CATEGORY_NAMES[fn.function_category] ?? fn.function_category;
   const hasConfig = CONFIGURABLE_FUNCTIONS.includes(fn.function_key);
@@ -276,7 +280,13 @@ function MetaFunctionCard({ fn, isEnabled, isUpdating, onToggle, onConfigClick, 
             </div>
           )}
           <div onClick={e => e.stopPropagation()}>
-            <SimpleSwitch checked={isEnabled} onChange={onToggle} disabled={isUpdating} />
+            {isSystemFunction ? (
+              <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                Sempre ativo
+              </span>
+            ) : (
+              <SimpleSwitch checked={isEnabled} onChange={onToggle} disabled={isUpdating} />
+            )}
           </div>
         </div>
         {isUpdating && (
@@ -331,7 +341,13 @@ function MetaFunctionCard({ fn, isEnabled, isUpdating, onToggle, onConfigClick, 
             </button>
           )}
           <div onClick={e => e.stopPropagation()}>
-            <SimpleSwitch checked={isEnabled} onChange={onToggle} disabled={isUpdating} />
+            {isSystemFunction ? (
+              <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                Sempre ativo
+              </span>
+            ) : (
+              <SimpleSwitch checked={isEnabled} onChange={onToggle} disabled={isUpdating} />
+            )}
           </div>
         </div>
       </div>
@@ -399,6 +415,11 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
   }
 
   async function handleToggle(functionKey: string) {
+    // Funções de sistema não podem ser desativadas
+    if (SYSTEM_FUNCTIONS_META.has(functionKey)) {
+      return;
+    }
+    
     setUpdating(functionKey);
     const next = !enabled[functionKey];
     try {
@@ -532,6 +553,7 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
                 onToggle={() => handleToggle(fn.function_key)}
                 onConfigClick={() => setConfigModal(true)}
                 viewMode="grid"
+                isSystemFunction={SYSTEM_FUNCTIONS_META.has(fn.function_key)}
               />
             ))}
           </div>
@@ -549,6 +571,7 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
                     onToggle={() => handleToggle(fn.function_key)}
                     onConfigClick={() => setConfigModal(true)}
                     viewMode="list"
+                    isSystemFunction={SYSTEM_FUNCTIONS_META.has(fn.function_key)}
                   />
                 ))}
               </div>
@@ -568,6 +591,7 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
                           onToggle={() => handleToggle(fn.function_key)}
                           onConfigClick={() => setConfigModal(true)}
                           viewMode="grid"
+                          isSystemFunction={SYSTEM_FUNCTIONS_META.has(fn.function_key)}
                         />
                       ))}
                     </div>

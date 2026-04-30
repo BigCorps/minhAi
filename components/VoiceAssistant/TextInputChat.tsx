@@ -69,6 +69,15 @@ export default function TextInputChat({
     };
   }, [autoOpenKeyboard, showVirtualKeyboard, onVirtualKeyboardToggle]);
 
+  // ✅ NOVO: Disparar eventos quando teclado abre/fecha
+  useEffect(() => {
+    if (showVirtualKeyboard) {
+      window.dispatchEvent(new CustomEvent('eai:virtualKeyboardOpen'));
+    } else {
+      window.dispatchEvent(new CustomEvent('eai:virtualKeyboardClose'));
+    }
+  }, [showVirtualKeyboard]);
+
   // ✅ NOVO: Fechar teclado quando evento for disparado
   useEffect(() => {
     const handleClose = () => {

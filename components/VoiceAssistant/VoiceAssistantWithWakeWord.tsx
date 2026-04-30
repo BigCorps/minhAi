@@ -100,7 +100,6 @@ export function VoiceAssistantWithWakeWord({
   isKioskMode = false,
 }: VoiceAssistantProps & {
   onModalChange?: (modal: any) => void;
-  console.log('🔍 DEBUG:', { 
   onTextMessage?: (handler: (text: string) => Promise<{ text: string; functionKey?: string } | null>) => void;
   textMode?: boolean;
   isKioskMode?: boolean;
@@ -2297,7 +2296,6 @@ const handleTextMessage = async (message: string) => {
                   onExternalValueConsumed={() => setExternalInput('')}
                   showVirtualKeyboard={showVirtualKeyboard}
                   onVirtualKeyboardToggle={isKioskMode ? () => setShowVirtualKeyboard(v => !v) : undefined}
-                      console.log('🎹 Toggle clicado! Valor atual:', showVirtualKeyboard);
                 />
               </div>
             )}

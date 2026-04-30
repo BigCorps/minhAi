@@ -138,6 +138,21 @@ useEffect(() => {
     };
     window.addEventListener('eai:kioskExitConfirmed', handleKioskExitConfirmed);
 
+    // ✅ FIX: Sincronizar isKioskMode quando o evento é disparado de qualquer lugar
+    // (SlugHeaderWrapper, console, ou outros componentes)
+    const handleKioskModeChange = (e: CustomEvent) => {
+      const { active, password } = e.detail || {};
+      if (active !== undefined) {
+        setIsKioskMode(active);
+        if (active && password) {
+          setKioskPassword(password);
+        } else if (!active) {
+          setKioskPassword(null);
+        }
+      }
+    };
+    window.addEventListener('eai:kioskModeChange', handleKioskModeChange as EventListener);
+
     // Quando SlugHeaderWrapper vai sair do fullscreen por conta própria (outras páginas),
     // suspende o handler de fullscreenchange para não re-entrar em fullscreen em touch
     const handleKioskWillExit = () => {
@@ -158,6 +173,7 @@ useEffect(() => {
       window.removeEventListener('eai:requestKioskMode', handleRequestKiosk);
       window.removeEventListener('eai:requestExitKioskMode', handleRequestExitKiosk); // ← agora existe
       window.removeEventListener('eai:kioskExitConfirmed', handleKioskExitConfirmed);
+      window.removeEventListener('eai:kioskModeChange', handleKioskModeChange as EventListener); // ✅ NOVO
       window.removeEventListener('eai:kioskWillExit', handleKioskWillExit);
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);

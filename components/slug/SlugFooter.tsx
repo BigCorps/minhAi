@@ -146,7 +146,7 @@ export default function SlugFooter({ theme, slug, webapp_enabled, has_consulting
       className={`fixed bottom-0 left-0 right-0 h-8 border-t backdrop-blur-xl transition-transform duration-300 ${
         isKeyboardOpen ? 'translate-y-full' : 'translate-y-0'
       }`}
-      style={{ ...styles.container, zIndex: 20 }}
+      style={{ ...styles.container, zIndex: isKeyboardOpen ? 10 : 20 }}
     >
       {/* Layout Desktop */}
       <div className="hidden md:flex h-full items-center justify-between px-4 text-xs">

@@ -222,7 +222,6 @@ export default function PainelOfertasDisplay({
           </span>
         </div>
       </div>
-      </div>
 
       {loading && (
         <div className="flex flex-col items-center gap-4">

@@ -1161,13 +1161,12 @@ const onClose = () => {
         </div>
       )}
 
-      <div style={{ position: 'relative', zIndex: 60 }}>
-  <SlugFooter
-    theme={theme}
-    slug={company.slug}
-    webapp_enabled={company.webapp_enabled}
-  />
-</div>
+      {/* Footer - SEM wrapper, gerencia próprio z-index */}
+      <SlugFooter
+        theme={theme}
+        slug={company.slug}
+        webapp_enabled={company.webapp_enabled}
+      />
 
     </>
   );

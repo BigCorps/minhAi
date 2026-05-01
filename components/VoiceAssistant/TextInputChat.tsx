@@ -27,9 +27,9 @@ export default function TextInputChat({
   externalValue,
   onExternalValueConsumed,
   compact = false,
-  showVirtualKeyboard = false, // ← PROP controlado pelo pai
+  showVirtualKeyboard = false,
   onVirtualKeyboardToggle,
-  autoOpenKeyboard = false,  // ✅ NOVO
+  autoOpenKeyboard = false,
 }: TextInputChatProps) {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -51,7 +51,7 @@ export default function TextInputChat({
     }
   }, [externalValue]);
 
-  // ✅ NOVO: Abrir teclado automaticamente ao focar (modo kiosk)
+  // Abrir teclado automaticamente ao focar (modo kiosk)
   useEffect(() => {
     if (!autoOpenKeyboard || !inputRef.current) return;
 
@@ -63,13 +63,10 @@ export default function TextInputChat({
 
     const input = inputRef.current;
     input.addEventListener('focus', handleFocus);
-
-    return () => {
-      input.removeEventListener('focus', handleFocus);
-    };
+    return () => input.removeEventListener('focus', handleFocus);
   }, [autoOpenKeyboard, showVirtualKeyboard, onVirtualKeyboardToggle]);
 
-  // ✅ NOVO: Disparar eventos quando teclado abre/fecha
+  // Disparar eventos quando teclado abre/fecha
   useEffect(() => {
     if (showVirtualKeyboard) {
       window.dispatchEvent(new CustomEvent('eai:virtualKeyboardOpen'));
@@ -78,18 +75,15 @@ export default function TextInputChat({
     }
   }, [showVirtualKeyboard]);
 
-  // ✅ NOVO: Fechar teclado quando evento for disparado
+  // Fechar teclado quando evento for disparado externamente
   useEffect(() => {
     const handleClose = () => {
       if (showVirtualKeyboard && onVirtualKeyboardToggle) {
         onVirtualKeyboardToggle();
       }
     };
-
     window.addEventListener('eai:virtualKeyboardClose', handleClose);
-    return () => {
-      window.removeEventListener('eai:virtualKeyboardClose', handleClose);
-    };
+    return () => window.removeEventListener('eai:virtualKeyboardClose', handleClose);
   }, [showVirtualKeyboard, onVirtualKeyboardToggle]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,6 +112,7 @@ export default function TextInputChat({
   const isDisabled = isProcessing || isSending || disabled;
 
   // ── Handlers do teclado virtual ──────────────────────────
+
   const handleVirtualKey = (char: string) => {
     if (message.length >= 500) return;
     setMessage(prev => prev + char);
@@ -130,6 +125,11 @@ export default function TextInputChat({
   const handleVirtualEnter = () => {
     if (!message.trim() || isDisabled) return;
     handleSubmit({ preventDefault: () => {} } as any);
+  };
+
+  // ✅ NOVO: substitui o último caractere pelo acento escolhido
+  const handleVirtualReplace = (char: string) => {
+    setMessage(prev => prev.slice(0, -1) + char);
   };
 
   return (
@@ -234,6 +234,7 @@ export default function TextInputChat({
             onBackspace={handleVirtualBackspace}
             onEnter={handleVirtualEnter}
             onClose={onVirtualKeyboardToggle}
+            onReplace={handleVirtualReplace}  {/* ✅ NOVO */}
             theme={theme}
           />
         </div>

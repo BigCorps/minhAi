@@ -1047,6 +1047,34 @@ case 'juntar_pdfs':
     'Modal de juntar PDFs aberto'
   );
   break;
+
+case 'impressao_local':
+  await stopGoogleSpeech();
+  setActiveModal({ 
+    type: 'ImpressaoLocalDisplay', 
+    data: { companyId, functionKey: 'impressao_local' } 
+  });
+  pt('Prepare o arquivo para impressão local.').catch(() => {});
+  break;
+
+case 'impressao_remota':
+  await stopGoogleSpeech();
+  setActiveModal({ 
+    type: 'ImpressaoRemotaDisplay', 
+    data: { companyId, functionKey: 'impressao_remota' } 
+  });
+  pt('Prepare o arquivo para impressão remota.').catch(() => {});
+  break;
+
+case 'impressao_recibo':
+  await stopGoogleSpeech();
+  setActiveModal({ 
+    type: 'ImpressaoReciboDisplay', 
+    data: { companyId, functionKey: 'impressao_recibo' } 
+  });
+  pt('Prepare o arquivo para impressão térmica.').catch(() => {});
+  break;
+          
         case 'minha_conta':
           await stopGoogleSpeech();
           setActiveModal({ type: 'LoginClienteDisplay', data: { profile, companyId, slug: slug ?? '' } });

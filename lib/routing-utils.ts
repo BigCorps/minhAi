@@ -25,11 +25,19 @@ export function detectSubdomainContext(): {
     return { isSubdomain: true, currentSlug: slug };
   }
 
-  // Subdomínio .minhai.app (ex: loja.minhai.app)
-  const isMinhaiApp = hostname.endsWith('.minhai.app') && !hostname.startsWith('www.');
-  if (isMinhaiApp) {
-    const slug = hostname.replace('.minhai.app', '');
-    return { isSubdomain: true, currentSlug: slug };
+const MINHAI_DOMAINS = [
+    '.minhai.app',
+    '.minhai.com.br',
+    '.minhaia.app',
+    '.nossaia.app',
+    '.suaia.app',
+  ];
+
+  for (const domain of MINHAI_DOMAINS) {
+    if (hostname.endsWith(domain) && !hostname.startsWith('www.')) {
+      const slug = hostname.replace(domain, '');
+      return { isSubdomain: true, currentSlug: slug };
+    }
   }
 
   // Localhost com subdomínio (ex: loja.localhost:3000)

@@ -241,7 +241,7 @@ useEffect(() => {
   const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(companyWakeWord, wakeWordEnabled);
   const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio, ttsVoice);
   const isMobile = useIsMobile();
-const { profile, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? '');
+const { profile, token: profileToken, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? '');
 const profileRef = useRef(profile);
 useEffect(() => { profileRef.current = profile; }, [profile]);
 
@@ -1421,6 +1421,7 @@ case 'impressao_recibo':
                 registerFunctionUsage(companyId, key, credits),
               checkIfFunctionIsEnabled: async (key: string) =>
                 checkIfFunctionIsEnabled(companyId, key),
+              sessionToken: profileToken ?? null,
             });
             if (success) {
               await registerFunctionUsage(companyId, functionKey, registryFunc.creditsPerUse ?? 0);
@@ -1507,6 +1508,7 @@ case 'impressao_recibo':
             setIsProcessing,
             sessionId,
             setActiveModal,
+            sessionToken: profileToken ?? null,
           });
           if (handlerSuccess) {
             activeFunctionContextRef.current = {
@@ -1904,6 +1906,7 @@ const handleTextMessage = async (message: string) => {
                 registerFunctionUsage(companyId, key, credits),
               checkIfFunctionIsEnabled: async (key: string) =>
                 checkIfFunctionIsEnabled(companyId, key),
+              sessionToken: profileToken ?? null,
             });
             if (success) {
               activeFunctionContextRef.current = null;

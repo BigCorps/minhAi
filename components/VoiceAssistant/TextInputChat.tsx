@@ -234,7 +234,7 @@ export default function TextInputChat({
             onBackspace={handleVirtualBackspace}
             onEnter={handleVirtualEnter}
             onClose={onVirtualKeyboardToggle}
-            onReplace={handleVirtualReplace}  {/* ✅ NOVO */}
+            onReplace={handleVirtualReplace}
             theme={theme}
           />
         </div>

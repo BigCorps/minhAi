@@ -192,7 +192,7 @@ tef_debito: {
   requiresPayment: true,
   isPremium: false,
 
-  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+  handler: async ({ transcript, playText, setActiveModal, companyId, sessionToken }) => {
     const supabase = createClient()
 
     const amount = extractAmount(transcript ?? '')
@@ -265,7 +265,7 @@ tef_credito: {
   requiresPayment: true,
   isPremium: false,
 
-  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+  handler: async ({ transcript, playText, setActiveModal, companyId, sessionToken }) => {
     const supabase = createClient()
 
     const amount = extractAmount(transcript ?? '')

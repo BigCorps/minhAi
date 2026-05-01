@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
 
 interface Company {
   id: string;
@@ -139,6 +140,16 @@ function StepBar({ step }: { step: Step }) {
 // ── Página principal ───────────────────────────────────────────────────────────
 
 export default function WebAppPage() {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+
+  const DARK   = isDark ? '#0f172a' : '#f8fafc';
+  const MID    = isDark ? '#1e293b' : '#e2e8f0';
+  const CARD   = isDark ? '#162032' : '#ffffff';
+  const BORDER = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
+  const WHITE  = isDark ? '#f8fafc' : '#0f172a';
+  const MUTED  = isDark ? 'rgba(248,250,252,0.45)' : 'rgba(15,23,42,0.55)';
+
   const router = useRouter();
   const supabase = createClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -342,7 +353,7 @@ export default function WebAppPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 style={{ color: WHITE, fontWeight: 800, fontSize: 26, marginBottom: 8 }}>Seu WebApp está no ar! 🎉</h2>
+          <h2 style={{ color: WHITE, fontWeight: 800, fontSize: 26, marginBottom: 8 }}>Seu WebApp está no ar!</h2>
           <p style={{ color: MUTED, fontSize: 15, marginBottom: 32 }}>Compartilhe o link abaixo com seus clientes</p>
 
           <div style={{ background: 'rgba(16,185,129,0.08)', border: `1px solid rgba(16,185,129,0.2)`, borderRadius: 14, padding: '16px 20px', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' }}>
@@ -415,7 +426,7 @@ export default function WebAppPage() {
                   style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px', color: WHITE, fontSize: 15, outline: 'none' }}>
                   {companies.map(c => <option key={c.id} value={c.id} style={{ background: MID }}>{c.name}</option>)}
                 </select>
-                <p style={{ color: 'rgba(249,115,22,0.7)', fontSize: 12, marginTop: 8 }}>⚠️ Apenas 1 webapp por conta. Ativar aqui desativa o anterior.</p>
+                <p style={{ color: 'rgba(249,115,22,0.7)', fontSize: 12, marginTop: 8 }}>Apenas 1 webapp por conta. Ativar aqui desativa o anterior.</p>
               </div>
             )}
 
@@ -489,7 +500,6 @@ export default function WebAppPage() {
             <h2 style={{ color: WHITE, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Escolha seu domínio</h2>
             <p style={{ color: MUTED, fontSize: 14, marginBottom: 28 }}>Selecione como seus clientes vão encontrar e lembrar do seu assistente</p>
 
-            {/* Seletor de domínio */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
               {WEBAPP_DOMAINS.map(domain => {
                 const isSelected = webappDomain === domain.value;
@@ -511,7 +521,6 @@ export default function WebAppPage() {
                       width: '100%',
                     }}
                   >
-                    {/* Radio */}
                     <div style={{
                       width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
                       border: `2px solid ${isSelected ? ORANGE : 'rgba(255,255,255,0.2)'}`,
@@ -522,7 +531,6 @@ export default function WebAppPage() {
                       {isSelected && <div style={{ width: 8, height: 8, borderRadius: '50%', background: WHITE }} />}
                     </div>
 
-                    {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
                         <span style={{ color: isSelected ? WHITE : MUTED, fontWeight: 700, fontSize: 15, fontFamily: 'monospace' }}>
@@ -537,7 +545,6 @@ export default function WebAppPage() {
                       </p>
                     </div>
 
-                    {/* Badge padrão */}
                     {domain.value === 'minhai.app' && (
                       <span style={{ background: 'rgba(249,115,22,0.15)', border: `1px solid rgba(249,115,22,0.3)`, color: ORANGE, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
                         Padrão
@@ -551,7 +558,7 @@ export default function WebAppPage() {
             {/* Preview do endereço final */}
             <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER}`, borderRadius: 14, padding: '16px 20px', marginBottom: 28 }}>
               <p style={{ color: MUTED, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-                {selectedDomainInfo} Endereço final do seu WebApp:
+                Endereço final do seu WebApp:
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 16px' }}>
                 <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 15, fontFamily: 'monospace' }}>https://</span>
@@ -598,7 +605,7 @@ export default function WebAppPage() {
                 },
                 {
                   label: 'Domínio',
-                  value: `${selectedDomainInfo} ${selectedDomainInfo.label} — ${selectedDomainInfo.desc}`,
+                  value: `${selectedDomainInfo.label} — ${selectedDomainInfo.desc}`,
                   icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" /></svg>,
                 },
               ].map((row, i, arr) => (
@@ -633,7 +640,7 @@ export default function WebAppPage() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        select option { background: #1e293b; }
+        select option { background: ${MID}; }
       `}</style>
     </div>
   );

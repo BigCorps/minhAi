@@ -30,11 +30,10 @@ const MUTED  = 'rgba(248,250,252,0.45)';
 
 // ── Domínios disponíveis ───────────────────────────────────────────────────────
 const WEBAPP_DOMAINS = [
-  { value: 'minhai.app',    label: 'minhai.app',    desc: 'Domínio principal',       emoji: '⭐' },
-  { value: 'minhai.com.br', label: 'minhai.com.br', desc: 'Versão brasileira',        emoji: '🇧🇷' },
-  { value: 'minhaia.app',   label: 'minhaia.app',   desc: 'Minha IA',                emoji: '🤖' },
-  { value: 'nossaia.app',   label: 'nossaia.app',   desc: 'Nossa IA — para equipes', emoji: '🤝' },
-  { value: 'suaia.app',     label: 'suaia.app',     desc: 'Sua IA — identidade própria', emoji: '✨' },
+  { value: 'minhai.com.br', label: 'minhai.com.br', desc: 'Versão brasileira'},
+  { value: 'minhaia.app',   label: 'minhaia.app',   desc: 'Minha IA - Mais pessoal'},
+  { value: 'nossaia.app',   label: 'nossaia.app',   desc: 'Nossa IA - para equipes'},
+  { value: 'suaia.app',     label: 'suaia.app',     desc: 'Sua IA - Foco no Cliente'},
 ];
 
 const THEME_COLORS = [
@@ -523,9 +522,6 @@ export default function WebAppPage() {
                       {isSelected && <div style={{ width: 8, height: 8, borderRadius: '50%', background: WHITE }} />}
                     </div>
 
-                    {/* Emoji */}
-                    <span style={{ fontSize: 20, flexShrink: 0 }}>{domain.emoji}</span>
-
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
@@ -555,7 +551,7 @@ export default function WebAppPage() {
             {/* Preview do endereço final */}
             <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER}`, borderRadius: 14, padding: '16px 20px', marginBottom: 28 }}>
               <p style={{ color: MUTED, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-                {selectedDomainInfo.emoji} Endereço final do seu WebApp:
+                {selectedDomainInfo} Endereço final do seu WebApp:
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 16px' }}>
                 <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 15, fontFamily: 'monospace' }}>https://</span>
@@ -602,7 +598,7 @@ export default function WebAppPage() {
                 },
                 {
                   label: 'Domínio',
-                  value: `${selectedDomainInfo.emoji} ${selectedDomainInfo.label} — ${selectedDomainInfo.desc}`,
+                  value: `${selectedDomainInfo} ${selectedDomainInfo.label} — ${selectedDomainInfo.desc}`,
                   icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" /></svg>,
                 },
               ].map((row, i, arr) => (

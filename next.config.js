@@ -49,28 +49,17 @@ const nextConfig = {
     
     return config;
   },
-  async redirects() {
-    return [
-      {
-        source: '/:path*',
-        has: [{ type: 'host', value: 'minhai.app' }],
-        destination: 'https://www.minhai.app/:path*',
-        permanent: true,
-      },
-      {
-        source: '/:path*',
-        has: [{ type: 'host', value: 'minhai.com.br' }],
-        destination: 'https://www.minhai.app/:path*',
-        permanent: true,
-      },
-      {
-        source: '/:path*',
-        has: [{ type: 'host', value: 'www.minhai.com.br' }],
-        destination: 'https://www.minhai.app/:path*',
-        permanent: true,
-      },
-    ];
-  },
+async redirects() {
+  return [
+    // Domínios raiz sem subdomínio → www.minhai.app
+    { source: '/:path*', has: [{ type: 'host', value: 'minhai.app'     }], destination: 'https://www.minhai.app/:path*', permanent: true },
+    { source: '/:path*', has: [{ type: 'host', value: 'minhai.com.br'  }], destination: 'https://www.minhai.app/:path*', permanent: true },
+    { source: '/:path*', has: [{ type: 'host', value: 'www.minhai.com.br' }], destination: 'https://www.minhai.app/:path*', permanent: true },
+    { source: '/:path*', has: [{ type: 'host', value: 'minhaia.app'    }], destination: 'https://www.minhai.app/:path*', permanent: true },
+    { source: '/:path*', has: [{ type: 'host', value: 'nossaia.app'    }], destination: 'https://www.minhai.app/:path*', permanent: true },
+    { source: '/:path*', has: [{ type: 'host', value: 'suaia.app'      }], destination: 'https://www.minhai.app/:path*', permanent: true },
+  ];
+},
   async headers() {
     return [
       {

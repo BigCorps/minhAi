@@ -17,7 +17,8 @@ interface VirtualKeyboardProps {
   onKey: (char: string) => void;
   onBackspace: () => void;
   onEnter: () => void;
-  onClose?: () => void;  // ✅ NOVO: Chamado quando clicar no X
+  onClose?: () => void;
+  onReplace?: (char: string) => void; // ✅ NOVO: substitui o último caractere digitado
   theme?: 'dark' | 'light';
 }
 
@@ -59,49 +60,54 @@ export default function VirtualKeyboard({
   onKey,
   onBackspace,
   onEnter,
-  onClose,  // ✅ NOVO
+  onClose,
+  onReplace,
   theme = 'dark',
 }: VirtualKeyboardProps) {
   const [shift, setShift] = useState(false);
   const [numbers, setNumbers] = useState(false);
-  const [accentMenu, setAccentMenu] = useState<{ key: string; options: string[] } | null>(null);
+  // ✅ ALTERADO: accentMenu agora só guarda qual tecla está "ativa" (para highlight)
+  // A letra já foi enviada no primeiro clique
+  const [accentActiveKey, setAccentActiveKey] = useState<{ key: string; options: string[] } | null>(null);
 
   const isDark = theme === 'dark';
 
   // ✅ Handler para fechar o teclado
   const handleClose = () => {
-    onClose?.();  // Chama handler do pai PRIMEIRO
-    window.dispatchEvent(new CustomEvent('eai:virtualKeyboardClose'));  // Depois dispara evento
+    onClose?.();
+    window.dispatchEvent(new CustomEvent('eai:virtualKeyboardClose'));
   };
 
   // ── Cores ─────────────────────────────────────────────────
-  const bg       = isDark ? '#1e293b' : '#f1f5f9';
-  const keyBg    = isDark ? '#334155' : '#ffffff';
-  const keyHover = isDark ? '#475569' : '#e2e8f0';
-  const keyText  = isDark ? '#f8fafc'  : '#0f172a';
+  const bg        = isDark ? '#1e293b' : '#f1f5f9';
+  const keyBg     = isDark ? '#334155' : '#ffffff';
+  const keyText   = isDark ? '#f8fafc'  : '#0f172a';
   const specialBg = isDark ? '#0f172a' : '#cbd5e1';
   const accentBg  = isDark ? '#1d4ed8' : '#3b82f6';
   const enterBg   = isDark ? '#16a34a' : '#22c55e';
   const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
 
   // ── Handlers ──────────────────────────────────────────────
+
   const handleKey = (key: string) => {
-    setAccentMenu(null);
+    setAccentActiveKey(null);
     onKey(key);
-    if (shift) setShift(false); // auto-desativa shift após tecla
+    if (shift) setShift(false);
   };
 
   const handleKeyPress = (key: string) => {
-    // Verificar se é acentuável — toque longo seria ideal mas no kiosk
-    // usamos toque simples: se a tecla tem acentos, mostra popup pequeno
     const base = key;
     if (ACCENTABLE.has(base)) {
-      if (accentMenu?.key === base) {
-        // Segunda vez na mesma tecla = digita a letra normal
-        setAccentMenu(null);
-        handleKey(key);
+      // ✅ FIX: Primeiro clique ENVIA a letra imediatamente
+      onKey(key);
+      if (shift) setShift(false);
+
+      if (accentActiveKey?.key === base) {
+        // Segunda vez na mesma tecla = fecha o menu de acentos (letra já foi enviada)
+        setAccentActiveKey(null);
       } else {
-        setAccentMenu({ key: base, options: ACCENTS[base] });
+        // Abre o menu de acentos para eventual substituição
+        setAccentActiveKey({ key: base, options: ACCENTS[base] });
       }
     } else {
       handleKey(key);
@@ -109,8 +115,15 @@ export default function VirtualKeyboard({
   };
 
   const handleAccent = (char: string) => {
-    setAccentMenu(null);
-    onKey(char);
+    // ✅ FIX: Substitui a última letra digitada pelo acento escolhido
+    if (onReplace) {
+      onReplace(char); // usa callback de substituição se disponível
+    } else {
+      // Fallback: apaga a letra anterior e digita o acento
+      onBackspace();
+      onKey(char);
+    }
+    setAccentActiveKey(null);
     if (shift) setShift(false);
   };
 
@@ -148,21 +161,26 @@ export default function VirtualKeyboard({
 
   return (
     <div
-      data-virtual-keyboard  /* ✅ Marca este componente para exceção no KioskWrapper */
+      data-virtual-keyboard
       style={{
         background: bg,
         borderTop: `1px solid ${borderColor}`,
         padding: '10px 8px 12px',
+        // ✅ FIX: garante largura total independente do tema
         width: '100%',
+        boxSizing: 'border-box',
+        // ✅ FIX: remove qualquer posicionamento relativo que causava
+        //         o teclado "pequeno" no dark; o pai é quem posiciona
+        position: 'static',
         userSelect: 'none',
         WebkitUserSelect: 'none',
-        position: 'relative', // ✅ Para posicionar o botão X
+        // ✅ FIX: evita que o conteúdo transborde no dark mode
+        overflow: 'hidden',
       }}
-      // Impede que o teclado virtual feche o teclado nativo
       onMouseDown={(e) => e.preventDefault()}
       onTouchStart={(e) => e.preventDefault()}
     >
-      {/* ✅ NOVO: Botão X para fechar o teclado */}
+      {/* ✅ Botão X para fechar o teclado */}
       <button
         type="button"
         onClick={handleClose}
@@ -196,24 +214,27 @@ export default function VirtualKeyboard({
       </button>
 
       {/* ── Popup de acentos ──────────────────────────────── */}
-      {accentMenu && (
+      {/* ✅ FIX: agora aparece ACIMA do teclado como sugestão de substituição */}
+      {accentActiveKey && (
         <div style={{
           display: 'flex',
           justifyContent: 'center',
           gap: 6,
           marginBottom: 8,
         }}>
-          {/* Letra base */}
-          <button
-            type="button"
-            style={{ ...keyStyle(), flex: 'none', width: 44, background: keyBg, fontWeight: 700 }}
-            onMouseDown={(e) => { e.preventDefault(); handleKey(accentMenu.key); }}
-            onTouchEnd={(e) => { e.preventDefault(); handleKey(accentMenu.key); }}
-          >
-            {accentMenu.key}
-          </button>
+          {/* Label informativo */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.4)',
+            fontSize: 11,
+            paddingRight: 4,
+          }}>
+            substituir:
+          </div>
+
           {/* Variantes acentuadas */}
-          {accentMenu.options.map((a) => (
+          {accentActiveKey.options.map((a) => (
             <button
               key={a}
               type="button"
@@ -224,12 +245,13 @@ export default function VirtualKeyboard({
               {a}
             </button>
           ))}
-          {/* Cancelar */}
+
+          {/* Fechar popup */}
           <button
             type="button"
             style={{ ...keyStyle(), flex: 'none', width: 44, background: specialBg, fontSize: 11 }}
-            onMouseDown={(e) => { e.preventDefault(); setAccentMenu(null); }}
-            onTouchEnd={(e) => { e.preventDefault(); setAccentMenu(null); }}
+            onMouseDown={(e) => { e.preventDefault(); setAccentActiveKey(null); }}
+            onTouchEnd={(e) => { e.preventDefault(); setAccentActiveKey(null); }}
           >
             ✕
           </button>
@@ -239,7 +261,6 @@ export default function VirtualKeyboard({
       {/* ── Números ───────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
         {numbers ? (
-          // Modo numérico expandido: 2 linhas de 5
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
               {NUMBERS.slice(0, 5).map((n) => (
@@ -259,7 +280,6 @@ export default function VirtualKeyboard({
             </div>
           </div>
         ) : (
-          // Linha de números compacta (sempre visível)
           NUMBERS.map((n) => (
             <button key={n} type="button" style={keyStyle()}
               onMouseDown={(e) => { e.preventDefault(); handleKey(n); }}
@@ -272,14 +292,14 @@ export default function VirtualKeyboard({
       {/* ── Letras ────────────────────────────────────────── */}
       {!numbers && rows.map((row, ri) => (
         <div key={ri} style={{ display: 'flex', gap: 5, justifyContent: 'center', marginBottom: 6 }}>
-          {/* Indentação visual das linhas 2 e 3 */}
           {ri > 0 && <div style={{ width: ri === 1 ? 18 : 54 }} />}
 
           {row.map((key) => (
             <button
               key={key}
               type="button"
-              style={keyStyle(accentMenu?.key === key)}
+              // ✅ FIX: highlight quando a tecla está como "acent ativa" (já enviada, aguardando substituição)
+              style={keyStyle(accentActiveKey?.key === key)}
               onMouseDown={(e) => { e.preventDefault(); handleKeyPress(key); }}
               onTouchEnd={(e) => { e.preventDefault(); handleKeyPress(key); }}
             >
@@ -298,8 +318,8 @@ export default function VirtualKeyboard({
         <button
           type="button"
           style={specialKeyStyle()}
-          onMouseDown={(e) => { e.preventDefault(); setShift(!shift); setAccentMenu(null); }}
-          onTouchEnd={(e) => { e.preventDefault(); setShift(!shift); setAccentMenu(null); }}
+          onMouseDown={(e) => { e.preventDefault(); setShift(!shift); setAccentActiveKey(null); }}
+          onTouchEnd={(e) => { e.preventDefault(); setShift(!shift); setAccentActiveKey(null); }}
         >
           {shift ? '⬆ ON' : '⬆'}
         </button>
@@ -308,8 +328,8 @@ export default function VirtualKeyboard({
         <button
           type="button"
           style={specialKeyStyle()}
-          onMouseDown={(e) => { e.preventDefault(); setNumbers(!numbers); setAccentMenu(null); }}
-          onTouchEnd={(e) => { e.preventDefault(); setNumbers(!numbers); setAccentMenu(null); }}
+          onMouseDown={(e) => { e.preventDefault(); setNumbers(!numbers); setAccentActiveKey(null); }}
+          onTouchEnd={(e) => { e.preventDefault(); setNumbers(!numbers); setAccentActiveKey(null); }}
         >
           {numbers ? 'ABC' : '123'}
         </button>
@@ -328,8 +348,8 @@ export default function VirtualKeyboard({
         <button
           type="button"
           style={specialKeyStyle()}
-          onMouseDown={(e) => { e.preventDefault(); onBackspace(); setAccentMenu(null); }}
-          onTouchEnd={(e) => { e.preventDefault(); onBackspace(); setAccentMenu(null); }}
+          onMouseDown={(e) => { e.preventDefault(); onBackspace(); setAccentActiveKey(null); }}
+          onTouchEnd={(e) => { e.preventDefault(); onBackspace(); setAccentActiveKey(null); }}
         >
           ⌫
         </button>
@@ -338,8 +358,8 @@ export default function VirtualKeyboard({
         <button
           type="button"
           style={{ ...specialKeyStyle(true), background: enterBg, color: '#fff' }}
-          onMouseDown={(e) => { e.preventDefault(); onEnter(); setAccentMenu(null); }}
-          onTouchEnd={(e) => { e.preventDefault(); onEnter(); setAccentMenu(null); }}
+          onMouseDown={(e) => { e.preventDefault(); onEnter(); setAccentActiveKey(null); }}
+          onTouchEnd={(e) => { e.preventDefault(); onEnter(); setAccentActiveKey(null); }}
         >
           ↵ Enviar
         </button>

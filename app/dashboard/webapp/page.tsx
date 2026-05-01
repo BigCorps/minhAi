@@ -3,9 +3,9 @@
 // app/dashboard/webapp/page.tsx
 
 import { useEffect, useRef, useState } from 'react';
+import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
-import { useTheme } from 'next-themes';
 
 interface Company {
   id: string;
@@ -20,21 +20,14 @@ interface Company {
 type Step = 1 | 2 | 3;
 type Motivo = 'ineligible' | 'loading' | 'ok';
 
-const DARK   = '#0f172a';
-const MID    = '#1e293b';
-const CARD   = '#162032';
-const BORDER = 'rgba(255,255,255,0.07)';
 const ORANGE = '#f97316';
 const GREEN  = '#10b981';
-const WHITE  = '#f8fafc';
-const MUTED  = 'rgba(248,250,252,0.45)';
 
-// ── Domínios disponíveis ───────────────────────────────────────────────────────
 const WEBAPP_DOMAINS = [
-  { value: 'minhai.com.br', label: 'minhai.com.br', desc: 'Versão brasileira'},
-  { value: 'minhaia.app',   label: 'minhaia.app',   desc: 'Minha IA - Mais pessoal'},
-  { value: 'nossaia.app',   label: 'nossaia.app',   desc: 'Nossa IA - para equipes'},
-  { value: 'suaia.app',     label: 'suaia.app',     desc: 'Sua IA - Foco no Cliente'},
+  { value: 'minhai.com.br', label: 'minhai.com.br', desc: 'Versão Brasileira' },
+  { value: 'minhaia.app',   label: 'minhaia.app',   desc: 'Minha IA - Mais Pessoal' },
+  { value: 'nossaia.app',   label: 'nossaia.app',   desc: 'Nossa IA - Para Equipes e Empresas' },
+  { value: 'suaia.app',     label: 'suaia.app',     desc: 'Sua IA - Foco no Cliente' },
 ];
 
 const THEME_COLORS = [
@@ -48,59 +41,47 @@ const THEME_COLORS = [
   { label: 'Ciano',    value: '#06b6d4' },
 ];
 
-// ── Processa qualquer imagem para 512×512 com letterbox ────────────────────────
 async function prepareLogoFor512(file: File): Promise<{ blob: Blob; previewUrl: string }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
-
     img.onload = () => {
       const SIZE = 512;
       const canvas = document.createElement('canvas');
-      canvas.width = SIZE;
-      canvas.height = SIZE;
+      canvas.width = SIZE; canvas.height = SIZE;
       const ctx = canvas.getContext('2d');
       if (!ctx) { reject(new Error('Canvas não disponível')); return; }
-
       ctx.clearRect(0, 0, SIZE, SIZE);
-
       const ratio = Math.min(SIZE / img.naturalWidth, SIZE / img.naturalHeight);
       const drawW = img.naturalWidth * ratio;
       const drawH = img.naturalHeight * ratio;
-      const offsetX = (SIZE - drawW) / 2;
-      const offsetY = (SIZE - drawH) / 2;
-
-      ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+      ctx.drawImage(img, (SIZE - drawW) / 2, (SIZE - drawH) / 2, drawW, drawH);
       URL.revokeObjectURL(objectUrl);
-
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) { reject(new Error('Falha ao gerar PNG')); return; }
-          const previewUrl = URL.createObjectURL(blob);
-          resolve({ blob, previewUrl });
-        },
-        'image/png'
-      );
+      canvas.toBlob(blob => {
+        if (!blob) { reject(new Error('Falha ao gerar PNG')); return; }
+        resolve({ blob, previewUrl: URL.createObjectURL(blob) });
+      }, 'image/png');
     };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error('Imagem inválida'));
-    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Imagem inválida')); };
     img.src = objectUrl;
   });
 }
 
-// ── Componentes de UI ──────────────────────────────────────────────────────────
+// ── Componentes recebem cores como props ───────────────────────────────────────
 
-function Dot({ active, done }: { active: boolean; done: boolean }) {
+interface ThemeColors {
+  WHITE: string; MUTED: string; BORDER: string; MID: string;
+}
+
+function Dot({ active, done, tc }: { active: boolean; done: boolean; tc: ThemeColors }) {
   return (
     <div style={{
       width: 32, height: 32, borderRadius: '50%',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: done ? GREEN : active ? ORANGE : 'rgba(255,255,255,0.07)',
-      border: `2px solid ${done ? GREEN : active ? ORANGE : 'rgba(255,255,255,0.12)'}`,
-      color: WHITE, fontWeight: 700, fontSize: 13,
+      background: done ? GREEN : active ? ORANGE : tc.BORDER,
+      border: `2px solid ${done ? GREEN : active ? ORANGE : tc.MUTED}`,
+      color: done || active ? '#fff' : tc.MUTED,
+      fontWeight: 700, fontSize: 13,
       transition: 'all 0.3s', flexShrink: 0,
     }}>
       {done
@@ -111,7 +92,7 @@ function Dot({ active, done }: { active: boolean; done: boolean }) {
   );
 }
 
-function StepBar({ step }: { step: Step }) {
+function StepBar({ step, tc }: { step: Step; tc: ThemeColors }) {
   const steps = ['Visual', 'Domínio', 'Publicar'];
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 40 }}>
@@ -122,13 +103,13 @@ function StepBar({ step }: { step: Step }) {
         return (
           <div key={n} style={{ display: 'flex', alignItems: 'center', flex: i < 2 ? 1 : undefined }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <Dot active={active} done={done} />
-              <span style={{ fontSize: 11, fontWeight: active ? 700 : 500, color: active ? ORANGE : done ? GREEN : MUTED, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              <Dot active={active} done={done} tc={tc} />
+              <span style={{ fontSize: 11, fontWeight: active ? 700 : 500, color: active ? ORANGE : done ? GREEN : tc.MUTED, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                 {label}
               </span>
             </div>
             {i < 2 && (
-              <div style={{ flex: 1, height: 2, margin: '0 8px', marginBottom: 18, background: step > n ? GREEN : 'rgba(255,255,255,0.07)', transition: 'background 0.3s' }} />
+              <div style={{ flex: 1, height: 2, margin: '0 8px', marginBottom: 18, background: step > n ? GREEN : tc.BORDER, transition: 'background 0.3s' }} />
             )}
           </div>
         );
@@ -143,31 +124,38 @@ export default function WebAppPage() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
-  const DARK   = isDark ? '#0f172a' : '#f8fafc';
-  const MID    = isDark ? '#1e293b' : '#e2e8f0';
-  const CARD   = isDark ? '#162032' : '#ffffff';
-  const BORDER = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
-  const WHITE  = isDark ? '#f8fafc' : '#0f172a';
-  const MUTED  = isDark ? 'rgba(248,250,252,0.45)' : 'rgba(15,23,42,0.55)';
+  // Todas as cores derivadas do tema
+  const CARD   = isDark ? '#162032'                    : '#ffffff';
+  const MID    = isDark ? '#1e293b'                    : '#e2e8f0';
+  const BORDER = isDark ? 'rgba(255,255,255,0.07)'     : 'rgba(0,0,0,0.10)';
+  const WHITE  = isDark ? '#f8fafc'                    : '#0f172a';
+  const MUTED  = isDark ? 'rgba(248,250,252,0.50)'     : 'rgba(15,23,42,0.55)';
+  const SUB    = isDark ? 'rgba(248,250,252,0.25)'     : 'rgba(15,23,42,0.35)';
+  const INPUTBG= isDark ? 'rgba(255,255,255,0.04)'     : 'rgba(0,0,0,0.04)';
+  const ROWBG  = isDark ? 'rgba(255,255,255,0.02)'     : 'rgba(0,0,0,0.02)';
+  const PREVIEWBG = isDark ? 'rgba(255,255,255,0.04)'  : 'rgba(0,0,0,0.04)';
+  const HTTPSGRAY = isDark ? 'rgba(255,255,255,0.30)'  : 'rgba(15,23,42,0.35)';
+
+  const tc: ThemeColors = { WHITE, MUTED, BORDER, MID };
 
   const router = useRouter();
   const supabase = createClient();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [motivo, setMotivo]           = useState<Motivo>('loading');
-  const [companies, setCompanies]     = useState<Company[]>([]);
-  const [selectedId, setSelectedId]   = useState<string>('');
-  const [step, setStep]               = useState<Step>(1);
-  const [logoFile, setLogoFile]       = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [motivo, setMotivo]                 = useState<Motivo>('loading');
+  const [companies, setCompanies]           = useState<Company[]>([]);
+  const [selectedId, setSelectedId]         = useState<string>('');
+  const [step, setStep]                     = useState<Step>(1);
+  const [logoFile, setLogoFile]             = useState<File | null>(null);
+  const [logoPreview, setLogoPreview]       = useState<string | null>(null);
   const [processingLogo, setProcessingLogo] = useState(false);
-  const [themeColor, setThemeColor]   = useState('#f97316');
-  const [webappDomain, setWebappDomain] = useState('minhai.app');
-  const [saving, setSaving]           = useState(false);
-  const [error, setError]             = useState('');
-  const [published, setPublished]     = useState(false);
-  const [finalSlug, setFinalSlug]     = useState('');
-  const [finalDomain, setFinalDomain] = useState('minhai.app');
+  const [themeColor, setThemeColor]         = useState('#f97316');
+  const [webappDomain, setWebappDomain]     = useState('minhai.app');
+  const [saving, setSaving]                 = useState(false);
+  const [error, setError]                   = useState('');
+  const [published, setPublished]           = useState(false);
+  const [finalSlug, setFinalSlug]           = useState('');
+  const [finalDomain, setFinalDomain]       = useState('minhai.app');
 
   useEffect(() => {
     async function init() {
@@ -191,13 +179,11 @@ export default function WebAppPage() {
 
       if (!isTrial) {
         if (!credits.active_plan_id) { setMotivo('ineligible'); return; }
-
         const { data: pkg } = await supabase
           .from('credits_packages')
           .select('has_consultoria')
           .eq('id', credits.active_plan_id)
           .single();
-
         if (!pkg?.has_consultoria) { setMotivo('ineligible'); return; }
       }
 
@@ -230,17 +216,14 @@ export default function WebAppPage() {
     init();
   }, []);
 
-  const selectedCompany = companies.find(c => c.id === selectedId);
+  const selectedCompany   = companies.find(c => c.id === selectedId);
   const selectedDomainInfo = WEBAPP_DOMAINS.find(d => d.value === webappDomain) ?? WEBAPP_DOMAINS[0];
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { setError('Logo deve ter no máximo 5MB'); return; }
-
-    setProcessingLogo(true);
-    setError('');
-
+    setProcessingLogo(true); setError('');
     try {
       const { blob, previewUrl } = await prepareLogoFor512(file);
       setLogoFile(new File([blob], 'logo_512.png', { type: 'image/png' }));
@@ -254,9 +237,7 @@ export default function WebAppPage() {
 
   async function publish() {
     if (!selectedCompany) return;
-    setSaving(true);
-    setError('');
-
+    setSaving(true); setError('');
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
@@ -265,26 +246,17 @@ export default function WebAppPage() {
 
       if (logoFile) {
         const path = `logos/${selectedCompany.id}/logo.png`;
-
         const { error: upErr } = await supabase.storage
           .from('company-assets')
           .upload(path, logoFile, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
-
         if (upErr) throw upErr;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('company-assets')
-          .getPublicUrl(path);
-
+        const { data: { publicUrl } } = supabase.storage.from('company-assets').getPublicUrl(path);
         logo_url = publicUrl;
       }
 
       const others = companies.filter(c => c.id !== selectedId && c.webapp_enabled);
       if (others.length > 0) {
-        await supabase
-          .from('companies')
-          .update({ webapp_enabled: false })
-          .in('id', others.map(c => c.id));
+        await supabase.from('companies').update({ webapp_enabled: false }).in('id', others.map(c => c.id));
       }
 
       const { error: updErr } = await supabase
@@ -297,7 +269,6 @@ export default function WebAppPage() {
           ...(logo_url ? { webapp_logo_url: logo_url } : {}),
         })
         .eq('id', selectedId);
-
       if (updErr) throw updErr;
 
       setFinalSlug(selectedCompany.slug);
@@ -335,7 +306,7 @@ export default function WebAppPage() {
           <p style={{ color: MUTED, fontSize: 15, lineHeight: 1.6, marginBottom: 32 }}>
             O WebApp com subdomínio próprio está disponível apenas no plano <strong style={{ color: WHITE }}>Consulting</strong>.
           </p>
-          <a href="/dashboard/credits" style={{ display: 'inline-block', padding: '12px 28px', background: `linear-gradient(135deg, ${ORANGE}, #ea580c)`, color: WHITE, borderRadius: 12, fontWeight: 700, fontSize: 15, textDecoration: 'none' }}>
+          <a href="/dashboard/credits" style={{ display: 'inline-block', padding: '12px 28px', background: `linear-gradient(135deg, ${ORANGE}, #ea580c)`, color: '#fff', borderRadius: 12, fontWeight: 700, fontSize: 15, textDecoration: 'none' }}>
             Ver Planos
           </a>
         </div>
@@ -362,20 +333,19 @@ export default function WebAppPage() {
             </span>
             <button
               onClick={() => navigator.clipboard.writeText(`https://${finalSlug}.${finalDomain}`)}
-              style={{ background: 'rgba(16,185,129,0.15)', border: `1px solid rgba(16,185,129,0.3)`, borderRadius: 8, padding: '6px 14px', color: GREEN, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
-            >
+              style={{ background: 'rgba(16,185,129,0.15)', border: `1px solid rgba(16,185,129,0.3)`, borderRadius: 8, padding: '6px 14px', color: GREEN, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
               Copiar
             </button>
           </div>
 
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href={`https://${finalSlug}.${finalDomain}`} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: `linear-gradient(135deg, ${GREEN}, #059669)`, color: WHITE, borderRadius: 12, fontWeight: 700, fontSize: 15, textDecoration: 'none' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: `linear-gradient(135deg, ${GREEN}, #059669)`, color: '#fff', borderRadius: 12, fontWeight: 700, fontSize: 15, textDecoration: 'none' }}>
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
               Abrir WebApp
             </a>
             <button onClick={() => { setPublished(false); setStep(1); }}
-              style={{ padding: '12px 24px', background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, borderRadius: 12, color: MUTED, fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>
+              style={{ padding: '12px 24px', background: INPUTBG, border: `1px solid ${BORDER}`, borderRadius: 12, color: MUTED, fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>
               Editar configurações
             </button>
           </div>
@@ -399,7 +369,7 @@ export default function WebAppPage() {
         <p style={{ color: MUTED, fontSize: 15 }}>Seu assistente IA com endereço e visual próprios</p>
       </div>
 
-      <StepBar step={step} />
+      <StepBar step={step} tc={tc} />
 
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, overflow: 'hidden' }}>
 
@@ -423,10 +393,10 @@ export default function WebAppPage() {
                       setLogoFile(null);
                     }
                   }}
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px', color: WHITE, fontSize: 15, outline: 'none' }}>
+                  style={{ width: '100%', background: INPUTBG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px', color: WHITE, fontSize: 15, outline: 'none' }}>
                   {companies.map(c => <option key={c.id} value={c.id} style={{ background: MID }}>{c.name}</option>)}
                 </select>
-                <p style={{ color: 'rgba(249,115,22,0.7)', fontSize: 12, marginTop: 8 }}>Apenas 1 webapp por conta. Ativar aqui desativa o anterior.</p>
+                <p style={{ color: 'rgba(249,115,22,0.8)', fontSize: 12, marginTop: 8 }}>Apenas 1 webapp por conta. Ativar aqui desativa o anterior.</p>
               </div>
             )}
 
@@ -435,29 +405,24 @@ export default function WebAppPage() {
               onClick={() => !processingLogo && fileRef.current?.click()}
               style={{
                 position: 'relative',
-                border: `2px dashed ${logoPreview ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.12)'}`,
-                borderRadius: 16,
-                padding: '28px 20px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 12,
+                border: `2px dashed ${logoPreview ? 'rgba(16,185,129,0.4)' : BORDER}`,
+                borderRadius: 16, padding: '28px 20px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
                 cursor: processingLogo ? 'wait' : 'pointer',
                 marginBottom: 28,
-                background: logoPreview ? 'rgba(16,185,129,0.04)' : 'rgba(255,255,255,0.02)',
+                background: logoPreview ? 'rgba(16,185,129,0.04)' : ROWBG,
                 transition: 'all 0.2s',
               }}
             >
               {processingLogo && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'rgba(15,23,42,0.82)', borderRadius: 14, zIndex: 2 }}>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, background: isDark ? 'rgba(15,23,42,0.82)' : 'rgba(255,255,255,0.82)', borderRadius: 14, zIndex: 2 }}>
                   <div style={{ width: 28, height: 28, border: `3px solid ${BORDER}`, borderTopColor: ORANGE, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                   <span style={{ color: MUTED, fontSize: 12, fontWeight: 500 }}>Ajustando para 512×512…</span>
                 </div>
               )}
-
               {logoPreview ? (
                 <>
-                  <div style={{ width: 80, height: 80, borderRadius: 16, background: 'rgba(255,255,255,0.04)', border: `2px solid rgba(16,185,129,0.4)`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  <div style={{ width: 80, height: 80, borderRadius: 16, background: INPUTBG, border: `2px solid rgba(16,185,129,0.4)`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     <img src={logoPreview} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                   </div>
                   <span style={{ color: GREEN, fontSize: 13, fontWeight: 600 }}>Logo ajustado para 512×512 — clique para trocar</span>
@@ -465,11 +430,11 @@ export default function WebAppPage() {
                 </>
               ) : (
                 <>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: INPUTBG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="22" height="22" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                   </div>
                   <span style={{ color: MUTED, fontSize: 14 }}>Clique para fazer upload do logo</span>
-                  <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>PNG, JPG, WebP ou SVG · Máx 5MB · será convertido para 512×512</span>
+                  <span style={{ color: SUB, fontSize: 12 }}>PNG, JPG, WebP ou SVG · Máx 5MB · será convertido para 512×512</span>
                 </>
               )}
             </div>
@@ -483,12 +448,11 @@ export default function WebAppPage() {
               ))}
             </div>
 
-            {error && <p style={{ color: '#f87171', fontSize: 13, marginTop: 12 }}>{error}</p>}
+            {error && <p style={{ color: '#ef4444', fontSize: 13, marginTop: 12 }}>{error}</p>}
             <button
               onClick={() => setStep(2)}
               disabled={processingLogo}
-              style={{ marginTop: 28, width: '100%', padding: '14px', background: processingLogo ? 'rgba(249,115,22,0.3)' : `linear-gradient(135deg, ${ORANGE}, #ea580c)`, border: 'none', borderRadius: 14, color: WHITE, fontWeight: 700, fontSize: 16, cursor: processingLogo ? 'not-allowed' : 'pointer' }}
-            >
+              style={{ marginTop: 28, width: '100%', padding: '14px', background: processingLogo ? 'rgba(249,115,22,0.3)' : `linear-gradient(135deg, ${ORANGE}, #ea580c)`, border: 'none', borderRadius: 14, color: '#fff', fontWeight: 700, fontSize: 16, cursor: processingLogo ? 'not-allowed' : 'pointer' }}>
               Continuar →
             </button>
           </div>
@@ -508,39 +472,36 @@ export default function WebAppPage() {
                     key={domain.value}
                     onClick={() => setWebappDomain(domain.value)}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 14,
+                      display: 'flex', alignItems: 'center', gap: 14,
                       padding: '14px 18px',
-                      background: isSelected ? 'rgba(249,115,22,0.08)' : 'rgba(255,255,255,0.02)',
-                      border: `2px solid ${isSelected ? ORANGE : 'rgba(255,255,255,0.07)'}`,
-                      borderRadius: 14,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      textAlign: 'left',
-                      width: '100%',
+                      background: isSelected ? 'rgba(249,115,22,0.08)' : ROWBG,
+                      border: `2px solid ${isSelected ? ORANGE : BORDER}`,
+                      borderRadius: 14, cursor: 'pointer', transition: 'all 0.2s',
+                      textAlign: 'left', width: '100%',
                     }}
                   >
+                    {/* Radio */}
                     <div style={{
                       width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                      border: `2px solid ${isSelected ? ORANGE : 'rgba(255,255,255,0.2)'}`,
+                      border: `2px solid ${isSelected ? ORANGE : MUTED}`,
                       background: isSelected ? ORANGE : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       transition: 'all 0.2s',
                     }}>
-                      {isSelected && <div style={{ width: 8, height: 8, borderRadius: '50%', background: WHITE }} />}
+                      {isSelected && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
                     </div>
 
+                    {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
                         <span style={{ color: isSelected ? WHITE : MUTED, fontWeight: 700, fontSize: 15, fontFamily: 'monospace' }}>
                           {selectedCompany.slug}.
                         </span>
-                        <span style={{ color: isSelected ? ORANGE : 'rgba(255,255,255,0.4)', fontWeight: 800, fontSize: 16, fontFamily: 'monospace' }}>
+                        <span style={{ color: isSelected ? ORANGE : MUTED, fontWeight: 800, fontSize: 16, fontFamily: 'monospace' }}>
                           {domain.label}
                         </span>
                       </div>
-                      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, margin: '2px 0 0', fontWeight: 500 }}>
+                      <p style={{ color: SUB, fontSize: 12, margin: '2px 0 0', fontWeight: 500 }}>
                         {domain.desc}
                       </p>
                     </div>
@@ -556,21 +517,21 @@ export default function WebAppPage() {
             </div>
 
             {/* Preview do endereço final */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER}`, borderRadius: 14, padding: '16px 20px', marginBottom: 28 }}>
+            <div style={{ background: ROWBG, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '16px 20px', marginBottom: 28 }}>
               <p style={{ color: MUTED, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                 Endereço final do seu WebApp:
               </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 16px' }}>
-                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 15, fontFamily: 'monospace' }}>https://</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: PREVIEWBG, borderRadius: 10, padding: '12px 16px' }}>
+                <span style={{ color: HTTPSGRAY, fontSize: 15, fontFamily: 'monospace' }}>https://</span>
                 <span style={{ color: WHITE, fontWeight: 800, fontSize: 17, fontFamily: 'monospace' }}>{selectedCompany.slug}</span>
-                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 15, fontFamily: 'monospace' }}>.</span>
+                <span style={{ color: HTTPSGRAY, fontSize: 15, fontFamily: 'monospace' }}>.</span>
                 <span style={{ color: ORANGE, fontWeight: 800, fontSize: 17, fontFamily: 'monospace' }}>{webappDomain}</span>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setStep(1)} style={{ flex: 1, padding: '14px', background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, borderRadius: 14, color: MUTED, fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>← Voltar</button>
-              <button onClick={() => setStep(3)} style={{ flex: 2, padding: '14px', background: `linear-gradient(135deg, ${ORANGE}, #ea580c)`, border: 'none', borderRadius: 14, color: WHITE, fontWeight: 700, fontSize: 16, cursor: 'pointer' }}>Continuar →</button>
+              <button onClick={() => setStep(1)} style={{ flex: 1, padding: '14px', background: INPUTBG, border: `1px solid ${BORDER}`, borderRadius: 14, color: MUTED, fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>← Voltar</button>
+              <button onClick={() => setStep(3)} style={{ flex: 2, padding: '14px', background: `linear-gradient(135deg, ${ORANGE}, #ea580c)`, border: 'none', borderRadius: 14, color: '#fff', fontWeight: 700, fontSize: 16, cursor: 'pointer' }}>Continuar →</button>
             </div>
           </div>
         )}
@@ -581,7 +542,7 @@ export default function WebAppPage() {
             <h2 style={{ color: WHITE, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Tudo pronto!</h2>
             <p style={{ color: MUTED, fontSize: 14, marginBottom: 28 }}>Revise e publique seu WebApp</p>
 
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${BORDER}`, borderRadius: 16, overflow: 'hidden', marginBottom: 28 }}>
+            <div style={{ background: ROWBG, border: `1px solid ${BORDER}`, borderRadius: 16, overflow: 'hidden', marginBottom: 28 }}>
               {[
                 {
                   label: 'Assistente',
@@ -618,17 +579,17 @@ export default function WebAppPage() {
             </div>
 
             {error && (
-              <div style={{ background: 'rgba(239,68,68,0.08)', border: `1px solid rgba(239,68,68,0.2)`, borderRadius: 10, padding: '12px 16px', color: '#f87171', fontSize: 13, marginBottom: 16 }}>
+              <div style={{ background: 'rgba(239,68,68,0.08)', border: `1px solid rgba(239,68,68,0.2)`, borderRadius: 10, padding: '12px 16px', color: '#ef4444', fontSize: 13, marginBottom: 16 }}>
                 {error}
               </div>
             )}
 
             <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setStep(2)} disabled={saving} style={{ flex: 1, padding: '14px', background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, borderRadius: 14, color: MUTED, fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>← Voltar</button>
+              <button onClick={() => setStep(2)} disabled={saving} style={{ flex: 1, padding: '14px', background: INPUTBG, border: `1px solid ${BORDER}`, borderRadius: 14, color: MUTED, fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>← Voltar</button>
               <button onClick={publish} disabled={saving}
-                style={{ flex: 2, padding: '14px', background: saving ? 'rgba(16,185,129,0.3)' : `linear-gradient(135deg, ${GREEN}, #059669)`, border: 'none', borderRadius: 14, color: WHITE, fontWeight: 700, fontSize: 16, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                style={{ flex: 2, padding: '14px', background: saving ? 'rgba(16,185,129,0.3)' : `linear-gradient(135deg, ${GREEN}, #059669)`, border: 'none', borderRadius: 14, color: '#fff', fontWeight: 700, fontSize: 16, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                 {saving
-                  ? <><div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: WHITE, borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Publicando...</>
+                  ? <><div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Publicando...</>
                   : <><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Publicar WebApp</>
                 }
               </button>

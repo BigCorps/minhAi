@@ -1722,6 +1722,7 @@ const handleTextMessage = async (message: string) => {
         activeFunctionContextRef,
         groqContextRef,
         fallbackMessageRef,
+        sessionToken: profileToken ?? null,
       });
 
       if (isCommand) return;
@@ -1881,6 +1882,7 @@ const handleTextMessage = async (message: string) => {
         activeFunctionContextRef: dummyContextRef,
         groqContextRef,
         fallbackMessageRef,
+        sessionToken: profileToken ?? null,
       });
 
       if (isCommand) {

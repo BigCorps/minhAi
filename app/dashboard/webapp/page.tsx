@@ -25,9 +25,9 @@ const GREEN  = '#10b981';
 
 const WEBAPP_DOMAINS = [
   { value: 'minhai.com.br', label: 'minhai.com.br', desc: 'Versão Brasileira' },
-  { value: 'minhaia.app',   label: 'minhaia.app',   desc: 'Minha IA - Mais Pessoal' },
+  { value: 'minhaia.app',   label: 'minhaia.app',   desc: 'Minha IA - Mais Pessoal e para MEIs' },
   { value: 'nossaia.app',   label: 'nossaia.app',   desc: 'Nossa IA - Para Equipes e Empresas' },
-  { value: 'suaia.app',     label: 'suaia.app',     desc: 'Sua IA - Foco no Cliente' },
+  { value: 'suaia.app',     label: 'suaia.app',     desc: 'Sua IA - Foco Total no Cliente' },
 ];
 
 const THEME_COLORS = [

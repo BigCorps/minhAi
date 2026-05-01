@@ -125,10 +125,17 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
   // ✅ Fix Next.js 15 — headers() é assíncrono
   const headersList = await headers();
   const host = headersList.get('host') || '';
-  const isMinhaiBr  = host.endsWith('.minhai.com.br') && !host.startsWith('www.');
-  const isMinhaiApp = host.endsWith('.minhai.app') && !host.startsWith('www.');
-  const isDevSub    = host.includes('.localhost');
-  const viaSubdomain = isMinhaiBr || isMinhaiApp || isDevSub;
+  const MINHAI_DOMAINS = [
+    '.minhai.app',
+    '.minhai.com.br',
+    '.minhaia.app',
+    '.nossaia.app',
+    '.suaia.app',
+  ];
+  const isDevSub = host.includes('.localhost');
+  const viaSubdomain = isDevSub || MINHAI_DOMAINS.some(d =>
+    host.endsWith(d) && !host.startsWith('www.')
+  );
 
   // ── Verificação de webapp (só se vier pelo subdomínio) ───────────────────
   if (viaSubdomain) {

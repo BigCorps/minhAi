@@ -138,8 +138,12 @@ export default function MercadoPagoPointDisplay({
   const startPolling = useCallback((oId: string) => {
     pollRef.current = setInterval(async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) return
+        let { data: { session } } = await supabase.auth.getSession()
+if (!session) {
+  const { data: refreshData } = await supabase.auth.refreshSession()
+  session = refreshData.session
+}
+if (!session) return
 
         const resp = await fetch(
           `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/consultar-order-mp-point`,
@@ -227,8 +231,12 @@ export default function MercadoPagoPointDisplay({
     setStage('generating')
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Sessão expirada')
+      let { data: { session } } = await supabase.auth.getSession()
+if (!session) {
+  const { data: refreshData } = await supabase.auth.refreshSession()
+  session = refreshData.session
+}
+if (!session) throw new Error('Sessão expirada. Faça login novamente.')
 
       const resp = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/criar-order-mp-point`,
@@ -281,8 +289,12 @@ export default function MercadoPagoPointDisplay({
     window.speechSynthesis?.cancel()
 
     if (orderId && stage === 'awaiting') {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
+      let { data: { session } } = await supabase.auth.getSession()
+if (!session) {
+  const { data: refreshData } = await supabase.auth.refreshSession()
+  session = refreshData.session
+}
+if (session) {
         fetch(
           `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/cancelar-order-mp-point`,
           {

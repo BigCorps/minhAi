@@ -58,7 +58,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </span>
 
             <span className="block whitespace-nowrap">
-              Seu{' '}
+              A{' '}
               <WordCarousel isDark={isDark} />
               {' '}IA que
             </span>

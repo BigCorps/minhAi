@@ -5,10 +5,10 @@
 import { useState, useEffect } from 'react';
 
 const OPCOES = [
-  'Assistente', 'Aplicativo', 'Funcionário', 'Atendente',
-  'Gerente', 'Totem', 'Auxiliar', 'Secretário', 'Operador',
-  'Vendedor', 'Recepcionista', 'Agente', 'Analista',
-  'Estoquista', 'Consultor', 'Coordenador', 'Divulgador',
+  'Assistente', 'Funcionária', 'Atendente', 'Minha', 'Nossa', 'Sua',
+  'Gerente', 'Totem', 'Auxiliar', 'Secretária', 'Operadora',
+  'Vendedora', 'Recepcionista', 'Agente', 'Analista',
+  'Estoquista', 'Consultora', 'Coordenadora', 'Divulgadora', 'App',
 ];
 
 interface WordCarouselProps {

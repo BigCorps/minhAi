@@ -78,18 +78,17 @@ export default function MercadoPagoPointDisplay({
   // 1. Tenta sessão Supabase Auth (dashboard www.minhai.app)
   // 2. Fallback: token de perfil (subdomínio loja.minhai.com.br)
 
-  const getAuthHeader = useCallback(async (): Promise<string | null> => {
-    let { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      const { data: refreshData } = await supabase.auth.refreshSession()
-      session = refreshData.session
-    }
-    if (session) return `Bearer ${session.access_token}`
-
-    if (sessionToken) return `Bearer ${sessionToken}`
-
-    return null
-  }, [supabase, sessionToken])
+// CORRIGIR PARA
+const getAuthHeader = useCallback(async (): Promise<string> => {
+  let { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    const { data: refreshData } = await supabase.auth.refreshSession()
+    session = refreshData.session
+  }
+  if (session) return `Bearer ${session.access_token}`
+  if (sessionToken) return `Bearer ${sessionToken}`
+  return `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`
+}, [supabase, sessionToken])
 
   // ── Limpeza ────────────────────────────────────────────────────────────────
 

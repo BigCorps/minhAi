@@ -10,9 +10,9 @@ interface Option {
 }
 
 const OPTIONS: Option[] = [
-  { id: 'minha', label: 'Minha IA', sublabel: 'Mais pessoal',       domain: 'minhaia.app' },
-  { id: 'nossa', label: 'Nossa IA', sublabel: 'Ideal para equipes', domain: 'nossaia.app' },
-  { id: 'sua',   label: 'Sua IA',   sublabel: 'Foco no cliente',    domain: 'suaia.app'   },
+  { id: 'minha', label: 'Minha IA', sublabel: 'Mais Pessoal e para MEIs',       domain: 'minhaia.app' },
+  { id: 'nossa', label: 'Nossa IA', sublabel: 'Ideal para Equipes e Empresas', domain: 'nossaia.app' },
+  { id: 'sua',   label: 'Sua IA',   sublabel: 'Com Foco Total no Cliente',    domain: 'suaia.app'   },
 ];
 
 interface Props {

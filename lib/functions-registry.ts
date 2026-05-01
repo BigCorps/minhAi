@@ -72,7 +72,6 @@ export interface FunctionDefinition {
     registerFunctionUsage?: (key: string, credits: number) => Promise<void>;
     checkIfFunctionIsEnabled?: (key: string) => Promise<boolean>;
     sessionId?: string | null;
-    sessionToken?: string | null;
   }) => Promise<boolean>;
 }
 
@@ -192,7 +191,7 @@ tef_debito: {
   requiresPayment: true,
   isPremium: false,
 
-  handler: async ({ transcript, playText, setActiveModal, companyId, sessionToken }) => {
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
     const supabase = createClient()
 
     const amount = extractAmount(transcript ?? '')
@@ -220,7 +219,6 @@ tef_debito: {
         companyId,
         paymentType: 'debit_card',
         initialAmount: amount ? Math.round(amount * 100) : undefined,
-        sessionToken, 
       },
     })
 
@@ -265,7 +263,7 @@ tef_credito: {
   requiresPayment: true,
   isPremium: false,
 
-  handler: async ({ transcript, playText, setActiveModal, companyId, sessionToken }) => {
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
     const supabase = createClient()
 
     const amount = extractAmount(transcript ?? '')
@@ -315,7 +313,6 @@ tef_credito: {
         companyId,
         paymentType: 'credit_card',
         initialAmount: amount ? Math.round(amount * 100) : undefined,
-        sessionToken, 
         initialInstallments: parsedInstallments,
         maxInstallments,
         minInstallmentValueCents,

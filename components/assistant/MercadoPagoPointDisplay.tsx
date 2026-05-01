@@ -166,6 +166,7 @@ const getAuthHeader = useCallback(async (): Promise<string> => {
             headers: {
               'Content-Type': 'application/json',
               Authorization: authHeader,
+              'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, 
             },
             body: JSON.stringify({ order_id: oId }),
           }
@@ -246,7 +247,6 @@ const getAuthHeader = useCallback(async (): Promise<string> => {
 
     try {
       const authHeader = await getAuthHeader()
-      if (!authHeader) throw new Error('Sessão expirada. Faça login novamente.')
 
       const resp = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/criar-order-mp-point`,
@@ -255,6 +255,7 @@ const getAuthHeader = useCallback(async (): Promise<string> => {
           headers: {
             'Content-Type': 'application/json',
             Authorization: authHeader,
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, 
           },
           body: JSON.stringify({
             company_id: companyId,
@@ -308,6 +309,7 @@ const getAuthHeader = useCallback(async (): Promise<string> => {
             headers: {
               'Content-Type': 'application/json',
               Authorization: authHeader,
+              'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, 
             },
             body: JSON.stringify({ order_id: orderId }),
           }

@@ -30,6 +30,7 @@ interface MercadoPagoPointDisplayProps {
   playText?: (text: string) => Promise<void>
   onClose: () => void
   theme?: 'dark' | 'light'
+  sessionToken?: string | null  // ← novo: token de perfil para subdomínio
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ export default function MercadoPagoPointDisplay({
   playText,
   onClose,
   theme = 'dark',
+  sessionToken,  // ← novo
 }: MercadoPagoPointDisplayProps) {
   const supabase = createClient()
   const isCreditCard = paymentType === 'credit_card'
@@ -71,6 +73,23 @@ export default function MercadoPagoPointDisplay({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const handleGerarRef = useRef<(overrideCents?: number) => void>(() => {})
   const handleCloseRef = useRef<() => void>(() => {})
+
+  // ── Helper: obter header de autorização ───────────────────────────────────
+  // 1. Tenta sessão Supabase Auth (dashboard www.minhai.app)
+  // 2. Fallback: token de perfil (subdomínio loja.minhai.com.br)
+
+  const getAuthHeader = useCallback(async (): Promise<string | null> => {
+    let { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      const { data: refreshData } = await supabase.auth.refreshSession()
+      session = refreshData.session
+    }
+    if (session) return `Bearer ${session.access_token}`
+
+    if (sessionToken) return `Bearer ${sessionToken}`
+
+    return null
+  }, [supabase, sessionToken])
 
   // ── Limpeza ────────────────────────────────────────────────────────────────
 
@@ -138,12 +157,8 @@ export default function MercadoPagoPointDisplay({
   const startPolling = useCallback((oId: string) => {
     pollRef.current = setInterval(async () => {
       try {
-        let { data: { session } } = await supabase.auth.getSession()
-if (!session) {
-  const { data: refreshData } = await supabase.auth.refreshSession()
-  session = refreshData.session
-}
-if (!session) return
+        const authHeader = await getAuthHeader()
+        if (!authHeader) return
 
         const resp = await fetch(
           `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/consultar-order-mp-point`,
@@ -151,7 +166,7 @@ if (!session) return
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${session.access_token}`,
+              Authorization: authHeader,
             },
             body: JSON.stringify({ order_id: oId }),
           }
@@ -171,7 +186,7 @@ if (!session) return
         console.error('Polling error:', err)
       }
     }, 5000)
-  }, [supabase, clearPolling, playText])
+  }, [getAuthHeader, clearPolling, playText])
 
   // ── Auto-envio quando initialAmount é fornecido pela voz ──────────────────
 
@@ -231,12 +246,8 @@ if (!session) return
     setStage('generating')
 
     try {
-      let { data: { session } } = await supabase.auth.getSession()
-if (!session) {
-  const { data: refreshData } = await supabase.auth.refreshSession()
-  session = refreshData.session
-}
-if (!session) throw new Error('Sessão expirada. Faça login novamente.')
+      const authHeader = await getAuthHeader()
+      if (!authHeader) throw new Error('Sessão expirada. Faça login novamente.')
 
       const resp = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/criar-order-mp-point`,
@@ -244,7 +255,7 @@ if (!session) throw new Error('Sessão expirada. Faça login novamente.')
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: authHeader,
           },
           body: JSON.stringify({
             company_id: companyId,
@@ -289,19 +300,15 @@ if (!session) throw new Error('Sessão expirada. Faça login novamente.')
     window.speechSynthesis?.cancel()
 
     if (orderId && stage === 'awaiting') {
-      let { data: { session } } = await supabase.auth.getSession()
-if (!session) {
-  const { data: refreshData } = await supabase.auth.refreshSession()
-  session = refreshData.session
-}
-if (session) {
+      const authHeader = await getAuthHeader()
+      if (authHeader) {
         fetch(
           `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/cancelar-order-mp-point`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${session.access_token}`,
+              Authorization: authHeader,
             },
             body: JSON.stringify({ order_id: orderId }),
           }

@@ -13,6 +13,7 @@ interface Company {
   logo_url: string | null;
   webapp_enabled: boolean;
   webapp_theme_color: string | null;
+  webapp_domain: string | null;
 }
 
 type Step = 1 | 2 | 3;
@@ -26,7 +27,15 @@ const ORANGE = '#f97316';
 const GREEN  = '#10b981';
 const WHITE  = '#f8fafc';
 const MUTED  = 'rgba(248,250,252,0.45)';
-const WEBAPP_DOMAIN = 'minhai.com.br';
+
+// ── Domínios disponíveis ───────────────────────────────────────────────────────
+const WEBAPP_DOMAINS = [
+  { value: 'minhai.app',    label: 'minhai.app',    desc: 'Domínio principal',       emoji: '⭐' },
+  { value: 'minhai.com.br', label: 'minhai.com.br', desc: 'Versão brasileira',        emoji: '🇧🇷' },
+  { value: 'minhaia.app',   label: 'minhaia.app',   desc: 'Minha IA',                emoji: '🤖' },
+  { value: 'nossaia.app',   label: 'nossaia.app',   desc: 'Nossa IA — para equipes', emoji: '🤝' },
+  { value: 'suaia.app',     label: 'suaia.app',     desc: 'Sua IA — identidade própria', emoji: '✨' },
+];
 
 const THEME_COLORS = [
   { label: 'Laranja',  value: '#f97316' },
@@ -39,7 +48,7 @@ const THEME_COLORS = [
   { label: 'Ciano',    value: '#06b6d4' },
 ];
 
-// ── Processa qualquer imagem para 512×512 com letterbox (sem esticar) ──────────
+// ── Processa qualquer imagem para 512×512 com letterbox ────────────────────────
 async function prepareLogoFor512(file: File): Promise<{ blob: Blob; previewUrl: string }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -53,10 +62,8 @@ async function prepareLogoFor512(file: File): Promise<{ blob: Blob; previewUrl: 
       const ctx = canvas.getContext('2d');
       if (!ctx) { reject(new Error('Canvas não disponível')); return; }
 
-      // Fundo transparente (ideal para logos com fundo já removido)
       ctx.clearRect(0, 0, SIZE, SIZE);
 
-      // Calcula dimensões mantendo proporção (letterbox)
       const ratio = Math.min(SIZE / img.naturalWidth, SIZE / img.naturalHeight);
       const drawW = img.naturalWidth * ratio;
       const drawH = img.naturalHeight * ratio;
@@ -105,7 +112,7 @@ function Dot({ active, done }: { active: boolean; done: boolean }) {
 }
 
 function StepBar({ step }: { step: Step }) {
-  const steps = ['Logo', 'Subdomínio', 'Publicar'];
+  const steps = ['Visual', 'Domínio', 'Publicar'];
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 40 }}>
       {steps.map((label, i) => {
@@ -145,24 +152,24 @@ export default function WebAppPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [processingLogo, setProcessingLogo] = useState(false);
   const [themeColor, setThemeColor]   = useState('#f97316');
+  const [webappDomain, setWebappDomain] = useState('minhai.app');
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState('');
   const [published, setPublished]     = useState(false);
   const [finalSlug, setFinalSlug]     = useState('');
+  const [finalDomain, setFinalDomain] = useState('minhai.app');
 
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
-      // 1. Buscar créditos e plano
       const { data: credits } = await supabase
         .from('user_credits')
         .select('has_active_plan, plan_expires_at, active_plan_id, active_plan_name')
         .eq('user_id', user.id)
         .single();
 
-      // 2. Verificar validade do plano
       const planOk =
         credits?.has_active_plan &&
         credits?.plan_expires_at &&
@@ -170,14 +177,10 @@ export default function WebAppPage() {
 
       if (!planOk) { setMotivo('ineligible'); return; }
 
-      // 3. Trial tem acesso ao webapp
       const isTrial = credits.active_plan_name === 'Trial' && !credits.active_plan_id;
 
       if (!isTrial) {
-        // Não é trial — verificar se o pacote tem has_consultoria
-        if (!credits.active_plan_id) {
-          setMotivo('ineligible'); return;
-        }
+        if (!credits.active_plan_id) { setMotivo('ineligible'); return; }
 
         const { data: pkg } = await supabase
           .from('credits_packages')
@@ -185,15 +188,12 @@ export default function WebAppPage() {
           .eq('id', credits.active_plan_id)
           .single();
 
-        if (!pkg?.has_consultoria) {
-          setMotivo('ineligible'); return;
-        }
+        if (!pkg?.has_consultoria) { setMotivo('ineligible'); return; }
       }
 
-      // 4. Buscar empresas do usuário
       const { data: comps } = await supabase
         .from('companies')
-        .select('id, name, slug, logo_url, webapp_enabled, webapp_theme_color')
+        .select('id, name, slug, logo_url, webapp_enabled, webapp_theme_color, webapp_domain')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .order('name');
@@ -206,9 +206,11 @@ export default function WebAppPage() {
       if (ativo) {
         setSelectedId(ativo.id);
         setThemeColor(ativo.webapp_theme_color || '#f97316');
+        setWebappDomain(ativo.webapp_domain || 'minhai.app');
         if (ativo.logo_url) setLogoPreview(ativo.logo_url);
         setPublished(true);
         setFinalSlug(ativo.slug);
+        setFinalDomain(ativo.webapp_domain || 'minhai.app');
       } else {
         setSelectedId(comps[0].id);
       }
@@ -219,8 +221,8 @@ export default function WebAppPage() {
   }, []);
 
   const selectedCompany = companies.find(c => c.id === selectedId);
+  const selectedDomainInfo = WEBAPP_DOMAINS.find(d => d.value === webappDomain) ?? WEBAPP_DOMAINS[0];
 
-  // ── Upload e processamento 512×512 ─────────────────────────────────────────
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -231,7 +233,6 @@ export default function WebAppPage() {
 
     try {
       const { blob, previewUrl } = await prepareLogoFor512(file);
-      // Substitui o File original pelo blob 512×512 já processado
       setLogoFile(new File([blob], 'logo_512.png', { type: 'image/png' }));
       setLogoPreview(previewUrl);
     } catch (err: any) {
@@ -241,7 +242,6 @@ export default function WebAppPage() {
     }
   }
 
-  // ── Publicar ───────────────────────────────────────────────────────────────
   async function publish() {
     if (!selectedCompany) return;
     setSaving(true);
@@ -254,7 +254,6 @@ export default function WebAppPage() {
       let logo_url = selectedCompany.logo_url;
 
       if (logoFile) {
-        // logoFile já é PNG 512×512 processado pela prepareLogoFor512
         const path = `logos/${selectedCompany.id}/logo.png`;
 
         const { error: upErr } = await supabase.storage
@@ -283,6 +282,7 @@ export default function WebAppPage() {
         .update({
           webapp_enabled: true,
           webapp_theme_color: themeColor,
+          webapp_domain: webappDomain,
           webapp_configured_at: new Date().toISOString(),
           ...(logo_url ? { webapp_logo_url: logo_url } : {}),
         })
@@ -291,6 +291,7 @@ export default function WebAppPage() {
       if (updErr) throw updErr;
 
       setFinalSlug(selectedCompany.slug);
+      setFinalDomain(webappDomain);
       setPublished(true);
       setStep(3);
     } catch (e: any) {
@@ -300,7 +301,7 @@ export default function WebAppPage() {
     }
   }
 
-  // ── Tela de loading ────────────────────────────────────────────────────────
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (motivo === 'loading') {
     return (
       <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -310,7 +311,7 @@ export default function WebAppPage() {
     );
   }
 
-  // ── Tela de inelegível ─────────────────────────────────────────────────────
+  // ── Inelegível ─────────────────────────────────────────────────────────────
   if (motivo === 'ineligible') {
     return (
       <div style={{ maxWidth: 480, margin: '60px auto', padding: '0 16px' }}>
@@ -332,7 +333,7 @@ export default function WebAppPage() {
     );
   }
 
-  // ── Tela de sucesso ────────────────────────────────────────────────────────
+  // ── Sucesso ────────────────────────────────────────────────────────────────
   if (published && step === 3) {
     return (
       <div style={{ maxWidth: 560, margin: '40px auto', padding: '0 16px' }}>
@@ -345,12 +346,12 @@ export default function WebAppPage() {
           <h2 style={{ color: WHITE, fontWeight: 800, fontSize: 26, marginBottom: 8 }}>Seu WebApp está no ar! 🎉</h2>
           <p style={{ color: MUTED, fontSize: 15, marginBottom: 32 }}>Compartilhe o link abaixo com seus clientes</p>
 
-          <div style={{ background: 'rgba(16,185,129,0.08)', border: `1px solid rgba(16,185,129,0.2)`, borderRadius: 14, padding: '16px 20px', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between' }}>
+          <div style={{ background: 'rgba(16,185,129,0.08)', border: `1px solid rgba(16,185,129,0.2)`, borderRadius: 14, padding: '16px 20px', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' }}>
             <span style={{ color: GREEN, fontWeight: 700, fontSize: 17, letterSpacing: '-0.02em' }}>
-              {finalSlug}.{WEBAPP_DOMAIN}
+              {finalSlug}.{finalDomain}
             </span>
             <button
-              onClick={() => navigator.clipboard.writeText(`https://${finalSlug}.${WEBAPP_DOMAIN}`)}
+              onClick={() => navigator.clipboard.writeText(`https://${finalSlug}.${finalDomain}`)}
               style={{ background: 'rgba(16,185,129,0.15)', border: `1px solid rgba(16,185,129,0.3)`, borderRadius: 8, padding: '6px 14px', color: GREEN, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
             >
               Copiar
@@ -358,7 +359,7 @@ export default function WebAppPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href={`https://${finalSlug}.${WEBAPP_DOMAIN}`} target="_blank" rel="noopener noreferrer"
+            <a href={`https://${finalSlug}.${finalDomain}`} target="_blank" rel="noopener noreferrer"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: `linear-gradient(135deg, ${GREEN}, #059669)`, color: WHITE, borderRadius: 12, fontWeight: 700, fontSize: 15, textDecoration: 'none' }}>
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
               Abrir WebApp
@@ -369,7 +370,9 @@ export default function WebAppPage() {
             </button>
           </div>
         </div>
-        <style>{`@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0.3)} 50%{box-shadow:0 0 0 12px rgba(16,185,129,0)} }`}</style>
+        <style>{`
+          @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0.3)} 50%{box-shadow:0 0 0 12px rgba(16,185,129,0)} }
+        `}</style>
       </div>
     );
   }
@@ -390,7 +393,7 @@ export default function WebAppPage() {
 
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, overflow: 'hidden' }}>
 
-        {/* ── PASSO 1 ── */}
+        {/* ── PASSO 1: Visual ───────────────────────────────────────────────── */}
         {step === 1 && (
           <div style={{ padding: '36px 36px 32px' }}>
             <h2 style={{ color: WHITE, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Identidade visual</h2>
@@ -403,7 +406,12 @@ export default function WebAppPage() {
                   onChange={e => {
                     setSelectedId(e.target.value);
                     const c = companies.find(x => x.id === e.target.value);
-                    if (c) { setThemeColor(c.webapp_theme_color || '#f97316'); setLogoPreview(c.logo_url || null); setLogoFile(null); }
+                    if (c) {
+                      setThemeColor(c.webapp_theme_color || '#f97316');
+                      setWebappDomain(c.webapp_domain || 'minhai.app');
+                      setLogoPreview(c.logo_url || null);
+                      setLogoFile(null);
+                    }
                   }}
                   style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px', color: WHITE, fontSize: 15, outline: 'none' }}>
                   {companies.map(c => <option key={c.id} value={c.id} style={{ background: MID }}>{c.name}</option>)}
@@ -413,8 +421,6 @@ export default function WebAppPage() {
             )}
 
             <label style={{ display: 'block', color: MUTED, fontSize: 13, fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Logo</label>
-
-            {/* Drop zone com posição relativa para overlay de loading */}
             <div
               onClick={() => !processingLogo && fileRef.current?.click()}
               style={{
@@ -432,20 +438,8 @@ export default function WebAppPage() {
                 transition: 'all 0.2s',
               }}
             >
-              {/* Overlay de processamento */}
               {processingLogo && (
-                <div style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 10,
-                  background: 'rgba(15,23,42,0.82)',
-                  borderRadius: 14,
-                  zIndex: 2,
-                }}>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'rgba(15,23,42,0.82)', borderRadius: 14, zIndex: 2 }}>
                   <div style={{ width: 28, height: 28, border: `3px solid ${BORDER}`, borderTopColor: ORANGE, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                   <span style={{ color: MUTED, fontSize: 12, fontWeight: 500 }}>Ajustando para 512×512…</span>
                 </div>
@@ -453,32 +447,10 @@ export default function WebAppPage() {
 
               {logoPreview ? (
                 <>
-                  {/* Preview quadrado 512×512 simulado */}
-                  <div style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: 16,
-                    background: 'rgba(255,255,255,0.04)',
-                    border: `2px solid rgba(16,185,129,0.4)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    position: 'relative',
-                  }}>
-                    <img
-                      src={logoPreview}
-                      alt="Logo"
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '100%',
-                        objectFit: 'contain',
-                      }}
-                    />
+                  <div style={{ width: 80, height: 80, borderRadius: 16, background: 'rgba(255,255,255,0.04)', border: `2px solid rgba(16,185,129,0.4)`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                    <img src={logoPreview} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                   </div>
-                  <span style={{ color: GREEN, fontSize: 13, fontWeight: 600 }}>
-                    Logo ajustado para 512×512 — clique para trocar
-                  </span>
+                  <span style={{ color: GREEN, fontSize: 13, fontWeight: 600 }}>Logo ajustado para 512×512 — clique para trocar</span>
                   <span style={{ color: MUTED, fontSize: 11 }}>PNG transparente · pronto para PWA/TWA</span>
                 </>
               ) : (
@@ -491,13 +463,7 @@ export default function WebAppPage() {
                 </>
               )}
             </div>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
-              style={{ display: 'none' }}
-              onChange={onFileChange}
-            />
+            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml" style={{ display: 'none' }} onChange={onFileChange} />
 
             <label style={{ display: 'block', color: MUTED, fontSize: 13, fontWeight: 600, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cor principal</label>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
@@ -518,60 +484,84 @@ export default function WebAppPage() {
           </div>
         )}
 
-        {/* ── PASSO 2 ── */}
+        {/* ── PASSO 2: Domínio ──────────────────────────────────────────────── */}
         {step === 2 && selectedCompany && (
           <div style={{ padding: '36px 36px 32px' }}>
-            <h2 style={{ color: WHITE, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Seu endereço</h2>
-            <p style={{ color: MUTED, fontSize: 14, marginBottom: 28 }}>O subdomínio é gerado automaticamente a partir do nome do seu assistente</p>
+            <h2 style={{ color: WHITE, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Escolha seu domínio</h2>
+            <p style={{ color: MUTED, fontSize: 14, marginBottom: 28 }}>Selecione como seus clientes vão encontrar e lembrar do seu assistente</p>
 
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER}`, borderRadius: 16, padding: '24px', marginBottom: 28 }}>
-              <p style={{ color: MUTED, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Seu WebApp ficará disponível em:</p>
-              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '14px 18px', border: `1px solid rgba(255,255,255,0.08)` }}>
-                <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 17, fontFamily: 'monospace' }}>https://</span>
-                <span style={{ color: themeColor, fontWeight: 800, fontSize: 19, fontFamily: 'monospace', letterSpacing: '-0.02em' }}>{selectedCompany.slug}</span>
-                <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 17, fontFamily: 'monospace' }}>.{WEBAPP_DOMAIN}</span>
-              </div>
-              <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, marginTop: 12 }}>O slug é o mesmo já configurado para o seu assistente</p>
+            {/* Seletor de domínio */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
+              {WEBAPP_DOMAINS.map(domain => {
+                const isSelected = webappDomain === domain.value;
+                return (
+                  <button
+                    key={domain.value}
+                    onClick={() => setWebappDomain(domain.value)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: '14px 18px',
+                      background: isSelected ? 'rgba(249,115,22,0.08)' : 'rgba(255,255,255,0.02)',
+                      border: `2px solid ${isSelected ? ORANGE : 'rgba(255,255,255,0.07)'}`,
+                      borderRadius: 14,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'left',
+                      width: '100%',
+                    }}
+                  >
+                    {/* Radio */}
+                    <div style={{
+                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                      border: `2px solid ${isSelected ? ORANGE : 'rgba(255,255,255,0.2)'}`,
+                      background: isSelected ? ORANGE : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s',
+                    }}>
+                      {isSelected && <div style={{ width: 8, height: 8, borderRadius: '50%', background: WHITE }} />}
+                    </div>
+
+                    {/* Emoji */}
+                    <span style={{ fontSize: 20, flexShrink: 0 }}>{domain.emoji}</span>
+
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ color: isSelected ? WHITE : MUTED, fontWeight: 700, fontSize: 15, fontFamily: 'monospace' }}>
+                          {selectedCompany.slug}.
+                        </span>
+                        <span style={{ color: isSelected ? ORANGE : 'rgba(255,255,255,0.4)', fontWeight: 800, fontSize: 16, fontFamily: 'monospace' }}>
+                          {domain.label}
+                        </span>
+                      </div>
+                      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, margin: '2px 0 0', fontWeight: 500 }}>
+                        {domain.desc}
+                      </p>
+                    </div>
+
+                    {/* Badge padrão */}
+                    {domain.value === 'minhai.app' && (
+                      <span style={{ background: 'rgba(249,115,22,0.15)', border: `1px solid rgba(249,115,22,0.3)`, color: ORANGE, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
+                        Padrão
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px', marginBottom: 28 }}>
-              <p style={{ color: MUTED, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Preview do seu app</p>
-              <div style={{ background: DARK, borderRadius: 12, padding: '16px', border: `1px solid ${BORDER}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  {logoPreview
-                    ? (
-                      <div style={{
-                        width: 32, height: 32,
-                        borderRadius: 8,
-                        overflow: 'hidden',
-                        background: 'rgba(255,255,255,0.04)',
-                        border: `1px solid rgba(255,255,255,0.1)`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        flexShrink: 0,
-                      }}>
-                        <img src={logoPreview} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                      </div>
-                    )
-                    : (
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: themeColor + '33', border: `1px solid ${themeColor}66`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="14" height="14" fill="none" stroke={themeColor} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                      </div>
-                    )
-                  }
-                  <div>
-                    <p style={{ color: WHITE, fontWeight: 700, fontSize: 13 }}>{selectedCompany.name}</p>
-                    <p style={{ color: MUTED, fontSize: 11 }}>Assistente IA</p>
-                  </div>
-                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: GREEN }} />
-                    <span style={{ color: MUTED, fontSize: 10 }}>Online</span>
-                  </div>
-                </div>
-                <div style={{ height: 2, background: `linear-gradient(90deg, ${themeColor}, transparent)`, borderRadius: 2, marginBottom: 10 }} />
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <div style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.07)', flex: 3 }} />
-                  <div style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.04)', flex: 2 }} />
-                </div>
+            {/* Preview do endereço final */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER}`, borderRadius: 14, padding: '16px 20px', marginBottom: 28 }}>
+              <p style={{ color: MUTED, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                {selectedDomainInfo.emoji} Endereço final do seu WebApp:
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 16px' }}>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 15, fontFamily: 'monospace' }}>https://</span>
+                <span style={{ color: WHITE, fontWeight: 800, fontSize: 17, fontFamily: 'monospace' }}>{selectedCompany.slug}</span>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 15, fontFamily: 'monospace' }}>.</span>
+                <span style={{ color: ORANGE, fontWeight: 800, fontSize: 17, fontFamily: 'monospace' }}>{webappDomain}</span>
               </div>
             </div>
 
@@ -582,7 +572,7 @@ export default function WebAppPage() {
           </div>
         )}
 
-        {/* ── PASSO 3 ── */}
+        {/* ── PASSO 3: Publicar ─────────────────────────────────────────────── */}
         {step === 3 && !published && selectedCompany && (
           <div style={{ padding: '36px 36px 32px' }}>
             <h2 style={{ color: WHITE, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Tudo pronto!</h2>
@@ -590,15 +580,36 @@ export default function WebAppPage() {
 
             <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${BORDER}`, borderRadius: 16, overflow: 'hidden', marginBottom: 28 }}>
               {[
-                { label: 'Assistente', value: selectedCompany.name, icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> },
-                { label: 'Endereço', value: `${selectedCompany.slug}.${WEBAPP_DOMAIN}`, icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg> },
-                { label: 'Logo', value: logoFile ? 'Logo 512×512 (PNG)' : logoPreview ? 'Logo atual mantido' : 'Sem logo (padrão)', icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
-                { label: 'Cor', value: THEME_COLORS.find(c => c.value === themeColor)?.label || themeColor, icon: <div style={{ width: 16, height: 16, borderRadius: '50%', background: themeColor }} /> },
-              ].map((row, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderBottom: i < 3 ? `1px solid ${BORDER}` : 'none' }}>
+                {
+                  label: 'Assistente',
+                  value: selectedCompany.name,
+                  icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
+                },
+                {
+                  label: 'Endereço',
+                  value: `${selectedCompany.slug}.${webappDomain}`,
+                  icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>,
+                },
+                {
+                  label: 'Logo',
+                  value: logoFile ? 'Logo 512×512 (PNG)' : logoPreview ? 'Logo atual mantido' : 'Sem logo (padrão)',
+                  icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+                },
+                {
+                  label: 'Cor',
+                  value: THEME_COLORS.find(c => c.value === themeColor)?.label || themeColor,
+                  icon: <div style={{ width: 16, height: 16, borderRadius: '50%', background: themeColor }} />,
+                },
+                {
+                  label: 'Domínio',
+                  value: `${selectedDomainInfo.emoji} ${selectedDomainInfo.label} — ${selectedDomainInfo.desc}`,
+                  icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" /></svg>,
+                },
+              ].map((row, i, arr) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderBottom: i < arr.length - 1 ? `1px solid ${BORDER}` : 'none' }}>
                   <div style={{ flexShrink: 0 }}>{row.icon}</div>
                   <span style={{ color: MUTED, fontSize: 13, flex: 1 }}>{row.label}</span>
-                  <span style={{ color: WHITE, fontSize: 14, fontWeight: 600, textAlign: 'right', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.value}</span>
+                  <span style={{ color: WHITE, fontSize: 14, fontWeight: 600, textAlign: 'right', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.value}</span>
                 </div>
               ))}
             </div>

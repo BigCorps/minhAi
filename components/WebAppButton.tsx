@@ -70,7 +70,7 @@ export function WebAppButton({ userId }: WebAppButtonProps) {
 
   if (state === 'active' && webappSlug) {
     return (
-      
+      <a
         href={`https://${webappSlug}.${webappDomain}`}
         target="_blank"
         rel="noopener noreferrer"
@@ -90,7 +90,7 @@ export function WebAppButton({ userId }: WebAppButtonProps) {
   }
 
   return (
-    
+    <a
       href="/dashboard/webapp"
       style={{ ...btnBase, background: 'linear-gradient(135deg, #f97316, #ea580c)', boxShadow: '0 2px 12px rgba(249,115,22,0.3)' }}
       onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}

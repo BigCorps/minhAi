@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { LandingAvatarFace } from './LandingAvatarFace';
 import { WordCarousel } from '@/components/landing/WordCarousel';
+import { DomainPreviewPicker } from '@/components/landing/DomainPreviewPicker';
 
 interface InicioSectionProps {
   theme?: 'dark' | 'light';
@@ -71,10 +72,14 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </span>
           </h1>
 
-          <p className={`text-sm sm:text-base md:text-lg max-w-lg mb-4 sm:mb-7 leading-relaxed transition-colors mx-auto ${isDark ? 'text-white/55' : 'text-gray-600'}`}>
+          {/* ← mb reduzido para dar espaço ao picker */}
+          <p className={`text-sm sm:text-base md:text-lg max-w-lg mb-3 sm:mb-4 leading-relaxed transition-colors mx-auto ${isDark ? 'text-white/55' : 'text-gray-600'}`}>
             Nunca mais perca venda por falta de atendimento.
             Configure em minutos, sem programar — e deixe a IA trabalhar, facilitando a gestão com seus clientes e funcionários, enquanto você descansa.
           </p>
+
+          {/* ← NOVO: picker de domínio */}
+          <DomainPreviewPicker isDark={isDark} />
 
           {/* CTAs */}
           <div className="flex flex-row items-center justify-center gap-2 sm:gap-4">

@@ -41,7 +41,6 @@ interface DetectorDeps {
   setActiveModal: (modal: ActiveModal | null) => void;
   activeFunctionContextRef: React.MutableRefObject<any>;
   fromGroq?: boolean;
-  sessionToken?: string | null; 
 }
 
 // ── Helper: parsear view/data do transcript de agenda ────────
@@ -111,7 +110,6 @@ export async function detectVoiceCommand(
     setActiveModal,
     activeFunctionContextRef,
     fromGroq,
-    sessionToken,
   } = deps;
 
   const correctedTranscript = correctTranscriptionErrors(transcript);
@@ -737,7 +735,6 @@ export async function detectVoiceCommand(
               setIsProcessing,
               sessionId,
               setActiveModal,
-              sessionToken: sessionToken ?? null, 
             });
           } else {
             if (result.speechText) await playText(result.speechText);
@@ -766,7 +763,6 @@ export async function detectVoiceCommand(
             setIsProcessing,
             sessionId,
             setActiveModal,
-            sessionToken: sessionToken ?? null, 
           });
         } else {
           if (result.speechText) await playText(result.speechText);

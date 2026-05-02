@@ -102,12 +102,17 @@ export default function ClienteDashboard({ profile, company, theme }: ClienteDas
     }
   }
 
-  function handleFazerPedido() {
+function handleFazerPedido() {
+  const MINHAI_DOMAINS = [
+    '.minhai.app', '.minhai.com.br',
+    '.minhaia.app', '.nossaia.app', '.suaia.app',
+  ];
   const isSubdomain =
     typeof window !== 'undefined' &&
-    (window.location.hostname.endsWith('.minhai.com.br') ||
-     window.location.hostname.endsWith('.minhai.app')) &&
-    !window.location.hostname.startsWith('www.');
+    MINHAI_DOMAINS.some(d =>
+      window.location.hostname.endsWith(d) &&
+      !window.location.hostname.startsWith('www.')
+    );
 
   if (isSubdomain) {
     router.push('/vendas');

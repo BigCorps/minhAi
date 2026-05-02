@@ -142,7 +142,6 @@ const TOTAL_RECURSO_SLIDES = RECURSO_IMAGE_SLIDES.length;
 // FUNÇÕES — 4 páginas com copy orientado a benefício
 // ============================================================
 const FUNCAO_PAGES = [
-  // Página 1 — VENDER MAIS
   {
     id: 'funcao-page-1',
     cards: [
@@ -169,7 +168,6 @@ const FUNCAO_PAGES = [
       },
     ],
   },
-  // Página 2 — ATENDER MAIS
   {
     id: 'funcao-page-2',
     cards: [
@@ -203,7 +201,6 @@ const FUNCAO_PAGES = [
       },
     ],
   },
-  // Página 3 — CONHECER MAIS
   {
     id: 'funcao-page-3',
     cards: [
@@ -230,7 +227,6 @@ const FUNCAO_PAGES = [
       },
     ],
   },
-  // Página 4 — OPERAR MAIS
   {
     id: 'funcao-page-4',
     cards: [
@@ -269,7 +265,7 @@ const FUNCAO_PAGES = [
 const TOTAL_FUNCAO_PAGES = FUNCAO_PAGES.length;
 
 // ============================================================
-// IDs — inclui novas seções
+// IDs
 // ============================================================
 const ALL_SECTION_IDS = [
   'inicio',
@@ -288,12 +284,34 @@ const NAV_SECTIONS = ['inicio', 'recursos', 'funcoes', 'precos', 'contato'];
 function getSectionNavGroup(sectionId: string): string {
   if (sectionId.startsWith('funcao-')) return 'funcoes';
   if (sectionId.startsWith('recurso-')) return 'recursos';
-  // Seções novas — mapeiam para o nav item mais próximo contextualmente
   if (sectionId === 'provas-sociais') return 'inicio';
   if (sectionId === 'como-funciona') return 'recursos';
   if (sectionId === 'depoimentos') return 'precos';
   if (sectionId === 'faq') return 'precos';
   return sectionId;
+}
+
+// ============================================================
+// HOOK — altura real da viewport
+// Resolve o problema central: dvh/svh não exclui UI do browser
+// no Android. Calculamos window.innerHeight que já desconta tudo.
+// ============================================================
+function useRealVh() {
+  useEffect(() => {
+    function update() {
+      // 1px = 1% da altura real disponível
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--real-vh', `${vh}px`);
+    }
+    update();
+    window.addEventListener('resize', update);
+    // orientationchange necessário para iOS
+    window.addEventListener('orientationchange', () => setTimeout(update, 200));
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+    };
+  }, []);
 }
 
 // ============================================================
@@ -305,20 +323,14 @@ export default function LandingPage() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const isScrollingRef = useRef(false);
 
+  // Aplica --real-vh globalmente
+  useRealVh();
+
   const activeNavItem = getSectionNavGroup(activeSectionId);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: light)');
     if (mq.matches) setTheme('light');
-  }, []);
-
-  useEffect(() => {
-    function setVh() {
-      document.documentElement.style.setProperty('--dvh', `${window.innerHeight * 0.01}px`);
-    }
-    setVh();
-    window.addEventListener('resize', setVh);
-    return () => window.removeEventListener('resize', setVh);
   }, []);
 
   useEffect(() => {
@@ -399,9 +411,19 @@ export default function LandingPage() {
   const canGoRight = currentAllIndex < ALL_SECTION_IDS.length - 1;
 
   return (
-    <div className={`relative h-dvh-safe w-screen overflow-hidden transition-colors duration-500 ${
-      isDark ? 'bg-slate-950 text-white' : 'bg-white text-gray-900'
-    }`}>
+    /*
+      ALTURA DO WRAPPER:
+      Usa calc(var(--real-vh, 1vh) * 100) como fallback progressivo:
+      1. --real-vh é setado pelo useRealVh() via JS no primeiro render
+      2. Enquanto JS não rodou: 100dvh (melhor fallback moderno)
+      3. Fallback final para browsers antigos: 100vh
+    */
+    <div
+      className={`relative w-screen overflow-hidden transition-colors duration-500 ${
+        isDark ? 'bg-slate-950 text-white' : 'bg-white text-gray-900'
+      }`}
+      style={{ height: 'calc(var(--real-vh, 1svh) * 100)' }}
+    >
 
       <Header
         activeSection={activeNavItem}
@@ -412,27 +434,53 @@ export default function LandingPage() {
 
       <main
         ref={scrollContainerRef}
-        className="flex w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className="flex w-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth"
+        /*
+          Altura do main = altura real disponível.
+          Não usamos h-full aqui pois o wrapper pai
+          pode ter height via style (não via classe),
+          e h-full em alguns browsers não propaga style height.
+          Usamos o mesmo calc diretamente.
+        */
+        style={{
+          height: 'calc(var(--real-vh, 1svh) * 100)',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}
         aria-label="Seções da landing page minhAi"
       >
-        <style jsx>{`main::-webkit-scrollbar { display: none; }`}</style>
-        <style jsx global>{`
-          .h-dvh-safe { height: 100vh; height: 100dvh; }
-        `}</style>
+        <style>{`main::-webkit-scrollbar { display: none; }`}</style>
+
+        {/* SEÇÕES — cada uma ocupa exatamente a viewport real */}
+        {/* A classe section-full é definida no globals.css abaixo */}
 
         {/* INÍCIO */}
-        <section id="inicio" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Início">
+        <section
+          id="inicio"
+          className="flex-shrink-0 snap-start snap-always"
+          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
+          aria-label="Início"
+        >
           <InicioSection theme={theme} />
         </section>
 
-        {/* PROVAS SOCIAIS — nova */}
-        <section id="provas-sociais" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Quem usa o minhAi">
+        {/* PROVAS SOCIAIS */}
+        <section
+          id="provas-sociais"
+          className="flex-shrink-0 snap-start snap-always"
+          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
+          aria-label="Quem usa o minhAi"
+        >
           <ProvasSociaisSection theme={theme} />
         </section>
 
-        {/* COMO FUNCIONA — nova */}
-        <section id="como-funciona" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Como funciona o minhAi">
+        {/* COMO FUNCIONA */}
+        <section
+          id="como-funciona"
+          className="flex-shrink-0 snap-start snap-always"
+          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
+          aria-label="Como funciona o minhAi"
+        >
           <ComoFuncionaSection theme={theme} />
         </section>
 
@@ -441,7 +489,8 @@ export default function LandingPage() {
           <section
             key={slide.id}
             id={slide.id}
-            className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always"
+            className="flex-shrink-0 snap-start snap-always"
+            style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
             aria-label={slide.title || slide.label || 'Recurso'}
           >
             <RecursoImageSlide
@@ -459,13 +508,23 @@ export default function LandingPage() {
           </section>
         ))}
 
-        {/* RECURSOS — slide 4: extras (WebApp, Indicação, PIX) */}
-        <section id="recurso-extras" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Vantagens extras">
+        {/* RECURSOS — slide 4: extras */}
+        <section
+          id="recurso-extras"
+          className="flex-shrink-0 snap-start snap-always"
+          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
+          aria-label="Vantagens extras"
+        >
           <VantagensSlide theme={theme} currentIndex={3} totalCount={TOTAL_RECURSO_SLIDES} />
         </section>
 
         {/* RECURSOS — slide 5: 4 cards */}
-        <section id="recurso-cards" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Diferenciais">
+        <section
+          id="recurso-cards"
+          className="flex-shrink-0 snap-start snap-always"
+          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
+          aria-label="Diferenciais"
+        >
           <RecursoCardsSlide theme={theme} recursos={RECURSO_CARDS} currentIndex={4} totalCount={TOTAL_RECURSO_SLIDES} />
         </section>
 
@@ -474,7 +533,8 @@ export default function LandingPage() {
           <section
             key={page.id}
             id={page.id}
-            className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always"
+            className="flex-shrink-0 snap-start snap-always"
+            style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
             aria-label={`Funções — página ${index + 1}`}
           >
             <FuncaoCardsSlide
@@ -486,23 +546,43 @@ export default function LandingPage() {
           </section>
         ))}
 
-        {/* DEPOIMENTOS — nova */}
-        <section id="depoimentos" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Depoimentos de clientes">
+        {/* DEPOIMENTOS */}
+        <section
+          id="depoimentos"
+          className="flex-shrink-0 snap-start snap-always"
+          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
+          aria-label="Depoimentos de clientes"
+        >
           <DepoimentosSection theme={theme} />
         </section>
 
-        {/* FAQ — nova */}
-        <section id="faq" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Perguntas frequentes">
+        {/* FAQ */}
+        <section
+          id="faq"
+          className="flex-shrink-0 snap-start snap-always"
+          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
+          aria-label="Perguntas frequentes"
+        >
           <FAQSection theme={theme} />
         </section>
 
         {/* PREÇOS */}
-        <section id="precos" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Planos e preços">
+        <section
+          id="precos"
+          className="flex-shrink-0 snap-start snap-always"
+          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
+          aria-label="Planos e preços"
+        >
           <PrecosSection theme={theme} />
         </section>
 
         {/* CONTATO */}
-        <section id="contato" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Contato e CTA final">
+        <section
+          id="contato"
+          className="flex-shrink-0 snap-start snap-always"
+          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
+          aria-label="Contato e CTA final"
+        >
           <ContatoSection theme={theme} />
         </section>
       </main>
@@ -520,7 +600,7 @@ export default function LandingPage() {
         </svg>
       </button>
 
-<LandingDemoFooter theme={theme} />
+      <LandingDemoFooter theme={theme} />
 
       {/* SETA DIREITA */}
       <button
@@ -534,7 +614,6 @@ export default function LandingPage() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </button>
-
 
       {/* INDICADOR DE PROGRESSO */}
       <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">

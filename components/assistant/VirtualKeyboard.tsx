@@ -162,21 +162,21 @@ export default function VirtualKeyboard({
   return (
     <div
       data-virtual-keyboard
-      style={{
-        background: bg,
-        borderTop: `1px solid ${borderColor}`,
-        padding: '10px 8px 12px',
-        // ✅ FIX: garante largura total independente do tema
-        width: '100%',
-        boxSizing: 'border-box',
-        // ✅ FIX: remove qualquer posicionamento relativo que causava
-        //         o teclado "pequeno" no dark; o pai é quem posiciona
-        position: 'static',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-        // ✅ FIX: evita que o conteúdo transborde no dark mode
-        overflow: 'hidden',
-      }}
+style={{
+  background: bg,
+  borderTop: `1px solid ${borderColor}`,
+  padding: '10px 8px 12px',
+  width: '100vw',
+  maxWidth: '100%',
+  boxSizing: 'border-box',
+  position: 'fixed',
+  bottom: 0,
+  left: 0,
+  zIndex: 10001,
+  userSelect: 'none',
+  WebkitUserSelect: 'none',
+  overflow: 'hidden',
+}}
       onMouseDown={(e) => e.preventDefault()}
       onTouchStart={(e) => e.preventDefault()}
     >

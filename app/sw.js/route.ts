@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
-  const slug = hostname.replace('.minhai.com.br', '');
+const MINHAI_DOMAINS = [
+    '.minhai.app', '.minhai.com.br',
+    '.minhaia.app', '.nossaia.app', '.suaia.app',
+  ];
+  const domain = MINHAI_DOMAINS.find(d => hostname.endsWith(d)) ?? '.minhai.app';
+  const slug = hostname.replace(domain, '');
 
   const swContent = `
 const CACHE_NAME = 'minhai-${slug}-v1';

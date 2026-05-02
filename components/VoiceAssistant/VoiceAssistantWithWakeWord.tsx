@@ -126,7 +126,12 @@ export function VoiceAssistantWithWakeWord({
 
 useEffect(() => {
   const handleKeyboardOpen = () => setIsKeyboardOpen(true);
-  const handleKeyboardClose = () => setIsKeyboardOpen(false);
+  
+const handleKeyboardClose = () => {
+  setIsKeyboardOpen(false);
+  setShowVirtualKeyboard(false); // ✅ garante fechamento ao receber evento externo
+};
+  
   window.addEventListener('eai:virtualKeyboardOpen', handleKeyboardOpen);
   window.addEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
   return () => {
@@ -134,15 +139,6 @@ useEffect(() => {
     window.removeEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
   };
 }, []);
-  
-// ✅ NOVO: Disparar eventos para componentes externos (footer, carrossel)
-useEffect(() => {
-  if (showVirtualKeyboard) {
-    window.dispatchEvent(new CustomEvent('eai:virtualKeyboardOpen'));
-  } else {
-    window.dispatchEvent(new CustomEvent('eai:virtualKeyboardClose'));
-  }
-}, [showVirtualKeyboard]);
 
   // -- States de Destaque de Função (Inatividade) --
   const [showFeatureHighlight, setShowFeatureHighlight] = useState(false);

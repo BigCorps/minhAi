@@ -75,6 +75,13 @@ export default function GerarSenhaDisplay({
   const colors = theme === 'dark' ? DARK : LIGHT;
   const { companyId, slug } = data;
 
+// 🔍 DEBUG Props
+  console.log('🎟️ GerarSenhaDisplay montado:', {
+    printOnQueue,
+    hasActivePlan,
+    companyId,
+  });
+
   const [loading, setLoading] = useState(true);
   const [senha, setSenha] = useState<FilaSenha | null>(null);
   const [posicao, setPosicao] = useState(0);

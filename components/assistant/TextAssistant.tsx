@@ -46,7 +46,7 @@ export default function TextAssistant({
   // ✅ Detectar modo kiosk do sessionStorage
   useEffect(() => {
     const checkKiosk = () => {
-      const kioskData = sessionStorage.getItem('eai:kioskMode');
+      const kioskData = sessionStorage.getItem('eai:kioskSession');
       if (kioskData) {
         try {
           const { active } = JSON.parse(kioskData);
@@ -349,7 +349,7 @@ const handleSendMessage = async (overrideText?: string) => {
           isProcessing={busy}
           theme={theme}
           showVirtualKeyboard={showVirtualKeyboard}
-          onVirtualKeyboardToggle={isKioskMode ? undefined : () => setShowVirtualKeyboard(v => !v)}
+          onVirtualKeyboardToggle={isKioskMode ? () => setShowVirtualKeyboard(v => !v) : undefined}
           autoOpenKeyboard={isKioskMode}
         />
       </div>

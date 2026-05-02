@@ -244,6 +244,12 @@ useEffect(() => {
           .eq('user_id', company.user_id)
           .maybeSingle();
         
+        console.log('🔍 Raw credits data:', {
+          credits,
+          user_id: company.user_id,
+          has_active_plan: credits?.has_active_plan,
+          plan_expires_at: credits?.plan_expires_at,
+        });
         // ✅ PASSO 3: Verificar se plano está ativo e não expirado
         const active =
           credits?.has_active_plan === true &&

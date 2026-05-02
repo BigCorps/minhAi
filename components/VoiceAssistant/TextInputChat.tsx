@@ -228,7 +228,7 @@ export default function TextInputChat({
 
       {/* Teclado virtual — fixo no bottom, acima de tudo */}
       {showVirtualKeyboard && (
-        <div className="fixed bottom-0 left-0 right-0 z-[9999]">
+        <div className="fixed bottom-0 left-0 right-0 z-[10001]">
           <VirtualKeyboard
             onKey={handleVirtualKey}
             onBackspace={handleVirtualBackspace}

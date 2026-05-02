@@ -220,11 +220,14 @@ useEffect(() => {
       try {
         const supabase = createClient();
         
-        // ✅ Buscar usuário autenticado
-        const { data: { user } } = await supabase.auth.getUser();
+        // ✅ PASSO 1: Buscar a empresa e o user_id do dono
+        const { data: company } = await supabase
+          .from('companies')
+          .select('print_on_purchase, print_on_queue, print_on_payment, user_id')
+          .eq('id', companyId)
+          .maybeSingle();
         
-        if (!user) {
-          // Sem usuário logado = sem plano ativo
+        if (!company) {
           setPrintConfig({
             print_on_purchase: false,
             print_on_queue: false,
@@ -234,26 +237,32 @@ useEffect(() => {
           return;
         }
         
-        // ✅ Buscar configurações da empresa E plano do usuário
-        const [{ data: company }, { data: credits }] = await Promise.all([
-          supabase.from('companies').select('print_on_purchase, print_on_queue, print_on_payment').eq('id', companyId).maybeSingle(),
-          supabase.from('user_credits').select('has_active_plan, plan_expires_at').eq('user_id', user.id).maybeSingle(),
-        ]);
+        // ✅ PASSO 2: Buscar plano do DONO da empresa (company.user_id)
+        const { data: credits } = await supabase
+          .from('user_credits')
+          .select('has_active_plan, plan_expires_at')
+          .eq('user_id', company.user_id)
+          .maybeSingle();
         
-        // ✅ Verificar se plano está ativo e não expirado
+        // ✅ PASSO 3: Verificar se plano está ativo e não expirado
         const active =
           credits?.has_active_plan === true &&
           credits?.plan_expires_at != null &&
           new Date(credits.plan_expires_at) > new Date();
         
         setPrintConfig({
-          print_on_purchase: company?.print_on_purchase ?? false,
-          print_on_queue:    company?.print_on_queue    ?? false,
-          print_on_payment:  company?.print_on_payment  ?? false,
+          print_on_purchase: company.print_on_purchase ?? false,
+          print_on_queue:    company.print_on_queue    ?? false,
+          print_on_payment:  company.print_on_payment  ?? false,
           hasActivePlan: active,
         });
         
-        console.log('🖨️ Print Config:', { userId: user.id, hasActivePlan: active });
+        console.log('🖨️ Print Config:', {
+          companyId,
+          ownerId: company.user_id,
+          hasActivePlan: active,
+          planExpiresAt: credits?.plan_expires_at,
+        });
       } catch (err) {
         console.error('❌ Erro ao carregar printConfig:', err);
         setPrintConfig({

@@ -1,21 +1,7 @@
 'use client';
 
-import {
-  QrCode,
-  CreditCard,
-  Play,
-  Radio,
-  Search,
-  MapPin,
-  CalendarDays,
-  Brain,
-  Wrench,
-  BadgeCheck,
-  FolderOpen,
-  ConciergeBell,
-  ShoppingCart,
-  Camera,
-} from 'lucide-react';
+// components/landing/FuncaoCardsSlide.tsx
+
 import { ReactNode } from 'react';
 
 interface FuncaoCard {
@@ -34,36 +20,12 @@ interface FuncaoCardsSlideProps {
 
 const colorStyles = {
   green: {
-    dark: {
-      border: 'border-green-500/15',
-      cardBg: 'bg-green-500/5',
-      iconBg: 'bg-green-500/15',
-      iconText: 'text-green-400',
-      titleText: 'text-green-400',
-    },
-    light: {
-      border: 'border-green-200',
-      cardBg: 'bg-green-50',
-      iconBg: 'bg-green-100',
-      iconText: 'text-green-600',
-      titleText: 'text-green-700',
-    },
+    dark:  { border: 'border-green-500/15', cardBg: 'bg-green-500/5',  iconBg: 'bg-green-500/15',  iconText: 'text-green-400', titleText: 'text-green-400' },
+    light: { border: 'border-green-200',    cardBg: 'bg-green-50',     iconBg: 'bg-green-100',     iconText: 'text-green-600', titleText: 'text-green-700' },
   },
   blue: {
-    dark: {
-      border: 'border-blue-500/15',
-      cardBg: 'bg-blue-500/5',
-      iconBg: 'bg-blue-500/15',
-      iconText: 'text-blue-400',
-      titleText: 'text-blue-400',
-    },
-    light: {
-      border: 'border-blue-200',
-      cardBg: 'bg-blue-50',
-      iconBg: 'bg-blue-100',
-      iconText: 'text-blue-600',
-      titleText: 'text-blue-700',
-    },
+    dark:  { border: 'border-blue-500/15',  cardBg: 'bg-blue-500/5',   iconBg: 'bg-blue-500/15',   iconText: 'text-blue-400',  titleText: 'text-blue-400' },
+    light: { border: 'border-blue-200',     cardBg: 'bg-blue-50',      iconBg: 'bg-blue-100',      iconText: 'text-blue-600',  titleText: 'text-blue-700' },
   },
 };
 
@@ -81,58 +43,86 @@ export default function FuncaoCardsSlide({
     : glowColor === 'green' ? 'bg-green-200/20' : 'bg-blue-200/20';
 
   const count = cards.length;
-  const gridClass =
-    count === 3
-      ? 'grid-cols-1 sm:grid-cols-3'
-      : 'grid-cols-1 sm:grid-cols-2';
+  const gridClass = count === 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2';
 
   return (
     <div
-      className={`relative flex flex-col h-full w-full overflow-hidden transition-colors duration-500 ${
-        isDark
+      className={`
+        relative flex flex-col items-center justify-center
+        h-full w-full overflow-hidden
+        transition-colors duration-500
+        ${isDark
           ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
           : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
-      }`}
+        }
+      `}
     >
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div className={`absolute top-1/3 right-1/4 w-[45%] h-[45%] rounded-full blur-[130px] ${glowClass}`} />
       </div>
 
-      <div className="relative z-10 flex flex-col items-center justify-center h-full px-4 sm:px-8 lg:px-12 pt-20 pb-6 md:pt-24 md:pb-8 gap-4 md:gap-5">
+      <div
+        className={`
+          relative z-10 w-full max-w-4xl mx-auto
+          flex flex-col items-center
+          px-4 sm:px-8 lg:px-12
+          pt-[68px] pb-[52px] md:pt-6 md:pb-6
+          gap-2.5
+          [@media(min-height:720px)_and_(max-width:767px)]:gap-4
+          sm:gap-4 md:gap-5
+        `}
+      >
 
-        {/* Header */}
+        {/* ── Header ─────────────────────────────────────────── */}
         <div className="text-center">
-          <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
+          <p className={`text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-1 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
             Funções — Página {currentIndex + 1} de {totalCount}
           </p>
           <h2
-            style={{ fontFamily: "'Nunito', sans-serif" }}
-            className={`text-lg sm:text-xl md:text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
+            className={`
+              font-bold
+              text-base
+              [@media(min-height:680px)_and_(max-width:767px)]:text-lg
+              sm:text-xl md:text-2xl
+              ${isDark ? 'text-white' : 'text-gray-900'}
+            `}
           >
             O que o seu funcionário IA pode fazer
           </h2>
         </div>
 
-        {/* Cards */}
-        <div className={`w-full max-w-4xl grid ${gridClass} gap-3 md:gap-4 overflow-y-auto md:overflow-visible`}>
+        {/* ── Cards ──────────────────────────────────────────── */}
+        <div className={`w-full grid ${gridClass} gap-2 sm:gap-3 md:gap-4`}>
           {cards.map((card, i) => {
-            const s = colorStyles[card.color][theme];
+            const s = colorStyles[card.color][isDark ? 'dark' : 'light'];
             return (
               <div
                 key={i}
-                className={`flex flex-col gap-3 p-4 md:p-5 rounded-2xl border transition-all duration-300 ease-out hover:scale-[1.03] cursor-default ${s.cardBg} ${s.border}`}
+                className={`
+                  flex flex-col gap-2 sm:gap-3
+                  p-3.5 sm:p-5 rounded-2xl border
+                  transition-all duration-300 hover:scale-[1.02] cursor-default
+                  ${s.cardBg} ${s.border}
+                `}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${s.iconBg}`}>
-                    <div className={`${s.iconText} [&>svg]:w-5 [&>svg]:h-5`}>
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${s.iconBg}`}>
+                    <div className={`${s.iconText} [&>svg]:w-4 [&>svg]:h-4 sm:[&>svg]:w-5 sm:[&>svg]:h-5`}>
                       {card.icon}
                     </div>
                   </div>
-                  <h3 className={`text-sm md:text-base font-bold ${s.titleText}`}>
+                  <h3 className={`text-xs sm:text-sm md:text-base font-bold ${s.titleText}`}>
                     {card.title}
                   </h3>
                 </div>
-                <p className={`text-xs md:text-sm leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                {/* Descrição some em telas muito baixas */}
+                <p
+                  className={`
+                    text-[11px] sm:text-xs md:text-sm leading-relaxed
+                    [@media(max-height:600px)_and_(max-width:767px)]:hidden
+                    ${isDark ? 'text-white/50' : 'text-gray-500'}
+                  `}
+                >
                   {card.description}
                 </p>
               </div>
@@ -140,7 +130,7 @@ export default function FuncaoCardsSlide({
           })}
         </div>
 
-        {/* Progress dots */}
+        {/* ── Progress dots ──────────────────────────────────── */}
         <div className="flex items-center gap-2">
           {Array.from({ length: totalCount }).map((_, i) => (
             <div
@@ -154,7 +144,14 @@ export default function FuncaoCardsSlide({
           ))}
         </div>
 
-        <p className={`text-xs ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
+        {/* Hint — some em telas baixas */}
+        <p
+          className={`
+            text-[10px] sm:text-xs
+            [@media(max-height:660px)_and_(max-width:767px)]:hidden
+            ${isDark ? 'text-white/20' : 'text-gray-300'}
+          `}
+        >
           {currentIndex < totalCount - 1 ? 'Role para ver mais funções →' : 'Próximo: Informações →'}
         </p>
       </div>

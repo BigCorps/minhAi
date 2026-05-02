@@ -12,7 +12,7 @@ const RESERVED_SUBDOMAINS = [
   'www', 'app', 'api', 'pay', 'admin', 'mail', 'smtp',
   'dashboard', 'login', 'cadastro',
   'precos', 'sobre', 'contato', 'docs', 'blog',
-  'para', 'suporte',
+  'para',
 ];
 
 const CRAWLER_PASSTHROUGH = ['/robots.txt', '/sitemap.xml', '/sitemap.ts'];

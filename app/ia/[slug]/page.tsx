@@ -258,7 +258,7 @@ export async function generateMetadata({ params }: PageProps) {
 
   const { data: company } = await supabase
     .from('companies')
-    .select('name, logo_url')
+    .select('name, logo_url, webapp_logo_url')
     .eq('slug', slug)
     .single();
 
@@ -266,16 +266,20 @@ export async function generateMetadata({ params }: PageProps) {
     return { title: 'minhAi - Uma IA pra chamar de sua!' };
   }
 
+  // Priorizar webapp_logo_url (ícone do PWA) sobre logo_url (header do assistente)
+  const iconUrl = company.webapp_logo_url || null;
+
   return {
     title: `${company.name} - minhAi`,
     description: `Converse com o assistente IA da ${company.name}`,
-    icons: company.logo_url
-      ? { icon: company.logo_url, apple: company.logo_url }
+    // Só define icons se tiver webapp_logo_url — evita URLs externas problemáticas
+    icons: iconUrl
+      ? { icon: iconUrl, apple: iconUrl }
       : undefined,
     openGraph: {
       title: `${company.name} - Assistente IA`,
       description: `Converse com o assistente IA da ${company.name}`,
-      images: company.logo_url ? [{ url: company.logo_url }] : [],
+      images: iconUrl ? [{ url: iconUrl }] : [],
     },
   };
 }

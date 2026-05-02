@@ -19,67 +19,59 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
 
   return (
     <div
-      className={`relative flex items-center justify-center h-full w-full overflow-hidden transition-colors duration-500 ${
-        isDark
+      className={`
+        relative flex flex-col items-center justify-center
+        h-full w-full overflow-hidden
+        transition-colors duration-500
+        ${isDark
           ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
           : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
-      }`}
+        }
+      `}
     >
-      {/* Fundo decorativo */}
+      {/* Fundo decorativo — pointer-events:none para nunca bloquear swipe */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div className={`absolute -top-1/4 -right-1/4 w-[60%] h-[60%] rounded-full blur-[120px] ${isDark ? 'bg-blue-500/10' : 'bg-blue-200/30'}`} />
         <div className={`absolute -bottom-1/4 -left-1/4 w-[50%] h-[50%] rounded-full blur-[100px] ${isDark ? 'bg-green-500/8' : 'bg-green-200/20'}`} />
       </div>
 
       {/*
-        ESTRATÉGIA DE LAYOUT:
-        - Mobile portrait (<md): coluna com avatar acima, texto abaixo
-          pt-16 = compensa header (h-16 = 64px)
-          pb-10 = compensa footer de dots (bottom-12 = 48px)
-          overflow-y-auto garante scroll se ainda sobrar conteúdo
-        - Desktop (md+): linha lado a lado, sem scroll necessário
+        REGRA FUNDAMENTAL:
+        - ZERO overflow neste div ou em qualquer filho
+        - O conteúdo encolhe/some via media queries de altura (max-height)
+        - pt/pb compensam header (64px mobile) e dots (48px) sem criar scroll
+        - O swipe horizontal fica 100% no <main> snap-container pai
       */}
       <div
         className={`
           relative z-10
           flex flex-col md:flex-row
-          items-center justify-between
+          items-center justify-center md:justify-between
           w-full max-w-7xl mx-auto
           px-5 sm:px-8 lg:px-12
-          pt-[72px] pb-[56px]
-          md:pt-0 md:pb-0
-          overflow-y-auto md:overflow-visible
-          h-full md:h-auto
-          gap-2 xs:gap-3 sm:gap-4 md:gap-16
+          pt-[68px] pb-[52px] md:pt-0 md:pb-0
+          gap-1
+          [@media(min-height:700px)_and_(max-width:767px)]:gap-3
+          md:gap-16
         `}
-        style={{ scrollbarWidth: 'none' }}
       >
-        <style>{`.inicio-inner::-webkit-scrollbar { display: none; }`}</style>
 
         {/* ── AVATAR ─────────────────────────────────────────── */}
-        {/*
-          Tamanhos responsivos por altura de tela:
-          - telas muito baixas (<600px): avatar some (hidden) → só texto
-          - telas baixas (600-750px): avatar pequeno, 28vw
-          - telas normais (750px+): tamanhos habituais
-          Usamos a classe utilitária do Tailwind para height breakpoints
-          via arbitrary variant [@media(max-height:...)]:
-        */}
         <div
           className={`
             flex-shrink-0 order-1 md:order-2
             flex items-center justify-center
-            [@media(max-height:560px)]:hidden
+            [@media(max-height:580px)_and_(max-width:767px)]:hidden
           `}
         >
           <div
             className={`
               relative transition-all duration-500
-              w-[34vw] h-[34vw]
-              [@media(max-height:700px)_and_(max-width:767px)]:w-[26vw]
-              [@media(max-height:700px)_and_(max-width:767px)]:h-[26vw]
-              [@media(max-height:620px)_and_(max-width:767px)]:w-[20vw]
-              [@media(max-height:620px)_and_(max-width:767px)]:h-[20vw]
+              w-[30vw] h-[30vw]
+              [@media(min-height:680px)_and_(max-width:767px)]:w-[36vw]
+              [@media(min-height:680px)_and_(max-width:767px)]:h-[36vw]
+              [@media(max-height:620px)_and_(max-width:767px)]:w-[22vw]
+              [@media(max-height:620px)_and_(max-width:767px)]:h-[22vw]
               sm:w-[32vw] sm:h-[32vw]
               md:w-80 md:h-80
               lg:w-[22rem] lg:h-[22rem]
@@ -91,14 +83,14 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
         </div>
 
         {/* ── TEXTO + CTAs ────────────────────────────────────── */}
-        <div className="flex-1 text-center order-2 md:order-1 max-w-xl w-full">
+        <div className="flex-1 text-center order-2 md:order-1 max-w-xl w-full min-w-0">
 
-          {/* Badge — oculto em telas muito baixas */}
+          {/* Badge */}
           <div
             className={`
               inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold
-              mb-2 sm:mb-3
-              [@media(max-height:620px)]:hidden
+              mb-1.5
+              [@media(max-height:640px)_and_(max-width:767px)]:hidden
               ${isDark
                 ? 'bg-green-500/10 text-green-400 border border-green-500/20'
                 : 'bg-green-100 text-green-700 border border-green-200'
@@ -109,14 +101,12 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             Mais de 100 funções para o seu negócio
           </div>
 
-          {/* Título — escala via clamp + media queries de altura */}
+          {/* Título */}
           <h1
             className={`
-              font-bold leading-[1.15] transition-colors
-              mb-2 sm:mb-3
-              [@media(max-height:680px)]:mb-1.5
-              text-xl
-              [@media(min-height:600px)]:text-2xl
+              font-bold leading-[1.15] transition-colors mb-1.5
+              text-[1.35rem]
+              [@media(min-height:680px)_and_(max-width:767px)]:text-[1.6rem]
               sm:text-4xl md:text-4xl lg:text-[2.75rem]
               ${isDark ? 'text-white' : 'text-gray-900'}
             `}
@@ -125,8 +115,8 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               <span
                 className={`
                   font-bold
-                  text-xl
-                  [@media(min-height:600px)]:text-2xl
+                  text-[1.35rem]
+                  [@media(min-height:680px)_and_(max-width:767px)]:text-[1.6rem]
                   sm:text-4xl md:text-5xl lg:text-5xl
                   ${isDark ? 'text-blue-400' : 'text-blue-600'}
                 `}
@@ -134,31 +124,23 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
                 Uma IA pra chamar de sua!
               </span>
             </span>
-
             <span className="block whitespace-nowrap">
-              A{' '}
-              <WordCarousel isDark={isDark} />
-              {' '}IA que
+              A{' '}<WordCarousel isDark={isDark} />{' '}IA que
             </span>
-
             <span className="block whitespace-nowrap">
               vende e atende{' '}
-              <span className={isDark ? 'text-green-400' : 'text-green-600'}>
-                24 horas.
-              </span>
+              <span className={isDark ? 'text-green-400' : 'text-green-600'}>24 horas.</span>
             </span>
           </h1>
 
-          {/* Parágrafo — oculto em telas muito baixas */}
+          {/* Parágrafo */}
           <p
             className={`
-              text-sm sm:text-base md:text-lg max-w-lg leading-relaxed transition-colors mx-auto
-              mb-2 sm:mb-3
-              [@media(max-height:640px)]:hidden
+              text-xs sm:text-base md:text-lg max-w-lg leading-relaxed transition-colors mx-auto
+              mb-1.5
+              [@media(max-height:660px)_and_(max-width:767px)]:hidden
+              ${isDark ? 'text-white/55' : 'text-gray-600'}
             `}
-            style={{
-              color: isDark ? 'rgba(255,255,255,0.55)' : 'rgb(75,85,99)',
-            }}
           >
             Nunca mais perca venda por falta de atendimento.
             Configure em minutos, sem programar — e deixe a IA trabalhar, facilitando a gestão com seus clientes e funcionários, enquanto você descansa.
@@ -190,12 +172,12 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </Link>
           </div>
 
-          {/* Mini destaques — oculto em telas muito baixas */}
+          {/* Mini destaques */}
           <div
             className={`
-              flex flex-wrap items-center justify-center gap-x-4 gap-y-2
-              mt-3 sm:mt-5
-              [@media(max-height:680px)]:hidden
+              flex flex-wrap items-center justify-center gap-x-4 gap-y-1
+              mt-2 sm:mt-5
+              [@media(max-height:700px)_and_(max-width:767px)]:hidden
             `}
           >
             {MINI_DESTAQUES.map((text, i) => (
@@ -203,16 +185,8 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
                 key={text}
                 className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}
               >
-                {i > 0 && (
-                  <span className={isDark ? 'text-white/15 mr-1' : 'text-gray-200 mr-1'}>·</span>
-                )}
-                <svg
-                  className={`w-3 h-3 flex-shrink-0 ${isDark ? 'text-green-400/70' : 'text-green-600/70'}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
+                {i > 0 && <span className={isDark ? 'text-white/15 mr-1' : 'text-gray-200 mr-1'}>·</span>}
+                <svg className={`w-3 h-3 flex-shrink-0 ${isDark ? 'text-green-400/70' : 'text-green-600/70'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                 </svg>
                 {text}

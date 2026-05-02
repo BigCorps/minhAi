@@ -223,7 +223,7 @@ useEffect(() => {
         // ✅ PASSO 1: Buscar a empresa e o user_id do dono
         const { data: company } = await supabase
           .from('companies')
-          .select('print_on_purchase, print_on_queue, print_on_payment, user_id')
+          .select('print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment, user_id')
           .eq('id', companyId)
           .maybeSingle();
         
@@ -250,6 +250,7 @@ useEffect(() => {
           has_active_plan: credits?.has_active_plan,
           plan_expires_at: credits?.plan_expires_at,
         });
+        
         // ✅ PASSO 3: Verificar se plano está ativo e não expirado
         const active =
           credits?.has_active_plan === true &&
@@ -257,9 +258,10 @@ useEffect(() => {
           new Date(credits.plan_expires_at) > new Date();
         
         setPrintConfig({
-          print_on_purchase: company.print_on_purchase ?? false,
-          print_on_queue:    company.print_on_queue    ?? false,
-          print_on_payment:  company.print_on_payment  ?? false,
+          // ✅ Converte print_auto_type_* para boolean
+          print_on_purchase: !!company.print_auto_type_purchase && company.print_auto_type_purchase !== 'none',
+          print_on_queue:    !!company.print_auto_type_queue    && company.print_auto_type_queue    !== 'none',
+          print_on_payment:  !!company.print_auto_type_payment  && company.print_auto_type_payment  !== 'none',
           hasActivePlan: active,
         });
         
@@ -268,6 +270,9 @@ useEffect(() => {
           ownerId: company.user_id,
           hasActivePlan: active,
           planExpiresAt: credits?.plan_expires_at,
+          printOnPurchase: !!company.print_auto_type_purchase,
+          printOnQueue: !!company.print_auto_type_queue,
+          printOnPayment: !!company.print_auto_type_payment,
         });
       } catch (err) {
         console.error('❌ Erro ao carregar printConfig:', err);

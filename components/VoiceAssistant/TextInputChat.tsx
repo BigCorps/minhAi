@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Send, Loader2, Keyboard } from 'lucide-react';
 import VirtualKeyboard from '@/components/assistant/VirtualKeyboard';
 
@@ -34,6 +35,8 @@ export default function TextInputChat({
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
 
   // Auto-focus no input quando não estiver processando (apenas desktop)
   useEffect(() => {
@@ -74,17 +77,6 @@ export default function TextInputChat({
       window.dispatchEvent(new CustomEvent('eai:virtualKeyboardClose'));
     }
   }, [showVirtualKeyboard]);
-
-  // Fechar teclado quando evento for disparado externamente
-  useEffect(() => {
-    const handleClose = () => {
-      if (showVirtualKeyboard && onVirtualKeyboardToggle) {
-        onVirtualKeyboardToggle();
-      }
-    };
-    window.addEventListener('eai:virtualKeyboardClose', handleClose);
-    return () => window.removeEventListener('eai:virtualKeyboardClose', handleClose);
-  }, [showVirtualKeyboard, onVirtualKeyboardToggle]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -227,18 +219,19 @@ export default function TextInputChat({
       )}
 
       {/* Teclado virtual — fixo no bottom, acima de tudo */}
-      {showVirtualKeyboard && (
-        <div className="fixed bottom-0 left-0 right-0 z-[10001]">
-          <VirtualKeyboard
-            onKey={handleVirtualKey}
-            onBackspace={handleVirtualBackspace}
-            onEnter={handleVirtualEnter}
-            onClose={onVirtualKeyboardToggle}
-            onReplace={handleVirtualReplace}
-            theme={theme}
-          />
-        </div>
-      )}
+{showVirtualKeyboard && isMounted && createPortal(
+  <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10001 }}>
+    <VirtualKeyboard
+      onKey={handleVirtualKey}
+      onBackspace={handleVirtualBackspace}
+      onEnter={handleVirtualEnter}
+      onClose={onVirtualKeyboardToggle}
+      onReplace={handleVirtualReplace}
+      theme={theme}
+    />
+  </div>,
+  document.body
+)}
     </form>
   );
 }

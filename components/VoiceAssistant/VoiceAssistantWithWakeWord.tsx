@@ -214,29 +214,59 @@ useEffect(() => {
     hasActivePlan: boolean;
   }>({ print_on_purchase: false, print_on_queue: false, print_on_payment: false, hasActivePlan: false });
 
-  useEffect(() => {
+useEffect(() => {
     if (!companyId) return;
     async function loadPrintConfig() {
       try {
         const supabase = createClient();
+        
+        // ✅ Buscar usuário autenticado
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          // Sem usuário logado = sem plano ativo
+          setPrintConfig({
+            print_on_purchase: false,
+            print_on_queue: false,
+            print_on_payment: false,
+            hasActivePlan: false,
+          });
+          return;
+        }
+        
+        // ✅ Buscar configurações da empresa E plano do usuário
         const [{ data: company }, { data: credits }] = await Promise.all([
           supabase.from('companies').select('print_on_purchase, print_on_queue, print_on_payment').eq('id', companyId).maybeSingle(),
-          supabase.from('credits').select('has_active_plan, plan_expires_at').eq('company_id', companyId).maybeSingle(),
+          supabase.from('user_credits').select('has_active_plan, plan_expires_at').eq('user_id', user.id).maybeSingle(),
         ]);
+        
+        // ✅ Verificar se plano está ativo e não expirado
         const active =
           credits?.has_active_plan === true &&
           credits?.plan_expires_at != null &&
           new Date(credits.plan_expires_at) > new Date();
+        
         setPrintConfig({
           print_on_purchase: company?.print_on_purchase ?? false,
           print_on_queue:    company?.print_on_queue    ?? false,
           print_on_payment:  company?.print_on_payment  ?? false,
           hasActivePlan: active,
         });
-      } catch { /* silencioso */ }
+        
+        console.log('🖨️ Print Config:', { userId: user.id, hasActivePlan: active });
+      } catch (err) {
+        console.error('❌ Erro ao carregar printConfig:', err);
+        setPrintConfig({
+          print_on_purchase: false,
+          print_on_queue: false,
+          print_on_payment: false,
+          hasActivePlan: false,
+        });
+      }
     }
     loadPrintConfig();
   }, [companyId]);
+  
   const { noiseWarning, repromptWarning, handleVolumeChange, triggerRepromptWarning } = useNoiseWarning();
   const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(companyWakeWord, wakeWordEnabled);
   const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio, ttsVoice);
@@ -2230,13 +2260,15 @@ const handleTextMessage = async (message: string) => {
         </div>
 
 {/* Card direito: Status / Microfone */}
-<div className={`rounded-3xl shadow-2xl p-8 border transition-colors ${isKeyboardOpen ? "h-48" : "h-[448px]"} flex flex-col overflow-hidden transition-all duration-300 ${
+<div className={`rounded-3xl shadow-2xl p-8 border flex flex-col overflow-hidden transition-all duration-300 ${
+  showVirtualKeyboard ? "h-[200px]" : "h-[448px]"
+} ${
   theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
 }`}>
   <div className="flex flex-col items-center flex-1 min-h-0">
 
     {/* Microfone oculto quando teclado estiver aberto */}
-    {!isKeyboardOpen && (
+    {!showVirtualKeyboard && (
       <div className="relative flex items-center justify-center mt-2">
         <button
           onMouseDown={(e) => { if (!isMobile) { isRecordingToggle ? handleMicButtonUp() : handleMicButtonDown(e); } }}
@@ -2258,11 +2290,11 @@ const handleTextMessage = async (message: string) => {
       </div>
     )}
 
-    {!isKeyboardOpen && !showStartButton && (
+{!showVirtualKeyboard && !showStartButton && (
       <p className={`text-xs font-medium mt-1 ${theme === 'dark' ? 'text-white/40' : 'text-gray-400'}`}>
         {getMicHintText()}
-              </p>
-            )}
+      </p>
+    )}
 
             <div className="text-center w-full mt-4">
               <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>

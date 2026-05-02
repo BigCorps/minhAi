@@ -11,6 +11,7 @@ import VantagensSlide from '@/components/landing/VantagensSlide';
 import FuncaoCardsSlide from '@/components/landing/FuncaoCardsSlide';
 import DepoimentosSection from '@/components/landing/DepoimentosSection';
 import FAQSection from '@/components/landing/FAQSection';
+import TecnologiaSection from '@/components/landing/TecnologiaSection';
 import { LandingDemoFooter } from '@/components/landing/LandingDemoFooter';
 import {
   QrCode,
@@ -275,6 +276,7 @@ const ALL_SECTION_IDS = [
   ...FUNCAO_PAGES.map((f) => f.id),
   'depoimentos',
   'faq',
+  'tecnologia',
   'precos',
   'contato',
 ];
@@ -288,6 +290,7 @@ function getSectionNavGroup(sectionId: string): string {
   if (sectionId === 'como-funciona') return 'recursos';
   if (sectionId === 'depoimentos') return 'precos';
   if (sectionId === 'faq') return 'precos';
+  if (sectionId === 'tecnologia') return 'precos';
   return sectionId;
 }
 
@@ -564,6 +567,16 @@ export default function LandingPage() {
           aria-label="Perguntas frequentes"
         >
           <FAQSection theme={theme} />
+        </section>
+
+        {/* TECNOLOGIA */}
+        <section
+          id="tecnologia"
+          className="flex-shrink-0 snap-start snap-always"
+          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
+          aria-label="Tecnologia e stack técnico"
+        >
+          <TecnologiaSection theme={theme} />
         </section>
 
         {/* PREÇOS */}

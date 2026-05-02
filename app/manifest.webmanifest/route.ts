@@ -7,11 +7,14 @@ export async function GET(request: NextRequest) {
 
   // Slug pode vir via query param (rewrite do middleware) ou via hostname
   const slugFromQuery = request.nextUrl.searchParams.get('slug');
-  const slugFromHost = hostname.endsWith('.minhai.com.br') && !hostname.startsWith('www.')
-    ? hostname.replace('.minhai.com.br', '')
-    : hostname.endsWith('.minhai.app') && !hostname.startsWith('www.')
-    ? hostname.replace('.minhai.app', '')
-    : null;
+const MINHAI_DOMAINS = [
+    '.minhai.app', '.minhai.com.br',
+    '.minhaia.app', '.nossaia.app', '.suaia.app',
+  ];
+  const matchedDomain = MINHAI_DOMAINS.find(d =>
+    hostname.endsWith(d) && !hostname.startsWith('www.')
+  );
+  const slugFromHost = matchedDomain ? hostname.replace(matchedDomain, '') : null;
 
   const slug = slugFromQuery || slugFromHost;
 

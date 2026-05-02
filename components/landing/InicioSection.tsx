@@ -29,19 +29,12 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
         }
       `}
     >
-      {/* Fundo decorativo — pointer-events:none para nunca bloquear swipe */}
+      {/* Fundo decorativo */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div className={`absolute -top-1/4 -right-1/4 w-[60%] h-[60%] rounded-full blur-[120px] ${isDark ? 'bg-blue-500/10' : 'bg-blue-200/30'}`} />
         <div className={`absolute -bottom-1/4 -left-1/4 w-[50%] h-[50%] rounded-full blur-[100px] ${isDark ? 'bg-green-500/8' : 'bg-green-200/20'}`} />
       </div>
 
-      {/*
-        REGRA FUNDAMENTAL:
-        - ZERO overflow neste div ou em qualquer filho
-        - O conteúdo encolhe/some via media queries de altura (max-height)
-        - pt/pb compensam header (64px mobile) e dots (48px) sem criar scroll
-        - O swipe horizontal fica 100% no <main> snap-container pai
-      */}
       <div
         className={`
           relative z-10
@@ -155,7 +148,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               href="/login"
               className="flex-1 sm:flex-none px-4 sm:px-8 py-2 sm:py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-xs sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
             >
-              Criar meu Funcionário IA grátis
+              Criar Minha IA Grátis
             </Link>
             <Link
               href="/ia/suporte"

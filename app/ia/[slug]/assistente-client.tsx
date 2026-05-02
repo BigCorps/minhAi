@@ -43,6 +43,10 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const MODES: AssistenteMode[] = ['full', 'padrao', 'texto'];
 const navigateMode = (direction: 'left' | 'right') => {
   if (isModalOpenState) return;
+
+  // ✅ Fechar teclado ao trocar de modo
+  window.dispatchEvent(new CustomEvent('eai:virtualKeyboardClose'));
+
   const currentIndex = MODES.indexOf(mode);
   if (direction === 'left') {
     const newIndex = currentIndex === 0 ? MODES.length - 1 : currentIndex - 1;

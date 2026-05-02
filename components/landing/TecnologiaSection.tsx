@@ -6,11 +6,11 @@ interface TecnologiaSectionProps {
 
 // ── Bloco 1: Stack de IA ──────────────────────────────────────
 const AI_STACK = [
-  { label: 'GPT-4o', sub: 'LLM principal',        color: 'blue'  as const },
-  { label: 'Claude',  sub: 'LLM alternativo',      color: 'blue'  as const },
+  { label: 'ChatGPT', sub: 'LLM principal',        color: 'blue'  as const },
+  { label: 'GROQ',  sub: 'LLM alternativo',      color: 'blue'  as const },
   { label: 'Whisper', sub: 'STT — voz para texto', color: 'green' as const },
-  { label: 'Google Speech', sub: 'STT alternativo',color: 'green' as const },
-  { label: 'ElevenLabs',   sub: 'TTS — voz natural', color: 'blue' as const },
+  { label: 'Cloud TTS', sub: 'AI Voice Generator',color: 'green' as const },
+  { label: 'Google Speech',   sub: 'voz masc/femin', color: 'blue' as const },
   { label: 'GPT-4 Vision', sub: 'OCR & visão',     color: 'green' as const },
   { label: 'Embeddings',   sub: 'text-embedding-3', color: 'blue' as const },
   { label: 'RAG Pipeline', sub: 'busca semântica',  color: 'green' as const },

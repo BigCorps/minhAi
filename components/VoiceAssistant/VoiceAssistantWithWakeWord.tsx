@@ -2248,9 +2248,11 @@ const handleTextMessage = async (message: string) => {
       <div className="grid md:grid-cols-2 gap-8">
 
         {/* Card esquerdo: Avatar */}
-        <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-colors ${
-          theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
-        }`}>
+<div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-all duration-300 flex flex-col ${
+  showVirtualKeyboard ? "h-[220px]" : "h-[448px]"
+} ${
+  theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
+}`}>
           <div className={`relative h-96 transition-all duration-300 ${
   isKeyboardOpen ? 'scale-[0.6]' : 'scale-100'
 }`}>

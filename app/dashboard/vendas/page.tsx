@@ -110,6 +110,7 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
     estoque_minimo: produto?.estoque_minimo ?? 0,
     controla_estoque: produto?.controla_estoque ?? true,
     is_active: produto?.is_active ?? true,
+    is_favorito: produto?.is_favorito ?? false,
   });
 
   const [saving, setSaving] = useState(false);
@@ -407,6 +408,32 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
                 </div>
               </div>
             )}
+          </div>
+
+{/* ── Mais Vendido (favorito) ── */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                <span className={`text-base leading-none transition-colors ${
+                  form.is_favorito ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600'
+                }`}>★</span>
+                Mais Vendido
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Aparece no topo da seção "Mais Vendidos" no PDV
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => set('is_favorito', !form.is_favorito)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                form.is_favorito ? 'bg-amber-400' : 'bg-gray-400 dark:bg-slate-600'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                form.is_favorito ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
           </div>
 
           {/* Ativo */}
@@ -853,7 +880,8 @@ function AbaProducts({ companyId }: { companyId: string }) {
   const [importarAberto, setImportarAberto] = useState(false);
   const [opcionaisProduto, setOpcionaisProduto] = useState<ProdutoVenda | null>(null);
   const [csvAberto, setCsvAberto] = useState(false);
-  
+  const [produtoDuplicando, setProdutoDuplicando] = useState<ProdutoVenda | null>(null);
+
   const [hasActivePlan, setHasActivePlan] = useState(false);
 
   useEffect(() => { load(); }, [companyId]);
@@ -920,6 +948,18 @@ function AbaProducts({ companyId }: { companyId: string }) {
   function toggleSort(field: typeof sortField) {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDir('asc'); }
+  }
+
+  function handleDuplicar(produto: ProdutoVenda) {
+    const { id, created_at, updated_at, ...clone } = produto as any;
+    const copia: Partial<ProdutoVendaInput> = {
+      ...clone,
+      nome: `${produto.nome} (Cópia)`,
+      is_favorito: false,
+      is_active: false,
+    };
+    setProdutoDuplicando(copia as any);
+    setModalAberto('novo');
   }
 
   function SortIcon({ field }: { field: typeof sortField }) {
@@ -1130,6 +1170,15 @@ function AbaProducts({ companyId }: { companyId: string }) {
                           Opcionais
                         </button>
                         <button
+                          onClick={e => { e.stopPropagation(); handleDuplicar(p); }}
+                          title="Duplicar produto"
+                          className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                        <button
                           onClick={() => { setProdutoEditando(p); setModalAberto('editar'); }}
                           className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition">
                           Editar
@@ -1182,6 +1231,15 @@ function AbaProducts({ companyId }: { companyId: string }) {
                   title="Opcionais">
                   <Settings className="w-3 h-3" />
                 </button>
+                <button
+                  onClick={e => { e.stopPropagation(); handleDuplicar(p); }}
+                  className="absolute bottom-2 right-10 p-1.5 rounded-lg bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/15 transition"
+                  title="Duplicar produto">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
               </div>
               <div className="p-3">
                 <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{p.nome}</p>
@@ -1205,8 +1263,12 @@ function AbaProducts({ companyId }: { companyId: string }) {
       {(modalAberto === 'novo' || modalAberto === 'editar') && (
         <ProdutoModal
           companyId={companyId}
-          produto={modalAberto === 'editar' ? produtoEditando : null}
-          onClose={() => { setModalAberto(null); setProdutoEditando(null); }}
+          produto={
+            modalAberto === 'editar'
+              ? produtoEditando
+              : produtoDuplicando ?? null
+          }
+          onClose={() => { setModalAberto(null); setProdutoEditando(null); setProdutoDuplicando(null); }}
           onSalvo={load}
         />
       )}

@@ -7,7 +7,32 @@
 // Separado do layout.tsx (Server Component) pois usa event handlers.
 //
 // ✅ FIX: Exceção para teclado virtual funcionar corretamente
+
+import { useEffect } from 'react';
+
 export default function KioskWrapper({ children }: { children: React.ReactNode }) {
+
+  // Monkey-patch window.open para bloquear qualquer abertura de link externo no kiosk
+  useEffect(() => {
+    const originalOpen = window.open.bind(window);
+
+    window.open = (...args: Parameters<typeof window.open>) => {
+      try {
+        const session = sessionStorage.getItem('eai:kioskSession');
+        const isKiosk = session ? JSON.parse(session)?.active === true : false;
+        if (isKiosk) return null; // bloqueia silenciosamente
+      } catch {}
+      return originalOpen(...args);
+    };
+
+    // Listener reativo: quando o kiosk muda, o patch já está no lugar
+    // (a verificação é feita em tempo de execução dentro do window.open)
+
+    return () => {
+      window.open = originalOpen; // restaura ao desmontar
+    };
+  }, []);
+
   return (
     <>
       <style>{`

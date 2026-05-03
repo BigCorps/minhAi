@@ -304,7 +304,7 @@ export default function SlugHeaderWrapper({
  
       {/* ── Mini-overlay de ENTRADA do kiosk ───────────────────── */}
       {showSetupOverlay && (
-        <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-start justify-center p-4 pt-[12%]">
           <div className={`rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm ${
             theme === 'dark'
               ? 'bg-slate-800 border border-white/10'
@@ -387,7 +387,7 @@ export default function SlugHeaderWrapper({
 
       {/* ── Mini-overlay de saída do kiosk ──────────────────── */}
       {showExitOverlay && (
-        <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-start justify-center p-4 pt-[12%]">
           <div className={`rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm ${
             theme === 'dark'
               ? 'bg-slate-800 border border-white/10'

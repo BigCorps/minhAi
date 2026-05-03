@@ -291,7 +291,7 @@ export default function PixLinkModal({ onClose }: Props) {
                       {/* Aviso de janela 24h */}
                       <div className="rounded-lg bg-green-100 dark:bg-green-900/20 px-3 py-2">
                         <p className="text-xs text-green-800 dark:text-green-300">
-                          ⚠️ <strong>Importante:</strong> Para receber a notificação, você precisa ter mandado uma mensagem para o número do assistente nas últimas 24h.{' '}
+                          ⚠️ <strong>Importante:</strong> Caso não receba a notificação, basta enviar qualquer mensagem para o whatsapp minhAi para reativar a janela de conversas.{' '}
                           {waLink && (
                             <a
                               href={waLink}

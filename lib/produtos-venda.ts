@@ -22,6 +22,7 @@ export interface ProdutoVenda {
   estoque_minimo: number;
   controla_estoque: boolean;
   is_active: boolean;
+  is_favorito: boolean;        // ← ADICIONADO
   display_order: number;
   created_at: string;
   updated_at: string;
@@ -43,6 +44,7 @@ export interface ProdutoVendaInput {
   estoque_minimo?: number;
   controla_estoque?: boolean;
   is_active?: boolean;
+  is_favorito?: boolean;       // ← ADICIONADO
   display_order?: number;
 }
 

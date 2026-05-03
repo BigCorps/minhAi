@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { detectSubdomainContext, getContextualRoute } from '@/lib/routing-utils';
 import SlugHeaderWrapper from '@/app/ia/[slug]/SlugHeaderWrapper';  // FIX: wrapper com kiosk/wakelock
 import SlugFooter from '@/components/slug/SlugFooter';
+import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
+import type { ActiveModal } from '@/components/VoiceAssistant/types';
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -173,9 +175,21 @@ export default function LinkClient({ company, links, slug }: Props) {
   const { resolvedTheme, setTheme } = useTheme();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [isKioskMode, setIsKioskMode] = useState(false);
+  const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const session = sessionStorage.getItem('eai:kioskSession');
+      if (session) setIsKioskMode(JSON.parse(session)?.active === true);
+    } catch {}
+    const handleKiosk = (e: CustomEvent) => setIsKioskMode(e.detail?.active === true);
+    window.addEventListener('eai:kioskModeChange', handleKiosk as EventListener);
+    return () => window.removeEventListener('eai:kioskModeChange', handleKiosk as EventListener);
   }, []);
 
   const theme = mounted ? ((resolvedTheme as 'dark' | 'light') ?? 'dark') : 'dark';
@@ -235,6 +249,19 @@ export default function LinkClient({ company, links, slug }: Props) {
 
   const accentColor = company.webapp_theme_color ?? '#6366f1';
   const displayLogo = company.webapp_logo_url ?? company.logo_url;
+
+  const CONTACT_FUNCTION_MAP: Partial<Record<keyof CompanyData, string>> = {
+    whatsapp_number:     'qrcode_whatsapp',
+    instagram_username:  'qrcode_instagram',
+    facebook:            'qrcode_facebook',
+    website:             'qrcode_website',
+    email_contato:       'qrcode_email',
+    telefone_fixo:       'qrcode_telefone',
+    tiktok:              'qrcode_tiktok',
+    twitter:             'qrcode_twitter',
+    linkedin:            'qrcode_linkedin',
+    youtube_channel_url: 'canal_youtube',
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: palette.bg, display: 'flex', flexDirection: 'column' }}>
@@ -319,26 +346,49 @@ export default function LinkClient({ company, links, slug }: Props) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
               {contactLinks.map((c) => {
                 const val = String(company[c.field] ?? '');
-                return (
+                const sharedStyle = {
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  background: palette.card,
+                  border: `1px solid ${palette.cardBorder}`,
+                  color: palette.text,
+                  textDecoration: 'none',
+                  fontSize: 14, fontWeight: 500,
+                  transition: 'all 0.15s ease',
+                  cursor: 'pointer',
+                  width: '100%',
+                  boxSizing: 'border-box' as const,
+                };
+                return isKioskMode ? (
+                  <button
+                    key={c.field}
+                    onClick={() => setActiveModal({
+                      type: 'QRCodeDisplay',
+                      data: { companyId: company.id, functionKey: CONTACT_FUNCTION_MAP[c.field] }
+                    })}
+                    style={sharedStyle}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLElement).style.background = palette.cardHover;
+                      (e.currentTarget as HTMLElement).style.borderColor = `${c.color}50`;
+                      (e.currentTarget as HTMLElement).style.transform = 'scale(1.01)';
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.background = palette.card;
+                      (e.currentTarget as HTMLElement).style.borderColor = palette.cardBorder;
+                      (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
+                    }}
+                  >
+                    <span style={{ color: c.color, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{c.icon}</span>
+                    <span style={{ flex: 1, textAlign: 'center' }}>{c.label}</span>
+                  </button>
+                ) : (
                   <a
                     key={c.field}
                     href={c.buildUrl(val)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '12px 16px',
-                      borderRadius: 12,
-                      background: palette.card,
-                      border: `1px solid ${palette.cardBorder}`,
-                      color: palette.text,
-                      textDecoration: 'none',
-                      fontSize: 14, fontWeight: 500,
-                      transition: 'all 0.15s ease',
-                      cursor: 'pointer',
-                      width: '100%',
-                      boxSizing: 'border-box',
-                    }}
+                    style={sharedStyle}
                     onMouseEnter={e => {
                       (e.currentTarget as HTMLElement).style.background = palette.cardHover;
                       (e.currentTarget as HTMLElement).style.borderColor = `${c.color}50`;
@@ -366,58 +416,100 @@ export default function LinkClient({ company, links, slug }: Props) {
               Links
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {links.map((link) => (
-                <a
-                  key={link.id}
-                  href={link.is_broken ? undefined : link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'flex', alignItems: 'center',
-                    padding: '14px 18px',
-                    borderRadius: 14,
-                    background: palette.card,
-                    border: `1px solid ${link.is_broken ? '#ef444430' : palette.cardBorder}`,
-                    color: palette.text,
-                    textDecoration: 'none',
-                    fontSize: 15, fontWeight: 600,
-                    transition: 'all 0.15s ease',
-                    cursor: link.is_broken ? 'default' : 'pointer',
-                    opacity: link.is_broken ? 0.6 : 1,
-                  }}
-                  onMouseEnter={e => {
-                    if (!link.is_broken) {
+              {links.map((link) =>
+                isKioskMode && !link.is_broken ? (
+                  <button
+                    key={link.id}
+                    onClick={() => setActiveModal({
+                      type: 'GerarQRCodeDisplay',
+                      data: { companyId: company.id, prefillContent: link.url }
+                    })}
+                    style={{
+                      display: 'flex', alignItems: 'center',
+                      padding: '14px 18px',
+                      borderRadius: 14,
+                      background: palette.card,
+                      border: `1px solid ${palette.cardBorder}`,
+                      color: palette.text,
+                      textDecoration: 'none',
+                      fontSize: 15, fontWeight: 600,
+                      transition: 'all 0.15s ease',
+                      cursor: 'pointer',
+                      opacity: 1,
+                    }}
+                    onMouseEnter={e => {
                       (e.currentTarget as HTMLElement).style.background = palette.cardHover;
                       (e.currentTarget as HTMLElement).style.transform = 'scale(1.015)';
                       (e.currentTarget as HTMLElement).style.boxShadow = isDark
                         ? '0 4px 20px rgba(0,0,0,0.3)'
                         : '0 4px 20px rgba(0,0,0,0.08)';
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLElement).style.background = palette.card;
-                    (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
-                    (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-                  }}
-                >
-                  <span style={{ flex: 1 }}>{link.titulo}</span>
-
-                  {link.is_broken ? (
-                    <span style={{
-                      fontSize: 11, fontWeight: 600,
-                      background: palette.badge, color: palette.badgeText,
-                      padding: '2px 8px', borderRadius: 6,
-                    }}>
-                      Indisponível
-                    </span>
-                  ) : (
-                    /* Seta → */
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.background = palette.card;
+                      (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
+                      (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+                    }}
+                  >
+                    <span style={{ flex: 1 }}>{link.titulo}</span>
+                    {/* ícone QR no lugar da seta */}
                     <svg style={{ width: 16, height: 16, color: palette.textMuted, flexShrink: 0 }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
+                      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                      <rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3"/>
                     </svg>
-                  )}
-                </a>
-              ))}
+                  </button>
+                ) : (
+                  <a
+                    key={link.id}
+                    href={link.is_broken ? undefined : link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'flex', alignItems: 'center',
+                      padding: '14px 18px',
+                      borderRadius: 14,
+                      background: palette.card,
+                      border: `1px solid ${link.is_broken ? '#ef444430' : palette.cardBorder}`,
+                      color: palette.text,
+                      textDecoration: 'none',
+                      fontSize: 15, fontWeight: 600,
+                      transition: 'all 0.15s ease',
+                      cursor: link.is_broken ? 'default' : 'pointer',
+                      opacity: link.is_broken ? 0.6 : 1,
+                    }}
+                    onMouseEnter={e => {
+                      if (!link.is_broken) {
+                        (e.currentTarget as HTMLElement).style.background = palette.cardHover;
+                        (e.currentTarget as HTMLElement).style.transform = 'scale(1.015)';
+                        (e.currentTarget as HTMLElement).style.boxShadow = isDark
+                          ? '0 4px 20px rgba(0,0,0,0.3)'
+                          : '0 4px 20px rgba(0,0,0,0.08)';
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.background = palette.card;
+                      (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
+                      (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+                    }}
+                  >
+                    <span style={{ flex: 1 }}>{link.titulo}</span>
+
+                    {link.is_broken ? (
+                      <span style={{
+                        fontSize: 11, fontWeight: 600,
+                        background: palette.badge, color: palette.badgeText,
+                        padding: '2px 8px', borderRadius: 6,
+                      }}>
+                        Indisponível
+                      </span>
+                    ) : (
+                      /* Seta → */
+                      <svg style={{ width: 16, height: 16, color: palette.textMuted, flexShrink: 0 }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
+                      </svg>
+                    )}
+                  </a>
+                )
+              )}
             </div>
           </section>
         )}
@@ -456,6 +548,13 @@ export default function LinkClient({ company, links, slug }: Props) {
         theme={theme}
         slug={slug}
         webapp_enabled={company.webapp_enabled}
+      />
+
+      <ActionModals
+        activeModal={activeModal}
+        onClose={() => setActiveModal(null)}
+        theme={theme}
+        playText={async () => {}}
       />
     </div>
   );

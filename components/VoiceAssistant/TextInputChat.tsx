@@ -139,8 +139,13 @@ export default function TextInputChat({
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isDisabled}
+onKeyDown={handleKeyDown}
+disabled={isDisabled}
+onClick={() => {
+  if (autoOpenKeyboard && !showVirtualKeyboard && onVirtualKeyboardToggle) {
+    onVirtualKeyboardToggle();
+  }
+}}
           placeholder={
             isProcessing
               ? 'Processando...'

@@ -143,30 +143,26 @@ export default function OpcionaisProdutoModal({
   // ── Toggle seleção ─────────────────────────────────────────────────────────
 
   function toggleItem(grupo: GrupoOpcoes, itemId: string) {
-    setSelecoes(prev => {
-      const next    = new Map(prev);
+  setSelecoes(prev => {
+    const next = new Map(prev);
+
+    if (grupo.max_escolhas === 1) {
+      // Radio — substitui sempre, mesmo que seja o mesmo item
+      next.set(grupo.id, new Set([itemId]));
+    } else {
+      // Checkbox — toggle com limite
       const current = new Set(next.get(grupo.id) ?? []);
-
-      if (grupo.max_escolhas === 1) {
-        // Radio — substitui
-        current.clear();
+      if (current.has(itemId)) {
+        current.delete(itemId);
+      } else if (current.size < grupo.max_escolhas) {
         current.add(itemId);
-      } else {
-        // Checkbox — toggle com limite
-        if (current.has(itemId)) {
-          current.delete(itemId);
-        } else {
-          if (current.size < grupo.max_escolhas) {
-            current.add(itemId);
-          }
-          // Se já atingiu o máximo, ignora o clique
-        }
       }
-
       next.set(grupo.id, current);
-      return next;
-    });
-  }
+    }
+
+    return next;
+  });
+}
 
   // ── Validação e total ──────────────────────────────────────────────────────
 

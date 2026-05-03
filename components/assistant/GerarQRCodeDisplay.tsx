@@ -117,6 +117,18 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
   const isDark = theme === 'dark';
   const supabase = createClient();
 
+  // Detecta modo kiosk
+  const [isKioskMode, setIsKioskMode] = useState(false);
+  useEffect(() => {
+    try {
+      const session = sessionStorage.getItem('eai:kioskSession');
+      if (session) setIsKioskMode(JSON.parse(session)?.active === true);
+    } catch {}
+    const handleKiosk = (e: CustomEvent) => setIsKioskMode(e.detail?.active === true);
+    window.addEventListener('eai:kioskModeChange', handleKiosk as EventListener);
+    return () => window.removeEventListener('eai:kioskModeChange', handleKiosk as EventListener);
+  }, []);
+
   // Se prefillContent foi passado, começa gerando direto; caso contrário, abre o input
   const [stage,      setStage]      = useState<Stage>(data.prefillContent ? 'generating' : 'input');
   const [inputText,  setInputText]  = useState(data.prefillContent ?? '');
@@ -404,43 +416,47 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
               </p>
             )}
 
-            <div className="flex gap-2 w-full">
-              <button
-                onClick={handleDownload}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all"
-                style={{ background: '#2563eb', color: '#ffffff' }}
-              >
-                <IconDownload className="w-4 h-4" />
-                Baixar PNG
-              </button>
-              <button
-                onClick={handleSendEmail}
-                disabled={sendingEmail || emailSent}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all"
-                style={{
-                  background: emailSent ? (isDark ? '#166534' : '#dcfce7') : (isDark ? '#1e3a5f' : '#eff6ff'),
-                  color: emailSent ? (isDark ? '#86efac' : '#166534') : (isDark ? '#60a5fa' : '#2563eb'),
-                  cursor: sendingEmail || emailSent ? 'default' : 'pointer',
-                  opacity: sendingEmail ? 0.7 : 1,
-                }}
-              >
-                {sendingEmail
-                  ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  : <IconMail className="w-4 h-4" />}
-                {emailSent ? 'Enviado!' : 'Enviar email'}
-              </button>
-            </div>
+            {!isKioskMode && (
+              <>
+                <div className="flex gap-2 w-full">
+                  <button
+                    onClick={handleDownload}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all"
+                    style={{ background: '#2563eb', color: '#ffffff' }}
+                  >
+                    <IconDownload className="w-4 h-4" />
+                    Baixar PNG
+                  </button>
+                  <button
+                    onClick={handleSendEmail}
+                    disabled={sendingEmail || emailSent}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all"
+                    style={{
+                      background: emailSent ? (isDark ? '#166534' : '#dcfce7') : (isDark ? '#1e3a5f' : '#eff6ff'),
+                      color: emailSent ? (isDark ? '#86efac' : '#166534') : (isDark ? '#60a5fa' : '#2563eb'),
+                      cursor: sendingEmail || emailSent ? 'default' : 'pointer',
+                      opacity: sendingEmail ? 0.7 : 1,
+                    }}
+                  >
+                    {sendingEmail
+                      ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      : <IconMail className="w-4 h-4" />}
+                    {emailSent ? 'Enviado!' : 'Enviar email'}
+                  </button>
+                </div>
 
-            <button
-              onClick={handleReset}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-all"
-              style={{ color: SUB, background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6' }}
-            >
-              <IconRefresh className="w-3.5 h-3.5" />
-              Gerar novo QR Code
-            </button>
+                <button
+                  onClick={handleReset}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-all"
+                  style={{ color: SUB, background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6' }}
+                >
+                  <IconRefresh className="w-3.5 h-3.5" />
+                  Gerar novo QR Code
+                </button>
 
-            <VoiceHint commands={['"baixar"', '"email"', '"novo"', '"fechar"']} isDark={isDark} />
+                <VoiceHint commands={['"baixar"', '"email"', '"novo"', '"fechar"']} isDark={isDark} />
+              </>
+            )}
           </div>
         )}
 

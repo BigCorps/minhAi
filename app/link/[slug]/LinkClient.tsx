@@ -250,18 +250,7 @@ export default function LinkClient({ company, links, slug }: Props) {
   const accentColor = company.webapp_theme_color ?? '#6366f1';
   const displayLogo = company.webapp_logo_url ?? company.logo_url;
 
-  const CONTACT_FUNCTION_MAP: Partial<Record<keyof CompanyData, string>> = {
-    whatsapp_number:     'qrcode_whatsapp',
-    instagram_username:  'qrcode_instagram',
-    facebook:            'qrcode_facebook',
-    website:             'qrcode_website',
-    email_contato:       'qrcode_email',
-    telefone_fixo:       'qrcode_telefone',
-    tiktok:              'qrcode_tiktok',
-    twitter:             'qrcode_twitter',
-    linkedin:            'qrcode_linkedin',
-    youtube_channel_url: 'canal_youtube',
-  };
+
 
   return (
     <div style={{ minHeight: '100vh', background: palette.bg, display: 'flex', flexDirection: 'column' }}>
@@ -364,8 +353,8 @@ export default function LinkClient({ company, links, slug }: Props) {
                   <button
                     key={c.field}
                     onClick={() => setActiveModal({
-                      type: 'QRCodeDisplay',
-                      data: { companyId: company.id, functionKey: CONTACT_FUNCTION_MAP[c.field] }
+                      type: 'GerarQRCodeDisplay',
+                      data: { companyId: company.id, prefillContent: c.buildUrl(val) }
                     })}
                     style={sharedStyle}
                     onMouseEnter={e => {

@@ -79,6 +79,7 @@ const navigateMode = (direction: 'left' | 'right') => {
   const anyModalOpenRef = useRef(false);
   const isExitingKioskRef = useRef(false);
   const [isModalOpenState, setIsModalOpenState] = useState(false);
+  const isPrintingRef = useRef(false);
   
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [showToast, setShowToast] = useState(false);
@@ -199,6 +200,17 @@ const onClose = () => {
     };
   }, []);
 
+useEffect(() => {
+  const handleBefore = () => { isPrintingRef.current = true; };
+  const handleAfter  = () => { isPrintingRef.current = false; };
+  window.addEventListener('beforeprint', handleBefore);
+  window.addEventListener('afterprint',  handleAfter);
+  return () => {
+    window.removeEventListener('beforeprint', handleBefore);
+    window.removeEventListener('afterprint',  handleAfter);
+  };
+}, []);
+
   useEffect(() => {
     if (!isKioskMode) return;
     
@@ -260,12 +272,11 @@ const onClose = () => {
 
   useEffect(() => {
     if (!isKioskMode) return;
-    
-    const handleFullscreenChange = () => {
-      // Se estamos saindo intencionalmente via exitKioskMode, ignora o evento
-      if (isExitingKioskRef.current) return;
 
-      if (isKioskMode && !document.fullscreenElement) {
+const handleFullscreenChange = () => {
+  if (isExitingKioskRef.current) return;
+  if (isPrintingRef.current) return; // ✅ ignora durante impressão
+  if (isKioskMode && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {
           showToastMessage('⚠️ Digite a senha para sair', 'warning');
           setModalType('verify');

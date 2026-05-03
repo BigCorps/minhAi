@@ -68,7 +68,11 @@ function IconSend({ className, style }: { className?: string; style?: React.CSSP
 type Stage = 'input' | 'generating' | 'result' | 'sending_email' | 'error';
 
 interface Props {
-  data: { companyId: string };
+  data: {
+    companyId: string;
+    /** Quando presente, pula a etapa de input e gera o QR direto */
+    prefillContent?: string;
+  };
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText: (text: string) => Promise<void>;
@@ -113,8 +117,9 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
   const isDark = theme === 'dark';
   const supabase = createClient();
 
-  const [stage,      setStage]      = useState<Stage>('input');
-  const [inputText,  setInputText]  = useState('');
+  // Se prefillContent foi passado, começa gerando direto; caso contrário, abre o input
+  const [stage,      setStage]      = useState<Stage>(data.prefillContent ? 'generating' : 'input');
+  const [inputText,  setInputText]  = useState(data.prefillContent ?? '');
   const [qrDataUrl,  setQrDataUrl]  = useState<string | null>(null);
   const [errorMsg,   setErrorMsg]   = useState<string | null>(null);
   const [emailSent,  setEmailSent]  = useState(false);
@@ -126,11 +131,8 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
 
   // ── Sinalizar abertura/fechamento do modal para o assistente-client ──────────
   useEffect(() => {
-    // Avisa que um modal está aberto — bloqueia o modo full do avatar
     window.dispatchEvent(new CustomEvent('eai:modalOpen'));
-
     return () => {
-      // Avisa que o modal fechou — libera o modo full do avatar
       window.dispatchEvent(new CustomEvent('eai:modalClose'));
       window.speechSynthesis.cancel();
     };
@@ -157,7 +159,16 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
       setStage('error');
       playText('Erro ao gerar o QR Code. Tente novamente.').catch(() => {});
     }
-  }, [playText]);
+  }, [data.companyId, playText]);
+
+  // ── Auto-gerar quando prefillContent foi passado ─────────────────────────────
+
+  useEffect(() => {
+    if (data.prefillContent) {
+      handleGenerate(data.prefillContent);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Download PNG ────────────────────────────────────────────────────────────
 
@@ -186,12 +197,10 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
     setEmailSent(false);
 
     try {
-      // Buscar email do usuário logado
       const { data: { user } } = await supabase.auth.getUser();
       const email = user?.email;
       if (!email) throw new Error('Usuário sem email cadastrado.');
 
-      // Buscar imagem da API e converter para base64
       const res = await fetch(qrDataUrl);
       const blob = await res.blob();
       const base64 = await new Promise<string>((resolve) => {
@@ -242,7 +251,6 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
     onTranscript: (transcript) => {
       const t = normalize(transcript);
 
-      // Universais
       if (['fechar', 'cancelar', 'sair', 'voltar'].some(c => t.includes(c))) {
         onClose(); return;
       }
@@ -250,7 +258,6 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
         playText(OPENING_TEXT).catch(() => {}); return;
       }
 
-      // Resultado
       if (stage === 'result') {
         if (['baixar', 'download', 'salvar', 'baixar qr', 'baixar qrcode'].some(c => t.includes(c))) {
           handleDownload(); return;
@@ -264,7 +271,6 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
         return;
       }
 
-      // Erro
       if (stage === 'error') {
         if (['tentar', 'novamente', 'tentar novamente'].some(c => t.includes(c))) {
           handleReset(); return;
@@ -272,7 +278,6 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
         return;
       }
 
-      // Input — comandos especiais
       if (stage === 'input') {
         if (['gerar', 'criar qr', 'criar qrcode', 'gerar qr', 'confirmar', 'confirma', 'ok'].some(c => t.includes(c))) {
           if (inputText.trim()) { handleGenerate(inputText); return; }
@@ -284,7 +289,6 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
           playText('Texto apagado.').catch(() => {}); return;
         }
 
-        // Ditado: acumula o transcript como texto
         const END_TRIGGERS = ['pronto', 'fim', 'acabou', 'terminou', 'concluir'];
         const isEnd = END_TRIGGERS.some(e => t === e || t.endsWith(e));
         if (isEnd) {
@@ -301,7 +305,6 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
           return;
         }
 
-        // Acumular texto ditado
         transcriptRef.current = (transcriptRef.current + ' ' + transcript).trim();
         setInputText(transcriptRef.current);
       }

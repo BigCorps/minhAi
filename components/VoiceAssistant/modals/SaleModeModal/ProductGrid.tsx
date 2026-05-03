@@ -34,6 +34,7 @@ export default function ProductGrid({
   onOpenBarcodeScanner,
 }: ProductGridProps) {
   const { addItem, itens } = useCart();
+  const MAIS_VENDIDOS = '__mais_vendidos__';
   const [categoria, setCategoria] = useState<string>('');
   const [feedbacks, setFeedbacks] = useState<Record<string, boolean>>({});
   const [produtoOpcionais, setProdutoOpcionais] = useState<{ produto: ProdutoVenda; quantidade: number } | null>(null);
@@ -47,7 +48,9 @@ export default function ProductGrid({
         p.nome.toLowerCase().includes(termoBusca.toLowerCase()) ||
         p.descricao?.toLowerCase().includes(termoBusca.toLowerCase()) ||
         p.ean?.includes(termoBusca);
-      const matchCat = !categoria || p.categoria === categoria;
+      const matchCat =
+        !categoria ||
+        (categoria === MAIS_VENDIDOS ? p.is_favorito : p.categoria === categoria);
       return matchBusca && matchCat;
     });
 
@@ -103,7 +106,13 @@ export default function ProductGrid({
       {/* Pills de categoria + botão scanner */}
       {(categorias.length > 0 || onOpenBarcodeScanner) && (
         // ── Wrapper externo: centraliza o conteúdo e permite scroll horizontal ──
-        <div className="flex-shrink-0 flex justify-center overflow-x-auto">
+        <div
+          className="flex-shrink-0 flex justify-center overflow-x-auto"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: isDark ? 'rgba(255,255,255,0.15) transparent' : 'rgba(0,0,0,0.12) transparent',
+          }}
+        >
           <div className="flex gap-1.5 items-center flex-nowrap px-1 pb-0.5">
 
             {/* ── Botão Scanner PDV ── */}
@@ -120,6 +129,24 @@ export default function ProductGrid({
                   <path d="M3 5v14M7 5v14M11 5v14M15 5v4M15 15v4M19 5v4M19 15v4M15 11h4"/>
                 </svg>
                 Cód. Barras
+              </button>
+            )}
+
+            {/* ── Pill "Mais Vendidos" (amarela) ── */}
+            {produtos.some((p) => p.is_favorito) && (
+              <button
+                onClick={() => setCategoria(MAIS_VENDIDOS)}
+                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                  categoria === MAIS_VENDIDOS
+                    ? isDark
+                      ? 'bg-amber-400/30 text-amber-300 border-amber-400/50'
+                      : 'bg-amber-100 text-amber-700 border-amber-400'
+                    : isDark
+                      ? 'bg-amber-400/10 text-amber-400/70 border-amber-400/20 hover:border-amber-400/40'
+                      : 'bg-amber-50 text-amber-600 border-amber-200 hover:border-amber-400'
+                }`}
+              >
+                ★ Mais Vendidos
               </button>
             )}
 
@@ -211,10 +238,16 @@ export default function ProductGrid({
           </p>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto pr-1 -mr-1">
+        <div
+          className="flex-1 overflow-y-auto pr-1 -mr-1"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: isDark ? 'rgba(255,255,255,0.15) transparent' : 'rgba(0,0,0,0.12) transparent',
+          }}
+        >
 
-          {/* ── Bloco 3b: label "Mais Vendidos" — aparece só se houver favoritos ── */}
-          {produtosFiltrados.some((p) => p.is_favorito) && (
+          {/* ── Bloco 3b: label "Mais Vendidos" — aparece só se houver favoritos e não estiver no filtro Mais Vendidos ── */}
+          {categoria !== MAIS_VENDIDOS && produtosFiltrados.some((p) => p.is_favorito) && (
             <p className={`text-[10px] font-semibold uppercase tracking-widest mb-1.5 px-0.5 ${
               isDark ? 'text-amber-400/70' : 'text-amber-600/80'
             }`}>

@@ -290,6 +290,31 @@ export function ActionModals({
     setMounted(true);
   }, []);
 
+  // Bloqueia links externos quando em modo kiosk
+  useEffect(() => {
+    if (!activeModal) return;
+
+    const handleClick = (e: MouseEvent) => {
+      try {
+        const session = sessionStorage.getItem('eai:kioskSession');
+        const isKiosk = session ? JSON.parse(session)?.active === true : false;
+        if (!isKiosk) return;
+      } catch { return; }
+
+      const anchor = (e.target as HTMLElement).closest('a');
+      if (!anchor) return;
+      const href = anchor.getAttribute('href') ?? '';
+      const isExternal = href.startsWith('http') || href.startsWith('//') || anchor.target === '_blank';
+      if (isExternal) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    document.addEventListener('click', handleClick, true);
+    return () => document.removeEventListener('click', handleClick, true);
+  }, [activeModal]);
+
   // ✅ CORREÇÃO: Disparar eventos globais para ocultar/mostrar o carrossel
   // Isso garante que QUALQUER modal aberto via ActionModals oculte o carrossel automaticamente.
   useEffect(() => {

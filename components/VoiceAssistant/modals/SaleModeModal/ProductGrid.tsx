@@ -39,8 +39,9 @@ export default function ProductGrid({
   const [produtoOpcionais, setProdutoOpcionais] = useState<{ produto: ProdutoVenda; quantidade: number } | null>(null);
   const isDark = theme === 'dark';
 
+  // ── Bloco 3b: favoritos no topo, sem duplicar ──────────────────────────────
   const produtosFiltrados = useMemo(() => {
-    return produtos.filter((p) => {
+    const filtrados = produtos.filter((p) => {
       const matchBusca =
         !termoBusca ||
         p.nome.toLowerCase().includes(termoBusca.toLowerCase()) ||
@@ -49,7 +50,12 @@ export default function ProductGrid({
       const matchCat = !categoria || p.categoria === categoria;
       return matchBusca && matchCat;
     });
+
+    const favoritos = filtrados.filter((p) => p.is_favorito);
+    const normais   = filtrados.filter((p) => !p.is_favorito);
+    return [...favoritos, ...normais];
   }, [produtos, termoBusca, categoria]);
+  // ──────────────────────────────────────────────────────────────────────────
 
   const getQtdNoCarrinho = (produtoId: string) =>
     itens.find((i) => i.produto.id === produtoId)?.quantidade ?? 0;
@@ -206,6 +212,16 @@ export default function ProductGrid({
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto pr-1 -mr-1">
+
+          {/* ── Bloco 3b: label "Mais Vendidos" — aparece só se houver favoritos ── */}
+          {produtosFiltrados.some((p) => p.is_favorito) && (
+            <p className={`text-[10px] font-semibold uppercase tracking-widest mb-1.5 px-0.5 ${
+              isDark ? 'text-amber-400/70' : 'text-amber-600/80'
+            }`}>
+              ★ Mais Vendidos
+            </p>
+          )}
+
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 pb-2">
             {produtosFiltrados.map((produto) => {
               const qtdCarrinho = getQtdNoCarrinho(produto.id);

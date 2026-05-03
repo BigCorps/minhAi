@@ -18,6 +18,7 @@ export default function SlugFooter({ theme, slug, webapp_enabled, has_consulting
   const [deferredPrompt, setDeferredPrompt]       = useState<any>(null);
   const [isKeyboardOpen, setIsKeyboardOpen]       = useState(false);
   const [currentDomain, setCurrentDomain]         = useState<string>('minhai.app');
+  const [isKioskMode, setIsKioskMode]             = useState(false);
 
   // Detecta em qual domínio o webapp está sendo acessado
   useEffect(() => {
@@ -26,6 +27,17 @@ export default function SlugFooter({ theme, slug, webapp_enabled, has_consulting
       const matched = WEBAPP_DOMAINS.find(d => hostname.endsWith(d));
       if (matched) setCurrentDomain(matched);
     }
+  }, []);
+
+  // Mudança 1 — detecção de kiosk via sessionStorage + evento
+  useEffect(() => {
+    const session = sessionStorage.getItem('eai:kioskSession');
+    if (session) {
+      try { setIsKioskMode(JSON.parse(session)?.active === true); } catch {}
+    }
+    const handleKiosk = (e: CustomEvent) => setIsKioskMode(e.detail?.active === true);
+    window.addEventListener('eai:kioskModeChange', handleKiosk as EventListener);
+    return () => window.removeEventListener('eai:kioskModeChange', handleKiosk as EventListener);
   }, []);
 
   useEffect(() => {
@@ -86,6 +98,13 @@ export default function SlugFooter({ theme, slug, webapp_enabled, has_consulting
     }
   };
 
+  // Mudança 2 — helper para disparar o modal
+  const handleMinhAiClick = () => {
+    window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
+      detail: { functionKey: 'meu_sistema' }
+    }));
+  };
+
   const isDark     = theme === 'dark';
   const hasWebapp  = webapp_enabled && slug;
   const href       = hasWebapp ? `https://${slug}.${currentDomain}` : 'https://minhai.app';
@@ -106,8 +125,9 @@ export default function SlugFooter({ theme, slug, webapp_enabled, has_consulting
     },
   };
 
+  // Mudança 4 — ocultar botão de instalação no modo kiosk
   const DownloadButton = () => {
-    if (!showInstallButton) return null;
+    if (!showInstallButton || isKioskMode) return null;
     return (
       <button
         onClick={handleInstallClick}
@@ -124,6 +144,18 @@ export default function SlugFooter({ theme, slug, webapp_enabled, has_consulting
     );
   };
 
+  // Mudança 3 — link ou botão dependendo do modo kiosk
+  const LinkOrButton = ({ className }: { className?: string }) =>
+    isKioskMode ? (
+      <button onClick={handleMinhAiClick} className={`font-medium hover:underline cursor-pointer ${className ?? ''}`}>
+        {linkLabel}
+      </button>
+    ) : (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={`font-medium hover:underline ${className ?? ''}`}>
+        {linkLabel}
+      </a>
+    );
+
   return (
     <div
       className={`fixed bottom-0 left-0 right-0 h-8 border-t backdrop-blur-xl transition-transform duration-300 ${
@@ -136,9 +168,7 @@ export default function SlugFooter({ theme, slug, webapp_enabled, has_consulting
 
         {/* Esquerda — tamanho variável, não interfere no centro */}
         <div className="flex items-center z-10">
-          <a href={href} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">
-            {linkLabel}
-          </a>
+          <LinkOrButton />
           <DownloadButton />
         </div>
 
@@ -154,10 +184,10 @@ export default function SlugFooter({ theme, slug, webapp_enabled, has_consulting
       {/* ── Mobile ── */}
       <div className="flex md:hidden h-full items-center justify-center px-4 text-xs">
         <div className="flex items-center">
-          <a href={href} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline text-center">
-            {linkLabel}
+          <span className="font-medium">
+            <LinkOrButton />
             <span className="opacity-70"> — Uma IA pra chamar de sua!</span>
-          </a>
+          </span>
           <DownloadButton />
         </div>
       </div>

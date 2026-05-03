@@ -2319,7 +2319,7 @@ const getStatusMessage = (maximized = false) => {
               <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                 {getStatusMessage()}
               </p>
-              {wakeWordEnabled && !isKioskMode && (
+              {wakeWordEnabled && (
                 <p className={`text-sm ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
                   Utilize a palavra de ativação apenas no modo voz.
                 </p>

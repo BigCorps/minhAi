@@ -117,6 +117,7 @@ function SaleModeInner({
   const [isPortrait, setIsPortrait] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [metodosAtivos, setMetodosAtivos] = useState<string[]>([]);
+  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
 
   // ── Scanner PDV ──────────────────────────────────────────────────────────
   const [showPdvScanner, setShowPdvScanner] = useState(false);
@@ -124,6 +125,18 @@ function SaleModeInner({
   const handleProductScanned = useCallback((produto: ProdutoVenda) => {
     addItem(produto as any);
   }, [addItem]);
+
+  const [isKioskMode, setIsKioskMode] = useState(false);
+
+useEffect(() => {
+  try {
+    const session = sessionStorage.getItem('eai:kioskSession');
+    if (session) setIsKioskMode(JSON.parse(session)?.active === true);
+  } catch {}
+  const handleKiosk = (e: CustomEvent) => setIsKioskMode(e.detail?.active === true);
+  window.addEventListener('eai:kioskModeChange', handleKiosk as EventListener);
+  return () => window.removeEventListener('eai:kioskModeChange', handleKiosk as EventListener);
+}, []);
 
   // ── Cards colapsáveis em portrait (mobile) ───────────────────────────────
   const [portraitExpanded, setPortraitExpanded] = useState<'avatar' | 'cart' | null>(null);
@@ -341,13 +354,16 @@ function SaleModeInner({
               {avatarLabel}
               {onTextMessage && (
                 <div className="w-full">
-                  <TextInputChat
-                    onSendMessage={onTextMessage}
-                    isProcessing={isProcessing || isPlayingAudio || isTranscribing}
-                    theme={effectiveTheme}
-                    disabled={false}
-                    compact
-                  />
+<TextInputChat
+  onSendMessage={onTextMessage}
+  isProcessing={isProcessing || isPlayingAudio || isTranscribing}
+  theme={effectiveTheme}
+  disabled={false}
+  compact
+  showVirtualKeyboard={showVirtualKeyboard}
+  onVirtualKeyboardToggle={isKioskMode ? () => setShowVirtualKeyboard(v => !v) : undefined}
+  autoOpenKeyboard={isKioskMode}
+/>
                 </div>
               )}
               {!isFullscreen && (
@@ -458,13 +474,16 @@ function SaleModeInner({
           {avatarLabel}
           {onTextMessage && (
             <div className="w-full mt-0.5">
-              <TextInputChat
-                onSendMessage={onTextMessage}
-                isProcessing={isProcessing || isPlayingAudio || isTranscribing}
-                theme={effectiveTheme}
-                disabled={false}
-                compact
-              />
+<TextInputChat
+  onSendMessage={onTextMessage}
+  isProcessing={isProcessing || isPlayingAudio || isTranscribing}
+  theme={effectiveTheme}
+  disabled={false}
+  compact
+  showVirtualKeyboard={showVirtualKeyboard}
+  onVirtualKeyboardToggle={isKioskMode ? () => setShowVirtualKeyboard(v => !v) : undefined}
+  autoOpenKeyboard={isKioskMode}
+/>
             </div>
           )}
         </div>

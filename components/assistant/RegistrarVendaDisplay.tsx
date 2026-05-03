@@ -8,13 +8,40 @@ import { createClient } from '@/lib/supabase-browser';
 interface RegistrarVendaDisplayProps {
   data: {
     companyId: string;
-    produto?: string;      // Nome do produto (opcional)
-    valor?: number;        // Valor da venda (opcional)
-    pagamento?: string;    // Tipo de pagamento (opcional)
+    produto?: string;          // Nome do produto (opcional)
+    valor?: number;            // legado — ainda aceito
+    initialValue?: number;     // nome enviado pelo handler do assistente
+    pagamento?: string;        // legado
+    metodoPagamento?: string;  // nome enviado pelo handler do assistente
   };
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText?: (text: string) => Promise<void>;
+}
+
+/** Converte um número (ex: 12.5) para string formatada "12,50" */
+function numberToFormatted(n: number): string {
+  return n.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/** Converte string digitada (ex: "1250" → "12,50") */
+function formatCurrency(value: string): string {
+  const numbers = value.replace(/\D/g, '');
+  if (!numbers) return '';
+  const amount = parseFloat(numbers) / 100;
+  return amount.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/** Converte string formatada "12,50" para número 12.5 */
+function parseBRL(str: string): number {
+  // Remove pontos de milhar, troca vírgula decimal por ponto
+  return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
 }
 
 export default function RegistrarVendaDisplay({
@@ -23,11 +50,26 @@ export default function RegistrarVendaDisplay({
   theme = 'dark',
   playText,
 }: RegistrarVendaDisplayProps) {
-  const { companyId, produto: produtoInicial, valor: valorInicial, pagamento: pagamentoInicial } = data;
-  
+  const {
+    companyId,
+    produto: produtoInicial,
+    // aceita tanto "valor" (legado) quanto "initialValue" (handler atual)
+    valor: valorLegado,
+    initialValue,
+    pagamento: pagamentoLegado,
+    metodoPagamento,
+  } = data;
+
+  // Resolve valor inicial: prefere initialValue, cai em valorLegado
+  const valorInicialNum = initialValue ?? valorLegado;
+  const pagamentoInicial = metodoPagamento ?? pagamentoLegado ?? 'dinheiro';
+
   const [produto, setProduto] = useState(produtoInicial || '');
-  const [valor, setValor] = useState(valorInicial?.toString() || '');
-  const [pagamento, setPagamento] = useState(pagamentoInicial || 'dinheiro');
+  // Se vier número do handler, já formata; se vier undefined, começa vazio
+  const [valor, setValor] = useState<string>(
+    valorInicialNum != null ? numberToFormatted(valorInicialNum) : ''
+  );
+  const [pagamento, setPagamento] = useState(pagamentoInicial);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -35,7 +77,6 @@ export default function RegistrarVendaDisplay({
   const supabase = createClient();
   const isDark = theme === 'dark';
 
-  // Paletas de cores
   const DARK = {
     bg: 'bg-slate-900',
     cardBg: 'bg-slate-800',
@@ -57,10 +98,10 @@ export default function RegistrarVendaDisplay({
   const colors = isDark ? DARK : LIGHT;
 
   const PAYMENT_TYPES = [
-    { value: 'dinheiro', label: '💵 Dinheiro', icon: '💵' },
-    { value: 'pix', label: '📱 PIX', icon: '📱' },
-    { value: 'debito', label: '💳 Débito', icon: '💳' },
-    { value: 'credito', label: '💳 Crédito', icon: '💳' },
+    { value: 'dinheiro', label: 'Dinheiro', icon: '💵' },
+    { value: 'pix',      label: 'PIX',      icon: '📱' },
+    { value: 'debito',   label: 'Débito',   icon: '💳' },
+    { value: 'credito',  label: 'Crédito',  icon: '💳' },
   ];
 
   useEffect(() => {
@@ -71,7 +112,6 @@ export default function RegistrarVendaDisplay({
     };
   }, []);
 
-  // Toast
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 3000);
@@ -83,65 +123,75 @@ export default function RegistrarVendaDisplay({
     setToast({ message, type });
   }
 
-  async function handleSave() {
-    // Validações
-    if (!produto.trim() && !valor) {
-      showToast('Informe o produto ou o valor da venda', 'error');
-      return;
-    }
+  function handleValorChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setValor(formatCurrency(e.target.value));
+  }
 
-    const valorNumerico = parseFloat(valor || '0');
+  async function handleSave() {
+    const valorNumerico = parseBRL(valor);
+
     if (valorNumerico <= 0) {
-      showToast('Valor deve ser maior que zero', 'error');
+      showToast('Informe um valor maior que zero', 'error');
       return;
     }
 
     setIsSaving(true);
 
     try {
-      // Busca perfil ativo do usuário
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
+      // ──────────────────────────────────────────────────────────────────────
+      // O cliente do totem pode NÃO estar autenticado, portanto NÃO
+      // bloqueamos o fluxo em caso de ausência de sessão.
+      // profile_id fica null quando não há usuário logado — a coluna aceita NULL.
+      // ──────────────────────────────────────────────────────────────────────
+      let profileId: string | null = null;
 
-      const { data: session } = await supabase
-        .from('profile_sessions')
-        .select('profile_id')
-        .eq('user_id', user.id)
-        .eq('company_id', companyId)
-        .eq('is_active', true)
-        .maybeSingle();
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user ?? null;
 
-      const profileId = session?.profile_id;
+      if (user) {
+        // Tenta encontrar sessão de perfil ativa para este usuário/empresa
+        const { data: session } = await supabase
+          .from('profile_sessions')
+          .select('profile_id')
+          .eq('company_id', companyId)
+          .gt('expires_at', new Date().toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      // Registra venda simplificada
-      const { error } = await supabase
-        .from('vendas_rapidas')
-        .insert({
-          company_id: companyId,
-          profile_id: profileId,
-          descricao: produto.trim() || 'Venda rápida',
-          valor: valorNumerico,
-          tipo_pagamento: pagamento,
-          created_at: new Date().toISOString(),
-        });
-
-      if (error) throw error;
-
-      showToast('Venda registrada com sucesso!', 'success');
-      
-      if (playText) {
-        await playText(`Venda de ${valorNumerico.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} registrada com sucesso!`);
+        profileId = session?.profile_id ?? null;
       }
 
-      // Fecha após 1.5s
-      setTimeout(() => {
-        onClose();
-      }, 1500);
+      const { error: insertError } = await supabase
+        .from('vendas_rapidas')
+        .insert({
+          company_id:      companyId,
+          profile_id:      profileId,          // null é aceito pelo schema
+          descricao:       produto.trim() || 'Venda rápida',
+          valor:           valorNumerico,
+          tipo_pagamento:  pagamento,
+          created_at:      new Date().toISOString(),
+        });
 
-    } catch (error) {
-      console.error('Erro ao registrar venda:', error);
-      showToast('Erro ao registrar venda', 'error');
-      
+      if (insertError) throw insertError;
+
+      showToast('Venda registrada com sucesso!', 'success');
+
+      if (playText) {
+        await playText(
+          `Venda de ${valorNumerico.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          })} registrada com sucesso!`
+        );
+      }
+
+      setTimeout(() => onClose(), 1500);
+
+    } catch (err) {
+      console.error('Erro ao registrar venda:', err);
+      showToast('Erro ao registrar venda. Tente novamente.', 'error');
+
       if (playText) {
         await playText('Erro ao registrar venda. Tente novamente.');
       }
@@ -150,40 +200,29 @@ export default function RegistrarVendaDisplay({
     }
   }
 
-  function formatCurrency(value: string): string {
-    const numbers = value.replace(/\D/g, '');
-    if (!numbers) return '';
-    const amount = parseFloat(numbers) / 100;
-    return amount.toLocaleString('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  }
-
-  function handleValorChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const formatted = formatCurrency(e.target.value);
-    setValor(formatted);
-  }
-
   if (!mounted) return null;
 
   const content = (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[400] px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
-          toast.type === 'error' 
-            ? 'bg-red-600 text-white' 
-            : 'bg-green-600 text-white'
-        }`}>
-          {toast.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <Check className="w-5 h-5" />}
+        <div
+          className={`fixed top-4 left-1/2 -translate-x-1/2 z-[400] px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
+            toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
+          }`}
+        >
+          {toast.type === 'error'
+            ? <AlertCircle className="w-5 h-5" />
+            : <Check className="w-5 h-5" />
+          }
           {toast.message}
         </div>
       )}
 
       {/* Modal */}
-      <div className={`w-full max-w-md rounded-2xl shadow-2xl ${colors.bg} ${colors.border} border overflow-hidden`}>
-        
+      <div
+        className={`w-full max-w-md rounded-2xl shadow-2xl ${colors.bg} ${colors.border} border overflow-hidden`}
+      >
         {/* Header */}
         <div className={`px-6 py-4 border-b ${colors.border} flex items-center justify-between`}>
           <div className="flex items-center gap-3">
@@ -199,8 +238,8 @@ export default function RegistrarVendaDisplay({
             onClick={onClose}
             disabled={isSaving}
             className={`p-2 rounded-lg transition-colors ${
-              isDark 
-                ? 'text-white/50 hover:text-white hover:bg-white/10' 
+              isDark
+                ? 'text-white/50 hover:text-white hover:bg-white/10'
                 : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
             } disabled:opacity-50`}
           >
@@ -212,7 +251,7 @@ export default function RegistrarVendaDisplay({
 
         {/* Content */}
         <div className="p-6 space-y-4">
-          
+
           {/* Produto/Descrição */}
           <div>
             <label className={`block text-sm font-medium mb-2 ${colors.textPrimary}`}>
@@ -237,6 +276,7 @@ export default function RegistrarVendaDisplay({
               <DollarSign className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${colors.textMuted}`} />
               <input
                 type="text"
+                inputMode="numeric"
                 value={valor}
                 onChange={handleValorChange}
                 placeholder="0,00"
@@ -244,11 +284,9 @@ export default function RegistrarVendaDisplay({
                 className={`w-full pl-10 pr-4 py-3 rounded-lg border ${colors.border} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50 text-lg font-semibold`}
               />
             </div>
-            {valor && (
-              <p className={`text-xs ${colors.textMuted} mt-1`}>
-                R$ {valor}
-              </p>
-            )}
+            {valor ? (
+              <p className={`text-xs ${colors.textMuted} mt-1`}>R$ {valor}</p>
+            ) : null}
           </div>
 
           {/* Tipo de Pagamento */}
@@ -271,16 +309,20 @@ export default function RegistrarVendaDisplay({
                   }`}
                 >
                   <div className="text-2xl mb-1">{type.icon}</div>
-                  <div className="text-xs font-medium">{type.label.replace(/[^\w\s]/g, '').trim()}</div>
+                  <div className="text-xs font-medium">{type.label}</div>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Info */}
-          <div className={`p-3 rounded-lg ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border`}>
+          <div
+            className={`p-3 rounded-lg border ${
+              isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'
+            }`}
+          >
             <p className={`text-xs ${isDark ? 'text-blue-200' : 'text-blue-800'}`}>
-              💡 Registro rápido para agilizar o atendimento. A venda será registrada no seu nome e aparecerá nos relatórios.
+              💡 Registro rápido para agilizar o atendimento. A venda aparecerá nos relatórios do estabelecimento.
             </p>
           </div>
 
@@ -290,8 +332,8 @@ export default function RegistrarVendaDisplay({
               onClick={onClose}
               disabled={isSaving}
               className={`flex-1 px-4 py-3 rounded-lg font-medium transition disabled:opacity-50 ${
-                isDark 
-                  ? 'bg-slate-700 hover:bg-slate-600 text-white' 
+                isDark
+                  ? 'bg-slate-700 hover:bg-slate-600 text-white'
                   : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
               }`}
             >
@@ -299,7 +341,7 @@ export default function RegistrarVendaDisplay({
             </button>
             <button
               onClick={handleSave}
-              disabled={isSaving || !valor || parseFloat(valor.replace(',', '.')) <= 0}
+              disabled={isSaving || parseBRL(valor) <= 0}
               className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
             >
               {isSaving ? (

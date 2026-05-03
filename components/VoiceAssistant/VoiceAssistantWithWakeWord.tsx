@@ -2120,18 +2120,19 @@ const handleTextMessage = async (message: string) => {
       companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings,
     });
 
-  const getStatusMessage = (maximized = false) => {
-    if (!hasMicrophone) return 'Modo de voz indisponível';
-    if (!permissionGranted) return 'Aguardando permissão de voz...';
-    if (isTranscribing) return 'Transcrevendo...';
-    if (isPlayingAudio) return 'Falando...';
-    if (isProcessing) return 'Processando...';
-    const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
-    if (!wakeWordEnabled) return maximized
-      ? 'Pressione o orbe para interagir'
-      : 'Pressione o microfone para interagir';
-    return primaryWakeWord ? `diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
-  };
+const getStatusMessage = (maximized = false) => {
+  if (isKioskMode && isKeyboardOpen)
+    return 'Use o teclado abaixo';
+  if (!permissionGranted) return 'Aguardando permissão de voz...';
+  if (isTranscribing) return 'Transcrevendo...';
+  if (isPlayingAudio) return 'Falando...';
+  if (isProcessing) return 'Processando...';
+  const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
+  if (!wakeWordEnabled) return maximized
+    ? 'Pressione o orbe para interagir'
+    : 'Pressione o microfone para interagir';
+  return primaryWakeWord ? `diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
+};
 
   const getMicButtonColor = () => {
     if (voiceRecorder.isRecording || isPlayingAudio) return 'bg-red-500 animate-pulse';
@@ -2249,7 +2250,7 @@ const handleTextMessage = async (message: string) => {
 
         {/* Card esquerdo: Avatar */}
 <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-all duration-300 flex flex-col ${
-  showVirtualKeyboard ? "h-[220px]" : "h-[448px]"
+  showVirtualKeyboard ? "h-[250px]" : "h-[448px]"
 } ${
   theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
 }`}>
@@ -2279,7 +2280,7 @@ const handleTextMessage = async (message: string) => {
 
         {/* Card direito: Status / Microfone */}
           <div className={`rounded-3xl shadow-2xl p-8 border flex flex-col overflow-hidden transition-all duration-300 ${
-            showVirtualKeyboard ? "h-[200px]" : "h-[448px]"
+            showVirtualKeyboard ? "h-[250px]" : "h-[448px]"
           } ${
             theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
           }`}>

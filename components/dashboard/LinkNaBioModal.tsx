@@ -32,16 +32,10 @@ interface ContactData {
   youtube_channel_url: string;
 }
 
-interface GbpContactData {
-  phone: string | null;
+// Dados que a Places API retorna e podemos mapear para ContactData
+interface PlaceContactData {
+  phone:   string | null;
   website: string | null;
-  whatsapp: string | null;
-  instagram: string | null;
-  facebook: string | null;
-  youtube: string | null;
-  tiktok: string | null;
-  twitter: string | null;
-  linkedin: string | null;
 }
 
 interface LinkNaBioModalProps {
@@ -76,29 +70,30 @@ const LIGHT = {
   warn: '#d97706', warnBg: '#fffbeb',
 };
 
-// ── Campos de contato mapeados ────────────────────────────────
+// ── Campos de contato ─────────────────────────────────────────
 
 const CONTACT_FIELDS: {
   key: keyof ContactData;
   label: string;
   placeholder: string;
   prefix?: string;
-  gbpKey?: keyof GbpContactData;
+  // Chave correspondente nos dados da Places API (só phone e website disponíveis)
+  placeKey?: keyof PlaceContactData;
 }[] = [
-  { key: 'whatsapp_number',    label: 'WhatsApp',    placeholder: '5511999999999',          prefix: 'wa.me/',         gbpKey: 'whatsapp' },
-  { key: 'instagram_username', label: 'Instagram',   placeholder: 'nome_usuario',           prefix: 'instagram.com/', gbpKey: 'instagram' },
-  { key: 'facebook',           label: 'Facebook',    placeholder: 'https://facebook.com/...', gbpKey: 'facebook' },
-  { key: 'website',            label: 'Site',        placeholder: 'https://seusite.com.br',   gbpKey: 'website' },
-  { key: 'email_contato',      label: 'E-mail',      placeholder: 'contato@empresa.com.br', prefix: 'mailto:' },
-  { key: 'telefone_fixo',      label: 'Telefone',    placeholder: '11 3333-4444',           prefix: 'tel:',           gbpKey: 'phone' },
-  { key: 'tiktok',             label: 'TikTok',      placeholder: 'nome_usuario',           prefix: 'tiktok.com/@',   gbpKey: 'tiktok' },
-  { key: 'twitter',            label: 'X / Twitter', placeholder: 'nome_usuario',           prefix: 'twitter.com/',   gbpKey: 'twitter' },
-  { key: 'linkedin',           label: 'LinkedIn',    placeholder: 'https://linkedin.com/...', gbpKey: 'linkedin' },
-  { key: 'youtube_channel_url',label: 'YouTube',     placeholder: 'https://youtube.com/@...', gbpKey: 'youtube' },
+  { key: 'whatsapp_number',    label: 'WhatsApp',    placeholder: '5511999999999',            prefix: 'wa.me/' },
+  { key: 'instagram_username', label: 'Instagram',   placeholder: 'nome_usuario',             prefix: 'instagram.com/' },
+  { key: 'facebook',           label: 'Facebook',    placeholder: 'https://facebook.com/...' },
+  { key: 'website',            label: 'Site',        placeholder: 'https://seusite.com.br',   placeKey: 'website' },
+  { key: 'email_contato',      label: 'E-mail',      placeholder: 'contato@empresa.com.br',   prefix: 'mailto:' },
+  { key: 'telefone_fixo',      label: 'Telefone',    placeholder: '11 3333-4444',             prefix: 'tel:',    placeKey: 'phone' },
+  { key: 'tiktok',             label: 'TikTok',      placeholder: 'nome_usuario',             prefix: 'tiktok.com/@' },
+  { key: 'twitter',            label: 'X / Twitter', placeholder: 'nome_usuario',             prefix: 'twitter.com/' },
+  { key: 'linkedin',           label: 'LinkedIn',    placeholder: 'https://linkedin.com/...' },
+  { key: 'youtube_channel_url',label: 'YouTube',     placeholder: 'https://youtube.com/@...' },
 ];
 
-// Apenas os campos que têm mapeamento GBP
-const GBP_SYNCABLE_FIELDS = CONTACT_FIELDS.filter(f => f.gbpKey);
+// Só os campos que têm mapeamento na Places API
+const PLACE_SYNCABLE_FIELDS = CONTACT_FIELDS.filter(f => f.placeKey);
 
 // ── Ícones SVG inline ─────────────────────────────────────────
 
@@ -106,11 +101,6 @@ const Ico = {
   Link: ({ s = 16, c = 'currentColor' }) => (
     <svg width={s} height={s} fill="none" stroke={c} strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-    </svg>
-  ),
-  Phone: ({ s = 16, c = 'currentColor' }) => (
-    <svg width={s} height={s} fill="none" stroke={c} strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
     </svg>
   ),
   Trash: ({ s = 16, c = 'currentColor' }) => (
@@ -160,6 +150,11 @@ const Ico = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
     </svg>
   ),
+  Download: ({ s = 16, c = 'currentColor' }) => (
+    <svg width={s} height={s} fill="none" stroke={c} strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+    </svg>
+  ),
 };
 
 // ── Google Logo SVG ───────────────────────────────────────────
@@ -197,11 +192,7 @@ function Field({ label, value, onChange, placeholder, prefix, p, highlight }: {
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
-          style={{
-            flex: 1, padding: '9px 12px',
-            background: 'transparent', border: 'none', outline: 'none',
-            color: p.text, fontSize: 13,
-          }}
+          style={{ flex: 1, padding: '9px 12px', background: 'transparent', border: 'none', outline: 'none', color: p.text, fontSize: 13 }}
         />
       </div>
     </div>
@@ -427,121 +418,98 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
   };
 
   // ────────────────────────────────────────────────────────
-  // GBP SYNC
+  // SYNC GOOGLE PLACES → minhAi (somente leitura)
   // ────────────────────────────────────────────────────────
 
-  const [showGbpSync, setShowGbpSync]   = useState(false);
-  const [gbpLoading, setGbpLoading]     = useState(false);
-  const [gbpData, setGbpData]           = useState<GbpContactData | null>(null);
-  const [gbpSyncing, setGbpSyncing]     = useState(false);
-  const [gbpToast, setGbpToast]         = useState('');
-  const [gbpDirection, setGbpDirection] = useState<'google_to_minhai' | 'minhai_to_google' | null>(null);
+  const [showPlaceSync, setShowPlaceSync]     = useState(false);
+  const [placeLoading, setPlaceLoading]       = useState(false);
+  const [placeData, setPlaceData]             = useState<PlaceContactData | null>(null);
+  const [placeSyncing, setPlaceSyncing]       = useState(false);
+  const [placeToast, setPlaceToast]           = useState('');
+  const [placeNoLinked, setPlaceNoLinked]     = useState(false);
 
-  // Mapeamento minhAi → GBP
-  function getMinhAiValue(gbpKey: keyof GbpContactData): string {
-    const field = GBP_SYNCABLE_FIELDS.find(f => f.gbpKey === gbpKey);
-    if (!field) return '';
-    return contact[field.key] || '';
+  function getContactValue(placeKey: keyof PlaceContactData): string {
+    const field = PLACE_SYNCABLE_FIELDS.find(f => f.placeKey === placeKey);
+    return field ? contact[field.key] : '';
   }
 
-  function getGbpValue(gbpKey: keyof GbpContactData): string {
-    return gbpData?.[gbpKey] || '';
+  function getPlaceValue(placeKey: keyof PlaceContactData): string {
+    return placeData?.[placeKey] ?? '';
   }
 
-  async function loadGbpData() {
-    setGbpLoading(true);
-    setGbpData(null);
-    setGbpDirection(null);
+  async function loadPlaceData() {
+    setPlaceLoading(true);
+    setPlaceData(null);
+    setPlaceNoLinked(false);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/gbp-sync-info`,
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/gbp-place-details`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
           },
-          body: JSON.stringify({ company_id: companyId, action: 'read' }),
+          body: JSON.stringify({ company_id: companyId }),
         }
       );
       const json = await res.json();
       if (json.error) throw new Error(json.error);
-      if (json.google) {
-        setGbpData(json.google);
-      } else {
-        setGbpToast('Nenhuma localização do Google vinculada. Configure em Serviços Google → Meu Negócio.');
-        setTimeout(() => setGbpToast(''), 5000);
-        setShowGbpSync(false);
-      }
+      // Extrai só phone e website do info retornado
+      setPlaceData({
+        phone:   json.info?.phone   ?? null,
+        website: json.info?.website ?? null,
+      });
     } catch (err: any) {
-      setGbpToast(err.message || 'Erro ao conectar com o Google.');
-      setTimeout(() => setGbpToast(''), 4000);
-      setShowGbpSync(false);
+      const msg: string = err.message ?? '';
+      if (msg.includes('place_id não encontrado') || msg.includes('Vincule')) {
+        setPlaceNoLinked(true);
+      } else {
+        setPlaceToast(msg || 'Erro ao buscar dados do Google.');
+        setTimeout(() => setPlaceToast(''), 4000);
+      }
+      setShowPlaceSync(false);
     } finally {
-      setGbpLoading(false);
+      setPlaceLoading(false);
     }
   }
 
-  async function applyGbpSync() {
-    if (!gbpDirection || !gbpData) return;
-    setGbpSyncing(true);
+  async function applyPlaceSync() {
+    if (!placeData) return;
+    setPlaceSyncing(true);
     try {
-      if (gbpDirection === 'google_to_minhai') {
-        // Mapear GBP → minhAi
-        const update: Partial<ContactData> = {};
-        for (const field of GBP_SYNCABLE_FIELDS) {
-          const gbpVal = getGbpValue(field.gbpKey!);
-          if (gbpVal) update[field.key] = gbpVal;
-        }
-        if (Object.keys(update).length > 0) {
-          await supabase.from('companies').update({
-            ...update,
-            updated_at: new Date().toISOString(),
-          }).eq('id', companyId);
-          setContact(prev => ({ ...prev, ...update }));
-          setContactDirty(false);
-        }
-        setGbpToast('✓ Dados do Google aplicados no minhAi!');
-      } else {
-        // Mapear minhAi → GBP
-        const data: Record<string, string> = {};
-        for (const field of GBP_SYNCABLE_FIELDS) {
-          const minhaiVal = getMinhAiValue(field.gbpKey!);
-          if (minhaiVal) data[field.gbpKey!] = minhaiVal;
-        }
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/gbp-sync-info`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({ company_id: companyId, action: 'write', data }),
-          }
-        );
-        const json = await res.json();
-        if (json.error) throw new Error(json.error);
-        setGbpToast('✓ Dados do minhAi enviados para o Google!');
+      const update: Partial<ContactData> = {};
+      for (const field of PLACE_SYNCABLE_FIELDS) {
+        const val = getPlaceValue(field.placeKey!);
+        if (val) update[field.key] = val;
       }
+      if (Object.keys(update).length > 0) {
+        await supabase.from('companies').update({
+          ...update,
+          updated_at: new Date().toISOString(),
+        }).eq('id', companyId);
+        setContact(prev => ({ ...prev, ...update }));
+        setContactDirty(false);
+      }
+      setPlaceToast('✓ Dados do Google aplicados!');
       setTimeout(() => {
-        setGbpToast('');
-        setShowGbpSync(false);
-      }, 2500);
+        setPlaceToast('');
+        setShowPlaceSync(false);
+      }, 2000);
     } catch (err: any) {
-      setGbpToast('Erro: ' + (err.message || 'Tente novamente.'));
-      setTimeout(() => setGbpToast(''), 4000);
+      setPlaceToast('Erro: ' + (err.message || 'Tente novamente.'));
+      setTimeout(() => setPlaceToast(''), 4000);
     } finally {
-      setGbpSyncing(false);
+      setPlaceSyncing(false);
     }
   }
 
   // Campos com divergência
-  const divergentFields = gbpData
-    ? GBP_SYNCABLE_FIELDS.filter(f => {
-        const minhai = getMinhAiValue(f.gbpKey!);
-        const google = getGbpValue(f.gbpKey!);
-        return minhai !== google && (minhai !== '' || google !== '');
+  const divergentFields = placeData
+    ? PLACE_SYNCABLE_FIELDS.filter(f => {
+        const local = getContactValue(f.placeKey!);
+        const google = getPlaceValue(f.placeKey!);
+        return local !== google && (local !== '' || google !== '');
       })
     : [];
 
@@ -598,19 +566,14 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
             </div>
           </div>
 
-          {/* Abas + botão Google */}
+          {/* Tabs + botão Sincronizar (só na aba contato) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-            <button style={tabStyle(tab === 'links')} onClick={() => setTab('links')}>
-              Bio / Links
-            </button>
-            <button style={tabStyle(tab === 'contato')} onClick={() => setTab('contato')}>
-              Contato
-            </button>
+            <button style={tabStyle(tab === 'links')} onClick={() => setTab('links')}>Bio / Links</button>
+            <button style={tabStyle(tab === 'contato')} onClick={() => setTab('contato')}>Contato</button>
 
-            {/* Botão Sincronizar Google — só na aba Contato */}
             {tab === 'contato' && (
               <button
-                onClick={() => { setShowGbpSync(true); loadGbpData(); }}
+                onClick={() => { setShowPlaceSync(true); loadPlaceData(); }}
                 style={{
                   marginLeft: 'auto', marginRight: 2, marginBottom: 4,
                   display: 'flex', alignItems: 'center', gap: 6,
@@ -618,8 +581,7 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
                   border: `1px solid ${p.border}`,
                   borderRadius: 8, background: p.surface,
                   cursor: 'pointer', fontSize: 11, fontWeight: 600,
-                  color: p.textMuted, flexShrink: 0,
-                  whiteSpace: 'nowrap',
+                  color: p.textMuted, flexShrink: 0, whiteSpace: 'nowrap',
                 }}
               >
                 <GoogleLogo size={13} />
@@ -750,8 +712,7 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
               ) : (
                 <>
                   <p style={{ margin: '0 0 14px', fontSize: 12, color: p.textMuted, lineHeight: 1.5 }}>
-                    Esses dados aparecem automaticamente na página pública como botões de contato.
-                    Campos vazios ficam ocultos na página.
+                    Esses dados aparecem automaticamente na página pública como botões de contato. Campos vazios ficam ocultos.
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {CONTACT_FIELDS.map(f => (
@@ -813,26 +774,26 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
         </div>
       )}
 
-      {/* ── Modal de Sync GBP ── */}
-      {showGbpSync && (
+      {/* ── Modal de Sync Places ── */}
+      {showPlaceSync && (
         <div
           style={{ position: 'fixed', inset: 0, zIndex: 10001, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-          onClick={() => setShowGbpSync(false)}
+          onClick={() => setShowPlaceSync(false)}
         >
           <div
-            style={{ background: p.bg, borderRadius: 18, width: '100%', maxWidth: 520, maxHeight: '85vh', overflowY: 'auto', border: `1px solid ${p.border}`, boxShadow: '0 30px 70px rgba(0,0,0,0.4)' }}
+            style={{ background: p.bg, borderRadius: 18, width: '100%', maxWidth: 460, maxHeight: '85vh', overflowY: 'auto', border: `1px solid ${p.border}`, boxShadow: '0 30px 70px rgba(0,0,0,0.4)' }}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
             <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 10, position: 'sticky', top: 0, background: p.bg, zIndex: 1 }}>
               <GoogleLogo size={20} />
               <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: p.text }}>Sincronizar com Google Meu Negócio</p>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: p.text }}>Sincronizar do Google</p>
                 <p style={{ margin: 0, fontSize: 11, color: p.textMuted }}>
-                  {gbpData ? `${divergentFields.length} campo${divergentFields.length !== 1 ? 's' : ''} com diferenças` : 'Buscando dados...'}
+                  Puxar telefone e site do Google para o minhAi
                 </p>
               </div>
-              <button onClick={() => setShowGbpSync(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+              <button onClick={() => setShowPlaceSync(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                 <Ico.X s={16} c={p.textMuted} />
               </button>
             </div>
@@ -841,56 +802,29 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
             <div style={{ padding: '16px 20px' }}>
 
               {/* Loading */}
-              {gbpLoading && (
+              {placeLoading && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '32px 0', color: p.textMuted, fontSize: 13 }}>
                   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    style={{ animation: 'gbp-spin 1s linear infinite' }}>
+                    style={{ animation: 'place-spin 1s linear infinite' }}>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  Buscando dados do Google Meu Negócio...
-                  <style>{`@keyframes gbp-spin { to { transform: rotate(360deg); } }`}</style>
+                  Buscando dados do Google...
+                  <style>{`@keyframes place-spin { to { transform: rotate(360deg); } }`}</style>
                 </div>
               )}
 
-              {!gbpLoading && gbpData && (
-                <>
-                  {/* Escolha de direção */}
-                  <p style={{ margin: '0 0 12px', fontSize: 12, color: p.textMuted }}>
-                    Escolha a direção da sincronização:
+              {/* Sem negócio vinculado */}
+              {!placeLoading && placeNoLinked && (
+                <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                  <p style={{ fontSize: 14, color: p.text, fontWeight: 600, marginBottom: 8 }}>Nenhum negócio vinculado</p>
+                  <p style={{ fontSize: 12, color: p.textMuted, lineHeight: 1.5 }}>
+                    Acesse <strong>Serviços Google → Meu Negócio</strong> para vincular seu negócio no Google e habilitar essa sincronização.
                   </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
-                    {([
-                      {
-                        key: 'google_to_minhai' as const,
-                        emoji: '🌐 → 📱',
-                        title: 'Google → minhAi',
-                        desc: 'Puxar dados do Google e aplicar aqui',
-                      },
-                      {
-                        key: 'minhai_to_google' as const,
-                        emoji: '📱 → 🌐',
-                        title: 'minhAi → Google',
-                        desc: 'Enviar dados daqui para o Google',
-                      },
-                    ]).map(opt => (
-                      <button
-                        key={opt.key}
-                        onClick={() => setGbpDirection(gbpDirection === opt.key ? null : opt.key)}
-                        style={{
-                          padding: '12px 10px', borderRadius: 12,
-                          border: `2px solid ${gbpDirection === opt.key ? p.accent : p.border}`,
-                          background: gbpDirection === opt.key ? p.accentBg : p.surface,
-                          cursor: 'pointer', textAlign: 'center',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        <div style={{ fontSize: 22, marginBottom: 4 }}>{opt.emoji}</div>
-                        <p style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: gbpDirection === opt.key ? p.accent : p.text }}>{opt.title}</p>
-                        <p style={{ margin: 0, fontSize: 10, color: p.textMuted, lineHeight: 1.3 }}>{opt.desc}</p>
-                      </button>
-                    ))}
-                  </div>
+                </div>
+              )}
 
+              {!placeLoading && placeData && (
+                <>
                   {/* Tabela comparativa */}
                   <div style={{ borderRadius: 12, border: `1px solid ${p.border}`, overflow: 'hidden', marginBottom: 16 }}>
                     {/* Cabeçalho */}
@@ -900,30 +834,21 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
                       <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: '#34d399', textTransform: 'uppercase' }}>Google</p>
                     </div>
 
-                    {GBP_SYNCABLE_FIELDS.map(field => {
-                      const minhaiVal = getMinhAiValue(field.gbpKey!);
-                      const googleVal = getGbpValue(field.gbpKey!);
-                      const isDiff = minhaiVal !== googleVal && (minhaiVal !== '' || googleVal !== '');
-                      const isEmpty = !minhaiVal && !googleVal;
-
+                    {PLACE_SYNCABLE_FIELDS.map(field => {
+                      const localVal  = getContactValue(field.placeKey!);
+                      const googleVal = getPlaceValue(field.placeKey!);
+                      const isDiff    = localVal !== googleVal && (localVal !== '' || googleVal !== '');
+                      const isEmpty   = !localVal && !googleVal;
                       if (isEmpty) return null;
-
                       return (
-                        <div
-                          key={field.key}
-                          style={{
-                            display: 'grid', gridTemplateColumns: '100px 1fr 1fr',
-                            padding: '8px 12px',
-                            borderBottom: `1px solid ${p.border}`,
-                            background: isDiff ? p.warnBg : 'transparent',
-                          }}
-                        >
+                        <div key={field.key}
+                          style={{ display: 'grid', gridTemplateColumns: '100px 1fr 1fr', padding: '8px 12px', borderBottom: `1px solid ${p.border}`, background: isDiff ? p.warnBg : 'transparent' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             {isDiff && <span style={{ fontSize: 10 }}>⚡</span>}
                             <span style={{ fontSize: 11, color: isDiff ? p.warn : p.textMuted, fontWeight: isDiff ? 600 : 400 }}>{field.label}</span>
                           </div>
                           <p style={{ margin: 0, fontSize: 11, color: p.text, wordBreak: 'break-all', paddingRight: 8 }}>
-                            {minhaiVal || <span style={{ color: p.textMuted, fontStyle: 'italic' }}>vazio</span>}
+                            {localVal || <span style={{ color: p.textMuted, fontStyle: 'italic' }}>vazio</span>}
                           </p>
                           <p style={{ margin: 0, fontSize: 11, color: p.text, wordBreak: 'break-all' }}>
                             {googleVal || <span style={{ color: p.textMuted, fontStyle: 'italic' }}>vazio</span>}
@@ -936,51 +861,51 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
                   {divergentFields.length === 0 && (
                     <div style={{ padding: '12px 16px', borderRadius: 10, background: p.successBg, border: `1px solid ${p.success}30`, marginBottom: 16 }}>
                       <p style={{ margin: 0, fontSize: 12, color: p.success, fontWeight: 600 }}>
-                        ✓ Todos os campos estão iguais nos dois lados!
+                        ✓ Telefone e site já estão iguais nos dois lados!
                       </p>
                     </div>
                   )}
 
                   {/* Botão aplicar */}
                   <button
-                    onClick={applyGbpSync}
-                    disabled={gbpSyncing || !gbpDirection}
+                    onClick={applyPlaceSync}
+                    disabled={placeSyncing || divergentFields.length === 0}
                     style={{
                       width: '100%', padding: '12px 0', borderRadius: 10,
-                      border: 'none', background: gbpDirection ? p.accent : p.surface,
-                      color: gbpDirection ? '#fff' : p.textMuted,
-                      fontSize: 13, fontWeight: 700, cursor: gbpDirection ? 'pointer' : 'not-allowed',
-                      opacity: gbpSyncing ? 0.7 : 1, transition: 'all 0.15s',
+                      border: 'none',
+                      background: divergentFields.length > 0 ? p.accent : p.surface,
+                      color: divergentFields.length > 0 ? '#fff' : p.textMuted,
+                      fontSize: 13, fontWeight: 700,
+                      cursor: divergentFields.length > 0 ? 'pointer' : 'not-allowed',
+                      opacity: placeSyncing ? 0.7 : 1, transition: 'all 0.15s',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                     }}
                   >
-                    {gbpSyncing ? (
+                    {placeSyncing ? (
                       <>
                         <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                          style={{ animation: 'gbp-spin 1s linear infinite' }}>
+                          style={{ animation: 'place-spin 1s linear infinite' }}>
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        Sincronizando...
+                        Aplicando...
                       </>
-                    ) : gbpDirection ? (
-                      gbpDirection === 'google_to_minhai' ? '🌐 Aplicar dados do Google no minhAi' : '📱 Enviar dados do minhAi ao Google'
                     ) : (
-                      'Selecione uma direção acima'
+                      '🌐 Aplicar dados do Google no minhAi'
                     )}
                   </button>
                 </>
               )}
 
-              {/* Toast do modal GBP */}
-              {gbpToast && (
+              {/* Toast do modal */}
+              {placeToast && (
                 <div style={{
                   marginTop: 12, padding: '10px 14px', borderRadius: 10,
-                  background: gbpToast.startsWith('✓') ? p.successBg : p.dangerBg,
-                  border: `1px solid ${gbpToast.startsWith('✓') ? p.success : p.danger}30`,
-                  color: gbpToast.startsWith('✓') ? p.success : p.danger,
+                  background: placeToast.startsWith('✓') ? p.successBg : p.dangerBg,
+                  border: `1px solid ${placeToast.startsWith('✓') ? p.success : p.danger}30`,
+                  color: placeToast.startsWith('✓') ? p.success : p.danger,
                   fontSize: 12, fontWeight: 600, textAlign: 'center',
                 }}>
-                  {gbpToast}
+                  {placeToast}
                 </div>
               )}
             </div>

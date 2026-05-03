@@ -7,7 +7,6 @@
 // Separado do layout.tsx (Server Component) pois usa event handlers.
 //
 // ✅ FIX: Exceção para teclado virtual funcionar corretamente
-
 export default function KioskWrapper({ children }: { children: React.ReactNode }) {
   return (
     <>
@@ -62,6 +61,16 @@ export default function KioskWrapper({ children }: { children: React.ReactNode }
         className="flex-1"
         onContextMenu={(e) => e.preventDefault()}
         onDragStart={(e) => e.preventDefault()}
+        onClick={(e) => {
+          const anchor = (e.target as HTMLElement).closest('a');
+          if (!anchor) return;
+          const href = anchor.getAttribute('href') ?? '';
+          const isExternal = href.startsWith('http') || href.startsWith('//') || anchor.target === '_blank';
+          if (isExternal) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
       >
         {children}
       </main>

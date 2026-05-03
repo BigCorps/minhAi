@@ -108,6 +108,12 @@ export default function SlugHeader({
     }
   };
 
+  const handleMinhAiClick = () => {
+    window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
+      detail: { functionKey: 'meu_sistema' }
+    }));
+  };
+
   const getInitials = (name: string) =>
     name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
@@ -206,6 +212,23 @@ export default function SlugHeader({
       </span>
     );
   };
+
+  // ── Logo minhAi — link normal ou botão kiosk ──────────────
+  const MinhAiLogo = ({ width, height }: { width: number; height: number }) =>
+    isKioskMode ? (
+      <button
+        onClick={handleMinhAiClick}
+        className="flex-shrink-0 hover:opacity-80 transition-opacity"
+        title="Sobre o minhAi"
+      >
+        <Image src="/logo-circle.png" alt="minhAi logo" width={width} height={height} className="rounded-lg" />
+      </button>
+    ) : (
+      <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer"
+        className="flex-shrink-0 hover:opacity-80 transition-opacity" title="Visite minhAi.app">
+        <Image src="/logo-circle.png" alt="minhAi logo" width={width} height={height} className="rounded-lg" />
+      </Link>
+    );
 
   const NavigationButtons = ({ iconSize }: { iconSize?: string } = {}) => {
     const sz = iconSize ?? icon;
@@ -441,11 +464,7 @@ export default function SlugHeader({
           <div className="relative flex items-center space-x-2">
             {overlayMode ? overlayButtons : normalButtons}
             {!overlayMode && <div className={`w-px h-10 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-300'}`} />}
-            <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer"
-              className="flex-shrink-0 hover:opacity-80 transition-opacity" title="Visite minhAi.app">
-              <Image src="/logo-circle.png" alt="minhAi logo"
-                width={overlayMode ? 36 : 40} height={overlayMode ? 36 : 40} className="rounded-lg" />
-            </Link>
+            <MinhAiLogo width={overlayMode ? 36 : 40} height={overlayMode ? 36 : 40} />
           </div>
         </div>
 
@@ -471,10 +490,9 @@ export default function SlugHeader({
                   {company.assistant_role || 'Uma IA para chamar de sua!'}
                 </p>
               </div>
-              <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer"
-                className="absolute right-4 flex-shrink-0 hover:opacity-80 transition-opacity" title="Visite minhAi.app">
-                <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />
-              </Link>
+              <div className="absolute right-4">
+                <MinhAiLogo width={32} height={32} />
+              </div>
             </div>
             <div className="flex items-center justify-center space-x-2">
               <NavigationButtons iconSize={iconMobile} />
@@ -584,10 +602,9 @@ export default function SlugHeader({
                 </button>
               )}
             </div>
-            <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer"
-              className="flex-shrink-0 hover:opacity-80 transition-opacity z-10" title="Visite minhAi.app">
-              <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />
-            </Link>
+            <div className="flex-shrink-0 z-10">
+              <MinhAiLogo width={32} height={32} />
+            </div>
           </div>
         )}
       </div>

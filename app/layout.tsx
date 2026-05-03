@@ -57,6 +57,14 @@ const KEYWORDS = [
   'ia para empresas',
   'atendente virtual ia',
   'SaaS ia brasil',
+  'minha ia',
+  'nossa ia',
+  'sua ia',
+  'ia pessoal',
+  'ia personalizável',
+  'ia com a minha cara',
+  'ia de autoatendimento',
+  'robô de atendimento',
 ];
 
 // ─── Metadata Next.js ────────────────────────────────────────────────────────

@@ -2275,13 +2275,13 @@ const handleTextMessage = async (message: string) => {
           </div>
         </div>
 
-{/* Card direito: Status / Microfone */}
-<div className={`rounded-3xl shadow-2xl p-8 border flex flex-col overflow-hidden transition-all duration-300 ${
-  showVirtualKeyboard ? "h-[200px]" : "h-[448px]"
-} ${
-  theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
-}`}>
-  <div className="flex flex-col items-center flex-1 min-h-0">
+        {/* Card direito: Status / Microfone */}
+          <div className={`rounded-3xl shadow-2xl p-8 border flex flex-col overflow-hidden transition-all duration-300 ${
+            showVirtualKeyboard ? "h-[200px]" : "h-[448px]"
+          } ${
+            theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
+          }`}>
+            <div className="flex flex-col items-center flex-1 min-h-0">
 
     {/* Microfone oculto quando teclado estiver aberto */}
     {!showVirtualKeyboard && (

@@ -11,6 +11,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import SlugHeader from '@/components/slug/SlugHeader';
+import VirtualKeyboard from '@/components/assistant/VirtualKeyboard';
  
 const KIOSK_STORAGE_KEY = 'eai:kioskSession';
  
@@ -82,6 +83,7 @@ export default function SlugHeaderWrapper({
   const [showSetupOverlay, setShowSetupOverlay] = useState(false);
   const [setupPasswordInput, setSetupPasswordInput] = useState('');
   const [setupPasswordError, setSetupPasswordError] = useState(false);
+  const [overlayKeyboardTarget, setOverlayKeyboardTarget] = useState<'setup' | 'exit' | null>(null);
 
   const kioskPasswordRef = useRef<string | null>(null);
  

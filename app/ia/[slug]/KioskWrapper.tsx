@@ -62,6 +62,12 @@ export default function KioskWrapper({ children }: { children: React.ReactNode }
         onContextMenu={(e) => e.preventDefault()}
         onDragStart={(e) => e.preventDefault()}
         onClick={(e) => {
+          try {
+            const session = sessionStorage.getItem('eai:kioskSession');
+            const isKiosk = session ? JSON.parse(session)?.active === true : false;
+            if (!isKiosk) return; // fora do kiosk, comportamento normal
+          } catch { return; }
+
           const anchor = (e.target as HTMLElement).closest('a');
           if (!anchor) return;
           const href = anchor.getAttribute('href') ?? '';

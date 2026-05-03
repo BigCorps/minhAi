@@ -8,7 +8,54 @@
 //
 // ✅ FIX: Exceção para teclado virtual funcionar corretamente
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+
+// ── Toast de bloqueio kiosk ───────────────────────────────────────────────────
+function KioskBlockedToast() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const handle = () => {
+      setVisible(true);
+      setTimeout(() => setVisible(false), 2500);
+    };
+    window.addEventListener('eai:kioskBlocked', handle);
+    return () => window.removeEventListener('eai:kioskBlocked', handle);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: 48,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 99999,
+        background: 'rgba(15,23,42,0.95)',
+        border: '1px solid rgba(239,68,68,0.4)',
+        borderRadius: 14,
+        padding: '10px 18px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        pointerEvents: 'none',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {/* Ícone cadeado */}
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      <span style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9' }}>
+        Bloqueado em modo kiosk
+      </span>
+    </div>
+  );
+}
 
 export default function KioskWrapper({ children }: { children: React.ReactNode }) {
 
@@ -20,16 +67,16 @@ export default function KioskWrapper({ children }: { children: React.ReactNode }
       try {
         const session = sessionStorage.getItem('eai:kioskSession');
         const isKiosk = session ? JSON.parse(session)?.active === true : false;
-        if (isKiosk) return null; // bloqueia silenciosamente
+        if (isKiosk) {
+          window.dispatchEvent(new CustomEvent('eai:kioskBlocked'));
+          return null;
+        }
       } catch {}
       return originalOpen(...args);
     };
 
-    // Listener reativo: quando o kiosk muda, o patch já está no lugar
-    // (a verificação é feita em tempo de execução dentro do window.open)
-
     return () => {
-      window.open = originalOpen; // restaura ao desmontar
+      window.open = originalOpen;
     };
   }, []);
 
@@ -56,11 +103,9 @@ export default function KioskWrapper({ children }: { children: React.ReactNode }
         img, svg {
           -webkit-user-drag: none;
           user-drag: none;
-          /* ✅ REMOVIDO: pointer-events: none; (bloqueava o teclado virtual) */
         }
         
         /* ✅ NOVA REGRA: Teclado virtual sempre funcional */
-        /* Garante que todos os elementos dentro do teclado virtual sejam clicáveis */
         [data-virtual-keyboard],
         [data-virtual-keyboard] *,
         [data-virtual-keyboard] button,
@@ -90,7 +135,7 @@ export default function KioskWrapper({ children }: { children: React.ReactNode }
           try {
             const session = sessionStorage.getItem('eai:kioskSession');
             const isKiosk = session ? JSON.parse(session)?.active === true : false;
-            if (!isKiosk) return; // fora do kiosk, comportamento normal
+            if (!isKiosk) return;
           } catch { return; }
 
           const anchor = (e.target as HTMLElement).closest('a');
@@ -100,11 +145,13 @@ export default function KioskWrapper({ children }: { children: React.ReactNode }
           if (isExternal) {
             e.preventDefault();
             e.stopPropagation();
+            window.dispatchEvent(new CustomEvent('eai:kioskBlocked'));
           }
         }}
       >
         {children}
       </main>
+      <KioskBlockedToast />
     </>
   );
 }

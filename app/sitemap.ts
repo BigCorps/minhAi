@@ -45,6 +45,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 0.75,
     },
+    {
+      url: `${BASE_URL}/termos`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${BASE_URL}/exclusao`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
   ];
 
   // ── Demo pública — indexável por crawlers de IA ──────────────────────────

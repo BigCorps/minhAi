@@ -247,9 +247,7 @@ const handleSendMessage = async (overrideText?: string) => {
 
   return (
     <div 
-      className={`fixed inset-0 flex flex-col transition-all duration-300 ${
-        isKeyboardOpen ? 'pb-[350px]' : 'pb-0'
-      }`}
+      className="fixed inset-0 flex flex-col"
       style={styles.container}
     >
       {/*
@@ -263,11 +261,9 @@ const handleSendMessage = async (overrideText?: string) => {
 
         {/* Boas-vindas quando vazio */}
         {messages.length === 0 && !busy && (
-          <div className="flex flex-1 items-center justify-center">
+          <div className="flex flex-1 items-end justify-center pb-8">
             <p
-              className={`text-xl font-bold text-center transition-all duration-300 ${
-                isKeyboardOpen ? 'scale-90 -translate-y-12' : 'scale-100'
-              }`}
+              className="text-xl font-bold text-center"
               style={{ color: isDark ? 'rgb(226, 232, 240)' : 'rgb(30, 41, 59)' }}
             >
               Como Posso te Ajudar Hoje?

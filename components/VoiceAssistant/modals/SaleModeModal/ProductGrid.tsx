@@ -246,15 +246,6 @@ export default function ProductGrid({
           }}
         >
 
-          {/* ── Bloco 3b: label "Mais Vendidos" — aparece só se houver favoritos e não estiver no filtro Mais Vendidos ── */}
-          {categoria !== MAIS_VENDIDOS && produtosFiltrados.some((p) => p.is_favorito) && (
-            <p className={`text-[10px] font-semibold uppercase tracking-widest mb-1.5 px-0.5 ${
-              isDark ? 'text-amber-400/70' : 'text-amber-600/80'
-            }`}>
-              ★ Mais Vendidos
-            </p>
-          )}
-
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 pb-2">
             {produtosFiltrados.map((produto) => {
               const qtdCarrinho = getQtdNoCarrinho(produto.id);

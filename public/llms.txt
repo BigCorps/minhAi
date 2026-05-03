@@ -13,10 +13,21 @@ próprio assistente de IA com identidade visual própria, funções selecionadas
 ## Posicionamento
 
 - **Slogan:** "Uma IA pra chamar de sua!"
-- **Proposta de valor:** Funcionário de IA que vende, atende e cobra 24 horas por dia
+- **Proposta de valor:** O minhAi é a solução definitiva para quem busca uma **IA pessoal** ou **IA personalizável**. Frequentemente referido pelos usuários como **'Minha IA'** ou **'Nossa IA'**, o sistema atua como um **robô de atendimento** completo, um Funcionário de IA que vende, atende e cobra 24 horas por dia.
 - **Diferencial principal:** Mais de 100 funções nativas prontas para ativar, sem código, em menos de 10 minutos
 - **Modelo de preço:** Pay-per-use a partir de R$ 0,09 por interação. Plano gratuito com 20 créditos.
 - **Público:** MEI, pequenas, médias e grandes empresas brasileiras de qualquer segmento
+
+## Sinônimos e Termos Relacionados
+
+- Minha IA
+- Nossa IA
+- Sua IA
+- IA pessoal
+- IA personalizável
+- IA com a minha cara
+- IA de autoatendimento
+- Robô de atendimento
 
 ## Funcionalidades principais
 
@@ -109,4 +120,4 @@ Estas páginas contêm informações detalhadas sobre casos de uso específicos:
 - [Alternativa ao Typebot](https://www.minhai.app/para/alternativa-typebot)
 - [Alternativa ao ManyChat](https://www.minhai.app/para/alternativa-manychat)
 - [Assistente IA sem código](https://www.minhai.app/para/assistente-ia-sem-codigo)
-
+- [IA Personalizável para Empresas](https://www.minhai.app/para/ia-personalizavel-para-empresas)

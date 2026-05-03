@@ -331,11 +331,9 @@ export default function SlugHeaderWrapper({
             <div className="px-6 py-5 space-y-4">
               <input
                 type="password"
-                inputMode="text"
+                inputMode="none"
                 value={setupPasswordInput}
-                onChange={(e) => setSetupPasswordInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleConfirmSetup()}
-                onClick={() => { if (isKioskMode) setOverlayKeyboardTarget('setup'); }}
+                readOnly
                 autoFocus
                 placeholder="Mínimo 4 caracteres"
                 className={`w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-colors text-base ${
@@ -348,17 +346,14 @@ export default function SlugHeaderWrapper({
                     : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
                 }`}
               />
-              {overlayKeyboardTarget === 'setup' && (
-                <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10002 }}>
-                  <VirtualKeyboard
-                    onKey={(char) => setSetupPasswordInput(prev => prev + char)}
-                    onBackspace={() => setSetupPasswordInput(prev => prev.slice(0, -1))}
-                    onEnter={handleConfirmSetup}
-                    onClose={() => setOverlayKeyboardTarget(null)}
-                    theme={theme}
-                  />
-                </div>
-              )}
+              <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10002 }}>
+                <VirtualKeyboard
+                  onKey={(char) => setSetupPasswordInput(prev => prev + char)}
+                  onBackspace={() => setSetupPasswordInput(prev => prev.slice(0, -1))}
+                  onEnter={handleConfirmSetup}
+                  theme={theme}
+                />
+              </div>
               {setupPasswordError && (
                 <p className="text-red-500 text-sm flex items-center gap-1.5">
                   <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -424,11 +419,9 @@ export default function SlugHeaderWrapper({
             <div className="px-6 py-5 space-y-4">
               <input
                 type="password"
-                inputMode="text"
+                inputMode="none"
                 value={exitPasswordInput}
-                onChange={(e) => setExitPasswordInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleConfirmExit()}
-                onClick={() => { if (isKioskMode) setOverlayKeyboardTarget('exit'); }}
+                readOnly
                 autoFocus
                 placeholder="••••••••"
                 className={`w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-colors text-base ${
@@ -441,17 +434,14 @@ export default function SlugHeaderWrapper({
                     : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
                 }`}
               />
-              {overlayKeyboardTarget === 'exit' && (
-                <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10002 }}>
-                  <VirtualKeyboard
-                    onKey={(char) => setExitPasswordInput(prev => prev + char)}
-                    onBackspace={() => setExitPasswordInput(prev => prev.slice(0, -1))}
-                    onEnter={handleConfirmExit}
-                    onClose={() => setOverlayKeyboardTarget(null)}
-                    theme={theme}
-                  />
-                </div>
-              )}
+              <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10002 }}>
+                <VirtualKeyboard
+                  onKey={(char) => setExitPasswordInput(prev => prev + char)}
+                  onBackspace={() => setExitPasswordInput(prev => prev.slice(0, -1))}
+                  onEnter={handleConfirmExit}
+                  theme={theme}
+                />
+              </div>
               {exitPasswordError && (
                 <p className="text-red-500 text-sm flex items-center gap-1.5">
                   <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

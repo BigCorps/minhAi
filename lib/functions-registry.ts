@@ -3938,18 +3938,68 @@ restricoes_cpf: {
     requiresPayment: false,
     isPremium: false,
  
-    handler: async ({ playText, setActiveModal, companyId }) => {
-      await playText('Abrindo o PDV...');
-      
-      setActiveModal?.({
-        type: 'RegistrarVendaDisplay',
-        data: {
-          companyId,
-        },
-      });
- 
-      return true;
-    },
+handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+
+  const METODOS: Record<string, string> = {
+    'pix':      'pix',
+    'dinheiro': 'dinheiro',
+    'especie':  'dinheiro',
+    'espécie':  'dinheiro',
+    'cartão':   'cartao',
+    'cartao':   'cartao',
+    'débito':   'debito',
+    'debito':   'debito',
+    'crédito':  'credito',
+    'credito':  'credito',
+  };
+
+  const lower = (transcript ?? '').toLowerCase();
+
+  let metodoPagamento: string | null = null;
+  for (const [keyword, metodo] of Object.entries(METODOS)) {
+    if (lower.includes(keyword)) {
+      metodoPagamento = metodo;
+      break;
+    }
+  }
+
+  const amountMatch = lower.match(/r?\$?\s*(\d+(?:[.,]\d{1,2})?)/i);
+  const valor = amountMatch
+    ? parseFloat(amountMatch[1].replace(',', '.'))
+    : undefined;
+
+  if (!metodoPagamento) {
+    // Incompleto — abre PDV com valor pré-preenchido
+    await playText(
+      valor
+        ? `Abrindo o PDV com ${valor.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          })}. Selecione o método de pagamento.`
+        : 'Abrindo o PDV...'
+    );
+    setActiveModal?.({
+      type: 'RegistrarVendaDisplay',
+      data: { companyId, initialValue: valor, forceStep: 'payment_selection' },
+    });
+    return true;
+  }
+
+  // Completo — método já informado
+  await playText(
+    valor
+      ? `Registrando venda de ${valor.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        })} no ${metodoPagamento}...`
+      : `Abrindo PDV no modo ${metodoPagamento}...`
+  );
+  setActiveModal?.({
+    type: 'RegistrarVendaDisplay',
+    data: { companyId, initialValue: valor, metodoPagamento },
+  });
+  return true;
+},
   },
  
   ver_clientes: {

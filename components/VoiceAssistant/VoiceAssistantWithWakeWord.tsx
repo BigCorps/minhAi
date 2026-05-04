@@ -1188,6 +1188,7 @@ case 'impressao_recibo':
           break;
         case 'registrar_venda':
           await stopGoogleSpeech();
+          console.log('[DEBUG] profileRef.current:', profileRef.current)
           setActiveModal({ type: 'RegistrarVendaDisplay', data: { companyId, profileId: profileRef.current?.id ?? null } });
           pt('Abrindo o PDV...').catch(() => {});
           break;

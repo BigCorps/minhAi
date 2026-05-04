@@ -36,6 +36,7 @@ interface CreditPackage {
 interface UnifiedTransaction {
   id: string;
   source: 'pix' | 'cobranca';
+  is_withdrawal: boolean;
   company_id: string;
   company_name: string;
   amount_cents: number;
@@ -160,6 +161,19 @@ export default function SaldoPage() {
     return key;
   }
 
+  function toSaoPauloDateKey(dateStr: string): string {
+    return new Date(dateStr)
+      .toLocaleDateString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+      .split('/')
+      .reverse()
+      .join('-'); // "dd/mm/yyyy" → "yyyy-mm-dd"
+  }
+
   function getTipoLabel(tipo: string, nfc_payment_method?: string | null): string {
     if (tipo === 'LINK_PAGAMENTO') return 'Link InfinitePay';
     if (tipo === 'NFC') return nfc_payment_method === 'debit' ? 'NFC Débito' : 'NFC Crédito';
@@ -188,11 +202,13 @@ export default function SaldoPage() {
   }
 
   function getTipoBadge(tx: UnifiedTransaction) {
-    const colorClass = tx.source === 'pix'
-      ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400'
-      : tx.tipo_label.includes('Link')
-        ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400'
-        : 'bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400';
+    const colorClass = tx.is_withdrawal
+      ? 'bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400'
+      : tx.source === 'pix'
+        ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400'
+        : tx.tipo_label.includes('Link')
+          ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400'
+          : 'bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400';
     return (
       <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter ${colorClass}`}>
         {tx.tipo_label}
@@ -304,23 +320,28 @@ async function loadBalanceData() {
       : { data: [] };
 
     // Normaliza PIX
-    const pixUnified: UnifiedTransaction[] = (pixData ?? []).map(tx => ({
-      id: tx.id,
-      source: 'pix' as const,
-      company_id: tx.company_id ?? '',
-      company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
-      amount_cents: tx.amount_cents,
-      status: tx.status,
-      date: tx.requested_at,
-      tipo_label: 'PIX',
-      notes: tx.notes,
-      pix_key: tx.destination_withdrawal_pix_key,
-    }));
+    const pixUnified: UnifiedTransaction[] = (pixData ?? []).map(tx => {
+      const isWithdrawal = tx.status === 'transferred' && !!tx.destination_withdrawal_pix_key;
+      return {
+        id: tx.id,
+        source: 'pix' as const,
+        is_withdrawal: isWithdrawal,
+        company_id: tx.company_id ?? '',
+        company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
+        amount_cents: tx.amount_cents,
+        status: tx.status,
+        date: tx.requested_at,
+        tipo_label: isWithdrawal ? 'Saque' : 'PIX',
+        notes: tx.notes,
+        pix_key: tx.destination_withdrawal_pix_key,
+      };
+    });
 
     // Normaliza Cobrancas
     const cobrancasUnified: UnifiedTransaction[] = (cobrancasData ?? []).map((tx: any) => ({
       id: tx.id,
       source: 'cobranca' as const,
+      is_withdrawal: false,
       company_id: tx.company_id,
       company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
       amount_cents: Math.round(Number(tx.valor) * 100),
@@ -688,24 +709,36 @@ async function loadBalanceData() {
                         {(() => {
                           const rows: React.ReactNode[] = [];
                           let lastDay = '';
-                          let dayTotal = 0;
+                          let dayReceived = 0;
+                          let dayWithdrawn = 0;
                           let dayGroup: UnifiedTransaction[] = [];
                           const colSpan = companies.length > 1 ? 6 : 5;
 
-                          const flushDay = (day: string, group: UnifiedTransaction[], total: number) => {
+                          const flushDay = (day: string, group: UnifiedTransaction[], received: number, withdrawn: number) => {
                             rows.push(
                               <tr key={`sep-${day}`}>
                                 <td colSpan={colSpan} className="pt-5 pb-1">
                                   <div className="flex items-center gap-3">
                                     <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                                      {new Date(day + 'T12:00:00').toLocaleDateString('pt-BR', {
+                                      {new Date(day + 'T12:00:00-03:00').toLocaleDateString('pt-BR', {
+                                        timeZone: 'America/Sao_Paulo',
                                         weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
                                       })}
                                     </span>
                                     <div className="flex-1 border-t border-gray-200 dark:border-white/10" />
-                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                      Recebido: <span className="text-green-600 dark:text-green-400">{formatCurrency(total)}</span>
-                                    </span>
+                                    {received > 0 && (
+                                      <span className="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                        Recebido: <span className="text-green-600 dark:text-green-400">{formatCurrency(received)}</span>
+                                      </span>
+                                    )}
+                                    {received > 0 && withdrawn > 0 && (
+                                      <div className="w-px h-3 bg-gray-300 dark:bg-white/20" />
+                                    )}
+                                    {withdrawn > 0 && (
+                                      <span className="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                        Sacado: <span className="text-orange-500 dark:text-orange-400">{formatCurrency(withdrawn)}</span>
+                                      </span>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
@@ -714,12 +747,12 @@ async function loadBalanceData() {
                               rows.push(
                                 <tr key={tx.id} className="text-sm border-t border-gray-100 dark:border-white/5">
                                   <td className="py-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                                    {new Date(tx.date).toLocaleString('pt-BR')}
+                                    {new Date(tx.date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
                                   </td>
                                   <td className="py-4">{getTipoBadge(tx)}</td>
                                   {companies.length > 1 && <td className="py-4">{getCompanyBadge(tx)}</td>}
-                                  <td className="py-4 font-bold text-gray-900 dark:text-white whitespace-nowrap">
-                                    {formatCurrency(tx.amount_cents)}
+                                  <td className={`py-4 font-bold whitespace-nowrap ${tx.is_withdrawal ? 'text-orange-500 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
+                                    {tx.is_withdrawal ? '−' : ''}{formatCurrency(tx.amount_cents)}
                                   </td>
                                   <td className="py-4">{getStatusBadge(tx)}</td>
                                   <td className="py-4 text-gray-500 dark:text-gray-500 font-mono text-xs max-w-[160px] truncate">
@@ -731,18 +764,25 @@ async function loadBalanceData() {
                           };
 
                           filteredTransactions.forEach(tx => {
-                            const day = tx.date.slice(0, 10);
+                            const day = toSaoPauloDateKey(tx.date);
                             if (day !== lastDay) {
-                              if (lastDay) flushDay(lastDay, dayGroup, dayTotal);
+                              if (lastDay) flushDay(lastDay, dayGroup, dayReceived, dayWithdrawn);
                               lastDay = day;
-                              dayTotal = 0;
+                              dayReceived = 0;
+                              dayWithdrawn = 0;
                               dayGroup = [];
                             }
                             const isConfirmed = tx.status === 'confirmed' || tx.status === 'transferred' || tx.status === 'PAGA';
-                            if (isConfirmed) dayTotal += tx.amount_cents;
+                            if (isConfirmed) {
+                              if (tx.is_withdrawal) {
+                                dayWithdrawn += tx.amount_cents;
+                              } else {
+                                dayReceived += tx.amount_cents;
+                              }
+                            }
                             dayGroup.push(tx);
                           });
-                          if (lastDay) flushDay(lastDay, dayGroup, dayTotal);
+                          if (lastDay) flushDay(lastDay, dayGroup, dayReceived, dayWithdrawn);
 
                           return rows;
                         })()}

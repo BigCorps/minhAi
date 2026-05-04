@@ -268,100 +268,116 @@ export default function SaldoPage() {
     }
   }
 
-async function loadBalanceData() {
-  setIsLoading(true);
-  try {
-    // Saldo
-    const { data: balanceData } = await supabase
-      .from('company_balance')
-      .select('*')
-      .eq('user_id', userId);
+  async function loadBalanceData() {
+    setIsLoading(true);
+    try {
+      // ── Saldo ────────────────────────────────────────────────────────────
+      const { data: balanceData } = await supabase
+        .from('company_balance')
+        .select('*')
+        .eq('user_id', userId);
 
-    if (balanceData?.length) {
-      setCompanyBalances(balanceData);
-      const total = balanceData.reduce(
-        (acc, curr) => ({
-          available_balance_cents: acc.available_balance_cents + curr.available_balance_cents,
-          total_received_cents: acc.total_received_cents + curr.total_received_cents,
-          total_transferred_cents: acc.total_transferred_cents + curr.total_transferred_cents,
-        }),
-        { available_balance_cents: 0, total_received_cents: 0, total_transferred_cents: 0 }
+      if (balanceData?.length) {
+        setCompanyBalances(balanceData);
+        const total = balanceData.reduce(
+          (acc, curr) => ({
+            available_balance_cents: acc.available_balance_cents + curr.available_balance_cents,
+            total_received_cents: acc.total_received_cents + curr.total_received_cents,
+            total_transferred_cents: acc.total_transferred_cents + curr.total_transferred_cents,
+          }),
+          { available_balance_cents: 0, total_received_cents: 0, total_transferred_cents: 0 }
+        );
+        setTotalBalance(total);
+      }
+
+      // ── Mapa de companies (necessário para companyIds e companyNameMap) ──
+      const { data: allCompanies } = await supabase
+        .from('companies')
+        .select('id, name')
+        .eq('user_id', userId);
+
+      const companyNameMap: Record<string, string> = {};
+      (allCompanies ?? []).forEach(c => { companyNameMap[c.id] = c.name; });
+      const companyIds = (allCompanies ?? []).map(c => c.id);
+
+      // ── IDs de saques via balance_transactions ───────────────────────────
+      // A tabela pix_transactions não possui coluna is_withdrawal nem
+      // destination_withdrawal_pix_key. A fonte confiável para identificar
+      // saques é balance_transactions.transaction_type = 'withdrawal'.
+      const { data: withdrawalData } = await supabase
+        .from('balance_transactions')
+        .select('pix_transaction_id')
+        .eq('user_id', userId)
+        .eq('transaction_type', 'withdrawal');
+
+      const withdrawalIds = new Set<string>(
+        (withdrawalData ?? [])
+          .map((w: { pix_transaction_id: string | null }) => w.pix_transaction_id)
+          .filter((id): id is string => id !== null)
       );
-      setTotalBalance(total);
-    }
 
-    // ← MAPA DE COMPANIES PRIMEIRO (necessário para companyIds e companyNameMap)
-    const { data: allCompanies } = await supabase
-      .from('companies')
-      .select('id, name')
-      .eq('user_id', userId);
+      // ── PIX ──────────────────────────────────────────────────────────────
+      const { data: pixData } = await supabase
+        .from('pix_transactions')
+        .select('id, company_id, amount_cents, status, requested_at, notes, destination_pix_key')
+        .eq('user_id', userId)
+        .order('requested_at', { ascending: false })
+        .limit(200);
 
-    const companyNameMap: Record<string, string> = {};
-    (allCompanies ?? []).forEach(c => { companyNameMap[c.id] = c.name; });
-    const companyIds = (allCompanies ?? []).map(c => c.id);
+      // ── Cobranças (apenas PAGA) ───────────────────────────────────────────
+      const { data: cobrancasData } = companyIds.length > 0
+        ? await supabase
+            .from('cobrancas')
+            .select('id, valor, status, created_at, paid_at, tipo, nfc_payment_method, descricao, company_id')
+            .in('company_id', companyIds)
+            .eq('status', 'PAGA')
+            .order('paid_at', { ascending: false })
+            .limit(200)
+        : { data: [] };
 
-    // PIX — busca por user_id, select * (igual ao original)
-    const { data: pixData } = await supabase
-      .from('pix_transactions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('requested_at', { ascending: false })
-      .limit(200);
+      // ── Normaliza PIX ────────────────────────────────────────────────────
+      const pixUnified: UnifiedTransaction[] = (pixData ?? []).map(tx => {
+        const isWithdrawal = withdrawalIds.has(tx.id);
+        return {
+          id: tx.id,
+          source: 'pix' as const,
+          is_withdrawal: isWithdrawal,
+          company_id: tx.company_id ?? '',
+          company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
+          amount_cents: tx.amount_cents,
+          status: tx.status,
+          date: tx.requested_at,
+          tipo_label: isWithdrawal ? 'Saque' : 'PIX',
+          notes: tx.notes,
+          pix_key: tx.destination_pix_key, // campo correto do schema
+        };
+      });
 
-    // Cobrancas — busca por company_id, apenas PAGA
-    const { data: cobrancasData } = companyIds.length > 0
-      ? await supabase
-          .from('cobrancas')
-          .select('id, valor, status, created_at, paid_at, tipo, nfc_payment_method, descricao, company_id')
-          .in('company_id', companyIds)
-          .eq('status', 'PAGA')
-          .order('paid_at', { ascending: false })
-          .limit(200)
-      : { data: [] };
-
-    // Normaliza PIX
-    const pixUnified: UnifiedTransaction[] = (pixData ?? []).map(tx => {
-      const isWithdrawal = tx.status === 'transferred' && !!tx.destination_withdrawal_pix_key;
-      return {
+      // ── Normaliza Cobranças ──────────────────────────────────────────────
+      const cobrancasUnified: UnifiedTransaction[] = (cobrancasData ?? []).map((tx: any) => ({
         id: tx.id,
-        source: 'pix' as const,
-        is_withdrawal: isWithdrawal,
-        company_id: tx.company_id ?? '',
+        source: 'cobranca' as const,
+        is_withdrawal: false,
+        company_id: tx.company_id,
         company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
-        amount_cents: tx.amount_cents,
+        amount_cents: Math.round(Number(tx.valor) * 100),
         status: tx.status,
-        date: tx.requested_at,
-        tipo_label: isWithdrawal ? 'Saque' : 'PIX',
-        notes: tx.notes,
-        pix_key: tx.destination_withdrawal_pix_key,
-      };
-    });
+        date: tx.paid_at ?? tx.created_at,
+        tipo_label: getTipoLabel(tx.tipo, tx.nfc_payment_method),
+        notes: tx.descricao,
+      }));
 
-    // Normaliza Cobrancas
-    const cobrancasUnified: UnifiedTransaction[] = (cobrancasData ?? []).map((tx: any) => ({
-      id: tx.id,
-      source: 'cobranca' as const,
-      is_withdrawal: false,
-      company_id: tx.company_id,
-      company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
-      amount_cents: Math.round(Number(tx.valor) * 100),
-      status: tx.status,
-      date: tx.paid_at ?? tx.created_at,
-      tipo_label: getTipoLabel(tx.tipo, tx.nfc_payment_method),
-      notes: tx.descricao,
-    }));
+      const merged = [...pixUnified, ...cobrancasUnified].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
 
-    const merged = [...pixUnified, ...cobrancasUnified].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-
-    setAllTransactions(merged);
-  } catch (error) {
-    console.error('Erro ao carregar dados:', error);
-  } finally {
-    setIsLoading(false);
+      setAllTransactions(merged);
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }
-}
 
   async function loadPackages() {
     const { data } = await supabase

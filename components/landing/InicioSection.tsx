@@ -11,7 +11,7 @@ interface InicioSectionProps {
 const MINI_DESTAQUES = [
   'Sem cartão de crédito',
   'Funciona em 5 minutos',
-  '100% em português',
+  'Tecnologia Brasileira',
 ];
 
 export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
@@ -141,6 +141,16 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
 
           {/* DomainPreviewPicker */}
           <DomainPreviewPicker isDark={isDark} />
+
+<p className={`text-[10px] sm:text-xs mt-1 mb-2 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
+  ou{' '}
+  
+    href="/contato"
+    className={`underline underline-offset-2 hover:opacity-80 transition-opacity ${isDark ? 'text-white/50' : 'text-gray-500'}`}
+  >
+    entre em contato para seu próprio domínio
+  </a>
+</p>
 
           {/* CTAs */}
           <div className="flex flex-row items-center justify-center gap-2 sm:gap-4">

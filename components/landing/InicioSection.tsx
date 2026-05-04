@@ -144,9 +144,10 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
 
 <p className={`text-[10px] sm:text-xs mt-1 mb-2 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
   {'ou '}
-<Link href="https://wa.me/5511926828418" target="_blank" rel="noopener noreferrer" className={`underline underline-offset-2 hover:opacity-80 transition-opacity ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-  entre em contato para seu próprio domínio
-</Link>
+  <Link href="https://wa.me/5511926828418" target="_blank" rel="noopener noreferrer" className={`underline underline-offset-2 hover:opacity-80 transition-opacity ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+    entre em contato
+  </Link>
+  {' para seu próprio domínio'}
 </p>
 
           {/* CTAs */}

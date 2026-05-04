@@ -116,12 +116,12 @@ useEffect(() => {
 <div
   ref={categoriasRef}
   className="flex-shrink-0 overflow-x-auto"
-          style={{
-            scrollbarWidth: 'thin',
-            scrollbarColor: isDark ? 'rgba(255,255,255,0.15) transparent' : 'rgba(0,0,0,0.12) transparent',
-          }}
-        >
-          <div className="flex gap-1.5 items-center flex-nowrap px-1 pb-0.5">
+  style={{
+    scrollbarWidth: 'thin',
+    scrollbarColor: isDark ? 'rgba(255,255,255,0.15) transparent' : 'rgba(0,0,0,0.12) transparent',
+  }}
+>
+  <div className="flex gap-1.5 items-center flex-nowrap px-1 pb-0.5 min-w-full justify-center">
 
             {/* ── Botão Scanner PDV ── */}
             {onOpenBarcodeScanner && (

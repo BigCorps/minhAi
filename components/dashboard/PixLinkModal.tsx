@@ -86,17 +86,19 @@ export default function PixLinkModal({ onClose }: Props) {
   const fullUrl = activeTab === 'pix' ? fullUrlPix : fullUrlPay;
 
   // Número formatado para exibição e link wa.me
-  const rawWhatsapp = selectedCompany?.whatsapp_number?.replace(/\D/g, '') ?? '';
-  const whatsappWithDDI = rawWhatsapp
-    ? rawWhatsapp.startsWith('55') ? rawWhatsapp : `55${rawWhatsapp}`
-    : '';
-  const whatsappFormatted = rawWhatsapp
-    ? selectedCompany!.whatsapp_number!
-    : null;
-  const notifyNumber = `+${whatsappWithDDI}`;
-  const waLink = whatsappWithDDI
-    ? `https://wa.me/${whatsappWithDDI}?text=Ol%C3%A1%2C+quero+receber+notifica%C3%A7%C3%B5es+de+pagamento`
-    : null;
+  // DEPOIS
+const MINHAI_WHATSAPP = '5511926828418'; // número fixo minhAi
+const rawWhatsapp = selectedCompany?.whatsapp_number?.replace(/\D/g, '') ?? '';
+const whatsappWithDDI = rawWhatsapp
+  ? rawWhatsapp.startsWith('55') ? rawWhatsapp : `55${rawWhatsapp}`
+  : '';
+const whatsappFormatted = rawWhatsapp
+  ? selectedCompany!.whatsapp_number!
+  : null;
+const notifyNumber = `+${whatsappWithDDI}`;
+const waLink = whatsappWithDDI
+  ? `https://wa.me/${MINHAI_WHATSAPP}?text=Ol%C3%A1%2C+quero+receber+notifica%C3%A7%C3%B5es+de+pagamento`
+  : null;
 
   function copy() {
     if (!fullUrl) return;

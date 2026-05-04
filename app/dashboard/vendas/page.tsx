@@ -1352,10 +1352,11 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
     });
 
   function exportCSV() {
-    const headers = ['Data', 'Cliente', 'Total', 'Método', 'Status'];
-    const rows = filtered.map((p) => [
-      new Date(p.created_at).toLocaleString('pt-BR'),
-      p.cliente_nome ?? '—',
+const headers = ['Data', 'Cliente', 'Vendedor', 'Total', 'Método', 'Status'];
+const rows = filtered.map((p) => [
+  new Date(p.created_at).toLocaleString('pt-BR'),
+  p.cliente_nome ?? '—',
+  p.company_profiles?.nome ?? '—',
       formatarPreco(p.total),
       p.metodo_pagamento ?? '—',
       p.status,
@@ -1474,6 +1475,7 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
                     </span>
                   </th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Cliente</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Vendedor</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Itens</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Total</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Método</th>
@@ -1498,6 +1500,12 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
+  {p.company_profiles?.nome
+    ? <span className="text-gray-700 dark:text-gray-300">{p.company_profiles.nome}</span>
+    : <span className="text-gray-300 dark:text-gray-600">—</span>
+  }
+</td>
+                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
                         {(p.pedido_itens ?? []).length === 0
                           ? <span className="text-gray-400 dark:text-gray-500 italic text-xs">Venda Rápida</span>
                           : <>{(p.pedido_itens ?? []).length} iten{(p.pedido_itens ?? []).length !== 1 ? 's' : ''}</>
@@ -1517,7 +1525,7 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
                     {/* Detalhe expandido */}
                     {expandedRow === p.id && (
                       <tr key={`${p.id}-detail`}>
-                        <td colSpan={6} className="px-6 py-4 bg-gray-50 dark:bg-slate-800/60">
+                        <td colSpan={7} className="px-6 py-4 bg-gray-50 dark:bg-slate-800/60">
                           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
                             Itens do pedido
                           </p>

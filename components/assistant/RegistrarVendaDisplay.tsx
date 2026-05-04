@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ShoppingCart, Check, Loader2, AlertCircle, DollarSign } from 'lucide-react';
-import { criarPedido, atualizarStatusPedido } from '@/lib/produtos-venda';
+import { ShoppingCart, Check, Loader2, AlertCircle, DollarSign, Zap } from 'lucide-react';
+import { atualizarStatusPedido } from '@/lib/produtos-venda';
+import PIXConfirmationModal from '@/components/VoiceAssistant/modals/PixConfirmationModal';
+import MercadoPagoPointDisplay from '@/components/VoiceAssistant/modals/MercadoPagoPointDisplay';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -20,6 +22,13 @@ interface RegistrarVendaDisplayProps {
   theme?: 'dark' | 'light';
   playText?: (text: string) => Promise<void>;
 }
+
+type PixData = {
+  transactionId: string;
+  qrCodeUrl: string;
+  pixCode: string;
+  companyName: string;
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -40,9 +49,6 @@ function parseBRL(str: string): number {
   return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
 }
 
-// Mapa de método de pagamento para os valores aceitos pelo CHECK constraint de pedidos:
-// 'pix' | 'nfc' | 'tef' | 'dinheiro' | 'fiado'
-// Nota: CheckoutFlow usa metodo === 'link' ? 'nfc' : metodo — seguimos o mesmo padrão.
 const PAGAMENTO_MAP: Record<string, 'pix' | 'nfc' | 'tef' | 'dinheiro' | 'fiado'> = {
   dinheiro: 'dinheiro',
   pix:      'pix',
@@ -71,14 +77,20 @@ export default function RegistrarVendaDisplay({
   const valorInicialNum  = initialValue ?? valorLegado;
   const pagamentoInicial = metodoPagamento ?? pagamentoLegado ?? 'dinheiro';
 
-  const [produto,   setProduto]   = useState(produtoInicial || '');
-  const [valor,     setValor]     = useState<string>(
+  const [produto,       setProduto]       = useState(produtoInicial || '');
+  const [valor,         setValor]         = useState<string>(
     valorInicialNum != null ? numberToFormatted(valorInicialNum) : ''
   );
-  const [pagamento, setPagamento] = useState(pagamentoInicial);
-  const [isSaving,  setIsSaving]  = useState(false);
-  const [toast,     setToast]     = useState<{ message: string; type: 'error' | 'success' } | null>(null);
-  const [mounted,   setMounted]   = useState(false);
+  const [pagamento,     setPagamento]     = useState(pagamentoInicial);
+  const [vendaRapida,   setVendaRapida]   = useState(true); // ← marcado por padrão
+  const [isSaving,      setIsSaving]      = useState(false);
+  const [isGerandoPix,  setIsGerandoPix]  = useState(false);
+  const [toast,         setToast]         = useState<{ message: string; type: 'error' | 'success' } | null>(null);
+  const [mounted,       setMounted]       = useState(false);
+
+  // Modais de cobrança
+  const [pixData,       setPixData]       = useState<PixData | null>(null);
+  const [showTef,       setShowTef]       = useState(false);
 
   const isDark = theme === 'dark';
 
@@ -92,6 +104,9 @@ export default function RegistrarVendaDisplay({
     { value: 'debito',   label: 'Débito',   icon: '💳' },
     { value: 'credito',  label: 'Crédito',  icon: '💳' },
   ];
+
+  // Pagamentos que abrem modal de cobrança quando vendaRapida=false
+  const precisaModal = !vendaRapida && ['pix', 'debito', 'credito'].includes(pagamento);
 
   useEffect(() => {
     setMounted(true);
@@ -113,19 +128,8 @@ export default function RegistrarVendaDisplay({
     setValor(formatCurrency(e.target.value));
   }
 
-  async function handleSave() {
-  const valorNumerico = parseBRL(valor);
-  if (valorNumerico <= 0) {
-    showToast('Informe um valor maior que zero', 'error');
-    return;
-  }
-  setIsSaving(true);
-  await handleSaveFallback(valorNumerico);
-}
-
-  // Fallback: insert direto caso criarPedido não aceite produto avulso.
-  // Segue exatamente a mesma estrutura de colunas que AbaPedidos lê.
-  async function handleSaveFallback(valorNumerico: number) {
+  // ── Registrar venda (fallback direto no Supabase) ─────────────────────────
+  async function handleSaveFallback(valorNumerico: number, statusFinal: 'pago' | 'aberto' = 'pago') {
     const { createClient } = await import('@/lib/supabase-browser');
     const supabase  = createClient();
     const descricao = produto.trim() || 'Venda rápida';
@@ -133,13 +137,11 @@ export default function RegistrarVendaDisplay({
     const now       = new Date().toISOString();
 
     try {
-      // Resolve user_id = dono da empresa (necessário para o RLS de SELECT)
       let userId: string | null = null;
       const { data: authData } = await supabase.auth.getUser();
       if (authData?.user?.id) {
         userId = authData.user.id;
       } else {
-        // Totem sem sessão: pega o dono via companies.user_id
         const { data: company } = await supabase
           .from('companies')
           .select('user_id')
@@ -148,7 +150,6 @@ export default function RegistrarVendaDisplay({
         userId = company?.user_id ?? null;
       }
 
-      // Resolve profile_id do colaborador logado (se houver sessão de perfil ativa)
       let profileId: string | null = null;
       if (authData?.user?.id) {
         const { data: session } = await supabase
@@ -162,20 +163,19 @@ export default function RegistrarVendaDisplay({
         profileId = session?.profile_id ?? null;
       }
 
-      // 1. Insere o pedido
       const { data: pedidoInserido, error: pedidoError } = await supabase
         .from('pedidos')
         .insert({
           company_id:       companyId,
-          user_id:          userId,      // ← RLS: dono consegue ver no dashboard
-          profile_id:       profileId,   // ← quem registrou (colaborador/totem/null)
+          user_id:          userId,
+          profile_id:       profileId,
           subtotal:         valorNumerico,
           desconto:         0,
           total:            valorNumerico,
           metodo_pagamento: metodoDB,
-          status:           'pago',
+          status:           statusFinal,
           observacoes:      descricao !== 'Venda rápida' ? descricao : null,
-          paid_at:          now,
+          paid_at:          statusFinal === 'pago' ? now : null,
           created_at:       now,
           updated_at:       now,
         })
@@ -184,7 +184,7 @@ export default function RegistrarVendaDisplay({
 
       if (pedidoError) throw pedidoError;
 
-      // 2. Produto placeholder "Venda Avulsa" (criado apenas uma vez por empresa)
+      // Produto placeholder
       let produtoId: string | null = null;
       const { data: produtoAvulso } = await supabase
         .from('produtos_venda')
@@ -206,44 +206,157 @@ export default function RegistrarVendaDisplay({
             preco_venda:      valorNumerico,
             unidade:          'un',
             controla_estoque: false,
-            is_active:        false,  // não aparece no catálogo
+            is_active:        false,
           })
           .select('id')
           .single();
         produtoId = novoProduto?.id ?? null;
       }
 
-      // 3. Insere item do pedido (aparece na coluna "Itens" e no detalhe expandido)
-if (produtoId && pedidoInserido?.id) {
-  await supabase.from('pedido_itens').insert({
-    pedido_id:      pedidoInserido.id,
-    produto_id:     produtoId,
-    nome_snapshot:  descricao,
-    preco_unitario: valorNumerico,
-    quantidade:     1,
-    subtotal:       valorNumerico,
-  });
-}
-
-      showToast('Venda registrada com sucesso!', 'success');
-      if (playText) {
-        await playText(
-          `Venda de ${valorNumerico.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} registrada com sucesso!`
-        );
+      if (produtoId && pedidoInserido?.id) {
+        await supabase.from('pedido_itens').insert({
+          pedido_id:      pedidoInserido.id,
+          produto_id:     produtoId,
+          nome_snapshot:  descricao,
+          preco_unitario: valorNumerico,
+          quantidade:     1,
+          subtotal:       valorNumerico,
+        });
       }
-      setTimeout(() => onClose(), 1500);
 
+      return pedidoInserido?.id ?? null;
     } catch (err) {
-      console.error('Erro no fallback ao registrar venda:', err);
-      showToast('Erro ao registrar venda. Tente novamente.', 'error');
-      if (playText) await playText('Erro ao registrar venda. Tente novamente.');
-    } finally {
-      setIsSaving(false);
+      throw err;
+    }
+  }
+
+  // ── Fluxo principal ───────────────────────────────────────────────────────
+  async function handleSave() {
+    const valorNumerico = parseBRL(valor);
+    if (valorNumerico <= 0) {
+      showToast('Informe um valor maior que zero', 'error');
+      return;
+    }
+
+    // Venda Rápida marcada → registra direto
+    if (vendaRapida) {
+      setIsSaving(true);
+      try {
+        await handleSaveFallback(valorNumerico, 'pago');
+        showToast('Venda registrada com sucesso!', 'success');
+        if (playText) await playText(`Venda de ${valorNumerico.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} registrada com sucesso!`);
+        setTimeout(() => onClose(), 1500);
+      } catch (err) {
+        console.error('Erro ao registrar venda:', err);
+        showToast('Erro ao registrar venda. Tente novamente.', 'error');
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    // Sem Venda Rápida + dinheiro/fiado → registra direto também
+    if (['dinheiro', 'fiado'].includes(pagamento)) {
+      setIsSaving(true);
+      try {
+        await handleSaveFallback(valorNumerico, 'pago');
+        showToast('Venda registrada com sucesso!', 'success');
+        if (playText) await playText(`Venda registrada com sucesso!`);
+        setTimeout(() => onClose(), 1500);
+      } catch (err) {
+        showToast('Erro ao registrar venda. Tente novamente.', 'error');
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    // Sem Venda Rápida + PIX → gera cobrança e abre modal
+    if (pagamento === 'pix') {
+      setIsGerandoPix(true);
+      try {
+        const { createClient } = await import('@/lib/supabase-browser');
+        const supabase = createClient();
+        const descricao = produto.trim() || 'Venda rápida';
+
+        const { data: pixResult, error } = await supabase.functions.invoke('gerar-pix-assistente', {
+          body: {
+            company_id:   companyId,
+            amount_cents: Math.round(valorNumerico * 100),
+            description:  descricao,
+          },
+        });
+
+        if (error) throw error;
+
+        setPixData({
+          transactionId: pixResult.transaction_id,
+          qrCodeUrl:     pixResult.qr_code_url,
+          pixCode:       pixResult.pix_code,
+          companyName:   pixResult.company_name ?? '',
+        });
+      } catch (err) {
+        console.error('Erro ao gerar PIX:', err);
+        showToast('Erro ao gerar cobrança PIX. Tente novamente.', 'error');
+      } finally {
+        setIsGerandoPix(false);
+      }
+      return;
+    }
+
+    // Sem Venda Rápida + débito/crédito → abre TEF
+    if (['debito', 'credito'].includes(pagamento)) {
+      setShowTef(true);
+      return;
     }
   }
 
   if (!mounted) return null;
 
+  // ── Modal PIX aberto ──────────────────────────────────────────────────────
+  if (pixData) {
+    const valorNumerico = parseBRL(valor);
+    return (
+      <PIXConfirmationModal
+        transactionId={pixData.transactionId}
+        amount={valorNumerico.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+        qrCodeUrl={pixData.qrCodeUrl}
+        pixCode={pixData.pixCode}
+        companyName={pixData.companyName}
+        theme={theme}
+        onConfirm={async () => {
+          await handleSaveFallback(valorNumerico, 'pago');
+          onClose();
+        }}
+        onCancel={async () => {
+          setPixData(null);
+        }}
+      />
+    );
+  }
+
+  // ── Modal TEF aberto ──────────────────────────────────────────────────────
+  if (showTef) {
+    const valorNumerico = parseBRL(valor);
+    return (
+      <MercadoPagoPointDisplay
+        companyId={companyId}
+        paymentType={pagamento === 'credito' ? 'credit_card' : 'debit_card'}
+        initialAmount={Math.round(valorNumerico * 100)}
+        theme={theme}
+        playText={playText}
+        onClose={async () => {
+          // Quando TEF fecha (pago ou cancelado), registra a venda e fecha
+          try {
+            await handleSaveFallback(valorNumerico, 'pago');
+          } catch (_) {}
+          onClose();
+        }}
+      />
+    );
+  }
+
+  // ── Modal principal ───────────────────────────────────────────────────────
   const content = (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       {/* Toast */}
@@ -272,7 +385,7 @@ if (produtoId && pedidoInserido?.id) {
           </div>
           <button
             onClick={onClose}
-            disabled={isSaving}
+            disabled={isSaving || isGerandoPix}
             className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${
               isDark ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
             }`}
@@ -296,7 +409,7 @@ if (produtoId && pedidoInserido?.id) {
               value={produto}
               onChange={(e) => setProduto(e.target.value)}
               placeholder="Ex: Café expresso, Serviço de impressão..."
-              disabled={isSaving}
+              disabled={isSaving || isGerandoPix}
               className={`w-full px-4 py-3 rounded-lg border ${colors.border} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50`}
             />
           </div>
@@ -314,11 +427,10 @@ if (produtoId && pedidoInserido?.id) {
                 value={valor}
                 onChange={handleValorChange}
                 placeholder="0,00"
-                disabled={isSaving}
+                disabled={isSaving || isGerandoPix}
                 className={`w-full pl-10 pr-4 py-3 rounded-lg border ${colors.border} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50 text-lg font-semibold`}
               />
             </div>
-            {valor ? <p className={`text-xs ${colors.textMuted} mt-1`}>R$ {valor}</p> : null}
           </div>
 
           {/* Tipo de Pagamento */}
@@ -331,7 +443,7 @@ if (produtoId && pedidoInserido?.id) {
                 <button
                   key={type.value}
                   onClick={() => setPagamento(type.value)}
-                  disabled={isSaving}
+                  disabled={isSaving || isGerandoPix}
                   className={`px-4 py-3 rounded-lg border-2 transition-all disabled:opacity-50 ${
                     pagamento === type.value
                       ? isDark
@@ -347,18 +459,59 @@ if (produtoId && pedidoInserido?.id) {
             </div>
           </div>
 
-          {/* Info */}
-          <div className={`p-3 rounded-lg border ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'}`}>
-            <p className={`text-xs ${isDark ? 'text-blue-200' : 'text-blue-800'}`}>
-              💡 A venda será registrada como <strong>paga</strong> e aparecerá na aba de Pedidos.
-            </p>
+          {/* Toggle Venda Rápida */}
+          <div className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+            vendaRapida
+              ? isDark
+                ? 'bg-amber-500/10 border-amber-500/30'
+                : 'bg-amber-50 border-amber-200'
+              : isDark
+                ? 'bg-white/3 border-white/10'
+                : 'bg-gray-50 border-gray-200'
+          }`}>
+            <div className="flex items-center gap-2">
+              <Zap className={`w-4 h-4 flex-shrink-0 ${
+                vendaRapida
+                  ? isDark ? 'text-amber-400' : 'text-amber-600'
+                  : isDark ? 'text-white/40' : 'text-gray-400'
+              }`} />
+              <div>
+                <p className={`text-sm font-medium ${
+                  vendaRapida
+                    ? isDark ? 'text-amber-300' : 'text-amber-700'
+                    : colors.textPrimary
+                }`}>
+                  Venda Rápida
+                </p>
+                <p className={`text-xs ${colors.textMuted}`}>
+                  {vendaRapida
+                    ? 'Registra direto como pago'
+                    : precisaModal
+                      ? pagamento === 'pix' ? 'Vai gerar cobrança PIX' : 'Vai abrir terminal TEF'
+                      : 'Registra direto como pago'
+                  }
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setVendaRapida(!vendaRapida)}
+              disabled={isSaving || isGerandoPix}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+                vendaRapida ? 'bg-amber-400' : isDark ? 'bg-slate-600' : 'bg-gray-300'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                vendaRapida ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
           </div>
 
           {/* Botões */}
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              disabled={isSaving}
+              disabled={isSaving || isGerandoPix}
               className={`flex-1 px-4 py-3 rounded-lg font-medium transition disabled:opacity-50 ${
                 isDark ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
               }`}
@@ -367,18 +520,21 @@ if (produtoId && pedidoInserido?.id) {
             </button>
             <button
               onClick={handleSave}
-              disabled={isSaving || parseBRL(valor) <= 0}
+              disabled={isSaving || isGerandoPix || parseBRL(valor) <= 0}
               className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
             >
-              {isSaving ? (
+              {isSaving || isGerandoPix ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Salvando...
+                  {isGerandoPix ? 'Gerando PIX...' : 'Salvando...'}
                 </>
               ) : (
                 <>
                   <Check className="w-5 h-5" />
-                  Registrar Venda
+                  {precisaModal
+                    ? pagamento === 'pix' ? 'Cobrar via PIX' : 'Cobrar via TEF'
+                    : 'Registrar Venda'
+                  }
                 </>
               )}
             </button>

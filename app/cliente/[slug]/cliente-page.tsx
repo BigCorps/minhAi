@@ -142,7 +142,7 @@ export default function ClientePage({ company }: ClientePageProps) {
     return () => {
       window.removeEventListener('voiceAssistantFunctionClick', handleFunctionClick as EventListener);
     };
-  }, [company.id]);
+  }, [company.id, profile]);
 
   // ── Redirecionar se não estiver logado ──
   useEffect(() => {

@@ -1,7 +1,7 @@
 // app/dashboard/assistentes/page.tsx
 import { createClient, getUser } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
-import AssistentesClient from './AssistentesClient';
+import AssistentesClient from './EmpresasClient';
 export const revalidate = 0;
 
 export default async function AssistentesPage() {

@@ -175,45 +175,51 @@ export default function RegistrarVendaDisplay({
 
       if (pedidoError) throw pedidoError;
 
-      // Produto placeholder
-      let produtoId: string | null = null;
-      const { data: produtoAvulso } = await supabase
+// Produto placeholder
+if (pedidoInserido?.id) {
+  try {
+    let produtoId: string | null = null;
+    const { data: produtoAvulso } = await supabase
+      .from('produtos_venda')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('nome', 'Venda Avulsa')
+      .limit(1)
+      .maybeSingle();
+
+    if (produtoAvulso) {
+      produtoId = produtoAvulso.id;
+    } else {
+      const { data: novoProduto } = await supabase
         .from('produtos_venda')
+        .insert({
+          company_id:       companyId,
+          nome:             'Venda Avulsa',
+          descricao:        'Placeholder para vendas rápidas via assistente',
+          preco_venda:      valorNumerico,
+          unidade:          'un',
+          controla_estoque: false,
+          is_active:        false,
+        })
         .select('id')
-        .eq('company_id', companyId)
-        .eq('nome', 'Venda Avulsa')
-        .limit(1)
-        .maybeSingle();
+        .single();
+      produtoId = novoProduto?.id ?? null;
+    }
 
-      if (produtoAvulso) {
-        produtoId = produtoAvulso.id;
-      } else {
-        const { data: novoProduto } = await supabase
-          .from('produtos_venda')
-          .insert({
-            company_id:       companyId,
-            nome:             'Venda Avulsa',
-            descricao:        'Placeholder para vendas rápidas via assistente',
-            preco_venda:      valorNumerico,
-            unidade:          'un',
-            controla_estoque: false,
-            is_active:        false,
-          })
-          .select('id')
-          .single();
-        produtoId = novoProduto?.id ?? null;
-      }
-
-      if (produtoId && pedidoInserido?.id) {
-        await supabase.from('pedido_itens').insert({
-          pedido_id:      pedidoInserido.id,
-          produto_id:     produtoId,
-          nome_snapshot:  descricao,
-          preco_unitario: valorNumerico,
-          quantidade:     1,
-          subtotal:       valorNumerico,
-        });
-      }
+    if (produtoId) {
+      await supabase.from('pedido_itens').insert({
+        pedido_id:      pedidoInserido.id,
+        produto_id:     produtoId,
+        nome_snapshot:  descricao,
+        preco_unitario: valorNumerico,
+        quantidade:     1,
+        subtotal:       valorNumerico,
+      });
+    }
+  } catch {
+    // RLS anônima não permite produtos_venda — venda salva sem item
+  }
+}
 
       return pedidoInserido?.id ?? null;
     } catch (err) {

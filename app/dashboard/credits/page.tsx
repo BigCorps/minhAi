@@ -389,10 +389,13 @@ export default function CreditsPage() {
             <div className={`hidden sm:block w-px self-stretch ${isDark ? 'bg-lime-500/20' : 'bg-lime-200'}`} />
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 flex-1">
               {[
-                'Validação antifraude',
+                'Créditos Ilimitados',
+                'Landing Page Personalizada',
                 'Implementação incluída',
-                'Cadastro de produtos',
-                'Configuração de totem',
+                'White Label',
+                'Implementação incluída',
+                'Domínio e Subdomínios próprios',
+                'Configuração completa',
                 'Suporte 24 horas',
               ].map((item) => (
                 <div key={item} className="flex items-center gap-1.5">

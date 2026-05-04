@@ -3912,9 +3912,10 @@ restricoes_cpf: {
  
     voiceTriggers: [
       'registrar venda',
+      'cobrar',      
       'nova venda',
       'fazer venda',
-      'vender',
+      'venda rápida',
       'vendendo',
       'abrir venda',
       'iniciar venda',

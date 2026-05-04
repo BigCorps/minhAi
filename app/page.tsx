@@ -151,7 +151,7 @@ const FUNCAO_PAGES = [
         icon: <QrCode />,
         color: 'blue' as const,
         description:
-          'WhatsApp, Instagram, ligação direta — QR Codes que conectam seu cliente ao canal certo na hora. Aumente conversão e engajamento sem esforço.',
+          'WhatsApp, Instagram, Facebook (com respostas de comentários e DMs automáticos) — Também QR Codes que conectam seu cliente ao canal certo, aumentando conversão e engajamento.',
       },
       {
         title: 'Cobra e recebe sozinho',

@@ -206,9 +206,8 @@ export default function AssistentesClient({
                         }
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center px-4 py-2 rounded-lg text-xs font-bold transition-all
-                          bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20"
-                      >
+                        className="flex items-center px-4 py-2 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20"
+                        >
                         <ExternalLink className="w-4 h-4 mr-2" />
                         Abrir
                       </a>

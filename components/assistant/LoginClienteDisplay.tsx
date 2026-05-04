@@ -3,16 +3,16 @@
 // ============================================================
 // components/assistant/LoginClienteDisplay.tsx
 //
-// Turnstile no modo visível (appearance: 'always').
-// O widget aparece acima do botão de submit em cada modo de login.
-// O botão fica desabilitado até o token existir.
-// Após submit (sucesso ou erro), o widget é resetado.
+// Dois modos:
+//   Modo CLIENTE  – email/telefone + senha  + botão "Criar conta"
+//   Modo COLABORADOR – identificador + PIN  (sem criar conta)
+//
+// Turnstile removido.
 // ============================================================
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useProfile } from '@/hooks/useProfile';
-import { useTurnstile } from '@/hooks/useTurnstileVisible';
 
 interface LoginClienteDisplayProps {
   data: {
@@ -60,14 +60,11 @@ const LIGHT = {
   pinBg: '#fffbeb', pinBorder: '#fde68a', pinText: '#92400e',
 };
 
-const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
-
 export default function LoginClienteDisplay({
   data, onClose, theme, playText,
 }: LoginClienteDisplayProps) {
   const C = theme === 'dark' ? DARK : LIGHT;
   const { profile, loading, login, logout, register } = useProfile(data.slug);
-  const { containerRef, token, resetWidget } = useTurnstile();
 
   type Mode = 'loading' | 'logado' | 'login_cliente' | 'login_colab' | 'cadastro';
   const [mode, setMode]                 = useState<Mode>('loading');
@@ -77,9 +74,6 @@ export default function LoginClienteDisplay({
   const [error, setError]               = useState('');
   const [submitting, setSubmitting]     = useState(false);
   const [mounted, setMounted]           = useState(false);
-
-  // Se não há SITE_KEY configurada, trata como token sempre presente (dev / sem proteção)
-  const turnstileOk = !SITE_KEY || !!token;
 
   useEffect(() => {
     setMounted(true);
@@ -123,23 +117,13 @@ export default function LoginClienteDisplay({
     setMode(profile ? 'logado' : 'login_cliente');
   }, [profile, loading]);
 
-  // Reseta o widget ao trocar de modo para forçar nova verificação
-  const switchMode = (next: Mode) => {
-    setMode(next);
-    setError('');
-    setFormValues({});
-    resetWidget();
-  };
-
   // ── Login cliente ─────────────────────────────────────────
   const handleLoginCliente = async () => {
     const identifier = formValues.email || formValues.telefone;
     if (!identifier) { setError('Informe seu e-mail ou telefone.'); return; }
-    if (!turnstileOk) { setError('Complete a verificação de segurança.'); return; }
     setSubmitting(true); setError('');
-    const result = await login(identifier, formValues.senha, token ?? undefined);
+    const result = await login(identifier, formValues.senha);
     setSubmitting(false);
-    resetWidget();
     if (!result.success) {
       setError(result.error || 'Conta não encontrada. Que tal se cadastrar?');
     } else {
@@ -153,11 +137,9 @@ export default function LoginClienteDisplay({
     const identifier = formValues.identificador || formValues.email_colab;
     if (!identifier) { setError('Informe seu identificador ou e-mail.'); return; }
     if (!formValues.pin?.trim()) { setError('Informe seu PIN.'); return; }
-    if (!turnstileOk) { setError('Complete a verificação de segurança.'); return; }
     setSubmitting(true); setError('');
-    const result = await login(identifier, formValues.pin, token ?? undefined);
+    const result = await login(identifier, formValues.pin);
     setSubmitting(false);
-    resetWidget();
     if (!result.success) {
       setError(result.error || 'Identificador ou PIN incorretos.');
     } else {
@@ -169,11 +151,9 @@ export default function LoginClienteDisplay({
   // ── Cadastro cliente ──────────────────────────────────────
   const handleCadastro = async () => {
     if (!formValues.nome?.trim()) { setError('Nome é obrigatório.'); return; }
-    if (!turnstileOk) { setError('Complete a verificação de segurança.'); return; }
     setSubmitting(true); setError('');
-    const result = await register(formValues, token ?? undefined);
+    const result = await register(formValues);
     setSubmitting(false);
-    resetWidget();
     if (!result.success) {
       setError(result.error || 'Erro ao criar conta.');
     } else {
@@ -191,7 +171,6 @@ export default function LoginClienteDisplay({
   if (!mounted) return null;
 
   const hasIdentifier = configFields.includes('email') || configFields.includes('telefone');
-  const showTurnstile = !!SITE_KEY && (mode === 'login_cliente' || mode === 'login_colab' || mode === 'cadastro');
 
   return createPortal(
     <div
@@ -319,16 +298,13 @@ export default function LoginClienteDisplay({
 
               {error && <ErrorMsg msg={error} C={C} />}
 
-              <TurnstileBox containerRef={containerRef} show={showTurnstile} />
-
-              <button onClick={handleLoginCliente} disabled={submitting || !turnstileOk}
+              <button onClick={handleLoginCliente} disabled={submitting}
                 style={{
                   width: '100%', padding: '0.75rem',
-                  background: (submitting || !turnstileOk) ? C.inputBorder : C.btnPrimary,
+                  background: submitting ? C.inputBorder : C.btnPrimary,
                   border: 'none', borderRadius: '0.625rem',
                   color: '#fff', fontSize: '0.875rem', fontWeight: 600,
-                  cursor: (submitting || !turnstileOk) ? 'not-allowed' : 'pointer',
-                  transition: 'background 0.2s',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
                 }}>
                 {submitting ? 'Entrando...' : 'Entrar'}
               </button>
@@ -337,13 +313,13 @@ export default function LoginClienteDisplay({
                 <div>
                   <span style={{ color: C.textMuted, fontSize: '0.8rem' }}>Não tem conta? </span>
                   <button
-                    onClick={() => switchMode('cadastro')}
+                    onClick={() => { setMode('cadastro'); setError(''); setFormValues({}); }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: '0.8rem', fontWeight: 600 }}>
                     Criar conta
                   </button>
                 </div>
                 <button
-                  onClick={() => switchMode('login_colab')}
+                  onClick={() => { setMode('login_colab'); setError(''); setFormValues({}); }}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textMuted, fontSize: '0.75rem' }}>
                   Sou colaborador
                 </button>
@@ -382,23 +358,20 @@ export default function LoginClienteDisplay({
 
               {error && <ErrorMsg msg={error} C={C} />}
 
-              <TurnstileBox containerRef={containerRef} show={showTurnstile} />
-
-              <button onClick={handleLoginColab} disabled={submitting || !turnstileOk}
+              <button onClick={handleLoginColab} disabled={submitting}
                 style={{
                   width: '100%', padding: '0.75rem',
-                  background: (submitting || !turnstileOk) ? C.inputBorder : C.btnPrimary,
+                  background: submitting ? C.inputBorder : C.btnPrimary,
                   border: 'none', borderRadius: '0.625rem',
                   color: '#fff', fontSize: '0.875rem', fontWeight: 600,
-                  cursor: (submitting || !turnstileOk) ? 'not-allowed' : 'pointer',
-                  transition: 'background 0.2s',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
                 }}>
                 {submitting ? 'Entrando...' : 'Entrar com PIN'}
               </button>
 
               <div style={{ textAlign: 'center' }}>
                 <button
-                  onClick={() => switchMode('login_cliente')}
+                  onClick={() => { setMode('login_cliente'); setError(''); setFormValues({}); }}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textMuted, fontSize: '0.8rem' }}>
                   Voltar ao login de cliente
                 </button>
@@ -422,16 +395,13 @@ export default function LoginClienteDisplay({
 
               {error && <ErrorMsg msg={error} C={C} />}
 
-              <TurnstileBox containerRef={containerRef} show={showTurnstile} />
-
-              <button onClick={handleCadastro} disabled={submitting || !turnstileOk}
+              <button onClick={handleCadastro} disabled={submitting}
                 style={{
                   width: '100%', padding: '0.75rem',
-                  background: (submitting || !turnstileOk) ? C.inputBorder : C.btnPrimary,
+                  background: submitting ? C.inputBorder : C.btnPrimary,
                   border: 'none', borderRadius: '0.625rem',
                   color: '#fff', fontSize: '0.875rem', fontWeight: 600,
-                  cursor: (submitting || !turnstileOk) ? 'not-allowed' : 'pointer',
-                  transition: 'background 0.2s',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
                 }}>
                 {submitting ? 'Criando conta...' : 'Criar conta'}
               </button>
@@ -440,7 +410,7 @@ export default function LoginClienteDisplay({
                 <div style={{ textAlign: 'center' }}>
                   <span style={{ color: C.textMuted, fontSize: '0.8rem' }}>Já tem conta? </span>
                   <button
-                    onClick={() => switchMode('login_cliente')}
+                    onClick={() => { setMode('login_cliente'); setError(''); setFormValues({}); }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: '0.8rem', fontWeight: 600 }}>
                     Entrar
                   </button>
@@ -459,23 +429,6 @@ export default function LoginClienteDisplay({
 }
 
 // ── Sub-componentes ───────────────────────────────────────────
-
-function TurnstileBox({
-  containerRef, show,
-}: {
-  containerRef: React.RefObject<HTMLDivElement>;
-  show: boolean;
-}) {
-  return (
-    <div style={{
-      display: show ? 'flex' : 'none',
-      justifyContent: 'center',
-      margin: '0.25rem 0',
-    }}>
-      <div ref={containerRef} />
-    </div>
-  );
-}
 
 function FieldInput({
   label, type, value, onChange, C, inputMode, placeholder,

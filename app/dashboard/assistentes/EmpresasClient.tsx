@@ -329,16 +329,6 @@ function WebAppIndicator({
           </a>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/dashboard/webapp"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
-              bg-green-50 text-green-700 hover:bg-green-100 border border-green-200
-              dark:bg-green-500/10 dark:text-green-400 dark:hover:bg-green-500/20 dark:border-green-500/20"
-          >
-            <Settings className="w-3.5 h-3.5" />
-            Gerenciar WebApp
-          </Link>
-
           <a
             href={webappUrl}
             target="_blank"
@@ -364,15 +354,6 @@ function WebAppIndicator({
           <Globe2 className="w-3.5 h-3.5" />
           Outro assistente usa o WebApp desta conta
         </span>
-        <Link
-          href="/dashboard/webapp"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
-            bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200
-            dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20 dark:border-amber-500/20"
-        >
-          <Settings className="w-3.5 h-3.5" />
-          Trocar para este assistente
-        </Link>
       </div>
     );
   }

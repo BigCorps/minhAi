@@ -14,10 +14,12 @@ import { usePlayText } from '@/hooks/usePlayText';
 ───────────────────────────────────────────────────────── */
 function WebAppSection({
   hasConsultingPlan,
+  hasActiveWebapp, // <-- NOVA PROP
   wantWebapp,
   onToggle,
 }: {
   hasConsultingPlan: boolean;
+  hasActiveWebapp: boolean; // <-- NOVA PROP
   wantWebapp: boolean;
   onToggle: (v: boolean) => void;
 }) {
@@ -29,7 +31,19 @@ function WebAppSection({
       <div className="grid grid-cols-2 gap-4">
 
         {/* Opção: Ativar WebApp */}
-        {hasConsultingPlan ? (
+        {hasActiveWebapp ? (
+          /* Já possui WebApp: card desabilitado com aviso */
+          <div className="flex items-start p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] opacity-70">
+            <Globe className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-gray-400" />
+            <div className="flex-1">
+              <p className="font-bold text-sm text-gray-500 dark:text-gray-400">Ativar WebApp</p>
+              <p className="text-[10px] text-gray-400 dark:text-white/30 mt-0.5 leading-tight">
+                Limite de 1 por conta. Você já possui um WebApp ativo.
+              </p>
+            </div>
+          </div>
+        ) : hasConsultingPlan ? (
+          /* Com plano e sem webapp: botão normal */
           <button
             type="button"
             onClick={() => onToggle(true)}
@@ -110,6 +124,7 @@ export default function NovaEmpresaPage() {
   // ── WebApp state ─────────────────────────────────────────
   const [wantWebapp, setWantWebapp] = useState(false);
   const [hasConsultingPlan, setHasConsultingPlan] = useState(false);
+  const [hasActiveWebapp, setHasActiveWebapp] = useState(false);
 
   // ── Slug validation ──────────────────────────────────────
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
@@ -133,6 +148,50 @@ export default function NovaEmpresaPage() {
     const obs = new MutationObserver(detect);
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     return () => obs.disconnect();
+  }, []);
+
+// ── Verificar plano Consulting e WebApp Existente ───────────
+  useEffect(() => {
+    async function checkPlanAndWebapp() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 1. Verificar se já existe webapp ativo em alguma empresa deste usuário
+      const { data: userCompanies } = await supabase
+        .from('companies')
+        .select('webapp_domain')
+        .eq('user_id', user.id);
+        
+      // Se houver alguma empresa com o campo webapp_domain preenchido, marca como true
+      const hasWebapp = userCompanies?.some(c => c.webapp_domain && c.webapp_domain.trim() !== '');
+      if (hasWebapp) {
+        setHasActiveWebapp(true);
+      }
+
+      // 2. Verificar plano
+      const { data: credits } = await supabase
+        .from('user_credits')
+        .select('has_active_plan, plan_expires_at, active_plan_id, active_plan_name')
+        .eq('user_id', user.id)
+        .single();
+
+      const planOk =
+        credits?.has_active_plan &&
+        credits?.plan_expires_at &&
+        new Date(credits.plan_expires_at) > new Date();
+
+      if (!planOk || !credits?.active_plan_id) return;
+
+      const { data: pkg } = await supabase
+        .from('credits_packages')
+        .select('has_consultoria')
+        .eq('id', credits.active_plan_id)
+        .single();
+
+      setHasConsultingPlan(pkg?.has_consultoria === true);
+    }
+    checkPlanAndWebapp();
   }, []);
 
   // ── Verificar plano Consulting ───────────────────────────
@@ -456,6 +515,7 @@ export default function NovaEmpresaPage() {
               {/* ── Seção WebApp ─────────────────────────────────── */}
               <WebAppSection
                 hasConsultingPlan={hasConsultingPlan}
+                hasActiveWebapp={hasActiveWebapp}
                 wantWebapp={wantWebapp}
                 onToggle={setWantWebapp}
               />

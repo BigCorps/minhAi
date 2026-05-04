@@ -563,6 +563,7 @@ export default function SaldoPage() {
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
               {formatCurrency(totalBalance.available_balance_cents)}
             </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Considera apenas recebimentos via PIX</p>
           </div>
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
             <div className="flex items-center gap-3 mb-4">
@@ -574,6 +575,7 @@ export default function SaldoPage() {
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
               {formatCurrency(totalBalance.total_received_cents)}
             </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Considera apenas recebimentos via PIX</p>
           </div>
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
             <div className="flex items-center gap-3 mb-4">

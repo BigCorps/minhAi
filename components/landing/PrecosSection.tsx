@@ -296,11 +296,14 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-1 flex-1">
                 {[
-                  'Antifraude',
-                  'Implementação',
-                  'Cadastro de produtos',
-                  'Configuração de totem',
-                  'Suporte 24h',
+                'Créditos Ilimitados',
+                'Landing Page Personalizada',
+                'Implementação incluída',
+                'White Label',
+                'Implementação incluída',
+                'Domínio e Subdomínios próprios',
+                'Configuração completa',
+                'Suporte 24 horas',
                 ].map((item) => (
                   <div key={item} className="flex items-center gap-1">
                     <svg className={`w-3 h-3 flex-shrink-0 ${isDark ? 'text-lime-400' : 'text-lime-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -4,10 +4,96 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Loader2, Globe, Lock, CheckCircle, XCircle, AlertCircle, Sparkles, Bot } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Globe, Lock, CheckCircle, XCircle, AlertCircle, Sparkles, Bot, ExternalLink as ExtLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import SetupAssistantChat from '@/components/dashboard/SetupAssistantChat';
 import { usePlayText } from '@/hooks/usePlayText';
+
+/* ─────────────────────────────────────────────────────────
+   Sub-componente: seleção de WebApp no formulário de criação
+───────────────────────────────────────────────────────── */
+function WebAppSection({
+  hasConsultingPlan,
+  wantWebapp,
+  onToggle,
+}: {
+  hasConsultingPlan: boolean;
+  wantWebapp: boolean;
+  onToggle: (v: boolean) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+        WebApp com subdomínio próprio
+      </label>
+      <div className="grid grid-cols-2 gap-4">
+
+        {/* Opção: Ativar WebApp */}
+        {hasConsultingPlan ? (
+          <button
+            type="button"
+            onClick={() => onToggle(true)}
+            className={`flex items-start p-4 rounded-xl border-2 transition-all text-left ${
+              wantWebapp
+                ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10'
+                : 'border-gray-200 dark:border-white/10 bg-transparent hover:border-amber-400/50'
+            }`}
+          >
+            <Globe className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${wantWebapp ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`} />
+            <div>
+              <p className={`font-bold text-sm ${wantWebapp ? 'text-amber-700 dark:text-amber-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                Ativar WebApp
+              </p>
+              <p className="text-[10px] opacity-70 mt-0.5 leading-tight">
+                Configurar subdomínio após criar
+              </p>
+            </div>
+          </button>
+        ) : (
+          /* Sem plano: card desabilitado com upsell */
+          <div className="flex items-start p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] opacity-70">
+            <Globe className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-gray-400" />
+            <div className="flex-1">
+              <p className="font-bold text-sm text-gray-500 dark:text-gray-400">Ativar WebApp</p>
+              <p className="text-[10px] text-gray-400 dark:text-white/30 mt-0.5 leading-tight">
+                Requer Plano Consulting
+              </p>
+              <Link
+                href="/dashboard/credits"
+                className="mt-1.5 inline-flex items-center text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Ver planos
+                <ExtLink className="w-2.5 h-2.5 ml-1" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Opção: Sem WebApp */}
+        <button
+          type="button"
+          onClick={() => onToggle(false)}
+          className={`flex items-start p-4 rounded-xl border-2 transition-all text-left ${
+            !wantWebapp
+              ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10'
+              : 'border-gray-200 dark:border-white/10 bg-transparent hover:border-blue-400/50'
+          }`}
+        >
+          <Lock className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${!wantWebapp ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
+          <div>
+            <p className={`font-bold text-sm ${!wantWebapp ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>
+              Continuar sem WebApp
+            </p>
+            <p className="text-[10px] opacity-70 mt-0.5 leading-tight">
+              Pode ativar depois se quiser
+            </p>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function NovaEmpresaPage() {
   const router = useRouter();
@@ -21,6 +107,10 @@ export default function NovaEmpresaPage() {
   const [greetingMessage, setGreetingMessage] = useState('Olá! Como posso ajudar você hoje?');
   const [isPublic, setIsPublic] = useState(true);
 
+  // ── WebApp state ─────────────────────────────────────────
+  const [wantWebapp, setWantWebapp] = useState(false);
+  const [hasConsultingPlan, setHasConsultingPlan] = useState(false);
+
   // ── Slug validation ──────────────────────────────────────
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const [slugError, setSlugError] = useState<string | null>(null);
@@ -28,7 +118,7 @@ export default function NovaEmpresaPage() {
 
   // ── Submit state ─────────────────────────────────────────
   const [loading, setLoading] = useState(false);
-  const [submitMode, setSubmitMode] = useState<'manual' | 'ia' | null>(null);
+  const [submitMode, setSubmitMode] = useState<'manual' | 'ia' | 'ia_webapp' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // ── Setup bot ────────────────────────────────────────────
@@ -45,45 +135,69 @@ export default function NovaEmpresaPage() {
     return () => obs.disconnect();
   }, []);
 
+  // ── Verificar plano Consulting ───────────────────────────
+  useEffect(() => {
+    async function checkPlan() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: credits } = await supabase
+        .from('user_credits')
+        .select('has_active_plan, plan_expires_at, active_plan_id, active_plan_name')
+        .eq('user_id', user.id)
+        .single();
+
+      const planOk =
+        credits?.has_active_plan &&
+        credits?.plan_expires_at &&
+        new Date(credits.plan_expires_at) > new Date();
+
+      if (!planOk || !credits?.active_plan_id) return;
+
+      const { data: pkg } = await supabase
+        .from('credits_packages')
+        .select('has_consultoria')
+        .eq('id', credits.active_plan_id)
+        .single();
+
+      setHasConsultingPlan(pkg?.has_consultoria === true);
+    }
+    checkPlan();
+  }, []);
+
   // ── Slug check ───────────────────────────────────────────
   const SLUGS_RESERVADOS = new Set([
-  // Subdomínios de infraestrutura
-  'www', 'app', 'api', 'admin', 'mail', 'smtp',
-  // Rotas do Next.js (prefixos de rota)
-  'dashboard', 'login', 'cadastro',
-  // Páginas públicas do minhAi
-  'precos', 'sobre', 'contato', 'docs', 'blog',
-  // Prefixo das páginas de nicho SEO
-  'para', 'api',
-  // Assistente de demo público
-  'suporte',
-  // Outras rotas conhecidas
-  'pix', 'ia', 'vendas', 'fila', 'cliente', 'link', 'atendimento',
-]);
+    'www', 'app', 'api', 'admin', 'mail', 'smtp',
+    'dashboard', 'login', 'cadastro',
+    'precos', 'sobre', 'contato', 'docs', 'blog',
+    'para', 'api',
+    'suporte',
+    'pix', 'ia', 'vendas', 'fila', 'cliente', 'link', 'atendimento',
+  ]);
 
-const checkSlugAvailability = async (slug: string) => {
-  if (!slug || slug.length < 3) { setSlugStatus('idle'); setSlugError(null); return; }
+  const checkSlugAvailability = async (slug: string) => {
+    if (!slug || slug.length < 3) { setSlugStatus('idle'); setSlugError(null); return; }
 
-  // ── Verificar reservados ANTES de bater no banco ──────────────
-  if (SLUGS_RESERVADOS.has(slug.toLowerCase())) {
-    setSlugStatus('taken');
-    setSlugError('Este slug é reservado pelo sistema. Escolha outro.');
-    return;
-  }
-
-  setSlugStatus('checking');
-  setSlugError(null);
-  try {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from('companies').select('id').eq('slug', slug).single();
-    if (error && error.code !== 'PGRST116') {
-      setSlugStatus('idle'); setSlugError('Erro ao verificar disponibilidade'); return;
+    if (SLUGS_RESERVADOS.has(slug.toLowerCase())) {
+      setSlugStatus('taken');
+      setSlugError('Este slug é reservado pelo sistema. Escolha outro.');
+      return;
     }
-    if (data) { setSlugStatus('taken'); setSlugError('Este slug já está em uso. Escolha outro.'); }
-    else { setSlugStatus('available'); setSlugError(null); }
-  } catch { setSlugStatus('idle'); setSlugError('Erro ao verificar disponibilidade'); }
-};
+
+    setSlugStatus('checking');
+    setSlugError(null);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('companies').select('id').eq('slug', slug).single();
+      if (error && error.code !== 'PGRST116') {
+        setSlugStatus('idle'); setSlugError('Erro ao verificar disponibilidade'); return;
+      }
+      if (data) { setSlugStatus('taken'); setSlugError('Este slug já está em uso. Escolha outro.'); }
+      else { setSlugStatus('available'); setSlugError(null); }
+    } catch { setSlugStatus('idle'); setSlugError('Erro ao verificar disponibilidade'); }
+  };
 
   useEffect(() => {
     if (!isPublic) { setSlugStatus('idle'); setSlugError(null); return; }
@@ -137,9 +251,6 @@ const checkSlugAvailability = async (slug: string) => {
       }
 
       const result = await response.json();
-
-      // ✅ A API retorna o objeto company diretamente (não { company: {...} })
-      // result.id é o companyId, result.company?.id seria undefined
       const newCompanyId = result.id ?? result.company?.id ?? null;
 
       console.log('✅ Assistente criado:', newCompanyId, result);
@@ -174,6 +285,15 @@ const checkSlugAvailability = async (slug: string) => {
       setSetupCompanyId(id);
       setShowSetupBot(true);
       setLoading(false);
+    }
+  }
+
+  // ── Submit com WebApp ────────────────────────────────────
+  async function handleSubmitComWebapp() {
+    setSubmitMode('ia');
+    const id = await criarAssistente();
+    if (id) {
+      router.push(`/dashboard/webapp?companyId=${id}&from=create`);
     }
   }
 
@@ -332,6 +452,13 @@ const checkSlugAvailability = async (slug: string) => {
                   rows={3} placeholder="Frase que o assistente dirá ao ser ativado"
                   className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white transition" />
               </div>
+
+              {/* ── Seção WebApp ─────────────────────────────────── */}
+              <WebAppSection
+                hasConsultingPlan={hasConsultingPlan}
+                wantWebapp={wantWebapp}
+                onToggle={setWantWebapp}
+              />
             </div>
 
             {/* ── Botões ──────────────────────────────────── */}
@@ -340,17 +467,22 @@ const checkSlugAvailability = async (slug: string) => {
               <button
                 type="button"
                 disabled={!canSubmit}
-                onClick={handleSubmitComIA}
+                onClick={wantWebapp ? handleSubmitComWebapp : handleSubmitComIA}
                 className={`w-full flex items-center justify-center px-6 py-3 rounded-xl transition font-bold shadow-lg text-white ${
-                  !canSubmit ? 'bg-gray-400 cursor-not-allowed'
-                             : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-purple-500/20'
+                  !canSubmit
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : wantWebapp
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-orange-500/20'
+                      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-purple-500/20'
                 }`}
               >
                 {loading && submitMode === 'ia'
                   ? <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  : <Sparkles className="w-5 h-5 mr-2" />
+                  : wantWebapp
+                    ? <Globe className="w-5 h-5 mr-2" />
+                    : <Sparkles className="w-5 h-5 mr-2" />
                 }
-                Criar e Configurar com IA
+                {wantWebapp ? 'Criar e Configurar WebApp' : 'Criar e Configurar com IA'}
               </button>
 
               <div className="flex items-center gap-3">
@@ -365,8 +497,9 @@ const checkSlugAvailability = async (slug: string) => {
                   disabled={!canSubmit}
                   onClick={handleSubmitManual}
                   className={`flex-1 flex items-center justify-center px-6 py-3 rounded-xl transition font-bold ${
-                    !canSubmit ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed text-white/70'
-                               : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/20'
+                    !canSubmit
+                      ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed text-white/70'
+                      : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/20'
                   }`}
                 >
                   {loading && submitMode === 'manual'
@@ -375,8 +508,10 @@ const checkSlugAvailability = async (slug: string) => {
                   }
                   Criar sem configurar
                 </button>
-                <Link href="/dashboard/assistentes"
-                  className="px-6 py-3 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition font-bold">
+                <Link
+                  href="/dashboard/assistentes"
+                  className="px-6 py-3 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition font-bold"
+                >
                   Cancelar
                 </Link>
               </div>

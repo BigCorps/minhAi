@@ -3,46 +3,55 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ShoppingCart, Check, Loader2, AlertCircle, DollarSign } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
+import { criarPedido, atualizarStatusPedido } from '@/lib/produtos-venda';
+
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 interface RegistrarVendaDisplayProps {
   data: {
     companyId: string;
-    produto?: string;          // Nome do produto (opcional)
-    valor?: number;            // legado — ainda aceito
-    initialValue?: number;     // nome enviado pelo handler do assistente
-    pagamento?: string;        // legado
-    metodoPagamento?: string;  // nome enviado pelo handler do assistente
+    produto?: string;
+    valor?: number;
+    initialValue?: number;
+    pagamento?: string;
+    metodoPagamento?: string;
   };
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText?: (text: string) => Promise<void>;
 }
 
-/** Converte um número (ex: 12.5) para string formatada "12,50" */
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function numberToFormatted(n: number): string {
-  return n.toLocaleString('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-/** Converte string digitada (ex: "1250" → "12,50") */
 function formatCurrency(value: string): string {
   const numbers = value.replace(/\D/g, '');
   if (!numbers) return '';
-  const amount = parseFloat(numbers) / 100;
-  return amount.toLocaleString('pt-BR', {
+  return (parseFloat(numbers) / 100).toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
 
-/** Converte string formatada "12,50" para número 12.5 */
 function parseBRL(str: string): number {
-  // Remove pontos de milhar, troca vírgula decimal por ponto
   return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
 }
+
+// Mapa de método de pagamento para os valores aceitos pelo CHECK constraint de pedidos:
+// 'pix' | 'nfc' | 'tef' | 'dinheiro' | 'fiado'
+// Nota: CheckoutFlow usa metodo === 'link' ? 'nfc' : metodo — seguimos o mesmo padrão.
+const PAGAMENTO_MAP: Record<string, 'pix' | 'nfc' | 'tef' | 'dinheiro' | 'fiado'> = {
+  dinheiro: 'dinheiro',
+  pix:      'pix',
+  debito:   'nfc',
+  credito:  'nfc',
+  fiado:    'fiado',
+};
+
+// ─── Componente ───────────────────────────────────────────────────────────────
 
 export default function RegistrarVendaDisplay({
   data,
@@ -53,48 +62,28 @@ export default function RegistrarVendaDisplay({
   const {
     companyId,
     produto: produtoInicial,
-    // aceita tanto "valor" (legado) quanto "initialValue" (handler atual)
     valor: valorLegado,
     initialValue,
     pagamento: pagamentoLegado,
     metodoPagamento,
   } = data;
 
-  // Resolve valor inicial: prefere initialValue, cai em valorLegado
-  const valorInicialNum = initialValue ?? valorLegado;
+  const valorInicialNum  = initialValue ?? valorLegado;
   const pagamentoInicial = metodoPagamento ?? pagamentoLegado ?? 'dinheiro';
 
-  const [produto, setProduto] = useState(produtoInicial || '');
-  // Se vier número do handler, já formata; se vier undefined, começa vazio
-  const [valor, setValor] = useState<string>(
+  const [produto,   setProduto]   = useState(produtoInicial || '');
+  const [valor,     setValor]     = useState<string>(
     valorInicialNum != null ? numberToFormatted(valorInicialNum) : ''
   );
   const [pagamento, setPagamento] = useState(pagamentoInicial);
-  const [isSaving, setIsSaving] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const [isSaving,  setIsSaving]  = useState(false);
+  const [toast,     setToast]     = useState<{ message: string; type: 'error' | 'success' } | null>(null);
+  const [mounted,   setMounted]   = useState(false);
 
-  const supabase = createClient();
   const isDark = theme === 'dark';
 
-  const DARK = {
-    bg: 'bg-slate-900',
-    cardBg: 'bg-slate-800',
-    border: 'border-white/10',
-    textPrimary: 'text-white',
-    textMuted: 'text-white/60',
-    inputBg: 'bg-slate-700',
-  };
-
-  const LIGHT = {
-    bg: 'bg-white',
-    cardBg: 'bg-gray-50',
-    border: 'border-gray-200',
-    textPrimary: 'text-gray-900',
-    textMuted: 'text-gray-600',
-    inputBg: 'bg-white',
-  };
-
+  const DARK  = { bg: 'bg-slate-900', cardBg: 'bg-slate-800', border: 'border-white/10',  textPrimary: 'text-white',    textMuted: 'text-white/60', inputBg: 'bg-slate-700' };
+  const LIGHT = { bg: 'bg-white',     cardBg: 'bg-gray-50',   border: 'border-gray-200',  textPrimary: 'text-gray-900', textMuted: 'text-gray-600', inputBg: 'bg-white'     };
   const colors = isDark ? DARK : LIGHT;
 
   const PAYMENT_TYPES = [
@@ -107,16 +96,13 @@ export default function RegistrarVendaDisplay({
   useEffect(() => {
     setMounted(true);
     window.dispatchEvent(new CustomEvent('eai:modalOpen'));
-    return () => {
-      window.dispatchEvent(new CustomEvent('eai:modalClose'));
-    };
+    return () => window.dispatchEvent(new CustomEvent('eai:modalClose'));
   }, []);
 
   useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 3000);
-      return () => clearTimeout(timer);
-    }
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
   }, [toast]);
 
   function showToast(message: string, type: 'error' | 'success') {
@@ -129,72 +115,177 @@ export default function RegistrarVendaDisplay({
 
   async function handleSave() {
     const valorNumerico = parseBRL(valor);
-
     if (valorNumerico <= 0) {
       showToast('Informe um valor maior que zero', 'error');
       return;
     }
 
     setIsSaving(true);
+    try {
+      const descricao  = produto.trim() || 'Venda rápida';
+      const metodoDB   = PAGAMENTO_MAP[pagamento] ?? 'dinheiro';
+
+      // ── Usa a mesma função que o CheckoutFlow usa ────────────────────────
+      // criarPedido resolve internamente: user_id, session_id, profile_id,
+      // pedido_itens — exatamente como o restante do sistema espera.
+      // Passamos um item avulso com o valor e a descrição digitada.
+      const pedido = await criarPedido({
+        company_id:       companyId,
+        cliente_nome:     undefined,  // venda rápida não coleta nome
+        cliente_telefone: undefined,
+        metodo_pagamento: metodoDB,
+        itens: [
+          {
+            produto_id:     '__avulso__', // criarPedido deve suportar itens sem produto_id real;
+            nome:           descricao,    // se não suportar, veja nota abaixo (*)
+            preco_venda:    valorNumerico,
+            quantidade:     1,
+          } as any,
+        ],
+      });
+
+      // Marca imediatamente como pago (igual ao fluxo dinheiro do CheckoutFlow)
+      await atualizarStatusPedido(pedido.id, 'pago');
+
+      showToast('Venda registrada com sucesso!', 'success');
+      if (playText) {
+        await playText(
+          `Venda de ${valorNumerico.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} registrada com sucesso!`
+        );
+      }
+      setTimeout(() => onClose(), 1500);
+
+    } catch (err: any) {
+      console.error('Erro ao registrar venda:', err);
+
+      // (*) Se criarPedido rejeitar produto_id='__avulso__', cai aqui.
+      // Nesse caso precisamos do insert direto — veja fallback abaixo.
+      if (err?.message?.includes('avulso') || err?.message?.includes('produto_id') || err?.code === '23503') {
+        await handleSaveFallback(parseBRL(valor));
+        return;
+      }
+
+      showToast('Erro ao registrar venda. Tente novamente.', 'error');
+      if (playText) await playText('Erro ao registrar venda. Tente novamente.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  // Fallback: insert direto caso criarPedido não aceite produto avulso.
+  // Segue exatamente a mesma estrutura de colunas que AbaPedidos lê.
+  async function handleSaveFallback(valorNumerico: number) {
+    const { createClient } = await import('@/lib/supabase-browser');
+    const supabase  = createClient();
+    const descricao = produto.trim() || 'Venda rápida';
+    const metodoDB  = PAGAMENTO_MAP[pagamento] ?? 'dinheiro';
+    const now       = new Date().toISOString();
 
     try {
-      // ──────────────────────────────────────────────────────────────────────
-      // O cliente do totem pode NÃO estar autenticado, portanto NÃO
-      // bloqueamos o fluxo em caso de ausência de sessão.
-      // profile_id fica null quando não há usuário logado — a coluna aceita NULL.
-      // ──────────────────────────────────────────────────────────────────────
-      let profileId: string | null = null;
-
+      // Resolve user_id = dono da empresa (necessário para o RLS de SELECT)
+      let userId: string | null = null;
       const { data: authData } = await supabase.auth.getUser();
-      const user = authData?.user ?? null;
+      if (authData?.user?.id) {
+        userId = authData.user.id;
+      } else {
+        // Totem sem sessão: pega o dono via companies.user_id
+        const { data: company } = await supabase
+          .from('companies')
+          .select('user_id')
+          .eq('id', companyId)
+          .maybeSingle();
+        userId = company?.user_id ?? null;
+      }
 
-      if (user) {
-        // Tenta encontrar sessão de perfil ativa para este usuário/empresa
+      // Resolve profile_id do colaborador logado (se houver sessão de perfil ativa)
+      let profileId: string | null = null;
+      if (authData?.user?.id) {
         const { data: session } = await supabase
           .from('profile_sessions')
           .select('profile_id')
           .eq('company_id', companyId)
-          .gt('expires_at', new Date().toISOString())
+          .gt('expires_at', now)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
-
         profileId = session?.profile_id ?? null;
       }
 
-      const { error: insertError } = await supabase
-        .from('vendas_rapidas')
+      // 1. Insere o pedido
+      const { data: pedidoInserido, error: pedidoError } = await supabase
+        .from('pedidos')
         .insert({
-          company_id:      companyId,
-          profile_id:      profileId,          // null é aceito pelo schema
-          descricao:       produto.trim() || 'Venda rápida',
-          valor:           valorNumerico,
-          tipo_pagamento:  pagamento,
-          created_at:      new Date().toISOString(),
-        });
+          company_id:       companyId,
+          user_id:          userId,      // ← RLS: dono consegue ver no dashboard
+          profile_id:       profileId,   // ← quem registrou (colaborador/totem/null)
+          subtotal:         valorNumerico,
+          desconto:         0,
+          total:            valorNumerico,
+          metodo_pagamento: metodoDB,
+          status:           'pago',
+          observacoes:      descricao !== 'Venda rápida' ? descricao : null,
+          paid_at:          now,
+          created_at:       now,
+          updated_at:       now,
+        })
+        .select('id')
+        .single();
 
-      if (insertError) throw insertError;
+      if (pedidoError) throw pedidoError;
 
-      showToast('Venda registrada com sucesso!', 'success');
+      // 2. Produto placeholder "Venda Avulsa" (criado apenas uma vez por empresa)
+      let produtoId: string | null = null;
+      const { data: produtoAvulso } = await supabase
+        .from('produtos_venda')
+        .select('id')
+        .eq('company_id', companyId)
+        .eq('nome', 'Venda Avulsa')
+        .limit(1)
+        .maybeSingle();
 
-      if (playText) {
-        await playText(
-          `Venda de ${valorNumerico.toLocaleString('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-          })} registrada com sucesso!`
-        );
+      if (produtoAvulso) {
+        produtoId = produtoAvulso.id;
+      } else {
+        const { data: novoProduto } = await supabase
+          .from('produtos_venda')
+          .insert({
+            company_id:       companyId,
+            nome:             'Venda Avulsa',
+            descricao:        'Placeholder para vendas rápidas via assistente',
+            preco_venda:      valorNumerico,
+            unidade:          'un',
+            controla_estoque: false,
+            is_active:        false,  // não aparece no catálogo
+          })
+          .select('id')
+          .single();
+        produtoId = novoProduto?.id ?? null;
       }
 
+      // 3. Insere item do pedido (aparece na coluna "Itens" e no detalhe expandido)
+      if (produtoId && pedidoInserido?.id) {
+        await supabase.from('pedido_itens').insert({
+          pedido_id:      pedidoInserido.id,
+          produto_id:     produtoId,
+          nome_snapshot:  descricao,       // descrição digitada visível no detalhe
+          preco_unitario: valorNumerico,
+          quantidade:     1,
+          subtotal:       valorNumerico,
+        });
+      }
+
+      showToast('Venda registrada com sucesso!', 'success');
+      if (playText) {
+        await playText(
+          `Venda de ${valorNumerico.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} registrada com sucesso!`
+        );
+      }
       setTimeout(() => onClose(), 1500);
 
     } catch (err) {
-      console.error('Erro ao registrar venda:', err);
+      console.error('Erro no fallback ao registrar venda:', err);
       showToast('Erro ao registrar venda. Tente novamente.', 'error');
-
-      if (playText) {
-        await playText('Erro ao registrar venda. Tente novamente.');
-      }
+      if (playText) await playText('Erro ao registrar venda. Tente novamente.');
     } finally {
       setIsSaving(false);
     }
@@ -206,23 +297,17 @@ export default function RegistrarVendaDisplay({
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       {/* Toast */}
       {toast && (
-        <div
-          className={`fixed top-4 left-1/2 -translate-x-1/2 z-[400] px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
-            toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
-          }`}
-        >
-          {toast.type === 'error'
-            ? <AlertCircle className="w-5 h-5" />
-            : <Check className="w-5 h-5" />
-          }
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[400] px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
+          toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
+        }`}>
+          {toast.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <Check className="w-5 h-5" />}
           {toast.message}
         </div>
       )}
 
       {/* Modal */}
-      <div
-        className={`w-full max-w-md rounded-2xl shadow-2xl ${colors.bg} ${colors.border} border overflow-hidden`}
-      >
+      <div className={`w-full max-w-md rounded-2xl shadow-2xl ${colors.bg} ${colors.border} border overflow-hidden`}>
+
         {/* Header */}
         <div className={`px-6 py-4 border-b ${colors.border} flex items-center justify-between`}>
           <div className="flex items-center gap-3">
@@ -237,11 +322,9 @@ export default function RegistrarVendaDisplay({
           <button
             onClick={onClose}
             disabled={isSaving}
-            className={`p-2 rounded-lg transition-colors ${
-              isDark
-                ? 'text-white/50 hover:text-white hover:bg-white/10'
-                : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
-            } disabled:opacity-50`}
+            className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${
+              isDark ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+            }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -284,9 +367,7 @@ export default function RegistrarVendaDisplay({
                 className={`w-full pl-10 pr-4 py-3 rounded-lg border ${colors.border} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50 text-lg font-semibold`}
               />
             </div>
-            {valor ? (
-              <p className={`text-xs ${colors.textMuted} mt-1`}>R$ {valor}</p>
-            ) : null}
+            {valor ? <p className={`text-xs ${colors.textMuted} mt-1`}>R$ {valor}</p> : null}
           </div>
 
           {/* Tipo de Pagamento */}
@@ -316,13 +397,9 @@ export default function RegistrarVendaDisplay({
           </div>
 
           {/* Info */}
-          <div
-            className={`p-3 rounded-lg border ${
-              isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'
-            }`}
-          >
+          <div className={`p-3 rounded-lg border ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'}`}>
             <p className={`text-xs ${isDark ? 'text-blue-200' : 'text-blue-800'}`}>
-              💡 Registro rápido para agilizar o atendimento. A venda aparecerá nos relatórios do estabelecimento.
+              💡 A venda será registrada como <strong>paga</strong> e aparecerá na aba de Pedidos.
             </p>
           </div>
 
@@ -332,9 +409,7 @@ export default function RegistrarVendaDisplay({
               onClick={onClose}
               disabled={isSaving}
               className={`flex-1 px-4 py-3 rounded-lg font-medium transition disabled:opacity-50 ${
-                isDark
-                  ? 'bg-slate-700 hover:bg-slate-600 text-white'
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+                isDark ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
               }`}
             >
               Cancelar

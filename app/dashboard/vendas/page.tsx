@@ -1318,7 +1318,7 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
     try {
       const { data } = await supabase
         .from('pedidos')
-        .select('*, pedido_itens(*)')
+        .select('*, pedido_itens(*), company_profiles(id, nome, tipo)')
         .eq('company_id', companyId)
         .order('created_at', { ascending: sortOrder === 'asc' });
       setPedidos(data ?? []);
@@ -1498,7 +1498,10 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
-                        {(p.pedido_itens ?? []).length} iten{(p.pedido_itens ?? []).length !== 1 ? 's' : ''}
+                        {(p.pedido_itens ?? []).length === 0
+                          ? <span className="text-gray-400 dark:text-gray-500 italic text-xs">Venda Rápida</span>
+                          : <>{(p.pedido_itens ?? []).length} iten{(p.pedido_itens ?? []).length !== 1 ? 's' : ''}</>
+                        }
                       </td>
                       <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">
                         {formatarPreco(p.total)}
@@ -1513,8 +1516,8 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
 
                     {/* Detalhe expandido */}
                     {expandedRow === p.id && (
-                      <tr key={`${p.id}-detail`} className="bg-gray-50 dark:bg-white/3">
-                        <td colSpan={6} className="px-6 py-4">
+                      <tr key={`${p.id}-detail`}>
+                        <td colSpan={6} className="px-6 py-4 bg-gray-50 dark:bg-slate-800/60">
                           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
                             Itens do pedido
                           </p>

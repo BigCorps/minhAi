@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
 import { formatarPreco } from '@/lib/produtos-venda';
 import { useCart } from '@/hooks/useCart';
@@ -39,6 +39,13 @@ export default function ProductGrid({
   const [feedbacks, setFeedbacks] = useState<Record<string, boolean>>({});
   const [produtoOpcionais, setProdutoOpcionais] = useState<{ produto: ProdutoVenda; quantidade: number } | null>(null);
   const isDark = theme === 'dark';
+  const categoriasRef = useRef<HTMLDivElement>(null);
+
+useEffect(() => {
+  const el = categoriasRef.current;
+  if (!el) return;
+  el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+}, [categorias]);
 
   // ── Bloco 3b: favoritos no topo, sem duplicar ──────────────────────────────
   const produtosFiltrados = useMemo(() => {
@@ -106,8 +113,9 @@ export default function ProductGrid({
       {/* Pills de categoria + botão scanner */}
       {(categorias.length > 0 || onOpenBarcodeScanner) && (
         // ── Wrapper externo: centraliza o conteúdo e permite scroll horizontal ──
-        <div
-          className="flex-shrink-0 flex justify-center overflow-x-auto"
+<div
+  ref={categoriasRef}
+  className="flex-shrink-0 overflow-x-auto"
           style={{
             scrollbarWidth: 'thin',
             scrollbarColor: isDark ? 'rgba(255,255,255,0.15) transparent' : 'rgba(0,0,0,0.12) transparent',

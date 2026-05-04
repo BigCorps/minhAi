@@ -17,7 +17,7 @@ const VANTAGENS = [
     ),
     title: 'Seu próprio App, sem App Store',
     highlight: 'PWA instalável',
-    description: 'WebApp com sua marca direto na tela do cliente — sem publicar na Play Store ou App Store. Funciona como app nativo, com seu logo, nome e dominio a sua escolha.',
+    description: 'WebApp com sua marca — sem publicar na Play Store ou App Store. Funciona como app nativo, com seu logo, nome e dominio a sua escolha. Consulte tambem sobre White Label.',
     color: 'blue' as const,
   },
   {

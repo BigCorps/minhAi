@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ShoppingCart, Check, Loader2, AlertCircle, DollarSign, Zap } from 'lucide-react';
 import { atualizarStatusPedido } from '@/lib/produtos-venda';
-import PIXConfirmationModal from '@/components/VoiceAssistant/modals/PixConfirmationModal';
-import MercadoPagoPointDisplay from '@/components/VoiceAssistant/modals/MercadoPagoPointDisplay';
+import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
+import MercadoPagoPointDisplay from '@/components/assistant/MercadoPagoPointDisplay';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 

@@ -3,26 +3,17 @@
 // ============================================================
 // components/assistant/LoginClienteDisplay.tsx
 //
-// Correção: o modal de login agora suporta dois modos:
+// Dois modos:
+//   Modo CLIENTE  – email/telefone + senha  + botão "Criar conta"
+//   Modo COLABORADOR – identificador + PIN  (sem criar conta)
 //
-//   Modo CLIENTE (padrão):
-//     - Campos: email/telefone + senha
-//     - Botão "Criar conta" disponível
-//
-//   Modo COLABORADOR (detectado após digitar identificador):
-//     - Campos: identificador/email + PIN (numérico)
-//     - Sem botão de criar conta (colaboradores são cadastrados
-//       pelo dashboard, não pelo modal)
-//     - O usuário troca o modo clicando em "Entrar com PIN"
-//
-// O useProfile.login() já aceita ambos: a Edge Function
-// auth-profile verifica senha_hash OU pin como credencial.
+// Turnstile removido — use o hook useTurnstile apenas se
+// precisar reativar em outro momento.
 // ============================================================
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useProfile } from '@/hooks/useProfile';
-import { useTurnstile } from '@/hooks/useTurnstile';
 
 interface LoginClienteDisplayProps {
   data: {
@@ -75,16 +66,15 @@ export default function LoginClienteDisplay({
 }: LoginClienteDisplayProps) {
   const C = theme === 'dark' ? DARK : LIGHT;
   const { profile, loading, login, logout, register } = useProfile(data.slug);
-  const { getToken, containerRef } = useTurnstile();
 
   type Mode = 'loading' | 'logado' | 'login_cliente' | 'login_colab' | 'cadastro';
-  const [mode, setMode]           = useState<Mode>('loading');
+  const [mode, setMode]                 = useState<Mode>('loading');
   const [configFields, setConfigFields] = useState<string[]>(['nome', 'email']);
   const [customLabels, setCustomLabels] = useState<Record<string, string>>({});
-  const [formValues, setFormValues] = useState<Record<string, string>>({});
-  const [error, setError]         = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [mounted, setMounted]     = useState(false);
+  const [formValues, setFormValues]     = useState<Record<string, string>>({});
+  const [error, setError]               = useState('');
+  const [submitting, setSubmitting]     = useState(false);
+  const [mounted, setMounted]           = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -109,7 +99,10 @@ export default function LoginClienteDisplay({
           const customFields: { key: string; label: string }[] = rows[0].custom_fields ?? [];
           if (customFields.length > 0) {
             setCustomLabels(
-              customFields.reduce((acc, cf) => { acc[cf.key] = cf.label || cf.key; return acc; }, {} as Record<string, string>)
+              customFields.reduce(
+                (acc, cf) => { acc[cf.key] = cf.label || cf.key; return acc; },
+                {} as Record<string, string>
+              )
             );
           }
         }
@@ -125,16 +118,11 @@ export default function LoginClienteDisplay({
     setMode(profile ? 'logado' : 'login_cliente');
   }, [profile, loading]);
 
-  // ── Login cliente (email/telefone + senha) ────────────────
+  // ── Login cliente ─────────────────────────────────────────
   const handleLoginCliente = async () => {
     const identifier = formValues.email || formValues.telefone;
     if (!identifier) { setError('Informe seu e-mail ou telefone.'); return; }
     setSubmitting(true); setError('');
-    const token = await getToken();
-    if (token === null && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
-      setError('Verificação de segurança falhou. Tente novamente.');
-      setSubmitting(false); return;
-    }
     const result = await login(identifier, formValues.senha);
     setSubmitting(false);
     if (!result.success) {
@@ -145,17 +133,12 @@ export default function LoginClienteDisplay({
     }
   };
 
-  // ── Login colaborador (identificador + PIN) ───────────────
+  // ── Login colaborador ─────────────────────────────────────
   const handleLoginColab = async () => {
     const identifier = formValues.identificador || formValues.email_colab;
     if (!identifier) { setError('Informe seu identificador ou e-mail.'); return; }
     if (!formValues.pin?.trim()) { setError('Informe seu PIN.'); return; }
     setSubmitting(true); setError('');
-    const token = await getToken();
-    if (token === null && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
-      setError('Verificação de segurança falhou. Tente novamente.');
-      setSubmitting(false); return;
-    }
     const result = await login(identifier, formValues.pin);
     setSubmitting(false);
     if (!result.success) {
@@ -170,11 +153,6 @@ export default function LoginClienteDisplay({
   const handleCadastro = async () => {
     if (!formValues.nome?.trim()) { setError('Nome é obrigatório.'); return; }
     setSubmitting(true); setError('');
-    const token = await getToken();
-    if (token === null && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
-      setError('Verificação de segurança falhou. Tente novamente.');
-      setSubmitting(false); return;
-    }
     const result = await register(formValues);
     setSubmitting(false);
     if (!result.success) {
@@ -332,7 +310,6 @@ export default function LoginClienteDisplay({
                 {submitting ? 'Entrando...' : 'Entrar'}
               </button>
 
-              {/* Links */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <span style={{ color: C.textMuted, fontSize: '0.8rem' }}>Não tem conta? </span>
@@ -351,11 +328,9 @@ export default function LoginClienteDisplay({
             </div>
           )}
 
-          {/* Login colaborador (identificador + PIN) */}
+          {/* Login colaborador */}
           {mode === 'login_colab' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-
-              {/* Banner PIN */}
               <div style={{
                 background: C.pinBg, border: `1px solid ${C.pinBorder}`,
                 borderRadius: '0.625rem', padding: '0.625rem 0.875rem',
@@ -444,9 +419,6 @@ export default function LoginClienteDisplay({
               )}
             </div>
           )}
-
-          {/* Turnstile — widget invisível, necessário para getToken() funcionar */}
-          <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
 
         </div>
       </div>

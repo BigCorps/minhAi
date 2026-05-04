@@ -314,7 +314,7 @@ export default function ProductGrid({
                     <p className={`text-[10px] font-semibold truncate mb-0.5 ${
                       isDark ? 'text-white' : 'text-gray-900'
                     }`}>
-                      {produto.nome}
+                      {produto.nome}{produto.is_favorito && <span className="text-amber-400 ml-0.5">★</span>}
                     </p>
                     {produto.descricao && (
                       <p className={`text-[9px] truncate mb-0.5 ${

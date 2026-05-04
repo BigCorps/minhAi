@@ -26,8 +26,10 @@ function numberToFormatted(n: number): string {
 function formatCurrency(value: string): string {
   const numbers = value.replace(/\D/g, '');
   if (!numbers) return '';
-  const amount = parseFloat(numbers) / 100;
-  return amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (parseFloat(numbers) / 100).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function parseBRL(str: string): number {
@@ -62,8 +64,8 @@ export default function RegistrarVendaDisplay({
   const valorInicialNum  = initialValue ?? valorLegado;
   const pagamentoInicial = metodoPagamento ?? pagamentoLegado ?? 'dinheiro';
 
-  const [produto,  setProduto]  = useState(produtoInicial || '');
-  const [valor,    setValor]    = useState<string>(
+  const [produto,   setProduto]   = useState(produtoInicial || '');
+  const [valor,     setValor]     = useState<string>(
     valorInicialNum != null ? numberToFormatted(valorInicialNum) : ''
   );
   const [pagamento, setPagamento] = useState(pagamentoInicial);
@@ -71,11 +73,15 @@ export default function RegistrarVendaDisplay({
   const [toast,     setToast]     = useState<{ message: string; type: 'error' | 'success' } | null>(null);
   const [mounted,   setMounted]   = useState(false);
 
+  // user_id do dono da empresa — buscado uma vez na montagem
+  // É necessário para que o RLS de pedidos permita que o dashboard leia a linha
+  const [ownerUserId, setOwnerUserId] = useState<string | null>(null);
+
   const supabase = createClient();
   const isDark   = theme === 'dark';
 
-  const DARK  = { bg: 'bg-slate-900', cardBg: 'bg-slate-800', border: 'border-white/10',  textPrimary: 'text-white',     textMuted: 'text-white/60', inputBg: 'bg-slate-700' };
-  const LIGHT = { bg: 'bg-white',     cardBg: 'bg-gray-50',   border: 'border-gray-200',  textPrimary: 'text-gray-900',  textMuted: 'text-gray-600', inputBg: 'bg-white'     };
+  const DARK  = { bg: 'bg-slate-900', cardBg: 'bg-slate-800', border: 'border-white/10',  textPrimary: 'text-white',    textMuted: 'text-white/60', inputBg: 'bg-slate-700' };
+  const LIGHT = { bg: 'bg-white',     cardBg: 'bg-gray-50',   border: 'border-gray-200',  textPrimary: 'text-gray-900', textMuted: 'text-gray-600', inputBg: 'bg-white'     };
   const colors = isDark ? DARK : LIGHT;
 
   const PAYMENT_TYPES = [
@@ -88,8 +94,32 @@ export default function RegistrarVendaDisplay({
   useEffect(() => {
     setMounted(true);
     window.dispatchEvent(new CustomEvent('eai:modalOpen'));
+
+    // Busca o user_id do dono da empresa para preencher pedidos.user_id.
+    // Sem isso, linhas inseridas por sessões anônimas (totem) ficam ocultas
+    // para o dono no dashboard por causa do RLS.
+    async function resolveOwner() {
+      // 1. Usuário logado no browser? Usa direto.
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user?.id) {
+        setOwnerUserId(authData.user.id);
+        return;
+      }
+
+      // 2. Totem sem sessão: busca o user_id via companies (coluna user_id = dono)
+      const { data: company } = await supabase
+        .from('companies')
+        .select('user_id')
+        .eq('id', companyId)
+        .maybeSingle();
+
+      setOwnerUserId(company?.user_id ?? null);
+    }
+
+    resolveOwner();
+
     return () => window.dispatchEvent(new CustomEvent('eai:modalClose'));
-  }, []);
+  }, [companyId]);
 
   useEffect(() => {
     if (!toast) return;
@@ -114,12 +144,12 @@ export default function RegistrarVendaDisplay({
 
     setIsSaving(true);
     try {
-      // ── perfil opcional — totem pode não ter sessão autenticada ──────────
+      // ── perfil de caixa/atendente (opcional) ────────────────────────────
       let profileId: string | null = null;
       const { data: authData } = await supabase.auth.getUser();
-      const user = authData?.user ?? null;
+      const sessionUser = authData?.user ?? null;
 
-      if (user) {
+      if (sessionUser) {
         const { data: session } = await supabase
           .from('profile_sessions')
           .select('profile_id')
@@ -135,17 +165,20 @@ export default function RegistrarVendaDisplay({
       const descricao = produto.trim() || 'Venda rápida';
       const now       = new Date().toISOString();
 
-      // ── 1. Insere o pedido na tabela correta ─────────────────────────────
+      // ── 1. Insere o pedido ────────────────────────────────────────────────
+      // user_id = ownerUserId garante que a política RLS de SELECT
+      // (user_id = auth.uid()) deixa o dono ver a linha no dashboard.
       const { data: pedidoInserido, error: pedidoError } = await supabase
         .from('pedidos')
         .insert({
           company_id:       companyId,
-          profile_id:       profileId,      // null é aceito pelo schema
+          user_id:          ownerUserId,   // ← chave para o RLS funcionar
+          profile_id:       profileId,
           subtotal:         valorNumerico,
           desconto:         0,
           total:            valorNumerico,
           metodo_pagamento: metodoDB,
-          status:           'pago',         // venda já concluída no caixa
+          status:           'pago',
           observacoes:      descricao !== 'Venda rápida' ? descricao : null,
           paid_at:          now,
           created_at:       now,
@@ -157,7 +190,7 @@ export default function RegistrarVendaDisplay({
       if (pedidoError) throw pedidoError;
 
       // ── 2. Garante produto placeholder "Venda Avulsa" para o item ────────
-      // pedido_itens.produto_id é FK NOT NULL → precisamos de um produto_id válido.
+      // pedido_itens.produto_id é FK NOT NULL → precisa de um produto_id válido.
       let produtoId: string | null = null;
 
       const { data: produtoAvulso } = await supabase
@@ -187,12 +220,12 @@ export default function RegistrarVendaDisplay({
         produtoId = novoProduto?.id ?? null;
       }
 
-      // ── 3. Insere o item do pedido ────────────────────────────────────────
+      // ── 3. Insere o item ──────────────────────────────────────────────────
       if (produtoId && pedidoInserido?.id) {
         await supabase.from('pedido_itens').insert({
           pedido_id:      pedidoInserido.id,
           produto_id:     produtoId,
-          nome_snapshot:  descricao,        // descrição digitada aparece na linha "Itens"
+          nome_snapshot:  descricao,       // aparece na linha expandida de "Itens"
           preco_unitario: valorNumerico,
           quantidade:     1,
           subtotal:       valorNumerico,

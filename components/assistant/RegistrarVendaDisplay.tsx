@@ -4,14 +4,15 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ShoppingCart, Check, Loader2, AlertCircle, DollarSign, Zap } from 'lucide-react';
 import { atualizarStatusPedido } from '@/lib/produtos-venda';
-import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
-import MercadoPagoPointDisplay from '@/components/assistant/MercadoPagoPointDisplay';
+import PIXConfirmationModal from '@/components/VoiceAssistant/modals/PixConfirmationModal';
+import MercadoPagoPointDisplay from '@/components/VoiceAssistant/modals/MercadoPagoPointDisplay';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 interface RegistrarVendaDisplayProps {
   data: {
     companyId: string;
+    profileId?: string | null;
     produto?: string;
     valor?: number;
     initialValue?: number;
@@ -67,6 +68,7 @@ export default function RegistrarVendaDisplay({
 }: RegistrarVendaDisplayProps) {
   const {
     companyId,
+    profileId,
     produto: produtoInicial,
     valor: valorLegado,
     initialValue,
@@ -82,7 +84,7 @@ export default function RegistrarVendaDisplay({
     valorInicialNum != null ? numberToFormatted(valorInicialNum) : ''
   );
   const [pagamento,     setPagamento]     = useState(pagamentoInicial);
-  const [vendaRapida,   setVendaRapida]   = useState(true); // ← marcado por padrão
+  const [vendaRapida,   setVendaRapida]   = useState(false);
   const [isSaving,      setIsSaving]      = useState(false);
   const [isGerandoPix,  setIsGerandoPix]  = useState(false);
   const [toast,         setToast]         = useState<{ message: string; type: 'error' | 'success' } | null>(null);
@@ -150,25 +152,14 @@ export default function RegistrarVendaDisplay({
         userId = company?.user_id ?? null;
       }
 
-      let profileId: string | null = null;
-      if (authData?.user?.id) {
-        const { data: session } = await supabase
-          .from('profile_sessions')
-          .select('profile_id')
-          .eq('company_id', companyId)
-          .gt('expires_at', now)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        profileId = session?.profile_id ?? null;
-      }
+      const resolvedProfileId = profileId ?? null;
 
       const { data: pedidoInserido, error: pedidoError } = await supabase
         .from('pedidos')
         .insert({
           company_id:       companyId,
           user_id:          userId,
-          profile_id:       profileId,
+          profile_id:       resolvedProfileId,
           subtotal:         valorNumerico,
           desconto:         0,
           total:            valorNumerico,
@@ -319,7 +310,7 @@ export default function RegistrarVendaDisplay({
     return (
       <PIXConfirmationModal
         transactionId={pixData.transactionId}
-        amount={valorNumerico.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+        amount={valorNumerico.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         qrCodeUrl={pixData.qrCodeUrl}
         pixCode={pixData.pixCode}
         companyName={pixData.companyName}

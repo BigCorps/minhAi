@@ -66,36 +66,36 @@ export default function CartPanel({ theme, onCheckout }: CartPanelProps) {
         </span>
       </div>
 
-      {/* Lista de itens */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2.5 min-h-0">
-        {itens.map((item) => (
-          <div
-            key={item.produto.id}
-            className={`rounded-xl p-2 ${isDark ? 'bg-white/4' : 'bg-gray-50'}`}
-          >
-            {/* Linha 1: nome + preço unitário + botão remover */}
-            <div className="flex items-start gap-1.5 mb-1.5">
-              <div className="flex-1 min-w-0">
-                <p className={`text-xs font-medium truncate ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
-                  {item.produto.nome}
-                </p>
-                <p className={`text-[10px] ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-                  {formatarPreco(item.produto.preco_venda)} / un
-                </p>
-              </div>
-              <button
-                onClick={() => removeItem(item.produto.id)}
-                className={`w-5 h-5 flex items-center justify-center rounded-full flex-shrink-0 transition-colors mt-0.5 ${
-                  isDark
-                    ? 'text-white/25 hover:text-red-400 hover:bg-red-500/10'
-                    : 'text-gray-300 hover:text-red-500 hover:bg-red-50'
-                }`}
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+{/* Lista de itens */}
+<div className="flex-1 overflow-y-auto px-3 py-2 space-y-2.5 min-h-0">
+  {itens.map((item) => (
+    <div
+      key={item.produto.id}
+      className={`rounded-xl p-2 ${isDark ? 'bg-white/4' : 'bg-gray-50'}`}
+    >
+      {/* Linha 1: nome + preço unitário + botão remover */}
+      <div className="flex items-start gap-1.5 mb-1.5">
+        <div className="flex-1 min-w-0">
+          <p className={`text-xs font-medium truncate ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+            {item.produto.nome}{item.produto.is_favorito && <span className="text-amber-400 ml-0.5">★</span>}
+          </p>
+          <p className={`text-[10px] ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
+            {formatarPreco(item.produto.preco_venda)} / un
+          </p>
+        </div>
+        <button
+          onClick={() => removeItem(item.produto.id)}
+          className={`w-5 h-5 flex items-center justify-center rounded-full flex-shrink-0 transition-colors mt-0.5 ${
+            isDark
+              ? 'text-white/25 hover:text-red-400 hover:bg-red-500/10'
+              : 'text-gray-300 hover:text-red-500 hover:bg-red-50'
+          }`}
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
 
             {/* Linha 2: controles de qty à esquerda + subtotal à direita */}
             <div className="flex items-center justify-between gap-2">

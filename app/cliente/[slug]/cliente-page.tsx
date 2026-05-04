@@ -135,7 +135,7 @@ export default function ClientePage({ company }: ClientePageProps) {
 
       console.log('[ClientePage] Função chamada:', functionKey, '→', modalType, rest);
 
-      setActiveModal({ type: modalType, data: { companyId: company.id, ...rest } });
+      setActiveModal({ type: modalType, data: { companyId: company.id, profileId: profile?.id ?? null, ...rest } });
     };
 
     window.addEventListener('voiceAssistantFunctionClick', handleFunctionClick as EventListener);

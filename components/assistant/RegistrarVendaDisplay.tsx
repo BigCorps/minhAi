@@ -134,14 +134,17 @@ export default function RegistrarVendaDisplay({
         cliente_nome:     undefined,  // venda rápida não coleta nome
         cliente_telefone: undefined,
         metodo_pagamento: metodoDB,
-        itens: [
-          {
-            produto_id:     '__avulso__', // criarPedido deve suportar itens sem produto_id real;
-            nome:           descricao,    // se não suportar, veja nota abaixo (*)
-            preco_venda:    valorNumerico,
-            quantidade:     1,
-          } as any,
-        ],
+itens: [
+  {
+    produto: {
+      id:           '__avulso__',
+      nome:         descricao,
+      preco_venda:  valorNumerico,
+    } as any,
+    quantidade: 1,
+    subtotal:   valorNumerico,
+  },
+],
       });
 
       // Marca imediatamente como pago (igual ao fluxo dinheiro do CheckoutFlow)

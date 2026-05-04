@@ -76,12 +76,9 @@ export default function CartPanel({ theme, onCheckout }: CartPanelProps) {
       {/* Linha 1: nome + preço unitário + botão remover */}
       <div className="flex items-start gap-1.5 mb-1.5">
         <div className="flex-1 min-w-0">
-<p className={`text-xs font-medium truncate ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
-  {item.produto.nome}
-  {item.produto.is_favorito && <span className="text-amber-400 ml-0.5">★</span>}
-  {/* debug temporário — remova depois */}
-  <span className="text-red-400 ml-1 text-[9px]">{String(item.produto.is_favorito)}</span>
-</p>
+          <p className={`text-xs font-medium truncate ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+            {item.produto.nome}{item.produto.is_favorito && <span className="text-amber-400 ml-0.5">★</span>}
+          </p>
           <p className={`text-[10px] ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
             {formatarPreco(item.produto.preco_venda)} / un
           </p>

@@ -198,7 +198,8 @@ export default function AssistentesClient({
                         <Settings className="w-4 h-4 mr-2" />
                         Configurar
                       </Link>
-                      
+
+                      <a
                         href={
                           assistant.is_public
                             ? `https://minhai.app/ia/${assistant.slug}`
@@ -269,7 +270,8 @@ export default function AssistentesClient({
                   >
                     Fechar
                   </button>
-                  
+
+                  <a
                     href={generateQrUrl(showQrModal.slug, showQrModal.is_public, showQrModal.private_slug, showQrModal.id)}
                     download={`qrcode-${showQrModal.slug}.png`}
                     target="_blank"
@@ -316,7 +318,8 @@ function WebAppIndicator({
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
             WebApp ativo
           </span>
-          
+
+          <a
             href={webappUrl}
             target="_blank"
             rel="noopener noreferrer"
@@ -335,7 +338,8 @@ function WebAppIndicator({
             <Settings className="w-3.5 h-3.5" />
             Gerenciar WebApp
           </Link>
-          
+
+          <a
             href={webappUrl}
             target="_blank"
             rel="noopener noreferrer"

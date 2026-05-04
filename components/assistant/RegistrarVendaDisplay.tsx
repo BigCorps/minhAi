@@ -114,13 +114,15 @@ export default function RegistrarVendaDisplay({
   }
 
   async function handleSave() {
-    const valorNumerico = parseBRL(valor);
-    if (valorNumerico <= 0) {
-      showToast('Informe um valor maior que zero', 'error');
-      return;
-    }
+  const valorNumerico = parseBRL(valor);
+  if (valorNumerico <= 0) {
+    showToast('Informe um valor maior que zero', 'error');
+    return;
+  }
+  setIsSaving(true);
+  await handleSaveFallback(valorNumerico);
+}
 
-    setIsSaving(true);
     try {
       const descricao  = produto.trim() || 'Venda rápida';
       const metodoDB   = PAGAMENTO_MAP[pagamento] ?? 'dinheiro';
@@ -266,16 +268,16 @@ itens: [
       }
 
       // 3. Insere item do pedido (aparece na coluna "Itens" e no detalhe expandido)
-      if (produtoId && pedidoInserido?.id) {
-        await supabase.from('pedido_itens').insert({
-          pedido_id:      pedidoInserido.id,
-          produto_id:     produtoId,
-          nome_snapshot:  descricao,       // descrição digitada visível no detalhe
-          preco_unitario: valorNumerico,
-          quantidade:     1,
-          subtotal:       valorNumerico,
-        });
-      }
+if (produtoId && pedidoInserido?.id) {
+  await supabase.from('pedido_itens').insert({
+    pedido_id:      pedidoInserido.id,
+    produto_id:     produtoId,
+    nome_snapshot:  descricao,
+    preco_unitario: valorNumerico,
+    quantidade:     1,
+    subtotal:       valorNumerico,
+  });
+}
 
       showToast('Venda registrada com sucesso!', 'success');
       if (playText) {

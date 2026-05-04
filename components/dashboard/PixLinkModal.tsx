@@ -3,13 +3,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
-import { X, Copy, Check, ExternalLink, Link, ChevronDown, Zap, MessageCircle, AlertCircle } from 'lucide-react';
+import {
+  X, Copy, Check, ExternalLink, Link, ChevronDown, Zap,
+  MessageCircle, AlertCircle, Eye, EyeOff, Save, Pencil, CheckCircle,
+} from 'lucide-react';
 
 interface Company {
   id: string;
   name: string;
   slug: string;
   whatsapp_number?: string | null;
+  infinitepay_handle?: string | null;
 }
 
 interface Props {
@@ -19,6 +23,8 @@ interface Props {
 
 type Tab = 'pix' | 'pay';
 
+const MINHAI_WHATSAPP = '5511987311425';
+
 export default function PixLinkModal({ onClose }: Props) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
@@ -26,12 +32,18 @@ export default function PixLinkModal({ onClose }: Props) {
   const [copied, setCopied] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('pix');
+
+  // ── Handle InfinitePay inline ─────────────────────────────────────────────
+  const [handleInput, setHandleInput] = useState('');
+  const [showHandle, setShowHandle] = useState(false);
+  const [editingHandle, setEditingHandle] = useState(false);
+  const [isSavingHandle, setIsSavingHandle] = useState(false);
+  const [handleSaved, setHandleSaved] = useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
-  useEffect(() => {
-    loadCompanies();
-  }, []);
+  useEffect(() => { loadCompanies(); }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -54,57 +66,79 @@ export default function PixLinkModal({ onClose }: Props) {
     setCopied(false);
   }, [activeTab]);
 
+  // Ao trocar empresa, sincroniza handleInput com o handle salvo
+  useEffect(() => {
+    setHandleInput(selectedCompany?.infinitepay_handle ?? '');
+    setEditingHandle(false);
+    setHandleSaved(false);
+    setShowHandle(false);
+  }, [selectedCompany?.id]);
+
   async function loadCompanies() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { data } = await supabase
       .from('companies')
-      .select('id, name, slug, whatsapp_number')
+      .select('id, name, slug, whatsapp_number, infinitepay_handle')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('name');
     if (data?.length) {
       setCompanies(data);
       setSelectedCompany(data[0]);
+      setHandleInput(data[0]?.infinitepay_handle ?? '');
     }
   }
 
-  const baseUrlPix = selectedCompany
-    ? `https://minhai.app/pix/${selectedCompany.slug}`
-    : '';
-  const fullUrlPix = valor && parseFloat(valor) > 0
-    ? `${baseUrlPix}/${valor}`
-    : baseUrlPix;
+  async function saveHandle() {
+    if (!selectedCompany || !handleInput.trim()) return;
+    setIsSavingHandle(true);
+    const { error } = await supabase
+      .from('companies')
+      .update({ infinitepay_handle: handleInput.trim() })
+      .eq('id', selectedCompany.id);
+    setIsSavingHandle(false);
+    if (!error) {
+      // Atualiza estado local sem recarregar
+      const updated: Company = { ...selectedCompany, infinitepay_handle: handleInput.trim() };
+      setSelectedCompany(updated);
+      setCompanies(prev => prev.map(c => c.id === updated.id ? updated : c));
+      setEditingHandle(false);
+      setHandleSaved(true);
+      setTimeout(() => setHandleSaved(false), 3000);
+    }
+  }
 
-  const baseUrlPay = selectedCompany
-    ? `https://minhai.app/pay/${selectedCompany.slug}`
-    : '';
-  const fullUrlPay = valor && parseFloat(valor) > 0
-    ? `${baseUrlPay}/${valor}`
-    : '';
+  // ── URLs ──────────────────────────────────────────────────────────────────
+  const baseUrlPix = selectedCompany ? `https://minhai.app/pix/${selectedCompany.slug}` : '';
+  const fullUrlPix = valor && parseFloat(valor) > 0 ? `${baseUrlPix}/${valor}` : baseUrlPix;
 
-  const fullUrl = activeTab === 'pix' ? fullUrlPix : fullUrlPay;
+  const baseUrlPay = selectedCompany ? `https://minhai.app/pay/${selectedCompany.slug}` : '';
+  const fullUrlPay = valor && parseFloat(valor) > 0 ? `${baseUrlPay}/${valor}` : '';
 
-  // Número formatado para exibição e link wa.me
-  // DEPOIS
-const MINHAI_WHATSAPP = '5511926828418'; // número fixo minhAi
-const rawWhatsapp = selectedCompany?.whatsapp_number?.replace(/\D/g, '') ?? '';
-const whatsappWithDDI = rawWhatsapp
-  ? rawWhatsapp.startsWith('55') ? rawWhatsapp : `55${rawWhatsapp}`
-  : '';
-const whatsappFormatted = rawWhatsapp
-  ? selectedCompany!.whatsapp_number!
-  : null;
-const notifyNumber = `+${whatsappWithDDI}`;
-const waLink = whatsappWithDDI
-  ? `https://wa.me/${MINHAI_WHATSAPP}?text=Ol%C3%A1%2C+quero+receber+notifica%C3%A7%C3%B5es+de+pagamento`
-  : null;
+  const hasInfinitePayHandle = !!selectedCompany?.infinitepay_handle;
+  const fullUrl = activeTab === 'pix' ? fullUrlPix : (hasInfinitePayHandle ? fullUrlPay : '');
+
+  // ── WhatsApp — apenas aba PIX ─────────────────────────────────────────────
+  const rawWhatsapp = selectedCompany?.whatsapp_number?.replace(/\D/g, '') ?? '';
+  const whatsappWithDDI = rawWhatsapp
+    ? rawWhatsapp.startsWith('55') ? rawWhatsapp : `55${rawWhatsapp}`
+    : '';
+  const whatsappFormatted = rawWhatsapp ? selectedCompany!.whatsapp_number! : null;
+  const waLink = whatsappWithDDI
+    ? `https://wa.me/${MINHAI_WHATSAPP}?text=Ol%C3%A1%2C+quero+receber+notifica%C3%A7%C3%B5es+de+pagamento`
+    : null;
 
   function copy() {
     if (!fullUrl) return;
     navigator.clipboard.writeText(fullUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  function maskHandle(handle: string) {
+    if (handle.length <= 6) return '••••••';
+    return handle.slice(0, 3) + '•'.repeat(handle.length - 6) + handle.slice(-3);
   }
 
   return createPortal(
@@ -206,34 +240,130 @@ const waLink = whatsappWithDDI
             </div>
           </div>
 
-          {/* Valor */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400 mb-2">
-              Valor{' '}
-              {activeTab === 'pix'
-                ? <span className="normal-case font-normal text-gray-400 dark:text-slate-500">(opcional)</span>
-                : <span className="normal-case font-normal text-red-400">*obrigatório</span>}
-            </label>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400 dark:text-slate-500">
-                R$
-              </span>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-                placeholder={activeTab === 'pix' ? 'Deixe vazio para o cliente digitar' : 'Digite o valor da cobrança'}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-              />
+          {/* ── Handle InfinitePay inline (apenas aba pay) ────────────────── */}
+          {activeTab === 'pay' && selectedCompany && (
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400 mb-2">
+                Handle InfinitePay
+              </label>
+
+              {/* Já tem handle e não está editando */}
+              {hasInfinitePayHandle && !editingHandle ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+                    <span className="font-mono text-gray-700 dark:text-gray-300 flex-1">
+                      {showHandle
+                        ? selectedCompany.infinitepay_handle
+                        : maskHandle(selectedCompany.infinitepay_handle!)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowHandle(v => !v)}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+                    >
+                      {showHandle ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingHandle(true); setHandleInput(selectedCompany.infinitepay_handle ?? ''); }}
+                    className="p-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition"
+                    title="Editar handle"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                /* Sem handle ou editando */
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type={showHandle ? 'text' : 'password'}
+                        placeholder="$seu-handle-aqui"
+                        value={handleInput}
+                        onChange={(e) => setHandleInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') saveHandle(); }}
+                        className="w-full pl-3.5 pr-10 py-2.5 rounded-xl text-sm font-mono bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 transition"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowHandle(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+                      >
+                        {showHandle ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={saveHandle}
+                      disabled={isSavingHandle || !handleInput.trim()}
+                      className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition"
+                    >
+                      {isSavingHandle
+                        ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        : <Save className="w-3.5 h-3.5" />}
+                      Salvar
+                    </button>
+                    {editingHandle && (
+                      <button
+                        type="button"
+                        onClick={() => { setEditingHandle(false); setHandleInput(selectedCompany.infinitepay_handle ?? ''); }}
+                        className="p-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition"
+                        title="Cancelar edição"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 dark:text-slate-500">
+                    Encontre em <strong>Painel InfinitePay → Integrações → Token</strong>.
+                    Formato: <code className="bg-gray-100 dark:bg-slate-700 px-1 rounded">$meu-handle</code>
+                  </p>
+                </div>
+              )}
+
+              {/* Feedback salvo com sucesso */}
+              {handleSaved && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-green-700 dark:text-green-400 font-medium">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Handle salvo com sucesso!
+                </div>
+              )}
             </div>
-            {activeTab === 'pay' && (!valor || parseFloat(valor) <= 0) && (
-              <p className="text-xs text-gray-400 dark:text-slate-500 mt-1.5">
-                Informe o valor para gerar o link de cobrança InfinitePay.
-              </p>
-            )}
-          </div>
+          )}
+
+          {/* Valor — só exibe se PIX, ou se pay com handle configurado */}
+          {(activeTab === 'pix' || (activeTab === 'pay' && hasInfinitePayHandle)) && (
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400 mb-2">
+                Valor{' '}
+                {activeTab === 'pix'
+                  ? <span className="normal-case font-normal text-gray-400 dark:text-slate-500">(opcional)</span>
+                  : <span className="normal-case font-normal text-red-400">*obrigatório</span>}
+              </label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400 dark:text-slate-500">
+                  R$
+                </span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={valor}
+                  onChange={(e) => setValor(e.target.value)}
+                  placeholder={activeTab === 'pix' ? 'Deixe vazio para o cliente digitar' : 'Digite o valor da cobrança'}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                />
+              </div>
+              {activeTab === 'pay' && (!valor || parseFloat(valor) <= 0) && (
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-1.5">
+                  Informe o valor para gerar o link de cobrança InfinitePay.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* URL gerada */}
           {fullUrl && (
@@ -259,8 +389,8 @@ const waLink = whatsappWithDDI
             </div>
           )}
 
-          {/* ── Aviso de notificação WhatsApp ─────────────────────────────── */}
-          {selectedCompany && (
+          {/* ── Aviso WhatsApp — APENAS aba PIX ──────────────────────────── */}
+          {activeTab === 'pix' && selectedCompany && (
             <div className={`rounded-xl p-4 border ${
               whatsappWithDDI
                 ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/40'
@@ -290,10 +420,9 @@ const waLink = whatsappWithDDI
                         Ao confirmar um PIX, você receberá uma notificação no{' '}
                         <span className="font-semibold">{whatsappFormatted}</span>.
                       </p>
-                      {/* Aviso de janela 24h */}
                       <div className="rounded-lg bg-green-100 dark:bg-green-900/20 px-3 py-2">
                         <p className="text-xs text-green-800 dark:text-green-300">
-                          ⚠️ <strong>Importante:</strong> Caso não receba a notificação, basta enviar qualquer mensagem para o whatsapp minhAi para reativar a janela de conversas.{' '}
+                          ⚠️ <strong>Importante:</strong> Caso não receba a notificação, basta enviar qualquer mensagem para o WhatsApp minhAi para reativar a janela de conversas.{' '}
                           {waLink && (
                             <a
                               href={waLink}

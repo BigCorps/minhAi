@@ -142,7 +142,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           {/* DomainPreviewPicker */}
           <DomainPreviewPicker isDark={isDark} />
 
-<p className={`text-[10px] sm:text-xs mt-3 mb-3 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
+<p className={`text-[10px] sm:text-xs mt-5 mb-5 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
   {'ou '}
   <Link href="https://wa.me/5511926828418" target="_blank" rel="noopener noreferrer" className={`underline underline-offset-2 hover:opacity-80 transition-opacity ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
     entre em contato

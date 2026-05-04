@@ -123,60 +123,6 @@ export default function RegistrarVendaDisplay({
   await handleSaveFallback(valorNumerico);
 }
 
-    try {
-      const descricao  = produto.trim() || 'Venda rápida';
-      const metodoDB   = PAGAMENTO_MAP[pagamento] ?? 'dinheiro';
-
-      // ── Usa a mesma função que o CheckoutFlow usa ────────────────────────
-      // criarPedido resolve internamente: user_id, session_id, profile_id,
-      // pedido_itens — exatamente como o restante do sistema espera.
-      // Passamos um item avulso com o valor e a descrição digitada.
-      const pedido = await criarPedido({
-        company_id:       companyId,
-        cliente_nome:     undefined,  // venda rápida não coleta nome
-        cliente_telefone: undefined,
-        metodo_pagamento: metodoDB,
-itens: [
-  {
-    produto: {
-      id:           '__avulso__',
-      nome:         descricao,
-      preco_venda:  valorNumerico,
-    } as any,
-    quantidade: 1,
-    subtotal:   valorNumerico,
-  },
-],
-      });
-
-      // Marca imediatamente como pago (igual ao fluxo dinheiro do CheckoutFlow)
-      await atualizarStatusPedido(pedido.id, 'pago');
-
-      showToast('Venda registrada com sucesso!', 'success');
-      if (playText) {
-        await playText(
-          `Venda de ${valorNumerico.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} registrada com sucesso!`
-        );
-      }
-      setTimeout(() => onClose(), 1500);
-
-    } catch (err: any) {
-      console.error('Erro ao registrar venda:', err);
-
-      // (*) Se criarPedido rejeitar produto_id='__avulso__', cai aqui.
-      // Nesse caso precisamos do insert direto — veja fallback abaixo.
-      if (err?.message?.includes('avulso') || err?.message?.includes('produto_id') || err?.code === '23503') {
-        await handleSaveFallback(parseBRL(valor));
-        return;
-      }
-
-      showToast('Erro ao registrar venda. Tente novamente.', 'error');
-      if (playText) await playText('Erro ao registrar venda. Tente novamente.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   // Fallback: insert direto caso criarPedido não aceite produto avulso.
   // Segue exatamente a mesma estrutura de colunas que AbaPedidos lê.
   async function handleSaveFallback(valorNumerico: number) {

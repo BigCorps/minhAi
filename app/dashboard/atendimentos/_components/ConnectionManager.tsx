@@ -476,13 +476,13 @@ export function ConnectionManager({
     if (!selectedCompanyId || !userId) {
       return (
         <div className={`flex ${size === 'lg' ? 'flex-col sm:flex-row' : 'flex-row'} gap-2`}>
-          <Button size={size} disabled>
-            <Facebook className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
-            {size === 'lg' ? 'Conectar Facebook / Instagram' : 'Facebook / Instagram'}
-          </Button>
           <Button size={size} disabled variant="outline">
             <Phone className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
             {size === 'lg' ? 'Conectar WhatsApp' : 'WhatsApp'}
+          </Button>
+          <Button size={size} disabled>
+            <Facebook className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
+            {size === 'lg' ? 'Conectar Facebook / Instagram' : 'Facebook / Instagram'}
           </Button>
         </div>
       );
@@ -491,24 +491,7 @@ export function ConnectionManager({
     return (
       <div className={`flex ${size === 'lg' ? 'flex-col sm:flex-row' : 'flex-row'} gap-2`}>
 
-        {/* ── Botão 1: Facebook + Instagram (OAuth redirect clássico) ── */}
-        <Button
-          onClick={handleConnect}
-          disabled={isConnecting}
-          size={size}
-          className={size === 'lg'
-            ? 'h-11 px-6 text-base'
-            : 'h-9 px-4 text-sm'
-          }
-        >
-          {isConnecting
-            ? <><Loader2 className={`mr-2 animate-spin ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />Conectando...</>
-            : <><Facebook className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
-               {size === 'lg' ? 'Conectar Facebook / Instagram' : 'Facebook / Instagram'}</>
-          }
-        </Button>
-
-        {/* ── Botão 2: WhatsApp Only ── */}
+        {/* ── Botão 1: WhatsApp Only ── */}
         {configIdWA ? (
           <EmbeddedSignupButton
             companyId={selectedCompanyId}
@@ -556,6 +539,24 @@ export function ConnectionManager({
             {size === 'lg' ? 'Conectar WhatsApp' : 'WhatsApp'}
           </Button>
         )}
+
+        {/* ── Botão 2: Facebook + Instagram (OAuth redirect clássico) ── */}
+        <Button
+          onClick={handleConnect}
+          disabled={isConnecting}
+          size={size}
+          className={size === 'lg'
+            ? 'h-11 px-6 text-base'
+            : 'h-9 px-4 text-sm'
+          }
+        >
+          {isConnecting
+            ? <><Loader2 className={`mr-2 animate-spin ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />Conectando...</>
+            : <><Facebook className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
+               {size === 'lg' ? 'Conectar Facebook / Instagram' : 'Facebook / Instagram'}</>
+          }
+        </Button>
+
       </div>
     );
   }
@@ -600,7 +601,9 @@ export function ConnectionManager({
                 Conecte sua conta do <strong>Facebook</strong> para ativar o agente no Instagram e Messenger,
                 ou conecte o <strong>WhatsApp</strong> diretamente.
               </p>
-              {renderConnectButton('lg')}
+              <div className="flex justify-center">
+                {renderConnectButton('lg')}
+              </div>
             </div>
 
           ) : (
@@ -646,7 +649,7 @@ export function ConnectionManager({
                               <EmbeddedSignupButton
                                 companyId={conn.company_id}
                                 userId={userId}
-                                mode="cloud"
+                                mode="coexistence"
                                 configIdOverride={configIdWA}
                                 whatsappOnly
                                 onSuccess={(result) => {

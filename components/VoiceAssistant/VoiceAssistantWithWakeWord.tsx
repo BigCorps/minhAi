@@ -1586,7 +1586,6 @@ case 'impressao_recibo':
       activeFunctionContextRef,
       groqContextRef,
       fallbackMessageRef,
-      onFunctionDetected: (key: string) => handleFunctionClick(key),
     });
 
     if (isCommand) {
@@ -1768,7 +1767,6 @@ const handleTextMessage = async (message: string) => {
         activeFunctionContextRef,
         groqContextRef,
         fallbackMessageRef,
-        onFunctionDetected: (key: string) => handleFunctionClick(key),
       });
 
       if (isCommand) return;
@@ -1928,7 +1926,6 @@ const handleTextMessage = async (message: string) => {
         activeFunctionContextRef: dummyContextRef,
         groqContextRef,
         fallbackMessageRef,
-        onFunctionDetected: (key: string) => handleFunctionClickSilent(key),
       });
 
       if (isCommand) {
@@ -1971,10 +1968,7 @@ const handleTextMessage = async (message: string) => {
       formData.append('directQuestion', message);
       formData.append('returnText', 'true');
       if (sessionId) formData.append('sessionId', sessionId);
-      // ✅ FIX PONTO B: companyContext estava faltando no modo texto puro
-      // Mesmo bug que havia na voice/process route — corrigido aqui também
-      formData.append('companyContext', gptContextRef.current);
- 
+
       const response = await fetch('/api/voice/process', { method: 'POST', body: formData });
 
       const newSessionId = response.headers.get('X-Session-Id');

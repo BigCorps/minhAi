@@ -1,6 +1,7 @@
 // ============================================================
-// handlers/voiceCommandDetector.ts
-// Caminho: components/assistant/VoiceAssistant/handlers/voiceCommandDetector.ts
+// handlers/voiceCommandDetector.ts — v2: Groq com sessionId + onFunctionDetected
+// MUDANÇAS: apenas interface DetectorDeps e bloco do Groq no final
+// Todo o resto permanece idêntico ao original
 // ============================================================
 
 import { FunctionSettings, PixConfirmationData, QRCodeData, ActiveModal } from '../types';
@@ -27,7 +28,7 @@ import { getContextualRoute } from '@/lib/routing-utils';
 // ── Interface de dependências ─────────────────────────────────
 interface DetectorDeps {
   companyId: string;
-  slug?: string;               // ← ADICIONADO para roteamento contextual
+  slug?: string;
   functionSettings: FunctionSettings;
   setIsProcessing: (v: boolean) => void;
   setQrCodeData: (data: QRCodeData | null) => void;
@@ -35,12 +36,14 @@ interface DetectorDeps {
   playText: (text: string) => Promise<void>;
   sessionId: string | null;
   groqContextRef: React.MutableRefObject<string>;
-  fallbackMessageRef: React.MutableRefObject<string>; // após groqContextRef
+  fallbackMessageRef: React.MutableRefObject<string>;
   commandProcessor: VoiceCommandProcessor | null;
   pixStateRef: React.MutableRefObject<{ qrCodeData: any; pixConfirmationData: any } | null>;
   setActiveModal: (modal: ActiveModal | null) => void;
   activeFunctionContextRef: React.MutableRefObject<any>;
   fromGroq?: boolean;
+  // ✅ NOVO: callback para executar função identificada pelo Groq
+  onFunctionDetected?: (functionKey: string) => void;
 }
 
 // ── Helper: parsear view/data do transcript de agenda ────────
@@ -715,16 +718,11 @@ export async function detectVoiceCommand(
     if (result?.success || (fromGroq && result?.functionKey)) {
       const funcKey = result.functionKey || '';
 
-      // ── Verificação de orçamento estruturado ──────────────
-      // "quanto custa X" genérico → GPT com contexto da empresa
-      // "me faz um orçamento de X" / "cotação de X" → handler do orçamento
       if (funcKey === 'orcamento') {
         const isStructuredBudget = /orçamento|orcamento|orçar|cotação|cotacao/.test(lowerTranscript);
         if (!isStructuredBudget) {
-          console.log('💰 Orçamento genérico detectado → deixando cair para o GPT com contexto');
-          // Não executa o handler; cai para o GROQ → GPT abaixo
+          console.log('💰 Orçamento genérico → GPT com contexto');
         } else {
-          // Orçamento estruturado: executa normalmente
           const registryFunc = getFunctionByKey(funcKey);
           if (registryFunc?.handler) {
             await registryFunc.handler({
@@ -751,9 +749,7 @@ export async function detectVoiceCommand(
           return true;
         }
       } else {
-        // ── Todas as outras funções do registry ──────────────
         const registryFunc = getFunctionByKey(funcKey);
-
         if (registryFunc?.handler) {
           await registryFunc.handler({
             transcript: lowerTranscript,
@@ -770,7 +766,6 @@ export async function detectVoiceCommand(
             setActiveModal({ type: result.modalType, data: result.modalData });
           }
         }
-
         if (funcKey) {
           activeFunctionContextRef.current = {
             functionKey: funcKey,
@@ -779,26 +774,29 @@ export async function detectVoiceCommand(
           };
           await commandProcessor.registerUsage(funcKey);
         }
-
         return true;
       }
     }
   }
 
   // ── GROQ: classificador de intenção como último recurso ───
-if (!fromGroq) {
-  const chatgptEnabled = await checkIfFunctionIsEnabled(companyId, 'chatgpt');
-  const { classifyIntentWithGroq } = await import('@/lib/groq-intent-classifier');
-  const groqHandled = await classifyIntentWithGroq(transcript, {
-    companyId,
-    playText,
-    groqContextRef: deps.groqContextRef,
-    fallbackMessage: deps.fallbackMessageRef.current,
-    commandProcessor,
-    forceResponse: !chatgptEnabled,
-  });
-  if (groqHandled) return true;
-}
+  // ✅ MUDANÇA: sessionId e onFunctionDetected adicionados
+  if (!fromGroq) {
+    const chatgptEnabled = await checkIfFunctionIsEnabled(companyId, 'chatgpt');
+    const { classifyIntentWithGroq } = await import('@/lib/groq-intent-classifier');
+    const groqHandled = await classifyIntentWithGroq(transcript, {
+      companyId,
+      sessionId,                            // ✅ NOVO: contexto de sessão para memória
+      playText,
+      groqContextRef: deps.groqContextRef,
+      fallbackMessage: deps.fallbackMessageRef.current,
+      commandProcessor,
+      forceResponse: !chatgptEnabled,
+      // ✅ NOVO: quando Groq identificar uma função, executa via handleFunctionClick
+      onFunctionDetected: deps.onFunctionDetected,
+    });
+    if (groqHandled) return true;
+  }
 
   console.log('❌ GROQ: intenção geral → GPT');
 

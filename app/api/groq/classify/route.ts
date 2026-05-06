@@ -1,4 +1,4 @@
-// app/api/groq/classify/route.ts
+// app/api/groq/classify/route.ts — v2: conversacional + execução de função
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 
@@ -8,50 +8,56 @@ export async function POST(req: NextRequest) {
   try {
     const { transcript, functionsContext, sessionContext, forceResponse } = await req.json();
     if (!transcript || !functionsContext) {
-      return NextResponse.json({ response: null });
+      return NextResponse.json({ response: null, functionKey: null });
     }
 
     const hasProfile = functionsContext?.includes('Cliente logado:');
+
     const memoryBlock = sessionContext?.summary || sessionContext?.lastFunctions?.length > 0
-      ? `\n\nCONTEXTO DESTA SESSÃO:\n${sessionContext.summary ? `- ${sessionContext.summary}` : ''}${sessionContext.lastFunctions?.length > 0 ? `\n- Funções usadas: ${sessionContext.lastFunctions.join(', ')}` : ''}`
+      ? `\n\nCONTEXTO DESTA SESSÃO:\n${sessionContext.summary ? `- ${sessionContext.summary}` : ''}${sessionContext.lastFunctions?.length > 0 ? `\n- Funções usadas recentemente: ${sessionContext.lastFunctions.join(', ')}` : ''}`
       : '';
 
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       max_tokens: 120,
-      temperature: 0.3,
+      temperature: 0.2,
       messages: [
         {
           role: 'system',
-          content: `Você é o assistente de voz minhAi. Sua ÚNICA função é orientar clientes sobre as FUNÇÕES DO SISTEMA listadas abaixo.
+          content: `Você é o assistente de voz minhAi. Sua função é orientar clientes e executar funções do sistema.
 
-## Funções disponíveis neste assistente:
+## Funções disponíveis (nome | functionKey | ativa quando):
 ${functionsContext}
 
-## REGRA PRINCIPAL — quando retornar null:
-Retorne exatamente a palavra null (sem aspas) quando a pergunta for sobre QUALQUER um destes temas:
-- Produtos, itens, modelos, opções de venda (ex: "tem pizza?", "quais windbanner?", "opções de X?")
-- Preços, valores, custos de produtos (ex: "quanto custa?", "qual o preço de X?")
-- Informações da empresa (ex: "qual o horário?", "onde fica?", "quais cartões aceitam?")
-- Qualidade, características ou detalhes de produtos
-- Qualquer pergunta sobre o negócio em si
-- Conversa geral (ex: "o que é um cometa?", "quem é você?")
-${forceResponse ? '' : '- Se tiver dúvida se deve responder ou retornar null → retorne null'}
+## COMO RESPONDER — escolha UMA das opções:
 
-## Quando responder (apenas estas situações):
-Responda SOMENTE quando o cliente perguntar COMO USAR uma função do sistema:
-- "como faço para imprimir?" → oriente sobre função de impressão
-- "como pagar via pix?" → oriente sobre função PIX
-- "tem como agendar?" → oriente sobre função de agenda
-- "como funciona o wifi?" → oriente sobre função wifi
-${forceResponse ? '- Qualquer outra pergunta → responda como assistente geral (ChatGPT está desativado)' : ''}
+### Opção 1 — retorne: null
+Quando for sobre produtos, preços, empresa, horário, endereço ou conversa geral.
+Exemplos: "tem pizza?", "qual o horário?", "tudo bem?"
+${forceResponse ? '' : 'Na dúvida → null'}
 
-## Formato da resposta:
-- Máximo 2 frases curtas (será falado em voz alta)
-- Diga exatamente o que o cliente deve falar para ativar a função
-- NUNCA invente funções fora da lista
-- NUNCA tente responder sobre produtos ou empresa
-${hasProfile ? '- Use o nome do cliente quando natural' : ''}
+### Opção 2 — retorne JSON com functionKey
+Quando identificar UMA função clara para executar imediatamente.
+Exemplos: "quero gerar um pix", "abre o cardápio", "quero imprimir"
+{"response": "frase curta em voz alta confirmando a ação", "functionKey": "function_key_aqui"}
+
+### Opção 3 — retorne JSON sem functionKey (pergunta de esclarecimento)
+Quando o pedido for ambíguo e precisar perguntar ao cliente para decidir a função.
+Exemplos: "quero pagar" (tem PIX, débito e crédito) → pergunta qual prefere
+{"response": "pergunta curta e direta ao cliente"}
+
+### Opção 4 — retorne JSON com functionKey (confirmação)
+Quando o cliente confirmar ("sim", "pode", "isso", "quero", "esse mesmo"):
+Se o contexto da sessão indicar uma função sugerida, execute-a.
+{"response": "Perfeito! Abrindo agora.", "functionKey": "function_key_aqui"}
+
+## REGRAS:
+- Respostas máximo 2 frases curtas — será falado em voz alta
+- Português brasileiro natural
+- NUNCA invente funções fora da lista acima
+- NUNCA responda sobre produtos, preços ou dados da empresa
+${hasProfile ? '- Use o nome do cliente quando ficar natural' : ''}
+${forceResponse ? '- ChatGPT desativado: se não for função do sistema, responda como assistente geral' : ''}
 ${memoryBlock}`,
         },
         {
@@ -61,16 +67,31 @@ ${memoryBlock}`,
       ],
     });
 
-    const text = completion.choices[0]?.message?.content?.trim();
+    const raw = completion.choices[0]?.message?.content?.trim();
 
-    if (!text || text === 'null' || text.toLowerCase() === 'null' || text.toLowerCase().startsWith('null')) {
-      return NextResponse.json({ response: null });
+    if (!raw || raw === 'null' || raw.toLowerCase() === 'null' || raw.toLowerCase().startsWith('null')) {
+      return NextResponse.json({ response: null, functionKey: null });
     }
 
-    return NextResponse.json({ response: text });
+    // Tenta parsear JSON estruturado { response, functionKey? }
+    try {
+      const cleaned = raw.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+      if (parsed?.response) {
+        return NextResponse.json({
+          response: parsed.response,
+          functionKey: parsed.functionKey ?? null,
+        });
+      }
+    } catch {
+      // Não era JSON — texto puro sem execução de função (orientação simples)
+    }
+
+    // Fallback: resposta em texto puro
+    return NextResponse.json({ response: raw, functionKey: null });
 
   } catch (err) {
     console.error('❌ GROQ error:', err);
-    return NextResponse.json({ response: null });
+    return NextResponse.json({ response: null, functionKey: null });
   }
 }

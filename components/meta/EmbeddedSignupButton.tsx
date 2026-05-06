@@ -13,14 +13,19 @@
 //                   FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING.
 //                   Exige WhatsApp Business App versão 2.24.17+.
 //
+// Novas props (Passo 1 — dois botões separados):
+//   configIdOverride → sobrescreve NEXT_PUBLIC_META_CONFIG_ID (ex: Config ID WA-only)
+//   whatsappOnly     → quando true, passa extras.setup={} forçando fluxo WA-only
+//
 // IMPORTANTE — o FB.login() NÃO aceita callback async.
 // O processamento assíncrono é feito via .then()/.catch() separado.
 //
 // ENV VARS necessárias:
-//   NEXT_PUBLIC_META_APP_ID      → ID do app Meta
-//   NEXT_PUBLIC_META_CONFIG_ID   → config_id da configuração "WhatsApp Embedded Signup"
-//   NEXT_PUBLIC_SUPABASE_URL     → URL do Supabase
-//   NEXT_PUBLIC_SUPABASE_ANON_KEY→ Anon key do Supabase
+//   NEXT_PUBLIC_META_APP_ID       → ID do app Meta
+//   NEXT_PUBLIC_META_CONFIG_ID    → config_id padrão (Facebook + Instagram + WA)
+//   NEXT_PUBLIC_META_CONFIG_ID_WA → config_id exclusivo de WhatsApp (opcional)
+//   NEXT_PUBLIC_SUPABASE_URL      → URL do Supabase
+//   NEXT_PUBLIC_SUPABASE_ANON_KEY → Anon key do Supabase
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 
@@ -65,15 +70,18 @@ export interface EmbeddedSignupResult {
 }
 
 interface EmbeddedSignupButtonProps {
-  companyId:   string;
-  userId:      string;
-  mode?:       EmbeddedSignupMode;
-  onSuccess:   (result: EmbeddedSignupResult) => void;
-  onError:     (error: string) => void;
-  onLoading?:  (loading: boolean) => void;
-  disabled?:   boolean;
-  className?:  string;
-  children?:   React.ReactNode;
+  companyId:        string;
+  userId:           string;
+  mode?:            EmbeddedSignupMode;
+  onSuccess:        (result: EmbeddedSignupResult) => void;
+  onError:          (error: string) => void;
+  onLoading?:       (loading: boolean) => void;
+  disabled?:        boolean;
+  className?:       string;
+  children?:        React.ReactNode;
+  // ── Novas props (Passo 1) ──────────────────────────────────────────────
+  configIdOverride?: string;  // sobrescreve NEXT_PUBLIC_META_CONFIG_ID
+  whatsappOnly?:     boolean; // força fluxo WA-only via extras.setup
 }
 
 // ── Tipos globais do FB SDK ─────────────────────────────────────────────────
@@ -97,9 +105,11 @@ export default function EmbeddedSignupButton({
   onSuccess,
   onError,
   onLoading,
-  disabled  = false,
-  className = '',
+  disabled         = false,
+  className        = '',
   children,
+  configIdOverride,
+  whatsappOnly     = false,
 }: EmbeddedSignupButtonProps) {
   const [loading, setLoading]   = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
@@ -111,7 +121,8 @@ export default function EmbeddedSignupButton({
   const isCoexistenceRef = useRef(false);
 
   const META_APP_ID   = process.env.NEXT_PUBLIC_META_APP_ID!;
-  const CONFIG_ID     = process.env.NEXT_PUBLIC_META_CONFIG_ID!;
+  // configIdOverride tem prioridade; fallback para a env var padrão
+  const CONFIG_ID     = configIdOverride ?? process.env.NEXT_PUBLIC_META_CONFIG_ID!;
   const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
@@ -219,7 +230,8 @@ export default function EmbeddedSignupButton({
         company_id:      companyId,
         waba_id,
         phone_number_id,
-        is_coexistence:  isCoexistence,  // edge pula o /register se true
+        is_coexistence:  isCoexistence,     // edge pula o /register se true
+        whatsapp_only:   whatsappOnly,       // ← NOVO: sinaliza fluxo WA-only
       }),
     });
 
@@ -237,7 +249,7 @@ export default function EmbeddedSignupButton({
       display_phone_number: result.whatsapp?.display_phone_number || null,
       is_coexistence:       isCoexistence,
     });
-  }, [companyId, userId, SUPABASE_URL, SUPABASE_ANON, onSuccess]);
+  }, [companyId, userId, whatsappOnly, SUPABASE_URL, SUPABASE_ANON, onSuccess]);
 
   // ── 4. Lançar o Embedded Signup ───────────────────────────────────────────
 
@@ -247,7 +259,11 @@ export default function EmbeddedSignupButton({
       return;
     }
     if (!CONFIG_ID) {
-      onError('NEXT_PUBLIC_META_CONFIG_ID não configurado.');
+      onError(
+        configIdOverride
+          ? 'configIdOverride fornecido mas inválido.'
+          : 'NEXT_PUBLIC_META_CONFIG_ID não configurado.'
+      );
       return;
     }
     if (!META_APP_ID) {
@@ -266,12 +282,14 @@ export default function EmbeddedSignupButton({
       ? 'whatsapp_business_app_onboarding'
       : '';
 
-    console.log(`[EmbeddedSignup] Lançando FB.login — mode: ${mode}, featureType: "${featureType}"`);
+    console.log(
+      `[EmbeddedSignup] Lançando FB.login — mode: ${mode}, featureType: "${featureType}", ` +
+      `configId: ${CONFIG_ID}, whatsappOnly: ${whatsappOnly}`
+    );
 
     // FB.login NÃO aceita callback async — usar função síncrona
     // O v4 mostra uma tela final "Continuar para configuração" — o callback
     // só dispara quando o usuário clica nesse botão ou fecha o popup.
-    // Se o popup abrir como aba (Edge/Safari), monitoramos via polling.
     let popupClosed = false;
     const popupCheckInterval = setInterval(() => {
       // Verificar se o message event já trouxe os dados mas o callback não disparou
@@ -279,8 +297,6 @@ export default function EmbeddedSignupButton({
         popupClosed = true;
         clearInterval(popupCheckInterval);
         console.log('[EmbeddedSignup] ✅ Dados detectados via message event — processando sem callback');
-        // Gerar um code fake não funciona — precisamos do code real do authResponse
-        // Neste caso, notificar o usuário para fechar o popup
         setLoading(false);
         onLoading?.(false);
         onError('Feche a janela do Facebook que abriu e tente novamente. O popup foi aberto como aba separada.');
@@ -325,13 +341,15 @@ export default function EmbeddedSignupButton({
         response_type:                  'code',
         override_default_response_type: true,
         extras: {
-          setup:              {},
-          featureType,
+          // whatsappOnly=true: passa setup:{} para forçar o fluxo direto de WA
+          // featureType vazio neste caso (o Config ID já determina o fluxo)
+          setup:              whatsappOnly ? {} : undefined,
+          featureType:        whatsappOnly ? '' : featureType,
           sessionInfoVersion: '3',
         },
       }
     );
-  }, [sdkReady, CONFIG_ID, META_APP_ID, mode, processSignup, onError, onLoading]);
+  }, [sdkReady, CONFIG_ID, configIdOverride, META_APP_ID, mode, whatsappOnly, processSignup, onError, onLoading]);
 
   // ── 5. Render ─────────────────────────────────────────────────────────────
 

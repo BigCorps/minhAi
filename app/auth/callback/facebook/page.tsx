@@ -1,12 +1,12 @@
 'use client';
 // app/auth/callback/facebook/page.tsx
 //
-// Com Embedded Signup v4, esta página NÃO é mais usada para o fluxo de WhatsApp.
-// O EmbeddedSignupButton processa tudo via popup + SDK sem redirect.
-//
-// Esta página continua sendo necessária APENAS para:
-//   1. Callback de login social simples via Supabase Auth (sem code Meta)
-//   2. Fallback de erro caso o redirect aconteça inesperadamente
+// Suporta dois fluxos:
+//   1. OAuth redirect clássico (Facebook + Instagram) — chega com ?code=
+//      Processa via exchange-meta-code e envia postMessage para o popup pai
+//   2. Embedded Signup v4 (WhatsApp) — NÃO usa redirect, processa via SDK
+//      Se chegar um code de WA aqui por engano, orienta o usuário
+//   3. Login social Supabase Auth — sem code, só reload do opener
 
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
@@ -15,7 +15,8 @@ export default function FacebookCallbackPage() {
   const [status, setStatus] = useState<{
     message: string;
     type: 'loading' | 'success' | 'error';
-  }>({ message: 'Processando autenticação...', type: 'loading' });
+    canClose: boolean;
+  }>({ message: 'Processando autenticação...', type: 'loading', canClose: false });
 
   const [logs, setLogs] = useState<string[]>([]);
 
@@ -31,14 +32,14 @@ export default function FacebookCallbackPage() {
 
   const processCallback = async () => {
     try {
-      addLog('🚀 Verificando tipo de callback...');
+      addLog('🚀 Iniciando processamento...');
 
-      const urlParams      = new URLSearchParams(window.location.search);
-      const code           = urlParams.get('code');
-      const error          = urlParams.get('error');
-      const errorDesc      = urlParams.get('error_description');
+      const urlParams = new URLSearchParams(window.location.search);
+      const code      = urlParams.get('code');
+      const state     = urlParams.get('state');
+      const error     = urlParams.get('error');
+      const errorDesc = urlParams.get('error_description');
 
-      // Erro OAuth explícito
       if (error) {
         addLog(`❌ Erro OAuth: ${error}`);
         throw new Error(errorDesc || error);
@@ -49,7 +50,7 @@ export default function FacebookCallbackPage() {
         addLog('✅ Callback de login Supabase');
         if (window.opener && !window.opener.closed) {
           window.opener.location.reload();
-          setStatus({ message: 'Login realizado com sucesso!', type: 'success' });
+          setStatus({ message: 'Login realizado com sucesso!', type: 'success', canClose: false });
           setTimeout(() => window.close(), 1000);
         } else {
           window.location.href = '/dashboard';
@@ -57,19 +58,93 @@ export default function FacebookCallbackPage() {
         return;
       }
 
-      // Se chegou aqui com um code Meta, é um redirect inesperado.
-      // Com Embedded Signup v4 isso não deveria acontecer — mas tratamos
-      // para não deixar o usuário preso numa tela em branco.
-      addLog('⚠️ Redirect com code Meta detectado (fluxo legado)');
-      addLog('ℹ️ Com Embedded Signup v4, use o botão de conexão no dashboard.');
-      setStatus({
-        message: 'Use o botão "Conectar WhatsApp" no painel de atendimentos para conectar sua conta.',
-        type: 'error',
-      });
+      // Code presente = OAuth redirect clássico (Facebook + Instagram)
+      addLog('✅ Code OAuth recebido — processando Facebook/Instagram...');
+      await processMetaCallback(code, state);
 
     } catch (err: any) {
       addLog(`❌ Erro: ${err.message}`);
-      setStatus({ message: err.message, type: 'error' });
+      setStatus({ message: err.message, type: 'error', canClose: true });
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage(
+          { type: 'meta_connection_error', success: false, error: err.message },
+          window.location.origin
+        );
+        setTimeout(() => window.close(), 3000);
+      }
+    }
+  };
+
+  const processMetaCallback = async (code: string, state: string | null) => {
+    addLog('⚙️ Chamando exchange-meta-code...');
+
+    const stateParts = state?.split(':') || [];
+    const companyId  = stateParts[1] || null;
+
+    const redirectUri       = `${window.location.origin}/auth/callback/facebook`;
+    const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      throw new Error('Configuração do Supabase não encontrada');
+    }
+
+    addLog(`📍 Redirect URI: ${redirectUri}`);
+
+    const exchangeResponse = await fetch(`${SUPABASE_URL}/functions/v1/exchange-meta-code`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        code,
+        state,
+        redirect_uri: redirectUri,
+        company_id:   companyId,
+        // Sem waba_id/phone_number_id — fluxo FB+IG não inclui WhatsApp
+      }),
+    });
+
+    if (!exchangeResponse.ok) {
+      const errData = await exchangeResponse.json();
+      throw new Error(errData.error || 'Erro ao processar no Supabase');
+    }
+
+    const metaData = await exchangeResponse.json();
+    if (!metaData.success) throw new Error(metaData.error || 'Erro desconhecido');
+
+    addLog('✅ Dados Meta recebidos');
+    addLog(`📄 Páginas: ${metaData.pages?.length || 0}`);
+    addLog(`📸 Instagram: ${metaData.summary?.withInstagram || 0}`);
+
+    const connectionData = {
+      userId:        metaData.userId,
+      pages:         metaData.pages,
+      grantedScopes: metaData.grantedScopes || [],
+      companyId,
+    };
+
+    const isPopup = window.opener && !window.opener.closed;
+
+    if (isPopup) {
+      addLog('📨 Enviando via postMessage (popup)...');
+      window.opener.postMessage(
+        { type: 'meta_connection_success', success: true, data: connectionData, state },
+        window.location.origin
+      );
+      setStatus({ message: 'Facebook / Instagram conectado com sucesso!', type: 'success', canClose: false });
+      addLog('🎉 Sucesso! Fechando popup...');
+      setTimeout(() => window.close(), 1000);
+    } else {
+      addLog('📨 Salvando resultado e redirecionando...');
+      localStorage.setItem(
+        'meta_connection_result',
+        JSON.stringify({ success: true, data: connectionData, state, timestamp: Date.now() })
+      );
+      setStatus({ message: 'Conectado! Redirecionando...', type: 'success', canClose: false });
+      addLog('🎉 Sucesso! Voltando para o dashboard...');
+      setTimeout(() => { window.location.href = '/dashboard/atendimentos'; }, 1500);
     }
   };
 
@@ -90,7 +165,7 @@ export default function FacebookCallbackPage() {
         <h2 className="text-lg font-semibold text-center mb-2 text-gray-900 dark:text-white">
           {status.type === 'loading' && 'Processando...'}
           {status.type === 'success'  && 'Sucesso!'}
-          {status.type === 'error'    && 'Atenção'}
+          {status.type === 'error'    && 'Ocorreu um erro'}
         </h2>
 
         <p className="text-sm text-center text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">

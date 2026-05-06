@@ -4,6 +4,10 @@
 // Versão simplificada: gerencia apenas conexões + toggle de agente + prompt.
 // FunctionsPanel → aba "Funções" (MetaFunctionsPanel)
 // CommentsPanel  → aba "Comentários" (MetaCommentsPanel)
+//
+// Passo 1 — dois botões separados:
+//   Botão 1: Facebook + Instagram (OAuth redirect clássico via popup)
+//   Botão 2: WhatsApp Only (usa EmbeddedSignupButton + NEXT_PUBLIC_META_CONFIG_ID_WA)
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button }   from '@/components/ui/button';
@@ -243,6 +247,9 @@ export function ConnectionManager({
   const notifCounter = useRef(0);
   const pollingRef   = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Config ID de WhatsApp-only (env var opcional)
+  const configIdWA = process.env.NEXT_PUBLIC_META_CONFIG_ID_WA;
+
   function notify(message: string, type: 'success' | 'error') {
     const id = ++notifCounter.current;
     setNotifications((prev) => [...prev, { id, message, type }]);
@@ -341,6 +348,82 @@ export function ConnectionManager({
 
   // ── Handlers ───────────────────────────────────────────────────────────
 
+  const handleConnect = async () => {
+    if (!selectedCompanyId) { notify('Selecione um assistente antes de conectar.', 'error'); return; }
+    setIsConnecting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+      const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID;
+      if (!META_APP_ID) throw new Error('META_APP_ID não configurado');
+      const state       = `${user.id}:${selectedCompanyId}:${crypto.randomUUID().substring(0, 8)}`;
+      const redirectUri = `${window.location.origin}/auth/callback/facebook`;
+      const scopes = [
+        'pages_show_list',
+        'pages_read_engagement',
+        'pages_manage_engagement',
+        'pages_manage_metadata',
+        'pages_messaging',
+        'pages_manage_posts',
+        'instagram_basic',
+        'instagram_manage_messages',
+        'instagram_manage_comments',
+      ].join(',');
+      const oauthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}&scope=${encodeURIComponent(scopes)}&response_type=code`;
+      await openOAuthWindow(oauthUrl);
+      notify('✅ Facebook / Instagram conectado!', 'success');
+      await fetchConnections();
+      setTimeout(() => fetchConnections(), 1500);
+      setTimeout(() => fetchConnections(), 4000);
+    } catch (err: any) {
+      const isCancel = err.message.includes('cancelada') || err.message.includes('fechado') || err.message.includes('closed');
+      if (!isCancel) notify(err.message, 'error');
+    } finally { setIsConnecting(false); }
+  };
+
+  function openOAuthWindow(url: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const s = screen as any;
+      const width = 580, height = 680;
+      const left = Math.round((s.availLeft ?? 0) + (screen.availWidth - width) / 2);
+      const top  = Math.round((s.availTop  ?? 0) + (screen.availHeight - height) / 2);
+      const popup = window.open(url, 'MetaOAuth', `width=${width},height=${height},left=${left},top=${top}`);
+      if (!popup || popup.closed) {
+        localStorage.removeItem('meta_connection_result');
+        window.open(url, '_blank');
+        const lsi = setInterval(() => {
+          const stored = localStorage.getItem('meta_connection_result');
+          if (stored) {
+            try {
+              const d = JSON.parse(stored);
+              if (Date.now() - (d.timestamp || 0) < 60_000) {
+                localStorage.removeItem('meta_connection_result');
+                clearInterval(lsi);
+                d.success ? resolve() : reject(new Error(d.error || 'Erro'));
+              }
+            } catch { }
+          }
+        }, 1000);
+        setTimeout(() => { clearInterval(lsi); reject(new Error('Tempo esgotado.')); }, 120_000);
+        return;
+      }
+      const mh = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return;
+        if (event.data?.type === 'meta_connection_success') { window.removeEventListener('message', mh); resolve(); }
+        else if (event.data?.type === 'meta_connection_error') { window.removeEventListener('message', mh); reject(new Error(event.data.error || 'Erro')); }
+      };
+      window.addEventListener('message', mh);
+      const cc = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(cc);
+          window.removeEventListener('message', mh);
+          reject(new Error('Autenticação cancelada pelo usuário'));
+        }
+      }, 500);
+      setTimeout(() => { clearInterval(cc); window.removeEventListener('message', mh); if (!popup.closed) popup.close(); reject(new Error('Tempo esgotado.')); }, 120_000);
+    });
+  }
+
   function handleSignupSuccess(result: {
     waba_id: string;
     phone_number_id: string;
@@ -387,41 +470,93 @@ export function ConnectionManager({
     await fetchConnections();
   };
 
-  // ── Botão de conexão ───────────────────────────────────────────────────
+  // ── Dois botões de conexão ─────────────────────────────────────────────
 
   function renderConnectButton(size: 'sm' | 'lg' = 'lg') {
     if (!selectedCompanyId || !userId) {
       return (
-        <Button size={size} disabled>
-          <Facebook className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
-          {size === 'lg' ? 'Conectar Conta Meta' : 'Conectar Nova Conta'}
-        </Button>
+        <div className={`flex ${size === 'lg' ? 'flex-col sm:flex-row' : 'flex-row'} gap-2`}>
+          <Button size={size} disabled>
+            <Facebook className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
+            {size === 'lg' ? 'Conectar Facebook / Instagram' : 'Facebook / Instagram'}
+          </Button>
+          <Button size={size} disabled variant="outline">
+            <Phone className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
+            {size === 'lg' ? 'Conectar WhatsApp' : 'WhatsApp'}
+          </Button>
+        </div>
       );
     }
 
     return (
-      <EmbeddedSignupButton
-        companyId={selectedCompanyId}
-        userId={userId}
-        mode="coexistence"
-        onSuccess={handleSignupSuccess}
-        onError={handleSignupError}
-        onLoading={setIsConnecting}
-        disabled={isConnecting}
-        className={`inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors
-          bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none
-          ${size === 'lg'
+      <div className={`flex ${size === 'lg' ? 'flex-col sm:flex-row' : 'flex-row'} gap-2`}>
+
+        {/* ── Botão 1: Facebook + Instagram (OAuth redirect clássico) ── */}
+        <Button
+          onClick={handleConnect}
+          disabled={isConnecting}
+          size={size}
+          className={size === 'lg'
             ? 'h-11 px-6 text-base'
-            : 'h-9 px-4 text-sm border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground'
-          }`}
-      >
-        {isConnecting
-          ? <><Loader2 className={`animate-spin ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />Conectando...</>
-          : connections.length === 0
-            ? <><Facebook className={size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'} />Conectar Conta Meta</>
-            : <><Facebook className="h-4 w-4" />Conectar Nova Conta</>
-        }
-      </EmbeddedSignupButton>
+            : 'h-9 px-4 text-sm'
+          }
+        >
+          {isConnecting
+            ? <><Loader2 className={`mr-2 animate-spin ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />Conectando...</>
+            : <><Facebook className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
+               {size === 'lg' ? 'Conectar Facebook / Instagram' : 'Facebook / Instagram'}</>
+          }
+        </Button>
+
+        {/* ── Botão 2: WhatsApp Only ── */}
+        {configIdWA ? (
+          <EmbeddedSignupButton
+            companyId={selectedCompanyId}
+            userId={userId}
+            mode="coexistence"
+            configIdOverride={configIdWA}
+            whatsappOnly
+            onSuccess={(result) => {
+              if (result.display_phone_number) {
+                notify(`📱 WhatsApp ${result.display_phone_number} conectado!`, 'success');
+              } else {
+                notify('✅ WhatsApp conectado com sucesso!', 'success');
+              }
+              setIsConnecting(false);
+              fetchConnections();
+              setTimeout(() => fetchConnections(), 1500);
+              setTimeout(() => fetchConnections(), 4000);
+            }}
+            onError={handleSignupError}
+            onLoading={setIsConnecting}
+            disabled={isConnecting}
+            className={`inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors
+              border border-green-500 text-green-700 dark:text-green-400
+              bg-green-50 dark:bg-green-900/20
+              hover:bg-green-100 dark:hover:bg-green-900/40
+              disabled:opacity-50 disabled:pointer-events-none
+              ${size === 'lg' ? 'h-11 px-6 text-base' : 'h-9 px-4 text-sm'}`}
+          >
+            {isConnecting
+              ? <><Loader2 className={`animate-spin ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />Conectando...</>
+              : <><Phone className={size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'} />
+                 {size === 'lg' ? 'Conectar WhatsApp' : 'WhatsApp'}</>
+            }
+          </EmbeddedSignupButton>
+        ) : (
+          // Fallback: env var não configurada → botão desabilitado com tooltip informativo
+          <Button
+            size={size}
+            variant="outline"
+            disabled
+            title="Configure NEXT_PUBLIC_META_CONFIG_ID_WA no Vercel para habilitar"
+            className="border-green-300 text-green-500 opacity-50 cursor-not-allowed"
+          >
+            <Phone className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
+            {size === 'lg' ? 'Conectar WhatsApp' : 'WhatsApp'}
+          </Button>
+        )}
+      </div>
     );
   }
 
@@ -462,7 +597,8 @@ export function ConnectionManager({
               </div>
               <h3 className="font-semibold text-lg mb-2">Nenhuma conta conectada</h3>
               <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">
-                Conecte sua conta do Facebook para ativar o agente no Instagram, WhatsApp e Messenger.
+                Conecte sua conta do <strong>Facebook</strong> para ativar o agente no Instagram e Messenger,
+                ou conecte o <strong>WhatsApp</strong> diretamente.
               </p>
               {renderConnectButton('lg')}
             </div>
@@ -506,21 +642,43 @@ export function ConnectionManager({
                           <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
                             <Phone className="h-4 w-4 shrink-0" />
                             <span>WhatsApp não conectado</span>
-                            <EmbeddedSignupButton
-                              companyId={conn.company_id}
-                              userId={userId}
-                              mode="coexistence"
-                              onSuccess={(result) => {
-                                if (result.display_phone_number) {
-                                  notify(`📱 WhatsApp ${result.display_phone_number} conectado!`, 'success');
+                            {configIdWA ? (
+                              <EmbeddedSignupButton
+                                companyId={conn.company_id}
+                                userId={userId}
+                                mode="coexistence"
+                                configIdOverride={configIdWA}
+                                whatsappOnly
+                                onSuccess={(result) => {
+                                  if (result.display_phone_number) {
+                                    notify(`📱 WhatsApp ${result.display_phone_number} conectado!`, 'success');
+                                  } else {
+                                    notify('✅ WhatsApp conectado!', 'success');
+                                  }
                                   fetchConnections();
-                                }
-                              }}
-                              onError={handleSignupError}
-                              className="text-xs underline underline-offset-2 hover:no-underline bg-transparent border-0 p-0 text-amber-600 dark:text-amber-400 cursor-pointer"
-                            >
-                              Conectar agora
-                            </EmbeddedSignupButton>
+                                }}
+                                onError={handleSignupError}
+                                className="text-xs underline underline-offset-2 hover:no-underline bg-transparent border-0 p-0 text-amber-600 dark:text-amber-400 cursor-pointer"
+                              >
+                                Conectar agora
+                              </EmbeddedSignupButton>
+                            ) : (
+                              <EmbeddedSignupButton
+                                companyId={conn.company_id}
+                                userId={userId}
+                                mode="coexistence"
+                                onSuccess={(result) => {
+                                  if (result.display_phone_number) {
+                                    notify(`📱 WhatsApp ${result.display_phone_number} conectado!`, 'success');
+                                    fetchConnections();
+                                  }
+                                }}
+                                onError={handleSignupError}
+                                className="text-xs underline underline-offset-2 hover:no-underline bg-transparent border-0 p-0 text-amber-600 dark:text-amber-400 cursor-pointer"
+                              >
+                                Conectar agora
+                              </EmbeddedSignupButton>
+                            )}
                           </div>
                         )}
 
@@ -555,7 +713,7 @@ export function ConnectionManager({
                       </div>
                     </div>
 
-                    {/* Prompt do agente — único painel que permanece aqui */}
+                    {/* Prompt do agente */}
                     <AgentConfigPanel
                       connection={conn}
                       companySystemPrompt={selectedCompany?.system_prompt || null}

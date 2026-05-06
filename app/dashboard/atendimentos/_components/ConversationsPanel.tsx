@@ -3,6 +3,8 @@
 //
 // Substitui o QuickActionsPanel. Mostra todas as conversas ativas de todas
 // as conexões do assistente, com filtros, realtime e ações inline.
+//
+// Passo 3: integração do ConversationChatModal (botão "Ver" em cada card)
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +17,7 @@ import {
   Camera, Users, ChevronRight, Circle,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
+import { ConversationChatModal } from './ConversationChatModal';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────
 
@@ -107,13 +110,14 @@ function PlatformBadge({ platform }: { platform: string }) {
 // ─── Card de conversa ─────────────────────────────────────────────────────
 
 function ConversationCard({
-  conv, onOpenModal, onTogglePause, onQuickMessage, togglingPause,
+  conv, onOpenModal, onTogglePause, onQuickMessage, onOpenChat, togglingPause,
 }: {
   conv:           Conversation;
   onOpenModal:    (conv: Conversation) => void;
   onTogglePause:  (conv: Conversation) => void;
   onQuickMessage: (conv: Conversation) => void;
-  togglingPause:  string | null; // conversation_id sendo toggleado
+  onOpenChat:     (conv: Conversation) => void;
+  togglingPause:  string | null;
 }) {
   const displayName = getDisplayName(conv);
   const isToggling  = togglingPause === conv.conversation_id + conv.page_id;
@@ -152,6 +156,7 @@ function ConversationCard({
 
         {/* Linha 3: ações inline */}
         <div className="flex items-center gap-1.5 pl-0.5">
+
           {/* Pausar/Retomar */}
           <button
             onClick={() => onTogglePause(conv)}
@@ -180,6 +185,17 @@ function ConversationCard({
               hover:bg-blue-200 dark:hover:bg-blue-900/50"
           >
             <Send className="h-3 w-3" />Responder
+          </button>
+
+          {/* Ver conversa — abre o ConversationChatModal */}
+          <button
+            onClick={() => onOpenChat(conv)}
+            title="Ver histórico da conversa"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition
+              bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400
+              hover:bg-purple-200 dark:hover:bg-purple-900/50"
+          >
+            <MessageSquare className="h-3 w-3" />Ver
           </button>
 
           {/* Mais ações */}
@@ -282,7 +298,7 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
   const [customName, setCustomName] = useState(conv.custom_name ?? '');
   const [nameSaved, setNameSaved]   = useState(false);
 
-  const fnDef      = FORCE_FUNCTIONS.find((f) => f.key === selectedFn)!;
+  const fnDef       = FORCE_FUNCTIONS.find((f) => f.key === selectedFn)!;
   const displayName = getDisplayName(conv);
 
   async function handleForceFunction() {
@@ -379,20 +395,30 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
                 {FORCE_FUNCTIONS.map((fn) => {
                   const Icon = fn.icon;
                   return (
-                    <button key={fn.key} onClick={() => { setSelectedFn(fn.key); setFnInput(''); }}
-                      className={`p-3 rounded-lg border text-xs font-medium transition flex flex-col items-center gap-2
+                    <button
+                      key={fn.key}
+                      onClick={() => setSelectedFn(fn.key)}
+                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-xs font-medium transition
                         ${selectedFn === fn.key
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                          : 'border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400'
-                        }`}>
-                      <Icon className="h-4 w-4" />{fn.label}
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                          : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:border-blue-300 dark:hover:border-blue-700/50'
+                        }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {fn.label}
+                      {fn.credits > 0 && (
+                        <span className="text-[10px] text-gray-400">{fn.credits} crédito{fn.credits > 1 ? 's' : ''}</span>
+                      )}
                     </button>
                   );
                 })}
               </div>
+
               {fnDef.hasInput && (
                 <input
-                  type="number" value={fnInput} onChange={(e) => setFnInput(e.target.value)}
+                  type="number"
+                  value={fnInput}
+                  onChange={(e) => setFnInput(e.target.value)}
                   placeholder={fnDef.placeholder}
                   className="w-full text-sm rounded-lg border p-2.5 outline-none
                     bg-white dark:bg-slate-800 text-gray-900 dark:text-white
@@ -400,15 +426,22 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
                     focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
                 />
               )}
-              <Button onClick={handleForceFunction} disabled={loading || (fnDef.hasInput && !fnInput.trim())} className="w-full">
+
+              <Button
+                onClick={handleForceFunction}
+                disabled={loading || (fnDef.hasInput && !fnInput)}
+                className="w-full"
+              >
                 {loading
                   ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  : <><Zap className="mr-2 h-4 w-4" />Executar {fnDef.label}</>}
+                  : <Zap className="mr-2 h-4 w-4" />
+                }
+                Executar para {displayName}
               </Button>
             </div>
           )}
 
-          {/* Nome */}
+          {/* Nome personalizado */}
           {tab === 'name' && (
             <div className="space-y-3">
               {conv.sender_name && (
@@ -454,6 +487,7 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
   const [isLoading, setIsLoading]         = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeModal, setActiveModal]     = useState<Conversation | null>(null);
+  const [chatConv, setChatConv]           = useState<Conversation | null>(null);
   const [quickMsgConv, setQuickMsgConv]   = useState<string | null>(null); // conversation_id+page_id
   const [togglingPause, setTogglingPause] = useState<string | null>(null);
   const [filter, setFilter]               = useState<Filter>('all');
@@ -548,7 +582,6 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
             if (idx >= 0) {
               const next = [...prev];
               next[idx] = updated;
-              // Reordenar por updated_at
               return next.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
             } else {
               return [updated, ...prev];
@@ -619,6 +652,7 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
     <>
       <Notifications items={notifications} onDismiss={(id) => setNotifications((p) => p.filter((n) => n.id !== id))} />
 
+      {/* Modal de ações (Funções + Nome) */}
       {activeModal && getConnection(activeModal) && (
         <ActionsModal
           conv={activeModal}
@@ -628,6 +662,19 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
             notify(msg, msg.startsWith('Erro') ? 'error' : 'success');
             setActiveModal(null);
             loadConversations();
+          }}
+        />
+      )}
+
+      {/* Modal de chat estilo WhatsApp */}
+      {chatConv && getConnection(chatConv) && (
+        <ConversationChatModal
+          conv={chatConv}
+          connection={getConnection(chatConv)!}
+          onClose={() => setChatConv(null)}
+          onTogglePause={(c) => {
+            handleTogglePause(c);
+            setChatConv((prev) => prev ? { ...prev, is_paused: !prev.is_paused } : prev);
           }}
         />
       )}
@@ -764,7 +811,8 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
                     conv={conv}
                     onOpenModal={setActiveModal}
                     onTogglePause={handleTogglePause}
-                    onQuickMessage={(c) => setQuickMsgConv(quickMsgConv === convKey ? null : convKey)}
+                    onQuickMessage={() => setQuickMsgConv(quickMsgConv === convKey ? null : convKey)}
+                    onOpenChat={(c) => setChatConv(c)}
                     togglingPause={togglingPause}
                   />
                   {quickMsgConv === convKey && (

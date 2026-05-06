@@ -646,7 +646,7 @@ export function ConnectionManager({
                               <EmbeddedSignupButton
                                 companyId={conn.company_id}
                                 userId={userId}
-                                mode="coexistence"
+                                mode="cloud"
                                 configIdOverride={configIdWA}
                                 whatsappOnly
                                 onSuccess={(result) => {

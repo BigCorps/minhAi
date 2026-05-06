@@ -1586,6 +1586,7 @@ case 'impressao_recibo':
       activeFunctionContextRef,
       groqContextRef,
       fallbackMessageRef,
+      onFunctionDetected: (key: string) => handleFunctionClick(key),
     });
 
     if (isCommand) {
@@ -1767,6 +1768,7 @@ const handleTextMessage = async (message: string) => {
         activeFunctionContextRef,
         groqContextRef,
         fallbackMessageRef,
+        onFunctionDetected: (key: string) => handleFunctionClick(key),
       });
 
       if (isCommand) return;
@@ -1926,6 +1928,7 @@ const handleTextMessage = async (message: string) => {
         activeFunctionContextRef: dummyContextRef,
         groqContextRef,
         fallbackMessageRef,
+        onFunctionDetected: (key: string) => handleFunctionClickSilent(key),
       });
 
       if (isCommand) {

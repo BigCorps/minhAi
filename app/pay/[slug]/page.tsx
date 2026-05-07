@@ -1,7 +1,5 @@
-// app/pay/[slug]/page.tsx
-import { notFound } from 'next/navigation';
+import { redirect, notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
-import PayEntradaValorClient from './PayEntradaValorClient';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -9,6 +7,7 @@ interface Props {
 
 export default async function PayRedirectPage({ params }: Props) {
   const { slug } = await params;
+
   if (!slug || slug.length !== 6) notFound();
 
   const supabase = createClient(
@@ -16,19 +15,17 @@ export default async function PayRedirectPage({ params }: Props) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { data: company } = await supabase
-    .from('companies')
-    .select('id, name, slug, infinitepay_handle')
+  const { data, error } = await supabase
+    .from('short_links')
+    .select('original_url, expires_at')
     .eq('slug', slug)
-    .eq('is_active', true)
     .single();
 
-  if (!company || !company.infinitepay_handle) notFound();
+  if (error || !data?.original_url) notFound();
 
-  return (
-    <PayEntradaValorClient
-      slug={slug}
-      companyName={company.name}
-    />
-  );
+  if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    notFound();
+  }
+
+  redirect(data.original_url);
 }

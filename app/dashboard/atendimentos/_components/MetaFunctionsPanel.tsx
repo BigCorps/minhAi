@@ -401,12 +401,13 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
   .select('function_key, meta_enabled') // <-- Ajuste o campo que deseja ler
   .eq('company_id', companyId);
 
-      const map: Record<string, boolean> = {};
-      for (const fn of fns ?? []) {
-        const s = (settings ?? []).find(s => s.function_key === fn.function_key);
-        map[fn.function_key] = s ? s.is_enabled : (fn.default_enabled ?? false);
-      }
-      setEnabled(map);
+const map: Record<string, boolean> = {};
+for (const fn of fns ?? []) {
+  const s = (settings ?? []).find(s => s.function_key === fn.function_key);
+  // Aqui você define se o switch começa ligado ou desligado
+  map[fn.function_key] = s ? s.meta_enabled : (fn.default_enabled ?? false);
+}
+setEnabled(map);
     } catch (err) {
       console.error('MetaFunctionsPanel:', err);
     } finally {

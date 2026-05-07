@@ -397,9 +397,9 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
       setFunctions(fns ?? []);
 
       const { data: settings } = await supabase
-        .from('company_meta_function_settings')
-        .select('function_key, is_enabled')
-        .eq('company_id', companyId);
+  .from('company_function_settings') // <-- Alterado aqui
+  .select('function_key, meta_enabled') // <-- Ajuste o campo que deseja ler
+  .eq('company_id', companyId);
 
       const map: Record<string, boolean> = {};
       for (const fn of fns ?? []) {
@@ -423,12 +423,16 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
     setUpdating(functionKey);
     const next = !enabled[functionKey];
     try {
-      await supabase
-        .from('company_meta_function_settings')
-        .upsert(
-          { company_id: companyId, function_key: functionKey, is_enabled: next },
-          { onConflict: 'company_id,function_key' }
-        );
+await supabase
+  .from('company_function_settings') // <-- Alterado aqui
+  .upsert(
+    { 
+      company_id: companyId, 
+      function_key: functionKey, 
+      meta_enabled: next // <-- Ajustado para a coluna existente no schema
+    },
+    { onConflict: 'company_id,function_key' } // (Certifique-se de que existe uma constraint unique para esses dois campos no banco)
+  );
       setEnabled(prev => ({ ...prev, [functionKey]: next }));
     } catch (err) {
       console.error('Erro ao atualizar função Meta:', err);

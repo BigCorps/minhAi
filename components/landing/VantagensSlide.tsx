@@ -64,7 +64,7 @@ export default function VantagensSlide({ theme = 'dark', currentIndex, totalCoun
   return (
     <div
       className={`
-        relative flex flex-col items-center justify-center
+        relative flex flex-col items-stretch justify-center
         h-full w-full overflow-hidden
         transition-colors duration-500
         ${isDark
@@ -82,7 +82,7 @@ export default function VantagensSlide({ theme = 'dark', currentIndex, totalCoun
           relative z-10
           flex flex-col md:flex-row
           items-center justify-center md:justify-between
-          h-full w-full
+          h-full w-full max-w-7xl mx-auto
           px-5 sm:px-10 lg:px-16
           pt-[68px] pb-[52px] md:pt-0 md:pb-0
           gap-3
@@ -92,7 +92,7 @@ export default function VantagensSlide({ theme = 'dark', currentIndex, totalCoun
       >
 
         {/* ── Texto + cards ──────────────────────────────────── */}
-        <div className="flex flex-col items-start justify-center w-full md:w-1/2 max-w-xl order-2 md:order-1">
+        <div className="flex flex-col items-start justify-center w-full md:w-1/2 max-w-xl md:max-w-none order-2 md:order-1">
 
           <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-2 sm:mb-5 ${
             isDark ? 'bg-green-500/10 text-green-400' : 'bg-green-100 text-green-600'
@@ -181,18 +181,15 @@ export default function VantagensSlide({ theme = 'dark', currentIndex, totalCoun
           className={`
             flex items-center justify-center
             order-1 md:order-2
-            w-full md:w-1/2 max-w-lg
+            w-full md:w-1/2 max-w-lg md:max-w-none
             [@media(max-height:600px)_and_(max-width:767px)]:hidden
           `}
         >
           <img
             src="/webapp.png"
             alt="WebApp personalizado, programa de indicação e Link PIX do minhAi"
-            className="w-full object-contain drop-shadow-2xl transition-transform duration-300 hover:scale-105"
-            style={{
-              maxWidth: 'min(300px, 50vw)',
-              maxHeight: 'clamp(100px, 28vh, 260px)',
-            }}
+            className="w-full max-w-[280px] md:max-w-full object-contain drop-shadow-2xl transition-transform duration-300 hover:scale-105 md:max-h-[55vh]"
+            style={{ maxHeight: 'clamp(100px, 28vh, 260px)' }}
           />
         </div>
       </div>

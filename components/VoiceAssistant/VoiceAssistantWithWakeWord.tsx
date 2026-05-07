@@ -1666,7 +1666,7 @@ audio.onended = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          session_id: sessionId,
+      session_id: sessionIdRef.current,
           company_id: companyId,
           user_message: lastTranscript,
           assistant_message: lastResponse,
@@ -1781,13 +1781,13 @@ const handleTextMessage = async (message: string) => {
       formData.append('audio', new Blob([message], { type: 'text/plain' }));
       formData.append('companyId', companyId);
       formData.append('directQuestion', message);
-      if (sessionId) formData.append('sessionId', sessionId);
+      if (sessionIdRef.current) formData.append('sessionId', sessionIdRef.current);
       formData.append('companyContext', gptContextRef.current);
 
       const response = await fetch('/api/voice/process', { method: 'POST', body: formData });
 
       const newSessionId = response.headers.get('X-Session-Id');
-      if (newSessionId && !sessionId) setSessionId(newSessionId);
+      if (newSessionId && !sessionIdRef.current) setSessionId(newSessionId);
 
       const responseTextHeader = response.headers.get('X-Response-Text');
       if (responseTextHeader) setLastResponse(decodeURIComponent(responseTextHeader));
@@ -1974,7 +1974,7 @@ const handleTextMessage = async (message: string) => {
       formData.append('companyId', companyId);
       formData.append('directQuestion', message);
       formData.append('returnText', 'true');
-      if (sessionId) formData.append('sessionId', sessionId);
+      if (sessionIdRef.current) formData.append('sessionId', sessionIdRef.current);
       // ✅ FIX PONTO B: companyContext estava faltando no modo texto puro
       // Mesmo bug que havia na voice/process route — corrigido aqui também
       formData.append('companyContext', gptContextRef.current);
@@ -1982,7 +1982,7 @@ const handleTextMessage = async (message: string) => {
       const response = await fetch('/api/voice/process', { method: 'POST', body: formData });
 
       const newSessionId = response.headers.get('X-Session-Id');
-      if (newSessionId && !sessionId) setSessionId(newSessionId);
+      if (newSessionId && !sessionIdRef.current) setSessionId(newSessionId);
 
       const hintFunctionKey = response.headers.get('X-Function-Key');
       if (hintFunctionKey) {

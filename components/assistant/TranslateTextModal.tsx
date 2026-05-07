@@ -312,20 +312,44 @@ export default function TranslateTextModal({
       console.log('🛑 [Desktop] Recognition.onend — apenas limpeza de estado');
     };
 
-    recognition.onerror = (event: any) => {
-      console.log('⚠️ [Desktop] Recognition.onerror:', event.error);
-      // 'aborted' = stop() manual esperado; 'network' pode ocorrer quando stop() é chamado
-      // logo após um resultado — ambos são seguros de ignorar quando translationFired=true
-      if (event.error === 'aborted' || translationFired) return;
+recognition.onend = () => {
+      console.log('🛑 [Desktop] Recognition.onend — parou de ouvir');
       setIsRecording(false);
       recognitionRef.current = null;
-      if (event.error === 'no-speech') showToast('Nenhuma fala detectada.', 'warning');
-      else if (event.error === 'not-allowed') showToast('Permissão do microfone negada.', 'error');
-      else showToast('Erro ao capturar áudio.', 'error');
+      
+      // O SEGREDO AQUI: Se parou sozinho e temos texto, dispara a tradução automaticamente!
+      if (!translationFired && finalTranscriptRef.current.trim().length > 0) {
+        handleStopManual(); 
+      }
     };
 
-    recognition.start();
-    recognitionRef.current = recognition;
+    recognition.onerror = (event: any) => {
+      console.log('⚠️ [Desktop] Recognition.onerror:', event.error);
+      
+      // 'aborted' = usuário cancelou manualmente
+      if (event.error === 'aborted' || translationFired) return;
+      
+      setIsRecording(false);
+      recognitionRef.current = null;
+      
+      // Tratamento mais suave para não poluir a tela com erros de rede (conflito com o WebSocket)
+      if (event.error === 'no-speech') {
+        // Ignora silêncio, apenas para de gravar
+      } else if (event.error === 'network') {
+        console.warn('Conflito de rede com o WebSocket. Encerrando gravação nativa.');
+      } else if (event.error === 'not-allowed') {
+        showToast('Permissão do microfone negada.', 'error');
+      } else {
+        showToast('Erro ao capturar áudio.', 'error');
+      }
+    };
+
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (err) {
+      console.error('Erro ao iniciar recognition nativo:', err);
+    }
   };
 
   const stopRecording = () => {

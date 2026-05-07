@@ -105,25 +105,33 @@ export async function classifyIntentWithGroq(
 
       // Fix 3 — tratamento especial para __payment_choice__:
       // quando o cliente responde "pix", "débito" ou "crédito", resolve direto
-      if (lastFunctionKey === '__payment_choice__') {
-        const resolved = resolvePaymentMethod(transcript);
-        if (resolved) {
-          console.log(`💳 Fix3: __payment_choice__ → ${transcript} → ${resolved}`);
-          await deps.playText('Abrindo agora.');
-          if (deps.onFunctionDetected) {
-            setTimeout(() => deps.onFunctionDetected!(resolved), 300);
-          }
-          if (effectiveSessionId) {
-            const supabase = createClient();
-            supabase
-              .from('assistant_sessions')
-              .update({ last_function_keys: [] })
-              .eq('id', effectiveSessionId)
-              .then(() => {})
-              .catch(() => {});
-          }
-          return true;
-        }
+// Função pendente esperando valor numérico
+if (lastFunctionKey?.startsWith('__pending__')) {
+  const pendingFunction = lastFunctionKey.replace('__pending__', '');
+  const amountMatch = transcript.match(/(\d+(?:[,.]?\d{1,2})?)/);
+
+  if (amountMatch) {
+    const amount = parseFloat(amountMatch[1].replace(',', '.'));
+    console.log(`💰 Valor ${amount} detectado → executando ${pendingFunction} com valor`);
+
+    if (effectiveSessionId) {
+      const supabase = createClient();
+      supabase
+        .from('assistant_sessions')
+        .update({ last_function_keys: [] })
+        .eq('id', effectiveSessionId)
+        .then(() => {}).catch(() => {});
+    }
+
+    await deps.playText(`Gerando agora.`);
+
+    if (deps.onFunctionDetected) {
+      // Dispara com o valor embutido no formato que o voiceCommandDetector já entende
+      setTimeout(() => deps.onFunctionDetected!(`${pendingFunction}:${amount}`), 300);
+    }
+    return true;
+  }
+}
         // Não reconheceu o método (ex: respondeu "tá bom" sem especificar) — cai pro Groq
         console.log('💳 Fix3: __payment_choice__ — método não reconhecido, seguindo para Groq');
       } else {

@@ -263,22 +263,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!currentSession) {
-      const { data: newSession, error: sessionError } = await supabase
-        .from('assistant_sessions')
-        .insert({ company_id: companyId, messages: [] })
-        .select()
-        .single();
+if (!currentSession) {
+  // ✅ Usa o sessionId enviado pelo cliente se disponível
+  const newSessionId = sessionId || randomUUID();
+  
+  const { data: newSession, error: sessionError } = await supabase
+    .from('assistant_sessions')
+    .insert({ 
+      id: newSessionId,  // ← preserva o ID do cliente
+      company_id: companyId, 
+      messages: [] 
+    })
+    .select()
+    .single();
 
-      if (sessionError || !newSession) {
-        console.error('❌ Erro ao criar sessão:', sessionError);
-        currentSession = { id: randomUUID(), messages: [] };
-        console.log('⚠️ Usando sessão temporária (sem persistência)');
-      } else {
-        currentSession = newSession;
-        console.log('✨ Nova sessão criada:', currentSession.id);
-      }
-    }
+  if (sessionError || !newSession) {
+    console.error('❌ Erro ao criar sessão:', sessionError);
+    currentSession = { id: newSessionId, messages: [] };
+    console.log('⚠️ Usando sessão temporária (sem persistência)');
+  } else {
+    currentSession = newSession;
+    console.log('✨ Nova sessão criada:', currentSession.id);
+  }
+}
 
     const rawMessage = directQuestion || '';
     const saleMode = formData.get('saleMode') === 'true';

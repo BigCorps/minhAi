@@ -510,17 +510,21 @@ await supabase
           </div>
         </div>
 
-        {/* Pills */}
+{/* Pills */}
         {/* Mobile: grid 3 colunas */}
         <div className="sm:hidden flex flex-col gap-2">
           <div className="grid grid-cols-3 gap-2">
+            
+            {/* Ocupa as 3 colunas sozinho (linha inteira) */}
             <button
               onClick={() => setSelectedCategories([])}
-              className={`${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}
+              className={`col-span-3 ${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}
             >
               Todas as Funções
             </button>
-            {filteredCategories.slice(0, 2).map(cat => {
+
+            {/* As outras categorias ocupam 1 coluna cada, formando 3 por linha automaticamente */}
+            {filteredCategories.map(cat => {
               const isSelected = selectedCategories.includes(cat.key);
               return (
                 <button
@@ -539,27 +543,7 @@ await supabase
                 </button>
               );
             })}
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {filteredCategories.slice(2).map(cat => {
-              const isSelected = selectedCategories.includes(cat.key);
-              return (
-                <button
-                  key={cat.key}
-                  onClick={() => setSelectedCategories(prev =>
-                    prev.includes(cat.key) ? prev.filter(k => k !== cat.key) : [...prev, cat.key]
-                  )}
-                  className={`${pillCommon} ${isSelected ? pillActiveColored : pillInactive}`}
-                  style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
-                >
-                  <span
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.85)' : cat.color }}
-                  />
-                  {cat.name}
-                </button>
-              );
-            })}
+            
           </div>
         </div>
 

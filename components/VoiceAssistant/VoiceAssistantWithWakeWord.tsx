@@ -921,6 +921,9 @@ useEffect(() => {
     setIsProcessing(true);
 
     try {
+    async function handleFunctionWithAmount(functionKey: string, amount: number) {
+  const pt = effectivePlayText;
+  const amountStr = amount.toFixed(2).replace('.', ',');
       switch (functionKey) {
         case 'faq':
           await pt('Me faça qualquer pergunta sobre nossos produtos, serviços, horários ou políticas.');
@@ -928,9 +931,16 @@ useEffect(() => {
         case 'chatgpt':
           await pt('Pode me fazer qualquer pergunta! Estou aqui para conversar e te ajudar.');
           break;
-        case 'pix_generate':
-          await pt('Para gerar um pix, me diga o valor. Por exemplo: gerar pix de 50 reais.');
-          break;
+    case 'pix_generate':
+      // reutiliza o fluxo existente passando transcript com valor
+      await detectVoiceCommand(`gerar pix de ${amountStr}`, {
+        companyId, slug, functionSettings, setIsProcessing,
+        setQrCodeData, setPixConfirmationData, playText: pt,
+        sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
+        setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
+        onFunctionDetected: (k) => handleFunctionClick(k),
+      });
+      break;
         case 'orcamento':
           await pt('Posso calcular orçamentos, prazos e valores totais. O que você precisa?');
           break;
@@ -1407,26 +1417,55 @@ case 'impressao_recibo':
           await stopGoogleSpeech();
           pt('Pode me dizer o valor para cobrar no crédito.').catch(() => {});
           break;
-        case 'link_pagamento':
-          await stopGoogleSpeech();
-          pt('Posso gerar um Link de Pagamento, basta pedir um Link com o valor.').catch(() => {});
-          break;
-        case 'nfc_credito':
-          await stopGoogleSpeech();
-          pt('Posso gerar uma Cobrança no Cartão de Crédito via NFC, basta pedir uma cobrança NFC crédito e o valor.').catch(() => {});
-          break;
-        case 'nfc_debito':
-          await stopGoogleSpeech();
-          pt('Posso gerar uma Cobrança no Cartão de Débito via NFC, basta pedir uma cobrança NFC débito e o valor.').catch(() => {});
-          break;
-        case 'tef_debito':
-          await stopGoogleSpeech();
-          pt('Posso cobrar no débito direto na maquininha Point. Basta pedir uma cobrança TEF débito com o valor.').catch(() => {});
-          break;
-        case 'tef_credito':
-          await stopGoogleSpeech();
-          pt('Posso cobrar no crédito direto na maquininha Point, à vista ou parcelado. Basta pedir uma cobrança TEF crédito com o valor.').catch(() => {});
-          break;
+    case 'link_pagamento':
+      await detectVoiceCommand(`gerar link de pagamento de ${amountStr}`, {
+        companyId, slug, functionSettings, setIsProcessing,
+        setQrCodeData, setPixConfirmationData, playText: pt,
+        sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
+        setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
+        onFunctionDetected: (k) => handleFunctionClick(k),
+      });
+      break;
+    case 'nfc_debito':
+      await detectVoiceCommand(`cobrar debito nfc ${amountStr}`, {
+        companyId, slug, functionSettings, setIsProcessing,
+        setQrCodeData, setPixConfirmationData, playText: pt,
+        sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
+        setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
+        onFunctionDetected: (k) => handleFunctionClick(k),
+      });
+      break;
+    case 'nfc_credito':
+      await detectVoiceCommand(`cobrar credito nfc ${amountStr}`, {
+        companyId, slug, functionSettings, setIsProcessing,
+        setQrCodeData, setPixConfirmationData, playText: pt,
+        sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
+        setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
+        onFunctionDetected: (k) => handleFunctionClick(k),
+      });
+      break;
+    case 'tef_debito':
+      await detectVoiceCommand(`cobrar debito tef ${amountStr}`, {
+        companyId, slug, functionSettings, setIsProcessing,
+        setQrCodeData, setPixConfirmationData, playText: pt,
+        sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
+        setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
+        onFunctionDetected: (k) => handleFunctionClick(k),
+      });
+      break;
+    case 'tef_credito':
+      await detectVoiceCommand(`cobrar credito tef ${amountStr}`, {
+        companyId, slug, functionSettings, setIsProcessing,
+        setQrCodeData, setPixConfirmationData, playText: pt,
+        sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
+        setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
+        onFunctionDetected: (k) => handleFunctionClick(k),
+      });
+      break;
+    default:
+      handleFunctionClick(functionKey);
+  }
+}
         case 'clima_tempo':
           await stopGoogleSpeech();
           setActiveModal({ type: 'ClimaTempoDisplay', data: { companyId, city: null } });
@@ -1589,7 +1628,16 @@ case 'impressao_recibo':
       activeFunctionContextRef,
       groqContextRef,
       fallbackMessageRef,
-      onFunctionDetected: (key: string) => handleFunctionClick(key),
+      onFunctionDetected: (key: string) => {
+  const [functionKey, rawAmount] = key.split(':');
+  if (rawAmount) {
+    // Tem valor embutido — injeta como transcript direto no handler
+    const amount = parseFloat(rawAmount);
+    handleFunctionWithAmount(functionKey, amount);
+  } else {
+    handleFunctionClick(functionKey);
+  }
+},
     });
 
     if (isCommand) {
@@ -1772,7 +1820,16 @@ const handleTextMessage = async (message: string) => {
         activeFunctionContextRef,
         groqContextRef,
         fallbackMessageRef,
-        onFunctionDetected: (key: string) => handleFunctionClick(key),
+        onFunctionDetected: (key: string) => {
+  const [functionKey, rawAmount] = key.split(':');
+  if (rawAmount) {
+    // Tem valor embutido — injeta como transcript direto no handler
+    const amount = parseFloat(rawAmount);
+    handleFunctionWithAmount(functionKey, amount);
+  } else {
+    handleFunctionClick(functionKey);
+  }
+},
       });
 
       if (isCommand) return;

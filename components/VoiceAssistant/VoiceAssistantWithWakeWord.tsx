@@ -118,6 +118,9 @@ export function VoiceAssistantWithWakeWord({
   const [sessionId, setSessionId] = useState<string | null>(
     () => crypto.randomUUID() // gera UUID local na montagem do componente
   );
+  const sessionIdRef = useRef<string | null>(null);
+  useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
+  
   const [externalInput, setExternalInput] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isRecordingToggle, setIsRecordingToggle] = useState(false);
@@ -1659,6 +1662,7 @@ audio.onended = () => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

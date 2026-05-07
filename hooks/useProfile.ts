@@ -52,6 +52,7 @@ export function useProfile(slug: string): UseProfileReturn {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${ANON_KEY}`,
+        'apikey': ANON_KEY,
       },
       body: JSON.stringify(body),
     });

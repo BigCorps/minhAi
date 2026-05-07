@@ -1,45 +1,43 @@
 'use client';
 
-// components/landing/RecursoImageSlide.tsx
+// components/landing/RecursoCardsSlide.tsx
 
-interface RecursoImageSlideProps {
-  theme?: 'dark' | 'light';
-  label: string;
+import { ReactNode } from 'react';
+
+interface RecursoCard {
+  icon: ReactNode;
   title: string;
+  highlight: string;
+  highlightLabel: string;
   description: string;
-  imageSrc: string;
-  imageAlt: string;
   color: 'green' | 'blue';
+}
+
+interface RecursoCardsSlideProps {
+  theme?: 'dark' | 'light';
+  recursos: RecursoCard[];
   currentIndex: number;
   totalCount: number;
-  nextHint?: string;
 }
 
 const colorStyles = {
   green: {
-    dark:  { accent: 'text-green-400', border: 'border-green-400/20', labelBg: 'bg-green-500/10', labelText: 'text-green-400', dotActive: 'bg-green-400', glow: 'bg-green-500/5' },
-    light: { accent: 'text-green-600', border: 'border-green-500/20', labelBg: 'bg-green-100',    labelText: 'text-green-600', dotActive: 'bg-green-500', glow: 'bg-green-200/15' },
+    dark:  { iconBg: 'bg-green-500/15', iconText: 'text-green-400', highlightText: 'text-green-400', border: 'border-green-500/10', cardBg: 'bg-green-500/5' },
+    light: { iconBg: 'bg-green-100',    iconText: 'text-green-600', highlightText: 'text-green-600', border: 'border-green-200',    cardBg: 'bg-green-50' },
   },
   blue: {
-    dark:  { accent: 'text-blue-400',  border: 'border-blue-400/20',  labelBg: 'bg-blue-500/10',  labelText: 'text-blue-400',  dotActive: 'bg-blue-400',  glow: 'bg-blue-500/5' },
-    light: { accent: 'text-blue-600',  border: 'border-blue-500/20',  labelBg: 'bg-blue-100',     labelText: 'text-blue-600',  dotActive: 'bg-blue-500',  glow: 'bg-blue-200/15' },
+    dark:  { iconBg: 'bg-blue-500/15',  iconText: 'text-blue-400',  highlightText: 'text-blue-400',  border: 'border-blue-500/10', cardBg: 'bg-blue-500/5' },
+    light: { iconBg: 'bg-blue-100',     iconText: 'text-blue-600',  highlightText: 'text-blue-600',  border: 'border-blue-200',    cardBg: 'bg-blue-50' },
   },
 };
 
-export default function RecursoImageSlide({
+export default function RecursoCardsSlide({
   theme = 'dark',
-  label,
-  title,
-  description,
-  imageSrc,
-  imageAlt,
-  color,
+  recursos,
   currentIndex,
   totalCount,
-  nextHint,
-}: RecursoImageSlideProps) {
+}: RecursoCardsSlideProps) {
   const isDark = theme === 'dark';
-  const s = colorStyles[color][theme];
 
   return (
     <div
@@ -54,105 +52,96 @@ export default function RecursoImageSlide({
       `}
     >
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-        <div className={`absolute top-1/4 right-1/4 w-[50%] h-[50%] rounded-full blur-[140px] ${s.glow}`} />
+        <div className={`absolute top-1/3 left-1/3 w-[40%] h-[40%] rounded-full blur-[120px] ${isDark ? 'bg-blue-500/5' : 'bg-blue-200/15'}`} />
       </div>
 
-      {/*
-        Mobile: coluna — imagem em cima (compacta), texto abaixo
-        Desktop: linha lado a lado
-        pt/pb compensam header e dots — zero overflow
-      */}
       <div
         className={`
           relative z-10
-          flex flex-col md:flex-row
-          items-center justify-center md:justify-between
-          h-full w-full
-          px-5 sm:px-10 lg:px-16
-          pt-[68px] pb-[52px] md:pt-0 md:pb-0
+          flex flex-col items-center
+          w-full max-w-4xl mx-auto
+          px-4 sm:px-8 lg:px-12
+          pt-[68px] pb-[52px] md:pt-6 md:pb-6
           gap-3
           [@media(min-height:720px)_and_(max-width:767px)]:gap-5
-          md:gap-12
+          sm:gap-4 md:gap-6
         `}
       >
 
-        {/* ── Imagem ─────────────────────────────────────────── */}
-        <div
-          className={`
-            flex items-center justify-center
-            order-1 md:order-2
-            w-full md:w-1/2
-            [@media(max-height:560px)_and_(max-width:767px)]:hidden
-          `}
-        >
-          <img
-            src={imageSrc}
-            alt={imageAlt}
-            className="w-full object-contain drop-shadow-2xl transition-transform duration-300 hover:scale-105"
-            style={{
-              maxWidth: 'min(320px, 55vw)',
-              maxHeight: 'clamp(120px, 30vh, 280px)',
-            }}
-          />
-        </div>
-
-        {/* ── Texto ──────────────────────────────────────────── */}
-        <div className="flex flex-col items-start justify-center order-2 md:order-1 w-full md:w-1/2 max-w-xl">
-
-          {/* Label */}
-          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-3 sm:mb-5 ${s.labelBg} ${s.labelText}`}>
-            {label}
-          </span>
-
-          {/* Título */}
+        {/* ── Header ─────────────────────────────────────────── */}
+        <div className="text-center">
+          <p className={`text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-1 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
+            Recurso {currentIndex + 1} de {totalCount}
+          </p>
           <h2
             className={`
-              font-bold leading-tight transition-colors
-              mb-2 sm:mb-5
-              text-xl
-              [@media(min-height:680px)_and_(max-width:767px)]:text-2xl
-              sm:text-3xl md:text-4xl lg:text-5xl
+              font-bold
+              text-lg sm:text-2xl md:text-3xl
               ${isDark ? 'text-white' : 'text-gray-900'}
             `}
           >
-            {title}
+            e não para por aí...
           </h2>
+        </div>
 
-          {/* Descrição — some em telas baixas */}
-          <p
-            className={`
-              text-xs sm:text-base md:text-lg leading-relaxed transition-colors
-              [@media(max-height:640px)_and_(max-width:767px)]:hidden
-              ${isDark ? 'text-white/60' : 'text-gray-500'}
-            `}
-          >
-            {description}
-          </p>
-
-          {/* Progress dots */}
-          <div className="flex items-center gap-2 mt-4 sm:mt-8">
-            {Array.from({ length: totalCount }).map((_, i) => (
+        {/* ── Cards 2×2 ──────────────────────────────────────── */}
+        <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 md:gap-4">
+          {recursos.map((recurso, i) => {
+            const s = colorStyles[recurso.color][isDark ? 'dark' : 'light'];
+            return (
               <div
                 key={i}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i === currentIndex
-                    ? `w-8 ${s.dotActive}`
-                    : `w-2 ${isDark ? 'bg-white/15' : 'bg-gray-200'}`
-                }`}
-              />
-            ))}
-          </div>
+                className={`
+                  flex items-center gap-3 sm:gap-4
+                  p-3.5 sm:p-5 rounded-2xl border
+                  transition-all duration-300 hover:scale-[1.02] cursor-default
+                  ${s.cardBg} ${s.border}
+                `}
+              >
+                {/* Ícone */}
+                <div className={`flex-shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center ${s.iconBg}`}>
+                  <div className={`${s.iconText} [&>svg]:w-5 [&>svg]:h-5 sm:[&>svg]:w-6 sm:[&>svg]:h-6`}>
+                    {recurso.icon}
+                  </div>
+                </div>
 
-          {/* Hint — some em telas baixas */}
-          <p
-            className={`
-              mt-2 sm:mt-4 text-xs transition-colors
-              [@media(max-height:660px)_and_(max-width:767px)]:hidden
-              ${isDark ? 'text-white/20' : 'text-gray-300'}
-            `}
-          >
-            {nextHint ?? (currentIndex < totalCount - 1 ? 'Role para ver mais →' : 'Próximo: Funções →')}
-          </p>
+                {/* Texto */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-1.5 sm:gap-2 mb-0.5 sm:mb-1 flex-wrap">
+                    <span className={`text-lg sm:text-xl md:text-2xl font-bold ${s.highlightText}`}>{recurso.highlight}</span>
+                    <span className={`text-[10px] sm:text-xs ${isDark ? 'text-white/30' : 'text-gray-400'}`}>{recurso.highlightLabel}</span>
+                  </div>
+                  <h3 className={`text-xs sm:text-sm md:text-base font-semibold mb-0.5 sm:mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {recurso.title}
+                  </h3>
+                  {/* Descrição some em telas baixas */}
+                  <p
+                    className={`
+                      text-[10px] sm:text-xs md:text-sm leading-relaxed
+                      [@media(max-height:620px)_and_(max-width:767px)]:hidden
+                      ${isDark ? 'text-white/45' : 'text-gray-500'}
+                    `}
+                  >
+                    {recurso.description}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Progress dots ──────────────────────────────────── */}
+        <div className="flex items-center gap-2">
+          {Array.from({ length: totalCount }).map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === currentIndex
+                  ? `w-8 ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`
+                  : `w-2 ${isDark ? 'bg-white/15' : 'bg-gray-200'}`
+              }`}
+            />
+          ))}
         </div>
       </div>
     </div>

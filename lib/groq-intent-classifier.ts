@@ -211,24 +211,26 @@ export async function classifyIntentWithGroq(
 
     deps.commandProcessor?.saveUnrecognizedHint(transcript);
 
-    // Salva memória em background
-    fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/update-session-memory`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: effectiveSessionId,
-          company_id: deps.companyId,
-          user_message: transcript,
-          assistant_message: groqResponse,
-          function_key: functionKey ?? null,
-        }),
-      }
-    ).catch(() => {});
+// Salva memória em background — só se tiver sessionId válido
+    if (effectiveSessionId) {
+      fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/update-session-memory`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            session_id: effectiveSessionId,
+            company_id: deps.companyId,
+            user_message: transcript,
+            assistant_message: groqResponse,
+            function_key: functionKey ?? null,
+          }),
+        }
+      ).catch(() => {});
+    }
 
     return true;
 

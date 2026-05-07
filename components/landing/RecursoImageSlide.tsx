@@ -67,7 +67,7 @@ export default function RecursoImageSlide({
           relative z-10
           flex flex-col md:flex-row
           items-center justify-center md:justify-between
-          h-full w-full
+          h-full w-full max-w-7xl mx-auto
           px-5 sm:px-10 lg:px-16
           pt-[68px] pb-[52px] md:pt-0 md:pb-0
           gap-3
@@ -88,16 +88,13 @@ export default function RecursoImageSlide({
           <img
             src={imageSrc}
             alt={imageAlt}
-            className="w-full object-contain drop-shadow-2xl transition-transform duration-300 hover:scale-105"
-            style={{
-              maxWidth: 'min(320px, 55vw)',
-              maxHeight: 'clamp(120px, 30vh, 280px)',
-            }}
+            className="w-full max-w-[280px] md:max-w-full object-contain drop-shadow-2xl transition-transform duration-300 hover:scale-105 md:max-h-[55vh]"
+            style={{ maxHeight: 'clamp(120px, 30vh, 280px)' }}
           />
         </div>
 
         {/* ── Texto ──────────────────────────────────────────── */}
-        <div className="flex flex-col items-start justify-center order-2 md:order-1 w-full md:w-1/2 max-w-xl">
+        <div className="flex flex-col items-start justify-center order-2 md:order-1 w-full md:w-1/2 max-w-xl md:max-w-none">
 
           {/* Label */}
           <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-3 sm:mb-5 ${s.labelBg} ${s.labelText}`}>

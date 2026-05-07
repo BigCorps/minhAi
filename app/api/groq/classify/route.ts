@@ -75,7 +75,11 @@ ${memoryBlock}`,
 
     // Tenta parsear JSON estruturado { response, functionKey? }
     try {
-      const cleaned = raw.replace(/```json|```/g, '').trim();
+      // Fix 1 — remove markdown fences, trailing commas antes de parsear
+      const cleaned = raw
+        .replace(/```json|```/g, '')
+        .replace(/,\s*([}\]])/g, '$1') // remove trailing commas ex: {"response": "...", }
+        .trim();
       const parsed = JSON.parse(cleaned);
       if (parsed?.response) {
         return NextResponse.json({

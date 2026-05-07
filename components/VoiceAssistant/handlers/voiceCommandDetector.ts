@@ -1,6 +1,6 @@
 // ============================================================
-// handlers/voiceCommandDetector.ts — v2: Groq com sessionId + onFunctionDetected
-// MUDANÇAS: apenas interface DetectorDeps e bloco do Groq no final
+// handlers/voiceCommandDetector.ts — v3: Fix 4 (__payment_choice__ sem Groq)
+// MUDANÇAS: bloco de resolução de pagamento antes da chamada ao Groq
 // Todo o resto permanece idêntico ao original
 // ============================================================
 
@@ -42,7 +42,7 @@ interface DetectorDeps {
   setActiveModal: (modal: ActiveModal | null) => void;
   activeFunctionContextRef: React.MutableRefObject<any>;
   fromGroq?: boolean;
-  // ✅ NOVO: callback para executar função identificada pelo Groq
+  // Callback para executar função identificada pelo Groq
   onFunctionDetected?: (functionKey: string) => void;
 }
 
@@ -779,20 +779,64 @@ export async function detectVoiceCommand(
     }
   }
 
+  // ── Fix 4 — resolução de __payment_choice__ sem chamar o Groq ────────────
+  // Camada mais rápida: zero latência de rede.
+  // Consulta last_function_keys da sessão antes de qualquer chamada ao Groq.
+  // Se for __payment_choice__ e o cliente disser "pix", "débito" ou "crédito",
+  // executa direto e retorna — sem custo de rede.
+  if (!fromGroq && deps.sessionId) {
+    try {
+      const { createClient } = await import('@/lib/supabase-browser');
+      const supabase = createClient();
+      const { data: sessionData } = await supabase
+        .from('assistant_sessions')
+        .select('last_function_keys')
+        .eq('id', deps.sessionId)
+        .eq('company_id', companyId)
+        .maybeSingle();
+
+      const lastKeys: string[] = sessionData?.last_function_keys ?? [];
+      const lastKey = lastKeys[lastKeys.length - 1];
+
+      if (lastKey === '__payment_choice__') {
+        const lower = lowerTranscript;
+        let resolved: string | null = null;
+
+        if (lower.includes('pix')) resolved = 'pix_generate';
+        else if (lower.includes('débito') || lower.includes('debito')) resolved = 'nfc_debito';
+        else if (lower.includes('crédito') || lower.includes('credito')) resolved = 'nfc_credito';
+        // Valor numérico isolado (ex: "dez reais", "10,00") sem método especificado:
+        // deixa cair pro Groq para perguntar débito/crédito/pix
+
+        if (resolved) {
+          console.log(`⚡ Fix4: __payment_choice__ resolvido sem Groq → ${resolved}`);
+          await playText('Abrindo agora.');
+          if (deps.onFunctionDetected) deps.onFunctionDetected(resolved);
+          // Limpa o pendente da sessão
+          supabase
+            .from('assistant_sessions')
+            .update({ last_function_keys: [] })
+            .eq('id', deps.sessionId)
+            .then(() => {})
+            .catch(() => {});
+          return true;
+        }
+      }
+    } catch { /* silencioso — não bloqueia o fluxo */ }
+  }
+
   // ── GROQ: classificador de intenção como último recurso ───
-  // ✅ MUDANÇA: sessionId e onFunctionDetected adicionados
   if (!fromGroq) {
     const chatgptEnabled = await checkIfFunctionIsEnabled(companyId, 'chatgpt');
     const { classifyIntentWithGroq } = await import('@/lib/groq-intent-classifier');
     const groqHandled = await classifyIntentWithGroq(transcript, {
       companyId,
-      sessionId,                            // ✅ NOVO: contexto de sessão para memória
+      sessionId,
       playText,
       groqContextRef: deps.groqContextRef,
       fallbackMessage: deps.fallbackMessageRef.current,
       commandProcessor,
       forceResponse: !chatgptEnabled,
-      // ✅ NOVO: quando Groq identificar uma função, executa via handleFunctionClick
       onFunctionDetected: deps.onFunctionDetected,
     });
     if (groqHandled) return true;

@@ -87,10 +87,13 @@ export default function PayValorClient({ companyId, companyName, amountCents }: 
           style={{ width: '56px', height: '56px', borderRadius: '12px', margin: '0 auto 16px' }}
         />
 
-        <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '4px' }}>{companyName}</p>
-        <p style={{ color: '#ffffff', fontSize: '24px', fontWeight: 700, marginBottom: '24px' }}>
-          {amountBRL}
-        </p>
+<p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '4px' }}>{companyName}</p>
+<p style={{ color: '#ffffff', fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>
+  {amountBRL}
+</p>
+<p style={{ color: '#64748b', fontSize: '12px', marginBottom: '24px', lineHeight: '1.5' }}>
+  Preencha seu telefone na tela a seguir para receber o SMS de confirmação da InfinitePay.
+</p>
 
         {stage === 'verifying' && (
           <>

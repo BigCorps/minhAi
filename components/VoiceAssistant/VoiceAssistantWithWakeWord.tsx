@@ -1189,6 +1189,7 @@ case 'impressao_recibo':
           await stopGoogleSpeech();
           setActiveModal({ type: 'LoginClienteDisplay', data: { profile, companyId, slug: slug ?? '' } });
           pt(profile ? `Olá ${profile.nome}! Sua conta está aberta.` : 'Abrindo sua conta. Faça login ou crie uma nova conta.').catch(() => {});
+          await registerFunctionUsage(companyId, functionKey, functionSettings[functionKey]?.creditsPerUse ?? 0);
           return;
         case 'segunda_via_boleto':
           setActiveModal({ type: 'SegundaViaBoletoDisplay', data: { companyId } });
@@ -1497,6 +1498,7 @@ case 'impressao_recibo':
           await stopGoogleSpeech();
           setActiveModal({ type: 'CadastrarProdutoDisplay', data: { companyId } });
           pt('Vou te guiar no cadastro do produto. Qual o nome?').catch(() => {});
+          await registerFunctionUsage(companyId, functionKey, functionSettings[functionKey]?.creditsPerUse ?? 0);
           return;
         case 'modo_venda': {
           await stopGoogleSpeech();
@@ -2560,7 +2562,7 @@ const getStatusMessage = (maximized = false) => {
         </div>
       </div>
 
-      {!textMode && (
+      <div style={textMode ? { position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: activeModal ? 'auto' : 'none' } : undefined}>
         <ActionModals
           activeModal={activeModal}
           onClose={handleCloseModal}
@@ -2570,7 +2572,7 @@ const getStatusMessage = (maximized = false) => {
           playText={playText}
           printConfig={printConfig}
         />
-      )}
+      </div>
     </div>
   );
 }

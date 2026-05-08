@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
 import ModoToggle from '@/components/dashboard/ModoToggle';
+import { triggerEmbeddingUpdate, triggerBulkEmbeddingSync } from '@/lib/embeddings'; // PATCH 1.1
 
 import {
   ShoppingCart,
@@ -130,22 +131,33 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
     setSaving(true);
     setErro(null);
     try {
+      // PATCH 1.3 — UPDATE com id garantido / INSERT capturando id retornado
       if (produto) {
+        // UPDATE — id já existe
         const { error } = await supabase
           .from('produtos_venda')
           .update({ ...form, updated_at: new Date().toISOString() })
           .eq('id', produto.id);
         if (error) throw error;
+
+        // Dispara embedding com id garantido
+        triggerEmbeddingUpdate('product', companyId, { ...form, id: produto.id });
+
       } else {
-        const { error } = await supabase
+        // INSERT — captura o id retornado pelo Supabase
+        const { data: inserted, error } = await supabase
           .from('produtos_venda')
-          .insert({ ...form, company_id: companyId });
+          .insert({ ...form, company_id: companyId })
+          .select('id')
+          .single();
         if (error) throw error;
+
+        // Dispara embedding com id real do novo produto
+        triggerEmbeddingUpdate('product', companyId, { ...form, id: inserted.id });
       }
 
       setSucesso(true);
       setSaving(false);
-
       onSalvo();
       setTimeout(() => onClose(), 600);
     } catch (e: any) {
@@ -586,8 +598,13 @@ function ImportarModal({
           controla_estoque: true,
           is_active: true,
         }));
+
+      // PATCH 1.4 — reindexação bulk após importar ingredientes
       const { error } = await supabase.from('produtos_venda').insert(itens);
       if (error) throw error;
+
+      triggerBulkEmbeddingSync(companyId);
+
       onImportado();
       onClose();
     } catch (e: any) {

@@ -85,8 +85,8 @@ const SYSTEM_FUNCTIONS_META = new Set(['meu_sistema']);
 // ─── Pill classes ─────────────────────────────────────────────────────────────
 
 const pillCommon =
-  'inline-flex items-center justify-center gap-1.5 ' +
-  'px-3 py-1.5 rounded-full text-xs sm:text-base font-medium border ' +
+  'inline-flex items-center justify-center gap-1 ' +
+  'px-2 py-1 rounded-full text-xs font-medium border ' +
   'transition-all duration-150 whitespace-nowrap';
 
 const pillInactive =

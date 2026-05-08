@@ -1,4 +1,4 @@
-// app/api/groq/classify/route.ts — v2: conversacional + execução de função
+// app/api/groq/classify/route.ts — v3: contexto pendente traduzido
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 
@@ -13,8 +13,40 @@ export async function POST(req: NextRequest) {
 
     const hasProfile = functionsContext?.includes('Cliente logado:');
 
-    const memoryBlock = sessionContext?.summary || sessionContext?.lastFunctions?.length > 0
-      ? `\n\nCONTEXTO DESTA SESSÃO:\n${sessionContext.summary ? `- ${sessionContext.summary}` : ''}${sessionContext.lastFunctions?.length > 0 ? `\n- Funções usadas recentemente: ${sessionContext.lastFunctions.join(', ')}` : ''}`
+    // Traduz tokens internos para linguagem que o GROQ entende
+    const lastFunctions: string[] = sessionContext?.lastFunctions ?? [];
+    const lastFunctionKey = lastFunctions[lastFunctions.length - 1] ?? '';
+
+    const isPendingPayment = lastFunctionKey.startsWith('__pending__');
+    const pendingFunction = isPendingPayment ? lastFunctionKey.replace('__pending__', '') : null;
+    const isPaymentChoice = lastFunctionKey === '__payment_choice__';
+
+    const friendlyFunctions = lastFunctions.map((k: string) => {
+      if (k === '__payment_choice__') return 'aguardando escolha do método de pagamento';
+      if (k.startsWith('__pending__')) return `aguardando valor para ${k.replace('__pending__', '')}`;
+      if (k === '__clarification__') return 'aguardando esclarecimento do cliente';
+      return k;
+    });
+
+    const memoryBlock = sessionContext?.summary || lastFunctions.length > 0
+      ? `\n\nCONTEXTO DESTA SESSÃO:\n${sessionContext?.summary ? `- ${sessionContext.summary}` : ''}${friendlyFunctions.length > 0 ? `\n- Estado atual: ${friendlyFunctions.join(', ')}` : ''}`
+      : '';
+
+    // Instrução extra quando há contexto pendente
+    const pendingInstruction = isPendingPayment
+      ? `\n\n## ATENÇÃO — AGUARDANDO VALOR:
+O cliente já escolheu "${pendingFunction}" mas ainda não informou o valor.
+Se o transcript contiver valor numérico (ex: "10,00", "cinquenta reais"), retorne:
+{"response": "Gerando agora.", "functionKey": "${pendingFunction}"}
+Se não contiver valor, pergunte: {"response": "Qual o valor?"}`
+      : isPaymentChoice
+      ? `\n\n## ATENÇÃO — AGUARDANDO MÉTODO DE PAGAMENTO:
+O cliente quer pagar mas ainda não escolheu o método.
+Se mencionar "pix" → {"response": "Abrindo agora.", "functionKey": "pix_generate"}
+Se mencionar "débito" ou "debito" → {"response": "Abrindo agora.", "functionKey": "nfc_debito"}
+Se mencionar "crédito" ou "credito" → {"response": "Abrindo agora.", "functionKey": "nfc_credito"}
+Se mencionar "link" → {"response": "Abrindo agora.", "functionKey": "link_pagamento"}
+Se não reconhecer o método, pergunte novamente.`
       : '';
 
     const completion = await groq.chat.completions.create({
@@ -58,7 +90,7 @@ Se o contexto da sessão indicar uma função sugerida, execute-a.
 - NUNCA responda sobre produtos, preços ou dados da empresa
 ${hasProfile ? '- Use o nome do cliente quando ficar natural' : ''}
 ${forceResponse ? '- ChatGPT desativado: se não for função do sistema, responda como assistente geral' : ''}
-${memoryBlock}`,
+${memoryBlock}${pendingInstruction}`,
         },
         {
           role: 'user',
@@ -75,10 +107,9 @@ ${memoryBlock}`,
 
     // Tenta parsear JSON estruturado { response, functionKey? }
     try {
-      // Fix 1 — remove markdown fences, trailing commas antes de parsear
       const cleaned = raw
         .replace(/```json|```/g, '')
-        .replace(/,\s*([}\]])/g, '$1') // remove trailing commas ex: {"response": "...", }
+        .replace(/,\s*([}\]])/g, '$1')
         .trim();
       const parsed = JSON.parse(cleaned);
       if (parsed?.response) {
@@ -88,7 +119,7 @@ ${memoryBlock}`,
         });
       }
     } catch {
-      // Não era JSON — texto puro sem execução de função (orientação simples)
+      // Não era JSON — texto puro sem execução de função
     }
 
     // Fallback: resposta em texto puro

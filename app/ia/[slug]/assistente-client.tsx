@@ -765,7 +765,7 @@ useEffect(() => {
 
 {/* VoiceAssistant oculto no modo texto — processa mensagens, mantém modais e GROQ ativos */}
 {mode === 'texto' && (
-  <div className="hidden">
+  <div style={{ position: 'fixed', width: 0, height: 0, overflow: 'visible', pointerEvents: 'none' }}>
     <VoiceAssistantWithWakeWord
       companyId={company.id}
       companyName={company.name}

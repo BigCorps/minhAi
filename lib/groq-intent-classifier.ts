@@ -1,4 +1,4 @@
-// lib/groq-intent-classifier.ts — v4: Fix 2 + Fix 3 (payment_choice + detectPendingContext)
+// lib/groq-intent-classifier.ts — v5: contexto pendente fora do isConfirmation
 import { createClient } from '@/lib/supabase-browser';
 
 interface ClassifierDeps {
@@ -18,15 +18,12 @@ const GENERAL_CONVERSATION = [
   'não entendi', 'nao entendi', 'pode repetir', 'fala de novo',
 ];
 
-// Confirmações que devem executar a última função sugerida
 const CONFIRMATION_TRIGGERS = [
   'sim', 'pode', 'isso', 'quero', 'esse mesmo', 'esse',
   'pode ser', 'ok', 'tá bom', 'ta bom', 'claro', 'com certeza',
   'pode fazer', 'pode abrir', 'abre', 'faz isso', 'execute',
 ];
 
-// Fix 2 — Detecta qual grupo de funções foi sugerido pela pergunta de esclarecimento
-// Usado para salvar __payment_choice__ quando Groq pergunta "débito, crédito ou PIX?"
 function detectPendingContext(groqResponse: string): string {
   const lower = groqResponse.toLowerCase();
   if (
@@ -34,20 +31,22 @@ function detectPendingContext(groqResponse: string): string {
     lower.includes('débito') ||
     lower.includes('debito') ||
     lower.includes('crédito') ||
-    lower.includes('credito')
+    lower.includes('credito') ||
+    lower.includes('link')
   ) {
     return '__payment_choice__';
   }
   return '__clarification__';
 }
 
-// Fix 3 — Resolve método de pagamento a partir da resposta do cliente
-// ex: "pix" → pix_generate | "débito" → nfc_debito | "crédito" → nfc_credito
 function resolvePaymentMethod(transcript: string): string | null {
   const lower = transcript.toLowerCase().trim();
   if (lower.includes('pix')) return 'pix_generate';
+  if (lower.includes('link')) return 'link_pagamento';
   if (lower.includes('débito') || lower.includes('debito')) return 'nfc_debito';
   if (lower.includes('crédito') || lower.includes('credito')) return 'nfc_credito';
+  if (lower.includes('tef debito') || lower.includes('tef débito')) return 'tef_debito';
+  if (lower.includes('tef credito') || lower.includes('tef crédito')) return 'tef_credito';
   return null;
 }
 
@@ -98,11 +97,11 @@ export async function classifyIntentWithGroq(
       } catch { /* silencioso */ }
     }
 
-    // Verifica se há uma função pendente esperando valor numérico
-    // (independente de ser confirmação — o cliente fala o valor direto)
+    // ── Resolução de contexto pendente (independente de confirmação) ──────────
     if (sessionContext?.lastFunctions?.length) {
       const lastFunctionKey = sessionContext.lastFunctions[sessionContext.lastFunctions.length - 1];
 
+      // 1. Função pendente esperando valor numérico (ex: __pending__pix_generate)
       if (lastFunctionKey?.startsWith('__pending__')) {
         const pendingFunction = lastFunctionKey.replace('__pending__', '');
         const amountMatch = transcript.match(/(\d+(?:[,.]?\d{1,2})?)/);
@@ -128,43 +127,36 @@ export async function classifyIntentWithGroq(
           return true;
         }
         // Sem valor numérico — cai pro Groq para perguntar o valor
-      }
-    }
 
-    // Se for confirmação pura E tiver função sugerida recentemente,
-    // executa direto sem chamar o Groq — zero latência
-    if (isConfirmation(transcript) && sessionContext?.lastFunctions?.length) {
-      const lastFunctionKey = sessionContext.lastFunctions[sessionContext.lastFunctions.length - 1];
-
-      // Fix 3 — quando o cliente responde "pix", "débito" ou "crédito", resolve direto
-      if (lastFunctionKey === '__payment_choice__') {
+      // 2. Aguardando escolha do método de pagamento (qualquer fala, não só confirmação)
+      } else if (lastFunctionKey === '__payment_choice__') {
         const resolved = resolvePaymentMethod(transcript);
         if (resolved) {
-          console.log(`💳 Fix3: __payment_choice__ → ${transcript} → ${resolved}`);
-          await deps.playText('Abrindo agora.');
-          if (deps.onFunctionDetected) {
-            setTimeout(() => deps.onFunctionDetected!(resolved), 300);
-          }
+          console.log(`💳 __payment_choice__ → "${transcript}" → ${resolved}`);
+
+          // Salva como __pending__ aguardando o valor
           if (effectiveSessionId) {
             const supabase = createClient();
             supabase
               .from('assistant_sessions')
-              .update({ last_function_keys: [] })
+              .update({ last_function_keys: [`__pending__${resolved}`] })
               .eq('id', effectiveSessionId)
               .then(() => {}).catch(() => {});
           }
+
+          await deps.playText('Ótimo! Qual o valor?');
           return true;
         }
-        // Não reconheceu o método — cai pro Groq
-        console.log('💳 Fix3: __payment_choice__ — método não reconhecido, seguindo para Groq');
-      } else {
-        // Confirmação normal — executa última função sugerida
-        console.log(`✅ Confirmação detectada → executando última função sugerida: ${lastFunctionKey}`);
+        // Método não reconhecido — cai pro Groq
+        console.log('💳 __payment_choice__ — método não reconhecido, seguindo para Groq');
+
+      // 3. Confirmação de função normal (não token interno)
+      } else if (!lastFunctionKey.startsWith('__') && isConfirmation(transcript)) {
+        console.log(`✅ Confirmação detectada → executando: ${lastFunctionKey}`);
         await deps.playText('Perfeito! Abrindo agora.');
         if (deps.onFunctionDetected) {
           setTimeout(() => deps.onFunctionDetected!(lastFunctionKey), 300);
         }
-        // Limpa o last_function_keys da sessão para não re-executar na próxima fala
         if (effectiveSessionId) {
           const supabase = createClient();
           supabase
@@ -178,6 +170,7 @@ export async function classifyIntentWithGroq(
       }
     }
 
+    // ── Chama o GROQ para classificar a intenção ──────────────────────────────
     const response = await fetch('/api/groq/classify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -194,7 +187,6 @@ export async function classifyIntentWithGroq(
     const data = await response.json();
     const { response: groqResponse, functionKey } = data;
 
-    // Groq retornou null → pergunta é sobre empresa/produtos → cai pro GPT
     if (!groqResponse) {
       if (deps.forceResponse) {
         await deps.playText(deps.fallbackMessage ?? 'Não tenho informações sobre isso.');
@@ -207,21 +199,17 @@ export async function classifyIntentWithGroq(
 
     console.log(`🤖 GROQ responde: "${groqResponse}"${functionKey ? ` → executa: ${functionKey}` : ''}`);
 
-    // Fala a resposta primeiro
     await deps.playText(groqResponse);
 
-    // Se Groq identificou uma função, executa após falar
     if (functionKey && deps.onFunctionDetected) {
       console.log(`⚡ GROQ dispara função: ${functionKey}`);
 
-      // Detecta se o transcript já contém um valor numérico
       const hasAmount = /\d+([,.]?\d{1,2})?/.test(transcript);
       const functionsNeedingAmount = ['pix_generate', 'link_pagamento', 'nfc_debito', 'nfc_credito', 'tef_debito', 'tef_credito'];
       const needsAmount = functionsNeedingAmount.includes(functionKey);
 
       if (!hasAmount && needsAmount) {
-        // Sem valor — salva como pendente e NÃO dispara a função ainda
-        // O GROQ já falou a pergunta (ex: "Qual o valor?"), aguarda o próximo transcript
+        // Sem valor — salva como pendente, NÃO dispara ainda
         console.log(`⏳ Função ${functionKey} pendente — aguardando valor do cliente`);
         if (effectiveSessionId) {
           const supabase = createClient();
@@ -232,7 +220,7 @@ export async function classifyIntentWithGroq(
             .then(() => {}).catch(() => {});
         }
       } else {
-        // Tem valor ou função não precisa de valor — dispara normalmente
+        // Tem valor ou não precisa — dispara normalmente
         setTimeout(() => deps.onFunctionDetected!(functionKey), 300);
 
         if (effectiveSessionId) {
@@ -246,9 +234,7 @@ export async function classifyIntentWithGroq(
         }
       }
     } else if (!functionKey && effectiveSessionId) {
-      // Fix 2 — Groq fez uma pergunta de esclarecimento:
-      // detecta o contexto pendente (ex: __payment_choice__) e salva na sessão
-      // em vez de salvar array vazio, preservando o contexto para a próxima fala
+      // Groq fez pergunta de esclarecimento — detecta contexto e salva
       const pendingContext = detectPendingContext(groqResponse);
       console.log(`💬 Fix2: pergunta de esclarecimento → salvando contexto: ${pendingContext}`);
       const supabase = createClient();
@@ -262,7 +248,6 @@ export async function classifyIntentWithGroq(
 
     deps.commandProcessor?.saveUnrecognizedHint(transcript);
 
-// Salva memória em background — só se tiver sessionId válido
     if (effectiveSessionId) {
       fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/update-session-memory`,

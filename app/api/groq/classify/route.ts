@@ -32,23 +32,27 @@ export async function POST(req: NextRequest) {
       ? `\n\nCONTEXTO DESTA SESSÃO:\n${sessionContext?.summary ? `- ${sessionContext.summary}` : ''}${friendlyFunctions.length > 0 ? `\n- Estado atual: ${friendlyFunctions.join(', ')}` : ''}`
       : '';
 
-    // Instrução extra quando há contexto pendente
-const pendingInstruction = isPendingPayment
-  ? `\n\n## ATENÇÃO — AGUARDANDO VALOR:
-O cliente já escolheu "${pendingFunction}" mas ainda não informou o valor.
-Se NÃO contiver valor numérico, OBRIGATORIAMENTE retorne:
+// Instrução extra quando há contexto pendente
+    const pendingInstruction = isPendingPayment
+      ? `\n\n## 🚨 REGRA CRÍTICA — AGUARDANDO VALOR:
+O cliente já escolheu a função "${pendingFunction}", mas AINDA NÃO informou o valor.
+
+1. SE O TRANSCRIPT NÃO CONTIVER VALOR NUMÉRICO:
+Se o cliente não disse um valor exato na mensagem atual, OBRIGATORIAMENTE retorne APENAS:
 {"response": "Qual o valor?"}
-NÃO diga "Abrindo" nem confirme a função sem ter o valor.`
-Se o transcript contiver valor numérico, retorne:
-{"response": "Gerando agora.", "functionKey": "${pendingFunction}"},
+(NÃO inclua functionKey e NÃO confirme a operação).
+
+2. SE O TRANSCRIPT CONTIVER VALOR NUMÉRICO:
+Se o cliente informou um valor claro (ex: "10", "dez reais", "50"), retorne:
+{"response": "Gerando agora.", "functionKey": "${pendingFunction}"}`
       : isPaymentChoice
-      ? `\n\n## ATENÇÃO — AGUARDANDO MÉTODO DE PAGAMENTO:
-O cliente quer pagar mas ainda não escolheu o método.
+      ? `\n\n## 🚨 REGRA CRÍTICA — AGUARDANDO MÉTODO DE PAGAMENTO:
+O cliente quer pagar, mas ainda não escolheu o método.
+Se não reconhecer o método, pergunte novamente.
 Se mencionar "pix" → {"response": "Abrindo agora.", "functionKey": "pix_generate"}
 Se mencionar "débito" ou "debito" → {"response": "Abrindo agora.", "functionKey": "nfc_debito"}
 Se mencionar "crédito" ou "credito" → {"response": "Abrindo agora.", "functionKey": "nfc_credito"}
-Se mencionar "link" → {"response": "Abrindo agora.", "functionKey": "link_pagamento"}
-Se não reconhecer o método, pergunte novamente.`
+Se mencionar "link" → {"response": "Abrindo agora.", "functionKey": "link_pagamento"}`
       : '';
 
     const completion = await groq.chat.completions.create({

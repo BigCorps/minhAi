@@ -10,6 +10,10 @@ import { createClient } from '@/lib/supabase-browser';
 // Chave: `${companyId}:${functionKey}` → valor: boolean
 const functionEnabledCache = new Map<string, boolean>();
 
+// Cache de créditos por função/empresa
+// Chave: `${companyId}:${functionKey}` → valor: number
+const functionCreditsCache = new Map<string, number>();
+
 /**
  * Limpa o cache de sessão.
  * Chame isso se os settings forem alterados em runtime
@@ -17,31 +21,77 @@ const functionEnabledCache = new Map<string, boolean>();
  */
 export function clearFunctionEnabledCache(): void {
   functionEnabledCache.clear();
+  functionCreditsCache.clear();
   console.log('🗑️ Cache de funções limpo');
+}
+
+/**
+ * Busca o número de créditos por uso de uma função.
+ * Respeita custom_credits_per_use da empresa, com fallback para credits_per_use global.
+ * Resultado cacheado por sessão.
+ */
+async function getCreditsPerUse(companyId: string, functionKey: string): Promise<number> {
+  const cacheKey = `${companyId}:${functionKey}`;
+  if (functionCreditsCache.has(cacheKey)) {
+    return functionCreditsCache.get(cacheKey)!;
+  }
+  try {
+    const supabase = createClient();
+    // Tenta buscar custom_credits_per_use da empresa primeiro
+    const { data: setting } = await supabase
+      .from('company_function_settings')
+      .select('custom_credits_per_use')
+      .eq('company_id', companyId)
+      .eq('function_key', functionKey)
+      .maybeSingle();
+
+    if (setting?.custom_credits_per_use != null) {
+      functionCreditsCache.set(cacheKey, setting.custom_credits_per_use);
+      return setting.custom_credits_per_use;
+    }
+
+    // Fallback: credits_per_use global da função
+    const { data: func } = await supabase
+      .from('assistant_functions')
+      .select('credits_per_use')
+      .eq('function_key', functionKey)
+      .maybeSingle();
+
+    const credits = func?.credits_per_use ?? 0;
+    functionCreditsCache.set(cacheKey, credits);
+    return credits;
+  } catch {
+    return 0;
+  }
 }
 
 /**
  * Registra uso de uma função no Supabase via RPC.
  * Debita créditos da empresa automaticamente.
+ * Se creditsConsumed não for informado (undefined), busca o valor correto
+ * do banco — útil quando chamado antes do hook useFunctionSettings carregar.
  */
 export async function registerFunctionUsage(
   companyId: string,
   functionKey: string,
-  creditsConsumed: number
+  creditsConsumed?: number
 ): Promise<void> {
-  console.log('🔵 Registrando uso:', { functionKey, creditsConsumed, companyId });
+  // Se não foi passado valor explícito, busca do banco (garante valor correto
+  // mesmo quando o carrossel dispara antes do hook useFunctionSettings hidratar)
+  const credits = creditsConsumed ?? await getCreditsPerUse(companyId, functionKey);
+  console.log('🔵 Registrando uso:', { functionKey, creditsConsumed: credits, companyId });
   try {
     const supabase = createClient();
     const { data, error } = await supabase.rpc('register_function_usage', {
       p_company_id: companyId,
       p_function_key: functionKey,
-      p_credits_consumed: creditsConsumed,
+      p_credits_consumed: credits,
     });
     if (error) {
       console.error('❌ ERRO RPC:', error);
       return;
     }
-    console.log('✅ Uso registrado:', functionKey, creditsConsumed, 'créditos — Resposta:', data);
+    console.log('✅ Uso registrado:', functionKey, credits, 'créditos — Resposta:', data);
   } catch (error) {
     console.error('❌ ERRO GERAL ao registrar uso:', error);
   }

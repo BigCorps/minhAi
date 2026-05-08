@@ -12,6 +12,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase-browser';
+import { triggerBulkEmbeddingSync } from '@/lib/embeddings'; // PATCH 2.1
 import {
   X, Upload, Download, AlertCircle, CheckCircle2,
   Loader2, FileText, Trash2, Eye, EyeOff,
@@ -276,9 +277,14 @@ export default function ImportarCSVModal({
       setProgresso(Math.round(((i + LOTE) / selecionadosValidos.length) * 100));
     }
 
+    // PATCH 2.2 — dispara reindexação bulk após importação CSV bem-sucedida
     setImportados(count);
     setStage('done');
-    if (count > 0) onImportado(count);
+
+    if (count > 0) {
+      triggerBulkEmbeddingSync(companyId);
+      onImportado(count);
+    }
   }
 
   // ── RENDER ─────────────────────────────────────────────────────────────────

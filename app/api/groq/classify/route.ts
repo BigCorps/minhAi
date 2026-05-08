@@ -1,18 +1,19 @@
-// app/api/groq/classify/route.ts
+// app/api/groq/classify/route.ts — v3: contexto pendente traduzido
 import { NextRequest, NextResponse } from 'next/server';
+import Groq from 'groq-sdk';
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
     const { transcript, functionsContext, sessionContext, forceResponse } = await req.json();
-    
     if (!transcript || !functionsContext) {
       return NextResponse.json({ response: null, functionKey: null });
     }
 
-    const GROQ_API_KEY = process.env.GROQ_API_KEY;
     const hasProfile = functionsContext?.includes('Cliente logado:');
 
-    // ── Lógica de Contexto Pendente ──
+    // Traduz tokens internos para linguagem que o GROQ entende
     const lastFunctions: string[] = sessionContext?.lastFunctions ?? [];
     const lastFunctionKey = lastFunctions[lastFunctions.length - 1] ?? '';
 
@@ -20,11 +21,18 @@ export async function POST(req: NextRequest) {
     const pendingFunction = isPendingPayment ? lastFunctionKey.replace('__pending__', '') : null;
     const isPaymentChoice = lastFunctionKey === '__payment_choice__';
 
+    const friendlyFunctions = lastFunctions.map((k: string) => {
+      if (k === '__payment_choice__') return 'aguardando escolha do método de pagamento';
+      if (k.startsWith('__pending__')) return `aguardando valor para ${k.replace('__pending__', '')}`;
+      if (k === '__clarification__') return 'aguardando esclarecimento do cliente';
+      return k;
+    });
+
     const memoryBlock = sessionContext?.summary || lastFunctions.length > 0
-      ? `\n\n## MEMÓRIA RECENTE:\n${sessionContext?.summary ?? ''}\nÚltimas ações: ${lastFunctions.join(', ')}`
+      ? `\n\nCONTEXTO DESTA SESSÃO:\n${sessionContext?.summary ? `- ${sessionContext.summary}` : ''}${friendlyFunctions.length > 0 ? `\n- Estado atual: ${friendlyFunctions.join(', ')}` : ''}`
       : '';
 
-    // ── Instrução de Roteamento (Flex Tier) ──
+// Instrução extra quando há contexto pendente
     const pendingInstruction = isPendingPayment
       ? `\n\n## 🚨 REGRA CRÍTICA — AGUARDANDO VALOR:
 O cliente já escolheu a função "${pendingFunction}", mas AINDA NÃO informou o valor.
@@ -39,75 +47,79 @@ Retorne: {"response": "Gerando agora.", "functionKey": "${pendingFunction}"}`
       ? `\n\n## 🚨 REGRA CRÍTICA — AGUARDANDO MÉTODO DE PAGAMENTO:
 O cliente quer pagar, mas ainda não escolheu o método.
 
-Como os métodos (Link, Débito e Crédito) possuem telas interativas próprias no sistema minhAi, você DEVE retornar a functionKey PADRÃO imediatamente, MESMO QUE O CLIENTE NÃO DIGA O VALOR.
+Como os métodos (Link, Débito e Crédito) possuem telas interativas próprias, você DEVE retornar a functionKey PADRÃO imediatamente, MESMO QUE O CLIENTE NÃO DIGA O VALOR.
 
 Mapeie a escolha e retorne OBRIGATORIAMENTE EM FORMATO JSON:
 - "link" → {"response": "Abrindo link de pagamento.", "functionKey": "link_pagamento"}
-- "débito" (celular/NFC) → {"response": "Preparando débito.", "functionKey": "nfc_debito"}
-- "crédito" (celular/NFC) → {"response": "Preparando crédito.", "functionKey": "nfc_credito"}
-- "débito" (maquininha/TEF) → {"response": "Preparando maquininha.", "functionKey": "tef_debito"}
-- "crédito" (maquininha/TEF) → {"response": "Preparando maquininha.", "functionKey": "tef_credito"}
+- "débito" (celular) → {"response": "Preparando débito.", "functionKey": "nfc_debito"}
+- "crédito" (celular) → {"response": "Preparando crédito.", "functionKey": "nfc_credito"}
+- "débito" (maquininha) → {"response": "Preparando maquininha.", "functionKey": "tef_debito"}
+- "crédito" (maquininha) → {"response": "Preparando maquininha.", "functionKey": "tef_credito"}
 
-REGRA EXCLUSIVA PARA O PIX (pois não tem tela de input própria):
+REGRA EXCLUSIVA PARA O PIX (pois não tem tela própria):
 - Pix COM valor: {"response": "Gerando Pix.", "functionKey": "pix_generate"}
 - Pix SEM valor: {"response": "Qual o valor do Pix?", "functionKey": "__pending__pix_generate"}
 
 Responda APENAS com o JSON, sem adicionar texto fora das chaves.`
       : '';
 
-    // ── Chamada à API da Groq via Fetch (Tier Flex) ──
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_API_KEY}`
-      },
-      body: JSON.stringify({
-        service_tier: 'flex',
-        model: 'llama-3.1-8b-instant',
-        temperature: 0.1,
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'system',
-            content: `Você é o cérebro de roteamento de um assistente de voz para empresas (SaaS minhAi).
-Sua missão é ler o que o usuário disse e decidir se ele quer executar uma das funções abaixo ou apenas conversar.
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      max_tokens: 1024,
+      temperature: 0.1,
+      messages: [
+        {
+          role: 'system',
+          content: `Você é o assistente de voz minhAi. Sua função é orientar clientes e executar funções do sistema.
 
-## FUNÇÕES DISPONÍVEIS:
+## Funções disponíveis (nome | functionKey | ativa quando):
 ${functionsContext}
 
+## COMO RESPONDER — escolha UMA das opções:
+
+### Opção 1 — retorne: null
+Quando for sobre produtos, preços, empresa, horário, endereço ou conversa geral.
+Exemplos: "tem pizza?", "qual o horário?", "tudo bem?"
+${forceResponse ? '' : 'Na dúvida → null'}
+
+### Opção 2 — retorne JSON com functionKey
+Quando identificar UMA função clara para executar imediatamente.
+Exemplos: "quero gerar um pix", "abre o cardápio", "quero imprimir"
+{"response": "frase curta em voz alta confirmando a ação", "functionKey": "function_key_aqui"}
+
+### Opção 3 — retorne JSON sem functionKey (pergunta de esclarecimento)
+Quando o pedido for ambíguo e precisar perguntar ao cliente para decidir a função.
+Exemplos: "quero pagar" (tem PIX, débito e crédito) → pergunta qual prefere
+{"response": "pergunta curta e direta ao cliente"}
+
+### Opção 4 — retorne JSON com functionKey (confirmação)
+Quando o cliente confirmar ("sim", "pode", "isso", "quero", "esse mesmo"):
+Se o contexto da sessão indicar uma função sugerida, execute-a.
+{"response": "Perfeito! Abrindo agora.", "functionKey": "function_key_aqui"}
+
 ## REGRAS:
-- Responda OBRIGATORIAMENTE em JSON: {"response": "...", "functionKey": "..."}
-- Se for apenas conversa, functionKey deve ser null.
-- Respostas máximo 2 frases curtas — será falado em voz alta.
-- Português brasileiro natural.
-- NUNCA invente funções fora da lista acima.
-${hasProfile ? '- Use o nome do cliente quando ficar natural.' : ''}
-${forceResponse ? '- ChatGPT desativado: se não for função do sistema, responda como assistente geral.' : ''}
-${memoryBlock}${pendingInstruction}`
-          },
-          {
-            role: 'user',
-            content: transcript
-          }
-        ]
-      })
+- Respostas máximo 2 frases curtas — será falado em voz alta
+- Português brasileiro natural
+- NUNCA invente funções fora da lista acima
+- NUNCA responda sobre produtos, preços ou dados da empresa
+${hasProfile ? '- Use o nome do cliente quando ficar natural' : ''}
+${forceResponse ? '- ChatGPT desativado: se não for função do sistema, responda como assistente geral' : ''}
+${memoryBlock}${pendingInstruction}`,
+        },
+        {
+          role: 'user',
+          content: transcript,
+        },
+      ],
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('❌ Erro na API da Groq:', errorData);
-      return NextResponse.json({ response: 'Desculpe, tive um problema de conexão.', functionKey: null });
-    }
+    const raw = completion.choices[0]?.message?.content?.trim();
 
-    const data = await response.json();
-    const raw = data.choices?.[0]?.message?.content?.trim();
-
-    if (!raw || raw.toLowerCase() === 'null') {
+    if (!raw || raw === 'null' || raw.toLowerCase() === 'null' || raw.toLowerCase().startsWith('null')) {
       return NextResponse.json({ response: null, functionKey: null });
     }
 
-    // ── Parsing da Resposta ──
+    // Tenta parsear JSON estruturado { response, functionKey? }
     try {
       const cleaned = raw
         .replace(/```json|```/g, '')
@@ -121,13 +133,14 @@ ${memoryBlock}${pendingInstruction}`
         });
       }
     } catch {
-      // Se falhar o parse, retorna o texto bruto como resposta de voz
+      // Não era JSON — texto puro sem execução de função
     }
 
+    // Fallback: resposta em texto puro
     return NextResponse.json({ response: raw, functionKey: null });
 
   } catch (err) {
-    console.error('❌ Erro crítico no route.ts:', err);
+    console.error('❌ GROQ error:', err);
     return NextResponse.json({ response: null, functionKey: null });
   }
 }

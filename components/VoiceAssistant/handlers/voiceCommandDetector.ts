@@ -680,7 +680,7 @@ export async function detectVoiceCommand(
     return true;
   }
 
-  // ── PIX: Gerar ────────────────────────────────────────────
+// ── PIX: Gerar ────────────────────────────────────────────
   const pixPatterns = [
     /(?:gerar|gera|criar|cria|fazer|faz|faça|quero)\s*(?:um\s*|uma\s*)?(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
     /(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
@@ -706,7 +706,29 @@ export async function detectVoiceCommand(
     }
   }
 
+  // Se mencionou PIX mas não passou um valor válido
   if (lowerTranscript.includes('pix')) {
+    if (deps.sessionId) {
+      try {
+        const { createClient } = await import('@/lib/supabase-browser');
+        const supabase = createClient();
+        
+        // Salva o contexto pendente no Supabase para que a próxima interação saiba que aguardamos o valor
+        await supabase
+          .from('assistant_sessions')
+          .update({ 
+            last_function_keys: ['__pending__pix_generate'],
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', deps.sessionId)
+          .eq('company_id', companyId);
+          
+        console.log('⏳ Contexto pendente salvo: __pending__pix_generate');
+      } catch (err) {
+        console.error('❌ Erro ao salvar contexto pendente para PIX:', err);
+      }
+    }
+
     await playText('Qual o valor do PIX que você deseja gerar?');
     return true;
   }

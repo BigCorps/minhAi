@@ -185,41 +185,42 @@ export function ConversationChatModal({
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // ── Buscar conversation_id + mensagens ────────────────────────────────────
-  useEffect(() => {
-    async function loadMessages() {
-      setIsLoading(true);
+useEffect(() => {
+  async function loadMessages() {
+    setIsLoading(true)
 
-      // Buscar a conversation mais recente para esse cliente + página
-      const { data: convRow } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('meta_from_id', conv.conversation_id)
-        .eq('meta_page_id', conv.page_id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    // Buscar as últimas 5 conversations desse contato
+    const { data: convRows } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('meta_from_id', conv.conversation_id)
+      .eq('meta_page_id', conv.page_id)
+      .order('created_at', { ascending: false })
+      .limit(5)
 
-      if (!convRow) {
-        setIsLoading(false);
-        return;
-      }
-
-      setConvId(convRow.id);
-
-      const { data: msgs } = await supabase
-        .from('messages')
-        .select('id, conversation_id, role, content, created_at')
-        .eq('conversation_id', convRow.id)
-        .order('created_at', { ascending: true })
-        .limit(30);
-
-      setMessages(msgs || []);
-      setIsLoading(false);
+    if (!convRows || convRows.length === 0) {
+      setIsLoading(false)
+      return
     }
 
-    loadMessages();
-  }, [conv.conversation_id, conv.page_id]);
+    // Usar a mais recente para o realtime
+    setConvId(convRows[0].id)
+    const convIds = convRows.map(c => c.id)
+
+    // Buscar mensagens de TODAS as conversations
+    const { data: msgs } = await supabase
+      .from('messages')
+      .select('id, conversation_id, role, content, created_at')
+      .in('conversation_id', convIds)
+      .order('created_at', { ascending: true })
+      .limit(60)
+
+    setMessages(msgs || [])
+    setIsLoading(false)
+  }
+
+  loadMessages()
+}, [conv.conversation_id, conv.page_id])
 
 // Substituir o useEffect do realtime de messages por:
 useEffect(() => {

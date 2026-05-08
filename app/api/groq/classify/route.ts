@@ -49,18 +49,18 @@ Se o cliente informou um valor claro (ex: "10", "dez reais", "50"), retorne:
       ? `\n\n## 🚨 REGRA CRÍTICA — AGUARDANDO MÉTODO DE PAGAMENTO:
 O cliente quer pagar, mas ainda não escolheu o método.
 
-1. SE O CLIENTE ESCOLHER O MÉTODO, MAS **NÃO INFORMAR O VALOR**:
+1. Se não reconhecer o método, pergunte novamente sem functionKey, nunca execute uma função sem ter todas as informações.
+
+2. SE O CLIENTE ESCOLHER O MÉTODO, MAS **NÃO INFORMAR O VALOR**:
 Você OBRIGATORIAMENTE deve retornar a functionKey com o prefixo "__pending__" para salvar o estado, e na response perguntar o valor.
 - Pix: {"response": "Qual o valor do Pix?", "functionKey": "__pending__pix_generate"}
 - Link: {"response": "Qual o valor do link?", "functionKey": "__pending__link_pagamento"}
 - Débito: {"response": "Qual o valor?", "functionKey": "__pending__nfc_debito"}
 - Crédito: {"response": "Qual o valor?", "functionKey": "__pending__nfc_credito"}
 
-2. SE O CLIENTE ESCOLHER O MÉTODO **E JÁ INFORMAR O VALOR** NA MESMA FRASE:
+3. SE O CLIENTE ESCOLHER O MÉTODO **E JÁ INFORMAR O VALOR** NA MESMA FRASE:
 Retorne a functionKey normal (sem pending) e confirme. Exemplo:
-{"response": "Gerando link agora.", "functionKey": "link_pagamento"}
-
-Se não reconhecer o método, pergunte novamente sem functionKey.`
+{"response": "Gerando link agora.", "functionKey": "link_pagamento"}.`
       : '';
 
     const completion = await groq.chat.completions.create({

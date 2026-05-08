@@ -35,7 +35,7 @@ const DIALOGUE_FUNCTIONS = ['chatgpt', 'orcamento', 'faq'];
 const META_FUNCTIONS = [
   'meta_reply', 'meta_comment',
   'pix_generate', 'pix_confirm', 'pix_check',
-  'faq', 'contact', 'nossa_marca', 'endereco', 'orcamento',
+  'faq', 'contacts', 'nossa_marca', 'endereco', 'orcamento',
   'consultar_cep', 'consultar_cnpj', 'consultar_cambio', 'consultar_cpf',
   'consultar_placa', 'restricoes_cpf', 'restricoes_cnpj', 'consultar_leilao',
   'consultar_ddd', 'consultar_feriados',
@@ -44,8 +44,8 @@ const META_FUNCTIONS = [
   'ver_agenda', 'horarios_disponiveis', 'agendar_compromisso',
   'cancelar_agendamento', 'confirmar_presenca', 'reagendar_compromisso',
   'enviar_email',
-]
-const RICH_FUNCTIONS = [...DIALOGUE_FUNCTIONS, ...META_FUNCTIONS]
+];
+const RICH_FUNCTIONS = [...DIALOGUE_FUNCTIONS, ...META_FUNCTIONS];
 const CONVERSATION_KEYS = RICH_FUNCTIONS;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -277,17 +277,16 @@ export default function HistoricoPage() {
       }
 
       if (META_FUNCTIONS.includes(log.function_key) && log.metadata) {
-         const u = log.metadata.user_input
-    || log.metadata.from_message
-    || log.metadata.comment_text
-    || log.metadata.message
-    || '';
-  const a = log.metadata.assistant_response
-    || log.metadata.reply_text
-    || log.metadata.response
-    || '';
-  if (u || a) return { ...log, realUserMessage: u, realAssistantMessage: a };
-  }
+        const u = log.metadata.user_input
+          || log.metadata.from_message
+          || log.metadata.comment_text
+          || log.metadata.message
+          || '';
+        const a = log.metadata.assistant_response
+          || log.metadata.reply_text
+          || log.metadata.response
+          || '';
+        if (u || a) return { ...log, realUserMessage: u, realAssistantMessage: a };
       }
 
       return log;

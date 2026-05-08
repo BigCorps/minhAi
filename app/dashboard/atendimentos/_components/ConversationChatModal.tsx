@@ -301,14 +301,37 @@ useEffect(() => {
     setIsSending(true);
 
     // Otimistic UI
-    const tempMsg: Message = {
-      id:              `temp_${Date.now()}`,
-      conversation_id: convId || '',
-      role:            'assistant',
-      content:         text.trim(),
-      created_at:      new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, tempMsg]);
+// Substituir o useEffect do realtime de messages por:
+useEffect(() => {
+  if (!convId) return
+
+  const channel = supabase
+    .channel(`chat_modal_messages_${convId}`)
+    .on(
+      'postgres_changes',
+      {
+        event:  'INSERT',
+        schema: 'public',
+        table:  'messages',
+        filter: `conversation_id=eq.${convId}`,
+      },
+      (payload: any) => {
+        const msg = payload.new as Message
+        setMessages((prev) => {
+          // Remover temp com mesmo conteúdo E substituir pelo real
+          const withoutTemp = prev.filter(
+            (m) => !(m.id.startsWith('temp_') && m.content === msg.content)
+          )
+          // Evitar duplicata por id real
+          if (withoutTemp.some((m) => m.id === msg.id)) return withoutTemp
+          return [...withoutTemp, msg]
+        })
+      }
+    )
+    .subscribe()
+
+  return () => { supabase.removeChannel(channel) }
+}, [convId])
     const sentText = text.trim();
     setText('');
 

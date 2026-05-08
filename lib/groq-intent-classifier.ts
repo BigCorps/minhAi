@@ -98,12 +98,11 @@ export async function classifyIntentWithGroq(
       } catch { /* silencioso */ }
     }
 
-    // Se for confirmação pura E tiver função sugerida recentemente,
-    // executa direto sem chamar o Groq — zero latência
-    if (isConfirmation(transcript) && sessionContext?.lastFunctions?.length) {
+    // Verifica se há uma função pendente esperando valor numérico
+    // (independente de ser confirmação — o cliente fala o valor direto)
+    if (sessionContext?.lastFunctions?.length) {
       const lastFunctionKey = sessionContext.lastFunctions[sessionContext.lastFunctions.length - 1];
 
-      // Função pendente esperando valor numérico (ex: link_pagamento sem valor)
       if (lastFunctionKey?.startsWith('__pending__')) {
         const pendingFunction = lastFunctionKey.replace('__pending__', '');
         const amountMatch = transcript.match(/(\d+(?:[,.]?\d{1,2})?)/);
@@ -129,10 +128,16 @@ export async function classifyIntentWithGroq(
           return true;
         }
         // Sem valor numérico — cai pro Groq para perguntar o valor
+      }
+    }
 
-      // Fix 3 — tratamento especial para __payment_choice__:
-      // quando o cliente responde "pix", "débito" ou "crédito", resolve direto
-      } else if (lastFunctionKey === '__payment_choice__') {
+    // Se for confirmação pura E tiver função sugerida recentemente,
+    // executa direto sem chamar o Groq — zero latência
+    if (isConfirmation(transcript) && sessionContext?.lastFunctions?.length) {
+      const lastFunctionKey = sessionContext.lastFunctions[sessionContext.lastFunctions.length - 1];
+
+      // Fix 3 — quando o cliente responde "pix", "débito" ou "crédito", resolve direto
+      if (lastFunctionKey === '__payment_choice__') {
         const resolved = resolvePaymentMethod(transcript);
         if (resolved) {
           console.log(`💳 Fix3: __payment_choice__ → ${transcript} → ${resolved}`);
@@ -211,23 +216,27 @@ export async function classifyIntentWithGroq(
 
       // Detecta se o transcript já contém um valor numérico
       const hasAmount = /\d+([,.]?\d{1,2})?/.test(transcript);
+      const functionsNeedingAmount = ['pix_generate', 'link_pagamento', 'nfc_debito', 'nfc_credito', 'tef_debito', 'tef_credito'];
+      const needsAmount = functionsNeedingAmount.includes(functionKey);
 
-      setTimeout(() => deps.onFunctionDetected!(functionKey), 300);
-
-      if (effectiveSessionId) {
-        const supabase = createClient();
-        const functionsNeedingAmount = ['pix_generate', 'link_pagamento', 'nfc_debito', 'nfc_credito', 'tef_debito', 'tef_credito'];
-
-        if (!hasAmount && functionsNeedingAmount.includes(functionKey)) {
-          // Sem valor — salva como pendente esperando o próximo transcript
-          console.log(`⏳ Função ${functionKey} pendente — aguardando valor`);
+      if (!hasAmount && needsAmount) {
+        // Sem valor — salva como pendente e NÃO dispara a função ainda
+        // O GROQ já falou a pergunta (ex: "Qual o valor?"), aguarda o próximo transcript
+        console.log(`⏳ Função ${functionKey} pendente — aguardando valor do cliente`);
+        if (effectiveSessionId) {
+          const supabase = createClient();
           supabase
             .from('assistant_sessions')
             .update({ last_function_keys: [`__pending__${functionKey}`] })
             .eq('id', effectiveSessionId)
             .then(() => {}).catch(() => {});
-        } else {
-          // Valor já informado ou função não precisa de valor — salva normalmente
+        }
+      } else {
+        // Tem valor ou função não precisa de valor — dispara normalmente
+        setTimeout(() => deps.onFunctionDetected!(functionKey), 300);
+
+        if (effectiveSessionId) {
+          const supabase = createClient();
           supabase
             .from('assistant_sessions')
             .update({ last_function_keys: [functionKey] })

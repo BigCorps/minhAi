@@ -40,7 +40,7 @@ Se NÃO contiver valor numérico, OBRIGATORIAMENTE retorne:
 {"response": "Qual o valor?"}
 NÃO diga "Abrindo" nem confirme a função sem ter o valor.`
 Se o transcript contiver valor numérico, retorne:
-{"response": "Gerando agora.", "functionKey": "${pendingFunction}"}
+{"response": "Gerando agora.", "functionKey": "${pendingFunction}"},
       : isPaymentChoice
       ? `\n\n## ATENÇÃO — AGUARDANDO MÉTODO DE PAGAMENTO:
 O cliente quer pagar mas ainda não escolheu o método.

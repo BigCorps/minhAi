@@ -221,28 +221,78 @@ export function ConversationChatModal({
     loadMessages();
   }, [conv.conversation_id, conv.page_id]);
 
-  // ── Realtime: novas mensagens ────────────────────────────────────────────
-  useEffect(() => {
-    if (!convId) return;
+// ── Realtime: novas mensagens na conversa atual ──────────────────────────
+useEffect(() => {
+  if (!convId) return
 
-    const channel = supabase
-      .channel(`chat_modal_${convId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${convId}` },
-        (payload: any) => {
-          const msg = payload.new as Message;
-          setMessages((prev) => {
-            // Evitar duplicata (ex: mensagem já adicionada otimisticamente)
-            if (prev.some((m) => m.id === msg.id)) return prev;
-            return [...prev, msg];
-          });
+  const channel = supabase
+    .channel(`chat_modal_messages_${convId}`)
+    .on(
+      'postgres_changes',
+      {
+        event:  'INSERT',
+        schema: 'public',
+        table:  'messages',
+        filter: `conversation_id=eq.${convId}`,
+      },
+      (payload: any) => {
+        const msg = payload.new as Message
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev
+          return [...prev, msg]
+        })
+      }
+    )
+    .subscribe()
+
+  return () => { supabase.removeChannel(channel) }
+}, [convId])
+
+// ── Realtime: detectar nova mensagem do usuário via conversation_ai_control ──
+useEffect(() => {
+  const channel = supabase
+    .channel(`chat_modal_ctrl_${conv.conversation_id}`)
+    .on(
+      'postgres_changes',
+      {
+        event:  'UPDATE',
+        schema: 'public',
+        table:  'conversation_ai_control',
+        filter: `conversation_id=eq.${conv.conversation_id}`,
+      },
+      async (payload: any) => {
+        const updated = payload.new
+
+        // Nova mensagem do usuário detectada — buscar mensagens atualizadas
+        if (updated.last_message_text) {
+          // Re-buscar conversation (pode ter sido criada nova)
+          const { data: convRow } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('meta_from_id', conv.conversation_id)
+            .eq('meta_page_id', conv.page_id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (convRow && convRow.id !== convId) {
+            // Nova conversation criada — atualizar convId e buscar mensagens
+            setConvId(convRow.id)
+            const { data: msgs } = await supabase
+              .from('messages')
+              .select('id, conversation_id, role, content, created_at')
+              .eq('conversation_id', convRow.id)
+              .order('created_at', { ascending: true })
+              .limit(60)
+            setMessages(msgs || [])
+          }
         }
-      )
-      .subscribe();
+      }
+    )
+    .subscribe()
 
-    return () => { supabase.removeChannel(channel); };
-  }, [convId]);
+  return () => { supabase.removeChannel(channel) }
+}, [conv.conversation_id, conv.page_id, convId])
 
   // ── Enviar mensagem ──────────────────────────────────────────────────────
   async function handleSend() {

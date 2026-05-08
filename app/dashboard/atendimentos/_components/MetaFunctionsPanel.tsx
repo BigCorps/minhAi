@@ -547,34 +547,34 @@ await supabase
           </div>
         </div>
 
-        {/* Desktop: flex-wrap centralizado */}
-        <div className="hidden sm:flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => setSelectedCategories([])}
-            className={`${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}
-          >
-            Todas as Funções
-          </button>
-          {filteredCategories.map(cat => {
-            const isSelected = selectedCategories.includes(cat.key);
-            return (
-              <button
-                key={cat.key}
-                onClick={() => setSelectedCategories(prev =>
-                  prev.includes(cat.key) ? prev.filter(k => k !== cat.key) : [...prev, cat.key]
-                )}
-                className={`${pillCommon} ${isSelected ? pillActiveColored : pillInactive}`}
-                style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
-              >
-                <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.85)' : cat.color }}
-                />
-                {cat.name}
-              </button>
-            );
-          })}
-        </div>
+{/* Desktop: sempre 10 colunas em tela grande, 5+5 em tela menor */}
+<div className="hidden sm:grid gap-2 grid-cols-5 lg:grid-cols-10">
+  <button
+    onClick={() => setSelectedCategories([])}
+    className={`${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}
+  >
+    Todas as Funções
+  </button>
+  {filteredCategories.map(cat => {
+    const isSelected = selectedCategories.includes(cat.key);
+    return (
+      <button
+        key={cat.key}
+        onClick={() => setSelectedCategories(prev =>
+          prev.includes(cat.key) ? prev.filter(k => k !== cat.key) : [...prev, cat.key]
+        )}
+        className={`${pillCommon} ${isSelected ? pillActiveColored : pillInactive}`}
+        style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
+      >
+        <span
+          className="w-2 h-2 rounded-full flex-shrink-0"
+          style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.85)' : cat.color }}
+        />
+        {cat.name}
+      </button>
+    );
+  })}
+</div>
       </div>
 
       {/* Cards */}

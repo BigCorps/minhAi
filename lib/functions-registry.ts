@@ -525,10 +525,6 @@ handler: async ({ playText, setActiveModal, companyId, transcript, sessionId }) 
     },
       });
 
-      return true;
-    },
-  },
-
 // ========================================
 // MODO FILA
 // ========================================

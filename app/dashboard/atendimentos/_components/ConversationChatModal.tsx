@@ -222,12 +222,13 @@ useEffect(() => {
   loadMessages()
 }, [conv.conversation_id, conv.page_id])
 
-// Substituir o useEffect do realtime de messages por:
+// ── Realtime: escuta mensagens novas E mudanças no controle da conversa ──
 useEffect(() => {
   if (!convId) return
 
-  const channel = supabase
-    .channel(`chat_modal_messages_${convId}`)
+  // Canal 1: mensagens novas na conversation atual
+  const msgChannel = supabase
+    .channel(`chat_msgs_${convId}`)
     .on(
       'postgres_changes',
       {
@@ -239,11 +240,9 @@ useEffect(() => {
       (payload: any) => {
         const msg = payload.new as Message
         setMessages((prev) => {
-          // Remover temp com mesmo conteúdo E substituir pelo real
           const withoutTemp = prev.filter(
             (m) => !(m.id.startsWith('temp_') && m.content === msg.content)
           )
-          // Evitar duplicata por id real
           if (withoutTemp.some((m) => m.id === msg.id)) return withoutTemp
           return [...withoutTemp, msg]
         })
@@ -251,13 +250,9 @@ useEffect(() => {
     )
     .subscribe()
 
-  return () => { supabase.removeChannel(channel) }
-}, [convId])
-
-// ── Realtime: detectar nova mensagem do usuário via conversation_ai_control ──
-useEffect(() => {
-  const channel = supabase
-    .channel(`chat_modal_ctrl_${conv.conversation_id}`)
+  // Canal 2: qualquer update no conversation_ai_control → recarrega tudo
+  const ctrlChannel = supabase
+    .channel(`chat_ctrl_${conv.conversation_id}`)
     .on(
       'postgres_changes',
       {
@@ -266,39 +261,38 @@ useEffect(() => {
         table:  'conversation_ai_control',
         filter: `conversation_id=eq.${conv.conversation_id}`,
       },
-      async (payload: any) => {
-        const updated = payload.new
+      async () => {
+        // Rebuscar todas as conversations e mensagens do contato
+        const { data: convRows } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('meta_from_id', conv.conversation_id)
+          .order('created_at', { ascending: false })
+          .limit(5)
 
-        // Nova mensagem do usuário detectada — buscar mensagens atualizadas
-        if (updated.last_message_text) {
-          // Re-buscar conversation (pode ter sido criada nova)
-          const { data: convRow } = await supabase
-            .from('conversations')
-            .select('id')
-            .eq('meta_from_id', conv.conversation_id)
-            .eq('meta_page_id', conv.page_id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
+        if (!convRows || convRows.length === 0) return
 
-          if (convRow && convRow.id !== convId) {
-            // Nova conversation criada — atualizar convId e buscar mensagens
-            setConvId(convRow.id)
-            const { data: msgs } = await supabase
-              .from('messages')
-              .select('id, conversation_id, role, content, created_at')
-              .eq('conversation_id', convRow.id)
-              .order('created_at', { ascending: true })
-              .limit(60)
-            setMessages(msgs || [])
-          }
-        }
+        const latestId = convRows[0].id
+        if (latestId !== convId) setConvId(latestId)
+
+        const convIds = convRows.map(c => c.id)
+        const { data: msgs } = await supabase
+          .from('messages')
+          .select('id, conversation_id, role, content, created_at')
+          .in('conversation_id', convIds)
+          .order('created_at', { ascending: true })
+          .limit(60)
+
+        setMessages(msgs || [])
       }
     )
     .subscribe()
 
-  return () => { supabase.removeChannel(channel) }
-}, [conv.conversation_id, conv.page_id, convId])
+  return () => {
+    supabase.removeChannel(msgChannel)
+    supabase.removeChannel(ctrlChannel)
+  }
+}, [convId, conv.conversation_id])
 
   // ── Enviar mensagem ──────────────────────────────────────────────────────
   async function handleSend() {

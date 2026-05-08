@@ -1189,7 +1189,7 @@ case 'impressao_recibo':
           await stopGoogleSpeech();
           setActiveModal({ type: 'LoginClienteDisplay', data: { profile, companyId, slug: slug ?? '' } });
           pt(profile ? `Olá ${profile.nome}! Sua conta está aberta.` : 'Abrindo sua conta. Faça login ou crie uma nova conta.').catch(() => {});
-          await registerFunctionUsage(companyId, functionKey, functionSettings[functionKey]?.creditsPerUse ?? 0);
+          await registerFunctionUsage(companyId, functionKey, functionSettings[functionKey]?.creditsPerUse);
           return;
         case 'segunda_via_boleto':
           setActiveModal({ type: 'SegundaViaBoletoDisplay', data: { companyId } });
@@ -1498,7 +1498,7 @@ case 'impressao_recibo':
           await stopGoogleSpeech();
           setActiveModal({ type: 'CadastrarProdutoDisplay', data: { companyId } });
           pt('Vou te guiar no cadastro do produto. Qual o nome?').catch(() => {});
-          await registerFunctionUsage(companyId, functionKey, functionSettings[functionKey]?.creditsPerUse ?? 0);
+          await registerFunctionUsage(companyId, functionKey, functionSettings[functionKey]?.creditsPerUse);
           return;
         case 'modo_venda': {
           await stopGoogleSpeech();
@@ -1545,7 +1545,7 @@ case 'impressao_recibo':
         }
       }
 
-      await registerFunctionUsage(companyId, functionKey, functionSettings[functionKey]?.creditsPerUse ?? 0);
+      await registerFunctionUsage(companyId, functionKey, functionSettings[functionKey]?.creditsPerUse);
     } catch (error) {
       console.error('Erro ao executar função:', error);
       await pt('Desculpe, ocorreu um erro ao executar esta função.');
@@ -2323,7 +2323,20 @@ const getStatusMessage = (maximized = false) => {
     );
   }
 
-  if (textMode) return null;
+  // ── RENDER: TEXT MODE — apenas modais, sem UI de voz ────────
+  if (textMode) {
+    return (
+      <ActionModals
+        activeModal={activeModal}
+        onClose={handleCloseModal}
+        theme={theme}
+        onConfirmPix={handleConfirmPixLocal}
+        onCancelPix={handleCancelPixLocal}
+        playText={playText}
+        printConfig={printConfig}
+      />
+    );
+  }
   // ── RENDER: NORMAL ────────────────────────────────────────
   return (
     <div className="w-full max-w-6xl mx-auto">
@@ -2562,7 +2575,7 @@ const getStatusMessage = (maximized = false) => {
         </div>
       </div>
 
-      <div style={textMode ? { position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: activeModal ? 'auto' : 'none' } : undefined}>
+      {!textMode && (
         <ActionModals
           activeModal={activeModal}
           onClose={handleCloseModal}
@@ -2572,7 +2585,7 @@ const getStatusMessage = (maximized = false) => {
           playText={playText}
           printConfig={printConfig}
         />
-      </div>
+      )}
     </div>
   );
 }

@@ -37,32 +37,30 @@ export async function POST(req: NextRequest) {
       ? `\n\n## 🚨 REGRA CRÍTICA — AGUARDANDO VALOR:
 O cliente já escolheu a função "${pendingFunction}", mas AINDA NÃO informou o valor.
 
-1. Se não reconhecer o método, pergunte novamente sem functionKey, nunca execute uma função sem ter todas as informações.
+1. SE O TRANSCRIPT NÃO CONTIVER VALOR NUMÉRICO:
+Retorne APENAS o JSON: {"response": "Qual o valor?"}
+(NÃO inclua functionKey).
 
-2. SE O TRANSCRIPT NÃO CONTIVER VALOR NUMÉRICO:
-Se o cliente não disse um valor exato na mensagem atual, OBRIGATORIAMENTE retorne APENAS:
-{"response": "Qual o valor?"}
-(NÃO inclua functionKey e NÃO confirme a operação).
-
-3. SE O TRANSCRIPT CONTIVER VALOR NUMÉRICO:
-Se o cliente informou um valor claro (ex: "10", "dez reais", "50"), retorne:
-{"response": "Gerando agora.", "functionKey": "${pendingFunction}"}`
+2. SE O TRANSCRIPT CONTIVER VALOR NUMÉRICO:
+Retorne: {"response": "Gerando agora.", "functionKey": "${pendingFunction}"}`
       : isPaymentChoice
       ? `\n\n## 🚨 REGRA CRÍTICA — AGUARDANDO MÉTODO DE PAGAMENTO:
 O cliente quer pagar, mas ainda não escolheu o método.
 
-1. Se não reconhecer o método, pergunte novamente sem functionKey, nunca execute uma função sem ter todas as informações.
+Como os métodos (Link, Débito e Crédito) possuem telas interativas próprias, você DEVE retornar a functionKey PADRÃO imediatamente, MESMO QUE O CLIENTE NÃO DIGA O VALOR.
 
-2. SE O CLIENTE ESCOLHER O MÉTODO, MAS **NÃO INFORMAR O VALOR**:
-Você OBRIGATORIAMENTE deve retornar a functionKey com o prefixo "__pending__" para salvar o estado, e na response perguntar o valor.
-- Pix: {"response": "Qual o valor do Pix?", "functionKey": "__pending__pix_generate"}
-- Link: {"response": "Qual o valor do link?", "functionKey": "__pending__link_pagamento"}
-- Débito: {"response": "Qual o valor?", "functionKey": "__pending__nfc_debito"}
-- Crédito: {"response": "Qual o valor?", "functionKey": "__pending__nfc_credito"}
+Mapeie a escolha e retorne OBRIGATORIAMENTE EM FORMATO JSON:
+- "link" → {"response": "Abrindo link de pagamento.", "functionKey": "link_pagamento"}
+- "débito" (celular) → {"response": "Preparando débito.", "functionKey": "nfc_debito"}
+- "crédito" (celular) → {"response": "Preparando crédito.", "functionKey": "nfc_credito"}
+- "débito" (maquininha) → {"response": "Preparando maquininha.", "functionKey": "tef_debito"}
+- "crédito" (maquininha) → {"response": "Preparando maquininha.", "functionKey": "tef_credito"}
 
-3. SE O CLIENTE ESCOLHER O MÉTODO **E JÁ INFORMAR O VALOR** NA MESMA FRASE:
-Retorne a functionKey normal (sem pending) e confirme. Exemplo:
-{"response": "Gerando link agora.", "functionKey": "link_pagamento"}.`
+REGRA EXCLUSIVA PARA O PIX (pois não tem tela própria):
+- Pix COM valor: {"response": "Gerando Pix.", "functionKey": "pix_generate"}
+- Pix SEM valor: {"response": "Qual o valor do Pix?", "functionKey": "__pending__pix_generate"}
+
+Responda APENAS com o JSON, sem adicionar texto fora das chaves.`
       : '';
 
     const completion = await groq.chat.completions.create({

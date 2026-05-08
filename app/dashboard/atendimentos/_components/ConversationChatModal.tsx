@@ -188,8 +188,13 @@ export function ConversationChatModal({
 useEffect(() => {
   async function loadMessages() {
     setIsLoading(true)
+    
+    console.log('🔍 DEBUG modal:', {
+      conversation_id: conv.conversation_id,
+      page_id: conv.page_id,
+      platform: conv.platform,
+    })
 
-    // Buscar as últimas 5 conversations desse contato
     const { data: convRows } = await supabase
       .from('conversations')
       .select('id')
@@ -197,6 +202,8 @@ useEffect(() => {
       .eq('meta_page_id', conv.page_id)
       .order('created_at', { ascending: false })
       .limit(5)
+
+    console.log('🔍 convRows encontradas:', convRows)
 
     if (!convRows || convRows.length === 0) {
       setIsLoading(false)

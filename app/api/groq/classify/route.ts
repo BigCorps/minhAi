@@ -37,12 +37,14 @@ export async function POST(req: NextRequest) {
       ? `\n\n## 🚨 REGRA CRÍTICA — AGUARDANDO VALOR:
 O cliente já escolheu a função "${pendingFunction}", mas AINDA NÃO informou o valor.
 
-1. SE O TRANSCRIPT NÃO CONTIVER VALOR NUMÉRICO:
+1. Se não reconhecer o método, pergunte novamente sem functionKey, nunca execute uma função sem ter todas as informações.
+
+2. SE O TRANSCRIPT NÃO CONTIVER VALOR NUMÉRICO:
 Se o cliente não disse um valor exato na mensagem atual, OBRIGATORIAMENTE retorne APENAS:
 {"response": "Qual o valor?"}
 (NÃO inclua functionKey e NÃO confirme a operação).
 
-2. SE O TRANSCRIPT CONTIVER VALOR NUMÉRICO:
+3. SE O TRANSCRIPT CONTIVER VALOR NUMÉRICO:
 Se o cliente informou um valor claro (ex: "10", "dez reais", "50"), retorne:
 {"response": "Gerando agora.", "functionKey": "${pendingFunction}"}`
       : isPaymentChoice

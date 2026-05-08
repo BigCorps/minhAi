@@ -706,19 +706,18 @@ export async function detectVoiceCommand(
     }
   }
 
-  // Se mencionou PIX mas não passou um valor válido
+// Se mencionou PIX mas não passou um valor válido
   if (lowerTranscript.includes('pix')) {
     if (deps.sessionId) {
       try {
         const { createClient } = await import('@/lib/supabase-browser');
         const supabase = createClient();
         
-        // Salva o contexto pendente no Supabase para que a próxima interação saiba que aguardamos o valor
+        // Salva o contexto pendente no Supabase (Removido o updated_at para evitar o Erro 400)
         await supabase
           .from('assistant_sessions')
           .update({ 
-            last_function_keys: ['__pending__pix_generate'],
-            updated_at: new Date().toISOString()
+            last_function_keys: ['__pending__pix_generate']
           })
           .eq('id', deps.sessionId)
           .eq('company_id', companyId);

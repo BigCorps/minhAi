@@ -37,7 +37,6 @@ async function getCreditsPerUse(companyId: string, functionKey: string): Promise
   }
   try {
     const supabase = createClient();
-    // Tenta buscar custom_credits_per_use da empresa primeiro
     const { data: setting } = await supabase
       .from('company_function_settings')
       .select('custom_credits_per_use')
@@ -50,7 +49,6 @@ async function getCreditsPerUse(companyId: string, functionKey: string): Promise
       return setting.custom_credits_per_use;
     }
 
-    // Fallback: credits_per_use global da função
     const { data: func } = await supabase
       .from('assistant_functions')
       .select('credits_per_use')
@@ -68,16 +66,14 @@ async function getCreditsPerUse(companyId: string, functionKey: string): Promise
 /**
  * Registra uso de uma função no Supabase via RPC.
  * Debita créditos da empresa automaticamente.
- * Se creditsConsumed não for informado (undefined), busca o valor correto
- * do banco — útil quando chamado antes do hook useFunctionSettings carregar.
+ * Se creditsConsumed não for informado, busca o valor correto do banco —
+ * útil quando chamado antes do hook useFunctionSettings carregar (ex: carrossel).
  */
 export async function registerFunctionUsage(
   companyId: string,
   functionKey: string,
   creditsConsumed?: number
 ): Promise<void> {
-  // Se não foi passado valor explícito, busca do banco (garante valor correto
-  // mesmo quando o carrossel dispara antes do hook useFunctionSettings hidratar)
   const credits = creditsConsumed ?? await getCreditsPerUse(companyId, functionKey);
   console.log('🔵 Registrando uso:', { functionKey, creditsConsumed: credits, companyId });
   try {
@@ -159,6 +155,8 @@ export async function checkIfFunctionIsEnabled(
 
 /**
  * Salva interação (pergunta + resposta) no histórico de conversas.
+ * Gera o UUID no cliente para evitar .select('id') após o insert —
+ * a policy de SELECT para anon exige auth.uid() e bloquearia a leitura.
  */
 export async function saveInteractionToHistory(
   companyId: string,
@@ -167,15 +165,16 @@ export async function saveInteractionToHistory(
 ): Promise<void> {
   try {
     const supabase = createClient();
-    const { data: conv, error: convError } = await supabase
+    const conversationId = crypto.randomUUID();
+
+    const { error: convError } = await supabase
       .from('conversations')
       .insert({
+        id: conversationId,
         company_id: companyId,
         status: 'completed',
         total_messages: 2,
-      })
-      .select('id')
-      .single();
+      });
 
     if (convError) {
       console.error('❌ Erro ao criar conversa:', convError);
@@ -183,11 +182,11 @@ export async function saveInteractionToHistory(
     }
 
     await supabase.from('messages').insert([
-      { conversation_id: conv.id, role: 'user', content: userMessage },
-      { conversation_id: conv.id, role: 'assistant', content: assistantMessage },
+      { conversation_id: conversationId, role: 'user', content: userMessage },
+      { conversation_id: conversationId, role: 'assistant', content: assistantMessage },
     ]);
 
-    console.log('✅ Salvo no histórico:', conv.id);
+    console.log('✅ Salvo no histórico:', conversationId);
   } catch (error) {
     console.error('❌ Erro ao salvar histórico:', error);
   }

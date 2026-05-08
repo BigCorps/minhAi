@@ -103,36 +103,54 @@ export async function classifyIntentWithGroq(
     if (isConfirmation(transcript) && sessionContext?.lastFunctions?.length) {
       const lastFunctionKey = sessionContext.lastFunctions[sessionContext.lastFunctions.length - 1];
 
+      // Função pendente esperando valor numérico (ex: link_pagamento sem valor)
+      if (lastFunctionKey?.startsWith('__pending__')) {
+        const pendingFunction = lastFunctionKey.replace('__pending__', '');
+        const amountMatch = transcript.match(/(\d+(?:[,.]?\d{1,2})?)/);
+
+        if (amountMatch) {
+          const amount = parseFloat(amountMatch[1].replace(',', '.'));
+          console.log(`💰 Valor ${amount} detectado → executando ${pendingFunction} com valor`);
+
+          if (effectiveSessionId) {
+            const supabase = createClient();
+            supabase
+              .from('assistant_sessions')
+              .update({ last_function_keys: [] })
+              .eq('id', effectiveSessionId)
+              .then(() => {}).catch(() => {});
+          }
+
+          await deps.playText('Gerando agora.');
+
+          if (deps.onFunctionDetected) {
+            setTimeout(() => deps.onFunctionDetected!(`${pendingFunction}:${amount}`), 300);
+          }
+          return true;
+        }
+        // Sem valor numérico — cai pro Groq para perguntar o valor
+
       // Fix 3 — tratamento especial para __payment_choice__:
       // quando o cliente responde "pix", "débito" ou "crédito", resolve direto
-// Função pendente esperando valor numérico
-if (lastFunctionKey?.startsWith('__pending__')) {
-  const pendingFunction = lastFunctionKey.replace('__pending__', '');
-  const amountMatch = transcript.match(/(\d+(?:[,.]?\d{1,2})?)/);
-
-  if (amountMatch) {
-    const amount = parseFloat(amountMatch[1].replace(',', '.'));
-    console.log(`💰 Valor ${amount} detectado → executando ${pendingFunction} com valor`);
-
-    if (effectiveSessionId) {
-      const supabase = createClient();
-      supabase
-        .from('assistant_sessions')
-        .update({ last_function_keys: [] })
-        .eq('id', effectiveSessionId)
-        .then(() => {}).catch(() => {});
-    }
-
-    await deps.playText(`Gerando agora.`);
-
-    if (deps.onFunctionDetected) {
-      // Dispara com o valor embutido no formato que o voiceCommandDetector já entende
-      setTimeout(() => deps.onFunctionDetected!(`${pendingFunction}:${amount}`), 300);
-    }
-    return true;
-  }
-}
-        // Não reconheceu o método (ex: respondeu "tá bom" sem especificar) — cai pro Groq
+      } else if (lastFunctionKey === '__payment_choice__') {
+        const resolved = resolvePaymentMethod(transcript);
+        if (resolved) {
+          console.log(`💳 Fix3: __payment_choice__ → ${transcript} → ${resolved}`);
+          await deps.playText('Abrindo agora.');
+          if (deps.onFunctionDetected) {
+            setTimeout(() => deps.onFunctionDetected!(resolved), 300);
+          }
+          if (effectiveSessionId) {
+            const supabase = createClient();
+            supabase
+              .from('assistant_sessions')
+              .update({ last_function_keys: [] })
+              .eq('id', effectiveSessionId)
+              .then(() => {}).catch(() => {});
+          }
+          return true;
+        }
+        // Não reconheceu o método — cai pro Groq
         console.log('💳 Fix3: __payment_choice__ — método não reconhecido, seguindo para Groq');
       } else {
         // Confirmação normal — executa última função sugerida
@@ -190,17 +208,33 @@ if (lastFunctionKey?.startsWith('__pending__')) {
     // Se Groq identificou uma função, executa após falar
     if (functionKey && deps.onFunctionDetected) {
       console.log(`⚡ GROQ dispara função: ${functionKey}`);
+
+      // Detecta se o transcript já contém um valor numérico
+      const hasAmount = /\d+([,.]?\d{1,2})?/.test(transcript);
+
       setTimeout(() => deps.onFunctionDetected!(functionKey), 300);
 
-      // Salva na sessão para que uma possível confirmação futura saiba qual foi a última função
       if (effectiveSessionId) {
         const supabase = createClient();
-        supabase
-          .from('assistant_sessions')
-          .update({ last_function_keys: [functionKey] })
-          .eq('id', effectiveSessionId)
-          .then(() => {})
-          .catch(() => {});
+        const functionsNeedingAmount = ['pix_generate', 'link_pagamento', 'nfc_debito', 'nfc_credito', 'tef_debito', 'tef_credito'];
+
+        if (!hasAmount && functionsNeedingAmount.includes(functionKey)) {
+          // Sem valor — salva como pendente esperando o próximo transcript
+          console.log(`⏳ Função ${functionKey} pendente — aguardando valor`);
+          supabase
+            .from('assistant_sessions')
+            .update({ last_function_keys: [`__pending__${functionKey}`] })
+            .eq('id', effectiveSessionId)
+            .then(() => {}).catch(() => {});
+        } else {
+          // Valor já informado ou função não precisa de valor — salva normalmente
+          supabase
+            .from('assistant_sessions')
+            .update({ last_function_keys: [functionKey] })
+            .eq('id', effectiveSessionId)
+            .then(() => {})
+            .catch(() => {});
+        }
       }
     } else if (!functionKey && effectiveSessionId) {
       // Fix 2 — Groq fez uma pergunta de esclarecimento:

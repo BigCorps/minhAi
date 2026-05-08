@@ -36,11 +36,11 @@ export async function POST(req: NextRequest) {
 const pendingInstruction = isPendingPayment
   ? `\n\n## ATENÇÃO — AGUARDANDO VALOR:
 O cliente já escolheu "${pendingFunction}" mas ainda não informou o valor.
-Se o transcript contiver valor numérico, retorne:
-{"response": "Gerando agora.", "functionKey": "${pendingFunction}"}
 Se NÃO contiver valor numérico, OBRIGATORIAMENTE retorne:
 {"response": "Qual o valor?"}
 NÃO diga "Abrindo" nem confirme a função sem ter o valor.`
+Se o transcript contiver valor numérico, retorne:
+{"response": "Gerando agora.", "functionKey": "${pendingFunction}"}
       : isPaymentChoice
       ? `\n\n## ATENÇÃO — AGUARDANDO MÉTODO DE PAGAMENTO:
 O cliente quer pagar mas ainda não escolheu o método.

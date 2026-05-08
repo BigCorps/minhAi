@@ -221,7 +221,7 @@ export function ConversationChatModal({
     loadMessages();
   }, [conv.conversation_id, conv.page_id]);
 
-// ── Realtime: novas mensagens na conversa atual ──────────────────────────
+// Substituir o useEffect do realtime de messages por:
 useEffect(() => {
   if (!convId) return
 
@@ -238,8 +238,13 @@ useEffect(() => {
       (payload: any) => {
         const msg = payload.new as Message
         setMessages((prev) => {
-          if (prev.some((m) => m.id === msg.id)) return prev
-          return [...prev, msg]
+          // Remover temp com mesmo conteúdo E substituir pelo real
+          const withoutTemp = prev.filter(
+            (m) => !(m.id.startsWith('temp_') && m.content === msg.content)
+          )
+          // Evitar duplicata por id real
+          if (withoutTemp.some((m) => m.id === msg.id)) return withoutTemp
+          return [...withoutTemp, msg]
         })
       }
     )
@@ -301,37 +306,14 @@ useEffect(() => {
     setIsSending(true);
 
     // Otimistic UI
-// Substituir o useEffect do realtime de messages por:
-useEffect(() => {
-  if (!convId) return
-
-  const channel = supabase
-    .channel(`chat_modal_messages_${convId}`)
-    .on(
-      'postgres_changes',
-      {
-        event:  'INSERT',
-        schema: 'public',
-        table:  'messages',
-        filter: `conversation_id=eq.${convId}`,
-      },
-      (payload: any) => {
-        const msg = payload.new as Message
-        setMessages((prev) => {
-          // Remover temp com mesmo conteúdo E substituir pelo real
-          const withoutTemp = prev.filter(
-            (m) => !(m.id.startsWith('temp_') && m.content === msg.content)
-          )
-          // Evitar duplicata por id real
-          if (withoutTemp.some((m) => m.id === msg.id)) return withoutTemp
-          return [...withoutTemp, msg]
-        })
-      }
-    )
-    .subscribe()
-
-  return () => { supabase.removeChannel(channel) }
-}, [convId])
+    const tempMsg: Message = {
+      id:              `temp_${Date.now()}`,
+      conversation_id: convId || '',
+      role:            'assistant',
+      content:         text.trim(),
+      created_at:      new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, tempMsg]);
     const sentText = text.trim();
     setText('');
 

@@ -124,11 +124,24 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     requiresPayment: false,
     isPremium: false,
 
-    handler: async ({ playText, setActiveModal, companyId, transcript }) => {
+handler: async ({ playText, setActiveModal, companyId, transcript, sessionId }) => {
       const amount = extractAmount(transcript ?? '');
 
       if (!amount) {
-        await playText('Por favor, informe o valor para gerar o link de pagamento.');
+        // Salva o contexto pendente para a próxima fala
+        if (sessionId) {
+          try {
+            const supabase = createClient();
+            await supabase
+              .from('assistant_sessions')
+              .update({ last_function_keys: ['__pending__link_pagamento'] })
+              .eq('id', sessionId)
+              .eq('company_id', companyId);
+          } catch (e) {
+            console.error('Erro ao salvar contexto pendente', e);
+          }
+        }
+        await playText('Qual o valor para gerar o link de pagamento?');
         return false;
       }
 
@@ -191,11 +204,29 @@ tef_debito: {
   requiresPayment: true,
   isPremium: false,
 
-  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+handler: async ({ transcript, playText, setActiveModal, companyId, sessionId }) => {
     const supabase = createClient()
 
     const amount = extractAmount(transcript ?? '')
 
+    // 1. Verifica se tem valor antes de continuar
+    if (!amount) {
+      if (sessionId) {
+        try {
+          await supabase
+            .from('assistant_sessions')
+            .update({ last_function_keys: ['__pending__tef_debito'] })
+            .eq('id', sessionId)
+            .eq('company_id', companyId);
+        } catch (e) {
+          console.error('Erro ao salvar contexto pendente para tef_debito', e);
+        }
+      }
+      await playText('Qual o valor para o pagamento no débito na maquininha?');
+      return false; // Interrompe para não abrir o modal sem valor
+    }
+
+    // 2. Se tem valor, continua o fluxo normal
     const { data: company } = await supabase
       .from('companies')
       .select('mp_access_token, mp_terminal_id')
@@ -208,9 +239,7 @@ tef_debito: {
     }
 
     await playText(
-      amount
-        ? `Preparando cobrança de ${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} no débito na maquininha.`
-        : 'Abrindo cobrança por débito na maquininha. Informe o valor.'
+      `Preparando cobrança de ${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} no débito na maquininha.`
     )
 
     setActiveModal?.({
@@ -218,7 +247,7 @@ tef_debito: {
       data: {
         companyId,
         paymentType: 'debit_card',
-        initialAmount: amount ? Math.round(amount * 100) : undefined,
+        initialAmount: Math.round(amount * 100),
       },
     })
 
@@ -263,12 +292,29 @@ tef_credito: {
   requiresPayment: true,
   isPremium: false,
 
-  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+handler: async ({ transcript, playText, setActiveModal, companyId, sessionId }) => {
     const supabase = createClient()
 
     const amount = extractAmount(transcript ?? '')
 
-    // Extrair parcelas do transcript
+    // 1. Verifica se tem valor antes de continuar
+    if (!amount) {
+      if (sessionId) {
+        try {
+          await supabase
+            .from('assistant_sessions')
+            .update({ last_function_keys: ['__pending__tef_credito'] })
+            .eq('id', sessionId)
+            .eq('company_id', companyId);
+        } catch (e) {
+          console.error('Erro ao salvar contexto pendente para tef_credito', e);
+        }
+      }
+      await playText('Qual o valor para o pagamento no crédito na maquininha?');
+      return false; // Interrompe para não abrir o modal sem valor
+    }
+
+    // 2. Se tem valor, continua o fluxo normal extraindo as parcelas
     const installmentsMatch = (transcript ?? '').match(/(\d{1,2})\s*(?:vezes|x\b|parcelas?)/)
     const installments = installmentsMatch ? Math.min(parseInt(installmentsMatch[1]), 12) : 1
 
@@ -296,23 +342,19 @@ tef_credito: {
     const parsedInstallments = Math.min(installments, maxInstallments)
     const installmentsCost = settings?.config?.installments_cost || 'seller'
 
-    if (amount) {
-      const amountStr = amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      await playText(
-        parsedInstallments > 1
-          ? `Preparando cobrança de ${amountStr} no crédito em ${parsedInstallments} vezes na maquininha.`
-          : `Preparando cobrança de ${amountStr} no crédito à vista na maquininha.`
-      )
-    } else {
-      await playText('Abrindo cobrança por crédito na maquininha. Informe o valor e as parcelas.')
-    }
+    const amountStr = amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    await playText(
+      parsedInstallments > 1
+        ? `Preparando cobrança de ${amountStr} no crédito em ${parsedInstallments} vezes na maquininha.`
+        : `Preparando cobrança de ${amountStr} no crédito à vista na maquininha.`
+    )
 
     setActiveModal?.({
       type: 'MercadoPagoPointDisplay',
       data: {
         companyId,
         paymentType: 'credit_card',
-        initialAmount: amount ? Math.round(amount * 100) : undefined,
+        initialAmount: Math.round(amount * 100),
         initialInstallments: parsedInstallments,
         maxInstallments,
         minInstallmentValueCents,
@@ -362,11 +404,24 @@ voiceTriggers: [
     requiresPayment: false,
     isPremium: false,
 
-    handler: async ({ playText, setActiveModal, companyId, transcript }) => {
+handler: async ({ playText, setActiveModal, companyId, transcript, sessionId }) => {
       const amount = extractAmount(transcript ?? '');
 
       if (!amount) {
-        await playText('Por favor, informe o valor para o pagamento no débito.');
+        // Salva o contexto pendente
+        if (sessionId) {
+          try {
+            const supabase = createClient();
+            await supabase
+              .from('assistant_sessions')
+              .update({ last_function_keys: ['__pending__nfc_debito'] })
+              .eq('id', sessionId)
+              .eq('company_id', companyId);
+          } catch (e) {
+            console.error('Erro ao salvar contexto pendente', e);
+          }
+        }
+        await playText('Qual o valor para o pagamento no débito?');
         return false;
       }
 
@@ -428,11 +483,24 @@ voiceTriggers: [
     requiresPayment: false,
     isPremium: false,
 
-    handler: async ({ playText, setActiveModal, companyId, transcript }) => {
+handler: async ({ playText, setActiveModal, companyId, transcript, sessionId }) => {
       const amount = extractAmount(transcript ?? '');
 
       if (!amount) {
-        await playText('Por favor, informe o valor para o pagamento no crédito.');
+        // Salva o contexto pendente
+        if (sessionId) {
+          try {
+            const supabase = createClient();
+            await supabase
+              .from('assistant_sessions')
+              .update({ last_function_keys: ['__pending__nfc_credito'] })
+              .eq('id', sessionId)
+              .eq('company_id', companyId);
+          } catch (e) {
+            console.error('Erro ao salvar contexto pendente', e);
+          }
+        }
+        await playText('Qual o valor para o pagamento no crédito?');
         return false;
       }
 
@@ -451,6 +519,10 @@ voiceTriggers: [
           nfc_payment_method: 'credit',
           amount_cents: Math.round(amount * 100),
         },
+      });
+
+      return true;
+    },
       });
 
       return true;

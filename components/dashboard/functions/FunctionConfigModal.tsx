@@ -3735,143 +3735,48 @@ const TocarMusicaForm = () => (
 // Seção reutilizável: Impressão Automática (gatilhos por plano)
 // ============================================================
 const PrintAutoSection = ({
-  settings, onChange, printKey, hasActivePlan, companyId, functionKey,
+  settings, onChange, printKey, hasActivePlan,
 }: {
   settings: any;
   onChange: (key: string, value: any) => void;
   printKey: 'local' | 'remota' | 'recibo';
   hasActivePlan: boolean;
-  companyId: string;
-  functionKey: string;
 }) => {
-  const supabase = createClient();
-  const [featureConfig, setFeatureConfig] = useState<any>({
-    enable_on_purchase: true,
-    enable_on_queue: true,
-    enable_on_payment: true,
-  });
-
-  useEffect(() => {
-    async function loadConfig() {
-      const { data } = await supabase
-        .from('company_function_settings')
-        .select('config')
-        .eq('company_id', companyId)
-        .eq('function_key', functionKey)
-        .maybeSingle();
-      if (data?.config) {
-        setFeatureConfig((prev: any) => ({ ...prev, ...data.config }));
-      }
-    }
-    loadConfig();
-  }, [companyId, functionKey]);
-
-  async function handleFeatureToggle(key: string, value: boolean) {
-    const newConfig = { ...featureConfig, [key]: value };
-    setFeatureConfig(newConfig);
-    await supabase
-      .from('company_function_settings')
-      .update({ config: newConfig, updated_at: new Date().toISOString() })
-      .eq('company_id', companyId)
-      .eq('function_key', functionKey);
-  }
-
-  const FEATURE_TOGGLES = [
-    {
-      key: 'enable_on_purchase',
-      label: 'Habilitar no Checkout (Modo Venda)',
-      description: 'Imprime recibo automaticamente ao finalizar compra.',
-    },
-    {
-      key: 'enable_on_queue',
-      label: 'Habilitar na Senha de Fila',
-      description: 'Imprime senha automaticamente ao entrar na fila.',
-    },
-    {
-      key: 'enable_on_payment',
-      label: 'Habilitar ao confirmar PIX',
-      description: 'Imprime comprovante automaticamente após PIX confirmado.',
-    },
-  ];
-
-  const TOGGLES = [
-    {
-      key: 'print_auto_type_purchase',
-      label: 'Impressão automática no Checkout',
-      description: 'Dispara sem nenhuma ação do usuário ao finalizar compra.',
-      value: settings.print_auto_type_purchase === printKey,
-    },
-    {
-      key: 'print_auto_type_queue',
-      label: 'Impressão automática na Fila',
-      description: 'Dispara sem nenhuma ação do usuário ao gerar senha.',
-      value: settings.print_auto_type_queue === printKey,
-    },
-    {
-      key: 'print_auto_type_payment',
-      label: 'Impressão automática no PIX',
-      description: 'Dispara sem nenhuma ação do usuário após PIX confirmado.',
-      value: settings.print_auto_type_payment === printKey,
-    },
-  ];
-
+const TOGGLES = [
+  { 
+    key: 'print_auto_type_purchase', // Antes era print_on_purchase
+    label: 'Imprimir ao finalizar compra', 
+    description: 'Imprime recibo automaticamente no Modo Venda.', 
+    value: settings.print_auto_type_purchase === printKey // Verifica se este formulário é o ativo para Vendas
+  },
+  { 
+    key: 'print_auto_type_queue', // Antes era print_on_queue
+    label: 'Imprimir senha da fila', 
+    description: 'Imprime a senha na fila de atendimento.', 
+    value: settings.print_auto_type_queue === printKey 
+  },
+  { 
+    key: 'print_auto_type_payment', // Antes era print_on_payment
+    label: 'Imprimir ao confirmar PIX', 
+    description: 'Imprime comprovante após confirmação de PIX.', 
+    value: settings.print_auto_type_payment === printKey 
+  },
+];
   return (
     <div className="space-y-3">
       <div className="border-t border-gray-200 dark:border-white/10 my-2" />
-
-      {/* ── NOVO: Contextos habilitados ── */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">
-            Disponível em
-          </p>
-        </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          Selecione onde o botão de impressão aparece para o usuário.
-        </p>
-        <div className="space-y-2">
-          {FEATURE_TOGGLES.map(({ key, label, description }) => (
-            <label key={key} className="flex items-center justify-between cursor-pointer gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
-              </div>
-              <div className="relative flex-shrink-0">
-                <input
-                  type="checkbox"
-                  checked={featureConfig[key] ?? true}
-                  onChange={e => handleFeatureToggle(key, e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
-              </div>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div className="border-t border-gray-200 dark:border-white/10 my-2" />
-
-      {/* ── EXISTENTE: Impressão automática ── */}
       <div className="flex items-center gap-2 mb-1">
         <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-        <p className="text-sm font-semibold text-gray-900 dark:text-white">
-          Impressão Automática
-        </p>
+        <p className="text-sm font-semibold text-gray-900 dark:text-white">Impressão Automática</p>
       </div>
       {!hasActivePlan && (
         <div className="p-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-              Requer plano mensal ativo
-            </p>
+            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">Requer plano mensal ativo</p>
             <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
               Esta funcionalidade só dispara automaticamente com um plano ativo.{' '}
-              <a href="/dashboard/credits" className="underline font-medium hover:text-amber-900 dark:hover:text-amber-100">
-                Contratar Agora →
-              </a>
+              <a href="/dashboard/credits" className="underline font-medium hover:text-amber-900 dark:hover:text-amber-100">Contratar Agora →</a>
             </p>
           </div>
         </div>
@@ -3884,23 +3789,24 @@ const PrintAutoSection = ({
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
             </div>
             <div className="relative flex-shrink-0">
-              <input
-                type="checkbox"
-                checked={value}
-                onChange={e => {
-                  const newValue = e.target.checked ? printKey : null;
-                  onChange(key, newValue);
-                }}
-                className="sr-only peer"
-                disabled={!hasActivePlan}
-              />
+              <input 
+  type="checkbox" 
+  checked={value} 
+  onChange={e => {
+    // Se ligar, salva o nome do tipo (ex: 'recibo'). Se desligar, salva vazio ou 'none'
+    const newValue = e.target.checked ? printKey : null;
+    onChange(key, newValue);
+  }}
+  className="sr-only peer" 
+  disabled={!hasActivePlan} 
+/>
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500" />
             </div>
           </label>
         ))}
       </div>
       <p className="text-xs text-gray-400 dark:text-gray-500 italic">
-        💡 Os toggles acima ativam a impressão 100% automática via esta impressora ({printKey}).
+        💡 Os toggles acima ativam a impressão automática via esta impressora ({printKey}) nos contextos indicados.
       </p>
     </div>
   );
@@ -3910,7 +3816,7 @@ const PrintAutoSection = ({
 // Formulário de configuração para Impressão Local (Nativa)
 // ============================================================
  
-const NativeConfigForm = ({ settings, onChange, hasActivePlan, companyId }: any) => {
+const NativeConfigForm = ({ settings, onChange, hasActivePlan }: any) => {
   const manualPaymentEnabled = settings.manual_payment_enabled ?? false;
   const pricePerPage = settings.print_price_per_page ?? 0.50;
   const maxPages = settings.print_max_pages_per_job ?? 50;
@@ -3986,14 +3892,7 @@ const NativeConfigForm = ({ settings, onChange, hasActivePlan, companyId }: any)
         <input type="number" step="1" min="1" max="200" value={maxPages} onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)} className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500" />
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Limite de páginas para evitar abusos</p>
       </div>
-      <PrintAutoSection
-  settings={settings}
-  onChange={onChange}
-  printKey="local"
-  hasActivePlan={hasActivePlan}
-  companyId={companyId}        // ← adicionar
-  functionKey="impressao_local" // ← adicionar
-/>
+      <PrintAutoSection settings={settings} onChange={onChange} printKey="local" hasActivePlan={hasActivePlan} />
     </div>
   );
 };
@@ -4002,7 +3901,7 @@ const NativeConfigForm = ({ settings, onChange, hasActivePlan, companyId }: any)
 // Formulário de configuração para Impressão Remota (PrintNode)
 // ============================================================
  
-const PrintNodeConfigForm = ({ settings, onChange, hasActivePlan, companyId }: any) => {
+const PrintNodeConfigForm = ({ settings, onChange, hasActivePlan }: any) => {
   const supabase = createClient();
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -4179,14 +4078,7 @@ const handleTestConnection = async () => {
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Máximo de Páginas</label>
         <input type="number" step="1" min="1" max="200" value={settings.print_max_pages_per_job ?? 50} onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)} className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500" />
       </div>
-      <PrintAutoSection
-  settings={settings}
-  onChange={onChange}
-  printKey="remota"
-  hasActivePlan={hasActivePlan}
-  companyId={companyId}         // ← adicionar
-  functionKey="impressao_remota" // ← adicionar
-/>
+      <PrintAutoSection settings={settings} onChange={onChange} printKey="remota" hasActivePlan={hasActivePlan} />
     </div>
   );
 };
@@ -4195,7 +4087,7 @@ const handleTestConnection = async () => {
 // Formulário de configuração para Impressão Recibo (Térmica)
 // ============================================================
  
-const ThermalConfigForm = ({ settings, onChange, hasActivePlan, companyId }: any) => {
+const ThermalConfigForm = ({ settings, onChange, hasActivePlan }: any) => {
   const [detectingPrinters, setDetectingPrinters] = useState(false);
   const [thermalPrinters, setThermalPrinters] = useState<any[]>([]);
   const [selectedPrinter, setSelectedPrinter] = useState<any>(null);
@@ -4327,14 +4219,7 @@ const ThermalConfigForm = ({ settings, onChange, hasActivePlan, companyId }: any
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Máximo de Páginas</label>
         <input type="number" step="1" min="1" max="200" value={maxPages} onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)} className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-green-500" />
       </div>
-      <PrintAutoSection
-  settings={settings}
-  onChange={onChange}
-  printKey="recibo"
-  hasActivePlan={hasActivePlan}
-  companyId={companyId}         // ← adicionar
-  functionKey="impressao_recibo" // ← adicionar
-/>
+      <PrintAutoSection settings={settings} onChange={onChange} printKey="recibo" hasActivePlan={hasActivePlan} />
     </div>
   );
 };

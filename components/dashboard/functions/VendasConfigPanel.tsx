@@ -17,7 +17,12 @@ import {
 // ── Funções disponíveis na versão Vendas ─────────────────────────────────────
 const VENDAS_FUNCTIONS: { key: string; name: string; icon: React.ReactNode; description: string }[] = [
   { key: 'modo_venda',          name: 'Modo Venda',           icon: <Disc className="w-4 h-4 text-gray-500" />,               description: 'Catálogo de produtos com carrinho de compras' },
+  { key: 'ver_produtos',        name: 'Ver Produtos',         icon: <ShoppingBag className="w-4 h-4 text-gray-500" />,         description: 'Consultar produtos do catálogo por voz' },
   { key: 'fazer_pedido',        name: 'Fazer Pedido',         icon: <ShoppingCart className="w-4 h-4 text-gray-500" />,        description: 'Pedido por voz com produtos do catálogo' },
+  { key: 'registrar_venda',     name: 'Registrar Venda',      icon: <Zap className="w-4 h-4 text-lime-500" />,                description: 'Registrar venda manualmente por voz' },
+  { key: 'cardapio',            name: 'Cardápio',             icon: <Disc className="w-4 h-4 text-orange-400" />,              description: 'Exibir cardápio digital para o cliente' },
+  { key: 'minha_conta',         name: 'Minha Conta',          icon: <Building2 className="w-4 h-4 text-gray-500" />,          description: 'Consultar saldo e dados da conta' },
+  { key: 'cadastrar_produto',   name: 'Cadastrar Produto',    icon: <ShoppingBag className="w-4 h-4 text-blue-400" />,         description: 'Adicionar produto ao catálogo por voz' },
   { key: 'pix_generate',        name: 'PIX',                  icon: <Banknote className="w-4 h-4 text-green-500" />,           description: 'Cobrar via PIX (Banco Inter)' },
   { key: 'nfc_debito',          name: 'NFC Débito',           icon: <CreditCard className="w-4 h-4 text-red-500" />,           description: 'Pagamento por aproximação no débito (InfinitePay)' },
   { key: 'nfc_credito',         name: 'NFC Crédito',          icon: <CreditCard className="w-4 h-4 text-red-500" />,           description: 'Pagamento por aproximação no crédito (InfinitePay)' },
@@ -28,6 +33,7 @@ const VENDAS_FUNCTIONS: { key: string; name: string; icon: React.ReactNode; desc
   { key: 'ver_agenda',          name: 'Ver Agenda',           icon: <Calendar className="w-4 h-4 text-pink-400" />,            description: 'Consultar compromissos do Google Calendar' },
   { key: 'chatgpt',             name: 'Perguntas Gerais',     icon: <MessageCircleQuestion className="w-4 h-4 text-blue-500" />, description: 'Assistente IA para dúvidas gerais' },
   { key: 'nossa_marca',         name: 'Nossa Marca',          icon: <Building2 className="w-4 h-4 text-gray-500" />,           description: 'Informações da empresa, endereço e horários' },
+  { key: 'meu_sistema',         name: 'Meu Sistema',          icon: <Terminal className="w-4 h-4 text-lime-600" />,            description: 'Acesso ao sistema interno (obrigatório)' },
 ];
 
 // ── Tipos de chave PIX ────────────────────────────────────────────────────────
@@ -175,6 +181,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
         const map: Record<string, boolean> = {};
         VENDAS_FUNCTIONS.forEach(f => { map[f.key] = false; });
         (settings || []).forEach((s: any) => { map[s.function_key] = s.is_enabled; });
+        map['meu_sistema'] = true; // sempre habilitado
         setEnabledFunctions(map);
 
         // Google Calendar conectado?
@@ -548,10 +555,12 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
                 </div>
                 <button
                   type="button"
-                  onClick={() => toggleFunction(fn.key)}
+                  onClick={() => fn.key !== 'meu_sistema' && toggleFunction(fn.key)}
+                  disabled={fn.key === 'meu_sistema'}
+                  title={fn.key === 'meu_sistema' ? 'Esta função é obrigatória e não pode ser desativada' : undefined}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
                     isOn ? 'bg-lime-500' : 'bg-gray-300 dark:bg-white/20'
-                  }`}
+                  } ${fn.key === 'meu_sistema' ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${

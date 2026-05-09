@@ -264,7 +264,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-lime-500" />
       </div>
     );
   }
@@ -288,7 +288,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
       {/* ── 1. Identidade do Assistente ─────────────────────────────────────── */}
       <Section
         title="Identidade do Assistente"
-        icon={<Bot className="w-5 h-5 text-amber-500" />}
+        icon={<Bot className="w-5 h-5 text-lime-500" />}
         defaultOpen
       >
         <Field
@@ -496,9 +496,9 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-800 dark:text-amber-200">
+            <div className="flex items-start gap-3 p-3 bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-800 rounded-lg">
+              <AlertCircle className="w-4 h-4 text-lime-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-lime-800 dark:text-lime-200">
                 Google Calendar não conectado. Conecte para habilitar as funções de Agendamento e Ver Agenda.
               </p>
             </div>
@@ -517,7 +517,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
       {/* ── 7. Funções Disponíveis ─────────────────────────────────────────── */}
       <Section
         title="Funções do Assistente"
-        icon={<Zap className="w-5 h-5 text-amber-500" />}
+        icon={<Zap className="w-5 h-5 text-lime-500" />}
         defaultOpen
       >
         <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -532,7 +532,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
                 key={fn.key}
                 className={`flex items-center justify-between p-3 rounded-lg border transition ${
                   isOn
-                    ? 'border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-900/10'
+                    ? 'border-lime-200 dark:border-lime-500/30 bg-lime-50 dark:bg-lime-900/10'
                     : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.02]'
                 }`}
               >
@@ -542,7 +542,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
                     <p className="text-sm font-medium text-gray-900 dark:text-white">{fn.name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{fn.description}</p>
                     {needsGoogle && !googleConnected && (
-                      <p className="text-[10px] text-amber-500 mt-0.5">Requer Google Calendar conectado</p>
+                      <p className="text-[10px] text-lime-500 mt-0.5">Requer Google Calendar conectado</p>
                     )}
                   </div>
                 </div>
@@ -550,7 +550,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
                   type="button"
                   onClick={() => toggleFunction(fn.key)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
-                    isOn ? 'bg-amber-500' : 'bg-gray-300 dark:bg-white/20'
+                    isOn ? 'bg-lime-500' : 'bg-gray-300 dark:bg-white/20'
                   }`}
                 >
                   <span

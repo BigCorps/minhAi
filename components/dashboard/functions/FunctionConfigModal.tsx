@@ -3828,6 +3828,7 @@ const NativeConfigForm = ({ settings, onChange, hasActivePlan }: any) => {
           <strong>Impressão Local:</strong> Usa a impressora nativa do dispositivo.
         </p>
         <ul className="text-sm text-purple-700 dark:text-purple-300 space-y-1">
+          <li>• Ao ativar a função, você disponibiliza ele como função, para disponibilar apenas para impressões especificas, selecione as opções abaixo e deixe a função inativa.</li>
           <li>• Funciona em qualquer dispositivo (desktop, tablet, mobile)</li>
           <li>• Cliente escolhe a impressora e confirma</li>
           <li>• Sem custo mensal</li>
@@ -3965,6 +3966,7 @@ const handleTestConnection = async () => {
       <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-200 dark:border-indigo-800">
         <p className="text-sm text-indigo-800 dark:text-indigo-200 mb-2"><strong>Impressão Remota:</strong> Impressão 100% automática via PrintNode.</p>
         <ul className="text-sm text-indigo-700 dark:text-indigo-300 space-y-1">
+          <li>• Ao ativar a função, você disponibiliza ele como função, para disponibilar apenas para impressões especificas, selecione as opções abaixo e deixe a função inativa.</li>
           <li>• Documento enviado automaticamente para a impressora</li>
           <li>• Ideal para desktop sem touch</li>
           <li>• Suporta filas separadas para P&B e Colorida</li>
@@ -4143,6 +4145,7 @@ const ThermalConfigForm = ({ settings, onChange, hasActivePlan }: any) => {
       <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
         <p className="text-sm text-green-800 dark:text-green-200 mb-2"><strong>Impressão Térmica:</strong> Para PDV, Totens e TEF.</p>
         <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
+          <li>• Ao ativar a função, você disponibiliza ele como função, para disponibilar apenas para impressões especificas, selecione as opções abaixo e deixe a função inativa.</li>
           <li>• Conecta via USB ou Bluetooth diretamente</li>
           <li>• Ideal para recibos e cupons fiscais</li>
         </ul>

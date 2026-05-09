@@ -13,15 +13,20 @@ interface PixDeps {
   setPixConfirmationData: (data: PixConfirmationData | null) => void;
   playText: (text: string) => Promise<void>;
   functionSettings: Record<string, FunctionSettings>;
+  // Opcional: quando fornecido, abre via ActionModals (necessário no modo texto,
+  // onde o AvatarFace não é renderizado)
+  setActiveModal?: (modal: { type: string; data: any } | null) => void;
 }
 
 /**
  * Gera um PIX via Edge Function do Supabase.
+ * Quando setActiveModal está disponível (modo texto), exibe via PIXConfirmationModal
+ * em vez de setPixConfirmationData (que só aparece no AvatarFace).
  * ⚠️ NÃO salva no histórico — apenas confirmação salva.
  */
 export async function handlePixCommand(
   amount: number,
-  { companyId, setIsProcessing, setPixConfirmationData, playText }: PixDeps
+  { companyId, setIsProcessing, setPixConfirmationData, playText, setActiveModal }: PixDeps
 ): Promise<void> {
   try {
     setIsProcessing(true);
@@ -37,12 +42,20 @@ export async function handlePixCommand(
 
     const data = response.data;
 
-    setPixConfirmationData({
+    const pixData: PixConfirmationData = {
       transactionId: data.transaction_id,
       amount: data.amount_brl,
       qrCodeUrl: data.qr_code_url,
       pixCode: data.pix_code,
-    });
+    };
+
+    if (setActiveModal) {
+      // Modo texto: renderiza via ActionModals (portal no document.body)
+      setActiveModal({ type: 'PIXConfirmationModal', data: pixData });
+    } else {
+      // Modo voz/padrão: renderiza dentro do AvatarFace
+      setPixConfirmationData(pixData);
+    }
 
     await playText(`PIX de ${amount.toFixed(2).replace('.', ',')} reais gerado. Aguardando confirmação.`);
 
@@ -60,7 +73,7 @@ export async function handlePixCommand(
  */
 export async function handleConfirmPix(
   pixConfirmationData: PixConfirmationData | null,
-  { companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings }: PixDeps
+  { companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings, setActiveModal }: PixDeps
 ): Promise<void> {
   console.log('🔘 handleConfirmPix chamada');
 
@@ -92,11 +105,16 @@ export async function handleConfirmPix(
     }
 
     console.log('✅ PIX confirmado:', data);
-    setPixConfirmationData(null);
+
+    // Fecha o modal independente do modo
+    if (setActiveModal) {
+      setActiveModal(null);
+    } else {
+      setPixConfirmationData(null);
+    }
 
     await playText('Pagamento confirmado com sucesso!');
 
-    // ✅ Sempre salva no histórico após confirmação bem-sucedida
     await saveInteractionToHistory(
       companyId,
       `PIX de R$ ${pixConfirmationData.amount} confirmado`,
@@ -122,7 +140,7 @@ export async function handleConfirmPix(
  */
 export async function handleCancelPix(
   pixConfirmationData: PixConfirmationData | null,
-  { companyId, setIsProcessing, setPixConfirmationData, playText }: PixDeps
+  { companyId, setIsProcessing, setPixConfirmationData, playText, setActiveModal }: PixDeps
 ): Promise<void> {
   console.log('🔘 handleCancelPix chamada');
 
@@ -144,7 +162,14 @@ export async function handleCancelPix(
     if (response.error) throw response.error;
 
     console.log('✅ PIX cancelado');
-    setPixConfirmationData(null);
+
+    // Fecha o modal independente do modo
+    if (setActiveModal) {
+      setActiveModal(null);
+    } else {
+      setPixConfirmationData(null);
+    }
+
     await playText('PIX cancelado.');
   } catch (error: any) {
     console.error('❌ Erro cancelar PIX:', error);

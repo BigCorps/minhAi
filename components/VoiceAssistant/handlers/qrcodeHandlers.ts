@@ -12,15 +12,19 @@ interface QRCodeHandlerDeps {
   setIsProcessing: (v: boolean) => void;
   setQrCodeData: (data: QRCodeData | null) => void;
   playText: (text: string) => Promise<void>;
+  // Opcional: quando fornecido, abre via ActionModals (necessário no modo texto)
+  setActiveModal?: (modal: { type: string; data: any } | null) => void;
 }
 
 /**
  * Handler genérico para QR Codes (email, linkedin, tiktok, twitter, telefone, website, facebook).
  * Centraliza a lógica que se repetia em cada handleXxxCommand().
+ * Quando setActiveModal está disponível (modo texto), usa QRCodeDisplay via ActionModals
+ * em vez de setQrCodeData (que só aparece no AvatarFace, ausente no modo texto).
  */
 export async function handleQRCodeCommand(
   qrType: string,
-  { companyId, setIsProcessing, setQrCodeData, playText }: QRCodeHandlerDeps
+  { companyId, setIsProcessing, setQrCodeData, playText, setActiveModal }: QRCodeHandlerDeps
 ): Promise<void> {
   try {
     setIsProcessing(true);
@@ -34,13 +38,21 @@ export async function handleQRCodeCommand(
 
     const data = response.data;
 
-    setQrCodeData({
+    const qrCodeData: QRCodeData = {
       type: qrType as QRCodeData['type'],
       qrCodeUrl: data.qr_code_url,
       qrContent: data.qr_content,
       displayText: data.display_text,
       companyName: data.company_name,
-    });
+    };
+
+    if (setActiveModal) {
+      // Modo texto: renderiza via ActionModals (portal no document.body)
+      setActiveModal({ type: 'QRCodeDisplay', data: qrCodeData });
+    } else {
+      // Modo voz/padrão: renderiza dentro do AvatarFace
+      setQrCodeData(qrCodeData);
+    }
 
     const speechMap: Record<string, string> = {
       whatsapp: `Aqui está o WhatsApp: ${data.display_text}`,

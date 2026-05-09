@@ -42,7 +42,7 @@ const FUNCOES_VENDAS = [
   { label: 'Nossa Marca',         desc: 'Infos, endereço e horários' },
   { label: 'Minha Conta',         desc: 'Saldo e dados da conta' },
   { label: 'Cadastrar Produto',   desc: 'Adiciona produto por voz' },
-  { label: 'Meu Sistema ⚠️',     desc: 'Obrigatório — sempre ativo' },
+  { label: 'Sobre o Sistema',     desc: 'Informações sobre a minhAi' },
 ];
 
 export default function PrecosSection({ theme = 'dark' }: PrecosProps) {

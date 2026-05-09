@@ -115,7 +115,7 @@ export default function AssistentesClient({
                           </span>
                         )}
                         {assistant.assistant_type === 'vendas' && (
-                          <span className="flex items-center text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 font-bold">
+                          <span className="flex items-center text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 font-bold">
                             <Zap className="w-3 h-3 mr-1" /> Versão Vendas · 10% comissão
                           </span>
                         )}

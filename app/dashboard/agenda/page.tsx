@@ -135,18 +135,67 @@ function AgendaPageContent() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('calendar');
   const [gbpSubTab, setGbpSubTab] = useState<GBPSubTab>('info');
-
+  const [assistantType, setAssistantType] = useState<string | null>(null);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  
   const router = useRouter();
   const supabase = createClient();
 
-  useEffect(() => {
-    if (selectedCompanyId) {
-      loadGoogleAccount(selectedCompanyId);
-    } else {
+useEffect(() => {
+    if (!selectedCompanyId) {
       setGoogleAccount(null);
       setEvents([]);
       setSentEmails([]);
+      setAssistantType(null);
+      setCheckingAccess(false);
+      return;
     }
+
+    async function checkAccessAndLoad() {
+      setCheckingAccess(true);
+
+      // Verificar assistant_type
+      const { data: company } = await supabase
+        .from('companies')
+        .select('assistant_type')
+        .eq('id', selectedCompanyId)
+        .single();
+
+      const type = company?.assistant_type ?? 'smart';
+      setAssistantType(type);
+
+      // Versão Vendas: acesso liberado direto
+      if (type === 'vendas') {
+        setCheckingAccess(false);
+        loadGoogleAccount(selectedCompanyId);
+        return;
+      }
+
+      // Versão Smart: verificar plano
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push('/dashboard/credits?requires_plan=1'); return; }
+
+      const { data: credits } = await supabase
+        .from('user_credits')
+        .select('has_active_plan, plan_expires_at')
+        .eq('user_id', user.id)
+        .single();
+
+      const hasActivePlan =
+        credits?.has_active_plan === true &&
+        credits?.plan_expires_at != null &&
+        new Date(credits.plan_expires_at) > new Date();
+
+      if (!hasActivePlan) {
+        router.push('/dashboard/credits?requires_plan=1');
+        return;
+      }
+
+      setCheckingAccess(false);
+      loadGoogleAccount(selectedCompanyId);
+    }
+
+    checkAccessAndLoad();
   }, [selectedCompanyId]);
 
   useEffect(() => {
@@ -426,6 +475,13 @@ function AgendaPageContent() {
   ];
 
   return (
+    if (checkingAccess) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-transparent">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
     <div className="min-h-screen bg-transparent">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">

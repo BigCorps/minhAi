@@ -10,6 +10,7 @@ import { useTheme } from 'next-themes';
 import { Search, Settings, User } from 'lucide-react';
 import FunctionCard from '@/components/dashboard/functions/FunctionCard';
 import FunctionConfigModal from '@/components/dashboard/functions/FunctionConfigModal';
+import VendasConfigPanel from '@/components/dashboard/functions/VendasConfigPanel';
 
 interface AssistantFunction {
   id: string;
@@ -273,6 +274,7 @@ function FunctionsPageContent() {
   const [tiposDisponiveis, setTiposDisponiveis] = useState<string[]>([]);
   const [selectedTipo, setSelectedTipo] = useState<string | null>(null); // null = principal
 
+  const [assistantType, setAssistantType] = useState<string>('smart');
   const supabase = createClient();
 
   const { toast } = useToast();
@@ -314,6 +316,13 @@ async function handleSendSuggestion() {
   async function loadData(selectedCompanyId: string) {
     try {
       setLoading(true);
+      const { data: companyType } = await supabase
+        .from('companies')
+        .select('assistant_type, name')
+        .eq('id', selectedCompanyId)
+        .single();
+      setAssistantType(companyType?.assistant_type ?? 'smart');
+      const companyNameForPanel = companyType?.name ?? '';
 
       // ── Incluídos enabled_meta e enabled_gpt para renderizar os badges ──
       const { data: allFunctions, error: functionsError } = await supabase
@@ -535,6 +544,19 @@ async function handleSendSuggestion() {
         </div>
       );
     });
+  }
+
+if (assistantType === 'vendas' && companyId) {
+    return (
+      <div className="min-h-screen bg-transparent py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
+          <VendasConfigPanel
+            companyId={companyId}
+            companyName={selectedAssistantName || ''}
+          />
+        </div>
+      </div>
+    );
   }
 
   return (

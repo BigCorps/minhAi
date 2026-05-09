@@ -137,21 +137,27 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
     host.endsWith(d) && !host.startsWith('www.')
   );
 
+const isVendas = company.assistant_type === 'vendas';
+
   // ── Verificação de webapp (só se vier pelo subdomínio) ───────────────────
   if (viaSubdomain) {
-    if (!company.webapp_enabled) {
-      return <WebappInativo company={company} motivo="nao_configurado" />;
-    }
+    // Versão Vendas: webapp sempre liberado para este assistente
+    if (!isVendas) {
+      if (!company.webapp_enabled) {
+        return <WebappInativo company={company} motivo="nao_configurado" />;
+      }
 
-    const webappOk = await checkWebappEligibility(company.id);
-    if (!webappOk) {
-      return <WebappInativo company={company} motivo="plano_expirado" />;
+      const webappOk = await checkWebappEligibility(company.id);
+      if (!webappOk) {
+        return <WebappInativo company={company} motivo="plano_expirado" />;
+      }
     }
   }
 
   // ── Verificação de acesso (créditos ou plano ativo) ──────────────────────
-  const hasAccess = await checkUserAccess(company.id);
-  console.log('🔍 Verificação:', { companyId: company.id, hasAccess, viaSubdomain });
+  // Versão Vendas: acesso sempre liberado (modelo gratuito + comissão)
+  const hasAccess = isVendas || await checkUserAccess(company.id);
+  console.log('🔍 Verificação:', { companyId: company.id, hasAccess, viaSubdomain, isVendas });
 
   if (!hasAccess) {
     return (
@@ -184,7 +190,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
     );
   }
 
-  return (
+return (
     <AssistenteClient
       company={{
         id: company.id,
@@ -200,6 +206,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
         modo_vendas_enabled: company.modo_vendas_enabled ?? false,
         modo_fila_enabled: company.modo_fila_enabled ?? false,
         modo_links_enabled: company.modo_links_enabled ?? false,
+        assistant_type: company.assistant_type ?? 'smart',
       }}
     />
   );

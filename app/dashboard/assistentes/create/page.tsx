@@ -121,6 +121,9 @@ export default function NovaEmpresaPage() {
   const [greetingMessage, setGreetingMessage] = useState('Olá! Como posso ajudar você hoje?');
   const [isPublic, setIsPublic] = useState(true);
 
+  // ── Tipo do assistente ───────────────────────────────────
+  const [assistantType, setAssistantType] = useState<'smart' | 'vendas'>('smart');
+
   // ── WebApp state ─────────────────────────────────────────
   const [wantWebapp, setWantWebapp] = useState(false);
   const [hasConsultingPlan, setHasConsultingPlan] = useState(false);
@@ -301,6 +304,7 @@ export default function NovaEmpresaPage() {
           wake_word: wakeWord || 'olá assistente',
           greeting_message: greetingMessage || 'Olá! Como posso ajudar você hoje?',
           is_public: isPublic,
+          assistant_type: assistantType,
         }),
       });
 
@@ -460,6 +464,68 @@ export default function NovaEmpresaPage() {
                 <input type="url" value={logoUrl} onChange={e => setLogoUrl(e.target.value)}
                   placeholder="https://exemplo.com/logo.png"
                   className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white transition" />
+              </div>
+
+{/* ── Tipo do Assistente ───────────────────────────── */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Modelo do Assistente
+                </label>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+                  Esta escolha é permanente e não pode ser alterada após a criação.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => { setAssistantType('smart'); setWantWebapp(false); }}
+                    className={`flex items-start p-4 rounded-xl border-2 transition-all text-left ${
+                      assistantType === 'smart'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10'
+                        : 'border-gray-200 dark:border-white/10 hover:border-blue-400/50'
+                    }`}
+                  >
+                    <Sparkles className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${assistantType === 'smart' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
+                    <div>
+                      <p className={`font-bold text-sm ${assistantType === 'smart' ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                        minhAi Smart
+                      </p>
+                      <p className="text-[10px] opacity-70 mt-0.5 leading-tight">
+                        Planos mensais + créditos por uso. Acesso a todas as funções.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setAssistantType('vendas'); setWantWebapp(false); }}
+                    className={`flex items-start p-4 rounded-xl border-2 transition-all text-left ${
+                      assistantType === 'vendas'
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10'
+                        : 'border-gray-200 dark:border-white/10 hover:border-amber-400/50'
+                    }`}
+                  >
+                    <Zap className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${assistantType === 'vendas' ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`} />
+                    <div>
+                      <p className={`font-bold text-sm ${assistantType === 'vendas' ? 'text-amber-700 dark:text-amber-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                        minhAi Vendas
+                      </p>
+                      <p className="text-[10px] opacity-70 mt-0.5 leading-tight">
+                        Gratuito. Comissão de 10% por venda + 1% no saque.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+
+                {assistantType === 'vendas' && (
+                  <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                        No modo Vendas, o assistente é gratuito e o webapp já vem incluído. A minhAi retém 10% sobre cada venda confirmada, mais 1% no momento do saque via PIX. As taxas de InfinitePay e Mercado Pago são cobradas diretamente por eles.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Visibilidade */}

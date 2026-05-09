@@ -91,7 +91,7 @@ function sanitizeInput(text: string): { safe: string; blocked: boolean; reason?:
   return { safe: cleaned, blocked: false };
 }
 
-// ─── findMatchingFAQ: NÃO acessa formData — recebe apenas supabase + companyId + question ──
+// ─── findMatchingFAQ ──────────────────────────────────────────────────────
 
 async function findMatchingFAQ(supabase: any, companyId: string, question: string) {
   console.log('=== FAQ MATCHING ===');
@@ -164,6 +164,8 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
   return bestMatch;
 }
 
+// ─── findMatchingHint ─────────────────────────────────────────────────────
+
 async function findMatchingHint(
   supabase: any,
   companyId: string,
@@ -202,12 +204,79 @@ async function findMatchingHint(
   }
 }
 
+// ─── fetchRAGContext (NOVO) ───────────────────────────────────────────────
+
+async function fetchRAGContext(
+  supabase: any,
+  companyId: string,
+  userMessage: string,
+): Promise<string | null> {
+  try {
+    const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'text-embedding-3-small',
+        input: userMessage,
+      }),
+    });
+
+    if (!embeddingResponse.ok) {
+      console.warn('⚠️ RAG: falha ao gerar embedding:', embeddingResponse.status);
+      return null;
+    }
+
+    const embeddingData = await embeddingResponse.json();
+    const queryEmbedding: number[] = embeddingData.data[0].embedding;
+
+    const { data: matches, error } = await supabase.rpc('match_context', {
+      query_embedding: queryEmbedding,
+      p_company_id: companyId,
+      product_threshold: 0.75,
+      faq_threshold: 0.80,
+      product_count: 6,
+      faq_count: 3,
+    });
+
+    if (error) {
+      console.warn('⚠️ RAG: erro no match_context RPC:', error.message);
+      return null;
+    }
+
+    if (!matches || matches.length === 0) {
+      console.log('🔍 RAG: nenhum match semântico encontrado');
+      return null;
+    }
+
+    const lines: string[] = matches.map((m: any) => {
+      const label = m.type === 'product' ? '[produto]' : '[faq]';
+      const score = (m.similarity * 100).toFixed(0);
+      return `${label} ${m.content} (relevância: ${score}%)`;
+    });
+
+    const ragContext = lines.join('\n');
+    console.log(`🔍 RAG: ${matches.length} resultado(s) semântico(s) encontrado(s)`);
+
+    return ragContext;
+
+  } catch (err: any) {
+    console.warn('⚠️ RAG: erro inesperado (ignorado):', err.message);
+    return null;
+  }
+}
+
 // ─── Resolve voz TTS da empresa ───────────────────────────────────────────
+
 function resolveVoiceName(ttsVoice: string | null | undefined): string {
   const allowed = [BRAZILIAN_VOICES.NEURAL_MALE, BRAZILIAN_VOICES.NEURAL_FEMALE];
   if (ttsVoice && allowed.includes(ttsVoice as any)) return ttsVoice;
   return BRAZILIAN_VOICES.NEURAL_MALE;
 }
+
+// ─── POST ─────────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -220,9 +289,6 @@ export async function POST(request: NextRequest) {
     const conversationId = formData.get('conversationId') as string | null;
     const directQuestion = formData.get('directQuestion') as string | null;
     const returnText = formData.get('returnText') === 'true';
-
-    // ✅ FIX PRINCIPAL: leitura de companyContext no escopo correto da rota
-    // Antes estava dentro de findMatchingFAQ() — escopo errado, sempre retornava null
     const companyContext = formData.get('companyContext') as string | null;
 
     if (!audioFile || !companyId) {
@@ -263,29 +329,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-if (!currentSession) {
-  // ✅ Usa o sessionId enviado pelo cliente se disponível
-  const newSessionId = sessionId || randomUUID();
-  
-  const { data: newSession, error: sessionError } = await supabase
-    .from('assistant_sessions')
-    .insert({ 
-      id: newSessionId,  // ← preserva o ID do cliente
-      company_id: companyId, 
-      messages: [] 
-    })
-    .select()
-    .single();
+    if (!currentSession) {
+      const newSessionId = sessionId || randomUUID();
 
-  if (sessionError || !newSession) {
-    console.error('❌ Erro ao criar sessão:', sessionError);
-    currentSession = { id: newSessionId, messages: [] };
-    console.log('⚠️ Usando sessão temporária (sem persistência)');
-  } else {
-    currentSession = newSession;
-    console.log('✨ Nova sessão criada:', currentSession.id);
-  }
-}
+      const { data: newSession, error: sessionError } = await supabase
+        .from('assistant_sessions')
+        .insert({
+          id: newSessionId,
+          company_id: companyId,
+          messages: [],
+        })
+        .select()
+        .single();
+
+      if (sessionError || !newSession) {
+        console.error('❌ Erro ao criar sessão:', sessionError);
+        currentSession = { id: newSessionId, messages: [] };
+        console.log('⚠️ Usando sessão temporária (sem persistência)');
+      } else {
+        currentSession = newSession;
+        console.log('✨ Nova sessão criada:', currentSession.id);
+      }
+    }
 
     const rawMessage = directQuestion || '';
     const saleMode = formData.get('saleMode') === 'true';
@@ -338,7 +403,7 @@ if (!currentSession) {
     const useOrcamentoPrompt = formData.get('useOrcamentoPrompt') === 'true';
     console.log('📋 useOrcamentoPrompt:', useOrcamentoPrompt);
 
-    // ✅ Hints: verificar antes do FAQ e ChatGPT (não roda para orçamento)
+    // Hints
     if (!useOrcamentoPrompt) {
       const matchedFunctionKey = await findMatchingHint(supabase, companyId, userMessage);
       if (matchedFunctionKey) {
@@ -364,7 +429,7 @@ if (!currentSession) {
       }
     }
 
-    // FAQ só roda quando NÃO for orçamento
+    // FAQ
     const matchingFAQ = useOrcamentoPrompt
       ? null
       : await findMatchingFAQ(supabase, companyId, userMessage);
@@ -439,22 +504,28 @@ if (!currentSession) {
         credits_consumed: 1,
         metadata: { user_input: userMessage, assistant_response: responseText },
       });
+
     } else {
       console.log('🤖 Usando OpenAI GPT-4o-mini');
 
-      // ✅ SYSTEM PROMPT CORRIGIDO
-      // companyContext agora é lido corretamente do formData (escopo da rota)
-      // e inclui produtos, FAQ, horários e dados da empresa do gptContextRef
+      // RAG: busca semântica como fallback antes do GPT
+      let ragContext: string | null = null;
+      if (!useOrcamentoPrompt) {
+        ragContext = await fetchRAGContext(supabase, companyId, userMessage);
+      }
+
       const systemPrompt = buildSystemPrompt({
         company,
         companyContext,
         userMessage,
         saleMode,
         useOrcamentoPrompt,
+        ragContext,
       });
 
       console.log('📋 Usando prompt:', useOrcamentoPrompt ? 'ORÇAMENTO' : 'PADRÃO');
       console.log(`📦 companyContext recebido: ${companyContext ? companyContext.length + ' chars' : 'VAZIO ⚠️'}`);
+      console.log(`🔍 ragContext: ${ragContext ? ragContext.length + ' chars' : 'nenhum'}`);
 
       responseText = await processWithGPT(userMessage, systemPrompt, conversationHistory);
       console.log(`🧠 Usando contexto de ${conversationHistory.length} mensagens`);
@@ -466,7 +537,12 @@ if (!currentSession) {
         company_id: companyId,
         function_key: functionKey,
         credits_consumed: 2,
-        metadata: { user_input: userMessage, assistant_response: responseText },
+        metadata: {
+          user_input: userMessage,
+          assistant_response: responseText,
+          rag_used: !!ragContext,
+          rag_matches: ragContext ? ragContext.split('\n').length : 0,
+        },
       });
     }
 
@@ -548,6 +624,7 @@ if (!currentSession) {
         'X-Response-Text': encodeURIComponent(responseText.slice(0, 300)),
       },
     });
+
   } catch (error: any) {
     console.error('❌ Erro:', error.message);
     try {
@@ -567,7 +644,7 @@ if (!currentSession) {
 }
 
 // ─── buildSystemPrompt ────────────────────────────────────────────────────
-// Separado em função própria para clareza e fácil manutenção futura
+
 interface BuildSystemPromptParams {
   company: {
     name: string;
@@ -579,6 +656,7 @@ interface BuildSystemPromptParams {
   userMessage: string;
   saleMode: boolean;
   useOrcamentoPrompt: boolean;
+  ragContext?: string | null; // NOVO
 }
 
 function buildSystemPrompt({
@@ -587,9 +665,9 @@ function buildSystemPrompt({
   userMessage,
   saleMode,
   useOrcamentoPrompt,
+  ragContext,
 }: BuildSystemPromptParams): string {
 
-  // Modo orçamento: usa prompt específico da empresa se disponível
   if (useOrcamentoPrompt && company.orcamento_prompt) {
     return company.orcamento_prompt;
   }
@@ -599,13 +677,15 @@ function buildSystemPrompt({
     ? company.system_prompt
     : `Você é ${role} da empresa ${company.name}. Responda de forma clara, objetiva e educada.`;
 
-  // Bloco de contexto da empresa (produtos, FAQ, horários, endereço, etc.)
-  // Vem do gptContextRef do useGroqContext — montado no cliente com dados reais do banco
   const contextBlock = companyContext
     ? `\n\n## Dados atuais da empresa:\n${companyContext}`
     : '';
 
-  // Contexto adicional para modo de venda
+  // NOVO: bloco RAG — só aparece quando encontrou matches semânticos
+  const ragBlock = ragContext
+    ? `\n\n## Contexto semântico relevante para a pergunta atual:\n${ragContext}\n\nUse estas informações para responder com precisão. Se os dados acima contradisserem algo, prefira os dados acima.`
+    : '';
+
   const saleModeBlock = saleMode
     ? `\n\n## CONTEXTO ATUAL: O cliente está visualizando o CARDÁPIO/LOJA VIRTUAL.
 Suas prioridades agora:
@@ -622,5 +702,5 @@ Suas prioridades agora:
 - Se não tiver a informação nos dados acima, diga honestamente que não tem essa informação no momento
 - NUNCA invente preços, horários ou produtos que não estejam listados`;
 
-  return `${basePrompt}${contextBlock}${saleModeBlock}${rules}`;
+  return `${basePrompt}${contextBlock}${ragBlock}${saleModeBlock}${rules}`;
 }

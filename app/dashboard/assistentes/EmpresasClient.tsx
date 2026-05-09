@@ -101,7 +101,7 @@ export default function AssistentesClient({
                       )}
                     </div>
                     <div>
-                      <div className="flex items-center space-x-2 mb-1">
+                      <div className="flex items-center space-x-2 mb-1 flex-wrap gap-y-1">
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                           {assistant.name}
                         </h3>
@@ -112,6 +112,11 @@ export default function AssistentesClient({
                         ) : (
                           <span className="flex items-center text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
                             <Lock className="w-3 h-3 mr-1" /> Privado
+                          </span>
+                        )}
+                        {assistant.assistant_type === 'vendas' && (
+                          <span className="flex items-center text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 font-bold">
+                            <Zap className="w-3 h-3 mr-1" /> Versão Vendas · 10% comissão
                           </span>
                         )}
                       </div>

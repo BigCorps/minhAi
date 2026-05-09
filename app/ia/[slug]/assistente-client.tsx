@@ -826,6 +826,7 @@ useEffect(() => {
             theme={theme}
             hideDisabledFunctions={company.hide_disabled_functions_carousel}
             autoScroll={company.carousel_auto_scroll}
+            isVendas={company.assistant_type === 'vendas'}
           />
         </div>
       )}

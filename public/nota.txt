@@ -1,41 +1,33 @@
-*conferir modais no texto definitivamente 
-
 *minhAi versão Vendas |  versão Smart
-
-*Analise de arquivos mortos - Manus pedidos
 
 *Corrigir os Serviços Meta para usar a Versão Vendedor
 subdominio
-*Conferir se todas as funções estão consumindo os normalmente e indo para o , se funcionam no mobile e desktop, slug e - Faq abrindo o Gerente apenas e no aparece como nossa marca
+
+*Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full e texto
 
 *Sugerir site e IA Hiperlimp como parceria
 
 -
 
- /  /  /  /  / itend eeaicom IAanexominhAi
-* Totem.plus / tIAtend.com / Agendai.me /  lojia.appiaWhats.com gráficas.apppostotec.appmercado.chat / filasenha.compainelmidia.com.brsaboreiaapp / roboatendente.com
-- iapos, já registrados (para cobranças , atendimento e funcionários IA) - relatório em
-✅
+* Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app / postotec.app / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
+- iapos, itend e eai já registrados (para cobranças , atendimento e funcionários IA) - relatório em anexo no email
+
 *Carrossel no footer com 15 empresas que usam a
 
 *Gilbarco com abastecimento por IA
 
-Tambemtypebotjiuithsu
 *Link na Bio com informações do whatsapp e facebook integradas (botão para a seção Serviços Meta - relatório em anexo).
 
 *implementar sincronia entre catálogo minhAi e Meta (relatório em anexo)
 
-*Colocar no rodapé do site como -
-Saipos
+*Colocar no rodapé do site como typebot widget
 
-*Seção Integrações Externas para o usuário conectar serviços como , Ifood e outros ao minhAi e vice e versa, além de integração e webhooks para link Pix e link de pagamento - em anexo
+*Seção Integrações Externas para o usuário conectar serviços como Saipos, Ifood e outros ao minhAi e vice e versa, além de integração e webhooks para link Pix e link de pagamento - em anexo
 
-*Página admin com login via Google apenas com email  com verificação de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header - em anexo
-appminhai@gmail.com
+*Página admin com login via Google apenas com email appminhai@gmail.com com verificação de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header - em anexo no email
 
 AGUARDANDO:
-
-*Publicar o App minhAi na Playstore (aguardando CURD)
+*Publicar o App minhAi e Vixus na Playstore (aguardando CURD)
 
 -
 
@@ -45,7 +37,6 @@ AGUARDANDO:
 *Implementar seleção de cores e key inter/asaas/MercadoPago para pix de clientes full, além de seletor de tema no assistente. Sempre light, sempre dark, de acordo com o tema do usuário ou de acordo com a hora do dia e se aparece ou não o seletor no header. Pensar na possibilidade do avatar ser o logo carregado pelo cliente, com animações react
 
 *Bot auxiliar no footer com conhecimento de todas as seções para atualizar tudo por ele e ir até outras seções também. Auxílio em todas as seções, semelhante ao que o de produção e de assistentes fazem, auxiliando o usuário na criação de tudo facilmente, principalmente ativando funções e na criação de novas funções já enviando a ideia nova por email para mim, além de fornecer relatórios de cada seção individualmente 
-tambemMateriainterpagconsultaminhAiOpenClaw
 
 *Linha de Produção pronta para Postos e outros ramos de produção (Mudar Ingredientes para Prima).
 
@@ -61,92 +52,77 @@ tambemMateriainterpagconsultaminhAiOpenClaw
 
 -
 
-Contatos -
-✅Site | Whatsapp | Telefone
-                                              Instagram | Facebook | Tiktok
-Linkedin | Email | Twitter/X
+Contatos - ✅ Site | Whatsapp | Telefone
+             Instagram | Facebook | Tiktok
+             Linkedin | Email | Twitter/X
 
-Multimidia
--  | |                    |  | 
-✅Tocar Vídeo Vídeo de InstruçõesPainel de Ofertas
- Iniciar Playlist Sequência de VídeosCanal do Youtube
-                     |  |
-Tocar MúsicaPorta RetratoVídeo Chamada
+Multimidia - ✅Tocar Vídeo | Vídeo de Instruções | Painel de Ofertas
+         Iniciar Playlist | Sequência de Vídeos | Canal do Youtube
+                 Tocar Música | Porta Retrato | Vídeo Chamada
 
-Utilitários  -  | 
-✅Aparelhos SmartCriar Lembrete | Cronômetro 
-                         Temporizador | Relógio Mundial | Alarme
-                         |
-Segunda Via Boleto  Criar Nota | Lembrete Remédios
+Utilitários - ✅ Aparelhos Smart | Criar Lembrete | Cronômetro 
+                  Temporizador | Relógio Mundial | Alarme
+         Segunda Via Boleto | Criar Nota | Lembrete Remédios
 
-Serviços  -  
-✅       Cardapio (QRcode) | Wifi (QRcode) | Nosso QRcode                              Impressão Remota | Impressão Local | Impressão Cupom
-Lista de Compras  | Chamar Gerente | Enviar SMS
+Serviços - ✅ Cardapio (QRcode) | Wifi (QRcode) | Nosso QRcode                       
+          Lista de Compras  | Chamar Gerente | Enviar SMS
+        Impressão Remota | Impressão Local | Impressão Cupom
 
-ModoChatGPT
-Câmera -  |   
-✅Ler QR Code | Ler Código de Barras Identificar Fraude
-                  Enviar Arquivo | Gerar QR Code | Criar Código de Barras
-                  Imagem em texto | Tabela em Texto | Contrato em Texto
+Câmera - ✅. Ler QR Code | Ler Código de Barras | Identificar Fraude
+            Enviar Arquivo | Gerar QR Code | Criar Código de Barras
+             Imagem em texto | Tabela em Texto | Contrato em Texto
                 
-Comercial -   
-✅Nossos Produtos |Link na Bio| Registrar Venda
-                      | 
-Venda| Fazer PedidoAuxiliar de Produção
-                   
-Gerar Cupom | Enviar E-mail |Cadastrar Produto
+Comercial - ✅ Nossos Produtos |Link na Bio| Registrar Venda
+             Venda Rápida | Fazer Pedido | Auxiliar de Produção
+              Gerar Cupom | Enviar E-mail | Cadastrar Produto
 
-Informação -                   |  | 
-✅Meu Sistema | Nossa Marca | Câmbio
-NotíciasFeriados NacionaisPesquisar Produto
-         
-Converter Medidas | Calculadora de Juros | Calculadora IMC
+Informação - ✅Meu Sistema | Nossa Marca | Câmbio
+           Notícias | Feriados Nacionais | Pesquisar Produto
+         Converter Medidas | Calculadora de Juros | Calculadora IMC
 
-Conhecimento - 
-6️⃣ | Orçamento | Respostas Rápidas 
-                        | 
-Traduzir Texto | Transcrever ÁudioClima e Tempo
-                Transcrever Reuniões | Transcrever Vídeos | Transcrever PDF
+Conhecimento - 6️⃣ ChatGPT | Orçamento | Respostas Rápidas 
+            Traduzir Texto | Transcrever Áudio | Clima e Tempo
 
-Agendamento -  |  | 
-6️⃣Marcar EventoVer AgendaConfirmar Presença 
-         
-Reagendamento | Cancelar Agendamento | Horários Disponíveis
-Lembrete de Aniversário | Evento Recorrente | Compartilhar Evento
+ *Transcrever Reuniões | Transcrever Vídeos | Transcrever PDF
+
+
+Agendamento - 6️⃣ Marcar EventoVer Agenda | Confirmar Presença 
+     Reagendamento | Cancelar Agendamento | Horários Disponíveis
+
+* Lembrete de Aniversário | Evento Recorrente | Compartilhar Evento
     
 
-Identificação - | |
-6️⃣Fazer LoginNovo Cadastro Gerar Senha
-               
-Modo Fila | Pesquisas e Avaliações | Pré-Atendimento
-                   Liberar Acesso | Facial e Biometria | Registro de Ponto
+Identificação - 6️⃣ Fazer Login | Novo Cadastro | Gerar Senha
+             Modo Fila | Pesquisas e Avaliações | Pré-Atendimento
 
-Debitojiuithsu
-Consultas -
-6️⃣ConsultarDados CNPJ | Dados CPF | Placa
-                 
-Consultar Leilão | Restrições CPF | Restrições CNPJ
-                  Tabela FIPE | Protesto Nacional | Consulta CRLV
+*Liberar Acesso | Facial e Biometria | Registro de Ponto
 
-Arquivos -  |
-6️⃣Remover Fundo | Duplicar ImagemPlanílhaAnalisar  
-                      
-Editar Imagem | Converter Arquivos| Juntar PDFs
-                  Proteger PDF | Vetores e Ícones | Assinar Documento
 
-Localização -  |  | 
-6️⃣EndereçoConsultar DDDConsultar CEP
-                      
-Traçar Rota | Buscar Endereço | Rastreio Correios
-                  Ponto de Referência | Encontre Agora | CEP por Endereços
+Consultas - 6️⃣ ConsultarDados CNPJ | Dados CPF | Placa
+           Consultar Leilão | Restrições CPF | Restrições CNPJ
+
+*Tabela FIPE | Protesto Nacional | Consulta CRLV
+
+Arquivos - 6️⃣ Remover Fundo | Duplicar Imagem | Analisar Planílha
+             Editar Imagem | Converter Arquivos| Juntar PDFs
+
+*Proteger PDF | Vetores e Ícones | Assinar Documento
+
+
+Localização - 6️⃣ Nosso Endereço | Consultar DDD | Consultar CEP
+             Traçar Rota | Buscar Endereço | Rastreio Correios
+
+*Ponto de Referência | Encontre Agora | CEP por Endereços
              
                                         
-Financeiro - |
-6️⃣ Gerar PixLink de Pagamento | TEF Débito
- |
-                      NFC | Crédito NFCTEF Crédito 
-                    Gerar Boleto | Cobranças | Recorrentes
+Financeiro - 6️⃣ Gerar Pix | Link de Pagamento | TEF Débito
+                 Débito NFC | Crédito NFC | TEF Crédito
 
+*Gerar Boleto | Cobranças | Recorrentes
+
+-
+
+*Analise de arquivos mortos - Manus pedidos
 *MODO KIOSK - claude ith.almeida
 *Landing -
 
@@ -161,10 +137,10 @@ Tributário 🔁- Emitir NF-e | Emitir NFS-e | Emitir NFC-e
                   Extrair Dados NF | Analisar Nota | Cancelar Nota
 
 Documentação 🔁- Validar RG/CNH | Auditar Contrato | Criar Recibo
-               Criar Timbrado | Reputação da Marca | Auxiliar de Relatório
+          Criar Timbrado | Reputação da Marca | Auxiliar de Relatório
 
 Rede Social 🔁- Criar Post | Postagem Direta | Gerador de Criativos
-                Calendário Editorial | Sugestão de Imagem | Refinar Idéia
+           Calendário Editorial | Sugestão de Imagem | Refinar Idéia
 
  ## Relatorios em anexo e Manus - ljcasaverde@gmail.com
 
@@ -173,11 +149,6 @@ Transporte 🔁- Auxiliar Motorista | Rota Inteligente | Recebimento App
  ## Pegar Ideias do Jad e implementar 
 
 Pagamentos 🔁- Enviar Pix | Pagar Boleto | Auxiliar de Pagamentos
-                      Pix em Lote | Boletos em Lote | Pagamentos em Lote
+               Pix em Lote | Boletos em Lote | Pagamentos em Lote
 
  ## Pagamentos (banco Inter) no menu usuário com um auxiliar para colocar pagamentos automaticamente, como o auxiliar de produção e funções disponíveis somente para quem tem token inter (relatório em anexo)
-
-
-Ithiel Almeida
-_____________
-BIGCORPS

@@ -33,7 +33,7 @@ const VENDAS_FUNCTIONS: { key: string; name: string; icon: React.ReactNode; desc
   { key: 'ver_agenda',          name: 'Ver Agenda',           icon: <Calendar className="w-4 h-4 text-pink-400" />,            description: 'Consultar compromissos do Google Calendar' },
   { key: 'chatgpt',             name: 'Perguntas Gerais',     icon: <MessageCircleQuestion className="w-4 h-4 text-blue-500" />, description: 'Assistente IA para dúvidas gerais' },
   { key: 'nossa_marca',         name: 'Nossa Marca',          icon: <Building2 className="w-4 h-4 text-gray-500" />,           description: 'Informações da empresa, endereço e horários' },
-  { key: 'meu_sistema',         name: 'Meu Sistema',          icon: <Terminal className="w-4 h-4 text-lime-600" />,            description: 'Acesso ao sistema interno (obrigatório)' },
+  { key: 'meu_sistema',         name: 'Meu Sistema',          icon: <Terminal className="w-4 h-4 text-lime-600" />,            description: 'Informações sobre o minhAi (obrigatório)' },
 ];
 
 // ── Tipos de chave PIX ────────────────────────────────────────────────────────

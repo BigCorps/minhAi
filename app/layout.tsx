@@ -26,7 +26,7 @@ const TITLE = 'minhAi — Seu Funcionário de IA que vende, atende e cobra 24h p
 
 // Description com dor → solução → CTA — 155 caracteres (ideal para snippet)
 const DESCRIPTION =
-  'Nunca mais perca venda por falta de resposta. Crie seu Funcionário de IA em minutos, sem programar. +100 funções, WhatsApp, PIX, totem e muito mais. Comece grátis.';
+  'Nunca mais perca venda por falta de resposta. Escolha entre o minhAi Smart (créditos por uso) ou minhAi Vendas (gratuito + 10% por venda). +100 funções, WhatsApp, PIX, totem e mais. Comece grátis.';
 
 const OG_IMAGE = `${APP_URL}/icons/og-image.png`;
 
@@ -38,6 +38,13 @@ const KEYWORDS = [
   'chatbot para whatsapp sem programar',
   'ia para atendimento automatico',
   'criar assistente de ia gratis',
+  // Versões Smart e Vendas
+  'minhai smart',
+  'minhai vendas',
+  'ia para lojista gratis',
+  'ia para vendas sem mensalidade',
+  'ia com comissao por venda',
+  'assistente ia vendas balcao',
   // Funcionalidades específicas — cauda longa
   'ia que cobra pix automaticamente',
   'totem de autoatendimento com ia',
@@ -57,14 +64,6 @@ const KEYWORDS = [
   'ia para empresas',
   'atendente virtual ia',
   'SaaS ia brasil',
-  'minha ia',
-  'nossa ia',
-  'sua ia',
-  'ia pessoal',
-  'ia personalizável',
-  'ia com a minha cara',
-  'ia de autoatendimento',
-  'robô de atendimento',
 ];
 
 // ─── Metadata Next.js ────────────────────────────────────────────────────────
@@ -130,6 +129,7 @@ export const metadata: Metadata = {
 
   // ── Verificação Google Search Console ───────────────────────────────────────
   // Já verificado via google90ae1b639a70083d.html — linha abaixo é opcional
+  // verification: { google: 'SEU_CODIGO_AQUI' },
 
   // ── Ícones ──────────────────────────────────────────────────────────────────
   icons: {
@@ -164,28 +164,36 @@ const jsonLd = {
       inLanguage: 'pt-BR',
       availableOnDevice: ['Desktop', 'Mobile', 'Tablet', 'Smart TV', 'Kiosk'],
 
-      // Preço — destaque para gratuidade + pay-per-use
+      // Preço — duas versões: Smart (créditos) e Vendas (comissão)
       offers: {
         '@type': 'AggregateOffer',
         priceCurrency: 'BRL',
         lowPrice: '0',
         highPrice: '0.15',
-        offerCount: '3',
+        offerCount: '4',
         offers: [
           {
             '@type': 'Offer',
-            name: 'Plano Gratuito',
+            name: 'minhAi Smart — Gratuito para testar',
             price: '0',
             priceCurrency: 'BRL',
-            description: '20 créditos gratuitos para começar. Sem cartão de crédito.',
+            description: '20 créditos gratuitos para começar. Sem cartão de crédito. Ideal para atendimento geral por voz com IA.',
             availability: 'https://schema.org/InStock',
           },
           {
             '@type': 'Offer',
-            name: 'Plano Pay-per-use',
+            name: 'minhAi Smart — Pay-per-use',
             price: '0.09',
             priceCurrency: 'BRL',
-            description: 'A partir de R$ 0,09 por interação. Sem mensalidade fixa.',
+            description: 'A partir de R$ 0,09 por interação. Sem mensalidade fixa. Pague só pelo que usar.',
+            availability: 'https://schema.org/InStock',
+          },
+          {
+            '@type': 'Offer',
+            name: 'minhAi Vendas — Gratuito para o lojista',
+            price: '0',
+            priceCurrency: 'BRL',
+            description: 'Gratuito para o lojista. Sem créditos, sem mensalidade. A minhAi retém 10% de comissão sobre cada venda confirmada (PIX, NFC, TEF ou Link de Pagamento). Ideal para lojas, restaurantes e food trucks.',
             availability: 'https://schema.org/InStock',
           },
         ],
@@ -219,6 +227,12 @@ const jsonLd = {
         'Transcrição de áudio para texto',
         'Tradução automática entre idiomas',
         'Programa de indicação com 50% de comissão',
+        'Versão minhAi Smart: assistente de IA por créditos de uso, sem mensalidade fixa',
+        'Versão minhAi Vendas: gratuito para o lojista, 10% de comissão por venda confirmada',
+        'PIX integrado via Banco Inter com confirmação automática',
+        'NFC Tap to Pay via InfinitePay (débito e crédito)',
+        'TEF Mercado Pago Point Smart (débito e crédito)',
+        'Link de pagamento via InfinitePay',
         'Dashboard de gestão completo',
         'Conformidade com LGPD',
       ],
@@ -265,7 +279,7 @@ const jsonLd = {
       contactPoint: [
         {
           '@type': 'ContactPoint',
-          telephone: '+55-11-92682-8418',
+          telephone: '+55-11-98731-1425',
           contactType: 'customer service',
           availableLanguage: 'Portuguese',
           contactOption: 'TollFree',

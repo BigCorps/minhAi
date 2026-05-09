@@ -663,7 +663,7 @@ export async function detectVoiceCommand(
     const currentPixState = pixStateRef.current;
     if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
       await handleConfirmPix(currentPixState.pixConfirmationData, {
-        companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings,
+        companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings, setActiveModal: deps.setActiveModal,
       });
     } else {
       await playText('Não há nenhum PIX aberto para confirmar');
@@ -677,7 +677,7 @@ export async function detectVoiceCommand(
     const currentPixState = pixStateRef.current;
     if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
       await handleCancelPix(currentPixState.pixConfirmationData, {
-        companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings,
+        companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings, setActiveModal: deps.setActiveModal,
       });
     } else {
       await playText('Não há nenhum PIX aberto');
@@ -703,7 +703,7 @@ export async function detectVoiceCommand(
         const isEnabled = await checkIfFunctionIsEnabled(companyId, 'pix_generate');
         if (!isEnabled) { await playText('A função PIX está desativada no momento.'); return true; }
         await handlePixCommand(amount, {
-          companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings,
+          companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings, setActiveModal: deps.setActiveModal,
         });
         await registerFunctionUsage(companyId, 'pix_generate', functionSettings['pix_generate']?.creditsPerUse ?? 0);
         return true;

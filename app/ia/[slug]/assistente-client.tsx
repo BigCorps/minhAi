@@ -28,6 +28,7 @@ interface AssistenteClientProps {
     modo_vendas_enabled?: boolean;
     modo_fila_enabled?: boolean;
     modo_links_enabled?: boolean;
+    assistant_type?: string;
   };
 }
 
@@ -626,6 +627,7 @@ useEffect(() => {
                 hideDisabledFunctions={company.hide_disabled_functions_carousel}
                 autoScroll={company.carousel_auto_scroll}
                 isKioskMode={isKioskMode}
+                isVendas={company.assistant_type === 'vendas'}
               />
             </div>
           </div>
@@ -755,6 +757,7 @@ useEffect(() => {
                   hideDisabledFunctions={company.hide_disabled_functions_carousel}
                   autoScroll={company.carousel_auto_scroll}
                   isKioskMode={isKioskMode}
+                  isVendas={company.assistant_type === 'vendas'}
                   onTextMessage={(handler) => {
                     textMessageHandlerRef.current = handler;
                   }}
@@ -778,6 +781,7 @@ useEffect(() => {
       hideDisabledFunctions={company.hide_disabled_functions_carousel}
       autoScroll={company.carousel_auto_scroll}
       isKioskMode={isKioskMode}
+      isVendas={company.assistant_type === 'vendas'}
       textMode={true}
       onTextMessage={(handler) => {
         textMessageHandlerRef.current = handler;

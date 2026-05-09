@@ -27,7 +27,6 @@ export async function POST(request: NextRequest) {
         greeting_message: data.greeting_message || 'Olá! Como posso ajudar você hoje?',
         system_prompt: 'Você é um assistente virtual prestativo. Responda de forma clara, objetiva e educada.',
         assistant_type: data.assistant_type === 'vendas' ? 'vendas' : 'smart',
-        webapp_enabled: data.assistant_type === 'vendas' ? true : false,
       })
       .select()
       .single();

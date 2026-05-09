@@ -204,8 +204,8 @@ return (
         carousel_auto_scroll: company.carousel_auto_scroll,
         webapp_enabled: company.webapp_enabled ?? false,
         modo_vendas_enabled: company.modo_vendas_enabled ?? false,
-        modo_fila_enabled: company.modo_fila_enabled ?? false,
-        modo_links_enabled: company.modo_links_enabled ?? false,
+        modo_fila_enabled: isVendas ? false : (company.modo_fila_enabled ?? false),
+        modo_links_enabled: isVendas ? false : (company.modo_links_enabled ?? false),
         assistant_type: company.assistant_type ?? 'smart',
       }}
     />

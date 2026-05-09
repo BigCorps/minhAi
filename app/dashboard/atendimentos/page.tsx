@@ -2,6 +2,7 @@
 // ARQUIVO: app/dashboard/atendimentos/page.tsx
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { ConnectionManager }   from './_components/ConnectionManager';
 import { ConversationsPanel }  from './_components/ConversationsPanel';
 import { MetaFunctionsPanel }  from './_components/MetaFunctionsPanel';
@@ -9,7 +10,7 @@ import { MetaCommentsPanel }   from './_components/MetaCommentsPanel';
 import { createClient }        from '@/lib/supabase-browser';
 import {
   HelpCircle, X, ExternalLink, MessageCircle, Smartphone, Monitor,
-  ChevronRight, Share2, Zap, MessageSquare, Settings,
+  ChevronRight, Share2, Zap, MessageSquare, Settings, Loader2
 } from 'lucide-react';
 import { useAssistant } from '@/contexts/AssistantContext';
 
@@ -24,6 +25,7 @@ const TABS: { key: Tab; label: string; icon: React.ElementType; requiresConnecti
 
 export default function AtendimentosPage() {
   const supabase = createClient();
+  const router = useRouter(); 
   const { selectedAssistantId: selectedCompanyId } = useAssistant();
   const [showHelp, setShowHelp]           = useState(false);
   const [activeTab, setActiveTab]         = useState<Tab>('connections');
@@ -31,8 +33,6 @@ export default function AtendimentosPage() {
 
   const [assistantType, setAssistantType] = useState<string | null>(null);
   const [checkingAccess, setCheckingAccess] = useState(true);
-  const router = useRouter();
-  const supabase = createClient();
 
 // DEPOIS
 const hasInitialized = useRef(false);

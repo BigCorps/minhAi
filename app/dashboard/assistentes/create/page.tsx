@@ -668,7 +668,7 @@ export default function NovaEmpresaPage() {
                 <div>
                   <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Criar e Configurar com IA</p>
                   <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                    Nosso assistente recomenda as melhores funções para o seu ramo e configura tudo por conversa — WhatsApp, endereço, horários e muito mais.
+                    Nosso assistente recomenda as melhores funções para o seu ramo e configura tudo por conversa — WhatsApp, endereço, horários e muito mais (disponível apenas na versão Smart).
                   </p>
                 </div>
               </div>

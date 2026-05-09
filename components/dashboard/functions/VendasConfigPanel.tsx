@@ -349,7 +349,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
             rows={5}
             value={systemPrompt}
             onChange={e => setSystemPrompt(e.target.value)}
-            placeholder={`Você é o assistente de vendas da ${companyName}. Seja direto, amigável e focado em ajudar o cliente a comprar.`}
+            placeholder={`Você é o vendedor da ${companyName}. Conhece todos os produtos, preços e especialidades da casa. Atende com simpatia, apresenta os produtos com entusiasmo e fecha a venda com naturalidade. Ex: somos especializados em X, nosso carro-chefe é Y, trabalhamos com clientes que buscam Z.`}
             className={textareaCls}
           />
         </Field>

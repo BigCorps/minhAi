@@ -33,10 +33,48 @@ export default function ProducaoClient() {
     }
   }, [selectedAssistantId, loadingAssistants, router]);
 
-  if (loadingAssistants) {
+  if (loadingAssistants || checkingType) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (isVendas) {
+    return (
+      <div className="min-h-screen bg-transparent">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">
+              Linha de Produção
+            </h2>
+            <p className="text-gray-600 dark:text-white/60">
+              Fichas técnicas e custos de receitas
+            </p>
+          </div>
+          <div className="rounded-xl shadow-lg p-12 text-center bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm">
+            <div className="max-w-md mx-auto">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center">
+                <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">
+                Não disponível na versão Vendas
+              </h3>
+              <p className="text-gray-600 dark:text-white/60">
+                A Linha de Produção é exclusiva da versão Smart. Na versão Vendas, gerencie seus produtos diretamente na seção Vendas e Produtos.
+              </p>
+              <Link
+                href="/dashboard/vendas"
+                className="inline-block mt-6 px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black rounded-lg transition font-semibold"
+              >
+                Ir para Vendas e Produtos
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -77,46 +115,9 @@ export default function ProducaoClient() {
     );
   }
 
-if (isVendas) {
-    return (
-      <div className="min-h-screen bg-transparent">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">
-              Linha de Produção
-            </h2>
-            <p className="text-gray-600 dark:text-white/60">
-              Fichas técnicas e custos de receitas
-            </p>
-          </div>
-          <div className="rounded-xl shadow-lg p-12 text-center bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm">
-            <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-lime-100 dark:bg-lime-500/10 flex items-center justify-center">
-                <svg className="w-8 h-8 text-lime-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">
-                Não disponível na versão Vendas
-              </h3>
-              <p className="text-gray-600 dark:text-white/60">
-                A Linha de Produção é exclusiva da versão Smart. Na versão Vendas, gerencie seus produtos diretamente na seção Vendas e Produtos.
-              </p>
-              <Link
-                href="/dashboard/vendas"
-                className="inline-block mt-6 px-6 py-3 bg-lime-500 hover:bg-lime-400 text-black rounded-lg transition font-semibold"
-              >
-                Ir para Vendas e Produtos
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex items-center justify-center min-h-screen">
       <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
     </div>
   );
+}

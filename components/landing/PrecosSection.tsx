@@ -561,15 +561,11 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
                     key={label}
                     title={desc}
                     className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-[10px] font-medium ${
-                      label.includes('⚠️')
-                        ? isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-700'
-                        : isDark ? 'bg-white/[0.03] border-white/6 text-white/60' : 'bg-white/80 border-gray-100 text-gray-600'
+                      isDark ? 'bg-white/[0.03] border-white/6 text-white/60' : 'bg-white/80 border-gray-100 text-gray-600'
                     }`}
                   >
                     <svg className={`w-2.5 h-2.5 flex-shrink-0 ${
-                      label.includes('⚠️')
-                        ? isDark ? 'text-amber-400' : 'text-amber-600'
-                        : isDark ? 'text-lime-400/60' : 'text-lime-600/60'
+                      ${isDark ? 'text-lime-400/60' : 'text-lime-600/60'
                     }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>

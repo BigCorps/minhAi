@@ -272,24 +272,21 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
 
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-amber-100 dark:bg-amber-500/10 rounded-xl">
-          <Zap className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-        </div>
         <div>
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">
             Configuração — minhAi Vendas
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {companyName} · Comissão 10% por venda + 1% no saque
+            {companyName} · Comissão 10% por venda | Sem cobrança de créditos
           </p>
         </div>
       </div>
 
       {/* Aviso de comissão */}
-      <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-xl flex items-start gap-3">
-        <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-amber-700 dark:text-amber-300">
-          Este assistente opera no modelo Vendas — gratuito com comissão. A minhAi retém 10% sobre cada venda confirmada (PIX, NFC, TEF ou Link), mais 1% no saque. As taxas de InfinitePay e Mercado Pago são cobradas diretamente por eles.
+      <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 rounded-xl flex items-start gap-3">
+        <AlertCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-purple-700 dark:text-purple-300">
+          Este assistente opera no modelo Vendas — gratuito com comissão. A minhAi retém 10% sobre cada venda confirmada (PIX, NFC, TEF ou Link), mais 1% no saque Pix. As taxas de InfinitePay e Mercado Pago são cobradas diretamente por eles.
         </p>
       </div>
 

@@ -7,6 +7,7 @@ interface Assistant {
   id: string;
   name: string;
   slug: string;
+  assistant_type?: string;
 }
 
 interface AssistantContextType {
@@ -41,10 +42,10 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
 
         // Fonte 2: companies.user_id
         const { data: ownedCompanies } = await supabase
-          .from('companies')
-          .select('id, name, slug')
-          .eq('user_id', user.id)
-          .order('name');
+            .from('companies')
+            .select('id, name, slug, assistant_type')
+            .eq('user_id', user.id)
+            .order('name');
         const ownedIds = (ownedCompanies || []).map(c => c.id);
 
         let allCompanies: Assistant[] = ownedCompanies || [];
@@ -54,7 +55,7 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
         if (missingIds.length > 0) {
           const { data: adminOnlyCompanies } = await supabase
             .from('companies')
-            .select('id, name, slug')
+            .select('id, name, slug, assistant_type')
             .in('id', missingIds);
           allCompanies = [
             ...allCompanies,

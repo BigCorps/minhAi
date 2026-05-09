@@ -73,8 +73,8 @@ export function VendasCard({ companyId }: VendasCardProps) {
       href="/dashboard/saldo"
       className={`block rounded-xl shadow-lg p-6 border transition-all hover:shadow-2xl hover:-translate-y-1 ${
         isDark
-          ? 'bg-gradient-to-br from-amber-900/30 to-slate-900 border-amber-500/20 backdrop-blur-xl hover:border-amber-500/40'
-          : 'bg-white border-amber-200 hover:border-amber-300'
+          ? 'bg-gradient-to-br from-lime-900/30 to-slate-900 border-lime-500/20 backdrop-blur-xl hover:border-lime-500/40'
+          : 'bg-white border-lime-200 hover:border-lime-300'
       }`}
     >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -82,7 +82,7 @@ export function VendasCard({ companyId }: VendasCardProps) {
         {/* Ícone + título */}
         <div className="flex items-center gap-4">
           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
-            isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-600'
+            isDark ? 'bg-lime-500/20 text-lime-400' : 'bg-lime-100 text-lime-600'
           }`}>
             <Zap className="w-8 h-8" />
           </div>
@@ -91,7 +91,7 @@ export function VendasCard({ companyId }: VendasCardProps) {
               <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 minhAi Vendas
               </h3>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-400 text-black">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-lime-400 text-black">
                 10% comissão
               </span>
             </div>
@@ -107,7 +107,7 @@ export function VendasCard({ companyId }: VendasCardProps) {
             <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {fmt(totalVendas)}
             </p>
-            <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+            <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-lime-400' : 'text-lime-600'}`}>
               Total vendido
             </p>
           </div>
@@ -116,7 +116,7 @@ export function VendasCard({ companyId }: VendasCardProps) {
             <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {fmt(totalComissoes)}
             </p>
-            <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+            <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-lime-400' : 'text-lime-600'}`}>
               Comissões totais
             </p>
           </div>
@@ -137,8 +137,8 @@ export function VendasCard({ companyId }: VendasCardProps) {
         <div className="shrink-0">
           <button className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold transition flex items-center gap-2 ${
             isDark
-              ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-900/20'
-              : 'bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-200'
+              ? 'bg-lime-500 hover:bg-lime-400 text-black shadow-lg shadow-lime-900/20'
+              : 'bg-lime-500 hover:bg-lime-400 text-black shadow-lg shadow-lime-200'
           }`}>
             <TrendingUp className="w-4 h-4" />
             Ver Recebimentos

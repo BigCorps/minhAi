@@ -2,7 +2,7 @@
 import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { Settings, Wallet, ShoppingCart, UserPlus, Calendar, Share2 } from 'lucide-react';
-import { CreditsCard } from '@/components/CreditsCard';
+import { CreditsOrVendasCard } from '@/components/CreditsOrVendasCard';
 import { WebAppButton } from '@/components/WebAppButton';
 import { CreditsProgressChartWrapper } from '@/components/CreditsProgressChartWrapper';
 import SetupBanner from '@/components/dashboard/SetupBanner';
@@ -78,7 +78,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Credit Card */}
-      {user && <CreditsCard userId={user.id} />}
+      {user && <CreditsOrVendasCard userId={user.id} />}
 
       {/* Banner — entre créditos e gráfico */}
       <SetupBanner />

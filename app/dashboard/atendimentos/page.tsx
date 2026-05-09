@@ -29,8 +29,62 @@ export default function AtendimentosPage() {
   const [activeTab, setActiveTab]         = useState<Tab>('connections');
   const [hasConnections, setHasConnections] = useState(false);
 
+  const [assistantType, setAssistantType] = useState<string | null>(null);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const router = useRouter();
+  const supabase = createClient();
+
 // DEPOIS
 const hasInitialized = useRef(false);
+
+useEffect(() => {
+    if (!selectedCompanyId) {
+      setAssistantType(null);
+      setCheckingAccess(false);
+      return;
+    }
+
+    async function checkAccess() {
+      setCheckingAccess(true);
+
+      const { data: company } = await supabase
+        .from('companies')
+        .select('assistant_type')
+        .eq('id', selectedCompanyId)
+        .single();
+
+      const type = company?.assistant_type ?? 'smart';
+      setAssistantType(type);
+
+      if (type === 'vendas') {
+        setCheckingAccess(false);
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push('/dashboard/credits?requires_plan=1'); return; }
+
+      const { data: credits } = await supabase
+        .from('user_credits')
+        .select('has_active_plan, plan_expires_at')
+        .eq('user_id', user.id)
+        .single();
+
+      const hasActivePlan =
+        credits?.has_active_plan === true &&
+        credits?.plan_expires_at != null &&
+        new Date(credits.plan_expires_at) > new Date();
+
+      if (!hasActivePlan) {
+        router.push('/dashboard/credits?requires_plan=1');
+        return;
+      }
+
+      setCheckingAccess(false);
+    }
+
+    checkAccess();
+  }, [selectedCompanyId]);
 
 useEffect(() => {
   hasInitialized.current = false;
@@ -60,6 +114,13 @@ useEffect(() => {
   checkConnections();
 }, [selectedCompanyId]);
 
+if (checkingAccess) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-transparent">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-transparent">
       <div className="container mx-auto px-4 py-8">

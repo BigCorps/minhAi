@@ -1,6 +1,7 @@
 // components/dashboard/functions/VendasConfigPanel.tsx
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { InfinitePayConfigForm } from './InfinitePayConfigModal';
@@ -510,12 +511,13 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
               </p>
             </div>
             
+              <Link
               href={`/dashboard/google-connect?companyId=${companyId}`}
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
             >
               <ExternalLink className="w-4 h-4" />
               Conectar Google Calendar
-            </a>
+            </Link>
           </div>
         )}
       </Section>

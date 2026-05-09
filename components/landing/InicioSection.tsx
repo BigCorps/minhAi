@@ -11,7 +11,7 @@ interface InicioSectionProps {
 const MINI_DESTAQUES = [
   'Sem cartão de crédito',
   'Funciona em 5 minutos',
-  'Tecnologia Brasileira',
+  '100% em português',
 ];
 
 export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
@@ -118,7 +118,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               </span>
             </span>
             <span className="block whitespace-nowrap">
-              Seu{' '}<WordCarousel isDark={isDark} />{' '}IA que
+              A{' '}<WordCarousel isDark={isDark} />{' '}IA que
             </span>
             <span className="block whitespace-nowrap">
               vende e atende{' '}
@@ -141,14 +141,6 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
 
           {/* DomainPreviewPicker */}
           <DomainPreviewPicker isDark={isDark} />
-
-<p className={`text-[10px] sm:text-xs mt-5 mb-5 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
-  {'ou '}
-  <Link href="https://wa.me/5511926828418" target="_blank" rel="noopener noreferrer" className={`underline underline-offset-2 hover:opacity-80 transition-opacity ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-    entre em contato
-  </Link>
-  {' para seu próprio domínio'}
-</p>
 
           {/* CTAs */}
           <div className="flex flex-row items-center justify-center gap-2 sm:gap-4">
@@ -193,6 +185,27 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
                 {text}
               </span>
             ))}
+          </div>
+
+          {/* Versões Smart vs Vendas */}
+          <div
+            className={`
+              flex items-center justify-center gap-2 mt-2 sm:mt-3
+              [@media(max-height:700px)_and_(max-width:767px)]:hidden
+            `}
+          >
+            <span className={`text-[10px] sm:text-xs ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
+              Como pagar:
+            </span>
+            <span className={`inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+              Smart — créditos por uso
+            </span>
+            <span className={`${isDark ? 'text-white/15' : 'text-gray-200'} text-xs`}>·</span>
+            <span className={`inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-lime-400 flex-shrink-0" />
+              Vendas — grátis, só pague quando vender
+            </span>
           </div>
         </div>
       </div>

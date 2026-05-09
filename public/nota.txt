@@ -1,9 +1,4 @@
-*minhAi versão Vendas |  versão Smart
-
-*Corrigir os Serviços Meta para usar a Versão Vendedor
-subdominio
-
-*Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full e texto
+*Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc
 
 *Sugerir site e IA Hiperlimp como parceria
 

@@ -301,62 +301,42 @@ useEffect(() => {
   }
 }, [convId, conv.conversation_id])
 
-  // ── Enviar mensagem ──────────────────────────────────────────────────────
-  async function handleSend() {
-    if (!text.trim() || isSending) return;
-    setSendError(null);
-    setIsSending(true);
+// ── Enviar mensagem ──────────────────────────────────────────────────────
+async function handleSend() {
+  if (!text.trim() || isSending) return;
+  setSendError(null);
+  setIsSending(true);
+  const sentText = text.trim();
+  setText('');
 
-    // Otimistic UI
-    const tempMsg: Message = {
-      id:              `temp_${Date.now()}`,
-      conversation_id: convId || '',
-      role:            'assistant',
-      content:         text.trim(),
-      created_at:      new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, tempMsg]);
-    const sentText = text.trim();
-    setText('');
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/meta-send-message`,
-        {
-          method:  'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization:  `Bearer ${session?.access_token}`,
-          },
-          body: JSON.stringify({
-            recipient_id:      conv.conversation_id,
-            message:           sentText,
-            page_access_token: connection.encrypted_page_access_token,
-            platform:          conv.platform,
-          }),
-        }
-      );
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error || 'Erro ao enviar');
-
-      // Substituir mensagem temp pelo id real (se retornado)
-      if (d.message_id) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === tempMsg.id ? { ...m, id: d.message_id } : m
-          )
-        );
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/meta-send-message`,
+      {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization:  `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          recipient_id:      conv.conversation_id,
+          message:           sentText,
+          page_access_token: connection.encrypted_page_access_token,
+          platform:          conv.platform,
+        }),
       }
-    } catch (e: any) {
-      setSendError(e.message);
-      // Remover mensagem otimista em caso de erro
-      setMessages((prev) => prev.filter((m) => m.id !== tempMsg.id));
-    } finally {
-      setIsSending(false);
-      textareaRef.current?.focus();
-    }
+    );
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'Erro ao enviar');
+  } catch (e: any) {
+    setSendError(e.message);
+    setText(sentText); // Restaurar texto em caso de erro
+  } finally {
+    setIsSending(false);
+    textareaRef.current?.focus();
   }
+}
 
   // ─── Render ───────────────────────────────────────────────────────────────
 

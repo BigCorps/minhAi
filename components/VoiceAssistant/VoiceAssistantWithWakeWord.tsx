@@ -214,77 +214,94 @@ useEffect(() => {
   }>({ print_on_purchase: false, print_on_queue: false, print_on_payment: false, hasActivePlan: false });
 
 useEffect(() => {
-    if (!companyId) return;
-    async function loadPrintConfig() {
-      try {
-        const supabase = createClient();
-        
-        // ✅ PASSO 1: Buscar a empresa e o user_id do dono
-        const { data: company } = await supabase
-          .from('companies')
-          .select('print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment, user_id')
-          .eq('id', companyId)
-          .maybeSingle();
-        
-        if (!company) {
-          setPrintConfig({
-            print_on_purchase: false,
-            print_on_queue: false,
-            print_on_payment: false,
-            hasActivePlan: false,
-          });
-          return;
-        }
-        
-        // ✅ PASSO 2: Buscar plano do DONO da empresa (company.user_id)
-        const { data: credits } = await supabase
-          .from('user_credits')
-          .select('has_active_plan, plan_expires_at')
-          .eq('user_id', company.user_id)
-          .maybeSingle();
-        
-        console.log('🔍 Raw credits data:', {
-          credits,
-          user_id: company.user_id,
-          has_active_plan: credits?.has_active_plan,
-          plan_expires_at: credits?.plan_expires_at,
-        });
-        
-        // ✅ PASSO 3: Verificar se plano está ativo e não expirado
-        const active =
-          credits?.has_active_plan === true &&
-          credits?.plan_expires_at != null &&
-          new Date(credits.plan_expires_at) > new Date();
-        
-        setPrintConfig({
-          // ✅ Converte print_auto_type_* para boolean
-          print_on_purchase: !!company.print_auto_type_purchase && company.print_auto_type_purchase !== 'none',
-          print_on_queue:    !!company.print_auto_type_queue    && company.print_auto_type_queue    !== 'none',
-          print_on_payment:  !!company.print_auto_type_payment  && company.print_auto_type_payment  !== 'none',
-          hasActivePlan: active,
-        });
-        
-        console.log('🖨️ Print Config:', {
-          companyId,
-          ownerId: company.user_id,
-          hasActivePlan: active,
-          planExpiresAt: credits?.plan_expires_at,
-          printOnPurchase: !!company.print_auto_type_purchase,
-          printOnQueue: !!company.print_auto_type_queue,
-          printOnPayment: !!company.print_auto_type_payment,
-        });
-      } catch (err) {
-        console.error('❌ Erro ao carregar printConfig:', err);
+  if (!companyId) return;
+  async function loadPrintConfig() {
+    try {
+      const supabase = createClient();
+
+      // ✅ PASSO 1: Buscar a empresa e o user_id do dono
+      const { data: company } = await supabase
+        .from('companies')
+        .select('print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment, user_id')
+        .eq('id', companyId)
+        .maybeSingle();
+
+      if (!company) {
         setPrintConfig({
           print_on_purchase: false,
           print_on_queue: false,
           print_on_payment: false,
           hasActivePlan: false,
         });
+        return;
       }
+
+      // ✅ PASSO 2: Buscar plano do DONO da empresa (company.user_id)
+      const { data: credits } = await supabase
+        .from('user_credits')
+        .select('has_active_plan, plan_expires_at')
+        .eq('user_id', company.user_id)
+        .maybeSingle();
+
+      // ✅ PASSO 3: Verificar se plano está ativo e não expirado
+      const active =
+        credits?.has_active_plan === true &&
+        credits?.plan_expires_at != null &&
+        new Date(credits.plan_expires_at) > new Date();
+
+      // ✅ PASSO 4: Buscar flags de habilitação por contexto (NOVO)
+      const { data: fnSettings } = await supabase
+        .from('company_function_settings')
+        .select('function_key, config')
+        .eq('company_id', companyId)
+        .in('function_key', ['impressao_local', 'impressao_remota', 'impressao_recibo']);
+
+      const configMap: Record<string, any> = Object.fromEntries(
+        (fnSettings ?? []).map((s: any) => [s.function_key, s.config ?? {}])
+      );
+
+      const getContextEnabled = (
+        autoType: string | null | undefined,
+        contextKey: 'enable_on_purchase' | 'enable_on_queue' | 'enable_on_payment'
+      ): boolean => {
+        if (!autoType || autoType === 'none') return false;
+        const fnKey = `impressao_${autoType}`;
+        const cfg = configMap[fnKey] ?? {};
+        // default true: não quebra empresas que ainda não configuraram os flags
+        return cfg[contextKey] !== false;
+      };
+
+      setPrintConfig({
+        print_on_purchase:
+          !!company.print_auto_type_purchase &&
+          company.print_auto_type_purchase !== 'none' &&
+          getContextEnabled(company.print_auto_type_purchase, 'enable_on_purchase'),
+
+        print_on_queue:
+          !!company.print_auto_type_queue &&
+          company.print_auto_type_queue !== 'none' &&
+          getContextEnabled(company.print_auto_type_queue, 'enable_on_queue'),
+
+        print_on_payment:
+          !!company.print_auto_type_payment &&
+          company.print_auto_type_payment !== 'none' &&
+          getContextEnabled(company.print_auto_type_payment, 'enable_on_payment'),
+
+        hasActivePlan: active,
+      });
+
+    } catch (err) {
+      console.error('❌ Erro ao carregar printConfig:', err);
+      setPrintConfig({
+        print_on_purchase: false,
+        print_on_queue: false,
+        print_on_payment: false,
+        hasActivePlan: false,
+      });
     }
-    loadPrintConfig();
-  }, [companyId]);
+  }
+  loadPrintConfig();
+}, [companyId]);
   
   const { noiseWarning, repromptWarning, handleVolumeChange, triggerRepromptWarning } = useNoiseWarning();
   const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(companyWakeWord, wakeWordEnabled);

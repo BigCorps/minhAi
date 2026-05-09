@@ -490,7 +490,7 @@ export default function NovaEmpresaPage() {
                         minhAi Smart
                       </p>
                       <p className="text-[10px] opacity-70 mt-0.5 leading-tight">
-                        Planos mensais + créditos por uso. Acesso a todas as funções.
+                        Mais de 100 funções com consumo de créditos por uso e com possibilidade de planos mensais para liberar mais funcionalidades.
                       </p>
                     </div>
                   </button>
@@ -500,27 +500,27 @@ export default function NovaEmpresaPage() {
                     onClick={() => { setAssistantType('vendas'); setWantWebapp(false); }}
                     className={`flex items-start p-4 rounded-xl border-2 transition-all text-left ${
                       assistantType === 'vendas'
-                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10'
-                        : 'border-gray-200 dark:border-white/10 hover:border-amber-400/50'
+                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-500/10'
+                        : 'border-gray-200 dark:border-white/10 hover:border-purple-400/50'
                     }`}
                   >
-                    <Zap className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${assistantType === 'vendas' ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`} />
+                    <Zap className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${assistantType === 'vendas' ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`} />
                     <div>
-                      <p className={`font-bold text-sm ${assistantType === 'vendas' ? 'text-amber-700 dark:text-amber-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                      <p className={`font-bold text-sm ${assistantType === 'vendas' ? 'text-purple-700 dark:text-purple-400' : 'text-gray-600 dark:text-gray-300'}`}>
                         minhAi Vendas
                       </p>
                       <p className="text-[10px] opacity-70 mt-0.5 leading-tight">
-                        Gratuito. Comissão de 10% por venda + 1% no saque.
+                        Assistente focado totalmente em vendas, sem cobrança de mensalidade e creditos, mas cobrando comissão de 10% por venda.
                       </p>
                     </div>
                   </button>
                 </div>
 
                 {assistantType === 'vendas' && (
-                  <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-lg">
+                  <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 rounded-lg">
                     <div className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                      <AlertCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-purple-700 dark:text-purple-300">
                         No modo Vendas, o assistente é gratuito e o webapp já vem incluído. A minhAi retém 10% sobre cada venda confirmada, mais 1% no momento do saque via PIX. As taxas de InfinitePay e Mercado Pago são cobradas diretamente por eles.
                       </p>
                     </div>
@@ -536,7 +536,7 @@ export default function NovaEmpresaPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <button type="button" onClick={() => setIsPublic(true)}
                     className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                      isPublic ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                      isPublic ? 'border-green-500 bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400'
                                : 'border-gray-200 dark:border-white/10 bg-transparent text-gray-500'}`}>
                     <Globe className="w-5 h-5 mr-2" />
                     <div className="text-left">
@@ -590,32 +590,36 @@ export default function NovaEmpresaPage() {
             {/* ── Botões ──────────────────────────────────── */}
             <div className="mt-8 space-y-3">
 
-              <button
-                type="button"
-                disabled={!canSubmit}
-                onClick={wantWebapp ? handleSubmitComWebapp : handleSubmitComIA}
-                className={`w-full flex items-center justify-center px-6 py-3 rounded-xl transition font-bold shadow-lg text-white ${
-                  !canSubmit
-                    ? 'bg-gray-400 cursor-not-allowed'
+              {assistantType === 'smart' && (
+                <button
+                  type="button"
+                  disabled={!canSubmit}
+                  onClick={wantWebapp ? handleSubmitComWebapp : handleSubmitComIA}
+                  className={`w-full flex items-center justify-center px-6 py-3 rounded-xl transition font-bold shadow-lg text-white ${
+                    !canSubmit
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : wantWebapp
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-orange-500/20'
+                        : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-purple-500/20'
+                  }`}
+                >
+                  {loading && submitMode === 'ia'
+                    ? <Loader2 className="w-5 h-5 animate-spin mr-2" />
                     : wantWebapp
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-orange-500/20'
-                      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-purple-500/20'
-                }`}
-              >
-                {loading && submitMode === 'ia'
-                  ? <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  : wantWebapp
-                    ? <Globe className="w-5 h-5 mr-2" />
-                    : <Sparkles className="w-5 h-5 mr-2" />
-                }
-                {wantWebapp ? 'Criar e Configurar WebApp' : 'Criar e Configurar com IA'}
-              </button>
+                      ? <Globe className="w-5 h-5 mr-2" />
+                      : <Sparkles className="w-5 h-5 mr-2" />
+                  }
+                  {wantWebapp ? 'Criar e Configurar WebApp' : 'Criar e Configurar com IA'}
+                </button>
+              )}
 
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-gray-200 dark:bg-white/10" />
-                <span className="text-xs text-gray-400 dark:text-white/30">ou</span>
-                <div className="flex-1 h-px bg-gray-200 dark:bg-white/10" />
-              </div>
+              {assistantType === 'smart' && (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-gray-200 dark:bg-white/10" />
+                  <span className="text-xs text-gray-400 dark:text-white/30">ou</span>
+                  <div className="flex-1 h-px bg-gray-200 dark:bg-white/10" />
+                </div>
+              )}
 
               <div className="flex items-center gap-4">
                 <button

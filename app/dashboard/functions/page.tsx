@@ -322,7 +322,6 @@ async function handleSendSuggestion() {
         .eq('id', selectedCompanyId)
         .single();
       setAssistantType(companyType?.assistant_type ?? 'smart');
-      const companyNameForPanel = companyType?.name ?? '';
 
       // ── Incluídos enabled_meta e enabled_gpt para renderizar os badges ──
       const { data: allFunctions, error: functionsError } = await supabase

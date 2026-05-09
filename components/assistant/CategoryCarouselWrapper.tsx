@@ -6,7 +6,12 @@ import CategoryCarousel from '@/components/assistant/CategoryCarousel';
 // Funções fixas da versão Vendas — mesma lista do VendasConfigPanel
 const VENDAS_FUNCTION_KEYS = [
   'modo_venda',
+  'ver_produtos',
   'fazer_pedido',
+  'registrar_venda',
+  'cardapio',
+  'minha_conta',
+  'cadastrar_produto',
   'pix_generate',
   'nfc_debito',
   'nfc_credito',
@@ -17,6 +22,7 @@ const VENDAS_FUNCTION_KEYS = [
   'ver_agenda',
   'chatgpt',
   'nossa_marca',
+  'meu_sistema',
 ];
 
 interface CategoryCarouselWrapperProps {

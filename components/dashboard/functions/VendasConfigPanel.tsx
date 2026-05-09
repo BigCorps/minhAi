@@ -285,14 +285,6 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
         </div>
       </div>
 
-      {/* Aviso de comissão */}
-      <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 rounded-xl flex items-start gap-3">
-        <AlertCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-purple-700 dark:text-purple-300">
-          Este assistente opera no modelo Vendas — gratuito com comissão. A minhAi retém 10% sobre cada venda confirmada (PIX, NFC, TEF ou Link), mais 1% no saque Pix. As taxas de InfinitePay e Mercado Pago são cobradas diretamente por eles.
-        </p>
-      </div>
-
       {/* ── 1. Identidade do Assistente ─────────────────────────────────────── */}
       <Section
         title="Identidade do Assistente"
@@ -594,13 +586,21 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
         onClick={handleSave}
         disabled={saving}
         className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition shadow-lg disabled:opacity-50
-          bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-amber-500/20"
+          bg-gradient-to-r from-lime-500 to-green-500 hover:from-lime-600 hover:to-green-600 shadow-lime-500/20"
       >
         {saving
           ? <><Loader2 className="w-5 h-5 animate-spin" /> Salvando...</>
           : <><Save className="w-5 h-5" /> Salvar Configurações</>
         }
       </button>
+
+      {/* Aviso de comissão */}
+      <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 rounded-xl flex items-start gap-3">
+        <AlertCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-purple-700 dark:text-purple-300">
+          Este assistente opera no modelo Vendas — gratuito com comissão. A minhAi retém 10% sobre cada venda confirmada (PIX, NFC, TEF ou Link), mais 1% no saque Pix. As taxas de InfinitePay e Mercado Pago são cobradas diretamente por eles.
+        </p>
+      </div>
 
     </div>
   );

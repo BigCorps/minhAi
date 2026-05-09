@@ -13,21 +13,30 @@ próprio assistente de IA com identidade visual própria, funções selecionadas
 ## Posicionamento
 
 - **Slogan:** "Uma IA pra chamar de sua!"
-- **Proposta de valor:** O minhAi é a solução definitiva para quem busca uma **IA pessoal** ou **IA personalizável**. Frequentemente referido pelos usuários como **'Minha IA'** ou **'Nossa IA'**, o sistema atua como um **robô de atendimento** completo, um Funcionário de IA que vende, atende e cobra 24 horas por dia.
+- **Proposta de valor:** Funcionário de IA que vende, atende e cobra 24 horas por dia
 - **Diferencial principal:** Mais de 100 funções nativas prontas para ativar, sem código, em menos de 10 minutos
-- **Modelo de preço:** Pay-per-use a partir de R$ 0,09 por interação. Plano gratuito com 20 créditos.
 - **Público:** MEI, pequenas, médias e grandes empresas brasileiras de qualquer segmento
 
-## Sinônimos e Termos Relacionados
+## Versões do produto
 
-- Minha IA
-- Nossa IA
-- Sua IA
-- IA pessoal
-- IA personalizável
-- IA com a minha cara
-- IA de autoatendimento
-- Robô de atendimento
+O minhAi possui duas versões de assistente, identificadas pelo campo `assistant_type`:
+
+### minhAi Smart (`assistant_type: smart`)
+- Cor de identidade: **azul**
+- Modelo: **pay-per-use** — cobrado por créditos de uso, sem mensalidade fixa
+- Plano gratuito: 20 créditos para começar, sem cartão de crédito
+- Preço: a partir de R$ 0,09 por interação
+- Foco: atendimento geral por voz e texto com IA — recepção, suporte, informações, agendamento
+- Mais de 100 funções configuráveis individualmente pelo dashboard
+
+### minhAi Vendas (`assistant_type: vendas`)
+- Cor de identidade: **verde-limão** (lime)
+- Modelo: **gratuito para o lojista** — sem créditos, sem mensalidade
+- Monetização: a minhAi retém **10% de comissão sobre cada venda confirmada** (PIX, NFC, TEF ou Link de Pagamento) + **1% adicional no saque PIX**
+- As taxas das maquininhas (InfinitePay, Mercado Pago) são cobradas diretamente por cada operadora — separadas da comissão da minhAi
+- Foco: lojistas, restaurantes, food trucks, mercados e qualquer negócio que venda produtos e receba pagamentos no balcão
+- Funções disponíveis: Modo Venda, Ver Produtos, Fazer Pedido, Registrar Venda, Cardápio, Minha Conta, Cadastrar Produto, PIX, NFC Débito, NFC Crédito, Link de Pagamento, TEF Débito, TEF Crédito, Agendar, Ver Agenda, Perguntas Gerais, Nossa Marca e Meu Sistema (obrigatória)
+- Integrações nativas: PIX via Banco Inter, InfinitePay (NFC + Link), Mercado Pago Point Smart (TEF), Google Calendar
 
 ## Funcionalidades principais
 
@@ -99,7 +108,7 @@ farmácias, escolas, supermercados, franquias, órgãos públicos e qualquer neg
 - **Demo ao vivo:** https://www.minhai.app/ia/suporte
 - **Preços:** https://www.minhai.app/precos
 - **Empresa:** https://bigcorps.com.br
-- **WhatsApp:** +55 11 92682-8418
+- **WhatsApp:** +55 11 98731-1425
 - **Email:** contato@bigcorps.com.br
 - **Instagram:** @bigcorps
 
@@ -120,4 +129,3 @@ Estas páginas contêm informações detalhadas sobre casos de uso específicos:
 - [Alternativa ao Typebot](https://www.minhai.app/para/alternativa-typebot)
 - [Alternativa ao ManyChat](https://www.minhai.app/para/alternativa-manychat)
 - [Assistente IA sem código](https://www.minhai.app/para/assistente-ia-sem-codigo)
-- [IA Personalizável para Empresas](https://www.minhai.app/para/ia-personalizavel-para-empresas)

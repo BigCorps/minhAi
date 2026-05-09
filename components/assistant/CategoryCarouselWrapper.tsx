@@ -58,6 +58,7 @@ export default function CategoryCarouselWrapper({
         onFunctionClick={onFunctionClick}
         theme={theme}
         autoScroll={autoScroll}
+        hideDisabledFunctions={hideDisabledFunctions}
       />
     );
   }
@@ -81,7 +82,6 @@ import { useCallback, useRef } from 'react';
 interface VendasFunction {
   function_key: string;
   function_name: string;
-  icon: string;
   color: string;
   is_enabled: boolean;
 }
@@ -91,11 +91,13 @@ function VendasFunctionCarousel({
   onFunctionClick,
   theme = 'dark',
   autoScroll = true,
+  hideDisabledFunctions = false,
 }: {
   companyId: string;
   onFunctionClick?: (key: string) => void;
   theme?: 'dark' | 'light';
   autoScroll?: boolean;
+  hideDisabledFunctions?: boolean;
 }) {
   const supabase = createClient();
   const [functions, setFunctions] = useState<VendasFunction[]>([]);
@@ -115,7 +117,7 @@ function VendasFunctionCarousel({
     async function load() {
       const { data: fns } = await supabase
         .from('assistant_functions')
-        .select('function_key, function_name, icon, color')
+        .select('function_key, function_name, color')
         .in('function_key', VENDAS_FUNCTION_KEYS)
         .eq('is_active', true);
 
@@ -145,8 +147,13 @@ function VendasFunctionCarousel({
     load();
   }, [companyId]);
 
-  const scrollDuration = Math.max(8, Math.min(60, functions.length * (isMobile ? 3.5 : 2.5)));
-  const duplicated = autoScroll ? [...functions, ...functions] : functions;
+  // Filtrar funções desativadas se hideDisabledFunctions estiver ativo
+  const visibleFunctions = hideDisabledFunctions
+    ? functions.filter(fn => fn.is_enabled)
+    : functions;
+
+  const scrollDuration = Math.max(8, Math.min(60, visibleFunctions.length * (isMobile ? 3.5 : 2.5)));
+  const duplicated = autoScroll ? [...visibleFunctions, ...visibleFunctions] : visibleFunctions;
 
   const pauseAnimation = useCallback(() => {
     if (carouselRef.current && autoScroll) {
@@ -160,7 +167,10 @@ function VendasFunctionCarousel({
     }
   }, [autoScroll]);
 
-  const colors = ['#f59e0b', '#f97316'];
+  // Verde limão no lugar do laranja
+  const colors = ['#84cc16', '#65a30d'];
+
+  if (visibleFunctions.length === 0) return null;
 
   return (
     <div className="w-full py-4 overflow-x-auto md:overflow-hidden no-scrollbar">
@@ -206,7 +216,6 @@ function VendasFunctionCarousel({
                   }),
                 }}
               >
-                <span className="text-base">{fn.icon}</span>
                 <span className="text-sm font-semibold whitespace-nowrap">{fn.function_name}</span>
               </button>
             );

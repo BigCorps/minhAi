@@ -108,6 +108,11 @@ export function AssistantSelectorHeader() {
         <span className="truncate max-w-[120px]">
           {current?.name || 'Selecione Assistente'}
         </span>
+        {current?.assistant_type === 'vendas' && (
+          <span className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-lime-400 text-black font-bold text-[9px]">
+            V
+          </span>
+        )}
         <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
@@ -137,7 +142,14 @@ export function AssistantSelectorHeader() {
                     <Bot className="w-4 h-4 text-blue-500" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{assistant.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-medium truncate">{assistant.name}</p>
+                      {assistant.assistant_type === 'vendas' && (
+                        <span className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-lime-400 text-black font-bold text-[9px]">
+                          V
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400">/{assistant.slug}</p>
                   </div>
                   {assistant.id === selectedAssistantId && (

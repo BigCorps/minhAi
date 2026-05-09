@@ -1,10 +1,5 @@
 *minhAi versão Vendas |  versão Smart
 
-*CLAUDE PEDIDOS - Modal meta
-
-*Ajustar modal config de impressões para habilitar ou não como função - fofo
-
-
 *Analise de arquivos mortos - Manus pedidos
 
 *Corrigir os Serviços Meta para usar a Versão Vendedor

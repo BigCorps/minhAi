@@ -22,15 +22,16 @@ export default function LinkNaBioContextWrapper() {
     const supabase = createClient();
     supabase
       .from('companies')
-      .select('id, slug, modo_links_enabled')
+      .select('id, slug, modo_links_enabled, assistant_type')
       .eq('id', selectedAssistantId)
       .single()
       .then(({ data: company }) => {
-        if (company) setData({
+        if (company && company.assistant_type !== 'vendas') setData({
           id: company.id,
           slug: company.slug,
           modo_links_enabled: company.modo_links_enabled ?? false,
         });
+        else setData(null);
       });
   }, [selectedAssistantId]);
 

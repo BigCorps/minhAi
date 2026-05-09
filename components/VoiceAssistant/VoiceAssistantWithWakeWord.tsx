@@ -98,11 +98,13 @@ export function VoiceAssistantWithWakeWord({
   onTextMessage,
   textMode = false,
   isKioskMode = false,
+  isVendas = false,
 }: VoiceAssistantProps & {
   onModalChange?: (modal: any) => void;
   onTextMessage?: (handler: (text: string) => Promise<{ text: string; functionKey?: string } | null>) => void;
   textMode?: boolean;
   isKioskMode?: boolean;
+  isVendas?: boolean;
 }) {
 
   // ── States básicos ────────────────────────────────────────
@@ -1693,7 +1695,7 @@ case 'impressao_recibo':
         }
       }, 1000);
 
-      const response = await fetch('/api/voice/process', { method: 'POST', body: formData });
+const response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/process', { method: 'POST', body: formData });
 
       const newSessionId = response.headers.get('X-Session-Id');
       if (newSessionId && !sessionId) setSessionId(newSessionId);
@@ -1865,7 +1867,7 @@ const handleTextMessage = async (message: string) => {
       if (sessionIdRef.current) formData.append('sessionId', sessionIdRef.current);
       formData.append('companyContext', gptContextRef.current);
 
-      const response = await fetch('/api/voice/process', { method: 'POST', body: formData });
+const response = await fetch('/api/voice/process', { method: 'POST', body: formData });
 
       const newSessionId = response.headers.get('X-Session-Id');
       if (newSessionId && !sessionIdRef.current) setSessionId(newSessionId);
@@ -2060,7 +2062,7 @@ const handleTextMessage = async (message: string) => {
       // Mesmo bug que havia na voice/process route — corrigido aqui também
       formData.append('companyContext', gptContextRef.current);
  
-      const response = await fetch('/api/voice/process', { method: 'POST', body: formData });
+const response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/process', { method: 'POST', body: formData });
 
       const newSessionId = response.headers.get('X-Session-Id');
       if (newSessionId && !sessionIdRef.current) setSessionId(newSessionId);

@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Loader2, Globe, Lock, CheckCircle, XCircle, AlertCircle, Sparkles, Bot, ExternalLink as ExtLink } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Globe, Zap, Lock, CheckCircle, XCircle, AlertCircle, Sparkles, Bot, ExternalLink as ExtLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import SetupAssistantChat from '@/components/dashboard/SetupAssistantChat';
 import { usePlayText } from '@/hooks/usePlayText';

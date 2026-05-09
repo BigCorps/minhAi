@@ -1,60 +1,9 @@
-miriamithiel
 *minhAi versão Vendas |  versão Smart
 
-*CLAUDE PEDIDOS - Modal Meta duplicando mensagens enviadas por ele e colocar para receber notificação push no dashboard quando chegar mensagem nova usando:
+*CLAUDE PEDIDOS - Modal meta
 
+*Ajustar modal config de impressões para habilitar ou não como função - fofo
 
-    // ── NOVO: DISPARAR PUSH NOTIFICATION DE PIX ───────────────────────
-    try {
-      const amountBrlNum = (transaction.amount_cents / 100).toFixed(2);
-      await fetch('https://www.minhai.app/api/send-push', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': Deno.env.get('PUSH_SECRET_KEY') ?? '@kg642902wzP'
-        },
-        body: JSON.stringify({
-          userId: transaction.user_id,
-          title: '💰 PIX Recebido!',
-          message: `Um pagamento de R$ ${amountBrlNum} acaba de cair no saldo da sua conta.`,
-          url: 'https://www.minhai.app/dashboard/saldo'
-        })
-      });
-    } catch (pushErr) {
-      console.error('⚠️ Erro ao enviar Push de PIX:', pushErr);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-
-    console.log('✅ Pagamento confirmado com sucesso!');
-
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Pagamento confirmado com sucesso!',
-      amount_received: transaction.amount_cents / 100,
-      new_balance: newBalance / 100,
-      bank_status: statusRecebido,
-      user_id: transaction.user_id,
-      company_id: transaction.company_id
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-
-  } catch (error: any) {
-    console.error('❌ Erro na confirmação:', error.message);
-    return new Response(JSON.stringify({
-      success: false,
-      error: error.message
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500
-    });
-  }
-});
-
- *Ajustar modal config de impressões para habilitar ou não como função - fofo
-
-*Implementar RAG embeddings para respostas mais precisas sobre produtos e a empresa e em IA conversacional -   - 19h40
 
 *Analise de arquivos mortos - Manus pedidos
 

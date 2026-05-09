@@ -466,7 +466,7 @@ export default function NovaEmpresaPage() {
                   className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white transition" />
               </div>
 
-{/* ── Tipo do Assistente ───────────────────────────── */}
+             {/* ── Tipo do Assistente ───────────────────────────── */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Modelo do Assistente
@@ -475,25 +475,6 @@ export default function NovaEmpresaPage() {
                   Esta escolha é permanente e não pode ser alterada após a criação.
                 </p>
                 <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => { setAssistantType('smart'); setWantWebapp(false); }}
-                    className={`flex items-start p-4 rounded-xl border-2 transition-all text-left ${
-                      assistantType === 'smart'
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10'
-                        : 'border-gray-200 dark:border-white/10 hover:border-blue-400/50'
-                    }`}
-                  >
-                    <Sparkles className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${assistantType === 'smart' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
-                    <div>
-                      <p className={`font-bold text-sm ${assistantType === 'smart' ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>
-                        minhAi Smart
-                      </p>
-                      <p className="text-[10px] opacity-70 mt-0.5 leading-tight">
-                        Mais de 100 funções com consumo de créditos por uso e com possibilidade de planos mensais para liberar mais funcionalidades.
-                      </p>
-                    </div>
-                  </button>
 
                   <button
                     type="button"
@@ -511,6 +492,26 @@ export default function NovaEmpresaPage() {
                       </p>
                       <p className="text-[10px] opacity-70 mt-0.5 leading-tight">
                         Assistente focado totalmente em vendas, sem cobrança de mensalidade e creditos, mas cobrando comissão de 10% por venda.
+                      </p>
+                    </div>
+                  </button>
+                   
+                  <button
+                    type="button"
+                    onClick={() => { setAssistantType('smart'); setWantWebapp(false); }}
+                    className={`flex items-start p-4 rounded-xl border-2 transition-all text-left ${
+                      assistantType === 'smart'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10'
+                        : 'border-gray-200 dark:border-white/10 hover:border-blue-400/50'
+                    }`}
+                  >
+                    <Sparkles className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${assistantType === 'smart' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
+                    <div>
+                      <p className={`font-bold text-sm ${assistantType === 'smart' ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                        minhAi Smart
+                      </p>
+                      <p className="text-[10px] opacity-70 mt-0.5 leading-tight">
+                        Mais de 100 funções com consumo de créditos por uso e com possibilidade de planos mensais para liberar mais funcionalidades.
                       </p>
                     </div>
                   </button>

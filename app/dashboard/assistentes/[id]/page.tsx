@@ -19,6 +19,7 @@ export default function EditarAssistentePage({ params }: PageProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assistant, setAssistant] = useState<any>(null);
+  const isVendas = assistant?.assistant_type === 'vendas';
 
   useEffect(() => {
     async function loadAssistant() {
@@ -462,31 +463,33 @@ export default function EditarAssistentePage({ params }: PageProps) {
                 </div>
                 <div className="p-6 space-y-3">
 
-                  {/* Modo Fila */}
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 flex-shrink-0 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <div>
-                        <label htmlFor="modo_fila_enabled" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Modo Fila
-                        </label>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          Gerenciamento de fila de atendimento
-                        </p>
+                  {/* Modo Fila — oculto na versão Vendas */}
+                  {!isVendas && (
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 flex-shrink-0 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <div>
+                          <label htmlFor="modo_fila_enabled" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Modo Fila
+                          </label>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Gerenciamento de fila de atendimento
+                          </p>
+                        </div>
                       </div>
+                      <input
+                        type="checkbox"
+                        id="modo_fila_enabled"
+                        name="modo_fila_enabled"
+                        defaultChecked={assistant.modo_fila_enabled ?? false}
+                        className="h-5 w-5 ml-4 shrink-0 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600"
+                      />
                     </div>
-                    <input
-                      type="checkbox"
-                      id="modo_fila_enabled"
-                      name="modo_fila_enabled"
-                      defaultChecked={assistant.modo_fila_enabled ?? false}
-                      className="h-5 w-5 ml-4 shrink-0 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600"
-                    />
-                  </div>
+                  )}
 
-                  {/* Modo Vendas */}
+                  {/* Modo Vendas — sempre ativo e travado na versão Vendas */}
                   <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
                     <div className="flex items-center gap-2">
                       <svg className="w-4 h-4 flex-shrink-0 text-emerald-500 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -497,7 +500,7 @@ export default function EditarAssistentePage({ params }: PageProps) {
                           Modo Vendas
                         </label>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          Loja virtual e módulo de pedidos
+                          {isVendas ? 'Sempre ativo na versão Vendas' : 'Loja virtual e módulo de pedidos'}
                         </p>
                       </div>
                     </div>
@@ -505,34 +508,49 @@ export default function EditarAssistentePage({ params }: PageProps) {
                       type="checkbox"
                       id="modo_vendas_enabled"
                       name="modo_vendas_enabled"
-                      defaultChecked={assistant.modo_vendas_enabled ?? false}
-                      className="h-5 w-5 ml-4 shrink-0 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600"
+                      defaultChecked={isVendas ? true : (assistant.modo_vendas_enabled ?? false)}
+                      disabled={isVendas}
+                      className="h-5 w-5 ml-4 shrink-0 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600 disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
 
-                  {/* Link na Bio */}
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 flex-shrink-0 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                      </svg>
-                      <div>
-                        <label htmlFor="modo_links_enabled" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Link na Bio
-                        </label>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          Página pública de links da empresa
-                        </p>
+                  {/* Link na Bio — oculto na versão Vendas */}
+                  {!isVendas && (
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 flex-shrink-0 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                        <div>
+                          <label htmlFor="modo_links_enabled" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Link na Bio
+                          </label>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Página pública de links da empresa
+                          </p>
+                        </div>
                       </div>
+                      <input
+                        type="checkbox"
+                        id="modo_links_enabled"
+                        name="modo_links_enabled"
+                        defaultChecked={assistant.modo_links_enabled ?? false}
+                        className="h-5 w-5 ml-4 shrink-0 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600"
+                      />
                     </div>
-                    <input
-                      type="checkbox"
-                      id="modo_links_enabled"
-                      name="modo_links_enabled"
-                      defaultChecked={assistant.modo_links_enabled ?? false}
-                      className="h-5 w-5 ml-4 shrink-0 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600"
-                    />
-                  </div>
+                  )}
+
+                  {/* Badge informativo versão Vendas */}
+                  {isVendas && (
+                    <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-lg">
+                      <svg className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                        Versão Vendas: Modo Fila e Link na Bio não estão disponíveis. O Modo Vendas é sempre ativo.
+                      </p>
+                    </div>
+                  )}
 
                 </div>
               </div>

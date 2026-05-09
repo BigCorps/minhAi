@@ -1,0 +1,237 @@
+miriamithiel
+*minhAi versão Vendas |  versão Smart
+
+*CLAUDE PEDIDOS - Modal Meta duplicando mensagens enviadas por ele e colocar para receber notificação push no dashboard quando chegar mensagem nova usando:
+
+
+    // ── NOVO: DISPARAR PUSH NOTIFICATION DE PIX ───────────────────────
+    try {
+      const amountBrlNum = (transaction.amount_cents / 100).toFixed(2);
+      await fetch('https://www.minhai.app/api/send-push', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': Deno.env.get('PUSH_SECRET_KEY') ?? '@kg642902wzP'
+        },
+        body: JSON.stringify({
+          userId: transaction.user_id,
+          title: '💰 PIX Recebido!',
+          message: `Um pagamento de R$ ${amountBrlNum} acaba de cair no saldo da sua conta.`,
+          url: 'https://www.minhai.app/dashboard/saldo'
+        })
+      });
+    } catch (pushErr) {
+      console.error('⚠️ Erro ao enviar Push de PIX:', pushErr);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+
+    console.log('✅ Pagamento confirmado com sucesso!');
+
+    return new Response(JSON.stringify({
+      success: true,
+      message: 'Pagamento confirmado com sucesso!',
+      amount_received: transaction.amount_cents / 100,
+      new_balance: newBalance / 100,
+      bank_status: statusRecebido,
+      user_id: transaction.user_id,
+      company_id: transaction.company_id
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+
+  } catch (error: any) {
+    console.error('❌ Erro na confirmação:', error.message);
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500
+    });
+  }
+});
+
+ *Ajustar modal config de impressões para habilitar ou não como função - fofo
+
+*Implementar RAG embeddings para respostas mais precisas sobre produtos e a empresa e em IA conversacional -   - 19h40
+
+*Analise de arquivos mortos - Manus pedidos
+
+*Corrigir os Serviços Meta para usar a Versão Vendedor
+subdominio
+*Conferir se todas as funções estão consumindo os normalmente e indo para o , se funcionam no mobile e desktop, slug e - Faq abrindo o Gerente apenas e no aparece como nossa marca
+
+*Sugerir site e IA Hiperlimp como parceria
+
+-
+
+ /  /  /  /  / itend eeaicom IAanexominhAi
+* Totem.plus / tIAtend.com / Agendai.me /  lojia.appiaWhats.com gráficas.apppostotec.appmercado.chat / filasenha.compainelmidia.com.brsaboreiaapp / roboatendente.com
+- iapos, já registrados (para cobranças , atendimento e funcionários IA) - relatório em
+✅
+*Carrossel no footer com 15 empresas que usam a
+
+*Gilbarco com abastecimento por IA
+
+Tambemtypebotjiuithsu
+*Link na Bio com informações do whatsapp e facebook integradas (botão para a seção Serviços Meta - relatório em anexo).
+
+*implementar sincronia entre catálogo minhAi e Meta (relatório em anexo)
+
+*Colocar no rodapé do site como -
+Saipos
+
+*Seção Integrações Externas para o usuário conectar serviços como , Ifood e outros ao minhAi e vice e versa, além de integração e webhooks para link Pix e link de pagamento - em anexo
+
+*Página admin com login via Google apenas com email  com verificação de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header - em anexo
+appminhai@gmail.com
+
+AGUARDANDO:
+
+*Publicar o App minhAi na Playstore (aguardando CURD)
+
+-
+
+*App ChatGPT implementados totalmente com imagens online (só no plano plus)  
+
+
+*Implementar seleção de cores e key inter/asaas/MercadoPago para pix de clientes full, além de seletor de tema no assistente. Sempre light, sempre dark, de acordo com o tema do usuário ou de acordo com a hora do dia e se aparece ou não o seletor no header. Pensar na possibilidade do avatar ser o logo carregado pelo cliente, com animações react
+
+*Bot auxiliar no footer com conhecimento de todas as seções para atualizar tudo por ele e ir até outras seções também. Auxílio em todas as seções, semelhante ao que o de produção e de assistentes fazem, auxiliando o usuário na criação de tudo facilmente, principalmente ativando funções e na criação de novas funções já enviando a ideia nova por email para mim, além de fornecer relatórios de cada seção individualmente 
+tambemMateriainterpagconsultaminhAiOpenClaw
+
+*Linha de Produção pronta para Postos e outros ramos de produção (Mudar Ingredientes para Prima).
+
+*3 novas funções nas categorias com apenas 6 e também 6 novas categorias futuramente, aproveitando para testar offline, implementando e testando com localhost, sem modificar o main no GitHub
+
+*Novas funções de transcrições já no Claude
+
+*Encontre Agora - função Pesquisar na região: tabela de clientes , se não encontrar, pesquisa no Maps.
+
+*configurar cadastro de produtos com imagens para a IA mostrar de acordo com o pedido do cliente. E também importar cardápio em pdf e imagem diretamente para o cadastro no dashboard 
+
+*Após tudo pronto, pensar em evoluir para um modelo inteligente como  com criação de funções autônomas e mesclar funções automaticamente de acordo com a escolha do cliente.
+
+-
+
+Contatos -
+✅Site | Whatsapp | Telefone
+                                              Instagram | Facebook | Tiktok
+Linkedin | Email | Twitter/X
+
+Multimidia
+-  | |                    |  | 
+✅Tocar Vídeo Vídeo de InstruçõesPainel de Ofertas
+ Iniciar Playlist Sequência de VídeosCanal do Youtube
+                     |  |
+Tocar MúsicaPorta RetratoVídeo Chamada
+
+Utilitários  -  | 
+✅Aparelhos SmartCriar Lembrete | Cronômetro 
+                         Temporizador | Relógio Mundial | Alarme
+                         |
+Segunda Via Boleto  Criar Nota | Lembrete Remédios
+
+Serviços  -  
+✅       Cardapio (QRcode) | Wifi (QRcode) | Nosso QRcode                              Impressão Remota | Impressão Local | Impressão Cupom
+Lista de Compras  | Chamar Gerente | Enviar SMS
+
+ModoChatGPT
+Câmera -  |   
+✅Ler QR Code | Ler Código de Barras Identificar Fraude
+                  Enviar Arquivo | Gerar QR Code | Criar Código de Barras
+                  Imagem em texto | Tabela em Texto | Contrato em Texto
+                
+Comercial -   
+✅Nossos Produtos |Link na Bio| Registrar Venda
+                      | 
+Venda| Fazer PedidoAuxiliar de Produção
+                   
+Gerar Cupom | Enviar E-mail |Cadastrar Produto
+
+Informação -                   |  | 
+✅Meu Sistema | Nossa Marca | Câmbio
+NotíciasFeriados NacionaisPesquisar Produto
+         
+Converter Medidas | Calculadora de Juros | Calculadora IMC
+
+Conhecimento - 
+6️⃣ | Orçamento | Respostas Rápidas 
+                        | 
+Traduzir Texto | Transcrever ÁudioClima e Tempo
+                Transcrever Reuniões | Transcrever Vídeos | Transcrever PDF
+
+Agendamento -  |  | 
+6️⃣Marcar EventoVer AgendaConfirmar Presença 
+         
+Reagendamento | Cancelar Agendamento | Horários Disponíveis
+Lembrete de Aniversário | Evento Recorrente | Compartilhar Evento
+    
+
+Identificação - | |
+6️⃣Fazer LoginNovo Cadastro Gerar Senha
+               
+Modo Fila | Pesquisas e Avaliações | Pré-Atendimento
+                   Liberar Acesso | Facial e Biometria | Registro de Ponto
+
+Debitojiuithsu
+Consultas -
+6️⃣ConsultarDados CNPJ | Dados CPF | Placa
+                 
+Consultar Leilão | Restrições CPF | Restrições CNPJ
+                  Tabela FIPE | Protesto Nacional | Consulta CRLV
+
+Arquivos -  |
+6️⃣Remover Fundo | Duplicar ImagemPlanílhaAnalisar  
+                      
+Editar Imagem | Converter Arquivos| Juntar PDFs
+                  Proteger PDF | Vetores e Ícones | Assinar Documento
+
+Localização -  |  | 
+6️⃣EndereçoConsultar DDDConsultar CEP
+                      
+Traçar Rota | Buscar Endereço | Rastreio Correios
+                  Ponto de Referência | Encontre Agora | CEP por Endereços
+             
+                                        
+Financeiro - |
+6️⃣ Gerar PixLink de Pagamento | TEF Débito
+ |
+                      NFC | Crédito NFCTEF Crédito 
+                    Gerar Boleto | Cobranças | Recorrentes
+
+*MODO KIOSK - claude ith.almeida
+*Landing -
+
+
+-
+
+6 categorias para o futuro:
+Análise 🔁- Analise de Currículos | Gerar Currículo | Radar de Mercado
+     Risco de Fornecedores | Analise de Licitações | Qualificar Empresa
+
+Tributário 🔁- Emitir NF-e | Emitir NFS-e | Emitir NFC-e
+                  Extrair Dados NF | Analisar Nota | Cancelar Nota
+
+Documentação 🔁- Validar RG/CNH | Auditar Contrato | Criar Recibo
+               Criar Timbrado | Reputação da Marca | Auxiliar de Relatório
+
+Rede Social 🔁- Criar Post | Postagem Direta | Gerador de Criativos
+                Calendário Editorial | Sugestão de Imagem | Refinar Idéia
+
+ ## Relatorios em anexo e Manus - ljcasaverde@gmail.com
+
+Transporte 🔁- Auxiliar Motorista | Rota Inteligente | Recebimento App
+
+ ## Pegar Ideias do Jad e implementar 
+
+Pagamentos 🔁- Enviar Pix | Pagar Boleto | Auxiliar de Pagamentos
+                      Pix em Lote | Boletos em Lote | Pagamentos em Lote
+
+ ## Pagamentos (banco Inter) no menu usuário com um auxiliar para colocar pagamentos automaticamente, como o auxiliar de produção e funções disponíveis somente para quem tem token inter (relatório em anexo)
+
+
+Ithiel Almeida
+_____________
+BIGCORPS

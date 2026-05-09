@@ -82,6 +82,13 @@ const CONFIGURABLE_FUNCTIONS = [
 // Funções de sistema que aparecem com badge "Sempre ativo" ao invés de toggle
 const SYSTEM_FUNCTIONS_META = new Set(['meu_sistema']);
 
+const VENDAS_META_FUNCTION_KEYS = new Set([
+  'fazer_pedido', 'registrar_venda', 'cardapio', 'minha_conta',
+  'pix_generate', 'link_pagamento',
+  'agendar_compromisso', 'ver_agenda',
+  'chatgpt', 'nossa_marca', 'meu_sistema',
+]);
+
 // ─── Pill classes ─────────────────────────────────────────────────────────────
 
 const pillCommon =
@@ -377,6 +384,7 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [viewMode, setViewMode]       = useState<'grid' | 'list'>('grid');
+  const [isVendas, setIsVendas]       = useState(false);
 
   const supabase = createClient();
 
@@ -384,17 +392,32 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
     if (companyId) loadData();
   }, [companyId]);
 
-  async function loadData() {
+async function loadData() {
     setLoading(true);
     try {
-      const { data: fns } = await supabase
+      // Verificar assistant_type
+      const { data: company } = await supabase
+        .from('companies')
+        .select('assistant_type')
+        .eq('id', companyId)
+        .single();
+
+      const vendas = company?.assistant_type === 'vendas';
+      setIsVendas(vendas);
+
+      const { data: allFns } = await supabase
         .from('assistant_functions')
         .select('id, function_key, function_name, function_category, description, short_description, icon, color, is_premium, consumes_credits, credits_per_use, edit_modal_component, default_enabled, enabled_meta')
         .eq('is_active', true)
         .eq('enabled_meta', true)
         .order('display_order');
 
-      setFunctions(fns ?? []);
+      // Versão Vendas: filtrar apenas funções do conjunto Vendas
+      const fns = vendas
+        ? (allFns ?? []).filter(f => VENDAS_META_FUNCTION_KEYS.has(f.function_key))
+        : (allFns ?? []);
+
+      setFunctions(fns);
 
       const { data: settings } = await supabase
   .from('company_function_settings') // <-- Alterado aqui
@@ -473,6 +496,71 @@ await supabase
     return (
       <div className="text-center py-12 text-gray-500 dark:text-gray-400">
         Nenhuma função Meta disponível no momento.
+      </div>
+    );
+  }
+
+// ── Tela dedicada versão Vendas ───────────────────────────────────────────
+  if (isVendas) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-xl">
+          <span className="text-amber-500 text-lg flex-shrink-0">⚡</span>
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            Assistente <strong>versão Vendas</strong> — ative as funções disponíveis para atendimento via Meta (WhatsApp, Instagram, Facebook). Nenhuma função consome créditos.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {functions.map(fn => {
+            const isOn = enabled[fn.function_key] ?? false;
+            const isSystem = SYSTEM_FUNCTIONS_META.has(fn.function_key);
+            const isUpd = updating === fn.function_key;
+
+            return (
+              <div
+                key={fn.function_key}
+                className={`relative flex items-center justify-between gap-3 p-4 rounded-xl border transition-all ${
+                  isOn
+                    ? 'border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-900/10'
+                    : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.02]'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-xl flex-shrink-0">{fn.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {fn.function_name}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {fn.short_description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {isSystem ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                      Sempre ativo
+                    </span>
+                  ) : (
+                    <SimpleSwitch
+                      checked={isOn}
+                      onChange={() => handleToggle(fn.function_key)}
+                      disabled={isUpd}
+                    />
+                  )}
+                </div>
+
+                {isUpd && (
+                  <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 flex items-center justify-center rounded-xl">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-500" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }

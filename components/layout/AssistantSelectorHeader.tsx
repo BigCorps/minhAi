@@ -80,6 +80,7 @@ export function AssistantSelectorHeader() {
 
   // ── Caso normal: com assistentes ────────────────────────────────────────────
   const current = availableAssistants.find(a => a.id === selectedAssistantId);
+  const currentIsVendas = current?.assistant_type === 'vendas';
 
   return (
     <div className="relative z-50">
@@ -92,7 +93,7 @@ export function AssistantSelectorHeader() {
           hover:bg-gray-50 dark:hover:bg-slate-700"
         aria-label={current?.name || 'Selecione Assistente'}
       >
-        <Bot className="w-4 h-4 text-blue-500" />
+        <Bot className={`w-4 h-4 ${currentIsVendas ? 'text-lime-500' : 'text-blue-500'}`} />
       </button>
 
       {/* Desktop: botão completo com nome */}
@@ -104,11 +105,11 @@ export function AssistantSelectorHeader() {
           text-gray-900 dark:text-white
           hover:bg-gray-50 dark:hover:bg-slate-700"
       >
-        <Bot className="w-4 h-4 text-blue-500 flex-shrink-0" />
+        <Bot className={`w-4 h-4 flex-shrink-0 ${currentIsVendas ? 'text-lime-500' : 'text-blue-500'}`} />
         <span className="truncate max-w-[120px]">
           {current?.name || 'Selecione Assistente'}
         </span>
-        {current?.assistant_type === 'vendas' && (
+        {currentIsVendas && (
           <span className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-lime-400 text-black font-bold text-[9px]">
             V
           </span>
@@ -124,41 +125,54 @@ export function AssistantSelectorHeader() {
             bg-white dark:bg-slate-800
             border-gray-300 dark:border-slate-700">
             <div className="max-h-72 overflow-y-auto">
-              {availableAssistants.map((assistant) => (
-                <button
-                  key={assistant.id}
-                  onClick={() => {
-                    setSelectedAssistant(assistant.id, assistant.name);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full px-4 py-2.5 flex items-center gap-3 text-sm transition-colors text-left
-                    ${assistant.id === selectedAssistantId
-                      ? 'bg-blue-500/20 text-blue-900 dark:text-white'
-                      : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-700'
-                    }`}
-                >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
-                    ${assistant.id === selectedAssistantId ? 'bg-blue-500/30' : 'bg-gray-100 dark:bg-slate-700'}`}>
-                    <Bot className="w-4 h-4 text-blue-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="font-medium truncate">{assistant.name}</p>
-                      {assistant.assistant_type === 'vendas' && (
-                        <span className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-lime-400 text-black font-bold text-[9px]">
-                          V
-                        </span>
-                      )}
+              {availableAssistants.map((assistant) => {
+                const isVendas = assistant.assistant_type === 'vendas';
+                const isSelected = assistant.id === selectedAssistantId;
+                return (
+                  <button
+                    key={assistant.id}
+                    onClick={() => {
+                      setSelectedAssistant(assistant.id, assistant.name);
+                      setIsOpen(false);
+                    }}
+                    className={`w-full px-4 py-2.5 flex items-center gap-3 text-sm transition-colors text-left
+                      ${isSelected
+                        ? isVendas
+                          ? 'bg-lime-500/20 text-lime-900 dark:text-white'
+                          : 'bg-blue-500/20 text-blue-900 dark:text-white'
+                        : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-700'
+                      }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                      ${isSelected
+                        ? isVendas ? 'bg-lime-500/30' : 'bg-blue-500/30'
+                        : 'bg-gray-100 dark:bg-slate-700'
+                      }`}>
+                      <Bot className={`w-4 h-4 ${isVendas ? 'text-lime-500' : 'text-blue-500'}`} />
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">/{assistant.slug}</p>
-                  </div>
-                  {assistant.id === selectedAssistantId && (
-                    <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </button>
-              ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium truncate">{assistant.name}</p>
+                        {isVendas && (
+                          <span className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-lime-400 text-black font-bold text-[9px]">
+                            V
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">/{assistant.slug}</p>
+                    </div>
+                    {isSelected && (
+                      <svg
+                        className={`w-4 h-4 flex-shrink-0 ${isVendas ? 'text-lime-500' : 'text-blue-500'}`}
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Rodapé com atalho para criar novo assistente */}

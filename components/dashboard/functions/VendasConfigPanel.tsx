@@ -9,22 +9,25 @@ import { MpPointConfigForm } from './MpPointConfigModal';
 import {
   Zap, ChevronDown, ChevronUp, Save, Loader2,
   CheckCircle, AlertCircle, ExternalLink, Calendar,
+  Bot, ShoppingBag, ShoppingCart, Banknote, CreditCard,
+  Link2, Terminal, Building2, MessageCircleQuestion,
+  MapPin, Eye, EyeOff, Disc,
 } from 'lucide-react';
 
 // ── Funções disponíveis na versão Vendas ─────────────────────────────────────
-const VENDAS_FUNCTIONS: { key: string; name: string; icon: string; description: string }[] = [
-  { key: 'modo_venda',          name: 'Modo Venda',           icon: '💿', description: 'Catálogo de produtos com carrinho de compras' },
-  { key: 'fazer_pedido',        name: 'Fazer Pedido',         icon: '🛒', description: 'Pedido por voz com produtos do catálogo' },
-  { key: 'pix_generate',        name: 'PIX',                  icon: '💚', description: 'Cobrar via PIX (Banco Inter)' },
-  { key: 'nfc_debito',          name: 'NFC Débito',           icon: '🔴', description: 'Pagamento por aproximação no débito (InfinitePay)' },
-  { key: 'nfc_credito',         name: 'NFC Crédito',          icon: '🔴', description: 'Pagamento por aproximação no crédito (InfinitePay)' },
-  { key: 'link_pagamento',      name: 'Link de Pagamento',    icon: '🔴', description: 'Link de cobrança via InfinitePay' },
-  { key: 'tef_debito',          name: 'TEF Débito',           icon: '🟥', description: 'Maquininha débito (Mercado Pago Point)' },
-  { key: 'tef_credito',         name: 'TEF Crédito',          icon: '🟥', description: 'Maquininha crédito (Mercado Pago Point)' },
-  { key: 'agendar_compromisso', name: 'Agendar',              icon: '🌸', description: 'Criar eventos no Google Calendar por voz' },
-  { key: 'ver_agenda',          name: 'Ver Agenda',           icon: '🌸', description: 'Consultar compromissos do Google Calendar' },
-  { key: 'chatgpt',             name: 'Perguntas Gerais',     icon: '🔵', description: 'Assistente IA para dúvidas gerais' },
-  { key: 'nossa_marca',         name: 'Nossa Marca',          icon: '🏢', description: 'Informações da empresa, endereço e horários' },
+const VENDAS_FUNCTIONS: { key: string; name: string; icon: React.ReactNode; description: string }[] = [
+  { key: 'modo_venda',          name: 'Modo Venda',           icon: <Disc className="w-4 h-4 text-gray-500" />,               description: 'Catálogo de produtos com carrinho de compras' },
+  { key: 'fazer_pedido',        name: 'Fazer Pedido',         icon: <ShoppingCart className="w-4 h-4 text-gray-500" />,        description: 'Pedido por voz com produtos do catálogo' },
+  { key: 'pix_generate',        name: 'PIX',                  icon: <Banknote className="w-4 h-4 text-green-500" />,           description: 'Cobrar via PIX (Banco Inter)' },
+  { key: 'nfc_debito',          name: 'NFC Débito',           icon: <CreditCard className="w-4 h-4 text-red-500" />,           description: 'Pagamento por aproximação no débito (InfinitePay)' },
+  { key: 'nfc_credito',         name: 'NFC Crédito',          icon: <CreditCard className="w-4 h-4 text-red-500" />,           description: 'Pagamento por aproximação no crédito (InfinitePay)' },
+  { key: 'link_pagamento',      name: 'Link de Pagamento',    icon: <Link2 className="w-4 h-4 text-red-500" />,                description: 'Link de cobrança via InfinitePay' },
+  { key: 'tef_debito',          name: 'TEF Débito',           icon: <Terminal className="w-4 h-4 text-red-700" />,             description: 'Maquininha débito (Mercado Pago Point)' },
+  { key: 'tef_credito',         name: 'TEF Crédito',          icon: <Terminal className="w-4 h-4 text-red-700" />,             description: 'Maquininha crédito (Mercado Pago Point)' },
+  { key: 'agendar_compromisso', name: 'Agendar',              icon: <Calendar className="w-4 h-4 text-pink-400" />,            description: 'Criar eventos no Google Calendar por voz' },
+  { key: 'ver_agenda',          name: 'Ver Agenda',           icon: <Calendar className="w-4 h-4 text-pink-400" />,            description: 'Consultar compromissos do Google Calendar' },
+  { key: 'chatgpt',             name: 'Perguntas Gerais',     icon: <MessageCircleQuestion className="w-4 h-4 text-blue-500" />, description: 'Assistente IA para dúvidas gerais' },
+  { key: 'nossa_marca',         name: 'Nossa Marca',          icon: <Building2 className="w-4 h-4 text-gray-500" />,           description: 'Informações da empresa, endereço e horários' },
 ];
 
 // ── Tipos de chave PIX ────────────────────────────────────────────────────────
@@ -293,7 +296,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
       {/* ── 1. Identidade do Assistente ─────────────────────────────────────── */}
       <Section
         title="Identidade do Assistente"
-        icon={<span className="text-lg">🤖</span>}
+        icon={<Bot className="w-5 h-5 text-amber-500" />}
         defaultOpen
       >
         <Field
@@ -356,7 +359,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
       {/* ── 2. Informações de Contato ───────────────────────────────────────── */}
       <Section
         title="Informações de Contato"
-        icon={<span className="text-lg">📍</span>}
+        icon={<MapPin className="w-5 h-5 text-blue-500" />}
       >
         <Field label="Endereço" hint="Endereço completo da empresa">
           <textarea
@@ -424,7 +427,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
       {/* ── 3. PIX ─────────────────────────────────────────────────────────── */}
       <Section
         title="Recebimento via PIX"
-        icon={<span className="text-lg">💚</span>}
+        icon={<Banknote className="w-5 h-5 text-green-500" />}
       >
         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-800 dark:text-blue-200">
           Chave PIX da sua empresa para receber pagamentos dos clientes. A comissão de 10% é descontada no momento do saque.
@@ -457,7 +460,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
       {/* ── 4. InfinitePay ─────────────────────────────────────────────────── */}
       <Section
         title="InfinitePay — NFC e Link de Pagamento"
-        icon={<span className="text-lg">🔴</span>}
+        icon={<CreditCard className="w-5 h-5 text-red-500" />}
       >
         <InfinitePayConfigForm
           settings={{}}
@@ -475,7 +478,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
       {/* ── 5. Mercado Pago Point ──────────────────────────────────────────── */}
       <Section
         title="Mercado Pago Point — TEF Débito e Crédito"
-        icon={<span className="text-lg">🟥</span>}
+        icon={<Terminal className="w-5 h-5 text-red-700" />}
       >
         <MpPointConfigForm
           companyId={companyId}
@@ -542,7 +545,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-base">{fn.icon}</span>
+                  {fn.icon}
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">{fn.name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{fn.description}</p>
@@ -652,9 +655,12 @@ function InfinitePayStandaloneFields({ companyId }: { companyId: string }) {
             <button
               type="button"
               onClick={() => setShow(v => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
-              {show ? '🙈' : '👁'}
+              {show
+                ? <EyeOff className="w-4 h-4" />
+                : <Eye className="w-4 h-4" />
+              }
             </button>
           </div>
           <button
@@ -663,7 +669,7 @@ function InfinitePayStandaloneFields({ companyId }: { companyId: string }) {
             disabled={saving}
             className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold rounded-lg transition disabled:opacity-50 whitespace-nowrap"
           >
-            {saving ? '...' : saved ? '✓' : 'Salvar'}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : 'Salvar'}
           </button>
         </div>
         <p className="text-xs text-gray-400 mt-1">

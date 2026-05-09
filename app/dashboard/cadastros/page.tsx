@@ -891,6 +891,18 @@ function CadastrosPageContent() {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
   const [aba, setAba] = useState<Aba>('cadastros');
+  const [isVendas, setIsVendas] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (!companyId) { setIsVendas(false); return; }
+    supabase
+      .from('companies')
+      .select('assistant_type')
+      .eq('id', companyId)
+      .single()
+      .then(({ data }) => setIsVendas(data?.assistant_type === 'vendas'));
+  }, [companyId]);
   const [modalPesquisaId, setModalPesquisaId] = useState<string | null | undefined>(undefined);
   const [modalFormId, setModalFormId] = useState<string | null | undefined>(undefined);
 
@@ -925,7 +937,7 @@ function CadastrosPageContent() {
             </p>
           </div>
 
-          {companyId && (
+          {companyId && !isVendas && (
             <div className="mb-8">
               <ModoToggle companyId={companyId} modoType="fila" initialEnabled={false}
                 onToggle={(enabled) => { console.log('Modo Fila atualizado:', enabled); }} />

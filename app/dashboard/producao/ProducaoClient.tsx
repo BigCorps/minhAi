@@ -55,8 +55,8 @@ export default function ProducaoClient() {
           </div>
           <div className="rounded-xl shadow-lg p-12 text-center bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm">
             <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center">
-                <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-lime-100 dark:bg-lime-500/10 flex items-center justify-center">
+                <svg className="w-8 h-8 text-lime-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
@@ -68,7 +68,7 @@ export default function ProducaoClient() {
               </p>
               <Link
                 href="/dashboard/vendas"
-                className="inline-block mt-6 px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black rounded-lg transition font-semibold"
+                className="inline-block mt-6 px-6 py-3 bg-lime-500 hover:bg-lime-400 text-black rounded-lg transition font-semibold"
               >
                 Ir para Vendas e Produtos
               </Link>

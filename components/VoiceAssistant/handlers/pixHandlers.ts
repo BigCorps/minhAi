@@ -51,7 +51,7 @@ export async function handlePixCommand(
 
     if (setActiveModal) {
       // Modo texto: renderiza via ActionModals (portal no document.body)
-      setActiveModal({ type: 'PIXConfirmationModal', data: pixData });
+      setActiveModal({ type: 'PIXConfirmationModal', data: { ...pixData, companyId } });
     } else {
       // Modo voz/padrão: renderiza dentro do AvatarFace
       setPixConfirmationData(pixData);

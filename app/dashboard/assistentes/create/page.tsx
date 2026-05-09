@@ -122,7 +122,7 @@ export default function NovaEmpresaPage() {
   const [isPublic, setIsPublic] = useState(true);
 
   // ── Tipo do assistente ───────────────────────────────────
-  const [assistantType, setAssistantType] = useState<'smart' | 'vendas'>('smart');
+  const [assistantType, setAssistantType] = useState<'smart' | 'vendas'>('vendas');
 
   // ── WebApp state ─────────────────────────────────────────
   const [wantWebapp, setWantWebapp] = useState(false);

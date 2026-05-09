@@ -120,9 +120,6 @@ export default function AssistentesClient({
                           </span>
                         )}
                       </div>
-                      <p className="text-sm font-mono text-gray-500 dark:text-white/40">
-                        ID: {assistant.id.substring(0, 8)}...
-                      </p>
                     </div>
                   </div>
 

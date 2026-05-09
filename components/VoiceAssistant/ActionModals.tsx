@@ -32,7 +32,23 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'VideoInstrucoesDisplay': dynamic(() => import('@/components/assistant/VideoInstrucoesDisplay'), { ssr: false }),
 
   // ── QR Codes e contato ────────────────────────────────────
-  'QRCodeDisplay': dynamic(() => import('@/components/assistant/QRCodeDisplay'), { ssr: false }),
+  // QRCodeDisplay espera props individuais — wrapper desestrutura data
+  'QRCodeDisplay': dynamic(
+    () => import('@/components/assistant/QRCodeDisplay').then(mod => ({
+      default: ({ data, onClose, theme }: any) => (
+        <mod.default
+          type={data.type}
+          qrCodeUrl={data.qrCodeUrl}
+          qrContent={data.qrContent}
+          displayText={data.displayText}
+          companyName={data.companyName}
+          onClose={onClose}
+          theme={theme}
+        />
+      )
+    })),
+    { ssr: false }
+  ),
   'WifiQRCodeDisplay': dynamic(() => import('@/components/assistant/WifiQRCodeDisplay'), { ssr: false }),
   'NossoQRCodeDisplay': dynamic(() => import('@/components/assistant/NossoQRCodeDisplay'), { ssr: false }),
   'GerarQRCodeDisplay': dynamic(() => import('@/components/assistant/GerarQRCodeDisplay'), { ssr: false }),
@@ -40,7 +56,28 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'CanalYoutubeDisplay': dynamic(() => import('@/components/assistant/CanalYoutubeDisplay'), { ssr: false }),
 
   // ── Pagamentos ────────────────────────────────────────────
-  'PIXConfirmationModal': dynamic(() => import('@/components/assistant/PixConfirmationModal'), { ssr: false }),
+  // PIXConfirmationModal espera props individuais — wrapper desestrutura data
+  // onConfirm e onCancel são passados via onConfirmPix/onCancelPix do ActionModals
+  'PIXConfirmationModal': dynamic(
+    () => import('@/components/assistant/PixConfirmationModal').then(mod => ({
+      default: ({ data, onClose, theme, onConfirmPix, onCancelPix, printOnPayment, hasActivePlan }: any) => (
+        <mod.default
+          transactionId={data.transactionId}
+          amount={data.amount}
+          qrCodeUrl={data.qrCodeUrl}
+          pixCode={data.pixCode}
+          companyName={data.companyName}
+          theme={theme}
+          printOnPayment={printOnPayment}
+          hasActivePlan={hasActivePlan}
+          companyId={data.companyId}
+          onConfirm={async () => { onConfirmPix?.(data); onClose(); }}
+          onCancel={async () => { onCancelPix?.(); onClose(); }}
+        />
+      )
+    })),
+    { ssr: false }
+  ),
   'InfinitePayDisplay': dynamic(() => import('@/components/assistant/InfinitePayDisplay'), { ssr: false }),
   'ImpressaoLocalDisplay': dynamic(() => import('@/components/assistant/ImpressaoLocalDisplay'), { ssr: false }),
   'ImpressaoRemotaDisplay': dynamic(() => import('@/components/assistant/ImpressaoRemotaDisplay'), { ssr: false }),

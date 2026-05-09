@@ -215,7 +215,12 @@ export async function detectVoiceCommand(
       const isEnabled = await checkIfFunctionIsEnabled(companyId, key);
       if (!isEnabled) { await playText('A função está desativada no momento.'); return true; }
       const qrType = key.replace('qrcode_', '');
-      await handleQRCodeCommand(qrType, { companyId, setIsProcessing, setQrCodeData, playText });
+      // ✅ CORREÇÃO: passa setActiveModal para que no modo texto o QR Code
+      // seja exibido via ActionModals em vez do AvatarFace (ausente no modo texto)
+      await handleQRCodeCommand(qrType, {
+        companyId, setIsProcessing, setQrCodeData, playText,
+        setActiveModal: deps.setActiveModal,
+      });
       await registerFunctionUsage(companyId, key, functionSettings[key]?.creditsPerUse ?? 0);
       return true;
     }
@@ -713,7 +718,6 @@ export async function detectVoiceCommand(
         const { createClient } = await import('@/lib/supabase-browser');
         const supabase = createClient();
         
-        // Salva o contexto pendente no Supabase (Removido o updated_at para evitar o Erro 400)
         await supabase
           .from('assistant_sessions')
           .update({ 
@@ -801,10 +805,6 @@ export async function detectVoiceCommand(
   }
 
   // ── Fix 4 — resolução de __payment_choice__ sem chamar o Groq ────────────
-  // Camada mais rápida: zero latência de rede.
-  // Consulta last_function_keys da sessão antes de qualquer chamada ao Groq.
-  // Se for __payment_choice__ e o cliente disser "pix", "débito" ou "crédito",
-  // executa direto e retorna — sem custo de rede.
   if (!fromGroq && deps.sessionId) {
     try {
       const { createClient } = await import('@/lib/supabase-browser');
@@ -826,14 +826,11 @@ export async function detectVoiceCommand(
         if (lower.includes('pix')) resolved = 'pix_generate';
         else if (lower.includes('débito') || lower.includes('debito')) resolved = 'nfc_debito';
         else if (lower.includes('crédito') || lower.includes('credito')) resolved = 'nfc_credito';
-        // Valor numérico isolado (ex: "dez reais", "10,00") sem método especificado:
-        // deixa cair pro Groq para perguntar débito/crédito/pix
 
         if (resolved) {
           console.log(`⚡ Fix4: __payment_choice__ resolvido sem Groq → ${resolved}`);
           await playText('Abrindo agora.');
           if (deps.onFunctionDetected) deps.onFunctionDetected(resolved);
-          // Limpa o pendente da sessão
           supabase
             .from('assistant_sessions')
             .update({ last_function_keys: [] })

@@ -695,12 +695,14 @@ Suas prioridades agora:
 4. Se mencionar um produto, confirme se está disponível e informe o preço.`
     : '';
 
-  const rules = `\n\n## Regras de resposta:
+const rules = `\n\n## Regras de resposta:
 - Máximo 2-3 frases por resposta (será falado em voz alta)
 - Português brasileiro, linguagem natural e amigável
 - Use SOMENTE os dados da empresa acima para responder sobre produtos, preços, horários ou localização
 - Se não tiver a informação nos dados acima, diga honestamente que não tem essa informação no momento
-- NUNCA invente preços, horários ou produtos que não estejam listados`;
+- NUNCA invente preços, horários ou produtos que não estejam listados
+- Quando informar o preço de um produto, SEMPRE termine perguntando se o cliente deseja comprar ou como prefere pagar
+- Se o cliente demonstrar interesse em um produto, proponha finalizar a compra imediatamente após informar o preço`;
 
   return `${basePrompt}${contextBlock}${ragBlock}${saleModeBlock}${rules}`;
 }

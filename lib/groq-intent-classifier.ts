@@ -120,7 +120,11 @@ export async function classifyIntentWithGroq(
               .update({ last_function_keys: [] })
               .eq('id', effectiveSessionId)
               .then(() => {}).catch(() => {});
-          }
+        } else {
+          // Sem valor numérico — pede diretamente sem ir pro GROQ
+          await deps.playText(`Qual o valor para ${pendingFunction === 'pix_generate' ? 'o PIX' : 'o link de pagamento'}?`);
+          return true;
+        }
 
           await deps.playText('Gerando agora.');
 

@@ -509,6 +509,7 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
                   <p className={`text-xs sm:text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
                     Sem mensalidade, sem créditos, sem surpresa.
                     Você só paga quando vender.
+                    Tenha uma IA focada em atender, vender e cobrar 24 horas!
                   </p>
                 </div>
                 <div className={`flex-shrink-0 text-center px-5 py-3 rounded-xl border ${

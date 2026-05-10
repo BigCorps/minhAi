@@ -1,3 +1,5 @@
+*Fazer saudação inicial já executar uma função e testar versão vendas para ver se tudo está certo, se não, sugerir um fluxo tipo typebot após o cliente escolher o pedido (conseguindo se tem cadastro, se não tem fazer, e então já enviar o pagamento e confirmação corretamente).
+
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc
 
 *Sugerir site e IA Hiperlimp como parceria

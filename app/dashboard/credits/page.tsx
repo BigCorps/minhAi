@@ -611,14 +611,13 @@ export default function CreditsPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { nome: 'PIX', sub: 'Banco Inter', detalhe: '10% descontado no saque', icon: '⚡' },
-                { nome: 'NFC + Link de Pagamento', sub: 'InfinitePay', detalhe: 'Taxa da operadora', icon: '📲' },
-                { nome: 'TEF (Maquininha)', sub: 'Mercado Pago', detalhe: 'Taxa da operadora', icon: '💳' },
-              ].map(({ nome, sub, detalhe, icon }) => (
+                { nome: 'PIX', sub: 'Banco Inter', detalhe: '10% descontado no saque' },
+                { nome: 'NFC + Link de Pagamento', sub: 'InfinitePay', detalhe: 'Taxa da operadora' },
+                { nome: 'TEF (Maquininha)', sub: 'Mercado Pago', detalhe: 'Taxa da operadora' },
+              ].map(({ nome, sub, detalhe }) => (
                 <div key={nome} className={`flex flex-col items-center text-center p-5 rounded-2xl border ${
                   isDark ? 'bg-white/[0.02] border-white/8' : 'bg-white border-gray-100 shadow-sm'
                 }`}>
-                  <span className="text-3xl mb-2">{icon}</span>
                   <span className={`text-base font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{nome}</span>
                   <span className={`text-sm font-medium ${isDark ? 'text-lime-400/80' : 'text-lime-600'}`}>{sub}</span>
                   <span className={`text-xs mt-1 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>{detalhe}</span>
@@ -653,36 +652,6 @@ export default function CreditsPage() {
                   <span className="truncate text-xs">{label}</span>
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* CTA */}
-          <div className={`rounded-2xl border p-6 flex flex-col sm:flex-row items-center justify-between gap-4 ${
-            isDark ? 'bg-lime-500/5 border-lime-500/20' : 'bg-lime-50 border-lime-200'
-          }`}>
-            <div>
-              <p className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Pronto para começar a vender?
-              </p>
-              <p className={`text-sm mt-0.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                Crie seu assistente de vendas agora — é totalmente gratuito.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
-              <a
-                href="/login"
-                className="px-6 py-3 bg-lime-500 text-white rounded-xl font-bold text-sm text-center shadow-lg hover:brightness-110 hover:scale-105 transition-all duration-300 whitespace-nowrap"
-              >
-                Criar assistente Vendas grátis
-              </a>
-              <button
-                onClick={() => window.open('https://wa.me/5511926828418?text=Quero%20saber%20mais%20sobre%20o%20minhAi%20Vendas', '_blank')}
-                className={`px-6 py-3 border-2 rounded-xl font-bold text-sm text-center hover:scale-105 transition-all duration-300 whitespace-nowrap ${
-                  isDark ? 'border-lime-500/50 text-lime-400 hover:bg-lime-500/10' : 'border-lime-500/50 text-lime-600 hover:bg-lime-50'
-                }`}
-              >
-                Falar com consultor
-              </button>
             </div>
           </div>
 

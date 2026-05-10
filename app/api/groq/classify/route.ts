@@ -6,7 +6,7 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
-    const { transcript, functionsContext, sessionContext, forceResponse } = await req.json();
+  const { transcript, functionsContext, sessionContext, forceResponse, conversationHistory } = await req.json();
     if (!transcript || !functionsContext) {
       return NextResponse.json({ response: null, functionKey: null });
     }
@@ -30,6 +30,14 @@ export async function POST(req: NextRequest) {
 
     const memoryBlock = sessionContext?.summary || lastFunctions.length > 0
       ? `\n\nCONTEXTO DESTA SESSÃO:\n${sessionContext?.summary ? `- ${sessionContext.summary}` : ''}${friendlyFunctions.length > 0 ? `\n- Estado atual: ${friendlyFunctions.join(', ')}` : ''}`
+      : '';
+
+    // Histórico recente da conversa — produto mencionado, valor cotado, intenção
+    const recentHistory: Array<{role: string; content: string}> = conversationHistory ?? [];
+    const historyBlock = recentHistory.length > 0
+      ? `\n\nHISTÓRICO RECENTE (últimas trocas):\n${recentHistory.slice(-6).map(m =>
+          `${m.role === 'user' ? 'Cliente' : 'Assistente'}: ${m.content}`
+        ).join('\n')}`
       : '';
 
 // Instrução extra quando há contexto pendente
@@ -104,10 +112,19 @@ Se o contexto da sessão indicar uma função sugerida, execute-a.
 - NUNCA responda sobre produtos, preços ou dados da empresa
 ${hasProfile ? '- Use o nome do cliente quando ficar natural' : ''}
 ${forceResponse ? '- ChatGPT desativado: se não for função do sistema, responda como assistente geral' : ''}
-${memoryBlock}${pendingInstruction}`,
-        },
+${memoryBlock}${historyBlock}${pendingInstruction}
+
+## REGRA DE CONTEXTO HISTÓRICO:
+Se o histórico acima mostrar que o cliente perguntou sobre um produto e o assistente informou o preço, e agora o cliente quiser pagar (ex: "quero pagar", "pode cobrar", "vou levar"), entenda o valor do contexto e execute a função de pagamento adequada com esse valor.
+Exemplo: histórico mostra "Suco de laranja: R$8,50" e cliente diz "quero pagar" → retorne {"response": "Gerando PIX de R$8,50.", "functionKey": "pix_generate"} com o valor inferido do histórico.`,
+                },
+        // Injeta histórico recente como mensagens reais para o GROQ ter contexto
+        ...recentHistory.slice(-4).map(m => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })),
         {
-          role: 'user',
+          role: 'user' as const,
           content: transcript,
         },
       ],

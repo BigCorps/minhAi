@@ -78,13 +78,14 @@ export async function classifyIntentWithGroq(
 
     const effectiveSessionId = deps.sessionId;
     let sessionContext: { summary: string; lastFunctions: string[] } | null = null;
-
+    let conversationHistory: Array<{ role: string; content: string }> = [];
+    
     if (effectiveSessionId) {
       try {
         const supabase = createClient();
         const { data: sessionData } = await supabase
           .from('assistant_sessions')
-          .select('context_summary, last_function_keys')
+          .select('context_summary, last_function_keys, messages')
           .eq('id', effectiveSessionId)
           .eq('company_id', deps.companyId)
           .maybeSingle();
@@ -93,6 +94,8 @@ export async function classifyIntentWithGroq(
             summary: sessionData.context_summary ?? '',
             lastFunctions: sessionData.last_function_keys ?? [],
           };
+          // Histórico recente — últimas 6 trocas para contexto de preço/produto
+          conversationHistory = (sessionData.messages ?? []).slice(-6);
         }
       } catch { /* silencioso */ }
     }
@@ -179,6 +182,7 @@ export async function classifyIntentWithGroq(
         functionsContext,
         sessionContext,
         forceResponse: deps.forceResponse,
+        conversationHistory,
       }),
     });
 

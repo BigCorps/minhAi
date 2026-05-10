@@ -67,7 +67,7 @@ const RECURSO_CARDS = [
     </svg>
   ),
   title: 'Assistentes Inteligentes',
-  highlight: 'Multi',
+  highlight: 'Multifuncional',
   highlightLabel: 'funções e equipes',
   description: 'Crie vários assistentes especializados para cada setor ou um único assistente completo capaz de atender, vender, cobrar e organizar seu negócio.',
   color: 'green' as const,
@@ -79,7 +79,7 @@ const RECURSO_CARDS = [
     </svg>
   ),
   title: 'Notificações em Tempo Real',
-  highlight: 'Alertas',
+  highlight: 'Alertas e Avisos',
   highlightLabel: 'instantâneos',
   description: 'Receba notificações automáticas por e-mail, WhatsApp e push sempre que uma venda, cobrança ou pagamento for realizado.',
   color: 'blue' as const,

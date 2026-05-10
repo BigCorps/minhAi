@@ -41,7 +41,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
         setStartupFunctionKey(data.startup_function_key ?? '');
       }
 
-      // Carregar funções disponíveis para autocomplete
       const { data: fns } = await supabase
         .from('assistant_functions')
         .select('function_key, function_name, short_description')
@@ -74,7 +73,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
       carousel_auto_scroll: formData.get('carousel_auto_scroll') === 'on',
       assistant_avatar_type: formData.get('assistant_avatar_type') as string,
       wake_word_enabled: formData.get('wake_word_enabled') === 'on',
-      // Novos campos — Fase 1
       presence_greeting_enabled: formData.get('presence_greeting_enabled') === 'on',
       inactivity_timeout_seconds: isNaN(inactivitySeconds) ? 300 : Math.min(3600, Math.max(30, inactivitySeconds)),
       inactivity_action: formData.get('inactivity_action') as string,
@@ -148,7 +146,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Grid de 2 colunas no desktop, 1 no mobile */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* ── COLUNA ESQUERDA ── */}
@@ -162,7 +159,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                 </div>
                 <div className="p-6 space-y-5">
 
-                  {/* Nome */}
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Nome do Assistente *
@@ -177,7 +173,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     />
                   </div>
 
-                  {/* Logo URL */}
                   <div>
                     <label htmlFor="logo_url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Link do Logo (URL da Imagem)
@@ -192,7 +187,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     />
                   </div>
 
-                  {/* Função do Assistente */}
                   <div>
                     <label htmlFor="assistant_role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Função do Assistente *
@@ -222,7 +216,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     </select>
                   </div>
 
-                  {/* Visibilidade (read-only) */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Visibilidade (definida na criação)
@@ -258,7 +251,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                 </div>
                 <div className="flex flex-col flex-1 p-6 space-y-5">
 
-                  {/* Palavras de Ativação */}
                   <div>
                     <label htmlFor="wake_word" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Palavras de Ativação *
@@ -273,7 +265,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     />
                   </div>
 
-                  {/* Mensagem de Ativação */}
                   <div className="flex flex-col flex-1">
                     <label htmlFor="greeting_message" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Mensagem de Saudação *
@@ -288,7 +279,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     />
                   </div>
 
-                  {/* Wake Word Enabled */}
                   <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
                     <div>
                       <label htmlFor="wake_word_enabled" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -307,7 +297,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     />
                   </div>
 
-                  {/* Voz do Assistente */}
                   <div>
                     <label htmlFor="tts_voice" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Voz do Assistente
@@ -328,12 +317,7 @@ export default function EditarAssistentePage({ params }: PageProps) {
                 </div>
               </div>
 
-            </div>
-
-            {/* ── COLUNA DIREITA ── */}
-            <div className="space-y-6">
-
-              {/* Card: Visual */}
+              {/* Card: Visual — MOVIDO PARA COLUNA ESQUERDA */}
               <div className="bg-white/80 dark:bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
                   <h2 className="text-base font-semibold text-gray-900 dark:text-white">Visual</h2>
@@ -341,7 +325,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                 </div>
                 <div className="p-6 space-y-5">
 
-                  {/* Avatar */}
                   <div>
                     <label htmlFor="assistant_avatar_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Avatar do Assistente
@@ -360,7 +343,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     </p>
                   </div>
 
-                  {/* Ocultar Funções Desabilitadas */}
                   <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
                     <div>
                       <label htmlFor="hide_disabled_functions_carousel" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -379,7 +361,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     />
                   </div>
 
-                  {/* Rolagem Automática */}
                   <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
                     <div>
                       <label htmlFor="carousel_auto_scroll" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -400,7 +381,13 @@ export default function EditarAssistentePage({ params }: PageProps) {
                 </div>
               </div>
 
-              {/* Card: Comportamento do Assistente — NOVO */}
+            </div>
+            {/* fim COLUNA ESQUERDA */}
+
+            {/* ── COLUNA DIREITA ── */}
+            <div className="space-y-6">
+
+              {/* Card: Comportamento do Assistente */}
               <div className="bg-white/80 dark:bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
                   <h2 className="text-base font-semibold text-gray-900 dark:text-white">Comportamento do Assistente</h2>
@@ -408,7 +395,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                 </div>
                 <div className="p-6 space-y-5">
 
-                  {/* Saudação por Presença */}
                   <div className="flex items-start justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
                     <div className="flex-1 pr-4">
                       <label htmlFor="presence_greeting_enabled" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -427,7 +413,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     />
                   </div>
 
-                  {/* Tempo de Inatividade */}
                   <div>
                     <label htmlFor="inactivity_timeout_seconds" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Tempo de inatividade (segundos)
@@ -446,7 +431,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     </p>
                   </div>
 
-                  {/* Ação de Inatividade */}
                   <div>
                     <label htmlFor="inactivity_action" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Ação ao detectar inatividade
@@ -551,7 +535,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                 </div>
                 <div className="p-6 space-y-3">
 
-                  {/* Modo Fila — oculto na versão Vendas */}
                   {!isVendas && (
                     <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
                       <div className="flex items-center gap-2">
@@ -577,7 +560,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     </div>
                   )}
 
-                  {/* Modo Vendas — sempre ativo e travado na versão Vendas */}
                   <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
                     <div className="flex items-center gap-2">
                       <svg className="w-4 h-4 flex-shrink-0 text-emerald-500 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -602,7 +584,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     />
                   </div>
 
-                  {/* Link na Bio — oculto na versão Vendas */}
                   {!isVendas && (
                     <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
                       <div className="flex items-center gap-2">
@@ -628,7 +609,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     </div>
                   )}
 
-                  {/* Badge informativo versão Vendas */}
                   {isVendas && (
                     <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-lg">
                       <svg className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -644,9 +624,11 @@ export default function EditarAssistentePage({ params }: PageProps) {
               </div>
 
             </div>
+            {/* fim COLUNA DIREITA */}
+
           </div>
 
-          {/* Botões de ação — largura total */}
+          {/* Botões de ação */}
           <div className="mt-6 flex items-center gap-4">
             <button
               type="submit"

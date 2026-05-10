@@ -58,7 +58,7 @@ const FUNCOES_VENDAS = [
   { label: 'Nossa Marca',         desc: 'Infos, endereço e horários' },
   { label: 'Minha Conta',         desc: 'Saldo e dados da conta' },
   { label: 'Cadastrar Produto',   desc: 'Adiciona produto por voz' },
-  { label: 'Meu Sistema',         desc: 'Informações sobre a minhAi' },
+  { label: 'Sobre o Sistema',     desc: 'Informações sobre a minhAi' },
 ];
 
 export default function CreditsPage() {
@@ -645,12 +645,10 @@ export default function CreditsPage() {
                   key={label}
                   title={desc}
                   className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium ${
-                    isDark ? 'bg-white/[0.03] border-white/6 text-white/60' : 'bg-white/80 border-gray-100 text-gray-600'
+                    isDark ? 'bg-white/[0.03] border-white/8 text-white/60' : 'bg-white border-gray-100 text-gray-600 shadow-sm'
                   }`}
                 >
-                  <Check className={`w-3.5 h-3.5 flex-shrink-0 ${
-                    ${isDark ? 'text-lime-400/60' : 'text-lime-600/60'}`}
-                  />
+                  <Check className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? 'text-lime-400/60' : 'text-lime-600/60'}`} />
                   <span className="truncate text-xs">{label}</span>
                 </div>
               ))}

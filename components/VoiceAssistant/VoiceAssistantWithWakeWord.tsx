@@ -1712,7 +1712,10 @@ case 'impressao_recibo':
 const response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/process', { method: 'POST', body: formData });
 
       const newSessionId = response.headers.get('X-Session-Id');
-      if (newSessionId && !sessionId) setSessionId(newSessionId);
+      if (newSessionId) {
+        setSessionId(newSessionId);
+        sessionIdRef.current = newSessionId;
+      }
 
       const responseTextHeader = response.headers.get('X-Response-Text');
       if (responseTextHeader) setLastResponse(decodeURIComponent(responseTextHeader));
@@ -1884,7 +1887,10 @@ const handleTextMessage = async (message: string) => {
 const response = await fetch('/api/voice/process', { method: 'POST', body: formData });
 
       const newSessionId = response.headers.get('X-Session-Id');
-      if (newSessionId && !sessionIdRef.current) setSessionId(newSessionId);
+      if (newSessionId) {
+        setSessionId(newSessionId);
+        sessionIdRef.current = newSessionId;
+      }
 
       const responseTextHeader = response.headers.get('X-Response-Text');
       if (responseTextHeader) setLastResponse(decodeURIComponent(responseTextHeader));

@@ -6144,11 +6144,10 @@ modo_venda: {
   responseType: 'navigation', // ← MUDOU de 'voice+modal' para 'navigation'
   voiceTriggers: [
     'modo venda', 'modo de venda', 'abrir loja',
-    'quero comprar', 'comprar agora', 'escolher produtos',
+    'comprar agora', 'escolher produtos',
     'fazer compras', 'abrir modo venda', 'loja virtual',
   ],
   examplePhrases: [
-    'Quero comprar',
     'Abrir modo de venda',
     'Escolher produtos',
     'Comprar agora',

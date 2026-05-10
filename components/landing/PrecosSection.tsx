@@ -574,24 +574,6 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
               </div>
             </div>
 
-            {/* CTA */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
-              <a
-                href="/login"
-                className="w-full sm:w-auto px-6 py-2.5 bg-lime-500 text-white rounded-full font-bold text-xs sm:text-sm text-center shadow-lg hover:brightness-110 hover:scale-105 transition-all duration-300"
-              >
-                Criar meu assistente Vendas grátis
-              </a>
-              <button
-                onClick={() => window.open('https://wa.me/5511926828418?text=Quero%20saber%20mais%20sobre%20o%20minhAi%20Vendas', '_blank')}
-                className={`w-full sm:w-auto px-6 py-2.5 border-2 rounded-full font-bold text-xs sm:text-sm text-center hover:scale-105 transition-all duration-300 ${
-                  isDark ? 'border-lime-500/50 text-lime-400 hover:bg-lime-500/10' : 'border-lime-500/50 text-lime-600 hover:bg-lime-50'
-                }`}
-              >
-                Falar com consultor
-              </button>
-            </div>
-
           </div>
         )}
 

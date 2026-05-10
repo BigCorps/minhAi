@@ -20,6 +20,10 @@ export default function EditarAssistentePage({ params }: PageProps) {
   const [error, setError] = useState<string | null>(null);
   const [assistant, setAssistant] = useState<any>(null);
   const isVendas = assistant?.assistant_type === 'vendas';
+  const [availableFunctions, setAvailableFunctions] = useState<{function_key: string; function_name: string; short_description?: string}[]>([]);
+  const [startupFunctionKey, setStartupFunctionKey] = useState('');
+  const [showStartupSuggestions, setShowStartupSuggestions] = useState(false);
+  const [startupSuggestions, setStartupSuggestions] = useState<typeof availableFunctions>([]);
 
   useEffect(() => {
     async function loadAssistant() {
@@ -34,7 +38,16 @@ export default function EditarAssistentePage({ params }: PageProps) {
         setError('Erro ao carregar assistente');
       } else {
         setAssistant(data);
+        setStartupFunctionKey(data.startup_function_key ?? '');
       }
+
+      // Carregar funções disponíveis para autocomplete
+      const { data: fns } = await supabase
+        .from('assistant_functions')
+        .select('function_key, function_name, short_description')
+        .eq('is_active', true)
+        .order('function_name');
+      if (fns) setAvailableFunctions(fns);
       setLoading(false);
     }
 
@@ -69,6 +82,7 @@ export default function EditarAssistentePage({ params }: PageProps) {
       modo_fila_enabled: formData.get('modo_fila_enabled') === 'on',
       modo_vendas_enabled: formData.get('modo_vendas_enabled') === 'on',
       modo_links_enabled: formData.get('modo_links_enabled') === 'on',
+      startup_function_key: startupFunctionKey.trim() || null,
     };
 
     try {
@@ -452,6 +466,80 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     </p>
                   </div>
 
+                </div>
+              </div>
+
+              {/* Card: Função de Boas-vindas */}
+              <div className="bg-white/80 dark:bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-white">Função de Boas-vindas</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Função executada automaticamente quando um novo cliente é detectado pela câmera ou envia a primeira mensagem via Meta
+                  </p>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="relative">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Função de inicialização
+                    </label>
+                    <input
+                      type="text"
+                      value={startupFunctionKey}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setStartupFunctionKey(val);
+                        if (val.length > 0) {
+                          const term = val.toLowerCase();
+                          const filtered = availableFunctions.filter(fn =>
+                            fn.function_key.includes(term) ||
+                            fn.function_name.toLowerCase().includes(term)
+                          );
+                          setStartupSuggestions(filtered);
+                          setShowStartupSuggestions(filtered.length > 0);
+                        } else {
+                          setShowStartupSuggestions(false);
+                        }
+                      }}
+                      onBlur={() => setTimeout(() => setShowStartupSuggestions(false), 150)}
+                      placeholder="Ex: modo_venda, minha_conta, agendar_compromisso..."
+                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition font-mono text-sm"
+                    />
+                    {showStartupSuggestions && (
+                      <div className="absolute z-10 w-full mt-1 rounded-lg border shadow-lg max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10">
+                        {startupSuggestions.map(fn => (
+                          <button
+                            key={fn.function_key}
+                            type="button"
+                            onMouseDown={() => {
+                              setStartupFunctionKey(fn.function_key);
+                              setShowStartupSuggestions(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-900 dark:text-white transition"
+                          >
+                            <span className="font-mono text-xs text-blue-600 dark:text-blue-400 mr-2">{fn.function_key}</span>
+                            <span className="font-medium">{fn.function_name}</span>
+                            {fn.short_description && (
+                              <span className="text-gray-400 ml-2 text-xs">— {fn.short_description}</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {startupFunctionKey && (
+                      <button
+                        type="button"
+                        onClick={() => { setStartupFunctionKey(''); setShowStartupSuggestions(false); }}
+                        className="mt-1 text-xs text-red-500 hover:text-red-600 transition"
+                      >
+                        Remover função de inicialização
+                      </button>
+                    )}
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                      {isVendas
+                        ? 'Recomendado: modo_venda (abre catálogo) ou minha_conta (login do cliente)'
+                        : 'Deixe em branco para desativar. Só executa quando presença é detectada pela câmera ou na primeira mensagem Meta.'}
+                    </p>
+                  </div>
                 </div>
               </div>
 

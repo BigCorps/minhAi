@@ -98,13 +98,15 @@ export function VoiceAssistantWithWakeWord({
   onTextMessage,
   textMode = false,
   isKioskMode = false,
-  isVendas = false,
+ isVendas = false,
+  startupFunctionKey,
 }: VoiceAssistantProps & {
   onModalChange?: (modal: any) => void;
   onTextMessage?: (handler: (text: string) => Promise<{ text: string; functionKey?: string } | null>) => void;
   textMode?: boolean;
   isKioskMode?: boolean;
   isVendas?: boolean;
+  startupFunctionKey?: string;
 }) {
 
   // ── States básicos ────────────────────────────────────────
@@ -451,9 +453,15 @@ usePresenceDetector({
     }
     if (isPlayingAudio || isProcessing || isSpeaking) return;
     const greeting = companyGreeting || greetingMessage || 'Olá! Como posso ajudar?';
-    playText(greeting).catch(() => {});
+    playText(greeting)
+      .then(() => {
+        if (startupFunctionKey) {
+          setTimeout(() => handleFunctionClick(startupFunctionKey), 500);
+        }
+      })
+      .catch(() => {});
     resetInactivityTimer();
-  }, [isPlayingAudio, isProcessing, isSpeaking, showFeatureHighlight, companyGreeting, greetingMessage]),
+  }, [isPlayingAudio, isProcessing, isSpeaking, showFeatureHighlight, companyGreeting, greetingMessage, startupFunctionKey]),
 });
 
   const handleCloseFeatureHighlight = useCallback(() => {
@@ -869,7 +877,13 @@ useEffect(() => {
       processingQuestion.current = true;
       if (!command) {
         const greeting = companyGreeting || greetingMessage || 'Oi! Como posso ajudar?';
-        playText(greeting).finally(() => { processingQuestion.current = false; });
+        playText(greeting)
+          .then(() => {
+            if (startupFunctionKey) {
+              setTimeout(() => handleFunctionClick(startupFunctionKey), 500);
+            }
+          })
+          .finally(() => { processingQuestion.current = false; });
       } else if (commandWords.length < 2) {
         triggerRepromptWarning();
         playText('Pode completar sua pergunta?').finally(() => {

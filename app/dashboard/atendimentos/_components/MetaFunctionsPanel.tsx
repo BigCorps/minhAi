@@ -373,6 +373,101 @@ interface MetaFunctionsPanelProps {
   selectedCompanyId: string;
 }
 
+// ── Subcomponente: seção de função de boas-vindas Meta ───────────────────────
+function StartupFunctionMetaSection({
+  value, onChange, suggestions, setSuggestions,
+  showSuggestions, setShowSuggestions, availableFunctions,
+  saving, saved, onSave,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  suggestions: any[];
+  setSuggestions: (v: any[]) => void;
+  showSuggestions: boolean;
+  setShowSuggestions: (v: boolean) => void;
+  availableFunctions: any[];
+  saving: boolean;
+  saved: boolean;
+  onSave: () => void;
+}) {
+  return (
+    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-xl space-y-3">
+      <div>
+        <p className="text-sm font-semibold text-blue-800 dark:text-blue-200 flex items-center gap-2">
+          Função de Boas-vindas
+        </p>
+        <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+          Executada automaticamente na primeira mensagem do cliente via WhatsApp, Instagram ou Facebook.
+        </p>
+      </div>
+
+      <div className="relative">
+        <input
+          type="text"
+          value={value}
+          onChange={e => {
+            const val = e.target.value;
+            onChange(val);
+            if (val.length > 0) {
+              const term = val.toLowerCase();
+              const filtered = availableFunctions.filter(fn =>
+                fn.function_key.includes(term) ||
+                fn.function_name.toLowerCase().includes(term)
+              );
+              setSuggestions(filtered);
+              setShowSuggestions(filtered.length > 0);
+            } else {
+              setShowSuggestions(false);
+            }
+          }}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+          placeholder="Ex: nossa_marca, chatgpt, modo_venda..."
+          className="w-full px-3 py-2 rounded-lg border border-blue-200 dark:border-blue-500/30 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        {showSuggestions && (
+          <div className="absolute z-10 w-full mt-1 rounded-lg border shadow-lg max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10">
+            {suggestions.map((fn: any) => (
+              <button
+                key={fn.function_key}
+                type="button"
+                onMouseDown={() => { onChange(fn.function_key); setShowSuggestions(false); }}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-900 dark:text-white transition"
+              >
+                <span className="font-mono text-xs text-blue-600 dark:text-blue-400 mr-2">{fn.function_key}</span>
+                <span className="font-medium">{fn.function_name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {value && (
+          <button
+            type="button"
+            onClick={() => { onChange(''); setShowSuggestions(false); }}
+            className="mt-1 text-xs text-red-500 hover:text-red-600 transition"
+          >
+            Remover função de boas-vindas
+          </button>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={saving}
+        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition"
+      >
+        {saving ? (
+          <><span className="animate-spin">⏳</span> Salvando...</>
+        ) : saved ? (
+          <>Salvo!</>
+        ) : (
+          <>Salvar</>
+        )}
+      </button>
+    </div>
+  );
+}
+
 export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProps) {
   const companyId = selectedCompanyId;
 
@@ -385,6 +480,11 @@ export function MetaFunctionsPanel({ selectedCompanyId }: MetaFunctionsPanelProp
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [viewMode, setViewMode]       = useState<'grid' | 'list'>('grid');
   const [isVendas, setIsVendas]       = useState(false);
+  const [startupFunctionKeyMeta, setStartupFunctionKeyMeta] = useState('');
+  const [startupMetaSuggestions, setStartupMetaSuggestions] = useState<{function_key: string; function_name: string; short_description?: string}[]>([]);
+  const [showStartupMetaSuggestions, setShowStartupMetaSuggestions] = useState(false);
+  const [savingStartup, setSavingStartup] = useState(false);
+  const [savedStartup, setSavedStartup] = useState(false);
 
   const supabase = createClient();
 
@@ -434,6 +534,13 @@ setEnabled(map);
     } catch (err) {
       console.error('MetaFunctionsPanel:', err);
     } finally {
+      const { data: metaConn } = await supabase
+        .from('meta_connections')
+        .select('startup_function_key_meta')
+        .eq('company_id', companyId)
+        .maybeSingle();
+      setStartupFunctionKeyMeta(metaConn?.startup_function_key_meta ?? '');
+
       setLoading(false);
     }
   }
@@ -500,6 +607,22 @@ await supabase
     );
   }
 
+async function saveStartupFunctionMeta() {
+    setSavingStartup(true);
+    try {
+      await supabase
+        .from('meta_connections')
+        .update({ startup_function_key_meta: startupFunctionKeyMeta.trim() || null })
+        .eq('company_id', companyId);
+      setSavedStartup(true);
+      setTimeout(() => setSavedStartup(false), 2000);
+    } catch (err) {
+      console.error('Erro ao salvar startup function meta:', err);
+    } finally {
+      setSavingStartup(false);
+    }
+  }
+
 // ── Tela dedicada versão Vendas ───────────────────────────────────────────
   if (isVendas) {
     return (
@@ -510,6 +633,19 @@ await supabase
             Assistente <strong>versão Vendas</strong> — ative as funções disponíveis para atendimento via Meta (WhatsApp, Instagram, Facebook). Nenhuma função consome créditos.
           </p>
         </div>
+
+        <StartupFunctionMetaSection
+          value={startupFunctionKeyMeta}
+          onChange={setStartupFunctionKeyMeta}
+          suggestions={startupMetaSuggestions}
+          setSuggestions={setStartupMetaSuggestions}
+          showSuggestions={showStartupMetaSuggestions}
+          setShowSuggestions={setShowStartupMetaSuggestions}
+          availableFunctions={functions}
+          saving={savingStartup}
+          saved={savedStartup}
+          onSave={saveStartupFunctionMeta}
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {functions.map(fn => {
@@ -569,6 +705,18 @@ await supabase
     <div className="space-y-6">
 
       {/* Filter bar */}
+      <StartupFunctionMetaSection
+          value={startupFunctionKeyMeta}
+          onChange={setStartupFunctionKeyMeta}
+          suggestions={startupMetaSuggestions}
+          setSuggestions={setStartupMetaSuggestions}
+          showSuggestions={showStartupMetaSuggestions}
+          setShowSuggestions={setShowStartupMetaSuggestions}
+          availableFunctions={functions}
+          saving={savingStartup}
+          saved={savedStartup}
+          onSave={saveStartupFunctionMeta}
+        />
       <div className="flex flex-col gap-3 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
         <div className="flex items-center gap-3">
           <div className="relative flex-grow">

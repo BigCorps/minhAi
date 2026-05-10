@@ -112,7 +112,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Escale sem contratar',
     title: 'Atenda 10x mais sem aumentar sua equipe',
     description:
-      'Um Funcionário IA não tira férias, não falta, não pede aumento e atende centenas de clientes ao mesmo tempo. É o melhor, você escolhe como pagar, se por interação ou por comissão. Libere sua equipe para o que realmente importa — enquanto o assistente resolve o repetitivo, 24 horas por dia.',
+      'Um Funcionário IA não tira férias, não falta, não pede aumento e atende centenas de clientes ao mesmo tempo. E o melhor, você escolhe como pagar, se por interação ou por comissão. Libere sua equipe para o que realmente importa — enquanto o assistente resolve o repetitivo, 24 horas por dia.',
     imageSrc: '/vantagens.png',
     imageAlt: 'Eficiência operacional com minhAi — automatize atendimento e escale seu negócio',
     color: 'blue' as const,

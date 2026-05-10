@@ -207,6 +207,7 @@ return (
         modo_fila_enabled: isVendas ? false : (company.modo_fila_enabled ?? false),
         modo_links_enabled: isVendas ? false : (company.modo_links_enabled ?? false),
         assistant_type: company.assistant_type ?? 'smart',
+        startup_function_key: company.startup_function_key ?? null,
       }}
     />
   );

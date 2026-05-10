@@ -224,9 +224,8 @@ export async function classifyIntentWithGroq(
             .then(() => {}).catch(() => {});
         }
       } else {
-        // Tem valor ou não precisa — dispara normalmente
-        setTimeout(() => deps.onFunctionDetected!(functionKey), 300);
-
+        // Salva como sugestão — cliente precisa confirmar antes de executar
+        // A confirmação é tratada pelo bloco isConfirmation() acima
         if (effectiveSessionId) {
           const supabase = createClient();
           supabase

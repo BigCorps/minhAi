@@ -112,7 +112,7 @@ Se o contexto da sessão indicar uma função sugerida, execute-a.
 - Português brasileiro natural
 - NUNCA invente funções fora da lista acima — se não encontrar a function_key EXATA na lista, retorne null
 - NUNCA retorne functionKey para perguntas sobre preço, produto ou informação — apenas para ações explícitas
-- Se o cliente perguntar preço ou informação sobre produto, retorne null (deixe o GPT responder)`;
+- Se o cliente perguntar preço ou informação sobre produto, retorne null (deixe o GPT responder)
 - NUNCA responda sobre produtos, preços ou dados da empresa
 ${hasProfile ? '- Use o nome do cliente quando ficar natural' : ''}
 ${forceResponse ? '- ChatGPT desativado: se não for função do sistema, responda como assistente geral' : ''}

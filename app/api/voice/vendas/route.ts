@@ -218,6 +218,17 @@ export async function POST(request: NextRequest) {
 
     console.log('🤖 GROQ respondeu:', responseText);
 
+    // Extrair pending_intent — produto + valor mencionados para contexto futuro
+    const mentionedPrice = responseText.match(/R\$\s*(\d+(?:[.,]\d{1,2})?)/);
+    if (mentionedPrice) {
+      // Salvar em last_function_keys para o próximo classify saber o valor em jogo
+      const priceValue = mentionedPrice[1].replace(',', '.');
+      conversationHistory.push({
+        role: 'assistant' as const,
+        content: `[contexto: produto cotado a R$${priceValue}] ${responseText}`,
+      });
+    }
+
     // Atualiza histórico
     conversationHistory.push(
       { role: 'user', content: userMessage },

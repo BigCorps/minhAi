@@ -34,7 +34,7 @@ const FAQS = [
   {
     pergunta: 'Posso testar antes de pagar?',
     resposta:
-      'Sim. O plano gratuito inclui 20 créditos para testar à vontade, sem nenhum compromisso. Não é necessário cartão de crédito para começar. Você só investe quando decidir escalar.',
+      'Sim. Você pode escolher entre a Versão Vendas que apenas cobra comissão por vendas ou começar na Versão Smart que inclui 20 créditos para testar à vontade, sem nenhum compromisso. Não é necessário cartão de crédito para começar. Você só investe quando decidir escalar.',
   },
   {
     pergunta: 'O minhAi funciona para qualquer tipo de negócio?',

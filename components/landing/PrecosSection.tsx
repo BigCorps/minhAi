@@ -564,9 +564,7 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
                       isDark ? 'bg-white/[0.03] border-white/6 text-white/60' : 'bg-white/80 border-gray-100 text-gray-600'
                     }`}
                   >
-                    <svg className={`w-2.5 h-2.5 flex-shrink-0 ${
-                      ${isDark ? 'text-lime-400/60' : 'text-lime-600/60'
-                    }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`w-2.5 h-2.5 flex-shrink-0 ${isDark ? 'text-lime-400/60' : 'text-lime-600/60'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>
                     <span className="truncate">{label}</span>

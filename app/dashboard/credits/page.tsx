@@ -586,6 +586,7 @@ export default function CreditsPage() {
                 <p className={`text-base ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
                   Sem mensalidade, sem créditos, sem surpresa.
                   Você só paga quando vender.
+                  Tenha uma IA focada em atender, vender e cobrar 24 horas!
                 </p>
               </div>
               <div className={`flex-shrink-0 text-center px-8 py-5 rounded-2xl border ${

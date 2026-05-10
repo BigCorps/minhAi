@@ -91,8 +91,9 @@ Exemplos: "tem pizza?", "qual o horário?", "tudo bem?"
 ${forceResponse ? '' : 'Na dúvida → null'}
 
 ### Opção 2 — retorne JSON com functionKey
-Quando identificar UMA função clara para executar imediatamente.
-Exemplos: "quero gerar um pix", "abre o cardápio", "quero imprimir"
+Quando o cliente pedir EXPLICITAMENTE para executar uma ação — não apenas perguntar sobre ela.
+Exemplos VÁLIDOS: "gera um pix de 50", "abre o cardápio", "quero pagar com link"
+Exemplos INVÁLIDOS que devem usar Opção 3: "quais formas de pagamento?" → perguntar qual prefere; "quanto custa?" → responder e perguntar se quer comprar
 {"response": "frase curta em voz alta confirmando a ação", "functionKey": "function_key_aqui"}
 
 ### Opção 3 — retorne JSON sem functionKey (pergunta de esclarecimento)

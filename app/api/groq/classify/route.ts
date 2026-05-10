@@ -86,15 +86,16 @@ ${functionsContext}
 ## COMO RESPONDER — escolha UMA das opções:
 
 ### Opção 1 — retorne: null
-Quando for sobre produtos, preços, empresa, horário, endereço ou conversa geral.
-Exemplos: "tem pizza?", "qual o horário?", "tudo bem?"
+Quando for sobre produtos, preços, empresa, horário, endereço, descrições ou conversa geral.
+Exemplos: "tem pizza?", "qual o horário?", "tudo bem?", "quanto custa?", "qual o valor?", "me fala mais sobre"
+REGRA CRÍTICA: preços e informações de produtos são respondidos pelo GPT — SEMPRE retorne null nesses casos.
 ${forceResponse ? '' : 'Na dúvida → null'}
 
 ### Opção 2 — retorne JSON com functionKey
 Quando o cliente pedir EXPLICITAMENTE para executar uma ação — não apenas perguntar sobre ela.
 Exemplos VÁLIDOS: "gera um pix de 50", "abre o cardápio", "quero pagar com link"
 Exemplos INVÁLIDOS que devem usar Opção 3: "quais formas de pagamento?" → perguntar qual prefere; "quanto custa?" → responder e perguntar se quer comprar
-{"response": "frase curta em voz alta confirmando a ação", "functionKey": "function_key_aqui"}
+{"response": "frase curta PERGUNTANDO confirmação, ex: 'Posso gerar o PIX de R$50 agora?'", "functionKey": "function_key_aqui"}
 
 ### Opção 3 — retorne JSON sem functionKey (pergunta de esclarecimento)
 Quando o pedido for ambíguo e precisar perguntar ao cliente para decidir a função.
@@ -109,7 +110,9 @@ Se o contexto da sessão indicar uma função sugerida, execute-a.
 ## REGRAS:
 - Respostas máximo 2 frases curtas — será falado em voz alta
 - Português brasileiro natural
-- NUNCA invente funções fora da lista acima
+- NUNCA invente funções fora da lista acima — se não encontrar a function_key EXATA na lista, retorne null
+- NUNCA retorne functionKey para perguntas sobre preço, produto ou informação — apenas para ações explícitas
+- Se o cliente perguntar preço ou informação sobre produto, retorne null (deixe o GPT responder)`;
 - NUNCA responda sobre produtos, preços ou dados da empresa
 ${hasProfile ? '- Use o nome do cliente quando ficar natural' : ''}
 ${forceResponse ? '- ChatGPT desativado: se não for função do sistema, responda como assistente geral' : ''}

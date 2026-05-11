@@ -1356,6 +1356,14 @@ case 'impressao_recibo':
           setActiveModal({ type: 'AparelhosSmartDisplay', data: { companyId, transcript: '' } });
           pt('Abrindo controle de dispositivos...').catch(() => {});
           break;
+        case 'EmitirNotaModal':
+  return (
+    <EmitirNotaModal
+      data={{ companyId, nfe_plano: activeModal.data?.nfe_plano }}
+      onClose={handleClose}
+      theme={theme}
+    />
+  );
         case 'confirmar_presenca':
           setActiveModal({ type: 'ConfirmPresenceModal', data: { companyId } });
           pt('Vou buscar seu agendamento para confirmar presença.').catch(() => {});

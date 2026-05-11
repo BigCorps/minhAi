@@ -132,7 +132,7 @@ export default function EmitirNotaModal({
   const border = isDark ? 'border-slate-700' : 'border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
-  const inputCls = `w-full px-4 py-2 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm`;
+  const inputCls = `w-full px-4 py-2 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm`;
   const labelCls = `block text-xs font-medium mb-1 ${textMuted}`;
 
   const tipoLabel = plano === 'nfse' ? 'NFS-e (Serviço)' : plano === 'nfe' ? 'NF-e / NFC-e (Produto)' : 'Nota Fiscal';
@@ -154,9 +154,9 @@ export default function EmitirNotaModal({
         className={`relative w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border} animate-in zoom-in-95 duration-300 flex flex-col`}
       >
         {/* Header */}
-        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-orange-950/30' : 'bg-orange-50'} flex items-center justify-between flex-shrink-0`}>
+        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-blue-950/30' : 'bg-blue-50'} flex items-center justify-between flex-shrink-0`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-xl">
+            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-xl">
               🧾
             </div>
             <div>
@@ -265,14 +265,14 @@ export default function EmitirNotaModal({
                   type="checkbox"
                   checked={enviarEmail}
                   onChange={(e) => setEnviarEmail(e.target.checked)}
-                  className="w-4 h-4 accent-orange-500"
+                  className="w-4 h-4 accent-blue-500"
                 />
                 <span className={`text-sm ${textPrimary}`}>Enviar DANFE por email ao destinatário</span>
               </label>
 
               <button
                 onClick={handleConfirmar}
-                className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition"
+                className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition"
               >
                 Revisar e Emitir
               </button>
@@ -294,8 +294,8 @@ export default function EmitirNotaModal({
                 </div>
               </div>
 
-              <div className={`p-3 rounded-lg ${isDark ? 'bg-orange-900/20 border-orange-800' : 'bg-orange-50 border-orange-200'} border text-center`}>
-                <p className={`text-sm ${isDark ? 'text-orange-200' : 'text-orange-800'}`}>
+              <div className={`p-3 rounded-lg ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border text-center`}>
+                <p className={`text-sm ${isDark ? 'text-blue-200' : 'text-blue-800'}`}>
                   Diga <strong>"CONFIRMAR"</strong> para emitir ou <strong>"CANCELAR"</strong> para fechar
                 </p>
               </div>
@@ -309,7 +309,7 @@ export default function EmitirNotaModal({
                 </button>
                 <button
                   onClick={handleEmitir}
-                  className="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition"
+                  className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition"
                 >
                   Confirmar Emissão
                 </button>
@@ -320,7 +320,7 @@ export default function EmitirNotaModal({
           {/* ─── EMITTING ─── */}
           {step === 'emitting' && (
             <div className="flex flex-col items-center justify-center py-12 gap-4">
-              <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
               <p className={`text-lg font-semibold ${textPrimary}`}>Transmitindo para a SEFAZ...</p>
               <p className={`text-sm ${textMuted}`}>Aguarde, isso pode levar alguns segundos</p>
             </div>
@@ -361,23 +361,23 @@ export default function EmitirNotaModal({
                 )}
               </div>
 
+              {resultado.danfe_base64 && (
+                <button
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = `data:application/pdf;base64,${resultado.danfe_base64}`;
+                    link.download = `nota-fiscal-${Date.now()}.pdf`;
+                    link.click();
+                  }}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Baixar DANFE
+                </button>
+              )}
 
-{resultado.danfe_base64 && (
-  <button
-    onClick={() => {
-      const link = document.createElement('a');
-      link.href = `data:application/pdf;base64,${resultado.danfe_base64}`;
-      link.download = `nota-fiscal-${Date.now()}.pdf`;
-      link.click();
-    }}
-    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
-  >
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-    </svg>
-    Baixar DANFE
-  </button>
-)}
               <button
                 onClick={onClose}
                 className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition"
@@ -406,7 +406,7 @@ export default function EmitirNotaModal({
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep('form')}
-                  className="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition"
+                  className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition"
                 >
                   Tentar Novamente
                 </button>

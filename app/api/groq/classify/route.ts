@@ -6,7 +6,7 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
-  const { transcript, functionsContext, sessionContext, forceResponse, conversationHistory } = await req.json();
+    const { transcript, functionsContext, sessionContext, forceResponse } = await req.json();
     if (!transcript || !functionsContext) {
       return NextResponse.json({ response: null, functionKey: null });
     }
@@ -30,14 +30,6 @@ export async function POST(req: NextRequest) {
 
     const memoryBlock = sessionContext?.summary || lastFunctions.length > 0
       ? `\n\nCONTEXTO DESTA SESSÃO:\n${sessionContext?.summary ? `- ${sessionContext.summary}` : ''}${friendlyFunctions.length > 0 ? `\n- Estado atual: ${friendlyFunctions.join(', ')}` : ''}`
-      : '';
-
-    // Histórico recente da conversa — produto mencionado, valor cotado, intenção
-    const recentHistory: Array<{role: string; content: string}> = conversationHistory ?? [];
-    const historyBlock = recentHistory.length > 0
-      ? `\n\nHISTÓRICO RECENTE (últimas trocas):\n${recentHistory.slice(-6).map(m =>
-          `${m.role === 'user' ? 'Cliente' : 'Assistente'}: ${m.content}`
-        ).join('\n')}`
       : '';
 
 // Instrução extra quando há contexto pendente
@@ -86,16 +78,14 @@ ${functionsContext}
 ## COMO RESPONDER — escolha UMA das opções:
 
 ### Opção 1 — retorne: null
-Quando for sobre produtos, preços, empresa, horário, endereço, descrições ou conversa geral.
-Exemplos: "tem pizza?", "qual o horário?", "tudo bem?", "quanto custa?", "qual o valor?", "me fala mais sobre"
-REGRA CRÍTICA: preços e informações de produtos são respondidos pelo GPT — SEMPRE retorne null nesses casos.
+Quando for sobre produtos, preços, empresa, horário, endereço ou conversa geral.
+Exemplos: "tem pizza?", "qual o horário?", "tudo bem?"
 ${forceResponse ? '' : 'Na dúvida → null'}
 
 ### Opção 2 — retorne JSON com functionKey
-Quando o cliente pedir EXPLICITAMENTE para executar uma ação — não apenas perguntar sobre ela.
-Exemplos VÁLIDOS: "gera um pix de 50", "abre o cardápio", "quero pagar com link"
-Exemplos INVÁLIDOS que devem usar Opção 3: "quais formas de pagamento?" → perguntar qual prefere; "quanto custa?" → responder e perguntar se quer comprar
-{"response": "frase curta PERGUNTANDO confirmação, ex: 'Posso gerar o PIX de R$50 agora?'", "functionKey": "function_key_aqui"}
+Quando identificar UMA função clara para executar imediatamente.
+Exemplos: "quero gerar um pix", "abre o cardápio", "quero imprimir"
+{"response": "frase curta em voz alta confirmando a ação", "functionKey": "function_key_aqui"}
 
 ### Opção 3 — retorne JSON sem functionKey (pergunta de esclarecimento)
 Quando o pedido for ambíguo e precisar perguntar ao cliente para decidir a função.
@@ -110,25 +100,14 @@ Se o contexto da sessão indicar uma função sugerida, execute-a.
 ## REGRAS:
 - Respostas máximo 2 frases curtas — será falado em voz alta
 - Português brasileiro natural
-- NUNCA invente funções fora da lista acima — se não encontrar a function_key EXATA na lista, retorne null
-- NUNCA retorne functionKey para perguntas sobre preço, produto ou informação — apenas para ações explícitas
-- Se o cliente perguntar preço ou informação sobre produto, retorne null (deixe o GPT responder)
+- NUNCA invente funções fora da lista acima
 - NUNCA responda sobre produtos, preços ou dados da empresa
 ${hasProfile ? '- Use o nome do cliente quando ficar natural' : ''}
 ${forceResponse ? '- ChatGPT desativado: se não for função do sistema, responda como assistente geral' : ''}
-${memoryBlock}${historyBlock}${pendingInstruction}
-
-## REGRA DE CONTEXTO HISTÓRICO:
-Se o histórico acima mostrar que o cliente perguntou sobre um produto e o assistente informou o preço, e agora o cliente quiser pagar (ex: "quero pagar", "pode cobrar", "vou levar"), entenda o valor do contexto e execute a função de pagamento adequada com esse valor.
-Exemplo: histórico mostra "Suco de laranja: R$8,50" e cliente diz "quero pagar" → retorne {"response": "Gerando PIX de R$8,50.", "functionKey": "pix_generate"} com o valor inferido do histórico.`,
-                },
-        // Injeta histórico recente como mensagens reais para o GROQ ter contexto
-        ...recentHistory.slice(-4).map(m => ({
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-        })),
+${memoryBlock}${pendingInstruction}`,
+        },
         {
-          role: 'user' as const,
+          role: 'user',
           content: transcript,
         },
       ],

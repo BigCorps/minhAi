@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Building2,
 } from 'lucide-react';
+import EmitirNotaModal from '@/components/modals/EmitirNotaModal'; // ajuste o path se necessário
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -812,6 +813,21 @@ function FiscalPageContent() {
   const [company, setCompany] = useState<Company | null>(null);
   const [isVendas, setIsVendas] = useState(false);
 
+  // ── NOVO: estado do modal Emitir Nota ──────────────────────────────
+  const [showEmitirNota, setShowEmitirNota] = useState(false);
+  const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
+
+  // Detecta tema dark/light automaticamente
+  useEffect(() => {
+    const detectTheme = () => {
+      setPageTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    };
+    detectTheme();
+    const observer = new MutationObserver(detectTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
   const loadCompany = async () => {
     if (!companyId) return;
     const { data } = await supabase
@@ -858,6 +874,17 @@ function FiscalPageContent() {
                 )}
               </p>
             </div>
+
+            {/* ── NOVO: Botão Emitir Nota (só aparece se nfe_ativo) ── */}
+            {companyId && company?.nfe_ativo && (
+              <button
+                onClick={() => setShowEmitirNota(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold text-sm transition shadow-sm whitespace-nowrap"
+              >
+                <Receipt className="w-4 h-4" />
+                Emitir Nota
+              </button>
+            )}
           </div>
 
           {/* Banner modelo de cobrança */}
@@ -926,8 +953,21 @@ function FiscalPageContent() {
               </div>
             </div>
           )}
+
         </div>
       </div>
+
+      {/* ── NOVO: Modal Emitir Nota ── */}
+      {showEmitirNota && companyId && (
+        <EmitirNotaModal
+          data={{
+            companyId: companyId,
+            nfe_plano: company?.nfe_plano,
+          }}
+          onClose={() => setShowEmitirNota(false)}
+          theme={pageTheme}
+        />
+      )}
     </div>
   );
 }

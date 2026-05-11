@@ -427,7 +427,7 @@ export default function ArquivosCompanyClient({
         <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
           <div className="grid grid-cols-3 sm:flex border-b border-gray-200 dark:border-white/10">
             {([
-              { key: 'notas',      label: 'Nota/Lista',  icon: <FileText className="w-4 h-4" /> },
+              { key: 'notas',      label: 'ANotação/Lista',  icon: <FileText className="w-4 h-4" /> },
               { key: 'boletos',    label: 'Boletos',     icon: <Receipt  className="w-4 h-4" /> },
               { key: 'enviados',   label: 'Enviados',    icon: <Upload   className="w-4 h-4" /> },
               { key: 'cupons',     label: 'Cupons',      icon: <Ticket   className="w-4 h-4" /> },

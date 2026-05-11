@@ -879,7 +879,7 @@ function FiscalPageContent() {
             {companyId && company?.nfe_ativo && (
               <button
                 onClick={() => setShowEmitirNota(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold text-sm transition shadow-sm whitespace-nowrap"
+                className="flex items-center gap-2 px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-xl font-semibold text-sm transition shadow-sm whitespace-nowrap"
               >
                 <Receipt className="w-4 h-4" />
                 Emitir Nota

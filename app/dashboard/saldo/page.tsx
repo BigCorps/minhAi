@@ -33,6 +33,12 @@ interface CreditPackage {
   display_order: number;
 }
 
+interface CommissionPending {
+  company_id: string;
+  valor_comissao: number;
+  valor_venda: number;
+}
+
 interface UnifiedTransaction {
   id: string;
   source: 'pix' | 'cobranca';
@@ -45,6 +51,8 @@ interface UnifiedTransaction {
   tipo_label: string;
   notes?: string;
   pix_key?: string;
+  is_vendas?: boolean;
+  comissao_cents?: number;
 }
 
 interface AutoRechargeSettings {
@@ -119,6 +127,9 @@ export default function SaldoPage() {
   const [autoRechargeLoaded, setAutoRechargeLoaded] = useState(false);
   const [isSavingAuto, setIsSavingAuto] = useState(false);
   const [userCredits, setUserCredits] = useState<number | null>(null);
+  const [commissionsPending, setCommissionsPending] = useState<CommissionPending[]>([]);
+  const [totalCommissionCents, setTotalCommissionCents] = useState(0);
+  const [hasVendasCompany, setHasVendasCompany] = useState(false);
 
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => { loadInitialData(); }, []);
@@ -241,10 +252,14 @@ export default function SaldoPage() {
 
       const { data: companiesData } = await supabase
         .from('companies')
-        .select('id, name, slug')
+        .select('id, name, slug, assistant_type')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .order('name');
+
+      if (companiesData?.some((c: any) => c.assistant_type === 'vendas')) {
+        setHasVendasCompany(true);
+      }
 
       if (companiesData?.length) {
         setCompanies(companiesData);
@@ -293,12 +308,34 @@ export default function SaldoPage() {
       // ── Mapa de companies (necessário para companyIds e companyNameMap) ──
       const { data: allCompanies } = await supabase
         .from('companies')
-        .select('id, name')
+        .select('id, name, assistant_type')
         .eq('user_id', userId);
-
+      
       const companyNameMap: Record<string, string> = {};
-      (allCompanies ?? []).forEach(c => { companyNameMap[c.id] = c.name; });
-      const companyIds = (allCompanies ?? []).map(c => c.id);
+      const companyTypeMap: Record<string, string> = {};
+      (allCompanies ?? []).forEach((c: any) => {
+        companyNameMap[c.id] = c.name;
+        companyTypeMap[c.id] = c.assistant_type ?? 'smart';
+      });
+      const companyIds = (allCompanies ?? []).map((c: any) => c.id);
+
+      // Comissões pendentes (versão Vendas)
+      if (companyIds.length > 0) {
+        const { data: commissionsData } = await supabase
+          .from('commission_pending')
+          .select('company_id, valor_comissao, valor_venda')
+          .in('company_id', companyIds)
+          .eq('status', 'pendente');
+
+        if (commissionsData?.length) {
+          setCommissionsPending(commissionsData);
+          const total = commissionsData.reduce((acc, c) => acc + Number(c.valor_comissao), 0);
+          setTotalCommissionCents(Math.round(total * 100));
+        } else {
+          setCommissionsPending([]);
+          setTotalCommissionCents(0);
+        }
+      }
 
       // ── IDs de saques via balance_transactions ───────────────────────────
       // A tabela pix_transactions não possui coluna is_withdrawal nem
@@ -322,7 +359,7 @@ export default function SaldoPage() {
         .select('id, company_id, amount_cents, status, requested_at, notes, destination_pix_key')
         .eq('user_id', userId)
         .order('requested_at', { ascending: false })
-        .limit(200);
+        .limit(500);
 
       // ── Cobranças (apenas PAGA) ───────────────────────────────────────────
       const { data: cobrancasData } = companyIds.length > 0
@@ -332,12 +369,16 @@ export default function SaldoPage() {
             .in('company_id', companyIds)
             .eq('status', 'PAGA')
             .order('paid_at', { ascending: false })
-            .limit(200)
+            .limit(500)
         : { data: [] };
 
       // ── Normaliza PIX ────────────────────────────────────────────────────
       const pixUnified: UnifiedTransaction[] = (pixData ?? []).map(tx => {
         const isWithdrawal = withdrawalIds.has(tx.id);
+        const isVendas = companyTypeMap[tx.company_id] === 'vendas';
+        const comissaoEntry = isVendas && !isWithdrawal
+          ? commissionsPending.find(c => c.company_id === tx.company_id)
+          : undefined;
         return {
           id: tx.id,
           source: 'pix' as const,
@@ -349,23 +390,35 @@ export default function SaldoPage() {
           date: tx.requested_at,
           tipo_label: isWithdrawal ? 'Saque' : 'PIX',
           notes: tx.notes,
-          pix_key: tx.destination_pix_key, // campo correto do schema
+          pix_key: tx.destination_pix_key,
+          is_vendas: isVendas && !isWithdrawal,
+          comissao_cents: comissaoEntry
+            ? Math.round(Number(comissaoEntry.valor_comissao) * 100)
+            : isVendas && !isWithdrawal
+              ? Math.round(tx.amount_cents * 0.10)
+              : undefined,
         };
       });
 
       // ── Normaliza Cobranças ──────────────────────────────────────────────
-      const cobrancasUnified: UnifiedTransaction[] = (cobrancasData ?? []).map((tx: any) => ({
-        id: tx.id,
-        source: 'cobranca' as const,
-        is_withdrawal: false,
-        company_id: tx.company_id,
-        company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
-        amount_cents: Math.round(Number(tx.valor) * 100),
-        status: tx.status,
-        date: tx.paid_at ?? tx.created_at,
-        tipo_label: getTipoLabel(tx.tipo, tx.nfc_payment_method),
-        notes: tx.descricao,
-      }));
+      const cobrancasUnified: UnifiedTransaction[] = (cobrancasData ?? []).map((tx: any) => {
+        const isVendas = companyTypeMap[tx.company_id] === 'vendas';
+        const amountCents = Math.round(Number(tx.valor) * 100);
+        return {
+          id: tx.id,
+          source: 'cobranca' as const,
+          is_withdrawal: false,
+          company_id: tx.company_id,
+          company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
+          amount_cents: amountCents,
+          status: tx.status,
+          date: tx.paid_at ?? tx.created_at,
+          tipo_label: getTipoLabel(tx.tipo, tx.nfc_payment_method),
+          notes: tx.descricao,
+          is_vendas: isVendas,
+          comissao_cents: isVendas ? Math.round(amountCents * 0.10) : undefined,
+        };
+      });
 
       const merged = [...pixUnified, ...cobrancasUnified].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -587,6 +640,20 @@ export default function SaldoPage() {
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
               {formatCurrency(totalBalance.total_transferred_cents)}
             </p>
+            {hasVendasCompany && (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-amber-200 dark:border-amber-500/20">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-amber-100 dark:bg-amber-500/10 rounded-lg">
+                  <Zap className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Comissões Pendentes</p>
+              </div>
+              <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
+                {formatCurrency(totalCommissionCents)}
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Serão descontadas no próximo saque (+ 1% do saque)</p>
+            </div>
+          )}
           </div>
         </div>
 
@@ -771,6 +838,11 @@ export default function SaldoPage() {
                                   {companies.length > 1 && <td className="py-4">{getCompanyBadge(tx)}</td>}
                                   <td className={`py-4 font-bold whitespace-nowrap ${tx.is_withdrawal ? 'text-orange-500 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
                                     {tx.is_withdrawal ? '−' : ''}{formatCurrency(tx.amount_cents)}
+                                    {tx.is_vendas && tx.comissao_cents && (
+                                      <div className="text-[11px] font-medium text-amber-500 dark:text-amber-400 mt-0.5">
+                                        Comissão minhAi: {formatCurrency(tx.comissao_cents)} (10%)
+                                      </div>
+                                    )}
                                   </td>
                                   <td className="py-4">{getStatusBadge(tx)}</td>
                                   <td className="py-4 text-gray-500 dark:text-gray-500 font-mono text-xs max-w-[160px] truncate">

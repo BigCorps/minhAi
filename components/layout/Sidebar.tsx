@@ -11,6 +11,7 @@ import {
   ClipboardList,
   MessageSquare,
   Menu,
+  Receipt,
   X,
   HelpCircle,
   Share2,
@@ -31,6 +32,7 @@ const menuItems = [
   { href: '/dashboard/agenda',       label: 'Serviços Google',                  icon: Calendar },
   { href: '/dashboard/atendimentos', label: 'Serviços Meta',                    icon: Share2 },
   { href: '/dashboard/faqs',         label: 'Respostas Rápidas',                icon: HelpCircle },
+  { href: '/dashboard/fiscal',       label: 'Notas Fiscais',                    icon: Receipt },
   { href: '/dashboard/arquivos',     label: 'Arquivos',                         icon: FolderOpen },
 ];
 

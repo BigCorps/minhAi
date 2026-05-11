@@ -78,13 +78,14 @@ export async function classifyIntentWithGroq(
 
     const effectiveSessionId = deps.sessionId;
     let sessionContext: { summary: string; lastFunctions: string[] } | null = null;
-
+    let conversationHistory: Array<{ role: string; content: string }> = [];
+    
     if (effectiveSessionId) {
       try {
         const supabase = createClient();
         const { data: sessionData } = await supabase
           .from('assistant_sessions')
-          .select('context_summary, last_function_keys')
+          .select('context_summary, last_function_keys, messages')
           .eq('id', effectiveSessionId)
           .eq('company_id', deps.companyId)
           .maybeSingle();
@@ -93,6 +94,8 @@ export async function classifyIntentWithGroq(
             summary: sessionData.context_summary ?? '',
             lastFunctions: sessionData.last_function_keys ?? [],
           };
+          // Histórico recente — últimas 6 trocas para contexto de preço/produto
+          conversationHistory = (sessionData.messages ?? []).slice(-6);
         }
       } catch { /* silencioso */ }
     }
@@ -117,7 +120,11 @@ export async function classifyIntentWithGroq(
               .update({ last_function_keys: [] })
               .eq('id', effectiveSessionId)
               .then(() => {}).catch(() => {});
-          }
+        } else {
+          // Sem valor numérico — pede diretamente sem ir pro GROQ
+          await deps.playText(`Qual o valor para ${pendingFunction === 'pix_generate' ? 'o PIX' : 'o link de pagamento'}?`);
+          return true;
+        }
 
           await deps.playText('Gerando agora.');
 
@@ -179,6 +186,7 @@ export async function classifyIntentWithGroq(
         functionsContext,
         sessionContext,
         forceResponse: deps.forceResponse,
+        conversationHistory,
       }),
     });
 
@@ -220,9 +228,8 @@ export async function classifyIntentWithGroq(
             .then(() => {}).catch(() => {});
         }
       } else {
-        // Tem valor ou não precisa — dispara normalmente
-        setTimeout(() => deps.onFunctionDetected!(functionKey), 300);
-
+        // Salva como sugestão — cliente precisa confirmar antes de executar
+        // A confirmação é tratada pelo bloco isConfirmation() acima
         if (effectiveSessionId) {
           const supabase = createClient();
           supabase

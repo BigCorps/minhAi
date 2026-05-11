@@ -378,7 +378,6 @@ export default function EmitirNotaModal({
     Baixar DANFE
   </button>
 )}
-
               <button
                 onClick={onClose}
                 className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition"

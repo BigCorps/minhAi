@@ -217,7 +217,7 @@ const FUNCAO_PAGES = [
         icon: <Wrench />,
         color: 'blue' as const,
         description:
-          'Aparelhos smart, lembretes, cronômetro, relógio mundial — ferramentas simples que economizam minutos todos os dias.',
+          'Emitir Notas, lembretes, cronômetro, relógio mundial — ferramentas simples que economizam minutos todos os dias.',
       },
       {
         title: 'Controle de acesso e filas',

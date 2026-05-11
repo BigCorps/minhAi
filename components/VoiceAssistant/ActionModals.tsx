@@ -152,10 +152,10 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'CardapioDisplay': dynamic(() => import('@/components/assistant/CardapioDisplay'), { ssr: false }),
 
   // ── Smart home ────────────────────────────────────────────
-  const EmitirNotaModal = dynamic(
-  () => import('@/components/assistant/EmitirNotaModal'),
-  { ssr: false }
-);
+    'EmitirNotaModal': dynamic(
+    () => import('@/components/assistant/EmitirNotaModal'),
+    { ssr: false }
+  ),
   'AparelhosSmartDisplay': dynamic(() => import('@/components/assistant/AparelhosSmartDisplay'), { ssr: false }),
 
   // ── Fichas de produção ────────────────────────────────────

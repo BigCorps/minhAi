@@ -454,14 +454,12 @@ useEffect(() => {
 
   // ── Tabs config ───────────────────────────────────────────
 
-  const tabs: { key: ActiveTab; label: string; icon: React.ReactNode; count?: number }[] = [
-    { key: 'calendar',  label: 'Calendário',      icon: <CalendarIcon className="w-4 h-4" />, count: events.length },
-    { key: 'email',     label: 'Emails Enviados', icon: <Send className="w-4 h-4" />,         count: sentEmails.length },
-    { key: 'drive',     label: 'Google Drive',    icon: <HardDrive className="w-4 h-4" /> },
-    { key: 'smarthome', label: 'Smart Home',      icon: <Home className="w-4 h-4" />,         count: smartDevices.length },
-    { key: 'gbp',       label: 'Meu Negócio',     icon: <Star className="w-4 h-4" /> },
-    { key: 'meet',      label: 'Google Meet',     icon: <PhoneCall className="w-4 h-4" /> },
-  ];
+const tabs: { key: ActiveTab; label: string; icon: React.ReactNode; count?: number }[] = [
+  { key: 'calendar', label: 'Calendário',      icon: <CalendarIcon className="w-4 h-4" />, count: events.length },
+  { key: 'email',    label: 'Emails Enviados', icon: <Send className="w-4 h-4" />,         count: sentEmails.length },
+  { key: 'gbp',      label: 'Meu Negócio',     icon: <Star className="w-4 h-4" /> },
+  { key: 'meet',     label: 'Google Meet',     icon: <PhoneCall className="w-4 h-4" /> },
+];
 
   const isLoading = loadingEvents || loadingEmails || loadingImages || loadingDevices || loadingGbp;
 
@@ -551,27 +549,26 @@ useEffect(() => {
                   </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="grid grid-cols-2 md:grid-cols-6">
-                  {tabs.map((tab, i) => (
-                    <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                      className={`px-3 py-3 text-xs sm:text-sm font-medium transition flex items-center justify-center gap-1.5 border-b-2 ${
-                        activeTab === tab.key
-                          ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                          : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5'
-                      } ${i % 2 !== 1 ? 'border-r border-r-gray-200 dark:border-r-white/10' : ''} ${i < 2 ? 'md:border-b-0' : ''}`}
-                    >
-                      {tab.icon}
-                      <span className="truncate hidden sm:inline">{tab.label}</span>
-                      {tab.count !== undefined && tab.count > 0 && (
-                        <span className="ml-1 px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full hidden sm:inline">
-                          {tab.count}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
+{/* Tabs */}
+<div className="grid grid-cols-2 md:grid-cols-4">
+  {tabs.map((tab, i) => (
+    <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+      className={`px-3 py-3 text-xs sm:text-sm font-medium transition flex items-center justify-center gap-1.5 border-b-2 ${
+        activeTab === tab.key
+          ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+          : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5'
+      } ${i % 2 !== 1 ? 'border-r border-r-gray-200 dark:border-r-white/10' : ''} ${i < 2 ? 'md:border-b-0' : ''}`}
+    >
+      <span className="hidden sm:block">{tab.icon}</span>
+      <span className="truncate">{tab.label}</span>
+      {tab.count !== undefined && tab.count > 0 && (
+        <span className="ml-1 px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full hidden sm:inline">
+          {tab.count}
+        </span>
+      )}
+    </button>
+  ))}
+</div>
 
               {/* ── CALENDÁRIO ── */}
               {activeTab === 'calendar' && (

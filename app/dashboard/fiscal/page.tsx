@@ -186,12 +186,12 @@ function VisaoGeral({
       color: !company?.nfe_cert_expiracao || !certOk
         ? 'text-red-600 dark:text-red-400'
         : diasCert! <= 30
-          ? 'text-amber-600 dark:text-amber-400'
+          ? 'text-lime-600 dark:text-lime-400'
           : 'text-green-600 dark:text-green-400',
       bg: !company?.nfe_cert_expiracao || !certOk
         ? 'bg-red-50 dark:bg-red-500/10'
         : diasCert! <= 30
-          ? 'bg-amber-50 dark:bg-amber-500/10'
+          ? 'bg-lime-50 dark:bg-lime-500/10'
           : 'bg-green-50 dark:bg-green-500/10',
       onClick: onIrParaConfig,
     },
@@ -223,13 +223,13 @@ function VisaoGeral({
 
       {/* Status de configuração */}
       {!company?.brasilnfe_token && (
-        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 rounded-xl border border-amber-200 dark:border-amber-500/20">
-          <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 p-4 bg-lime-50 dark:bg-lime-500/10 rounded-xl border border-lime-200 dark:border-lime-500/20">
+          <AlertCircle className="w-4 h-4 text-lime-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Emissão fiscal não configurada</p>
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Configure o CNPJ, regime tributário e certificado digital para começar a emitir notas.</p>
+            <p className="text-sm font-medium text-lime-800 dark:text-lime-200">Emissão fiscal não configurada</p>
+            <p className="text-xs text-lime-600 dark:text-lime-400 mt-0.5">Configure o CNPJ, regime tributário e certificado digital para começar a emitir notas.</p>
           </div>
-          <button onClick={onIrParaConfig} className="text-xs px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition whitespace-nowrap">
+          <button onClick={onIrParaConfig} className="text-xs px-3 py-1.5 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition whitespace-nowrap">
             Configurar
           </button>
         </div>
@@ -474,7 +474,7 @@ function AbaConfiguracao({
       {/* Toast */}
       {toast && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3
-          ${toast.type === 'success' ? 'bg-green-500' : toast.type === 'error' ? 'bg-red-500' : 'bg-amber-400'}
+          ${toast.type === 'success' ? 'bg-green-500' : toast.type === 'error' ? 'bg-red-500' : 'bg-lime-400'}
           animate-in slide-in-from-top duration-300`}>
           <p className="text-white font-semibold text-sm">{toast.msg}</p>
         </div>
@@ -606,7 +606,7 @@ function AbaConfiguracao({
             <>
               <p className="text-sm text-gray-500 dark:text-gray-400">Cadastra sua empresa na plataforma Brasil NFE usando os dados fiscais acima. Necessário para emissão.</p>
               {!passo1Ok && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Complete o Passo 1 primeiro</p>
+                <p className="text-xs text-lime-600 dark:text-lime-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Complete o Passo 1 primeiro</p>
               )}
               <button onClick={handleCadastrarBrasilNfe} disabled={loading || !passo1Ok} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Building2 className="w-4 h-4" />}
@@ -632,7 +632,7 @@ function AbaConfiguracao({
           )}
           <p className="text-xs text-gray-500 dark:text-gray-400">Certificado A1 (.pfx ou .p12) emitido por autoridade certificadora ICP-Brasil. A senha não é armazenada.</p>
           {!passo2Ok && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Complete o Passo 2 primeiro</p>
+            <p className="text-xs text-lime-600 dark:text-lime-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Complete o Passo 2 primeiro</p>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -664,7 +664,7 @@ function AbaConfiguracao({
         </div>
         <div className="p-5 space-y-4">
           {!passo3Ok && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Complete o Passo 3 primeiro</p>
+            <p className="text-xs text-lime-600 dark:text-lime-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Complete o Passo 3 primeiro</p>
           )}
 
           {/* Homologação */}
@@ -864,12 +864,12 @@ function FiscalPageContent() {
           {companyId && (
             <div className={`flex items-center justify-between gap-4 px-4 py-2.5 rounded-xl border ${
               isVendas
-                ? 'border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-900/10'
+                ? 'border-lime-200 dark:border-lime-500/30 bg-lime-50 dark:bg-lime-900/10'
                 : 'border-orange-200 dark:border-orange-500/30 bg-orange-50 dark:bg-orange-900/10'
             }`}>
               <div className="flex items-center gap-2">
-                <Receipt className={`w-4 h-4 flex-shrink-0 ${isVendas ? 'text-amber-500' : 'text-orange-500'}`} />
-                <span className={`text-sm font-medium ${isVendas ? 'text-amber-800 dark:text-amber-200' : 'text-orange-800 dark:text-orange-200'}`}>
+                <Receipt className={`w-4 h-4 flex-shrink-0 ${isVendas ? 'text-lime-500' : 'text-orange-500'}`} />
+                <span className={`text-sm font-medium ${isVendas ? 'text-lime-800 dark:text-lime-200' : 'text-orange-800 dark:text-orange-200'}`}>
                   {isVendas ? 'minhAi Vendas — emissão de nota incluída na comissão' : 'minhAi Smart — 2 créditos por nota emitida'}
                 </span>
               </div>

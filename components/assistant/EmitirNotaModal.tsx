@@ -213,10 +213,10 @@ export default function EmitirNotaModal({
                           onClick={() => setModeloNota('nfce')}
                           className={`py-2 px-3 rounded-lg border text-sm font-medium transition text-left ${
                             modeloNota === 'nfce'
-                              ? 'bg-orange-500 border-orange-500 text-white'
+                              ? 'bg-lime-500 border-lime-500 text-white'
                               : isDark
-                                ? 'border-slate-600 text-gray-300 hover:border-orange-500'
-                                : 'border-gray-300 text-gray-600 hover:border-orange-500'
+                                ? 'border-slate-600 text-gray-300 hover:border-lime-500'
+                                : 'border-gray-300 text-gray-600 hover:border-lime-500'
                           }`}
                         >
                           <span className="flex items-center gap-1.5">
@@ -230,10 +230,10 @@ export default function EmitirNotaModal({
                           onClick={() => setModeloNota('nfe')}
                           className={`py-2 px-3 rounded-lg border text-sm font-medium transition text-left ${
                             modeloNota === 'nfe'
-                              ? 'bg-orange-500 border-orange-500 text-white'
+                              ? 'bg-lime-500 border-lime-500 text-white'
                               : isDark
-                                ? 'border-slate-600 text-gray-300 hover:border-orange-500'
-                                : 'border-gray-300 text-gray-600 hover:border-orange-500'
+                                ? 'border-slate-600 text-gray-300 hover:border-lime-500'
+                                : 'border-gray-300 text-gray-600 hover:border-lime-500'
                           }`}
                         >
                           <span className="flex items-center gap-1.5">

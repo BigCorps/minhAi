@@ -4227,6 +4227,46 @@ const ThermalConfigForm = ({ settings, onChange, hasActivePlan }: any) => {
   );
 };
 
+const EmitirNotaForm = () => {
+  const router = useRouter();
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+        <h4 className="font-semibold text-orange-900 dark:text-orange-100 mb-2">
+          Como funciona
+        </h4>
+        <ul className="text-sm text-orange-800 dark:text-orange-200 space-y-1">
+          <li>• Emite NFS-e, NF-e ou NFC-e diretamente pelo assistente de voz</li>
+          <li>• Configure CNPJ, regime tributário e certificado digital antes de emitir</li>
+          <li>• Notas transmitidas em tempo real para SEFAZ ou prefeitura</li>
+          <li>• Histórico completo de notas emitidas no painel fiscal</li>
+        </ul>
+      </div>
+
+      <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+        <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">
+          Comandos de voz
+        </h5>
+        <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+          <li>• "Emitir nota fiscal"</li>
+          <li>• "Gerar nota"</li>
+          <li>• "Criar NFS-e"</li>
+        </ul>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => router.push('/dashboard/fiscal')}
+        className="w-full px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2"
+      >
+        <ExternalLink size={16} />
+        Configurar Emissão Fiscal
+      </button>
+    </div>
+  );
+};
+
 const VendasForm = ({ functionKey, companyId }: { functionKey: string; companyId: string }) => {
   const router = useRouter();
 
@@ -4443,6 +4483,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'chamar_gerente': ChamarGerenteConfigForm,
   'pre_atendimento': PreAtendimentoConfigForm,
   'responder_pesquisa': PesquisasConfigForm,
+  'emitir_nota': EmitirNotaForm,
 };
 
 // ===== INTERFACE =====

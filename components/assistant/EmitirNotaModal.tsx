@@ -43,7 +43,6 @@ export default function EmitirNotaModal({
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
-  // Toast auto-dismiss
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3000);
@@ -54,7 +53,6 @@ export default function EmitirNotaModal({
     setToast({ message, type });
   };
 
-  // Voz na etapa de confirmação
   useModalVoiceCommand({
     active: step === 'confirming',
     onTranscript: (transcript) => {
@@ -99,7 +97,6 @@ export default function EmitirNotaModal({
       if (plano === 'nfse') {
         body.descricao_servico = descricaoServico;
       } else {
-        // NFC-e/NF-e — item único simplificado
         body.itens = [{
           nome: descricaoServico || 'Produto',
           quantidade: 1,
@@ -149,9 +146,10 @@ export default function EmitirNotaModal({
         </div>
       )}
 
+      {/* Modal — max-w-lg mobile, max-w-2xl desktop */}
       <div
         role="dialog"
-        className={`relative w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border} animate-in zoom-in-95 duration-300 flex flex-col`}
+        className={`relative w-full max-w-lg sm:max-w-2xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border} animate-in zoom-in-95 duration-300 flex flex-col`}
       >
         {/* Header */}
         <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-blue-950/30' : 'bg-blue-50'} flex items-center justify-between flex-shrink-0`}>
@@ -165,7 +163,6 @@ export default function EmitirNotaModal({
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition">
-            {/* X icon SVG */}
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -173,110 +170,120 @@ export default function EmitirNotaModal({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
+        <div className="p-6 overflow-y-auto max-h-[75vh]">
 
           {/* ─── FORM ─── */}
           {step === 'form' && (
-            <>
-              {/* Valor */}
-              <div>
-                <label className={labelCls}>Valor Total (R$) *</label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={valorTotal}
-                  onChange={(e) => setValorTotal(e.target.value)}
-                  placeholder="0,00"
-                  className={inputCls}
-                />
-              </div>
+            <div className="space-y-4">
+              {/* Grid 2 colunas no desktop, 1 no mobile */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-              {/* Descrição */}
-              <div>
-                <label className={labelCls}>
-                  {plano === 'nfse' ? 'Descrição do Serviço *' : 'Descrição do Produto'}
-                </label>
-                <input
-                  type="text"
-                  value={descricaoServico}
-                  onChange={(e) => setDescricaoServico(e.target.value)}
-                  placeholder={plano === 'nfse' ? 'Ex: Desenvolvimento de website' : 'Ex: Produto'}
-                  className={inputCls}
-                />
-              </div>
+                {/* Coluna esquerda */}
+                <div className="space-y-4">
+                  {/* Valor */}
+                  <div>
+                    <label className={labelCls}>Valor Total (R$) *</label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={valorTotal}
+                      onChange={(e) => setValorTotal(e.target.value)}
+                      placeholder="0,00"
+                      className={inputCls}
+                    />
+                  </div>
 
-              {/* Destinatário */}
-              <div className={`p-3 rounded-lg border ${border} space-y-2`}>
-                <p className={`text-xs font-semibold ${textMuted} uppercase tracking-wide`}>
-                  Destinatário (opcional)
-                </p>
-                <div>
-                  <label className={labelCls}>CPF / CNPJ</label>
-                  <input
-                    type="text"
-                    value={destinatarioCpfCnpj}
-                    onChange={(e) => setDestinatarioCpfCnpj(e.target.value)}
-                    placeholder="000.000.000-00 ou 00.000.000/0001-00"
-                    className={inputCls}
-                  />
+                  {/* Descrição */}
+                  <div>
+                    <label className={labelCls}>
+                      {plano === 'nfse' ? 'Descrição do Serviço *' : 'Descrição do Produto'}
+                    </label>
+                    <input
+                      type="text"
+                      value={descricaoServico}
+                      onChange={(e) => setDescricaoServico(e.target.value)}
+                      placeholder={plano === 'nfse' ? 'Ex: Desenvolvimento de website' : 'Ex: Produto'}
+                      className={inputCls}
+                    />
+                  </div>
+
+                  {/* Forma de pagamento */}
+                  <div>
+                    <label className={labelCls}>Forma de Pagamento</label>
+                    <select
+                      value={formaPagamento}
+                      onChange={(e) => setFormaPagamento(e.target.value)}
+                      className={inputCls}
+                    >
+                      <option value="pix">PIX</option>
+                      <option value="dinheiro">Dinheiro</option>
+                      <option value="debito">Cartão Débito</option>
+                      <option value="credito">Cartão Crédito</option>
+                      <option value="nfc">NFC / Tap to Pay</option>
+                      <option value="tef">TEF / Maquininha</option>
+                    </select>
+                  </div>
+
+                  {/* Enviar email */}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enviarEmail}
+                      onChange={(e) => setEnviarEmail(e.target.checked)}
+                      className="w-4 h-4 accent-blue-500"
+                    />
+                    <span className={`text-sm ${textPrimary}`}>Enviar DANFE por email</span>
+                  </label>
                 </div>
+
+                {/* Coluna direita — Destinatário */}
                 <div>
-                  <label className={labelCls}>Nome</label>
-                  <input
-                    type="text"
-                    value={destinatarioNome}
-                    onChange={(e) => setDestinatarioNome(e.target.value)}
-                    placeholder="Nome do cliente"
-                    className={inputCls}
-                  />
-                </div>
-                <div>
-                  <label className={labelCls}>Email</label>
-                  <input
-                    type="email"
-                    value={destinatarioEmail}
-                    onChange={(e) => setDestinatarioEmail(e.target.value)}
-                    placeholder="cliente@email.com"
-                    className={inputCls}
-                  />
+                  <div className={`h-full p-3 rounded-lg border ${border} space-y-3`}>
+                    <p className={`text-xs font-semibold ${textMuted} uppercase tracking-wide`}>
+                      Destinatário (opcional)
+                    </p>
+                    <div>
+                      <label className={labelCls}>CPF / CNPJ</label>
+                      <input
+                        type="text"
+                        value={destinatarioCpfCnpj}
+                        onChange={(e) => setDestinatarioCpfCnpj(e.target.value)}
+                        placeholder="000.000.000-00"
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Nome</label>
+                      <input
+                        type="text"
+                        value={destinatarioNome}
+                        onChange={(e) => setDestinatarioNome(e.target.value)}
+                        placeholder="Nome do cliente"
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Email</label>
+                      <input
+                        type="email"
+                        value={destinatarioEmail}
+                        onChange={(e) => setDestinatarioEmail(e.target.value)}
+                        placeholder="cliente@email.com"
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Forma de pagamento */}
-              <div>
-                <label className={labelCls}>Forma de Pagamento</label>
-                <select
-                  value={formaPagamento}
-                  onChange={(e) => setFormaPagamento(e.target.value)}
-                  className={inputCls}
-                >
-                  <option value="pix">PIX</option>
-                  <option value="dinheiro">Dinheiro</option>
-                  <option value="debito">Cartão Débito</option>
-                  <option value="credito">Cartão Crédito</option>
-                  <option value="nfc">NFC / Tap to Pay</option>
-                  <option value="tef">TEF / Maquininha</option>
-                </select>
-              </div>
-
-              {/* Enviar email */}
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={enviarEmail}
-                  onChange={(e) => setEnviarEmail(e.target.checked)}
-                  className="w-4 h-4 accent-blue-500"
-                />
-                <span className={`text-sm ${textPrimary}`}>Enviar DANFE por email ao destinatário</span>
-              </label>
-
+              {/* Botão — largura total, fora do grid */}
               <button
                 onClick={handleConfirmar}
                 className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition"
               >
                 Revisar e Emitir
               </button>
-            </>
+            </div>
           )}
 
           {/* ─── CONFIRMING ─── */}
@@ -399,7 +406,7 @@ export default function EmitirNotaModal({
                 <p className={`text-xl font-bold ${textPrimary}`}>Falha na Emissão</p>
               </div>
 
-              <div className={`p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-400`}>
+              <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-400">
                 {erro}
               </div>
 

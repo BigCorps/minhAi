@@ -19,7 +19,7 @@ import {
   ShieldCheck,
   Building2,
 } from 'lucide-react';
-import EmitirNotaModal from '@/components/modals/EmitirNotaModal'; // ajuste o path se necessário
+import EmitirNotaModal from '@/components/assistant/EmitirNotaModal'; // ajuste o path se necessário
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 

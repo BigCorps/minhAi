@@ -569,6 +569,7 @@ const tabs: { key: ActiveTab; label: string; icon: React.ReactNode; count?: numb
     </button>
   ))}
 </div>
+</div>      
 
               {/* ── CALENDÁRIO ── */}
               {activeTab === 'calendar' && (

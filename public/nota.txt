@@ -57,7 +57,7 @@ Multimidia - ✅Tocar Vídeo | Vídeo de Instruções | Painel de Ofertas
          Iniciar Playlist | Sequência de Vídeos | Canal do Youtube
                  Tocar Música | Porta Retrato | Vídeo Chamada
 
-Utilitários - ✅ Aparelhos Smart | Criar Lembrete | Cronômetro 
+Utilitários - ✅ Emitir Nota | Criar Lembrete | Cronômetro 
                   Temporizador | Relógio Mundial | Alarme
          Segunda Via Boleto | Criar Nota | Lembrete Remédios
 

@@ -3450,6 +3450,72 @@ painel_ofertas: {
   },
 },
 
+emitir_nota: {
+  functionKey: 'emitir_nota',
+  functionName: 'Emitir Nota Fiscal',
+  category: 'utylities',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'nota fiscal',
+    'emitir nota',
+    'emitir nota fiscal',
+    'nota de serviço',
+    'nota fiscal de serviço',
+    'cupom fiscal',
+    'recibo fiscal',
+    'preciso de nota',
+    'gerar nota',
+    'quero nota',
+  ],
+
+  examplePhrases: [
+    'Emitir nota fiscal',
+    'Preciso de nota fiscal',
+    'Gerar cupom fiscal',
+    'Nota de serviço',
+  ],
+
+  requiresInput: false,
+  description: 'Emite Nota Fiscal de Serviço (NFS-e), Cupom Fiscal (NFC-e) ou Nota Fiscal de Produto (NF-e) por voz ou toque, com envio automático do DANFE por WhatsApp ou email.',
+  shortDescription: 'Emissão fiscal por voz',
+  icon: '🧾',
+  color: '#FFA500',
+
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      const supabase = createClient();
+      const { data: company } = await supabase
+        .from('companies')
+        .select('nfe_ativo, brasilnfe_token, nfe_plano')
+        .eq('id', companyId)
+        .single();
+
+      if (!company?.brasilnfe_token || !company?.nfe_ativo) {
+        await playText('A emissão fiscal não está ativada. Configure no painel do dashboard.');
+        return false;
+      }
+
+      await playText('Abrindo emissão de nota fiscal.');
+
+      setActiveModal?.({
+        type: 'EmitirNotaModal',
+        data: { companyId, nfe_plano: company.nfe_plano },
+      });
+
+      return true;
+    } catch {
+      await playText('Não foi possível abrir a emissão fiscal. Tente novamente.');
+      return false;
+    }
+  },
+},
+
 aparelhos_smart: {
   functionKey: 'aparelhos_smart',
   functionName: 'Aparelhos Smart',

@@ -298,6 +298,8 @@ function AbaConfiguracao({
     nfe_csc_identificador: company?.nfe_csc_identificador ?? '',
     nfe_csc_codigo: company?.nfe_csc_codigo ?? '',
     brasilnfe_ambiente: company?.brasilnfe_ambiente ?? 'homologacao',
+    nfe_ultimo_rps: (company as any)?.nfe_ultimo_rps?.toString() ?? '0',
+    nfe_serie_rps: (company as any)?.nfe_serie_rps ?? 'A',
   });
 
   useEffect(() => {
@@ -349,6 +351,8 @@ function AbaConfiguracao({
           nfe_csc_identificador: form.nfe_csc_identificador || null,
           nfe_csc_codigo: form.nfe_csc_codigo || null,
           brasilnfe_ambiente: form.brasilnfe_ambiente,
+          nfe_ultimo_rps: parseInt(form.nfe_ultimo_rps) || 0,
+          nfe_serie_rps: form.nfe_serie_rps || 'A',
         })
         .eq('id', companyId);
       if (error) throw error;
@@ -575,6 +579,36 @@ function AbaConfiguracao({
               </div>
             </div>
           )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-white/10">
+            <div>
+              <label className={labelCls}>Último RPS emitido</label>
+              <input
+                type="number"
+                min="0"
+                value={form.nfe_ultimo_rps}
+                onChange={e => setForm(f => ({ ...f, nfe_ultimo_rps: e.target.value }))}
+                className={inputCls}
+              />
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Informe o número da última nota emitida antes de migrar para o minhAi. Se for sua primeira nota, deixe 0.
+              </p>
+            </div>
+            <div>
+              <label className={labelCls}>Série RPS</label>
+              <input
+                type="text"
+                value={form.nfe_serie_rps}
+                onChange={e => setForm(f => ({ ...f, nfe_serie_rps: e.target.value.toUpperCase() }))}
+                maxLength={2}
+                placeholder="A"
+                className={inputCls}
+              />
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Série padrão é A. Altere somente se seu sistema anterior usava série diferente.
+              </p>
+            </div>
+          </div>
 
           <div>
             <label className={labelCls}>Ambiente</label>

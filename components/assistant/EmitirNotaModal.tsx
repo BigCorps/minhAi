@@ -361,7 +361,7 @@ export default function EmitirNotaModal({
                 )}
               </div>
 
-// Substitua o <a> do download por isso:
+
 {resultado.danfe_base64 && (
   <button
     onClick={() => {

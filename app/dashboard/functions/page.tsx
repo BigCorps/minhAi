@@ -308,7 +308,7 @@ async function handleSendSuggestion() {
     }
   }, [companyId]);
 
-  async function loadData(selectedCompanyId: string) {
+async function loadData(selectedCompanyId: string) {
     try {
       setLoading(true);
       const { data: companyType } = await supabase
@@ -318,7 +318,6 @@ async function handleSendSuggestion() {
         .single();
       setAssistantType(companyType?.assistant_type ?? 'smart');
 
-      // ── Incluídos enabled_meta e enabled_gpt para renderizar os badges ──
       const { data: allFunctions, error: functionsError } = await supabase
         .from('assistant_functions')
         .select('*, default_enabled, enabled_meta, enabled_gpt')
@@ -333,6 +332,12 @@ async function handleSendSuggestion() {
         .eq('company_id', selectedCompanyId);
       if (settingsError) console.error('Erro ao buscar settings:', settingsError);
       setSettings(companySettings || []);
+    } catch (error) {
+      console.error('Erro ao carregar:', error);
+    } finally {
+      setLoading(false);
+    }
+  }  // ← fecha loadData aqui
 
 async function toggleFunction(functionKey: string, currentlyEnabled: boolean) {
   if (!companyId) return;

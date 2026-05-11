@@ -153,7 +153,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
 
   // ── Smart home ────────────────────────────────────────────
   const EmitirNotaModal = dynamic(
-  () => import('@/components/Modals/EmitirNotaModal'),
+  () => import('@/components/assistant/EmitirNotaModal'),
   { ssr: false }
 );
   'AparelhosSmartDisplay': dynamic(() => import('@/components/assistant/AparelhosSmartDisplay'), { ssr: false }),

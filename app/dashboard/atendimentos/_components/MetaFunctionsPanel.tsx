@@ -72,7 +72,7 @@ const CONFIGURABLE_FUNCTIONS = [
   'meu_cupom','cadastro','clima_tempo','tocar_video','tocar_musica',
   'impressao_local','impressao_remota','impressao_recibo',
   'modo_venda','ver_produtos','fazer_pedido','consultar_estoque','cadastrar_produto',
-  'consultar_cep','playlist','porta_retrato','painel_ofertas','aparelhos_smart',
+  'consultar_cep','playlist','porta_retrato','painel_ofertas','emitir_nota',
   'canal_youtube','identificar_fraude','segunda_via_boleto','rastreio_correios',
   'buscar_endereco','tracar_rota','criar_nota','lembrete_remedios','ver_noticias',
   'procurar_produto','chamar_gerente','pre_atendimento','responder_pesquisa',

@@ -269,11 +269,6 @@ function FunctionsPageContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [editingFunction, setEditingFunction] = useState<AssistantFunction | null>(null);
 
-  // Estados novos — perfis
-  const [profilePermissions, setProfilePermissions] = useState<{tipo: string; function_key: string; is_enabled: boolean}[]>([]);
-  const [tiposDisponiveis, setTiposDisponiveis] = useState<string[]>([]);
-  const [selectedTipo, setSelectedTipo] = useState<string | null>(null); // null = principal
-
   const [assistantType, setAssistantType] = useState<string>('smart');
   const supabase = createClient();
 
@@ -339,101 +334,37 @@ async function handleSendSuggestion() {
       if (settingsError) console.error('Erro ao buscar settings:', settingsError);
       setSettings(companySettings || []);
 
-      // Tipos de perfil com pelo menos 1 perfil cadastrado
-      const { data: profilesData } = await supabase
-        .from('company_profiles')
-        .select('tipo')
-        .eq('company_id', selectedCompanyId)
-        .eq('is_active', true);
-
-      const tipos = [...new Set((profilesData ?? []).map((p: any) => p.tipo))]
-        .filter(t => t !== 'administrador');
-      setTiposDisponiveis(tipos);
-
-      // Permissões de perfil (inicializa se necessário)
-      if (tipos.length > 0) {
-        const { data: perms } = await supabase
-          .from('profile_type_permissions')
-          .select('tipo, function_key, is_enabled')
-          .eq('company_id', selectedCompanyId);
-
-        if (!perms || perms.length === 0) {
-          await supabase.rpc('initialize_company_profile_permissions', { p_company_id: selectedCompanyId });
-          const { data: permsInit } = await supabase
-            .from('profile_type_permissions')
-            .select('tipo, function_key, is_enabled')
-            .eq('company_id', selectedCompanyId);
-          setProfilePermissions(permsInit ?? []);
-        } else {
-          setProfilePermissions(perms);
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao carregar:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function toggleFunction(functionKey: string, currentlyEnabled: boolean) {
-    if (!companyId) return;
-    setUpdating(functionKey);
-    try {
-      if (selectedTipo === null) {
-        // Modo principal — comportamento original
-        const setting = settings.find(s => s.function_key === functionKey);
-        if (setting) {
-          await supabase.from('company_function_settings').update({
-            is_enabled: !currentlyEnabled,
-            ...(currentlyEnabled ? { disabled_at: new Date().toISOString() } : { enabled_at: new Date().toISOString() }),
-          }).eq('id', setting.id);
-        } else {
-          await supabase.from('company_function_settings').insert({
-            company_id: companyId, function_key: functionKey,
-            is_enabled: !currentlyEnabled,
-            ...(currentlyEnabled ? { disabled_at: new Date().toISOString() } : { enabled_at: new Date().toISOString() }),
-          });
-        }
-        await loadData(companyId);
-      } else {
-        // Modo perfil — atualiza profile_type_permissions
-        await supabase.from('profile_type_permissions').upsert(
-          { company_id: companyId, tipo: selectedTipo, function_key: functionKey, is_enabled: !currentlyEnabled },
-          { onConflict: 'company_id,tipo,function_key' }
-        );
-        // Atualiza estado local sem recarregar tudo
-        setProfilePermissions(prev => {
-          const exists = prev.find(p => p.tipo === selectedTipo && p.function_key === functionKey);
-          if (exists) {
-            return prev.map(p =>
-              p.tipo === selectedTipo && p.function_key === functionKey
-                ? { ...p, is_enabled: !currentlyEnabled }
-                : p
-            );
-          }
-          return [...prev, { tipo: selectedTipo, function_key: functionKey, is_enabled: !currentlyEnabled }];
-        });
-      }
-    } catch (error) {
-      console.error('Erro ao toggling função:', error);
-    } finally {
-      setUpdating(null);
-    }
-  }
-
-  function isFunctionEnabled(functionKey: string): boolean {
-    if (selectedTipo === null) {
-      const setting = settings.find(s => s.function_key === functionKey);
-      if (setting) return setting.is_enabled;
-      // fallback: default_enabled
-      const fn = functions.find(f => f.function_key === functionKey);
-      return fn?.default_enabled ?? false;
+async function toggleFunction(functionKey: string, currentlyEnabled: boolean) {
+  if (!companyId) return;
+  setUpdating(functionKey);
+  try {
+    const setting = settings.find(s => s.function_key === functionKey);
+    if (setting) {
+      await supabase.from('company_function_settings').update({
+        is_enabled: !currentlyEnabled,
+        ...(currentlyEnabled ? { disabled_at: new Date().toISOString() } : { enabled_at: new Date().toISOString() }),
+      }).eq('id', setting.id);
     } else {
-      const perm = profilePermissions.find(p => p.tipo === selectedTipo && p.function_key === functionKey);
-      if (perm) return perm.is_enabled;
-      return false;
+      await supabase.from('company_function_settings').insert({
+        company_id: companyId, function_key: functionKey,
+        is_enabled: !currentlyEnabled,
+        ...(currentlyEnabled ? { disabled_at: new Date().toISOString() } : { enabled_at: new Date().toISOString() }),
+      });
     }
+    await loadData(companyId);
+  } catch (error) {
+    console.error('Erro ao toggling função:', error);
+  } finally {
+    setUpdating(null);
   }
+}
+
+function isFunctionEnabled(functionKey: string): boolean {
+  const setting = settings.find(s => s.function_key === functionKey);
+  if (setting) return setting.is_enabled;
+  const fn = functions.find(f => f.function_key === functionKey);
+  return fn?.default_enabled ?? false;
+}
 
   function getFunctionStats(functionKey: string) {
     const setting = settings.find(s => s.function_key === functionKey);
@@ -683,11 +614,6 @@ if (assistantType === 'vendas' && companyId) {
                     />
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <ProfileTypeSelector
-                      selectedTipo={selectedTipo}
-                      tiposDisponiveis={tiposDisponiveis}
-                      onSelect={setSelectedTipo}
-                    />
                     <StatusPillSelector
                       filterStatus={filterStatus}
                       onSetStatus={setFilterStatus}

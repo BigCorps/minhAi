@@ -97,7 +97,7 @@ function TipoLabel({ tipo }: { tipo: string }) {
     nfe: 'NF-e',
     nfce: 'NFC-e',
   };
-  return <span className="text-xs font-mono font-semibold text-orange-500">{map[tipo] ?? tipo.toUpperCase()}</span>;
+  return <span className="text-xs font-mono font-semibold text-blue-500">{map[tipo] ?? tipo.toUpperCase()}</span>;
 }
 
 // ─── Aba: Visão Geral ─────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ function VisaoGeral({
     : null;
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-orange-500" /></div>;
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>;
   }
 
   const cards = [
@@ -152,8 +152,8 @@ function VisaoGeral({
       value: formatarPreco(stats.valorTotal),
       sub: `${stats.autorizadas} notas autorizadas`,
       icon: Receipt,
-      color: 'text-orange-600 dark:text-orange-400',
-      bg: 'bg-orange-50 dark:bg-orange-500/10',
+      color: 'text-blue-600 dark:text-blue-400',
+      bg: 'bg-blue-50 dark:bg-blue-500/10',
       onClick: onIrParaHistorico,
     },
     {
@@ -458,7 +458,7 @@ function AbaConfiguracao({
     }
   };
 
-  const inputCls = 'w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent';
+  const inputCls = 'w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent';
   const labelCls = 'block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1';
   const sectionCls = 'bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden';
   const sectionHeaderCls = 'flex items-center gap-3 px-5 py-3 border-b border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-slate-800/60';
@@ -500,7 +500,7 @@ function AbaConfiguracao({
       {/* Passo 1: Dados Fiscais */}
       <div className={sectionCls}>
         <div className={sectionHeaderCls}>
-          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${passo1Ok ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}`}>{passo1Ok ? '✓' : '1'}</div>
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${passo1Ok ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>{passo1Ok ? '✓' : '1'}</div>
           <h3 className="font-semibold text-sm text-gray-800 dark:text-gray-100">Dados Fiscais</h3>
         </div>
         <div className="p-5 space-y-4">
@@ -518,7 +518,7 @@ function AbaConfiguracao({
                 <button
                   onClick={handleDetectar}
                   disabled={detectando}
-                  className="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50 whitespace-nowrap flex items-center gap-1"
+                  className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50 whitespace-nowrap flex items-center gap-1"
                 >
                   {detectando ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                   Detectar
@@ -583,7 +583,7 @@ function AbaConfiguracao({
             </select>
           </div>
 
-          <button onClick={handleSalvarDados} disabled={salvando} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2">
+          <button onClick={handleSalvarDados} disabled={salvando} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2">
             {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             Salvar Dados Fiscais
           </button>
@@ -593,7 +593,7 @@ function AbaConfiguracao({
       {/* Passo 2: Cadastro Brasil NFE */}
       <div className={sectionCls}>
         <div className={sectionHeaderCls}>
-          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${passo2Ok ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}`}>{passo2Ok ? '✓' : '2'}</div>
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${passo2Ok ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>{passo2Ok ? '✓' : '2'}</div>
           <h3 className="font-semibold text-sm text-gray-800 dark:text-gray-100">Cadastro na Brasil NFE</h3>
         </div>
         <div className="p-5 space-y-3">
@@ -608,7 +608,7 @@ function AbaConfiguracao({
               {!passo1Ok && (
                 <p className="text-xs text-lime-600 dark:text-lime-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Complete o Passo 1 primeiro</p>
               )}
-              <button onClick={handleCadastrarBrasilNfe} disabled={loading || !passo1Ok} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2">
+              <button onClick={handleCadastrarBrasilNfe} disabled={loading || !passo1Ok} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Building2 className="w-4 h-4" />}
                 Cadastrar na Brasil NFE
               </button>
@@ -620,7 +620,7 @@ function AbaConfiguracao({
       {/* Passo 3: Certificado Digital */}
       <div className={sectionCls}>
         <div className={sectionHeaderCls}>
-          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${passo3Ok ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}`}>{passo3Ok ? '✓' : '3'}</div>
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${passo3Ok ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>{passo3Ok ? '✓' : '3'}</div>
           <h3 className="font-semibold text-sm text-gray-800 dark:text-gray-100">Certificado Digital A1</h3>
         </div>
         <div className="p-5 space-y-4">
@@ -641,7 +641,7 @@ function AbaConfiguracao({
                 type="file"
                 accept=".pfx,.p12"
                 onChange={e => setArquivoCert(e.target.files?.[0] ?? null)}
-                className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-600 dark:file:bg-orange-500/10 dark:file:text-orange-400 hover:file:bg-orange-100"
+                className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 dark:file:bg-blue-500/10 dark:file:text-blue-400 hover:file:bg-blue-100"
               />
             </div>
             <div>
@@ -649,7 +649,7 @@ function AbaConfiguracao({
               <input type="password" value={senhaCert} onChange={e => setSenhaCert(e.target.value)} placeholder="Senha do .pfx" className={inputCls} />
             </div>
           </div>
-          <button onClick={handleUploadCertificado} disabled={uploadingCert || !passo2Ok || !arquivoCert || !senhaCert} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2">
+          <button onClick={handleUploadCertificado} disabled={uploadingCert || !passo2Ok || !arquivoCert || !senhaCert} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2">
             {uploadingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             {passo3Ok ? 'Renovar Certificado' : 'Enviar Certificado'}
           </button>
@@ -659,7 +659,7 @@ function AbaConfiguracao({
       {/* Passo 4: Ativação */}
       <div className={sectionCls}>
         <div className={sectionHeaderCls}>
-          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${passo4Ok ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}`}>{passo4Ok ? '✓' : '4'}</div>
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${passo4Ok ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>{passo4Ok ? '✓' : '4'}</div>
           <h3 className="font-semibold text-sm text-gray-800 dark:text-gray-100">Ativação</h3>
         </div>
         <div className="p-5 space-y-4">
@@ -683,7 +683,7 @@ function AbaConfiguracao({
               Requer pagamento da assinatura Brasil NFE ({form.nfe_plano === 'nfse' ? 'R$ 99,90/mês' : 'R$ 49,90/mês'}).
             </p>
             <div className="flex flex-wrap gap-2">
-              <button onClick={handleGerarLinkAtivacao} disabled={ativando || !passo3Ok} className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50 flex items-center gap-1">
+              <button onClick={handleGerarLinkAtivacao} disabled={ativando || !passo3Ok} className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50 flex items-center gap-1">
                 {ativando ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                 Gerar Link de Pagamento
               </button>
@@ -754,7 +754,7 @@ function AbaHistorico({ companyId }: { companyId: string }) {
         </select>
       </div>
 
-      {loading && <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-orange-500" /></div>}
+      {loading && <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>}
 
       {!loading && filtered.length === 0 && (
         <div className="bg-white/50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
@@ -787,7 +787,7 @@ function AbaHistorico({ companyId }: { companyId: string }) {
                       <p className="text-gray-900 dark:text-white text-xs">{doc.destinatario_nome ?? 'Consumidor Final'}</p>
                       {doc.destinatario_cpf_cnpj && <p className="text-gray-400 text-xs font-mono">{doc.destinatario_cpf_cnpj}</p>}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-orange-600 dark:text-orange-400">
+                    <td className="px-4 py-3 font-semibold text-blue-600 dark:text-blue-400">
                       {formatarPreco(Number(doc.valor_total))}
                     </td>
                     <td className="px-4 py-3"><SituacaoBadge situacao={doc.situacao} /></td>
@@ -865,11 +865,11 @@ function FiscalPageContent() {
             <div className={`flex items-center justify-between gap-4 px-4 py-2.5 rounded-xl border ${
               isVendas
                 ? 'border-lime-200 dark:border-lime-500/30 bg-lime-50 dark:bg-lime-900/10'
-                : 'border-orange-200 dark:border-orange-500/30 bg-orange-50 dark:bg-orange-900/10'
+                : 'border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-900/10'
             }`}>
               <div className="flex items-center gap-2">
-                <Receipt className={`w-4 h-4 flex-shrink-0 ${isVendas ? 'text-lime-500' : 'text-orange-500'}`} />
-                <span className={`text-sm font-medium ${isVendas ? 'text-lime-800 dark:text-lime-200' : 'text-orange-800 dark:text-orange-200'}`}>
+                <Receipt className={`w-4 h-4 flex-shrink-0 ${isVendas ? 'text-lime-500' : 'text-blue-500'}`} />
+                <span className={`text-sm font-medium ${isVendas ? 'text-lime-800 dark:text-lime-200' : 'text-blue-800 dark:text-blue-200'}`}>
                   {isVendas ? 'minhAi Vendas — emissão de nota incluída na comissão' : 'minhAi Smart — 2 créditos por nota emitida'}
                 </span>
               </div>
@@ -896,7 +896,7 @@ function FiscalPageContent() {
                     onClick={() => setAba(key)}
                     className={`px-4 py-3 text-sm font-medium transition flex items-center justify-center gap-2
                       ${aba === key
-                        ? 'text-orange-600 dark:text-orange-400 border-b-2 border-orange-600 dark:border-orange-400 bg-orange-50 dark:bg-orange-900/20'
+                        ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-b-transparent'
                       }`}
                   >
@@ -937,7 +937,7 @@ export default function FiscalPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
         </div>
       }
     >

@@ -111,7 +111,7 @@ const CONFIGURABLE_FUNCTIONS = [
   'playlist',
   'porta_retrato',
   'painel_ofertas',
-  'aparelhos_smart',
+  'emitir_nota',
   'canal_youtube',
   'identificar_fraude',
   'segunda_via_boleto',

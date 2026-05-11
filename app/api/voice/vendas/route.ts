@@ -6,8 +6,8 @@ import { synthesizeSpeech, BRAZILIAN_VOICES } from '@/lib/google-tts';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_MODEL = 'gpt-4o-mini';
 
 const INJECTION_PATTERNS = [
   /ignore\s+(all\s+)?(previous|prior|above)\s+instructions?/i,
@@ -188,15 +188,15 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = buildVendasSystemPrompt(company, companyContext);
 
-    // GROQ direto
-    const groqResponse = await fetch(GROQ_API_URL, {
+    // GPT-4o-mini
+    const gptResponse = await fetch(OPENAI_API_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: OPENAI_MODEL,
         max_tokens: 150,
         temperature: 0.5,
         messages: [
@@ -207,15 +207,15 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    if (!groqResponse.ok) {
-      const err = await groqResponse.text();
-      throw new Error(`GROQ error: ${groqResponse.status} — ${err}`);
+    if (!gptResponse.ok) {
+      const err = await gptResponse.text();
+      throw new Error(`GPT error: ${gptResponse.status} — ${err}`);
     }
 
-    const groqData = await groqResponse.json();
-    const responseText: string = groqData.choices?.[0]?.message?.content?.trim() || 'Desculpe, não entendi.';
+    const gptData = await gptResponse.json();
+    const responseText: string = gptData.choices?.[0]?.message?.content?.trim() || 'Desculpe, não entendi.';
 
-    console.log('🤖 GROQ respondeu:', responseText);
+    console.log('🤖 GPT respondeu:', responseText);
 
     // Extrair pending_intent — produto + valor mencionados para contexto futuro
     const mentionedPrice = responseText.match(/R\$\s*(\d+(?:[.,]\d{1,2})?)/);
@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         user_input: userMessage,
         assistant_response: responseText,
-        source: 'vendas_groq',
+        source: 'vendas_gpt',
       },
     });
 

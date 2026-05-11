@@ -807,7 +807,7 @@ function AbaHistorico({ companyId }: { companyId: string }) {
 
 function FiscalPageContent() {
   const supabase = createClient();
-  const { companyId, selectedAssistantName } = useAssistant();
+  const { selectedAssistantId: companyId, selectedAssistantName } = useAssistant();
   const [aba, setAba] = useState<Aba>('visao_geral');
   const [company, setCompany] = useState<Company | null>(null);
   const [isVendas, setIsVendas] = useState(false);

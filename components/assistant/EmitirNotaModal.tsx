@@ -5,6 +5,17 @@ import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
+import {
+  Receipt,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Download,
+  Loader2,
+  X,
+  ArrowLeft,
+  Mic,
+} from 'lucide-react';
 
 interface EmitirNotaModalProps {
   data: {
@@ -29,6 +40,7 @@ export default function EmitirNotaModal({
 
   const [step, setStep] = useState<Step>('form');
   const [plano, setPlano] = useState<string>(nfe_plano ?? '');
+  const [modeloNota, setModeloNota] = useState<'nfce' | 'nfe'>('nfce');
   const [destinatarioCpfCnpj, setDestinatarioCpfCnpj] = useState('');
   const [destinatarioNome, setDestinatarioNome] = useState('');
   const [destinatarioEmail, setDestinatarioEmail] = useState('');
@@ -103,6 +115,7 @@ export default function EmitirNotaModal({
           valor_unitario: valor,
           valor_total: valor,
           unidade: 'UN',
+          modelo_forcado: modeloNota,
         }];
       }
 
@@ -146,7 +159,7 @@ export default function EmitirNotaModal({
         </div>
       )}
 
-      {/* Modal — max-w-lg mobile, max-w-2xl desktop */}
+      {/* Modal */}
       <div
         role="dialog"
         className={`relative w-full max-w-lg sm:max-w-2xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border} animate-in zoom-in-95 duration-300 flex flex-col`}
@@ -154,8 +167,8 @@ export default function EmitirNotaModal({
         {/* Header */}
         <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-blue-950/30' : 'bg-blue-50'} flex items-center justify-between flex-shrink-0`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-xl">
-              🧾
+            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+              <Receipt className="w-5 h-5 text-white" />
             </div>
             <div>
               <h2 className={`text-lg font-bold ${textPrimary}`}>Emitir Nota Fiscal</h2>
@@ -163,9 +176,7 @@ export default function EmitirNotaModal({
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -175,7 +186,6 @@ export default function EmitirNotaModal({
           {/* ─── FORM ─── */}
           {step === 'form' && (
             <div className="space-y-4">
-              {/* Grid 2 colunas no desktop, 1 no mobile */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                 {/* Coluna esquerda */}
@@ -192,6 +202,49 @@ export default function EmitirNotaModal({
                       className={inputCls}
                     />
                   </div>
+
+                  {/* Seletor de modelo — apenas para NF-e/NFC-e */}
+                  {plano === 'nfe' && (
+                    <div>
+                      <label className={labelCls}>Tipo de Nota *</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setModeloNota('nfce')}
+                          className={`py-2 px-3 rounded-lg border text-sm font-medium transition text-left ${
+                            modeloNota === 'nfce'
+                              ? 'bg-orange-500 border-orange-500 text-white'
+                              : isDark
+                                ? 'border-slate-600 text-gray-300 hover:border-orange-500'
+                                : 'border-gray-300 text-gray-600 hover:border-orange-500'
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Receipt className="w-4 h-4 flex-shrink-0" />
+                            NFC-e
+                          </span>
+                          <span className="block text-xs font-normal opacity-75 mt-0.5">Cupom fiscal / consumidor</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setModeloNota('nfe')}
+                          className={`py-2 px-3 rounded-lg border text-sm font-medium transition text-left ${
+                            modeloNota === 'nfe'
+                              ? 'bg-orange-500 border-orange-500 text-white'
+                              : isDark
+                                ? 'border-slate-600 text-gray-300 hover:border-orange-500'
+                                : 'border-gray-300 text-gray-600 hover:border-orange-500'
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <FileText className="w-4 h-4 flex-shrink-0" />
+                            NF-e
+                          </span>
+                          <span className="block text-xs font-normal opacity-75 mt-0.5">Nota completa / empresas</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Descrição */}
                   <div>
@@ -292,7 +345,7 @@ export default function EmitirNotaModal({
               <div className={`p-4 rounded-lg border ${border} space-y-2`}>
                 <p className={`text-sm font-semibold ${textPrimary}`}>Confirme os dados:</p>
                 <div className={`text-sm ${textMuted} space-y-1`}>
-                  <p><span className="font-medium">Tipo:</span> {tipoLabel}</p>
+                  <p><span className="font-medium">Tipo:</span> {tipoLabel}{plano === 'nfe' && ` — ${modeloNota.toUpperCase()}`}</p>
                   <p><span className="font-medium">Valor:</span> R$ {parseFloat(valorTotal.replace(',', '.')).toFixed(2)}</p>
                   {descricaoServico && <p><span className="font-medium">Descrição:</span> {descricaoServico}</p>}
                   {destinatarioCpfCnpj && <p><span className="font-medium">Destinatário:</span> {destinatarioCpfCnpj}</p>}
@@ -301,7 +354,8 @@ export default function EmitirNotaModal({
                 </div>
               </div>
 
-              <div className={`p-3 rounded-lg ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border text-center`}>
+              <div className={`p-3 rounded-lg ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border flex items-center gap-2`}>
+                <Mic className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-blue-300' : 'text-blue-600'}`} />
                 <p className={`text-sm ${isDark ? 'text-blue-200' : 'text-blue-800'}`}>
                   Diga <strong>"CONFIRMAR"</strong> para emitir ou <strong>"CANCELAR"</strong> para fechar
                 </p>
@@ -310,14 +364,16 @@ export default function EmitirNotaModal({
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep('form')}
-                  className={`flex-1 py-3 rounded-lg font-medium transition ${isDark ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}
+                  className={`flex-1 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 ${isDark ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}
                 >
+                  <ArrowLeft className="w-4 h-4" />
                   Voltar
                 </button>
                 <button
                   onClick={handleEmitir}
-                  className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition"
+                  className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
                 >
+                  <Receipt className="w-4 h-4" />
                   Confirmar Emissão
                 </button>
               </div>
@@ -327,7 +383,7 @@ export default function EmitirNotaModal({
           {/* ─── EMITTING ─── */}
           {step === 'emitting' && (
             <div className="flex flex-col items-center justify-center py-12 gap-4">
-              <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <Loader2 className="w-16 h-16 text-blue-500 animate-spin" />
               <p className={`text-lg font-semibold ${textPrimary}`}>Transmitindo para a SEFAZ...</p>
               <p className={`text-sm ${textMuted}`}>Aguarde, isso pode levar alguns segundos</p>
             </div>
@@ -338,9 +394,7 @@ export default function EmitirNotaModal({
             <div className="space-y-4">
               <div className="flex flex-col items-center py-6 gap-3">
                 <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
+                  <CheckCircle className="w-8 h-8 text-white" />
                 </div>
                 <p className={`text-xl font-bold ${textPrimary}`}>Nota Fiscal Emitida!</p>
                 {resultado.aguardando_processamento && (
@@ -378,9 +432,7 @@ export default function EmitirNotaModal({
                   }}
                   className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
                 >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
+                  <Download className="w-5 h-5" />
                   Baixar DANFE
                 </button>
               )}
@@ -399,9 +451,7 @@ export default function EmitirNotaModal({
             <div className="space-y-4">
               <div className="flex flex-col items-center py-6 gap-3">
                 <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <XCircle className="w-8 h-8 text-white" />
                 </div>
                 <p className={`text-xl font-bold ${textPrimary}`}>Falha na Emissão</p>
               </div>

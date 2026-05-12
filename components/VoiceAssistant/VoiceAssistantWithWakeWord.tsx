@@ -1362,6 +1362,7 @@ case 'impressao_recibo':
       data={{ companyId, nfe_plano: activeModal.data?.nfe_plano }}
       onClose={handleClose}
       theme={theme}
+      playText={playText} 
     />
   );
         case 'confirmar_presenca':

@@ -243,36 +243,26 @@ export async function classifyIntentWithGroq(
       console.log(`⚡ GROQ dispara função: ${functionKey}`);
 
       const hasAmount = /\d+([,.]?\d{1,2})?/.test(transcript);
+      
+      // DEIXE APENAS ESTA DECLARAÇÃO COM A LISTA COMPLETA
       const functionsNeedingAmount = ['pix_generate', 'link_pagamento', 'nfc_debito', 'nfc_credito', 'tef_debito', 'tef_credito'];
+      const needsAmount = functionsNeedingAmount.includes(functionKey);
+
       // Se o transcript menciona produto junto com pagamento,
       // confirmar produto primeiro antes de executar o pagamento
       const hasProductMention = conversationHistory.some(m =>
         m.role === 'assistant' && /R\$\s*\d+/.test(m.content)
       );
-      const functionsNeedingAmount = ['pix_generate', 'link_pagamento'];
-      const needsAmount = functionsNeedingAmount.includes(functionKey);
 
       if (needsAmount && !hasProductMention) {
         // GPT ainda não informou o preço — deixa o GPT responder primeiro
         console.log(`⏸️ Pagamento solicitado mas sem preço no histórico — deixando GPT responder`);
         return false; // cai pro GPT
       }
-      const needsAmount = functionsNeedingAmount.includes(functionKey);
 
       if (!hasAmount && needsAmount) {
         // Sem valor — salva como pendente, NÃO dispara ainda
         console.log(`⏳ Função ${functionKey} pendente — aguardando valor do cliente`);
-        if (effectiveSessionId) {
-          const supabase = createClient();
-          supabase
-            .from('assistant_sessions')
-            .update({ last_function_keys: [`__pending__${functionKey}`] })
-            .eq('id', effectiveSessionId)
-            .then(() => {}).catch(() => {});
-        }
-      } else {
-        // Salva como sugestão — cliente precisa confirmar antes de executar
-        // A confirmação é tratada pelo bloco isConfirmation() acima
         if (effectiveSessionId) {
           const supabase = createClient();
           supabase

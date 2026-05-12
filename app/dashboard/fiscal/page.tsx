@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
+import { usePlayText } from '@/hooks/usePlayText';
 import {
   Receipt,
   Loader2,
@@ -138,6 +139,7 @@ function VisaoGeral({
     load();
   }, [companyId]);
 
+  const { playText, stopAudio } = usePlayText();
   const certOk = company?.nfe_cert_expiracao && new Date(company.nfe_cert_expiracao) > new Date();
   const diasCert = company?.nfe_cert_expiracao
     ? Math.ceil((new Date(company.nfe_cert_expiracao).getTime() - Date.now()) / (1000 * 60 * 60 * 24))

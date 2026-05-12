@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase-browser';
 import {
   Loader2, TrendingUp, RefreshCw, Download, Wallet,
   AlertCircle, CheckCircle2, Filter, Zap, Building2,
-  ToggleLeft, ToggleRight, Settings,
+  ToggleLeft, ToggleRight, Settings, ChevronDown,
 } from 'lucide-react';
 import PixLinkModal from '@/components/dashboard/PixLinkModal';
 
@@ -65,6 +65,8 @@ type TypeFilter = 'all' | 'pix' | 'outros';
 type StatusFilter = 'confirmed' | 'cancelled' | 'all';
 type WithdrawTab = 'withdraw' | 'buy' | 'auto';
 
+const PAGE_SIZE = 50;
+
 const THRESHOLD_OPTIONS = [1, 5, 10, 15];
 
 const COMPANY_COLORS = [
@@ -101,6 +103,21 @@ export default function SaldoPage() {
   const [filteredTransactions, setFilteredTransactions] = useState<UnifiedTransaction[]>([]);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('confirmed');
+
+  // ── Paginação ─────────────────────────────────────────────────────────────
+  // offset controla quantos registros já foram buscados em cada tabela
+  const [pixOffset, setPixOffset] = useState(0);
+  const [cobrancasOffset, setCobrancasOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // Contexto reutilizado pelo "carregar mais" (evita re-buscar companies/withdrawals)
+  const [loadCtx, setLoadCtx] = useState<{
+    companyNameMap: Record<string, string>;
+    companyTypeMap: Record<string, string>;
+    companyIds: string[];
+    withdrawalIds: Set<string>;
+    commissionsPending: CommissionPending[];
+  } | null>(null);
 
   // ── UI geral ──────────────────────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState(true);
@@ -305,12 +322,12 @@ export default function SaldoPage() {
         setTotalBalance(total);
       }
 
-      // ── Mapa de companies (necessário para companyIds e companyNameMap) ──
+      // ── Mapa de companies ────────────────────────────────────────────────
       const { data: allCompanies } = await supabase
         .from('companies')
         .select('id, name, assistant_type')
         .eq('user_id', userId);
-      
+
       const companyNameMap: Record<string, string> = {};
       const companyTypeMap: Record<string, string> = {};
       (allCompanies ?? []).forEach((c: any) => {
@@ -319,15 +336,17 @@ export default function SaldoPage() {
       });
       const companyIds = (allCompanies ?? []).map((c: any) => c.id);
 
-      // Comissões pendentes (versão Vendas)
+      // ── Comissões pendentes ──────────────────────────────────────────────
+      let commissionsData: CommissionPending[] = [];
       if (companyIds.length > 0) {
-        const { data: commissionsData } = await supabase
+        const { data } = await supabase
           .from('commission_pending')
           .select('company_id, valor_comissao, valor_venda')
           .in('company_id', companyIds)
           .eq('status', 'pendente');
 
-        if (commissionsData?.length) {
+        commissionsData = data ?? [];
+        if (commissionsData.length) {
           setCommissionsPending(commissionsData);
           const total = commissionsData.reduce((acc, c) => acc + Number(c.valor_comissao), 0);
           setTotalCommissionCents(Math.round(total * 100));
@@ -337,10 +356,7 @@ export default function SaldoPage() {
         }
       }
 
-      // ── IDs de saques via balance_transactions ───────────────────────────
-      // A tabela pix_transactions não possui coluna is_withdrawal nem
-      // destination_withdrawal_pix_key. A fonte confiável para identificar
-      // saques é balance_transactions.transaction_type = 'withdrawal'.
+      // ── IDs de saques ────────────────────────────────────────────────────
       const { data: withdrawalData } = await supabase
         .from('balance_transactions')
         .select('pix_transaction_id')
@@ -353,15 +369,19 @@ export default function SaldoPage() {
           .filter((id): id is string => id !== null)
       );
 
-      // ── PIX ──────────────────────────────────────────────────────────────
+      // Salva contexto para reutilizar no "carregar mais"
+      const ctx = { companyNameMap, companyTypeMap, companyIds, withdrawalIds, commissionsPending: commissionsData };
+      setLoadCtx(ctx);
+
+      // ── Primeira página: PIX ─────────────────────────────────────────────
       const { data: pixData } = await supabase
         .from('pix_transactions')
         .select('id, company_id, amount_cents, status, requested_at, notes, destination_pix_key')
         .eq('user_id', userId)
         .order('requested_at', { ascending: false })
-        .limit(500);
+        .range(0, PAGE_SIZE - 1);
 
-      // ── Cobranças (apenas PAGA) ───────────────────────────────────────────
+      // ── Primeira página: Cobranças ───────────────────────────────────────
       const { data: cobrancasData } = companyIds.length > 0
         ? await supabase
             .from('cobrancas')
@@ -369,60 +389,21 @@ export default function SaldoPage() {
             .in('company_id', companyIds)
             .eq('status', 'PAGA')
             .order('paid_at', { ascending: false })
-            .limit(500)
+            .range(0, PAGE_SIZE - 1)
         : { data: [] };
 
-      // ── Normaliza PIX ────────────────────────────────────────────────────
-      const pixUnified: UnifiedTransaction[] = (pixData ?? []).map(tx => {
-        const isWithdrawal = withdrawalIds.has(tx.id);
-        const isVendas = companyTypeMap[tx.company_id] === 'vendas';
-        const comissaoEntry = isVendas && !isWithdrawal
-          ? commissionsPending.find(c => c.company_id === tx.company_id)
-          : undefined;
-        return {
-          id: tx.id,
-          source: 'pix' as const,
-          is_withdrawal: isWithdrawal,
-          company_id: tx.company_id ?? '',
-          company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
-          amount_cents: tx.amount_cents,
-          status: tx.status,
-          date: tx.requested_at,
-          tipo_label: isWithdrawal ? 'Saque' : 'PIX',
-          notes: tx.notes,
-          pix_key: tx.destination_pix_key,
-          is_vendas: isVendas && !isWithdrawal,
-          comissao_cents: comissaoEntry
-            ? Math.round(Number(comissaoEntry.valor_comissao) * 100)
-            : isVendas && !isWithdrawal
-              ? Math.round(tx.amount_cents * 0.10)
-              : undefined,
-        };
-      });
+      const pixCount = (pixData ?? []).length;
+      const cobrancasCount = (cobrancasData ?? []).length;
 
-      // ── Normaliza Cobranças ──────────────────────────────────────────────
-      const cobrancasUnified: UnifiedTransaction[] = (cobrancasData ?? []).map((tx: any) => {
-        const isVendas = companyTypeMap[tx.company_id] === 'vendas';
-        const amountCents = Math.round(Number(tx.valor) * 100);
-        return {
-          id: tx.id,
-          source: 'cobranca' as const,
-          is_withdrawal: false,
-          company_id: tx.company_id,
-          company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
-          amount_cents: amountCents,
-          status: tx.status,
-          date: tx.paid_at ?? tx.created_at,
-          tipo_label: getTipoLabel(tx.tipo, tx.nfc_payment_method),
-          notes: tx.descricao,
-          is_vendas: isVendas,
-          comissao_cents: isVendas ? Math.round(amountCents * 0.10) : undefined,
-        };
-      });
+      // Se ambas as tabelas retornaram menos que PAGE_SIZE, não há mais dados
+      setHasMore(pixCount >= PAGE_SIZE || cobrancasCount >= PAGE_SIZE);
+      setPixOffset(pixCount);
+      setCobrancasOffset(cobrancasCount);
 
-      const merged = [...pixUnified, ...cobrancasUnified].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
+      const merged = [
+        ...normalizePix(pixData ?? [], withdrawalIds, companyNameMap, companyTypeMap, commissionsData),
+        ...normalizeCobrancas(cobrancasData ?? [], companyNameMap, companyTypeMap),
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       setAllTransactions(merged);
     } catch (error) {
@@ -430,6 +411,117 @@ export default function SaldoPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function loadMore() {
+    if (!loadCtx || isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    try {
+      const { companyNameMap, companyTypeMap, companyIds, withdrawalIds, commissionsPending: commissions } = loadCtx;
+
+      const [{ data: pixData }, { data: cobrancasData }] = await Promise.all([
+        supabase
+          .from('pix_transactions')
+          .select('id, company_id, amount_cents, status, requested_at, notes, destination_pix_key')
+          .eq('user_id', userId)
+          .order('requested_at', { ascending: false })
+          .range(pixOffset, pixOffset + PAGE_SIZE - 1),
+
+        companyIds.length > 0
+          ? supabase
+              .from('cobrancas')
+              .select('id, valor, status, created_at, paid_at, tipo, nfc_payment_method, descricao, company_id')
+              .in('company_id', companyIds)
+              .eq('status', 'PAGA')
+              .order('paid_at', { ascending: false })
+              .range(cobrancasOffset, cobrancasOffset + PAGE_SIZE - 1)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const pixCount = (pixData ?? []).length;
+      const cobrancasCount = (cobrancasData ?? []).length;
+
+      setPixOffset(prev => prev + pixCount);
+      setCobrancasOffset(prev => prev + cobrancasCount);
+      setHasMore(pixCount >= PAGE_SIZE || cobrancasCount >= PAGE_SIZE);
+
+      const newBatch = [
+        ...normalizePix(pixData ?? [], withdrawalIds, companyNameMap, companyTypeMap, commissions),
+        ...normalizeCobrancas(cobrancasData ?? [], companyNameMap, companyTypeMap),
+      ];
+
+      setAllTransactions(prev => {
+        const merged = [...prev, ...newBatch].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        return merged;
+      });
+    } catch (error) {
+      console.error('Erro ao carregar mais transações:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
+
+  // ── Normalizadores ────────────────────────────────────────────────────────
+  function normalizePix(
+    data: any[],
+    withdrawalIds: Set<string>,
+    companyNameMap: Record<string, string>,
+    companyTypeMap: Record<string, string>,
+    commissions: CommissionPending[],
+  ): UnifiedTransaction[] {
+    return data.map(tx => {
+      const isWithdrawal = withdrawalIds.has(tx.id);
+      const isVendas = companyTypeMap[tx.company_id] === 'vendas';
+      const comissaoEntry = isVendas && !isWithdrawal
+        ? commissions.find(c => c.company_id === tx.company_id)
+        : undefined;
+      return {
+        id: tx.id,
+        source: 'pix' as const,
+        is_withdrawal: isWithdrawal,
+        company_id: tx.company_id ?? '',
+        company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
+        amount_cents: tx.amount_cents,
+        status: tx.status,
+        date: tx.requested_at,
+        tipo_label: isWithdrawal ? 'Saque' : 'PIX',
+        notes: tx.notes,
+        pix_key: tx.destination_pix_key,
+        is_vendas: isVendas && !isWithdrawal,
+        comissao_cents: comissaoEntry
+          ? Math.round(Number(comissaoEntry.valor_comissao) * 100)
+          : isVendas && !isWithdrawal
+            ? Math.round(tx.amount_cents * 0.10)
+            : undefined,
+      };
+    });
+  }
+
+  function normalizeCobrancas(
+    data: any[],
+    companyNameMap: Record<string, string>,
+    companyTypeMap: Record<string, string>,
+  ): UnifiedTransaction[] {
+    return data.map(tx => {
+      const isVendas = companyTypeMap[tx.company_id] === 'vendas';
+      const amountCents = Math.round(Number(tx.valor) * 100);
+      return {
+        id: tx.id,
+        source: 'cobranca' as const,
+        is_withdrawal: false,
+        company_id: tx.company_id,
+        company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
+        amount_cents: amountCents,
+        status: tx.status,
+        date: tx.paid_at ?? tx.created_at,
+        tipo_label: getTipoLabel(tx.tipo, tx.nfc_payment_method),
+        notes: tx.descricao,
+        is_vendas: isVendas,
+        comissao_cents: isVendas ? Math.round(amountCents * 0.10) : undefined,
+      };
+    });
   }
 
   async function loadPackages() {
@@ -646,17 +738,17 @@ export default function SaldoPage() {
 
           {/* Card de Comissões - Aparece apenas se hasVendasCompany for true e fica separado como um irmão dos outros cards */}
           {hasVendasCompany && (
-            <div className="bg-yellow-50 dark:bg-yellow-500/5 rounded-2xl p-6 shadow-xl border border-yellow-200 dark:border-yellow-500/20">
+            <div className="bg-lime-50 dark:bg-lime-500/5 rounded-2xl p-6 shadow-xl border border-lime-200 dark:border-lime-500/20">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-yellow-100 dark:bg-yellow-500/20 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                <div className="p-2 bg-lime-100 dark:bg-lime-500/20 rounded-lg">
+                  <AlertCircle className="w-5 h-5 text-lime-600 dark:text-lime-400" />
                 </div>
-                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-500">Comissões (Vendas)</p>
+                <p className="text-sm font-medium text-lime-800 dark:text-lime-500">Comissões (Vendas)</p>
               </div>
-              <p className="text-3xl font-bold text-yellow-900 dark:text-yellow-400">
+              <p className="text-3xl font-bold text-lime-900 dark:text-lime-400">
                 {formatCurrency(totalCommissionCents)}
               </p>
-              <p className="text-xs text-yellow-700 dark:text-yellow-500/70 mt-2">Comissões pendentes a receber</p>
+              <p className="text-xs text-lime-700 dark:text-lime-500/70 mt-2">Comissões pendentes</p>
             </div>
           )}
         </div>

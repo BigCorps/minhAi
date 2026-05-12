@@ -1,6 +1,8 @@
 *Voltar o carrossel como era antes mas deixando tudo oculto noma versão vendas (mas sem a possibilidade de ocultar e travar) com apenas 4 botões maiores acima do carrossel rodando: modo vendas / cadastro / venda rápida / *agenda *podendo ativar ou não 
 
-*Nota com IA completa - fofopandababy
+*Planilha Vixus - miriampostos
+
+*Nota com IA completa adicionar o Assistente IA no modal- fofopandababy
 
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc
 

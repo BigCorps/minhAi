@@ -67,26 +67,52 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
     async function fetchPrintConfig() {
       try {
         const supabase = createClient();
-        const { data } = await supabase
+
+        // PASSO 1: Buscar empresa + user_id do dono
+        const { data: companyData, error: companyError } = await supabase
           .from('companies')
-          .select('print_auto_type_purchase, name')
+          .select('print_auto_type_purchase, name, user_id')
           .eq('id', companyId)
           .maybeSingle();
-        setPrintOnPurchase(!!data?.print_auto_type_purchase);
-        setPrintAutoType((data?.print_auto_type_purchase as any) ?? 'local');
-        setCompanyName(data?.name ?? '');
 
-const { data: { user } } = await supabase.auth.getUser();
-const { data: credits } = await supabase
-  .from('user_credits')         // ✅
-  .eq('user_id', user.id) 
-          .select('has_active_plan, plan_expires_at')
+        if (companyError || !companyData) {
+          setHasActivePlan(false);
+          return;
+        }
+
+        setPrintOnPurchase(!!companyData.print_auto_type_purchase);
+        setPrintAutoType((companyData.print_auto_type_purchase as any) ?? 'local');
+        setCompanyName(companyData.name ?? '');
+
+        // PASSO 2: Buscar plano do DONO da empresa (não do usuário logado)
+        const { data: credits, error: creditsError } = await supabase
+          .from('user_credits')
+          .select('has_active_plan, plan_expires_at, active_plan_id')
+          .eq('user_id', companyData.user_id)
           .maybeSingle();
-        setHasActivePlan(
-          credits?.has_active_plan === true &&
-          credits?.plan_expires_at != null &&
-          new Date(credits.plan_expires_at) > new Date()
-        );
+
+        if (creditsError || !credits) {
+          setHasActivePlan(false);
+          return;
+        }
+
+        const planIsActive =
+          credits.has_active_plan === true &&
+          credits.plan_expires_at != null &&
+          new Date(credits.plan_expires_at) > new Date();
+
+        // PASSO 3: Verificar se o plano tem has_consultoria
+        let hasConsultingPlan = false;
+        if (planIsActive && credits.active_plan_id) {
+          const { data: pkg } = await supabase
+            .from('credits_packages')
+            .select('has_consultoria')
+            .eq('id', credits.active_plan_id)
+            .single();
+          hasConsultingPlan = pkg?.has_consultoria === true;
+        }
+
+        setHasActivePlan(planIsActive && hasConsultingPlan);
       } catch { /* silencioso */ }
     }
     fetchPrintConfig();

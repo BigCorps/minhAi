@@ -712,28 +712,34 @@ export async function detectVoiceCommand(
   }
 
 // Se mencionou PIX mas não passou um valor válido
-  if (lowerTranscript.includes('pix')) {
-    if (deps.sessionId) {
-      try {
-        const { createClient } = await import('@/lib/supabase-browser');
-        const supabase = createClient();
-        
-        await supabase
-          .from('assistant_sessions')
-          .update({ 
-            last_function_keys: ['__pending__pix_generate']
-          })
-          .eq('id', deps.sessionId)
-          .eq('company_id', companyId);
-          
-        console.log('⏳ Contexto pendente salvo: __pending__pix_generate');
-      } catch (err) {
-        console.error('❌ Erro ao salvar contexto pendente para PIX:', err);
-      }
-    }
+if (lowerTranscript.includes('pix')) {
+    // Se tem produto mencionado junto (sem valor numérico), deixa o GPT/GROQ processar
+    // para confirmar o produto antes de pedir o pagamento
+    const hasProductContext = lowerTranscript.replace(/pix/gi, '').trim().split(' ').length > 3;
+    const hasNumber = /\d/.test(transcriptWithNumbers);
 
-    await playText('Qual o valor do PIX que você deseja gerar?');
-    return true;
+    if (hasProductContext && !hasNumber) {
+      // Transcript tem contexto além do PIX mas sem valor — deixa passar pro GROQ/GPT
+      console.log('⏸️ PIX com contexto de produto sem valor — passando para GROQ/GPT');
+      // não retorna true — deixa cair pro classify
+    } else {
+      if (deps.sessionId) {
+        try {
+          const { createClient } = await import('@/lib/supabase-browser');
+          const supabase = createClient();
+          await supabase
+            .from('assistant_sessions')
+            .update({ last_function_keys: ['__pending__pix_generate'] })
+            .eq('id', deps.sessionId)
+            .eq('company_id', companyId);
+          console.log('⏳ Contexto pendente salvo: __pending__pix_generate');
+        } catch (err) {
+          console.error('❌ Erro ao salvar contexto pendente para PIX:', err);
+        }
+      }
+      await playText('Qual o valor do PIX que você deseja gerar?');
+      return true;
+    }
   }
 
   // ── VoiceCommandProcessor ─────────────────────────────────

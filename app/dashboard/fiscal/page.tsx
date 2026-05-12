@@ -1000,6 +1000,7 @@ function FiscalPageContent() {
           }}
           onClose={() => setShowEmitirNota(false)}
           theme={pageTheme}
+          playText={playText} 
         />
       )}
     </div>

@@ -52,6 +52,30 @@ interface EmitirNotaModalProps {
   };
   onClose: () => void;
   theme?: 'dark' | 'light';
+  // Mesmo padrão de FichaConversacionalDisplay — recebe a voz do sistema
+  playText?: (text: string) => Promise<void>;
+}
+
+// ─── Ícones de volume (inline, sem dep extra) ─────────────────────────────────
+
+function IconVolume({ className }: { className?: string }) {
+  return (
+    <svg className={className ?? 'w-5 h-5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+    </svg>
+  );
+}
+
+function IconVolumeMute({ className }: { className?: string }) {
+  return (
+    <svg className={className ?? 'w-5 h-5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+    </svg>
+  );
 }
 
 type Step = 'form' | 'form_nfe' | 'confirming' | 'emitting' | 'success' | 'error';
@@ -62,6 +86,7 @@ export default function EmitirNotaModal({
   data,
   onClose,
   theme = 'dark',
+  playText: playTextProp,
 }: EmitirNotaModalProps) {
   const { companyId, nfe_plano, pedidoId } = data;
   const supabase = createClient();
@@ -139,21 +164,73 @@ export default function EmitirNotaModal({
   const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'warning') =>
     setToast({ message, type });
 
-  // ─── TTS ──────────────────────────────────────────────────────────────────
-  const playText = useCallback(async (text: string) => {
-    try {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'pt-BR';
-      utterance.rate = 1.0;
-      window.speechSynthesis.speak(utterance);
-      return new Promise<void>((resolve) => {
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
-      });
-    } catch (err) {
-      console.error('Erro TTS:', err);
-    }
+  // ─── TTS — mesmo padrão de FichaConversacionalDisplay ────────────────────
+  // audioMutado: ref espelha state para callbacks sempre terem valor atual
+  const [audioMutado, setAudioMutado] = useState(false);
+  const audioMutadoRef = useRef(false);
+  const audioQueueRef  = useRef<string[]>([]);
+  const isPlayingRef   = useRef(false);
+
+  const toggleMute = useCallback(() => {
+    setAudioMutado((prev) => {
+      audioMutadoRef.current = !prev;
+      return !prev;
+    });
   }, []);
+
+  // Fallback interno — seleciona voz PT-BR se o sistema não fornecer playText
+  const playTextFallback = useCallback(async (text: string): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'pt-BR';
+        utterance.rate = 1.0;
+
+        // Tenta selecionar voz PT-BR disponível no browser
+        const voices = window.speechSynthesis.getVoices();
+        const ptVoice =
+          voices.find((v) => v.lang === 'pt-BR') ??
+          voices.find((v) => v.lang.startsWith('pt')) ??
+          null;
+        if (ptVoice) utterance.voice = ptVoice;
+
+        utterance.onend   = () => resolve();
+        utterance.onerror = () => resolve();
+        window.speechSynthesis.speak(utterance);
+      } catch {
+        resolve();
+      }
+    });
+  }, []);
+
+  // playTextComMute — respeita mute e usa prop do sistema se disponível
+  const playTextComMute = useCallback(async (text: string) => {
+    if (audioMutadoRef.current) return;
+    return playTextProp ? playTextProp(text) : playTextFallback(text);
+  }, [playTextProp, playTextFallback]);
+
+  // playTextSafe — fila anti-duplicação (igual FichaConversacionalDisplay v6)
+  const playText = useCallback(async (text: string) => {
+    if (audioMutadoRef.current) return;
+
+    audioQueueRef.current.push(text);
+    if (isPlayingRef.current) return;
+
+    while (audioQueueRef.current.length > 0) {
+      isPlayingRef.current = true;
+      const next = audioQueueRef.current.shift();
+      if (next) {
+        try {
+          await playTextComMute(next);
+          await new Promise((r) => setTimeout(r, 300));
+        } catch (err) {
+          console.error('Erro TTS:', err);
+        }
+      }
+    }
+    isPlayingRef.current = false;
+  }, [playTextComMute]);
 
   // ─── Voz na tela de confirmação ────────────────────────────────────────────
   useModalVoiceCommand({
@@ -700,13 +777,28 @@ export default function EmitirNotaModal({
                 <p className={`text-xs ${textMuted}`}>{company?.name ?? tipoLabel}</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-white/10 rounded-full transition"
-              aria-label="Fechar"
-            >
-              <X className={`w-5 h-5 ${textMuted}`} />
-            </button>
+            <div className="flex items-center gap-1">
+              {/* Mute — mesmo padrão de FichaConversacionalDisplay */}
+              <button
+                onClick={toggleMute}
+                title={audioMutado ? 'Ativar voz' : 'Silenciar voz'}
+                className={`p-2 rounded-full transition ${
+                  audioMutado
+                    ? isDark ? 'text-red-400 hover:bg-white/10' : 'text-red-500 hover:bg-gray-100'
+                    : isDark ? 'text-gray-400 hover:bg-white/10' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+                aria-label={audioMutado ? 'Ativar voz' : 'Silenciar voz'}
+              >
+                {audioMutado ? <IconVolumeMute /> : <IconVolume />}
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-white/10 rounded-full transition"
+                aria-label="Fechar"
+              >
+                <X className={`w-5 h-5 ${textMuted}`} />
+              </button>
+            </div>
           </div>
         )}
 

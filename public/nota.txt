@@ -2,7 +2,7 @@
 
 *Planilha Vixus - miriampostos
 
-*Nota com IA completa adicionar o Assistente IA no modal- fofopandababy
+*Testar nota com IA implementada - fofopandababy
 
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc
 

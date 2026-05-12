@@ -640,19 +640,6 @@ export default function SaldoPage() {
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
               {formatCurrency(totalBalance.total_transferred_cents)}
             </p>
-            {hasVendasCompany && (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-amber-200 dark:border-amber-500/20">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-amber-100 dark:bg-amber-500/10 rounded-lg">
-                  <Zap className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                </div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Comissões Pendentes</p>
-              </div>
-              <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
-                {formatCurrency(totalCommissionCents)}
-              </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Serão descontadas no próximo saque (+ 1% do saque)</p>
-            </div>
           )}
           </div>
         </div>

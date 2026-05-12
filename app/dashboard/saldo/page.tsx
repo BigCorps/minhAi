@@ -604,8 +604,8 @@ export default function SaldoPage() {
           </div>
         </div>
 
-        {/* ── Cards de resumo ──────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+{/* ── Cards de resumo ──────────────────────────────────────────────── */}
+        <div className={`grid grid-cols-1 ${hasVendasCompany ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6`}>
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-green-100 dark:bg-green-500/10 rounded-lg">
@@ -618,6 +618,7 @@ export default function SaldoPage() {
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Considera apenas recebimentos via PIX</p>
           </div>
+
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-blue-100 dark:bg-blue-500/10 rounded-lg">
@@ -630,6 +631,7 @@ export default function SaldoPage() {
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Considera apenas recebimentos via PIX</p>
           </div>
+
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-purple-100 dark:bg-purple-500/10 rounded-lg">
@@ -640,8 +642,23 @@ export default function SaldoPage() {
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
               {formatCurrency(totalBalance.total_transferred_cents)}
             </p>
-          )}
           </div>
+
+          {/* Card de Comissões - Aparece apenas se hasVendasCompany for true e fica separado como um irmão dos outros cards */}
+          {hasVendasCompany && (
+            <div className="bg-yellow-50 dark:bg-yellow-500/5 rounded-2xl p-6 shadow-xl border border-yellow-200 dark:border-yellow-500/20">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-yellow-100 dark:bg-yellow-500/20 rounded-lg">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-500">Comissões (Vendas)</p>
+              </div>
+              <p className="text-3xl font-bold text-yellow-900 dark:text-yellow-400">
+                {formatCurrency(totalCommissionCents)}
+              </p>
+              <p className="text-xs text-yellow-700 dark:text-yellow-500/70 mt-2">Comissões pendentes a receber</p>
+            </div>
+          )}
         </div>
 
         {/* ── Tabs principais ──────────────────────────────────────────────── */}

@@ -702,7 +702,10 @@ const rules = `\n\n## Regras de resposta:
 - Se não tiver a informação nos dados acima, diga honestamente que não tem essa informação no momento
 - NUNCA invente preços, horários ou produtos que não estejam listados
 - Quando informar o preço de um produto, SEMPRE termine perguntando se o cliente deseja comprar ou como prefere pagar
-- Se o cliente demonstrar interesse em um produto, proponha finalizar a compra imediatamente após informar o preço`;
+- Se o cliente demonstrar interesse em um produto, proponha finalizar a compra imediatamente após informar o preço`
+- NUNCA faça duas perguntas na mesma resposta — uma pergunta por vez
+- Fluxo de venda obrigatório: 1) confirmar produto e preço - 2) perguntar forma de pagamento - 3) executar cobrança
+- Se o cliente informar produto E pagamento juntos, confirme o produto primeiro: "Perfeito! [produto] por [valor]. Vou gerar o [pagamento] agora.";
 
   return `${basePrompt}${contextBlock}${ragBlock}${saleModeBlock}${rules}`;
 }

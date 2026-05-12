@@ -56,6 +56,7 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
   const [step, setStep] = useState<Step>('cliente');
   const [clienteNome, setClienteNome] = useState('');
   const [clienteTel, setClienteTel] = useState('');
+  const [showEmitirBanner, setShowEmitirBanner] = useState(false);
 
   // Configurações de impressão da company
   const [printOnPurchase, setPrintOnPurchase] = useState(false);
@@ -454,7 +455,32 @@ const div = document.createElement('div');
     } finally { setLoading(false); }
   }, [companyId, clienteNome, clienteTel, itens, metodo, total, playText, clear]);
 
-  const handleFinalizar = () => { clear(); onClose(); };
+  const handleFinalizar = useCallback(async () => {
+  // Verificar se empresa tem NFE ativo
+  const { data: company } = await supabase
+    .from('companies')
+    .select('nfe_ativo, nfe_plano')
+    .eq('id', companyId)
+    .single();
+
+  if (company?.nfe_ativo && pedidoId) {
+    setShowEmitirBanner(true);
+    return; // não fechar ainda
+  }
+
+  // Comportamento padrão se não tiver NFE
+  clear();
+  onClose();
+}, [companyId, pedidoId, clear, onClose]);
+
+// Adicionar handler para emissão:
+const handleEmitirCupom = useCallback((pedidoId: string) => {
+  setShowEmitirBanner(false);
+  // Abrir modal de emissão (implementar na próxima fase)
+  console.log('TODO: abrir EmitirNotaModal com pedidoId:', pedidoId);
+  clear();
+  onClose();
+}, [clear, onClose]);
 
   // Estilos
   const textPrimary   = isDark ? 'text-white'      : 'text-gray-900';
@@ -845,6 +871,18 @@ const div = document.createElement('div');
       <button onClick={handleFinalizar} className={`${btnPrimary} flex items-center justify-center gap-2`}>
         <Check className="w-4 h-4" />Fechar
       </button>
+      {showEmitirBanner && pedidoId && (
+  <EmitirCupomBanner
+    pedidoId={pedidoId}
+    onEmitir={handleEmitirCupom}
+    onDismiss={() => {
+      setShowEmitirBanner(false);
+      clear();
+      onClose();
+    }}
+    theme={theme}
+  />
+)}
     </div>
   );
 

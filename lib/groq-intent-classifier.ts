@@ -121,7 +121,37 @@ export async function classifyIntentWithGroq(
               .eq('id', effectiveSessionId)
               .then(() => {}).catch(() => {});
         } else {
-          // Sem valor numérico — pede diretamente sem ir pro GROQ
+          // Sem valor numérico — tenta extrair preço do histórico de conversa
+          const allMessages = conversationHistory;
+          const priceInHistory = allMessages
+            .slice()
+            .reverse()
+            .find(m => /R\$\s*\d+/.test(m.content));
+
+          if (priceInHistory) {
+            const priceMatch = priceInHistory.content.match(/R\$\s*(\d+(?:[.,]\d{1,2})?)/);
+            if (priceMatch) {
+              const amount = parseFloat(priceMatch[1].replace(',', '.'));
+              console.log(`💡 Preço inferido do histórico: R$${amount}`);
+
+              if (effectiveSessionId) {
+                const supabase = createClient();
+                supabase
+                  .from('assistant_sessions')
+                  .update({ last_function_keys: [] })
+                  .eq('id', effectiveSessionId)
+                  .then(() => {}).catch(() => {});
+              }
+
+              await deps.playText(`Gerando agora.`);
+              if (deps.onFunctionDetected) {
+                setTimeout(() => deps.onFunctionDetected!(`${pendingFunction}:${amount}`), 300);
+              }
+              return true;
+            }
+          }
+
+          // Sem preço no histórico — pede o valor
           await deps.playText(`Qual o valor para ${pendingFunction === 'pix_generate' ? 'o PIX' : 'o link de pagamento'}?`);
           return true;
         }
@@ -214,6 +244,19 @@ export async function classifyIntentWithGroq(
 
       const hasAmount = /\d+([,.]?\d{1,2})?/.test(transcript);
       const functionsNeedingAmount = ['pix_generate', 'link_pagamento', 'nfc_debito', 'nfc_credito', 'tef_debito', 'tef_credito'];
+      // Se o transcript menciona produto junto com pagamento,
+      // confirmar produto primeiro antes de executar o pagamento
+      const hasProductMention = conversationHistory.some(m =>
+        m.role === 'assistant' && /R\$\s*\d+/.test(m.content)
+      );
+      const functionsNeedingAmount = ['pix_generate', 'link_pagamento'];
+      const needsAmount = functionsNeedingAmount.includes(functionKey);
+
+      if (needsAmount && !hasProductMention) {
+        // GPT ainda não informou o preço — deixa o GPT responder primeiro
+        console.log(`⏸️ Pagamento solicitado mas sem preço no histórico — deixando GPT responder`);
+        return false; // cai pro GPT
+      }
       const needsAmount = functionsNeedingAmount.includes(functionKey);
 
       if (!hasAmount && needsAmount) {

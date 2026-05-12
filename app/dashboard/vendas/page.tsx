@@ -36,6 +36,7 @@ import type { ProdutoVenda, Pedido, ProdutoVendaInput } from '@/lib/produtos-ven
 import { formatarPreco } from '@/lib/produtos-venda';
 import OpcionaisModal from '@/components/dashboard/vendas/OpcionaisModal';
 import ImportarCSVModal from '@/components/dashboard/vendas/ImportarCSVModal';
+import SecaoFiscalProduto from '@/components/dashboard/vendas/SecaoFiscalProduto';
 
 // ─── Tipos locais ─────────────────────────────────────────────────────────────
 
@@ -114,6 +115,34 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
     is_favorito: produto?.is_favorito ?? false,
   });
 
+  const [dadosFiscais, setDadosFiscais] = useState({
+    ncm: '',
+    cfop: 5102,
+    cest: undefined as string | undefined,
+    origem_produto: 0,
+  });
+
+  // Carrega dados fiscais ao editar produto existente
+  useEffect(() => {
+    if (!produto?.id) return;
+    async function loadFiscal() {
+      const { data: fiscalData } = await supabase
+        .from('produtos_fiscal')
+        .select('*')
+        .eq('produto_id', produto!.id)
+        .single();
+      if (fiscalData) {
+        setDadosFiscais({
+          ncm: fiscalData.ncm || '',
+          cfop: fiscalData.cfop || 5102,
+          cest: fiscalData.cest,
+          origem_produto: fiscalData.origem_produto ?? 0,
+        });
+      }
+    }
+    loadFiscal();
+  }, [produto?.id]);
+
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
@@ -132,6 +161,8 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
     setErro(null);
     try {
       // PATCH 1.3 — UPDATE com id garantido / INSERT capturando id retornado
+      let produtoId: string;
+
       if (produto) {
         // UPDATE — id já existe
         const { error } = await supabase
@@ -139,10 +170,7 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
           .update({ ...form, updated_at: new Date().toISOString() })
           .eq('id', produto.id);
         if (error) throw error;
-
-        // Dispara embedding com id garantido
-        triggerEmbeddingUpdate('product', companyId, { ...form, id: produto.id });
-
+        produtoId = produto.id;
       } else {
         // INSERT — captura o id retornado pelo Supabase
         const { data: inserted, error } = await supabase
@@ -151,10 +179,39 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
           .select('id')
           .single();
         if (error) throw error;
-
-        // Dispara embedding com id real do novo produto
-        triggerEmbeddingUpdate('product', companyId, { ...form, id: inserted.id });
+        produtoId = inserted.id;
       }
+
+      // Salvar dados fiscais (apenas se NCM preenchido corretamente)
+      if (dadosFiscais.ncm && dadosFiscais.ncm.length === 8) {
+        const { error: fiscalError } = await supabase
+          .from('produtos_fiscal')
+          .upsert({
+            produto_id: produtoId,
+            company_id: companyId,
+            ncm: dadosFiscais.ncm,
+            cfop: dadosFiscais.cfop,
+            cest: dadosFiscais.cest || null,
+            origem_produto: dadosFiscais.origem_produto,
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'produto_id',
+          });
+        if (fiscalError) {
+          console.error('Erro ao salvar dados fiscais:', fiscalError);
+          // Não bloqueia o salvamento do produto
+        }
+      }
+
+      // Embedding SOMENTE com dados de produtos_venda (sem campos fiscais)
+      triggerEmbeddingUpdate('product', companyId, {
+        id: produtoId,
+        nome: form.nome,
+        descricao: form.descricao,
+        categoria: form.categoria,
+        preco_venda: form.preco_venda,
+        unidade: form.unidade,
+      });
 
       setSucesso(true);
       setSaving(false);
@@ -468,6 +525,15 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
               }`} />
             </button>
           </div>
+        </div>
+
+        {/* Seção Fiscal */}
+        <div className="px-6 pb-4">
+          <SecaoFiscalProduto
+            dados={dadosFiscais}
+            onChange={setDadosFiscais}
+            showHelp={true}
+          />
         </div>
 
         {/* Footer */}

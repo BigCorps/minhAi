@@ -2,7 +2,7 @@
 
 *Planilha Vixus - miriampostos
 
-*Testar nota com IA implementada - fofopandababy
+*Testar nota com IA implementada (testar ultimos logs, implementar pesquisa Endereço e CEP para ja preencher o endereço completo e cadastro de cliente, para preencher o nome e ja aparecer automaticamente o cadastro completo do cliente e tambem busca por produto no preview, colocando o nome e ja mostrando as opções de produtos)- miriamithiel e fofopandababy
 
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc
 

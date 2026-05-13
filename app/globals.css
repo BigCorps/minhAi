@@ -102,4 +102,29 @@ body {
     margin: 0;
     padding: 8px;
   }
+/* Scrollbar customizada — modal e listas do dashboard */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 99px;
+  background: rgba(var(--primary-green), 0.35);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--primary-green), 0.65);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(var(--primary-green-dark), 0.4);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--primary-green-dark), 0.7);
+}
 }

@@ -359,26 +359,35 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                         {faq.category}
                       </span>
                     )}
-                    {faq.function_key && (
-                      <span className={`px-3 py-1 text-xs font-semibold rounded-full flex items-center gap-1 ${
-                        isDark
-                          ? 'bg-purple-500/20 text-purple-300'
-                          : 'bg-purple-100 text-purple-800'
-                      }`}>
-                        {faq.function_key}
-                      </span>
-                    )}
-                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                      faq.is_active
-                        ? isDark
-                          ? 'bg-green-500/20 text-green-300'
-                          : 'bg-green-100 text-green-800'
-                        : isDark
-                          ? 'bg-gray-700 text-gray-400'
-                          : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {faq.is_active ? 'Ativa' : 'Inativa'}
-                    </span>
+{faq.function_key && (
+  <span className={`px-3 py-1 text-xs font-semibold rounded-full flex items-center gap-1 ${
+    isDark
+      ? 'bg-purple-500/20 text-purple-300'
+      : 'bg-purple-100 text-purple-800'
+  }`}>
+    {faq.function_key}
+  </span>
+)}
+{!faq.function_key && faq.is_active && (
+  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+    isDark
+      ? 'bg-green-500/20 text-green-300'
+      : 'bg-green-100 text-green-800'
+  }`}>
+    ✓ Meta
+  </span>
+)}
+<span className={`px-3 py-1 text-xs font-semibold rounded-full ${ 
+  faq.is_active
+    ? isDark
+      ? 'bg-blue-500/20 text-blue-300'
+      : 'bg-blue-100 text-blue-800'
+    : isDark
+      ? 'bg-gray-700 text-gray-400'
+      : 'bg-gray-100 text-gray-600'
+}`}>
+  {faq.is_active ? 'Ativa' : 'Inativa'}
+</span>
                   </div>
 
                   <p className={`mb-3 ${isDark ? 'text-white/70' : 'text-gray-700'}`}>
@@ -591,15 +600,21 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                     ))}
                   </div>
                 )}
-                {formData.function_key && (
-                  <button
-                    type="button"
-                    onClick={clearFunction}
-                    className={`mt-1 text-xs ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'}`}
-                  >
-                    Remover função vinculada
-                  </button>
-                )}
+// DEPOIS
+{formData.function_key && (
+  <>
+    <button
+      type="button"
+      onClick={clearFunction}
+      className={`mt-1 text-xs ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'}`}
+    >
+      Remover função vinculada
+    </button>
+    <p className={`mt-2 text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+      ⚠️ Respostas com função vinculada funcionam apenas no assistente e não são compatíveis com os serviços Meta.
+    </p>
+  </>
+)}
               </div>
 
               {/* Configurador Smart Home — só aparece quando aparelhos_smart é selecionado */}

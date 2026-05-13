@@ -1,5 +1,7 @@
 *Fazer outro assistente para que apos a venda, ja confira o cadastro do cliente, e envie as mensagens de confirmação para finalizar as vendas no assistente e na Meta.
 
+*Funções Meta - ith.almeida
+
 *Adicionar botão no template meta.
 
 *Voltar o carrossel como era antes mas deixando tudo oculto noma versão vendas (mas sem a possibilidade de ocultar e travar) com apenas 4 botões maiores acima do carrossel rodando: modo vendas / cadastro / venda rápida / *agenda *podendo ativar ou não 

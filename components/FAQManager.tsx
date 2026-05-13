@@ -762,10 +762,9 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
               </div>
             </form>
           </div>
-    </div>
-  </div>,
-  document.body
-)}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

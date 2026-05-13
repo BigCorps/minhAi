@@ -589,9 +589,10 @@ const handleDadosAtualizados = useCallback(
     body.destinatario_cpf_cnpj = dadosNfe.destinatario.cpf_cnpj.replace(/\D/g, '');
 
   body.itens = dadosNfe.itens.map(it => ({
-    ...it,
-    valor_total: it.quantidade * it.valor_unitario,
-  }));
+  ...it,
+  valor_total: it.quantidade * it.valor_unitario,
+  modelo_forcado: tipoNota, // 'nfe' ou 'nfce' — força o modelo na edge
+}));
 } else {
         body.valor_total = valor;
         if (cpfCnpjLimpo) body.destinatario_cpf_cnpj = cpfCnpjLimpo;

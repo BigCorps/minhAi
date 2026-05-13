@@ -547,9 +547,23 @@ export default function EmitirNotaModal({
       };
 
       if (isNFe && dadosNfe) {
-        body.destinatario = dadosNfe.destinatario;
-        body.itens = dadosNfe.itens;
-      } else {
+  const valorCalculado = dadosNfe.itens.reduce(
+    (acc, it) => acc + it.quantidade * it.valor_unitario, 0
+  );
+
+  body.valor_total = valorCalculado;
+
+  if (dadosNfe.destinatario.nome)
+    body.destinatario_nome = dadosNfe.destinatario.nome;
+
+  if (dadosNfe.destinatario.cpf_cnpj)
+    body.destinatario_cpf_cnpj = dadosNfe.destinatario.cpf_cnpj.replace(/\D/g, '');
+
+  body.itens = dadosNfe.itens.map(it => ({
+    ...it,
+    valor_total: it.quantidade * it.valor_unitario,
+  }));
+} else {
         body.valor_total = valor;
         if (cpfCnpjLimpo) body.destinatario_cpf_cnpj = cpfCnpjLimpo;
         if (destinatarioNome) body.destinatario_nome = destinatarioNome;

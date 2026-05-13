@@ -1,5 +1,7 @@
 *Fazer outro assistente para que apos a venda, ja confira o cadastro do cliente, e envie as mensagens de confirmação para finalizar as vendas no assistente e na Meta.
 
+*Landing GEO - jiuithsu
+
 *Fazer a configuração da fila na função gerar fila, para tambem gerenciarem por ali e não apenas pelo colaborador
 
 *Funções Meta - ith.almeida

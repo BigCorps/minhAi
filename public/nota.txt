@@ -1,8 +1,10 @@
+*Fazer outro assistente para que apos a venda, ja confira o cadastro do cliente, e envie as mensagens de confirmação para finalizar as vendas no assistente e na Meta.
+
 *Voltar o carrossel como era antes mas deixando tudo oculto noma versão vendas (mas sem a possibilidade de ocultar e travar) com apenas 4 botões maiores acima do carrossel rodando: modo vendas / cadastro / venda rápida / *agenda *podendo ativar ou não 
 
 *Planilha Vixus - miriampostos
 
-*NOtas funcionando (implementar pesquisa Endereço e CEP para ja preencher o endereço completo e cadastro de cliente, para preencher o nome e ja aparecer automaticamente o cadastro completo do cliente e tambem busca por produto no preview, colocando o nome e ja mostrando as opções de produtos, alem de ja enviar o email no NFe)- miriamithiel e fofopandababy
+*Notas funcionando - Agora precisamos deixar o frontend para ja enviar as informações corretamente. Seguem os codigos atuais para criarmos o plano de ação para implementar pesquisa Endereço e CEP para ja preencher o endereço completo. E tambem o cadastro de cliente de notas, para preencher o nome e ja aparecer automaticamente o cadastro completo do cliente (quando já emitiu uma nota) quando não emitiu, ja faz o cadastro. E tambem busca por produto no preview, colocando o nome e ja mostrando as opções de produtos, alem de ja enviar o email no NFe - miriamithiel e fofopandababy
 
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc
 

@@ -256,6 +256,127 @@ const jsonLd = {
       // Adicionar quando tiver reviews reais em página estática.
     },
 
+    {
+      '@type': 'FAQPage',
+      '@id': `${APP_URL}/#faq`,
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: 'O que é o minhAi?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'O minhAi é uma plataforma SaaS brasileira que permite criar assistentes de IA personalizados para empresas de qualquer tamanho. O assistente atende clientes, vende produtos, cobra via PIX, agenda serviços e executa mais de 100 funções — por voz ou chat, 24 horas por dia, sem programar. Desenvolvido pela BigCorps Tecnologia Ltda, com sede em São Paulo.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Qual a diferença entre minhAi Smart e minhAi Vendas?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'O minhAi Smart é cobrado por créditos de uso — a partir de R$ 0,09 por interação, sem mensalidade fixa, ideal para atendimento geral por voz com IA. O minhAi Vendas é gratuito para o lojista: sem créditos, sem mensalidade. A minhAi retém 10% de comissão sobre cada venda confirmada (PIX, NFC, TEF ou Link de Pagamento), ideal para lojas, restaurantes e food trucks que recebem pagamentos no balcão.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'O minhAi Vendas é realmente gratuito?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Sim. O minhAi Vendas é gratuito para o lojista — sem mensalidade e sem cobrança de créditos. A minhAi retém 10% de comissão sobre cada venda confirmada e 1% adicional no saque PIX. As taxas das maquininhas (InfinitePay e Mercado Pago) são cobradas diretamente por cada operadora, separadas da comissão da minhAi.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'O minhAi funciona com WhatsApp?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Sim. O minhAi integra com a API oficial do WhatsApp Business (Meta). O número da empresa permanece o mesmo e o assistente passa a responder automaticamente às mensagens — com a personalidade e o conhecimento configurados pelo proprietário do negócio.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Quanto custa o minhAi Smart por interação?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'O minhAi Smart custa a partir de R$ 0,09 por interação no pacote Professional (1.000 interações por R$ 99,90). Existem pacotes maiores como Business (3.600 interações por R$ 249,90, R$ 0,07 cada) e Enterprise (10.000 interações por R$ 499,90, R$ 0,05 cada). Novos usuários recebem 20 créditos gratuitos para testar, sem cartão de crédito.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Preciso saber programar para usar o minhAi?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Não. O minhAi foi feito para ser configurado por qualquer pessoa, sem nenhum código. Você acessa o dashboard, escolhe as funções que quer ativar, escreve a personalidade do assistente e publica. Todo o processo leva menos de 5 minutos.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'O minhAi é compatível com a LGPD?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Sim. O minhAi é 100% compatível com a Lei Geral de Proteção de Dados (LGPD). Os dados ficam armazenados em servidores no Brasil com criptografia de ponta a ponta, isolados por empresa. Nenhum dado do negócio de um cliente é compartilhado com outros clientes.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Quais formas de pagamento o minhAi Vendas aceita?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'O minhAi Vendas aceita: PIX via Banco Inter (10% de comissão descontada no saque), NFC Tap to Pay no débito e crédito via InfinitePay, Link de Pagamento via InfinitePay, e TEF Mercado Pago Point Smart no débito e crédito. As taxas de InfinitePay e Mercado Pago são cobradas diretamente por cada operadora.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Para quais segmentos o minhAi é indicado?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'O minhAi atende clínicas médicas, consultórios odontológicos, restaurantes, hamburguerias, academias de ginástica, salões de beleza, pet shops, escritórios de advocacia, imobiliárias, e-commerce, lojas físicas, farmácias, escolas, supermercados, franquias, órgãos públicos e qualquer negócio que atenda clientes. Tem mais de 30 empresas ativas e mais de 100 funções nativas.',
+          },
+        },
+      ],
+    },
+
+// ── HowTo — GEO: IAs citam processos numerados em respostas sobre "como funciona" ──
+    {
+      '@type': 'HowTo',
+      '@id': `${APP_URL}/#howto`,
+      name: 'Como criar um assistente de IA com o minhAi',
+      description: 'Configure um assistente de IA para sua empresa em menos de 10 minutos, sem código, e comece a atender, vender e cobrar automaticamente.',
+      totalTime: 'PT10M',
+      estimatedCost: {
+        '@type': 'MonetaryAmount',
+        currency: 'BRL',
+        value: '0',
+      },
+      tool: [
+        { '@type': 'HowToTool', name: 'Conta no minhAi (gratuita)' },
+        { '@type': 'HowToTool', name: 'Smartphone, tablet ou computador com navegador' },
+      ],
+      step: [
+        {
+          '@type': 'HowToStep',
+          position: 1,
+          name: 'Configure em minutos',
+          text: 'Crie sua conta gratuita em minhai.app, acesse o dashboard, escolha as funções que quer ativar e escreva a personalidade do assistente. Sem código, sem técnico. Em menos de 5 minutos o assistente já está pronto.',
+          url: `${APP_URL}/login`,
+        },
+        {
+          '@type': 'HowToStep',
+          position: 2,
+          name: 'Conecte seus canais',
+          text: 'Conecte o assistente ao WhatsApp Business, Instagram, Facebook, totem físico ou WebApp com sua marca — um único assistente responde em todos os canais ao mesmo tempo, com a mesma qualidade.',
+          url: `${APP_URL}/login`,
+        },
+        {
+          '@type': 'HowToStep',
+          position: 3,
+          name: 'Venda e atenda 24/7',
+          text: 'Seu assistente começa a responder clientes, qualificar leads, gerar cobranças PIX, agendar serviços e consultar o estoque — automaticamente, 24 horas por dia, sem precisar de intervenção manual.',
+          url: `${APP_URL}/ia/suporte`,
+        },
+      ],
+    },
+
+
     // ── Organização ────────────────────────────────────────────────────────────
     {
       '@type': 'Organization',

@@ -139,7 +139,6 @@ function VisaoGeral({
     load();
   }, [companyId]);
 
-  const { playText, stopAudio } = usePlayText();
   const certOk = company?.nfe_cert_expiracao && new Date(company.nfe_cert_expiracao) > new Date();
   const diasCert = company?.nfe_cert_expiracao
     ? Math.ceil((new Date(company.nfe_cert_expiracao).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
@@ -852,6 +851,7 @@ function FiscalPageContent() {
   // ── NOVO: estado do modal Emitir Nota ──────────────────────────────
   const [showEmitirNota, setShowEmitirNota] = useState(false);
   const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
+  const { playText, stopAudio } = usePlayText();
 
   // Detecta tema dark/light automaticamente
   useEffect(() => {

@@ -600,7 +600,6 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                     ))}
                   </div>
                 )}
-// DEPOIS
 {formData.function_key && (
   <>
     <button

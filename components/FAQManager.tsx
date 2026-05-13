@@ -610,7 +610,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
       Remover função vinculada
     </button>
     <p className={`mt-2 text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-      ⚠️ Respostas com função vinculada funcionam apenas no assistente e não são compatíveis com os serviços Meta.
+      ⚠️ Respostas com função vinculada funcionam apenas no assistente, mas não nos serviços Meta.
     </p>
   </>
 )}

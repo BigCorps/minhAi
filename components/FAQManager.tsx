@@ -468,7 +468,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
       {/* Modal de Adicionar/Editar */}
 {showAddModal && createPortal(
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
-    <div className={`relative rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border ${
+    <div className={`relative rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border custom-scrollbar ${
       isDark
         ? 'bg-slate-900 border-white/10'
         : 'bg-white border-gray-200'

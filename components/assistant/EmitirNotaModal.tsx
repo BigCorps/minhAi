@@ -487,13 +487,42 @@ export default function EmitirNotaModal({
   });
 
   // ─── Callback do assistente IA → atualiza estado central ──────────────────
-  const handleDadosAtualizados = useCallback(
-    (novosDados: DadosNota | null, status: 'collecting' | 'ready' | 'error') => {
-      setDadosNfe(novosDados);
-      setStatusAssistente(status);
-    },
-    [],
-  );
+const handleDadosAtualizados = useCallback(
+  (novosDados: DadosNota | null, status: 'collecting' | 'ready' | 'error') => {
+    setDadosNfe(prev => {
+      if (!novosDados) return prev;
+      if (!prev) return novosDados;
+
+      return {
+        destinatario: {
+          // Mantém o que o usuário digitou; IA preenche só se estiver vazio
+          nome:      prev.destinatario.nome      || novosDados.destinatario.nome,
+          cpf_cnpj:  prev.destinatario.cpf_cnpj  || novosDados.destinatario.cpf_cnpj,
+          endereco:  prev.destinatario.endereco   || novosDados.destinatario.endereco,
+        },
+        itens: novosDados.itens.map((itemIA, idx) => {
+          const itemManual = prev.itens[idx];
+          if (!itemManual) return itemIA; // item novo da IA, aceita
+          return {
+            // Campos que o usuário pode ter editado manualmente têm prioridade
+            nome:            itemManual.nome            || itemIA.nome,
+            quantidade:      itemManual.quantidade      || itemIA.quantidade,
+            valor_unitario:  itemManual.valor_unitario  || itemIA.valor_unitario,
+            unidade:         itemManual.unidade         || itemIA.unidade,
+            // NCM e CFOP: IA sempre preenche (é o ponto forte dela), 
+            // mas respeita se o usuário já digitou manualmente
+            ncm:             itemManual.ncm  || itemIA.ncm,
+            cfop:            itemManual.cfop || itemIA.cfop,
+            origem_produto:  itemIA.origem_produto ?? itemManual.origem_produto,
+            produto_id:      itemIA.produto_id      || itemManual.produto_id,
+            ncm_sugerido:    itemIA.ncm_sugerido,
+          };
+        }),
+      };
+    });
+    setStatusAssistente(status);
+  }, [],
+);
 
   // ─── Callback do painel manual → atualiza estado central ──────────────────
   const handleDadosManuais = useCallback((novosDados: DadosNota) => {

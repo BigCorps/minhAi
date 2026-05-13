@@ -60,12 +60,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ];
 
   // ── Demo pública — indexável por crawlers de IA ──────────────────────────
-  const paginasDemo: MetadataRoute.Sitemap = [
+   const paginasDemo: MetadataRoute.Sitemap = [
     {
       url: `${BASE_URL}/ia/suporte`,
       lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.60,
+      changeFrequency: 'weekly',
+      priority: 0.70,
     },
   ];
 

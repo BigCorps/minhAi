@@ -534,29 +534,32 @@ const handleDadosAtualizados = useCallback(
   }, []);
 
   // ─── Avançar step ─────────────────────────────────────────────────────────
-  const handleAvancar = useCallback(() => {
-    if (step === 'form') {
-      if (tipoNota === 'nfe') {
-        setStep('form_nfe');
-      } else {
-        if (!valorTotal || isNaN(parseFloat(valorTotal.replace(',', '.')))) {
-          showToast('Informe um valor válido', 'warning');
-          return;
-        }
-        if (plano === 'nfse' && !descricaoServico.trim()) {
-          showToast('Informe a descrição do serviço', 'warning');
-          return;
-        }
-        setStep('confirming');
+// ── Avançar step ─────────────────────────────────────────────────────────────
+const handleAvancar = useCallback(() => {
+  if (step === 'form') {
+    if (tipoNota === 'nfe') {
+      setStep('form_nfe');
+    } else {
+      if (!valorTotal || isNaN(parseFloat(valorTotal.replace(',', '.')))) {
+        showToast('Informe um valor válido', 'warning');
+        return;
       }
-    } else if (step === 'form_nfe') {
-      if (statusAssistente !== 'ready') {
-        showToast('Preencha ao menos um item com descrição e valor', 'warning');
+      if (plano === 'nfse' && !descricaoServico.trim()) {
+        showToast('Informe a descrição do serviço', 'warning');
         return;
       }
       setStep('confirming');
     }
-  }, [step, tipoNota, statusAssistente, valorTotal, descricaoServico, plano]);
+  } else if (step === 'form_nfe') {
+    const nfeValida = dadosNfe && dadosNfe.itens.length > 0 &&
+      dadosNfe.itens.every(it => it.nome.trim() && it.valor_unitario > 0);
+    if (!nfeValida) {
+      showToast('Preencha ao menos um item com descrição e valor', 'warning');
+      return;
+    }
+    setStep('confirming');
+  }
+}, [step, tipoNota, dadosNfe, valorTotal, descricaoServico, plano]);
 
   // ─── Emitir ───────────────────────────────────────────────────────────────
   const handleEmitir = useCallback(async () => {
@@ -587,6 +590,9 @@ const handleDadosAtualizados = useCallback(
 
   if (dadosNfe.destinatario.cpf_cnpj)
     body.destinatario_cpf_cnpj = dadosNfe.destinatario.cpf_cnpj.replace(/\D/g, '');
+
+  if (dadosNfe.destinatario.endereco)
+    body.destinatario_endereco = dadosNfe.destinatario.endereco;
 
   body.itens = dadosNfe.itens.map(it => ({
   ...it,
@@ -810,28 +816,40 @@ const handleDadosAtualizados = useCallback(
               </div>
             </div>
 
-            {/* Footer fixo */}
-            <div className={`px-6 py-4 border-t ${border} flex gap-3 flex-shrink-0 ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
-              <button
-                onClick={() => setStep('form')}
-                className={`px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 ${
-                  isDark ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
-                }`}
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Voltar
-              </button>
-              <button
-                onClick={handleAvancar}
-                disabled={statusAssistente !== 'ready'}
-                className="flex-1 py-2 px-4 rounded-lg font-semibold transition bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {statusAssistente === 'ready'
-                  ? <><CheckCircle2 className="w-4 h-4" /> Emitir NF-e</>
-                  : 'Preencha os itens para continuar'
-                }
-              </button>
-            </div>
+{/* Footer fixo */}
+<div className={`px-6 py-4 border-t ${border} flex gap-3 flex-shrink-0 ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
+  <button
+    onClick={() => setStep('form')}
+    className={`px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 ${
+      isDark ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+    }`}
+  >
+    <ArrowLeft className="w-4 h-4" />
+    Voltar
+  </button>
+  {(() => {
+    const nfeValida = !!(dadosNfe && dadosNfe.itens.length > 0 &&
+      dadosNfe.itens.every(it => it.nome.trim() && it.valor_unitario > 0));
+    return (
+      <button
+        onClick={handleAvancar}
+        disabled={!nfeValida}
+        className={`flex-1 py-2 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
+          nfeValida
+            ? 'bg-blue-500 hover:bg-blue-600 text-white'
+            : isDark
+              ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+        }`}
+      >
+        {nfeValida
+          ? <><CheckCircle2 className="w-4 h-4" /> Emitir NF-e</>
+          : 'Preencha os itens para continuar'
+        }
+      </button>
+    );
+  })()}
+</div>
           </div>
         );
 

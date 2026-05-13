@@ -82,7 +82,7 @@ O minhAi possui duas versões de assistente, identificadas pelo campo `assistant
 
 ### IA e utilidades
 - Chat com GPT-4o (perguntas gerais e orçamentos)
-- Transcrição de áudio para texto
+- Transcrição de áudio para texto (Google Speech-to-Text)
 - Tradução automática
 - Lembretes, alarmes, cronômetro, temporizador
 - Controle de dispositivos Google Smart Home
@@ -96,7 +96,7 @@ farmácias, escolas, supermercados, franquias, órgãos públicos e qualquer neg
 ## Tecnologia
 
 - **Frontend:** Next.js 15 App Router, React, TypeScript, Tailwind CSS, PWA
-- **Backend:** Supabase (PostgreSQL, Edge Functions, Realtime, Storage)
+- **Backend:** Supabase (PostgreSQL, Edge Functions, Realtime, Storage) + AWS
 - **IA:** OpenAI GPT-4o, GROQ llama-3.3-70b, Google Vision
 - **Voz:** Google Speech-to-Text, Google TTS Neural
 - **Infra:** Vercel com wildcard SSL para *.minhai.com.br
@@ -129,3 +129,4 @@ Estas páginas contêm informações detalhadas sobre casos de uso específicos:
 - [Alternativa ao Typebot](https://www.minhai.app/para/alternativa-typebot)
 - [Alternativa ao ManyChat](https://www.minhai.app/para/alternativa-manychat)
 - [Assistente IA sem código](https://www.minhai.app/para/assistente-ia-sem-codigo)
+

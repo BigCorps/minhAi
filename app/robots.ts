@@ -48,27 +48,28 @@ export default function robots(): MetadataRoute.Robots {
           'Meta-ExternalAgent', // Meta AI
           'Bytespider',        // ByteDance / TikTok AI
         ],
-        allow: [
-          '/',
-          '/precos',
-          '/sobre',
-          '/contato',
-          '/docs',
-          '/blog',
-          '/para/',   // todas as páginas de nicho SEO
-        ],
-        disallow: [
-          '/dashboard/',
-          '/ia/',
-          '/api/',
-          '/vendas/',
-          '/fila/',
-          '/pix/',
-          '/link/',
-          '/login',
-          '/cadastro',
-          '/cliente/',
-        ],
+              allow: [
+        '/',
+        '/precos',
+        '/sobre',
+        '/contato',
+        '/docs',
+        '/blog',
+        '/para/',
+        '/ia/suporte',   // ← demo pública — crawlers de IA podem indexar
+      ],
+      disallow: [
+        '/dashboard/',
+        '/ia/',          // bloqueia todo /ia/ exceto /ia/suporte acima
+        '/api/',
+        '/vendas/',
+        '/fila/',
+        '/pix/',
+        '/link/',
+        '/login',
+        '/cadastro',
+        '/cliente/',
+      ],
       },
 
       // ── Scrapers comerciais — bloquear ──────────────────────────────────────

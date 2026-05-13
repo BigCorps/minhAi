@@ -1,5 +1,4 @@
 // app/components/landing/FAQSection.tsx — Server Component
-// Inserir APÓS Depoimentos e ANTES de Preços (ou entre Preços e Contato)
 
 interface FAQSectionProps {
   theme?: 'dark' | 'light';
@@ -29,12 +28,12 @@ const FAQS = [
   {
     pergunta: 'Quanto tempo leva para configurar?',
     resposta:
-      'A maioria dos clientes configura o primeiro assistente em menos de 5 minutos. Para assistentes mais completos — com cardápio, produtos, integração com WhatsApp e PIX — e você pode sempre ajustar e implementar mais coisas quando quiser',
+      'A maioria dos clientes configura o primeiro assistente em menos de 5 minutos. Para assistentes mais completos — com cardápio, produtos, integração com WhatsApp e PIX — você pode sempre ajustar e implementar mais coisas quando quiser.',
   },
   {
     pergunta: 'Posso testar antes de pagar?',
     resposta:
-      'Sim. Você pode escolher entre a Versão Vendas que apenas cobra comissão por vendas ou começar na Versão Smart que inclui 20 créditos para testar à vontade, sem nenhum compromisso. Não é necessário cartão de crédito para começar. Você só investe quando decidir escalar.',
+      'Sim. Você pode escolher entre a Versão Vendas, que apenas cobra comissão por vendas confirmadas, ou começar na Versão Smart, que inclui 20 créditos para testar à vontade, sem nenhum compromisso. Não é necessário cartão de crédito para começar.',
   },
   {
     pergunta: 'O minhAi funciona para qualquer tipo de negócio?',
@@ -62,13 +61,18 @@ export default function FAQSection({ theme = 'dark' }: FAQSectionProps) {
   const isDark = theme === 'dark';
 
   return (
-    <div className={`relative flex flex-col items-center justify-center h-full w-full overflow-hidden transition-colors duration-500 ${
-      isDark
-        ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
-        : 'bg-gradient-to-br from-white via-gray-50 to-white'
-    }`}>
-
-      {/* Schema JSON-LD */}
+    <div
+      className={`
+        relative flex flex-col items-center justify-center
+        h-full w-full overflow-hidden
+        transition-colors duration-500
+        ${isDark
+          ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
+          : 'bg-gradient-to-br from-white via-gray-50 to-white'
+        }
+      `}
+    >
+      {/* Schema JSON-LD — renderizado no servidor, invisível no HTML */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
@@ -80,48 +84,65 @@ export default function FAQSection({ theme = 'dark' }: FAQSectionProps) {
       </div>
 
       {/*
-        Container principal:
-        - px responsivo
-        - py pequeno para respirar sem estourar
-        - overflow-y-auto só no mobile (scroll interno), no desktop tudo cabe
-        - max-h garante que nunca estoure a viewport (descontando ~56px do header)
+        CORRIGIDO: removido overflow-y-auto e maxHeight inline.
+        O conteúdo agora é controlado por pt/pb e gap adaptativo,
+        sem criar contexto de scroll que captura o swipe horizontal.
       */}
       <div
-        className="relative z-10 w-full max-w-3xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8
-                   py-3 sm:py-4
-                   overflow-y-auto sm:overflow-y-visible
-                   gap-2 sm:gap-3"
-        style={{ maxHeight: 'calc(100dvh - 56px)' }}
+        className={`
+          relative z-10 w-full max-w-3xl mx-auto
+          flex flex-col
+          px-4 sm:px-6 lg:px-8
+          pt-[68px] pb-[52px]
+          [@media(max-height:700px)_and_(max-width:767px)]:pt-[64px]
+          [@media(max-height:700px)_and_(max-width:767px)]:pb-[44px]
+          md:pt-4 md:pb-4
+          gap-2 sm:gap-3
+        `}
       >
 
-        {/* Header — fonte menor em telas pequenas */}
-        <div className="text-center flex-shrink-0">
-          <p className={`text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-1.5 sm:mb-2 ${isDark ? 'text-blue-400/70' : 'text-blue-600/70'}`}>
+        {/* Header */}
+        <div className="text-center">
+          <p className={`text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-1.5 ${isDark ? 'text-blue-400/70' : 'text-blue-600/70'}`}>
             Dúvidas frequentes
           </p>
-          <h2
-            style={{ fontFamily: "'Nunito', sans-serif" }}
-            className={`text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-0.5 sm:mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}
-          >
+          <h2 className={`text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>
             Respostas rápidas para{' '}
             <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>começar agora</span>
           </h2>
         </div>
 
-        {/* Lista de FAQs — gap e padding reduzidos para caber tudo */}
-        <div className="flex flex-col gap-1.5 sm:gap-2 w-full flex-shrink-0">
+        {/*
+          MARKUP SEMÂNTICO para GEO:
+          - itemScope + itemType="FAQPage" no container
+          - cada <details> tem itemScope + itemType="Question"
+          - <summary> tem itemProp="name"
+          - resposta tem itemProp="acceptedAnswer" + itemScope + itemType="Answer"
+          - texto da resposta tem itemProp="text"
+          Isso garante que crawlers de IA (GPTBot, ClaudeBot, PerplexityBot)
+          entendam a estrutura mesmo sem processar o JSON-LD.
+        */}
+        <div
+          className="flex flex-col gap-1.5 sm:gap-2 w-full"
+          itemScope
+          itemType="https://schema.org/FAQPage"
+        >
           {FAQS.map(({ pergunta, resposta }, i) => (
             <details
               key={i}
+              itemScope
+              itemType="https://schema.org/Question"
               className={`group rounded-xl border cursor-pointer transition-all duration-200 ${
                 isDark
                   ? 'bg-white/[0.02] border-white/8 hover:bg-white/[0.04] hover:border-white/12'
                   : 'bg-white border-gray-100 hover:border-blue-200 shadow-sm'
               }`}
             >
-              {/* Padding do summary: menor em mobile/desktop compacto */}
               <summary className="flex items-center justify-between gap-3 list-none px-4 py-2.5 sm:py-3">
-                <h3 className={`font-semibold text-xs sm:text-sm pr-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <h3
+                  itemProp="name"
+                  className={`font-semibold text-xs sm:text-sm pr-2 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                >
                   {pergunta}
                 </h3>
                 <svg
@@ -131,15 +152,31 @@ export default function FAQSection({ theme = 'dark' }: FAQSectionProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </summary>
-              <p className={`px-4 pb-2.5 sm:pb-3 text-[11px] sm:text-xs leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                {resposta}
-              </p>
+
+              {/* Resposta com markup semântico completo */}
+              <div
+                itemProp="acceptedAnswer"
+                itemScope
+                itemType="https://schema.org/Answer"
+              >
+                <p
+                  itemProp="text"
+                  className={`px-4 pb-2.5 sm:pb-3 text-[11px] sm:text-xs leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}
+                >
+                  {resposta}
+                </p>
+              </div>
             </details>
           ))}
         </div>
 
-        {/* CTA inline — padding reduzido */}
-        <div className="text-center flex-shrink-0 pt-0.5 sm:pt-1">
+        {/* CTA inline — some em telas muito baixas */}
+        <div
+          className={`
+            text-center pt-0.5
+            [@media(max-height:640px)_and_(max-width:767px)]:hidden
+          `}
+        >
           <p className={`text-xs mb-2 ${isDark ? 'text-white/35' : 'text-gray-400'}`}>
             Ainda tem dúvidas?
           </p>
@@ -159,6 +196,7 @@ export default function FAQSection({ theme = 'dark' }: FAQSectionProps) {
             Falar com a equipe no WhatsApp
           </a>
         </div>
+
       </div>
     </div>
   );

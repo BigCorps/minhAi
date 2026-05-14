@@ -4485,7 +4485,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'pre_atendimento': PreAtendimentoConfigForm,
   'responder_pesquisa': PesquisasConfigForm,
   'emitir_nota': EmitirNotaForm,
-  'gerar_fila': GerarFilaConfigForm, 
+  'gerar_senha': GerarFilaConfigForm, 
 };
 
 // ===== INTERFACE =====
@@ -4883,7 +4883,7 @@ try {
           >
             Cancelar
           </button>
-          {hasForm && functionData?.function_key !== 'gerar_fila' && (
+          {hasForm && functionData?.function_key !== 'gerar_senha' && (
             <button
               onClick={handleSave}
               disabled={isSaving || isLoading}

@@ -4,19 +4,15 @@
 
 *Fazer a configuração da fila na função gerar fila, para tambem gerenciarem por ali e não apenas pelo colaborador
 
-*Funções Meta - ith.almeida
-
-*Adicionar botão no template meta.
-
 *Fazer as paginas /ia /pix /pay simples para digitar o slug e ja entrar no slug, para não ser uma pagina 404
 
 *Voltar o carrossel como era antes mas deixando tudo oculto noma versão vendas (mas sem a possibilidade de ocultar e travar) com apenas 4 botões maiores acima do carrossel rodando: modo vendas / cadastro / venda rápida / *agenda *podendo ativar ou não 
 
-*Planilha Vixus - miriampostos
+*Planilha Vixus importando tambem os fornecedores e cadastros e esta pronto - miriampostos
 
-*Notas funcionando - Agora precisamos deixar o frontend para ja enviar as informações corretamente. Seguem os codigos atuais para criarmos o plano de ação para implementar pesquisa Endereço e CEP para ja preencher o endereço completo. E tambem o cadastro de cliente de notas, para preencher o nome e ja aparecer automaticamente o cadastro completo do cliente (quando já emitiu uma nota) quando não emitiu, ja faz o cadastro. E tambem busca por produto no preview, colocando o nome e ja mostrando as opções de produtos, alem de ja enviar o email no NFe - miriamithiel e fofopandababy
+*Notas funcionando - ajustar - fofopandababy
 
-*Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc
+*Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 
 *Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
 

@@ -429,7 +429,6 @@ load();
           })}
         </div>
       </div>
-      )}
 
       <style jsx>{`
         @keyframes fadeInUp {

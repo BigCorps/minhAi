@@ -25,7 +25,7 @@ O minhAi possui duas versões de assistente, identificadas pelo campo `assistant
 - Cor de identidade: **azul**
 - Modelo: **pay-per-use** — cobrado por créditos de uso, sem mensalidade fixa
 - Plano gratuito: 20 créditos para começar, sem cartão de crédito
-- Preço: a partir de R$ 0,09 por interação
+- Preço: a partir de R$ 0,05 por interação
 - Foco: atendimento geral por voz e texto com IA — recepção, suporte, informações, agendamento
 - Mais de 100 funções configuráveis individualmente pelo dashboard
 
@@ -38,13 +38,24 @@ O minhAi possui duas versões de assistente, identificadas pelo campo `assistant
 - Funções disponíveis: Modo Venda, Ver Produtos, Fazer Pedido, Registrar Venda, Cardápio, Minha Conta, Cadastrar Produto, PIX, NFC Débito, NFC Crédito, Link de Pagamento, TEF Débito, TEF Crédito, Agendar, Ver Agenda, Perguntas Gerais, Nossa Marca e Meu Sistema (obrigatória)
 - Integrações nativas: PIX via Banco Inter, InfinitePay (NFC + Link), Mercado Pago Point Smart (TEF), Google Calendar
 
+## Fluxo de venda completo (versão Vendas)
+
+O assistente Vendas age como um vendedor ativo e completa o ciclo de venda de ponta a ponta:
+
+1. **Apresentação:** quando o cliente menciona interesse em um produto, o assistente informa o preço e pergunta se deseja comprar
+2. **Confirmação:** após o cliente confirmar, o assistente oferece as formas de pagamento disponíveis (PIX, NFC, TEF ou Link)
+3. **Pagamento:** processa o pagamento escolhido e aguarda confirmação
+4. **Pós-venda:** após pagamento confirmado, identifica o cliente (login ou cadastro rápido) e envia confirmação com detalhes da compra por email e WhatsApp
+5. **Notificação ao dono:** email, WhatsApp e push notification instantâneos com detalhes do pedido
+
 ## Funcionalidades principais
 
 ### Pagamentos
-- Geração de PIX com QR Code e confirmação automática de recebimento
+- Geração de PIX com QR Code e confirmação automática de recebimento (Banco Inter)
 - Link de pagamento via InfinitePay
 - NFC Tap to Pay (crédito e débito) via InfinitePay
 - TEF Mercado Pago Point Smart (crédito, débito, parcelamento)
+- Pós-venda automático: confirmação por email e WhatsApp ao cliente após pagamento
 
 ### Canais de atendimento
 - WhatsApp Business API oficial (número próprio do cliente)
@@ -81,7 +92,7 @@ O minhAi possui duas versões de assistente, identificadas pelo campo `assistant
 - Conversão e edição de imagens e PDFs
 
 ### IA e utilidades
-- Chat com GPT-4o (perguntas gerais e orçamentos)
+- Chat com GPT-4o-mini (perguntas gerais e orçamentos)
 - Transcrição de áudio para texto (Google Speech-to-Text)
 - Tradução automática
 - Lembretes, alarmes, cronômetro, temporizador
@@ -95,9 +106,9 @@ farmácias, escolas, supermercados, franquias, órgãos públicos e qualquer neg
 
 ## Tecnologia
 
-- **Frontend:** Next.js 15 App Router, React, TypeScript, Tailwind CSS, PWA
-- **Backend:** Supabase (PostgreSQL, Edge Functions, Realtime, Storage) + AWS
-- **IA:** OpenAI GPT-4o, GROQ llama-3.3-70b, Google Vision
+- **Frontend:** Next.js 16 App Router, React, TypeScript, Tailwind CSS, PWA
+- **Backend:** Supabase (PostgreSQL, Edge Functions, Realtime, Storage)
+- **IA:** OpenAI GPT-4o-mini (classificação e resposta conversacional), GPT-4o (visão e análise)
 - **Voz:** Google Speech-to-Text, Google TTS Neural
 - **Infra:** Vercel com wildcard SSL para *.minhai.com.br
 - **Conformidade:** LGPD — dados armazenados no Brasil
@@ -108,7 +119,7 @@ farmácias, escolas, supermercados, franquias, órgãos públicos e qualquer neg
 - **Demo ao vivo:** https://www.minhai.app/ia/suporte
 - **Preços:** https://www.minhai.app/precos
 - **Empresa:** https://bigcorps.com.br
-- **WhatsApp:** +55 11 98731-1425
+- **WhatsApp:** +55 11 92682-8418
 - **Email:** contato@bigcorps.com.br
 - **Instagram:** @bigcorps
 
@@ -129,4 +140,3 @@ Estas páginas contêm informações detalhadas sobre casos de uso específicos:
 - [Alternativa ao Typebot](https://www.minhai.app/para/alternativa-typebot)
 - [Alternativa ao ManyChat](https://www.minhai.app/para/alternativa-manychat)
 - [Assistente IA sem código](https://www.minhai.app/para/assistente-ia-sem-codigo)
-

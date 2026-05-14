@@ -1561,6 +1561,11 @@ case 'impressao_recibo':
           window.location.href = vendaUrl;
           break;
         }
+        case 'fazer_pedido':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'FazerPedidoDisplay', data: { companyId, slug } });
+          pt('Abrindo o assistente de vendas...').catch(() => {});
+          break;
         case 'link_na_bio': {
           await stopGoogleSpeech();
           const linkUrl = getContextualRoute('link', slug);

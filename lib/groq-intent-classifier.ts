@@ -143,9 +143,34 @@ export async function classifyIntentWithGroq(
                   .then(() => {}).catch(() => {});
               }
 
+// Criar pedido antes de disparar o pagamento
+              let pedidoId: string | null = null;
+              try {
+                const supabase = createClient();
+                const { data: pedido } = await supabase
+                  .from('pedidos')
+                  .insert({
+                    company_id: deps.companyId,
+                    subtotal: amount,
+                    total: amount,
+                    metodo_pagamento: pendingFunction === 'pix_generate' ? 'pix'
+                      : pendingFunction === 'link_pagamento' ? 'pix'
+                      : pendingFunction.includes('nfc') ? 'nfc'
+                      : 'tef',
+                    status: 'aguardando_pagamento',
+                    observacoes: 'Pedido via assistente de voz',
+                  })
+                  .select('id')
+                  .single();
+                pedidoId = pedido?.id ?? null;
+              } catch { /* não crítico */ }
+
               await deps.playText(`Gerando agora.`);
               if (deps.onFunctionDetected) {
-                setTimeout(() => deps.onFunctionDetected!(`${pendingFunction}:${amount}`), 300);
+                const key = pedidoId
+                  ? `${pendingFunction}:${amount}:${pedidoId}`
+                  : `${pendingFunction}:${amount}`;
+                setTimeout(() => deps.onFunctionDetected!(key), 300);
               }
               return true;
             }
@@ -156,10 +181,33 @@ export async function classifyIntentWithGroq(
           return true;
         }
 
-          await deps.playText('Gerando agora.');
+let pedidoId: string | null = null;
+              try {
+                const supabase = createClient();
+                const { data: pedido } = await supabase
+                  .from('pedidos')
+                  .insert({
+                    company_id: deps.companyId,
+                    subtotal: amount,
+                    total: amount,
+                    metodo_pagamento: pendingFunction === 'pix_generate' ? 'pix'
+                      : pendingFunction === 'link_pagamento' ? 'pix'
+                      : pendingFunction.includes('nfc') ? 'nfc'
+                      : 'tef',
+                    status: 'aguardando_pagamento',
+                    observacoes: 'Pedido via assistente de voz',
+                  })
+                  .select('id')
+                  .single();
+                pedidoId = pedido?.id ?? null;
+              } catch { /* não crítico */ }
 
+          await deps.playText('Gerando agora.');
           if (deps.onFunctionDetected) {
-            setTimeout(() => deps.onFunctionDetected!(`${pendingFunction}:${amount}`), 300);
+            const key = pedidoId
+              ? `${pendingFunction}:${amount}:${pedidoId}`
+              : `${pendingFunction}:${amount}`;
+            setTimeout(() => deps.onFunctionDetected!(key), 300);
           }
           return true;
         }

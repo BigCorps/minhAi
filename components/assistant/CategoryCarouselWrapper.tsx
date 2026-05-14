@@ -348,7 +348,7 @@ load();
             >
               {SMART_CATEGORIES.find(c => c.key === activeShowcaseCategory)?.name}
             </div>
-            <div className="overflow-y-auto" style={{ maxHeight: '300px' }}>
+            <div className="overflow-hidden">
               {(smartFunctions[activeShowcaseCategory] ?? []).map(fn => (
                 <div
                   key={fn.function_key}

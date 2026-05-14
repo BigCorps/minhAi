@@ -6,6 +6,10 @@ import { createClient } from '@/lib/supabase-browser';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import AssistenteFiscalChat from '@/components/dashboard/vendas/AssistenteFiscalChat';
+// PASSO 1 — Novos imports
+import CampoDestinatario from '@/components/dashboard/vendas/CampoDestinatario';
+import ListaItensComAutocomplete from '@/components/dashboard/vendas/ListaItensComAutocomplete';
+import { useClienteFiscal } from '@/hooks/useClienteFiscal';
 import {
   Receipt,
   CheckCircle,
@@ -37,6 +41,7 @@ interface ItemNota {
   origem_produto?: number;
   produto_id?: string;
   ncm_sugerido?: boolean;
+  ean?: string; // PASSO 1 — campo adicionado
 }
 
 interface DadosNota {
@@ -85,8 +90,7 @@ function IconVolumeMute() {
   );
 }
 
-// ─── Painel de preenchimento manual (direita) ─────────────────────────────────
-// Substitui PreviewNotaFiscal: campos editáveis em sincronia com o assistente IA
+// ─── Painel de preenchimento manual (mantido para retrocompatibilidade) ────────
 
 interface EditablePreviewProps {
   dados: DadosNota | null;
@@ -110,15 +114,11 @@ function EditablePreviewNota({ dados, onChange, isDark }: EditablePreviewProps) 
   const label   = `block text-[11px] font-medium mb-0.5 ${muted}`;
   const input   = `w-full px-2.5 py-1.5 rounded-lg border ${border} ${bgInput} ${text} text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`;
 
-  // Garante estrutura mínima mesmo quando dados é null
   const dest  = dados?.destinatario ?? { nome: '', cpf_cnpj: '', endereco: '' };
   const itens = dados?.itens ?? [];
 
   function setDest(key: keyof typeof dest, val: string) {
-    onChange({
-      destinatario: { ...dest, [key]: val },
-      itens,
-    });
+    onChange({ destinatario: { ...dest, [key]: val }, itens });
   }
 
   function setItem(idx: number, key: keyof ItemNota, val: string | number) {
@@ -134,12 +134,10 @@ function EditablePreviewNota({ dados, onChange, isDark }: EditablePreviewProps) 
     onChange({ destinatario: dest, itens: itens.filter((_, i) => i !== idx) });
   }
 
-  // Calcula total para exibir
   const total = itens.reduce((acc, it) => acc + (it.quantidade * it.valor_unitario), 0);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      {/* ── Cabeçalho do painel ── */}
       <div className={`px-4 py-3 border-b ${border} flex items-center gap-2 flex-shrink-0`}>
         <ClipboardList className="w-4 h-4 text-blue-500" />
         <span className={`text-sm font-semibold ${text}`}>Preencher manualmente</span>
@@ -152,72 +150,51 @@ function EditablePreviewNota({ dados, onChange, isDark }: EditablePreviewProps) 
       </div>
 
       <div className="p-4 space-y-5 flex-1">
-
-        {/* ── Destinatário ── */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <User className={`w-4 h-4 ${muted}`} />
             <span className={`text-xs font-semibold uppercase tracking-wide ${muted}`}>Destinatário</span>
             <span className={`text-[10px] ${muted}`}>(opcional)</span>
           </div>
-
           <div className="space-y-2">
             <div>
               <label className={label}>Nome / Razão Social</label>
-              <input
-                type="text"
-                value={dest.nome}
+              <input type="text" value={dest.nome}
                 onChange={(e) => setDest('nome', e.target.value)}
-                placeholder="Nome do cliente ou empresa"
-                className={input}
-              />
+                placeholder="Nome do cliente ou empresa" className={input} />
             </div>
             <div>
               <label className={label}>CPF / CNPJ</label>
-              <input
-                type="text"
-                value={dest.cpf_cnpj ?? ''}
+              <input type="text" value={dest.cpf_cnpj ?? ''}
                 onChange={(e) => setDest('cpf_cnpj', e.target.value)}
-                placeholder="000.000.000-00"
-                className={input}
-              />
+                placeholder="000.000.000-00" className={input} />
             </div>
             <div>
               <label className={label}>Endereço</label>
-              <input
-                type="text"
-                value={dest.endereco ?? ''}
+              <input type="text" value={dest.endereco ?? ''}
                 onChange={(e) => setDest('endereco', e.target.value)}
-                placeholder="Rua, número, cidade"
-                className={input}
-              />
+                placeholder="Rua, número, cidade" className={input} />
             </div>
           </div>
         </div>
 
-        {/* ── Itens ── */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Package className={`w-4 h-4 ${muted}`} />
             <span className={`text-xs font-semibold uppercase tracking-wide ${muted}`}>Itens</span>
             <span className="ml-auto">
-              <button
-                onClick={addItem}
-                className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-400 font-medium transition"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Adicionar
+              <button onClick={addItem}
+                className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-400 font-medium transition">
+                <Plus className="w-3.5 h-3.5" />Adicionar
               </button>
             </span>
           </div>
 
           {itens.length === 0 && (
-            <button
-              onClick={addItem}
+            <button onClick={addItem}
               className={`w-full py-6 rounded-xl border-2 border-dashed ${
                 isDark ? 'border-slate-700 hover:border-blue-500/50' : 'border-gray-200 hover:border-blue-300'
-              } transition flex flex-col items-center gap-2`}
-            >
+              } transition flex flex-col items-center gap-2`}>
               <Plus className={`w-5 h-5 ${muted}`} />
               <span className={`text-xs ${muted}`}>Clique para adicionar um item</span>
             </button>
@@ -225,97 +202,58 @@ function EditablePreviewNota({ dados, onChange, isDark }: EditablePreviewProps) 
 
           <div className="space-y-3">
             {itens.map((item, idx) => (
-              <div
-                key={idx}
-                className={`p-3 rounded-xl border ${border} ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'} space-y-2`}
-              >
+              <div key={idx}
+                className={`p-3 rounded-xl border ${border} ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'} space-y-2`}>
                 <div className="flex items-center justify-between mb-1">
                   <span className={`text-[11px] font-semibold ${muted}`}>Item {idx + 1}</span>
-                  <button
-                    onClick={() => removeItem(idx)}
-                    className="text-red-400 hover:text-red-500 transition"
-                  >
+                  <button onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-500 transition">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
-
-                {/* Nome */}
                 <div>
                   <label className={label}>Descrição *</label>
-                  <input
-                    type="text"
-                    value={item.nome}
+                  <input type="text" value={item.nome}
                     onChange={(e) => setItem(idx, 'nome', e.target.value)}
-                    placeholder="Ex: Produto A"
-                    className={input}
-                  />
+                    placeholder="Ex: Produto A" className={input} />
                 </div>
-
-                {/* Qtd + Valor + Unidade */}
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className={label}>Qtd *</label>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={item.quantidade}
+                    <input type="number" min="1" step="1" value={item.quantidade}
                       onChange={(e) => setItem(idx, 'quantidade', parseFloat(e.target.value) || 1)}
-                      className={input}
-                    />
+                      className={input} />
                   </div>
                   <div>
                     <label className={label}>Valor unit. *</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={item.valor_unitario || ''}
+                    <input type="number" min="0" step="0.01" value={item.valor_unitario || ''}
                       onChange={(e) => setItem(idx, 'valor_unitario', parseFloat(e.target.value) || 0)}
-                      placeholder="0,00"
-                      className={input}
-                    />
+                      placeholder="0,00" className={input} />
                   </div>
                   <div>
                     <label className={label}>Unidade</label>
-                    <select
-                      value={item.unidade}
+                    <select value={item.unidade}
                       onChange={(e) => setItem(idx, 'unidade', e.target.value)}
-                      className={input}
-                    >
+                      className={input}>
                       {['UN', 'KG', 'L', 'CX', 'PC', 'M', 'M2', 'HR'].map((u) => (
                         <option key={u} value={u}>{u}</option>
                       ))}
                     </select>
                   </div>
                 </div>
-
-                {/* NCM + CFOP (opcionais) */}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className={label}>NCM <span className={muted}>(opcional)</span></label>
-                    <input
-                      type="text"
-                      maxLength={8}
-                      value={item.ncm ?? ''}
+                    <input type="text" maxLength={8} value={item.ncm ?? ''}
                       onChange={(e) => setItem(idx, 'ncm', e.target.value.replace(/\D/g, ''))}
-                      placeholder="00000000"
-                      className={`${input} font-mono`}
-                    />
+                      placeholder="00000000" className={`${input} font-mono`} />
                   </div>
                   <div>
                     <label className={label}>CFOP <span className={muted}>(opcional)</span></label>
-                    <input
-                      type="number"
-                      value={item.cfop ?? ''}
+                    <input type="number" value={item.cfop ?? ''}
                       onChange={(e) => setItem(idx, 'cfop', parseInt(e.target.value) || undefined as any)}
-                      placeholder="5102"
-                      className={input}
-                    />
+                      placeholder="5102" className={input} />
                   </div>
                 </div>
-
-                {/* Subtotal */}
                 {item.valor_unitario > 0 && (
                   <p className={`text-xs text-right font-medium ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
                     Subtotal: R$ {(item.quantidade * item.valor_unitario).toFixed(2)}
@@ -327,14 +265,11 @@ function EditablePreviewNota({ dados, onChange, isDark }: EditablePreviewProps) 
         </div>
       </div>
 
-      {/* ── Rodapé com total ── */}
       {itens.length > 0 && (
         <div className={`px-4 py-3 border-t ${border} flex-shrink-0`}>
           <div className="flex items-center justify-between">
             <span className={`text-sm font-medium ${muted}`}>Total da nota</span>
-            <span className={`text-lg font-bold ${text}`}>
-              R$ {total.toFixed(2)}
-            </span>
+            <span className={`text-lg font-bold ${text}`}>R$ {total.toFixed(2)}</span>
           </div>
         </div>
       )}
@@ -359,9 +294,44 @@ export default function EmitirNotaModal({
   const [tipoNota, setTipoNota] = useState<'nfce' | 'nfe'>('nfce');
   const [plano]                 = useState<string>(nfe_plano ?? '');
 
+  // Modelo de documento derivado do tipo de nota (55 = NF-e, 65 = NFC-e)
+  const modeloDocumento = tipoNota === 'nfe' ? 55 : 65;
+
   // Estado central dos dados NF-e — compartilhado entre IA e painel manual
   const [dadosNfe, setDadosNfe]                 = useState<DadosNota | null>(null);
   const [statusAssistente, setStatusAssistente] = useState<'collecting' | 'ready' | 'error'>('collecting');
+
+  // PASSO 2 — Estado de destinatário expandido (com endereço completo)
+  const [destinatario, setDestinatario] = useState({
+    nome: '',
+    cpf_cnpj: '',
+    email: '',
+    telefone: '',
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    uf: '',
+    endereco_completo: '',
+  });
+
+  // PASSO 2 — Estado de itens com campos fiscais completos
+  const [itens, setItens] = useState<Array<{
+    nome: string;
+    quantidade: number;
+    valor_unitario: number;
+    unidade: string;
+    ncm?: string;
+    cfop?: number;
+    origem_produto?: number;
+    produto_id?: string;
+    ean?: string;
+  }>>([]);
+
+  // PASSO 2 — Hook para salvar cliente após emissão
+  const { salvarCliente } = useClienteFiscal();
 
   // Aba mobile: 'chat' | 'form'
   const [abaAtiva, setAbaAtiva] = useState<'chat' | 'form'>('chat');
@@ -383,7 +353,7 @@ export default function EmitirNotaModal({
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
-  // ─── Reset ao montar ───────────────────────────────────────────────────────
+  // ─── PASSO 5 — Reset ao montar (inclui novos estados) ─────────────────────
   useEffect(() => {
     setStep('form');
     setTipoNota('nfce');
@@ -399,6 +369,22 @@ export default function EmitirNotaModal({
     setFormaPagamento('pix');
     setEnviarEmail(false);
     setAbaAtiva('chat');
+    // PASSO 5 — Reset dos novos estados
+    setDestinatario({
+      nome: '',
+      cpf_cnpj: '',
+      email: '',
+      telefone: '',
+      cep: '',
+      logradouro: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cidade: '',
+      uf: '',
+      endereco_completo: '',
+    });
+    setItens([]);
   }, []);
 
   // ─── Empresa ───────────────────────────────────────────────────────────────
@@ -421,7 +407,63 @@ export default function EmitirNotaModal({
   const showToast = (msg: string, type: 'success' | 'error' | 'warning' = 'warning') =>
     setToast({ message: msg, type });
 
-  // ─── TTS — mesmo padrão de FichaConversacionalDisplay ─────────────────────
+  // ─── PASSO 6 — Carregar itens do pedido automaticamente ───────────────────
+  useEffect(() => {
+    if (pedidoId && itens.length === 0) {
+      const carregarItensDoPedido = async () => {
+        try {
+          const { data: pedidoItens, error } = await supabase
+            .from('pedido_itens')
+            .select(`
+              nome_snapshot,
+              quantidade,
+              preco_unitario,
+              subtotal,
+              produto_id,
+              produtos_venda (
+                unidade,
+                ean,
+                produtos_fiscal (
+                  ncm,
+                  cfop,
+                  origem_produto
+                )
+              )
+            `)
+            .eq('pedido_id', pedidoId);
+
+          if (error) {
+            console.error('Erro ao carregar itens:', error);
+            return;
+          }
+
+          if (pedidoItens && pedidoItens.length > 0) {
+            const itensFormatados = pedidoItens.map((item: any) => {
+              const produto = item.produtos_venda;
+              const fiscal  = produto?.produtos_fiscal?.[0];
+              return {
+                nome:            item.nome_snapshot,
+                quantidade:      item.quantidade,
+                valor_unitario:  item.preco_unitario,
+                unidade:         produto?.unidade || 'un',
+                produto_id:      item.produto_id,
+                ean:             produto?.ean,
+                ncm:             fiscal?.ncm || '00000000',
+                cfop:            fiscal?.cfop || 5102,
+                origem_produto:  fiscal?.origem_produto ?? 0,
+              };
+            });
+            setItens(itensFormatados);
+          }
+        } catch (err) {
+          console.error('Erro ao carregar itens do pedido:', err);
+        }
+      };
+      carregarItensDoPedido();
+    }
+  }, [pedidoId, itens.length, supabase]);
+
+  // ─── TTS ──────────────────────────────────────────────────────────────────
   const [audioMutado, setAudioMutado] = useState(false);
   const audioMutadoRef = useRef(false);
   const audioQueueRef  = useRef<string[]>([]);
@@ -486,144 +528,275 @@ export default function EmitirNotaModal({
     },
   });
 
-  // ─── Callback do assistente IA → atualiza estado central ──────────────────
-const handleDadosAtualizados = useCallback(
-  (novosDados: DadosNota | null, status: 'collecting' | 'ready' | 'error') => {
-    setDadosNfe(prev => {
-      if (!novosDados) return prev;
-      if (!prev) return novosDados;
+  // ─── Callback do assistente IA → atualiza estado central e sincroniza novos estados ──
+  const handleDadosAtualizados = useCallback(
+    (novosDados: DadosNota | null, status: 'collecting' | 'ready' | 'error') => {
+      setDadosNfe(prev => {
+        if (!novosDados) return prev;
+        if (!prev) return novosDados;
+        return {
+          destinatario: {
+            nome:     prev.destinatario.nome     || novosDados.destinatario.nome,
+            cpf_cnpj: prev.destinatario.cpf_cnpj || novosDados.destinatario.cpf_cnpj,
+            endereco: prev.destinatario.endereco  || novosDados.destinatario.endereco,
+          },
+          itens: novosDados.itens.map((itemIA, idx) => {
+            const itemManual = prev.itens[idx];
+            if (!itemManual) return itemIA;
+            return {
+              nome:           itemManual.nome           || itemIA.nome,
+              quantidade:     itemManual.quantidade     || itemIA.quantidade,
+              valor_unitario: itemManual.valor_unitario || itemIA.valor_unitario,
+              unidade:        itemManual.unidade        || itemIA.unidade,
+              ncm:            itemManual.ncm  || itemIA.ncm,
+              cfop:           itemManual.cfop || itemIA.cfop,
+              origem_produto: itemIA.origem_produto ?? itemManual.origem_produto,
+              produto_id:     itemIA.produto_id      || itemManual.produto_id,
+              ncm_sugerido:   itemIA.ncm_sugerido,
+            };
+          }),
+        };
+      });
+      setStatusAssistente(status);
 
-      return {
-        destinatario: {
-          // Mantém o que o usuário digitou; IA preenche só se estiver vazio
-          nome:      prev.destinatario.nome      || novosDados.destinatario.nome,
-          cpf_cnpj:  prev.destinatario.cpf_cnpj  || novosDados.destinatario.cpf_cnpj,
-          endereco:  prev.destinatario.endereco   || novosDados.destinatario.endereco,
-        },
-        itens: novosDados.itens.map((itemIA, idx) => {
-          const itemManual = prev.itens[idx];
-          if (!itemManual) return itemIA; // item novo da IA, aceita
-          return {
-            // Campos que o usuário pode ter editado manualmente têm prioridade
-            nome:            itemManual.nome            || itemIA.nome,
-            quantidade:      itemManual.quantidade      || itemIA.quantidade,
-            valor_unitario:  itemManual.valor_unitario  || itemIA.valor_unitario,
-            unidade:         itemManual.unidade         || itemIA.unidade,
-            // NCM e CFOP: IA sempre preenche (é o ponto forte dela), 
-            // mas respeita se o usuário já digitou manualmente
-            ncm:             itemManual.ncm  || itemIA.ncm,
-            cfop:            itemManual.cfop || itemIA.cfop,
-            origem_produto:  itemIA.origem_produto ?? itemManual.origem_produto,
-            produto_id:      itemIA.produto_id      || itemManual.produto_id,
-            ncm_sugerido:    itemIA.ncm_sugerido,
-          };
-        }),
-      };
-    });
-    setStatusAssistente(status);
-  }, [],
-);
+      // Sincronizar com os novos estados usados pelos componentes do PASSO 3
+      if (novosDados) {
+        // Atualiza destinatário apenas se campos estiverem vazios (usuário tem prioridade)
+        setDestinatario(prev => ({
+          ...prev,
+          nome:             prev.nome             || novosDados.destinatario.nome      || '',
+          cpf_cnpj:         prev.cpf_cnpj         || novosDados.destinatario.cpf_cnpj  || '',
+          endereco_completo: prev.endereco_completo || novosDados.destinatario.endereco || '',
+        }));
+        // Atualiza itens apenas se lista estiver vazia
+        setItens(prev => {
+          if (prev.length > 0) return prev;
+          return novosDados.itens.map(item => ({
+            nome:           item.nome,
+            quantidade:     item.quantidade,
+            valor_unitario: item.valor_unitario,
+            unidade:        item.unidade,
+            ncm:            item.ncm,
+            cfop:           item.cfop,
+            origem_produto: item.origem_produto,
+            produto_id:     item.produto_id,
+            ean:            item.ean,
+          }));
+        });
+      }
+    },
+    [],
+  );
 
   // ─── Callback do painel manual → atualiza estado central ──────────────────
   const handleDadosManuais = useCallback((novosDados: DadosNota) => {
     setDadosNfe(novosDados);
-    // Recalcula status: pronto se tiver ao menos 1 item com nome + valor
     const pronto = novosDados.itens.length > 0 &&
       novosDados.itens.every((it) => it.nome.trim() && it.valor_unitario > 0);
     setStatusAssistente(pronto ? 'ready' : 'collecting');
   }, []);
 
   // ─── Avançar step ─────────────────────────────────────────────────────────
-// ── Avançar step ─────────────────────────────────────────────────────────────
-const handleAvancar = useCallback(() => {
-  if (step === 'form') {
-    if (tipoNota === 'nfe') {
-      setStep('form_nfe');
-    } else {
-      if (!valorTotal || isNaN(parseFloat(valorTotal.replace(',', '.')))) {
-        showToast('Informe um valor válido', 'warning');
+  const handleAvancar = useCallback(() => {
+    if (step === 'form') {
+      if (tipoNota === 'nfe') {
+        setStep('form_nfe');
+      } else {
+        if (!valorTotal || isNaN(parseFloat(valorTotal.replace(',', '.')))) {
+          showToast('Informe um valor válido', 'warning');
+          return;
+        }
+        if (plano === 'nfse' && !descricaoServico.trim()) {
+          showToast('Informe a descrição do serviço', 'warning');
+          return;
+        }
+        setStep('confirming');
+      }
+    } else if (step === 'form_nfe') {
+      // PASSO 7 — Validação usando os novos estados
+      if (!destinatario.nome || destinatario.nome.trim().length < 1) {
+        showToast('Preencha ao menos um item com descrição e valor', 'warning');
         return;
       }
-      if (plano === 'nfse' && !descricaoServico.trim()) {
-        showToast('Informe a descrição do serviço', 'warning');
+      if (itens.length === 0) {
+        showToast('Adicione pelo menos um item', 'warning');
         return;
+      }
+      const todosValidos = itens.every(it => it.nome.trim() && it.quantidade > 0 && it.valor_unitario > 0);
+      if (!todosValidos) {
+        showToast('Todos os itens precisam de descrição, quantidade e valor', 'warning');
+        return;
+      }
+      if (modeloDocumento === 55) {
+        const semNcm = itens.filter(i => !i.ncm || i.ncm === '00000000');
+        if (semNcm.length > 0) {
+          showToast('NF-e modelo 55 exige NCM válido em todos os produtos', 'warning');
+          return;
+        }
       }
       setStep('confirming');
     }
-  } else if (step === 'form_nfe') {
-    const nfeValida = dadosNfe && dadosNfe.itens.length > 0 &&
-      dadosNfe.itens.every(it => it.nome.trim() && it.valor_unitario > 0);
-    if (!nfeValida) {
-      showToast('Preencha ao menos um item com descrição e valor', 'warning');
-      return;
-    }
-    setStep('confirming');
-  }
-}, [step, tipoNota, dadosNfe, valorTotal, descricaoServico, plano]);
+  }, [step, tipoNota, destinatario, itens, modeloDocumento, valorTotal, descricaoServico, plano]);
 
-  // ─── Emitir ───────────────────────────────────────────────────────────────
+  // ─── PASSO 4 — Emitir (NF-e usa novos estados; NFC-e/NFS-e mantém lógica original) ──
   const handleEmitir = useCallback(async () => {
     setStep('emitting');
     try {
       const isNFe = tipoNota === 'nfe';
-      const valor  = parseFloat(valorTotal.replace(',', '.'));
-      const cpfCnpjLimpo = destinatarioCpfCnpj.replace(/\D/g, '');
 
-      const body: Record<string, unknown> = {
-        company_id: companyId,
-        tipo: isNFe ? 'nfe' : 'nfce',
-        modelo: isNFe ? '55' : '65',
-        pedido_id: pedidoId,
-        forma_pagamento: formaPagamento,
-        enviar_email: enviarEmail,
-      };
+      if (isNFe) {
+        // ── Validações NF-e ──
+        if (!destinatario.nome || destinatario.nome.trim().length < 3) {
+          setErro('Nome do destinatário é obrigatório (mínimo 3 caracteres)');
+          setStep('error');
+          return;
+        }
+        if (itens.length === 0) {
+          setErro('Adicione pelo menos um item');
+          setStep('error');
+          return;
+        }
+        for (const item of itens) {
+          if (!item.nome || item.nome.trim().length < 2) {
+            setErro('Todos os itens devem ter nome');
+            setStep('error');
+            return;
+          }
+          if (item.quantidade <= 0) {
+            setErro('Quantidade deve ser maior que zero');
+            setStep('error');
+            return;
+          }
+          if (item.valor_unitario <= 0) {
+            setErro('Valor unitário deve ser maior que zero');
+            setStep('error');
+            return;
+          }
+        }
+        if (modeloDocumento === 55) {
+          const semNcm = itens.filter(i => !i.ncm || i.ncm === '00000000');
+          if (semNcm.length > 0) {
+            setErro('NF-e modelo 55 exige NCM válido em todos os produtos');
+            setStep('error');
+            return;
+          }
+        }
 
-      if (isNFe && dadosNfe) {
-  const valorCalculado = dadosNfe.itens.reduce(
-    (acc, it) => acc + it.quantidade * it.valor_unitario, 0
-  );
+        const valorCalculado = itens.reduce(
+          (acc, item) => acc + item.quantidade * item.valor_unitario, 0
+        );
 
-  body.valor_total = valorCalculado;
+        const body: Record<string, unknown> = {
+          company_id:           companyId,
+          tipo:                 'nfe',
+          modelo:               '55',
+          pedido_id:            pedidoId,
+          forma_pagamento:      formaPagamento,
+          enviar_email:         !!destinatario.email,
+          valor_total:          valorCalculado,
+          destinatario_nome:    destinatario.nome.trim(),
+          destinatario_cpf_cnpj: destinatario.cpf_cnpj || undefined,
+          destinatario_email:   destinatario.email    || undefined,
+          destinatario_endereco: destinatario.endereco_completo || undefined,
+          itens: itens.map(item => ({
+            nome:           item.nome,
+            quantidade:     item.quantidade,
+            valor_unitario: item.valor_unitario,
+            valor_total:    item.quantidade * item.valor_unitario,
+            unidade:        item.unidade,
+            ncm:            item.ncm || '00000000',
+            cfop:           item.cfop || 5102,
+            origem_produto: item.origem_produto ?? 0,
+            produto_id:     item.produto_id,
+            ean:            item.ean,
+          })),
+        };
 
-  if (dadosNfe.destinatario.nome)
-    body.destinatario_nome = dadosNfe.destinatario.nome;
+        const { data: result, error } = await supabase.functions.invoke('emitir-nota', { body });
+        if (error) throw error;
+        if (!result.success) {
+          setErro(result.detalhe_rejeicao ?? result.error ?? 'Nota rejeitada.');
+          setStep('error');
+          return;
+        }
 
-  if (dadosNfe.destinatario.cpf_cnpj)
-    body.destinatario_cpf_cnpj = dadosNfe.destinatario.cpf_cnpj.replace(/\D/g, '');
+        // PASSO 4 — Salvar cliente após emissão bem-sucedida
+        if (destinatario.cpf_cnpj) {
+          try {
+            await salvarCliente({
+              company_id:        companyId,
+              nome:              destinatario.nome,
+              cpf_cnpj:          destinatario.cpf_cnpj,
+              email:             destinatario.email,
+              telefone:          destinatario.telefone,
+              cep:               destinatario.cep,
+              logradouro:        destinatario.logradouro,
+              numero:            destinatario.numero,
+              complemento:       destinatario.complemento,
+              bairro:            destinatario.bairro,
+              cidade:            destinatario.cidade,
+              uf:                destinatario.uf,
+              endereco_completo: destinatario.endereco_completo,
+            });
+          } catch (saveErr) {
+            // Não bloqueia o fluxo se salvar cliente falhar
+            console.warn('Aviso: não foi possível salvar cliente:', saveErr);
+          }
+        }
 
-  if (dadosNfe.destinatario.endereco)
-    body.destinatario_endereco = dadosNfe.destinatario.endereco;
+        setResultado(result);
+        setStep('success');
 
-  body.itens = dadosNfe.itens.map(it => ({
-  ...it,
-  valor_total: it.quantidade * it.valor_unitario,
-  modelo_forcado: tipoNota, // 'nfe' ou 'nfce' — força o modelo na edge
-}));
-} else {
-        body.valor_total = valor;
-        if (cpfCnpjLimpo) body.destinatario_cpf_cnpj = cpfCnpjLimpo;
-        if (destinatarioNome) body.destinatario_nome = destinatarioNome;
-        if (destinatarioEmail) body.destinatario_email = destinatarioEmail;
+      } else {
+        // ── Lógica original NFC-e / NFS-e (preservada integralmente) ──
+        const valor        = parseFloat(valorTotal.replace(',', '.'));
+        const cpfCnpjLimpo = destinatarioCpfCnpj.replace(/\D/g, '');
+
+        const body: Record<string, unknown> = {
+          company_id:      companyId,
+          tipo:            'nfce',
+          modelo:          '65',
+          pedido_id:       pedidoId,
+          forma_pagamento: formaPagamento,
+          enviar_email:    enviarEmail,
+          valor_total:     valor,
+        };
+
+        if (cpfCnpjLimpo)       body.destinatario_cpf_cnpj = cpfCnpjLimpo;
+        if (destinatarioNome)   body.destinatario_nome     = destinatarioNome;
+        if (destinatarioEmail)  body.destinatario_email    = destinatarioEmail;
         if (plano === 'nfse') {
           body.descricao_servico = descricaoServico;
         } else {
-          body.itens = [{ nome: descricaoServico || 'Produto', quantidade: 1, valor_unitario: valor, valor_total: valor, unidade: 'UN' }];
+          body.itens = [{
+            nome:           descricaoServico || 'Produto',
+            quantidade:     1,
+            valor_unitario: valor,
+            valor_total:    valor,
+            unidade:        'UN',
+          }];
         }
+
+        const { data: result, error } = await supabase.functions.invoke('emitir-nota', { body });
+        if (error) throw error;
+        if (!result.success) {
+          setErro(result.detalhe_rejeicao ?? result.error ?? 'Nota rejeitada.');
+          setStep('error');
+          return;
+        }
+        setResultado(result);
+        setStep('success');
       }
 
-      const { data: result, error } = await supabase.functions.invoke('emitir-nota', { body });
-      if (error) throw error;
-      if (!result.success) { setErro(result.detalhe_rejeicao ?? result.error ?? 'Nota rejeitada.'); setStep('error'); return; }
-      setResultado(result);
-      setStep('success');
     } catch (err: unknown) {
       setErro(err instanceof Error ? err.message : 'Erro ao emitir nota.');
       setStep('error');
     }
   }, [
-    tipoNota, valorTotal, destinatarioCpfCnpj, destinatarioNome,
-    destinatarioEmail, descricaoServico, formaPagamento, enviarEmail,
-    companyId, pedidoId, dadosNfe, plano,
+    tipoNota, destinatario, itens, modeloDocumento,
+    valorTotal, destinatarioCpfCnpj, destinatarioNome,
+    destinatarioEmail, descricaoServico, formaPagamento,
+    enviarEmail, companyId, pedidoId, plano, salvarCliente,
   ]);
 
   // ─── Estilos ───────────────────────────────────────────────────────────────
@@ -740,8 +913,15 @@ const handleAvancar = useCallback(() => {
           </div>
         );
 
-      // ── NF-e: assistente IA + painel manual em sincronia ──────────────────
-      case 'form_nfe':
+      // ── PASSO 3 — NF-e: assistente IA (esquerda) + novos componentes (direita) ──
+      case 'form_nfe': {
+        // PASSO 7 — Condição do botão calculada com novos estados
+        const nfeValida =
+          destinatario.nome.trim().length >= 1 &&
+          itens.length > 0 &&
+          itens.every(it => it.nome.trim() && it.quantidade > 0 && it.valor_unitario > 0) &&
+          !(modeloDocumento === 55 && itens.some(i => !i.ncm || i.ncm === '00000000'));
+
         return (
           <div className="flex flex-col" style={{ height: '620px' }}>
 
@@ -771,15 +951,14 @@ const handleAvancar = useCallback(() => {
             {/* Corpo */}
             <div className="flex flex-1 overflow-hidden">
 
-              {/* Coluna esquerda — Assistente IA */}
+              {/* Coluna esquerda — Assistente IA (preservado) */}
               <div className={`
                 flex-1 overflow-hidden
                 ${!isMobile ? `border-r ${border}` : ''}
                 ${isMobile && abaAtiva !== 'chat' ? 'hidden' : ''}
               `}>
-                {/* Hint sobre o painel direito — só desktop */}
                 {!isMobile && (
-                  <div className={`px-4 pt-3 pb-0 flex items-center gap-2`}>
+                  <div className="px-4 pt-3 pb-0 flex items-center gap-2">
                     <span className={`text-[11px] ${textMuted}`}>
                       💡 O assistente preenche o formulário automaticamente. Você também pode editar à direita.
                     </span>
@@ -793,7 +972,7 @@ const handleAvancar = useCallback(() => {
                 />
               </div>
 
-              {/* Coluna direita — Painel editável */}
+              {/* Coluna direita — PASSO 3: novos componentes com autocomplete */}
               <div className={`
                 overflow-hidden flex flex-col
                 ${isMobile ? 'flex-1' : 'w-[400px]'}
@@ -806,52 +985,68 @@ const handleAvancar = useCallback(() => {
                     </p>
                   </div>
                 )}
-                <div className="flex-1 overflow-hidden">
-                  <EditablePreviewNota
-                    dados={dadosNfe}
-                    onChange={handleDadosManuais}
-                    isDark={isDark}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {/* Campo Destinatário com Autocomplete */}
+                  <CampoDestinatario
+                    companyId={companyId}
+                    dados={destinatario}
+                    onChange={setDestinatario}
+                    theme={theme}
+                    required={modeloDocumento === 55}
+                  />
+
+                  {/* Divisor */}
+                  <div className={`border-t ${border}`} />
+
+                  {/* Lista de Itens com Autocomplete */}
+                  <ListaItensComAutocomplete
+                    companyId={companyId}
+                    itens={itens}
+                    onChange={setItens}
+                    theme={theme}
+                    mostrarDadosFiscais={modeloDocumento === 55}
+                    modeloDocumento={modeloDocumento}
                   />
                 </div>
               </div>
             </div>
 
-{/* Footer fixo */}
-<div className={`px-6 py-4 border-t ${border} flex gap-3 flex-shrink-0 ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
-  <button
-    onClick={() => setStep('form')}
-    className={`px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 ${
-      isDark ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
-    }`}
-  >
-    <ArrowLeft className="w-4 h-4" />
-    Voltar
-  </button>
-  {(() => {
-    const nfeValida = !!(dadosNfe && dadosNfe.itens.length > 0 &&
-      dadosNfe.itens.every(it => it.nome.trim() && it.valor_unitario > 0));
-    return (
-      <button
-        onClick={handleAvancar}
-        disabled={!nfeValida}
-        className={`flex-1 py-2 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
-          nfeValida
-            ? 'bg-blue-500 hover:bg-blue-600 text-white'
-            : isDark
-              ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-        }`}
-      >
-        {nfeValida
-          ? <><CheckCircle2 className="w-4 h-4" /> Emitir NF-e</>
-          : 'Preencha os itens para continuar'
-        }
-      </button>
-    );
-  })()}
-</div>
+            {/* Footer fixo */}
+            <div className={`px-6 py-4 border-t ${border} flex gap-3 flex-shrink-0 ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
+              <button
+                onClick={() => setStep('form')}
+                className={`px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 ${
+                  isDark ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+                }`}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Voltar
+              </button>
+              {/* PASSO 7 — Botão com nova condição disabled */}
+              <button
+                onClick={handleAvancar}
+                disabled={!nfeValida}
+                className={`flex-1 py-2 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
+                  nfeValida
+                    ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                    : isDark
+                      ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {nfeValida
+                  ? <><CheckCircle2 className="w-4 h-4" /> Emitir NF-e</>
+                  : modeloDocumento === 55 && itens.some(i => !i.ncm || i.ncm === '00000000')
+                    ? 'NCM obrigatório em todos os itens'
+                    : itens.length === 0
+                      ? 'Adicione ao menos um item'
+                      : 'Preencha os dados para continuar'
+                }
+              </button>
+            </div>
           </div>
         );
+      }
 
       // ── Confirmação ────────────────────────────────────────────────────────
       case 'confirming':
@@ -861,17 +1056,35 @@ const handleAvancar = useCallback(() => {
               <p className={`text-sm font-semibold ${textPrimary}`}>Confirme os dados:</p>
               <div className={`text-sm ${textMuted} space-y-1`}>
                 <p><span className="font-medium">Tipo:</span> {tipoLabel}</p>
-                {valorTotal && <p><span className="font-medium">Valor:</span> R$ {parseFloat(valorTotal.replace(',', '.')).toFixed(2)}</p>}
-                {dadosNfe && (
+                {/* NFC-e / NFS-e */}
+                {valorTotal && tipoNota !== 'nfe' && (
+                  <p><span className="font-medium">Valor:</span> R$ {parseFloat(valorTotal.replace(',', '.')).toFixed(2)}</p>
+                )}
+                {/* NF-e — usa novos estados */}
+                {tipoNota === 'nfe' && (
                   <>
-                    {dadosNfe.destinatario.nome && <p><span className="font-medium">Destinatário:</span> {dadosNfe.destinatario.nome}</p>}
-                    {dadosNfe.destinatario.cpf_cnpj && <p><span className="font-medium">CPF/CNPJ:</span> {dadosNfe.destinatario.cpf_cnpj}</p>}
-                    <p><span className="font-medium">Itens:</span> {dadosNfe.itens.length}</p>
-                    <p><span className="font-medium">Total:</span> R$ {dadosNfe.itens.reduce((a, i) => a + i.quantidade * i.valor_unitario, 0).toFixed(2)}</p>
+                    {destinatario.nome && (
+                      <p><span className="font-medium">Destinatário:</span> {destinatario.nome}</p>
+                    )}
+                    {destinatario.cpf_cnpj && (
+                      <p><span className="font-medium">CPF/CNPJ:</span> {destinatario.cpf_cnpj}</p>
+                    )}
+                    {destinatario.email && (
+                      <p><span className="font-medium">E-mail:</span> {destinatario.email}</p>
+                    )}
+                    <p><span className="font-medium">Itens:</span> {itens.length}</p>
+                    <p>
+                      <span className="font-medium">Total:</span> R$&nbsp;
+                      {itens.reduce((a, i) => a + i.quantidade * i.valor_unitario, 0).toFixed(2)}
+                    </p>
                   </>
                 )}
-                {descricaoServico && <p><span className="font-medium">Descrição:</span> {descricaoServico}</p>}
-                {destinatarioCpfCnpj && <p><span className="font-medium">CPF/CNPJ:</span> {destinatarioCpfCnpj}</p>}
+                {descricaoServico && tipoNota !== 'nfe' && (
+                  <p><span className="font-medium">Descrição:</span> {descricaoServico}</p>
+                )}
+                {destinatarioCpfCnpj && tipoNota !== 'nfe' && (
+                  <p><span className="font-medium">CPF/CNPJ:</span> {destinatarioCpfCnpj}</p>
+                )}
                 <p><span className="font-medium">Pagamento:</span> {formaPagamento.toUpperCase()}</p>
               </div>
             </div>
@@ -920,9 +1133,9 @@ const handleAvancar = useCallback(() => {
               )}
             </div>
             <div className={`p-4 rounded-lg border ${border} space-y-2 text-sm ${textMuted}`}>
-              {resultado?.numero_nfse   && <p><span className="font-medium">Número NFS-e:</span> {String(resultado.numero_nfse)}</p>}
-              {resultado?.numero        && <p><span className="font-medium">Número:</span> {String(resultado.numero)}</p>}
-              {resultado?.chave_acesso  && <p className="break-all"><span className="font-medium">Chave:</span> {String(resultado.chave_acesso)}</p>}
+              {resultado?.numero_nfse    && <p><span className="font-medium">Número NFS-e:</span> {String(resultado.numero_nfse)}</p>}
+              {resultado?.numero         && <p><span className="font-medium">Número:</span> {String(resultado.numero)}</p>}
+              {resultado?.chave_acesso   && <p className="break-all"><span className="font-medium">Chave:</span> {String(resultado.chave_acesso)}</p>}
               {resultado?.cod_verificacao && <p><span className="font-medium">Cód. Verificação:</span> {String(resultado.cod_verificacao)}</p>}
               {resultado?.cod_lote && resultado?.aguardando_processamento && (
                 <p><span className="font-medium">Protocolo:</span> {String(resultado.cod_lote)}</p>

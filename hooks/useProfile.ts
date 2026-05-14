@@ -30,8 +30,8 @@ interface UseProfileReturn {
   profile: SlugProfile | null;
   loading: boolean;
   token: string | null;
-  login: (identifier: string, senha?: string) => Promise<{ success: boolean; error?: string }>;
-  register: (fields: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
+  login: (identifier: string, senha?: string) => Promise<{ success: boolean; error?: string; profileId?: string; nome?: string }>;
+  register: (fields: Record<string, string>) => Promise<{ success: boolean; error?: string; profileId?: string; nome?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -115,7 +115,7 @@ export function useProfile(slug: string): UseProfileReturn {
       // Emite evento global para que outros componentes saibam
       window.dispatchEvent(new CustomEvent('eai:profileLogin', { detail: data.profile }));
 
-      return { success: true };
+      return { success: true, profileId: data.profile?.id, nome: data.profile?.nome };
     } catch (err) {
       return { success: false, error: 'Erro ao fazer login' };
     }
@@ -142,7 +142,7 @@ export function useProfile(slug: string): UseProfileReturn {
 
       window.dispatchEvent(new CustomEvent('eai:profileLogin', { detail: data.profile }));
 
-      return { success: true };
+      return { success: true, profileId: data.profile?.id, nome: data.profile?.nome };
     } catch (err) {
       return { success: false, error: 'Erro ao criar conta' };
     }

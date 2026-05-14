@@ -108,6 +108,8 @@ function VendasFunctionCarousel({
   const supabase = createClient();
   const [functions, setFunctions] = useState<VendasFunction[]>([]);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [allSmartFunctions, setAllSmartFunctions] = useState<VendasFunction[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   const isDark = theme === 'dark';
@@ -150,7 +152,15 @@ function VendasFunctionCarousel({
 
       setFunctions(ordered);
     }
-    load();
+load();
+
+    // Carrega todas as funções ativas para o showcase Smart
+    supabase
+      .from('assistant_functions')
+      .select('function_key, function_name, icon, color')
+      .eq('is_active', true)
+      .order('display_order')
+      .then(({ data }) => setAllSmartFunctions(data ?? []));
   }, [companyId]);
 
   // Filtrar funções desativadas se hideDisabledFunctions estiver ativo
@@ -229,13 +239,73 @@ function VendasFunctionCarousel({
         </div>
       </div>
 
-      <style jsx>{`
+<style jsx>{`
         @keyframes scroll-infinite {
           0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+
+      {/* Toast de upsell */}
+      {showToast && (
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex flex-col items-center gap-0.5
+            px-5 py-3 rounded-xl shadow-xl
+            bg-slate-900 dark:bg-slate-800 border border-white/10"
+          style={{ animation: 'fadeInUp 0.2s ease-out' }}
+        >
+          <p className="text-sm font-semibold text-white whitespace-nowrap">
+            Função disponível na versão Smart
+          </p>
+          <p className="text-xs text-white/50">
+            saiba mais em minhai.app
+          </p>
+        </div>
+      )}
+
+      {/* Carrossel showcase — todas as funções Smart, semi-opaco */}
+      {allSmartFunctions.length > 0 && (
+        <div className="w-full overflow-hidden mt-1" style={{ opacity: 0.45 }}>
+          <div
+            className="flex gap-3 pl-3 w-max"
+            style={{
+              animation: `scroll-infinite 40s linear infinite`,
+              willChange: 'transform',
+            }}
+          >
+            {[...allSmartFunctions, ...allSmartFunctions].map((fn, index) => (
+              <button
+                key={`smart-${fn.function_key}-${index}`}
+                onClick={() => {
+                  setShowToast(true);
+                  setTimeout(() => setShowToast(false), 2500);
+                }}
+                className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium flex items-center gap-2
+                  ${isDark
+                    ? 'bg-white/10 text-white'
+                    : 'bg-white text-gray-900'
+                  }`}
+                style={{
+                  borderLeft: `4px solid ${index % 2 === 0 ? '#3B82F6' : '#10B981'}`,
+                  boxShadow: isDark ? '0 2px 4px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.05)',
+                  cursor: 'pointer',
+                }}
+              >
+                <span className="text-base">{fn.icon}</span>
+                <span className="text-sm font-semibold whitespace-nowrap">{fn.function_name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translate(-50%, 8px); }
+          to   { opacity: 1; transform: translate(-50%, 0); }
+        }
       `}</style>
     </div>
   );

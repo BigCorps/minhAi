@@ -1,4 +1,4 @@
-*Testar o fluxo de venda completo para finalizar as vendas no assistente e depois fazer na Meta.
+*Implementar Fazer Pedido como um auxiliar de compra, testar e depois fazer na Meta.
 
 *Correção erros Vixus - Manus ith.almeida
 

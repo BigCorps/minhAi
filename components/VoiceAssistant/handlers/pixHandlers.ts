@@ -43,11 +43,20 @@ export async function handlePixCommand(
 
     const data = response.data;
 
+    if (deps.pedidoId && data.transaction_id) {
+      const supabase = createClient();
+      await supabase
+        .from('pix_transactions')
+        .update({ pedido_id: deps.pedidoId })
+        .eq('id', data.transaction_id);
+    }
+
     const pixData: PixConfirmationData = {
       transactionId: data.transaction_id,
       amount: data.amount_brl,
       qrCodeUrl: data.qr_code_url,
       pixCode: data.pix_code,
+      pedidoId: deps.pedidoId ?? null, 
     };
 
     if (setActiveModal) {

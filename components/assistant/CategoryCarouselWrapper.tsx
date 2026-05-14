@@ -329,7 +329,6 @@ load();
             className="rounded-2xl border-2 backdrop-blur-xl overflow-hidden"
             style={{
               width: '280px',
-              maxHeight: '350px',
               background: isDark
                 ? 'linear-gradient(135deg, rgba(30,41,59,0.98), rgba(51,65,85,0.98))'
                 : 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98))',

@@ -77,7 +77,7 @@ export default function ClienteRootPage() {
             </svg>
           </div>
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: textPrimary, margin: '0 0 8px' }}>Área do Cliente</h1>
-          <p style={{ color: textSecondary, fontSize: '14px', margin: 0 }}>Acesse seu painel de cliente</p>
+          <p style={{ color: textSecondary, fontSize: '14px', margin: 0 }}>Acesse seu painel de cliente clicando no icone de usuário no seu assistente.</p>
         </div>
 
         <form onSubmit={handleSubmit} style={{

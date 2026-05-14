@@ -198,6 +198,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'RelatorioVendasDisplay': dynamic(() => import('@/components/assistant/RelatorioVendasDisplay'), { ssr: false }),
   'MinhasComprasDisplay': dynamic(() => import('@/components/assistant/MinhasComprasDisplay'), { ssr: false }),
   'ChamarGerenteDisplay': dynamic(() => import('@/components/assistant/ChamarGerenteDisplay'), { ssr: false }),
+  'FazerPedidoDisplay': dynamic(() => import('@/components/assistant/FazerPedidoDisplay'), { ssr: false }),
   
   // ── Fila de Atendimento ───────────────────────────────────
   'FilaAtendimentoDisplay': dynamic(() => import('@/components/VoiceAssistant/modals/FilaAtendimentoDisplay'), { ssr: false }),

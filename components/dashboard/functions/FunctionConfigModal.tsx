@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import { InfinitePayConfigForm } from './InfinitePayConfigModal';
 import { MpPointConfigForm } from './MpPointConfigModal'
+import { GerarFilaConfigForm } from './GerarFilaConfigModal';
 import DrivePickerButton from '@/components/ui/DrivePickerButton';
 import {
   LerQRCodeConfigForm,
@@ -4484,6 +4485,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'pre_atendimento': PreAtendimentoConfigForm,
   'responder_pesquisa': PesquisasConfigForm,
   'emitir_nota': EmitirNotaForm,
+  'gerar_fila': GerarFilaConfigForm, 
 };
 
 // ===== INTERFACE =====
@@ -4881,7 +4883,7 @@ try {
           >
             Cancelar
           </button>
-          {hasForm && (
+          {hasForm && functionData?.function_key !== 'gerar_fila' && (
             <button
               onClick={handleSave}
               disabled={isSaving || isLoading}

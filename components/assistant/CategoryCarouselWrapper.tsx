@@ -132,6 +132,11 @@ function VendasFunctionCarousel({
   const [functions, setFunctions] = useState<VendasFunction[]>([]);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
+  const [smartFunctions, setSmartFunctions] = useState<Record<string, {function_key: string; function_name: string; short_description?: string}[]>>({});
+  const [activeShowcaseCategory, setActiveShowcaseCategory] = useState<string | null>(null);
+  const [showcasePanelPos, setShowcasePanelPos] = useState<{left: number; bottom: number} | null>(null);
+  const showcaseChipRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const showcasePanelRef = useRef<HTMLDivElement>(null);
   const [allSmartFunctions, setAllSmartFunctions] = useState<VendasFunction[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -143,6 +148,21 @@ function VendasFunctionCarousel({
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+useEffect(() => {
+    if (!activeShowcaseCategory) return;
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      const outsidePanel = showcasePanelRef.current && !showcasePanelRef.current.contains(target);
+      const outsideChips = !Array.from(showcaseChipRefs.current.values()).some(el => el.contains(target));
+      if (outsidePanel && outsideChips) {
+        setActiveShowcaseCategory(null);
+        setShowcasePanelPos(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeShowcaseCategory]);
 
   useEffect(() => {
     async function load() {
@@ -177,13 +197,21 @@ function VendasFunctionCarousel({
     }
 load();
 
-    // Carrega todas as funções ativas para o showcase Smart
+// Carrega funções Smart agrupadas por categoria para o showcase
     supabase
       .from('assistant_functions')
-      .select('function_key, function_name, icon, color')
+      .select('function_key, function_name, short_description, function_category')
       .eq('is_active', true)
       .order('display_order')
-      .then(({ data }) => setAllSmartFunctions(data ?? []));
+      .then(({ data }) => {
+        if (!data) return;
+        const grouped: Record<string, typeof data> = {};
+        data.forEach(fn => {
+          if (!grouped[fn.function_category]) grouped[fn.function_category] = [];
+          grouped[fn.function_category].push(fn);
+        });
+        setSmartFunctions(grouped);
+      });
   }, [companyId]);
 
   // Filtrar funções desativadas se hideDisabledFunctions estiver ativo
@@ -286,43 +314,121 @@ load();
         </div>
       )}
 
-{/* Carrossel showcase — categorias Smart, semi-opaco, mesmo visual do CategoryCarousel */}
-      {allSmartFunctions.length > 0 && (
-        <div className="w-full overflow-hidden mt-1 no-scrollbar" style={{ opacity: 0.45 }}>
+{/* Painel flutuante do showcase */}
+      {activeShowcaseCategory && showcasePanelPos && (
+        <div
+          ref={showcasePanelRef}
+          className="z-[100]"
+          style={{
+            position: 'fixed',
+            left: `${showcasePanelPos.left}px`,
+            bottom: `${showcasePanelPos.bottom}px`,
+          }}
+        >
           <div
-            className="flex gap-3 pl-3 w-max"
+            className="rounded-2xl border-2 backdrop-blur-xl overflow-hidden"
             style={{
-              animation: `scroll-infinite ${calcSmartScrollDuration(isMobile)}s linear infinite`,
-              willChange: 'transform',
+              width: '280px',
+              maxHeight: '350px',
+              background: isDark
+                ? 'linear-gradient(135deg, rgba(30,41,59,0.98), rgba(51,65,85,0.98))'
+                : 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98))',
+              borderColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)',
+              boxShadow: isDark
+                ? '0 -10px 40px rgba(0,0,0,0.5)'
+                : '0 -10px 40px rgba(0,0,0,0.15)',
             }}
           >
-            {[...SMART_CATEGORIES, ...SMART_CATEGORIES].map((cat, index) => {
-              const borderColor = index % 2 === 0 ? '#3B82F6' : '#10B981';
-              return (
-                <button
-                  key={`showcase-${cat.key}-${index}`}
+            <div
+              className="px-3 py-1.5 font-semibold border-b text-xs"
+              style={{
+                borderColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)',
+                color: isDark ? 'rgb(226,232,240)' : 'rgb(30,41,59)',
+              }}
+            >
+              {SMART_CATEGORIES.find(c => c.key === activeShowcaseCategory)?.name}
+            </div>
+            <div className="overflow-y-auto" style={{ maxHeight: '300px' }}>
+              {(smartFunctions[activeShowcaseCategory] ?? []).map(fn => (
+                <div
+                  key={fn.function_key}
+                  className="px-3 py-1.5 border-b border-white/5 cursor-pointer transition-all"
+                  style={{
+                    background: isDark ? 'rgba(51,65,85,0.5)' : 'rgba(241,245,249,0.8)',
+                    color: isDark ? 'rgb(226,232,240)' : 'rgb(30,41,59)',
+                  }}
                   onClick={() => {
+                    setActiveShowcaseCategory(null);
+                    setShowcasePanelPos(null);
                     setShowToast(true);
                     setTimeout(() => setShowToast(false), 2500);
                   }}
-                  className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 ${
-                    isDark
-                      ? 'bg-white/10 text-white'
-                      : 'bg-white text-gray-900'
-                  }`}
-                  style={{
-                    borderLeft: `4px solid ${borderColor}`,
-                    boxShadow: isDark
-                      ? '0 2px 4px rgba(0,0,0,0.2)'
-                      : '0 2px 8px rgba(0,0,0,0.05)',
-                  }}
                 >
-                  <span className="text-sm font-semibold whitespace-nowrap">{cat.name}</span>
-                </button>
-              );
-            })}
+                  <span className="font-medium text-[11px] leading-tight block">
+                    {fn.function_name}
+                  </span>
+                  {fn.short_description && (
+                    <span className="text-[9px] leading-tight opacity-60 block mt-0.5">
+                      {fn.short_description}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Carrossel showcase — categorias Smart, semi-opaco */}
+      <div className="w-full overflow-hidden mt-1 no-scrollbar" style={{ opacity: 0.45 }}>
+        <div
+          className="flex gap-3 pl-3 w-max"
+          style={{
+            animation: `scroll-infinite ${calcSmartScrollDuration(isMobile)}s linear infinite`,
+            willChange: 'transform',
+          }}
+        >
+          {[...SMART_CATEGORIES, ...SMART_CATEGORIES].map((cat, index) => {
+            const borderColor = index % 2 === 0 ? '#3B82F6' : '#10B981';
+            return (
+              <button
+                key={`showcase-${cat.key}-${index}`}
+                ref={el => {
+                  if (el && index < SMART_CATEGORIES.length) {
+                    showcaseChipRefs.current.set(cat.key, el);
+                  }
+                }}
+                onClick={(e) => {
+                  const chip = showcaseChipRefs.current.get(cat.key);
+                  const rect = chip?.getBoundingClientRect();
+                  if (!rect) return;
+                  const panelWidth = 280;
+                  const vw = window.innerWidth;
+                  let left = rect.left + rect.width / 2 - panelWidth / 2;
+                  if (left < 10) left = 10;
+                  if (left + panelWidth > vw - 10) left = vw - panelWidth - 10;
+                  if (activeShowcaseCategory === cat.key) {
+                    setActiveShowcaseCategory(null);
+                    setShowcasePanelPos(null);
+                  } else {
+                    setActiveShowcaseCategory(cat.key);
+                    setShowcasePanelPos({ left, bottom: window.innerHeight - rect.top + 8 });
+                  }
+                }}
+                className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 ${
+                  isDark ? 'bg-white/10 text-white' : 'bg-white text-gray-900'
+                }`}
+                style={{
+                  borderLeft: `4px solid ${borderColor}`,
+                  boxShadow: isDark ? '0 2px 4px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.05)',
+                }}
+              >
+                <span className="text-sm font-semibold whitespace-nowrap">{cat.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
       )}
 
       <style jsx>{`

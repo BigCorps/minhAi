@@ -105,7 +105,7 @@ REGRA CRÍTICA: quando o cliente escolher forma de pagamento (pix, link, débito
 ### Opção 3 — retorne JSON sem functionKey (pergunta de esclarecimento)
 Quando o pedido for ambíguo e precisar perguntar ao cliente para decidir a função.
 Exemplos: "quero pagar" (tem PIX, débito e crédito) → pergunta qual prefere
-{"response": "pergunta curta e direta ao cliente"}
+{"response": "uma pergunta curta e direta ao cliente sobre o método de pagamento que ele prefere"}
 
 ### Opção 4 — retorne JSON com functionKey (confirmação)
 Quando o cliente confirmar ("sim", "pode", "isso", "quero", "esse mesmo"):

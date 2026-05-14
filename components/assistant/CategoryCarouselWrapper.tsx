@@ -92,6 +92,29 @@ interface VendasFunction {
   is_enabled: boolean;
 }
 
+// Categorias do minhAi Smart para o carrossel showcase
+const SMART_CATEGORIES = [
+  { key: 'ai_assistant',  name: 'Conhecimento' },
+  { key: 'products',      name: 'Comercial' },
+  { key: 'payment',       name: 'Financeiro' },
+  { key: 'information',   name: 'Informação' },
+  { key: 'video',         name: 'Multimídia' },
+  { key: 'schedule',      name: 'Agendamento' },
+  { key: 'contact',       name: 'Contato' },
+  { key: 'configuration', name: 'Localização' },
+  { key: 'knowledge',     name: 'Consultas' },
+  { key: 'biometry',      name: 'Identificação' },
+  { key: 'images',        name: 'Arquivos' },
+  { key: 'utylities',     name: 'Utilitários' },
+  { key: 'codes',         name: 'Câmera' },
+  { key: 'services',      name: 'Serviços' },
+];
+
+function calcSmartScrollDuration(isMobile: boolean): number {
+  const perItem = isMobile ? 3.5 : 2.5;
+  return Math.max(8, Math.min(60, SMART_CATEGORIES.length * perItem));
+}
+
 function VendasFunctionCarousel({
   companyId,
   onFunctionClick,
@@ -263,38 +286,41 @@ load();
         </div>
       )}
 
-      {/* Carrossel showcase — todas as funções Smart, semi-opaco */}
+{/* Carrossel showcase — categorias Smart, semi-opaco, mesmo visual do CategoryCarousel */}
       {allSmartFunctions.length > 0 && (
-        <div className="w-full overflow-hidden mt-1" style={{ opacity: 0.45 }}>
+        <div className="w-full overflow-hidden mt-1 no-scrollbar" style={{ opacity: 0.45 }}>
           <div
             className="flex gap-3 pl-3 w-max"
             style={{
-              animation: `scroll-infinite 40s linear infinite`,
+              animation: `scroll-infinite ${calcSmartScrollDuration(isMobile)}s linear infinite`,
               willChange: 'transform',
             }}
           >
-            {[...allSmartFunctions, ...allSmartFunctions].map((fn, index) => (
-              <button
-                key={`smart-${fn.function_key}-${index}`}
-                onClick={() => {
-                  setShowToast(true);
-                  setTimeout(() => setShowToast(false), 2500);
-                }}
-                className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium flex items-center gap-2
-                  ${isDark
-                    ? 'bg-white/10 text-white'
-                    : 'bg-white text-gray-900'
+            {[...SMART_CATEGORIES, ...SMART_CATEGORIES].map((cat, index) => {
+              const borderColor = index % 2 === 0 ? '#3B82F6' : '#10B981';
+              return (
+                <button
+                  key={`showcase-${cat.key}-${index}`}
+                  onClick={() => {
+                    setShowToast(true);
+                    setTimeout(() => setShowToast(false), 2500);
+                  }}
+                  className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 ${
+                    isDark
+                      ? 'bg-white/10 text-white'
+                      : 'bg-white text-gray-900'
                   }`}
-                style={{
-                  borderLeft: `4px solid ${index % 2 === 0 ? '#3B82F6' : '#10B981'}`,
-                  boxShadow: isDark ? '0 2px 4px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.05)',
-                  cursor: 'pointer',
-                }}
-              >
-                <span className="text-base">{fn.icon}</span>
-                <span className="text-sm font-semibold whitespace-nowrap">{fn.function_name}</span>
-              </button>
-            ))}
+                  style={{
+                    borderLeft: `4px solid ${borderColor}`,
+                    boxShadow: isDark
+                      ? '0 2px 4px rgba(0,0,0,0.2)'
+                      : '0 2px 8px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <span className="text-sm font-semibold whitespace-nowrap">{cat.name}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

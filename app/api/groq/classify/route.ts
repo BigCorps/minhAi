@@ -97,9 +97,10 @@ ${forceResponse ? '' : 'Na dúvida → null'}
 
 ### Opção 2 — retorne JSON com functionKey
 Quando o cliente pedir EXPLICITAMENTE para executar uma ação — não apenas perguntar sobre ela.
-Exemplos VÁLIDOS: "gera um pix de 50", "abre o cardápio", "quero pagar com link"
+Exemplos VÁLIDOS: "gera um pix de 50", "abre o cardápio", "quero pagar com link", "quero pagar no pix", "pix", "pode ser pix"
 Exemplos INVÁLIDOS que devem usar Opção 3: "quais formas de pagamento?" → perguntar qual prefere; "quanto custa?" → responder e perguntar se quer comprar
-{"response": "frase curta PERGUNTANDO confirmação, ex: 'Posso gerar o PIX de R$50 agora?'", "functionKey": "function_key_aqui"}
+REGRA CRÍTICA: quando o cliente escolher forma de pagamento (pix, link, débito, crédito), execute IMEDIATAMENTE — não peça confirmação. O cliente já confirmou ao escolher.
+{"response": "frase curta confirmando a ação SEM perguntar, ex: 'Gerando PIX agora.'", "functionKey": "function_key_aqui"}
 
 ### Opção 3 — retorne JSON sem functionKey (pergunta de esclarecimento)
 Quando o pedido for ambíguo e precisar perguntar ao cliente para decidir a função.

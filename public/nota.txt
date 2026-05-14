@@ -2,15 +2,14 @@
 
 *Landing GEO - jiuithsu - 15h30
 
-*Fazer a configuração da fila na função gerar fila, para tambem gerenciarem por ali e não apenas pelo colaborador
-
 *Fazer as paginas /ia /pix /pay simples para digitar o slug e ja entrar no slug, para não ser uma pagina 404
 
 *Voltar o carrossel como era antes mas deixando tudo oculto noma versão vendas (mas sem a possibilidade de ocultar e travar) com apenas 4 botões maiores acima do carrossel rodando: modo vendas / cadastro / venda rápida / *agenda *podendo ativar ou não 
 
 *Planilha Vixus importando tambem os fornecedores e cadastros e esta pronto - miriampostos
+*Correção erros Vixus - Manus ith.almeida
 
-*Notas funcionando - ajustar - fofopandababy
+*Notas funcionando - implementar no modal e testar os 3 tipos de notas - fofopandababy - 13h30
 
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 

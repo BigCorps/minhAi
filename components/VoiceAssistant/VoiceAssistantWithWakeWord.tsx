@@ -564,7 +564,33 @@ usePresenceDetector({
         data: { companyId, callId, roomUrl, token: receiverToken, callerName },
       });
     };
-    window.addEventListener('eai:incomingVideoCall', handleIncomingCall);
+window.addEventListener('eai:incomingVideoCall', handleIncomingCall);
+
+    // ── Pós-venda: identificação do cliente após pagamento confirmado ──
+    const handleSolicitarIdentificacao = async (e: any) => {
+      const { pedidoId } = e.detail;
+      setActiveModal({
+        type: 'LoginClienteDisplay',
+        data: {
+          companyId,
+          slug: slug ?? '',
+          profile: null,
+          pedidoIdParaVincular: pedidoId,
+        }
+      });
+      await playText('Obrigado pela compra! Para enviarmos sua confirmação, informe seu nome ou telefone.');
+    };
+
+    const handleEnviarConfirmacao = (e: any) => {
+      const { pedidoId, profileId } = e.detail;
+      const supabase = createClient();
+      supabase.functions.invoke('confirmar-venda-cliente', {
+        body: { pedido_id: pedidoId, profile_id: profileId }
+      }).catch(() => {});
+    };
+
+    window.addEventListener('eai:solicitarIdentificacaoCliente', handleSolicitarIdentificacao);
+    window.addEventListener('eai:enviarConfirmacaoCliente', handleEnviarConfirmacao);
 
     return () => {
       isActiveRef.current = false;
@@ -573,6 +599,8 @@ usePresenceDetector({
       window.removeEventListener('voiceAssistantFunctionClick', handleExternalFunctionClick);
       window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('eai:incomingVideoCall', handleIncomingCall);
+      window.removeEventListener('eai:solicitarIdentificacaoCliente', handleSolicitarIdentificacao);
+      window.removeEventListener('eai:enviarConfirmacaoCliente', handleEnviarConfirmacao);
     };
   }, []);
 
@@ -926,6 +954,7 @@ useEffect(() => {
           sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
           setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
           onFunctionDetected: (k) => handleFunctionClick(k),
+          profileId: profileRef.current?.id ?? undefined, 
         });
         break;
       case 'link_pagamento':

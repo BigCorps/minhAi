@@ -16,6 +16,7 @@ interface PixDeps {
   // Opcional: quando fornecido, abre via ActionModals (necessário no modo texto,
   // onde o AvatarFace não é renderizado)
   setActiveModal?: (modal: { type: string; data: any } | null) => void;
+  profileId?: string | null; 
 }
 
 /**
@@ -113,7 +114,34 @@ export async function handleConfirmPix(
       setPixConfirmationData(null);
     }
 
-    await playText('Pagamento confirmado com sucesso!');
+await playText('Pagamento confirmado com sucesso!');
+
+    // Pós-venda: vincular cliente ao pedido se houver contexto de produto
+    if (pixConfirmationData.pedidoId) {
+      const supabase = createClient();
+      const { data: pedido } = await supabase
+        .from('pedidos')
+        .select('profile_id, cliente_nome')
+        .eq('id', pixConfirmationData.pedidoId)
+        .single();
+
+      const profileIdAtual = (deps as any).profileId ?? null;
+
+      if (profileIdAtual && !pedido?.profile_id) {
+        // Perfil logado — vincular direto
+        await supabase.from('pedidos')
+          .update({ profile_id: profileIdAtual })
+          .eq('id', pixConfirmationData.pedidoId);
+        window.dispatchEvent(new CustomEvent('eai:enviarConfirmacaoCliente', {
+          detail: { pedidoId: pixConfirmationData.pedidoId, profileId: profileIdAtual }
+        }));
+      } else if (!pedido?.profile_id && !pedido?.cliente_nome) {
+        // Sem cliente — solicitar identificação
+        window.dispatchEvent(new CustomEvent('eai:solicitarIdentificacaoCliente', {
+          detail: { pedidoId: pixConfirmationData.pedidoId }
+        }));
+      }
+    }
 
     await saveInteractionToHistory(
       companyId,

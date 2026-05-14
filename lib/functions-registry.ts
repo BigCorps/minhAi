@@ -6509,7 +6509,7 @@ fazer_pedido: {
   voiceTriggers: [
     'quero pedir', 'fazer pedido', 'pedir agora',
     'adicionar ao carrinho', 'quero comprar',
-    'adiciona', 'coloca no carrinho',
+    'estou querendo um produto', 'coloca no carrinho',
   ],
   examplePhrases: [
     'Quero 2 sucos de laranja',
@@ -6526,47 +6526,14 @@ fazer_pedido: {
   creditsPerUse: 0,
   requiresPayment: false,
   isPremium: false,
-handler: async ({ transcript, playText, slug }) => {
+handler: async ({ transcript, playText, setActiveModal, companyId }) => {
   try {
-    // Extrai itens do transcript
-    const numerais: Record<string, string> = {
-      'um': '1', 'uma': '1', 'dois': '2', 'duas': '2',
-      'três': '3', 'tres': '3', 'quatro': '4', 'cinco': '5',
-      'seis': '6', 'sete': '7', 'oito': '8', 'nove': '9', 'dez': '10',
-    };
-    
-    let textoNorm = (transcript ?? '').toLowerCase();
-    for (const [palavra, num] of Object.entries(numerais)) {
-      textoNorm = textoNorm.replace(new RegExp(`\\b${palavra}\\b`, 'g'), num);
-    }
-    
-    const regex = /(\d+)\s+([a-záéíóúãõâêîôûç][a-záéíóúãõâêîôûç\s]{2,40?}?)(?=\s*(?:e\s|\s*,|\s*$))/gi;
-    const itensBrutos: { nome: string; quantidade: number }[] = [];
-    let match;
-    while ((match = regex.exec(textoNorm)) !== null) {
-      const nome = match[2].replace(/\b(de|do|da|um|uma|o|a)\s*$/i, '').trim();
-      if (nome.length >= 3) {
-        itensBrutos.push({ nome, quantidade: parseInt(match[1]) });
-      }
-    }
-
-    const baseUrl = getContextualRoute('vendas', slug);
-
-    // Sem itens → abre modo venda normal
-    if (itensBrutos.length === 0) {
-      window.location.href = baseUrl;
-      await playText('Abrindo o cardápio. Escolha os produtos.');
+    if (setActiveModal && companyId) {
+      setActiveModal({ type: 'FazerPedidoDisplay', data: { companyId } });
+      await playText('Serei seu assistente de vendas.');
       return true;
     }
-
-    // Com itens → serializa e navega
-    const params = new URLSearchParams({
-      itens: JSON.stringify(itensBrutos),
-    });
-
-    await playText('Buscando os produtos. Aguarde...');
-    window.location.href = `${baseUrl}?${params.toString()}`;
-    return true;
+    return false;
   } catch {
     const baseUrl = getContextualRoute('vendas', slug);
     window.location.href = baseUrl;

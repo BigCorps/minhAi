@@ -175,9 +175,7 @@ export default function LoginClienteDisplay({
     onClose();
   };
 
-  if (!mounted) return null;
-
-  // Vincula perfil identificado ao pedido pós-pagamento
+// Vincula perfil identificado ao pedido pós-pagamento
   const vincularAoPedido = async (profileId: string, nome: string) => {
     const pedidoId = data.pedidoIdParaVincular;
     if (!pedidoId) return;
@@ -200,6 +198,8 @@ export default function LoginClienteDisplay({
       }));
     } catch { /* não crítico */ }
   };
+
+  if (!mounted) return null;
 
   const hasIdentifier = configFields.includes('email') || configFields.includes('telefone');
 

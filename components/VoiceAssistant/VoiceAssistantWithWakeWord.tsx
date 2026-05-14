@@ -2265,6 +2265,7 @@ const response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/proces
   const handleConfirmPixLocal = () =>
     handleConfirmPix(pixStateRef.current?.pixConfirmationData ?? null, {
       companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings,
+      profileId: profileRef.current?.id ?? null,
     });
 
   const handleCancelPixLocal = () =>

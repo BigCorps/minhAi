@@ -125,6 +125,7 @@ const CONFIGURABLE_FUNCTIONS = [
   'chamar_gerente',
   'pre_atendimento',
   'responder_pesquisa',
+  'gerar_senha',
   'tef_debito',
   'tef_credito'
 ];

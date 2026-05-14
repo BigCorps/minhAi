@@ -9,25 +9,6 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
-import {
-  Bell,
-  BarChart3,
-  Settings,
-  Tv,
-  Play,
-  CheckCircle2,
-  Pause,
-  XCircle,
-  Users,
-  Clock,
-  TrendingUp,
-  AlertCircle,
-  Save,
-  Hash,
-  FileText,
-  Calendar,
-} from 'lucide-react';
-
 // ------------------------------------
 // Tipos locais
 // ------------------------------------

@@ -22,11 +22,9 @@ interface CheckoutFlowProps {
   theme: 'dark' | 'light';
   onClose: () => void;
   playText?: (text: string) => Promise<void>;
-  /** Chaves de métodos ativos vindas do banco (company_function_settings).
-   * Ex: ['pix_generate', 'tef_debito', 'link_pagamento']
-   * Se undefined, exibe todos (comportamento legado). */
   metodosAtivos?: string[];
   profile?: { nome: string; email?: string | null; identificador?: string | null; telefone?: string | null; endereco?: string | null } | null;
+  observacaoEntrega?: string | null;
 }
 
 function usePixTimer(expiresAt: string | null) {
@@ -49,7 +47,7 @@ function formatTime(s: number) {
   return `${m}:${(s % 60).toString().padStart(2, '0')}`;
 }
 
-export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos, profile }: CheckoutFlowProps) {
+export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos, profile, observacaoEntrega }: CheckoutFlowProps) {
   const { itens, total, clear } = useCart();
   const isDark = theme === 'dark';
 
@@ -359,7 +357,8 @@ const div = document.createElement('div');
         cliente_nome: clienteNome || undefined,
         cliente_telefone: clienteTel || undefined,
         itens,
-        metodo_pagamento: metodo === 'link' ? 'nfc' : metodo, // link usa cobranca igual ao nfc
+        metodo_pagamento: metodo === 'link' ? 'nfc' : metodo,
+        observacoes: observacaoEntrega || undefined,
       });
       setPedidoId(pedido.id);
 

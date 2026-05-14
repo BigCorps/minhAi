@@ -76,7 +76,7 @@ Envie uma mensagem de teste para seu número e veja o assistente respondendo em 
 
 ## Quanto custa?
 
-O minhAi Smart cobra a partir de **R$ 0,09 por interação** — sem mensalidade fixa. Para negócios que vendem produtos no balcão, o **minhAi Vendas é gratuito** para o lojista, com 10% de comissão sobre cada venda confirmada.
+O minhAi Smart cobra a partir de **R$ 0,05 por interação** — sem mensalidade fixa. Para negócios que vendem produtos no balcão, o **minhAi Vendas é gratuito** para o lojista, com 10% de comissão sobre cada venda confirmada.
 
 ## Conclusão
 
@@ -501,19 +501,19 @@ IAs generativas selecionam fontes com base em quatro fatores principais:
 
 ### 1. llms.txt — o robots.txt das IAs
 
-Crie um arquivo `/public/llms.txt` na raiz do seu site com informações densas e factuais sobre sua empresa em Markdown. Crawlers como Perplexity e Claude verificam esse arquivo para entender quem você é antes de indexar o restante do site.
+Crie um arquivo \`/public/llms.txt\` na raiz do seu site com informações densas e factuais sobre sua empresa em Markdown. Crawlers como Perplexity e Claude verificam esse arquivo para entender quem você é antes de indexar o restante do site.
 
 ### 2. robots.txt com crawlers de IA liberados
 
-Garanta que GPTBot, ClaudeBot, PerplexityBot e outros crawlers de IA têm acesso ao seu conteúdo público. Muitos sites bloqueiam esses bots sem querer ao usar configurações de robots.txt genéricas.
+Garanta que GPTBot, ClaudeBot, PerplexityBot e outros crawlers de IA têm acesso ao seu conteúdo público. Muitos sites bloqueiam esses bots sem querer ao usar configurações de \`robots.txt\` genéricas.
 
 ### 3. JSON-LD rico com FAQPage e HowTo
 
-Perguntas e respostas estruturadas com Schema.org são facilmente citadas por IAs. Um bloco FAQPage com perguntas que você quer que a IA responda sobre você é muito eficaz.
+Perguntas e respostas estruturadas com Schema.org são facilmente citadas por IAs. Um bloco \`FAQPage\` com perguntas que você quer que a IA responda sobre você é muito eficaz.
 
 ### 4. Páginas de nicho por segmento
 
-Páginas como /para/ia-para-restaurante e /para/agendamento-clinica têm muito mais chance de ser citadas do que páginas genéricas, porque respondem perguntas específicas que usuários fazem às IAs.
+Páginas como \`/para/ia-para-restaurante\` e \`/para/agendamento-clinica\` têm muito mais chance de ser citadas do que páginas genéricas, porque respondem perguntas específicas que usuários fazem às IAs.
 
 ### 5. Conteúdo factual e citável
 
@@ -522,12 +522,12 @@ IAs preferem citar fatos verificáveis: preços exatos, percentuais, comparaçõ
 ## O que o minhAi já implementou de GEO
 
 O próprio minhAi utiliza todas essas técnicas:
-- `llms.txt` em `/public` com descrição completa do produto
-- `robots.txt` com 15 crawlers de IA liberados explicitamente
-- `FAQPage` JSON-LD na home e em 30+ páginas de nicho
-- `HowTo` JSON-LD descrevendo o processo de configuração
-- `SoftwareApplication` com `featureList` de 34 funcionalidades
-- Páginas `/para/[slug]` para cada segmento e funcionalidade
+- \`llms.txt\` em \`/public\` com descrição completa do produto
+- \`robots.txt\` com 15 crawlers de IA liberados explicitamente
+- \`FAQPage\` JSON-LD na home e em 30+ páginas de nicho
+- \`HowTo\` JSON-LD descrevendo o processo de configuração
+- \`SoftwareApplication\` com \`featureList\` de 34 funcionalidades
+- Páginas \`/para/[slug]\` para cada segmento e funcionalidade
 
 ## Conclusão
 

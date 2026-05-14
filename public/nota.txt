@@ -1,12 +1,14 @@
 *Fazer outro assistente para que apos a venda, ja confira o cadastro do cliente, e envie as mensagens de confirmação para finalizar as vendas no assistente e na Meta.
 
-*Landing GEO - jiuithsu
+*Landing GEO - jiuithsu - 15h30
 
 *Fazer a configuração da fila na função gerar fila, para tambem gerenciarem por ali e não apenas pelo colaborador
 
 *Funções Meta - ith.almeida
 
 *Adicionar botão no template meta.
+
+*Fazer as paginas /ia /pix /pay simples para digitar o slug e ja entrar no slug, para não ser uma pagina 404
 
 *Voltar o carrossel como era antes mas deixando tudo oculto noma versão vendas (mas sem a possibilidade de ocultar e travar) com apenas 4 botões maiores acima do carrossel rodando: modo vendas / cadastro / venda rápida / *agenda *podendo ativar ou não 
 

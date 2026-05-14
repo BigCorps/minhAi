@@ -2,10 +2,6 @@
 
 *Landing GEO - jiuithsu - 15h30
 
-*Fazer as paginas /ia /pix /pay simples para digitar o slug e ja entrar no slug, para não ser uma pagina 404
-
-*Voltar o carrossel como era antes mas deixando tudo oculto noma versão vendas (mas sem a possibilidade de ocultar e travar) com apenas 4 botões maiores acima do carrossel rodando: modo vendas / cadastro / venda rápida / *agenda *podendo ativar ou não 
-
 *Planilha Vixus importando tambem os fornecedores e cadastros e esta pronto - miriampostos
 *Correção erros Vixus - Manus ith.almeida
 
@@ -20,7 +16,7 @@
 * Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app / postotec.app / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
 - iapos, itend e eai já registrados (para cobranças , atendimento e funcionários IA) - relatório em anexo no email
 
-*Carrossel no footer com 15 empresas que usam a
+*Carrossel no footer com 15 empresas que usam a minhAi futuramente
 
 *Gilbarco com abastecimento por IA
 

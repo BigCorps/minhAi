@@ -462,7 +462,7 @@ Acesse **Configurações → Modo Totem** e ative. Configure uma senha de saída
 Use o modo Kiosk nativo do Chrome OS e aponte para a URL do assistente.
 
 **Windows com Chrome:**
-Use o atalho `chrome.exe --kiosk [URL]` para abrir em modo kiosk.
+Use o atalho \`chrome.exe --kiosk [URL]\` para abrir em modo kiosk.
 
 ## Segurança
 
@@ -648,42 +648,6 @@ Se nenhum dos itens acima resolver, tente:
 ## Ainda com problema?
 
 Entre em contato via WhatsApp (+55 11 98731-1425) com o ID do seu assistente (disponível em Dashboard → Assistentes → [nome] → Configurações → ID).
-        `.trim(),
-      },
-      {
-        slug: 'pix-nao-confirmando',
-        titulo: 'Pagamento PIX não está sendo confirmado automaticamente',
-        resumo: 'O que verificar quando o sistema não detecta o pagamento PIX em tempo real.',
-        publishedAt: '2026-04-05',
-        updatedAt: '2026-05-01',
-        conteudo: `
-## Por que a confirmação pode falhar?
-
-A confirmação automática de PIX depende do webhook do Banco Inter. Se a notificação não chega, o sistema não detecta o pagamento.
-
-## Checklist
-
-**1. Credenciais do Inter válidas**
-Dashboard → Integrações → PIX → verifique se o Client ID e Secret ainda são válidos. Tokens podem expirar — gere novos no Portal do Desenvolvedor do Inter.
-
-**2. Webhook configurado**
-No Portal do Desenvolvedor do Inter, confirme que o webhook está apontando para:
-`https://api.minhai.app/webhooks/inter`
-
-**3. Conta Inter ativa**
-Verifique se a conta Banco Inter está ativa e sem pendências.
-
-**4. Chave PIX correta**
-Confirme que a chave PIX cadastrada no minhAi é a mesma da sua conta Inter.
-
-## Confirmação manual
-
-Enquanto resolve o problema, você pode confirmar pagamentos manualmente:
-Dashboard → Transações → [transação] → "Marcar como pago"
-
-## Contato Inter
-
-Se o problema persistir, contate o suporte do Banco Inter (Central de Atendimento Inter: 3003-4070) para verificar se o webhook está ativo na conta.
         `.trim(),
       },
     ],

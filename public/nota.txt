@@ -1,8 +1,8 @@
-*Fazer outro assistente para que apos a venda, ja confira o cadastro do cliente, e envie as mensagens de confirmação para finalizar as vendas no assistente e na Meta.
+*Testar o fluxo de venda completo ara finalizar as vendas no assistente e depois fazer na Meta.
 
 *Correção erros Vixus - Manus ith.almeida
 
-*Notas funcionando - implementar no modal e testar os 3 tipos de notas - fofopandababy - 18h50
+*Notas funcionando - (adicionar aba de cadastros de notas) e testar os 3 tipos de notas - fofopandababy - 18h50
 
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 

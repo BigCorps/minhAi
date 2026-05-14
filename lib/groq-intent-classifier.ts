@@ -229,6 +229,35 @@ let pedidoId: string | null = null;
               .then(() => {}).catch(() => {});
           }
 
+// Tenta extrair valor do histórico antes de pedir
+          const priceInHistory = conversationHistory
+            .slice()
+            .reverse()
+            .find((m: any) => /R\$\s*\d+/.test(m.content));
+
+          if (priceInHistory) {
+            const priceMatch = priceInHistory.content.match(/R\$\s*(\d+(?:[.,]\d{1,2})?)/);
+            if (priceMatch) {
+              const amount = parseFloat(priceMatch[1].replace(',', '.'));
+              console.log(`💡 __payment_choice__ valor do histórico: R$${amount} → ${resolved}`);
+
+              if (effectiveSessionId) {
+                const supabase = createClient();
+                supabase
+                  .from('assistant_sessions')
+                  .update({ last_function_keys: [] })
+                  .eq('id', effectiveSessionId)
+                  .then(() => {}).catch(() => {});
+              }
+
+              await deps.playText('Gerando agora.');
+              if (deps.onFunctionDetected) {
+                setTimeout(() => deps.onFunctionDetected!(`${resolved}:${amount}`), 300);
+              }
+              return true;
+            }
+          }
+
           await deps.playText('Ótimo! Qual o valor?');
           return true;
         }

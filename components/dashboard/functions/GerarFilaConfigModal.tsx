@@ -78,10 +78,10 @@ export const GerarFilaConfigForm = ({
   hasActivePlan?: boolean;
 }) => {
   // Detectar tema do sistema para usar a paleta correta
-  const prefersDark =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const colors = prefersDark ? FILA_COLORS.dark : FILA_COLORS.light;
+const prefersDark =
+  typeof window !== 'undefined' &&
+  document.documentElement.classList.contains('dark');
+const colors = prefersDark ? FILA_COLORS.dark : FILA_COLORS.light;
 
   const [activeTab, setActiveTab] = useState<
     'atendimento' | 'stats' | 'config' | 'painel'

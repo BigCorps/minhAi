@@ -251,9 +251,7 @@ load();
       {/* Toast de upsell */}
       {showToast && (
         <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex flex-col items-center gap-0.5
-            px-5 py-3 rounded-xl shadow-xl
-            bg-slate-900 dark:bg-slate-800 border border-white/10"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex flex-col items-center gap-0.5 px-5 py-3 rounded-xl shadow-xl bg-slate-900 dark:bg-slate-800 border border-white/10"
           style={{ animation: 'fadeInUp 0.2s ease-out' }}
         >
           <p className="text-sm font-semibold text-white whitespace-nowrap">

@@ -31,6 +31,7 @@ export interface PixConfirmationData {
   pixCode: string;
   /** Necessário para impressão automática via auto-print */
   companyId?: string;
+  pedidoId?: string | null; 
 }
 export interface NossaMarcaData {
   companyName: string;

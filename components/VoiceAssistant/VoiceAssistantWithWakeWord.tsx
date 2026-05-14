@@ -942,7 +942,7 @@ useEffect(() => {
   }
 
   // ── handleFunctionWithAmount ──────────────────────────────
-  async function handleFunctionWithAmount(functionKey: string, amount: number) {
+  async function handleFunctionWithAmount(functionKey: string, amount: number, pedidoId?: string | null) {
     const pt = effectivePlayText;
     const amountStr = amount.toFixed(2).replace('.', ',');
 
@@ -954,7 +954,8 @@ useEffect(() => {
           sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
           setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
           onFunctionDetected: (k) => handleFunctionClick(k),
-          profileId: profileRef.current?.id ?? undefined, 
+          profileId: profileRef.current?.id ?? undefined,
+          pedidoId: pedidoId ?? null,
         });
         break;
       case 'link_pagamento':
@@ -1707,15 +1708,17 @@ case 'impressao_recibo':
       groqContextRef,
       fallbackMessageRef,
       onFunctionDetected: (key: string) => {
-  const [functionKey, rawAmount] = key.split(':');
-  if (rawAmount) {
-    // Tem valor embutido — injeta como transcript direto no handler
-    const amount = parseFloat(rawAmount);
-    handleFunctionWithAmount(functionKey, amount);
-  } else {
-    handleFunctionClick(functionKey);
-  }
-},
+        const parts = key.split(':');
+        const functionKey = parts[0];
+        const rawAmount = parts[1];
+        const pedidoId = parts[2] ?? null;
+        if (rawAmount) {
+          const amount = parseFloat(rawAmount);
+          handleFunctionWithAmount(functionKey, amount, pedidoId);
+        } else {
+          handleFunctionClick(functionKey);
+        }
+      },
     });
 
     if (isCommand) {
@@ -1902,15 +1905,17 @@ const handleTextMessage = async (message: string) => {
         groqContextRef,
         fallbackMessageRef,
         onFunctionDetected: (key: string) => {
-  const [functionKey, rawAmount] = key.split(':');
-  if (rawAmount) {
-    // Tem valor embutido — injeta como transcript direto no handler
-    const amount = parseFloat(rawAmount);
-    handleFunctionWithAmount(functionKey, amount);
-  } else {
-    handleFunctionClick(functionKey);
-  }
-},
+          const parts = key.split(':');
+          const functionKey = parts[0];
+          const rawAmount = parts[1];
+          const pedidoId = parts[2] ?? null;
+          if (rawAmount) {
+            const amount = parseFloat(rawAmount);
+            handleFunctionWithAmount(functionKey, amount, pedidoId);
+          } else {
+            handleFunctionClick(functionKey);
+          }
+        },
       });
 
       if (isCommand) return;

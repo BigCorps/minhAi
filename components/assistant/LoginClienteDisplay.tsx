@@ -20,6 +20,7 @@ interface LoginClienteDisplayProps {
     slug: string;
     theme?: 'dark' | 'light';
     profile?: any;
+    pedidoIdParaVincular?: string | null; 
   };
   onClose: () => void;
   theme: 'dark' | 'light';
@@ -128,6 +129,9 @@ export default function LoginClienteDisplay({
       setError(result.error || 'Conta não encontrada. Que tal se cadastrar?');
     } else {
       playText?.(`Bem-vindo de volta, ${profile?.nome || ''}!`).catch(() => {});
+      if (data.pedidoIdParaVincular && result.profileId) {
+        await vincularAoPedido(result.profileId, result.nome ?? '');
+      }
       onClose();
     }
   };
@@ -158,6 +162,9 @@ export default function LoginClienteDisplay({
       setError(result.error || 'Erro ao criar conta.');
     } else {
       playText?.(`Conta criada! Bem-vindo, ${formValues.nome}!`).catch(() => {});
+      if (data.pedidoIdParaVincular && result.profileId) {
+        await vincularAoPedido(result.profileId, formValues.nome ?? '');
+      }
       onClose();
     }
   };
@@ -169,6 +176,30 @@ export default function LoginClienteDisplay({
   };
 
   if (!mounted) return null;
+
+  // Vincula perfil identificado ao pedido pós-pagamento
+  const vincularAoPedido = async (profileId: string, nome: string) => {
+    const pedidoId = data.pedidoIdParaVincular;
+    if (!pedidoId) return;
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/pedidos?id=eq.${pedidoId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          },
+          body: JSON.stringify({ profile_id: profileId, cliente_nome: nome }),
+        }
+      );
+      window.dispatchEvent(new CustomEvent('eai:enviarConfirmacaoCliente', {
+        detail: { pedidoId, profileId }
+      }));
+    } catch { /* não crítico */ }
+  };
 
   const hasIdentifier = configFields.includes('email') || configFields.includes('telefone');
 

@@ -1,8 +1,7 @@
 *Fazer outro assistente para que apos a venda, ja confira o cadastro do cliente, e envie as mensagens de confirmação para finalizar as vendas no assistente e na Meta.
 
-*Landing GEO - jiuithsu - 15h30
+*Landing GEO - jiuithsu - 22h
 
-*Planilha Vixus importando tambem os fornecedores e cadastros e esta pronto - miriampostos
 *Correção erros Vixus - Manus ith.almeida
 
 *Notas funcionando - implementar no modal e testar os 3 tipos de notas - fofopandababy - 18h50

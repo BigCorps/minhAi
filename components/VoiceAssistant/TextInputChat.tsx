@@ -152,7 +152,7 @@ onClick={() => {
               : isSending
               ? 'Enviando...'
               : compact
-              ? 'Digite...'
+              ? 'Ou digite...'
               : 'Ou digite sua mensagem...'
           }
           className={`flex-1 min-w-0 bg-transparent outline-none ${

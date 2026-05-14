@@ -1015,7 +1015,7 @@ export const GerarFilaConfigForm = ({
                 fila_ativa: true,
                 mensagem_fila_pausada: 'Fila temporariamente pausada',
               },
-              { onConflict: 'company_id' }
+              { onConflict: 'company_id,prefixo_senha' }
             );
             await carregarDados();
           }}

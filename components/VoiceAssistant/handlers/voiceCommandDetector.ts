@@ -44,6 +44,8 @@ interface DetectorDeps {
   fromGroq?: boolean;
   // Callback para executar função identificada pelo Groq
   onFunctionDetected?: (functionKey: string) => void;
+  profileId?: string | null;
+  pedidoId?: string | null;
 }
 
 // ── Helper: parsear view/data do transcript de agenda ────────
@@ -703,7 +705,10 @@ export async function detectVoiceCommand(
         const isEnabled = await checkIfFunctionIsEnabled(companyId, 'pix_generate');
         if (!isEnabled) { await playText('A função PIX está desativada no momento.'); return true; }
         await handlePixCommand(amount, {
-          companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings, setActiveModal: deps.setActiveModal,
+          companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings,
+          setActiveModal: deps.setActiveModal,
+          profileId: deps.profileId ?? null,
+          pedidoId: deps.pedidoId ?? null,
         });
         await registerFunctionUsage(companyId, 'pix_generate', functionSettings['pix_generate']?.creditsPerUse ?? 0);
         return true;

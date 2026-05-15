@@ -316,6 +316,7 @@ export default function EmitirNotaModal({
     cidade: '',
     uf: '',
     endereco_completo: '',
+    cod_municipio: '',
   });
 
   // PASSO 2 — Estado de itens com campos fiscais completos
@@ -388,6 +389,7 @@ export default function EmitirNotaModal({
       cidade: '',
       uf: '',
       endereco_completo: '',
+      cod_municipio: '',
     });
     setItens([]);
   }, []);
@@ -717,6 +719,7 @@ export default function EmitirNotaModal({
           destinatario_cpf_cnpj: destinatario.cpf_cnpj || undefined,
           destinatario_email:   destinatario.email    || undefined,
           destinatario_endereco: destinatario.endereco_completo || undefined,
+          destinatario_cod_municipio: destinatario.cod_municipio || undefined,
           itens: itens.map(item => ({
             nome:           item.nome,
             quantidade:     item.quantidade,

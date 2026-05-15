@@ -12,6 +12,7 @@ import FuncaoCardsSlide from '@/components/landing/FuncaoCardsSlide';
 import DepoimentosSection from '@/components/landing/DepoimentosSection';
 import FAQSection from '@/components/landing/FAQSection';
 import TecnologiaSection from '@/components/landing/TecnologiaSection';
+import AssistentesSection from '@/components/landing/AssistentesSection';
 import { LandingDemoFooter } from '@/components/landing/LandingDemoFooter';
 import {
   QrCode,
@@ -45,7 +46,7 @@ const RECURSO_CARDS = [
     title: 'Economia real',
     highlight: 'até 90% mais barato',
     highlightLabel: 'que atendimento humano',
-    description: 'Escolha entre comissao por venda ou créditos por interação. Compare com salário + encargos de um atendente, ou contratar um serviço de autoatendimento, e a diferença é enorme — sem perder qualidade.',
+    description: 'R$ 0,05 por interação. Compare com salário + encargos de um atendente, ou contratar um serviço de autoatendimento, e a diferença é enorme — sem perder qualidade.',
     color: 'green' as const,
   },
   {
@@ -55,35 +56,35 @@ const RECURSO_CARDS = [
       </svg>
     ),
     title: 'Sua cara, seu jeito',
-    highlight: '100% Personalizado',
-    highlightLabel: 'configuração total',
-    description: 'Configure palavras de ativação, saudações, tipo de voz, saudação automática, prompts e funções para cada assistente. A IA fala como você quer.',
+    highlight: '100%',
+    highlightLabel: 'personalizado',
+    description: 'Configure palavras de ativação, saudações, prompts e funções para cada assistente. A IA fala como você quer.',
     color: 'blue' as const,
   },
   {
-  icon: (
-    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5V4H2v16h5m10 0v-6H7v6m10 0H7" />
-    </svg>
-  ),
-  title: 'Assistentes Inteligentes',
-  highlight: 'Multifuncional',
-  highlightLabel: 'funções e equipes',
-  description: 'Crie vários assistentes especializados para cada setor ou um único assistente completo capaz de atender, vender, cobrar e organizar seu negócio.',
-  color: 'green' as const,
-},
-{
-  icon: (
-    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0m6 0H9" />
-    </svg>
-  ),
-  title: 'Notificações em Tempo Real',
-  highlight: 'Alertas e Avisos',
-  highlightLabel: 'instantâneos',
-  description: 'Receba notificações automáticas por e-mail, WhatsApp e push sempre que uma venda, cobrança ou pagamento for realizado.',
-  color: 'blue' as const,
-},
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+    title: 'Pronto em 5 minutos',
+    highlight: '< 5 min',
+    highlightLabel: 'para configurar',
+    description: 'Sem código, sem técnico, sem complicação. Qualquer pessoa consegue criar e publicar seu assistente em minutos.',
+    color: 'green' as const,
+  },
+  {
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    title: 'Trabalha enquanto você dorme',
+    highlight: '24/7',
+    highlightLabel: 'sempre disponível',
+    description: 'Seu Funcionário IA nunca para. Atende, vende e cobra a qualquer hora — fins de semana e feriados incluídos.',
+    color: 'blue' as const,
+  },
 ];
 
 const RECURSO_IMAGE_SLIDES = [
@@ -112,7 +113,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Escale sem contratar',
     title: 'Atenda 10x mais sem aumentar sua equipe',
     description:
-      'Um Funcionário IA não tira férias, não falta, não pede aumento e atende centenas de clientes ao mesmo tempo. E o melhor, você escolhe como pagar, se por interação ou por comissão. Libere sua equipe para o que realmente importa — enquanto o assistente resolve o repetitivo, 24 horas por dia.',
+      'Um Funcionário IA não tira férias, não falta, não pede aumento e atende centenas de clientes ao mesmo tempo. Libere sua equipe para o que realmente importa — enquanto o assistente resolve o repetitivo, 24 horas por dia.',
     imageSrc: '/vantagens.png',
     imageAlt: 'Eficiência operacional com minhAi — automatize atendimento e escale seu negócio',
     color: 'blue' as const,
@@ -151,7 +152,7 @@ const FUNCAO_PAGES = [
         icon: <QrCode />,
         color: 'blue' as const,
         description:
-          'WhatsApp, Instagram, Facebook (com respostas de comentários e DMs automáticos) — Também QR Codes que conectam seu cliente ao canal certo, aumentando conversão e engajamento.',
+          'WhatsApp, Instagram, ligação direta — QR Codes que conectam seu cliente ao canal certo na hora. Aumente conversão e engajamento sem esforço.',
       },
       {
         title: 'Cobra e recebe sozinho',
@@ -217,7 +218,7 @@ const FUNCAO_PAGES = [
         icon: <Wrench />,
         color: 'blue' as const,
         description:
-          'Emitir Notas, lembretes, cronômetro, relógio mundial — ferramentas simples que economizam minutos todos os dias.',
+          'Aparelhos smart, lembretes, cronômetro, relógio mundial — ferramentas simples que economizam minutos todos os dias.',
       },
       {
         title: 'Controle de acesso e filas',
@@ -274,6 +275,7 @@ const ALL_SECTION_IDS = [
   'como-funciona',
   ...RECURSO_IMAGE_SLIDES.map((r) => r.id),
   ...FUNCAO_PAGES.map((f) => f.id),
+  'assistentes',
   'depoimentos',
   'faq',
   'tecnologia',
@@ -288,6 +290,7 @@ function getSectionNavGroup(sectionId: string): string {
   if (sectionId.startsWith('recurso-')) return 'recursos';
   if (sectionId === 'provas-sociais') return 'inicio';
   if (sectionId === 'como-funciona') return 'recursos';
+  if (sectionId === 'assistentes') return 'funcoes';
   if (sectionId === 'depoimentos') return 'precos';
   if (sectionId === 'faq') return 'precos';
   if (sectionId === 'tecnologia') return 'precos';
@@ -548,6 +551,16 @@ export default function LandingPage() {
             />
           </section>
         ))}
+
+        {/* ASSISTENTES ESPECIALIZADOS */}
+        <section
+          id="assistentes"
+          className="flex-shrink-0 snap-start snap-always"
+          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
+          aria-label="Especialistas de IA — Vendas, Orçamentos, Produção e Fiscal"
+        >
+          <AssistentesSection theme={theme} />
+        </section>
 
         {/* DEPOIMENTOS */}
         <section

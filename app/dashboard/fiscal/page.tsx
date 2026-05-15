@@ -25,7 +25,7 @@ import EmitirNotaModal from '@/components/assistant/EmitirNotaModal'; // ajuste 
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-type Aba = 'visao_geral' | 'configuracao' | 'clientes' | 'historico';
+type Aba = 'visao_geral' | 'clientes' | 'historico' | 'configuracao';
 
 type SituacaoNota = 'autorizada' | 'rejeitada' | 'cancelada' | 'processando';
 
@@ -1230,9 +1230,9 @@ function FiscalPageContent() {
 
   const abas: { key: Aba; label: string; icon: any }[] = [
     { key: 'visao_geral',   label: 'Visão Geral',   icon: Receipt },
-    { key: 'configuracao',  label: 'Configuração',   icon: Settings },
     { key: 'clientes',      label: 'Clientes',       icon: User },
     { key: 'historico',     label: 'Histórico',      icon: FileText },
+    { key: 'configuracao',  label: 'Configuração',   icon: Settings },
   ];
 
   return (

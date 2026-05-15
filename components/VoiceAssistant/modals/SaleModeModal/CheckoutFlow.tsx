@@ -551,7 +551,8 @@ const handleEmitirCupom = useCallback((pedidoId: string) => {
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={onClose} className={btnSecondary}>Cancelar</button>
+          <button onClick={onClose} className={btnSecondary}>Voltar</button>
+          
           <button onClick={() => setStep('pagamento')} className={btnPrimary}>Continuar →</button>
         </div>
       </div>
@@ -576,11 +577,11 @@ const handleEmitirCupom = useCallback((pedidoId: string) => {
       desc: string;
       dbKeys: string[];
     }[] = [
-      { key: 'pix',      label: 'PIX',              Icon: Zap,          desc: 'QR Code instantâneo',      dbKeys: ['pix_generate'] },
+      { key: 'pix',      label: 'PIX',               Icon: Zap,          desc: 'QR Code instantâneo',       dbKeys: ['pix_generate'] },
       { key: 'link',     label: 'Link InfinitePay',  Icon: ExternalLink, desc: 'Cliente paga pelo celular', dbKeys: ['link_pagamento'] },
-      { key: 'nfc',      label: 'Cartão NFC',        Icon: Smartphone,   desc: 'Aproximar cartão',         dbKeys: ['nfc_debito', 'nfc_credito'] },
-      { key: 'tef',      label: 'TEF Maquininha',    Icon: CreditCard,   desc: 'Inserir na maquininha',    dbKeys: ['tef_debito', 'tef_credito'] },
-      { key: 'dinheiro', label: 'Dinheiro',           Icon: Banknote,     desc: 'Pagamento em espécie',     dbKeys: ['dinheiro'] },
+      { key: 'nfc',      label: 'Cartão NFC',        Icon: Smartphone,   desc: 'Aproximar cartão',          dbKeys: ['nfc_debito', 'nfc_credito'] },
+      { key: 'tef',      label: 'TEF Maquininha',    Icon: CreditCard,   desc: 'Inserir na maquininha',     dbKeys: ['tef_debito', 'tef_credito'] },
+      { key: 'dinheiro', label: 'Dinheiro',          Icon: Banknote,     desc: 'Pagamento em espécie',      dbKeys: ['manual_payment'] },
     ];
 
     const metodosFiltrados = metodosAtivos === undefined
@@ -690,7 +691,7 @@ const handleEmitirCupom = useCallback((pedidoId: string) => {
 
             <button onClick={() => { setAutoChecking(false); setStep('pagamento'); }}
               className={`text-[10px] flex items-center justify-center gap-1 transition-colors ${textMuted}`}>
-              <ArrowLeft className="w-3 h-3" />Cancelar
+              <ArrowLeft className="w-3 h-3" />Voltar
             </button>
           </div>
 
@@ -807,7 +808,7 @@ const handleEmitirCupom = useCallback((pedidoId: string) => {
           onClick={() => { setStep('pagamento'); setLinkCobranca(null); setLinkPendingMsg(null); }}
           className={btnSecondary}
         >
-          <span className="flex items-center justify-center gap-1"><ArrowLeft className="w-4 h-4" />Cancelar</span>
+          <span className="flex items-center justify-center gap-1"><ArrowLeft className="w-4 h-4" />Voltar</span>
         </button>
       </div>
     );
@@ -833,7 +834,7 @@ const handleEmitirCupom = useCallback((pedidoId: string) => {
           <span className="w-4 h-4 border-2 border-emerald-500/40 border-t-emerald-500 rounded-full animate-spin" />
           <span className={`text-xs ${textMuted}`}>Aguardando pagamento...</span>
         </div>
-        <button onClick={() => { setPolling(false); setStep('pagamento'); }} className={btnSecondary}>Cancelar</button>
+        <button onClick={() => { setPolling(false); setStep('pagamento'); }} className={btnSecondary}>Voltar</button>
       </div>
     );
   }

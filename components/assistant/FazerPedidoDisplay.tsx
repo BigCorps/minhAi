@@ -91,6 +91,7 @@ function AssistenteVendasChat({
   const audioQueueRef   = useRef<string[]>([]);
   const isPlayingRef    = useRef(false);
   const chatRef         = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const sessaoRef       = useRef<{ messages: { role: string; content: string }[] }>({ messages: [] });
   const hasSpokenRef    = useRef(false);
 
@@ -118,6 +119,8 @@ function AssistenteVendasChat({
       }
     }
     isPlayingRef.current = false;
+    // Restaura foco no input após TTS terminar
+    setTimeout(() => inputRef.current?.focus(), 100);
   }, [playText]);
 
   useEffect(() => {
@@ -167,12 +170,6 @@ function AssistenteVendasChat({
         produto: produtoMencionado,
       }]);
       playTextSafe(respostaTexto);
-
-      // Detecta intenção de finalizar
-      const lower = respostaTexto.toLowerCase();
-      if (['finalizar', 'checkout', 'pagamento agora'].some(x => lower.includes(x))) {
-        setTimeout(onFinalizarPedido, 1500);
-      }
     } catch {
       setMensagens(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', content: 'Erro ao processar. Tente novamente.' }]);
     } finally {
@@ -263,7 +260,7 @@ function AssistenteVendasChat({
       {/* Input — idêntico ao AssistenteFiscalChat */}
       <div className="px-4 py-3 border-t flex-shrink-0" style={{ borderColor: C.border, backgroundColor: C.bg }}>
         <form onSubmit={e => { e.preventDefault(); enviarMensagem(input); }} className="flex items-end gap-2">
-          <input type="text" value={input}
+          <input ref={inputRef} type="text" value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(input); } }}
             placeholder="Digite sua mensagem..."

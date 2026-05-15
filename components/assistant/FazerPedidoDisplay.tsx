@@ -596,7 +596,6 @@ function FazerPedidoInner({ data, onClose, theme = 'dark', playText }: FazerPedi
           .eq('company_id', companyId)
           .in('function_key', [
             'pix_generate',
-            'link_pagamento',
             'nfc_debito', 'nfc_credito',
             'tef_debito', 'tef_credito',
             'dinheiro',

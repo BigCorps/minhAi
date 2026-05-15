@@ -1,534 +1,801 @@
-// components/assistant/FazerPedidoDisplay.tsx
-// Modal de venda guiada — 4 etapas: Catálogo → Carrinho → Entrega → Pagamento
-// Reusa ProductGrid, CartPanel, CheckoutFlow e useCart do SaleModeModal
-
 'use client';
 
-import { useState, useEffect } from 'react';
+// components/assistant/FazerPedidoDisplay.tsx
+// Assistente de vendas guiado — padrão visual idêntico ao EmitirNotaModal
+// Coluna esquerda: chat IA de vendas | Coluna direita: carrinho + busca visual
+
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
-import { CartProvider, useCart } from '@/hooks/useCart';
-import { listarProdutos, listarCategorias } from '@/lib/produtos-venda';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { listarProdutos, formatarPreco } from '@/lib/produtos-venda';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
-import { getContextualRoute } from '@/lib/routing-utils';
-
-// Componentes reusados do SaleModeModal
-import ProductGrid from '@/components/VoiceAssistant/modals/SaleModeModal/ProductGrid';
-import CartPanel from '@/components/VoiceAssistant/modals/SaleModeModal/CartPanel';
 import CheckoutFlow from '@/components/VoiceAssistant/modals/SaleModeModal/CheckoutFlow';
+import { CartProvider, useCart } from '@/hooks/useCart';
+import {
+  ShoppingCart, X, ArrowRight, ArrowLeft, MessageSquare,
+  Package, Plus, Minus, Trash2, Search, Send, Mic,
+  Loader2, Volume2, VolumeX, CreditCard,
+} from 'lucide-react';
 
-// ── Tipos ──────────────────────────────────────────────────
-type Etapa = 'catalogo' | 'carrinho' | 'entrega' | 'pagamento';
-type TipoEntrega = 'retirada' | 'delivery' | 'mesa';
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 interface FazerPedidoDisplayProps {
-  data: {
-    companyId: string;
-    slug?: string;
-  };
+  data: { companyId: string; slug?: string };
   onClose: () => void;
-  theme: 'dark' | 'light';
+  theme?: 'dark' | 'light';
   playText?: (text: string) => Promise<void>;
 }
 
-// ── Paletas ────────────────────────────────────────────────
-const DARK = {
-  bg: 'rgba(10,15,30,0.98)',
-  card: 'rgba(20,28,50,0.95)',
-  border: 'rgba(255,255,255,0.08)',
-  text: '#f1f5f9',
-  textMuted: 'rgba(241,245,249,0.45)',
-  accent: '#10b981',
-  accentBg: 'rgba(16,185,129,0.12)',
-};
-const LIGHT = {
-  bg: '#f8fafc',
-  card: '#ffffff',
-  border: '#e2e8f0',
-  text: '#0f172a',
-  textMuted: '#94a3b8',
-  accent: '#10b981',
-  accentBg: '#f0fdf4',
-};
+type Step = 'pedido' | 'entrega' | 'pagamento';
+type AbaAtiva = 'chat' | 'carrinho';
+type TipoEntrega = 'retirada' | 'delivery' | 'mesa';
 
-// ── Ícones SVG ─────────────────────────────────────────────
-function IconShoppingBag() {
-  return (
-    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-    </svg>
-  );
-}
-function IconCart() {
-  return (
-    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-    </svg>
-  );
-}
-function IconTruck() {
-  return (
-    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zm10 0a2 2 0 11-4 0 2 2 0 014 0zM13 17H9m4 0V5a1 1 0 00-1-1H5a1 1 0 00-1 1v12m9 0h2m2 0h1m-3-9h3l2 4v5h-5V8z" />
-    </svg>
-  );
-}
-function IconCreditCard() {
-  return (
-    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <rect x="1" y="4" width="22" height="16" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
-      <line x1="1" y1="10" x2="23" y2="10" strokeLinecap="round" />
-    </svg>
-  );
-}
-function IconExternalLink() {
-  return (
-    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-    </svg>
-  );
-}
-function IconX() {
-  return (
-    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  );
-}
-function IconArrowLeft() {
-  return (
-    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-    </svg>
-  );
+interface MensagemChat {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  produto?: ProdutoVenda | null;
 }
 
-// ── Etapa de entrega ───────────────────────────────────────
-function EtapaEntrega({
-  C,
-  tipoEntrega,
-  setTipoEntrega,
-  enderecoDelivery,
-  setEnderecoDelivery,
-  numeroMesa,
-  setNumeroMesa,
-  onVoltar,
-  onAvancar,
-  totalItens,
+interface ItemCarrinhoLocal {
+  produto: ProdutoVenda;
+  quantidade: number;
+}
+
+// ─── Paleta de cores ──────────────────────────────────────────────────────────
+
+function useCores(isDark: boolean) {
+  return {
+    bg:               isDark ? '#1e293b' : '#ffffff',
+    bgSecondary:      isDark ? '#334155' : '#f8fafc',
+    bgChat:           isDark ? '#0f172a' : '#f1f5f9',
+    text:             isDark ? '#f1f5f9' : '#0f172a',
+    textMuted:        isDark ? '#94a3b8' : '#64748b',
+    border:           isDark ? '#475569' : '#e2e8f0',
+    accent:           '#10b981',
+    accentBlue:       '#3b82f6',
+    userBubble:       isDark ? '#10b981' : '#059669',
+    assistantBubble:  isDark ? '#334155' : '#e2e8f0',
+  };
+}
+
+type Cores = ReturnType<typeof useCores>;
+
+// ─── Chat de Vendas ───────────────────────────────────────────────────────────
+
+function AssistenteVendasChat({
+  companyId, C, playText, produtos, onAdicionarProduto, onFinalizarPedido,
 }: {
-  C: typeof DARK;
-  tipoEntrega: TipoEntrega;
-  setTipoEntrega: (t: TipoEntrega) => void;
-  enderecoDelivery: string;
-  setEnderecoDelivery: (v: string) => void;
-  numeroMesa: string;
-  setNumeroMesa: (v: string) => void;
-  onVoltar: () => void;
-  onAvancar: () => void;
-  totalItens: number;
+  companyId: string;
+  C: Cores;
+  playText?: (text: string) => Promise<void>;
+  produtos: ProdutoVenda[];
+  onAdicionarProduto: (produto: ProdutoVenda, quantidade: number) => void;
+  onFinalizarPedido: () => void;
 }) {
+  const voiceRecorder = useVoiceRecorder();
+  const [mensagens, setMensagens] = useState<MensagemChat[]>([{
+    id: 'init',
+    role: 'assistant',
+    content: 'Olá! Sou seu assistente de vendas. Me diga o que deseja comprar ou pesquise um produto no carrinho ao lado.',
+  }]);
+  const [input, setInput]               = useState('');
+  const [carregando, setCarregando]     = useState(false);
+  const [transcrevendo, setTranscrevendo] = useState(false);
+  const [audioMutado, setAudioMutado]   = useState(false);
+  const audioMutadoRef  = useRef(false);
+  const audioQueueRef   = useRef<string[]>([]);
+  const isPlayingRef    = useRef(false);
+  const chatRef         = useRef<HTMLDivElement>(null);
+  const sessaoRef       = useRef<{ messages: { role: string; content: string }[] }>({ messages: [] });
+  const hasSpokenRef    = useRef(false);
+
+  const toggleMute = useCallback(() => {
+    setAudioMutado(prev => { audioMutadoRef.current = !prev; return !prev; });
+  }, []);
+
+  const playTextSafe = useCallback(async (text: string) => {
+    if (audioMutadoRef.current || !playText) return;
+    audioQueueRef.current.push(text);
+    if (isPlayingRef.current) return;
+    while (audioQueueRef.current.length > 0) {
+      isPlayingRef.current = true;
+      const next = audioQueueRef.current.shift();
+      if (next) {
+        try { await playText(next); await new Promise(r => setTimeout(r, 300)); } catch {}
+      }
+    }
+    isPlayingRef.current = false;
+  }, [playText]);
+
+  useEffect(() => {
+    chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' });
+  }, [mensagens]);
+
+  useEffect(() => {
+    if (hasSpokenRef.current) return;
+    hasSpokenRef.current = true;
+    playTextSafe('Olá! Sou seu assistente de vendas. Me diga o que deseja comprar.');
+  }, [playTextSafe]);
+
+  const enviarMensagem = useCallback(async (texto: string) => {
+    if (!texto.trim() || carregando) return;
+    const userMsg: MensagemChat = { id: `u-${Date.now()}`, role: 'user', content: texto };
+    setMensagens(prev => [...prev, userMsg]);
+    setInput('');
+    setCarregando(true);
+    sessaoRef.current.messages.push({ role: 'user', content: texto });
+
+    try {
+      const contextoProdutos = produtos
+        .map(p => `- ${p.nome}: R$${p.preco_venda.toFixed(2)}${p.descricao ? ` (${p.descricao})` : ''}${p.controla_estoque && p.estoque_atual <= 0 ? ' [sem estoque]' : ''}`)
+        .join('\n') || 'Nenhum produto cadastrado.';
+
+      const supabase = createClient();
+      const { data, error } = await supabase.functions.invoke('assistente-vendas-chat', {
+        body: {
+          company_id: companyId,
+          messages: sessaoRef.current.messages,
+          produtos_context: contextoProdutos,
+        },
+      });
+
+      const respostaTexto = (!error && data?.message) ? data.message : 'Desculpe, não consegui processar. Pode repetir?';
+      sessaoRef.current.messages.push({ role: 'assistant', content: respostaTexto });
+
+      // Detecta produto mencionado
+      const produtoMencionado = produtos.find(p =>
+        respostaTexto.toLowerCase().includes(p.nome.toLowerCase())
+      ) ?? null;
+
+      setMensagens(prev => [...prev, {
+        id: `a-${Date.now()}`,
+        role: 'assistant',
+        content: respostaTexto,
+        produto: produtoMencionado,
+      }]);
+      playTextSafe(respostaTexto);
+
+      // Detecta intenção de finalizar
+      const lower = respostaTexto.toLowerCase();
+      if (['finalizar', 'checkout', 'pagamento agora'].some(x => lower.includes(x))) {
+        setTimeout(onFinalizarPedido, 1500);
+      }
+    } catch {
+      setMensagens(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', content: 'Erro ao processar. Tente novamente.' }]);
+    } finally {
+      setCarregando(false);
+    }
+  }, [carregando, produtos, companyId, playTextSafe, onFinalizarPedido]);
+
+  // Gravação — igual ao AssistenteFiscalChat
+  const handleStartVoice = useCallback(async () => {
+    try { await voiceRecorder.startRecording(); } catch {}
+  }, [voiceRecorder]);
+
+  const handleStopVoice = useCallback(async () => {
+    try {
+      setTranscrevendo(true);
+      const audioBlob = await voiceRecorder.stopRecording();
+      const formData = new FormData();
+      formData.append('file', audioBlob, 'audio.webm');
+      formData.append('model', 'whisper-1');
+      formData.append('language', 'pt');
+      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}` },
+        body: formData,
+      });
+      if (response.ok) {
+        const { text } = await response.json();
+        if (text?.trim()) {
+          const lower = text.toLowerCase();
+          if (['finalizar', 'pagar', 'concluir', 'checkout', 'fechar pedido'].some(x => lower.includes(x))) {
+            onFinalizarPedido();
+          } else {
+            await enviarMensagem(text.trim());
+          }
+        }
+      }
+    } catch {} finally { setTranscrevendo(false); }
+  }, [voiceRecorder, enviarMensagem, onFinalizarPedido]);
+
+  return (
+    <div className="flex flex-col h-full" style={{ backgroundColor: C.bgChat }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
+        style={{ borderColor: C.border, backgroundColor: C.bg }}>
+        <div>
+          <h3 className="text-sm font-bold" style={{ color: C.text }}>Assistente de Vendas</h3>
+          <p className="text-xs" style={{ color: C.textMuted }}>Diga ou digite o produto desejado</p>
+        </div>
+        <button onClick={toggleMute} className="p-2 rounded-lg transition-colors"
+          style={{ backgroundColor: audioMutado ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: audioMutado ? '#ef4444' : C.accent }}>
+          {audioMutado ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+        </button>
+      </div>
+
+      {/* Mensagens */}
+      <div ref={chatRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
+        {mensagens.map(msg => (
+          <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className="max-w-[85%] space-y-2">
+              <div className="rounded-2xl px-4 py-2 text-sm"
+                style={{ backgroundColor: msg.role === 'user' ? C.userBubble : C.assistantBubble, color: msg.role === 'user' ? '#ffffff' : C.text }}>
+                {msg.content}
+              </div>
+              {/* Card do produto */}
+              {msg.role === 'assistant' && msg.produto && (
+                <div className="rounded-xl border overflow-hidden" style={{ borderColor: C.border, backgroundColor: C.bg }}>
+                  {msg.produto.imagem_url && (
+                    <img src={msg.produto.imagem_url} alt={msg.produto.nome} className="w-full h-32 object-cover" />
+                  )}
+                  <div className="p-3">
+                    <p className="font-semibold text-sm" style={{ color: C.text }}>{msg.produto.nome}</p>
+                    {msg.produto.descricao && (
+                      <p className="text-xs mt-0.5" style={{ color: C.textMuted }}>{msg.produto.descricao}</p>
+                    )}
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="font-bold text-sm" style={{ color: C.accent }}>
+                        {formatarPreco(msg.produto.preco_venda)}
+                      </span>
+                      <button onClick={() => onAdicionarProduto(msg.produto!, 1)}
+                        className="flex items-center gap-1 px-3 py-1 rounded-lg text-white text-xs font-semibold"
+                        style={{ backgroundColor: C.accent }}>
+                        <Plus className="w-3 h-3" /> Adicionar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+        {carregando && (
+          <div className="flex justify-start">
+            <div className="rounded-2xl px-4 py-2 flex items-center gap-2" style={{ backgroundColor: C.assistantBubble }}>
+              <Loader2 className="w-4 h-4 animate-spin" style={{ color: C.accent }} />
+              <span className="text-sm" style={{ color: C.textMuted }}>Processando...</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Input — idêntico ao AssistenteFiscalChat */}
+      <div className="px-4 py-3 border-t flex-shrink-0" style={{ borderColor: C.border, backgroundColor: C.bg }}>
+        <form onSubmit={e => { e.preventDefault(); enviarMensagem(input); }} className="flex items-end gap-2">
+          <input type="text" value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(input); } }}
+            placeholder="Digite sua mensagem..."
+            disabled={carregando || transcrevendo}
+            className="flex-1 px-3 py-2 rounded-lg border text-sm focus:outline-none transition-colors"
+            style={{ backgroundColor: C.bgSecondary, borderColor: C.border, color: C.text }} />
+          <button type="button"
+            onClick={voiceRecorder.isRecording ? handleStopVoice : handleStartVoice}
+            disabled={carregando || transcrevendo}
+            className="p-2.5 rounded-lg transition-all active:scale-95 disabled:opacity-50"
+            style={{ backgroundColor: voiceRecorder.isRecording ? '#ef4444' : C.accentBlue, color: '#ffffff' }}>
+            {transcrevendo ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mic className="w-5 h-5" />}
+          </button>
+          <button type="submit"
+            disabled={!input.trim() || carregando || transcrevendo}
+            className="p-2.5 rounded-lg transition-all active:scale-95 disabled:opacity-50"
+            style={{ backgroundColor: C.accent, color: '#ffffff' }}>
+            {carregando ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+          </button>
+        </form>
+        {voiceRecorder.isRecording && (
+          <div className="mt-2 flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-xs font-medium" style={{ color: '#ef4444' }}>
+              Gravando... {voiceRecorder.duration}s
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Painel Carrinho ──────────────────────────────────────────────────────────
+
+function PainelCarrinho({
+  C, itens, produtos, onAdicionar, onRemover, onAlterarQtd, onFinalizar,
+}: {
+  C: Cores;
+  itens: ItemCarrinhoLocal[];
+  produtos: ProdutoVenda[];
+  onAdicionar: (produto: ProdutoVenda, quantidade: number) => void;
+  onRemover: (produtoId: string) => void;
+  onAlterarQtd: (produtoId: string, delta: number) => void;
+  onFinalizar: () => void;
+}) {
+  const [busca, setBusca] = useState('');
+  const [resultados, setResultados] = useState<ProdutoVenda[]>([]);
+
+  useEffect(() => {
+    if (!busca.trim()) { setResultados([]); return; }
+    const lower = busca.toLowerCase();
+    setResultados(produtos.filter(p => p.nome.toLowerCase().includes(lower)).slice(0, 5));
+  }, [busca, produtos]);
+
+  const total     = itens.reduce((acc, i) => acc + i.produto.preco_venda * i.quantidade, 0);
+  const totalItens = itens.reduce((acc, i) => acc + i.quantidade, 0);
+  const umProduto = itens.length === 1;
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Busca */}
+      <div className="px-4 pt-4 pb-3 border-b flex-shrink-0" style={{ borderColor: C.border, backgroundColor: C.bg }}>
+        <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: C.textMuted }}>
+          Adicionar produto
+        </p>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: C.textMuted }} />
+          <input value={busca} onChange={e => setBusca(e.target.value)}
+            placeholder="Buscar produto pelo nome..."
+            className="w-full pl-9 pr-3 py-2 rounded-xl text-sm border outline-none"
+            style={{ borderColor: C.border, backgroundColor: C.bgSecondary, color: C.text }} />
+        </div>
+        {resultados.length > 0 && (
+          <div className="mt-1 rounded-xl border overflow-hidden shadow-lg" style={{ borderColor: C.border, backgroundColor: C.bg }}>
+            {resultados.map(p => (
+              <button key={p.id}
+                onClick={() => { onAdicionar(p, 1); setBusca(''); setResultados([]); }}
+                className="w-full flex items-center justify-between px-3 py-2.5 text-sm text-left border-b last:border-0 hover:opacity-70 transition-opacity"
+                style={{ borderColor: C.border }}>
+                <span style={{ color: C.text }}>{p.nome}</span>
+                <span className="font-semibold text-xs" style={{ color: C.accent }}>{formatarPreco(p.preco_venda)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Itens */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0" style={{ backgroundColor: C.bgChat }}>
+        {itens.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: C.textMuted }}>
+            <ShoppingCart className="w-10 h-10 opacity-20" />
+            <p className="text-sm">Carrinho vazio</p>
+            <p className="text-xs text-center">Use o chat ou a busca acima</p>
+          </div>
+        ) : umProduto ? (
+          /* 1 produto — imagem grande */
+          <div className="rounded-2xl border overflow-hidden" style={{ borderColor: C.border, backgroundColor: C.bg }}>
+            {itens[0].produto.imagem_url ? (
+              <img src={itens[0].produto.imagem_url} alt={itens[0].produto.nome} className="w-full h-44 object-cover" />
+            ) : (
+              <div className="w-full h-44 flex items-center justify-center" style={{ backgroundColor: C.bgSecondary }}>
+                <Package className="w-16 h-16 opacity-20" style={{ color: C.textMuted }} />
+              </div>
+            )}
+            <div className="p-4">
+              <p className="font-bold text-base" style={{ color: C.text }}>{itens[0].produto.nome}</p>
+              {itens[0].produto.descricao && (
+                <p className="text-xs mt-1" style={{ color: C.textMuted }}>{itens[0].produto.descricao}</p>
+              )}
+              <div className="flex items-center justify-between mt-3">
+                <span className="font-bold text-base" style={{ color: C.accent }}>
+                  {formatarPreco(itens[0].produto.preco_venda * itens[0].quantidade)}
+                </span>
+                <div className="flex items-center gap-2 rounded-lg px-2 py-1" style={{ backgroundColor: C.bgSecondary }}>
+                  <button onClick={() => onAlterarQtd(itens[0].produto.id, -1)}
+                    className="w-6 h-6 flex items-center justify-center rounded hover:opacity-70"
+                    style={{ color: C.textMuted }}>
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <span className="text-sm font-semibold w-5 text-center" style={{ color: C.text }}>
+                    {itens[0].quantidade}
+                  </span>
+                  <button onClick={() => onAlterarQtd(itens[0].produto.id, 1)}
+                    className="w-6 h-6 flex items-center justify-center rounded hover:opacity-70"
+                    style={{ color: C.textMuted }}>
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* 2+ produtos — lista */
+          <div className="space-y-2">
+            {itens.map(item => (
+              <div key={item.produto.id} className="rounded-xl border p-3" style={{ borderColor: C.border, backgroundColor: C.bg }}>
+                <div className="flex items-center gap-3">
+                  {item.produto.imagem_url ? (
+                    <img src={item.produto.imagem_url} alt={item.produto.nome} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: C.bgSecondary }}>
+                      <Package className="w-5 h-5 opacity-30" style={{ color: C.textMuted }} />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate" style={{ color: C.text }}>{item.produto.nome}</p>
+                    <p className="text-xs" style={{ color: C.textMuted }}>{formatarPreco(item.produto.preco_venda)} / un</p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-1 rounded-lg px-1 py-0.5" style={{ backgroundColor: C.bgSecondary }}>
+                      <button onClick={() => onAlterarQtd(item.produto.id, -1)}
+                        className="w-5 h-5 flex items-center justify-center rounded hover:opacity-70" style={{ color: C.textMuted }}>
+                        <Minus className="w-2.5 h-2.5" />
+                      </button>
+                      <span className="text-xs font-semibold w-4 text-center" style={{ color: C.text }}>{item.quantidade}</span>
+                      <button onClick={() => onAlterarQtd(item.produto.id, 1)}
+                        className="w-5 h-5 flex items-center justify-center rounded hover:opacity-70" style={{ color: C.textMuted }}>
+                        <Plus className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                    <button onClick={() => onRemover(item.produto.id)}
+                      className="w-6 h-6 flex items-center justify-center rounded-full hover:opacity-70" style={{ color: C.textMuted }}>
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-1">
+                  <span className="text-xs font-bold" style={{ color: C.accent }}>
+                    {formatarPreco(item.produto.preco_venda * item.quantidade)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Total + botão */}
+      {itens.length > 0 && (
+        <div className="px-4 py-3 border-t space-y-2 flex-shrink-0" style={{ borderColor: C.border, backgroundColor: C.bg }}>
+          <div className="flex justify-between items-center">
+            <span className="text-sm" style={{ color: C.textMuted }}>
+              {totalItens} {totalItens === 1 ? 'item' : 'itens'}
+            </span>
+            <span className="font-bold text-base" style={{ color: C.text }}>{formatarPreco(total)}</span>
+          </div>
+          <button onClick={onFinalizar}
+            className="w-full py-3 rounded-xl text-white font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+            style={{ backgroundColor: C.accent }}>
+            <CreditCard className="w-4 h-4" />
+            Finalizar Venda
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Etapa de Entrega ─────────────────────────────────────────────────────────
+
+function EtapaEntrega({ C, onAvancar, onVoltar }: {
+  C: Cores;
+  onAvancar: (tipo: TipoEntrega, obs: string) => void;
+  onVoltar: () => void;
+}) {
+  const [tipo, setTipo]       = useState<TipoEntrega>('retirada');
+  const [endereco, setEndereco] = useState('');
+  const [mesa, setMesa]         = useState('');
+
+  const podeAvancar =
+    tipo === 'retirada' ||
+    (tipo === 'delivery' && endereco.trim().length >= 5) ||
+    (tipo === 'mesa' && mesa.trim().length >= 1);
+
+  const getObs = () => {
+    if (tipo === 'delivery') return `Delivery: ${endereco}`;
+    if (tipo === 'mesa') return `Mesa/Comanda: ${mesa}`;
+    return '';
+  };
+
   const opcoes: { key: TipoEntrega; label: string; desc: string; icon: string }[] = [
     { key: 'retirada', label: 'Retirada no local', desc: 'Cliente retira no balcão', icon: '🏪' },
     { key: 'delivery', label: 'Delivery', desc: 'Entrega no endereço do cliente', icon: '🛵' },
-    { key: 'mesa', label: 'Mesa / Comanda', desc: 'Consumo no estabelecimento', icon: '🪑' },
+    { key: 'mesa',    label: 'Mesa / Comanda', desc: 'Consumo no estabelecimento', icon: '🪑' },
   ];
 
-  const podeProsseguir =
-    tipoEntrega === 'retirada' ||
-    (tipoEntrega === 'delivery' && enderecoDelivery.trim().length >= 5) ||
-    (tipoEntrega === 'mesa' && numeroMesa.trim().length >= 1);
+  const inputStyle = { borderColor: C.border, backgroundColor: C.bgSecondary, color: C.text };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 16, padding: 24 }}>
-      <p style={{ color: C.textMuted, fontSize: 13, margin: 0 }}>
-        Como será a entrega do pedido?
-      </p>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="p-6 space-y-4">
+      <p className="text-sm" style={{ color: C.textMuted }}>Como o pedido será entregue?</p>
+      <div className="space-y-2">
         {opcoes.map(op => (
-          <button
-            key={op.key}
-            onClick={() => setTipoEntrega(op.key)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 14,
-              padding: '14px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
-              textAlign: 'left', transition: 'all 0.15s',
-              background: tipoEntrega === op.key ? C.accentBg : C.card,
-              outline: tipoEntrega === op.key ? `2px solid ${C.accent}` : `1px solid ${C.border}`,
-            }}
-          >
-            <span style={{ fontSize: 24 }}>{op.icon}</span>
+          <button key={op.key} onClick={() => setTipo(op.key)}
+            className="w-full flex items-center gap-4 p-4 rounded-xl border text-left transition-opacity hover:opacity-80"
+            style={{ borderColor: tipo === op.key ? C.accent : C.border, backgroundColor: tipo === op.key ? 'rgba(16,185,129,0.08)' : C.bgSecondary }}>
+            <span className="text-2xl">{op.icon}</span>
             <div>
-              <p style={{ margin: 0, fontWeight: 600, color: C.text, fontSize: 14 }}>{op.label}</p>
-              <p style={{ margin: 0, color: C.textMuted, fontSize: 12 }}>{op.desc}</p>
+              <p className="font-semibold text-sm" style={{ color: C.text }}>{op.label}</p>
+              <p className="text-xs" style={{ color: C.textMuted }}>{op.desc}</p>
             </div>
           </button>
         ))}
       </div>
 
-      {/* Campo extra para delivery */}
-      {tipoEntrega === 'delivery' && (
+      {tipo === 'delivery' && (
         <div>
-          <label style={{ display: 'block', color: C.textMuted, fontSize: 12, marginBottom: 6 }}>
-            Endereço de entrega *
-          </label>
-          <textarea
-            value={enderecoDelivery}
-            onChange={e => setEnderecoDelivery(e.target.value)}
+          <label className="block text-xs font-semibold mb-1" style={{ color: C.textMuted }}>Endereço de entrega *</label>
+          <textarea rows={2} value={endereco} onChange={e => setEndereco(e.target.value)}
             placeholder="Rua, número, bairro, cidade..."
-            rows={3}
-            style={{
-              width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.border}`,
-              background: C.card, color: C.text, fontSize: 13, resize: 'none', boxSizing: 'border-box',
-              outline: 'none', fontFamily: 'inherit',
-            }}
-          />
+            className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none resize-none"
+            style={inputStyle} />
         </div>
       )}
-
-      {/* Campo extra para mesa */}
-      {tipoEntrega === 'mesa' && (
+      {tipo === 'mesa' && (
         <div>
-          <label style={{ display: 'block', color: C.textMuted, fontSize: 12, marginBottom: 6 }}>
-            Número da mesa / comanda *
-          </label>
-          <input
-            type="text"
-            value={numeroMesa}
-            onChange={e => setNumeroMesa(e.target.value)}
+          <label className="block text-xs font-semibold mb-1" style={{ color: C.textMuted }}>Mesa / Comanda *</label>
+          <input value={mesa} onChange={e => setMesa(e.target.value)}
             placeholder="Ex: Mesa 5, Comanda 12"
-            style={{
-              width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.border}`,
-              background: C.card, color: C.text, fontSize: 13, boxSizing: 'border-box', outline: 'none',
-              fontFamily: 'inherit',
-            }}
-          />
+            className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none"
+            style={inputStyle} />
         </div>
       )}
 
-      <div style={{ marginTop: 'auto', display: 'flex', gap: 10 }}>
-        <button
-          onClick={onVoltar}
-          style={{
-            flex: 1, padding: '12px 0', borderRadius: 10, border: `1px solid ${C.border}`,
-            background: 'transparent', color: C.text, fontWeight: 600, fontSize: 14, cursor: 'pointer',
-          }}
-        >
-          Voltar
+      <div className="flex gap-3 pt-2">
+        <button onClick={onVoltar}
+          className="flex-1 py-3 px-4 rounded-xl font-semibold transition flex items-center justify-center gap-2"
+          style={{ backgroundColor: C.bgSecondary, color: C.text }}>
+          <ArrowLeft className="w-4 h-4" /> Voltar
         </button>
-        <button
-          onClick={onAvancar}
-          disabled={!podeProsseguir}
+        <button onClick={() => podeAvancar && onAvancar(tipo, getObs())}
+          disabled={!podeAvancar}
+          className="flex-1 py-3 px-4 rounded-xl font-semibold transition flex items-center justify-center gap-2"
           style={{
-            flex: 2, padding: '12px 0', borderRadius: 10, border: 'none',
-            background: podeProsseguir ? C.accent : C.border,
-            color: '#fff', fontWeight: 700, fontSize: 14, cursor: podeProsseguir ? 'pointer' : 'not-allowed',
-            transition: 'all 0.15s',
-          }}
-        >
-          Ir para pagamento
+            backgroundColor: podeAvancar ? C.accent : C.border,
+            color: podeAvancar ? '#ffffff' : C.textMuted,
+            cursor: podeAvancar ? 'pointer' : 'not-allowed',
+          }}>
+          Ir para pagamento <ArrowRight className="w-4 h-4" />
         </button>
       </div>
     </div>
   );
 }
 
-// ── Inner (precisa de CartProvider) ───────────────────────
-function FazerPedidoInner({
-  companyId,
-  slug,
-  onClose,
-  theme,
-  playText,
-}: {
-  companyId: string;
-  slug?: string;
-  onClose: () => void;
-  theme: 'dark' | 'light';
-  playText?: (text: string) => Promise<void>;
-}) {
+// ─── Componente interno ───────────────────────────────────────────────────────
+
+function FazerPedidoInner({ data, onClose, theme = 'dark', playText }: FazerPedidoDisplayProps) {
+  const { companyId, slug } = data;
   const isDark = theme === 'dark';
-  const C = isDark ? DARK : LIGHT;
-  const { itens, total, totalItens } = useCart();
+  const C = useCores(isDark);
+  const isMobile = useIsMobile();
+  const { addItem, clear } = useCart();
 
-  const [etapa, setEtapa] = useState<Etapa>('catalogo');
-  const [produtos, setProdutos] = useState<ProdutoVenda[]>([]);
-  const [categorias, setCategorias] = useState<string[]>([]);
-  const [metodosAtivos, setMetodosAtivos] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [step, setStep]                     = useState<Step>('pedido');
+  const [abaAtiva, setAbaAtiva]             = useState<AbaAtiva>('chat');
+  const [produtos, setProdutos]             = useState<ProdutoVenda[]>([]);
+  const [itens, setItens]                   = useState<ItemCarrinhoLocal[]>([]);
+  const [metodosAtivos, setMetodosAtivos]   = useState<string[]>(['pix_generate']);
+  const [observacaoEntrega, setObservacaoEntrega] = useState<string | null>(null);
+  const [carregandoProdutos, setCarregandoProdutos] = useState(true);
 
-  // Entrega
-  const [tipoEntrega, setTipoEntrega] = useState<TipoEntrega>('retirada');
-  const [enderecoDelivery, setEnderecoDelivery] = useState('');
-  const [numeroMesa, setNumeroMesa] = useState('');
-
-  // Labels das etapas
-  const ETAPAS: { key: Etapa; label: string; icon: React.ReactNode }[] = [
-    { key: 'catalogo', label: 'Produtos', icon: <IconShoppingBag /> },
-    { key: 'carrinho', label: 'Carrinho', icon: <IconCart /> },
-    { key: 'entrega', label: 'Entrega', icon: <IconTruck /> },
-    { key: 'pagamento', label: 'Pagamento', icon: <IconCreditCard /> },
-  ];
-  const etapaIdx = ETAPAS.findIndex(e => e.key === etapa);
+  const totalItens = itens.reduce((acc, i) => acc + i.quantidade, 0);
 
   useEffect(() => {
     async function load() {
-      setLoading(true);
+      setCarregandoProdutos(true);
       try {
-        const [prods, cats] = await Promise.all([
-          listarProdutos(companyId),
-          listarCategorias(companyId),
-        ]);
+        const prods = await listarProdutos(companyId);
         setProdutos(prods);
-        setCategorias(cats);
-
-        // Buscar métodos de pagamento ativos
         const supabase = createClient();
         const { data: settings } = await supabase
           .from('company_function_settings')
           .select('function_key, is_enabled')
           .eq('company_id', companyId)
           .in('function_key', ['pix_generate', 'nfc_debito', 'nfc_credito', 'tef_debito', 'tef_credito', 'link_pagamento']);
-
         const ativos = settings?.filter(s => s.is_enabled).map(s => s.function_key) ?? [];
         setMetodosAtivos(ativos.length > 0 ? ativos : ['pix_generate']);
       } finally {
-        setLoading(false);
+        setCarregandoProdutos(false);
       }
     }
     load();
   }, [companyId]);
 
-  // Monta observação de entrega para o pedido
-  function getObservacaoEntrega(): string | null {
-    if (tipoEntrega === 'delivery') return `Delivery: ${enderecoDelivery}`;
-    if (tipoEntrega === 'mesa') return `Mesa/Comanda: ${numeroMesa}`;
-    return null;
+  function adicionarProduto(produto: ProdutoVenda, quantidade: number) {
+    setItens(prev => {
+      const idx = prev.findIndex(i => i.produto.id === produto.id);
+      if (idx >= 0) {
+        const novo = [...prev];
+        novo[idx] = { ...novo[idx], quantidade: novo[idx].quantidade + quantidade };
+        return novo;
+      }
+      return [...prev, { produto, quantidade }];
+    });
+    addItem(produto, quantidade);
+    if (isMobile) setAbaAtiva('carrinho');
   }
 
-  const vendaUrl = slug ? getContextualRoute('vendas', slug) : null;
+  function removerProduto(produtoId: string) {
+    setItens(prev => prev.filter(i => i.produto.id !== produtoId));
+  }
 
-  return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        background: C.bg,
-        display: 'flex', flexDirection: 'column',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 20px', borderBottom: `1px solid ${C.border}`,
-          background: C.card, flexShrink: 0,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* Botão voltar etapa */}
-          {etapaIdx > 0 && etapa !== 'pagamento' && (
-            <button
-              onClick={() => setEtapa(ETAPAS[etapaIdx - 1].key)}
-              style={{
-                background: 'transparent', border: 'none', cursor: 'pointer',
-                color: C.textMuted, padding: 4, display: 'flex', alignItems: 'center',
-              }}
-            >
-              <IconArrowLeft />
-            </button>
-          )}
-          <span style={{ fontWeight: 700, color: C.text, fontSize: 16 }}>
-            Fazer Pedido
-          </span>
+  function alterarQtd(produtoId: string, delta: number) {
+    setItens(prev => {
+      const idx = prev.findIndex(i => i.produto.id === produtoId);
+      if (idx < 0) return prev;
+      const novaQtd = prev[idx].quantidade + delta;
+      if (novaQtd <= 0) return prev.filter(i => i.produto.id !== produtoId);
+      const novo = [...prev];
+      novo[idx] = { ...novo[idx], quantidade: novaQtd };
+      return novo;
+    });
+  }
+
+  function irParaEntrega() {
+    if (itens.length === 0) return;
+    clear();
+    itens.forEach(i => addItem(i.produto, i.quantidade));
+    setStep('entrega');
+  }
+
+  const titulo = step === 'pedido' ? 'Assistente de Vendas'
+    : step === 'entrega' ? 'Tipo de Entrega'
+    : 'Pagamento';
+
+  const subtitulo = step === 'pedido' ? 'Monte seu pedido com o assistente'
+    : step === 'entrega' ? 'Como deseja receber seu pedido?'
+    : 'Escolha a forma de pagamento';
+
+  function renderConteudo() {
+    if (step === 'entrega') {
+      return (
+        <EtapaEntrega
+          C={C}
+          onVoltar={() => setStep('pedido')}
+          onAvancar={(tipo, obs) => { setObservacaoEntrega(obs || null); setStep('pagamento'); }}
+        />
+      );
+    }
+
+    if (step === 'pagamento') {
+      return (
+        <div style={{ height: 560 }}>
+          <CheckoutFlow
+            companyId={companyId}
+            theme={theme}
+            onClose={onClose}
+            playText={playText}
+            metodosAtivos={metodosAtivos}
+            observacaoEntrega={observacaoEntrega}
+          />
         </div>
+      );
+    }
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* Link para seção de vendas completa */}
-          {vendaUrl && (
-            <a
-              href={vendaUrl}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                fontSize: 12, color: C.accent, textDecoration: 'none',
-                padding: '5px 10px', borderRadius: 8,
-                border: `1px solid ${C.accent}33`,
-                background: C.accentBg,
-              }}
-            >
-              <IconExternalLink />
-              Loja completa
-            </a>
-          )}
-          <button
-            onClick={onClose}
-            style={{
-              background: 'transparent', border: 'none', cursor: 'pointer',
-              color: C.textMuted, padding: 4, display: 'flex', alignItems: 'center',
-            }}
-          >
-            <IconX />
-          </button>
-        </div>
-      </div>
-
-      {/* Indicador de progresso */}
-      {etapa !== 'pagamento' && (
-        <div
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: 0, padding: '10px 20px', borderBottom: `1px solid ${C.border}`,
-            background: C.card, flexShrink: 0,
-          }}
-        >
-          {ETAPAS.map((e, i) => {
-            const ativo = e.key === etapa;
-            const concluido = i < etapaIdx;
-            return (
-              <div key={e.key} style={{ display: 'flex', alignItems: 'center' }}>
-                <div
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px',
-                    borderRadius: 20, fontSize: 12, fontWeight: ativo ? 700 : 500,
-                    color: ativo ? C.accent : concluido ? C.accent : C.textMuted,
-                    background: ativo ? C.accentBg : 'transparent',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <span style={{ opacity: ativo || concluido ? 1 : 0.4 }}>{e.icon}</span>
-                  <span style={{ display: window.innerWidth < 400 ? 'none' : 'inline' }}>
-                    {e.label}
-                  </span>
-                  {concluido && (
-                    <span style={{ color: C.accent, fontWeight: 700 }}>✓</span>
-                  )}
-                </div>
-                {i < ETAPAS.length - 1 && (
-                  <div style={{ width: 20, height: 1, background: C.border }} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Conteúdo */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {loading ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ textAlign: 'center', color: C.textMuted }}>
-              <div style={{
-                width: 32, height: 32, border: `3px solid ${C.border}`,
-                borderTopColor: C.accent, borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite', margin: '0 auto 12px',
-              }} />
-              <p style={{ margin: 0, fontSize: 14 }}>Carregando produtos...</p>
-            </div>
-          </div>
-        ) : etapa === 'catalogo' ? (
-          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ flex: 1, overflow: 'auto' }}>
-              <ProductGrid
-                companyId={companyId}
-                produtos={produtos}
-                categorias={categorias}
-                theme={theme}
-              />
-            </div>
-            {/* Botão avançar — aparece quando há itens */}
-            {totalItens > 0 && (
-              <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}`, background: C.card, flexShrink: 0 }}>
-                <button
-                  onClick={() => setEtapa('carrinho')}
-                  style={{
-                    width: '100%', padding: '13px 0', borderRadius: 12, border: 'none',
-                    background: C.accent, color: '#fff', fontWeight: 700, fontSize: 15,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  }}
-                >
-                  <IconCart />
-                  Ver carrinho ({totalItens} {totalItens === 1 ? 'item' : 'itens'})
-                </button>
-              </div>
-            )}
-          </div>
-        ) : etapa === 'carrinho' ? (
-          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 16 }}>
-            <div style={{ flex: 1, overflow: 'auto' }}>
-              <CartPanel
-                theme={theme}
-                onCheckout={() => setEtapa('entrega')}
-              />
-            </div>
-            {/* Botão voltar ao catálogo */}
-            <div style={{ paddingTop: 10, flexShrink: 0 }}>
-              <button
-                onClick={() => setEtapa('catalogo')}
-                style={{
-                  width: '100%', padding: '10px 0', borderRadius: 10,
-                  border: `1px solid ${C.border}`, background: 'transparent',
-                  color: C.text, fontWeight: 600, fontSize: 13, cursor: 'pointer',
-                }}
-              >
-                + Adicionar mais itens
+    // Step pedido — duas colunas igual EmitirNotaModal
+    return (
+      <div className="flex flex-col" style={{ height: 560 }}>
+        {/* Tabs mobile */}
+        {isMobile && (
+          <div className="flex border-b flex-shrink-0" style={{ borderColor: C.border }}>
+            {([
+              { key: 'chat' as const, label: 'Assistente', Icon: MessageSquare },
+              { key: 'carrinho' as const, label: totalItens > 0 ? `Carrinho (${totalItens})` : 'Carrinho', Icon: ShoppingCart },
+            ] as const).map(({ key, label, Icon }) => (
+              <button key={key} onClick={() => setAbaAtiva(key)}
+                className="flex-1 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition border-b-2"
+                style={{ borderColor: abaAtiva === key ? C.accent : 'transparent', color: abaAtiva === key ? C.accent : C.textMuted }}>
+                <Icon className="w-4 h-4" />
+                {label}
               </button>
-            </div>
-          </div>
-        ) : etapa === 'entrega' ? (
-          <div style={{ flex: 1, overflow: 'auto' }}>
-            <EtapaEntrega
-              C={C}
-              tipoEntrega={tipoEntrega}
-              setTipoEntrega={setTipoEntrega}
-              enderecoDelivery={enderecoDelivery}
-              setEnderecoDelivery={setEnderecoDelivery}
-              numeroMesa={numeroMesa}
-              setNumeroMesa={setNumeroMesa}
-              onVoltar={() => setEtapa('carrinho')}
-              onAvancar={() => setEtapa('pagamento')}
-              totalItens={totalItens}
-            />
-          </div>
-        ) : (
-          /* Etapa pagamento — CheckoutFlow completo */
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <CheckoutFlow
-              companyId={companyId}
-              theme={theme}
-              onClose={onClose}
-              playText={playText}
-              metodosAtivos={metodosAtivos}
-              observacaoEntrega={getObservacaoEntrega()}
-            />
+            ))}
           </div>
         )}
-      </div>
 
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
+        <div className="flex flex-1 overflow-hidden">
+          {/* Coluna esquerda — chat */}
+          <div className={`flex-1 overflow-hidden ${!isMobile ? `border-r` : ''} ${isMobile && abaAtiva !== 'chat' ? 'hidden' : ''}`}
+            style={{ borderColor: C.border }}>
+            {!isMobile && (
+              <div className="px-4 pt-3 pb-1 flex-shrink-0" style={{ backgroundColor: C.bg }}>
+                <span className="text-[11px]" style={{ color: C.textMuted }}>
+                  💡 Diga ou digite o produto. O assistente monta o pedido com você.
+                </span>
+              </div>
+            )}
+            {carregandoProdutos ? (
+              <div className="flex items-center justify-center h-full" style={{ backgroundColor: C.bgChat }}>
+                <Loader2 className="w-6 h-6 animate-spin" style={{ color: C.accent }} />
+              </div>
+            ) : (
+              <AssistenteVendasChat
+                companyId={companyId}
+                C={C}
+                playText={playText}
+                produtos={produtos}
+                onAdicionarProduto={adicionarProduto}
+                onFinalizarPedido={irParaEntrega}
+              />
+            )}
+          </div>
+
+          {/* Coluna direita — carrinho */}
+          <div className={`overflow-hidden flex flex-col ${isMobile ? 'flex-1' : 'w-[380px]'} ${isMobile && abaAtiva !== 'carrinho' ? 'hidden' : ''}`}
+            style={{ backgroundColor: C.bg }}>
+            <PainelCarrinho
+              C={C}
+              itens={itens}
+              produtos={produtos}
+              onAdicionar={adicionarProduto}
+              onRemover={removerProduto}
+              onAlterarQtd={alterarQtd}
+              onFinalizar={irParaEntrega}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        onClick={e => e.stopPropagation()}
+        className="relative w-full max-w-lg sm:max-w-5xl rounded-2xl shadow-2xl overflow-hidden border flex flex-col animate-in zoom-in-95 duration-300"
+        style={{ backgroundColor: C.bg, borderColor: C.border }}
+      >
+        {/* Header — idêntico ao EmitirNotaModal */}
+        <div className="px-6 py-4 border-b flex items-center justify-between flex-shrink-0"
+          style={{ borderColor: C.border, backgroundColor: isDark ? 'rgba(16,185,129,0.08)' : '#f0fdf4' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: C.accent }}>
+              <ShoppingCart className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold" style={{ color: C.text }}>{titulo}</h2>
+              <p className="text-xs" style={{ color: C.textMuted }}>{subtitulo}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Indicador de progresso */}
+            <div className="flex items-center gap-1 mr-2">
+              {(['pedido', 'entrega', 'pagamento'] as Step[]).map((s, i) => (
+                <div key={s} className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full transition-all"
+                    style={{ backgroundColor: step === s || (s === 'entrega' && step === 'pagamento') || (s === 'pedido' && step !== 'pedido') ? C.accent : C.border }} />
+                  {i < 2 && <div className="w-3 h-px" style={{ backgroundColor: C.border }} />}
+                </div>
+              ))}
+            </div>
+            {slug && (
+              <a href={`/ia/${slug}/vendas`}
+                className="text-xs px-2 py-1 rounded-lg border hover:opacity-70 transition-opacity"
+                style={{ borderColor: C.border, color: C.textMuted }}>
+                Loja completa
+              </a>
+            )}
+            <button onClick={onClose}
+              className="p-2 rounded-full hover:opacity-70 transition-opacity"
+              aria-label="Fechar">
+              <X className="w-5 h-5" style={{ color: C.textMuted }} />
+            </button>
+          </div>
+        </div>
+
+        {/* Conteúdo */}
+        <div className="relative overflow-y-auto max-h-[90vh]" style={{ backgroundColor: C.bg }}>
+          {renderConteudo()}
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
-// ── Export principal com CartProvider e portal ─────────────
-export default function FazerPedidoDisplay({ data, onClose, theme, playText }: FazerPedidoDisplayProps) {
+// ─── Export com CartProvider ──────────────────────────────────────────────────
+
+export default function FazerPedidoDisplay(props: FazerPedidoDisplayProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   if (!mounted) return null;
-
-  return createPortal(
+  return (
     <CartProvider>
-      <FazerPedidoInner
-        companyId={data.companyId}
-        slug={data.slug}
-        onClose={onClose}
-        theme={theme}
-        playText={playText}
-      />
-    </CartProvider>,
-    document.body
+      <FazerPedidoInner {...props} />
+    </CartProvider>
   );
 }

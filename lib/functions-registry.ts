@@ -6209,8 +6209,7 @@ modo_venda: {
   category: 'products',
   responseType: 'navigation', // ← MUDOU de 'voice+modal' para 'navigation'
   voiceTriggers: [
-    'modo venda', 'modo de venda', 'abrir loja',
-    'comprar agora', 'escolher produtos',
+    'modo venda', 'modo de venda', 'abrir loja', 'escolher produtos',
     'fazer compras', 'abrir modo venda', 'loja virtual',
   ],
   examplePhrases: [
@@ -6326,7 +6325,6 @@ procurar_produto: {
   examplePhrases: [
     'Procurar produto',
     'Buscar produto no Mercado Livre',
-    'Quero comprar',
   ],
  
   edgeFunction: undefined,

@@ -67,7 +67,7 @@ type Cores = ReturnType<typeof useCores>;
 // ─── Chat de Vendas ───────────────────────────────────────────────────────────
 
 function AssistenteVendasChat({
-  companyId, C, playText, produtos, onAdicionarProduto, onFinalizarPedido,
+  companyId, C, playText, produtos, onAdicionarProduto, onFinalizarPedido, muteRef,
 }: {
   companyId: string;
   C: Cores;
@@ -75,6 +75,7 @@ function AssistenteVendasChat({
   produtos: ProdutoVenda[];
   onAdicionarProduto: (produto: ProdutoVenda, quantidade: number) => void;
   onFinalizarPedido: () => void;
+  muteRef?: React.MutableRefObject<{ toggle: () => void; muted: boolean } | null>;
 }) {
   const voiceRecorder = useVoiceRecorder();
   const [mensagens, setMensagens] = useState<MensagemChat[]>([{
@@ -94,8 +95,16 @@ function AssistenteVendasChat({
   const hasSpokenRef    = useRef(false);
 
   const toggleMute = useCallback(() => {
-    setAudioMutado(prev => { audioMutadoRef.current = !prev; return !prev; });
-  }, []);
+    setAudioMutado(prev => {
+      audioMutadoRef.current = !prev;
+      if (muteRef) muteRef.current = { toggle: toggleMute, muted: !prev };
+      return !prev;
+    });
+  }, [muteRef]);
+
+  useEffect(() => {
+    if (muteRef) muteRef.current = { toggle: toggleMute, muted: audioMutado };
+  }, [muteRef, toggleMute, audioMutado]);
 
   const playTextSafe = useCallback(async (text: string) => {
     if (audioMutadoRef.current || !playText) return;
@@ -205,14 +214,6 @@ function AssistenteVendasChat({
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: C.bgChat }}>
-      {/* Botão mute — sem header para não duplicar */}
-      <div className="flex justify-end px-3 pt-2 flex-shrink-0" style={{ backgroundColor: C.bgChat }}>
-        <button onClick={toggleMute} className="p-1.5 rounded-lg transition-colors"
-          style={{ backgroundColor: audioMutado ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: audioMutado ? '#ef4444' : C.accent }}>
-          {audioMutado ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-        </button>
-      </div>
-
       {/* Mensagens */}
       <div ref={chatRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
         {mensagens.map(msg => (
@@ -566,6 +567,8 @@ function FazerPedidoInner({ data, onClose, theme = 'dark', playText }: FazerPedi
   const [metodosAtivos, setMetodosAtivos]   = useState<string[]>(['pix_generate']);
   const [observacaoEntrega, setObservacaoEntrega] = useState<string | null>(null);
   const [carregandoProdutos, setCarregandoProdutos] = useState(true);
+  const muteRef = useRef<{ toggle: () => void; muted: boolean } | null>(null);
+  const [, forceUpdate] = useState(0);
 
   const totalItens = itens.reduce((acc, i) => acc + i.quantidade, 0);
 
@@ -685,10 +688,6 @@ function FazerPedidoInner({ data, onClose, theme = 'dark', playText }: FazerPedi
           {/* Coluna esquerda — chat */}
           <div className={`flex-1 overflow-hidden ${!isMobile ? `border-r` : ''} ${isMobile && abaAtiva !== 'chat' ? 'hidden' : ''}`}
             style={{ borderColor: C.border }}>
-            {!isMobile && (
-              <div className="px-4 pt-3 pb-1 flex-shrink-0" style={{ backgroundColor: C.bg }}>
-              </div>
-            )}
             {carregandoProdutos ? (
               <div className="flex items-center justify-center h-full" style={{ backgroundColor: C.bgChat }}>
                 <Loader2 className="w-6 h-6 animate-spin" style={{ color: C.accent }} />
@@ -701,6 +700,7 @@ function FazerPedidoInner({ data, onClose, theme = 'dark', playText }: FazerPedi
                 produtos={produtos}
                 onAdicionarProduto={adicionarProduto}
                 onFinalizarPedido={irParaEntrega}
+                muteRef={muteRef}
               />
             )}
           </div>
@@ -761,6 +761,14 @@ function FazerPedidoInner({ data, onClose, theme = 'dark', playText }: FazerPedi
                 style={{ borderColor: C.border, color: C.textMuted }}>
                 Página de Vendas
               </a>
+            )}
+            {step === 'pedido' && (
+              <button
+                onClick={() => { muteRef.current?.toggle(); forceUpdate(n => n + 1); }}
+                className="p-2 rounded-lg transition-colors"
+                style={{ backgroundColor: muteRef.current?.muted ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: muteRef.current?.muted ? '#ef4444' : C.accent }}>
+                {muteRef.current?.muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              </button>
             )}
             <button onClick={onClose}
               className="p-2 rounded-full hover:opacity-70 transition-opacity"

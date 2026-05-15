@@ -707,32 +707,39 @@ export default function EmitirNotaModal({
           (acc, item) => acc + item.quantidade * item.valor_unitario, 0
         );
 
-        const body: Record<string, unknown> = {
-          company_id:           companyId,
-          tipo:                 'nfe',
-          modelo:               '55',
-          pedido_id:            pedidoId,
-          forma_pagamento:      formaPagamento,
-          enviar_email:         !!destinatario.email,
-          valor_total:          valorCalculado,
-          destinatario_nome:    destinatario.nome.trim(),
-          destinatario_cpf_cnpj: destinatario.cpf_cnpj || undefined,
-          destinatario_email:   destinatario.email    || undefined,
-          destinatario_endereco: destinatario.endereco_completo || undefined,
-          destinatario_cod_municipio: destinatario.cod_municipio || undefined,
-          itens: itens.map(item => ({
-            nome:           item.nome,
-            quantidade:     item.quantidade,
-            valor_unitario: item.valor_unitario,
-            valor_total:    item.quantidade * item.valor_unitario,
-            unidade:        item.unidade,
-            ncm:            item.ncm || '00000000',
-            cfop:           item.cfop || 5102,
-            origem_produto: item.origem_produto ?? 0,
-            produto_id:     item.produto_id,
-            ean:            item.ean,
-          })),
-        };
+const body: Record<string, unknown> = {
+  company_id:                 companyId,
+  tipo:                       'nfe',
+  modelo:                     '55',
+  pedido_id:                  pedidoId,
+  forma_pagamento:            formaPagamento,
+  enviar_email:               !!destinatario.email,
+  valor_total:                valorCalculado,
+  destinatario_nome:          destinatario.nome.trim(),
+  destinatario_cpf_cnpj:      destinatario.cpf_cnpj      || undefined,
+  destinatario_email:         destinatario.email         || undefined,
+  destinatario_telefone:      destinatario.telefone      || undefined,
+  destinatario_cep:           destinatario.cep           || undefined,
+  destinatario_logradouro:    destinatario.logradouro    || undefined,
+  destinatario_numero:        destinatario.numero        || undefined,
+  destinatario_bairro:        destinatario.bairro        || undefined,
+  destinatario_cidade:        destinatario.cidade        || undefined,
+  destinatario_uf:            destinatario.uf            || undefined,
+  destinatario_endereco:      destinatario.endereco_completo || undefined,
+  destinatario_cod_municipio: destinatario.cod_municipio || undefined,
+  itens: itens.map(item => ({
+    nome:           item.nome,
+    quantidade:     item.quantidade,
+    valor_unitario: item.valor_unitario,
+    valor_total:    item.quantidade * item.valor_unitario,
+    unidade:        item.unidade,
+    ncm:            item.ncm || '00000000',
+    cfop:           item.cfop || 5102,
+    origem_produto: item.origem_produto ?? 0,
+    produto_id:     item.produto_id,
+    ean:            item.ean,
+  })),
+};
 
         const { data: result, error } = await supabase.functions.invoke('emitir-nota', { body });
         if (error) throw error;
@@ -769,7 +776,6 @@ export default function EmitirNotaModal({
         setResultado(result);
         setStep('success');
 
-// DEPOIS
 } else {
   const valor = parseFloat(valorTotal.replace(',', '.'));
 

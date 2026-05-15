@@ -1,7 +1,5 @@
 *Implementar Fazer Pedido como um auxiliar de compra, testar e depois fazer na Meta.
 
-*Correção erros Vixus - Manus ith.almeida
-
 *Notas funcionando - adicionar aba de cadastros de notas, conferir a edge sem mocks e testar os 3 tipos de notas - fofopandababy
 
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
@@ -126,7 +124,7 @@ Financeiro - 6️⃣ Gerar Pix | Link de Pagamento | TEF Débito
 *Analise de arquivos mortos - Manus pedidos
 *MODO KIOSK - claude ith.almeida
 *Landing - Claude jiuitsu 
-
+*App Vixus - Manus ith.almeida
 
 -
 

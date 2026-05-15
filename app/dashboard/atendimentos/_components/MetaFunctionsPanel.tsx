@@ -390,69 +390,73 @@ function StartupFunctionMetaSection({
   saved: boolean;
   onSave: () => void;
 }) {
-  const [inputText, setInputText] = React.useState(() => {
-    const match = availableFunctions.find(fn => fn.function_key === value);
-    return match ? match.function_name : value;
-  });
+  // ✅ useState e useEffect sem o prefixo React
+  const [inputText, setInputText] = useState('');
 
-  React.useEffect(() => {
+  useEffect(() => {
+    if (!availableFunctions.length) return;
     const match = availableFunctions.find(fn => fn.function_key === value);
     setInputText(match ? match.function_name : value);
   }, [value, availableFunctions]);
 
   return (
-    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-xl space-y-3">
+    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-xl space-y-2">
       <div>
-        <p className="text-sm font-semibold text-blue-800 dark:text-blue-200 flex items-center gap-2">
+        <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
           Função de Boas-vindas
         </p>
-        <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+        <p className="text-xs text-blue-600 dark:text-blue-400">
           Executada automaticamente na primeira mensagem do cliente via WhatsApp, Instagram ou Facebook.
         </p>
       </div>
-      <div className="relative">
-        <input
-          type="text"
-          value={inputText}
-          onChange={e => {
-            const val = e.target.value;
-            setInputText(val);
-            onChange('');
 
-            if (val.length > 0) {
-              const term = val.toLowerCase();
-              const filtered = availableFunctions.filter(fn =>
-                fn.function_key.includes(term) ||
-                fn.function_name.toLowerCase().includes(term)
-              );
-              setSuggestions(filtered);
-              setShowSuggestions(filtered.length > 0);
-            } else {
-              setShowSuggestions(false);
-            }
-          }}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-          placeholder="Ex: Nossa Marca, Fazer Pedido, Nosso Instagram..."
-          className="w-full px-3 py-2 rounded-lg border border-blue-200 dark:border-blue-500/30 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        {showSuggestions && (
-          <div className="absolute z-10 w-full mt-1 rounded-lg border shadow-lg max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10">
-            {suggestions.map((fn: any) => (
-              <button
-                key={fn.function_key}
-                type="button"
-                onMouseDown={() => {
-                  setInputText(fn.function_name);
-                  onChange(fn.function_key);
-                  setShowSuggestions(false);
-                }}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-900 dark:text-white transition"
-              >
-                <span className="font-medium">{fn.function_name}</span>
-              </button>
-            ))}
-          </div>
-        )}
+      <div className="relative flex items-center gap-2">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={inputText}
+            onChange={e => {
+              const val = e.target.value;
+              setInputText(val);
+              onChange('');
+
+              if (val.length > 0) {
+                const term = val.toLowerCase();
+                const filtered = availableFunctions.filter(fn =>
+                  fn.function_key.includes(term) ||
+                  fn.function_name.toLowerCase().includes(term)
+                );
+                setSuggestions(filtered);
+                setShowSuggestions(filtered.length > 0);
+              } else {
+                setShowSuggestions(false);
+              }
+            }}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            placeholder="Ex: Nossa Marca, Fazer Pedido..."
+            className="w-full px-3 py-2 rounded-lg border border-blue-200 dark:border-blue-500/30 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+
+          {showSuggestions && (
+            <div className="absolute z-10 w-full mt-1 rounded-lg border shadow-lg max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10">
+              {suggestions.map((fn: any) => (
+                <button
+                  key={fn.function_key}
+                  type="button"
+                  onMouseDown={() => {
+                    setInputText(fn.function_name);
+                    onChange(fn.function_key);
+                    setShowSuggestions(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-900 dark:text-white transition"
+                >
+                  <span className="font-medium">{fn.function_name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {value && (
           <button
             type="button"
@@ -461,26 +465,27 @@ function StartupFunctionMetaSection({
               setInputText('');
               setShowSuggestions(false);
             }}
-            className="mt-1 text-xs text-red-500 hover:text-red-600 transition"
+            className="shrink-0 px-3 py-2 text-xs font-medium text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg transition"
           >
-            Remover função de boas-vindas
+            Remover
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saving}
+          className="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition"
+        >
+          {saving ? (
+            <><span className="animate-spin">⏳</span> Salvando...</>
+          ) : saved ? (
+            <>✓ Salvo</>
+          ) : (
+            <>Salvar</>
+          )}
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={onSave}
-        disabled={saving}
-        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition"
-      >
-        {saving ? (
-          <><span className="animate-spin">⏳</span> Salvando...</>
-        ) : saved ? (
-          <>Salvo!</>
-        ) : (
-          <>Salvar</>
-        )}
-      </button>
     </div>
   );
 }

@@ -33,6 +33,7 @@ import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
 import { listarProdutos, listarCategorias } from '@/lib/produtos-venda';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
 import SlugHeaderWrapper from '@/app/ia/[slug]/SlugHeaderWrapper';  // FIX: usa wrapper com kiosk/wakelock
+import { ArrowLeft, ArrowRight, Truck, Store, UtensilsCrossed } from 'lucide-react';
 
 export interface SaleModeModalProps {
   companyId: string;
@@ -114,6 +115,10 @@ function SaleModeInner({
     produtoDestaqueInicial ?? null,
   );
   const [showCheckout, setShowCheckout] = useState(false);
+  const [showEntrega, setShowEntrega] = useState(false);
+  const [tipoEntrega, setTipoEntrega] = useState<'retirada' | 'delivery' | 'mesa'>('retirada');
+  const [enderecoDelivery, setEnderecoDelivery] = useState('');
+  const [numeroMesa, setNumeroMesa] = useState('');
   const [isPortrait, setIsPortrait] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [metodosAtivos, setMetodosAtivos] = useState<string[]>([]);
@@ -230,8 +235,19 @@ useEffect(() => {
 
   const handleCheckout = useCallback(() => {
     if (totalItens === 0) return;
-    setShowCheckout(true);
+    setShowEntrega(true);
   }, [totalItens]);
+
+  const handleConfirmarEntrega = useCallback(() => {
+    setShowEntrega(false);
+    setShowCheckout(true);
+  }, []);
+
+  function getObservacaoEntrega(): string | null {
+    if (tipoEntrega === 'delivery') return `Delivery: ${enderecoDelivery}`;
+    if (tipoEntrega === 'mesa') return `Mesa/Comanda: ${numeroMesa}`;
+    return null;
+  }
 
   // ── Prop compartilhada para todos os AvatarFace ──────────────────────────
   // Centraliza as props fixas para não repetir em cada instância
@@ -496,6 +512,94 @@ useEffect(() => {
     </>
   );
 
+// ── Entrega ──────────────────────────────────────────────────────────────
+  const entregaBorder = isDark ? '#475569' : '#e2e8f0';
+  const entregaBgSec  = isDark ? '#334155' : '#f8fafc';
+  const entregaText   = isDark ? '#f1f5f9' : '#0f172a';
+  const entregaMuted  = isDark ? '#94a3b8' : '#64748b';
+  const entregaAccent = '#10b981';
+
+  const opcoesEntrega = [
+    { key: 'retirada' as const, label: 'Retirada no local', desc: 'Cliente retira no balcão',   Icon: Store },
+    { key: 'delivery' as const, label: 'Delivery',          desc: 'Entrega no endereço',         Icon: Truck },
+    { key: 'mesa'    as const, label: 'Mesa / Comanda',     desc: 'Consumo no estabelecimento',  Icon: UtensilsCrossed },
+  ];
+
+  const podeAvancarEntrega =
+    tipoEntrega === 'retirada' ||
+    (tipoEntrega === 'delivery' && enderecoDelivery.trim().length >= 5) ||
+    (tipoEntrega === 'mesa'    && numeroMesa.trim().length >= 1);
+
+  const entregaContent = (
+    <div className="flex-1 flex items-start justify-center overflow-y-auto pt-4 pb-20">
+      <div className={`w-full max-w-sm rounded-2xl border p-5 space-y-4 ${
+        isDark ? 'bg-slate-800 border-white/10' : 'bg-white border-gray-200 shadow-xl'
+      }`}>
+        <p className="text-sm" style={{ color: entregaMuted }}>Como o pedido será entregue?</p>
+
+        <div className="space-y-2">
+          {opcoesEntrega.map(({ key, label, desc, Icon }) => (
+            <button key={key} onClick={() => setTipoEntrega(key)}
+              className="w-full flex items-center gap-4 p-4 rounded-xl border text-left transition-opacity hover:opacity-80"
+              style={{
+                borderColor:     tipoEntrega === key ? entregaAccent : entregaBorder,
+                backgroundColor: tipoEntrega === key ? 'rgba(16,185,129,0.08)' : entregaBgSec,
+              }}>
+              <Icon className="w-6 h-6 flex-shrink-0"
+                style={{ color: tipoEntrega === key ? entregaAccent : entregaMuted }} />
+              <div>
+                <p className="font-semibold text-sm" style={{ color: entregaText }}>{label}</p>
+                <p className="text-xs"               style={{ color: entregaMuted }}>{desc}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {tipoEntrega === 'delivery' && (
+          <div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: entregaMuted }}>
+              Endereço de entrega *
+            </label>
+            <textarea rows={2} value={enderecoDelivery}
+              onChange={e => setEnderecoDelivery(e.target.value)}
+              placeholder="Rua, número, bairro, cidade..."
+              className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none resize-none"
+              style={{ borderColor: entregaBorder, backgroundColor: entregaBgSec, color: entregaText }} />
+          </div>
+        )}
+
+        {tipoEntrega === 'mesa' && (
+          <div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: entregaMuted }}>
+              Mesa / Comanda *
+            </label>
+            <input value={numeroMesa} onChange={e => setNumeroMesa(e.target.value)}
+              placeholder="Ex: Mesa 5, Comanda 12"
+              className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none"
+              style={{ borderColor: entregaBorder, backgroundColor: entregaBgSec, color: entregaText }} />
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-2">
+          <button onClick={() => setShowEntrega(false)}
+            className="flex-1 py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-opacity hover:opacity-80"
+            style={{ backgroundColor: entregaBgSec, color: entregaText }}>
+            <ArrowLeft className="w-4 h-4" /> Voltar
+          </button>
+          <button onClick={handleConfirmarEntrega} disabled={!podeAvancarEntrega}
+            className="flex-1 py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2"
+            style={{
+              backgroundColor: podeAvancarEntrega ? entregaAccent : entregaBorder,
+              color:           podeAvancarEntrega ? '#fff' : entregaMuted,
+              cursor:          podeAvancarEntrega ? 'pointer' : 'not-allowed',
+            }}>
+            Ir para pagamento <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   // ── Checkout compartilhado ───────────────────────────────────────────────
   const checkoutContent = (
     <div className="flex-1 flex items-start justify-center overflow-y-auto pt-4 pb-20">
@@ -508,9 +612,11 @@ useEffect(() => {
           companyId={companyId}
           theme={effectiveTheme}
           onClose={() => { setShowCheckout(false); onClose(); }}
+          onVoltar={() => { setShowCheckout(false); setShowEntrega(true); }}
           playText={playText}
           metodosAtivos={metodosAtivos.length > 0 ? metodosAtivos : undefined}
           profile={profile}
+          observacaoEntrega={getObservacaoEntrega()}
         />
         <button
           onClick={() => setShowCheckout(false)}
@@ -565,7 +671,7 @@ useEffect(() => {
         <div className={`flex-1 flex overflow-hidden px-3 py-3 pb-3 min-h-0 w-full gap-3 ${
           isPortrait ? 'flex-col' : 'flex-row'
         }`}>
-          {showCheckout ? checkoutContent : gridAndCart}
+          {showCheckout ? checkoutContent : showEntrega ? entregaContent : gridAndCart}
         </div>
 
         {pdvScanner}
@@ -575,6 +681,8 @@ useEffect(() => {
     return createPortal(fullscreenContent, document.body);
   }
 
+  
+
   // ============================================================
   // MODO NORMAL — Modal dentro do VoiceAssistant (sem header/footer)
   // ============================================================
@@ -582,7 +690,7 @@ useEffect(() => {
     <>
       <div className={`absolute inset-0 z-40 flex flex-col overflow-hidden rounded-2xl ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
         <div className="flex-1 flex flex-col overflow-hidden px-3 py-3 min-h-0 w-full gap-3">
-          {showCheckout ? checkoutContent : gridAndCart}
+          {showCheckout ? checkoutContent : showEntrega ? entregaContent : gridAndCart}
         </div>
       </div>
       {pdvScanner}

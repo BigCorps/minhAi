@@ -201,7 +201,7 @@ useEffect(() => {
           .select('function_key, is_enabled')
           .eq('company_id', companyId)
           .in('function_key', [
-            'pix_generate', 'link_pagamento',
+            'pix_generate',
             'nfc_debito', 'nfc_credito',
             'tef_debito', 'tef_credito',
             'dinheiro',

@@ -120,7 +120,7 @@ function AssistenteVendasChat({
     }
     isPlayingRef.current = false;
     // Restaura foco no input após TTS terminar
-    setTimeout(() => inputRef.current?.focus(), 100);
+    inputRef.current?.focus({ preventScroll: true });
   }, [playText]);
 
   useEffect(() => {
@@ -135,6 +135,13 @@ function AssistenteVendasChat({
 
   const enviarMensagem = useCallback(async (texto: string) => {
     if (!texto.trim() || carregando) return;
+
+    // Detecta intenção explícita de finalizar ANTES de chamar a IA
+    const lowerInput = texto.toLowerCase();
+    if (['finalizar', 'prosseguir', 'continuar', 'pagar', 'checkout', 'concluir', 'fechar pedido'].some(x => lowerInput.includes(x))) {
+      onFinalizarPedido();
+      return;
+    }
     const userMsg: MensagemChat = { id: `u-${Date.now()}`, role: 'user', content: texto };
     setMensagens(prev => [...prev, userMsg]);
     setInput('');
@@ -170,6 +177,12 @@ function AssistenteVendasChat({
         produto: produtoMencionado,
       }]);
       playTextSafe(respostaTexto);
+      // Detecta se o USUÁRIO pediu explicitamente para finalizar
+      const lowerInput = texto.toLowerCase();
+      if (['finalizar', 'prosseguir', 'continuar', 'pagar', 'checkout', 'concluir'].some(x => lowerInput.includes(x))) {
+        setTimeout(onFinalizarPedido, 800);
+        return;
+      }
     } catch {
       setMensagens(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', content: 'Erro ao processar. Tente novamente.' }]);
     } finally {
@@ -261,6 +274,7 @@ function AssistenteVendasChat({
       <div className="px-4 py-3 border-t flex-shrink-0" style={{ borderColor: C.border, backgroundColor: C.bg }}>
         <form onSubmit={e => { e.preventDefault(); enviarMensagem(input); }} className="flex items-end gap-2">
           <input ref={inputRef} type="text" value={input}
+            onBlur={() => { if (!carregando && !transcrevendo && !voiceRecorder.isRecording) setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50); }}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(input); } }}
             placeholder="Digite sua mensagem..."

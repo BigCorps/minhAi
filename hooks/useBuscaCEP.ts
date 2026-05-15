@@ -19,6 +19,7 @@ interface EnderecoFormatado {
   bairro: string;
   cidade: string;
   uf: string;
+  ibge: string;  
   endereco_completo: string;
 }
 
@@ -67,6 +68,7 @@ export function useBuscaCEP() {
         bairro: data.bairro,
         cidade: data.localidade,
         uf: data.uf,
+        ibge: (data as any).ibge ?? '', 
         endereco_completo,
       };
     } catch (err) {

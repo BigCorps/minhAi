@@ -433,7 +433,6 @@ function StartupFunctionMetaSection({
                 onMouseDown={() => { onChange(fn.function_key); setShowSuggestions(false); }}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-900 dark:text-white transition"
               >
-                <span className="font-mono text-xs text-blue-600 dark:text-blue-400 mr-2">{fn.function_key}</span>
                 <span className="font-medium">{fn.function_name}</span>
               </button>
             ))}

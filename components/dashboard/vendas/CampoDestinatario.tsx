@@ -21,6 +21,7 @@ interface DadosDestinatario {
   cidade?: string;
   uf?: string;
   endereco_completo?: string;
+  cod_municipio?: string;
 }
 
 interface CampoDestinatarioProps {
@@ -121,6 +122,7 @@ export default function CampoDestinatario({
         cidade: cliente.cidade || '',
         uf: cliente.uf || '',
         endereco_completo: cliente.endereco_completo || '',
+        cod_municipio: endereco.ibge || undefined,
       });
 
       // Mostrar feedback visual
@@ -167,6 +169,7 @@ export default function CampoDestinatario({
         cidade: endereco.cidade,
         uf: endereco.uf,
         endereco_completo: endereco.endereco_completo,
+        cod_municipio: endereco.ibge || undefined, 
       });
     }
   }, [dados, buscarCEP, onChange]);
@@ -186,6 +189,7 @@ export default function CampoDestinatario({
       cidade: '',
       uf: '',
       endereco_completo: '',
+      cod_municipio: '', 
     });
     setSugestoes([]);
   }, [onChange]);

@@ -27,6 +27,7 @@ import {
   ClipboardList,
   User,
   Package,
+  FileText,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -949,9 +950,13 @@ export default function EmitirNotaModal({
         />
       </div>
       {/* Coluna direita — dados do serviço */}
-      <div className="space-y-4">
-        <div>
-          <label className={labelCls}>Descrição do Serviço *</label>
+<div className="space-y-4">
+  <div className="flex items-center gap-2 mb-1">
+    <FileText className="w-4 h-4 text-blue-400" />
+    <span className={`text-sm font-semibold ${textPrimary}`}>Dados da Nota</span>
+  </div>
+  <div>
+    <label className={labelCls}>Descrição do Serviço *</label>
           <textarea
             value={descricaoServico}
             onChange={(e) => setDescricaoServico(e.target.value)}

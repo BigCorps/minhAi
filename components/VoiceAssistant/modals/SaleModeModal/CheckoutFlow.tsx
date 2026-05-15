@@ -582,7 +582,7 @@ const handleEmitirCupom = useCallback((pedidoId: string) => {
       { key: 'link',     label: 'Link InfinitePay',  Icon: ExternalLink, desc: 'Cliente paga pelo celular', dbKeys: ['link_pagamento'] },
       { key: 'nfc',      label: 'Cartão NFC',        Icon: Smartphone,   desc: 'Aproximar cartão',          dbKeys: ['nfc_debito', 'nfc_credito'] },
       { key: 'tef',      label: 'TEF Maquininha',    Icon: CreditCard,   desc: 'Inserir na maquininha',     dbKeys: ['tef_debito', 'tef_credito'] },
-      { key: 'dinheiro', label: 'Dinheiro',          Icon: Banknote,     desc: 'Pagamento em espécie',      dbKeys: ['manual_payment'] },
+      { key: 'dinheiro', label: 'Dinheiro',          Icon: Banknote,     desc: 'Pagamento em espécie',      dbKeys: ['dinheiro'] },
     ];
 
     const metodosFiltrados = metodosAtivos === undefined

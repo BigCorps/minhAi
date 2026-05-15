@@ -205,16 +205,11 @@ function AssistenteVendasChat({
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: C.bgChat }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
-        style={{ borderColor: C.border, backgroundColor: C.bg }}>
-        <div>
-          <h3 className="text-sm font-bold" style={{ color: C.text }}>Assistente de Vendas</h3>
-          <p className="text-xs" style={{ color: C.textMuted }}>Diga ou digite o produto desejado</p>
-        </div>
-        <button onClick={toggleMute} className="p-2 rounded-lg transition-colors"
+      {/* Botão mute — sem header para não duplicar */}
+      <div className="flex justify-end px-3 pt-2 flex-shrink-0" style={{ backgroundColor: C.bgChat }}>
+        <button onClick={toggleMute} className="p-1.5 rounded-lg transition-colors"
           style={{ backgroundColor: audioMutado ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: audioMutado ? '#ef4444' : C.accent }}>
-          {audioMutado ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          {audioMutado ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
         </button>
       </div>
 

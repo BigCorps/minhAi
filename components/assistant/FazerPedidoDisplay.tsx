@@ -274,7 +274,16 @@ function AssistenteVendasChat({
       <div className="px-4 py-3 border-t flex-shrink-0" style={{ borderColor: C.border, backgroundColor: C.bg }}>
         <form onSubmit={e => { e.preventDefault(); enviarMensagem(input); }} className="flex items-end gap-2">
           <input ref={inputRef} type="text" value={input}
-            onBlur={() => { if (!carregando && !transcrevendo && !voiceRecorder.isRecording) setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50); }}
+            onBlur={(e) => {
+              const relatedTarget = e.relatedTarget as HTMLElement | null;
+              // Só restaura foco se o destino não for outro input/button dentro do modal
+              if (
+                !carregando && !transcrevendo && !voiceRecorder.isRecording &&
+                (!relatedTarget || relatedTarget.tagName === 'BODY')
+              ) {
+                setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
+              }
+            }}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(input); } }}
             placeholder="Digite sua mensagem..."

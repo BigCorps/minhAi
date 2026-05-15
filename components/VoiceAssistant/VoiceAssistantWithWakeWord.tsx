@@ -1564,7 +1564,7 @@ case 'impressao_recibo':
         case 'fazer_pedido':
           await stopGoogleSpeech();
           setActiveModal({ type: 'FazerPedidoDisplay', data: { companyId, slug } });
-          pt('Abrindo o assistente de vendas...').catch(() => {});
+          pt('Abrindo...').catch(() => {});
           break;
         case 'link_na_bio': {
           await stopGoogleSpeech();

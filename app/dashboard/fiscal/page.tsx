@@ -19,12 +19,13 @@ import {
   ExternalLink,
   ShieldCheck,
   Building2,
+  User,
 } from 'lucide-react';
 import EmitirNotaModal from '@/components/assistant/EmitirNotaModal'; // ajuste o path se necessário
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-type Aba = 'visao_geral' | 'configuracao' | 'historico';
+type Aba = 'visao_geral' | 'configuracao' | 'clientes' | 'historico';
 
 type SituacaoNota = 'autorizada' | 'rejeitada' | 'cancelada' | 'processando';
 
@@ -839,6 +840,345 @@ function AbaHistorico({ companyId }: { companyId: string }) {
   );
 }
 
+// ─── Aba: Clientes Cadastrados ────────────────────────────────────────────────
+
+function AbaClientes({ companyId }: { companyId: string }) {
+  const supabase = createClient();
+  const [clientes, setClientes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editando, setEditando] = useState<string | null>(null);
+  const [formEdit, setFormEdit] = useState<any>({});
+  const [salvando, setSalvando] = useState(false);
+  const [deletando, setDeletando] = useState<string | null>(null);
+  const [busca, setBusca] = useState('');
+
+  useEffect(() => {
+    loadClientes();
+  }, [companyId]);
+
+  const loadClientes = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('clientes_fiscal')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('ultimo_uso_at', { ascending: false })
+      .limit(100);
+    setClientes(data ?? []);
+    setLoading(false);
+  };
+
+  const handleEditar = (cliente: any) => {
+    setEditando(cliente.id);
+    setFormEdit({ ...cliente });
+  };
+
+  const handleCancelar = () => {
+    setEditando(null);
+    setFormEdit({});
+  };
+
+  const handleSalvar = async () => {
+    setSalvando(true);
+    try {
+      const { error } = await supabase
+        .from('clientes_fiscal')
+        .update({
+          nome: formEdit.nome,
+          cpf_cnpj: formEdit.cpf_cnpj.replace(/\D/g, ''),
+          email: formEdit.email || null,
+          telefone: formEdit.telefone?.replace(/\D/g, '') || null,
+          cep: formEdit.cep?.replace(/\D/g, '') || null,
+          logradouro: formEdit.logradouro || null,
+          numero: formEdit.numero || null,
+          complemento: formEdit.complemento || null,
+          bairro: formEdit.bairro || null,
+          cidade: formEdit.cidade || null,
+          uf: formEdit.uf?.toUpperCase() || null,
+          endereco_completo: [
+            formEdit.logradouro,
+            formEdit.numero,
+            formEdit.bairro,
+            formEdit.cidade,
+            formEdit.uf
+          ].filter(Boolean).join(', ') || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editando);
+
+      if (error) throw error;
+      
+      setEditando(null);
+      setFormEdit({});
+      loadClientes();
+    } catch (err) {
+      console.error('Erro ao salvar cliente:', err);
+      alert('Erro ao salvar cliente');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const handleDeletar = async (clienteId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
+    
+    setDeletando(clienteId);
+    try {
+      const { error } = await supabase
+        .from('clientes_fiscal')
+        .delete()
+        .eq('id', clienteId);
+
+      if (error) throw error;
+      loadClientes();
+    } catch (err) {
+      console.error('Erro ao deletar cliente:', err);
+      alert('Erro ao deletar cliente');
+    } finally {
+      setDeletando(null);
+    }
+  };
+
+  const formatarCpfCnpj = (cpfCnpj: string) => {
+    const limpo = cpfCnpj.replace(/\D/g, '');
+    if (limpo.length === 11) {
+      return limpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    if (limpo.length === 14) {
+      return limpo.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    }
+    return cpfCnpj;
+  };
+
+  const clientesFiltrados = clientes.filter(c =>
+    busca === '' ||
+    c.nome.toLowerCase().includes(busca.toLowerCase()) ||
+    c.cpf_cnpj.includes(busca.replace(/\D/g, ''))
+  );
+
+  if (loading) {
+    return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header + Busca */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Clientes Cadastrados
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {clientes.length} {clientes.length === 1 ? 'cliente' : 'clientes'} cadastrado{clientes.length === 1 ? '' : 's'}
+          </p>
+        </div>
+        
+        <input
+          type="text"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por nome ou CPF/CNPJ..."
+          className="px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm w-64"
+        />
+      </div>
+
+      {/* Lista vazia */}
+      {clientesFiltrados.length === 0 && (
+        <div className="bg-white/50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
+          <User className="w-14 h-14 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+            {busca ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {busca 
+              ? 'Tente outro termo de busca'
+              : 'Os clientes serão salvos automaticamente ao emitir notas'
+            }
+          </p>
+        </div>
+      )}
+
+      {/* Tabela */}
+      {clientesFiltrados.length > 0 && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
+                  <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Nome</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">CPF/CNPJ</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Contato</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Cidade/UF</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Último uso</th>
+                  <th className="text-right px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {clientesFiltrados.map(cliente => (
+                  <tr key={cliente.id} className="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition">
+                    
+                    {/* Modo visualização */}
+                    {editando !== cliente.id ? (
+                      <>
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-gray-900 dark:text-white">{cliente.nome}</p>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-400">
+                          {formatarCpfCnpj(cliente.cpf_cnpj)}
+                        </td>
+                        <td className="px-4 py-3">
+                          {cliente.email && <p className="text-xs text-gray-600 dark:text-gray-400">{cliente.email}</p>}
+                          {cliente.telefone && <p className="text-xs text-gray-600 dark:text-gray-400">{cliente.telefone}</p>}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400 text-xs">
+                          {cliente.cidade && cliente.uf ? `${cliente.cidade}/${cliente.uf}` : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">
+                          {formatDate(cliente.ultimo_uso_at)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => handleEditar(cliente)}
+                            className="text-blue-500 hover:text-blue-600 text-xs font-medium mr-3"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDeletar(cliente.id)}
+                            disabled={deletando === cliente.id}
+                            className="text-red-500 hover:text-red-600 text-xs font-medium disabled:opacity-50"
+                          >
+                            {deletando === cliente.id ? 'Excluindo...' : 'Excluir'}
+                          </button>
+                        </td>
+                      </>
+                    ) : (
+                      /* Modo edição */
+                      <td colSpan={6} className="px-4 py-4">
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Nome *</label>
+                              <input
+                                type="text"
+                                value={formEdit.nome || ''}
+                                onChange={(e) => setFormEdit({...formEdit, nome: e.target.value})}
+                                className="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">CPF/CNPJ *</label>
+                              <input
+                                type="text"
+                                value={formEdit.cpf_cnpj || ''}
+                                onChange={(e) => setFormEdit({...formEdit, cpf_cnpj: e.target.value})}
+                                className="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Email</label>
+                              <input
+                                type="email"
+                                value={formEdit.email || ''}
+                                onChange={(e) => setFormEdit({...formEdit, email: e.target.value})}
+                                className="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Telefone</label>
+                              <input
+                                type="text"
+                                value={formEdit.telefone || ''}
+                                onChange={(e) => setFormEdit({...formEdit, telefone: e.target.value})}
+                                className="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">CEP</label>
+                              <input
+                                type="text"
+                                value={formEdit.cep || ''}
+                                onChange={(e) => setFormEdit({...formEdit, cep: e.target.value})}
+                                className="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Logradouro</label>
+                              <input
+                                type="text"
+                                value={formEdit.logradouro || ''}
+                                onChange={(e) => setFormEdit({...formEdit, logradouro: e.target.value})}
+                                className="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Número</label>
+                              <input
+                                type="text"
+                                value={formEdit.numero || ''}
+                                onChange={(e) => setFormEdit({...formEdit, numero: e.target.value})}
+                                className="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Bairro</label>
+                              <input
+                                type="text"
+                                value={formEdit.bairro || ''}
+                                onChange={(e) => setFormEdit({...formEdit, bairro: e.target.value})}
+                                className="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cidade</label>
+                              <input
+                                type="text"
+                                value={formEdit.cidade || ''}
+                                onChange={(e) => setFormEdit({...formEdit, cidade: e.target.value})}
+                                className="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">UF</label>
+                              <input
+                                type="text"
+                                maxLength={2}
+                                value={formEdit.uf || ''}
+                                onChange={(e) => setFormEdit({...formEdit, uf: e.target.value.toUpperCase()})}
+                                className="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2 pt-2">
+                            <button
+                              onClick={handleSalvar}
+                              disabled={salvando}
+                              className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-semibold disabled:opacity-50"
+                            >
+                              {salvando ? 'Salvando...' : 'Salvar'}
+                            </button>
+                            <button
+                              onClick={handleCancelar}
+                              className="px-3 py-1.5 border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-300 rounded text-xs font-semibold hover:bg-gray-50 dark:hover:bg-white/5"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 function FiscalPageContent() {
@@ -891,6 +1231,7 @@ function FiscalPageContent() {
   const abas: { key: Aba; label: string; icon: any }[] = [
     { key: 'visao_geral',   label: 'Visão Geral',   icon: Receipt },
     { key: 'configuracao',  label: 'Configuração',   icon: Settings },
+    { key: 'clientes',      label: 'Clientes',       icon: User },
     { key: 'historico',     label: 'Histórico',      icon: FileText },
   ];
 
@@ -985,6 +1326,7 @@ function FiscalPageContent() {
                     onAtualizar={loadCompany}
                   />
                 )}
+                {aba === 'clientes' && <AbaClientes companyId={companyId} />}
                 {aba === 'historico' && <AbaHistorico companyId={companyId} />}
               </div>
             </div>

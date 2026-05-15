@@ -124,8 +124,10 @@ ${forceResponse ? '- ChatGPT desativado: se não for função do sistema, respon
 ${memoryBlock}${historyBlock}${pendingInstruction}
 
 ## REGRA DE CONTEXTO HISTÓRICO:
-Se o histórico acima mostrar que o cliente perguntou sobre um produto e o assistente informou o preço, e agora o cliente quiser pagar (ex: "quero pagar", "pode cobrar", "vou levar"), entenda o valor do contexto e execute a função de pagamento adequada com esse valor.
-Exemplo: histórico mostra "Suco de laranja: R$8,50" e cliente diz "quero pagar" → retorne {"response": "Gerando PIX de R$8,50.", "functionKey": "pix_generate"} com o valor inferido do histórico.`,
+Se o histórico mostrar que o assistente informou o preço de um produto e o cliente confirmar que quer comprar (ex: "quero", "sim", "pode ser", "vou levar", "quero comprar", "pode cobrar"), abra o assistente de compra visual.
+Exemplo: histórico mostra "Produto Teste 2: R$100" e cliente diz "quero" → retorne {"response": "Perfeito! Abrindo o assistente de compra.", "functionKey": "fazer_pedido"}
+
+IMPORTANTE: não tente processar pagamento diretamente por voz quando houver contexto de produto — sempre use fazer_pedido para o checkout visual.
                 },
         // Injeta histórico recente como mensagens reais para o GROQ ter contexto
         ...recentHistory.slice(-4).map((m: any) => ({

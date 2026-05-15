@@ -215,6 +215,27 @@ let pedidoId: string | null = null;
 
       // 2. Aguardando escolha do método de pagamento (qualquer fala, não só confirmação)
       } else if (lastFunctionKey === '__payment_choice__') {
+        // Se há produto no histórico, abrir fazer_pedido em vez de pagamento direto
+        const hasProductInHistory = conversationHistory.some(
+          (m: any) => m.role === 'assistant' && /R\$\s*\d+/.test(m.content)
+        );
+        if (hasProductInHistory) {
+          console.log('🛒 __payment_choice__ com produto no histórico → abrindo fazer_pedido');
+          if (effectiveSessionId) {
+            const supabase = createClient();
+            supabase
+              .from('assistant_sessions')
+              .update({ last_function_keys: [] })
+              .eq('id', effectiveSessionId)
+              .then(() => {}).catch(() => {});
+          }
+          await deps.playText('Perfeito! Abrindo o assistente de compra.');
+          if (deps.onFunctionDetected) {
+            setTimeout(() => deps.onFunctionDetected!('fazer_pedido'), 300);
+          }
+          return true;
+        }
+
         const resolved = resolvePaymentMethod(transcript);
         if (resolved) {
           console.log(`💳 __payment_choice__ → "${transcript}" → ${resolved}`);

@@ -580,7 +580,7 @@ function FazerPedidoInner({ data, onClose, theme = 'dark', playText }: FazerPedi
           .from('company_function_settings')
           .select('function_key, is_enabled')
           .eq('company_id', companyId)
-          .in('function_key', ['pix_generate', 'nfc_debito', 'nfc_credito', 'tef_debito', 'tef_credito', 'link_pagamento']);
+          .in('function_key', ['pix_generate', 'nfc_debito', 'nfc_credito', 'tef_debito', 'tef_credito', 'link_pagamento', 'manual_payment']);
         const ativos = settings?.filter(s => s.is_enabled).map(s => s.function_key) ?? [];
         setMetodosAtivos(ativos.length > 0 ? ativos : ['pix_generate']);
       } finally {

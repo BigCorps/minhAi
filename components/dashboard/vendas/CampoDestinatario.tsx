@@ -373,110 +373,80 @@ export default function CampoDestinatario({
       </div>
 
       {/* Endereço (se preenchido via CEP ou manualmente) */}
-      {(dados.logradouro || dados.cidade) && (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <label className="block mb-1.5">
-              <span className="text-sm font-medium" style={{ color: C.text }}>
-                Logradouro
-              </span>
-            </label>
-            <input
-              type="text"
-              value={dados.logradouro || ''}
-              onChange={(e) => onChange({ ...dados, logradouro: e.target.value })}
-              placeholder="Rua, Avenida, etc"
-              className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-colors"
-              style={{
-                backgroundColor: C.bg,
-                borderColor: C.border,
-                color: C.text,
-              }}
-            />
-          </div>
+{(dados.cep || dados.logradouro || dados.cidade) && (
+  <div className="grid grid-cols-2 gap-3">
+    <div className="col-span-2">
+      <label className="block mb-1.5">
+        <span className="text-sm font-medium" style={{ color: C.text }}>Logradouro</span>
+      </label>
+      <input
+        type="text"
+        value={dados.logradouro || ''}
+        onChange={(e) => onChange({ ...dados, logradouro: e.target.value })}
+        placeholder="Rua, Avenida, etc"
+        className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-colors"
+        style={{ backgroundColor: C.bg, borderColor: C.border, color: C.text }}
+      />
+    </div>
 
-          <div>
-            <label className="block mb-1.5">
-              <span className="text-sm font-medium" style={{ color: C.text }}>
-                Número
-              </span>
-            </label>
-            <input
-              type="text"
-              value={dados.numero || ''}
-              onChange={(e) => onChange({ ...dados, numero: e.target.value })}
-              placeholder="123"
-              className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-colors"
-              style={{
-                backgroundColor: C.bg,
-                borderColor: C.border,
-                color: C.text,
-              }}
-            />
-          </div>
+    <div>
+      <label className="block mb-1.5">
+        <span className="text-sm font-medium" style={{ color: C.text }}>Número</span>
+      </label>
+      <input
+        type="text"
+        value={dados.numero || ''}
+        onChange={(e) => onChange({ ...dados, numero: e.target.value })}
+        placeholder="123"
+        className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-colors"
+        style={{ backgroundColor: C.bg, borderColor: C.border, color: C.text }}
+      />
+    </div>
 
-          <div>
-            <label className="block mb-1.5">
-              <span className="text-sm font-medium" style={{ color: C.text }}>
-                Bairro
-              </span>
-            </label>
-            <input
-              type="text"
-              value={dados.bairro || ''}
-              onChange={(e) => onChange({ ...dados, bairro: e.target.value })}
-              placeholder="Centro"
-              className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-colors"
-              style={{
-                backgroundColor: C.bg,
-                borderColor: C.border,
-                color: C.text,
-              }}
-            />
-          </div>
+    <div>
+      <label className="block mb-1.5">
+        <span className="text-sm font-medium" style={{ color: C.text }}>Bairro</span>
+      </label>
+      <input
+        type="text"
+        value={dados.bairro || ''}
+        onChange={(e) => onChange({ ...dados, bairro: e.target.value })}
+        placeholder="Centro"
+        className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-colors"
+        style={{ backgroundColor: C.bg, borderColor: C.border, color: C.text }}
+      />
+    </div>
 
-          <div>
-            <label className="block mb-1.5">
-              <span className="text-sm font-medium" style={{ color: C.text }}>
-                Cidade
-              </span>
-            </label>
-            <input
-              type="text"
-              value={dados.cidade || ''}
-              onChange={(e) => onChange({ ...dados, cidade: e.target.value })}
-              placeholder="São Paulo"
-              className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-colors"
-              style={{
-                backgroundColor: C.bg,
-                borderColor: C.border,
-                color: C.text,
-              }}
-            />
-          </div>
+    <div>
+      <label className="block mb-1.5">
+        <span className="text-sm font-medium" style={{ color: C.text }}>Cidade</span>
+      </label>
+      <input
+        type="text"
+        value={dados.cidade || ''}
+        onChange={(e) => onChange({ ...dados, cidade: e.target.value })}
+        placeholder="São Paulo"
+        className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-colors"
+        style={{ backgroundColor: C.bg, borderColor: C.border, color: C.text }}
+      />
+    </div>
 
-          <div>
-            <label className="block mb-1.5">
-              <span className="text-sm font-medium" style={{ color: C.text }}>
-                UF
-              </span>
-            </label>
-            <input
-              type="text"
-              value={dados.uf || ''}
-              onChange={(e) => onChange({ ...dados, uf: e.target.value.toUpperCase() })}
-              placeholder="SP"
-              maxLength={2}
-              className="w-full px-3 py-2 rounded-lg border text-sm font-mono uppercase focus:outline-none focus:ring-2 transition-colors"
-              style={{
-                backgroundColor: C.bg,
-                borderColor: C.border,
-                color: C.text,
-              }}
-            />
-          </div>
-        </div>
-      )}
+    <div>
+      <label className="block mb-1.5">
+        <span className="text-sm font-medium" style={{ color: C.text }}>UF</span>
+      </label>
+      <input
+        type="text"
+        value={dados.uf || ''}
+        onChange={(e) => onChange({ ...dados, uf: e.target.value.toUpperCase() })}
+        placeholder="SP"
+        maxLength={2}
+        className="w-full px-3 py-2 rounded-lg border text-sm font-mono uppercase focus:outline-none focus:ring-2 transition-colors"
+        style={{ backgroundColor: C.bg, borderColor: C.border, color: C.text }}
+      />
+    </div>
+  </div>
+)}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { listarProdutos, formatarPreco } from '@/lib/produtos-venda';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
+import { getContextualRoute } from '@/lib/routing-utils';
 import CheckoutFlow from '@/components/VoiceAssistant/modals/SaleModeModal/CheckoutFlow';
 import { CartProvider, useCart } from '@/hooks/useCart';
 import {
@@ -489,10 +490,10 @@ function EtapaEntrega({ C, onAvancar, onVoltar }: {
     return '';
   };
 
-  const opcoes: { key: TipoEntrega; label: string; desc: string; icon: string }[] = [
-    { key: 'retirada', label: 'Retirada no local', desc: 'Cliente retira no balcão', icon: '🏪' },
-    { key: 'delivery', label: 'Delivery', desc: 'Entrega no endereço do cliente', icon: '🛵' },
-    { key: 'mesa',    label: 'Mesa / Comanda', desc: 'Consumo no estabelecimento', icon: '🪑' },
+const opcoes: { key: TipoEntrega; label: string; desc: string; Icon: React.FC<{ className?: string }> }[] = [
+    { key: 'retirada', label: 'Retirada no local', desc: 'Cliente retira no balcão',   Icon: ({ className }) => <svg className={className} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" /></svg> },
+    { key: 'delivery', label: 'Delivery', desc: 'Entrega no endereço do cliente',      Icon: ({ className }) => <svg className={className} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" /></svg> },
+    { key: 'mesa',    label: 'Mesa / Comanda', desc: 'Consumo no estabelecimento',     Icon: ({ className }) => <svg className={className} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg> },
   ];
 
   const inputStyle = { borderColor: C.border, backgroundColor: C.bgSecondary, color: C.text };
@@ -505,7 +506,7 @@ function EtapaEntrega({ C, onAvancar, onVoltar }: {
           <button key={op.key} onClick={() => setTipo(op.key)}
             className="w-full flex items-center gap-4 p-4 rounded-xl border text-left transition-opacity hover:opacity-80"
             style={{ borderColor: tipo === op.key ? C.accent : C.border, backgroundColor: tipo === op.key ? 'rgba(16,185,129,0.08)' : C.bgSecondary }}>
-            <span className="text-2xl">{op.icon}</span>
+            <op.Icon className="w-6 h-6 flex-shrink-0" style={{ color: C.accent } as any} />
             <div>
               <p className="font-semibold text-sm" style={{ color: C.text }}>{op.label}</p>
               <p className="text-xs" style={{ color: C.textMuted }}>{op.desc}</p>
@@ -652,7 +653,7 @@ function FazerPedidoInner({ data, onClose, theme = 'dark', playText }: FazerPedi
 
     if (step === 'pagamento') {
       return (
-        <div style={{ height: 560 }}>
+        <div style={{ height: 560, padding: '0 24px 24px' }}>
           <CheckoutFlow
             companyId={companyId}
             theme={theme}
@@ -763,10 +764,10 @@ function FazerPedidoInner({ data, onClose, theme = 'dark', playText }: FazerPedi
               ))}
             </div>
             {slug && (
-              <a href={`/ia/${slug}/vendas`}
+              <a href={getContextualRoute('vendas', slug)}
                 className="text-xs px-2 py-1 rounded-lg border hover:opacity-70 transition-opacity"
                 style={{ borderColor: C.border, color: C.textMuted }}>
-                Loja completa
+                Página de Vendas
               </a>
             )}
             <button onClick={onClose}
@@ -778,7 +779,7 @@ function FazerPedidoInner({ data, onClose, theme = 'dark', playText }: FazerPedi
         </div>
 
         {/* Conteúdo */}
-        <div className="relative overflow-y-auto max-h-[90vh]" style={{ backgroundColor: C.bg }}>
+        <div className="relative overflow-hidden" style={{ backgroundColor: C.bg }}>
           {renderConteudo()}
         </div>
       </div>

@@ -667,6 +667,7 @@ function FazerPedidoInner({ data, onClose, theme = 'dark', playText }: FazerPedi
             companyId={companyId}
             theme={theme}
             onClose={onClose}
+            onVoltar={() => setStep('entrega')}
             playText={playText}
             metodosAtivos={metodosAtivos}
             observacaoEntrega={observacaoEntrega}

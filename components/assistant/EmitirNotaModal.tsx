@@ -345,6 +345,10 @@ export default function EmitirNotaModal({
   const [formaPagamento, setFormaPagamento]             = useState('pix');
   const [enviarEmail, setEnviarEmail]                   = useState(false);
 
+  // Alias para o CampoDestinatario do formulário NFS-e (usa o mesmo estado `destinatario`)
+  const destinatarioCompleto    = destinatario;
+  const setDestinatarioCompleto = setDestinatario;
+
   const [resultado, setResultado] = useState<Record<string, unknown> | null>(null);
   const [erro, setErro]           = useState('');
   const [toast, setToast]         = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
@@ -391,7 +395,7 @@ export default function EmitirNotaModal({
   useEffect(() => {
     supabase
       .from('companies')
-      .select('nfe_ativo, nfe_cnpj, nfe_crt, name')
+      .select('nfe_ativo, nfe_cnpj, nfe_crt, name, nfe_plano')
       .eq('id', companyId)
       .single()
       .then(({ data: row }) => setCompany(row));
@@ -599,6 +603,20 @@ export default function EmitirNotaModal({
   // ─── Avançar step ─────────────────────────────────────────────────────────
   const handleAvancar = useCallback(() => {
     if (step === 'form') {
+      // ✅ NFS-e vai direto para confirmação
+      if (plano === 'nfse') {
+        if (!valorTotal || isNaN(parseFloat(valorTotal.replace(',', '.')))) {
+          showToast('Informe um valor válido', 'warning');
+          return;
+        }
+        if (!descricaoServico.trim()) {
+          showToast('Informe a descrição do serviço', 'warning');
+          return;
+        }
+        setStep('confirming');
+        return;
+      }
+
       if (tipoNota === 'nfe') {
         setStep('form_nfe');
       } else {
@@ -765,9 +783,48 @@ export default function EmitirNotaModal({
         if (cpfCnpjLimpo)       body.destinatario_cpf_cnpj = cpfCnpjLimpo;
         if (destinatarioNome)   body.destinatario_nome     = destinatarioNome;
         if (destinatarioEmail)  body.destinatario_email    = destinatarioEmail;
+
+        // ✅ NFS-e com destinatário completo
         if (plano === 'nfse') {
           body.descricao_servico = descricaoServico;
+
+          // Dados do destinatário estruturados
+          if (destinatarioCompleto.nome)
+            body.destinatario_nome = destinatarioCompleto.nome;
+
+          if (destinatarioCompleto.cpf_cnpj)
+            body.destinatario_cpf_cnpj = destinatarioCompleto.cpf_cnpj.replace(/\D/g, '');
+
+          if (destinatarioCompleto.email)
+            body.destinatario_email = destinatarioCompleto.email;
+
+          if (destinatarioCompleto.telefone)
+            body.destinatario_telefone = destinatarioCompleto.telefone;
+
+          // Endereço estruturado
+          if (destinatarioCompleto.cep)
+            body.destinatario_cep = destinatarioCompleto.cep;
+
+          if (destinatarioCompleto.logradouro)
+            body.destinatario_logradouro = destinatarioCompleto.logradouro;
+
+          if (destinatarioCompleto.numero)
+            body.destinatario_numero = destinatarioCompleto.numero;
+
+          if (destinatarioCompleto.bairro)
+            body.destinatario_bairro = destinatarioCompleto.bairro;
+
+          if (destinatarioCompleto.cidade)
+            body.destinatario_cidade = destinatarioCompleto.cidade;
+
+          if (destinatarioCompleto.uf)
+            body.destinatario_uf = destinatarioCompleto.uf;
+
+          if (destinatarioCompleto.endereco_completo)
+            body.destinatario_endereco = destinatarioCompleto.endereco_completo;
+
         } else {
+          // ✅ NFCe com itens
           body.itens = [{
             nome:           descricaoServico || 'Produto',
             quantidade:     1,
@@ -784,6 +841,31 @@ export default function EmitirNotaModal({
           setStep('error');
           return;
         }
+
+        // ✅ SALVAR CLIENTE se emissão bem-sucedida e tem CPF/CNPJ
+        // Funciona para NFS-e, NFC-e e NF-e
+        if (result.success && destinatarioCompleto.cpf_cnpj && destinatarioCompleto.nome) {
+          try {
+            await salvarCliente({
+              company_id:        companyId,
+              nome:              destinatarioCompleto.nome,
+              cpf_cnpj:          destinatarioCompleto.cpf_cnpj,
+              email:             destinatarioCompleto.email,
+              telefone:          destinatarioCompleto.telefone,
+              cep:               destinatarioCompleto.cep,
+              logradouro:        destinatarioCompleto.logradouro,
+              numero:            destinatarioCompleto.numero,
+              complemento:       destinatarioCompleto.complemento,
+              bairro:            destinatarioCompleto.bairro,
+              cidade:            destinatarioCompleto.cidade,
+              uf:                destinatarioCompleto.uf,
+              endereco_completo: destinatarioCompleto.endereco_completo,
+            });
+          } catch (saveErr) {
+            console.warn('Aviso: não foi possível salvar cliente:', saveErr);
+          }
+        }
+
         setResultado(result);
         setStep('success');
       }
@@ -793,7 +875,7 @@ export default function EmitirNotaModal({
       setStep('error');
     }
   }, [
-    tipoNota, destinatario, itens, modeloDocumento,
+    tipoNota, destinatario, destinatarioCompleto, itens, modeloDocumento,
     valorTotal, destinatarioCpfCnpj, destinatarioNome,
     destinatarioEmail, descricaoServico, formaPagamento,
     enviarEmail, companyId, pedidoId, plano, salvarCliente,
@@ -825,33 +907,122 @@ export default function EmitirNotaModal({
             </div>
 
             <div className="space-y-3">
-              {[
-                { key: 'nfce' as const, title: 'NFC-e (Cupom Fiscal)', desc: 'Modelo 65 — Ideal para vendas no balcão' },
-                { key: 'nfe'  as const, title: 'NF-e (Nota Fiscal Eletrônica)', desc: 'Modelo 55 — Com assistente IA e preenchimento manual' },
-              ].map(({ key, title, desc }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setTipoNota(key)}
-                  className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                    tipoNota === key
-                      ? isDark ? 'border-blue-500 bg-blue-500/10' : 'border-blue-500 bg-blue-50'
-                      : isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className={`font-bold mb-0.5 ${textPrimary}`}>{title}</p>
-                      <p className={`text-sm ${textMuted}`}>{desc}</p>
+              {/* ✅ ADAPTAR OPÇÕES BASEADO NO PLANO */}
+              {(() => {
+                // Se plano for nfse, mostrar só NFS-e
+                if (plano === 'nfse') {
+                  return (
+                    <div className={`w-full p-4 rounded-xl border-2 text-left ${
+                      isDark ? 'border-blue-500 bg-blue-500/10' : 'border-blue-500 bg-blue-50'
+                    }`}>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className={`font-bold mb-0.5 ${textPrimary}`}>NFS-e (Nota Fiscal de Serviço)</p>
+                          <p className={`text-sm ${textMuted}`}>Nota de serviço eletrônica</p>
+                        </div>
+                        <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                      </div>
                     </div>
-                    {tipoNota === key && <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0" />}
-                  </div>
-                </button>
-              ))}
+                  );
+                }
+
+                // Se plano for nfe, mostrar NFC-e e NF-e
+                return [
+                  { key: 'nfce' as const, title: 'NFC-e (Cupom Fiscal)', desc: 'Modelo 65 — Ideal para vendas no balcão' },
+                  { key: 'nfe'  as const, title: 'NF-e (Nota Fiscal Eletrônica)', desc: 'Modelo 55 — Com assistente IA e preenchimento manual' },
+                ].map(({ key, title, desc }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setTipoNota(key)}
+                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                      tipoNota === key
+                        ? isDark ? 'border-blue-500 bg-blue-500/10' : 'border-blue-500 bg-blue-50'
+                        : isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className={`font-bold mb-0.5 ${textPrimary}`}>{title}</p>
+                        <p className={`text-sm ${textMuted}`}>{desc}</p>
+                      </div>
+                      {tipoNota === key && <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0" />}
+                    </div>
+                  </button>
+                ));
+              })()}
             </div>
 
+            {/* ✅ FORMULÁRIO PARA NFS-e */}
+            {plano === 'nfse' && (
+              <div className="space-y-4 pt-2">
+                {/* Campo de Destinatário com Autocomplete */}
+                <CampoDestinatario
+                  companyId={companyId}
+                  dados={destinatarioCompleto}
+                  onChange={setDestinatarioCompleto}
+                  theme={theme}
+                  required={false}
+                />
+
+                {/* Divisor */}
+                <div className={`border-t ${border}`} />
+
+                {/* Descrição do Serviço */}
+                <div>
+                  <label className={labelCls}>Descrição do Serviço *</label>
+                  <textarea
+                    value={descricaoServico}
+                    onChange={(e) => setDescricaoServico(e.target.value)}
+                    placeholder="Descreva o serviço prestado..."
+                    rows={3}
+                    className={inputCls}
+                  />
+                </div>
+
+                {/* Valor Total */}
+                <div>
+                  <label className={labelCls}>Valor Total (R$) *</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={valorTotal}
+                    onChange={(e) => setValorTotal(e.target.value)}
+                    placeholder="0,00"
+                    className={inputCls}
+                  />
+                </div>
+
+                {/* Forma de Pagamento */}
+                <div>
+                  <label className={labelCls}>Forma de Pagamento</label>
+                  <select value={formaPagamento} onChange={(e) => setFormaPagamento(e.target.value)} className={inputCls}>
+                    {[
+                      ['pix','PIX'],
+                      ['dinheiro','Dinheiro'],
+                      ['debito','Cartão Débito'],
+                      ['credito','Cartão Crédito'],
+                      ['nfc','NFC / Tap to Pay'],
+                      ['tef','TEF / Maquininha']
+                    ].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
+
+                {/* Checkbox Email */}
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enviarEmail}
+                    onChange={(e) => setEnviarEmail(e.target.checked)}
+                    className="w-4 h-4 accent-blue-500"
+                  />
+                  <span className={`text-sm ${textPrimary}`}>Enviar NFS-e por e-mail</span>
+                </label>
+              </div>
+            )}
+
             {/* Formulário rápido para NFCe */}
-            {tipoNota === 'nfce' && (
+            {tipoNota === 'nfce' && plano !== 'nfse' && (
               <div className="space-y-4 pt-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-4">
@@ -906,6 +1077,10 @@ export default function EmitirNotaModal({
                 Cancelar
               </button>
               <button onClick={handleAvancar}
+                disabled={
+                  (tipoNota === 'nfce' && plano !== 'nfse' && (!valorTotal || isNaN(parseFloat(valorTotal.replace(',', '.'))))) ||
+                  (plano === 'nfse' && (!valorTotal || !descricaoServico.trim()))
+                }
                 className="flex-1 py-3 px-4 rounded-xl font-semibold transition bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center gap-2">
                 Continuar <ArrowRight className="w-4 h-4" />
               </button>
@@ -1056,8 +1231,25 @@ export default function EmitirNotaModal({
               <p className={`text-sm font-semibold ${textPrimary}`}>Confirme os dados:</p>
               <div className={`text-sm ${textMuted} space-y-1`}>
                 <p><span className="font-medium">Tipo:</span> {tipoLabel}</p>
-                {/* NFC-e / NFS-e */}
-                {valorTotal && tipoNota !== 'nfe' && (
+                {/* ✅ Dados específicos de NFS-e */}
+                {plano === 'nfse' && (
+                  <>
+                    {destinatarioCompleto.nome && (
+                      <p><span className="font-medium">Destinatário:</span> {destinatarioCompleto.nome}</p>
+                    )}
+                    {destinatarioCompleto.cpf_cnpj && (
+                      <p><span className="font-medium">CPF/CNPJ:</span> {destinatarioCompleto.cpf_cnpj}</p>
+                    )}
+                    {descricaoServico && (
+                      <p><span className="font-medium">Serviço:</span> {descricaoServico}</p>
+                    )}
+                    {valorTotal && (
+                      <p><span className="font-medium">Valor:</span> R$ {parseFloat(valorTotal.replace(',', '.')).toFixed(2)}</p>
+                    )}
+                  </>
+                )}
+                {/* Dados de NFC-e */}
+                {plano !== 'nfse' && valorTotal && tipoNota !== 'nfe' && (
                   <p><span className="font-medium">Valor:</span> R$ {parseFloat(valorTotal.replace(',', '.')).toFixed(2)}</p>
                 )}
                 {/* NF-e — usa novos estados */}
@@ -1079,10 +1271,10 @@ export default function EmitirNotaModal({
                     </p>
                   </>
                 )}
-                {descricaoServico && tipoNota !== 'nfe' && (
+                {descricaoServico && tipoNota !== 'nfe' && plano !== 'nfse' && (
                   <p><span className="font-medium">Descrição:</span> {descricaoServico}</p>
                 )}
-                {destinatarioCpfCnpj && tipoNota !== 'nfe' && (
+                {destinatarioCpfCnpj && tipoNota !== 'nfe' && plano !== 'nfse' && (
                   <p><span className="font-medium">CPF/CNPJ:</span> {destinatarioCpfCnpj}</p>
                 )}
                 <p><span className="font-medium">Pagamento:</span> {formaPagamento.toUpperCase()}</p>

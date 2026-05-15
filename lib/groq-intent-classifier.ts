@@ -353,9 +353,23 @@ let pedidoId: string | null = null;
       );
 
       if (needsAmount && !hasProductMention) {
-        // GPT ainda não informou o preço — deixa o GPT responder primeiro
         console.log(`⏸️ Pagamento solicitado mas sem preço no histórico — deixando GPT responder`);
-        return false; // cai pro GPT
+        return false;
+      }
+
+      if (!needsAmount) {
+        // Função que não precisa de valor — dispara imediatamente
+        console.log(`⚡ Disparando função imediata: ${functionKey}`);
+        if (effectiveSessionId) {
+          const supabase = createClient();
+          supabase
+            .from('assistant_sessions')
+            .update({ last_function_keys: [] })
+            .eq('id', effectiveSessionId)
+            .then(() => {}).catch(() => {});
+        }
+        setTimeout(() => deps.onFunctionDetected!(functionKey), 300);
+        return true;
       }
 
       if (!hasAmount && needsAmount) {

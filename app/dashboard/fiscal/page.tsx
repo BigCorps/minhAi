@@ -1293,7 +1293,7 @@ function FiscalPageContent() {
           {companyId && (
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow border border-gray-100 dark:border-white/5 overflow-hidden">
               {/* Tabs */}
-              <div className="grid grid-cols-3 border-b border-gray-200 dark:border-white/10">
+              <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-gray-200 dark:border-white/10">
                 {abas.map(({ key, label, icon: Icon }) => (
                   <button
                     key={key}

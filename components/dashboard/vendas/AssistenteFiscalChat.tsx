@@ -135,7 +135,7 @@ export default function AssistenteFiscalChat({
     const initialMsg: Message = {
       id: `init-${Date.now()}`,
       role: 'assistant',
-      content: 'Olá! Vou te ajudar a emitir uma nota fiscal. Para começar, qual é o nome do cliente?',
+      content: 'Olá! Vou te ajudar a emitir uma nota fiscal. Você pode preencher aqui ao lado ou passar as informações para mim que eu preencho pra você.',
       timestamp: new Date(),
     };
 

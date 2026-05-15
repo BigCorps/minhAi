@@ -390,6 +390,16 @@ function StartupFunctionMetaSection({
   saved: boolean;
   onSave: () => void;
 }) {
+  const [inputText, setInputText] = React.useState(() => {
+    const match = availableFunctions.find(fn => fn.function_key === value);
+    return match ? match.function_name : value;
+  });
+
+  React.useEffect(() => {
+    const match = availableFunctions.find(fn => fn.function_key === value);
+    setInputText(match ? match.function_name : value);
+  }, [value, availableFunctions]);
+
   return (
     <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-xl space-y-3">
       <div>
@@ -400,14 +410,15 @@ function StartupFunctionMetaSection({
           Executada automaticamente na primeira mensagem do cliente via WhatsApp, Instagram ou Facebook.
         </p>
       </div>
-
       <div className="relative">
         <input
           type="text"
-          value={value}
+          value={inputText}
           onChange={e => {
             const val = e.target.value;
-            onChange(val);
+            setInputText(val);
+            onChange('');
+
             if (val.length > 0) {
               const term = val.toLowerCase();
               const filtered = availableFunctions.filter(fn =>
@@ -430,7 +441,11 @@ function StartupFunctionMetaSection({
               <button
                 key={fn.function_key}
                 type="button"
-                onMouseDown={() => { onChange(fn.function_key); setShowSuggestions(false); }}
+                onMouseDown={() => {
+                  setInputText(fn.function_name);
+                  onChange(fn.function_key);
+                  setShowSuggestions(false);
+                }}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-900 dark:text-white transition"
               >
                 <span className="font-medium">{fn.function_name}</span>
@@ -441,14 +456,17 @@ function StartupFunctionMetaSection({
         {value && (
           <button
             type="button"
-            onClick={() => { onChange(''); setShowSuggestions(false); }}
+            onClick={() => {
+              onChange('');
+              setInputText('');
+              setShowSuggestions(false);
+            }}
             className="mt-1 text-xs text-red-500 hover:text-red-600 transition"
           >
             Remover função de boas-vindas
           </button>
         )}
       </div>
-
       <button
         type="button"
         onClick={onSave}

@@ -935,7 +935,6 @@ export default function EmitirNotaModal({
               })()}
             </div>
 
-// DEPOIS — 2 colunas no desktop, coluna única no mobile
 {plano === 'nfse' && (
   <div className="space-y-4 pt-2">
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
@@ -999,7 +998,6 @@ export default function EmitirNotaModal({
   </div>
 )}
 
-// NFC-e usa CampoDestinatario igual NFS-e/NF-e
 {tipoNota === 'nfce' && plano !== 'nfse' && (
   <div className="space-y-4 pt-2">
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

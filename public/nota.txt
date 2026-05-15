@@ -130,9 +130,6 @@ Financeiro - 6️⃣ Gerar Pix | Link de Pagamento | TEF Débito
 Análise 🔁- Analise de Currículos | Gerar Currículo | Radar de Mercado
      Risco de Fornecedores | Analise de Licitações | Qualificar Empresa
 
-Tributário 🔁- Emitir NF-e | Emitir NFS-e | Emitir NFC-e
-                  Extrair Dados NF | Analisar Nota | Cancelar Nota
-
 Documentação 🔁- Validar RG/CNH | Auditar Contrato | Criar Recibo
           Criar Timbrado | Reputação da Marca | Auxiliar de Relatório
 

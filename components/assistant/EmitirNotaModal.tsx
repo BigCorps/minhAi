@@ -765,74 +765,56 @@ export default function EmitirNotaModal({
         setResultado(result);
         setStep('success');
 
-      } else {
-        // ── Lógica original NFC-e / NFS-e (preservada integralmente) ──
-        const valor        = parseFloat(valorTotal.replace(',', '.'));
-        const cpfCnpjLimpo = destinatarioCpfCnpj.replace(/\D/g, '');
+// DEPOIS
+} else {
+  const valor = parseFloat(valorTotal.replace(',', '.'));
 
-        const body: Record<string, unknown> = {
-          company_id:      companyId,
-          tipo:            'nfce',
-          modelo:          '65',
-          pedido_id:       pedidoId,
-          forma_pagamento: formaPagamento,
-          enviar_email:    enviarEmail,
-          valor_total:     valor,
-        };
+  const body: Record<string, unknown> = {
+    company_id:      companyId,
+    pedido_id:       pedidoId,
+    forma_pagamento: formaPagamento,
+    enviar_email:    enviarEmail,
+    valor_total:     valor,
+  };
 
-        if (cpfCnpjLimpo)       body.destinatario_cpf_cnpj = cpfCnpjLimpo;
-        if (destinatarioNome)   body.destinatario_nome     = destinatarioNome;
-        if (destinatarioEmail)  body.destinatario_email    = destinatarioEmail;
+  if (plano === 'nfse') {
+    body.tipo              = 'nfse';
+    body.descricao_servico = descricaoServico;
+  } else {
+    body.tipo  = 'nfce';
+    body.modelo = '65';
+    body.itens = [{
+      nome:           descricaoServico || 'Produto',
+      quantidade:     1,
+      valor_unitario: valor,
+      valor_total:    valor,
+      unidade:        'UN',
+    }];
+  }
 
-        // ✅ NFS-e com destinatário completo
-        if (plano === 'nfse') {
-          body.descricao_servico = descricaoServico;
-
-          // Dados do destinatário estruturados
-          if (destinatarioCompleto.nome)
-            body.destinatario_nome = destinatarioCompleto.nome;
-
-          if (destinatarioCompleto.cpf_cnpj)
-            body.destinatario_cpf_cnpj = destinatarioCompleto.cpf_cnpj.replace(/\D/g, '');
-
-          if (destinatarioCompleto.email)
-            body.destinatario_email = destinatarioCompleto.email;
-
-          if (destinatarioCompleto.telefone)
-            body.destinatario_telefone = destinatarioCompleto.telefone;
-
-          // Endereço estruturado
-          if (destinatarioCompleto.cep)
-            body.destinatario_cep = destinatarioCompleto.cep;
-
-          if (destinatarioCompleto.logradouro)
-            body.destinatario_logradouro = destinatarioCompleto.logradouro;
-
-          if (destinatarioCompleto.numero)
-            body.destinatario_numero = destinatarioCompleto.numero;
-
-          if (destinatarioCompleto.bairro)
-            body.destinatario_bairro = destinatarioCompleto.bairro;
-
-          if (destinatarioCompleto.cidade)
-            body.destinatario_cidade = destinatarioCompleto.cidade;
-
-          if (destinatarioCompleto.uf)
-            body.destinatario_uf = destinatarioCompleto.uf;
-
-          if (destinatarioCompleto.endereco_completo)
-            body.destinatario_endereco = destinatarioCompleto.endereco_completo;
-
-        } else {
-          // ✅ NFCe com itens
-          body.itens = [{
-            nome:           descricaoServico || 'Produto',
-            quantidade:     1,
-            valor_unitario: valor,
-            valor_total:    valor,
-            unidade:        'UN',
-          }];
-        }
+  // Destinatário completo — igual NF-e, usando destinatarioCompleto
+  if (destinatarioCompleto.nome)
+    body.destinatario_nome = destinatarioCompleto.nome;
+  if (destinatarioCompleto.cpf_cnpj)
+    body.destinatario_cpf_cnpj = destinatarioCompleto.cpf_cnpj.replace(/\D/g, '');
+  if (destinatarioCompleto.email)
+    body.destinatario_email = destinatarioCompleto.email;
+  if (destinatarioCompleto.telefone)
+    body.destinatario_telefone = destinatarioCompleto.telefone;
+  if (destinatarioCompleto.cep)
+    body.destinatario_cep = destinatarioCompleto.cep;
+  if (destinatarioCompleto.logradouro)
+    body.destinatario_logradouro = destinatarioCompleto.logradouro;
+  if (destinatarioCompleto.numero)
+    body.destinatario_numero = destinatarioCompleto.numero;
+  if (destinatarioCompleto.bairro)
+    body.destinatario_bairro = destinatarioCompleto.bairro;
+  if (destinatarioCompleto.cidade)
+    body.destinatario_cidade = destinatarioCompleto.cidade;
+  if (destinatarioCompleto.uf)
+    body.destinatario_uf = destinatarioCompleto.uf;
+  if (destinatarioCompleto.endereco_completo)
+    body.destinatario_endereco = destinatarioCompleto.endereco_completo;
 
         const { data: result, error } = await supabase.functions.invoke('emitir-nota', { body });
         if (error) throw error;
@@ -953,123 +935,110 @@ export default function EmitirNotaModal({
               })()}
             </div>
 
-            {/* ✅ FORMULÁRIO PARA NFS-e */}
-            {plano === 'nfse' && (
-              <div className="space-y-4 pt-2">
-                {/* Campo de Destinatário com Autocomplete */}
-                <CampoDestinatario
-                  companyId={companyId}
-                  dados={destinatarioCompleto}
-                  onChange={setDestinatarioCompleto}
-                  theme={theme}
-                  required={false}
-                />
+// DEPOIS — 2 colunas no desktop, coluna única no mobile
+{plano === 'nfse' && (
+  <div className="space-y-4 pt-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+      {/* Coluna esquerda — dados do destinatário */}
+      <div>
+        <CampoDestinatario
+          companyId={companyId}
+          dados={destinatarioCompleto}
+          onChange={setDestinatarioCompleto}
+          theme={theme}
+          required={false}
+        />
+      </div>
+      {/* Coluna direita — dados do serviço */}
+      <div className="space-y-4">
+        <div>
+          <label className={labelCls}>Descrição do Serviço *</label>
+          <textarea
+            value={descricaoServico}
+            onChange={(e) => setDescricaoServico(e.target.value)}
+            placeholder="Descreva o serviço prestado..."
+            rows={3}
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>Valor Total (R$) *</label>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={valorTotal}
+            onChange={(e) => setValorTotal(e.target.value)}
+            placeholder="0,00"
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>Forma de Pagamento</label>
+          <select value={formaPagamento} onChange={(e) => setFormaPagamento(e.target.value)} className={inputCls}>
+            {[
+              ['pix','PIX'],
+              ['dinheiro','Dinheiro'],
+              ['debito','Cartão Débito'],
+              ['credito','Cartão Crédito'],
+              ['nfc','NFC / Tap to Pay'],
+              ['tef','TEF / Maquininha']
+            ].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </div>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={enviarEmail}
+            onChange={(e) => setEnviarEmail(e.target.checked)}
+            className="w-4 h-4 accent-blue-500"
+          />
+          <span className={`text-sm ${textPrimary}`}>Enviar NFS-e por e-mail</span>
+        </label>
+      </div>
+    </div>
+  </div>
+)}
 
-                {/* Divisor */}
-                <div className={`border-t ${border}`} />
-
-                {/* Descrição do Serviço */}
-                <div>
-                  <label className={labelCls}>Descrição do Serviço *</label>
-                  <textarea
-                    value={descricaoServico}
-                    onChange={(e) => setDescricaoServico(e.target.value)}
-                    placeholder="Descreva o serviço prestado..."
-                    rows={3}
-                    className={inputCls}
-                  />
-                </div>
-
-                {/* Valor Total */}
-                <div>
-                  <label className={labelCls}>Valor Total (R$) *</label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={valorTotal}
-                    onChange={(e) => setValorTotal(e.target.value)}
-                    placeholder="0,00"
-                    className={inputCls}
-                  />
-                </div>
-
-                {/* Forma de Pagamento */}
-                <div>
-                  <label className={labelCls}>Forma de Pagamento</label>
-                  <select value={formaPagamento} onChange={(e) => setFormaPagamento(e.target.value)} className={inputCls}>
-                    {[
-                      ['pix','PIX'],
-                      ['dinheiro','Dinheiro'],
-                      ['debito','Cartão Débito'],
-                      ['credito','Cartão Crédito'],
-                      ['nfc','NFC / Tap to Pay'],
-                      ['tef','TEF / Maquininha']
-                    ].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
-                </div>
-
-                {/* Checkbox Email */}
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={enviarEmail}
-                    onChange={(e) => setEnviarEmail(e.target.checked)}
-                    className="w-4 h-4 accent-blue-500"
-                  />
-                  <span className={`text-sm ${textPrimary}`}>Enviar NFS-e por e-mail</span>
-                </label>
-              </div>
-            )}
-
-            {/* Formulário rápido para NFCe */}
-            {tipoNota === 'nfce' && plano !== 'nfse' && (
-              <div className="space-y-4 pt-2">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-4">
-                    <div>
-                      <label className={labelCls}>Valor Total (R$) *</label>
-                      <input type="text" inputMode="decimal" value={valorTotal}
-                        onChange={(e) => setValorTotal(e.target.value)} placeholder="0,00" className={inputCls} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>{plano === 'nfse' ? 'Descrição do Serviço *' : 'Descrição do Produto'}</label>
-                      <input type="text" value={descricaoServico}
-                        onChange={(e) => setDescricaoServico(e.target.value)}
-                        placeholder={plano === 'nfse' ? 'Ex: Desenvolvimento de website' : 'Ex: Produto'} className={inputCls} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>Forma de Pagamento</label>
-                      <select value={formaPagamento} onChange={(e) => setFormaPagamento(e.target.value)} className={inputCls}>
-                        {[['pix','PIX'],['dinheiro','Dinheiro'],['debito','Cartão Débito'],['credito','Cartão Crédito'],['nfc','NFC / Tap to Pay'],['tef','TEF / Maquininha']]
-                          .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                      </select>
-                    </div>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" checked={enviarEmail} onChange={(e) => setEnviarEmail(e.target.checked)} className="w-4 h-4 accent-blue-500" />
-                      <span className={`text-sm ${textPrimary}`}>Enviar DANFE por e-mail</span>
-                    </label>
-                  </div>
-                  <div className={`p-3 rounded-lg border ${border} space-y-3`}>
-                    <p className={`text-xs font-semibold uppercase tracking-wide ${textMuted}`}>Destinatário (opcional)</p>
-                    <div>
-                      <label className={labelCls}>CPF / CNPJ</label>
-                      <input type="text" value={destinatarioCpfCnpj}
-                        onChange={(e) => setDestinatarioCpfCnpj(e.target.value)} placeholder="000.000.000-00" className={inputCls} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>Nome</label>
-                      <input type="text" value={destinatarioNome}
-                        onChange={(e) => setDestinatarioNome(e.target.value)} placeholder="Nome do cliente" className={inputCls} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>E-mail</label>
-                      <input type="email" value={destinatarioEmail}
-                        onChange={(e) => setDestinatarioEmail(e.target.value)} placeholder="cliente@email.com" className={inputCls} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+// NFC-e usa CampoDestinatario igual NFS-e/NF-e
+{tipoNota === 'nfce' && plano !== 'nfse' && (
+  <div className="space-y-4 pt-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="space-y-4">
+        <div>
+          <label className={labelCls}>Valor Total (R$) *</label>
+          <input type="text" inputMode="decimal" value={valorTotal}
+            onChange={(e) => setValorTotal(e.target.value)} placeholder="0,00" className={inputCls} />
+        </div>
+        <div>
+          <label className={labelCls}>Descrição do Produto</label>
+          <input type="text" value={descricaoServico}
+            onChange={(e) => setDescricaoServico(e.target.value)}
+            placeholder="Ex: Produto" className={inputCls} />
+        </div>
+        <div>
+          <label className={labelCls}>Forma de Pagamento</label>
+          <select value={formaPagamento} onChange={(e) => setFormaPagamento(e.target.value)} className={inputCls}>
+            {[['pix','PIX'],['dinheiro','Dinheiro'],['debito','Cartão Débito'],['credito','Cartão Crédito'],['nfc','NFC / Tap to Pay'],['tef','TEF / Maquininha']]
+              .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </div>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={enviarEmail} onChange={(e) => setEnviarEmail(e.target.checked)} className="w-4 h-4 accent-blue-500" />
+          <span className={`text-sm ${textPrimary}`}>Enviar DANFE por e-mail</span>
+        </label>
+      </div>
+      <div>
+        <CampoDestinatario
+          companyId={companyId}
+          dados={destinatarioCompleto}
+          onChange={setDestinatarioCompleto}
+          theme={theme}
+          required={false}
+        />
+      </div>
+    </div>
+  </div>
+)}
 
             <div className="flex gap-3 pt-2">
               <button onClick={onClose}

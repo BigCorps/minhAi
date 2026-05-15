@@ -196,22 +196,24 @@ useEffect(() => {
     async function loadMetodos() {
       try {
         const supabase = createClient();
-        const { data: settings } = await supabase
+        const { data } = await supabase
           .from('company_function_settings')
           .select('function_key, is_enabled')
           .eq('company_id', companyId)
           .in('function_key', [
-            'pix_generate',
-            'link_pagamento',
+            'pix_generate', 'link_pagamento',
             'nfc_debito', 'nfc_credito',
             'tef_debito', 'tef_credito',
             'dinheiro',
           ]);
+
         const ativos: string[] = [];
-        (settings ?? []).forEach((r: any) => {
+        (data ?? []).forEach((r: any) => {
           if (r.is_enabled) ativos.push(r.function_key);
         });
         setMetodosAtivos(ativos.length > 0 ? ativos : ['pix_generate']);
+      } catch {
+        setMetodosAtivos([]);
       }
     }
     loadMetodos();

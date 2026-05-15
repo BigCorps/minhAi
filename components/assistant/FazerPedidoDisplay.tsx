@@ -692,9 +692,6 @@ function FazerPedidoInner({ data, onClose, theme = 'dark', playText }: FazerPedi
             style={{ borderColor: C.border }}>
             {!isMobile && (
               <div className="px-4 pt-3 pb-1 flex-shrink-0" style={{ backgroundColor: C.bg }}>
-                <span className="text-[11px]" style={{ color: C.textMuted }}>
-                  💡 Diga ou digite o produto. O assistente monta o pedido com você.
-                </span>
               </div>
             )}
             {carregandoProdutos ? (

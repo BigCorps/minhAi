@@ -1,5 +1,7 @@
 *Implementar Fazer Pedido na Meta.
 
+*Fazer a função Marcar Evento e Reagendamento já vincularem a marcação de um evento com um produto e eventual cobrança para a versão Vendas poder cobrar os 10% de comissão
+
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 
 *Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria

@@ -127,7 +127,7 @@ ${memoryBlock}${historyBlock}${pendingInstruction}
 Se o histórico mostrar que o assistente informou o preço de um produto e o cliente confirmar que quer comprar (ex: "quero", "sim", "pode ser", "vou levar", "quero comprar", "pode cobrar"), abra o assistente de compra visual.
 Exemplo: histórico mostra "Produto Teste 2: R$100" e cliente diz "quero" → retorne {"response": "Perfeito! Abrindo o assistente de compra.", "functionKey": "fazer_pedido"}
 
-IMPORTANTE: não tente processar pagamento diretamente por voz quando houver contexto de produto — sempre use fazer_pedido para o checkout visual.
+IMPORTANTE: não tente processar pagamento diretamente por voz quando houver contexto de produto — sempre use fazer_pedido para o checkout visual.`,
                 },
         // Injeta histórico recente como mensagens reais para o GROQ ter contexto
         ...recentHistory.slice(-4).map((m: any) => ({

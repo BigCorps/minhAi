@@ -81,7 +81,7 @@ function AssistenteVendasChat({
   const [mensagens, setMensagens] = useState<MensagemChat[]>([{
     id: 'init',
     role: 'assistant',
-    content: 'Olá! Sou seu assistente de vendas. Me diga o que deseja comprar ou pesquise um produto no carrinho ao lado.',
+    content: 'Olá! Sou seu assistente de vendas. Me diga o que deseja comprar. Você também pode pesquisar um produto no carrinho ao lado ou selecionar todos os produtos na Página de Vendas.',
   }]);
   const [input, setInput]               = useState('');
   const [carregando, setCarregando]     = useState(false);

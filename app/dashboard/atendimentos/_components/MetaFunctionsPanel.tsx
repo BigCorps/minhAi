@@ -421,7 +421,7 @@ function StartupFunctionMetaSection({
             }
           }}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-          placeholder="Ex: nossa_marca, chatgpt, modo_venda..."
+          placeholder="Ex: Nossa Marca, Fazer Pedido, Nosso Instagram..."
           className="w-full px-3 py-2 rounded-lg border border-blue-200 dark:border-blue-500/30 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         {showSuggestions && (

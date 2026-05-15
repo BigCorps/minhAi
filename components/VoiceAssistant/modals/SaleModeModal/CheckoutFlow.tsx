@@ -25,6 +25,7 @@ interface CheckoutFlowProps {
   metodosAtivos?: string[];
   profile?: { nome: string; email?: string | null; identificador?: string | null; telefone?: string | null; endereco?: string | null } | null;
   observacaoEntrega?: string | null;
+  onVoltar?: () => void;
 }
 
 function usePixTimer(expiresAt: string | null) {
@@ -47,7 +48,7 @@ function formatTime(s: number) {
   return `${m}:${(s % 60).toString().padStart(2, '0')}`;
 }
 
-export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos, profile, observacaoEntrega }: CheckoutFlowProps) {
+export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos, profile, observacaoEntrega, onVoltar }: CheckoutFlowProps) {
   const { itens, total, clear } = useCart();
   const isDark = theme === 'dark';
 
@@ -551,7 +552,7 @@ const handleEmitirCupom = useCallback((pedidoId: string) => {
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={onClose} className={btnSecondary}>Voltar</button>
+          <button onClick={onVoltar ?? onClose} className={btnSecondary}>Voltar</button>
           
           <button onClick={() => setStep('pagamento')} className={btnPrimary}>Continuar →</button>
         </div>

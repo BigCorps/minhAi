@@ -1,13 +1,5 @@
 'use client';
 // ARQUIVO: app/dashboard/atendimentos/_components/ConnectionManager.tsx
-//
-// Versão simplificada: gerencia apenas conexões + toggle de agente + prompt.
-// FunctionsPanel → aba "Funções" (MetaFunctionsPanel)
-// CommentsPanel  → aba "Comentários" (MetaCommentsPanel)
-//
-// Passo 1 — dois botões separados:
-//   Botão 1: Facebook + Instagram (OAuth redirect clássico via popup)
-//   Botão 2: WhatsApp Only (usa EmbeddedSignupButton + NEXT_PUBLIC_META_CONFIG_ID_WA)
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button }   from '@/components/ui/button';
@@ -16,6 +8,7 @@ import { Switch }   from '@/components/ui/switch';
 import {
   Loader2, AlertCircle, Instagram, Facebook, CheckCircle,
   Trash2, Phone, X, Bot, Save, ChevronDown, ChevronUp,
+  MessageSquare, Zap,
 } from 'lucide-react';
 import { createClient }          from '@/lib/supabase-browser';
 import EmbeddedSignupButton      from '@/components/meta/EmbeddedSignupButton';
@@ -37,7 +30,14 @@ type MetaConnection = {
   agent_prompt: string | null;
   prompt_enabled: boolean;
   greeting_message: string | null;
+  startup_function_key_meta: string | null;
   created_at: string;
+};
+
+type AvailableFunction = {
+  function_key: string;
+  function_name: string;
+  short_description?: string;
 };
 
 type Notification = { id: number; message: string; type: 'success' | 'error' };
@@ -47,12 +47,15 @@ type Notification = { id: number; message: string; type: 'success' | 'error' };
 function Notifications({ items, onDismiss }: { items: Notification[]; onDismiss: (id: number) => void }) {
   if (items.length === 0) return null;
   return (
-    <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
+    <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50 max-w-[calc(100vw-2rem)]">
       {items.map((n) => (
-        <div key={n.id} className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-sm text-white max-w-xs
-          ${n.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
-          <span className="flex-1">{n.message}</span>
-          <button onClick={() => onDismiss(n.id)} className="opacity-70 hover:opacity-100">
+        <div
+          key={n.id}
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-sm text-white
+            ${n.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}
+        >
+          <span className="flex-1 break-words">{n.message}</span>
+          <button onClick={() => onDismiss(n.id)} className="opacity-70 hover:opacity-100 shrink-0">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -61,48 +64,213 @@ function Notifications({ items, onDismiss }: { items: Notification[]; onDismiss:
   );
 }
 
-// ─── Painel de saudação (só-funções) ─────────────────────────────────────
+// ─── GreetingStartupSection ───────────────────────────────────────────────
+// Substitui o antigo GreetingConfig.
+// Exposto fora do AgentConfigPanel — visível sempre, independente do modo IA.
+// Mutuamente exclusivo: texto OU função, nunca os dois ao mesmo tempo.
 
-function GreetingConfig({
+function GreetingStartupSection({
   connection,
+  availableFunctions,
   onSave,
 }: {
   connection: MetaConnection;
+  availableFunctions: AvailableFunction[];
   onSave: (updates: Partial<MetaConnection>) => Promise<void>;
 }) {
-  const [text, setText]     = useState(connection.greeting_message || '');
-  const [saving, setSaving] = useState(false);
+  type Mode = 'text' | 'function';
+  const [mode, setMode]                 = useState<Mode>(connection.startup_function_key_meta ? 'function' : 'text');
+  const [greetingText, setGreetingText] = useState(connection.greeting_message || '');
+  const [fnKey, setFnKey]               = useState(connection.startup_function_key_meta || '');
+  const [fnInputText, setFnInputText]   = useState('');
+  const [suggestions, setSuggestions]   = useState<AvailableFunction[]>([]);
+  const [showSugg, setShowSugg]         = useState(false);
+  const [saving, setSaving]             = useState(false);
+  const [saved, setSaved]               = useState(false);
+
+  // Preenche label da função quando há valor salvo
+  useEffect(() => {
+    if (!connection.startup_function_key_meta || !availableFunctions.length) return;
+    const match = availableFunctions.find(f => f.function_key === connection.startup_function_key_meta);
+    setFnInputText(match ? match.function_name : connection.startup_function_key_meta);
+  }, [connection.startup_function_key_meta, availableFunctions]);
+
+  function handleFnInput(val: string) {
+    setFnInputText(val);
+    setFnKey('');
+    if (val.length > 0) {
+      const term = val.toLowerCase();
+      const filtered = availableFunctions.filter(f =>
+        f.function_key.includes(term) || f.function_name.toLowerCase().includes(term)
+      );
+      setSuggestions(filtered);
+      setShowSugg(filtered.length > 0);
+    } else {
+      setShowSugg(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
-    await onSave({ greeting_message: text.trim() || null });
-    setSaving(false);
+    try {
+      if (mode === 'text') {
+        await onSave({
+          greeting_message:          greetingText.trim() || null,
+          startup_function_key_meta: null,
+        });
+      } else {
+        await onSave({
+          greeting_message:          null,
+          startup_function_key_meta: fnKey || null,
+        });
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } finally {
+      setSaving(false);
+    }
   }
 
+  const savedFnName = availableFunctions.find(f => f.function_key === connection.startup_function_key_meta)?.function_name
+    ?? connection.startup_function_key_meta;
+
+  const statusLabel = mode === 'text'
+    ? (connection.greeting_message ? 'Texto configurado' : 'Nenhum texto salvo')
+    : (connection.startup_function_key_meta ? `Função: ${savedFnName}` : 'Nenhuma função salva');
+
   return (
-    <div className="ml-2 p-3 rounded-lg bg-green-500/10 border border-green-500/30 space-y-2">
-      <p className="text-xs font-medium text-green-600 dark:text-green-400">
-        Modo só com funções ativo — o bot só responde quando uma função for acionada, sem utilizar o ChatGPT.
-      </p>
-      <p className="text-xs text-muted-foreground">Mensagem de saudação enviada na primeira interação do cliente:</p>
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        rows={3}
-        placeholder="Ex: Olá! Posso te ajudar com orçamentos, endereço ou PIX. O que precisa?"
-        className="w-full text-sm rounded-lg border p-2 resize-none outline-none bg-background text-foreground border-border placeholder:text-muted-foreground focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
-      />
-      <Button size="sm" onClick={handleSave} disabled={saving}>
-        {saving
-          ? <><Loader2 className="mr-2 h-3 w-3 animate-spin" />Salvando...</>
-          : <><Save className="mr-2 h-3 w-3" />Salvar saudação</>
-        }
-      </Button>
+    <div className="mt-3 border border-border rounded-xl overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/30 border-b border-border flex-wrap gap-y-1">
+        <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />
+        <span className="text-sm font-semibold">Saudação Inicial</span>
+        <span className="ml-auto text-xs text-muted-foreground truncate max-w-[160px] sm:max-w-xs">
+          {statusLabel}
+        </span>
+      </div>
+
+      <div className="p-3 space-y-3">
+        {/* Seletor de modo */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setMode('text')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs sm:text-sm font-medium border transition-all
+              ${mode === 'text'
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-background text-muted-foreground border-border hover:border-blue-400 hover:text-blue-600'}`}
+          >
+            <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+            <span>Texto</span>
+          </button>
+          <button
+            onClick={() => setMode('function')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs sm:text-sm font-medium border transition-all
+              ${mode === 'function'
+                ? 'bg-purple-600 text-white border-purple-600'
+                : 'bg-background text-muted-foreground border-border hover:border-purple-400 hover:text-purple-600'}`}
+          >
+            <Zap className="h-3.5 w-3.5 shrink-0" />
+            <span>Função</span>
+          </button>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          {mode === 'text'
+            ? 'Mensagem enviada automaticamente ao primeiro contato do cliente, em qualquer modo.'
+            : 'Função executada na primeira mensagem (ex: cardápio, nossa marca, orçamento).'}
+        </p>
+
+        {/* Campo texto */}
+        {mode === 'text' && (
+          <textarea
+            value={greetingText}
+            onChange={(e) => setGreetingText(e.target.value)}
+            rows={3}
+            placeholder="Ex: Olá! Posso te ajudar com orçamentos, endereço ou PIX. O que precisa?"
+            className="w-full text-sm rounded-lg border border-border p-2.5 resize-none outline-none
+              bg-background text-foreground placeholder:text-muted-foreground
+              focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+          />
+        )}
+
+        {/* Campo função */}
+        {mode === 'function' && (
+          <div className="relative">
+            <div className="flex gap-2">
+              <div className="relative flex-1 min-w-0">
+                <input
+                  type="text"
+                  value={fnInputText}
+                  onChange={(e) => handleFnInput(e.target.value)}
+                  onBlur={() => setTimeout(() => setShowSugg(false), 150)}
+                  placeholder="Buscar função..."
+                  className="w-full px-3 py-2 pr-8 rounded-lg border border-border bg-background text-sm
+                    text-foreground placeholder:text-muted-foreground outline-none
+                    focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500"
+                />
+                {fnKey && (
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold
+                    px-1 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30
+                    text-purple-700 dark:text-purple-300">✓</span>
+                )}
+              </div>
+              {fnKey && (
+                <button
+                  onClick={() => { setFnKey(''); setFnInputText(''); }}
+                  className="shrink-0 p-2 rounded-lg border border-destructive/30 text-destructive
+                    hover:bg-destructive/10 transition"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {showSugg && (
+              <div className="absolute z-20 w-full mt-1 rounded-lg border border-border shadow-xl
+                max-h-48 overflow-y-auto bg-popover">
+                {suggestions.map(fn => (
+                  <button
+                    key={fn.function_key}
+                    type="button"
+                    onMouseDown={() => {
+                      setFnKey(fn.function_key);
+                      setFnInputText(fn.function_name);
+                      setShowSugg(false);
+                    }}
+                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted transition flex flex-col gap-0.5"
+                  >
+                    <span className="font-semibold text-foreground">{fn.function_name}</span>
+                    {fn.short_description && (
+                      <span className="text-xs text-muted-foreground truncate">{fn.short_description}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={saving || (mode === 'function' && !fnKey && !connection.startup_function_key_meta)}
+          className={`w-full sm:w-auto ${mode === 'function' ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
+        >
+          {saving ? (
+            <><Loader2 className="mr-2 h-3 w-3 animate-spin" />Salvando...</>
+          ) : saved ? (
+            <>✓ Salvo!</>
+          ) : (
+            <><Save className="mr-2 h-3 w-3" />Salvar saudação</>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }
 
-// ─── Painel de configuração do prompt ────────────────────────────────────
+// ─── AgentConfigPanel ─────────────────────────────────────────────────────
+// GreetingConfig foi removido daqui — agora está em GreetingStartupSection.
 
 function AgentConfigPanel({
   connection,
@@ -113,11 +281,11 @@ function AgentConfigPanel({
   companySystemPrompt: string | null;
   onSave: (updates: Partial<MetaConnection>) => Promise<void>;
 }) {
-  const [isOpen, setIsOpen]       = useState(false);
-  const [isSaving, setIsSaving]   = useState(false);
-  const [useCustom, setUseCustom] = useState(!!connection.agent_prompt);
-  const [promptText, setPromptText] = useState(connection.agent_prompt || companySystemPrompt || '');
-  const [promptEnabled, setPromptEnabled] = useState(connection.prompt_enabled ?? true);
+  const [isOpen, setIsOpen]             = useState(false);
+  const [isSaving, setIsSaving]         = useState(false);
+  const [useCustom, setUseCustom]       = useState(!!connection.agent_prompt);
+  const [promptText, setPromptText]     = useState(connection.agent_prompt || companySystemPrompt || '');
+  const [promptEnabled, setPromptEnabled]           = useState(connection.prompt_enabled ?? true);
   const [savingPromptEnabled, setSavingPromptEnabled] = useState(false);
 
   async function handleSave() {
@@ -139,7 +307,7 @@ function AgentConfigPanel({
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition w-full"
       >
-        <Bot className="h-4 w-4" />
+        <Bot className="h-4 w-4 shrink-0" />
         <span>Configurar prompt do agente</span>
         {savingPromptEnabled && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
         {isOpen ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
@@ -149,8 +317,8 @@ function AgentConfigPanel({
         <div className="mt-3 space-y-3">
 
           {/* Toggle: Respostas via IA */}
-          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border">
-            <div>
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border gap-3">
+            <div className="min-w-0">
               <p className="text-sm font-medium">Respostas via IA (ChatGPT)</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {promptEnabled
@@ -165,14 +333,9 @@ function AgentConfigPanel({
             />
           </div>
 
-          {/* Saudação (modo só-funções) */}
-          {!promptEnabled && (
-            <GreetingConfig connection={connection} onSave={onSave} />
-          )}
-
           {/* Prompt personalizado */}
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border">
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">Prompt personalizado para Meta</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {useCustom
@@ -237,17 +400,17 @@ export function ConnectionManager({
   onConnectionsChange?: (hasConnections: boolean) => void;
 }) {
   const supabase = createClient();
-  const [companies, setCompanies]       = useState<Company[]>([]);
-  const [connections, setConnections]   = useState<MetaConnection[]>([]);
-  const [isLoading, setIsLoading]       = useState(true);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [error, setError]               = useState<string | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [userId, setUserId]             = useState<string>('');
+  const [companies, setCompanies]               = useState<Company[]>([]);
+  const [connections, setConnections]           = useState<MetaConnection[]>([]);
+  const [availableFunctions, setAvailableFunctions] = useState<AvailableFunction[]>([]);
+  const [isLoading, setIsLoading]               = useState(true);
+  const [isConnecting, setIsConnecting]         = useState(false);
+  const [error, setError]                       = useState<string | null>(null);
+  const [notifications, setNotifications]       = useState<Notification[]>([]);
+  const [userId, setUserId]                     = useState<string>('');
   const notifCounter = useRef(0);
   const pollingRef   = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Config ID de WhatsApp-only (env var opcional)
   const configIdWA = process.env.NEXT_PUBLIC_META_CONFIG_ID_WA;
 
   function notify(message: string, type: 'success' | 'error') {
@@ -258,6 +421,20 @@ export function ConnectionManager({
   function dismissNotif(id: number) {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }
+
+  // ── Carregar funções Meta disponíveis (autocomplete de saudação) ───────
+  useEffect(() => {
+    async function loadFunctions() {
+      const { data } = await supabase
+        .from('assistant_functions')
+        .select('function_key, function_name, short_description')
+        .eq('is_active', true)
+        .eq('enabled_meta', true)
+        .order('function_name');
+      if (data) setAvailableFunctions(data);
+    }
+    loadFunctions();
+  }, []);
 
   // ── Carregar usuário e empresas ────────────────────────────────────────
   useEffect(() => {
@@ -429,9 +606,7 @@ export function ConnectionManager({
     phone_number_id: string;
     display_phone_number: string | null;
   }) {
-    const waMsg = result.display_phone_number
-      ? ` WhatsApp: ${result.display_phone_number}.`
-      : '';
+    const waMsg = result.display_phone_number ? ` WhatsApp: ${result.display_phone_number}.` : '';
     notify(`✅ Conta Meta conectada com sucesso!${waMsg}`, 'success');
     setIsConnecting(false);
     fetchConnections();
@@ -470,28 +645,28 @@ export function ConnectionManager({
     await fetchConnections();
   };
 
-  // ── Dois botões de conexão ─────────────────────────────────────────────
+  // ── Botões de conexão ──────────────────────────────────────────────────
 
   function renderConnectButton(size: 'sm' | 'lg' = 'lg') {
     if (!selectedCompanyId || !userId) {
       return (
-        <div className={`flex ${size === 'lg' ? 'flex-col sm:flex-row' : 'flex-row'} gap-2`}>
-          <Button size={size} disabled variant="outline">
-            <Phone className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
-            {size === 'lg' ? 'Conectar WhatsApp' : 'WhatsApp'}
+        <div className="flex flex-col xs:flex-row flex-wrap gap-2 w-full">
+          <Button size={size} disabled variant="outline" className="flex-1 min-w-0">
+            <Phone className={`mr-2 shrink-0 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
+            <span className="truncate">{size === 'lg' ? 'Conectar WhatsApp' : 'WhatsApp'}</span>
           </Button>
-          <Button size={size} disabled>
-            <Facebook className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
-            {size === 'lg' ? 'Conectar Facebook / Instagram' : 'Facebook / Instagram'}
+          <Button size={size} disabled className="flex-1 min-w-0">
+            <Facebook className={`mr-2 shrink-0 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
+            <span className="truncate">{size === 'lg' ? 'Conectar Facebook / Instagram' : 'Facebook / Instagram'}</span>
           </Button>
         </div>
       );
     }
 
     return (
-      <div className={`flex ${size === 'lg' ? 'flex-col sm:flex-row' : 'flex-row'} gap-2`}>
+      <div className="flex flex-col xs:flex-row flex-wrap gap-2 w-full">
 
-        {/* ── Botão 1: WhatsApp Only ── */}
+        {/* Botão WhatsApp */}
         {configIdWA ? (
           <EmbeddedSignupButton
             companyId={selectedCompanyId}
@@ -513,47 +688,41 @@ export function ConnectionManager({
             onError={handleSignupError}
             onLoading={setIsConnecting}
             disabled={isConnecting}
-            className={`inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors
+            className={`flex-1 min-w-0 inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors
               border border-green-500 text-green-700 dark:text-green-400
               bg-green-50 dark:bg-green-900/20
               hover:bg-green-100 dark:hover:bg-green-900/40
               disabled:opacity-50 disabled:pointer-events-none
-              ${size === 'lg' ? 'h-11 px-6 text-base' : 'h-9 px-4 text-sm'}`}
+              ${size === 'lg' ? 'h-11 px-4 text-base' : 'h-9 px-3 text-sm'}`}
           >
             {isConnecting
-              ? <><Loader2 className={`animate-spin ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />Conectando...</>
-              : <><Phone className={size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'} />
-                 {size === 'lg' ? 'Conectar WhatsApp' : 'WhatsApp'}</>
+              ? <><Loader2 className={`animate-spin shrink-0 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} /><span className="truncate">Conectando...</span></>
+              : <><Phone className={`shrink-0 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} /><span className="truncate">{size === 'lg' ? 'Conectar WhatsApp' : 'WhatsApp'}</span></>
             }
           </EmbeddedSignupButton>
         ) : (
-          // Fallback: env var não configurada → botão desabilitado com tooltip informativo
           <Button
             size={size}
             variant="outline"
             disabled
             title="Configure NEXT_PUBLIC_META_CONFIG_ID_WA no Vercel para habilitar"
-            className="border-green-300 text-green-500 opacity-50 cursor-not-allowed"
+            className="flex-1 min-w-0 border-green-300 text-green-500 opacity-50 cursor-not-allowed"
           >
-            <Phone className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
-            {size === 'lg' ? 'Conectar WhatsApp' : 'WhatsApp'}
+            <Phone className={`mr-2 shrink-0 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
+            <span className="truncate">{size === 'lg' ? 'Conectar WhatsApp' : 'WhatsApp'}</span>
           </Button>
         )}
 
-        {/* ── Botão 2: Facebook + Instagram (OAuth redirect clássico) ── */}
+        {/* Botão Facebook / Instagram */}
         <Button
           onClick={handleConnect}
           disabled={isConnecting}
           size={size}
-          className={size === 'lg'
-            ? 'h-11 px-6 text-base'
-            : 'h-9 px-4 text-sm'
-          }
+          className={`flex-1 min-w-0 ${size === 'lg' ? 'h-11 px-4 text-base' : 'h-9 px-3 text-sm'}`}
         >
           {isConnecting
-            ? <><Loader2 className={`mr-2 animate-spin ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />Conectando...</>
-            : <><Facebook className={`mr-2 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
-               {size === 'lg' ? 'Conectar Facebook / Instagram' : 'Facebook / Instagram'}</>
+            ? <><Loader2 className={`mr-2 animate-spin shrink-0 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} /><span className="truncate">Conectando...</span></>
+            : <><Facebook className={`mr-2 shrink-0 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} /><span className="truncate">{size === 'lg' ? 'Conectar Facebook / Instagram' : 'Facebook / Instagram'}</span></>
           }
         </Button>
 
@@ -570,7 +739,7 @@ export function ConnectionManager({
       <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-white/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Facebook className="h-5 w-5 text-blue-600" />
+            <Facebook className="h-5 w-5 text-blue-600 shrink-0" />
             Conexões Meta
           </CardTitle>
         </CardHeader>
@@ -608,7 +777,9 @@ export function ConnectionManager({
 
           ) : (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+
+              {/* Header da lista: contagem + botões de adicionar */}
+              <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
                   {connections.length}{' '}
                   {connections.length === 1 ? 'conexão ativa' : 'conexões ativas'}
@@ -616,112 +787,131 @@ export function ConnectionManager({
                 {renderConnectButton('sm')}
               </div>
 
+              {/* Cards de conexão */}
               {connections.map((conn) => (
-                <Card key={conn.id} className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+                <Card key={conn.id} className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow overflow-hidden">
                   <CardContent className="p-4">
-                    <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+
+                    {/* ── Linha principal: info + controles ── */}
+                    <div className="flex flex-col gap-3">
 
                       {/* Info da conexão */}
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Facebook className="h-4 w-4 text-blue-600 shrink-0" />
-                          <p className="font-bold">{conn.page_name}</p>
-                          <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
-                        </div>
-
-                        {conn.instagram_username && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Instagram className="h-4 w-4 text-pink-600 shrink-0" />
-                            <span>@{conn.instagram_username}</span>
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Facebook className="h-4 w-4 text-blue-600 shrink-0" />
+                            <p className="font-bold truncate">{conn.page_name}</p>
+                            <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
                           </div>
-                        )}
 
-                        {conn.whatsapp_number ? (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Phone className="h-4 w-4 text-green-600 shrink-0" />
-                            <span>{conn.whatsapp_number}</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
-                            <Phone className="h-4 w-4 shrink-0" />
-                            <span>WhatsApp não conectado</span>
-                            {configIdWA ? (
-                              <EmbeddedSignupButton
-                                companyId={conn.company_id}
-                                userId={userId}
-                                mode="coexistence"
-                                configIdOverride={configIdWA}
-                                whatsappOnly
-                                onSuccess={(result) => {
-                                  if (result.display_phone_number) {
-                                    notify(`📱 WhatsApp ${result.display_phone_number} conectado!`, 'success');
-                                  } else {
-                                    notify('✅ WhatsApp conectado!', 'success');
-                                  }
-                                  fetchConnections();
-                                }}
-                                onError={handleSignupError}
-                                className="text-xs underline underline-offset-2 hover:no-underline bg-transparent border-0 p-0 text-amber-600 dark:text-amber-400 cursor-pointer"
-                              >
-                                Conectar agora
-                              </EmbeddedSignupButton>
-                            ) : (
-                              <EmbeddedSignupButton
-                                companyId={conn.company_id}
-                                userId={userId}
-                                mode="coexistence"
-                                onSuccess={(result) => {
-                                  if (result.display_phone_number) {
-                                    notify(`📱 WhatsApp ${result.display_phone_number} conectado!`, 'success');
+                          {conn.instagram_username && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Instagram className="h-4 w-4 text-pink-600 shrink-0" />
+                              <span className="truncate">@{conn.instagram_username}</span>
+                            </div>
+                          )}
+
+                          {conn.whatsapp_number ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Phone className="h-4 w-4 text-green-600 shrink-0" />
+                              <span className="truncate">{conn.whatsapp_number}</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 flex-wrap">
+                              <Phone className="h-4 w-4 shrink-0" />
+                              <span>WhatsApp não conectado</span>
+                              {configIdWA ? (
+                                <EmbeddedSignupButton
+                                  companyId={conn.company_id}
+                                  userId={userId}
+                                  mode="coexistence"
+                                  configIdOverride={configIdWA}
+                                  whatsappOnly
+                                  onSuccess={(result) => {
+                                    if (result.display_phone_number) {
+                                      notify(`📱 WhatsApp ${result.display_phone_number} conectado!`, 'success');
+                                    } else {
+                                      notify('✅ WhatsApp conectado!', 'success');
+                                    }
                                     fetchConnections();
-                                  }
-                                }}
-                                onError={handleSignupError}
-                                className="text-xs underline underline-offset-2 hover:no-underline bg-transparent border-0 p-0 text-amber-600 dark:text-amber-400 cursor-pointer"
-                              >
-                                Conectar agora
-                              </EmbeddedSignupButton>
-                            )}
-                          </div>
-                        )}
+                                  }}
+                                  onError={handleSignupError}
+                                  className="text-xs underline underline-offset-2 hover:no-underline bg-transparent border-0 p-0 text-amber-600 dark:text-amber-400 cursor-pointer"
+                                >
+                                  Conectar agora
+                                </EmbeddedSignupButton>
+                              ) : (
+                                <EmbeddedSignupButton
+                                  companyId={conn.company_id}
+                                  userId={userId}
+                                  mode="coexistence"
+                                  onSuccess={(result) => {
+                                    if (result.display_phone_number) {
+                                      notify(`📱 WhatsApp ${result.display_phone_number} conectado!`, 'success');
+                                      fetchConnections();
+                                    }
+                                  }}
+                                  onError={handleSignupError}
+                                  className="text-xs underline underline-offset-2 hover:no-underline bg-transparent border-0 p-0 text-amber-600 dark:text-amber-400 cursor-pointer"
+                                >
+                                  Conectar agora
+                                </EmbeddedSignupButton>
+                              )}
+                            </div>
+                          )}
 
-                        <p className="text-xs text-muted-foreground pt-1">
-                          Configure e acompanhe as conversas das contas do Facebook · Instagram · WhatsApp
-                          diretamente no Business Suite do Grupo Meta
-                        </p>
+                          <p className="text-xs text-muted-foreground pt-0.5">
+                            Configure e acompanhe as conversas do Facebook · Instagram · WhatsApp
+                            diretamente no Business Suite do Grupo Meta
+                          </p>
+                        </div>
                       </div>
 
-                      {/* Toggle + Remover */}
-                      <div className="flex flex-row sm:flex-col gap-3 items-center sm:items-end w-full sm:w-auto">
-                        <div className="flex items-center gap-2 flex-1 sm:flex-none">
-                          <span className="text-sm font-medium whitespace-nowrap">
-                            Respostas automáticas
-                          </span>
+                      {/* ── Controles: toggle + remover (nunca estouram o card) ── */}
+                      <div className="flex items-center justify-between gap-3 pt-1 border-t border-border">
+                        {/* Toggle respostas automáticas */}
+                        <div className="flex items-center gap-2 min-w-0">
                           <Switch
                             checked={conn.agent_enabled}
                             onCheckedChange={(v) => handleToggleAgent(conn.id, v)}
                           />
-                          <span className={`text-xs font-medium ${conn.agent_enabled ? 'text-green-500' : 'text-gray-400'}`}>
-                            {conn.agent_enabled ? 'Ativas' : 'Pausadas'}
-                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium leading-tight">Respostas automáticas</p>
+                            <p className={`text-xs font-medium ${conn.agent_enabled ? 'text-green-500' : 'text-gray-400'}`}>
+                              {conn.agent_enabled ? 'Ativas' : 'Pausadas'}
+                            </p>
+                          </div>
                         </div>
+
+                        {/* Botão remover */}
                         <Button
                           variant="destructive"
                           size="sm"
                           onClick={() => handleDisconnect(conn.id)}
                           className="shrink-0"
                         >
-                          <Trash2 className="mr-1 h-4 w-4" />Remover
+                          <Trash2 className="h-4 w-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Remover</span>
                         </Button>
                       </div>
                     </div>
 
-                    {/* Prompt do agente */}
+                    {/* ── Configurações expandíveis ── */}
+
+                    {/* Prompt do agente (IA, prompt personalizado) */}
                     <AgentConfigPanel
                       connection={conn}
                       companySystemPrompt={selectedCompany?.system_prompt || null}
                       onSave={(u) => handleSaveConnection(conn.id, u)}
                     />
+
+                    {/* Saudação inicial / Função de boas-vindas */}
+                    <GreetingStartupSection
+                      connection={conn}
+                      availableFunctions={availableFunctions}
+                      onSave={(u) => handleSaveConnection(conn.id, u)}
+                    />
+
                   </CardContent>
                 </Card>
               ))}

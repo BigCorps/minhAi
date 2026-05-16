@@ -271,11 +271,11 @@ const TOTAL_FUNCAO_PAGES = FUNCAO_PAGES.length;
 // ============================================================
 const ALL_SECTION_IDS = [
   'inicio',
+  'assistentes',
   'provas-sociais',
   'como-funciona',
   ...RECURSO_IMAGE_SLIDES.map((r) => r.id),
   ...FUNCAO_PAGES.map((f) => f.id),
-  'assistentes',
   'depoimentos',
   'faq',
   'tecnologia',
@@ -470,6 +470,16 @@ export default function LandingPage() {
           <InicioSection theme={theme} />
         </section>
 
+        {/* ASSISTENTES ESPECIALIZADOS */}
+        <section
+          id="assistentes"
+          className="flex-shrink-0 snap-start snap-always"
+          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
+          aria-label="Especialistas de IA — Vendas, Orçamentos, Produção e Fiscal"
+        >
+          <AssistentesSection theme={theme} />
+        </section>
+
         {/* PROVAS SOCIAIS */}
         <section
           id="provas-sociais"
@@ -551,16 +561,6 @@ export default function LandingPage() {
             />
           </section>
         ))}
-
-        {/* ASSISTENTES ESPECIALIZADOS */}
-        <section
-          id="assistentes"
-          className="flex-shrink-0 snap-start snap-always"
-          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
-          aria-label="Especialistas de IA — Vendas, Orçamentos, Produção e Fiscal"
-        >
-          <AssistentesSection theme={theme} />
-        </section>
 
         {/* DEPOIMENTOS */}
         <section

@@ -1,5 +1,5 @@
-// app/components/landing/AssistentesSection.tsx — Server Component — v2 (6 especialistas)
-import { ShoppingCart, FileText, Factory, Receipt, Settings2, CalendarClock, FileBarChart2, ShieldAlert } from 'lucide-react';
+// app/components/landing/AssistentesSection.tsx — Server Component
+import { ShoppingCart, FileText, Factory, Receipt } from 'lucide-react';
 
 interface AssistentesSectionProps {
   theme?: 'dark' | 'light';
@@ -39,22 +39,6 @@ const ASSISTENTES = [
     ],
   },
   {
-    id: 'fiscal',
-    Icon: Receipt,
-    nome: 'Auxiliar Fiscal',
-    tagline: 'Emite NFe, NFSe e NFCe por voz',
-    color: 'amber' as const,
-    descricao:
-      'Informe os dados por voz — destinatário, produtos e valores — e o auxiliar preenche os campos fiscais (NCM, CFOP, CSOSN), valida os dados e emite a nota diretamente pela SEFAZ. Integrado com seus produtos e vendas.',
-    recursos: [
-      'Emissão de NFe, NFSe e NFCe',
-      'Preenchimento por voz',
-      'Sugestão automática de NCM',
-      'Integrado com produtos e vendas',
-      'Emissão direta na SEFAZ',
-    ],
-  },
-  {
     id: 'producao',
     Icon: Factory,
     nome: 'Auxiliar de Produção',
@@ -71,67 +55,19 @@ const ASSISTENTES = [
     ],
   },
   {
-    id: 'agenda',
-    Icon: CalendarClock,
-    nome: 'Gestor de Agenda',
-    tagline: 'Gerencia consultas, salões e reuniões',
-    color: 'green' as const,
-    descricao:
-      'Gerencia marcações de consultas, horários de salão e reuniões com Google Agenda e Google Meet integrados. Confirma presença, envia lembretes, reagenda e cria links de videochamada automaticamente.',
-    recursos: [
-      'Agendamento integrado ao Google Agenda',
-      'Criação de reuniões no Google Meet',
-      'Confirmação e lembrete automático',
-      'Reagendamento por voz',
-      'Suporte a múltiplos profissionais',
-    ],
-  },
-  {
-    id: 'funcoes',
-    Icon: Settings2,
-    nome: 'Gerenciador de Funções',
-    tagline: 'Cria e configura assistentes sem código',
-    color: 'blue' as const,
-    descricao:
-      'Guia o usuário na criação de assistentes e na ativação ou desativação de funções conforme a necessidade do negócio. Explica cada função, recomenda combinações e aplica as configurações em tempo real.',
-    recursos: [
-      'Criação guiada de assistentes',
-      'Ativar e desativar funções',
-      'Recomendações por segmento',
-      'Configuração em tempo real',
-      'Sem necessidade de suporte técnico',
-    ],
-  },
-  {
-    id: 'antifraude',
-    Icon: ShieldAlert,
-    nome: 'Investigador Antifraude',
-    tagline: 'Analisa arquivos e sites suspeitos',
+    id: 'fiscal',
+    Icon: Receipt,
+    nome: 'Auxiliar Fiscal',
+    tagline: 'Emite NFe, NFSe e NFCe por voz',
     color: 'amber' as const,
     descricao:
-      'Carregue arquivos, boletos, contratos ou informe uma URL e o investigador analisa a probabilidade de fraude, identifica inconsistências, verifica dados e emite um laudo com nível de risco — protegendo seu negócio.',
+      'Informe os dados por voz — destinatário, produtos e valores — e o auxiliar preenche os campos fiscais (NCM, CFOP, CSOSN), valida os dados e emite a nota diretamente pela SEFAZ. Integrado com seus produtos e vendas.',
     recursos: [
-      'Análise de boletos e links suspeitos',
-      'Verificação de URLs e sites',
-      'Upload de contratos e documentos',
-      'Laudo com nível de risco',
-      'Detecção de inconsistências fiscais',
-    ],
-  },
-  {
-    id: 'relatorios',
-    Icon: FileBarChart2,
-    nome: 'Auxiliar de Relatórios',
-    tagline: 'Transforma arquivos em relatórios inteligentes',
-    color: 'blue' as const,
-    descricao:
-      'Carregue planilhas, PDFs ou documentos e o auxiliar extrai os dados, organiza as informações e gera um relatório formatado com resumos, gráficos e insights — por voz ou chat, sem precisar de outro software.',
-    recursos: [
-      'Upload de planilhas, PDF e documentos',
-      'Extração e organização de dados',
-      'Geração de relatório formatado',
-      'Resumos e insights automáticos',
-      'Exportação em PDF ou texto',
+      'Emissão de NFe, NFSe e NFCe',
+      'Preenchimento por voz',
+      'Sugestão automática de NCM',
+      'Integrado com produtos e vendas',
+      'Emissão direta na SEFAZ',
     ],
   },
 ];
@@ -148,10 +84,6 @@ const colorMap = {
   amber: {
     dark:  { iconBg: 'bg-amber-500/15', iconText: 'text-amber-400', tag: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-400', cardBg: 'bg-amber-500/5', border: 'border-amber-500/15' },
     light: { iconBg: 'bg-amber-100',    iconText: 'text-amber-700', tag: 'bg-amber-50 text-amber-700 border-amber-200',         dot: 'bg-amber-500', cardBg: 'bg-amber-50/60', border: 'border-amber-200' },
-  },
-  green: {
-    dark:  { iconBg: 'bg-green-500/15', iconText: 'text-green-400', tag: 'bg-green-500/10 text-green-400 border-green-500/20', dot: 'bg-green-400', cardBg: 'bg-green-500/5', border: 'border-green-500/15' },
-    light: { iconBg: 'bg-green-100',    iconText: 'text-green-700', tag: 'bg-green-50 text-green-700 border-green-200',         dot: 'bg-green-500', cardBg: 'bg-green-50/60', border: 'border-green-200' },
   },
 };
 
@@ -241,7 +173,7 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
         </div>
 
         {/* ── DESKTOP: grid 4 colunas ─────────────────────────── */}
-        <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 w-full">
+        <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full">
           {ASSISTENTES.map(({ id, Icon, nome, tagline, descricao, recursos, color }) => {
             const c = colorMap[color][isDark ? 'dark' : 'light'];
             return (

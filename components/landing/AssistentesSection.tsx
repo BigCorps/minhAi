@@ -1,5 +1,5 @@
 // app/components/landing/AssistentesSection.tsx — Server Component — v2 (6 especialistas)
-import { ShoppingCart, FileText, Factory, Receipt, Settings2, CalendarClock } from 'lucide-react';
+import { ShoppingCart, FileText, Factory, Receipt, Settings2, CalendarClock, FileBarChart2, ShieldAlert } from 'lucide-react';
 
 interface AssistentesSectionProps {
   theme?: 'dark' | 'light';
@@ -100,6 +100,38 @@ const ASSISTENTES = [
       'Recomendações por segmento',
       'Configuração em tempo real',
       'Sem necessidade de suporte técnico',
+    ],
+  },
+  {
+    id: 'antifraude',
+    Icon: ShieldAlert,
+    nome: 'Investigador Antifraude',
+    tagline: 'Analisa arquivos e sites suspeitos',
+    color: 'amber' as const,
+    descricao:
+      'Carregue arquivos, boletos, contratos ou informe uma URL e o investigador analisa a probabilidade de fraude, identifica inconsistências, verifica dados e emite um laudo com nível de risco — protegendo seu negócio.',
+    recursos: [
+      'Análise de boletos e links suspeitos',
+      'Verificação de URLs e sites',
+      'Upload de contratos e documentos',
+      'Laudo com nível de risco',
+      'Detecção de inconsistências fiscais',
+    ],
+  },
+  {
+    id: 'relatorios',
+    Icon: FileBarChart2,
+    nome: 'Auxiliar de Relatórios',
+    tagline: 'Transforma arquivos em relatórios inteligentes',
+    color: 'blue' as const,
+    descricao:
+      'Carregue planilhas, PDFs ou documentos e o auxiliar extrai os dados, organiza as informações e gera um relatório formatado com resumos, gráficos e insights — por voz ou chat, sem precisar de outro software.',
+    recursos: [
+      'Upload de planilhas, PDF e documentos',
+      'Extração e organização de dados',
+      'Geração de relatório formatado',
+      'Resumos e insights automáticos',
+      'Exportação em PDF ou texto',
     ],
   },
 ];

@@ -43,7 +43,7 @@ const ASSISTENTES = [
     Icon: CalendarClock,
     nome: 'Gestor de Agenda',
     tagline: 'Consultas, salões e reuniões',
-    color: 'green' as const,
+    color: 'lime' as const,
     descricao: 'Gerencia agendamentos com Google Agenda e Meet. Confirma presença, envia lembretes e cria links de videochamada.',
   },
   {
@@ -84,10 +84,6 @@ const colorMap = {
   amber: {
     dark:  { iconBg: 'bg-amber-500/15', iconText: 'text-amber-400', tag: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-400', cardBg: 'bg-amber-500/5', border: 'border-amber-500/15' },
     light: { iconBg: 'bg-amber-100',    iconText: 'text-amber-700', tag: 'bg-amber-50 text-amber-700 border-amber-200',         dot: 'bg-amber-500', cardBg: 'bg-amber-50/60', border: 'border-amber-200' },
-  },
-  green: {
-    dark:  { iconBg: 'bg-green-500/15', iconText: 'text-green-400', tag: 'bg-green-500/10 text-green-400 border-green-500/20', dot: 'bg-green-400', cardBg: 'bg-green-500/5', border: 'border-green-500/15' },
-    light: { iconBg: 'bg-green-100',    iconText: 'text-green-700', tag: 'bg-green-50 text-green-700 border-green-200',         dot: 'bg-green-500', cardBg: 'bg-green-50/60', border: 'border-green-200' },
   },
 };
 

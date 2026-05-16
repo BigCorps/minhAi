@@ -1,6 +1,6 @@
 *Implementar Fazer Pedido na Meta.
 
-*Auxiliar de Orçamento com modal e PDF - e melhorar e colocar na landing os auxiliares anti fraude e de relatórios.
+*Auxiliar de Orçamento com modal e PDF - e melhorar os auxiliares anti fraude e de relatórios.
 
 *Função de Boas Vindas não esta funcionando. Tem que fazer ela funcionar junto com a mensagem de boas vindas atual. Assim o usuario ja define a mensagem de boa vinda, e se tiver uma função vinculada, manda a mensagem de boas vindas e no balão seguinte a função
 

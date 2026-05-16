@@ -129,7 +129,7 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
             <span className={isDark ? 'text-lime-400' : 'text-lime-600'}>completa</span>
           </h2>
           <p className={`text-xs sm:text-sm max-w-xl mx-auto mt-1 [@media(max-height:640px)_and_(max-width:767px)]:hidden ${isDark ? 'text-white/45' : 'text-gray-500'}`}>
-            8 especialistas de IA integrados ao seu negócio — cada um com foco em uma área específica.
+            Além das mais de 100 funções, você conta tambem 8 especialistas de IA integrados ao seu negócio — cada um com foco em uma área específica.
           </p>
         </div>
 

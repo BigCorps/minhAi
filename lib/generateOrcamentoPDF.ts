@@ -76,19 +76,23 @@ export async function generateOrcamentoPDF(
     }
   }
 
-  // ── Nome da empresa ───────────────────────────────────────
+  // ── Nome da empresa — centralizado verticalmente no bloco do logo ──
   const textX = margin + (logoH > 0 ? 35 : 0);
+  const blocoH = Math.max(logoH, 20); // altura mínima do bloco mesmo sem logo
+  const nomeY = y + blocoH / 2 - 2;  // nome levemente acima do centro
+  const subtituloY = y + blocoH / 2 + 6; // subtítulo abaixo do nome
+
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(cr, cg, cb);
-  doc.text(company.name, textX, y + 12);
+  doc.text(company.name, textX, nomeY);
 
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(120, 120, 120);
-  doc.text('ORÇAMENTO', textX, y + 20);
+  doc.text('ORÇAMENTO', textX, subtituloY);
 
-  y += Math.max(logoH + 8, 30);
+  y += blocoH + 8;
 
   // ── Linha separadora ──────────────────────────────────────
   doc.setDrawColor(cr, cg, cb);
@@ -123,7 +127,12 @@ export async function generateOrcamentoPDF(
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(80, 80, 80);
-      doc.text(orcamento.cliente.contato, pageW - margin - 5, y + 15, { align: 'right' });
+      doc.text(
+        orcamento.cliente.contato,
+        pageW - margin - 5,
+        y + 15,
+        { align: 'right' }
+      );
     }
 
     y += 30;
@@ -168,7 +177,12 @@ export async function generateOrcamentoPDF(
   doc.setTextColor(30, 30, 30);
   doc.text('TOTAL', pageW - margin - 80, y);
   doc.setTextColor(cr, cg, cb);
-  doc.text(`R$ ${Number(orcamento.total).toFixed(2)}`, pageW - margin, y, { align: 'right' });
+  doc.text(
+    `R$ ${Number(orcamento.total).toFixed(2)}`,
+    pageW - margin,
+    y,
+    { align: 'right' }
+  );
   y += 10;
 
   // ── Condições ─────────────────────────────────────────────
@@ -196,15 +210,17 @@ export async function generateOrcamentoPDF(
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(180, 180, 180);
-  doc.text('Orçamento gerado por minhAi • minhai.app', margin, rodapeY + 2);
+  doc.text(
+    'Orçamento gerado por minhAi • minhai.app',
+    margin,
+    rodapeY + 2
+  );
 
   // ── QR Code PIX no canto direito do rodapé ───────────────
   if (company.slug && orcamento.total > 0) {
     try {
       const pixUrl = `https://minhai.app/pix/${company.slug}/${orcamento.total.toFixed(2)}`;
-      const qrApiUrl = `/api/qrcode?data=${encodeURIComponent(pixUrl)}&size=150&color=%23000000&bg=%23ffffff`;
 
-      // Em ambiente server-side, precisa da URL absoluta
       const baseUrl = typeof window !== 'undefined'
         ? window.location.origin
         : process.env.NEXT_PUBLIC_APP_URL || 'https://minhai.app';
@@ -217,21 +233,27 @@ export async function generateOrcamentoPDF(
         const qrX = pageW - margin - qrSize;
         const qrY = rodapeY - qrSize + 2;
 
-        doc.addImage(qrBase64, 'PNG', qrX, qrY, qrSize, qrSize);
-
         // Label "Pague via PIX" acima do QR
         doc.setFontSize(6);
         doc.setTextColor(120, 120, 120);
         doc.text('Pague via PIX', qrX + qrSize / 2, qrY - 1.5, { align: 'center' });
 
-        // Link por extenso abaixo do QR (truncado se necessário)
+        // QR Code
+        doc.addImage(qrBase64, 'PNG', qrX, qrY, qrSize, qrSize);
+
+        // Link por extenso abaixo do QR
         const linkLabel = `minhai.app/pix/${company.slug}/${orcamento.total.toFixed(2)}`;
         doc.setFontSize(5.5);
         doc.setTextColor(150, 150, 150);
-        doc.text(linkLabel, qrX + qrSize / 2, qrY + qrSize + 2, { align: 'center' });
+        doc.text(
+          linkLabel,
+          qrX + qrSize / 2,
+          qrY + qrSize + 3,
+          { align: 'center' }
+        );
       }
     } catch {
-      // QR Code falhou — rodapé continua sem ele, não bloqueia o PDF
+      // QR Code falhou — PDF gerado normalmente sem ele
     }
   }
 

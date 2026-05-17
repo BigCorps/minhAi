@@ -759,23 +759,10 @@ if (lowerTranscript.includes('pix')) {
         if (!isStructuredBudget) {
           console.log('💰 Orçamento genérico → GPT com contexto');
         } else {
-          const registryFunc = getFunctionByKey(funcKey);
-          if (registryFunc?.handler) {
-            await registryFunc.handler({
-              transcript: lowerTranscript,
-              companyId,
-              functionSettings,
-              playText,
-              setIsProcessing,
-              sessionId,
-              setActiveModal,
-            });
-          } else {
-            if (result.speechText) await playText(result.speechText);
-            if (result.modalData && result.modalType) {
-              setActiveModal({ type: result.modalType, data: result.modalData });
-            }
-          }
+          setActiveModal({
+       type: 'OrcamentoDisplay',
+       data: { companyId, transcriptInicial: lowerTranscript },
+     });
           activeFunctionContextRef.current = {
             functionKey: funcKey,
             activatedAt: Date.now(),

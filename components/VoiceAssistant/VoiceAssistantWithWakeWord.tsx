@@ -1038,9 +1038,24 @@ useEffect(() => {
         case 'chatgpt':
           await pt('Pode me fazer qualquer pergunta! Estou aqui para conversar e te ajudar.');
           break;
-        case 'orcamento':
-          await pt('Posso calcular orçamentos, prazos e valores totais. O que você precisa?');
-          break;
+        case 'orcamento': {
+   await stopGoogleSpeech();
+   const supabase = createClient();
+   const { data: co } = await supabase
+     .from('companies')
+     .select('orcamento_prompt')
+     .eq('id', companyId)
+     .single();
+   if (!co?.orcamento_prompt) {
+     await pt('A função de orçamento não está configurada. Configure o prompt no painel.');
+     break;
+   }
+   setActiveModal({
+     type: 'OrcamentoDisplay',
+     data: { companyId, transcriptInicial: lastTranscript || '' },
+   });
+   break;
+ }
         case 'qrcode_whatsapp':
         case 'qrcode_instagram':
         case 'qrcode_website':

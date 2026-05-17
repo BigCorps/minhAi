@@ -208,38 +208,6 @@ useEffect(() => {
           />
         )}
 
-        {/* Campo função */}
-        {mode === 'function' && (
-          <div className="relative">
-            <div className="flex gap-2">
-              <div className="relative flex-1 min-w-0">
-                <input
-                  type="text"
-                  value={fnInputText}
-                  onChange={(e) => handleFnInput(e.target.value)}
-                  onBlur={() => setTimeout(() => setShowSugg(false), 150)}
-                  placeholder="Buscar função..."
-                  className="w-full px-3 py-2 pr-8 rounded-lg border border-border bg-background text-sm
-                    text-foreground placeholder:text-muted-foreground outline-none
-                    focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500"
-                />
-                {fnKey && (
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold
-                    px-1 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30
-                    text-purple-700 dark:text-purple-300">✓</span>
-                )}
-              </div>
-              {fnKey && (
-                <button
-                  onClick={() => { setFnKey(''); setFnInputText(''); }}
-                  className="shrink-0 p-2 rounded-lg border border-destructive/30 text-destructive
-                    hover:bg-destructive/10 transition"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
 {/* Campo função */}
 {mode === 'function' && (
   <div className="relative">

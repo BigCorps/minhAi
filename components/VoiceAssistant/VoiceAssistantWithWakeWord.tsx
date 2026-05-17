@@ -2238,6 +2238,7 @@ const response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/proces
       remover_fundo:      { type: 'RemoverFundoDisplay',              data: { companyId } },
       duplicar_imagem:    { type: 'DuplicarImagemDisplay',            data: { companyId } },
       lista_compras:      { type: 'ListaComprasDisplay',              data: { companyId } },
+      orcamento:          { type: 'OrcamentoDisplay',                data: { companyId, transcriptInicial: '' } },
       analisar_planilha:  { type: 'AnalisarPlanilhaDisplay',          data: { companyId } },
     };
 

@@ -1,5 +1,3 @@
-*Implementar Fazer Pedido e os outros 7 auxiliares na Meta.
-
 *Auxiliar de Orçamento com modal final para gerar o orçamento em PDF com o logo em PDF
 
 *Função de Boas Vindas - testar segunda pois agora esta renovando a cada 24h - qpreco 0h
@@ -8,7 +6,7 @@
 
 *Gerenciador de Funções e Onboarding na criação do assistente.
 
-*Implementar Gestor de Agenda, Auxiliar Fiscal e Auxilar de Produção nos serviços Meta.
+*Implementar Fazer Pedido, Gestor de Agenda, Auxiliar Fiscal, Auxilar de Produção e todos os 8 auxiliares nos serviços Meta.
 
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 

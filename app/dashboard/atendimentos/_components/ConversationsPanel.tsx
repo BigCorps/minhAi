@@ -154,9 +154,7 @@ function ConversationCard({
           </p>
         )}
 
-{/* Linha 3: ações — 2 linhas de 2 botões */}
 <div className="space-y-1.5 mt-2">
-  {/* Linha A: Pausar + Responder */}
   <div className="grid grid-cols-2 gap-1.5">
     <button
       onClick={() => onTogglePause(conv)}
@@ -187,7 +185,6 @@ function ConversationCard({
     </button>
   </div>
 
-  {/* Linha B: Ver conversa + Ações */}
   <div className="grid grid-cols-2 gap-1.5">
     <button
       onClick={() => onOpenChat(conv)}

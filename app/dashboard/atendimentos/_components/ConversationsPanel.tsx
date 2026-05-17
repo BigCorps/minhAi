@@ -154,58 +154,56 @@ function ConversationCard({
           </p>
         )}
 
-<div className="space-y-1.5 mt-2">
-  <div className="grid grid-cols-2 gap-1.5">
-    <button
-      onClick={() => onTogglePause(conv)}
-      disabled={isToggling}
-      title={conv.is_paused ? 'Retomar assistente' : 'Pausar assistente'}
-      className={`inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium transition
-        ${conv.is_paused
-          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
-          : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
-        } disabled:opacity-50`}
-    >
-      {isToggling
-        ? <Loader2 className="h-3 w-3 animate-spin" />
-        : conv.is_paused
-          ? <><PlayCircle  className="h-3 w-3" />Retomar</>
-          : <><PauseCircle className="h-3 w-3" />Pausar</>
-      }
-    </button>
+{/* Linha 3: ações — 1 linha no desktop, 2 no mobile */}
+<div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+  <button
+    onClick={() => onTogglePause(conv)}
+    disabled={isToggling}
+    title={conv.is_paused ? 'Retomar assistente' : 'Pausar assistente'}
+    className={`inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium transition
+      ${conv.is_paused
+        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
+        : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+      } disabled:opacity-50`}
+  >
+    {isToggling
+      ? <Loader2 className="h-3 w-3 animate-spin" />
+      : conv.is_paused
+        ? <><PlayCircle  className="h-3 w-3" />Retomar</>
+        : <><PauseCircle className="h-3 w-3" />Pausar</>
+    }
+  </button>
 
-    <button
-      onClick={() => onQuickMessage(conv)}
-      title="Enviar mensagem rápida"
-      className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium transition
-        bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400
-        hover:bg-blue-200 dark:hover:bg-blue-900/50"
-    >
-      <Send className="h-3 w-3" />Responder
-    </button>
-  </div>
+  <button
+    onClick={() => onQuickMessage(conv)}
+    title="Enviar mensagem rápida"
+    className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium transition
+      bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400
+      hover:bg-blue-200 dark:hover:bg-blue-900/50"
+  >
+    <Send className="h-3 w-3" />Responder
+  </button>
 
-  <div className="grid grid-cols-2 gap-1.5">
-    <button
-      onClick={() => onOpenChat(conv)}
-      title="Ver histórico da conversa"
-      className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium transition
-        bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400
-        hover:bg-purple-200 dark:hover:bg-purple-900/50"
-    >
-      <MessageSquare className="h-3 w-3" />Ver conversa
-    </button>
+  <button
+    onClick={() => onOpenChat(conv)}
+    title="Ver histórico da conversa"
+    className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium transition
+      bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400
+      hover:bg-purple-200 dark:hover:bg-purple-900/50"
+  >
+    <MessageSquare className="h-3 w-3" />Ver
+  </button>
 
-    <button
-      onClick={() => onOpenModal(conv)}
-      title="Mais ações"
-      className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium transition
-        bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400
-        hover:bg-gray-200 dark:hover:bg-white/20"
-    >
-      <Zap className="h-3 w-3" />Ações
-    </button>
-  </div>
+  <button
+    onClick={() => onOpenModal(conv)}
+    title="Mais ações"
+    className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium transition
+      bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400
+      hover:bg-gray-200 dark:hover:bg-white/20"
+  >
+    <Zap className="h-3 w-3" />Ações
+  </button>
+</div>
 </div>
             </div>
     </div>

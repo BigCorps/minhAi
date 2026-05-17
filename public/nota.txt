@@ -1,4 +1,4 @@
-*Auxiliar de Orçamento com modal final para gerar o orçamento em PDF com o logo em PDF
+*Publicar o App minhAi e Vixus na Playstore - DUNS RECEBIDO
 
 *Função de Boas Vindas - testar segunda pois agora esta renovando a cada 24h - qpreco 0h
 
@@ -6,7 +6,7 @@
 
 *Gerenciador de Funções e Onboarding na criação do assistente.
 
-*Implementar Fazer Pedido, Gestor de Agenda, Auxiliar Fiscal, Auxilar de Produção e todos os 8 auxiliares nos serviços Meta.
+*Implementar Fazer Pedido, Gestor de Agenda, Auxiliar Fiscal, Auxilar de Produção - todos os 8 auxiliares nos serviços Meta.
 
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 
@@ -30,9 +30,6 @@
 *Seção Integrações Externas para o usuário conectar serviços como Saipos, Ifood e outros ao minhAi e vice e versa, além de integração e webhooks para link Pix e link de pagamento - em anexo
 
 *Página admin com login via Google apenas com email appminhai@gmail.com com verificação de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header - em anexo no email
-
-AGUARDANDO:
-*Publicar o App minhAi e Vixus na Playstore (aguardando CURD)
 
 -
 

@@ -2,7 +2,7 @@
 
 *Auxiliar de Orçamento com modal final para gerar o orçamento em PDF com o logo em PDF - e melhorar os auxiliares anti fraude e de relatórios.
 
-*Função de Boas Vindas Meta e ajustar visual das abas Meta no mobile pois os botões ficam fora do quadro - qpreco 0h
+*Função de Boas Vindas - testar segunda pois agora esta renovando a cada 24h - qpreco 0h
 
 *Gestor de Agenda - Fazer a função Marcar Evento e Reagendamento já vincularem a marcação de um evento com um produto e eventual cobrança para a versão Vendas poder cobrar os 10% de comissão
 

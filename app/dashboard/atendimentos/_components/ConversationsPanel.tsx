@@ -207,6 +207,7 @@ function ConversationCard({
     </button>
   </div>
 </div>
+            </div>
     </div>
   );
 }

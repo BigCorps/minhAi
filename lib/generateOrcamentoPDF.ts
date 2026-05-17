@@ -17,6 +17,7 @@ interface OrcamentoContext {
 
 interface CompanyInfo {
   name: string;
+  slug?: string;
   logo_url?: string;
   theme_color?: string;
 }
@@ -41,7 +42,7 @@ function hexToRgb(hex: string): [number, number, number] {
   const r = parseInt(clean.substring(0, 2), 16);
   const g = parseInt(clean.substring(2, 4), 16);
   const b = parseInt(clean.substring(4, 6), 16);
-  return [isNaN(r) ? 249 : r, isNaN(g) ? 115 : g, isNaN(b) ? 22 : b];
+  return [isNaN(r) ? 59 : r, isNaN(g) ? 130 : g, isNaN(b) ? 246 : b];
 }
 
 export async function generateOrcamentoPDF(
@@ -50,37 +51,44 @@ export async function generateOrcamentoPDF(
 ): Promise<string> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
   const margin = 20;
-  const [cr, cg, cb] = hexToRgb(company.theme_color || '#f97316');
+  const [cr, cg, cb] = hexToRgb(company.theme_color || '#3b82f6');
 
   let y = margin;
 
   // ── Logo ──────────────────────────────────────────────────
+  let logoH = 0;
   if (company.logo_url) {
     const logoBase64 = await loadImageAsBase64(company.logo_url);
     if (logoBase64) {
       const ext = company.logo_url.match(/\.(png|jpg|jpeg|webp)/i)?.[1]?.toUpperCase() || 'PNG';
       const imgFormat = ext === 'JPG' ? 'JPEG' : ext;
       try {
-        doc.addImage(logoBase64, imgFormat as any, margin, y, 30, 30);
+        // ✅ Proporção correta — nunca distorce
+        const imgProps = doc.getImageProperties(logoBase64);
+        const logoW = 30;
+        logoH = (imgProps.height * logoW) / imgProps.width;
+        doc.addImage(logoBase64, imgFormat as any, margin, y, logoW, logoH);
       } catch {
-        // logo inválido — ignora
+        logoH = 0;
       }
     }
   }
 
   // ── Nome da empresa ───────────────────────────────────────
+  const textX = margin + (logoH > 0 ? 35 : 0);
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(cr, cg, cb);
-  doc.text(company.name, margin + 35, y + 12);
+  doc.text(company.name, textX, y + 12);
 
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(120, 120, 120);
-  doc.text('ORÇAMENTO', margin + 35, y + 20);
+  doc.text('ORÇAMENTO', textX, y + 20);
 
-  y += 38;
+  y += Math.max(logoH + 8, 30);
 
   // ── Linha separadora ──────────────────────────────────────
   doc.setDrawColor(cr, cg, cb);
@@ -177,10 +185,55 @@ export async function generateOrcamentoPDF(
   }
 
   // ── Rodapé ────────────────────────────────────────────────
-  const pageH = doc.internal.pageSize.getHeight();
+  const rodapeY = pageH - 28;
+
+  // Linha separadora do rodapé
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.3);
+  doc.line(margin, rodapeY - 4, pageW - margin, rodapeY - 4);
+
+  // Texto esquerdo
   doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
   doc.setTextColor(180, 180, 180);
-  doc.text('Orçamento gerado por minhAi • minhai.com.br', pageW / 2, pageH - 10, { align: 'center' });
+  doc.text('Orçamento gerado por minhAi • minhai.app', margin, rodapeY + 2);
+
+  // ── QR Code PIX no canto direito do rodapé ───────────────
+  if (company.slug && orcamento.total > 0) {
+    try {
+      const pixUrl = `https://minhai.app/pix/${company.slug}/${orcamento.total.toFixed(2)}`;
+      const qrApiUrl = `/api/qrcode?data=${encodeURIComponent(pixUrl)}&size=150&color=%23000000&bg=%23ffffff`;
+
+      // Em ambiente server-side, precisa da URL absoluta
+      const baseUrl = typeof window !== 'undefined'
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_APP_URL || 'https://minhai.app';
+
+      const qrFullUrl = `${baseUrl}/api/qrcode?data=${encodeURIComponent(pixUrl)}&size=150&color=%23000000&bg=%23ffffff`;
+      const qrBase64 = await loadImageAsBase64(qrFullUrl);
+
+      if (qrBase64) {
+        const qrSize = 20; // mm no PDF
+        const qrX = pageW - margin - qrSize;
+        const qrY = rodapeY - qrSize + 2;
+
+        doc.addImage(qrBase64, 'PNG', qrX, qrY, qrSize, qrSize);
+
+        // Label "Pague via PIX" acima do QR
+        doc.setFontSize(6);
+        doc.setTextColor(120, 120, 120);
+        doc.text('Pague via PIX', qrX + qrSize / 2, qrY - 1.5, { align: 'center' });
+
+        // Link por extenso abaixo do QR (truncado se necessário)
+        const linkLabel = `minhai.app/pix/${company.slug}/${orcamento.total.toFixed(2)}`;
+        doc.setFontSize(5.5);
+        doc.setTextColor(150, 150, 150);
+        doc.text(linkLabel, qrX + qrSize / 2, qrY + qrSize + 2, { align: 'center' });
+      }
+    } catch {
+      // QR Code falhou — rodapé continua sem ele, não bloqueia o PDF
+    }
+  }
 
   return doc.output('datauristring');
 }

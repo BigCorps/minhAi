@@ -188,8 +188,8 @@ function ConversationCard({
     onClick={() => onOpenChat(conv)}
     title="Ver histórico da conversa"
     className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium transition
-      bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400
-      hover:bg-purple-200 dark:hover:bg-purple-900/50"
+      bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400
+      hover:bg-lime-200 dark:hover:bg-lime-900/50"
   >
     <MessageSquare className="h-3 w-3" />Ver
   </button>
@@ -455,9 +455,9 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
                 className="w-full text-sm rounded-lg border p-2.5 outline-none
                   bg-white dark:bg-slate-800 text-gray-900 dark:text-white
                   border-gray-300 dark:border-white/10 placeholder:text-gray-400
-                  focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500"
+                  focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500"
               />
-              <Button onClick={handleSaveName} disabled={loading} className="w-full bg-purple-600 hover:bg-purple-700">
+              <Button onClick={handleSaveName} disabled={loading} className="w-full bg-lime-600 hover:bg-lime-700">
                 {loading
                   ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   : nameSaved

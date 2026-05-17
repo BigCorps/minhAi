@@ -40,6 +40,43 @@ interface OrcamentoDisplayProps {
   playText: (text: string) => Promise<void>;
 }
 
+interface InputAreaProps {
+  inputText: string;
+  setInputText: (v: string) => void;
+  isProcessing: boolean;
+  isTranscribing: boolean;
+  aguardandoConfirmacao: boolean;
+  voiceRecorder: any;
+  handleMicPress: () => void;
+  enviarMensagem: () => void;
+  inputRef: React.RefObject<HTMLInputElement>;
+  C: Record<string, string>;
+}
+
+interface PreviewOrcamentoProps {
+  orcamentoContext: OrcamentoContext;
+  completo: boolean;
+  pdfDataUrl: string | null;
+  isGerandoPdf: boolean;
+  gerarPdf: () => void;
+  baixarPdf: () => void;
+  C: Record<string, string>;
+}
+
+interface BotaoMutarProps {
+  audioMutado: boolean;
+  toggleMute: () => void;
+  C: Record<string, string>;
+}
+
+const CONFIRMACAO_REGEX = /\b(sim|pode|confirma|salvar|gerar|quero|ok|claro|vai|bora|gera)\b/i;
+const ORCAMENTO_VAZIO: OrcamentoContext = {
+  cliente: { nome: '', contato: '' },
+  itens: [],
+  total: 0,
+  condicoes: '',
+};
+
 function IconVolume() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,266 +97,10 @@ function IconVolumeMute() {
   );
 }
 
-const CONFIRMACAO_REGEX = /\b(sim|pode|confirma|salvar|gerar|quero|ok|claro|vai|bora|gera)\b/i;
-const ORCAMENTO_VAZIO: OrcamentoContext = {
-  cliente: { nome: '', contato: '' },
-  itens: [],
-  total: 0,
-  condicoes: '',
-};
+// ── Componentes externos (evitam remount no keystroke) ────────
 
-export default function OrcamentoDisplay({
-  data,
-  onClose,
-  theme = 'dark',
-  playText,
-}: OrcamentoDisplayProps) {
-  const { companyId, transcriptInicial } = data;
-  const isDark = theme === 'dark';
-  const isMobile = useIsMobile();
-  const voiceRecorder = useVoiceRecorder();
-
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [audioMutado, setAudioMutado] = useState(false);
-  const audioMutadoRef = useRef(false);
-
-  const [orcamentoContext, setOrcamentoContext] = useState<OrcamentoContext>(ORCAMENTO_VAZIO);
-  const [completo, setCompleto] = useState(false);
-  const [aguardandoConfirmacao, setAguardandoConfirmacao] = useState(false);
-  const [companyInfo, setCompanyInfo] = useState<{ name: string; logo_url?: string; theme_color?: string } | null>(null);
-
-  // PDF
-  const [pdfDataUrl, setPdfDataUrl] = useState<string | null>(null);
-  const [isGerandoPdf, setIsGerandoPdf] = useState(false);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const hasSpokenInitialRef = useRef(false);
-  const audioQueueRef = useRef<string[]>([]);
-  const isPlayingRef = useRef(false);
-
-  const toggleMute = useCallback(() => {
-    setAudioMutado(prev => {
-      audioMutadoRef.current = !prev;
-      return !prev;
-    });
-  }, []);
-
-  const playTextComMute = useCallback(async (text: string) => {
-    if (audioMutadoRef.current) return;
-    return playText(text);
-  }, [playText]);
-
-  const playTextSafe = useCallback(async (text: string) => {
-    if (audioMutadoRef.current) return;
-    audioQueueRef.current.push(text);
-    if (isPlayingRef.current) return;
-    while (audioQueueRef.current.length > 0) {
-      isPlayingRef.current = true;
-      const next = audioQueueRef.current.shift();
-      if (next) {
-        try {
-          await playTextComMute(next);
-          await new Promise(r => setTimeout(r, 300));
-        } catch {}
-      }
-    }
-    isPlayingRef.current = false;
-  }, [playTextComMute]);
-
-  const C = {
-    bg: isDark ? '#1e293b' : '#ffffff',
-    bgSecondary: isDark ? '#334155' : '#f8fafc',
-    bgChat: isDark ? '#0f172a' : '#f1f5f9',
-    text: isDark ? '#f1f5f9' : '#0f172a',
-    textMuted: isDark ? '#94a3b8' : '#64748b',
-    border: isDark ? '#475569' : '#e2e8f0',
-    accent: '#f97316',
-    success: '#22c55e',
-    userBubble: isDark ? '#f97316' : '#ea580c',
-    assistantBubble: isDark ? '#334155' : '#e2e8f0',
-  };
-
-  // ── Mensagem inicial ──────────────────────────────────────
-  useEffect(() => {
-    if (hasSpokenInitialRef.current) return;
-    hasSpokenInitialRef.current = true;
-
-    const msg = 'Olá! Vou montar seu orçamento. Me diga o que você precisa — pode incluir nome do cliente, itens e quantidades.';
-    setMessages([{
-      id: Date.now().toString(),
-      role: 'assistant',
-      content: msg,
-      timestamp: new Date(),
-    }]);
-    playTextSafe(msg);
-
-    // Se veio com transcript inicial (ex: "quero um orçamento de X"), processa direto
-    if (transcriptInicial && transcriptInicial.trim().length > 5) {
-      setTimeout(() => processarMensagem(transcriptInicial), 800);
-    }
-  }, []);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // ── Gerar PDF ─────────────────────────────────────────────
-  const gerarPdf = useCallback(async () => {
-    if (!companyInfo) return;
-    setIsGerandoPdf(true);
-    try {
-      const dataUrl = await generateOrcamentoPDF(orcamentoContext, companyInfo);
-      setPdfDataUrl(dataUrl);
-    } catch (err) {
-      console.error('[ORCAMENTO PDF]', err);
-    } finally {
-      setIsGerandoPdf(false);
-    }
-  }, [orcamentoContext, companyInfo]);
-
-  const baixarPdf = () => {
-    if (!pdfDataUrl) return;
-    const a = document.createElement('a');
-    a.href = pdfDataUrl;
-    a.download = `orcamento-${companyInfo?.name?.toLowerCase().replace(/\s+/g, '-') ?? 'empresa'}-${Date.now()}.pdf`;
-    a.click();
-  };
-
-  // ── Gravação de voz ───────────────────────────────────────
-  const handleMicPress = async () => {
-    if (voiceRecorder.isRecording) {
-      setIsTranscribing(true);
-      try {
-        const audioBlob = await voiceRecorder.stopRecording();
-        await transcreverAudio(audioBlob);
-      } catch {}
-      finally { setIsTranscribing(false); }
-    } else {
-      await voiceRecorder.startRecording();
-    }
-  };
-
-  const transcreverAudio = async (audioBlob: Blob) => {
-    try {
-      const reader = new FileReader();
-      reader.readAsDataURL(audioBlob);
-      const base64Audio = await new Promise<string>((resolve) => {
-        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-      });
-      const response = await fetch('/api/voice/transcribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audio: base64Audio }),
-      });
-      if (!response.ok) throw new Error();
-      const { text } = await response.json();
-      if (text?.trim()) processarMensagem(text.trim());
-    } catch {
-      alert('Erro ao transcrever. Tente digitar.');
-    }
-  };
-
-  // ── Processar mensagem ────────────────────────────────────
-  const processarMensagem = async (textoUsuario: string) => {
-    // Se aguardando confirmação de PDF
-    if (aguardandoConfirmacao) {
-      const userMsg: Message = {
-        id: Date.now().toString(),
-        role: 'user',
-        content: textoUsuario,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, userMsg]);
-
-      if (CONFIRMACAO_REGEX.test(textoUsuario)) {
-        const msgGerandoPdf: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: 'Gerando seu PDF...',
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, msgGerandoPdf]);
-        playTextSafe('Gerando o PDF do orçamento!');
-        setAguardandoConfirmacao(false);
-        await gerarPdf();
-        return;
-      } else {
-        // Não confirmou — volta a conversar
-        setAguardandoConfirmacao(false);
-        setCompleto(false);
-        // Cai no fluxo normal abaixo
-      }
-    }
-
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: textoUsuario,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMsg]);
-    setIsProcessing(true);
-
-    try {
-      const response = await fetch('/api/orcamento/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          company_id: companyId,
-          messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
-          orcamento_context: orcamentoContext,
-        }),
-      });
-
-      if (!response.ok) throw new Error();
-      const resultado = await response.json();
-
-      // Salvar companyInfo na primeira resposta
-      if (resultado.company && !companyInfo) {
-        setCompanyInfo(resultado.company);
-      }
-
-      setOrcamentoContext(resultado.orcamento);
-
-      const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: resultado.resposta,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, assistantMsg]);
-      playTextSafe(resultado.resposta);
-
-      if (resultado.completo) {
-        setCompleto(true);
-        setAguardandoConfirmacao(true);
-      }
-
-    } catch {
-      const errMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'Desculpe, tive um problema. Pode repetir?',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errMsg]);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const enviarMensagem = () => {
-    if (!inputText.trim() || isProcessing) return;
-    processarMensagem(inputText.trim());
-    setInputText('');
-  };
-
-  // ── Sub-componentes ───────────────────────────────────────
-  const BotaoMutar = () => (
+function BotaoMutar({ audioMutado, toggleMute, C }: BotaoMutarProps) {
+  return (
     <button
       onClick={toggleMute}
       title={audioMutado ? 'Ativar áudio' : 'Desativar áudio'}
@@ -332,8 +113,14 @@ export default function OrcamentoDisplay({
       {audioMutado ? <IconVolumeMute /> : <IconVolume />}
     </button>
   );
+}
 
-  const InputArea = () => (
+function InputArea({
+  inputText, setInputText, isProcessing, isTranscribing,
+  aguardandoConfirmacao, voiceRecorder, handleMicPress,
+  enviarMensagem, inputRef, C,
+}: InputAreaProps) {
+  return (
     <div style={{ padding: '16px', borderTop: `1px solid ${C.border}`, background: C.bg, flexShrink: 0 }}>
       <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
         {!inputText.trim() && (
@@ -357,14 +144,19 @@ export default function OrcamentoDisplay({
           type="text"
           value={inputText}
           onChange={e => setInputText(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(); } }}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              enviarMensagem();
+            }
+          }}
           placeholder={aguardandoConfirmacao ? 'Diga "sim" para gerar o PDF...' : 'Digite sua mensagem...'}
           disabled={isProcessing || voiceRecorder.isRecording || isTranscribing}
           style={{
             flex: 1, padding: '12px 16px', background: C.bgSecondary,
             border: `1px solid ${aguardandoConfirmacao ? C.accent : C.border}`,
             borderRadius: '24px', color: C.text, fontSize: '14px',
-            transition: 'border-color 0.2s',
+            transition: 'border-color 0.2s', outline: 'none',
           }}
         />
         {inputText.trim() && (
@@ -389,12 +181,18 @@ export default function OrcamentoDisplay({
         </div>
       )}
       {isTranscribing && (
-        <div style={{ marginTop: '8px', fontSize: '12px', color: C.accent, textAlign: 'center' }}>Transcrevendo...</div>
+        <div style={{ marginTop: '8px', fontSize: '12px', color: C.accent, textAlign: 'center' }}>
+          Transcrevendo...
+        </div>
       )}
     </div>
   );
+}
 
-  const PreviewOrcamento = () => (
+function PreviewOrcamento({
+  orcamentoContext, completo, pdfDataUrl, isGerandoPdf, gerarPdf, baixarPdf, C,
+}: PreviewOrcamentoProps) {
+  return (
     <div style={{ padding: '20px', overflowY: 'auto', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
         <FileText style={{ width: '20px', height: '20px', color: C.accent }} />
@@ -407,7 +205,8 @@ export default function OrcamentoDisplay({
           <iframe
             src={pdfDataUrl}
             style={{
-              width: '100%', height: '400px', border: `1px solid ${C.border}`,
+              width: '100%', height: '400px',
+              border: `1px solid ${C.border}`,
               borderRadius: '8px', marginBottom: '8px',
             }}
             title="Preview do PDF"
@@ -435,27 +234,38 @@ export default function OrcamentoDisplay({
         </div>
       )}
 
-      {/* Preview estruturado — só quando completo ou tem itens */}
+      {/* Preview estruturado */}
       {!pdfDataUrl && orcamentoContext.itens.length > 0 && (
         <>
-          {/* Cliente */}
           {(orcamentoContext.cliente.nome || orcamentoContext.cliente.contato) && (
             <div style={{
-              padding: '12px', background: C.bgSecondary, borderRadius: '8px', marginBottom: '12px',
+              padding: '12px', background: C.bgSecondary,
+              borderRadius: '8px', marginBottom: '12px',
             }}>
-              <div style={{ fontSize: '10px', color: C.textMuted, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cliente</div>
+              <div style={{
+                fontSize: '10px', color: C.textMuted, marginBottom: '4px',
+                textTransform: 'uppercase', letterSpacing: '0.05em',
+              }}>
+                Cliente
+              </div>
               {orcamentoContext.cliente.nome && (
-                <div style={{ fontSize: '14px', fontWeight: 600, color: C.text }}>{orcamentoContext.cliente.nome}</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: C.text }}>
+                  {orcamentoContext.cliente.nome}
+                </div>
               )}
               {orcamentoContext.cliente.contato && (
-                <div style={{ fontSize: '12px', color: C.textMuted }}>{orcamentoContext.cliente.contato}</div>
+                <div style={{ fontSize: '12px', color: C.textMuted }}>
+                  {orcamentoContext.cliente.contato}
+                </div>
               )}
             </div>
           )}
 
-          {/* Itens */}
           <div style={{ marginBottom: '12px' }}>
-            <div style={{ fontSize: '10px', color: C.textMuted, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{
+              fontSize: '10px', color: C.textMuted, marginBottom: '8px',
+              textTransform: 'uppercase', letterSpacing: '0.05em',
+            }}>
               Itens ({orcamentoContext.itens.length})
             </div>
             {orcamentoContext.itens.map((item, i) => (
@@ -468,19 +278,23 @@ export default function OrcamentoDisplay({
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 500, color: C.text }}>{item.descricao}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: C.text }}>
+                    {item.descricao}
+                  </div>
                   <div style={{ fontSize: '11px', color: C.textMuted }}>
                     {item.qtd}x · R$ {Number(item.valor_unitario).toFixed(2)} cada
                   </div>
                 </div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: C.accent, whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                <div style={{
+                  fontSize: '13px', fontWeight: 600, color: C.accent,
+                  whiteSpace: 'nowrap', marginLeft: '8px',
+                }}>
                   R$ {Number(item.subtotal).toFixed(2)}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Total */}
           <div style={{
             padding: '12px 16px', background: C.accent + '22',
             borderRadius: '8px', border: `1px solid ${C.accent}44`,
@@ -493,7 +307,6 @@ export default function OrcamentoDisplay({
             </span>
           </div>
 
-          {/* Botão gerar PDF (quando completo mas ainda não gerou) */}
           {completo && !pdfDataUrl && !isGerandoPdf && (
             <button
               onClick={gerarPdf}
@@ -511,7 +324,6 @@ export default function OrcamentoDisplay({
         </>
       )}
 
-      {/* Estado vazio */}
       {orcamentoContext.itens.length === 0 && !pdfDataUrl && (
         <div style={{ padding: '40px 20px', textAlign: 'center', color: C.textMuted, fontSize: '13px' }}>
           <FileText style={{ width: '48px', height: '48px', margin: '0 auto 12px', opacity: 0.3 }} />
@@ -520,47 +332,281 @@ export default function OrcamentoDisplay({
       )}
     </div>
   );
+}
 
-  const ChatArea = () => (
-    <div style={{ background: C.bgChat, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{
-        flex: 1, overflowY: 'auto', padding: '20px',
-        display: 'flex', flexDirection: 'column', gap: '16px', minHeight: 0,
-      }}>
-        {messages.map(msg => (
-          <div key={msg.id} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-            <div style={{
-              maxWidth: '70%', padding: '12px 16px', borderRadius: '12px',
-              background: msg.role === 'user' ? C.userBubble : C.assistantBubble,
-              color: msg.role === 'user' ? 'white' : C.text,
-              fontSize: '14px', lineHeight: 1.5,
-            }}>
-              {msg.content}
-            </div>
+// ── Componente principal ──────────────────────────────────────
+
+export default function OrcamentoDisplay({
+  data,
+  onClose,
+  theme = 'dark',
+  playText,
+}: OrcamentoDisplayProps) {
+  const { companyId } = data;
+  const isDark = theme === 'dark';
+  const isMobile = useIsMobile();
+  const voiceRecorder = useVoiceRecorder();
+
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [audioMutado, setAudioMutado] = useState(false);
+  const audioMutadoRef = useRef(false);
+
+  const [orcamentoContext, setOrcamentoContext] = useState<OrcamentoContext>(ORCAMENTO_VAZIO);
+  const [completo, setCompleto] = useState(false);
+  const [aguardandoConfirmacao, setAguardandoConfirmacao] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState<{
+    name: string; logo_url?: string; theme_color?: string;
+  } | null>(null);
+
+  const [pdfDataUrl, setPdfDataUrl] = useState<string | null>(null);
+  const [isGerandoPdf, setIsGerandoPdf] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const hasSpokenInitialRef = useRef(false);
+  const audioQueueRef = useRef<string[]>([]);
+  const isPlayingRef = useRef(false);
+
+  const toggleMute = useCallback(() => {
+    setAudioMutado(prev => {
+      audioMutadoRef.current = !prev;
+      return !prev;
+    });
+  }, []);
+
+  const C = {
+    bg: isDark ? '#1e293b' : '#ffffff',
+    bgSecondary: isDark ? '#334155' : '#f8fafc',
+    bgChat: isDark ? '#0f172a' : '#f1f5f9',
+    text: isDark ? '#f1f5f9' : '#0f172a',
+    textMuted: isDark ? '#94a3b8' : '#64748b',
+    border: isDark ? '#475569' : '#e2e8f0',
+    accent: '#3b82f6',
+    success: '#22c55e',
+    userBubble: isDark ? '#3b82f6' : '#2563eb',
+    assistantBubble: isDark ? '#334155' : '#e2e8f0',
+  };
+
+  const playTextComMute = useCallback(async (text: string) => {
+    if (audioMutadoRef.current) return;
+    return playText(text);
+  }, [playText]);
+
+  const playTextSafe = useCallback(async (text: string) => {
+    if (audioMutadoRef.current) return;
+    audioQueueRef.current.push(text);
+    if (isPlayingRef.current) return;
+    while (audioQueueRef.current.length > 0) {
+      isPlayingRef.current = true;
+      const next = audioQueueRef.current.shift();
+      if (next) {
+        try {
+          await playTextComMute(next);
+          await new Promise(r => setTimeout(r, 300));
+        } catch {}
+      }
+    }
+    isPlayingRef.current = false;
+  }, [playTextComMute]);
+
+  // ── Mensagem inicial ──────────────────────────────────────
+  useEffect(() => {
+    if (hasSpokenInitialRef.current) return;
+    hasSpokenInitialRef.current = true;
+
+    const msg = 'Olá! Vou montar seu orçamento. Me diga o que você precisa — pode incluir nome do cliente, itens e quantidades.';
+    setMessages([{
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: msg,
+      timestamp: new Date(),
+    }]);
+    playTextSafe(msg);
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // ── Gerar PDF ─────────────────────────────────────────────
+  const gerarPdf = useCallback(async () => {
+    if (!companyInfo) return;
+    setIsGerandoPdf(true);
+    try {
+      const dataUrl = await generateOrcamentoPDF(orcamentoContext, companyInfo);
+      setPdfDataUrl(dataUrl);
+    } catch (err) {
+      console.error('[ORCAMENTO PDF]', err);
+    } finally {
+      setIsGerandoPdf(false);
+    }
+  }, [orcamentoContext, companyInfo]);
+
+  const baixarPdf = useCallback(() => {
+    if (!pdfDataUrl) return;
+    const a = document.createElement('a');
+    a.href = pdfDataUrl;
+    a.download = `orcamento-${companyInfo?.name?.toLowerCase().replace(/\s+/g, '-') ?? 'empresa'}-${Date.now()}.pdf`;
+    a.click();
+  }, [pdfDataUrl, companyInfo]);
+
+  // ── Gravação de voz ───────────────────────────────────────
+  const handleMicPress = useCallback(async () => {
+    if (voiceRecorder.isRecording) {
+      setIsTranscribing(true);
+      try {
+        const audioBlob = await voiceRecorder.stopRecording();
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        const base64Audio = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+        });
+        const response = await fetch('/api/voice/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audio: base64Audio }),
+        });
+        if (!response.ok) throw new Error();
+        const { text } = await response.json();
+        if (text?.trim()) processarMensagem(text.trim());
+      } catch {
+        alert('Erro ao transcrever. Tente digitar.');
+      } finally {
+        setIsTranscribing(false);
+      }
+    } else {
+      await voiceRecorder.startRecording();
+    }
+  }, [voiceRecorder]);
+
+  // ── Processar mensagem ────────────────────────────────────
+  const processarMensagem = useCallback(async (textoUsuario: string) => {
+    if (aguardandoConfirmacao) {
+      const userMsg: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: textoUsuario,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, userMsg]);
+
+      if (CONFIRMACAO_REGEX.test(textoUsuario)) {
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: 'Gerando seu PDF...',
+          timestamp: new Date(),
+        }]);
+        playTextSafe('Gerando o PDF do orçamento!');
+        setAguardandoConfirmacao(false);
+        await gerarPdf();
+        return;
+      } else {
+        setAguardandoConfirmacao(false);
+        setCompleto(false);
+      }
+    }
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: textoUsuario,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMsg]);
+    setIsProcessing(true);
+
+    try {
+      const response = await fetch('/api/orcamento/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company_id: companyId,
+          messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
+          orcamento_context: orcamentoContext,
+        }),
+      });
+
+      if (!response.ok) throw new Error();
+      const resultado = await response.json();
+
+      if (resultado.company && !companyInfo) {
+        setCompanyInfo(resultado.company);
+      }
+
+      setOrcamentoContext(resultado.orcamento);
+
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: resultado.resposta,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMsg]);
+      playTextSafe(resultado.resposta);
+
+      if (resultado.completo) {
+        setCompleto(true);
+        setAguardandoConfirmacao(true);
+      }
+    } catch {
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Desculpe, tive um problema. Pode repetir?',
+        timestamp: new Date(),
+      }]);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [aguardandoConfirmacao, messages, orcamentoContext, companyId, companyInfo, gerarPdf, playTextSafe]);
+
+  const enviarMensagem = useCallback(() => {
+    if (!inputText.trim() || isProcessing) return;
+    processarMensagem(inputText.trim());
+    setInputText('');
+  }, [inputText, isProcessing, processarMensagem]);
+
+  const ChatMessages = () => (
+    <>
+      {messages.map(msg => (
+        <div key={msg.id} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+          <div style={{
+            maxWidth: '70%', padding: '12px 16px', borderRadius: '12px',
+            background: msg.role === 'user' ? C.userBubble : C.assistantBubble,
+            color: msg.role === 'user' ? 'white' : C.text,
+            fontSize: '14px', lineHeight: 1.5,
+          }}>
+            {msg.content}
           </div>
-        ))}
-        {isProcessing && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <div style={{
-              padding: '12px 16px', borderRadius: '12px',
-              background: C.assistantBubble, color: C.text,
-              display: 'flex', alignItems: 'center', gap: '8px',
-            }}>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span style={{ fontSize: '14px' }}>Processando...</span>
-            </div>
+        </div>
+      ))}
+      {isProcessing && (
+        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+          <div style={{
+            padding: '12px 16px', borderRadius: '12px',
+            background: C.assistantBubble, color: C.text,
+            display: 'flex', alignItems: 'center', gap: '8px',
+          }}>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span style={{ fontSize: '14px' }}>Processando...</span>
           </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      <InputArea />
-    </div>
+        </div>
+      )}
+      <div ref={messagesEndRef} />
+    </>
   );
 
   // ── Render mobile ─────────────────────────────────────────
   if (isMobile) {
     return createPortal(
-      <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: C.bg, display: 'flex', flexDirection: 'column' }}>
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: C.bg, display: 'flex', flexDirection: 'column',
+      }}>
         {/* Header */}
         <div style={{
           padding: '12px 16px', borderBottom: `1px solid ${C.border}`,
@@ -571,15 +617,21 @@ export default function OrcamentoDisplay({
             <span style={{ fontSize: '16px', fontWeight: 'bold', color: C.text }}>Criar Orçamento</span>
           </div>
           <div style={{ display: 'flex', gap: '4px' }}>
-            <BotaoMutar />
-            <button onClick={onClose} style={{ padding: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}>
+            <BotaoMutar audioMutado={audioMutado} toggleMute={toggleMute} C={C} />
+            <button
+              onClick={onClose}
+              style={{ padding: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         {/* Chat */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
+        <div style={{
+          flex: 1, overflowY: 'auto', padding: '16px',
+          display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0,
+        }}>
           {messages.map(msg => (
             <div
               key={msg.id}
@@ -607,18 +659,36 @@ export default function OrcamentoDisplay({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Preview compacto mobile — só quando tem itens */}
+        {/* Preview compacto mobile */}
         {orcamentoContext.itens.length > 0 && (
           <div style={{
             maxHeight: '35vh', overflowY: 'auto',
-            padding: '12px 16px', background: C.bgSecondary,
             borderTop: `1px solid ${C.border}`, flexShrink: 0,
           }}>
-            <PreviewOrcamento />
+            <PreviewOrcamento
+              orcamentoContext={orcamentoContext}
+              completo={completo}
+              pdfDataUrl={pdfDataUrl}
+              isGerandoPdf={isGerandoPdf}
+              gerarPdf={gerarPdf}
+              baixarPdf={baixarPdf}
+              C={C}
+            />
           </div>
         )}
 
-        <InputArea />
+        <InputArea
+          inputText={inputText}
+          setInputText={setInputText}
+          isProcessing={isProcessing}
+          isTranscribing={isTranscribing}
+          aguardandoConfirmacao={aguardandoConfirmacao}
+          voiceRecorder={voiceRecorder}
+          handleMicPress={handleMicPress}
+          enviarMensagem={enviarMensagem}
+          inputRef={inputRef}
+          C={C}
+        />
       </div>,
       document.body
     );
@@ -650,8 +720,11 @@ export default function OrcamentoDisplay({
             </div>
           </div>
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-            <BotaoMutar />
-            <button onClick={onClose} style={{ padding: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}>
+            <BotaoMutar audioMutado={audioMutado} toggleMute={toggleMute} C={C} />
+            <button
+              onClick={onClose}
+              style={{ padding: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -662,9 +735,39 @@ export default function OrcamentoDisplay({
           flex: 1, display: 'grid', gridTemplateColumns: '1fr 400px',
           gap: '1px', background: C.border, overflow: 'hidden',
         }}>
-          <ChatArea />
+          {/* Chat */}
+          <div style={{ background: C.bgChat, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{
+              flex: 1, overflowY: 'auto', padding: '20px',
+              display: 'flex', flexDirection: 'column', gap: '16px', minHeight: 0,
+            }}>
+              <ChatMessages />
+            </div>
+            <InputArea
+              inputText={inputText}
+              setInputText={setInputText}
+              isProcessing={isProcessing}
+              isTranscribing={isTranscribing}
+              aguardandoConfirmacao={aguardandoConfirmacao}
+              voiceRecorder={voiceRecorder}
+              handleMicPress={handleMicPress}
+              enviarMensagem={enviarMensagem}
+              inputRef={inputRef}
+              C={C}
+            />
+          </div>
+
+          {/* Preview */}
           <div style={{ background: C.bg, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <PreviewOrcamento />
+            <PreviewOrcamento
+              orcamentoContext={orcamentoContext}
+              completo={completo}
+              pdfDataUrl={pdfDataUrl}
+              isGerandoPdf={isGerandoPdf}
+              gerarPdf={gerarPdf}
+              baixarPdf={baixarPdf}
+              C={C}
+            />
           </div>
         </div>
       </div>

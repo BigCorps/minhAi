@@ -729,6 +729,13 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
   const isActiveRef         = useRef(true);
   const hasSpokenInitialRef = useRef(false);
   const sessaoRef           = useRef<{ messages: { role: string; content: string }[] }>({ messages: [] });
+  // Refs espelhando state para evitar stale closure em callbacks assíncronos
+  const dadosBrutosRef      = useRef<Record<string, unknown>[]>([]);
+  const schemaRef           = useRef<ReturnType<typeof construirSchema>>([]);
+  const conteudoTextoRef    = useRef('');
+  const imagemBase64Ref     = useRef('');
+  const tipoArquivoRef      = useRef<TipoArquivo>(null);
+  const nomeArquivoRef      = useRef('');
 
   // ── Audio ───────────────────────────────────────────────────────────────────
   const toggleMute = useCallback(() => {
@@ -775,43 +782,57 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
+  // Mantém refs sincronizadas com os states para uso em callbacks assíncronos
+  useEffect(() => { dadosBrutosRef.current = dadosBrutos; }, [dadosBrutos]);
+  useEffect(() => { schemaRef.current = schema; }, [schema]);
+  useEffect(() => { conteudoTextoRef.current = conteudoTexto; }, [conteudoTexto]);
+  useEffect(() => { imagemBase64Ref.current = imagemBase64; }, [imagemBase64]);
+  useEffect(() => { tipoArquivoRef.current = tipoArquivo; }, [tipoArquivo]);
+  useEffect(() => { nomeArquivoRef.current = nomeArquivo; }, [nomeArquivo]);
+
   // ── Helpers ─────────────────────────────────────────────────────────────────
   const addMessage = (role: 'user' | 'assistant', content: string) => {
     setMessages(prev => [...prev, { id: Date.now().toString() + Math.random(), role, content, timestamp: new Date() }]);
   };
 
+  // ── Helper: recalcula completo após qualquer edição local ────────────────────
+  const recalcularCompleto = (f: DashboardFicha): DashboardFicha => ({
+    ...f,
+    completo: f.kpis.length >= 3 && f.graficos.length >= 2 && f.insights.length >= 2 && !!f.resumo_executivo,
+  });
+
   // ── Edição direta no painel ──────────────────────────────────────────────────
   const atualizarKPI = useCallback((index: number, kpi: KPI) => {
-    setFicha(f => { const kpis = [...f.kpis]; kpis[index] = kpi; return { ...f, kpis }; });
+    setFicha(f => { const kpis = [...f.kpis]; kpis[index] = kpi; return recalcularCompleto({ ...f, kpis }); });
   }, []);
   const removerKPI = useCallback((index: number) => {
-    setFicha(f => ({ ...f, kpis: f.kpis.filter((_, i) => i !== index) }));
+    setFicha(f => recalcularCompleto({ ...f, kpis: f.kpis.filter((_, i) => i !== index) }));
   }, []);
   const adicionarKPI = useCallback((kpi: KPI) => {
-    setFicha(f => ({ ...f, kpis: [...f.kpis, kpi] }));
+    setFicha(f => recalcularCompleto({ ...f, kpis: [...f.kpis, kpi] }));
     setAddingKPI(false);
   }, []);
 
   const atualizarGrafico = useCallback((index: number, g: Grafico) => {
-    setFicha(f => { const graficos = [...f.graficos]; graficos[index] = g; return { ...f, graficos }; });
+    setFicha(f => { const graficos = [...f.graficos]; graficos[index] = g; return recalcularCompleto({ ...f, graficos }); });
   }, []);
   const removerGrafico = useCallback((index: number) => {
-    setFicha(f => ({ ...f, graficos: f.graficos.filter((_, i) => i !== index) }));
+    setFicha(f => recalcularCompleto({ ...f, graficos: f.graficos.filter((_, i) => i !== index) }));
   }, []);
 
   const atualizarInsight = useCallback((index: number, ins: Insight) => {
-    setFicha(f => { const insights = [...f.insights]; insights[index] = ins; return { ...f, insights }; });
+    setFicha(f => { const insights = [...f.insights]; insights[index] = ins; return recalcularCompleto({ ...f, insights }); });
   }, []);
   const removerInsight = useCallback((index: number) => {
-    setFicha(f => ({ ...f, insights: f.insights.filter((_, i) => i !== index) }));
+    setFicha(f => recalcularCompleto({ ...f, insights: f.insights.filter((_, i) => i !== index) }));
   }, []);
   const adicionarInsight = useCallback((ins: Insight) => {
-    setFicha(f => ({ ...f, insights: [...f.insights, ins] }));
+    setFicha(f => recalcularCompleto({ ...f, insights: [...f.insights, ins] }));
     setAddingInsight(false);
   }, []);
 
   const salvarResumo = useCallback(() => {
-    setFicha(f => ({ ...f, resumo_executivo: resumoDraft }));
+    setFicha(f => recalcularCompleto({ ...f, resumo_executivo: resumoDraft }));
     setResumoEditando(false);
   }, [resumoDraft]);
 
@@ -846,12 +867,14 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
     acaoOverride?: Acao,
     graficoAlvoOverride?: string,
   ) => {
-    const dadosEnvio    = dadosOverride    ?? dadosBrutos;
-    const schemaEnvio   = schemaOverride   ?? schema;
-    const conteudoEnvio = conteudoOverride ?? conteudoTexto;
-    const imagemEnvio   = imagemOverride   ?? imagemBase64;
-    const nomeEnvio     = nomeOverride     ?? nomeArquivo;
-    const tipoEnvio     = tipoOverride     ?? tipoArquivo;
+    // Usa refs para evitar stale closure — setState é assíncrono e processarArquivo
+    // chama processarMensagem logo após setDadosBrutos, antes do re-render
+    const dadosEnvio    = dadosOverride    ?? dadosBrutosRef.current;
+    const schemaEnvio   = schemaOverride   ?? schemaRef.current;
+    const conteudoEnvio = conteudoOverride ?? conteudoTextoRef.current;
+    const imagemEnvio   = imagemOverride   ?? imagemBase64Ref.current;
+    const nomeEnvio     = nomeOverride     ?? nomeArquivoRef.current;
+    const tipoEnvio     = tipoOverride     ?? tipoArquivoRef.current;
 
     const { acao: acaoDetectada, graficoAlvoId: graficoDetectado } =
       acaoOverride
@@ -875,16 +898,22 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
       sessaoRef.current.messages.push({ role: 'user', content: textoUsuario });
     }
 
+    // Patches (resumo, mais_insights, refinar, adicionar_kpi) não precisam de arquivo em memória
+    const isPatch = acaoDetectada !== 'analisar' && acaoDetectada !== 'aprofundar';
     const temArquivo = dadosEnvio.length > 0 || conteudoEnvio.length > 0 || imagemEnvio.length > 0;
-    if (!temArquivo) {
+    if (!temArquivo && !isPatch) {
       addMessage('assistant', 'Primeiro envie um arquivo para analisar. Aceito planilhas (XLSX, CSV), documentos (DOCX, PDF) e imagens (JPG, PNG).');
+      return;
+    }
+    // Patches sem arquivo em memória também precisam de fichaAtual preenchida
+    if (isPatch && !ficha.dominio) {
+      addMessage('assistant', 'Ainda não há análise para refinar. Envie um arquivo primeiro.');
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      const isPatch = acaoDetectada !== 'analisar' && acaoDetectada !== 'aprofundar';
       const body: Record<string, unknown> = {
         messages: sessaoRef.current.messages.map(m => ({ role: m.role, content: m.content })),
         fichaAtual: ficha,
@@ -896,15 +925,19 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
 
       if (acaoDetectada === 'editar_grafico' && graficoDetectado) body.graficoAlvo = graficoDetectado;
 
-      if (tipoEnvio === 'planilha') {
-        body.dados  = isPatch ? dadosEnvio.slice(0, 80)  : dadosEnvio.slice(0, 500);
-        body.schema = schemaEnvio;
-      } else if (tipoEnvio === 'pdf' || tipoEnvio === 'docx') {
-        body.conteudo = isPatch ? conteudoEnvio.slice(0, 3000) : conteudoEnvio.slice(0, 8000);
-      } else if (tipoEnvio === 'imagem') {
-        body.imagem = imagemEnvio;
-        body.dados  = [];
-        body.schema = [];
+      // Resumo e refinar de texto não precisam enviar dados brutos — só fichaAtual
+      const acoesTextoOnly: Acao[] = ['resumo'];
+      if (!acoesTextoOnly.includes(acaoDetectada)) {
+        if (tipoEnvio === 'planilha') {
+          body.dados  = isPatch ? dadosEnvio.slice(0, 80) : dadosEnvio.slice(0, 500);
+          body.schema = schemaEnvio;
+        } else if (tipoEnvio === 'pdf' || tipoEnvio === 'docx') {
+          body.conteudo = isPatch ? conteudoEnvio.slice(0, 3000) : conteudoEnvio.slice(0, 8000);
+        } else if (tipoEnvio === 'imagem') {
+          body.imagem = imagemEnvio;
+          body.dados  = [];
+          body.schema = [];
+        }
       }
 
       const response = await fetch(
@@ -959,6 +992,8 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
 
     setNomeArquivo(file.name);
     setTipoArquivo(tipo);
+    nomeArquivoRef.current = file.name;
+    tipoArquivoRef.current = tipo;
     addMessage('user', `${ICONE_POR_TIPO[tipo]} ${file.name}`);
     sessaoRef.current.messages = []; // reseta sessão ao trocar arquivo
 
@@ -973,6 +1008,8 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         const { dadosLimpos, camposAnonimizados, totalOcorrencias } = anonimizarPII(jsonData);
         const schemaDetectado = construirSchema(dadosLimpos);
         setDadosBrutos(dadosLimpos); setSchema(schemaDetectado);
+        dadosBrutosRef.current = dadosLimpos;
+        schemaRef.current = schemaDetectado;
         if (camposAnonimizados.length > 0) setAlertaPII(camposAnonimizados);
         const avisoAnon = camposAnonimizados.length > 0 ? ` (${totalOcorrencias} dado(s) sensível(is) anonimizados)` : '';
         const msg = `Planilha lida: ${jsonData.length} linhas, ${schemaDetectado.length} colunas${avisoAnon}. Iniciando análise...`;
@@ -999,6 +1036,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         }
         if (!textoCompleto.trim()) { addMessage('assistant', 'PDF sem texto extraível. Tente exportar como imagem (JPG/PNG).'); return; }
         setConteudoTexto(textoCompleto);
+        conteudoTextoRef.current = textoCompleto;
         const msg = `PDF lido: ${pdfDoc.numPages} página(s). Iniciando análise...`;
         addMessage('assistant', msg);
         await playTextSafe(msg);
@@ -1015,6 +1053,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         const result = await mammothLib.extractRawText({ arrayBuffer: await file.arrayBuffer() });
         if (!result?.value?.trim()) { addMessage('assistant', 'Documento vazio ou protegido.'); return; }
         setConteudoTexto(result.value.trim());
+        conteudoTextoRef.current = result.value.trim();
         const msg = `Documento lido: ${Math.round(result.value.length / 1000)}k caracteres. Iniciando análise...`;
         addMessage('assistant', msg);
         await playTextSafe(msg);
@@ -1027,6 +1066,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         const reader = new FileReader();
         const base64 = await new Promise<string>((res, rej) => { reader.onload = () => res((reader.result as string).split(',')[1]); reader.onerror = rej; reader.readAsDataURL(file); });
         setImagemBase64(base64);
+        imagemBase64Ref.current = base64;
         const msg = 'Imagem carregada. Iniciando análise com IA visual...';
         addMessage('assistant', msg);
         await playTextSafe(msg);

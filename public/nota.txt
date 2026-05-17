@@ -1,12 +1,12 @@
-*Publicar o App minhAi e Vixus na Playstore - DUNS RECEBIDO
+*Publicar o App minhAi e Vixus na Playstore - Aguardando aprovação
 
 *Função de Boas Vindas - testar segunda pois agora esta renovando a cada 24h - qpreco 0h
 
 *Gestor de Agenda - Fazer a função Marcar Evento e Reagendamento já vincularem a marcação de um evento com um produto e eventual cobrança para a versão Vendas poder cobrar os 10% de comissão além de mudar para 3 créditos.
 
-*Gerenciador de Funções e Onboarding na criação do assistente.
+*Gerenciador de Funções e Onboarding na criação do assistente (implementar tudo já enviado e testar)
 
-*Implementar Fazer Pedido, Gestor de Agenda, Auxiliar Fiscal, Auxilar de Produção - todos os 8 auxiliares nos serviços Meta.
+*Implementar Fazer Pedido (implemtar arquivos enviados e testar), então fazer também com Gestor de Agenda, Auxiliar Fiscal, Auxilar de Produção - todos os 8 auxiliares nos serviços Meta.
 
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 
@@ -33,8 +33,7 @@
 
 -
 
-*App ChatGPT implementados totalmente com imagens online (só no plano plus)  
-
+*App ChatGPT implementados totalmente com imagens online para configuração dos assistentes direto pelo app GPT.
 
 *Implementar seleção de cores e key inter/asaas/MercadoPago para pix de clientes full, além de seletor de tema no assistente. Sempre light, sempre dark, de acordo com o tema do usuário ou de acordo com a hora do dia e se aparece ou não o seletor no header. Pensar na possibilidade do avatar ser o logo carregado pelo cliente, com animações react
 

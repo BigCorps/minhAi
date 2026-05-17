@@ -11,11 +11,11 @@ export async function POST(req: NextRequest) {
     const supabase = createClient();
 
     // Buscar company com prompt e logo
-    const { data: company } = await supabase
-      .from('companies')
-      .select('orcamento_prompt, name, logo_url, webapp_theme_color')
-      .eq('id', company_id)
-      .single();
+ const { data: company } = await supabase
+   .from('companies')
+   .select('orcamento_prompt, name, slug, logo_url, webapp_theme_color')
+   .eq('id', company_id)
+   .single();
 
     if (!company?.orcamento_prompt) {
       return NextResponse.json({ error: 'Orçamento não configurado.' }, { status: 400 });
@@ -83,11 +83,13 @@ INSTRUÇÕES CRÍTICAS:
       resposta: resultado.resposta || '',
       orcamento: resultado.orcamento,
       completo: resultado.completo === true,
-      company: {
-        name: company.name,
-        logo_url: company.logo_url,
-        theme_color: company.webapp_theme_color || '#f97316',
-      },
+      
+ company: {
+   name: company.name,
+   slug: company.slug,
+   logo_url: company.logo_url,
+   theme_color: company.webapp_theme_color || '#3b82f6',
+ },
     });
 
   } catch (err) {

@@ -30,6 +30,13 @@ interface OrcamentoContext {
   condicoes?: string;
 }
 
+interface CompanyInfo {
+  name: string;
+  slug?: string;
+  logo_url?: string;
+  theme_color?: string;
+}
+
 interface OrcamentoDisplayProps {
   data: {
     companyId: string;
@@ -97,7 +104,7 @@ function IconVolumeMute() {
   );
 }
 
-// ── Componentes externos (evitam remount no keystroke) ────────
+// ── Componentes externos ──────────────────────────────────────
 
 function BotaoMutar({ audioMutado, toggleMute, C }: BotaoMutarProps) {
   return (
@@ -121,7 +128,10 @@ function InputArea({
   enviarMensagem, inputRef, C,
 }: InputAreaProps) {
   return (
-    <div style={{ padding: '16px', borderTop: `1px solid ${C.border}`, background: C.bg, flexShrink: 0 }}>
+    <div style={{
+      padding: '16px', borderTop: `1px solid ${C.border}`,
+      background: C.bg, flexShrink: 0,
+    }}>
       <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
         {!inputText.trim() && (
           <button
@@ -130,9 +140,11 @@ function InputArea({
             style={{
               width: '48px', height: '48px', borderRadius: '50%',
               background: voiceRecorder.isRecording ? '#ef4444' : C.accent,
-              border: 'none', cursor: (isProcessing || isTranscribing) ? 'not-allowed' : 'pointer',
+              border: 'none',
+              cursor: (isProcessing || isTranscribing) ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'white', transform: voiceRecorder.isRecording ? 'scale(1.1)' : 'scale(1)',
+              color: 'white',
+              transform: voiceRecorder.isRecording ? 'scale(1.1)' : 'scale(1)',
               transition: 'all 0.1s',
             }}
           >
@@ -199,18 +211,25 @@ function PreviewOrcamento({
         <span style={{ fontSize: '16px', fontWeight: 600, color: C.text }}>Preview do Orçamento</span>
       </div>
 
-      {/* PDF gerado */}
+      {/* PDF gerado — só botão de download, sem iframe */}
       {pdfDataUrl && (
         <div style={{ marginBottom: '16px' }}>
-          <iframe
-            src={pdfDataUrl}
-            style={{
-              width: '100%', height: '400px',
-              border: `1px solid ${C.border}`,
-              borderRadius: '8px', marginBottom: '8px',
-            }}
-            title="Preview do PDF"
-          />
+          <div style={{
+            padding: '16px', background: C.bgSecondary,
+            borderRadius: '8px', marginBottom: '8px',
+            display: 'flex', alignItems: 'center', gap: '12px',
+            border: `1px solid ${C.accent}44`,
+          }}>
+            <FileText style={{ width: '32px', height: '32px', color: C.accent, flexShrink: 0 }} />
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: C.text }}>
+                PDF gerado com sucesso!
+              </div>
+              <div style={{ fontSize: '11px', color: C.textMuted }}>
+                Clique no botão abaixo para baixar
+              </div>
+            </div>
+          </div>
           <button
             onClick={baixarPdf}
             style={{
@@ -228,15 +247,19 @@ function PreviewOrcamento({
 
       {/* Gerando PDF */}
       {isGerandoPdf && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: C.accent, marginBottom: '16px' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '8px',
+          color: C.accent, marginBottom: '16px',
+        }}>
           <Loader2 className="w-4 h-4 animate-spin" />
           <span style={{ fontSize: '13px' }}>Gerando PDF...</span>
         </div>
       )}
 
-      {/* Preview estruturado */}
+      {/* Preview estruturado — só quando tem itens e PDF ainda não foi gerado */}
       {!pdfDataUrl && orcamentoContext.itens.length > 0 && (
         <>
+          {/* Cliente */}
           {(orcamentoContext.cliente.nome || orcamentoContext.cliente.contato) && (
             <div style={{
               padding: '12px', background: C.bgSecondary,
@@ -261,6 +284,7 @@ function PreviewOrcamento({
             </div>
           )}
 
+          {/* Itens */}
           <div style={{ marginBottom: '12px' }}>
             <div style={{
               fontSize: '10px', color: C.textMuted, marginBottom: '8px',
@@ -295,6 +319,7 @@ function PreviewOrcamento({
             ))}
           </div>
 
+          {/* Total */}
           <div style={{
             padding: '12px 16px', background: C.accent + '22',
             borderRadius: '8px', border: `1px solid ${C.accent}44`,
@@ -307,7 +332,8 @@ function PreviewOrcamento({
             </span>
           </div>
 
-          {completo && !pdfDataUrl && !isGerandoPdf && (
+          {/* Botão gerar PDF — só aparece quando completo */}
+          {completo && !isGerandoPdf && (
             <button
               onClick={gerarPdf}
               style={{
@@ -324,8 +350,12 @@ function PreviewOrcamento({
         </>
       )}
 
+      {/* Estado vazio */}
       {orcamentoContext.itens.length === 0 && !pdfDataUrl && (
-        <div style={{ padding: '40px 20px', textAlign: 'center', color: C.textMuted, fontSize: '13px' }}>
+        <div style={{
+          padding: '40px 20px', textAlign: 'center',
+          color: C.textMuted, fontSize: '13px',
+        }}>
           <FileText style={{ width: '48px', height: '48px', margin: '0 auto 12px', opacity: 0.3 }} />
           <p>O orçamento aparecerá aqui conforme você conversa</p>
         </div>
@@ -357,9 +387,7 @@ export default function OrcamentoDisplay({
   const [orcamentoContext, setOrcamentoContext] = useState<OrcamentoContext>(ORCAMENTO_VAZIO);
   const [completo, setCompleto] = useState(false);
   const [aguardandoConfirmacao, setAguardandoConfirmacao] = useState(false);
-  const [companyInfo, setCompanyInfo] = useState<{
-    name: string; logo_url?: string; theme_color?: string;
-  } | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
 
   const [pdfDataUrl, setPdfDataUrl] = useState<string | null>(null);
   const [isGerandoPdf, setIsGerandoPdf] = useState(false);
@@ -484,6 +512,7 @@ export default function OrcamentoDisplay({
 
   // ── Processar mensagem ────────────────────────────────────
   const processarMensagem = useCallback(async (textoUsuario: string) => {
+    // Bloco de confirmação de PDF — totalmente isolado, nunca cai no fluxo normal
     if (aguardandoConfirmacao) {
       const userMsg: Message = {
         id: Date.now().toString(),
@@ -503,13 +532,24 @@ export default function OrcamentoDisplay({
         playTextSafe('Gerando o PDF do orçamento!');
         setAguardandoConfirmacao(false);
         await gerarPdf();
-        return;
+        return; // ← sai sem chamar a API
       } else {
+        // Negou — volta a conversar normalmente mas sem chamar a API
         setAguardandoConfirmacao(false);
         setCompleto(false);
+        const msgVoltar: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: 'Tudo bem! O que você gostaria de ajustar no orçamento?',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, msgVoltar]);
+        playTextSafe(msgVoltar.content);
+        return; // ← sai sem chamar a API
       }
     }
 
+    // Fluxo normal — chama a API
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -570,36 +610,6 @@ export default function OrcamentoDisplay({
     setInputText('');
   }, [inputText, isProcessing, processarMensagem]);
 
-  const ChatMessages = () => (
-    <>
-      {messages.map(msg => (
-        <div key={msg.id} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-          <div style={{
-            maxWidth: '70%', padding: '12px 16px', borderRadius: '12px',
-            background: msg.role === 'user' ? C.userBubble : C.assistantBubble,
-            color: msg.role === 'user' ? 'white' : C.text,
-            fontSize: '14px', lineHeight: 1.5,
-          }}>
-            {msg.content}
-          </div>
-        </div>
-      ))}
-      {isProcessing && (
-        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-          <div style={{
-            padding: '12px 16px', borderRadius: '12px',
-            background: C.assistantBubble, color: C.text,
-            display: 'flex', alignItems: 'center', gap: '8px',
-          }}>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span style={{ fontSize: '14px' }}>Processando...</span>
-          </div>
-        </div>
-      )}
-      <div ref={messagesEndRef} />
-    </>
-  );
-
   // ── Render mobile ─────────────────────────────────────────
   if (isMobile) {
     return createPortal(
@@ -610,17 +620,23 @@ export default function OrcamentoDisplay({
         {/* Header */}
         <div style={{
           padding: '12px 16px', borderBottom: `1px solid ${C.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FileText style={{ width: '20px', height: '20px', color: C.accent }} />
-            <span style={{ fontSize: '16px', fontWeight: 'bold', color: C.text }}>Criar Orçamento</span>
+            <span style={{ fontSize: '16px', fontWeight: 'bold', color: C.text }}>
+              Criar Orçamento
+            </span>
           </div>
           <div style={{ display: 'flex', gap: '4px' }}>
             <BotaoMutar audioMutado={audioMutado} toggleMute={toggleMute} C={C} />
             <button
               onClick={onClose}
-              style={{ padding: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}
+              style={{
+                padding: '8px', background: 'transparent',
+                border: 'none', cursor: 'pointer', color: C.textMuted,
+              }}
             >
               <X className="w-5 h-5" />
             </button>
@@ -659,11 +675,12 @@ export default function OrcamentoDisplay({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Preview compacto mobile */}
-        {orcamentoContext.itens.length > 0 && (
+        {/* Preview compacto mobile — só quando tem itens ou PDF */}
+        {(orcamentoContext.itens.length > 0 || pdfDataUrl) && (
           <div style={{
-            maxHeight: '35vh', overflowY: 'auto',
+            maxHeight: '40vh', overflowY: 'auto',
             borderTop: `1px solid ${C.border}`, flexShrink: 0,
+            background: C.bgSecondary,
           }}>
             <PreviewOrcamento
               orcamentoContext={orcamentoContext}
@@ -710,20 +727,28 @@ export default function OrcamentoDisplay({
         {/* Header */}
         <div style={{
           padding: '20px', borderBottom: `1px solid ${C.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <FileText style={{ width: '24px', height: '24px', color: C.accent }} />
             <div>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', color: C.text }}>Criar Orçamento</div>
-              <div style={{ fontSize: '13px', color: C.textMuted }}>Converse para montar o orçamento</div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: C.text }}>
+                Criar Orçamento
+              </div>
+              <div style={{ fontSize: '13px', color: C.textMuted }}>
+                Converse para montar o orçamento
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             <BotaoMutar audioMutado={audioMutado} toggleMute={toggleMute} C={C} />
             <button
               onClick={onClose}
-              style={{ padding: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}
+              style={{
+                padding: '8px', background: 'transparent',
+                border: 'none', cursor: 'pointer', color: C.textMuted,
+              }}
             >
               <X className="w-5 h-5" />
             </button>
@@ -736,12 +761,45 @@ export default function OrcamentoDisplay({
           gap: '1px', background: C.border, overflow: 'hidden',
         }}>
           {/* Chat */}
-          <div style={{ background: C.bgChat, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{
+            background: C.bgChat, display: 'flex',
+            flexDirection: 'column', overflow: 'hidden',
+          }}>
             <div style={{
               flex: 1, overflowY: 'auto', padding: '20px',
               display: 'flex', flexDirection: 'column', gap: '16px', minHeight: 0,
             }}>
-              <ChatMessages />
+              {messages.map(msg => (
+                <div
+                  key={msg.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                  }}
+                >
+                  <div style={{
+                    maxWidth: '70%', padding: '12px 16px', borderRadius: '12px',
+                    background: msg.role === 'user' ? C.userBubble : C.assistantBubble,
+                    color: msg.role === 'user' ? 'white' : C.text,
+                    fontSize: '14px', lineHeight: 1.5,
+                  }}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              {isProcessing && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <div style={{
+                    padding: '12px 16px', borderRadius: '12px',
+                    background: C.assistantBubble, color: C.text,
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                  }}>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span style={{ fontSize: '14px' }}>Processando...</span>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
             </div>
             <InputArea
               inputText={inputText}
@@ -758,7 +816,10 @@ export default function OrcamentoDisplay({
           </div>
 
           {/* Preview */}
-          <div style={{ background: C.bg, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{
+            background: C.bg, overflow: 'hidden',
+            display: 'flex', flexDirection: 'column',
+          }}>
             <PreviewOrcamento
               orcamentoContext={orcamentoContext}
               completo={completo}

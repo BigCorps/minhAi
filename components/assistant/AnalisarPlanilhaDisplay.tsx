@@ -711,7 +711,8 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
   const [addingKPI, setAddingKPI]         = useState(false);
   const [addingInsight, setAddingInsight] = useState(false);
   const [resumoEditando, setResumoEditando] = useState(false);
-  const [resumoDraft, setResumoDraft]     = useState('');
+  // Ref em vez de state para evitar re-render a cada letra digitada (perderia foco na textarea)
+  const resumoDraftRef = useRef('');
   const [abaAtiva, setAbaAtiva]           = useState<'kpi' | 'graficos' | 'insights' | 'resumo'>('kpi');
 
   const [ficha, setFicha] = useState<DashboardFicha>({
@@ -832,9 +833,9 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
   }, []);
 
   const salvarResumo = useCallback(() => {
-    setFicha(f => recalcularCompleto({ ...f, resumo_executivo: resumoDraft }));
+    setFicha(f => recalcularCompleto({ ...f, resumo_executivo: resumoDraftRef.current }));
     setResumoEditando(false);
-  }, [resumoDraft]);
+  }, []);
 
   // ── Intent detection ────────────────────────────────────────────────────────
   const detectarAcao = useCallback((texto: string, fichaLocal: DashboardFicha): { acao: Acao; graficoAlvoId?: string } => {
@@ -1125,7 +1126,8 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
 
   // ── Export PDF ───────────────────────────────────────────────────────────────
   const exportarPDF = async () => {
-    if (!ficha.completo || isExportingPDF) return;
+    if (isExportingPDF) return;
+    if (!ficha.kpis.length && !ficha.graficos.length && !ficha.insights.length) return;
     setIsExportingPDF(true);
     try {
       const { jsPDF } = await import('jspdf');
@@ -1368,10 +1370,15 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
               {resumoEditando ? (
                 <div>
                   <p style={{ fontSize: 11, color: C.textMuted, marginBottom: 6 }}>Edite o resumo executivo:</p>
-                  <textarea rows={6} value={resumoDraft} onChange={e => setResumoDraft(e.target.value)}
-                    style={{ width: '100%', padding: '10px', borderRadius: 8, border: `1px solid ${C.accent}`, background: C.bgSecondary, color: C.text, fontSize: 13, outline: 'none', resize: 'vertical', lineHeight: 1.6 }} />
+                  {/* textarea não controlada por state — usa defaultValue + ref para evitar perda de foco */}
+                  <textarea
+                    rows={6}
+                    defaultValue={resumoDraftRef.current}
+                    onChange={e => { resumoDraftRef.current = e.target.value; }}
+                    style={{ width: '100%', padding: '10px', borderRadius: 8, border: `1px solid ${C.accent}`, background: C.bgSecondary, color: C.text, fontSize: 13, outline: 'none', resize: 'vertical', lineHeight: 1.6 }}
+                  />
                   <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                    <button onClick={() => { setResumoDraft(ficha.resumo_executivo); setResumoEditando(false); }} style={{ flex: 1, padding: '8px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.textMuted, fontSize: 12, cursor: 'pointer' }}>Cancelar</button>
+                    <button onClick={() => setResumoEditando(false)} style={{ flex: 1, padding: '8px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.textMuted, fontSize: 12, cursor: 'pointer' }}>Cancelar</button>
                     <button onClick={salvarResumo} style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', background: C.accent, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                       <IconCheck /> Salvar
                     </button>
@@ -1388,7 +1395,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
                   )}
                   <div style={{ display: 'flex', gap: 8 }}>
                     {ficha.resumo_executivo && (
-                      <button onClick={() => { setResumoDraft(ficha.resumo_executivo); setResumoEditando(true); }}
+                      <button onClick={() => { resumoDraftRef.current = ficha.resumo_executivo; setResumoEditando(true); }}
                         style={{ flex: 1, padding: '8px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.textMuted, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                         <IconEdit /> Editar
                       </button>
@@ -1406,7 +1413,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         </div>
 
         {/* Botão exportar PDF */}
-        {ficha.completo && (
+        {(ficha.kpis.length > 0 || ficha.graficos.length > 0 || ficha.insights.length > 0) && (
           <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
             <button onClick={exportarPDF} disabled={isExportingPDF}
               style={{ width: '100%', padding: '11px', borderRadius: 8, border: 'none', cursor: isExportingPDF ? 'not-allowed' : 'pointer', background: C.accent, color: 'white', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: isExportingPDF ? 0.6 : 1 }}>

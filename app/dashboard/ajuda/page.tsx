@@ -38,7 +38,7 @@ const cardsDeAjuda: AjudaCard[] = [
     titulo: 'Suporte', 
     descricao: 'Precisa de ajuda urgente? Nossa equipe de suporte técnico está pronta para te auxiliar.', 
     icone: <LifeBuoy className="w-6 h-6" />, 
-    acao: { tipo: 'link', valor: 'https://api.whatsapp.com/send/?phone=11926828418&text=Preciso%20de%20suporte%20URGENTE%20no%20minhAi%20App&type=phone_number&app_absent=0' }, 
+    acao: { tipo: 'link', valor: 'https://api.whatsapp.com/send/?phone=5511926828418&text=Preciso%20de%20suporte%20URGENTE%20no%20minhAi%20App&type=phone_number&app_absent=0' }, 
     textoBotao: 'Contatar Suporte' 
   },
   { 

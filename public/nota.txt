@@ -2,15 +2,17 @@
 
 *Função de Boas Vindas - testar segunda pois agora esta renovando a cada 24h - qpreco 0h
 
-*Gestor de Agenda - Fazer a função Marcar Evento e Reagendamento já vincularem a marcação de um evento com um produto e eventual cobrança para a versão Vendas poder cobrar os 10% de comissão além de mudar para 3 créditos.
+*Gestor de Agenda - Fazer a função Marcar Evento e Reagendamento já vincularem a marcação de um evento com um produto e eventual cobrança para a versão Vendas poder cobrar os 10% de comissão
 
-*Gerenciador de Funções e Onboarding na criação do assistente (implementar tudo já enviado e testar)
+*Gerenciador de Funções, trocar a versão, duplicar assistente e Onboarding na criação do assistente (implementar tudo já enviado e testar)
 
-*Implementar Fazer Pedido (implemtar arquivos enviados e testar), então fazer também com Gestor de Agenda, Auxiliar Fiscal, Auxilar de Produção - todos os 8 auxiliares nos serviços Meta.
+*Serviços Meta: Implementar Fazer Pedido (implemtar arquivos enviados e testar), então fazer também com Gestor de Agenda, Auxiliar Fiscal, Auxilar de Produção - todos os 8 auxiliares.
 
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 
 *Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
+
+*Funções demo no slug Suporte para ter demonstrativo de todas as funções 
 
 -
 

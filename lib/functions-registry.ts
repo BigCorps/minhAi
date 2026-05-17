@@ -6126,77 +6126,35 @@ voiceTriggers: [
     icon: '💰',
     color: '#8B5CF6',
     saveToHistory: true,
-    creditsPerUse: 2,
+    creditsPerUse: 5,
     requiresPayment: false,
     isPremium: false,
     
-    handler: async ({ transcript, playText, companyId, sessionId }) => {
-      try {
-        console.log('💰 [ORCAMENTO] Handler iniciado');
-        
-        const supabase = createClient();
+    handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+  try {
+    const supabase = createClient();
+    const { data: company } = await supabase
+      .from('companies')
+      .select('orcamento_prompt')
+      .eq('id', companyId)
+      .single();
 
-        const { data: company } = await supabase
-          .from('companies')
-          .select('orcamento_prompt')
-          .eq('id', companyId)
-          .single();
+    if (!company?.orcamento_prompt) {
+      await playText('A função de orçamento não está configurada. Configure o prompt no painel.');
+      return false;
+    }
 
-        if (!company?.orcamento_prompt) {
-          await playText('A função de orçamento não está configurada.');
-          return false;
-        }
+    setActiveModal?.({
+      type: 'OrcamentoDisplay',
+      data: { companyId, transcriptInicial: transcript },
+    });
 
-        await playText('Gerando seu orçamento. Um momento...');
-
-        const formData = new FormData();
-        const textBlob = new Blob([transcript], { type: 'text/plain' });
-        formData.append('audio', textBlob, 'question.txt');
-        formData.append('companyId', companyId);
-        formData.append('directQuestion', transcript);
-        formData.append('useOrcamentoPrompt', 'true');
-        formData.append('returnText', 'true');
-
-        if (sessionId) {
-          formData.append('sessionId', sessionId);
-        }
-
-        const response = await fetch('/api/voice/process', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error('Erro ao gerar orçamento');
-        }
-
-        // ✅ CORRIGIDO: verificar content-type antes de parsear JSON
-        const contentType = response.headers.get('content-type') || '';
-
-        if (!contentType.includes('application/json')) {
-          console.error('💰 [ORCAMENTO] API retornou áudio em vez de JSON — verifique returnText na rota');
-          throw new Error('API retornou áudio em vez de JSON. Verifique a rota /api/voice/process.');
-        }
-
-        const data = await response.json();
-        const reply = data.response || data.reply;
-        
-        if (!reply) {
-          throw new Error('Resposta vazia do servidor');
-        }
-
-        console.log('💰 [ORCAMENTO] Orçamento gerado com sucesso');
-        
-        await playText(reply);
-
-        return true;
-        
-      } catch (error) {
-        console.error('💰 [ORCAMENTO] ERRO:', error);
-        await playText('Desculpe, não consegui gerar o orçamento.');
-        return false;
-      }
-    },
+    return true;
+  } catch {
+    await playText('Não consegui abrir o orçamento. Tente novamente.');
+    return false;
+  }
+},
   },
 
 // ============================================================

@@ -2,6 +2,7 @@
 // ARQUIVO: app/dashboard/atendimentos/_components/ConnectionManager.tsx
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Button }   from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch }   from '@/components/ui/switch';
@@ -87,6 +88,20 @@ function GreetingStartupSection({
   const [showSugg, setShowSugg]         = useState(false);
   const [saving, setSaving]             = useState(false);
   const [saved, setSaved]               = useState(false);
+  const inputWrapperRef = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+// Calcula posição do dropdown quando ele abre
+useEffect(() => {
+  if (showSugg && inputWrapperRef.current) {
+    const rect = inputWrapperRef.current.getBoundingClientRect();
+    setDropdownPos({
+      top:   rect.bottom + 4,
+      left:  rect.left,
+      width: rect.width,
+    });
+  }
+}, [showSugg]);
 
   // Preenche label da função quando há valor salvo
   useEffect(() => {
@@ -225,29 +240,74 @@ function GreetingStartupSection({
               )}
             </div>
 
-            {showSugg && (
-<div className="absolute z-50 w-full mt-1 rounded-lg border border-border shadow-xl
-  max-h-48 overflow-y-auto
-  bg-white dark:bg-slate-800">
-                {suggestions.map(fn => (
-                  <button
-                    key={fn.function_key}
-                    type="button"
-                    onMouseDown={() => {
-                      setFnKey(fn.function_key);
-                      setFnInputText(fn.function_name);
-                      setShowSugg(false);
-                    }}
-                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted transition flex flex-col gap-0.5"
-                  >
-                    <span className="font-semibold text-foreground">{fn.function_name}</span>
-                    {fn.short_description && (
-                      <span className="text-xs text-muted-foreground truncate">{fn.short_description}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
+{/* Campo função */}
+{mode === 'function' && (
+  <div className="relative">
+    <div className="flex gap-2">
+      <div className="relative flex-1 min-w-0" ref={inputWrapperRef}>
+        <input
+          type="text"
+          value={fnInputText}
+          onChange={(e) => handleFnInput(e.target.value)}
+          onFocus={() => {
+            if (suggestions.length > 0) setShowSugg(true);
+          }}
+          onBlur={() => setTimeout(() => setShowSugg(false), 150)}
+          placeholder="Buscar função..."
+          className="w-full px-3 py-2 pr-8 rounded-lg border border-border bg-background text-sm
+            text-foreground placeholder:text-muted-foreground outline-none
+            focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500"
+        />
+        {fnKey && (
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold
+            px-1 py-0.5 rounded bg-lime-100 dark:bg-lime-900/30
+            text-lime-700 dark:text-lime-300">✓</span>
+        )}
+      </div>
+      {fnKey && (
+        <button
+          onClick={() => { setFnKey(''); setFnInputText(''); }}
+          className="shrink-0 p-2 rounded-lg border border-destructive/30 text-destructive
+            hover:bg-destructive/10 transition"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+
+    {showSugg && dropdownPos && createPortal(
+      <div
+        style={{
+          position: 'fixed',
+          top:    dropdownPos.top,
+          left:   dropdownPos.left,
+          width:  dropdownPos.width,
+          zIndex: 9999,
+        }}
+        className="rounded-lg border border-border shadow-xl max-h-48 overflow-y-auto bg-white dark:bg-slate-800"
+      >
+        {suggestions.map(fn => (
+          <button
+            key={fn.function_key}
+            type="button"
+            onMouseDown={() => {
+              setFnKey(fn.function_key);
+              setFnInputText(fn.function_name);
+              setShowSugg(false);
+            }}
+            className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted transition flex flex-col gap-0.5"
+          >
+            <span className="font-semibold text-foreground">{fn.function_name}</span>
+            {fn.short_description && (
+              <span className="text-xs text-muted-foreground truncate">{fn.short_description}</span>
             )}
+          </button>
+        ))}
+      </div>,
+      document.body
+    )}
+  </div>
+)}
           </div>
         )}
 

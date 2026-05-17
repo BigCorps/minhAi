@@ -204,7 +204,6 @@ function ConversationCard({
     <Zap className="h-3 w-3" />Ações
   </button>
 </div>
-</div>
             </div>
     </div>
   );

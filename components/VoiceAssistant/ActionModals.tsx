@@ -30,6 +30,10 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'NossaMarcaDisplay': dynamic(() => import('@/components/assistant/NossaMarcaDisplay'), { ssr: false }),
   'EnderecoDisplay': dynamic(() => import('@/components/assistant/EnderecoDisplay'), { ssr: false }),
   'VideoInstrucoesDisplay': dynamic(() => import('@/components/assistant/VideoInstrucoesDisplay'), { ssr: false }),
+  'OrcamentoDisplay': dynamic(
+  () => import('@/components/assistant/OrcamentoDisplay'),
+  { ssr: false }
+),
 
   // ── QR Codes e contato ────────────────────────────────────
   // QRCodeDisplay espera props individuais — wrapper desestrutura data

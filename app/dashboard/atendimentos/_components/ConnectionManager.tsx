@@ -276,8 +276,6 @@ useEffect(() => {
     )}
   </div>
 )}
-          </div>
-        )}
 
         <Button
           size="sm"

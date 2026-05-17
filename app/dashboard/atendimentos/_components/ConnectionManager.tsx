@@ -162,13 +162,13 @@ function GreetingStartupSection({
             <MessageSquare className="h-3.5 w-3.5 shrink-0" />
             <span>Texto</span>
           </button>
-          <button
-            onClick={() => setMode('function')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs sm:text-sm font-medium border transition-all
-              ${mode === 'function'
-                ? 'bg-purple-600 text-white border-purple-600'
-                : 'bg-background text-muted-foreground border-border hover:border-purple-400 hover:text-purple-600'}`}
-          >
+// Botão Salvar saudação quando mode === 'function':
+<Button
+  size="sm"
+  onClick={handleSave}
+  disabled={saving || (mode === 'function' && !fnKey && !connection.startup_function_key_meta)}
+  className={`w-full sm:w-auto ${mode === 'function' ? 'bg-lime-500 hover:bg-lime-600 text-white' : ''}`}
+>
             <Zap className="h-3.5 w-3.5 shrink-0" />
             <span>Função</span>
           </button>
@@ -226,8 +226,9 @@ function GreetingStartupSection({
             </div>
 
             {showSugg && (
-              <div className="absolute z-20 w-full mt-1 rounded-lg border border-border shadow-xl
-                max-h-48 overflow-y-auto bg-popover">
+<div className="absolute z-50 w-full mt-1 rounded-lg border border-border shadow-xl
+  max-h-48 overflow-y-auto
+  bg-white dark:bg-slate-800">
                 {suggestions.map(fn => (
                   <button
                     key={fn.function_key}
@@ -650,7 +651,7 @@ export function ConnectionManager({
   function renderConnectButton(size: 'sm' | 'lg' = 'lg') {
     if (!selectedCompanyId || !userId) {
       return (
-        <div className="flex flex-col xs:flex-row flex-wrap gap-2 w-full">
+        <div className={`grid gap-2 w-full ${size === 'lg' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'}`}>
           <Button size={size} disabled variant="outline" className="flex-1 min-w-0">
             <Phone className={`mr-2 shrink-0 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
             <span className="truncate">{size === 'lg' ? 'Conectar WhatsApp' : 'WhatsApp'}</span>
@@ -664,7 +665,7 @@ export function ConnectionManager({
     }
 
     return (
-      <div className="flex flex-col xs:flex-row flex-wrap gap-2 w-full">
+      <div className={`grid gap-2 w-full ${size === 'lg' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'}`}>
 
         {/* Botão WhatsApp */}
         {configIdWA ? (
@@ -706,7 +707,7 @@ export function ConnectionManager({
             variant="outline"
             disabled
             title="Configure NEXT_PUBLIC_META_CONFIG_ID_WA no Vercel para habilitar"
-            className="flex-1 min-w-0 border-green-300 text-green-500 opacity-50 cursor-not-allowed"
+            className="w-full border-green-300 text-green-500 opacity-50 cursor-not-allowed"
           >
             <Phone className={`mr-2 shrink-0 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} />
             <span className="truncate">{size === 'lg' ? 'Conectar WhatsApp' : 'WhatsApp'}</span>
@@ -714,12 +715,12 @@ export function ConnectionManager({
         )}
 
         {/* Botão Facebook / Instagram */}
-        <Button
-          onClick={handleConnect}
-          disabled={isConnecting}
-          size={size}
-          className={`flex-1 min-w-0 ${size === 'lg' ? 'h-11 px-4 text-base' : 'h-9 px-3 text-sm'}`}
-        >
+<Button
+  onClick={handleConnect}
+  disabled={isConnecting}
+  size={size}
+  className={`w-full ${size === 'lg' ? 'h-12 px-4 text-base' : 'h-10 px-3 text-sm'}`}
+>
           {isConnecting
             ? <><Loader2 className={`mr-2 animate-spin shrink-0 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} /><span className="truncate">Conectando...</span></>
             : <><Facebook className={`mr-2 shrink-0 ${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'}`} /><span className="truncate">{size === 'lg' ? 'Conectar Facebook / Instagram' : 'Facebook / Instagram'}</span></>
@@ -789,7 +790,7 @@ export function ConnectionManager({
 
               {/* Cards de conexão */}
               {connections.map((conn) => (
-                <Card key={conn.id} className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow overflow-hidden">
+                <Card key={conn.id} className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
 
                     {/* ── Linha principal: info + controles ── */}

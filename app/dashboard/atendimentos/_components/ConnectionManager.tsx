@@ -861,10 +861,17 @@ export function ConnectionManager({
                             </div>
                           )}
 
-                          <p className="text-xs text-muted-foreground pt-0.5">
+<p className="text-xs text-muted-foreground pt-0.5">
                             Configure e acompanhe as conversas do Facebook · Instagram · WhatsApp
                             diretamente no Business Suite do Grupo Meta
                           </p>
+
+                          {/* Saudação inicial / Função de boas-vindas */}
+                          <GreetingStartupSection
+                            connection={conn}
+                            availableFunctions={availableFunctions}
+                            onSave={(u) => handleSaveConnection(conn.id, u)}
+                          />
                         </div>
                       </div>
 
@@ -903,13 +910,6 @@ export function ConnectionManager({
                     <AgentConfigPanel
                       connection={conn}
                       companySystemPrompt={selectedCompany?.system_prompt || null}
-                      onSave={(u) => handleSaveConnection(conn.id, u)}
-                    />
-
-                    {/* Saudação inicial / Função de boas-vindas */}
-                    <GreetingStartupSection
-                      connection={conn}
-                      availableFunctions={availableFunctions}
                       onSave={(u) => handleSaveConnection(conn.id, u)}
                     />
 

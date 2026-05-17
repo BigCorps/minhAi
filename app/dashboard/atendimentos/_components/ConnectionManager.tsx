@@ -150,7 +150,7 @@ function GreetingStartupSection({
       </div>
 
       <div className="p-3 space-y-3">
-        {/* Seletor de modo */}
+{/* Seletor de modo */}
         <div className="flex gap-2">
           <button
             onClick={() => setMode('text')}
@@ -162,13 +162,13 @@ function GreetingStartupSection({
             <MessageSquare className="h-3.5 w-3.5 shrink-0" />
             <span>Texto</span>
           </button>
-// Botão Salvar saudação quando mode === 'function':
-<Button
-  size="sm"
-  onClick={handleSave}
-  disabled={saving || (mode === 'function' && !fnKey && !connection.startup_function_key_meta)}
-  className={`w-full sm:w-auto ${mode === 'function' ? 'bg-lime-500 hover:bg-lime-600 text-white' : ''}`}
->
+          <button
+            onClick={() => setMode('function')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs sm:text-sm font-medium border transition-all
+              ${mode === 'function'
+                ? 'bg-lime-500 text-white border-lime-500'
+                : 'bg-background text-muted-foreground border-border hover:border-lime-400 hover:text-lime-600'}`}
+          >
             <Zap className="h-3.5 w-3.5 shrink-0" />
             <span>Função</span>
           </button>
@@ -255,7 +255,7 @@ function GreetingStartupSection({
           size="sm"
           onClick={handleSave}
           disabled={saving || (mode === 'function' && !fnKey && !connection.startup_function_key_meta)}
-          className={`w-full sm:w-auto ${mode === 'function' ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
+          className={`w-full sm:w-auto ${mode === 'function' ? 'bg-lime-500 hover:bg-lime-600 text-white' : ''}`}
         >
           {saving ? (
             <><Loader2 className="mr-2 h-3 w-3 animate-spin" />Salvando...</>

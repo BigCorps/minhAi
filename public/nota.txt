@@ -1,10 +1,10 @@
 *Implementar Fazer Pedido e os outros 7 auxiliares na Meta.
 
-*Auxiliar de Orçamento com modal final para gerar o orçamento em PDF com o logo em PDF - e melhorar os auxiliares anti fraude e de relatórios.
+*Auxiliar de Orçamento com modal final para gerar o orçamento em PDF com o logo em PDF
 
 *Função de Boas Vindas - testar segunda pois agora esta renovando a cada 24h - qpreco 0h
 
-*Gestor de Agenda - Fazer a função Marcar Evento e Reagendamento já vincularem a marcação de um evento com um produto e eventual cobrança para a versão Vendas poder cobrar os 10% de comissão
+*Gestor de Agenda - Fazer a função Marcar Evento e Reagendamento já vincularem a marcação de um evento com um produto e eventual cobrança para a versão Vendas poder cobrar os 10% de comissão além de mudar para 3 créditos.
 
 *Gerenciador de Funções e Onboarding na criação do assistente.
 
@@ -93,7 +93,7 @@ Conhecimento - 6️⃣ ChatGPT | Orçamento | Respostas Rápidas
  *Transcrever Reuniões | Transcrever Vídeos | Transcrever PDF
 
 
-Agendamento - 6️⃣ Marcar EventoVer Agenda | Confirmar Presença 
+Agendamento - 6️⃣ Marcar Evento | Ver Agenda | Confirmar Presença 
      Reagendamento | Cancelar Agendamento | Horários Disponíveis
 
 * Lembrete de Aniversário | Evento Recorrente | Compartilhar Evento

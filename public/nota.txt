@@ -1,7 +1,5 @@
 *Publicar o App minhAi e Vixus na Playstore - Aguardando aprovação
 
-*Função de Boas Vindas - testar segunda pois agora esta renovando a cada 24h - qpreco 0h
-
 *Gestor de Agenda - Fazer a função Marcar Evento e Reagendamento já vincularem a marcação de um evento com um produto e eventual cobrança para a versão Vendas poder cobrar os 10% de comissão
 
 *Gerenciador de Funções, trocar a versão, duplicar assistente e Onboarding na criação do assistente (implementar tudo já enviado e testar)

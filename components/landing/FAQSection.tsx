@@ -38,7 +38,7 @@ const FAQS = [
   {
     pergunta: 'Como o minhAi nasceu?',
     resposta:
-      'Ithiel Almeida tem uma empresa de design e servicos graficos ha mais de 20 anos e precisava de uma IA para ajudar no atendimento do balcao e no WhatsApp. Nao encontrou nada no mercado que chegasse perto do que precisava — entao decidiu desenvolver a propria solucao, ha cerca de 2 anos. O minhAi nasceu dessa necessidade real, com a crenca de que a mesma tecnologia pode ajudar outros empresarios autonomos, MEIs e pequenas e medias empresas a atender melhor, vender mais e entrar no mundo da Inteligencia Artificial sem precisar de conhecimento tecnico ou saber programar.',
+      'Ithiel Almeida tem uma empresa de design e servicos graficos ha mais de 20 anos e precisava de uma IA para ajudar no atendimento do balcao e no WhatsApp. Não encontrou nada no mercado que chegasse perto do que precisava — entao decidiu desenvolver a propria solucao, ha cerca de 2 anos. O minhAi nasceu dessa necessidade real, com a crenca de que a mesma tecnologia pode ajudar outros empresarios autonomos, MEIs e pequenas e medias empresas a atender melhor, vender mais e entrar no mundo da Inteligencia Artificial sem precisar de conhecimento tecnico ou saber programar.',
   },
   {
     pergunta: 'O minhAi funciona para qualquer tipo de negócio?',

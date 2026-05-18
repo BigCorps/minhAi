@@ -139,7 +139,7 @@ export default function ExclusionPage() {
                                : 'text-gray-800'
             }`}>
               
-              <h2>Como Funciona a Exclusão de Dados</h2>
+              <h2>Como Funciona a Exclusão de Dados da minhAi</h2>
               <p>Você pode solicitar a exclusão permanente de todos os seus dados pessoais do minhAi a qualquer momento, conforme garantido pela Lei Geral de Proteção de Dados (LGPD).</p>
 
               <div className={`p-4 rounded-lg border my-4 ${

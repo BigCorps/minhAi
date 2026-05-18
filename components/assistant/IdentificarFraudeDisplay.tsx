@@ -436,62 +436,55 @@ const handleAnalyzeUrl = useCallback(async (urlToAnalyze?: string) => {
               </>
             )}
 
-            {/* ── Modo URL ── */}
-// ── 2. Substituir o bloco inteiro do modo URL (inputMode === 'url') ──
-// Localizar: <p style={{ fontSize: 13, color: p.sub, textAlign: 'center', margin: 0 }}>
-//              Cole o link suspeito para verificar se é phishing ou fraude
+{/* ── Modo URL ── */}
+            {inputMode === 'url' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <p style={{ fontSize: 13, color: p.sub, textAlign: 'center', margin: 0 }}>
+                  Cole o link suspeito <strong style={{ color: p.header }}>ou a linha digitável do boleto</strong> para análise
+                </p>
 
-// SUBSTITUIR por:
+                <input
+                  type="text"
+                  value={urlInput}
+                  onChange={e => { setUrlInput(e.target.value); setUrlError(''); }}
+                  onKeyDown={e => e.key === 'Enter' && handleAnalyzeUrl()}
+                  placeholder="https://site-suspeito.com  ou  00000.00000 00000.000000..."
+                  autoFocus
+                  style={{
+                    width: '100%', padding: '12px 14px', borderRadius: 12,
+                    border: `1px solid ${urlError ? '#ef4444' : p.inputBorder}`,
+                    background: p.input, color: p.inputText,
+                    fontSize: 13, fontFamily: 'monospace',
+                    outline: 'none', boxSizing: 'border-box',
+                  }}
+                />
+                {urlError && (
+                  <p style={{ fontSize: 12, color: '#ef4444', margin: 0 }}>{urlError}</p>
+                )}
 
-{inputMode === 'url' && (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-    <p style={{ fontSize: 13, color: p.sub, textAlign: 'center', margin: 0 }}>
-      Cole o link suspeito <strong style={{ color: p.header }}>ou a linha digitável do boleto</strong> para análise
-    </p>
+                {urlInput.trim() && (
+                  <p style={{ fontSize: 12, color: p.sub, margin: 0, textAlign: 'right' }}>
+                    {isLinhaDigitavel(urlInput)
+                      ? '🔢 Linha digitável detectada'
+                      : '🔗 URL detectada'}
+                  </p>
+                )}
 
-    <input
-      type="text"
-      value={urlInput}
-      onChange={e => { setUrlInput(e.target.value); setUrlError(''); }}
-      onKeyDown={e => e.key === 'Enter' && handleAnalyzeUrl()}
-      placeholder="https://site-suspeito.com  ou  00000.00000 00000.000000..."
-      autoFocus
-      style={{
-        width: '100%', padding: '12px 14px', borderRadius: 12,
-        border: `1px solid ${urlError ? '#ef4444' : p.inputBorder}`,
-        background: p.input, color: p.inputText,
-        fontSize: 13, fontFamily: 'monospace',
-        outline: 'none', boxSizing: 'border-box',
-      }}
-    />
-    {urlError && (
-      <p style={{ fontSize: 12, color: '#ef4444', margin: 0 }}>{urlError}</p>
-    )}
-
-    {/* Badge dinâmico mostrando o que foi detectado */}
-    {urlInput.trim() && (
-      <p style={{ fontSize: 12, color: p.sub, margin: 0, textAlign: 'right' }}>
-        {isLinhaDigitavel(urlInput)
-          ? '🔢 Linha digitável detectada'
-          : '🔗 URL detectada'}
-      </p>
-    )}
-
-    <button
-      onClick={() => handleAnalyzeUrl()}
-      disabled={!urlInput.trim()}
-      style={{
-        padding: '12px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
-        background: urlInput.trim() ? p.btn : p.btnSecondary,
-        color: urlInput.trim() ? p.btnText : p.btnSecondaryText,
-        fontSize: 14, fontWeight: 600, transition: 'all 0.2s',
-      }}
-    >
-      {urlInput.trim() && isLinhaDigitavel(urlInput) ? 'Validar boleto' : 'Analisar link'}
-    </button>
-    <VoiceHint commands={['imagem', 'link', 'fechar']} p={p} />
-  </div>
-)}
+                <button
+                  onClick={() => handleAnalyzeUrl()}
+                  disabled={!urlInput.trim()}
+                  style={{
+                    padding: '12px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
+                    background: urlInput.trim() ? p.btn : p.btnSecondary,
+                    color: urlInput.trim() ? p.btnText : p.btnSecondaryText,
+                    fontSize: 14, fontWeight: 600, transition: 'all 0.2s',
+                  }}
+                >
+                  {urlInput.trim() && isLinhaDigitavel(urlInput) ? 'Validar boleto' : 'Analisar link'}
+                </button>
+                <VoiceHint commands={['imagem', 'link', 'fechar']} p={p} />
+              </div>
+            )}
           </div>
         )}
 

@@ -107,6 +107,12 @@ const TYPE_LABELS: Record<string, string> = {
   imagem_generica: 'Imagem',
 };
 
+function isLinhaDigitavel(input: string): boolean {
+  // Remove pontos, espaços e traços — aceita formato com e sem formatação
+  const digits = input.replace(/[\s.\-]/g, '');
+  return /^\d{47}$/.test(digits) || /^\d{48}$/.test(digits); // 47 = boleto, 48 = tributo
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const normalize = (text: string) =>
   text.toLowerCase().trim()
@@ -189,31 +195,53 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
   }, []); // eslint-disable-line
 
   // ── Analisar URL ──────────────────────────────────────────────────────────────
-  const handleAnalyzeUrl = useCallback(async (urlToAnalyze?: string) => {
-    const target = (urlToAnalyze ?? urlInput).trim();
-    if (!target) { setUrlError('Cole uma URL para análise.'); return; }
+const handleAnalyzeUrl = useCallback(async (urlToAnalyze?: string) => {
+  const target = (urlToAnalyze ?? urlInput).trim();
+  if (!target) { setUrlError('Cole uma URL ou linha digitável para análise.'); return; }
 
-    const normalized = target.startsWith('http') ? target : `https://${target}`;
-    try { new URL(normalized); } catch { setUrlError('URL inválida.'); return; }
-
+  // Linha digitável — manda como boleto_linha, não como url
+  if (isLinhaDigitavel(target)) {
     setUrlError('');
     setStage('processing');
-
     try {
       const { data: res, error } = await supabase.functions.invoke('camera-process', {
-        body: { action: 'fraude_url', url: normalized, company_id: data.companyId },
+        body: { action: 'fraude_boleto_linha', linha: target.replace(/[\s.\-]/g, ''), company_id: data.companyId },
       });
       if (error) throw new Error(error.message);
       if (!res.success) throw new Error(res.error ?? 'Falha na análise');
       setFraudeData(res.fraude);
-      setUrlFetchError(res.url_fetch_error ?? null);
+      setUrlFetchError(null);
       setStage('result');
       playText(res.speech_text).catch(() => {});
     } catch (err: any) {
-      setErrorMsg(err.message ?? 'Erro ao analisar URL.');
+      setErrorMsg(err.message ?? 'Erro ao validar linha digitável.');
       setStage('error');
     }
-  }, [urlInput, data.companyId, supabase, playText]);
+    return;
+  }
+
+  // URL normal
+  const normalized = target.startsWith('http') ? target : `https://${target}`;
+  try { new URL(normalized); } catch { setUrlError('URL inválida.'); return; }
+
+  setUrlError('');
+  setStage('processing');
+
+  try {
+    const { data: res, error } = await supabase.functions.invoke('camera-process', {
+      body: { action: 'fraude_url', url: normalized, company_id: data.companyId },
+    });
+    if (error) throw new Error(error.message);
+    if (!res.success) throw new Error(res.error ?? 'Falha na análise');
+    setFraudeData(res.fraude);
+    setUrlFetchError(res.url_fetch_error ?? null);
+    setStage('result');
+    playText(res.speech_text).catch(() => {});
+  } catch (err: any) {
+    setErrorMsg(err.message ?? 'Erro ao analisar URL.');
+    setStage('error');
+  }
+}, [urlInput, data.companyId, supabase, playText]);
 
   // Manter ref sempre atualizada com a versão mais recente
   useEffect(() => {
@@ -409,45 +437,61 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
             )}
 
             {/* ── Modo URL ── */}
-            {inputMode === 'url' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <p style={{ fontSize: 13, color: p.sub, textAlign: 'center', margin: 0 }}>
-                  Cole o link suspeito para verificar se é phishing ou fraude
-                </p>
+// ── 2. Substituir o bloco inteiro do modo URL (inputMode === 'url') ──
+// Localizar: <p style={{ fontSize: 13, color: p.sub, textAlign: 'center', margin: 0 }}>
+//              Cole o link suspeito para verificar se é phishing ou fraude
 
-                <input
-                  type="url"
-                  value={urlInput}
-                  onChange={e => { setUrlInput(e.target.value); setUrlError(''); }}
-                  onKeyDown={e => e.key === 'Enter' && handleAnalyzeUrl()}
-                  placeholder="https://site-suspeito.com"
-                  autoFocus
-                  style={{
-                    width: '100%', padding: '12px 14px', borderRadius: 12,
-                    border: `1px solid ${urlError ? '#ef4444' : p.inputBorder}`,
-                    background: p.input, color: p.inputText,
-                    fontSize: 13, fontFamily: 'monospace',
-                    outline: 'none', boxSizing: 'border-box',
-                  }}
-                />
-                {urlError && (
-                  <p style={{ fontSize: 12, color: '#ef4444', margin: 0 }}>{urlError}</p>
-                )}
-                <button
-                  onClick={() => handleAnalyzeUrl()}
-                  disabled={!urlInput.trim()}
-                  style={{
-                    padding: '12px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
-                    background: urlInput.trim() ? p.btn : p.btnSecondary,
-                    color: urlInput.trim() ? p.btnText : p.btnSecondaryText,
-                    fontSize: 14, fontWeight: 600, transition: 'all 0.2s',
-                  }}
-                >
-                  Analisar link
-                </button>
-                <VoiceHint commands={['imagem', 'link', 'fechar']} p={p} />
-              </div>
-            )}
+// SUBSTITUIR por:
+
+{inputMode === 'url' && (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <p style={{ fontSize: 13, color: p.sub, textAlign: 'center', margin: 0 }}>
+      Cole o link suspeito <strong style={{ color: p.header }}>ou a linha digitável do boleto</strong> para análise
+    </p>
+
+    <input
+      type="text"
+      value={urlInput}
+      onChange={e => { setUrlInput(e.target.value); setUrlError(''); }}
+      onKeyDown={e => e.key === 'Enter' && handleAnalyzeUrl()}
+      placeholder="https://site-suspeito.com  ou  00000.00000 00000.000000..."
+      autoFocus
+      style={{
+        width: '100%', padding: '12px 14px', borderRadius: 12,
+        border: `1px solid ${urlError ? '#ef4444' : p.inputBorder}`,
+        background: p.input, color: p.inputText,
+        fontSize: 13, fontFamily: 'monospace',
+        outline: 'none', boxSizing: 'border-box',
+      }}
+    />
+    {urlError && (
+      <p style={{ fontSize: 12, color: '#ef4444', margin: 0 }}>{urlError}</p>
+    )}
+
+    {/* Badge dinâmico mostrando o que foi detectado */}
+    {urlInput.trim() && (
+      <p style={{ fontSize: 12, color: p.sub, margin: 0, textAlign: 'right' }}>
+        {isLinhaDigitavel(urlInput)
+          ? '🔢 Linha digitável detectada'
+          : '🔗 URL detectada'}
+      </p>
+    )}
+
+    <button
+      onClick={() => handleAnalyzeUrl()}
+      disabled={!urlInput.trim()}
+      style={{
+        padding: '12px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
+        background: urlInput.trim() ? p.btn : p.btnSecondary,
+        color: urlInput.trim() ? p.btnText : p.btnSecondaryText,
+        fontSize: 14, fontWeight: 600, transition: 'all 0.2s',
+      }}
+    >
+      {urlInput.trim() && isLinhaDigitavel(urlInput) ? 'Validar boleto' : 'Analisar link'}
+    </button>
+    <VoiceHint commands={['imagem', 'link', 'fechar']} p={p} />
+  </div>
+)}
           </div>
         )}
 

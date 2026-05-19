@@ -21,8 +21,11 @@ export default function AssistentesClient({
   hasConsultingPlan,
   activeWebappCompanyId,
 }: AssistentesClientProps) {
-  const [copiedId, setCopiedId]     = useState<string | null>(null);
-  const [showQrModal, setShowQrModal] = useState<any | null>(null);
+  const [copiedId, setCopiedId]         = useState<string | null>(null);
+  const [showQrModal, setShowQrModal]   = useState<any | null>(null);
+  const [duplicating, setDuplicating]   = useState<string | null>(null);
+  const [switching, setSwitching]       = useState<string | null>(null);
+  const [confirmSwitch, setConfirmSwitch] = useState<string | null>(null);
 
   const handleCopy = (slug: string, id: string) => {
     navigator.clipboard.writeText(`https://minhai.app/ia/${slug}`);
@@ -40,6 +43,41 @@ export default function AssistentesClient({
       ? `https://minhai.app/ia/${slug}`
       : `https://minhai.app/ia/private/${privateSlug}`;
     return `/api/qrcode?size=300&data=${encodeURIComponent(baseUrl)}&color=%23000080&company_id=${companyId}`;
+  };
+
+const handleDuplicate = async (assistant: any) => {
+    setDuplicating(assistant.id);
+    try {
+      const res = await fetch('/api/assistentes/duplicate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: assistant.id }),
+      });
+      if (res.ok) window.location.reload();
+    } finally {
+      setDuplicating(null);
+    }
+  };
+
+  const handleSwitchVersion = async (assistant: any) => {
+    if (confirmSwitch !== assistant.id) {
+      setConfirmSwitch(assistant.id);
+      setTimeout(() => setConfirmSwitch(null), 4000);
+      return;
+    }
+    setConfirmSwitch(null);
+    setSwitching(assistant.id);
+    try {
+      const newType = assistant.assistant_type === 'vendas' ? 'smart' : 'vendas';
+      const res = await fetch('/api/assistentes/switch-version', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: assistant.id, newType }),
+      });
+      if (res.ok) window.location.reload();
+    } finally {
+      setSwitching(null);
+    }
   };
 
   return (
@@ -191,6 +229,42 @@ export default function AssistentesClient({
                         <Settings className="w-4 h-4 mr-2" />
                         Funções
                       </Link>
+                      <button
+                        onClick={() => handleDuplicate(assistant)}
+                        disabled={!!duplicating}
+                        title="Duplicar assistente (copia configurações, produtos e prompts)"
+                        className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                          bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50
+                          dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
+                      >
+                        {duplicating === assistant.id
+                          ? <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                          : <Copy className="w-4 h-4 mr-2" />}
+                        Duplicar
+                      </button>
+
+                      <button
+                        onClick={() => handleSwitchVersion(assistant)}
+                        disabled={!!switching}
+                        title={assistant.assistant_type === 'vendas' ? 'Trocar para versão Smart (créditos)' : 'Trocar para versão Vendas (10% comissão)'}
+                        className={`flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50 border ${
+                          confirmSwitch === assistant.id
+                            ? 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30 animate-pulse'
+                            : assistant.assistant_type === 'vendas'
+                            ? 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+                            : 'bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20'
+                        }`}
+                      >
+                        {switching === assistant.id
+                          ? <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                          : <Zap className="w-4 h-4 mr-2" />}
+                        {confirmSwitch === assistant.id
+                          ? 'Confirmar troca?'
+                          : assistant.assistant_type === 'vendas'
+                          ? 'Trocar para Smart'
+                          : 'Trocar para Vendas'}
+                      </button>
+
                       <Link
                         href={`/dashboard/assistentes/${assistant.id}`}
                         className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all

@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
-  const { companyId } = await req.json();
+  const { companyId, newName, newSlug } = await req.json();
   const supabase = createClient();
 
   // Verifica ownership
@@ -18,18 +18,8 @@ export async function POST(req: NextRequest) {
 
   if (!original) return NextResponse.json({ error: 'Assistente não encontrado' }, { status: 404 });
 
-  // Gera novo slug único
-  const baseSlug = `${original.slug}-copia`;
-  let newSlug = baseSlug;
-  let attempt = 1;
-  while (true) {
-    const { data: exists } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('slug', newSlug)
-      .maybeSingle();
-    if (!exists) break;
-    newSlug = `${baseSlug}-${++attempt}`;
+if (!newSlug || !newName) {
+    return NextResponse.json({ error: 'Nome e slug são obrigatórios' }, { status: 400 });
   }
 
   // Copia company — exclui campos que devem ser únicos ou não copiados
@@ -44,8 +34,8 @@ export async function POST(req: NextRequest) {
     .from('companies')
     .insert({
       ...copyFields,
+      name: newName,
       slug: newSlug,
-      name: `${original.name} (cópia)`,
       user_id: user.id,
       webapp_enabled: false,
       mp_access_token: null,

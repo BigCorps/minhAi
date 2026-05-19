@@ -287,18 +287,6 @@ const handleDuplicate = (assistant: any) => {
                           : <Copy className="w-4 h-4 mr-2" />}
                         Duplicar
                       </button>
-                      <button
-                        onClick={() => { setShowDeleteModal(assistant); setDeleteConfirmText(''); }}
-                        disabled={!!deleting}
-                        className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
-                          bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50
-                          dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 border border-red-100 dark:border-red-500/20"
-                      >
-                        {deleting === assistant.id
-                          ? <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-                          : <Trash2 className="w-4 h-4 mr-2" />}
-                        Excluir
-                      </button>
 
                       <button
                         onClick={() => handleSwitchVersion(assistant)}
@@ -322,7 +310,7 @@ const handleDuplicate = (assistant: any) => {
                           : 'Trocar para Vendas'}
                       </button>
 
-                      <Link
+<Link
                         href={`/dashboard/assistentes/${assistant.id}`}
                         className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
                           bg-gray-100 text-gray-700 hover:bg-gray-200
@@ -332,7 +320,18 @@ const handleDuplicate = (assistant: any) => {
                         Configurar
                       </Link>
 
-                      <a
+                      <button
+                        onClick={() => { setShowDeleteModal(assistant); setDeleteConfirmText(''); }}
+                        disabled={!!deleting}
+                        title="Excluir assistente"
+                        className="flex items-center px-3 py-2 rounded-lg text-xs font-bold transition-all bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-500/20 disabled:opacity-50"
+                      >
+                        {deleting === assistant.id
+                          ? <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                          : <Trash2 className="w-4 h-4" />}
+                      </button>
+
+                      
                         href={
                           assistant.is_public
                             ? `https://minhai.app/ia/${assistant.slug}`
@@ -341,7 +340,7 @@ const handleDuplicate = (assistant: any) => {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center px-4 py-2 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20"
-                        >
+                      >
                         <ExternalLink className="w-4 h-4 mr-2" />
                         Abrir
                       </a>

@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { Lightbulb, Send, Loader2, X } from 'lucide-react';
+import { Lightbulb, Send, Loader2, X, Bot } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase-browser';
 import { useAssistant } from '@/contexts/AssistantContext';
@@ -11,6 +11,10 @@ import { Search, Settings, User } from 'lucide-react';
 import FunctionCard from '@/components/dashboard/functions/FunctionCard';
 import FunctionConfigModal from '@/components/dashboard/functions/FunctionConfigModal';
 import VendasConfigPanel from '@/components/dashboard/functions/VendasConfigPanel';
+import dynamic from 'next/dynamic';
+import { usePlayText } from '@/hooks/usePlayText';
+
+const FuncoesChat = dynamic(() => import('@/components/dashboard/FuncoesChat'), { ssr: false });
 
 interface AssistantFunction {
   id: string;
@@ -277,6 +281,20 @@ function FunctionsPageContent() {
   const [suggestionText, setSuggestionText] = useState('');
   const [isSendingsuggestion, setIsSendingSuggestion] = useState(false);
 
+  // ── Estados para FuncoesChat ──
+  const { playText } = usePlayText();
+  const [showFuncoesChat, setShowFuncoesChat] = useState(false);
+  const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
+
+  useEffect(() => {
+    const detect = () =>
+      setPageTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    detect();
+    const obs = new MutationObserver(detect);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
+
 async function handleSendSuggestion() {
   if (suggestionText.trim().length < 10) {
     toast({ title: "Sugestão muito curta", description: "Por favor, descreva com mais detalhes.", variant: "destructive" });
@@ -512,15 +530,30 @@ if (assistantType === 'vendas' && companyId) {
       </p>
     </div>
    
-    {companyId && (
-      <a
-        href={`/dashboard/assistentes/${companyId}`}
-        className="flex-shrink-0 p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 transition"
-        title="Configurar assistente"
-      >
-        <Settings className="w-5 h-5" />
-      </a>
-    )}
+    <div className="flex items-center gap-2 flex-shrink-0">
+      {companyId && (
+        <a
+          href={`/dashboard/assistentes/${companyId}`}
+          className="flex-shrink-0 p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 transition"
+          title="Configurar assistente"
+        >
+          <Settings className="w-5 h-5" />
+        </a>
+      )}
+
+      {companyId && (
+        <button
+          onClick={() => setShowFuncoesChat(true)}
+          className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
+            text-blue-600 border border-blue-300 hover:bg-blue-50
+            dark:text-blue-400 dark:border-blue-500/40 dark:hover:bg-blue-500/10 transition"
+          title="Auxiliar de Funções IA"
+        >
+          <Bot className="w-4 h-4" />
+          <span className="hidden lg:inline">Auxiliar IA</span>
+        </button>
+      )}
+    </div>
   </div>
 
   {/* Mobile */}
@@ -543,6 +576,16 @@ if (assistantType === 'vendas' && companyId) {
           >
             <Settings className="w-5 h-5" />
           </a>
+        )}
+
+        {companyId && (
+          <button
+            onClick={() => setShowFuncoesChat(true)}
+            className="p-2 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition"
+            title="Auxiliar de Funções IA"
+          >
+            <Bot className="w-5 h-5" />
+          </button>
         )}
       </div>
     </div>
@@ -782,6 +825,22 @@ if (assistantType === 'vendas' && companyId) {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ── Modal FuncoesChat ── */}
+          {showFuncoesChat && companyId && (
+            <FuncoesChat
+              companyId={companyId}
+              companyName={selectedAssistantName || ''}
+              assistantType={assistantType as 'smart' | 'vendas'}
+              theme={pageTheme}
+              playText={playText}
+              onClose={() => setShowFuncoesChat(false)}
+              onFunctionsChanged={() => {
+                loadData(companyId);
+                setShowFuncoesChat(false);
+              }}
+            />
           )}
 
         </div>

@@ -4980,6 +4980,23 @@ try {
           )}
         </div>
       </div>
+     {showChatPrompt && companyId && (
+        <ChatPromptModal
+          companyId={companyId}
+          companyName={functionData?.function_name || ''}
+          assistantType="smart"
+          initialPrompt={settings.system_prompt || ''}
+          initialFallback={settings.groq_fallback_message || ''}
+          theme={pageTheme}
+          playText={playText}
+          onClose={() => setShowChatPrompt(false)}
+          onSaved={() => {
+            setShowChatPrompt(false);
+            onUpdate();
+            onClose();
+          }}
+        />
+      )}
     </div>
   );
 }

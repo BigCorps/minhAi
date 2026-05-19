@@ -1,4 +1,8 @@
-*Publicar o App minhAi e Vixus na Playstore - Aguardando aprovação
+*Publicar o App minhAi e Vixus na Playstore
+
+*Cards na landing: Google, Meta, PlayStore e WebApp
+
+*Shark tank - Fazer Video
 
 *Gestor de Agenda - Fazer a função Marcar Evento e Reagendamento já vincularem a marcação de um evento com um produto e eventual cobrança para a versão Vendas poder cobrar os 10% de comissão
 

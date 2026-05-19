@@ -2,7 +2,6 @@
 'use client';
  
 import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { usePlayText } from '@/hooks/usePlayText';
 import { CheckCircle, UserPlus, Info, Mic, Sparkles, Loader2, X, Mail, Calendar, Bell, ExternalLink, Settings, AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
@@ -20,18 +19,12 @@ import {
   ContratoEmTextoConfigForm,
 } from './CameraConfigModal';
 
-const { playText } = usePlayText();
-const [showChatPrompt, setShowChatPrompt] = useState(false);
-const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
+import dynamic from 'next/dynamic';
 
-useEffect(() => {
-  const detect = () =>
-    setPageTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-  detect();
-  const obs = new MutationObserver(detect);
-  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-  return () => obs.disconnect();
-}, []);
+const ChatPromptModal = dynamic(
+  () => import('@/components/dashboard/ChatPromptModal'),
+  { ssr: false }
+);
 
 // ===== FORMULÁRIOS =====
 
@@ -47,11 +40,6 @@ const SequenciaVideosForm = ({ settings, onChange }: any) => {
     const newVideos = videos.filter((_: any, i: number) => i !== index);
     onChange('sequencia_videos_urls', newVideos);
   };
-
- const ChatPromptModal = dynamic(
-  () => import('@/components/dashboard/ChatPromptModal'),
-  { ssr: false }
-);
 
   const handleUpdateVideo = (index: number, field: 'title' | 'url', value: string) => {
     const newVideos = [...videos];
@@ -4758,10 +4746,22 @@ export default function FunctionConfigModal({
   onUpdate,
 }: FunctionConfigModalProps) {
   const supabase = createClient();
+  const { playText } = usePlayText();
+  const [showChatPrompt, setShowChatPrompt] = useState(false);
+  const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
   const [settings, setSettings] = useState<any>({});
   const [isLoading, setIsLoading] = useState(false);
-const [isSaving, setIsSaving] = useState(false);
-const [hasActivePlan, setHasActivePlan] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasActivePlan, setHasActivePlan] = useState(false);
+
+  useEffect(() => {
+    const detect = () =>
+      setPageTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    detect();
+    const obs = new MutationObserver(detect);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;

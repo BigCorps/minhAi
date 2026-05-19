@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase-browser';
 import {
   Settings, ExternalLink, QrCode, Zap, Plus, Copy, Check,
   Lock, Globe, X, Download, Mail, MessageSquare, Users,
-  Sparkles, Globe2,
+  Sparkles, Globe2, CheckCircle, XCircle, Loader2
 } from 'lucide-react';
 
 interface AssistentesClientProps {
@@ -26,6 +27,10 @@ export default function AssistentesClient({
   const [duplicating, setDuplicating]   = useState<string | null>(null);
   const [switching, setSwitching]       = useState<string | null>(null);
   const [confirmSwitch, setConfirmSwitch] = useState<string | null>(null);
+  const [showDuplicateModal, setShowDuplicateModal] = useState<any | null>(null);
+  const [dupName, setDupName] = useState('');
+  const [dupSlug, setDupSlug] = useState('');
+  const [dupSlugStatus, setDupSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
 
   const handleCopy = (slug: string, id: string) => {
     navigator.clipboard.writeText(`https://minhai.app/ia/${slug}`);
@@ -45,13 +50,31 @@ export default function AssistentesClient({
     return `/api/qrcode?size=300&data=${encodeURIComponent(baseUrl)}&color=%23000080&company_id=${companyId}`;
   };
 
-const handleDuplicate = async (assistant: any) => {
-    setDuplicating(assistant.id);
+const handleDuplicate = (assistant: any) => {
+    setDupName(`${assistant.name} (cópia)`);
+    const baseSlug = `${assistant.slug}-copia`;
+    setDupSlug(baseSlug);
+    setDupSlugStatus('idle');
+    setShowDuplicateModal(assistant);
+  };
+
+  const checkDupSlug = async (slug: string) => {
+    if (slug.length < 3) { setDupSlugStatus('idle'); return; }
+    setDupSlugStatus('checking');
+    const supabase = createClient();
+    const { data } = await supabase.from('companies').select('id').eq('slug', slug).maybeSingle();
+    setDupSlugStatus(data ? 'taken' : 'available');
+  };
+
+  const executeDuplicate = async () => {
+    if (!showDuplicateModal || dupSlugStatus !== 'available') return;
+    setDuplicating(showDuplicateModal.id);
+    setShowDuplicateModal(null);
     try {
       const res = await fetch('/api/assistentes/duplicate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyId: assistant.id }),
+        body: JSON.stringify({ companyId: showDuplicateModal.id, newName: dupName, newSlug: dupSlug }),
       });
       if (res.ok) window.location.reload();
     } finally {
@@ -315,6 +338,83 @@ const handleDuplicate = async (assistant: any) => {
             </div>
           )}
         </div>
+
+{/* Modal de Duplicar */}
+        {showDuplicateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-200 dark:border-white/10 relative">
+              <button
+                onClick={() => setShowDuplicateModal(null)}
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-white">Duplicar Assistente</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
+                Defina o nome e slug do novo assistente antes de duplicar.
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome</label>
+                  <input
+                    type="text"
+                    value={dupName}
+                    onChange={e => setDupName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Slug (URL)</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={dupSlug}
+                      onChange={e => {
+                        const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+                        setDupSlug(v);
+                        setDupSlugStatus('idle');
+                        clearTimeout((window as any)._dupSlugTimeout);
+                        (window as any)._dupSlugTimeout = setTimeout(() => checkDupSlug(v), 500);
+                      }}
+                      className={`w-full px-3 py-2 pr-10 rounded-lg border-2 text-sm font-mono focus:outline-none ${
+                        dupSlugStatus === 'available' ? 'border-green-500' :
+                        dupSlugStatus === 'taken' ? 'border-red-500' :
+                        'border-gray-300 dark:border-white/10'
+                      } bg-white dark:bg-slate-800 text-gray-900 dark:text-white`}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {dupSlugStatus === 'checking' && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
+                      {dupSlugStatus === 'available' && <CheckCircle className="w-4 h-4 text-green-500" />}
+                      {dupSlugStatus === 'taken' && <XCircle className="w-4 h-4 text-red-500" />}
+                    </div>
+                  </div>
+                  {dupSlugStatus === 'available' && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">✓ minhai.app/ia/{dupSlug}</p>
+                  )}
+                  {dupSlugStatus === 'taken' && (
+                    <p className="text-xs text-red-500 mt-1">Slug já em uso. Escolha outro.</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowDuplicateModal(null)}
+                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={executeDuplicate}
+                  disabled={dupSlugStatus !== 'available' || !dupName.trim()}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm flex items-center justify-center gap-2"
+                >
+                  <Copy className="w-4 h-4" />
+                  Duplicar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal de QR Code — igual ao original */}
         {showQrModal && (

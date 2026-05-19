@@ -1,7 +1,3 @@
-*Publicar o App minhAi e Vixus na Playstore
-
-*Cards na landing: Google, Meta, PlayStore e WebApp
-
 *Shark tank - Fazer Video
 
 *Gestor de Agenda - Fazer a função Marcar Evento e Reagendamento já vincularem a marcação de um evento com um produto e eventual cobrança para a versão Vendas poder cobrar os 10% de comissão
@@ -13,6 +9,10 @@
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 
 *Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
+
+*App minhAi e Vixus publicados na Playstore - AGUARDANDO APROVAÇÃO
+
+*Cards na landing: Google, Meta, PlayStore e WebApp
 
 *Funções demo no slug Suporte para ter demonstrativo de todas as funções 
 

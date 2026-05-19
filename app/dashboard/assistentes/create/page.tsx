@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, Loader2, Globe, Zap, Lock, CheckCircle, XCircle, AlertCircle, Sparkles, Bot, ExternalLink as ExtLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
-import SetupAssistantChat from '@/components/dashboard/SetupAssistantChat';
-import { usePlayText } from '@/hooks/usePlayText';
 
 /* ─────────────────────────────────────────────────────────
    Sub-componente: seleção de WebApp no formulário de criação
@@ -111,7 +109,6 @@ function WebAppSection({
 
 export default function NovaEmpresaPage() {
   const router = useRouter();
-  const { playText } = usePlayText();
 
   // ── Form state ───────────────────────────────────────────
   const [nome, setNome] = useState('');
@@ -139,21 +136,7 @@ export default function NovaEmpresaPage() {
   const [submitMode, setSubmitMode] = useState<'manual' | 'ia' | 'ia_webapp' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Setup bot ────────────────────────────────────────────
-  const [showSetupBot, setShowSetupBot] = useState(false);
-  const [setupCompanyId, setSetupCompanyId] = useState<string | null>(null);
-
-  // ── Tema ─────────────────────────────────────────────────
-  const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
-  useEffect(() => {
-    const detect = () => setPageTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-    detect();
-    const obs = new MutationObserver(detect);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => obs.disconnect();
-  }, []);
-
-// ── Verificar plano Consulting e WebApp Existente ───────────
+  // ── Verificar plano Consulting e WebApp Existente ───────────
   useEffect(() => {
     async function checkPlanAndWebapp() {
       const supabase = createClient();
@@ -341,14 +324,8 @@ export default function NovaEmpresaPage() {
   }
 
   // ── Submit com IA ────────────────────────────────────────
-  async function handleSubmitComIA() {
-    setSubmitMode('ia');
-    const id = await criarAssistente();
-    if (id) {
-      setSetupCompanyId(id);
-      setShowSetupBot(true);
-      setLoading(false);
-    }
+  function handleSubmitComIA() {
+    router.push('/dashboard/assistentes/novo');
   }
 
   // ── Submit com WebApp ────────────────────────────────────
@@ -604,13 +581,17 @@ export default function NovaEmpresaPage() {
                         : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-purple-500/20'
                   }`}
                 >
-                  {loading && submitMode === 'ia'
-                    ? <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                    : wantWebapp
-                      ? <Globe className="w-5 h-5 mr-2" />
-                      : <Sparkles className="w-5 h-5 mr-2" />
-                  }
-                  {wantWebapp ? 'Criar e Configurar WebApp' : 'Criar e Configurar com IA'}
+                  {wantWebapp ? (
+                    <>
+                      <Globe className="w-5 h-5 mr-2" />
+                      Criar e Configurar WebApp
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      Criar com IA (Configuração Guiada)
+                    </>
+                  )}
                 </button>
               )}
 
@@ -677,27 +658,6 @@ export default function NovaEmpresaPage() {
           </div>
         </div>
       </div>
-
-      {/* Modal do Setup Bot */}
-      {showSetupBot && setupCompanyId && (
-        <SetupAssistantChat
-          companyId={setupCompanyId}
-          companyName={nome}
-          slug={slugValue}
-          theme={pageTheme}
-          playText={playText}
-          onClose={() => {
-            setShowSetupBot(false);
-            router.push('/dashboard/assistentes');
-            router.refresh();
-          }}
-          onConcluido={() => {
-            setShowSetupBot(false);
-            router.push('/dashboard/assistentes');
-            router.refresh();
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -32,6 +32,7 @@ interface ChatPromptModalProps {
   onSaved:           () => void; // recarrega as configurações na página pai
   theme?:            'dark' | 'light';
   playText:          (text: string) => Promise<void>;
+  stopAudio:         () => void;
 }
 
 // ── Componente ───────────────────────────────────────────────
@@ -46,6 +47,7 @@ export default function ChatPromptModal({
   onSaved,
   theme = 'dark',
   playText,
+  stopAudio,
 }: ChatPromptModalProps) {
   const isDark = theme === 'dark';
   const voiceRecorder = useVoiceRecorder();
@@ -86,7 +88,6 @@ export default function ChatPromptModal({
   const audioQueueRef  = useRef<string[]>([]);
   const isPlayingRef   = useRef(false);
   const hasStartedRef  = useRef(false);
-  const cancelledRef = useRef(false);
 
   // ── Breakpoint ──────────────────────────────────────────
   useEffect(() => {
@@ -110,18 +111,13 @@ export default function ChatPromptModal({
     playTextSafe(msg);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-   useEffect(() => {
-   cancelledRef.current = false;
-   return () => {
-     // Ao desmontar: cancela a fila e para o speechSynthesis se estiver falando
-     cancelledRef.current = true;
-     audioQueueRef.current = [];
-     isPlayingRef.current = false;
-     if (typeof window !== 'undefined' && window.speechSynthesis) {
-       window.speechSynthesis.cancel();
-     }
-   };
- }, []);
+  // ── Cleanup ao desmontar ────────────────────────────────
+  useEffect(() => {
+    return () => {
+      audioQueueRef.current = [];
+      isPlayingRef.current = false;
+    };
+  }, []);
 
   // ── Scroll ──────────────────────────────────────────────
   useEffect(() => {
@@ -133,22 +129,18 @@ export default function ChatPromptModal({
     setAudioMutado(prev => { audioMutadoRef.current = !prev; return !prev; });
   }, []);
 
-const playTextSafe = useCallback(async (text: string) => {
+  const playTextSafe = useCallback(async (text: string) => {
     if (audioMutadoRef.current) return;
     audioQueueRef.current.push(text);
     if (isPlayingRef.current) return;
     while (audioQueueRef.current.length > 0) {
       isPlayingRef.current = true;
       const next = audioQueueRef.current.shift();
-     if (cancelledRef.current) break;
       if (next) {
         try { await playText(next); await new Promise(r => setTimeout(r, 200)); }
         catch {}
       }
     }
-   if (cancelledRef.current) {
-     audioQueueRef.current = [];
-   }
     isPlayingRef.current = false;
   }, [playText]);
 
@@ -532,7 +524,7 @@ const playTextSafe = useCallback(async (text: string) => {
         }}>
           {audioMutado ? <VolumeX size={17} /> : <Volume2 size={17} />}
         </button>
-        <button onClick={onClose} style={{
+        <button onClick={() => { stopAudio(); onClose(); }} style={{
           padding: 7, background: 'transparent', border: 'none',
           cursor: 'pointer', color: C.textMuted,
         }}>
@@ -569,7 +561,7 @@ const playTextSafe = useCallback(async (text: string) => {
   // ── RENDER DESKTOP ──────────────────────────────────────
   return createPortal(
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 10000, // acima do FunctionConfigModal (z-50)
+      position: 'fixed', inset: 0, zIndex: 10000,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(0,0,0,0.7)', padding: 20,
     }}>

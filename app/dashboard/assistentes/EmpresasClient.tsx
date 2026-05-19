@@ -331,7 +331,7 @@ const handleDuplicate = (assistant: any) => {
                           : <Trash2 className="w-4 h-4" />}
                       </button>
 
-                      
+                      <a
                         href={
                           assistant.is_public
                             ? `https://minhai.app/ia/${assistant.slug}`

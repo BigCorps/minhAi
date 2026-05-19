@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Bot } from 'lucide-react';
 import type { StepProps } from './types';
 
-const SUGGESTIONS = ['Sofia', 'Max', 'Luna', 'Alex', 'Nina', 'Theo'];
+const SUGGESTIONS = ['Alexa', 'Gerente', 'Assistente', 'Robô', 'Minha IA', 'Max'];
 
 export function Step1({ state, update, onNext, onBack }: StepProps) {
   const [touched, setTouched] = useState(false);

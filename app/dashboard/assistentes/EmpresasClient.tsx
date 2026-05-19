@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase-browser';
 import {
   Settings, ExternalLink, QrCode, Zap, Plus, Copy, Check,
   Lock, Globe, X, Download, Mail, MessageSquare, Users,
-  Sparkles, Globe2, CheckCircle, XCircle, Loader2
+  Sparkles, Globe2, CheckCircle, XCircle, Loader2, Trash2
 } from 'lucide-react';
 
 interface AssistentesClientProps {

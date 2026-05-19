@@ -2,6 +2,8 @@
 'use client';
  
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import { usePlayText } from '@/hooks/usePlayText';
 import { CheckCircle, UserPlus, Info, Mic, Sparkles, Loader2, X, Mail, Calendar, Bell, ExternalLink, Settings, AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
@@ -18,6 +20,19 @@ import {
   ContratoEmTextoConfigForm,
 } from './CameraConfigModal';
 
+const { playText } = usePlayText();
+const [showChatPrompt, setShowChatPrompt] = useState(false);
+const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
+
+useEffect(() => {
+  const detect = () =>
+    setPageTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+  detect();
+  const obs = new MutationObserver(detect);
+  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  return () => obs.disconnect();
+}, []);
+
 // ===== FORMULÁRIOS =====
 
 const SequenciaVideosForm = ({ settings, onChange }: any) => {
@@ -32,6 +47,11 @@ const SequenciaVideosForm = ({ settings, onChange }: any) => {
     const newVideos = videos.filter((_: any, i: number) => i !== index);
     onChange('sequencia_videos_urls', newVideos);
   };
+
+ const ChatPromptModal = dynamic(
+  () => import('@/components/dashboard/ChatPromptModal'),
+  { ssr: false }
+);
 
   const handleUpdateVideo = (index: number, field: 'title' | 'url', value: string) => {
     const newVideos = [...videos];
@@ -4424,7 +4444,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'qrcode_twitter': TwitterForm,
   'qrcode_telefone': TelefoneForm,
   'pix_generate': PixForm,
-  'chatgpt': ChatGptForm,
+  'chatgpt': null, // tratado via ChatPromptModal abaixo
   'orcamento': OrcamentoForm,  // ← ADICIONAR
   'faq': FaqForm,
   'endereco': EnderecoForm, 
@@ -4712,6 +4732,8 @@ function GoogleCalendarScheduleForm({
         </div>
       </div>
 
+     
+
       {/* Funcionalidade Inteligente (apenas para funções específicas) */}
       {info.smartFeature && (
         <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
@@ -4858,19 +4880,76 @@ try {
           </div>
         ) : (
           <div className="space-y-4 mb-6">
-            {hasForm ? (
-              <FormComponent 
-                settings={settings} 
-                onChange={handleSettingChange}
-                companyId={companyId}
-                functionKey={functionData?.function_key}
-                hasActivePlan={hasActivePlan}
-              />
-            ) : (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                Esta função não possui configurações editáveis.
-              </div>
-            )}
+{functionData?.function_key === 'chatgpt' ? (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    {/* Preview do prompt atual */}
+    <div style={{
+      padding: '12px 14px',
+      background: 'rgba(59,130,246,0.06)',
+      border: '1px solid rgba(59,130,246,0.2)',
+      borderRadius: 10,
+    }}>
+      <p style={{ fontSize: 12, fontWeight: 600, color: '#3b82f6', marginBottom: 6 }}>
+        Comportamento configurado
+      </p>
+      <p style={{
+        fontSize: 13, color: 'inherit', lineHeight: 1.6,
+         maxHeight: 80, overflow: 'hidden',
+         maskImage: 'linear-gradient(to bottom, black 60%, transparent)',
+         WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent)',
+       }}>
+         {settings.system_prompt || 'Nenhum comportamento configurado ainda.'}
+       </p>
+     </div>
+
+     {/* Botão para abrir o chat */}
+     <button
+       onClick={() => setShowChatPrompt(true)}
+       className="w-full flex items-center justify-center gap-2 px-4 py-3
+         bg-gradient-to-r from-blue-600 to-purple-600
+         hover:from-blue-700 hover:to-purple-700
+         text-white font-bold rounded-xl transition shadow-lg"
+     >
+       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+       </svg>
+       Configurar com IA
+     </button>
+
+     {/* Campo fallback — visível mesmo sem abrir o chat */}
+     <div>
+       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+         Mensagem quando ChatGPT estiver desativado
+         <span className="text-gray-400 font-normal ml-1">(opcional)</span>
+       </label>
+       <textarea
+        rows={2}
+        value={settings.groq_fallback_message || ''}
+        onChange={e => handleSettingChange('groq_fallback_message', e.target.value)}
+        placeholder='Ex: "Não tenho informações sobre isso. Entre em contato com a empresa."'
+        maxLength={300}
+        className="w-full px-3 py-2 text-sm border rounded-lg resize-none
+          dark:bg-slate-800 dark:border-white/10 dark:text-white
+          focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      />
+      <p className="text-xs text-gray-400 text-right mt-1">
+        {(settings.groq_fallback_message || '').length}/300
+      </p>
+    </div>
+  </div>
+) : hasForm ? (
+  <FormComponent
+    settings={settings}
+    onChange={handleSettingChange}
+    companyId={companyId}
+    functionKey={functionData?.function_key}
+    hasActivePlan={hasActivePlan}
+  />
+) : (
+  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+    Esta função não possui configurações editáveis.
+  </div>
+)}
           </div>
         )}
 
@@ -4883,7 +4962,7 @@ try {
           >
             Cancelar
           </button>
-          {hasForm && functionData?.function_key !== 'gerar_senha' && (
+          {hasForm && functionData?.function_key !== 'gerar_senha' && functionData?.function_key !== 'chatgpt' && (
             <button
               onClick={handleSave}
               disabled={isSaving || isLoading}

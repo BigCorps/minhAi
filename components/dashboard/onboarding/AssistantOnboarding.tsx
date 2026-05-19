@@ -1,7 +1,4 @@
 // components/dashboard/onboarding/AssistantOnboarding.tsx
-// Orquestrador principal do fluxo de criação de assistente.
-// Gerencia estado global, navegação entre etapas e chamadas às APIs.
-
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -15,8 +12,6 @@ import { Step4 } from './steps/Step4';
 import { Step5 } from './steps/Step5';
 import { Step6 } from './steps/Step6';
 
-// ── Tipos ────────────────────────────────────────────────────
-
 export type AssistantType = 'smart' | 'vendas';
 export type Tone = 'formal' | 'amigavel' | 'descontraido';
 
@@ -28,9 +23,7 @@ export interface Step3Data {
   extra_info:   string;
 }
 
-export interface Step4Data {
-  tone: Tone;
-}
+export interface Step4Data { tone: Tone; }
 
 export interface Step5Data {
   no_competitor_info: boolean;
@@ -40,25 +33,17 @@ export interface Step5Data {
 }
 
 export interface OnboardingState {
-  // Step 0
-  assistantType:  AssistantType;
-  // Step 1
-  assistantName:  string;
-  // Step 2
-  segmentKey:     string;
-  segmentLabel:   string;
-  segmentEmoji:   string;
-  // Step 3
-  step3:          Step3Data;
-  // Step 4
-  step4:          Step4Data;
-  // Step 5
-  step5:          Step5Data;
-  // Gerado na transição 5→6
+  assistantType:   AssistantType;
+  assistantName:   string;
+  segmentKey:      string;
+  segmentLabel:    string;
+  segmentEmoji:    string;
+  step3:           Step3Data;
+  step4:           Step4Data;
+  step5:           Step5Data;
   generatedPrompt: string;
-  // Resultado final
-  createdSlug:    string;
-  createdId:      string;
+  createdSlug:     string;
+  createdId:       string;
 }
 
 const INITIAL_STATE: OnboardingState = {
@@ -67,58 +52,30 @@ const INITIAL_STATE: OnboardingState = {
   segmentKey:      '',
   segmentLabel:    '',
   segmentEmoji:    '',
-  step3: {
-    company_name: '',
-    what_offers:  '',
-    location:     '',
-    hours:        '',
-    extra_info:   '',
-  },
+  step3: { company_name: '', what_offers: '', location: '', hours: '', extra_info: '' },
   step4: { tone: 'amigavel' },
-  step5: {
-    no_competitor_info: false,
-    no_prices:          false,
-    no_personal_data:   false,
-    custom_rule:        '',
-  },
+  step5: { no_competitor_info: false, no_prices: false, no_personal_data: false, custom_rule: '' },
   generatedPrompt: '',
   createdSlug:     '',
   createdId:       '',
 };
 
-// Total de etapas visíveis na barra (0 a 6 = 7 etapas)
 const TOTAL_STEPS = 7;
-
-// Labels da barra de progresso
-const STEP_LABELS = [
-  'Tipo',
-  'Nome',
-  'Segmento',
-  'Empresa',
-  'Tom de voz',
-  'Regras',
-  'Revisão',
-];
-
-// ── Componente principal ─────────────────────────────────────
+const STEP_LABELS = ['Tipo', 'Nome', 'Segmento', 'Empresa', 'Tom de voz', 'Regras', 'Revisão'];
 
 export function AssistantOnboarding() {
   const router = useRouter();
-  const [step, setStep]       = useState(0);
-  const [state, setState]     = useState<OnboardingState>(INITIAL_STATE);
+  const [step, setStep]           = useState(0);
+  const [state, setState]         = useState<OnboardingState>(INITIAL_STATE);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError]     = useState<string | null>(null);
+  const [error, setError]         = useState<string | null>(null);
 
-  // ── Atualizar estado parcialmente ────────────────────────
   const update = useCallback((patch: Partial<OnboardingState>) => {
     setState(prev => ({ ...prev, ...patch }));
   }, []);
 
-  // ── Avançar etapa ────────────────────────────────────────
   const next = useCallback(async () => {
     setError(null);
-
-    // Na transição 5 → 6: gerar prompt antes de exibir revisão
     if (step === 5) {
       setIsLoading(true);
       try {
@@ -129,69 +86,54 @@ export function AssistantOnboarding() {
             assistantName: state.assistantName,
             segmentKey:    state.segmentKey,
             assistantType: state.assistantType,
-            step3:         state.step3,
-            step4:         state.step4,
-            step5:         state.step5,
+            step3: state.step3,
+            step4: state.step4,
+            step5: state.step5,
           }),
         });
         const data = await res.json();
-        if (data.prompt) {
-          update({ generatedPrompt: data.prompt });
-        }
+        if (data.prompt) update({ generatedPrompt: data.prompt });
       } catch (err) {
-        // Não bloqueia o avanço — fallback já está no backend
-        console.warn('generate-prompt falhou no cliente:', err);
+        console.warn('generate-prompt falhou:', err);
       } finally {
         setIsLoading(false);
       }
     }
-
     setStep(s => Math.min(s + 1, TOTAL_STEPS - 1));
   }, [step, state, update]);
 
-  // ── Voltar etapa ─────────────────────────────────────────
   const back = useCallback(() => {
     setError(null);
     setStep(s => Math.max(s - 1, 0));
   }, []);
 
-  // ── Criar assistente (Step 6) ────────────────────────────
   const handleCreate = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-
     try {
       const slugBase = state.step3.company_name || state.assistantName;
       const res = await fetch('/api/assistant/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          assistantName:  state.assistantName,
-          assistantType:  state.assistantType,
-          segmentKey:     state.segmentKey,
-          step3:          state.step3,
-          systemPrompt:   state.generatedPrompt,
-          slug: slugBase
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '')
-            .slice(0, 60),
+          assistantName: state.assistantName,
+          assistantType: state.assistantType,
+          segmentKey:    state.segmentKey,
+          step3:         state.step3,
+          systemPrompt:  state.generatedPrompt,
+          slug: slugBase.toLowerCase().normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '').slice(0, 60),
           is_public: true,
         }),
       });
-
       const data = await res.json();
-
       if (!res.ok || !data.success) {
         setError(data.error ?? 'Erro ao criar assistente. Tente novamente.');
         return;
       }
-
       update({ createdSlug: data.slug, createdId: data.id });
-      setStep(TOTAL_STEPS); // etapa "concluído" (além do range normal)
-
+      setStep(TOTAL_STEPS);
     } catch (err: any) {
       setError(err.message ?? 'Erro inesperado. Tente novamente.');
     } finally {
@@ -199,80 +141,65 @@ export function AssistantOnboarding() {
     }
   }, [state, update]);
 
-  // ── Ir para o dashboard após criação ────────────────────
   const goToDashboard = useCallback(() => {
     router.push(`/dashboard/assistentes?novo=${state.createdSlug}`);
     router.refresh();
   }, [router, state.createdSlug]);
 
-  // ── Props compartilhadas para todos os Steps ─────────────
   const sharedProps = { state, update, onNext: next, onBack: back };
 
-  // ── Tela de concluído ────────────────────────────────────
   if (step >= TOTAL_STEPS) {
-    return (
-      <ConclusionScreen
-        slug={state.createdSlug}
-        assistantName={state.assistantName}
-        onGo={goToDashboard}
-      />
-    );
+    return <ConclusionScreen slug={state.createdSlug} assistantName={state.assistantName} onGo={goToDashboard} />;
   }
 
   return (
-    <div style={{
-      maxWidth: 600,
-      margin: '0 auto',
-      background: '#ffffff',
-      borderRadius: 16,
-      boxShadow: '0 4px 32px rgba(0,0,0,0.10)',
-      overflow: 'hidden',
-    }}>
+    <div className="w-full">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden relative">
 
-      {/* ── Barra de progresso ── */}
-      <ProgressBar current={step} total={TOTAL_STEPS} labels={STEP_LABELS} />
-
-      {/* ── Conteúdo da etapa ── */}
-      <div style={{ padding: '32px 32px 24px' }}>
-
-        {error && (
-          <div style={{
-            marginBottom: 20, padding: '12px 16px',
-            background: '#fef2f2', border: '1px solid #fecaca',
-            borderRadius: 8, fontSize: 14, color: '#dc2626',
-          }}>
-            {error}
+        {/* Barra de progresso */}
+        <div className="px-8 pt-5 bg-gray-50 dark:bg-white/[0.03] border-b border-gray-100 dark:border-white/5">
+          <div className="flex justify-between mb-2">
+            {STEP_LABELS.map((label, i) => (
+              <span key={i} className={`text-[10px] text-center flex-1 transition-colors ${
+                i < step  ? 'text-green-500 font-semibold' :
+                i === step ? 'text-blue-500 dark:text-blue-400 font-bold' :
+                             'text-gray-400 dark:text-white/25'
+              }`}>
+                {label}
+              </span>
+            ))}
           </div>
-        )}
+          <div className="h-1 bg-gray-200 dark:bg-white/10 rounded-full mb-5">
+            <div
+              className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300"
+              style={{ width: `${(step / (TOTAL_STEPS - 1)) * 100}%` }}
+            />
+          </div>
+        </div>
 
-        {step === 0 && <Step0 {...sharedProps} />}
-        {step === 1 && <Step1 {...sharedProps} />}
-        {step === 2 && <Step2 {...sharedProps} />}
-        {step === 3 && <Step3 {...sharedProps} />}
-        {step === 4 && <Step4 {...sharedProps} />}
-        {step === 5 && <Step5 {...sharedProps} />}
-        {step === 6 && (
-          <Step6
-            state={state}
-            onBack={back}
-            onCreate={handleCreate}
-            isCreating={isLoading}
-          />
-        )}
+        {/* Conteúdo */}
+        <div className="px-8 py-8">
+          {error && (
+            <div className="mb-6 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-xl text-sm text-red-600 dark:text-red-400">
+              {error}
+            </div>
+          )}
 
-        {/* Spinner de geração de prompt (transição 5→6) */}
+          {step === 0 && <Step0 {...sharedProps} />}
+          {step === 1 && <Step1 {...sharedProps} />}
+          {step === 2 && <Step2 {...sharedProps} />}
+          {step === 3 && <Step3 {...sharedProps} />}
+          {step === 4 && <Step4 {...sharedProps} />}
+          {step === 5 && <Step5 {...sharedProps} />}
+          {step === 6 && <Step6 state={state} onBack={back} onCreate={handleCreate} isCreating={isLoading} />}
+        </div>
+
+        {/* Spinner overlay (transição 5→6) */}
         {isLoading && step < 6 && (
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: 'rgba(255,255,255,0.85)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            borderRadius: 16,
-          }}>
-            <div style={{ textAlign: 'center' }}>
-              <Loader2 size={32} className="animate-spin" color="#3b82f6" style={{ margin: '0 auto 12px' }} />
-              <p style={{ fontSize: 14, color: '#64748b' }}>
-                Preparando sua revisão...
-              </p>
+          <div className="absolute inset-0 bg-white/90 dark:bg-slate-900/90 flex items-center justify-center rounded-2xl">
+            <div className="text-center">
+              <Loader2 size={32} className="animate-spin text-blue-500 mx-auto mb-3" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Preparando sua revisão...</p>
             </div>
           </div>
         )}
@@ -281,82 +208,30 @@ export function AssistantOnboarding() {
   );
 }
 
-// ── Barra de progresso ───────────────────────────────────────
-
-function ProgressBar({
-  current, total, labels,
-}: { current: number; total: number; labels: string[] }) {
+function ConclusionScreen({ slug, assistantName, onGo }: { slug: string; assistantName: string; onGo: () => void }) {
   return (
-    <div style={{ padding: '20px 32px 0', background: '#f8fafc' }}>
-      {/* Labels */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-        {labels.map((label, i) => (
-          <span key={i} style={{
-            fontSize: 10, fontWeight: i === current ? 700 : 400,
-            color: i < current ? '#22c55e' : i === current ? '#3b82f6' : '#94a3b8',
-            textAlign: 'center', flex: 1,
-          }}>
-            {label}
-          </span>
-        ))}
+    <div className="w-full">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 px-8 py-12 text-center">
+        <div className="text-5xl mb-4">🎉</div>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          {assistantName} está pronto!
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+          Seu assistente foi criado com sucesso e já está configurado para começar a atender.
+        </p>
+        <div className="px-5 py-3 bg-gray-100 dark:bg-white/5 rounded-lg mb-8 text-sm text-gray-600 dark:text-gray-400 font-mono">
+          minhai.app/ia/{slug}
+        </div>
+        <button
+          onClick={onGo}
+          className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl text-base font-bold hover:opacity-90 transition"
+        >
+          Ir para o Dashboard →
+        </button>
+        <p className="text-xs text-gray-400 dark:text-white/30 mt-4">
+          Você pode configurar mais funções, editar o comportamento e personalizar o visual a qualquer momento.
+        </p>
       </div>
-      {/* Barra */}
-      <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, marginBottom: 20 }}>
-        <div style={{
-          height: '100%',
-          width: `${(current / (total - 1)) * 100}%`,
-          background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
-          borderRadius: 2,
-          transition: 'width 0.3s ease',
-        }} />
-      </div>
-    </div>
-  );
-}
-
-// ── Tela de conclusão ────────────────────────────────────────
-
-function ConclusionScreen({
-  slug, assistantName, onGo,
-}: { slug: string; assistantName: string; onGo: () => void }) {
-  return (
-    <div style={{
-      maxWidth: 600, margin: '0 auto',
-      background: '#ffffff', borderRadius: 16,
-      boxShadow: '0 4px 32px rgba(0,0,0,0.10)',
-      padding: '48px 32px', textAlign: 'center',
-    }}>
-      <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
-      <h2 style={{ fontSize: 24, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>
-        {assistantName} está pronto!
-      </h2>
-      <p style={{ fontSize: 15, color: '#64748b', marginBottom: 24 }}>
-        Seu assistente foi criado com sucesso e já está configurado para começar a atender.
-      </p>
-
-      <div style={{
-        padding: '12px 20px', background: '#f1f5f9',
-        borderRadius: 8, marginBottom: 32,
-        fontSize: 14, color: '#475569', fontFamily: 'monospace',
-      }}>
-        minhai.app/ia/{slug}
-      </div>
-
-      <button
-        onClick={onGo}
-        style={{
-          width: '100%', padding: '14px',
-          background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-          color: 'white', border: 'none', borderRadius: 10,
-          fontSize: 16, fontWeight: 700, cursor: 'pointer',
-        }}
-      >
-        Ir para o Dashboard →
-      </button>
-
-      <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 16 }}>
-        Você pode configurar mais funções, editar o comportamento e personalizar o visual a qualquer momento.
-      </p>
     </div>
   );
 }

@@ -28,6 +28,9 @@ export default function AssistentesClient({
   const [switching, setSwitching]       = useState<string | null>(null);
   const [confirmSwitch, setConfirmSwitch] = useState<string | null>(null);
   const [showDuplicateModal, setShowDuplicateModal] = useState<any | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState<any | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [dupName, setDupName] = useState('');
   const [dupSlug, setDupSlug] = useState('');
   const [dupSlugStatus, setDupSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
@@ -100,6 +103,25 @@ const handleDuplicate = (assistant: any) => {
       if (res.ok) window.location.reload();
     } finally {
       setSwitching(null);
+    }
+  };
+
+  const executeDelete = async () => {
+    if (!showDeleteModal) return;
+    const expected = `minhai.app/ia/${showDeleteModal.slug}`;
+    if (deleteConfirmText.trim() !== expected) return;
+    setDeleting(showDeleteModal.id);
+    setShowDeleteModal(null);
+    setDeleteConfirmText('');
+    try {
+      const res = await fetch('/api/assistentes/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: showDeleteModal.id }),
+      });
+      if (res.ok) window.location.reload();
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -265,6 +287,18 @@ const handleDuplicate = (assistant: any) => {
                           : <Copy className="w-4 h-4 mr-2" />}
                         Duplicar
                       </button>
+                      <button
+                        onClick={() => { setShowDeleteModal(assistant); setDeleteConfirmText(''); }}
+                        disabled={!!deleting}
+                        className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                          bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50
+                          dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 border border-red-100 dark:border-red-500/20"
+                      >
+                        {deleting === assistant.id
+                          ? <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                          : <Trash2 className="w-4 h-4 mr-2" />}
+                        Excluir
+                      </button>
 
                       <button
                         onClick={() => handleSwitchVersion(assistant)}
@@ -410,6 +444,68 @@ const handleDuplicate = (assistant: any) => {
                 >
                   <Copy className="w-4 h-4" />
                   Duplicar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Excluir */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-red-200 dark:border-red-500/30 relative">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                  <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Excluir Assistente</h3>
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium">Esta ação não pode ser desfeita</p>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                Você está prestes a excluir permanentemente o assistente <strong className="text-gray-900 dark:text-white">{showDeleteModal.name}</strong> e todos os seus dados:
+              </p>
+              <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1 mb-4 ml-3">
+                <li>• Configurações, funções e prompts</li>
+                <li>• Produtos, FAQs e histórico de atendimentos</li>
+                <li>• Pedidos, agendamentos e registros</li>
+                <li>• Conexões Meta (WhatsApp, Instagram, Facebook)</li>
+              </ul>
+
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-500/20 mb-4">
+                <p className="text-xs text-red-700 dark:text-red-300 mb-2">
+                  Para confirmar, digite exatamente:
+                </p>
+                <p className="text-xs font-mono font-bold text-red-800 dark:text-red-200 mb-2 select-all">
+                  minhai.app/ia/{showDeleteModal.slug}
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={e => setDeleteConfirmText(e.target.value)}
+                  onPaste={e => e.preventDefault()}
+                  placeholder="Digite aqui para confirmar"
+                  className="w-full px-3 py-2 rounded-lg border border-red-300 dark:border-red-500/30 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-500"
+                  autoComplete="off"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowDeleteModal(null); setDeleteConfirmText(''); }}
+                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={executeDelete}
+                  disabled={deleteConfirmText.trim() !== `minhai.app/ia/${showDeleteModal.slug}`}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Excluir permanentemente
                 </button>
               </div>
             </div>

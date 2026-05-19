@@ -138,7 +138,7 @@ const handleDuplicate = (assistant: any) => {
             </p>
           </div>
           <Link
-            href="/dashboard/assistentes/create"
+            href="/dashboard/assistentes/novo"
             className="inline-flex items-center justify-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-500/20 font-semibold active:scale-95"
           >
             <Plus className="w-5 h-5 mr-2" />

@@ -1364,7 +1364,7 @@ case 'impressao_recibo':
         case 'identificar_fraude':
           setActiveModal({ type: 'IdentificarFraudeDisplay', data: { companyId } });
           await saveInteractionToHistory(companyId, 'Identificar Fraude', 'Análise de fraude iniciada');
-          pt('Modo de identificação de fraude. Escolha imagem para fotografar ou link para analisar um site.').catch(() => {});
+          pt('Ok').catch(() => {});
           break;
         case 'enviar_arquivo':
           await stopGoogleSpeech();

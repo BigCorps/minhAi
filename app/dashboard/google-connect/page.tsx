@@ -374,12 +374,6 @@ function GoogleConnectPageContent() {
                           <Youtube className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" />
                           <span>Acessar vídeos (YouTube)</span>
                         </div>
-                        <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-purple-500" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 3C7.58 3 4 6.58 4 11c0 2.83 1.42 5.33 3.57 6.84L6 20h12l-1.57-2.16C18.58 16.33 20 13.83 20 11c0-4.42-3.58-8-8-8zm0 2c3.31 0 6 2.69 6 6 0 2.22-1.21 4.16-3 5.19V18H9v-1.81C7.21 15.16 6 13.22 6 11c0-3.31 2.69-6 6-6z"/>
-                          </svg>
-                          <span>Controlar dispositivos Smart Home</span>
-                        </div>
                         {/* ✅ NOVO — Google Meet */}
                         <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <svg className="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none">
@@ -494,14 +488,6 @@ function GoogleConnectPageContent() {
                         <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
                           <Youtube className="w-5 h-5 text-red-600 dark:text-red-400" />
                           <span className="text-sm font-medium text-gray-900 dark:text-white">YouTube</span>
-                        </div>
-                      )}
-                      {googleAccount.scopes.includes('https://www.googleapis.com/auth/sdm.service') && (
-                        <div className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                          <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 3C7.58 3 4 6.58 4 11c0 2.83 1.42 5.33 3.57 6.84L6 20h12l-1.57-2.16C18.58 16.33 20 13.83 20 11c0-4.42-3.58-8-8-8zm0 2c3.31 0 6 2.69 6 6 0 2.22-1.21 4.16-3 5.19V18H9v-1.81C7.21 15.16 6 13.22 6 11c0-3.31 2.69-6 6-6z"/>
-                          </svg>
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">Smart Home</span>
                         </div>
                       )}
                       {/* ✅ NOVO — Google Meet */}

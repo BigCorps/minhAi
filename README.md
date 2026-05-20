@@ -1,3 +1,5 @@
+## AGORA
+
 *Fazer Video de pitch para Shark Tank e Inatel
 
 *Gestor de Agenda - testar todo o processo
@@ -15,7 +17,9 @@
 
 *Funções demo no slug Suporte para ter demonstrativo de todas as funções 
 
--
+.
+
+## IDÉIAS
 
 * Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app / postotec.app / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
 - iapos, itend e eai já registrados (para cobranças , atendimento e funcionários IA) - relatório em anexo no email
@@ -34,7 +38,9 @@
 
 *Página admin com login via Google apenas com email appminhai@gmail.com com verificação de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header - em anexo no email
 
--
+.
+
+## BREVE
 
 *App ChatGPT para configuração dos assistentes direto pelo app GPT, vinculado ao usuário.
 
@@ -54,7 +60,9 @@
 
 *Após tudo pronto, pensar em evoluir para um modelo inteligente como  com criação de funções autônomas e mesclar funções automaticamente de acordo com a escolha do cliente.
 
--
+.
+
+## FUNÇÕES
 
 Contatos - ✅ Site | Whatsapp | Telefone
              Instagram | Facebook | Tiktok
@@ -124,14 +132,7 @@ Financeiro - 6️⃣ Gerar Pix | Link de Pagamento | TEF Débito
 
 *Gerar Boleto | Cobranças | Recorrentes
 
--
-
-*Analise de arquivos mortos - Manus pedidos
-*MODO KIOSK - claude ith.almeida
-*Landing - Claude jiuitsu 
-*App Vixus - Manus ith.almeida
-
--
+.
 
 6 categorias para o futuro:
 Análise 🔁- Analise de Currículos | Gerar Currículo | Radar de Mercado
@@ -153,3 +154,12 @@ Pagamentos 🔁- Enviar Pix | Pagar Boleto | Auxiliar de Pagamentos
                Pix em Lote | Boletos em Lote | Pagamentos em Lote
 
  ## Pagamentos (banco Inter) no menu usuário com um auxiliar para colocar pagamentos automaticamente, como o auxiliar de produção e funções disponíveis somente para quem tem token inter (relatório em anexo)
+
+.
+
+## INFORMAÇÕES
+
+*Analise de arquivos mortos - Manus pedidos
+*MODO KIOSK - claude ith.almeida
+*Landing - Claude jiuitsu 
+*App Vixus - Manus ith.almeida

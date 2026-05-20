@@ -61,10 +61,11 @@ export async function generateOrcamentoPDF(
   // ── Logo ──────────────────────────────────────────────────
 let logoH = 0;
   if (company.logo_url) {
-    // Se já é data URI (gerado server-side), usa direto — evita FileReader que não existe em Node.js
+    console.log('[PDF LOGO] logo_url tipo:', company.logo_url.startsWith('data:') ? 'data URI' : 'URL')
     const logoBase64 = company.logo_url.startsWith('data:')
       ? company.logo_url
       : await loadImageAsBase64(company.logo_url);
+    console.log('[PDF LOGO] logoBase64 ok:', !!logoBase64)
 
     if (logoBase64) {
       // Detecta formato pelo data URI ou pela extensão da URL

@@ -70,12 +70,13 @@ export async function POST(req: NextRequest) {
     console.log('[GERAR PDF] logoBase64 gerado:', !!logoBase64, logoBase64?.substring(0, 30))
 
     const pdfDataUrl = await generateOrcamentoPDF(orcamento, {
-      console.log('[GERAR PDF] PDF gerado, tamanho:', pdfDataUrl?.length)
       name:        companyInfo.name,
       slug:        companyInfo.slug,
       logo_url:    logoBase64 ?? companyInfo.logo_url,
       theme_color: companyInfo.webapp_theme_color || companyInfo.theme_color || '#3b82f6',
     }, pixQrBase64)
+
+    console.log('[GERAR PDF] PDF gerado, tamanho:', pdfDataUrl?.length)
 
     // Nome do arquivo
     const clienteNome = orcamento.cliente?.nome

@@ -2,7 +2,7 @@
 
 *Gestor de Agenda - Fazer a função Marcar Evento e Reagendamento já vincularem a marcação de um evento com um produto e eventual cobrança para a versão Vendas poder cobrar os 10% de comissão
 
-*Serviços Meta: Implementar Fazer Pedido (implemtar arquivos enviados e testar), então fazer também com Gestor de Agenda, Auxiliar Fiscal, Auxilar de Produção - todos os 8 auxiliares.
+*Serviços Meta: Implemtar Gestor de Agenda, Auxiliar Fiscal e Auxilar de Produção - Pedido e Orçamento ja concluidos
 
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 

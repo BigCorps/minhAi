@@ -137,16 +137,16 @@ Documentação 🔁- Validar RG/CNH | Auditar Contrato | Criar Recibo
 Rede Social 🔁- Criar Post | Postagem Direta | Gerador de Criativos
            Calendário Editorial | Sugestão de Imagem | Refinar Idéia
 
- ## Relatorios em anexo e Manus - ljcasaverde@gmail.com
+ (Relatorios em anexo e Manus - ljcasaverde@gmail.com)
 
 Transporte 🔁- Auxiliar Motorista | Rota Inteligente | Recebimento App
 
- ## Pegar Ideias do Jad e implementar 
+(Pegar Ideias do Jad e implementar)
 
 Pagamentos 🔁- Enviar Pix | Pagar Boleto | Auxiliar de Pagamentos
                Pix em Lote | Boletos em Lote | Pagamentos em Lote
 
- ## Pagamentos (banco Inter) no menu usuário com um auxiliar para colocar pagamentos automaticamente, como o auxiliar de produção e funções disponíveis somente para quem tem token inter (relatório em anexo)
+(Pagamentos (banco Inter) no menu usuário com um auxiliar para colocar pagamentos automaticamente, como o auxiliar de produção e funções disponíveis somente para quem tem token inter (relatório em anexo)
 
 .
 

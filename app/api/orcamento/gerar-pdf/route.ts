@@ -31,13 +31,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Empresa não encontrada' }, { status: 404 })
     }
 
-    // Gera o PDF usando a função existente (já inclui QR Code PIX no rodapé)
+// Gera QR Code PIX server-side usando qrcode + sharp (mesma lib da /api/qrcode)
+    let pixQrBase64: string | undefined
+    try {
+      if (companyInfo.slug && orcamento.total > 0) {
+        const QRCode = (await import('qrcode')).default
+        const sharp = (await import('sharp')).default
+        const pixUrl = `https://minhai.app/pix/${companyInfo.slug}/${Number(orcamento.total).toFixed(2)}`
+        
+        const qrSvg = await QRCode.toString(pixUrl, {
+          type: 'svg', margin: 2,
+          color: { dark: '#000000', light: '#ffffff' },
+          errorCorrectionLevel: 'H', width: 150,
+        })
+        const qrBuffer = await sharp(Buffer.from(qrSvg)).resize(150, 150).png().toBuffer()
+        pixQrBase64 = `data:image/png;base64,${qrBuffer.toString('base64')}`
+      }
+    } catch (qrErr: any) {
+      console.warn('[GERAR PDF] QR Code falhou, continuando sem ele:', qrErr.message)
+    }
+
     const pdfDataUrl = await generateOrcamentoPDF(orcamento, {
       name:        companyInfo.name,
       slug:        companyInfo.slug,
       logo_url:    companyInfo.logo_url,
       theme_color: companyInfo.webapp_theme_color || companyInfo.theme_color || '#3b82f6',
-    })
+    }, pixQrBase64)
 
     // Nome do arquivo
     const clienteNome = orcamento.cliente?.nome

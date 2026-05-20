@@ -2737,7 +2737,6 @@ agendar_compromisso: {
     'nova reunião',
     'marcar horário',
     'agendar horário',
-    // ✅ ADICIONAR TRIGGERS DE FOLLOW-UP
     'marcar agora',
     'marcar sim',
     'pode marcar',
@@ -2759,7 +2758,7 @@ agendar_compromisso: {
   color: '#10B981',
   
   saveToHistory: true,
-  creditsPerUse: 2, // ← Crédito só cobrado ao criar evento
+  creditsPerUse: 2,
   requiresPayment: false,
   isPremium: false,
   
@@ -2767,7 +2766,7 @@ agendar_compromisso: {
     try {
       console.log('📅 [MARCAR EVENTO] Processando comando');
       
-      // ✅ VERIFICAR SE É UM FOLLOW-UP DE CONSULTA DE DISPONIBILIDADE
+      // Verificar se é follow-up de consulta de disponibilidade
       const lastCheck = typeof window !== 'undefined' 
         ? (window as any).eAi_lastAvailabilityCheck 
         : null;
@@ -2779,7 +2778,6 @@ agendar_compromisso: {
         transcript.includes('quero marcar')
       );
       
-      // Se for follow-up E tiver contexto disponível
       if (isFollowUp && lastCheck?.available) {
         console.log('📅 [MARCAR EVENTO] Follow-up detectado - usando dados da consulta');
         
@@ -2796,9 +2794,8 @@ agendar_compromisso: {
           });
         }
         
-        await playText('Perfeito! Confirme o horário e me diga seu nome para finalizar o agendamento.');
+        // Sem playText — o modal fala no useEffect interno
         
-        // Limpar contexto
         if (typeof window !== 'undefined') {
           delete (window as any).eAi_lastAvailabilityCheck;
         }
@@ -2806,17 +2803,15 @@ agendar_compromisso: {
         return true;
       }
       
-      // ✅ FLUXO NORMAL (não é follow-up)
+      // Fluxo normal — extrai dados do transcript para pré-preencher o painel
       const transcriptText = transcript?.toLowerCase() || '';
       
-      // Objeto para armazenar os dados extraídos
       const extractedData: {
         date?: Date;
         time?: string;
         name?: string;
       } = {};
       
-      // ==================== EXTRAIR DATA ====================
       const today = new Date();
       
       if (transcriptText.includes('hoje')) {
@@ -2826,7 +2821,6 @@ agendar_compromisso: {
         tomorrow.setDate(tomorrow.getDate() + 1);
         extractedData.date = tomorrow;
       } else {
-        // Detectar dias da semana
         const diasSemana: Record<string, number> = {
           'segunda': 1, 'segunda-feira': 1, 'segunda feira': 1,
           'terça': 2, 'terca': 2, 'terça-feira': 2, 'terca-feira': 2,
@@ -2849,18 +2843,14 @@ agendar_compromisso: {
           }
         }
         
-        // Detectar data no formato "dia X"
         const diaMatch = transcriptText.match(/dia (\d{1,2})/);
         if (diaMatch) {
           const dia = parseInt(diaMatch[1]);
           const dataTemp = new Date(today.getFullYear(), today.getMonth(), dia);
-          if (dataTemp < today) {
-            dataTemp.setMonth(dataTemp.getMonth() + 1);
-          }
+          if (dataTemp < today) dataTemp.setMonth(dataTemp.getMonth() + 1);
           extractedData.date = dataTemp;
         }
         
-        // Detectar mês específico
         const meses: Record<string, number> = {
           'janeiro': 0, 'fevereiro': 1, 'março': 2, 'marco': 2,
           'abril': 3, 'maio': 4, 'junho': 5,
@@ -2880,11 +2870,10 @@ agendar_compromisso: {
         }
       }
       
-      // ==================== EXTRAIR HORÁRIO ====================
       const horaMatch = transcriptText.match(/(\d{1,2})[h:](\d{2})?/);
       if (horaMatch) {
         const hora = horaMatch[1].padStart(2, '0');
-        const minuto = horaMatch[2] ? horaMatch[2] : '00';
+        const minuto = horaMatch[2] ?? '00';
         extractedData.time = `${hora}:${minuto}`;
       } else {
         if (transcriptText.includes('meio dia') || transcriptText.includes('meio-dia')) {
@@ -2897,18 +2886,12 @@ agendar_compromisso: {
         if (horaTexto) {
           let hora = parseInt(horaTexto[1]);
           const periodo = horaTexto[3];
-          
-          if (periodo.includes('tarde') && hora < 12) {
-            hora += 12;
-          } else if (periodo.includes('noite') && hora < 12) {
-            hora += 12;
-          }
-          
+          if (periodo.includes('tarde') && hora < 12) hora += 12;
+          else if (periodo.includes('noite') && hora < 12) hora += 12;
           extractedData.time = `${hora.toString().padStart(2, '0')}:00`;
         }
       }
       
-      // ==================== EXTRAIR NOME/TÍTULO ====================
       const nomePatterns = [
         /chamado\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i,
         /chamada\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i,
@@ -2926,24 +2909,14 @@ agendar_compromisso: {
         }
       }
       
-      // ==================== ABRIR MODAL ====================
       if (setActiveModal) {
         setActiveModal({ 
           type: 'CreateEventModal', 
-          data: { 
-            companyId,
-            prefilledData: extractedData
-          } 
+          data: { companyId, prefilledData: extractedData }
         });
       }
       
-      const hasAllRequiredData = extractedData.date && extractedData.time && extractedData.name;
-      
-      if (hasAllRequiredData) {
-        await playText('Verifique os dados e confirme para criar o evento.');
-      } else {
-        await playText('Posso te marcar na agenda, basta me dizer qual o dia, mês, hora e seu nome.');
-      }
+      // Sem playText — o modal fala no useEffect interno
       
       return true;
       

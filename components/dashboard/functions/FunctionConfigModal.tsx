@@ -2,7 +2,7 @@
 'use client';
  
 import { useState, useEffect } from 'react';
-import { usePlayText } from '@/hooks/usePlayText';
+import { usePlayText, stopAudio } from '@/hooks/usePlayText';
 import { CheckCircle, UserPlus, Info, Mic, Sparkles, Loader2, X, Mail, Calendar, Bell, ExternalLink, Settings, AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
@@ -4746,13 +4746,14 @@ export default function FunctionConfigModal({
   onUpdate,
 }: FunctionConfigModalProps) {
   const supabase = createClient();
-  const { playText } = usePlayText();
+  const { playText, stopAudio } = usePlayText();
   const [showChatPrompt, setShowChatPrompt] = useState(false);
   const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
   const [settings, setSettings] = useState<any>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasActivePlan, setHasActivePlan] = useState(false);
+ 
 
   useEffect(() => {
     const detect = () =>
@@ -4980,6 +4981,7 @@ try {
           )}
         </div>
       </div>
+     
      {showChatPrompt && companyId && (
         <ChatPromptModal
           companyId={companyId}
@@ -4989,6 +4991,7 @@ try {
           initialFallback={settings.groq_fallback_message || ''}
           theme={pageTheme}
           playText={playText}
+          stopAudio={stopAudio}
           onClose={() => setShowChatPrompt(false)}
           onSaved={() => {
             setShowChatPrompt(false);

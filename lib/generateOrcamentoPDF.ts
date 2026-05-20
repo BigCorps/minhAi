@@ -59,14 +59,25 @@ export async function generateOrcamentoPDF(
   let y = margin;
 
   // ── Logo ──────────────────────────────────────────────────
-  let logoH = 0;
+let logoH = 0;
   if (company.logo_url) {
-    const logoBase64 = await loadImageAsBase64(company.logo_url);
+    // Se já é data URI (gerado server-side), usa direto — evita FileReader que não existe em Node.js
+    const logoBase64 = company.logo_url.startsWith('data:')
+      ? company.logo_url
+      : await loadImageAsBase64(company.logo_url);
+
     if (logoBase64) {
-      const ext = company.logo_url.match(/\.(png|jpg|jpeg|webp)/i)?.[1]?.toUpperCase() || 'PNG';
-      const imgFormat = ext === 'JPG' ? 'JPEG' : ext;
+      // Detecta formato pelo data URI ou pela extensão da URL
+      let imgFormat = 'PNG';
+      if (logoBase64.startsWith('data:image/jpeg') || logoBase64.startsWith('data:image/jpg')) {
+        imgFormat = 'JPEG';
+      } else if (logoBase64.startsWith('data:image/webp')) {
+        imgFormat = 'WEBP';
+      } else if (!logoBase64.startsWith('data:')) {
+        const ext = company.logo_url.match(/\.(png|jpg|jpeg|webp)/i)?.[1]?.toUpperCase() || 'PNG';
+        imgFormat = ext === 'JPG' ? 'JPEG' : ext;
+      }
       try {
-        // ✅ Proporção correta — nunca distorce
         const imgProps = doc.getImageProperties(logoBase64);
         const logoW = 30;
         logoH = (imgProps.height * logoW) / imgProps.width;

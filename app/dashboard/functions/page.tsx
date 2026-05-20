@@ -282,7 +282,7 @@ function FunctionsPageContent() {
   const [isSendingsuggestion, setIsSendingSuggestion] = useState(false);
 
   // ── Estados para FuncoesChat ──
-  const { playText } = usePlayText();
+  const { playText, stopAudio } = usePlayText();
   const [showFuncoesChat, setShowFuncoesChat] = useState(false);
   const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
 
@@ -835,6 +835,7 @@ if (assistantType === 'vendas' && companyId) {
               assistantType={assistantType as 'smart' | 'vendas'}
               theme={pageTheme}
               playText={playText}
+              stopAudio={stopAudio}
               onClose={() => setShowFuncoesChat(false)}
               onFunctionsChanged={() => {
                 loadData(companyId);

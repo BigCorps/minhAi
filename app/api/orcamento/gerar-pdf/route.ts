@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Empresa não encontrada' }, { status: 404 })
     }
 
-// Gera QR Code PIX server-side usando qrcode + sharp (mesma lib da /api/qrcode)
+   // Gera QR Code PIX server-side usando qrcode + sharp (mesma lib da /api/qrcode)
     let pixQrBase64: string | undefined
     try {
       if (companyInfo.slug && orcamento.total > 0) {
@@ -51,10 +51,26 @@ export async function POST(req: NextRequest) {
       console.warn('[GERAR PDF] QR Code falhou, continuando sem ele:', qrErr.message)
     }
 
+    // Busca logo server-side para evitar falha do loadImageAsBase64 no servidor
+    let logoBase64: string | undefined
+    try {
+      if (companyInfo.logo_url) {
+        const logoRes = await fetch(companyInfo.logo_url, { redirect: 'follow' })
+        if (logoRes.ok) {
+          const logoBuffer = await logoRes.arrayBuffer()
+          const ext = companyInfo.logo_url.match(/\.(png|jpg|jpeg|webp)/i)?.[1]?.toLowerCase() ?? 'png'
+          const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : 'image/png'
+          logoBase64 = `data:${mime};base64,${Buffer.from(logoBuffer).toString('base64')}`
+        }
+      }
+    } catch (logoErr: any) {
+      console.warn('[GERAR PDF] Logo falhou, continuando sem ela:', logoErr.message)
+    }
+
     const pdfDataUrl = await generateOrcamentoPDF(orcamento, {
       name:        companyInfo.name,
       slug:        companyInfo.slug,
-      logo_url:    companyInfo.logo_url,
+      logo_url:    logoBase64 ?? companyInfo.logo_url,
       theme_color: companyInfo.webapp_theme_color || companyInfo.theme_color || '#3b82f6',
     }, pixQrBase64)
 

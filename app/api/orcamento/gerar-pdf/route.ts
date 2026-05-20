@@ -66,8 +66,11 @@ export async function POST(req: NextRequest) {
     } catch (logoErr: any) {
       console.warn('[GERAR PDF] Logo falhou, continuando sem ela:', logoErr.message)
     }
+    console.log('[GERAR PDF] logo_url recebida:', companyInfo.logo_url?.substring(0, 50))
+    console.log('[GERAR PDF] logoBase64 gerado:', !!logoBase64, logoBase64?.substring(0, 30))
 
     const pdfDataUrl = await generateOrcamentoPDF(orcamento, {
+      console.log('[GERAR PDF] PDF gerado, tamanho:', pdfDataUrl?.length)
       name:        companyInfo.name,
       slug:        companyInfo.slug,
       logo_url:    logoBase64 ?? companyInfo.logo_url,

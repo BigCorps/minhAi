@@ -12,7 +12,7 @@ import FunctionCard from '@/components/dashboard/functions/FunctionCard';
 import FunctionConfigModal from '@/components/dashboard/functions/FunctionConfigModal';
 import VendasConfigPanel from '@/components/dashboard/functions/VendasConfigPanel';
 import dynamic from 'next/dynamic';
-import { usePlayText } from '@/hooks/usePlayText';
+import { usePlayText, useStopAudio } from '@/hooks/usePlayText';
 
 const FuncoesChat = dynamic(() => import('@/components/dashboard/FuncoesChat'), { ssr: false });
 

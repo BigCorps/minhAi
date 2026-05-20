@@ -47,7 +47,7 @@ function hexToRgb(hex: string): [number, number, number] {
 
 export async function generateOrcamentoPDF(
   orcamento: OrcamentoContext,
-  company: CompanyInfo
+  company: CompanyInfo,
   pixQrBase64?: string
 ): Promise<string> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });

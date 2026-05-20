@@ -60,6 +60,7 @@ interface FuncoesChatProps {
   onFunctionsChanged: () => void; // recarrega a lista na página pai
   theme?:           'dark' | 'light';
   playText:         (text: string) => Promise<void>;
+  stopAudio:          () => void;
 }
 
 // ── Componente ───────────────────────────────────────────────
@@ -72,6 +73,7 @@ export default function FuncoesChat({
   onFunctionsChanged,
   theme = 'dark',
   playText,
+  stopAudio,
 }: FuncoesChatProps) {
   const isDark = theme === 'dark';
   const voiceRecorder = useVoiceRecorder();
@@ -573,7 +575,7 @@ const playTextSafe = useCallback(async (text: string) => {
         }}>
           {audioMutado ? <VolumeX size={18} /> : <Volume2 size={18} />}
         </button>
-        <button onClick={onClose} style={{
+        <<button onClick={() => { stopAudio(); onClose} style={{
           padding: 8, background: 'transparent', border: 'none',
           cursor: 'pointer', color: C.textMuted,
         }}>

@@ -32,7 +32,6 @@ interface ChatPromptModalProps {
   onSaved:           () => void; // recarrega as configurações na página pai
   theme?:            'dark' | 'light';
   playText:          (text: string) => Promise<void>;
-  stopAudio:         () => void;
 }
 
 // ── Componente ───────────────────────────────────────────────
@@ -47,7 +46,6 @@ export default function ChatPromptModal({
   onSaved,
   theme = 'dark',
   playText,
-  stopAudio,
 }: ChatPromptModalProps) {
   const isDark = theme === 'dark';
   const voiceRecorder = useVoiceRecorder();
@@ -110,14 +108,6 @@ export default function ChatPromptModal({
     addAssistantMessage(msg);
     playTextSafe(msg);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Cleanup ao desmontar ────────────────────────────────
-  useEffect(() => {
-    return () => {
-      audioQueueRef.current = [];
-      isPlayingRef.current = false;
-    };
-  }, []);
 
   // ── Scroll ──────────────────────────────────────────────
   useEffect(() => {
@@ -524,7 +514,7 @@ export default function ChatPromptModal({
         }}>
           {audioMutado ? <VolumeX size={17} /> : <Volume2 size={17} />}
         </button>
-        <button onClick={() => { stopAudio(); onClose(); }} style={{
+        <button onClick={onClose} style={{
           padding: 7, background: 'transparent', border: 'none',
           cursor: 'pointer', color: C.textMuted,
         }}>
@@ -537,13 +527,10 @@ export default function ChatPromptModal({
   // ── RENDER MOBILE ───────────────────────────────────────
   if (isMobile) {
     return createPortal(
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 10000,
-          background: C.bg, display: 'flex', flexDirection: 'column',
-        }}
-      >
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 10000, // acima do FunctionConfigModal (z-50)
+        background: C.bg, display: 'flex', flexDirection: 'column',
+      }}>
         {headerJSX(true)}
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
           {mensagensJSX('13px', '85%', '9px 12px')}
@@ -561,18 +548,15 @@ export default function ChatPromptModal({
   // ── RENDER DESKTOP ──────────────────────────────────────
   return createPortal(
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 10000,
+      position: 'fixed', inset: 0, zIndex: 10000, // acima do FunctionConfigModal (z-50)
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(0,0,0,0.7)', padding: 20,
     }}>
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          width: '100%', maxWidth: 980, height: '86vh',
-          background: C.bg, borderRadius: 16, border: `1px solid ${C.border}`,
-          display: 'flex', flexDirection: 'column', overflow: 'hidden',
-        }}
-      >
+      <div style={{
+        width: '100%', maxWidth: 980, height: '86vh',
+        background: C.bg, borderRadius: 16, border: `1px solid ${C.border}`,
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}>
         {headerJSX(false)}
 
         <div style={{

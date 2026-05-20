@@ -48,6 +48,7 @@ function hexToRgb(hex: string): [number, number, number] {
 export async function generateOrcamentoPDF(
   orcamento: OrcamentoContext,
   company: CompanyInfo
+  pixQrBase64?: string
 ): Promise<string> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
@@ -217,16 +218,17 @@ export async function generateOrcamentoPDF(
   );
 
   // ── QR Code PIX no canto direito do rodapé ───────────────
-  if (company.slug && orcamento.total > 0) {
+if (company.slug && orcamento.total > 0) {
     try {
-      const pixUrl = `https://minhai.app/pix/${company.slug}/${orcamento.total.toFixed(2)}`;
+      const pixUrl = `https://minhai.app/pix/${company.slug}/${orcamento.total.toFixed(2)}`
 
       const baseUrl = typeof window !== 'undefined'
         ? window.location.origin
-        : process.env.NEXT_PUBLIC_APP_URL || 'https://minhai.app';
+        : process.env.NEXT_PUBLIC_APP_URL || 'https://minhai.app'
 
-      const qrFullUrl = `${baseUrl}/api/qrcode?data=${encodeURIComponent(pixUrl)}&size=150&color=%23000000&bg=%23ffffff`;
-      const qrBase64 = await loadImageAsBase64(qrFullUrl);
+      const qrFullUrl = `${baseUrl}/api/qrcode?data=${encodeURIComponent(pixUrl)}&size=150&color=%23000000&bg=%23ffffff`
+      // Usa QR pré-gerado se disponível (server-side), senão busca via fetch (client-side)
+      const qrBase64 = pixQrBase64 ?? await loadImageAsBase64(qrFullUrl)
 
       if (qrBase64) {
         const qrSize = 20; // mm no PDF

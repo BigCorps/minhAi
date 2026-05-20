@@ -1,21 +1,23 @@
 ## AGORA
 
-*Fazer Video de pitch para Shark Tank e Inatel
+* Fazer Video de pitch para Shark Tank e Inatel
 
-*Gestor de Agenda - testar todo o processo
+* Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistwnte
 
-*Serviços Meta: Implemtar Gestor de Agenda, antifraude, Auxiliar Fiscal, auxiliar de Relatórios e Auxilar de Produção - Pedido e Orçamento ja concluidos
+* Gestor de Agenda - testar todo o processo
 
-*Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
+* Serviços Meta: Implemtar Gestor de Agenda, antifraude, Auxiliar Fiscal, auxiliar de Relatórios e Auxilar de Produção - Pedido e Orçamento ja concluidos
 
-*Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistwnte
+* Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 
-*Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
+* Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
 
-*App minhAi e Vixus publicados na Playstore - AGUARDANDO APROVAÇÃO
-*Cards na landing: Google, Meta, PlayStore e WebApp
+* App minhAi e Vixus publicados na Playstore - AGUARDANDO APROVAÇÃO
++ Cards na landing: Google, Meta, PlayStore e WebApp
 
-*Funções demo no slug Suporte para ter demonstrativo de todas as funções 
+* Funções demo no slug Suporte para ter demonstrativo de todas as funções
+
+* App ChatGPT para configuração dos assistentes direto pelo app GPT, vinculado ao usuário.
 
 .
 
@@ -24,113 +26,104 @@
 * Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app / postotec.app / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
 - iapos, itend e eai já registrados (para cobranças , atendimento e funcionários IA) - relatório em anexo no email
 
-*Carrossel no footer com 15 empresas que usam a minhAi futuramente
+* Carrossel no footer com 15 empresas que usam a minhAi futuramente
 
-*Gilbarco com abastecimento por IA
+* Gilbarco com abastecimento por IA
 
-*Link na Bio com informações do whatsapp e facebook integradas (botão para a seção Serviços Meta - relatório em anexo).
+* Link na Bio com informações do whatsapp e facebook integradas (botão para a seção Serviços Meta - relatório em anexo).
 
-*implementar sincronia entre catálogo minhAi e Meta (relatório em anexo)
+* implementar sincronia entre catálogo minhAi e Meta (relatório em anexo)
 
-*Colocar no rodapé do site como typebot widget
+* Colocar no rodapé do site como typebot widget
 
-*Seção Integrações Externas para o usuário conectar serviços como Saipos, Ifood e outros ao minhAi e vice e versa, além de integração e webhooks para link Pix e link de pagamento - em anexo
+* Seção Integrações Externas para o usuário conectar serviços como Saipos, Ifood e outros ao minhAi e vice e versa, além de integração e webhooks para link Pix e link de pagamento - em anexo
 
-*Página admin com login via Google apenas com email appminhai@gmail.com com verificação de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header - em anexo no email
+* Página admin com login via Google apenas com email appminhai@gmail.com com verificação de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header - em anexo no email
 
 .
 
 ## BREVE
 
-*App ChatGPT para configuração dos assistentes direto pelo app GPT, vinculado ao usuário.
+* Implementar seleção de cores e key inter/asaas/MercadoPago para pix de clientes full, além de seletor de tema no assistente. Sempre light, sempre dark, de acordo com o tema do usuário ou de acordo com a hora do dia e se aparece ou não o seletor no header. Pensar na possibilidade do avatar ser o logo carregado pelo cliente, com animações react
 
-*Implementar seleção de cores e key inter/asaas/MercadoPago para pix de clientes full, além de seletor de tema no assistente. Sempre light, sempre dark, de acordo com o tema do usuário ou de acordo com a hora do dia e se aparece ou não o seletor no header. Pensar na possibilidade do avatar ser o logo carregado pelo cliente, com animações react
+* Bot auxiliar no footer com conhecimento de todas as seções para atualizar tudo por ele e ir até outras seções também. Auxílio em todas as seções, semelhante ao que o de produção e de assistentes fazem, auxiliando o usuário na criação de tudo facilmente, principalmente ativando funções e na criação de novas funções já enviando a ideia nova por email para mim, além de fornecer relatórios de cada seção individualmente 
 
-*Bot auxiliar no footer com conhecimento de todas as seções para atualizar tudo por ele e ir até outras seções também. Auxílio em todas as seções, semelhante ao que o de produção e de assistentes fazem, auxiliando o usuário na criação de tudo facilmente, principalmente ativando funções e na criação de novas funções já enviando a ideia nova por email para mim, além de fornecer relatórios de cada seção individualmente 
+* Linha de Produção pronta para Postos e outros ramos de produção (Mudar Ingredientes para Prima).
 
-*Linha de Produção pronta para Postos e outros ramos de produção (Mudar Ingredientes para Prima).
+* 3 novas funções nas categorias com apenas 6 e também 6 novas categorias futuramente, aproveitando para testar offline, implementando e testando com localhost, sem modificar o main no GitHub
 
-*3 novas funções nas categorias com apenas 6 e também 6 novas categorias futuramente, aproveitando para testar offline, implementando e testando com localhost, sem modificar o main no GitHub
+* Novas funções de transcrições já no Claude
 
-*Novas funções de transcrições já no Claude
+* Encontre Agora - função Pesquisar na região: tabela de clientes , se não encontrar, pesquisa no Maps.
 
-*Encontre Agora - função Pesquisar na região: tabela de clientes , se não encontrar, pesquisa no Maps.
+* configurar cadastro de produtos com imagens para a IA mostrar de acordo com o pedido do cliente. E também importar cardápio em pdf e imagem diretamente para o cadastro no dashboard 
 
-*configurar cadastro de produtos com imagens para a IA mostrar de acordo com o pedido do cliente. E também importar cardápio em pdf e imagem diretamente para o cadastro no dashboard 
-
-*Após tudo pronto, pensar em evoluir para um modelo inteligente como  com criação de funções autônomas e mesclar funções automaticamente de acordo com a escolha do cliente.
+* Após tudo pronto, pensar em evoluir para um modelo inteligente como  com criação de funções autônomas e mesclar funções automaticamente de acordo com a escolha do cliente.
 
 .
 
 ## FUNÇÕES
 
-Contatos - ✅ Site | Whatsapp | Telefone
+* Contatos - ✅ Site | Whatsapp | Telefone
              Instagram | Facebook | Tiktok
              Linkedin | Email | Twitter/X
 
-Multimidia - ✅Tocar Vídeo | Vídeo de Instruções | Painel de Ofertas
+* Multimidia - ✅Tocar Vídeo | Vídeo de Instruções | Painel de Ofertas
          Iniciar Playlist | Sequência de Vídeos | Canal do Youtube
                  Tocar Música | Porta Retrato | Vídeo Chamada
 
-Utilitários - ✅ Emitir Nota | Criar Lembrete | Cronômetro 
+* Utilitários - ✅ Emitir Nota | Criar Lembrete | Cronômetro 
                   Temporizador | Relógio Mundial | Alarme
          Segunda Via Boleto | Criar Nota | Lembrete Remédios
 
-Serviços - ✅ Cardapio (QRcode) | Wifi (QRcode) | Nosso QRcode                       
+* Serviços - ✅ Cardapio (QRcode) | Wifi (QRcode) | Nosso QRcode                       
           Lista de Compras  | Chamar Gerente | Enviar SMS
         Impressão Remota | Impressão Local | Impressão Cupom
 
-Câmera - ✅. Ler QR Code | Ler Código de Barras | Identificar Fraude
+* Câmera - ✅. Ler QR Code | Ler Código de Barras | Identificar Fraude
             Enviar Arquivo | Gerar QR Code | Criar Código de Barras
              Imagem em texto | Tabela em Texto | Contrato em Texto
                 
-Comercial - ✅ Nossos Produtos |Link na Bio| Registrar Venda
+* Comercial - ✅ Nossos Produtos |Link na Bio| Registrar Venda
              Venda Rápida | Fazer Pedido | Auxiliar de Produção
               Gerar Cupom | Enviar E-mail | Cadastrar Produto
 
-Informação - ✅Meu Sistema | Nossa Marca | Câmbio
+* Informação - ✅Meu Sistema | Nossa Marca | Câmbio
            Notícias | Feriados Nacionais | Pesquisar Produto
          Converter Medidas | Calculadora de Juros | Calculadora IMC
 
-Conhecimento - 6️⃣ ChatGPT | Orçamento | Respostas Rápidas 
+* Conhecimento - 6️⃣ ChatGPT | Orçamento | Respostas Rápidas 
             Traduzir Texto | Transcrever Áudio | Clima e Tempo
+(Transcrever Reuniões | Transcrever Vídeos | Transcrever PDF)
 
- *Transcrever Reuniões | Transcrever Vídeos | Transcrever PDF
 
-
-Agendamento - 6️⃣ Marcar Evento | Ver Agenda | Confirmar Presença 
+* Agendamento - 6️⃣ Marcar Evento | Ver Agenda | Confirmar Presença 
      Reagendamento | Cancelar Agendamento | Horários Disponíveis
-
-* Lembrete de Aniversário | Evento Recorrente | Compartilhar Evento
+(Lembrete de Aniversário | Evento Recorrente | Compartilhar Evento)
     
 
-Identificação - 6️⃣ Fazer Login | Novo Cadastro | Gerar Senha
+* Identificação - 6️⃣ Fazer Login | Novo Cadastro | Gerar Senha
              Modo Fila | Pesquisas e Avaliações | Pré-Atendimento
+(Liberar Acesso | Facial e Biometria | Registro de Ponto)
 
-*Liberar Acesso | Facial e Biometria | Registro de Ponto
 
-
-Consultas - 6️⃣ ConsultarDados CNPJ | Dados CPF | Placa
+* Consultas - 6️⃣ ConsultarDados CNPJ | Dados CPF | Placa
            Consultar Leilão | Restrições CPF | Restrições CNPJ
+(Tabela FIPE | Protesto Nacional | Consulta CRLV)
 
-*Tabela FIPE | Protesto Nacional | Consulta CRLV
-
-Arquivos - 6️⃣ Remover Fundo | Duplicar Imagem | Analisar Planílha
+* Arquivos - 6️⃣ Remover Fundo | Duplicar Imagem | Analisar Planílha
              Editar Imagem | Converter Arquivos| Juntar PDFs
+(Proteger PDF | Vetores e Ícones | Assinar Documento)
 
-*Proteger PDF | Vetores e Ícones | Assinar Documento
 
-
-Localização - 6️⃣ Nosso Endereço | Consultar DDD | Consultar CEP
+* Localização - 6️⃣ Nosso Endereço | Consultar DDD | Consultar CEP
              Traçar Rota | Buscar Endereço | Rastreio Correios
-
-*Ponto de Referência | Encontre Agora | CEP por Endereços
+(Ponto de Referência | Encontre Agora | CEP por Endereços)
              
                                         
-Financeiro - 6️⃣ Gerar Pix | Link de Pagamento | TEF Débito
+* Financeiro - 6️⃣ Gerar Pix | Link de Pagamento | TEF Débito
                  Débito NFC | Crédito NFC | TEF Crédito
-
-*Gerar Boleto | Cobranças | Recorrentes
+(Gerar Boleto | Cobranças | Recorrentes)
 
 .
 

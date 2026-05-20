@@ -288,9 +288,9 @@ const NAV_SECTIONS = ['inicio', 'recursos', 'funcoes', 'precos', 'contato'];
 function getSectionNavGroup(sectionId: string): string {
   if (sectionId.startsWith('funcao-')) return 'funcoes';
   if (sectionId.startsWith('recurso-')) return 'recursos';
-  if (sectionId === 'provas-sociais') return 'inicio';
+  if (sectionId === 'provas-sociais') return 'recursos';
   if (sectionId === 'como-funciona') return 'recursos';
-  if (sectionId === 'assistentes') return 'funcoes';
+  if (sectionId === 'assistentes') return 'recursos';
   if (sectionId === 'depoimentos') return 'precos';
   if (sectionId === 'faq') return 'precos';
   if (sectionId === 'tecnologia') return 'precos';

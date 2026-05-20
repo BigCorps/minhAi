@@ -6,6 +6,8 @@
 
 *Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 
+*Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistwnte
+
 *Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
 
 *App minhAi e Vixus publicados na Playstore - AGUARDANDO APROVAÇÃO

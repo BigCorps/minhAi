@@ -1510,7 +1510,6 @@ case 'impressao_recibo':
         case 'agendar_compromisso':
           await stopGoogleSpeech();
           setActiveModal({ type: 'CreateEventModal', data: { companyId, prefilledData: {} } });
-          pt('Posso te marcar na agenda, basta me dizer qual o dia, mês, hora e seu nome.').catch(() => {});
           break;
         case 'ver_agenda':
           setActiveModal({ type: 'ViewAgendaModal', data: { companyId, initialView: 'month' } });

@@ -575,7 +575,7 @@ const playTextSafe = useCallback(async (text: string) => {
         }}>
           {audioMutado ? <VolumeX size={18} /> : <Volume2 size={18} />}
         </button>
-        <<button onClick={() => { stopAudio(); onClose} style={{
+        <button onClick={onClose} style={{
           padding: 8, background: 'transparent', border: 'none',
           cursor: 'pointer', color: C.textMuted,
         }}>

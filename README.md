@@ -1,16 +1,16 @@
-## AGORA
+## MINHAI - UMA IA PRA CHAMAR DE SUA
 
-* widget simples usando a lógica dos auxiliares e então um link direcionando para o assistente
+* Gestor de Agenda - aplicado, testar todo o processo
 
-* página admin em dashboard que aparece apenas para o email que eu escolhi e somente acessível via dashboard/admin e o switch de assistente vira o botão que leva a página de admin
+* widget inline (colocar no bigcorps e Vixus depois)
+
+* Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistwnte
+
+* página admin em dashboard que aparece apenas para o email que eu escolhi e somente acessível via dashboard/admin e o switch de assistente vira o botão que leva a página de admin. email appminhai@gmail.com com relatorio de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header
 
 * bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
 
 * Fazer Video de pitch para Shark Tank e Inatel
-
-* Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistwnte
-
-* Gestor de Agenda - testar todo o processo
 
 * Serviços Meta: Implemtar Gestor de Agenda, antifraude, Auxiliar Fiscal, auxiliar de Relatórios e Auxilar de Produção - Pedido e Orçamento ja concluidos
 
@@ -40,11 +40,7 @@
 
 * implementar sincronia entre catálogo minhAi e Meta (relatório em anexo)
 
-* Colocar no rodapé do site como typebot widget
-
 * Seção Integrações Externas para o usuário conectar serviços como Saipos, Ifood e outros ao minhAi e vice e versa, além de integração e webhooks para link Pix e link de pagamento - em anexo
-
-* Página admin com login via Google apenas com email appminhai@gmail.com com verificação de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header - em anexo no email
 
 .
 

@@ -730,9 +730,9 @@ function StepPagamento({ C, dados, companyId, theme, playText, metodosAtivos, on
   onPular: () => void;
 }) {
   return (
-    <div style={{ padding: '24px', height: 520, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <div style={{ padding: '16px 24px 24px', height: 520, display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {/* Banner informativo */}
-      <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: '#10b98115', border: '1px solid #10b98140' }}>
+      <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: '#10b98115', border: '1px solid #10b98140', flexShrink: 0 }}>
         <p style={{ fontSize: '13px', fontWeight: 600, color: '#10b981', margin: 0 }}>
           Agendamento criado! Deseja cobrar agora?
         </p>
@@ -743,8 +743,16 @@ function StepPagamento({ C, dados, companyId, theme, playText, metodosAtivos, on
         )}
       </div>
 
-      {/* CheckoutFlow ocupa o restante */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
+      {/* Botão pular — ACIMA do checkout para não ficar tampado */}
+      <button onClick={onPular} style={{
+        width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${C.border}`,
+        backgroundColor: 'transparent', color: C.textMuted, fontSize: '13px', cursor: 'pointer', flexShrink: 0,
+      }}>
+        Cobrar depois — apenas confirmar agendamento
+      </button>
+
+      {/* CheckoutFlow ocupa o restante — passa dados do cliente coletados no chat */}
+      <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
         <CheckoutFlow
           companyId={companyId}
           theme={theme}
@@ -752,17 +760,10 @@ function StepPagamento({ C, dados, companyId, theme, playText, metodosAtivos, on
           onVoltar={onPular}
           playText={playText}
           metodosAtivos={metodosAtivos}
+          profile={dados.nomeCliente ? { nome: dados.nomeCliente } : null}
           observacaoEntrega={`Agendamento: ${dados.nomeCliente || dados.produtoNome || 'Compromisso'} - ${dados.data ? formatDateShort(dados.data) : ''} às ${dados.hora}`}
         />
       </div>
-
-      {/* Botão pular */}
-      <button onClick={onPular} style={{
-        width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${C.border}`,
-        backgroundColor: 'transparent', color: C.textMuted, fontSize: '13px', cursor: 'pointer',
-      }}>
-        Cobrar depois — apenas confirmar agendamento
-      </button>
     </div>
   );
 }
@@ -770,7 +771,7 @@ function StepPagamento({ C, dados, companyId, theme, playText, metodosAtivos, on
 // ─── Componente interno ───────────────────────────────────────────────────────
 
 function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }: GestorAgendaDisplayProps) {
-  const { companyId, slug, prefilledData } = propData;
+  const { companyId, slug, assistantType: assistantTypeProp, prefilledData } = propData;
   const isDark = theme === 'dark';
   const C = useCores(isDark);
   const isMobile = useIsMobile();
@@ -779,6 +780,7 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
 
   const [step, setStep] = useState<Step>('agendamento');
   const [abaAtiva, setAbaAtiva] = useState<AbaAtiva>('chat');
+  const [assistantType, setAssistantType] = useState<'smart' | 'vendas'>(assistantTypeProp ?? 'smart');
 
   const [dados, setDados] = useState<DadosAgendamento>({
     data: prefilledData?.date ?? null,
@@ -822,6 +824,14 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
   // Carrega dados iniciais
   useEffect(() => {
     async function load() {
+      // Detecta assistant_type da empresa
+      const { data: company } = await supabase
+        .from('companies')
+        .select('assistant_type')
+        .eq('id', companyId)
+        .maybeSingle();
+      if (company?.assistant_type) setAssistantType(company.assistant_type as 'smart' | 'vendas');
+
       const { data: prods } = await supabase
         .from('produtos_venda')
         .select('id, nome, descricao, preco_venda, imagem_url')
@@ -891,11 +901,6 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
   const handleDadosUpdate = useCallback((updates: Partial<DadosAgendamento>) => {
     setDados(prev => ({ ...prev, ...updates }));
   }, []);
-
-  const handleFinalizarAgendamento = useCallback(() => {
-    setStep('confirmar_data');
-    if (isMobile) setAbaAtiva('painel');
-  }, [isMobile]);
 
   const handleConfirmarData = useCallback(async () => {
     if (!dados.data || !dados.hora) {
@@ -978,6 +983,12 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
     }
   }, [dados, companyId, produtos, addItem, clear]);
 
+  // Pula step 2 — vai direto para criar o evento e então pagamento
+  // Declarado APÓS handleConfirmarData para evitar dependência circular
+  const handleFinalizarAgendamento = useCallback(() => {
+    handleConfirmarData();
+  }, [handleConfirmarData]);
+
   const handlePularPagamento = useCallback(() => {
     setStep('confirmado');
     playText?.('Agendamento confirmado com sucesso!').catch(() => {});
@@ -1017,7 +1028,7 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
               {formatDate(dados.data)} às {dados.hora}
             </p>
           )}
-          {dados.produtoPreco && (
+          {dados.produtoPreco && assistantType === 'vendas' && (
             <p style={{ fontSize: '13px', color: C.textMuted, marginBottom: '16px' }}>
               Comissão de {formatCurrency(dados.produtoPreco * 0.10)} registrada como pendente
             </p>

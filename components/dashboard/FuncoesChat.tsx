@@ -101,7 +101,7 @@ export default function FuncoesChat({
   const [audioMutado, setAudioMutado]     = useState(false);
   const [isMobile, setIsMobile]           = useState(false);
 
-  const [conversationHistory, setConversationHistory] = useState
+  const [conversationHistory, setConversationHistory] = useState<
     { role: 'user' | 'assistant'; content: string }[]
   >([]);
 

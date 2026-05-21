@@ -91,7 +91,7 @@
     }
 
     const popup = window.open(
-      `https://${slug}.minhai.com.br/widget`,
+      `https://minhai.app/ia/${slug}/widget`,
       'minhAiWidget',
       [
         `width=${popupWidth}`,

@@ -221,10 +221,10 @@ function GestorAgendaChat({
   onFinalizarAgendamento,
   produtos,
   onProdutoSelecionado,
-  // recebe do pai para persistência entre trocas de aba
   mensagens,
   setMensagens,
   sessaoRef,
+  slots,
 }: {
   companyId: string;
   C: Cores;
@@ -238,6 +238,7 @@ function GestorAgendaChat({
   mensagens: MensagemChat[];
   setMensagens: React.Dispatch<React.SetStateAction<MensagemChat[]>>;
   sessaoRef: React.MutableRefObject<{ messages: { role: string; content: string }[] }>;
+  slots: SlotHorario[];
 }) {
   const voiceRecorder = useVoiceRecorder();
   const [input, setInput] = useState('');
@@ -302,6 +303,10 @@ function GestorAgendaChat({
     sessaoRef.current.messages.push({ role: 'user', content: texto });
 
     try {
+      const horariosOcupados = slots
+        .filter(s => s.ocupado)
+        .map(s => s.eventoNome ? `${s.hora} (${s.eventoNome})` : s.hora);
+
       const contextoAgenda: Record<string, any> = {
         data: dados.data ? formatDateShort(dados.data) : null,
         hora: dados.hora,
@@ -311,6 +316,7 @@ function GestorAgendaChat({
         produtoId: dados.produtoId,
         produtoNome: dados.produtoNome,
         produtoPreco: dados.produtoPreco,
+        horarios_ocupados: horariosOcupados.length > 0 ? horariosOcupados : null,
       };
 
       const contextoProdutos = produtos
@@ -346,12 +352,6 @@ function GestorAgendaChat({
         updates.produtoPreco = produtoMencionado.preco_venda;
         updates.produtoImagemUrl = produtoMencionado.imagem_url ?? null;
         onProdutoSelecionado(produtoMencionado);
-      }
-
-      // Detecta nome do cliente no texto do USUÁRIO
-      if (!dados.nomeCliente) {
-        const nomeMatch = texto.match(/(?:sou|me chamo|meu nome é|para|cliente)\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú]?[a-zà-ú]+)*)/i);
-        if (nomeMatch) updates.nomeCliente = nomeMatch[1];
       }
 
       // Detecta observações
@@ -564,7 +564,7 @@ function PainelSlotsDia({ C, data, slots, horaSelecionada, onSelectHora }: {
 
 // ─── Painel lateral direito ───────────────────────────────────────────────────
 
-function PainelAgendamento({ C, dados, onDadosUpdate, onAvancarParaData, step, eventosOcupados, slots, loadingSlots }: {
+function PainelAgendamento({ C, dados, onDadosUpdate, onAvancarParaData, step, eventosOcupados, slots, loadingSlots, produtos, onProdutoSelecionado }: {
   C: Cores;
   dados: DadosAgendamento;
   onDadosUpdate: (updates: Partial<DadosAgendamento>) => void;
@@ -573,7 +573,18 @@ function PainelAgendamento({ C, dados, onDadosUpdate, onAvancarParaData, step, e
   eventosOcupados: string[];
   slots: SlotHorario[];
   loadingSlots: boolean;
+  produtos: ProdutoVenda[];
+  onProdutoSelecionado: (produto: ProdutoVenda) => void;
 }) {
+  const [buscaProduto, setBuscaProduto] = useState('');
+  const [resultadosBusca, setResultadosBusca] = useState<ProdutoVenda[]>([]);
+
+  useEffect(() => {
+    if (!buscaProduto.trim()) { setResultadosBusca([]); return; }
+    const lower = buscaProduto.toLowerCase();
+    setResultadosBusca(produtos.filter(p => p.nome.toLowerCase().includes(lower)).slice(0, 5));
+  }, [buscaProduto, produtos]);
+
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '8px 10px', borderRadius: '8px', border: `1px solid ${C.border}`,
     fontSize: '13px', backgroundColor: C.bgSecondary, color: C.text, outline: 'none', boxSizing: 'border-box',
@@ -650,7 +661,7 @@ function PainelAgendamento({ C, dados, onDadosUpdate, onAvancarParaData, step, e
           </div>
         </div>
 
-        {/* Produto — sempre visível nas duas versões */}
+{/* Produto — seletor com busca + seleção pelo chat */}
         <div style={sectionStyle}>
           <label style={labelStyle}>Serviço / Produto</label>
           {dados.produtoNome ? (
@@ -660,19 +671,51 @@ function PainelAgendamento({ C, dados, onDadosUpdate, onAvancarParaData, step, e
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: '13px', fontWeight: 600, color: C.text, margin: 0 }}>{dados.produtoNome}</p>
-                {dados.produtoPreco && <p style={{ fontSize: '12px', color: '#10b981', margin: 0 }}>{formatCurrency(dados.produtoPreco)}</p>}
+                {dados.produtoPreco && <p style={{ fontSize: '12px', color: '#10b981', margin: 0 }}>{formatCurrency(dados.produtoPreco)} — clique × para trocar</p>}
               </div>
-              <button onClick={() => onDadosUpdate({ produtoId: null, produtoNome: null, produtoPreco: null, produtoImagemUrl: null })}
+              <button onClick={() => { onDadosUpdate({ produtoId: null, produtoNome: null, produtoPreco: null, produtoImagemUrl: null }); setBuscaProduto(''); }}
                 style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', flexShrink: 0 }}>
                 <IconX size={14} color={C.textMuted} />
               </button>
             </div>
           ) : (
-            <p style={{ fontSize: '12px', color: C.textMuted, fontStyle: 'italic' }}>Diga o serviço no chat para vincular ao agendamento</p>
+            <div>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="Buscar serviço pelo nome..."
+                  value={buscaProduto}
+                  onChange={e => setBuscaProduto(e.target.value)}
+                  style={{ ...inputStyle, paddingLeft: '28px' }}
+                />
+                <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px' }}>🔍</span>
+              </div>
+              {resultadosBusca.length > 0 && (
+                <div style={{ marginTop: '4px', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden', backgroundColor: C.bg }}>
+                  {resultadosBusca.map(p => (
+                    <button key={p.id}
+                      onClick={() => { onProdutoSelecionado(p); setBuscaProduto(''); setResultadosBusca([]); }}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '8px 10px', border: 'none', borderBottom: `1px solid ${C.border}`,
+                        backgroundColor: 'transparent', cursor: 'pointer', textAlign: 'left',
+                      }}>
+                      <span style={{ fontSize: '13px', color: C.text }}>{p.nome}</span>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#10b981' }}>{formatCurrency(p.preco_venda)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {produtos.length > 0 && !buscaProduto && (
+                <p style={{ fontSize: '11px', color: C.textMuted, marginTop: '4px' }}>
+                  {produtos.length} serviço{produtos.length > 1 ? 's' : ''} disponível{produtos.length > 1 ? 'is' : ''} — ou diga no chat
+                </p>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Valor */}
+        {/* Valor — só aparece quando produto selecionado */}
         {dados.produtoPreco && (
           <div style={sectionStyle}>
             <label style={labelStyle}>Valor</label>
@@ -890,9 +933,16 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
     setDados(prev => ({ ...prev, ...updates }));
   }, []);
 
-  const handleConfirmarData = useCallback(async () => {
+const handleConfirmarData = useCallback(async () => {
     if (!dados.data || !dados.hora) {
       alert('Selecione data e horário antes de confirmar.');
+      return;
+    }
+
+    // Verifica se o slot selecionado está ocupado
+    const slotOcupado = slots.find(s => s.hora === dados.hora && s.ocupado);
+    if (slotOcupado) {
+      alert(`O horário ${dados.hora} já está ocupado${slotOcupado.eventoNome ? ` (${slotOcupado.eventoNome})` : ''}. Escolha outro horário.`);
       return;
     }
 
@@ -969,7 +1019,7 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
     } finally {
       setCriandoEvento(false);
     }
-  }, [dados, companyId, produtos, addItem, clear]);
+  }, [dados, slots, companyId, produtos, addItem, clear]);
 
   // Pula step 2 — vai direto para criar o evento e então pagamento
   // Declarado APÓS handleConfirmarData para evitar dependência circular
@@ -1098,13 +1148,14 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
               mensagens={mensagens}
               setMensagens={setMensagens}
               sessaoRef={sessaoRef}
+              slots={slots}
             />
           </div>
 
           {/* Coluna direita: painel */}
           {(!isMobile || abaAtiva === 'painel') && (
             <div style={{ width: isMobile ? '100%' : '340px', overflow: 'hidden', display: 'flex', flexDirection: 'column', backgroundColor: C.bg }}>
-              <PainelAgendamento
+            <PainelAgendamento
                 C={C}
                 dados={dados}
                 onDadosUpdate={handleDadosUpdate}
@@ -1113,6 +1164,13 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
                 eventosOcupados={eventosOcupados}
                 slots={slots}
                 loadingSlots={loadingSlots}
+                produtos={produtos}
+                onProdutoSelecionado={p => handleDadosUpdate({
+                  produtoId: p.id,
+                  produtoNome: p.nome,
+                  produtoPreco: p.preco_venda,
+                  produtoImagemUrl: p.imagem_url ?? null,
+                })}
               />
               {/* Botão confirmar — só aparece no step confirmar_data com data+hora selecionados */}
               {step === 'confirmar_data' && dados.data && dados.hora && (

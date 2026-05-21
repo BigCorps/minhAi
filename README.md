@@ -1,5 +1,11 @@
 ## AGORA
 
+* widget simples usando a lógica dos auxiliares e então um link direcionando para o assistente
+
+* página admin em dashboard que aparece apenas para o email que eu escolhi e somente acessível via dashboard/admin
+
+* bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
+
 * Fazer Video de pitch para Shark Tank e Inatel
 
 * Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistwnte

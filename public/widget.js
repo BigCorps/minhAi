@@ -74,20 +74,23 @@
 
   // ── Abertura do popup ────────────────────────────────────────────────────
   btn.onclick = () => {
-    const screenW = window.screen.width;
-    const screenH = window.screen.height;
+    // Captura as dimensões internas da janela do navegador atual e onde ela está posicionada no monitor
+    const windowW = window.innerWidth || document.documentElement.clientWidth;
+    const windowH = window.innerHeight || document.documentElement.clientHeight;
+    const windowX = window.screenX !== undefined ? window.screenX : window.screenLeft;
+    const windowY = window.screenY !== undefined ? window.screenY : window.screenTop;
 
-    // Posição vertical: centralizado na tela
-    const top = Math.round((screenH - popupHeight) / 2);
+    // Centraliza verticalmente de acordo com a posição atual da janela do usuário
+    const top = Math.round(windowY + (windowH - popupHeight) / 2);
 
-    // Posição horizontal: alinha pelo mesmo lado do botão
+    // Define a posição horizontal respeitando estritamente o lado definido pelo usuário
     let left;
     if (posicao === 'left') {
-      // Popup parte da borda esquerda com 24px de margem
-      left = 24;
+      // Abre alinhado ao canto esquerdo da janela do navegador atual + margem
+      left = windowX + 24;
     } else {
-      // Popup fica encostado na borda direita com 24px de margem
-      left = screenW - popupWidth - 24;
+      // Abre alinhado ao canto direito da janela do navegador atual - largura do popup - margem
+      left = Math.round(windowX + windowW - popupWidth - 24);
     }
 
     const popup = window.open(

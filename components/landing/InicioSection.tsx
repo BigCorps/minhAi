@@ -215,14 +215,14 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               [@media(max-height:700px)_and_(max-width:767px)]:hidden
             `}
           >
-            {['meta', 'google', 'play'].map((name) => (
-              <img
-                key={name}
-                src={`/cards/${name}.png`}
-                alt={`${name} integration card`}
-                className="h-10 sm:h-12 w-auto object-contain"
-              />
-            ))}
+{['meta', 'google', 'play'].map((name) => (
+  <img
+    key={name}
+    src={`/cards/${name}.png`}
+    alt={`${name} integration card`}
+    className="h-8 sm:h-[2.4rem] w-auto object-contain transition-transform duration-200 hover:scale-110"
+  />
+))}
           </div>
         </div>
       </div>

@@ -7,7 +7,13 @@ import { createClient } from '@/lib/supabase-browser';
 interface WidgetConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
-  company: {
+  companySlug?: string; // Mantido como opcional para retrocompatibilidade
+  initialConfig?: {    // Mantido como opcional para retrocompatibilidade
+    color: string;
+    text: string;
+    position: 'left' | 'right';
+  };
+  company?: {          // Novo objeto completo vindo do banco
     id: string;
     slug: string;
     primary_color?: string;
@@ -19,13 +25,26 @@ interface WidgetConfigModalProps {
   onUpdateSuccess?: () => void;
 }
 
-export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSuccess }: WidgetConfigModalProps) {
-  // Inicializa o estado lendo direto do registro existente no banco de dados
-  const [color, setColor] = useState(company.primary_color || '#3b82f6');
-  const [text, setText] = useState(company.widget_text || '💬 Assistente');
-  const [position, setPosition] = useState<'left' | 'right'>(company.widget_position || 'right');
-  const [buttonSize, setButtonSize] = useState<'small' | 'medium' | 'large'>(company.widget_button_size || 'medium');
-  const [popupSize, setPopupSize] = useState<'small' | 'medium' | 'large'>(company.widget_popup_size || 'medium');
+export default function WidgetConfigModal({ 
+  isOpen, 
+  onClose, 
+  companySlug, 
+  initialConfig, 
+  company, 
+  onUpdateSuccess 
+}: WidgetConfigModalProps) {
+  
+  // Se o "company" não for passado pela página pai, criamos fallbacks seguros usando "initialConfig" e "companySlug"
+  const safeSlug = company?.slug || companySlug || '';
+  const safeId = company?.id || null;
+
+  // Inicializa os estados olhando primeiro para o 'company' do banco, depois para o 'initialConfig' antigo, e por fim um padrão fixo
+  const [color, setColor] = useState(company?.primary_color || initialConfig?.color || '#3b82f6');
+  const [text, setText] = useState(company?.widget_text || initialConfig?.text || '💬 Assistente');
+  const [position, setPosition] = useState<'left' | 'right'>(company?.widget_position || initialConfig?.position || 'right');
+  const [buttonSize, setButtonSize] = useState<'small' | 'medium' | 'large'>(company?.widget_button_size || 'medium');
+  const [popupSize, setPopupSize] = useState<'small' | 'medium' | 'large'>(company?.widget_popup_size || 'medium');
+  
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -33,7 +52,7 @@ export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSu
 
   const snippet = `<script 
   src="https://minhai.app/widget.js" 
-  data-slug="${company.slug}" 
+  data-slug="${safeSlug}" 
   data-cor="${color}" 
   data-texto="${text}" 
   data-posicao="${position}"
@@ -47,15 +66,19 @@ export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSu
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Mapeamento para o Preview do Botão
   const buttonPreviewStyles = {
     small: { padding: '8px 16px', fontSize: '12px' },
     medium: { padding: '10px 20px', fontSize: '14px' },
     large: { padding: '14px 28px', fontSize: '16px' }
   };
 
-  // Função para persistir as alterações reais no banco de dados
   const handleSave = async () => {
+    // Se não tiver o ID da empresa para salvar, ele apenas executa o fechamento local tradicional
+    if (!safeId) {
+      onClose();
+      return;
+    }
+
     setLoading(true);
     try {
       const supabase = createClient();
@@ -69,7 +92,7 @@ export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSu
           widget_button_size: buttonSize,
           widget_popup_size: popupSize
         })
-        .eq('id', company.id);
+        .eq('id', safeId);
 
       if (error) throw error;
 
@@ -227,7 +250,7 @@ export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSu
                   className="rounded-full text-white font-bold shadow-xl flex items-center gap-2 pointer-events-none transition-all duration-300"
                 >
                   {text || '💬 Assistente'}
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                     <path d="m6 9 6 6 6-6"/>
                   </svg>
                 </button>

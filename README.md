@@ -17,7 +17,6 @@
 * Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
 
 * App minhAi e Vixus publicados na Playstore - AGUARDANDO APROVAÇÃO
-+ Cards na landing: Google, Meta, PlayStore e WebApp
 
 * Funções demo no slug Suporte para ter demonstrativo de todas as funções
 

@@ -1,6 +1,4 @@
-## MINHAI - UMA IA PRA CHAMAR DE SUA
-
-* Gestor de Agenda - aplicado, testar todo o processo
+## minhAI - Uma IA pra chamar de sua!
 
 * widget inline - talvez apenas com modo texto e botão para o assistente completo - seletor de tema, lugar ocupado no footer e se aparece o avatar ou orbe (colocar no bigcorps e Vixus depois)
 
@@ -10,7 +8,7 @@
 
 * Fazer Video de pitch para Shark Tank e Inatel
 
-* Serviços Meta: Implemtar Gestor de Agenda, antifraude, Auxiliar Fiscal, auxiliar de Relatórios e Auxilar de Produção - Pedido e Orçamento ja concluidos
+* Serviços Meta: Implementar Gestor de Agenda, antifraude, Auxiliar Fiscal, auxiliar de Relatórios e Auxilar de Produção - Pedido e Orçamento ja concluidos
 
 * Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 

@@ -93,7 +93,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Compatibilidade total',
     title: 'Funciona onde seu cliente está',
     description:
-      'Celular, computador, tablet, totem, TV ou PDV — se tem tela e navegador, roda o minhAi. Conecte também WhatsApp, Instagram e Facebook e tambem um Widget no seu site! Um assistente único que responde em todos os canais ao mesmo tempo, sem você monitorar nada.',
+      'Celular, computador, tablet, totem, TV ou PDV — se tem tela e navegador, roda o minhAi. Conecte também WhatsApp, Instagram e Facebook e tambem um Widget no seu site! Um assistente único que responde em todos os canais ao mesmo tempo, você apenas gerencia e se preocupa com o pós-venda.',
     imageSrc: '/dispositivos.png',
     imageAlt: 'Dispositivos compatíveis com minhAi — celular, tablet, totem e computador',
     color: 'blue' as const,

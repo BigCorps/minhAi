@@ -6,7 +6,9 @@
 
 * Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistwnte
 
-* página admin em dashboard que aparece apenas para o email que eu escolhi e somente acessível via dashboard/admin e o switch de assistente vira o botão que leva a página de admin. email appminhai@gmail.com com relatorio de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header
+* Auxiliar de funções já com a lógica de configuração de todos os modais e também na criação de novas funções já enviando a ideia nova por email
+
+* Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota. E colocar ele na header no lugar do assistente de funções.
 
 * bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
 
@@ -29,6 +31,8 @@
 
 ## IDÉIAS
 
+* página admin em dashboard que aparece apenas para o email que eu escolhi e somente acessível via dashboard/admin e o switch de assistente vira o botão que leva a página de admin. email appminhai@gmail.com com relatorio de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header
+
 * Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app / postotec.app / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
 - iapos, itend e eai já registrados (para cobranças , atendimento e funcionários IA) - relatório em anexo no email
 
@@ -48,8 +52,6 @@
 
 * Implementar seleção de cores e key inter/asaas/MercadoPago para pix de clientes full, além de seletor de tema no assistente. Sempre light, sempre dark, de acordo com o tema do usuário ou de acordo com a hora do dia e se aparece ou não o seletor no header. Pensar na possibilidade do avatar ser o logo carregado pelo cliente, com animações react
 
-* Bot auxiliar no footer com conhecimento de todas as seções para atualizar tudo por ele e ir até outras seções também. Auxílio em todas as seções, semelhante ao que o de produção e de assistentes fazem, auxiliando o usuário na criação de tudo facilmente, principalmente ativando funções e na criação de novas funções já enviando a ideia nova por email para mim, além de fornecer relatórios de cada seção individualmente 
-
 * Linha de Produção pronta para Postos e outros ramos de produção (Mudar Ingredientes para Prima).
 
 * 3 novas funções nas categorias com apenas 6 e também 6 novas categorias futuramente, aproveitando para testar offline, implementando e testando com localhost, sem modificar o main no GitHub
@@ -57,8 +59,6 @@
 * Novas funções de transcrições já no Claude
 
 * Encontre Agora - função Pesquisar na região: tabela de clientes , se não encontrar, pesquisa no Maps.
-
-* configurar cadastro de produtos com imagens para a IA mostrar de acordo com o pedido do cliente. E também importar cardápio em pdf e imagem diretamente para o cadastro no dashboard 
 
 * Após tudo pronto, pensar em evoluir para um modelo inteligente como  com criação de funções autônomas e mesclar funções automaticamente de acordo com a escolha do cliente.
 

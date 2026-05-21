@@ -43,7 +43,7 @@ export default function WidgetConfigModal({ isOpen, onClose, companySlug, initia
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Code className="w-5 h-5 text-blue-500" />
-              Instalar Widget no Site
+              Inserir Widget no Site
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">Personalize e copie o código para seu site</p>
           </div>

@@ -323,9 +323,17 @@ export default function SlugHeaderWrapper({
                 <h3 className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                   Ativar Modo Kiosk
                 </h3>
-                <p className={`text-xs mt-0.5 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
-                  Defina uma senha para proteger a saída
-                </p>
+<p className={`text-xs mt-0.5 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
+  Defina uma senha para proteger a saída.{' '}
+  
+    href="https://minhai.app/kiosk"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="underline text-blue-400 hover:text-blue-300"
+  >
+    Para mais informações: minhai.app/kiosk
+  </a>
+</p>
               </div>
             </div>
             <div className="px-6 py-5 space-y-4">

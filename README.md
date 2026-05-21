@@ -2,7 +2,7 @@
 
 * widget simples usando a lógica dos auxiliares e então um link direcionando para o assistente
 
-* página admin em dashboard que aparece apenas para o email que eu escolhi e somente acessível via dashboard/admin
+* página admin em dashboard que aparece apenas para o email que eu escolhi e somente acessível via dashboard/admin e o switch de assistente vira o botão que leva a página de admin
 
 * bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
 

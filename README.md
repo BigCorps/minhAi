@@ -10,6 +10,10 @@
 
 * Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 
+.
+
+## IDÉIAS
+
 * Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
 
 * App minhAi e Vixus publicados na Playstore - AGUARDANDO APROVAÇÃO
@@ -17,10 +21,6 @@
 * Funções demo no slug Suporte para ter demonstrativo de todas as funções
 
 * App ChatGPT para configuração dos assistentes direto pelo app GPT, vinculado ao usuário.
-
-.
-
-## IDÉIAS
 
 * Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota. E colocar ele na header no lugar do assistente de funções.
 

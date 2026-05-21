@@ -136,7 +136,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             `}
           >
             Nunca mais perca venda por falta de atendimento.
-            Configure em minutos, sem programar — e deixe a IA trabalhar, facilitando a gestão com seus clientes e funcionários, enquanto você descansa.
+            Configure em minutos, sem programar — e deixe a IA trabalhar, facilitando a gestão com seus clientes e funcionários, enquanto você descansa e apenas gerencia seu negócio.
           </p>
 
           {/* DomainPreviewPicker */}

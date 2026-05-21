@@ -1,18 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Copy, Check, Code, Palette, Type, Layout, Maximize } from 'lucide-react';
+import { X, Copy, Check, Code, Palette, Type, Layout } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
 interface WidgetConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
-  companySlug: string;
-  initialConfig: {
-    color: string;
-    text: string;
-    position: 'left' | 'right';
+  company: {
+    id: string;
+    slug: string;
+    primary_color?: string;
+    widget_text?: string;
+    widget_position?: 'left' | 'right';
+    widget_popup_size?: 'small' | 'medium' | 'large';
+    widget_button_size?: 'small' | 'medium' | 'large';
   };
+  onUpdateSuccess?: () => void;
 }
 
 export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSuccess }: WidgetConfigModalProps) {
@@ -23,8 +27,34 @@ export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSu
   const [buttonSize, setButtonSize] = useState<'small' | 'medium' | 'large'>(company.widget_button_size || 'medium');
   const [popupSize, setPopupSize] = useState<'small' | 'medium' | 'large'>(company.widget_popup_size || 'medium');
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-// Função para persistir as alterações reais no banco de dados
+  if (!isOpen) return null;
+
+  const snippet = `<script 
+  src="https://minhai.app/widget.js" 
+  data-slug="${company.slug}" 
+  data-cor="${color}" 
+  data-texto="${text}" 
+  data-posicao="${position}"
+  data-button-size="${buttonSize}"
+  data-popup-size="${popupSize}"
+></script>`;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(snippet);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Mapeamento para o Preview do Botão
+  const buttonPreviewStyles = {
+    small: { padding: '8px 16px', fontSize: '12px' },
+    medium: { padding: '10px 20px', fontSize: '14px' },
+    large: { padding: '14px 28px', fontSize: '16px' }
+  };
+
+  // Função para persistir as alterações reais no banco de dados
   const handleSave = async () => {
     setLoading(true);
     try {
@@ -51,33 +81,6 @@ export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSu
     } finally {
       setLoading(false);
     }
-  };
-  
-  const [copied, setCopied] = useState(false);
-
-  if (!isOpen) return null;
-
-  const snippet = `<script 
-  src="https://minhai.app/widget.js" 
-  data-slug="${companySlug}" 
-  data-cor="${config.color}" 
-  data-texto="${config.text}" 
-  data-posicao="${config.position}"
-  data-button-size="${buttonSize}"
-  data-popup-size="${popupSize}"
-></script>`;
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(snippet);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  // Mapeamento para o Preview do Botão
-  const buttonPreviewStyles = {
-    small: { padding: '8px 16px', fontSize: '12px' },
-    medium: { padding: '10px 20px', fontSize: '14px' },
-    large: { padding: '14px 28px', fontSize: '16px' }
   };
 
   return (
@@ -114,14 +117,14 @@ export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSu
                   <div className="flex gap-3">
                     <input 
                       type="color" 
-                      value={config.color}
-                      onChange={(e) => setConfig({...config, color: e.target.value})}
+                      value={color}
+                      onChange={(e) => setColor(e.target.value)}
                       className="h-10 w-20 rounded cursor-pointer bg-transparent border-none"
                     />
                     <input 
                       type="text" 
-                      value={config.color}
-                      onChange={(e) => setConfig({...config, color: e.target.value})}
+                      value={color}
+                      onChange={(e) => setColor(e.target.value)}
                       className="flex-1 px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-lg text-sm font-mono"
                     />
                   </div>
@@ -134,8 +137,8 @@ export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSu
                     <Type className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input 
                       type="text" 
-                      value={config.text}
-                      onChange={(e) => setConfig({...config, text: e.target.value})}
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-lg text-sm"
                     />
                   </div>
@@ -178,14 +181,14 @@ export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSu
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Posição na Tela</label>
                   <div className="grid grid-cols-2 gap-2">
                     <button 
-                      onClick={() => setConfig({...config, position: 'left'})}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${config.position === 'left' ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-500/30' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-500'}`}
+                      onClick={() => setPosition('left')}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${position === 'left' ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-500/30' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-500'}`}
                     >
                       Esquerda
                     </button>
                     <button 
-                      onClick={() => setConfig({...config, position: 'right'})}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${config.position === 'right' ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-500/30' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-500'}`}
+                      onClick={() => setPosition('right')}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${position === 'right' ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-500/30' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-500'}`}
                     >
                       Direita
                     </button>
@@ -217,14 +220,14 @@ export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSu
                 <span className="text-[10px] uppercase font-bold text-gray-400 absolute top-3 left-4 tracking-widest">Preview do Botão</span>
                 <button 
                   style={{ 
-                    backgroundColor: config.color,
+                    backgroundColor: color,
                     padding: buttonPreviewStyles[buttonSize].padding,
                     fontSize: buttonPreviewStyles[buttonSize].fontSize
                   }}
                   className="rounded-full text-white font-bold shadow-xl flex items-center gap-2 pointer-events-none transition-all duration-300"
                 >
-                  {config.text || '💬 Assistente'}
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  {text || '💬 Assistente'}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                     <path d="m6 9 6 6 6-6"/>
                   </svg>
                 </button>
@@ -234,15 +237,17 @@ export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSu
           </div>
         </div>
 
-    {/* Footer */}
-    <div className="px-6 py-5 border-t bg-gray-50 dark:bg-white/5 flex justify-end">
-      <button 
-        onClick={handleSave}
-        disabled={loading}
-        className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-xl font-bold transition-all"
-      >
-        {loading ? 'Salvando...' : 'Salvar e Fechar'}
-      </button>
+        {/* Footer */}
+        <div className="px-6 py-5 border-t border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 flex justify-end">
+          <button 
+            onClick={handleSave}
+            disabled={loading}
+            className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-xl font-bold transition-all"
+          >
+            {loading ? 'Salvando...' : 'Salvar e Fechar'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

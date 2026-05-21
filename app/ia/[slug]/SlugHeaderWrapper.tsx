@@ -325,7 +325,7 @@ export default function SlugHeaderWrapper({
                 </h3>
 <p className={`text-xs mt-0.5 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
   Defina uma senha para proteger a saída.{' '}
-  
+  <a
     href="https://minhai.app/kiosk"
     target="_blank"
     rel="noopener noreferrer"

@@ -16,7 +16,7 @@ interface WidgetConfigModalProps {
   company?: {
     id: string;
     slug: string;
-    primary_color?: string;
+    widget_color?: string; // Alterado para widget_color para bater com o banco
     widget_text?: string;
     widget_position?: 'left' | 'right';
     widget_popup_size?: 'small' | 'medium' | 'large';
@@ -51,16 +51,15 @@ export default function WidgetConfigModal({
   const [fetching, setFetching] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Efeito para carregar os dados reais do banco usando o slug caso o objeto company completo não venha do pai
+  // Efeito para carregar os dados reais do banco usando o slug
   useEffect(() => {
     if (!isOpen) return;
 
     async function fetchCompanyData() {
-      // Se já recebemos o objeto completo ou não temos um slug, usa os valores iniciais disponíveis
       if (initialCompany?.id) {
         setCompanyId(initialCompany.id);
         setSlug(initialCompany.slug);
-        setColor(initialCompany.primary_color || '#3b82f6');
+        setColor(initialCompany.widget_color || '#3b82f6'); // Lendo widget_color
         setText(initialCompany.widget_text || '💬 Assistente');
         setPosition(initialCompany.widget_position || 'right');
         setButtonSize(initialCompany.widget_button_size || 'medium');
@@ -70,7 +69,6 @@ export default function WidgetConfigModal({
 
       const targetSlug = companySlug || slug;
       if (!targetSlug) {
-        // Fallback para as propriedades do config estático antigo se nada mais existir
         if (initialConfig) {
           setColor(initialConfig.color);
           setText(initialConfig.text);
@@ -83,14 +81,14 @@ export default function WidgetConfigModal({
       try {
         const { data, error } = await supabase
           .from('companies')
-          .select('id, slug, primary_color, widget_text, widget_position, widget_button_size, widget_popup_size')
+          .select('id, slug, widget_color, widget_text, widget_position, widget_button_size, widget_popup_size') // Selecionando widget_color
           .eq('slug', targetSlug)
           .single();
 
         if (data && !error) {
           setCompanyId(data.id);
           setSlug(data.slug);
-          setColor(data.primary_color || '#3b82f6');
+          setColor(data.widget_color || '#3b82f6'); // Ajustado
           setText(data.widget_text || '💬 Assistente');
           setPosition(data.widget_position || 'right');
           setButtonSize((data.widget_button_size as any) || 'medium');
@@ -135,7 +133,6 @@ export default function WidgetConfigModal({
   };
 
   const handleSave = async () => {
-    // Se mesmo após a busca não houver ID (ex: carregamento falhou), fecha a modal para evitar travamentos
     if (!companyId) {
       alert('Aviso: ID da empresa não localizado. Configurações aplicadas apenas localmente.');
       onClose();
@@ -147,7 +144,7 @@ export default function WidgetConfigModal({
       const { error } = await supabase
         .from('companies')
         .update({
-          primary_color: color,
+          widget_color: color, // Atualiza para salvar na coluna correta widget_color
           widget_text: text,
           widget_position: position,
           widget_button_size: buttonSize,
@@ -313,7 +310,7 @@ export default function WidgetConfigModal({
                   className="rounded-full text-white font-bold shadow-xl flex items-center gap-2 pointer-events-none transition-all duration-300"
                 >
                   {text || '💬 Assistente'}
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                     <path d="m6 9 6 6 6-6"/>
                   </svg>
                 </button>

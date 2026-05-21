@@ -1,7 +1,5 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* widget inline - Manus interpag (colocar no bigcorps e Vixus depois)
-
 * Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistwnte
 
 * Auxiliar de funções já com a lógica de configuração de todos os modais e também na criação de novas funções já enviando a ideia nova por email

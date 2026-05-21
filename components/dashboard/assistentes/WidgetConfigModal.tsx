@@ -1,19 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Copy, Check, Code, Palette, Type, Layout } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
 interface WidgetConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
-  companySlug?: string; // Mantido como opcional para retrocompatibilidade
-  initialConfig?: {    // Mantido como opcional para retrocompatibilidade
+  companySlug?: string;
+  initialConfig?: {
     color: string;
     text: string;
     position: 'left' | 'right';
   };
-  company?: {          // Novo objeto completo vindo do banco
+  company?: {
     id: string;
     slug: string;
     primary_color?: string;
@@ -30,29 +30,91 @@ export default function WidgetConfigModal({
   onClose, 
   companySlug, 
   initialConfig, 
-  company, 
+  company: initialCompany, 
   onUpdateSuccess 
 }: WidgetConfigModalProps) {
   
-  // Se o "company" não for passado pela página pai, criamos fallbacks seguros usando "initialConfig" e "companySlug"
-  const safeSlug = company?.slug || companySlug || '';
-  const safeId = company?.id || null;
+  const supabase = createClient();
+  
+  // Estados para dados da empresa identificada
+  const [companyId, setCompanyId] = useState<string | null>(initialCompany?.id || null);
+  const [slug, setSlug] = useState<string>(initialCompany?.slug || companySlug || '');
 
-  // Inicializa os estados olhando primeiro para o 'company' do banco, depois para o 'initialConfig' antigo, e por fim um padrão fixo
-  const [color, setColor] = useState(company?.primary_color || initialConfig?.color || '#3b82f6');
-  const [text, setText] = useState(company?.widget_text || initialConfig?.text || '💬 Assistente');
-  const [position, setPosition] = useState<'left' | 'right'>(company?.widget_position || initialConfig?.position || 'right');
-  const [buttonSize, setButtonSize] = useState<'small' | 'medium' | 'large'>(company?.widget_button_size || 'medium');
-  const [popupSize, setPopupSize] = useState<'small' | 'medium' | 'large'>(company?.widget_popup_size || 'medium');
+  // Estados das configurações da UI
+  const [color, setColor] = useState('#3b82f6');
+  const [text, setText] = useState('💬 Assistente');
+  const [position, setPosition] = useState<'left' | 'right'>('right');
+  const [buttonSize, setButtonSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [popupSize, setPopupSize] = useState<'small' | 'medium' | 'large'>('medium');
   
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Efeito para carregar os dados reais do banco usando o slug caso o objeto company completo não venha do pai
+  useEffect(() => {
+    if (!isOpen) return;
+
+    async function fetchCompanyData() {
+      // Se já recebemos o objeto completo ou não temos um slug, usa os valores iniciais disponíveis
+      if (initialCompany?.id) {
+        setCompanyId(initialCompany.id);
+        setSlug(initialCompany.slug);
+        setColor(initialCompany.primary_color || '#3b82f6');
+        setText(initialCompany.widget_text || '💬 Assistente');
+        setPosition(initialCompany.widget_position || 'right');
+        setButtonSize(initialCompany.widget_button_size || 'medium');
+        setPopupSize(initialCompany.widget_popup_size || 'medium');
+        return;
+      }
+
+      const targetSlug = companySlug || slug;
+      if (!targetSlug) {
+        // Fallback para as propriedades do config estático antigo se nada mais existir
+        if (initialConfig) {
+          setColor(initialConfig.color);
+          setText(initialConfig.text);
+          setPosition(initialConfig.position);
+        }
+        return;
+      }
+
+      setFetching(true);
+      try {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('id, slug, primary_color, widget_text, widget_position, widget_button_size, widget_popup_size')
+          .eq('slug', targetSlug)
+          .single();
+
+        if (data && !error) {
+          setCompanyId(data.id);
+          setSlug(data.slug);
+          setColor(data.primary_color || '#3b82f6');
+          setText(data.widget_text || '💬 Assistente');
+          setPosition(data.widget_position || 'right');
+          setButtonSize((data.widget_button_size as any) || 'medium');
+          setPopupSize((data.widget_popup_size as any) || 'medium');
+        } else if (initialConfig) {
+          setColor(initialConfig.color);
+          setText(initialConfig.text);
+          setPosition(initialConfig.position);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar dados complementares da empresa:', err);
+      } finally {
+        setFetching(false);
+      }
+    }
+
+    fetchCompanyData();
+  }, [isOpen, companySlug, initialCompany, initialConfig]);
 
   if (!isOpen) return null;
 
   const snippet = `<script 
   src="https://minhai.app/widget.js" 
-  data-slug="${safeSlug}" 
+  data-slug="${slug}" 
   data-cor="${color}" 
   data-texto="${text}" 
   data-posicao="${position}"
@@ -73,16 +135,15 @@ export default function WidgetConfigModal({
   };
 
   const handleSave = async () => {
-    // Se não tiver o ID da empresa para salvar, ele apenas executa o fechamento local tradicional
-    if (!safeId) {
+    // Se mesmo após a busca não houver ID (ex: carregamento falhou), fecha a modal para evitar travamentos
+    if (!companyId) {
+      alert('Aviso: ID da empresa não localizado. Configurações aplicadas apenas localmente.');
       onClose();
       return;
     }
 
     setLoading(true);
     try {
-      const supabase = createClient();
-      
       const { error } = await supabase
         .from('companies')
         .update({
@@ -92,14 +153,14 @@ export default function WidgetConfigModal({
           widget_button_size: buttonSize,
           widget_popup_size: popupSize
         })
-        .eq('id', safeId);
+        .eq('id', companyId);
 
       if (error) throw error;
 
       if (onUpdateSuccess) onUpdateSuccess();
       onClose();
     } catch (err) {
-      console.error('Erro ao salvar configurações:', err);
+      console.error('Erro ao salvar configurações no Supabase:', err);
       alert('Erro ao salvar no banco de dados.');
     } finally {
       setLoading(false);
@@ -117,7 +178,9 @@ export default function WidgetConfigModal({
               <Code className="w-5 h-5 text-blue-500" />
               Configurar Widget do Cliente
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Ajuste as dimensões e o comportamento visual</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {fetching ? 'Carregando dados sincronizados...' : 'Ajuste as dimensões e o comportamento visual'}
+            </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-colors">
             <X className="w-6 h-6 text-gray-500" />
@@ -264,8 +327,8 @@ export default function WidgetConfigModal({
         <div className="px-6 py-5 border-t border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 flex justify-end">
           <button 
             onClick={handleSave}
-            disabled={loading}
-            className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-xl font-bold transition-all"
+            disabled={loading || fetching}
+            className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-xl font-bold transition-all flex items-center gap-2"
           >
             {loading ? 'Salvando...' : 'Salvar e Fechar'}
           </button>

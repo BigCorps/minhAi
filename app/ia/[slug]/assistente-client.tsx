@@ -14,6 +14,7 @@ import Image from 'next/image';
 import SlugHeaderWrapper from './SlugHeaderWrapper';
 
 interface AssistenteClientProps {
+  widgetMode?: boolean;
   company: {
     id: string;
     name: string;
@@ -33,13 +34,13 @@ interface AssistenteClientProps {
   };
 }
 
-export default function AssistenteClient({ company }: AssistenteClientProps) {
+export default function AssistenteClient({ company, widgetMode = false }: AssistenteClientProps) {
   const { theme: globalTheme, setTheme: setGlobalTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   // B. Substituir isMaximized por mode
   type AssistenteMode = 'padrao' | 'texto' | 'full';
-  const [mode, setMode] = useState<AssistenteMode>('padrao');
+  const [mode, setMode] = useState<AssistenteMode>(widgetMode ? 'texto' : 'padrao');
 
   // Helper para navegar entre modos (roleta infinita)
   const MODES: AssistenteMode[] = ['full', 'padrao', 'texto'];
@@ -91,14 +92,14 @@ useEffect(() => {
 }, [isModalOpenState]);
 
 useSwipe({
-  onSwipeLeft: () => { if (!isModalOpenRef.current) navigateMode('right'); },
-  onSwipeRight: () => { if (!isModalOpenRef.current) navigateMode('left'); },
+  onSwipeLeft: () => { if (!widgetMode && !isModalOpenRef.current) navigateMode('right'); },
+  onSwipeRight: () => { if (!widgetMode && !isModalOpenRef.current) navigateMode('left'); },
 });
 
   // C. Navegação por teclado (setas ← →)
   useEffect(() => {
 const handleKeyPress = (e: KeyboardEvent) => {
-  if (isModalOpenRef.current) return;
+  if (widgetMode || isModalOpenRef.current) return;
   if (e.key === 'ArrowLeft') {
     navigateMode('left');
   } else if (e.key === 'ArrowRight') {
@@ -462,8 +463,9 @@ useEffect(() => {
       )}
 
 {/* H. Setas laterais de navegação entre modos */}
-      <>
-        {/* Seta esquerda */}
+{!widgetMode && (
+  <>
+    {/* Seta esquerda */}
         <button
           onClick={() => navigateMode('left')}
           className={`fixed left-2 md:left-4 top-1/2 -translate-y-1/2 z-[60] p-1.5 md:p-3 rounded-full transition-all ${

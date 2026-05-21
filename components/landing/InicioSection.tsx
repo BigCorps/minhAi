@@ -118,7 +118,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               </span>
             </span>
             <span className="block whitespace-nowrap">
-              O{' '}<WordCarousel isDark={isDark} />{' '}IA que
+              A{' '}<WordCarousel isDark={isDark} />{' '}IA que
             </span>
             <span className="block whitespace-nowrap">
               vende e atende{' '}
@@ -206,6 +206,23 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               <span className="w-1.5 h-1.5 rounded-full bg-lime-400 flex-shrink-0" />
               Vendas — grátis, só pague quando vender
             </span>
+          </div>
+
+          {/* Cards de integração — Meta / Google / Google Play */}
+          <div
+            className={`
+              flex items-center justify-center gap-2 sm:gap-3 mt-2 sm:mt-3
+              [@media(max-height:700px)_and_(max-width:767px)]:hidden
+            `}
+          >
+            {['meta', 'google', 'play'].map((name) => (
+              <img
+                key={name}
+                src={`/cards/${name}.png`}
+                alt={`${name} integration card`}
+                className="h-10 sm:h-12 w-auto object-contain"
+              />
+            ))}
           </div>
         </div>
       </div>

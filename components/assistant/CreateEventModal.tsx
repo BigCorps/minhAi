@@ -423,12 +423,6 @@ function GestorAgendaChat({
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(input); } }}
-            onBlur={e => {
-              const rel = e.relatedTarget as HTMLElement | null;
-              if (!carregando && !transcrevendo && !voiceRecorder.isRecording && (!rel || rel.tagName === 'BODY')) {
-                setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
-              }
-            }}
             placeholder="Digite sua mensagem..."
             disabled={carregando || transcrevendo}
             style={{
@@ -712,7 +706,7 @@ function PainelAgendamento({ C, dados, onDadosUpdate, onAvancarParaData, step, e
 
 // ─── Step de pagamento com opção pular ────────────────────────────────────────
 
-function StepPagamento({ C, dados, companyId, theme, playText, metodosAtivos, onClose, onPular }: {
+function StepPagamento({ C, dados, companyId, theme, playText, metodosAtivos, onClose, onPular, onVoltar }: {
   C: Cores;
   dados: DadosAgendamento;
   companyId: string;
@@ -721,9 +715,10 @@ function StepPagamento({ C, dados, companyId, theme, playText, metodosAtivos, on
   metodosAtivos: string[];
   onClose: () => void;
   onPular: () => void;
+  onVoltar: () => void;
 }) {
   return (
-    <div style={{ padding: '16px 24px 24px', height: 520, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <div style={{ padding: '16px 0px 0px', height: 520, display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {/* Banner informativo */}
       <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: '#10b98115', border: '1px solid #10b98140', flexShrink: 0 }}>
         <p style={{ fontSize: '13px', fontWeight: 600, color: '#10b981', margin: 0 }}>
@@ -750,7 +745,7 @@ function StepPagamento({ C, dados, companyId, theme, playText, metodosAtivos, on
           companyId={companyId}
           theme={theme}
           onClose={onClose}
-          onVoltar={onPular}
+          onVoltar={onVoltar}
           playText={playText}
           metodosAtivos={metodosAtivos}
           profile={dados.nomeCliente ? { nome: dados.nomeCliente } : null}
@@ -1038,16 +1033,17 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
   function renderConteudo() {
     if (step === 'pagamento') {
       return (
-        <StepPagamento
-          C={C}
-          dados={dados}
-          companyId={companyId}
-          theme={theme}
-          playText={playText}
-          metodosAtivos={metodosAtivos}
-          onClose={onClose}
-          onPular={handlePularPagamento}
-        />
+<StepPagamento
+  C={C}
+  dados={dados}
+  companyId={companyId}
+  theme={theme}
+  playText={playText}
+  metodosAtivos={metodosAtivos}
+  onClose={onClose}
+  onPular={handlePularPagamento}
+  onVoltar={() => setStep('agendamento')}
+/>
       );
     }
 

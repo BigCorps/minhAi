@@ -2,8 +2,6 @@
 
 * Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistwnte
 
-* Auxiliar de funções já com a lógica de configuração de todos os modais e também na criação de novas funções já enviando a ideia nova por email
-
 * Fazer Video de pitch para Shark Tank e Inatel
 
 * Serviços Meta: Implementar Gestor de Agenda, antifraude, Auxiliar Fiscal, auxiliar de Relatórios e Auxilar de Produção - Pedido e Orçamento ja concluidos

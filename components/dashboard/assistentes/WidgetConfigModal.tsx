@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, Copy, Check, Code, Palette, Type, Layout, Maximize } from 'lucide-react';
+import { createClient } from '@/lib/supabase-browser';
 
 interface WidgetConfigModalProps {
   isOpen: boolean;
@@ -14,10 +15,44 @@ interface WidgetConfigModalProps {
   };
 }
 
-export default function WidgetConfigModal({ isOpen, onClose, companySlug, initialConfig }: WidgetConfigModalProps) {
-  const [config, setConfig] = useState(initialConfig);
-  const [buttonSize, setButtonSize] = useState<'small' | 'medium' | 'large'>('medium');
-  const [popupSize, setPopupSize] = useState<'small' | 'medium' | 'large'>('medium');
+export default function WidgetConfigModal({ isOpen, onClose, company, onUpdateSuccess }: WidgetConfigModalProps) {
+  // Inicializa o estado lendo direto do registro existente no banco de dados
+  const [color, setColor] = useState(company.primary_color || '#3b82f6');
+  const [text, setText] = useState(company.widget_text || '💬 Assistente');
+  const [position, setPosition] = useState<'left' | 'right'>(company.widget_position || 'right');
+  const [buttonSize, setButtonSize] = useState<'small' | 'medium' | 'large'>(company.widget_button_size || 'medium');
+  const [popupSize, setPopupSize] = useState<'small' | 'medium' | 'large'>(company.widget_popup_size || 'medium');
+  const [loading, setLoading] = useState(false);
+
+// Função para persistir as alterações reais no banco de dados
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          primary_color: color,
+          widget_text: text,
+          widget_position: position,
+          widget_button_size: buttonSize,
+          widget_popup_size: popupSize
+        })
+        .eq('id', company.id);
+
+      if (error) throw error;
+
+      if (onUpdateSuccess) onUpdateSuccess();
+      onClose();
+    } catch (err) {
+      console.error('Erro ao salvar configurações:', err);
+      alert('Erro ao salvar no banco de dados.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
@@ -199,16 +234,15 @@ export default function WidgetConfigModal({ isOpen, onClose, companySlug, initia
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-5 border-t border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 flex justify-end">
-          <button 
-            onClick={onClose}
-            className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95"
-          >
-            Salvar e Fechar
-          </button>
-        </div>
-      </div>
+    {/* Footer */}
+    <div className="px-6 py-5 border-t bg-gray-50 dark:bg-white/5 flex justify-end">
+      <button 
+        onClick={handleSave}
+        disabled={loading}
+        className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-xl font-bold transition-all"
+      >
+        {loading ? 'Salvando...' : 'Salvar e Fechar'}
+      </button>
     </div>
   );
 }

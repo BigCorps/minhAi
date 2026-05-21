@@ -626,13 +626,13 @@ function PainelAgendamento({ C, dados, onDadosUpdate, onAvancarParaData, step, e
         <div style={sectionStyle}>
           <div style={{ display: 'flex', gap: '8px' }}>
             <div style={{ flex: 1 }}>
-              <label style={labelStyle}>📅 Data</label>
+              <label style={labelStyle}>Data</label>
               <input type="date" value={dados.data ? dados.data.toISOString().split('T')[0] : ''}
                 onChange={e => { if (e.target.value) onDadosUpdate({ data: new Date(e.target.value + 'T12:00:00') }); }}
                 style={inputStyle} />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={labelStyle}>🕐 Hora</label>
+              <label style={labelStyle}>Hora</label>
               <input type="time" value={dados.hora} onChange={e => onDadosUpdate({ hora: e.target.value })} style={inputStyle} />
             </div>
           </div>
@@ -640,7 +640,7 @@ function PainelAgendamento({ C, dados, onDadosUpdate, onAvancarParaData, step, e
 
         {/* Duração */}
         <div style={sectionStyle}>
-          <label style={labelStyle}>⏱️ Duração</label>
+          <label style={labelStyle}>Duração</label>
           <div style={{ display: 'flex', gap: '6px' }}>
             {[30, 60, 90, 120].map(min => (
               <button key={min} onClick={() => onDadosUpdate({ duracao: min })} style={{
@@ -656,16 +656,9 @@ function PainelAgendamento({ C, dados, onDadosUpdate, onAvancarParaData, step, e
           </div>
         </div>
 
-        {/* Nome cliente */}
-        <div style={sectionStyle}>
-          <label style={labelStyle}>👤 Nome / Cliente</label>
-          <input type="text" placeholder="Nome do cliente ou evento" value={dados.nomeCliente}
-            onChange={e => onDadosUpdate({ nomeCliente: e.target.value })} style={inputStyle} />
-        </div>
-
         {/* Produto — sempre visível nas duas versões */}
         <div style={sectionStyle}>
-          <label style={labelStyle}>📦 Serviço / Produto</label>
+          <label style={labelStyle}>Serviço / Produto</label>
           {dados.produtoNome ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', borderRadius: '8px', border: '1px solid #10b98140', backgroundColor: '#10b98108' }}>
               {dados.produtoImagemUrl && (
@@ -688,14 +681,14 @@ function PainelAgendamento({ C, dados, onDadosUpdate, onAvancarParaData, step, e
         {/* Valor */}
         {dados.produtoPreco && (
           <div style={sectionStyle}>
-            <label style={labelStyle}>💰 Valor</label>
+            <label style={labelStyle}>Valor</label>
             <p style={{ fontSize: '18px', fontWeight: 700, color: '#10b981', margin: 0 }}>{formatCurrency(dados.produtoPreco)}</p>
           </div>
         )}
 
         {/* Observações */}
         <div style={sectionStyle}>
-          <label style={labelStyle}>📝 Observações</label>
+          <label style={labelStyle}>Observações</label>
           <textarea rows={2} placeholder="Observações opcionais..." value={dados.observacoes}
             onChange={e => onDadosUpdate({ observacoes: e.target.value })}
             style={{ ...inputStyle, resize: 'none' }} />
@@ -710,7 +703,7 @@ function PainelAgendamento({ C, dados, onDadosUpdate, onAvancarParaData, step, e
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
         }}>
           <IconCalendar size={16} color="#fff" />
-          Escolher Data e Hora
+          Confirmar Informações
         </button>
       </div>
     </div>

@@ -71,7 +71,7 @@ export default function WidgetPage({ params }: PageProps) {
 
       {/* Assistente */}
       <div className="flex-1 relative">
-        <AssistenteClient company={company} />
+        <AssistenteClient company={company} widgetMode />
       </div>
 
       {/* Estilos específicos para forçar o modo widget no AssistenteClient se necessário */}

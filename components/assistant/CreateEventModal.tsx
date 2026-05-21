@@ -718,7 +718,7 @@ function StepPagamento({ C, dados, companyId, theme, playText, metodosAtivos, on
   onVoltar: () => void;
 }) {
   return (
-    <div style={{ padding: '16px 4px 0px', height: 520, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <div style={{ padding: '16px 8px 0px', height: 520, display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {/* Banner informativo */}
       <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: '#10b98115', border: '1px solid #10b98140', flexShrink: 0 }}>
         <p style={{ fontSize: '13px', fontWeight: 600, color: '#10b981', margin: 0 }}>

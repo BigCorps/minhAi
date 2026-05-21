@@ -2,15 +2,11 @@
 
 * Gestor de Agenda - aplicado, testar todo o processo
 
-* widget inline (colocar no bigcorps e Vixus depois)
+* widget inline - talvez apenas com modo texto e botão para o assistente completo - seletor de tema, lugar ocupado no footer e se aparece o avatar ou orbe (colocar no bigcorps e Vixus depois)
 
 * Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistwnte
 
 * Auxiliar de funções já com a lógica de configuração de todos os modais e também na criação de novas funções já enviando a ideia nova por email
-
-* Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota. E colocar ele na header no lugar do assistente de funções.
-
-* bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
 
 * Fazer Video de pitch para Shark Tank e Inatel
 
@@ -30,6 +26,10 @@
 .
 
 ## IDÉIAS
+
+* Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota. E colocar ele na header no lugar do assistente de funções.
+
+* bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
 
 * página admin em dashboard que aparece apenas para o email que eu escolhi e somente acessível via dashboard/admin e o switch de assistente vira o botão que leva a página de admin. email appminhai@gmail.com com relatorio de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header
 

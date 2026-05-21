@@ -16,7 +16,7 @@ interface WidgetConfigModalProps {
   company?: {
     id: string;
     slug: string;
-    widget_color?: string; // Alterado para widget_color para bater com o banco
+    widget_color?: string;
     widget_text?: string;
     widget_position?: 'left' | 'right';
     widget_popup_size?: 'small' | 'medium' | 'large';
@@ -36,11 +36,11 @@ export default function WidgetConfigModal({
   
   const supabase = createClient();
   
-  // Estados para dados da empresa identificada
-  const [companyId, setCompanyId] = useState<string | null>(initialCompany?.id || null);
-  const [slug, setSlug] = useState<string>(initialCompany?.slug || companySlug || '');
+  // Estados para dados de identificação da empresa
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [slug, setSlug] = useState<string>('');
 
-  // Estados das configurações da UI
+  // Estados das configurações dos inputs controlados da UI
   const [color, setColor] = useState('#3b82f6');
   const [text, setText] = useState('💬 Assistente');
   const [position, setPosition] = useState<'left' | 'right'>('right');
@@ -51,15 +51,16 @@ export default function WidgetConfigModal({
   const [fetching, setFetching] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Efeito para carregar os dados reais do banco usando o slug
+  // Carrega os dados apenas uma vez quando a modal abre
   useEffect(() => {
     if (!isOpen) return;
 
-    async function fetchCompanyData() {
+    async function initializeData() {
+      // Cenário 1: O objeto completo da empresa já foi fornecido pela página pai
       if (initialCompany?.id) {
         setCompanyId(initialCompany.id);
         setSlug(initialCompany.slug);
-        setColor(initialCompany.widget_color || '#3b82f6'); // Lendo widget_color
+        setColor(initialCompany.widget_color || '#3b82f6');
         setText(initialCompany.widget_text || '💬 Assistente');
         setPosition(initialCompany.widget_position || 'right');
         setButtonSize(initialCompany.widget_button_size || 'medium');
@@ -67,46 +68,45 @@ export default function WidgetConfigModal({
         return;
       }
 
-      const targetSlug = companySlug || slug;
-      if (!targetSlug) {
-        if (initialConfig) {
-          setColor(initialConfig.color);
-          setText(initialConfig.text);
-          setPosition(initialConfig.position);
+      // Cenário 2: Fornecido apenas o slug, busca o restante das propriedades no banco
+      const targetSlug = companySlug || initialCompany?.slug;
+      if (targetSlug) {
+        setFetching(true);
+        try {
+          const { data, error } = await supabase
+            .from('companies')
+            .select('id, slug, widget_color, widget_text, widget_position, widget_button_size, widget_popup_size')
+            .eq('slug', targetSlug)
+            .single();
+
+          if (data && !error) {
+            setCompanyId(data.id);
+            setSlug(data.slug);
+            setColor(data.widget_color || '#3b82f6');
+            setText(data.widget_text || '💬 Assistente');
+            setPosition(data.widget_position || 'right');
+            setButtonSize((data.widget_button_size as any) || 'medium');
+            setPopupSize((data.widget_popup_size as any) || 'medium');
+            return;
+          }
+        } catch (err) {
+          console.error('Erro ao buscar dados complementares da empresa:', err);
+        } finally {
+          setFetching(false);
         }
-        return;
       }
 
-      setFetching(true);
-      try {
-        const { data, error } = await supabase
-          .from('companies')
-          .select('id, slug, widget_color, widget_text, widget_position, widget_button_size, widget_popup_size') // Selecionando widget_color
-          .eq('slug', targetSlug)
-          .single();
-
-        if (data && !error) {
-          setCompanyId(data.id);
-          setSlug(data.slug);
-          setColor(data.widget_color || '#3b82f6'); // Ajustado
-          setText(data.widget_text || '💬 Assistente');
-          setPosition(data.widget_position || 'right');
-          setButtonSize((data.widget_button_size as any) || 'medium');
-          setPopupSize((data.widget_popup_size as any) || 'medium');
-        } else if (initialConfig) {
-          setColor(initialConfig.color);
-          setText(initialConfig.text);
-          setPosition(initialConfig.position);
-        }
-      } catch (err) {
-        console.error('Erro ao buscar dados complementares da empresa:', err);
-      } finally {
-        setFetching(false);
+      // Cenário 3: Fallback final para os configs estáticos legados do pai
+      if (initialConfig) {
+        setColor(initialConfig.color);
+        setText(initialConfig.text);
+        setPosition(initialConfig.position);
       }
+      if (companySlug) setSlug(companySlug);
     }
 
-    fetchCompanyData();
-  }, [isOpen, companySlug, initialCompany, initialConfig]);
+    initializeData();
+  }, [isOpen]); // ATENÇÃO: Executa estritamente na abertura do Modal para liberar digitação livre nos inputs
 
   if (!isOpen) return null;
 
@@ -134,7 +134,7 @@ export default function WidgetConfigModal({
 
   const handleSave = async () => {
     if (!companyId) {
-      alert('Aviso: ID da empresa não localizado. Configurações aplicadas apenas localmente.');
+      alert('Aviso: ID da empresa não localizado. Configurações salvas apenas localmente.');
       onClose();
       return;
     }
@@ -144,7 +144,7 @@ export default function WidgetConfigModal({
       const { error } = await supabase
         .from('companies')
         .update({
-          widget_color: color, // Atualiza para salvar na coluna correta widget_color
+          widget_color: color,
           widget_text: text,
           widget_position: position,
           widget_button_size: buttonSize,
@@ -234,6 +234,7 @@ export default function WidgetConfigModal({
                     {(['small', 'medium', 'large'] as const).map((s) => (
                       <button
                         key={s}
+                        type="button"
                         onClick={() => setButtonSize(s)}
                         className={`py-1.5 text-xs font-bold rounded-lg transition-all capitalize ${buttonSize === s ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-gray-500'}`}
                       >
@@ -250,6 +251,7 @@ export default function WidgetConfigModal({
                     {(['small', 'medium', 'large'] as const).map((s) => (
                       <button
                         key={s}
+                        type="button"
                         onClick={() => setPopupSize(s)}
                         className={`py-1.5 text-xs font-bold rounded-lg transition-all ${popupSize === s ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-gray-500'}`}
                       >
@@ -264,12 +266,14 @@ export default function WidgetConfigModal({
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Posição na Tela</label>
                   <div className="grid grid-cols-2 gap-2">
                     <button 
+                      type="button"
                       onClick={() => setPosition('left')}
                       className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${position === 'left' ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-500/30' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-500'}`}
                     >
                       Esquerda
                     </button>
                     <button 
+                      type="button"
                       onClick={() => setPosition('right')}
                       className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${position === 'right' ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-500/30' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-500'}`}
                     >
@@ -291,6 +295,7 @@ export default function WidgetConfigModal({
                   {snippet}
                 </pre>
                 <button 
+                  type="button"
                   onClick={copyToClipboard}
                   className="absolute top-3 right-3 p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all flex items-center gap-2 text-xs"
                 >
@@ -302,6 +307,7 @@ export default function WidgetConfigModal({
               <div className="p-6 bg-gray-50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-300 dark:border-white/10 relative min-h-[140px] flex items-center justify-center">
                 <span className="text-[10px] uppercase font-bold text-gray-400 absolute top-3 left-4 tracking-widest">Preview do Botão</span>
                 <button 
+                  type="button"
                   style={{ 
                     backgroundColor: color,
                     padding: buttonPreviewStyles[buttonSize].padding,
@@ -323,6 +329,7 @@ export default function WidgetConfigModal({
         {/* Footer */}
         <div className="px-6 py-5 border-t border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 flex justify-end">
           <button 
+            type="button"
             onClick={handleSave}
             disabled={loading || fetching}
             className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-xl font-bold transition-all flex items-center gap-2"

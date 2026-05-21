@@ -54,7 +54,7 @@ export default function WidgetPage({ params }: PageProps) {
         
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => window.open(`https://${slug}.minhai.com.br`, '_blank')}
+            onClick={() => window.open(`https://minhai.app/ia/${slug}`, '_blank')}
             className="p-1.5 hover:bg-accent rounded-full transition-colors text-muted-foreground"
             title="Abrir versão completa"
           >

@@ -1,6 +1,6 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* widget inline - talvez apenas com modo texto e botão para o assistente completo - seletor de tema, lugar ocupado no footer e se aparece o avatar ou orbe (colocar no bigcorps e Vixus depois)
+* widget inline - Manus interpag (colocar no bigcorps e Vixus depois)
 
 * Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistwnte
 

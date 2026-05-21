@@ -3,7 +3,8 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Loader2, Globe, Lock, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Globe, Lock, AlertCircle, Code } from 'lucide-react'; // Adicione 'Code'
+import WidgetConfigModal from '@/components/dashboard/assistentes/WidgetConfigModal'; // Importe o modal
 import { createClient } from '@/lib/supabase-browser';
 
 interface PageProps {
@@ -24,6 +25,7 @@ export default function EditarAssistentePage({ params }: PageProps) {
   const [startupFunctionKey, setStartupFunctionKey] = useState('');
   const [showStartupSuggestions, setShowStartupSuggestions] = useState(false);
   const [startupSuggestions, setStartupSuggestions] = useState<typeof availableFunctions>([]);
+  const [isWidgetModalOpen, setIsWidgetModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadAssistant() {
@@ -646,12 +648,12 @@ export default function EditarAssistentePage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Botões de ação — largura total */}
-          <div className="mt-6 flex items-center gap-4">
+           {/* Botões de ação — largura total */}
+          <div className="mt-6 flex flex-col sm:flex-row items-center gap-4">
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition disabled:opacity-50 font-bold shadow-lg shadow-blue-500/20"
+              className="w-full sm:flex-1 flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition disabled:opacity-50 font-bold shadow-lg shadow-blue-500/20"
             >
               {saving ? (
                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -660,15 +662,39 @@ export default function EditarAssistentePage({ params }: PageProps) {
               )}
               Salvar Alterações
             </button>
+
+            {/* NOVO: Botão do Widget */}
+            <button
+              type="button"
+              onClick={() => setIsWidgetModalOpen(true)}
+              className="w-full sm:flex-1 flex items-center justify-center px-6 py-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-white rounded-xl hover:bg-gray-50 dark:hover:bg-white/10 transition font-bold"
+            >
+              <Code className="w-5 h-5 mr-2 text-blue-500" />
+              Inserir Widget no Site
+            </button>
+
             <Link
               href="/dashboard/assistentes"
-              className="px-6 py-3 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition font-bold"
+              className="w-full sm:w-auto px-6 py-3 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition font-bold text-center"
             >
               Cancelar
             </Link>
           </div>
         </form>
+
+        {/* NOVO: Componente do Modal */}
+        <WidgetConfigModal 
+          isOpen={isWidgetModalOpen}
+          onClose={() => setIsWidgetModalOpen(false)}
+          companySlug={assistant.slug}
+          initialConfig={{
+            color: assistant.widget_color || '#3b82f6',
+            text: assistant.widget_text || '💬 Assistente',
+            position: assistant.widget_position || 'right'
+          }}
+        />
       </div>
     </div>
   );
 }
+

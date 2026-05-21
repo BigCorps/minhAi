@@ -101,6 +101,10 @@ export default function FuncoesChat({
   const [audioMutado, setAudioMutado]     = useState(false);
   const [isMobile, setIsMobile]           = useState(false);
 
+  const [conversationHistory, setConversationHistory] = useState
+    { role: 'user' | 'assistant'; content: string }[]
+  >([]);
+
   // Catálogo de funções
   const [todasPorCategoria, setTodasPorCategoria] = useState<FuncoesPorCategoria>({});
   const [funcoesSelecionadas, setFuncoesSelecionadas] = useState<Set<string>>(new Set());
@@ -241,50 +245,61 @@ const playTextSafe = useCallback(async (text: string) => {
     setPendingChanges(true);
   }
 
-  // ── Processar mensagem do usuário ───────────────────────
-  async function processarInput(texto: string) {
-    if (!texto.trim() || isProcessing) return;
-    addUserMessage(texto);
-    setIsProcessing(true);
+// ── Processar mensagem do usuário ───────────────────────
+async function processarInput(texto: string) {
+  if (!texto.trim() || isProcessing) return;
+  addUserMessage(texto);
+  setIsProcessing(true);
 
-    try {
-      const res = await fetch('/api/setup/chat-funcoes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyId,
-          message:         texto,
-          activeFunctions: Array.from(funcoesSelecionadas),
-        }),
+  try {
+    const res = await fetch('/api/setup/chat-funcoes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        companyId,
+        message:             texto,
+        activeFunctions:     Array.from(funcoesSelecionadas),
+        conversationHistory,
+      }),
+    });
+
+    const data = await res.json();
+
+    // Atualizar histórico ANTES de processar actions
+    setConversationHistory(prev => [
+      ...prev,
+      { role: 'user', content: texto },
+      { role: 'assistant', content: data.reply ?? 'Pronto!' },
+    ]);
+
+    if (data.actions?.length > 0) {
+      setFuncoesSelecionadas(prev => {
+        const next = new Set(prev);
+        for (const action of data.actions) {
+          if (action.action === 'enable')  next.add(action.function_key);
+          if (action.action === 'disable') next.delete(action.function_key);
+          // 'configure' não altera o set — já foi salvo server-side
+        }
+        return next;
       });
-
-      const data = await res.json();
-
-      // Aplicar ações retornadas pelo GPT ao estado local
-      if (data.actions?.length > 0) {
-        setFuncoesSelecionadas(prev => {
-          const next = new Set(prev);
-          for (const action of data.actions) {
-            if (action.action === 'enable')  next.add(action.function_key);
-            if (action.action === 'disable') next.delete(action.function_key);
-          }
-          return next;
-        });
-        setPendingChanges(true);
-      }
-
-      const reply = data.reply ?? 'Pronto!';
-      addAssistantMessage(reply);
-      playTextSafe(reply);
-
-    } catch (err) {
-      const errMsg = 'Tive um problema. Pode tentar novamente?';
-      addAssistantMessage(errMsg);
-      playTextSafe(errMsg);
-    } finally {
-      setIsProcessing(false);
+      const hasToggle = data.actions.some(
+        (a: any) => a.action === 'enable' || a.action === 'disable'
+      );
+      if (hasToggle) setPendingChanges(true);
     }
+
+    const reply = data.reply ?? 'Pronto!';
+    addAssistantMessage(reply);
+    playTextSafe(reply);
+
+  } catch (err) {
+    const errMsg = 'Tive um problema. Pode tentar novamente?';
+    addAssistantMessage(errMsg);
+    playTextSafe(errMsg);
+  } finally {
+    setIsProcessing(false);
   }
+}
 
   // ── Salvar alterações no banco ──────────────────────────
   async function salvarAlteracoes() {
@@ -575,7 +590,7 @@ const playTextSafe = useCallback(async (text: string) => {
         }}>
           {audioMutado ? <VolumeX size={18} /> : <Volume2 size={18} />}
         </button>
-        <button onClick={onClose} style={{
+        <button onClick={() => { setConversationHistory([]); onClose(); }} style={{
           padding: 8, background: 'transparent', border: 'none',
           cursor: 'pointer', color: C.textMuted,
         }}>

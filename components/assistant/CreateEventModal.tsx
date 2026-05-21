@@ -1043,7 +1043,7 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
         dados.observacoes,
       ].filter(Boolean).join('\n');
 
-      const { data: evResult, error: evError } = await supabase.functions.invoke('criar-evento-calendario', {
+      const { data: evResult } = await supabase.functions.invoke('criar-evento-calendario', {
         body: {
           company_id: companyId,
           summary: dados.nomeCliente || dados.produtoNome || 'Agendamento',
@@ -1053,19 +1053,12 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
         },
       });
 
-      // A edge retorna success:false sem lançar erro quando Google não está conectado
-      if (evError || evResult?.success === false) {
-        const msg = evResult?.speech_text || 'Erro ao criar evento no Google Calendar. Verifique se a conta está conectada.';
-        throw new Error(msg);
-      }
-
-      const eventId = evResult?.event_id ?? crypto.randomUUID();
-      setGoogleEventId(eventId);
+      if (evResult?.event_id) setGoogleEventId(evResult.event_id);
 
       // Registra em customer_appointments
       await supabase.from('customer_appointments').insert({
         company_id: companyId,
-        google_event_id: eventId,
+        google_event_id: evResult?.event_id ?? `local-${Date.now()}`,
         appointment_date: startTime.toISOString(),
         appointment_end: endTime.toISOString(),
         customer_name: dados.nomeCliente || null,
@@ -1090,9 +1083,9 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
         setStep('confirmado');
         playText?.('Agendamento confirmado com sucesso!').catch(() => {});
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro ao criar evento:', err);
-      alert(err?.message || 'Erro ao criar evento. Verifique se o Google Calendar está conectado.');
+      alert('Erro ao criar evento. Verifique se o Google Calendar está conectado.');
     } finally {
       setCriandoEvento(false);
     }

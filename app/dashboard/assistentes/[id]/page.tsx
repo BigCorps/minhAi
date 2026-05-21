@@ -682,17 +682,16 @@ export default function EditarAssistentePage({ params }: PageProps) {
           </div>
         </form>
 
-        {/* NOVO: Componente do Modal */}
-        <WidgetConfigModal 
-          isOpen={isWidgetModalOpen}
-          onClose={() => setIsWidgetModalOpen(false)}
-          companySlug={assistant.slug}
-          initialConfig={{
-            color: assistant.widget_color || '#3b82f6',
-            text: assistant.widget_text || '💬 Assistente',
-            position: assistant.widget_position || 'right'
-          }}
-        />
+{/* NOVO: Componente do Modal */}
+<WidgetConfigModal 
+  isOpen={isWidgetModalOpen}
+  onClose={() => setIsWidgetModalOpen(false)}
+  company={assistant} // Passa o objeto completo carregado do banco aqui
+  onUpdateSuccess={() => {
+    // Recarrega os dados do assistente na página pai para atualizar o estado local instantaneamente
+    router.refresh(); 
+  }}
+/>
       </div>
     </div>
   );

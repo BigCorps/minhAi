@@ -80,8 +80,6 @@ export default function CategoryCarousel({
 
   const panelRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const chipRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-
   const isDark = theme === 'dark';
 
   useEffect(() => {
@@ -169,16 +167,12 @@ export default function CategoryCarousel({
   const handleCategoryClick = (category: Category, e: React.MouseEvent<HTMLButtonElement>) => {
     if (!category.hasEnabledFunctions) return;
 
-    const chipElement = chipRefs.current.get(category.key);
-
     if (activeCategory === category.key) {
       setActiveCategory(null);
       setClickedChipRect(null);
     } else {
       setActiveCategory(category.key);
-      if (chipElement) {
-        setClickedChipRect(chipElement.getBoundingClientRect());
-      }
+      setClickedChipRect(e.currentTarget.getBoundingClientRect());
     }
   };
 
@@ -357,11 +351,6 @@ export default function CategoryCarousel({
                 return (
                   <button
                     key={`${category.key}-${index}`}
-                    ref={(el) => {
-                      if (el && (!autoScroll || index < categories.length)) {
-                        chipRefs.current.set(category.key, el);
-                      }
-                    }}
                     onClick={(e) => handleCategoryClick(category, e)}
                     disabled={!hasEnabled}
                     className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 active:scale-95 ${

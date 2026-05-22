@@ -372,18 +372,31 @@ let pedidoId: string | null = null;
         return true;
       }
 
-      if (!hasAmount && needsAmount) {
-        // Sem valor — salva como pendente, NÃO dispara ainda
+       if (!hasAmount && needsAmount) {
         console.log(`⏳ Função ${functionKey} pendente — aguardando valor do cliente`);
+
+        // Salva como __pending__ para próxima mensagem já ter contexto
         if (effectiveSessionId) {
           const supabase = createClient();
           supabase
             .from('assistant_sessions')
-            .update({ last_function_keys: [functionKey] })
+            .update({ last_function_keys: [`__pending__${functionKey}`] })
             .eq('id', effectiveSessionId)
             .then(() => {})
             .catch(() => {});
         }
+
+        // Fala para o usuário informar o valor — sem silêncio
+        const labelMetodo: Record<string, string> = {
+          pix_generate:   'o PIX',
+          link_pagamento: 'o link de pagamento',
+          nfc_debito:     'o débito',
+          nfc_credito:    'o crédito',
+          tef_debito:     'o débito na maquininha',
+          tef_credito:    'o crédito na maquininha',
+        }
+        const label = labelMetodo[functionKey] ?? 'o pagamento'
+        await deps.playText(`Qual o valor para ${label}?`)
       }
     } else if (!functionKey && effectiveSessionId) {
       // Groq fez pergunta de esclarecimento — detecta contexto e salva

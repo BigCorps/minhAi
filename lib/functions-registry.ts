@@ -414,7 +414,7 @@ pix_generate: {
           console.error('Erro ao salvar contexto pendente pix_generate', e);
         }
       }
-      await playText('Qual o valor do PIX?');
+      await playText('Posso gerar um pix, basta me pedir um Pix e qual valor você deseja.');
       return false;
     }
 

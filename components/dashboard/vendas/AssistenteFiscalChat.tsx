@@ -235,41 +235,38 @@ export default function AssistenteFiscalChat({
     }
   }, [voiceRecorder]);
 
-  const handleStopVoice = useCallback(async () => {
-    try {
-      setIsTranscribing(true);
-      const audioBlob = await voiceRecorder.stopRecording();
+// DEPOIS
+const handleStopVoice = useCallback(async () => {
+  try {
+    setIsTranscribing(true);
+    const audioBlob = await voiceRecorder.stopRecording();
 
-      // Transcrever com Whisper
-      const formData = new FormData();
-      formData.append('file', audioBlob, 'audio.webm');
-      formData.append('model', 'whisper-1');
-      formData.append('language', 'pt');
+    const reader = new FileReader();
+    reader.readAsDataURL(audioBlob);
+    const base64Audio = await new Promise<string>((resolve) => {
+      reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+    });
 
-      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
-        },
-        body: formData,
-      });
+    const response = await fetch('/api/voice/transcribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ audio: base64Audio }),
+    });
 
-      if (!response.ok) {
-        throw new Error('Erro ao transcrever áudio');
-      }
+    if (!response.ok) throw new Error('Erro ao transcrever áudio');
 
-      const { text } = await response.json();
-      
-      if (text && text.trim()) {
-        await enviarMensagem(text.trim());
-      }
-    } catch (err) {
-      console.error('Erro ao processar voz:', err);
-      setError('Erro ao transcrever áudio');
-    } finally {
-      setIsTranscribing(false);
+    const { text } = await response.json();
+
+    if (text?.trim()) {
+      await enviarMensagem(text.trim());
     }
-  }, [voiceRecorder, enviarMensagem]);
+  } catch (err) {
+    console.error('Erro ao processar voz:', err);
+    setError('Erro ao transcrever áudio');
+  } finally {
+    setIsTranscribing(false);
+  }
+}, [voiceRecorder, enviarMensagem]);
 
   // Handlers
   const handleSubmit = (e: React.FormEvent) => {

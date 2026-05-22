@@ -21,6 +21,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
+import VirtualKeyboard from '@/components/assistant/VirtualKeyboard';
 
 // ── Mapa de Componentes (todos lazy loaded) ───────────────────
 const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
@@ -311,7 +312,7 @@ interface ActionModalsProps {
   onConfirmPix?: (data: any) => void;
   onCancelPix?: () => void;
   playText?: (text: string) => Promise<void>;
-  // ✅ ADICIONAR
+  isKioskMode?: boolean;
   printConfig?: {
     print_on_purchase: boolean;
     print_on_queue: boolean;
@@ -328,13 +329,53 @@ export function ActionModals({
   onConfirmPix,
   onCancelPix,
   playText,
+  isKioskMode = false,
   printConfig,
 }: ActionModalsProps) {
   const [mounted, setMounted] = useState(false);
+  const [kioskKeyboardTarget, setKioskKeyboardTarget] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const [kioskInputValue, setKioskInputValue] = useState('');
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Detecta foco em inputs dentro dos modais quando em modo kiosk
+  useEffect(() => {
+    if (!isKioskMode || !activeModal) {
+      setKioskKeyboardTarget(null);
+      return;
+    }
+
+    const handleFocusIn = (e: FocusEvent) => {
+      const el = e.target as HTMLElement;
+      if (
+        (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') &&
+        (el as HTMLInputElement).inputMode !== 'none' // respeita inputMode="none" (já tem teclado próprio)
+      ) {
+        const input = el as HTMLInputElement | HTMLTextAreaElement;
+        setKioskKeyboardTarget(input);
+        setKioskInputValue(input.value);
+        input.blur(); // evita que o teclado nativo abra
+      }
+    };
+
+    const handleFocusOut = (e: FocusEvent) => {
+      const related = (e as FocusEvent & { relatedTarget: EventTarget | null }).relatedTarget as HTMLElement | null;
+      // Só fecha se o foco não foi para outro input
+      if (!related || (related.tagName !== 'INPUT' && related.tagName !== 'TEXTAREA')) {
+        // Pequeno delay para não fechar ao clicar em tecla do VirtualKeyboard
+        setTimeout(() => setKioskKeyboardTarget(null), 150);
+      }
+    };
+
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+    };
+  }, [isKioskMode, activeModal]);
 
   // Bloqueia links externos quando em modo kiosk
   useEffect(() => {
@@ -389,18 +430,64 @@ export function ActionModals({
     return null;
   }
 
-  return createPortal(
-    <Component
-      data={activeModal.data}
-      onClose={onClose}
-      theme={theme}
-      playText={playText}
-      onConfirmPix={onConfirmPix}
-      onCancelPix={onCancelPix}
-      printOnQueue={printConfig?.print_on_queue}
-      printOnPayment={printConfig?.print_on_payment}
-      hasActivePlan={printConfig?.hasActivePlan}
-    />,
+return createPortal(
+    <>
+      <Component
+        data={activeModal.data}
+        onClose={onClose}
+        theme={theme}
+        playText={playText}
+        onConfirmPix={onConfirmPix}
+        onCancelPix={onCancelPix}
+        printOnQueue={printConfig?.print_on_queue}
+        printOnPayment={printConfig?.print_on_payment}
+        hasActivePlan={printConfig?.hasActivePlan}
+      />
+      {isKioskMode && kioskKeyboardTarget && (
+        <VirtualKeyboard
+          theme={theme}
+          onKey={(char) => {
+            const el = kioskKeyboardTarget;
+            const newValue = el.value + char;
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+              el.tagName === 'INPUT' ? window.HTMLInputElement.prototype : window.HTMLTextAreaElement.prototype,
+              'value'
+            )?.set;
+            nativeInputValueSetter?.call(el, newValue);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            setKioskInputValue(newValue);
+          }}
+          onBackspace={() => {
+            const el = kioskKeyboardTarget;
+            const newValue = el.value.slice(0, -1);
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+              el.tagName === 'INPUT' ? window.HTMLInputElement.prototype : window.HTMLTextAreaElement.prototype,
+              'value'
+            )?.set;
+            nativeInputValueSetter?.call(el, newValue);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            setKioskInputValue(newValue);
+          }}
+          onEnter={() => {
+            kioskKeyboardTarget.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            kioskKeyboardTarget.closest('form')?.dispatchEvent(new Event('submit', { bubbles: true }));
+            setKioskKeyboardTarget(null);
+          }}
+          onClose={() => setKioskKeyboardTarget(null)}
+          onReplace={(char) => {
+            const el = kioskKeyboardTarget;
+            const newValue = el.value.slice(0, -1) + char;
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+              el.tagName === 'INPUT' ? window.HTMLInputElement.prototype : window.HTMLTextAreaElement.prototype,
+              'value'
+            )?.set;
+            nativeInputValueSetter?.call(el, newValue);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            setKioskInputValue(newValue);
+          }}
+        />
+      )}
+    </>,
     document.body
   );
 }

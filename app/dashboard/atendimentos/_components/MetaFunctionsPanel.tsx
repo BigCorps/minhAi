@@ -89,11 +89,10 @@ const VENDAS_META_FUNCTION_KEYS = new Set([
   'chatgpt', 'nossa_marca', 'meu_sistema',
 ]);
 
-// ─── Pill classes ─────────────────────────────────────────────────────────────
-
+// ─── Pill classes ─────────
 const pillCommon =
   'inline-flex items-center justify-center gap-1 ' +
-  'px-2 py-1 rounded-full text-xs font-medium border ' +
+  'px-2 py-1 rounded-full text-xs sm:text-xs font-medium border ' +
   'transition-all duration-150 whitespace-nowrap';
 
 const pillInactive =

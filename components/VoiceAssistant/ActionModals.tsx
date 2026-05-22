@@ -333,49 +333,51 @@ export function ActionModals({
   printConfig,
 }: ActionModalsProps) {
   const [mounted, setMounted] = useState(false);
-  const [kioskKeyboardTarget, setKioskKeyboardTarget] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
+const [kioskKeyboardTarget, setKioskKeyboardTarget] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const [kioskInputValue, setKioskInputValue] = useState('');
+  const kioskKeyboardTargetRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Detecta foco em inputs dentro dos modais quando em modo kiosk
+  // Intercepta cliques em inputs ANTES do foco, sem deixar o teclado nativo abrir
   useEffect(() => {
     if (!isKioskMode || !activeModal) {
       setKioskKeyboardTarget(null);
+      kioskKeyboardTargetRef.current = null;
       return;
     }
 
-    const handleFocusIn = (e: FocusEvent) => {
+    const handlePointerDown = (e: PointerEvent) => {
       const el = e.target as HTMLElement;
       if (
         (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') &&
-        (el as HTMLInputElement).inputMode !== 'none' // respeita inputMode="none" (já tem teclado próprio)
+        (el as HTMLInputElement).inputMode !== 'none' &&
+        !(el as HTMLInputElement).readOnly
       ) {
+        // Impede o foco nativo (e portanto o teclado do browser)
+        e.preventDefault();
         const input = el as HTMLInputElement | HTMLTextAreaElement;
+        kioskKeyboardTargetRef.current = input;
         setKioskKeyboardTarget(input);
         setKioskInputValue(input.value);
-        input.blur(); // evita que o teclado nativo abra
       }
     };
 
-    const handleFocusOut = (e: FocusEvent) => {
-      const related = (e as FocusEvent & { relatedTarget: EventTarget | null }).relatedTarget as HTMLElement | null;
-      // Só fecha se o foco não foi para outro input
-      if (!related || (related.tagName !== 'INPUT' && related.tagName !== 'TEXTAREA')) {
-        // Pequeno delay para não fechar ao clicar em tecla do VirtualKeyboard
-        setTimeout(() => setKioskKeyboardTarget(null), 150);
-      }
-    };
-
-    document.addEventListener('focusin', handleFocusIn);
-    document.addEventListener('focusout', handleFocusOut);
+    document.addEventListener('pointerdown', handlePointerDown);
     return () => {
-      document.removeEventListener('focusin', handleFocusIn);
-      document.removeEventListener('focusout', handleFocusOut);
+      document.removeEventListener('pointerdown', handlePointerDown);
     };
   }, [isKioskMode, activeModal]);
+
+  // Fecha o teclado se o modal fecha
+  useEffect(() => {
+    if (!activeModal) {
+      setKioskKeyboardTarget(null);
+      kioskKeyboardTargetRef.current = null;
+    }
+  }, [activeModal]);
 
   // Bloqueia links externos quando em modo kiosk
   useEffect(() => {

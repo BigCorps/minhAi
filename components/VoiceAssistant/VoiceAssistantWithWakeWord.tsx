@@ -2402,6 +2402,7 @@ const getStatusMessage = (maximized = false) => {
             onConfirmPix={handleConfirmPixLocal}
             onCancelPix={handleCancelPixLocal}
             playText={playText}
+            isKioskMode={isKioskMode}
             printConfig={printConfig}
           />
         )}
@@ -2419,6 +2420,7 @@ const getStatusMessage = (maximized = false) => {
         onConfirmPix={handleConfirmPixLocal}
         onCancelPix={handleCancelPixLocal}
         playText={playText}
+        isKioskMode={isKioskMode}
         printConfig={printConfig}
       />
     );
@@ -2669,6 +2671,7 @@ const getStatusMessage = (maximized = false) => {
           onConfirmPix={handleConfirmPixLocal}
           onCancelPix={handleCancelPixLocal}
           playText={playText}
+          isKioskMode={isKioskMode}
           printConfig={printConfig}
         />
       )}

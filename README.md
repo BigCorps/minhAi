@@ -2,8 +2,6 @@
 
 * Editar Video de pitch para Shark Tank e Inatel (vídeos gravados, gravar também a tela para mostrar mais funcionalidades e editar)
 
-* Serviços Meta: Implementar Gestor de Agenda, antifraude, Auxiliar Fiscal, auxiliar de Relatórios e Auxilar de Produção - Pedido e Orçamento ja concluidos
-
 * Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 .
 ## IDÉIAS

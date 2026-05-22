@@ -366,6 +366,77 @@ handler: async ({ transcript, playText, setActiveModal, companyId, sessionId }) 
   },
 },
 
+pix_generate: {
+  functionKey: 'pix_generate',
+  functionName: 'PIX',
+  category: 'payment',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'pix', 'gerar pix', 'cobrar pix',
+    'pagamento pix', 'chave pix',
+    'pagar com pix', 'receber pix',
+  ],
+
+  examplePhrases: [
+    'Gerar PIX de 50 reais',
+    'Cobrar 100 reais no PIX',
+    'Quero receber por PIX',
+  ],
+
+  requiresInput: true,
+  inputType: 'number',
+  inputPrompt: 'Qual o valor do PIX?',
+
+  description: 'Gera QR Code PIX para recebimento.',
+  shortDescription: 'Gerar QR Code PIX',
+  icon: '💠',
+  color: '#32BCAD',
+
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ transcript, playText, setActiveModal, companyId, sessionId }) => {
+    const amount = extractAmount(transcript ?? '');
+
+    if (!amount) {
+      if (sessionId) {
+        try {
+          const supabase = createClient();
+          await supabase
+            .from('assistant_sessions')
+            .update({ last_function_keys: ['__pending__pix_generate'] })
+            .eq('id', sessionId)
+            .eq('company_id', companyId);
+        } catch (e) {
+          console.error('Erro ao salvar contexto pendente pix_generate', e);
+        }
+      }
+      await playText('Qual o valor do PIX?');
+      return false;
+    }
+
+    await playText(
+      `Gerando PIX de ${amount.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      })}...`
+    );
+
+    setActiveModal?.({
+      type: 'PIXQRCodeDisplay',
+      data: {
+        companyId,
+        amount_cents: Math.round(amount * 100),
+      },
+    });
+
+    return true;
+  },
+},
+
   nfc_debito: {
     functionKey: 'nfc_debito',
     functionName: 'NFC Débito',

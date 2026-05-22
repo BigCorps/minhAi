@@ -268,27 +268,26 @@ async function processarInput(texto: string) {
       { role: 'assistant', content: data.reply ?? 'Pronto!' },
     ]);
 
-    if (data.actions?.length > 0) {
-      setFuncoesSelecionadas(prev => {
-const configActions = data.actions.filter((a: any) => a.action === 'configure');
-if (configActions.length > 0) {
-  // O reply do GPT já confirma — mas garantir que pendingChanges não fica preso
-  // Forçar reload das funções para refletir o que foi salvo
-  await loadFunctions();
-}
-        const next = new Set(prev);
-        for (const action of data.actions) {
-          if (action.action === 'enable')  next.add(action.function_key);
-          if (action.action === 'disable') next.delete(action.function_key);
-          // 'configure' não altera o set — já foi salvo server-side
-        }
-        return next;
-      });
-      const hasToggle = data.actions.some(
-        (a: any) => a.action === 'enable' || a.action === 'disable'
-      );
-      if (hasToggle) setPendingChanges(true);
+if (data.actions?.length > 0) {
+  setFuncoesSelecionadas(prev => {
+    const next = new Set(prev);
+    for (const action of data.actions) {
+      if (action.action === 'enable')  next.add(action.function_key);
+      if (action.action === 'disable') next.delete(action.function_key);
     }
+    return next;
+  });
+
+  const hasToggle = data.actions.some(
+    (a: any) => a.action === 'enable' || a.action === 'disable'
+  );
+  if (hasToggle) setPendingChanges(true);
+
+  const hasConfig = data.actions.some(
+    (a: any) => a.action === 'configure'
+  );
+  if (hasConfig) await loadFunctions();  // ← agora fora do callback, no escopo async correto
+}
 
     const reply = data.reply ?? 'Pronto!';
     addAssistantMessage(reply);

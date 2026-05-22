@@ -633,33 +633,43 @@ await supabase
           </div>
         </div>
 
-{/* Desktop: sempre 10 colunas em tela grande, 5+5 em tela menor */}
-<div className="hidden sm:grid gap-2 grid-cols-5 lg:grid-cols-10">
-  <button
-    onClick={() => setSelectedCategories([])}
-    className={`${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}
-  >
-    Todas as Funções
-  </button>
-  {filteredCategories.map(cat => {
-    const isSelected = selectedCategories.includes(cat.key);
-    return (
-      <button
-        key={cat.key}
-        onClick={() => setSelectedCategories(prev =>
-          prev.includes(cat.key) ? prev.filter(k => k !== cat.key) : [...prev, cat.key]
-        )}
-        className={`${pillCommon} ${isSelected ? pillActiveColored : pillInactive}`}
-        style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
-      >
-        <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.85)' : cat.color }}
-        />
-        {cat.name}
-      </button>
-    );
-  })}
+{/* Desktop: 2 linhas sempre alinhadas, dividindo os itens ao meio */}
+<div className="hidden sm:flex flex-col gap-2">
+  {(() => {
+    const allItems = [{ key: '__all__', name: 'Todas', color: '' }, ...filteredCategories];
+    const half = Math.ceil(allItems.length / 2);
+    const rows = [allItems.slice(0, half), allItems.slice(half)];
+    return rows.map((row, rowIdx) => (
+      <div key={rowIdx} className="flex gap-2">
+        {row.map(item => {
+          const isAll = item.key === '__all__';
+          const isSelected = !isAll && selectedCategories.includes(item.key);
+          const isActive = isAll ? isAllSelected : isSelected;
+          return (
+            <button
+              key={item.key}
+              onClick={() => {
+                if (isAll) setSelectedCategories([]);
+                else setSelectedCategories(prev =>
+                  prev.includes(item.key) ? prev.filter(k => k !== item.key) : [...prev, item.key]
+                );
+              }}
+              className={`flex-1 ${pillCommon} py-1.5 ${isActive ? (isAll ? pillActiveNeutral : pillActiveColored) : pillInactive}`}
+              style={isActive && !isAll ? { backgroundColor: item.color, borderColor: item.color } : {}}
+            >
+              {!isAll && (
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: isActive ? 'rgba(255,255,255,0.85)' : item.color }}
+                />
+              )}
+              {item.name}
+            </button>
+          );
+        })}
+      </div>
+    ));
+  })()}
 </div>
       </div>
 

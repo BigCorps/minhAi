@@ -1,6 +1,6 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* Conferir a troca entre modos no modo kiosk que o assistente para de funcionar. Conferir os microfones dos auxiliares e o funcionamento do teclado no modo kiosk. Conferir TEF no checkout e disponibilizar débito e crédito separadamente
+* Conferir TEF no checkout e disponibilizar débito e crédito separadamente
 
 * Editar Video de pitch para Shark Tank e Inatel (vídeos gravados, gravar também a tela para mostrar mais funcionalidades e editar)
 

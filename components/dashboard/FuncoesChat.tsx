@@ -157,6 +157,16 @@ export default function FuncoesChat({
       );
       setFuncoesSelecionadas(activeSet);
 
+      if (!hasStartedRef.current) {
+  hasStartedRef.current = true;
+  const count = activeSet.size; // usa o valor direto, não o state ainda desatualizado
+  const msg = assistantType === 'vendas'
+    ? `Olá! Sou o auxiliar de funções do ${companyName}. Você tem ${count} função(ões) ativa(s). Me diga o que quer ativar, desativar ou explicar — pode falar naturalmente!`
+    : `Olá! Sou o auxiliar de funções do ${companyName}. Você tem ${count} função(ões) ativa(s) no minhAi Smart. Pode me pedir para ativar, desativar, explicar ou recomendar funções — é só falar!`;
+  addAssistantMessage(msg);
+  playTextSafe(msg);
+}
+
       // Agrupar por categoria
       const porCategoria: FuncoesPorCategoria = {};
       for (const fn of allFns ?? []) {
@@ -169,20 +179,6 @@ export default function FuncoesChat({
       console.error('Erro ao carregar funções:', err);
     }
   }
-
-  // ── Mensagem inicial ────────────────────────────────────
-  useEffect(() => {
-    if (hasStartedRef.current) return;
-    hasStartedRef.current = true;
-
-    const activasCount = funcoesSelecionadas.size;
-    const msg = assistantType === 'vendas'
-      ? `Olá! Sou o auxiliar de funções do ${companyName}. Você tem ${activasCount} função(ões) ativa(s). Me diga o que quer ativar, desativar ou explicar — pode falar naturalmente!`
-      : `Olá! Sou o auxiliar de funções do ${companyName}. Você tem ${activasCount} função(ões) ativa(s) no minhAi Smart. Pode me pedir para ativar, desativar, explicar ou recomendar funções — é só falar!`;
-
-    addAssistantMessage(msg);
-    playTextSafe(msg);
-  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
    cancelledRef.current = false;
@@ -274,6 +270,12 @@ async function processarInput(texto: string) {
 
     if (data.actions?.length > 0) {
       setFuncoesSelecionadas(prev => {
+const configActions = data.actions.filter((a: any) => a.action === 'configure');
+if (configActions.length > 0) {
+  // O reply do GPT já confirma — mas garantir que pendingChanges não fica preso
+  // Forçar reload das funções para refletir o que foi salvo
+  await loadFunctions();
+}
         const next = new Set(prev);
         for (const action of data.actions) {
           if (action.action === 'enable')  next.add(action.function_key);
@@ -628,7 +630,7 @@ async function processarInput(texto: string) {
       background: 'rgba(0,0,0,0.65)', padding: 20,
     }}>
       <div style={{
-        width: '100%', maxWidth: 960, height: '88vh',
+        width: '100%', maxWidth: 860, maxHeight: '88vh', 
         background: C.bg, borderRadius: 16, border: `1px solid ${C.border}`,
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>

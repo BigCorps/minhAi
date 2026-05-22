@@ -73,7 +73,7 @@ export default function SlugHeaderWrapper({
   const [isPortrait, setIsPortrait] = useState(false);
   const [isKioskMode, setIsKioskMode] = useState(false);
   const isKioskModeRef = useRef(false);
- 
+
   // mini-overlay de saída do kiosk (próprio deste componente)
   const [showExitOverlay, setShowExitOverlay] = useState(false);
   const [exitPasswordInput, setExitPasswordInput] = useState('');
@@ -84,6 +84,7 @@ export default function SlugHeaderWrapper({
   const [setupPasswordInput, setSetupPasswordInput] = useState('');
   const [setupPasswordError, setSetupPasswordError] = useState(false);
   const [overlayKeyboardTarget, setOverlayKeyboardTarget] = useState<'setup' | 'exit' | null>(null);
+  const isExitingRef = useRef(false);
 
   const kioskPasswordRef = useRef<string | null>(null);
  
@@ -117,12 +118,15 @@ export default function SlugHeaderWrapper({
  
     // FIX 1: lê estado do sessionStorage ao montar
     // Cobre navegação entre /ia, /vendas, /fila, /link sem precisar do evento
-    const saved = readKioskSession();
-    if (saved?.active) {
-      isKioskModeRef.current = true;
-      setIsKioskMode(true);
-      kioskPasswordRef.current = saved.password;
-    }
+const saved = readKioskSession();
+if (saved?.active) {
+  isKioskModeRef.current = true;
+  setIsKioskMode(true);
+  kioskPasswordRef.current = saved.password;
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+}
  
     const checkOrientation = () => setIsPortrait(window.innerHeight > window.innerWidth);
     checkOrientation();
@@ -152,10 +156,22 @@ export default function SlugHeaderWrapper({
     };
     window.addEventListener('eai:kioskExitConfirmed', handleExitConfirmed);
  
+   const isExitingRef = { current: false };
+
+    // Restaura fullscreen automaticamente se o kiosk ainda está ativo
+    // e a saída do fullscreen NÃO foi intencional (ex: troca de página)
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement && isKioskModeRef.current && !isExitingRef.current) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+
     return () => {
       window.removeEventListener('resize', checkOrientation);
       window.removeEventListener('eai:kioskModeChange', handleKioskChange as EventListener);
       window.removeEventListener('eai:kioskExitConfirmed', handleExitConfirmed);
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
     };
   }, []);
  
@@ -246,6 +262,7 @@ export default function SlugHeaderWrapper({
     // para que ele suspenda o handler de fullscreenchange (evita re-enter em touch)
     window.dispatchEvent(new CustomEvent('eai:kioskWillExit'));
 
+    isExitingRef.current = true;
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
     } catch { /* silencioso */ }

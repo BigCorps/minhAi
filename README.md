@@ -1,7 +1,5 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* Conferir TEF no checkout e disponibilizar débito e crédito separadamente
-
 * Editar Video de pitch para Shark Tank e Inatel (vídeos gravados, gravar também a tela para mostrar mais funcionalidades e editar)
 
 * Serviços Meta: Implementar Gestor de Agenda, antifraude, Auxiliar Fiscal, auxiliar de Relatórios e Auxilar de Produção - Pedido e Orçamento ja concluidos

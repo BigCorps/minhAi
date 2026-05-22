@@ -268,10 +268,10 @@ const div = document.createElement('div');
           }
         } else if (metodo === 'tef_debito' || metodo === 'tef_credito') {
           if (!mpOrderId) return;
-          const { data: od } = await supabase.functions.invoke('consultar-order-mp-point', {
-            body: { order_id: mpOrderId, company_id: companyId },
-          });
-          if (od?.status === 'paid' || od?.status === 'processed') {
+const { data: od } = await supabase.functions.invoke('consultar-order-mp-point', {
+  body: { order_id: mpOrderId },
+});
+if (od?.status === 'paid') {
             const { data: p } = await supabase.from('pedidos').select('status').eq('id', pedidoId).single();
             if (p?.status !== 'pago') await supabase.rpc('confirmar_pedido_pago', { p_pedido_id: pedidoId });
             clearInterval(interval); setPolling(false);
@@ -448,10 +448,10 @@ if (metodo === 'tef_debito' || metodo === 'tef_credito') {
       payment_type: metodo === 'tef_debito' ? 'debit_card' : 'credit_card',
     },
   });
-  if (orderErr || !orderData?.id) throw new Error('Erro ao criar order na maquininha');
-  await supabase.from('mp_orders').update({ pedido_id: pedido.id }).eq('id', orderData.id);
+  if (orderErr || !orderData?.order_id) throw new Error('Erro ao criar order na maquininha');
+  await supabase.from('mp_orders').update({ pedido_id: pedido.id }).eq('id', orderData.order_id);
   await atualizarStatusPedido(pedido.id, 'aguardando_pagamento');
-  setMpOrderId(orderData.id); setStep('aguardando'); setPolling(true);
+  setMpOrderId(orderData.order_id); setStep('aguardando'); setPolling(true);
   playText?.(`Insira o cartão ${metodo === 'tef_credito' ? 'de crédito' : 'de débito'} na maquininha Point para pagar.`).catch(() => {}); return;
 }
     } catch (err: any) {

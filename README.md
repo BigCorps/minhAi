@@ -1,7 +1,5 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* Voltar ao Groq pois a resposta está muito devagar e conferir o pix sem valor que não está funcionando, deveria pedir o valor como antes.
-
 * Conferir a troca entre modos no modo kiosk que o assistente para de funcionar. Conferir os microfones dos auxiliares e o funcionamento do teclado no modo kiosk. Conferir TEF no checkout e disponibilizar débito e crédito separadamente
 
 * Editar Video de pitch para Shark Tank e Inatel (vídeos gravados, gravar também a tela para mostrar mais funcionalidades e editar)
@@ -9,11 +7,10 @@
 * Serviços Meta: Implementar Gestor de Agenda, antifraude, Auxiliar Fiscal, auxiliar de Relatórios e Auxilar de Produção - Pedido e Orçamento ja concluidos
 
 * Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
+.
+## IDÉIAS
 
 * Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistente
-.
-
-## IDÉIAS
 
 * Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
 

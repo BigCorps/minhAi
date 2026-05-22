@@ -1,8 +1,10 @@
 ## minhAI - Uma IA pra chamar de sua!
 
+* Claude - pedidos: ajustar flow agenda e depois conferir os flows de fraude e fiscal e entao ajustar todos os flows para cobrar 5 créditos por etapa final e não 1 crédito por interação, mas toda a interação continua aparecendo no histórico.
+
 * Conferir se o widget pode ficar inframe agora que condicionados o assistente a abrir só como modo texto, sem precisar de câmera, localização, apenas o microfone 
 
-* Editar Video de pitch para Shark Tank e Inatel (vídeos gravados, gravar também a tela para mostrar mais funcionalidades e editar)
+* Editar Video de pitch para Shark Tank e Inatel (áudio gravado no Manus, vídeos gravados, gravar também a tela para mostrar mais funcionalidades e editar)
 
 * Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 .

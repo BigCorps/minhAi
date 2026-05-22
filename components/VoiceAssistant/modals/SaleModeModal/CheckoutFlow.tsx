@@ -15,7 +15,7 @@ import { triggerAutoPrint, formatPurchaseReceipt } from '@/lib/auto-print';
 import RegistrationDisplay from '@/components/assistant/RegistrationDisplay';
 
 type Step = 'cliente' | 'pagamento' | 'aguardando' | 'confirmado' | 'erro';
-type MetodoPagamento = 'pix' | 'nfc' | 'tef' | 'dinheiro' | 'link';
+type MetodoPagamento = 'pix' | 'nfc_debito' | 'nfc_credito' | 'tef_debito' | 'tef_credito' | 'dinheiro' | 'link';
 
 interface CheckoutFlowProps {
   companyId: string;
@@ -251,11 +251,11 @@ const div = document.createElement('div');
   // Polling NFC / TEF
   useEffect(() => {
     if (!polling || !pedidoId) return;
-    if (metodo !== 'nfc' && metodo !== 'tef') return;
+    if (!['nfc_debito','nfc_credito','tef_debito','tef_credito'].includes(metodo)) return;
     const supabase = createClient();
     const interval = setInterval(async () => {
       try {
-        if (metodo === 'nfc') {
+        if (metodo === 'nfc_debito' || metodo === 'nfc_credito') {
           if (!cobrancaId) return;
           const { data: cob } = await supabase.from('cobrancas').select('status').eq('id', cobrancaId).single();
           if (cob?.status === 'PAGA') {
@@ -266,7 +266,7 @@ const div = document.createElement('div');
             setStep('confirmado');
             playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {}); clear();
           }
-        } else if (metodo === 'tef') {
+        } else if (metodo === 'tef_debito' || metodo === 'tef_credito') {
           if (!mpOrderId) return;
           const { data: od } = await supabase.functions.invoke('consultar-order-mp-point', {
             body: { order_id: mpOrderId, company_id: companyId },
@@ -358,7 +358,11 @@ const div = document.createElement('div');
         cliente_nome: clienteNome || undefined,
         cliente_telefone: clienteTel || undefined,
         itens,
-        metodo_pagamento: metodo === 'link' ? 'nfc' : metodo,
+        metodo_pagamento: metodo === 'link'
+  ? 'nfc'
+  : (metodo === 'nfc_debito' || metodo === 'nfc_credito') ? 'nfc'
+  : (metodo === 'tef_debito' || metodo === 'tef_credito') ? 'tef'
+  : metodo,
         observacoes: observacaoEntrega || undefined,
       });
       setPedidoId(pedido.id);
@@ -386,21 +390,21 @@ const div = document.createElement('div');
         playText?.('Escaneie o QR code para pagar via PIX.').catch(() => {}); return;
       }
 
-      if (metodo === 'nfc') {
-        const { data: cobData, error: cobErr } = await supabase.functions.invoke('gerar-cobranca-infinitepay', {
-          body: {
-            company_id: companyId,
-            amount_cents: Math.round(total * 100),
-            tipo: 'NFC',
-            nfc_payment_method: 'debit',
-            descricao: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`,
-          },
-        });
-        if (cobErr || !cobData?.cobranca_id) throw new Error('Erro ao gerar cobrança NFC');
-        await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', cobData.cobranca_id);
-        setCobrancaId(cobData.cobranca_id); setStep('aguardando'); setPolling(true);
-        playText?.('Aproxime o cartão na maquininha para pagar.').catch(() => {}); return;
-      }
+if (metodo === 'nfc_debito' || metodo === 'nfc_credito') {
+  const { data: cobData, error: cobErr } = await supabase.functions.invoke('gerar-cobranca-infinitepay', {
+    body: {
+      company_id: companyId,
+      amount_cents: Math.round(total * 100),
+      tipo: 'NFC',
+      nfc_payment_method: metodo === 'nfc_debito' ? 'debit' : 'credit',
+      descricao: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`,
+    },
+  });
+  if (cobErr || !cobData?.cobranca_id) throw new Error('Erro ao gerar cobrança NFC');
+  await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', cobData.cobranca_id);
+  setCobrancaId(cobData.cobranca_id); setStep('aguardando'); setPolling(true);
+  playText?.(`Aproxime o cartão ${metodo === 'nfc_credito' ? 'de crédito' : 'de débito'} na maquininha para pagar.`).catch(() => {}); return;
+}
 
       if (metodo === 'link') {
         const { data: cobData, error: cobErr } = await supabase.functions.invoke('gerar-cobranca-infinitepay', {
@@ -435,21 +439,21 @@ const div = document.createElement('div');
         return;
       }
 
-      if (metodo === 'tef') {
-        const { data: orderData, error: orderErr } = await supabase.functions.invoke('criar-order-mp-point', {
-          body: {
-            company_id: companyId,
-            amount_cents: Math.round(total * 100),
-            description: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`,
-            payment_type: 'debit_card',
-          },
-        });
-        if (orderErr || !orderData?.id) throw new Error('Erro ao criar order na maquininha');
-        await supabase.from('mp_orders').update({ pedido_id: pedido.id }).eq('id', orderData.id);
-        await atualizarStatusPedido(pedido.id, 'aguardando_pagamento');
-        setMpOrderId(orderData.id); setStep('aguardando'); setPolling(true);
-        playText?.('Insira o cartão na maquininha Point para pagar.').catch(() => {}); return;
-      }
+if (metodo === 'tef_debito' || metodo === 'tef_credito') {
+  const { data: orderData, error: orderErr } = await supabase.functions.invoke('criar-order-mp-point', {
+    body: {
+      company_id: companyId,
+      amount_cents: Math.round(total * 100),
+      description: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`,
+      payment_type: metodo === 'tef_debito' ? 'debit_card' : 'credit_card',
+    },
+  });
+  if (orderErr || !orderData?.id) throw new Error('Erro ao criar order na maquininha');
+  await supabase.from('mp_orders').update({ pedido_id: pedido.id }).eq('id', orderData.id);
+  await atualizarStatusPedido(pedido.id, 'aguardando_pagamento');
+  setMpOrderId(orderData.id); setStep('aguardando'); setPolling(true);
+  playText?.(`Insira o cartão ${metodo === 'tef_credito' ? 'de crédito' : 'de débito'} na maquininha Point para pagar.`).catch(() => {}); return;
+}
     } catch (err: any) {
       setErro(err?.message || 'Erro ao processar pagamento'); setStep('erro');
     } finally { setLoading(false); }
@@ -578,11 +582,13 @@ const handleEmitirCupom = useCallback((pedidoId: string) => {
       desc: string;
       dbKeys: string[];
     }[] = [
-      { key: 'pix',      label: 'PIX',               Icon: Zap,          desc: 'QR Code instantâneo',       dbKeys: ['pix_generate'] },
-      { key: 'link',     label: 'Link InfinitePay',  Icon: ExternalLink, desc: 'Cliente paga pelo celular', dbKeys: ['link_pagamento'] },
-      { key: 'nfc',      label: 'Cartão NFC',        Icon: Smartphone,   desc: 'Aproximar cartão',          dbKeys: ['nfc_debito', 'nfc_credito'] },
-      { key: 'tef',      label: 'TEF Maquininha',    Icon: CreditCard,   desc: 'Inserir na maquininha',     dbKeys: ['tef_debito', 'tef_credito'] },
-      { key: 'dinheiro', label: 'Dinheiro',          Icon: Banknote,     desc: 'Pagamento em espécie',      dbKeys: ['dinheiro'] },
+      { key: 'pix',         label: 'PIX',               Icon: Zap,          desc: 'QR Code instantâneo',       dbKeys: ['pix_generate'] },
+      { key: 'link',        label: 'Link InfinitePay',  Icon: ExternalLink, desc: 'Cliente paga pelo celular', dbKeys: ['link_pagamento'] },
+      { key: 'nfc_debito',  label: 'NFC Débito',        Icon: Smartphone,   desc: 'Aproximar — débito',        dbKeys: ['nfc_debito'] },
+      { key: 'nfc_credito', label: 'NFC Crédito',       Icon: Smartphone,   desc: 'Aproximar — crédito',       dbKeys: ['nfc_credito'] },
+      { key: 'tef_debito',  label: 'TEF Débito',        Icon: CreditCard,   desc: 'Maquininha — débito',       dbKeys: ['tef_debito'] },
+      { key: 'tef_credito', label: 'TEF Crédito',       Icon: CreditCard,   desc: 'Maquininha — crédito',      dbKeys: ['tef_credito'] },
+      { key: 'dinheiro',    label: 'Dinheiro',          Icon: Banknote,     desc: 'Pagamento em espécie',      dbKeys: ['dinheiro'] },
     ];
 
     const metodosFiltrados = metodosAtivos === undefined
@@ -814,22 +820,26 @@ const handleEmitirCupom = useCallback((pedidoId: string) => {
       </div>
     );
 
-    // NFC / TEF — simples centralizado
-    return (
-      <div className="w-full flex flex-col items-center gap-4">
-        <div className="text-center">
-          <p className={`text-base font-bold mb-0.5 ${textPrimary}`}>
-            {metodo === 'nfc' ? 'Aproxime o cartão' : 'Insira o cartão na maquininha'}
-          </p>
-          <p className={`text-xs ${textMuted}`}>
-            {metodo === 'nfc' ? 'Aproxime na maquininha para pagar' : 'Insira ou aproxime o cartão na maquininha Point'}
-          </p>
-        </div>
-        <div className={`w-24 h-24 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/5' : 'bg-gray-50 border border-gray-200'}`}>
-          {metodo === 'nfc'
-            ? <Smartphone className={`w-10 h-10 ${textSecondary}`} />
-            : <CreditCard className={`w-10 h-10 ${textSecondary}`} />}
-        </div>
+// NFC / TEF — simples centralizado
+const isNfcMetodo = metodo === 'nfc_debito' || metodo === 'nfc_credito';
+const isCreditoMetodo = metodo === 'nfc_credito' || metodo === 'tef_credito';
+return (
+  <div className="w-full flex flex-col items-center gap-4">
+    <div className="text-center">
+      <p className={`text-base font-bold mb-0.5 ${textPrimary}`}>
+        {isNfcMetodo ? 'Aproxime o cartão' : 'Insira o cartão na maquininha'}
+      </p>
+      <p className={`text-xs ${textMuted}`}>
+        {isNfcMetodo
+          ? `Aproxime o cartão ${isCreditoMetodo ? 'de crédito' : 'de débito'} na maquininha para pagar`
+          : `Insira o cartão ${isCreditoMetodo ? 'de crédito' : 'de débito'} na maquininha Point`}
+      </p>
+    </div>
+    <div className={`w-24 h-24 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/5' : 'bg-gray-50 border border-gray-200'}`}>
+      {isNfcMetodo
+        ? <Smartphone className={`w-10 h-10 ${textSecondary}`} />
+        : <CreditCard className={`w-10 h-10 ${textSecondary}`} />}
+    </div>
         <p className="text-2xl font-bold text-emerald-500">{formatarPreco(total)}</p>
         <div className="flex items-center gap-2">
           <span className="w-4 h-4 border-2 border-emerald-500/40 border-t-emerald-500 rounded-full animate-spin" />

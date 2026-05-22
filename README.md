@@ -1,5 +1,7 @@
 ## minhAI - Uma IA pra chamar de sua!
 
+* Conferir se o widget pode ficar inframe agora que condicionados o assistente a abrir só como modo texto, sem precisar de câmera, localização, apenas o microfone 
+
 * Editar Video de pitch para Shark Tank e Inatel (vídeos gravados, gravar também a tela para mostrar mais funcionalidades e editar)
 
 * Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida

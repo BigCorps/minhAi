@@ -1,6 +1,8 @@
 // app/api/groq/classify/route.ts — v3: contexto pendente traduzido
 import { NextRequest, NextResponse } from 'next/server';
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+import Groq from 'groq-sdk';
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
@@ -69,20 +71,14 @@ REGRA EXCLUSIVA PARA O PIX (pois não tem tela própria):
 Responda APENAS com o JSON, sem adicionar texto fora das chaves.`
       : '';
 
-    const completion = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        max_tokens: 256,
-        temperature: 0.1,
-        messages: [
-          {
-            role: 'system',
-            content: `Você é o assistente de voz minhAi. Sua função é orientar clientes e executar funções do sistema.
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      max_tokens: 1024,
+      temperature: 0.1,
+      messages: [
+        {
+          role: 'system',
+          content: `Você é o assistente de voz minhAi. Sua função é orientar clientes e executar funções do sistema.
 
 ## Funções disponíveis (nome | functionKey | ativa quando):
 ${functionsContext}
@@ -97,15 +93,14 @@ ${forceResponse ? '' : 'Na dúvida → null'}
 
 ### Opção 2 — retorne JSON com functionKey
 Quando o cliente pedir EXPLICITAMENTE para executar uma ação — não apenas perguntar sobre ela.
-Exemplos VÁLIDOS: "gera um pix de 50", "abre o cardápio", "quero pagar com link", "quero pagar no pix", "pix", "pode ser pix"
+Exemplos VÁLIDOS: "gera um pix de 50", "abre o cardápio", "quero pagar com link"
 Exemplos INVÁLIDOS que devem usar Opção 3: "quais formas de pagamento?" → perguntar qual prefere; "quanto custa?" → responder e perguntar se quer comprar
-REGRA CRÍTICA: quando o cliente escolher forma de pagamento (pix, link, débito, crédito), execute IMEDIATAMENTE — não peça confirmação. O cliente já confirmou ao escolher.
-{"response": "frase curta confirmando a ação SEM perguntar, ex: 'Gerando PIX agora.'", "functionKey": "function_key_aqui"}
+{"response": "frase curta PERGUNTANDO confirmação, ex: 'Posso gerar o PIX de R$50 agora?'", "functionKey": "function_key_aqui"}
 
 ### Opção 3 — retorne JSON sem functionKey (pergunta de esclarecimento)
 Quando o pedido for ambíguo e precisar perguntar ao cliente para decidir a função.
 Exemplos: "quero pagar" (tem PIX, débito e crédito) → pergunta qual prefere
-{"response": "uma pergunta curta e direta ao cliente sobre o método de pagamento que ele prefere"}
+{"response": "pergunta curta e direta ao cliente"}
 
 ### Opção 4 — retorne JSON com functionKey (confirmação)
 Quando o cliente confirmar ("sim", "pode", "isso", "quero", "esse mesmo"):
@@ -124,31 +119,22 @@ ${forceResponse ? '- ChatGPT desativado: se não for função do sistema, respon
 ${memoryBlock}${historyBlock}${pendingInstruction}
 
 ## REGRA DE CONTEXTO HISTÓRICO:
-Se o histórico mostrar que o assistente informou o preço de um produto e o cliente confirmar que quer comprar (ex: "quero", "sim", "pode ser", "vou levar", "quero comprar", "pode cobrar"), abra o assistente de compra visual.
-Exemplo: histórico mostra "Produto Teste 2: R$100" e cliente diz "quero" → retorne {"response": "Perfeito! Abrindo o assistente de compra.", "functionKey": "fazer_pedido"}
-
-IMPORTANTE: não tente processar pagamento diretamente por voz quando houver contexto de produto — sempre use fazer_pedido para o checkout visual.`,
+Se o histórico acima mostrar que o cliente perguntou sobre um produto e o assistente informou o preço, e agora o cliente quiser pagar (ex: "quero pagar", "pode cobrar", "vou levar"), entenda o valor do contexto e execute a função de pagamento adequada com esse valor.
+Exemplo: histórico mostra "Suco de laranja: R$8,50" e cliente diz "quero pagar" → retorne {"response": "Gerando PIX de R$8,50.", "functionKey": "pix_generate"} com o valor inferido do histórico.`,
                 },
         // Injeta histórico recente como mensagens reais para o GROQ ter contexto
-        ...recentHistory.slice(-4).map((m: any) => ({
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-          })),
-          {
-            role: 'user' as const,
-            content: transcript,
-          },
-        ],
-      }),
+        ...recentHistory.slice(-4).map(m => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })),
+        {
+          role: 'user' as const,
+          content: transcript,
+        },
+      ],
     });
 
-    if (!completion.ok) {
-      console.error('❌ OpenAI classify error:', completion.status);
-      return NextResponse.json({ response: null, functionKey: null });
-    }
-
-    const completionData = await completion.json();
-    const raw = completionData.choices[0]?.message?.content?.trim();
+    const raw = completion.choices[0]?.message?.content?.trim();
 
     if (!raw || raw === 'null' || raw.toLowerCase() === 'null' || raw.toLowerCase().startsWith('null')) {
       return NextResponse.json({ response: null, functionKey: null });

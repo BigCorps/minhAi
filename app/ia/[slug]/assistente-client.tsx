@@ -816,7 +816,7 @@ useEffect(() => {
 
       {/* ── SEMPRE MONTADOS — nunca reinicializam ao trocar de modo ── */}
 
-{assistantStarted && !widgetMode && (
+{assistantStarted && (
   <div
     data-no-swipe
     className={`fixed bottom-8 left-0 right-0 z-[55] transition-all duration-500 ease-in-out ${

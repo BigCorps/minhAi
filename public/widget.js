@@ -108,6 +108,24 @@
     btn.style.boxShadow = '0 6px 24px rgba(0,0,0,0.15)';
   };
 
+  // ── Helpers para trocar o ícone ──────────────────────────────────────────
+  function setIconX() {
+    iconSVG.innerHTML = '';
+    const p1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p1.setAttribute('d', 'M18 6 6 18');
+    const p2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p2.setAttribute('d', 'M6 6 l12 12');
+    iconSVG.appendChild(p1);
+    iconSVG.appendChild(p2);
+  }
+
+  function setIconChevron() {
+    iconSVG.innerHTML = '';
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', 'm6 9 6 6 6-6');
+    iconSVG.appendChild(p);
+  }
+
   // ── Cria o card inline com iframe ────────────────────────────────────────
   function createCard() {
     const wrapper = document.createElement('div');
@@ -168,14 +186,7 @@
       });
     });
 
-    // X precisa de dois paths — um único path não suporta dois segmentos desconexos
-    iconSVG.innerHTML = '';
-    const x1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    x1.setAttribute('d', 'M18 6 6 18');
-    const x2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    x2.setAttribute('d', 'M6 6 l12 12');
-    iconSVG.appendChild(x1);
-    iconSVG.appendChild(x2);
+    setIconX();
     isOpen = true;
   }
 
@@ -192,10 +203,7 @@
       card = null;
     }, 250);
 
-    iconSVG.innerHTML = '';
-    const chev = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    chev.setAttribute('d', 'm6 9 6 6 6-6');
-    iconSVG.appendChild(chev);
+    setIconChevron();
     isOpen = false;
   }
 
@@ -208,6 +216,12 @@
     if (btn.contains(e.target)) return;
     if (card && card.contains(e.target)) return;
     closeCard();
+  });
+
+  // ── Escuta mensagem de fechar vinda do iframe (botão X interno) ──────────
+  // window.close() não funciona em iframes — o iframe envia postMessage no lugar
+  window.addEventListener('message', (e) => {
+    if (e.data === 'minhai:close') closeCard();
   });
 
   // ── Injeta no body ───────────────────────────────────────────────────────

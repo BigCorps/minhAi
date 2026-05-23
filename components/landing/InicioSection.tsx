@@ -215,7 +215,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               [@media(max-height:700px)_and_(max-width:767px)]:hidden
             `}
           >
-{['meta', 'google', 'play'].map((name) => (
+{['meta', 'google', 'webapp'].map((name) => (
   <img
     key={name}
     src={`/cards/${name}.png`}

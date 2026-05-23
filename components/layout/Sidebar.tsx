@@ -40,14 +40,15 @@ function MetaIcon({ className }: { className?: string }) {
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M6.8 8.5C8.3 8.5 9.7 10.2 12 13.3C14.3 10.2 15.7 8.5 17.2 8.5C18.9 8.5 20 10.1 20 12C20 13.9 18.9 15.5 17.2 15.5C15.7 15.5 14.3 13.8 12 10.7C9.7 13.8 8.3 15.5 6.8 15.5C5.1 15.5 4 13.9 4 12C4 10.1 5.1 8.5 6.8 8.5Z"
+        d="M6.2 7.8C7.9 7.8 9.5 9.8 12 13.2C14.5 9.8 16.1 7.8 17.8 7.8C19.6 7.8 21 9.6 21 12C21 14.4 19.6 16.2 17.8 16.2C16.1 16.2 14.5 14.2 12 10.8C9.5 14.2 7.9 16.2 6.2 16.2C4.4 16.2 3 14.4 3 12C3 9.6 4.4 7.8 6.2 7.8Z"
         stroke="currentColor"
-        strokeWidth="1.9"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
   );
+}
 }
 
 const menuItems = [
@@ -134,7 +135,13 @@ export function Sidebar() {
                           : 'text-gray-700 hover:bg-gray-50 border-l-2 border-transparent'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon
+  className={
+    item.label === 'Serviços Meta'
+      ? 'w-5 h-5 scale-y-110'
+      : 'w-4 h-4'
+  }
+/>
                     <span>{item.label}</span>
                   </Link>
                 );

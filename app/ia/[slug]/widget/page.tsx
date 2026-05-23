@@ -17,11 +17,9 @@ export default function WidgetPage({ params }: PageProps) {
   const [company, setCompany] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  // Controle de tema para o Header Compacto
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  // Evita problemas de hidratação no Next.js ao renderizar ícones baseados no tema local
   useEffect(() => {
     setMounted(true);
     setTheme('light');
@@ -36,9 +34,7 @@ export default function WidgetPage({ params }: PageProps) {
         .eq('slug', slug)
         .single();
       
-      if (data) {
-        setCompany(data);
-      }
+      if (data) setCompany(data);
       setLoading(false);
     }
     loadCompany();
@@ -52,7 +48,6 @@ export default function WidgetPage({ params }: PageProps) {
 
   if (!company) return <div>Empresa não encontrada</div>;
 
-  // Define qual o tema atual ativo real (lidando com o modo 'system')
   const currentTheme = theme === 'system' ? resolvedTheme : theme;
 
   return (
@@ -82,16 +77,18 @@ export default function WidgetPage({ params }: PageProps) {
             </button>
           )}
 
-          <button 
+          <button
             onClick={() => window.open(`https://${slug}.minhai.com.br`, '_blank')}
             className="p-1.5 hover:bg-accent rounded-full transition-colors text-muted-foreground hover:text-foreground"
             title="Abrir versão completa"
           >
             <Maximize2 size={18} />
           </button>
-          
-          <button 
-            onClick={() => window.close()}
+
+          {/* Envia postMessage para o widget pai fechar o card.
+              window.close() não funciona em iframes — só em janelas abertas via window.open() */}
+          <button
+            onClick={() => window.parent.postMessage('minhai:close', '*')}
             className="p-1.5 hover:bg-accent rounded-full transition-colors text-muted-foreground hover:text-foreground"
             title="Fechar"
           >
@@ -105,7 +102,6 @@ export default function WidgetPage({ params }: PageProps) {
         <AssistenteClient company={company} widgetMode />
       </div>
 
-      {/* Estilos específicos para forçar o modo widget no AssistenteClient se necessário */}
       <style jsx global>{`
         html, body {
           margin: 0;
@@ -114,7 +110,6 @@ export default function WidgetPage({ params }: PageProps) {
           height: 100%;
           width: 100%;
         }
-        /* Esconder header/footer do AssistenteClient dentro do iframe */
         header, footer { display: none !important; }
         .widget-header { display: flex !important; }
         main { padding-top: 0 !important; }

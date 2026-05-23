@@ -4,9 +4,9 @@
   const slug       = script.dataset.slug;
   const cor        = script.dataset.cor        || '#3b82f6';
   const texto      = script.dataset.texto      || '💬 Assistente';
-  const posicao    = script.dataset.posicao    || 'right';   // 'left' | 'right'
-  const popupSize  = script.dataset.popupSize  || 'medium';  // 'small' | 'medium' | 'large'
-  const buttonSize = script.dataset.buttonSize || 'medium';  // 'small' | 'medium' | 'large'
+  const posicao    = script.dataset.posicao    || 'right';
+  const popupSize  = script.dataset.popupSize  || 'medium';
+  const buttonSize = script.dataset.buttonSize || 'medium';
 
   if (!slug) {
     console.error('minhAi Widget: data-slug é obrigatório.');
@@ -81,7 +81,6 @@
     const wrapper = document.createElement('div');
     wrapper.id = 'minhai-widget-card';
 
-    // Posicionamento: mesmo lado do botão, logo acima dele
     wrapper.style.cssText = `
       position: fixed;
       bottom: 90px;
@@ -96,18 +95,19 @@
       transform: translateY(16px) scale(0.97);
       transition: opacity 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1);
       pointer-events: none;
+      isolation: isolate;
     `;
 
-    // Iframe — sem câmera, microfone e localização
     const iframe = document.createElement('iframe');
-    iframe.src = `https://${slug}.minhai.com.br/widget`;
+    iframe.src = `https://minhai.app/ia/${slug}/widget`;
+    iframe.scrolling = 'no';
     iframe.style.cssText = `
       width: 100%;
       height: 100%;
       border: none;
       display: block;
+      overflow: hidden;
     `;
-    // Somente permissões necessárias para texto/funções
     iframe.allow = 'clipboard-write';
     iframe.setAttribute('sandbox', [
       'allow-scripts',
@@ -116,16 +116,19 @@
       'allow-popups',
     ].join(' '));
 
+    // Impede qualquer evento de scroll/touch do iframe de propagar para a página pai
+    wrapper.addEventListener('wheel', (e) => e.stopPropagation(), { passive: false });
+    wrapper.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false });
+
     wrapper.appendChild(iframe);
     return wrapper;
   }
 
-  // ── Abrir / fechar card ──────────────────────────────────────────────────
+  // ── Abrir card ───────────────────────────────────────────────────────────
   function openCard() {
     card = createCard();
     document.body.appendChild(card);
 
-    // Animação de entrada (próximo frame)
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         card.style.opacity = '1';
@@ -134,11 +137,11 @@
       });
     });
 
-    // Atualizar ícone do botão para X
     document.getElementById('minhai-btn-icon').innerHTML = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
     isOpen = true;
   }
 
+  // ── Fechar card ──────────────────────────────────────────────────────────
   function closeCard() {
     if (!card) return;
 
@@ -147,27 +150,18 @@
     card.style.pointerEvents = 'none';
 
     setTimeout(() => {
-      if (card && card.parentNode) {
-        card.parentNode.removeChild(card);
-      }
+      if (card && card.parentNode) card.parentNode.removeChild(card);
       card = null;
     }, 250);
 
-    // Restaurar ícone de seta
     document.getElementById('minhai-btn-icon').innerHTML = '<path d="m6 9 6 6 6-6"/>';
     isOpen = false;
   }
 
   // ── Click do botão ───────────────────────────────────────────────────────
-  btn.onclick = () => {
-    if (isOpen) {
-      closeCard();
-    } else {
-      openCard();
-    }
-  };
+  btn.onclick = () => isOpen ? closeCard() : openCard();
 
-  // ── Fechar ao clicar fora do card ────────────────────────────────────────
+  // ── Fechar ao clicar fora ────────────────────────────────────────────────
   document.addEventListener('click', (e) => {
     if (!isOpen) return;
     if (btn.contains(e.target)) return;
@@ -179,8 +173,6 @@
   if (document.body) {
     document.body.appendChild(btn);
   } else {
-    window.addEventListener('DOMContentLoaded', () => {
-      document.body.appendChild(btn);
-    });
+    window.addEventListener('DOMContentLoaded', () => document.body.appendChild(btn));
   }
 })();

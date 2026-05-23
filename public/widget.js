@@ -168,8 +168,14 @@
       });
     });
 
-    // Manipula o ícone via referência direta (closure) — sem getElementById
-    iconPath.setAttribute('d', 'M18 6 6 18 M6 6 l12 12');
+    // X precisa de dois paths — um único path não suporta dois segmentos desconexos
+    iconSVG.innerHTML = '';
+    const x1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    x1.setAttribute('d', 'M18 6 6 18');
+    const x2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    x2.setAttribute('d', 'M6 6 l12 12');
+    iconSVG.appendChild(x1);
+    iconSVG.appendChild(x2);
     isOpen = true;
   }
 
@@ -186,7 +192,10 @@
       card = null;
     }, 250);
 
-    iconPath.setAttribute('d', 'm6 9 6 6 6-6');
+    iconSVG.innerHTML = '';
+    const chev = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    chev.setAttribute('d', 'm6 9 6 6 6-6');
+    iconSVG.appendChild(chev);
     isOpen = false;
   }
 

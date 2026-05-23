@@ -1,6 +1,16 @@
 (function() {
   // ── Leitura dos data-attributes ──────────────────────────────────────────
-  const script     = document.currentScript;
+  // document.currentScript é null quando carregado dinamicamente (React, Vue, etc.)
+  // Fallback: busca a tag pelo src para garantir compatibilidade universal
+  const script =
+    document.currentScript ||
+    document.querySelector('script[src*="minhai.app/widget.js"]');
+
+  if (!script) {
+    console.error('minhAi Widget: não foi possível localizar o script no DOM.');
+    return;
+  }
+
   const slug       = script.dataset.slug;
   const cor        = script.dataset.cor        || '#3b82f6';
   const texto      = script.dataset.texto      || '💬 Assistente';
@@ -13,13 +23,17 @@
     return;
   }
 
+  // ── Evita duplicação (React StrictMode, hot reload, múltiplas injeções) ──
+  if (document.getElementById('minhai-widget-button')) return;
+
   // ── Dimensões do card inline ─────────────────────────────────────────────
   const cardSizes = {
     small:  { width: '320px', height: '560px' },
     medium: { width: '420px', height: '720px' },
     large:  { width: '520px', height: '860px' },
   };
-  const { width: cardWidth, height: cardHeight } = cardSizes[popupSize] || cardSizes.medium;
+  const { width: cardWidth, height: cardHeight } =
+    cardSizes[popupSize] || cardSizes.medium;
 
   // ── Estilos do botão por tamanho ─────────────────────────────────────────
   const buttonStyles = {
@@ -27,21 +41,39 @@
     medium: { padding: '14px 24px', fontSize: '15px' },
     large:  { padding: '18px 32px', fontSize: '17px' },
   };
-  const { padding: btnPadding, fontSize: btnFontSize } = buttonStyles[buttonSize] || buttonStyles.medium;
+  const { padding: btnPadding, fontSize: btnFontSize } =
+    buttonStyles[buttonSize] || buttonStyles.medium;
 
   // ── Estado ───────────────────────────────────────────────────────────────
   let isOpen = false;
   let card = null;
 
+  // ── Cria o ícone SVG como referência direta (closure) ────────────────────
+  // Evita getElementById frágil após re-renders ou múltiplas aberturas
+  const iconSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  iconSVG.setAttribute('width', '16');
+  iconSVG.setAttribute('height', '16');
+  iconSVG.setAttribute('viewBox', '0 0 24 24');
+  iconSVG.setAttribute('fill', 'none');
+  iconSVG.setAttribute('stroke', 'currentColor');
+  iconSVG.setAttribute('stroke-width', '2.5');
+  iconSVG.setAttribute('stroke-linecap', 'round');
+  iconSVG.setAttribute('stroke-linejoin', 'round');
+
+  const iconPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  iconPath.setAttribute('d', 'm6 9 6 6 6-6');
+  iconSVG.appendChild(iconPath);
+
   // ── Cria o botão flutuante ───────────────────────────────────────────────
   const btn = document.createElement('button');
   btn.id = 'minhai-widget-button';
-  btn.innerHTML = `
-    <span id="minhai-btn-label" style="margin-right: 8px;">${texto}</span>
-    <svg id="minhai-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="m6 9 6 6 6-6"/>
-    </svg>
-  `;
+
+  const labelSpan = document.createElement('span');
+  labelSpan.style.marginRight = '8px';
+  labelSpan.textContent = texto;
+
+  btn.appendChild(labelSpan);
+  btn.appendChild(iconSVG);
 
   btn.style.cssText = `
     position: fixed;
@@ -116,8 +148,7 @@
       'allow-popups',
     ].join(' '));
 
-    // Impede qualquer evento de scroll/touch do iframe de propagar para a página pai
-    wrapper.addEventListener('wheel', (e) => e.stopPropagation(), { passive: false });
+    wrapper.addEventListener('wheel',     (e) => e.stopPropagation(), { passive: false });
     wrapper.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false });
 
     wrapper.appendChild(iframe);
@@ -137,7 +168,8 @@
       });
     });
 
-    document.getElementById('minhai-btn-icon').innerHTML = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
+    // Manipula o ícone via referência direta (closure) — sem getElementById
+    iconPath.setAttribute('d', 'M18 6 6 18 M6 6 l12 12');
     isOpen = true;
   }
 
@@ -154,7 +186,7 @@
       card = null;
     }, 250);
 
-    document.getElementById('minhai-btn-icon').innerHTML = '<path d="m6 9 6 6 6-6"/>';
+    iconPath.setAttribute('d', 'm6 9 6 6 6-6');
     isOpen = false;
   }
 
@@ -173,6 +205,8 @@
   if (document.body) {
     document.body.appendChild(btn);
   } else {
-    window.addEventListener('DOMContentLoaded', () => document.body.appendChild(btn));
+    window.addEventListener('DOMContentLoaded', () =>
+      document.body.appendChild(btn)
+    );
   }
 })();

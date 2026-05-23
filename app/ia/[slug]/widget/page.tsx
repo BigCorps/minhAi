@@ -24,6 +24,7 @@ export default function WidgetPage({ params }: PageProps) {
   // Evita problemas de hidratação no Next.js ao renderizar ícones baseados no tema local
   useEffect(() => {
     setMounted(true);
+    setTheme('light');
   }, []);
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export default function WidgetPage({ params }: PageProps) {
   return (
     <div className="relative h-screen w-screen overflow-hidden flex flex-col bg-background text-foreground">
       {/* Header Compacto para o Widget */}
-      <div className="bg-background/80 backdrop-blur-md border-b px-4 py-2 flex items-center justify-between z-50 widget-header">
+      <div className="bg-background/80 backdrop-blur-md border-b px-4 py-2 flex items-center justify-between z-50 widget-header" style={{ flexShrink: 0 }}>
         <div className="flex items-center gap-2">
           {company.logo_url && (
             <img src={company.logo_url} alt={company.name} className="w-6 h-6 rounded-full object-contain" />
@@ -106,11 +107,16 @@ export default function WidgetPage({ params }: PageProps) {
 
       {/* Estilos específicos para forçar o modo widget no AssistenteClient se necessário */}
       <style jsx global>{`
-        /* Esconder rodapés padrão ou elementos desnecessários no modo popup */
+        html, body {
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+          height: 100%;
+          width: 100%;
+        }
+        /* Esconder header/footer do AssistenteClient dentro do iframe */
         header, footer { display: none !important; }
         .widget-header { display: flex !important; }
-        
-        /* Ajustar o container do chat para ocupar o espaço correto */
         main { padding-top: 0 !important; }
       `}</style>
     </div>

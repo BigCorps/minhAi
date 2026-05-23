@@ -39,8 +39,6 @@ const WIDGET_BLOCKED_FUNCTIONS = new Set([
   'TracarRotaDisplay',
 ]);
 
-const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
-
 // ── Mapa de Componentes (todos lazy loaded) ───────────────────
 const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
 

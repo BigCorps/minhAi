@@ -1,25 +1,25 @@
 (function() {
   // ── Leitura dos data-attributes ──────────────────────────────────────────
-  const script      = document.currentScript;
-  const slug        = script.dataset.slug;
-  const cor         = script.dataset.cor         || '#3b82f6';
-  const texto       = script.dataset.texto       || '💬 Assistente';
-  const posicao     = script.dataset.posicao     || 'right';   // 'left' | 'right'
-  const popupSize   = script.dataset.popupSize   || 'medium';  // 'small' | 'medium' | 'large'
-  const buttonSize  = script.dataset.buttonSize  || 'medium';  // 'small' | 'medium' | 'large'
+  const script     = document.currentScript;
+  const slug       = script.dataset.slug;
+  const cor        = script.dataset.cor        || '#3b82f6';
+  const texto      = script.dataset.texto      || '💬 Assistente';
+  const posicao    = script.dataset.posicao    || 'right';   // 'left' | 'right'
+  const popupSize  = script.dataset.popupSize  || 'medium';  // 'small' | 'medium' | 'large'
+  const buttonSize = script.dataset.buttonSize || 'medium';  // 'small' | 'medium' | 'large'
 
   if (!slug) {
     console.error('minhAi Widget: data-slug é obrigatório.');
     return;
   }
 
-  // ── Dimensões do popup ───────────────────────────────────────────────────
-  const popupSizes = {
-    small:  { width: 320, height: 560 },
-    medium: { width: 420, height: 720 },
-    large:  { width: 520, height: 860 },
+  // ── Dimensões do card inline ─────────────────────────────────────────────
+  const cardSizes = {
+    small:  { width: '320px', height: '560px' },
+    medium: { width: '420px', height: '720px' },
+    large:  { width: '520px', height: '860px' },
   };
-  const { width: popupWidth, height: popupHeight } = popupSizes[popupSize] || popupSizes.medium;
+  const { width: cardWidth, height: cardHeight } = cardSizes[popupSize] || cardSizes.medium;
 
   // ── Estilos do botão por tamanho ─────────────────────────────────────────
   const buttonStyles = {
@@ -29,12 +29,16 @@
   };
   const { padding: btnPadding, fontSize: btnFontSize } = buttonStyles[buttonSize] || buttonStyles.medium;
 
+  // ── Estado ───────────────────────────────────────────────────────────────
+  let isOpen = false;
+  let card = null;
+
   // ── Cria o botão flutuante ───────────────────────────────────────────────
   const btn = document.createElement('button');
   btn.id = 'minhai-widget-button';
   btn.innerHTML = `
-    <span style="margin-right: 8px;">${texto}</span>
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <span id="minhai-btn-label" style="margin-right: 8px;">${texto}</span>
+    <svg id="minhai-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="m6 9 6 6 6-6"/>
     </svg>
   `;
@@ -72,49 +76,104 @@
     btn.style.boxShadow = '0 6px 24px rgba(0,0,0,0.15)';
   };
 
-  // ── Abertura do popup ────────────────────────────────────────────────────
+  // ── Cria o card inline com iframe ────────────────────────────────────────
+  function createCard() {
+    const wrapper = document.createElement('div');
+    wrapper.id = 'minhai-widget-card';
+
+    // Posicionamento: mesmo lado do botão, logo acima dele
+    wrapper.style.cssText = `
+      position: fixed;
+      bottom: 90px;
+      ${posicao}: 24px;
+      width: ${cardWidth};
+      height: ${cardHeight};
+      z-index: 2147483646;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 16px 64px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.1);
+      opacity: 0;
+      transform: translateY(16px) scale(0.97);
+      transition: opacity 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1);
+      pointer-events: none;
+    `;
+
+    // Iframe — sem câmera, microfone e localização
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://${slug}.minhai.com.br/widget`;
+    iframe.style.cssText = `
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    `;
+    // Somente permissões necessárias para texto/funções
+    iframe.allow = 'clipboard-write';
+    iframe.setAttribute('sandbox', [
+      'allow-scripts',
+      'allow-same-origin',
+      'allow-forms',
+      'allow-popups',
+    ].join(' '));
+
+    wrapper.appendChild(iframe);
+    return wrapper;
+  }
+
+  // ── Abrir / fechar card ──────────────────────────────────────────────────
+  function openCard() {
+    card = createCard();
+    document.body.appendChild(card);
+
+    // Animação de entrada (próximo frame)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0) scale(1)';
+        card.style.pointerEvents = 'auto';
+      });
+    });
+
+    // Atualizar ícone do botão para X
+    document.getElementById('minhai-btn-icon').innerHTML = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
+    isOpen = true;
+  }
+
+  function closeCard() {
+    if (!card) return;
+
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(16px) scale(0.97)';
+    card.style.pointerEvents = 'none';
+
+    setTimeout(() => {
+      if (card && card.parentNode) {
+        card.parentNode.removeChild(card);
+      }
+      card = null;
+    }, 250);
+
+    // Restaurar ícone de seta
+    document.getElementById('minhai-btn-icon').innerHTML = '<path d="m6 9 6 6 6-6"/>';
+    isOpen = false;
+  }
+
+  // ── Click do botão ───────────────────────────────────────────────────────
   btn.onclick = () => {
-    // Captura as dimensões internas da janela do navegador atual e onde ela está posicionada no monitor
-    const windowW = window.innerWidth || document.documentElement.clientWidth;
-    const windowH = window.innerHeight || document.documentElement.clientHeight;
-    const windowX = window.screenX !== undefined ? window.screenX : window.screenLeft;
-    const windowY = window.screenY !== undefined ? window.screenY : window.screenTop;
-
-    // Centraliza verticalmente de acordo com a posição atual da janela do usuário
-    const top = Math.round(windowY + (windowH - popupHeight) / 2);
-
-    // Define a posição horizontal respeitando estritamente o lado definido pelo usuário
-    let left;
-    if (posicao === 'left') {
-      // Abre alinhado ao canto esquerdo da janela do navegador atual + margem
-      left = windowX + 24;
+    if (isOpen) {
+      closeCard();
     } else {
-      // Abre alinhado ao canto direito da janela do navegador atual - largura do popup - margem
-      left = Math.round(windowX + windowW - popupWidth - 24);
-    }
-
-    const popup = window.open(
-      `https://minhai.app/ia/${slug}/widget`,
-      'minhAiWidget',
-      [
-        `width=${popupWidth}`,
-        `height=${popupHeight}`,
-        `top=${top}`,
-        `left=${left}`,
-        'status=no',
-        'menubar=no',
-        'toolbar=no',
-        'location=no',
-        'resizable=yes',
-      ].join(',')
-    );
-
-    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-      alert('Por favor, permita popups para falar com o assistente.');
-    } else {
-      popup.focus();
+      openCard();
     }
   };
+
+  // ── Fechar ao clicar fora do card ────────────────────────────────────────
+  document.addEventListener('click', (e) => {
+    if (!isOpen) return;
+    if (btn.contains(e.target)) return;
+    if (card && card.contains(e.target)) return;
+    closeCard();
+  });
 
   // ── Injeta no body ───────────────────────────────────────────────────────
   if (document.body) {

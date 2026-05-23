@@ -49,7 +49,6 @@ function MetaIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-}
 
 const menuItems = [
   { href: '/dashboard',              label: 'Dashboard',                        icon: LayoutDashboard },

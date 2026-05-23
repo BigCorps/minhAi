@@ -157,7 +157,14 @@ export default function CategoryCarousel({
   }, [activeCategory]);
 
   const scrollDuration = calcScrollDuration(categories.length, isMobile);
-  const duplicatedCategories = autoScroll ? [...categories, ...categories] : categories;
+  const MIN_COPIES = 8;
+const copies = autoScroll ? Math.max(MIN_COPIES, MIN_COPIES) : 1;
+const duplicatedCategories = autoScroll
+  ? Array.from({ length: copies }, () => categories).flat()
+  : categories;
+
+// 2. Percentual de reset na animação (1/copies = 1/8 = 12.5%)
+const resetPercent = autoScroll ? `${(1 / copies) * 100}%` : '0%';
 
   const getChipColor = (index: number) => {
     const colors = ['#3B82F6', '#10B981'];
@@ -380,15 +387,15 @@ export default function CategoryCarousel({
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes scroll-infinite {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
+<style jsx>{`
+  @keyframes scroll-infinite {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-${parseFloat(((1 / copies) * 100).toFixed(4))}%); }
+  }
 
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+`}</style>
     </div>
   );
 }

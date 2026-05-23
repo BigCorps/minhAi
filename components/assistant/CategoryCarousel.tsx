@@ -111,7 +111,9 @@ export default function CategoryCarousel({
 
       const processedFunctions = functions.map((fn) => ({
         ...fn,
-        is_enabled_for_company: settingsMap.get(fn.function_key) ?? true,
+        is_enabled_for_company: settingsMap.has(fn.function_key)
+  ? settingsMap.get(fn.function_key)!
+  : (fn.default_enabled ?? false),
       }));
 
       let filteredFunctions = processedFunctions;

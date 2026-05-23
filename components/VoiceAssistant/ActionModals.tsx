@@ -23,6 +23,24 @@ import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import VirtualKeyboard from '@/components/assistant/VirtualKeyboard';
 
+// ── Funções bloqueadas no widget (requerem câmera, microfone ou localização) ──
+const WIDGET_BLOCKED_FUNCTIONS = new Set([
+  'LerQRCodeDisplay',
+  'LerCodigoBarrasDisplay',
+  'ImagemEmTextoDisplay',
+  'TabelaEmTextoDisplay',
+  'ContratoEmTextoDisplay',
+  'IdentificarFraudeDisplay',
+  'VideoCallRequestDisplay',
+  'VideoCallIncomingDisplay',
+  'TranscribeAudioModal',
+  'ClimaTempoDisplay',
+  'BuscarEnderecoDisplay',
+  'TracarRotaDisplay',
+]);
+
+const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
+
 // ── Mapa de Componentes (todos lazy loaded) ───────────────────
 const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
 
@@ -313,6 +331,8 @@ interface ActionModalsProps {
   onCancelPix?: () => void;
   playText?: (text: string) => Promise<void>;
   isKioskMode?: boolean;
+  widgetMode?: boolean;
+  slug?: string;
   printConfig?: {
     print_on_purchase: boolean;
     print_on_queue: boolean;
@@ -330,6 +350,8 @@ export function ActionModals({
   onCancelPix,
   playText,
   isKioskMode = false,
+  widgetMode = false,
+  slug,
   printConfig,
 }: ActionModalsProps) {
   const [mounted, setMounted] = useState(false);
@@ -423,7 +445,96 @@ const [kioskKeyboardTarget, setKioskKeyboardTarget] = useState<HTMLInputElement 
     };
   }, [activeModal]);
 
-  if (!activeModal || !mounted) return null;
+if (!activeModal || !mounted) return null;
+
+  // ── Aviso para funções bloqueadas no widget ──────────────────────────────
+  if (widgetMode && WIDGET_BLOCKED_FUNCTIONS.has(activeModal.type)) {
+    const isDark = theme === 'dark';
+    return createPortal(
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px',
+          background: isDark ? 'rgba(2,6,23,0.85)' : 'rgba(241,245,249,0.85)',
+          backdropFilter: 'blur(8px)',
+        }}
+      >
+        <div
+          style={{
+            background: isDark ? 'rgb(15,23,42)' : '#ffffff',
+            border: `1px solid ${isDark ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.15)'}`,
+            borderRadius: '16px',
+            padding: '32px 24px',
+            maxWidth: '320px',
+            width: '100%',
+            textAlign: 'center',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
+          }}
+        >
+          <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔒</div>
+          <p style={{
+            fontWeight: 700,
+            fontSize: '16px',
+            marginBottom: '10px',
+            color: isDark ? 'rgb(226,232,240)' : 'rgb(15,23,42)',
+          }}>
+            Função não disponível no widget
+          </p>
+          <p style={{
+            fontSize: '13px',
+            lineHeight: '1.6',
+            marginBottom: '24px',
+            color: isDark ? 'rgb(148,163,184)' : 'rgb(100,116,139)',
+          }}>
+            Esta função requer acesso à câmera, microfone ou localização,
+            recursos não permitidos no widget incorporado.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {slug && (
+              <a
+                href={`https://minhai.app/ia/${slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'block',
+                  background: 'linear-gradient(135deg, rgb(59,130,246), rgb(16,185,129))',
+                  color: '#ffffff',
+                  borderRadius: '50px',
+                  padding: '12px 20px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                }}
+              >
+                Abrir assistente completo
+              </a>
+            )}
+            <button
+              onClick={onClose}
+              style={{
+                background: 'transparent',
+                border: `1px solid ${isDark ? 'rgba(148,163,184,0.3)' : 'rgba(100,116,139,0.3)'}`,
+                borderRadius: '50px',
+                padding: '11px 20px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                color: isDark ? 'rgb(148,163,184)' : 'rgb(100,116,139)',
+              }}
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  }
 
   const Component = MODAL_COMPONENTS[activeModal.type];
 

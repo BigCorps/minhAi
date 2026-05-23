@@ -816,9 +816,9 @@ useEffect(() => {
 
       {/* ── SEMPRE MONTADOS — nunca reinicializam ao trocar de modo ── */}
 
-{assistantStarted && (
+{assistantStarted && !widgetMode && (
   <div
-    data-no-swipe  // ← adicionar
+    data-no-swipe
     className={`fixed bottom-8 left-0 right-0 z-[55] transition-all duration-500 ease-in-out ${
       isModalOpenState ? 'opacity-0 pointer-events-none translate-y-10' : 'opacity-100 translate-y-0'
     }`}

@@ -1,6 +1,6 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* corrigir edges agenda é fraude (conferir de notas) 3 mudar agendamento no assistente e na meta para pedir email e não telefone (verificar se dá pra enviar confirmação por email do usuário e do cliente
+* corrigir edges agenda e fraude (conferir de notas) 3 mudar agendamento no assistente e na meta para pedir email e não telefone (verificar se dá pra enviar confirmação por email do usuário e do cliente
 
 * Editar Video de pitch para Shark Tank e Inatel (áudio gravado no Manus, vídeos gravados, gravar também a tela para mostrar mais funcionalidades e editar)
 
@@ -16,7 +16,7 @@
 
 * Funções demo no slug Suporte para ter demonstrativo de todas as funções
 
-* App ChatGPT para configuração dos assistentes direto pelo app GPT, vinculado ao usuário.
+* MCP e App ChatGPT e MCP Claude para configuração dos assistentes direto e acesso a algumas funções específicas, vinculado ao usuário.
 
 * Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota. E colocar ele na header no lugar do assistente de funções.
 

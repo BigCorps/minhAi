@@ -602,11 +602,11 @@ await supabase
             
             {/* Ocupa as 3 colunas sozinho (linha inteira) */}
             <button
-              onClick={() => setSelectedCategories([])}
-              className={`col-span-3 ${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}
-            >
-              Todas as Funções
-            </button>
+  onClick={() => setSelectedCategories([])}
+  className={`${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}
+>
+  Todas
+</button>
 
             {/* As outras categorias ocupam 1 coluna cada, formando 3 por linha automaticamente */}
             {filteredCategories.map(cat => {

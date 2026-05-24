@@ -2,6 +2,8 @@
 
 * corrigir edges agenda e fraude (conferir de notas) 3 mudar agendamento no assistente e na meta para pedir email e não telefone (verificar se dá pra enviar confirmação por email do usuário e do cliente
 
+* Artes Instagram: Manus jiuithsu e fofopanda / GPT as 18h amanha
+
 * Editar Video de pitch para Shark Tank e Inatel (áudio gravado no Manus, vídeos gravados, gravar também a tela para mostrar mais funcionalidades e editar)
 
 * Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida

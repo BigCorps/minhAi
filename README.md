@@ -1,6 +1,6 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-*corrigir edges agenda é fraude (conferir de notas)
+* corrigir edges agenda é fraude (conferir de notas) 3 mudar agendamento no assistente e na meta para pedir email e não telefone (verificar se dá pra enviar confirmação por email do usuário e do cliente
 
 * Editar Video de pitch para Shark Tank e Inatel (áudio gravado no Manus, vídeos gravados, gravar também a tela para mostrar mais funcionalidades e editar)
 

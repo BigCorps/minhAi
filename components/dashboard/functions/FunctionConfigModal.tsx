@@ -1235,7 +1235,7 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
   }
 
   function handleGoToCadastros() {
-    router.push(`/dashboard/${companyId}/cadastros`);
+    router.push(`/dashboard/cadastros`);
   }
 
   if (loading) {

@@ -1,7 +1,5 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* conferir anotação
-
 * melhoria no reconhecimento de wakeword com ajuste para ambientes externos e internos no painel de configuração
 
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões 

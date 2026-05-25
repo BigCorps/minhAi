@@ -37,6 +37,16 @@ const WIDGET_BLOCKED_FUNCTIONS = new Set([
   'ClimaTempoDisplay',
   'BuscarEnderecoDisplay',
   'TracarRotaDisplay',
+  'LoginClienteDisplay',
+  'FilaAtendimentoDisplay',
+  'PainelFilaDisplay',
+  'MercadoPagoPointDisplay',
+  'TocarVideoDisplay',
+  'TocarMusicaDisplay',
+  'PlaylistDisplay',
+  'PortaRetratoDisplay',
+  'PainelOfertasDisplay',
+  'SequenciaVideosDisplay',
 ]);
 
 // ── Mapa de Componentes (todos lazy loaded) ───────────────────

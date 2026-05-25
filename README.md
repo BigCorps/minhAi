@@ -2,7 +2,9 @@
 
 * corrigir edges agenda e fraude (conferir de notas) 3 mudar agendamento no assistente e na meta para pedir email e não telefone (verificar se dá pra enviar confirmação por email do usuário e do cliente
 
-* corrigir bugs de ter débito com Groq e verificar sms, além de melhoria no reconhecimento de wakeword
+* corrigir bugs de TEF débito/credito com Groq e verificar sms, além de melhoria no reconhecimento de wakeword
+
+* conferir funções que funcionam no widget e colocar aviso
 
 * Artes Instagram: Manus jiuithsu e fofopanda / GPT as 18h amanha
 

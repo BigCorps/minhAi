@@ -229,24 +229,24 @@ async function handleSend() {
     }
 
     // ✅ Envia SMS se configurado
-    if (notificarSms && gerenteTelefone) {
-      console.log('📱 Enviando SMS para:', gerenteTelefone);
-      
-      const smsPromise = fetch(`${SUPABASE_URL}/functions/v1/send-sms-gerente`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          number: gerenteTelefone, // ✅ CORRIGIDO: "number" não "telefone"
-          gerente_nome: gerenteNome, // ✅ CORRIGIDO: adicionar gerente_nome
-          motivo: motivo, // ✅ CORRIGIDO: "motivo" não "mensagem"
-        }),
-      });
-      
-      promises.push(smsPromise);
-    }
+if (notificarSms && gerenteTelefone) {
+  const numeroLimpo = gerenteTelefone.replace(/\D/g, ''); // ← adicionar isso
+  
+  const smsPromise = fetch(`${SUPABASE_URL}/functions/v1/send-sms-gerente`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({
+      number: numeroLimpo, // ← usar numeroLimpo, não gerenteTelefone
+      gerente_nome: gerenteNome,
+      motivo: motivo,
+    }),
+  });
+  
+  promises.push(smsPromise);
+}
 
     const results = await Promise.allSettled(promises);
 

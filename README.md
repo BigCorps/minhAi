@@ -1,6 +1,6 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* corrigir edge de notas e mudar agendamento no assistente e na meta para pedir email e não telefone (verificar se dá pra enviar confirmação por email do usuário e do cliente
+* conferir anotação
 
 * corrigir bugs de TEF débito/credito com Groq além de melhoria no reconhecimento de wakeword com ajuste para ambientes externos e internos
 

@@ -437,32 +437,110 @@ setEnabled(map);
     }
   }
 
-  async function handleToggle(functionKey: string) {
-    // Funções de sistema não podem ser desativadas
-    if (SYSTEM_FUNCTIONS_META.has(functionKey)) {
-      return;
+// SUBSTITUIR a função handleToggle inteira por:
+
+async function handleToggle(functionKey: string) {
+  if (SYSTEM_FUNCTIONS_META.has(functionKey)) return;
+
+  setUpdating(functionKey);
+  const next = !enabled[functionKey];
+
+  try {
+    // 1. Atualiza company_function_settings (controle interno do painel)
+    await supabase
+      .from('company_function_settings')
+      .upsert(
+        { company_id: companyId, function_key: functionKey, meta_enabled: next },
+        { onConflict: 'company_id,function_key' }
+      );
+
+    // 2. Atualiza meta_connections (lido pelo router em runtime)
+    // Mapeamento function_key → coluna em meta_connections
+    const META_COLUMN_MAP: Record<string, string> = {
+      pix_generate:              'pix_enabled',
+      orcamento:                 'orcamento_enabled',
+      faq:                       'faq_enabled',
+      chatgpt:                   'prompt_enabled',
+      nossa_marca:               'nossa_marca_enabled',
+      endereco:                  'endereco_enabled',
+      contacts:                  'contacts_enabled',
+      agendar_compromisso:       'agendar_enabled',
+      ver_agenda:                'ver_agenda_enabled',
+      enviar_email:              'email_enabled',
+      consultar_cep:             'consultar_cep_enabled',
+      consultar_cnpj:            'consultar_cnpj_enabled',
+      consultar_cambio:          'consultar_cambio_enabled',
+      consultar_cpf:             'consultar_cpf_enabled',
+      consultar_placa:           'consultar_placa_enabled',
+      restricoes_cpf:            'restricoes_cpf_enabled',
+      restricoes_cnpj:           'restricoes_cnpj_enabled',
+      consultar_leilao:          'consultar_leilao_enabled',
+      consultar_ddd:             'consultar_ddd_enabled',
+      consultar_feriados:        'consultar_feriados_enabled',
+      clima_tempo:               'clima_tempo_enabled',
+      traduzir_texto:            'traduzir_enabled',
+      ver_noticias:              'ver_noticias_enabled',
+      rastreio_correios:         'rastreio_enabled',
+      procurar_produto:          'procurar_produto_enabled',
+      segunda_via_boleto:        'segunda_via_enabled',
+      buscar_endereco:           'buscar_endereco_enabled',
+      gerar_qrcode:              'gerar_qrcode_enabled',
+      gerar_codigo_barras:       'gerar_codigo_barras_enabled',
+      chamar_gerente:            'chamar_gerente_enabled',
+      gerar_senha:               'gerar_senha_enabled',
+      cadastro:                  'cadastro_enabled',
+      ver_produtos:              'ver_produtos_enabled',
+      fazer_pedido:              'fazer_pedido_enabled',
+      meu_cupom:                 'meu_cupom_enabled',
+      transcrever_audio:         'transcrever_audio_enabled',
+      qrcode_whatsapp:           'qrcode_whatsapp_enabled',
+      qrcode_email:              'qrcode_email_enabled',
+      qrcode_facebook:           'qrcode_facebook_enabled',
+      qrcode_instagram:          'qrcode_instagram_enabled',
+      qrcode_twitter:            'qrcode_twitter_enabled',
+      qrcode_tiktok:             'qrcode_tiktok_enabled',
+      qrcode_linkedin:           'qrcode_linkedin_enabled',
+      qrcode_website:            'qrcode_website_enabled',
+      qrcode_telefone:           'qrcode_telefone_enabled',
+      nosso_qrcode:              'nosso_qrcode_enabled',
+      wifi_qrcode:               'wifi_qrcode_enabled',
+      ler_qrcode:                'ler_qrcode_enabled',
+      ler_codigo_barras:         'ler_codigo_barras_enabled',
+      tabela_em_texto:           'tabela_em_texto_enabled',
+      contrato_em_texto:         'contrato_em_texto_enabled',
+      imagem_em_texto:           'imagem_em_texto_enabled',
+      identificar_fraude:        'identificar_fraude_enabled',
+      criar_nota:                'criar_nota_enabled',
+      reagendar_compromisso:     'reagendar_compromisso_enabled',
+      confirmar_presenca:        'confirmar_presenca_enabled',
+      cancelar_agendamento:      'cancelar_agendamento_enabled',
+      horarios_disponiveis:      'horarios_disponiveis_enabled',
+      link_pagamento:            'link_pagamento_enabled',
+    };
+
+    const metaColumn = META_COLUMN_MAP[functionKey];
+    if (metaColumn) {
+      const { data: conn } = await supabase
+        .from('meta_connections')
+        .select('id')
+        .eq('company_id', companyId)
+        .maybeSingle();
+
+      if (conn?.id) {
+        await supabase
+          .from('meta_connections')
+          .update({ [metaColumn]: next })
+          .eq('id', conn.id);
+      }
     }
-    
-    setUpdating(functionKey);
-    const next = !enabled[functionKey];
-    try {
-await supabase
-  .from('company_function_settings') // <-- Alterado aqui
-  .upsert(
-    { 
-      company_id: companyId, 
-      function_key: functionKey, 
-      meta_enabled: next // <-- Ajustado para a coluna existente no schema
-    },
-    { onConflict: 'company_id,function_key' } // (Certifique-se de que existe uma constraint unique para esses dois campos no banco)
-  );
-      setEnabled(prev => ({ ...prev, [functionKey]: next }));
-    } catch (err) {
-      console.error('Erro ao atualizar função Meta:', err);
-    } finally {
-      setUpdating(null);
-    }
+
+    setEnabled(prev => ({ ...prev, [functionKey]: next }));
+  } catch (err) {
+    console.error('Erro ao atualizar função Meta:', err);
+  } finally {
+    setUpdating(null);
   }
+}
 
   const isAllSelected = selectedCategories.length === 0;
 

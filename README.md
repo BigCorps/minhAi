@@ -2,7 +2,9 @@
 
 * corrigir edges agenda e fraude (conferir de notas) 3 mudar agendamento no assistente e na meta para pedir email e não telefone (verificar se dá pra enviar confirmação por email do usuário e do cliente
 
-* corrigir bugs de TEF débito/credito com Groq e verificar sms, além de melhoria no reconhecimento de wakeword
+* corrigir bugs de TEF débito/credito com Groq além de melhoria no reconhecimento de wakeword com ajuste para ambientes externos e internos
+
+* fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões 
 
 * conferir funções que funcionam no widget e colocar aviso
 

@@ -976,6 +976,19 @@ export default function SaldoPage() {
                     </table>
                   </div>
                 )}
+                {hasMore && (
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={loadMore}
+                    disabled={isLoadingMore}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 transition disabled:opacity-50"
+                  >
+                    {isLoadingMore
+                      ? <><Loader2 className="w-4 h-4 animate-spin" />Carregando...</>
+                      : <><ChevronDown className="w-4 h-4" />Carregar mais 50</>}
+                  </button>
+                </div>
+              )}
               </div>
             )}
 

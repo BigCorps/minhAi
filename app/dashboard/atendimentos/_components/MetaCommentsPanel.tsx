@@ -353,28 +353,6 @@ export function MetaCommentsPanel({
   selectedCompanyId: string;
   assistantType?: string;
 }) {
-  if (assistantType === 'vendas') {
-    return (
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-white/10 p-10 text-center">
-        <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center mx-auto mb-4">
-          <Lock className="h-6 w-6 text-gray-400" />
-        </div>
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-          Disponível apenas no minhAi Smart
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-          Respostas automáticas a comentários não estão disponíveis na versão Vendas.
-          Faça upgrade para o <strong className="text-gray-700 dark:text-gray-300">minhAi Smart</strong> com um plano mensal para acessar essa funcionalidade.
-        </p>
-        
-          href="/dashboard/credits"
-          className="inline-block mt-5 px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
-        >
-          Ver planos
-        </a>
-      </div>
-    );
-  }
   const supabase = createClient();
   const [connections, setConnections] = useState<MetaConnection[]>([]);
   const [isLoading, setIsLoading]     = useState(true);
@@ -424,6 +402,29 @@ export function MetaCommentsPanel({
   }
 
   // ── Render ─────────────────────────────────────────────────────────────
+
+  if (assistantType === 'vendas') {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-white/10 p-10 text-center">
+        <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center mx-auto mb-4">
+          <Lock className="h-6 w-6 text-gray-400" />
+        </div>
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+          Disponível apenas no minhAi Smart
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+          Respostas automáticas a comentários não estão disponíveis na versão Vendas.
+          Faça upgrade para o <strong className="text-gray-700 dark:text-gray-300">minhAi Smart</strong> com um plano mensal para acessar essa funcionalidade.
+        </p>
+        
+          href="/dashboard/credits"
+          className="inline-block mt-5 px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+        >
+          Ver planos
+        </a>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

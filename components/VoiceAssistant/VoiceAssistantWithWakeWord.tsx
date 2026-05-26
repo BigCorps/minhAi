@@ -98,8 +98,9 @@ export function VoiceAssistantWithWakeWord({
   onTextMessage,
   textMode = false,
   isKioskMode = false,
- isVendas = false,
+  isVendas = false,
   startupFunctionKey,
+  widgetMode = false,
 }: VoiceAssistantProps & {
   onModalChange?: (modal: any) => void;
   onTextMessage?: (handler: (text: string) => Promise<{ text: string; functionKey?: string } | null>) => void;
@@ -107,6 +108,7 @@ export function VoiceAssistantWithWakeWord({
   isKioskMode?: boolean;
   isVendas?: boolean;
   startupFunctionKey?: string;
+  widgetMode?: boolean;
 }) {
 
   // ── States básicos ────────────────────────────────────────
@@ -1009,9 +1011,23 @@ useEffect(() => {
   }
 
   // ── Function click ────────────────────────────────────────
-  async function handleFunctionClick(functionKey: string, event?: any) {
+async function handleFunctionClick(functionKey: string, event?: any) {
     resetInactivityTimer();
     const pt = effectivePlayText;
+
+    // No widget, bloquear funções que navegam para outras páginas
+    const WIDGET_NAVIGATION_BLOCKED = new Set([
+      'modo_venda', 'modo_fila', 'link_na_bio', 'fazer_pedido',
+    ]);
+    if (widgetMode && WIDGET_NAVIGATION_BLOCKED.has(functionKey)) {
+      const slug = company?.slug ?? '';
+      await pt(`Esta função está disponível na versão completa do assistente.`);
+      setActiveModal({
+        type: '__widget_blocked_navigation__',
+        data: { slug },
+      });
+      return;
+    }
 
     const isEnabled = await checkIfFunctionIsEnabled(companyId, functionKey);
     if (!isEnabled) {

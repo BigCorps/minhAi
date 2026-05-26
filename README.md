@@ -1,13 +1,9 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* melhoria no reconhecimento de wakeword com ajuste para ambientes externos e internos no painel de configuração
-
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões 
 
 * conferir funções bloqueadas que não aparecem aviso no carrossel e elas ainda funcionam pelo textinput - miriamithiel@gmail.com
   
-* Frisar na landing e SEO: Ser o unico assistente chatGPT que atendente virtual e presencial
-
 * Escolher como começar, Apenas Vendendo, apenas Agendando, Apenas atendendo ou diversos
   
 * Mudar Modo Vendas no Meta para não responder com prompt nem a aba comentarios, forçando apenas a venda/agendamento

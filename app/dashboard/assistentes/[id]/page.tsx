@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Loader2, Globe, Lock, AlertCircle, Code } from 'lucide-react'; // Adicione 'Code'
+import { ArrowLeft, Save, Loader2, Globe, Lock, AlertCircle, Code, VolumeX, Volume1, Volume2 } from 'lucide-react'; // Adicione 'Code'
 import WidgetConfigModal from '@/components/dashboard/assistentes/WidgetConfigModal'; // Importe o modal
 import { createClient } from '@/lib/supabase-browser';
 
@@ -26,6 +26,8 @@ export default function EditarAssistentePage({ params }: PageProps) {
   const [showStartupSuggestions, setShowStartupSuggestions] = useState(false);
   const [startupSuggestions, setStartupSuggestions] = useState<typeof availableFunctions>([]);
   const [isWidgetModalOpen, setIsWidgetModalOpen] = useState(false);
+  const [calibrating, setCalibrating] = useState(false);
+  const [calibrationResult, setCalibrationResult] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadAssistant() {
@@ -56,6 +58,80 @@ export default function EditarAssistentePage({ params }: PageProps) {
     loadAssistant();
   }, [id]);
 
+  async function handleAutoCalibrate() {
+  setCalibrating(true);
+  setCalibrationResult(null);
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const audioCtx = new AudioContext();
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    source.connect(analyser);
+
+    const samples: number[] = [];
+    const buffer = new Float32Array(analyser.fftSize);
+    const startTime = Date.now();
+
+    await new Promise<void>((resolve) => {
+      const collect = () => {
+        analyser.getFloatTimeDomainData(buffer);
+        let sum = 0;
+        for (let i = 0; i < buffer.length; i++) sum += buffer[i] * buffer[i];
+        samples.push(Math.sqrt(sum / buffer.length));
+        if (Date.now() - startTime < 5000) requestAnimationFrame(collect);
+        else resolve();
+      };
+      collect();
+    });
+
+    stream.getTracks().forEach(t => t.stop());
+    audioCtx.close();
+
+    const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+
+    let preset: string;
+    let newVolumeThreshold: number;
+    let newSilenceThreshold: number;
+    let newSensitivity: number;
+
+    if (avg < 0.012) {
+      preset = 'silencioso';
+      newVolumeThreshold = 0.012;
+      newSilenceThreshold = 100;
+      newSensitivity = 0.85;
+    } else if (avg < 0.030) {
+      preset = 'moderado';
+      newVolumeThreshold = Math.max(0.015, avg * 2.5);
+      newSilenceThreshold = 140;
+      newSensitivity = 0.75;
+    } else {
+      preset = 'ruidoso';
+      newVolumeThreshold = Math.min(0.08, avg * 2.5);
+      newSilenceThreshold = 180;
+      newSensitivity = 0.60;
+    }
+
+    setCalibrationResult(
+      avg > 0.05
+        ? `⚠️ Ambiente muito ruidoso (${(avg * 100).toFixed(1)}%). Preset ruidoso aplicado.`
+        : `✓ Calibrado: ${preset} (RMS ${(avg * 100).toFixed(1)}%)`
+    );
+
+    setAssistant((prev: any) => ({
+      ...prev,
+      vad_environment_preset: preset,
+      vad_volume_threshold: newVolumeThreshold,
+      vad_silence_threshold: newSilenceThreshold,
+      wake_word_sensitivity: newSensitivity,
+    }));
+  } catch {
+    setCalibrationResult('Erro ao acessar microfone. Verifique as permissões.');
+  } finally {
+    setCalibrating(false);
+  }
+}
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaving(true);
@@ -85,6 +161,10 @@ export default function EditarAssistentePage({ params }: PageProps) {
       modo_vendas_enabled: formData.get('modo_vendas_enabled') === 'on',
       modo_links_enabled: formData.get('modo_links_enabled') === 'on',
       startup_function_key: startupFunctionKey.trim() || null,
+      vad_environment_preset: formData.get('vad_environment_preset') as string || 'moderado',
+      vad_volume_threshold: parseFloat(formData.get('vad_volume_threshold') as string) || 0.015,
+      vad_silence_threshold: parseInt(formData.get('vad_silence_threshold') as string, 10) || 120,
+      wake_word_sensitivity: parseFloat(formData.get('wake_word_sensitivity') as string) || 0.75,
     };
 
     try {
@@ -289,6 +369,92 @@ export default function EditarAssistentePage({ params }: PageProps) {
                       className="flex-1 w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition resize-none"
                     />
                   </div>
+
+{/* ── Calibração de Ambiente ── */}
+<div className="pt-2 border-t border-gray-100 dark:border-white/10">
+  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+    Sensibilidade ao Ambiente
+  </label>
+
+  <input type="hidden" name="vad_environment_preset" value={assistant.vad_environment_preset ?? 'moderado'} />
+  <input type="hidden" name="vad_volume_threshold"   value={assistant.vad_volume_threshold ?? 0.015} />
+  <input type="hidden" name="vad_silence_threshold"  value={assistant.vad_silence_threshold ?? 120} />
+  <input type="hidden" name="wake_word_sensitivity"  value={assistant.wake_word_sensitivity ?? 0.75} />
+
+  <div className="grid grid-cols-3 gap-2 mb-3">
+{([
+  { key: 'silencioso', Icon: VolumeX,  name: 'Silencioso', desc: 'Escritório, quarto', v: 0.012, s: 100,  sens: 0.85 },
+  { key: 'moderado',   Icon: Volume1,  name: 'Moderado',   desc: 'Loja tranquila',    v: 0.020, s: 140,  sens: 0.75 },
+  { key: 'ruidoso',    Icon: Volume2,  name: 'Ruidoso',    desc: 'Balcão, mercado',   v: 0.050, s: 180,  sens: 0.60 },
+] as const).map(opt => {
+  const active = (assistant.vad_environment_preset ?? 'moderado') === opt.key;
+  return (
+    <button
+      key={opt.key}
+      type="button"
+      onClick={() => setAssistant((prev: any) => ({
+        ...prev,
+        vad_environment_preset: opt.key,
+        vad_volume_threshold: opt.v,
+        vad_silence_threshold: opt.s,
+        wake_word_sensitivity: opt.sens,
+      }))}
+      className={`flex flex-col items-center p-3 rounded-xl border-2 text-center transition ${
+        active
+          ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10'
+          : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 hover:border-gray-300 dark:hover:border-white/20'
+      }`}
+    >
+      <opt.Icon className={`w-5 h-5 mb-1 ${active ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`} />
+      <span className={`text-xs font-semibold ${active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
+        {opt.name}
+      </span>
+      <span className="text-[10px] text-gray-400 mt-0.5">{opt.desc}</span>
+    </button>
+  );
+    })}
+  </div>
+
+  <button
+    type="button"
+    onClick={handleAutoCalibrate}
+    disabled={calibrating}
+    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 text-sm font-medium text-gray-700 dark:text-gray-300 transition disabled:opacity-50"
+  >
+    {calibrating ? (
+      <>
+        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        Escutando ambiente (5s)...
+      </>
+    ) : (
+      <>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-7V3" />
+        </svg>
+        Calibrar automaticamente pelo microfone
+      </>
+    )}
+  </button>
+
+  {calibrationResult && (
+    <p className={`mt-2 text-xs px-3 py-2 rounded-lg ${
+      calibrationResult.startsWith('⚠️')
+        ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'
+        : calibrationResult.startsWith('Erro')
+        ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+        : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+    }`}>
+      {calibrationResult}
+    </p>
+  )}
+
+  <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+    Ajusta threshold de volume, tolerância ao silêncio e sensibilidade da wake word.
+  </p>
+</div>
 
                   {/* Wake Word Enabled */}
                   <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">

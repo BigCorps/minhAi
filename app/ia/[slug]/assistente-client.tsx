@@ -790,6 +790,7 @@ useEffect(() => {
       isVendas={company.assistant_type === 'vendas'}
       startupFunctionKey={company.startup_function_key ?? undefined}
       textMode={true}
+      widgetMode={widgetMode}
       onTextMessage={(handler) => {
         textMessageHandlerRef.current = handler;
       }}

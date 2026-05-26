@@ -134,7 +134,7 @@ export function Sidebar() {
                           : 'text-gray-700 hover:bg-gray-50 border-l-2 border-transparent'
                     }`}
                   >
-<Icon className="w-4 h-4" />
+                    <Icon className="w-5 h-5" />
                     <span>{item.label}</span>
                   </Link>
                 );

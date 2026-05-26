@@ -5,6 +5,10 @@
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões 
 
 * conferir funções que funcionam no widget para colocar no condicional de aviso - miriamithiel@gmail.com
+  
+* Frisar na landing e SEO: Ser o unico assistente chatGPT que atendente virtual e presencial
+
+* Escolher como começar, Apenas Vendendo, apenas Agendando, Apenas atendendo ou diversos
 
 * Artes Instagram: Manus jiuithsu e fofopanda / GPT as 18h amanha
 

@@ -4,7 +4,7 @@
 
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões 
 
-* conferir funções que funcionam no widget para colocar no condicional de aviso - miriamithiel@gmail.com
+* conferir funções bloqueadas que não aparecem aviso no carrossel e elas ainda funcionam pelo textinput - miriamithiel@gmail.com
   
 * Frisar na landing e SEO: Ser o unico assistente chatGPT que atendente virtual e presencial
 

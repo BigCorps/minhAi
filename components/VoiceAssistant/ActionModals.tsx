@@ -25,6 +25,7 @@ import VirtualKeyboard from '@/components/assistant/VirtualKeyboard';
 
 // ── Funções bloqueadas no widget (requerem câmera, microfone ou localização) ──
 const WIDGET_BLOCKED_FUNCTIONS = new Set([
+  '__widget_blocked_navigation__',
   'LerQRCodeDisplay',
   'LerCodigoBarrasDisplay',
   'ImagemEmTextoDisplay',

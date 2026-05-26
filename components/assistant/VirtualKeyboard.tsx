@@ -289,6 +289,18 @@ style={{
         )}
       </div>
 
+      {/* ── Pontuação (visível apenas no modo 123) ────────── */}
+      {numbers && (
+        <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
+          {[',', '.', '?', '!', '@', '-', '(', ')', '/', ':'].map((char) => (
+            <button key={char} type="button" style={keyStyle()}
+              onMouseDown={(e) => { e.preventDefault(); handleKey(char); }}
+              onTouchEnd={(e) => { e.preventDefault(); handleKey(char); }}
+            >{char}</button>
+          ))}
+        </div>
+      )}
+
       {/* ── Letras ────────────────────────────────────────── */}
       {!numbers && rows.map((row, ri) => (
         <div key={ri} style={{ display: 'flex', gap: 5, justifyContent: 'center', marginBottom: 6 }}>
@@ -331,7 +343,7 @@ style={{
           onMouseDown={(e) => { e.preventDefault(); setNumbers(!numbers); setAccentActiveKey(null); }}
           onTouchEnd={(e) => { e.preventDefault(); setNumbers(!numbers); setAccentActiveKey(null); }}
         >
-          {numbers ? 'ABC' : '123'}
+          {numbers ? 'ABC' : '123@?,'}
         </button>
 
         {/* Espaço */}

@@ -416,7 +416,7 @@ export function MetaCommentsPanel({
           Respostas automáticas a comentários não estão disponíveis na versão Vendas.
           Faça upgrade para o <strong className="text-gray-700 dark:text-gray-300">minhAi Smart</strong> com um plano mensal para acessar essa funcionalidade.
         </p>
-        
+        <a
           href="/dashboard/credits"
           className="inline-block mt-5 px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
         >

@@ -127,17 +127,17 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           </h1>
 
           {/* Parágrafo */}
-          <p
-            className={`
-              text-xs sm:text-base md:text-lg max-w-lg leading-relaxed transition-colors mx-auto
-              mb-1.5
-              [@media(max-height:660px)_and_(max-width:767px)]:hidden
-              ${isDark ? 'text-white/55' : 'text-gray-600'}
-            `}
-          >
-            Nunca mais perca venda por falta de atendimento.
-            Configure em minutos, sem programar — e deixe a IA trabalhar, facilitando a gestão com seus clientes e funcionários, enquanto você descansa e apenas gerencia seu negócio.
-          </p>
+<p
+  className={`
+    text-xs sm:text-base md:text-lg max-w-lg leading-relaxed transition-colors mx-auto
+    mb-1.5
+    [@media(max-height:660px)_and_(max-width:767px)]:hidden
+    ${isDark ? 'text-white/55' : 'text-gray-600'}
+  `}
+>
+  A única IA que atende seus clientes no virtual e no presencial, cobra, agenda, confirma pagamentos via Pix e nunca deixa uma venda sem resposta.
+  Configure tudo em minutos, sem programar, e automatize atendimentos, cobranças, agendamentos e operações enquanto sua empresa funciona sozinha — 24 horas por dia.
+</p>
 
           {/* DomainPreviewPicker */}
           <DomainPreviewPicker isDark={isDark} />

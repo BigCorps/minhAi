@@ -199,18 +199,22 @@ if (checkingAccess) {
                 {activeTab === 'conversations' && hasConnections && (
                   <ConversationsPanel selectedCompanyId={selectedCompanyId} />
                 )}
-                {activeTab === 'comments' && hasConnections && (
-                  <MetaCommentsPanel selectedCompanyId={selectedCompanyId} />
-                )}
-                {activeTab === 'connections' && (
-                  <ConnectionManager
-                    selectedCompanyId={selectedCompanyId}
-                    onCompanyChange={() => {}}
-                    onConnectionsChange={(connected) => {
-                      setHasConnections(connected);
-                    }}
-                  />
-                )}
+{activeTab === 'comments' && hasConnections && (
+  <MetaCommentsPanel
+    selectedCompanyId={selectedCompanyId}
+    assistantType={assistantType ?? 'smart'}
+  />
+)}
+{activeTab === 'connections' && (
+  <ConnectionManager
+    selectedCompanyId={selectedCompanyId}
+    assistantType={assistantType ?? 'smart'}
+    onCompanyChange={() => {}}
+    onConnectionsChange={(connected) => {
+      setHasConnections(connected);
+    }}
+  />
+)}
               </div>
             </>
           )}

@@ -12,10 +12,12 @@ interface CompanyConfig {
   avatarType: 'face' | 'orb' | null;
   wakeWordEnabled: boolean;
   ttsVoice: string;
-  // ── Fase 4: comportamento do assistente ──
   presenceGreetingEnabled: boolean;
   inactivityTimeoutSeconds: number;
   inactivityAction: 'feature_highlight' | 'offers_panel' | 'restart';
+  vadVolumeThreshold: number;
+  vadSilenceThreshold: number;
+  wakeWordSensitivity: number;
 }
 
 /**

@@ -9,6 +9,8 @@
 * Frisar na landing e SEO: Ser o unico assistente chatGPT que atendente virtual e presencial
 
 * Escolher como começar, Apenas Vendendo, apenas Agendando, Apenas atendendo ou diversos
+  
+* Mudar Modo Vendas no Meta para não responder com prompt nem a aba comentarios, forçando apenas a venda/agendamento
 
 * Artes Instagram: Manus jiuithsu e fofopanda / GPT as 18h amanha
 

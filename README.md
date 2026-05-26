@@ -11,8 +11,6 @@
 .
 ## IDÉIAS
 
-* Site Bigcorps novo em HTML
-
 * Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistente
 
 * Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria

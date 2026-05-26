@@ -38,6 +38,9 @@ export function useCompanyConfig(
   const [presenceGreetingEnabled, setPresenceGreetingEnabled] = useState(false);
   const [inactivityTimeoutSeconds, setInactivityTimeoutSeconds] = useState(300);
   const [inactivityAction, setInactivityAction] = useState<'feature_highlight' | 'offers_panel' | 'restart'>('feature_highlight');
+  const [vadVolumeThreshold, setVadVolumeThreshold] = useState(0.015);
+  const [vadSilenceThreshold, setVadSilenceThreshold] = useState(120);
+  const [wakeWordSensitivity, setWakeWordSensitivity] = useState(0.75);
 
   useEffect(() => {
     async function loadCompanyConfig() {
@@ -55,7 +58,10 @@ export function useCompanyConfig(
             presence_greeting_enabled,
             inactivity_timeout_seconds,
             inactivity_action,
-            tts_voice
+            tts_voice,
+            vad_volume_threshold,
+            vad_silence_threshold,
+            wake_word_sensitivity
           `)
           .eq('id', companyId)
           .single();
@@ -81,6 +87,9 @@ export function useCompanyConfig(
           setInactivityAction(
             (data.inactivity_action as 'feature_highlight' | 'offers_panel' | 'restart') ?? 'feature_highlight'
           );
+          setVadVolumeThreshold(data.vad_volume_threshold ?? 0.015);
+          setVadSilenceThreshold(data.vad_silence_threshold ?? 120);
+          setWakeWordSensitivity(data.wake_word_sensitivity ?? 0.75);
 
           console.log('✅ Config carregada — Wake word:', wakeWordFromDb, '| Presença:', data.presence_greeting_enabled, '| Inatividade:', data.inactivity_timeout_seconds, 's →', data.inactivity_action);
         }
@@ -101,5 +110,8 @@ export function useCompanyConfig(
     presenceGreetingEnabled,
     inactivityTimeoutSeconds,
     inactivityAction,
+    vadVolumeThreshold,
+    vadSilenceThreshold,
+    wakeWordSensitivity,
   };
 }

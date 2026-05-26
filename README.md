@@ -11,8 +11,6 @@
 * Artes Instagram: Manus jiuithsu e fofopanda / GPT as 18h amanha
 
 * Editar Video de pitch para Shark Tank e Inatel (áudio gravado no Manus, vídeos gravados, gravar também a tela para mostrar mais funcionalidades e editar)
-
-* Conferir se todas as funções estão consumindo os normalmente e indo para o saldo, se funcionam no Meta, mobile e desktop, slug, webapp, full, texto, vendas, smart, etc - Funções Meta - ith.almeida
 .
 ## IDÉIAS
 

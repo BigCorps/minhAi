@@ -136,7 +136,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
   `}
 >
   A única IA que atende seus clientes no virtual e no presencial, cobra, agenda, confirma pagamentos via Pix e nunca deixa uma venda sem resposta.
-  Configure tudo em minutos, sem programar, e automatize atendimentos, cobranças, agendamentos e operações enquanto sua empresa funciona sozinha — 24 horas por dia.
+  Configure tudo em minutos, sem programar e automatize atendimentos, cobranças, agendamentos e operações enquanto sua empresa lucra mais.
 </p>
 
           {/* DomainPreviewPicker */}

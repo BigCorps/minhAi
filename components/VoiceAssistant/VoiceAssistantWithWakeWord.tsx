@@ -1017,7 +1017,7 @@ async function handleFunctionClick(functionKey: string, event?: any) {
 
     // No widget, bloquear funções que navegam para outras páginas
     const WIDGET_NAVIGATION_BLOCKED = new Set([
-      'modo_venda', 'modo_fila', 'link_na_bio', 'fazer_pedido',
+      'modo_venda', 'modo_fila', 'link_na_bio',
     ]);
     if (widgetMode && WIDGET_NAVIGATION_BLOCKED.has(functionKey)) {
       const slug = company?.slug ?? '';

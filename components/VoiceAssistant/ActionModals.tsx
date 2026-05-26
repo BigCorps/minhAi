@@ -48,6 +48,10 @@ const WIDGET_BLOCKED_FUNCTIONS = new Set([
   'PortaRetratoDisplay',
   'PainelOfertasDisplay',
   'SequenciaVideosDisplay',
+  'ImpressaoLocalDisplay',
+  'ImpressaoRemotaDisplay',
+  'ImpressaoReciboDisplay',
+
 ]);
 
 // ── Mapa de Componentes (todos lazy loaded) ───────────────────

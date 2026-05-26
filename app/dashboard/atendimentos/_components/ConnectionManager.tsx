@@ -303,12 +303,15 @@ function AgentConfigPanel({
   connection,
   companySystemPrompt,
   onSave,
+  assistantType,
 }: {
   connection: MetaConnection;
   companySystemPrompt: string | null;
   onSave: (updates: Partial<MetaConnection>) => Promise<void>;
+  assistantType: string;
 }) {
-  const [isOpen, setIsOpen]             = useState(false);
+  if (assistantType === 'vendas') return null;
+  const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving]         = useState(false);
   const [useCustom, setUseCustom]       = useState(!!connection.agent_prompt);
   const [promptText, setPromptText]     = useState(connection.agent_prompt || companySystemPrompt || '');
@@ -419,10 +422,12 @@ function AgentConfigPanel({
 
 export function ConnectionManager({
   selectedCompanyId,
+  assistantType = 'smart',
   onCompanyChange,
   onConnectionsChange,
 }: {
   selectedCompanyId: string;
+  assistantType?: string;
   onCompanyChange?: (id: string) => void;
   onConnectionsChange?: (hasConnections: boolean) => void;
 }) {
@@ -933,11 +938,12 @@ export function ConnectionManager({
                     {/* ── Configurações expandíveis ── */}
 
                     {/* Prompt do agente (IA, prompt personalizado) */}
-                    <AgentConfigPanel
-                      connection={conn}
-                      companySystemPrompt={selectedCompany?.system_prompt || null}
-                      onSave={(u) => handleSaveConnection(conn.id, u)}
-                    />
+<AgentConfigPanel
+  connection={conn}
+  companySystemPrompt={selectedCompany?.system_prompt || null}
+  onSave={(u) => handleSaveConnection(conn.id, u)}
+  assistantType={assistantType}
+/>
 
                   </CardContent>
                 </Card>

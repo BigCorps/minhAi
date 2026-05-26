@@ -72,6 +72,8 @@ export interface FunctionDefinition {
     registerFunctionUsage?: (key: string, credits: number) => Promise<void>;
     checkIfFunctionIsEnabled?: (key: string) => Promise<boolean>;
     sessionId?: string | null;
+    widgetMode?: boolean;
+    slug?: string;
   }) => Promise<boolean>;
 }
 
@@ -628,9 +630,13 @@ modo_fila: {
   requiresPayment: false,
   isPremium: false,
 
-  handler: async ({ slug }) => {
+handler: async ({ slug, widgetMode, playText, setActiveModal }) => {
+    if (widgetMode) {
+      await playText('Esta função está disponível na versão completa do assistente.');
+      setActiveModal?.({ type: '__widget_blocked_navigation__', data: { slug } });
+      return false;
+    }
     try {
-      // Usa getContextualRoute para detectar slug vs subdomínio
       const filaUrl = getContextualRoute('fila', slug);
       window.location.href = filaUrl;
       return true;
@@ -1382,7 +1388,12 @@ link_na_bio: {
   requiresPayment: false,
   isPremium: false,
  
-  handler: async ({ playText, slug }) => {
+  handler: async ({ playText, slug, widgetMode, setActiveModal }) => {
+    if (widgetMode) {
+      await playText('Esta função está disponível na versão completa do assistente.');
+      setActiveModal?.({ type: '__widget_blocked_navigation__', data: { slug } });
+      return false;
+    }
     try {
       const linkUrl = getContextualRoute('link', slug);
       await playText('Abrindo página de links!');
@@ -6228,7 +6239,12 @@ modo_venda: {
   creditsPerUse: 0,
   requiresPayment: false,
   isPremium: false,
-handler: async ({ playText, slug, ...rest }: any) => {
+handler: async ({ playText, slug, widgetMode, setActiveModal, ...rest }: any) => {
+  if (widgetMode) {
+    await playText('Esta função está disponível na versão completa do assistente.');
+    setActiveModal?.({ type: '__widget_blocked_navigation__', data: { slug } });
+    return false;
+  }
   try {
     const baseUrl = getContextualRoute('vendas', slug);
     

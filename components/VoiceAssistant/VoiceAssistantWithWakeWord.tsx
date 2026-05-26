@@ -208,6 +208,9 @@ useEffect(() => {
     inactivityTimeoutSeconds,
     inactivityAction,
     ttsVoice,
+    vadVolumeThreshold,
+    vadSilenceThreshold,
+    wakeWordSensitivity,
   } = useCompanyConfig(companyId, wakeWord, greetingMessage);
   const functionSettings = useFunctionSettings(companyId);
 
@@ -293,12 +296,16 @@ useEffect(() => {
   }, [companyId]);
   
   const { noiseWarning, repromptWarning, handleVolumeChange, triggerRepromptWarning } = useNoiseWarning();
-  const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(companyWakeWord, wakeWordEnabled);
+  const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(
+    companyWakeWord,
+    wakeWordEnabled,
+    wakeWordSensitivity ?? 0.75
+  );
   const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio, ttsVoice);
   const isMobile = useIsMobile();
-const { profile, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? '');
-const profileRef = useRef(profile);
-useEffect(() => { profileRef.current = profile; }, [profile]);
+  const { profile, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? '');
+  const profileRef = useRef(profile);
+  useEffect(() => { profileRef.current = profile; }, [profile]);
 
 const { onlineProfiles } = useOnlinePresence({
   companyId,
@@ -662,7 +669,10 @@ useEffect(() => {
 
     const vadConfig = isMobile
       ? { volumeThreshold: 0.030, silenceThreshold: 60 }
-      : { volumeThreshold: 0.015, silenceThreshold: 120 };
+      : {
+          volumeThreshold: vadVolumeThreshold ?? 0.015,
+          silenceThreshold: vadSilenceThreshold ?? 120,
+        };
 
     try {
       if (googleSpeechRef.current) {

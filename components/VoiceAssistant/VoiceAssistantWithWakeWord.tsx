@@ -1620,6 +1620,8 @@ case 'impressao_recibo':
               setIsProcessing,
               sessionId,
               setActiveModal,
+              widgetMode,
+              slug,
               registerFunctionUsage: async (key: string, credits: number) =>
                 registerFunctionUsage(companyId, key, credits),
               checkIfFunctionIsEnabled: async (key: string) =>
@@ -2134,7 +2136,9 @@ const response = await fetch('/api/voice/process', { method: 'POST', body: formD
               playText: silentPlayText,
               setIsProcessing,
               sessionId,
-              setActiveModal,
+              setActiveModal,                 
+              widgetMode,
+              slug,
               registerFunctionUsage: async (key: string, credits: number) =>
                 registerFunctionUsage(companyId, key, credits),
               checkIfFunctionIsEnabled: async (key: string) =>
@@ -2272,6 +2276,8 @@ const response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/proces
           setIsProcessing,
           sessionId,
           setActiveModal,
+          widgetMode,
+          slug,
         }).catch(() => {});
       } else {
         handleFunctionClick(functionKey);

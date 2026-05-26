@@ -51,17 +51,17 @@ function MetaIcon({ className }: { className?: string }) {
 }
 
 const menuItems = [
-  { href: '/dashboard',              label: ' Dashboard',                        icon: LayoutDashboard },
-  { href: '/dashboard/assistentes',  label: ' Assistentes',                      icon: Bot },
-  { href: '/dashboard/functions',    label: ' Funções',                          icon: Settings },
-  { href: '/dashboard/vendas',       label: ' Vendas e Produtos',                icon: ShoppingCart },
-  { href: '/dashboard/cadastros',    label: ' Controle de Usuários',             icon: UserPlus },
-  { href: '/dashboard/producao',     label: ' Linha de Produção',                icon: ClipboardList },
-  { href: '/dashboard/agenda',       label: ' Serviços Google',                  icon: GoogleIcon },
+  { href: '/dashboard',              label: 'Dashboard',                        icon: LayoutDashboard },
+  { href: '/dashboard/assistentes',  label: 'Assistentes',                      icon: Bot },
+  { href: '/dashboard/functions',    label: 'Funções',                          icon: Settings },
+  { href: '/dashboard/vendas',       label: 'Vendas e Produtos',                icon: ShoppingCart },
+  { href: '/dashboard/cadastros',    label: 'Controle de Usuários',             icon: UserPlus },
+  { href: '/dashboard/producao',     label: 'Linha de Produção',                icon: ClipboardList },
+  { href: '/dashboard/agenda',       label: 'Serviços Google',                  icon: GoogleIcon },
   { href: '/dashboard/atendimentos', label: 'Serviços Meta',                    icon: MetaIcon },
-  { href: '/dashboard/faqs',         label: ' Respostas Rápidas',                icon: HelpCircle },
-  { href: '/dashboard/fiscal',       label: ' Notas Fiscais',                    icon: Receipt },
-  { href: '/dashboard/arquivos',     label: ' Arquivos',                         icon: FolderOpen },
+  { href: '/dashboard/faqs',         label: 'Respostas Rápidas',                icon: HelpCircle },
+  { href: '/dashboard/fiscal',       label: 'Notas Fiscais',                    icon: Receipt },
+  { href: '/dashboard/arquivos',     label: 'Arquivos',                         icon: FolderOpen },
 ];
 
 export function Sidebar() {
@@ -134,13 +134,7 @@ export function Sidebar() {
                           : 'text-gray-700 hover:bg-gray-50 border-l-2 border-transparent'
                     }`}
                   >
-                    <Icon
-  className={
-    item.label === 'Serviços Meta'
-      ? 'w-5 h-5 scale-y-110'
-      : 'w-4 h-4'
-  }
-/>
+<Icon className="w-4 h-4" />
                     <span>{item.label}</span>
                   </Link>
                 );

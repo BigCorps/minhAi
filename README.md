@@ -6,8 +6,6 @@
   
 * Passo a passo no dashboard para na tela inicial mostrando os passos para a configuração total do primeiro assistente com todas as funcionalidades escolhidas. Cadastro / Funções / Configuração/ Serviços Google / Serviços Meta / Cadastro de Produtos / Cadastro de Usuário / Nota (opcional)
 
-* Não fazer landing, apenas mudar a escolha do usuário webapp para escolher qual vai ser a página principal.
-
 * MCP e App ChatGPT e MCP Claude para configuração dos assistentes direto e acesso a algumas funções específicas, vinculado ao usuário.
 (pix / link / emitir nota / agendar / cotação / orçamento / qrcode etc)
 (Criar categoria Integrações IA - para conexão com aplicativos IA e integrações externas)

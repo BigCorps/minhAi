@@ -70,7 +70,7 @@ const MINHAI_DOMAINS = [
  * getContextualRoute('cliente', 'loja') → '/cliente/loja'
  */
 export function getContextualRoute(
-  route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk' | 'cliente' | 'link' | 'site'
+  route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk' | 'cliente' | 'link' | 'site',
   slug?: string
 ): string {
   const { isSubdomain, currentSlug } = detectSubdomainContext();

@@ -1,13 +1,12 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* enviar releases
+* enviar releases e criar LinkedIn
 
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões 
 
-* conferir funções bloqueadas que não aparecem aviso no carrossel e elas ainda funcionam pelo textinput - miriamithiel@gmail.com
+* conferir funções bloqueadas - miriamithiel@gmail.com
 
-* MCP e App ChatGPT e MCP Claude para configuração dos assistentes direto e acesso a algumas funções específicas, vinculado ao usuário.
-(pix / link / emitir nota / agendar / cotação / orçamento / qrcode etc)
+* MCP e App ChatGPT e MCP Claude
 (Criar categoria Integrações IA - para conexão com aplicativos IA e integrações externas)
 
 * PagAi - Pix com confirmação automática e Bolão entre amigos (Pool).

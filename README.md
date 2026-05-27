@@ -3,8 +3,6 @@
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões 
 
 * conferir funções bloqueadas que não aparecem aviso no carrossel e elas ainda funcionam pelo textinput - miriamithiel@gmail.com
-  
-* Passo a passo no dashboard para na tela inicial mostrando os passos para a configuração total do primeiro assistente com todas as funcionalidades escolhidas. Cadastro / Funções / Configuração/ Serviços Google / Serviços Meta / Cadastro de Produtos / Cadastro de Usuário / Nota (opcional)
 
 * MCP e App ChatGPT e MCP Claude para configuração dos assistentes direto e acesso a algumas funções específicas, vinculado ao usuário.
 (pix / link / emitir nota / agendar / cotação / orçamento / qrcode etc)

@@ -108,6 +108,7 @@ export default function SaldoPage() {
   // offset controla quantos registros já foram buscados em cada tabela
   const [pixOffset, setPixOffset] = useState(0);
   const [cobrancasOffset, setCobrancasOffset] = useState(0);
+  const [mpOrdersOffset, setMpOrdersOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   // Contexto reutilizado pelo "carregar mais" (evita re-buscar companies/withdrawals)
@@ -167,9 +168,9 @@ export default function SaldoPage() {
       filtered = filtered.filter(tx => tx.source === 'cobranca');
     }
     if (statusFilter === 'confirmed') {
-      filtered = filtered.filter(tx =>
-        tx.status === 'confirmed' || tx.status === 'transferred' || tx.status === 'PAGA'
-      );
+filtered = filtered.filter(tx =>
+  tx.status === 'confirmed' || tx.status === 'transferred' || tx.status === 'PAGA' || tx.status === 'paid'
+);
     } else if (statusFilter === 'cancelled') {
       filtered = filtered.filter(tx =>
         tx.status === 'cancelled' || tx.status === 'expired' || tx.status === 'CANCELADA'
@@ -209,7 +210,7 @@ export default function SaldoPage() {
   }
 
   function getStatusBadge(tx: UnifiedTransaction) {
-    const isConfirmed = tx.status === 'confirmed' || tx.status === 'transferred' || tx.status === 'PAGA';
+    const isConfirmed = tx.status === 'confirmed' || tx.status === 'transferred' || tx.status === 'PAGA' || tx.status === 'paid';
     const isCancelled = tx.status === 'cancelled' || tx.status === 'expired' || tx.status === 'CANCELADA';
 
     if (isConfirmed) return (
@@ -392,17 +393,29 @@ export default function SaldoPage() {
             .range(0, PAGE_SIZE - 1)
         : { data: [] };
 
+      const { data: mpOrdersData } = companyIds.length > 0
+        ? await supabase
+            .from('mp_orders')
+            .select('id, company_id, amount_cents, payment_type, installments, description, status, created_at, paid_at')
+            .in('company_id', companyIds)
+            .eq('status', 'paid')
+            .order('paid_at', { ascending: false })
+            .range(0, PAGE_SIZE - 1)
+        : { data: [] };
+
       const pixCount = (pixData ?? []).length;
       const cobrancasCount = (cobrancasData ?? []).length;
+      const mpOrdersCount = (mpOrdersData ?? []).length;
 
-      // Se ambas as tabelas retornaram menos que PAGE_SIZE, não há mais dados
-      setHasMore(pixCount >= PAGE_SIZE || cobrancasCount >= PAGE_SIZE);
+      setHasMore(pixCount >= PAGE_SIZE || cobrancasCount >= PAGE_SIZE || mpOrdersCount >= PAGE_SIZE);
       setPixOffset(pixCount);
       setCobrancasOffset(cobrancasCount);
+      setMpOrdersOffset(mpOrdersCount);
 
       const merged = [
         ...normalizePix(pixData ?? [], withdrawalIds, companyNameMap, companyTypeMap, commissionsData),
         ...normalizeCobrancas(cobrancasData ?? [], companyNameMap, companyTypeMap),
+        ...normalizeMpOrders(mpOrdersData ?? [], companyNameMap, companyTypeMap),
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       setAllTransactions(merged);
@@ -419,7 +432,7 @@ export default function SaldoPage() {
     try {
       const { companyNameMap, companyTypeMap, companyIds, withdrawalIds, commissionsPending: commissions } = loadCtx;
 
-      const [{ data: pixData }, { data: cobrancasData }] = await Promise.all([
+      const [{ data: pixData }, { data: cobrancasData }, { data: mpOrdersData }] = await Promise.all([
         supabase
           .from('pix_transactions')
           .select('id, company_id, amount_cents, status, requested_at, notes, destination_pix_key')
@@ -436,18 +449,31 @@ export default function SaldoPage() {
               .order('paid_at', { ascending: false })
               .range(cobrancasOffset, cobrancasOffset + PAGE_SIZE - 1)
           : Promise.resolve({ data: [] }),
+
+        companyIds.length > 0
+          ? supabase
+              .from('mp_orders')
+              .select('id, company_id, amount_cents, payment_type, installments, description, status, created_at, paid_at')
+              .in('company_id', companyIds)
+              .eq('status', 'paid')
+              .order('paid_at', { ascending: false })
+              .range(mpOrdersOffset, mpOrdersOffset + PAGE_SIZE - 1)
+          : Promise.resolve({ data: [] }),
       ]);
 
       const pixCount = (pixData ?? []).length;
       const cobrancasCount = (cobrancasData ?? []).length;
+      const mpOrdersCount = (mpOrdersData ?? []).length;
 
       setPixOffset(prev => prev + pixCount);
       setCobrancasOffset(prev => prev + cobrancasCount);
-      setHasMore(pixCount >= PAGE_SIZE || cobrancasCount >= PAGE_SIZE);
+      setMpOrdersOffset(prev => prev + mpOrdersCount);
+      setHasMore(pixCount >= PAGE_SIZE || cobrancasCount >= PAGE_SIZE || mpOrdersCount >= PAGE_SIZE);
 
       const newBatch = [
         ...normalizePix(pixData ?? [], withdrawalIds, companyNameMap, companyTypeMap, commissions),
         ...normalizeCobrancas(cobrancasData ?? [], companyNameMap, companyTypeMap),
+        ...normalizeMpOrders(mpOrdersData ?? [], companyNameMap, companyTypeMap),
       ];
 
       setAllTransactions(prev => {
@@ -520,6 +546,33 @@ export default function SaldoPage() {
         notes: tx.descricao,
         is_vendas: isVendas,
         comissao_cents: isVendas ? Math.round(amountCents * 0.10) : undefined,
+      };
+    });
+  }
+
+  function normalizeMpOrders(
+    data: any[],
+    companyNameMap: Record<string, string>,
+    companyTypeMap: Record<string, string>,
+  ): UnifiedTransaction[] {
+    return data.map(tx => {
+      const isVendas = companyTypeMap[tx.company_id] === 'vendas';
+      const label = tx.payment_type === 'debit_card'
+        ? tx.installments > 1 ? `TEF Débito ${tx.installments}x` : 'TEF Débito'
+        : tx.installments > 1 ? `TEF Crédito ${tx.installments}x` : 'TEF Crédito';
+      return {
+        id: tx.id,
+        source: 'cobranca' as const,
+        is_withdrawal: false,
+        company_id: tx.company_id,
+        company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
+        amount_cents: tx.amount_cents,
+        status: tx.status,
+        date: tx.paid_at ?? tx.created_at,
+        tipo_label: label,
+        notes: tx.description ?? undefined,
+        is_vendas: isVendas,
+        comissao_cents: isVendas ? Math.round(tx.amount_cents * 0.10) : undefined,
       };
     });
   }

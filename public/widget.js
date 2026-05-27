@@ -47,6 +47,24 @@
   // ── Estado ───────────────────────────────────────────────────────────────
   let isOpen = false;
   let card = null;
+  let currentTheme = 'light';
+
+  // ── Detecção de tema do site hospedeiro ──────────────────────────────────
+  function detectTheme() {
+    const dataTheme =
+      document.documentElement.getAttribute('data-theme') ||
+      document.documentElement.getAttribute('data-color-scheme');
+    if (dataTheme) return dataTheme.includes('dark') ? 'dark' : 'light';
+
+    if (
+      document.documentElement.classList.contains('dark') ||
+      document.body.classList.contains('dark')
+    ) return 'dark';
+
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+
+  currentTheme = detectTheme();
 
   // ── Cria o ícone SVG como referência direta (closure) ────────────────────
   // Evita getElementById frágil após re-renders ou múltiplas aberturas
@@ -149,7 +167,7 @@
     `;
 
     const iframe = document.createElement('iframe');
-    iframe.src = `https://minhai.app/ia/${slug}/widget`;
+    iframe.src = `https://minhai.app/ia/${slug}/widget?theme=${currentTheme}`;
     iframe.scrolling = 'no';
     iframe.style.cssText = `
       width: 100%;
@@ -222,6 +240,28 @@
   // window.close() não funciona em iframes — o iframe envia postMessage no lugar
   window.addEventListener('message', (e) => {
     if (e.data === 'minhai:close') closeCard();
+  });
+
+// ── Observa mudanças de tema no site hospedeiro ──────────────────────────
+  function notifyThemeChange(newTheme) {
+    if (newTheme === currentTheme) return;
+    currentTheme = newTheme;
+    const iframe = card ? card.querySelector('iframe') : null;
+    if (iframe) {
+      iframe.contentWindow.postMessage({ type: 'minhai:theme', theme: currentTheme }, '*');
+    }
+  }
+
+  const themeObserver = new MutationObserver(() => {
+    notifyThemeChange(detectTheme());
+  });
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class', 'data-theme', 'data-color-scheme'],
+  });
+
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    notifyThemeChange(e.matches ? 'dark' : 'light');
   });
 
   // ── Injeta no body ───────────────────────────────────────────────────────

@@ -1174,6 +1174,11 @@ case 'minha_posicao_fila':
 
 case 'modo_fila':
   await stopGoogleSpeech();
+  if (widgetMode) {
+    await pt('Esta função está disponível na versão completa do assistente.');
+    setActiveModal({ type: '__widget_blocked_navigation__', data: { slug } });
+    break;
+  }
   const filaUrl = getContextualRoute('fila', slug);
   window.location.href = filaUrl;
   break;
@@ -1595,23 +1600,33 @@ case 'impressao_recibo':
           pt('Vou te guiar no cadastro do produto. Qual o nome?').catch(() => {});
           await registerFunctionUsage(companyId, functionKey, functionSettings[functionKey]?.creditsPerUse);
           return;
-        case 'modo_venda': {
-          await stopGoogleSpeech();
-          const vendaUrl = getContextualRoute('vendas', slug);
-          window.location.href = vendaUrl;
-          break;
-        }
+case 'modo_venda': {
+  await stopGoogleSpeech();
+ if (widgetMode) {
+   await pt('Esta função está disponível na versão completa do assistente.');
+   setActiveModal({ type: '__widget_blocked_navigation__', data: { slug } });
+   break;
+ }
+  const vendaUrl = getContextualRoute('vendas', slug);
+  window.location.href = vendaUrl;
+  break;
+}
         case 'fazer_pedido':
           await stopGoogleSpeech();
           setActiveModal({ type: 'FazerPedidoDisplay', data: { companyId, slug } });
           pt('Abrindo...').catch(() => {});
           break;
-        case 'link_na_bio': {
-          await stopGoogleSpeech();
-          const linkUrl = getContextualRoute('link', slug);
-          window.location.href = linkUrl;
-          break;
-        }
+case 'link_na_bio': {
+  await stopGoogleSpeech();
+ if (widgetMode) {
+   await pt('Esta função está disponível na versão completa do assistente.');
+   setActiveModal({ type: '__widget_blocked_navigation__', data: { slug } });
+   break;
+ }
+  const linkUrl = getContextualRoute('link', slug);
+  window.location.href = linkUrl;
+  break;
+}
         case 'analisar_planilha':
           await stopGoogleSpeech();
           setActiveModal({ type: 'AnalisarPlanilhaDisplay', data: { companyId } });
@@ -1940,6 +1955,7 @@ const handleTextMessage = async (message: string) => {
       const isCommand = await detectVoiceCommand(message, {
         companyId,
         slug,
+        widgetMode,
         functionSettings,
         setIsProcessing,
         setQrCodeData,
@@ -2114,6 +2130,7 @@ const response = await fetch('/api/voice/process', { method: 'POST', body: formD
       const isCommand = await detectVoiceCommand(message, {
         companyId,
         slug,
+        widgetMode,
         functionSettings,
         setIsProcessing,
         setQrCodeData,

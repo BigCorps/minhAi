@@ -47,6 +47,8 @@ interface SlugHeaderWrapperProps {
     assistant_role?: string | null;
     webapp_theme_color?: string | null;
     webapp_enabled?: boolean;
+    webapp_home?: string | null;
+    website?: string | null;
     modo_vendas_enabled?: boolean;
     modo_fila_enabled?: boolean;
     modo_links_enabled?: boolean;

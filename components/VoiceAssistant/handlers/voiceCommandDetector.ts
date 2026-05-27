@@ -29,6 +29,7 @@ import { getContextualRoute } from '@/lib/routing-utils';
 interface DetectorDeps {
   companyId: string;
   slug?: string;
+  widgetMode?: boolean;
   functionSettings: FunctionSettings;
   setIsProcessing: (v: boolean) => void;
   setQrCodeData: (data: QRCodeData | null) => void;
@@ -144,6 +145,11 @@ export async function detectVoiceCommand(
   if (modoVendaTriggers.some(t => lowerTranscript.includes(t))) {
     const isEnabled = await checkIfFunctionIsEnabled(companyId, 'modo_venda');
     if (!isEnabled) { await playText('A função de vendas está desativada.'); return true; }
+      if (deps.widgetMode) {
+        await playText('Esta função está disponível na versão completa do assistente.');
+    deps.setActiveModal({ type: '__widget_blocked_navigation__', data: { slug } });
+    return true;
+  }
     const vendaUrl = getContextualRoute('vendas', slug);
     window.location.href = vendaUrl;
     playText('Abrindo modo vendas!').catch(() => {});
@@ -164,6 +170,11 @@ export async function detectVoiceCommand(
   if (verProdutosMatch) {
     const isEnabled = await checkIfFunctionIsEnabled(companyId, 'ver_produtos');
     if (!isEnabled) { await playText('A função de produtos está desativada.'); return true; }
+      if (deps.widgetMode) {
+    await playText('Esta função está disponível na versão completa do assistente.');
+    deps.setActiveModal({ type: '__widget_blocked_navigation__', data: { slug } });
+    return true;
+  }
     const termoBusca = lowerTranscript
       .replace(/tem |você tem |voce tem |ver produtos?|mostrar produtos?/gi, '')
       .trim();

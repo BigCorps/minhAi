@@ -194,18 +194,17 @@ const isVendas = company.assistant_type === 'vendas';
     const home = company.webapp_home ?? 'ia';
 
     if (home === 'vendas' && company.modo_vendas_enabled) {
-      redirect(`/vendas/${slug}`);
+      redirect(`/vendas`);
     }
     if (home === 'fila' && company.modo_fila_enabled) {
-      redirect(`/fila/${slug}`);
+      redirect(`/fila`);
     }
     if (home === 'links' && company.modo_links_enabled) {
-      redirect(`/link/${slug}`);
+      redirect(`/link`);
     }
     if (home === 'site' && company.website) {
       redirect(company.website);
     }
-    // 'ia' ou fallback → continua e renderiza o assistente
   }
 
   return (

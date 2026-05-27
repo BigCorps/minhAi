@@ -70,27 +70,24 @@ const MINHAI_DOMAINS = [
  * getContextualRoute('cliente', 'loja') → '/cliente/loja'
  */
 export function getContextualRoute(
-  route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk' | 'cliente' | 'link',
+  route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk' | 'cliente' | 'link' | 'site'
   slug?: string
 ): string {
   const { isSubdomain, currentSlug } = detectSubdomainContext();
 
   // Se está em subdomínio
   if (isSubdomain) {
-    // Se for 'ia', vai para a home (/) ao invés de /ia
-    if (route === 'ia') {
-      return '/';
-    }
-    // Outras rotas usam rota simples
+    if (route === 'ia') return '/';
+    if (route === 'site') return '/'; // site externo tratado no onClick do botão
     return `/${route}`;
   }
 
-  // Se não está em subdomínio, precisa do slug na URL
   if (!slug) {
     console.warn(`getContextualRoute: slug necessário quando não está em subdomínio`);
     return '/';
   }
 
+  if (route === 'site') return '/'; // site externo tratado no onClick do botão
   return `/${route}/${slug}`;
 }
 

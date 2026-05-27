@@ -6,20 +6,22 @@
   
 * Escolher como começar, Apenas Vendendo, apenas Agendando, Apenas atendendo ou diversos
 
+* Não fazer landing, apenas mudar a escolha do usuário webapp para escolher qual vai ser a página principal.
+
+* MCP e App ChatGPT e MCP Claude para configuração dos assistentes direto e acesso a algumas funções específicas, vinculado ao usuário.
+(pix / link / emitir nota / agendar / cotação / orçamento / qrcode etc)
+(Criar categoria Integrações IA - para conexão com aplicativos IA e integrações externas)
+
 * Artes Instagram: Manus jiuithsu e fofopanda / GPT as 18h amanha
+
+* PagAi - Pix com confirmação automática e Bolão entre amigos (Pool).
 
 .
 ## IDÉIAS
 
-* Gerador de landing automático com as informações do criador de assistente e deixar o slug apontando pra ele e /ia para o assistente
-
 * Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
 
-* App minhAi e Vixus publicados na Playstore - AGUARDANDO APROVAÇÃO
-
 * Funções demo no slug Suporte para ter demonstrativo de todas as funções
-
-* MCP e App ChatGPT e MCP Claude para configuração dos assistentes direto e acesso a algumas funções específicas, vinculado ao usuário.
 
 * Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota. E colocar ele na header no lugar do assistente de funções.
 
@@ -32,7 +34,7 @@
 
 * Carrossel no footer com 15 empresas que usam a minhAi futuramente
 
-* Gilbarco com abastecimento por IA
+* App PagSeguro para postos
 
 * Link na Bio com informações do whatsapp e facebook integradas (botão para a seção Serviços Meta - relatório em anexo).
 
@@ -119,7 +121,7 @@
                                         
 * Financeiro - 6️⃣ Gerar Pix | Link de Pagamento | TEF Débito
                  Débito NFC | Crédito NFC | TEF Crédito
-(Gerar Boleto | Cobranças | Recorrentes)
+(Gerar Boleto | Dividir Conta | Criar Bolão)
 
 .
 

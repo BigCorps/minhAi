@@ -549,6 +549,10 @@ if (!activeModal || !mounted) return null;
     );
   }
 
+ if (activeModal.type === '__widget_blocked_navigation__') {
+   return null;
+ }
+
   const Component = MODAL_COMPONENTS[activeModal.type];
 
   if (!Component) {

@@ -15,6 +15,11 @@ interface Company {
   webapp_enabled: boolean;
   webapp_theme_color: string | null;
   webapp_domain: string | null;
+  webapp_home: string | null;
+  website: string | null;
+  modo_vendas_enabled?: boolean;
+  modo_fila_enabled?: boolean;
+  modo_links_enabled?: boolean;
 }
 
 type Step = 1 | 2 | 3;
@@ -39,6 +44,14 @@ const THEME_COLORS = [
   { label: 'Vermelho', value: '#ef4444' },
   { label: 'Amarelo',  value: '#eab308' },
   { label: 'Ciano',    value: '#06b6d4' },
+];
+
+const WEBAPP_HOME_OPTIONS = [
+  { value: 'ia',     label: 'Assistente IA',        desc: 'Abre direto no assistente de voz (padrão)',},
+  { value: 'vendas', label: 'Modo Vendas',           desc: 'Abre no catálogo de produtos',            },
+  { value: 'fila',   label: 'Fila de Atendimento',   desc: 'Abre no painel de senhas',                },
+  { value: 'links',  label: 'Página de Links',       desc: 'Abre na página de contatos e links',      },
+  { value: 'site',   label: 'Meu Site',              desc: 'Redireciona para o site da empresa',      },
 ];
 
 async function prepareLogoFor512(file: File): Promise<{ blob: Blob; previewUrl: string }> {
@@ -156,6 +169,7 @@ export default function WebAppPage() {
   const [published, setPublished]           = useState(false);
   const [finalSlug, setFinalSlug]           = useState('');
   const [finalDomain, setFinalDomain]       = useState('minhai.app');
+  const [webappHome, setWebappHome]         = useState('ia');
 
   useEffect(() => {
     async function init() {
@@ -189,7 +203,7 @@ export default function WebAppPage() {
 
       const { data: comps } = await supabase
         .from('companies')
-        .select('id, name, slug, logo_url, webapp_enabled, webapp_theme_color, webapp_domain')
+        .select('id, name, slug, logo_url, webapp_enabled, webapp_theme_color, webapp_domain, webapp_home, website, modo_vendas_enabled, modo_fila_enabled, modo_links_enabled')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .order('name');
@@ -203,6 +217,7 @@ export default function WebAppPage() {
         setSelectedId(ativo.id);
         setThemeColor(ativo.webapp_theme_color || '#f97316');
         setWebappDomain(ativo.webapp_domain || 'minhai.app');
+        setWebappHome(ativo.webapp_home || 'ia');
         if (ativo.logo_url) setLogoPreview(ativo.logo_url);
         setPublished(true);
         setFinalSlug(ativo.slug);
@@ -265,6 +280,7 @@ export default function WebAppPage() {
           webapp_enabled: true,
           webapp_theme_color: themeColor,
           webapp_domain: webappDomain,
+          webapp_home: webappHome,
           webapp_configured_at: new Date().toISOString(),
           ...(logo_url ? { webapp_logo_url: logo_url } : {}),
         })
@@ -389,6 +405,7 @@ export default function WebAppPage() {
                     if (c) {
                       setThemeColor(c.webapp_theme_color || '#f97316');
                       setWebappDomain(c.webapp_domain || 'minhai.app');
+                      setWebappHome(c.webapp_home || 'ia');
                       setLogoPreview(c.logo_url || null);
                       setLogoFile(null);
                     }
@@ -516,6 +533,52 @@ export default function WebAppPage() {
               })}
             </div>
 
+            {/* ── Página Inicial ── */}
+            <label style={{ display: 'block', color: MUTED, fontSize: 13, fontWeight: 600, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 28 }}>
+              Página Inicial
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+              {WEBAPP_HOME_OPTIONS.map(opt => {
+                const isSelected = webappHome === opt.value;
+                // Desabilitar opções que dependem de modo ativado
+                const disabled =
+                  (opt.value === 'vendas' && !selectedCompany?.modo_vendas_enabled) ||
+                  (opt.value === 'fila'   && !selectedCompany?.modo_fila_enabled) ||
+                  (opt.value === 'links'  && !selectedCompany?.modo_links_enabled) ||
+                  (opt.value === 'site'   && !selectedCompany?.website);
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => !disabled && setWebappHome(opt.value)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      padding: '12px 16px',
+                      background: isSelected ? 'rgba(249,115,22,0.08)' : ROWBG,
+                      border: `2px solid ${isSelected ? ORANGE : BORDER}`,
+                      borderRadius: 12, cursor: disabled ? 'not-allowed' : 'pointer',
+                      textAlign: 'left', width: '100%',
+                      opacity: disabled ? 0.4 : 1,
+                    }}
+                  >
+                    <span style={{ fontSize: 20 }}>{opt.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: isSelected ? WHITE : MUTED, fontWeight: 600, fontSize: 14 }}>{opt.label}</div>
+                      <div style={{ color: SUB, fontSize: 12, marginTop: 2 }}>
+                        {disabled && opt.value !== 'site' ? 'Modo não ativado neste assistente' :
+                         disabled && opt.value === 'site' ? 'Site não cadastrado nas configurações' :
+                         opt.desc}
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <svg width="16" height="16" fill="none" stroke={ORANGE} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Preview do endereço final */}
             <div style={{ background: ROWBG, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '16px 20px', marginBottom: 28 }}>
               <p style={{ color: MUTED, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
@@ -569,6 +632,11 @@ export default function WebAppPage() {
                   value: `${selectedDomainInfo.label} — ${selectedDomainInfo.desc}`,
                   icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" /></svg>,
                 },
+        {
+          label: 'Página Inicial',
+          value: WEBAPP_HOME_OPTIONS.find(o => o.value === webappHome)?.label || 'Assistente IA',
+          icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
+        },
               ].map((row, i, arr) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderBottom: i < arr.length - 1 ? `1px solid ${BORDER}` : 'none' }}>
                   <div style={{ flexShrink: 0 }}>{row.icon}</div>

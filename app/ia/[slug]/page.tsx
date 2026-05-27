@@ -1,6 +1,6 @@
 // app/ia/[slug]/page.tsx
 import { createClient } from '@/lib/supabase-server';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import AssistenteClient from './assistente-client';
 import { createAdminClient } from '@/lib/supabase-admin';
@@ -190,7 +190,25 @@ const isVendas = company.assistant_type === 'vendas';
     );
   }
 
-return (
+  if (viaSubdomain) {
+    const home = company.webapp_home ?? 'ia';
+
+    if (home === 'vendas' && company.modo_vendas_enabled) {
+      redirect(`/vendas/${slug}`);
+    }
+    if (home === 'fila' && company.modo_fila_enabled) {
+      redirect(`/fila/${slug}`);
+    }
+    if (home === 'links' && company.modo_links_enabled) {
+      redirect(`/link/${slug}`);
+    }
+    if (home === 'site' && company.website) {
+      redirect(company.website);
+    }
+    // 'ia' ou fallback → continua e renderiza o assistente
+  }
+
+  return (
     <AssistenteClient
       company={{
         id: company.id,
@@ -203,11 +221,10 @@ return (
         hide_disabled_functions_carousel: company.hide_disabled_functions_carousel,
         carousel_auto_scroll: company.carousel_auto_scroll,
         webapp_enabled: company.webapp_enabled ?? false,
+        webapp_home: company.webapp_home ?? null,
         modo_vendas_enabled: company.modo_vendas_enabled ?? false,
-        modo_fila_enabled: isVendas ? false : (company.modo_fila_enabled ?? false),
-        modo_links_enabled: isVendas ? false : (company.modo_links_enabled ?? false),
-        assistant_type: company.assistant_type ?? 'smart',
-        startup_function_key: company.startup_function_key ?? null,
+        modo_fila_enabled: company.modo_fila_enabled ?? false,
+        modo_links_enabled: company.modo_links_enabled ?? false,
       }}
     />
   );

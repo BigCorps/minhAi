@@ -633,6 +633,7 @@ useEffect(() => {
                 isKioskMode={isKioskMode}
                 isVendas={company.assistant_type === 'vendas'}
                 startupFunctionKey={company.startup_function_key ?? undefined}
+                widgetMode={widgetMode}
               />
             </div>
           </div>
@@ -764,6 +765,7 @@ useEffect(() => {
                   isKioskMode={isKioskMode}
                   isVendas={company.assistant_type === 'vendas'}
                   startupFunctionKey={company.startup_function_key ?? undefined}
+                  widgetMode={widgetMode}
                   onTextMessage={(handler) => {
                     textMessageHandlerRef.current = handler;
                   }}

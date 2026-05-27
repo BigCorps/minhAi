@@ -22,8 +22,22 @@ export default function WidgetPage({ params }: PageProps) {
 
   useEffect(() => {
     setMounted(true);
-    setTheme('light');
+    const params = new URLSearchParams(window.location.search);
+    const initialTheme = params.get('theme');
+    if (initialTheme === 'dark' || initialTheme === 'light') {
+      setTheme(initialTheme);
+    }
   }, []);
+
+  useEffect(() => {
+    function handleMessage(e: MessageEvent) {
+      if (e.data?.type === 'minhai:theme') {
+        setTheme(e.data.theme);
+      }
+    }
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [setTheme]);
 
   useEffect(() => {
     async function loadCompany() {
@@ -62,7 +76,6 @@ export default function WidgetPage({ params }: PageProps) {
         </div>
         
         <div className="flex items-center gap-1.5">
-          {/* Alternador de Tema (Sol / Lua) */}
           {mounted && (
             <button
               onClick={() => setTheme(currentTheme === 'dark' ? 'light' : 'dark')}
@@ -85,8 +98,6 @@ export default function WidgetPage({ params }: PageProps) {
             <Maximize2 size={18} />
           </button>
 
-          {/* Envia postMessage para o widget pai fechar o card.
-              window.close() não funciona em iframes — só em janelas abertas via window.open() */}
           <button
             onClick={() => window.parent.postMessage('minhai:close', '*')}
             className="p-1.5 hover:bg-accent rounded-full transition-colors text-muted-foreground hover:text-foreground"

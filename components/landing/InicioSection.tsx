@@ -215,14 +215,15 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               [@media(max-height:700px)_and_(max-width:767px)]:hidden
             `}
           >
-{['meta', 'google', 'play'].map((name) => (
-  <img
-    key={name}
-    src={`/cards/${name}.png`}
-    alt={`${name} integration card`}
-    className="h-8 sm:h-[2.4rem] w-auto object-contain transition-transform duration-200 hover:scale-110"
-  />
-))}
+<img src="/cards/meta.png" alt="Integração oficial Meta" className="h-10 sm:h-12 w-auto object-contain" />
+<img src="/cards/google.png" alt="Integração verificada pelo Google" className="h-10 sm:h-12 w-auto object-contain" />
+<a
+  href="https://play.google.com/store/apps/details?id=app.minhai.www.twa"
+  target="_blank"
+  rel="noopener noreferrer"
+>
+  <img src="/cards/play.png" alt="Disponível no Google Play" className="h-10 sm:h-12 w-auto object-contain hover:opacity-80 transition-opacity" />
+</a>
           </div>
         </div>
       </div>

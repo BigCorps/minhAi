@@ -91,12 +91,12 @@ export default function SetupBanner() {
   const steps = [
     { id: 'criar_assistente', label: 'Criar Assistente', done: status.criar_assistente, link: '/dashboard/assistentes' },
     { id: 'definir_funcoes', label: 'Definir Funções', done: status.definir_funcoes, link: '/dashboard/functions' },
-    { id: 'configuracao', label: 'Configuração', done: status.configuracao, link: '/dashboard/assistentes' },
-    { id: 'servicos_google', label: 'Serviços Google', done: status.servicos_google, link: '/dashboard/agenda' },
-    { id: 'servicos_meta', label: 'Serviços Meta', done: status.servicos_meta, link: '/dashboard/atendimentos' },
-    { id: 'cadastro_produtos', label: 'Cadastro de Produtos', done: status.cadastro_produtos, link: '/dashboard/vendas' },
-    { id: 'cadastro_usuario', label: 'Cadastro de Usuário', done: status.cadastro_usuario, link: '/dashboard/cadastros' },
-    { id: 'nota', label: 'Nota (opcional)', done: status.nota, link: '/dashboard/arquivos', optional: true },
+    { id: 'configuracao', label: 'Configuração', done: status.configuracao, link: `/dashboard/assistentes/${selectedAssistantId}` },
+    { id: 'servicos_google', label: 'Serviços Google', done: status.servicos_google, link: '/dashboard/agenda', optional: true },
+    { id: 'servicos_meta', label: 'Serviços Meta', done: status.servicos_meta, link: '/dashboard/atendimentos', optional: true },
+    { id: 'cadastro_produtos', label: 'Cadastro de Produtos', done: status.cadastro_produtos, link: '/dashboard/vendas', optional: true },
+    { id: 'cadastro_usuario', label: 'Controle de Usuários', done: status.cadastro_usuario, link: '/dashboard/cadastros', optional: true },
+    { id: 'nota', label: 'Nota Fiscal', done: status.nota, link: '/dashboard/arquivos', optional: true },
   ];
 
   const completedCount = steps.filter(s => s.done && !s.optional).length;

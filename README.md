@@ -1,5 +1,7 @@
 ## minhAI - Uma IA pra chamar de sua!
 
+* enviar releases
+
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões 
 
 * conferir funções bloqueadas que não aparecem aviso no carrossel e elas ainda funcionam pelo textinput - miriamithiel@gmail.com
@@ -8,12 +10,12 @@
 (pix / link / emitir nota / agendar / cotação / orçamento / qrcode etc)
 (Criar categoria Integrações IA - para conexão com aplicativos IA e integrações externas)
 
-* Artes Instagram: Manus jiuithsu e fofopanda / GPT as 18h amanha
-
 * PagAi - Pix com confirmação automática e Bolão entre amigos (Pool).
 
 .
 ## IDÉIAS
+
+* Artes Instagram: Manus jiuithsu e fofopanda / GPT as 18h amanha
 
 * Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
 

@@ -19,6 +19,7 @@ interface SlugHeaderProps {
     logo_url?: string | null;
     assistant_role?: string | null;
     webapp_enabled?: boolean;
+    website?: string | null;
     modo_vendas_enabled?: boolean;
     modo_fila_enabled?: boolean;
     modo_links_enabled?: boolean;  

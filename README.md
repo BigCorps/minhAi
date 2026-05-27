@@ -4,7 +4,7 @@
 
 * conferir funções bloqueadas que não aparecem aviso no carrossel e elas ainda funcionam pelo textinput - miriamithiel@gmail.com
   
-* Escolher como começar, Apenas Vendendo, apenas Agendando, Apenas atendendo ou diversos
+* Passo a passo no dashboard para na tela inicial mostrando os passos para a configuração total do primeiro assistente com todas as funcionalidades escolhidas. Cadastro / Funções / Configuração/ Serviços Google / Serviços Meta / Cadastro de Produtos / Cadastro de Usuário / Nota (opcional)
 
 * Não fazer landing, apenas mudar a escolha do usuário webapp para escolher qual vai ser a página principal.
 

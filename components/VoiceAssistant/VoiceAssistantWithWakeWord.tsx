@@ -2436,7 +2436,7 @@ const getStatusMessage = (maximized = false) => {
             playText={playText}
             isKioskMode={isKioskMode}
             printConfig={printConfig}
-            widgetMode={textMode}
+            widgetMode={widgetMode}
             slug={slug}
           />
         )}
@@ -2456,7 +2456,7 @@ const getStatusMessage = (maximized = false) => {
         playText={playText}
         isKioskMode={isKioskMode}
         printConfig={printConfig}
-        widgetMode={textMode}
+        widgetMode={widgetMode}
         slug={slug}
       />
     );
@@ -2709,7 +2709,7 @@ const getStatusMessage = (maximized = false) => {
           playText={playText}
           isKioskMode={isKioskMode}
           printConfig={printConfig}
-          widgetMode={textMode}
+          widgetMode={widgetMode}
           slug={slug}
         />
       )}

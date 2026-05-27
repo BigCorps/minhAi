@@ -1742,6 +1742,7 @@ case 'impressao_recibo':
     const isCommand = await detectVoiceCommand(questionText, {
       companyId,
       slug,
+      widgetMode,
       functionSettings,
       setIsProcessing,
       setQrCodeData,

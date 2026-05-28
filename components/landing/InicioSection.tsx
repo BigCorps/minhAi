@@ -126,7 +126,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </span>
           </h1>
 
-          {/* Parágrafo */}
+{/* Parágrafo — versão curta no mobile, completa no desktop */}
 <p
   className={`
     text-xs sm:text-base md:text-lg max-w-lg leading-relaxed transition-colors mx-auto
@@ -135,8 +135,15 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
     ${isDark ? 'text-white/55' : 'text-gray-600'}
   `}
 >
-  A única IA que atende seus clientes no virtual e no presencial, cobra, agenda, confirma pagamentos via Pix e nunca deixa uma venda sem resposta.
-  Configure tudo em minutos, sem programar e automatize atendimentos, cobranças, agendamentos e operações enquanto sua empresa lucra mais.
+  {/* Mobile: texto curto */}
+  <span className="sm:hidden">
+    A única IA que vende, atende, agenda e cobra automaticamente.
+  </span>
+  {/* Desktop: texto completo */}
+  <span className="hidden sm:inline">
+    A única IA que atende seus clientes no virtual e no presencial, cobra, agenda, confirma pagamentos via Pix e nunca deixa uma venda sem resposta.
+    Configure tudo em minutos, sem programar e automatize atendimentos, cobranças, agendamentos e operações enquanto sua empresa lucra mais.
+  </span>
 </p>
 
           {/* DomainPreviewPicker */}

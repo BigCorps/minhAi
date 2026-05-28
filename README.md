@@ -9,7 +9,6 @@
 
 * PagAi - Pix com confirmação automática e Bolão entre amigos (Pool).
 
-.
 ## IDÉIAS
 
 * Artes Instagram: Manus jiuithsu e fofopanda / GPT as 18h amanha

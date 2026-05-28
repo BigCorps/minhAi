@@ -35,7 +35,15 @@ function AuthorizeContent() {
   useEffect(() => {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     setTheme(isDark ? 'dark' : 'light')
-  }, [])
+
+    // Voltou do Google OAuth já autenticado — pular direto para confirmação
+    const googleDone = searchParams.get('google_done')
+    if (googleDone === '1') {
+      supabase.auth.getUser().then(({ data }) => {
+        if (data?.user) loadCompanies(data.user.id)
+      })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Login com email/senha ────────────────────────────────────────────────────
   async function handleEmailLogin(e: React.FormEvent<HTMLFormElement>) {
@@ -63,15 +71,19 @@ function AuthorizeContent() {
     setLoading(true)
     setError('')
     try {
-      // Salva os params OAuth para recuperar no callback
-      sessionStorage.setItem('mcp_redirect_uri', redirectUri)
-      sessionStorage.setItem('mcp_state', state)
-      sessionStorage.setItem('mcp_client_id', clientId)
+      // Salva os params MCP em cookie (sobrevive ao redirect do Google)
+      // sessionStorage não funciona pois o Google redireciona para outra origem
+      const mcpParams = encodeURIComponent(JSON.stringify({
+        redirect_uri: redirectUri,
+        state:        state,
+        client_id:    clientId,
+      }))
+      document.cookie = `mcp_oauth_params=${mcpParams}; path=/; max-age=300; SameSite=Lax; Secure`
 
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/mcp/oauth-callback`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       })
       if (oauthErr) throw oauthErr

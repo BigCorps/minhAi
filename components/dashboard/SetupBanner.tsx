@@ -104,14 +104,17 @@ export default function SetupBanner() {
   const progressPercentage = Math.round((completedCount / totalRequired) * 100);
   const isAllCompleted = completedCount === totalRequired;
 
+  // Quando 100%, não permite expandir e esconde o corpo
+  const showContent = isExpanded && !isAllCompleted;
+
   if (isAllCompleted && dismissed) return null;
 
   return (
     <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
       {/* Header do Checklist */}
       <div 
-        className="px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition"
-        onClick={() => setIsExpanded(!isExpanded)}
+        className={`px-5 py-4 flex items-center justify-between transition ${!isAllCompleted ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5' : ''}`}
+        onClick={() => !isAllCompleted && setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-4 flex-1">
           <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0">
@@ -124,7 +127,7 @@ export default function SetupBanner() {
             <div className="flex items-center gap-3 mt-1">
               <div className="flex-1 h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden max-w-md">
                 <div 
-                  className="h-full bg-blue-500 transition-all duration-500 ease-out"
+                  className={`h-full transition-all duration-500 ease-out ${isAllCompleted ? 'bg-emerald-500' : 'bg-blue-500'}`}
                   style={{ width: `${progressPercentage}%` }}
                 />
               </div>
@@ -135,7 +138,9 @@ export default function SetupBanner() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isExpanded ? <ChevronDown className="w-5 h-5 text-gray-400" /> : <ChevronRight className="w-5 h-5 text-gray-400" />}
+          {!isAllCompleted && (
+            isExpanded ? <ChevronDown className="w-5 h-5 text-gray-400" /> : <ChevronRight className="w-5 h-5 text-gray-400" />
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); setDismissed(true); }}
             className="p-1.5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-md transition ml-2"
@@ -147,7 +152,7 @@ export default function SetupBanner() {
       </div>
 
       {/* Corpo do Checklist (Expansível) */}
-      {isExpanded && (
+      {showContent && (
         <div className="px-5 pb-5 pt-2 border-t border-gray-100 dark:border-white/5">
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Complete as etapas abaixo para extrair o máximo de potencial do seu assistente de IA.

@@ -31,14 +31,14 @@ const nextConfig = {
         test: /\.wasm$/,
         type: 'asset/resource',
       });
-      
+
       // Configuração para PDF.js worker
       config.resolve.alias = {
         ...config.resolve.alias,
         'pdfjs-dist/build/pdf.worker.entry': 'pdfjs-dist/build/pdf.worker.min.js',
       };
     }
-    
+
     // Canvas é problemático no server-side, sempre fazer fallback
     if (isServer) {
       config.resolve.alias = {
@@ -46,42 +46,63 @@ const nextConfig = {
         canvas: false,
       };
     }
-    
+
     return config;
   },
-async redirects() {
-  return [
-    // Domínios raiz sem subdomínio → www.minhai.app
-    { source: '/:path*', has: [{ type: 'host', value: 'minhai.app'     }], destination: 'https://www.minhai.app/:path*', permanent: true },
-    { source: '/:path*', has: [{ type: 'host', value: 'minhai.com.br'  }], destination: 'https://www.minhai.app/:path*', permanent: true },
-    { source: '/:path*', has: [{ type: 'host', value: 'www.minhai.com.br' }], destination: 'https://www.minhai.app/:path*', permanent: true },
-    { source: '/:path*', has: [{ type: 'host', value: 'minhaia.app'    }], destination: 'https://www.minhai.app/:path*', permanent: true },
-    { source: '/:path*', has: [{ type: 'host', value: 'nossaia.app'    }], destination: 'https://www.minhai.app/:path*', permanent: true },
-    { source: '/:path*', has: [{ type: 'host', value: 'suaia.app'      }], destination: 'https://www.minhai.app/:path*', permanent: true },
-  ];
-},
+
+  // ── Rewrites: proxy mcp.minhai.app → Supabase Edge Function ─────────────────
+  // beforeFiles garante que o proxy acontece ANTES do Next.js tentar servir
+  // qualquer página ou arquivo do app principal no subdomínio mcp.minhai.app
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/:path*',
+          has: [{ type: 'host', value: 'mcp.minhai.app' }],
+          destination:
+            'https://qyonozbroekuqlotqcbm.supabase.co/functions/v1/mcp-server/:path*',
+        },
+      ],
+      afterFiles:  [],
+      fallback:    [],
+    }
+  },
+  // ────────────────────────────────────────────────────────────────────────────
+
+  async redirects() {
+    return [
+      // Domínios raiz sem subdomínio → www.minhai.app
+      { source: '/:path*', has: [{ type: 'host', value: 'minhai.app'        }], destination: 'https://www.minhai.app/:path*', permanent: true },
+      { source: '/:path*', has: [{ type: 'host', value: 'minhai.com.br'     }], destination: 'https://www.minhai.app/:path*', permanent: true },
+      { source: '/:path*', has: [{ type: 'host', value: 'www.minhai.com.br' }], destination: 'https://www.minhai.app/:path*', permanent: true },
+      { source: '/:path*', has: [{ type: 'host', value: 'minhaia.app'       }], destination: 'https://www.minhai.app/:path*', permanent: true },
+      { source: '/:path*', has: [{ type: 'host', value: 'nossaia.app'       }], destination: 'https://www.minhai.app/:path*', permanent: true },
+      { source: '/:path*', has: [{ type: 'host', value: 'suaia.app'         }], destination: 'https://www.minhai.app/:path*', permanent: true },
+    ]
+  },
+
   async headers() {
     return [
       {
         source: '/:path*.onnx',
         headers: [
-          { key: 'Content-Type', value: 'application/octet-stream' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Content-Type',                value: 'application/octet-stream' },
+          { key: 'Cache-Control',               value: 'public, max-age=31536000, immutable' },
           { key: 'Access-Control-Allow-Origin', value: '*' },
         ],
       },
       {
         source: '/:path*.wasm',
         headers: [
-          { key: 'Content-Type', value: 'application/wasm' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Content-Type',                value: 'application/wasm' },
+          { key: 'Cache-Control',               value: 'public, max-age=31536000, immutable' },
           { key: 'Access-Control-Allow-Origin', value: '*' },
         ],
       },
       {
         source: '/:path*.mjs',
         headers: [
-          { key: 'Content-Type', value: 'application/javascript' },
+          { key: 'Content-Type',                value: 'application/javascript' },
           { key: 'Access-Control-Allow-Origin', value: '*' },
         ],
       },
@@ -89,14 +110,15 @@ async redirects() {
       {
         source: '/pdf-worker/:path*',
         headers: [
-          { key: 'Content-Type', value: 'application/javascript' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Content-Type',                value: 'application/javascript' },
+          { key: 'Cache-Control',               value: 'public, max-age=31536000, immutable' },
           { key: 'Access-Control-Allow-Origin', value: '*' },
         ],
       },
-    ];
+    ]
   },
-  transpilePackages: ['@ricky0123/vad-web', 'onnxruntime-web'],
-};
 
-module.exports = nextConfig;
+  transpilePackages: ['@ricky0123/vad-web', 'onnxruntime-web'],
+}
+
+module.exports = nextConfig

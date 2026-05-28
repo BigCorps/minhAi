@@ -7,6 +7,7 @@ import { WebAppButton } from '@/components/WebAppButton';
 import { CreditsProgressChartWrapper } from '@/components/CreditsProgressChartWrapper';
 import SetupBanner from '@/components/dashboard/SetupBanner';
 import { PushNotificationSetup } from '@/components/dashboard/PushNotificationSetup';
+import { NotificationBanner } from '@/components/dashboard/NotificationBanner';
 import ModoToggle from '@/components/dashboard/ModoToggle';
 import LinkNaBioContextWrapper from '@/components/dashboard/LinkNaBioContextWrapper';
 
@@ -85,6 +86,8 @@ export default async function DashboardPage() {
 
       {/* Banner de notificações */}
       {user && <PushNotificationSetup userId={user.id} />}
+
+      {user && <NotificationBanner userId={user.id} />}
 
       {/* Credits Progress Chart */}
       {user && <CreditsProgressChartWrapper userId={user.id} />}

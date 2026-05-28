@@ -74,5 +74,6 @@
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+    "@bubblewrap/cli": "latest"
   }
 }

@@ -4,8 +4,6 @@
 
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões 
 
-* conferir funções bloqueadas - miriamithiel@gmail.com
-
 * MCP e App ChatGPT e MCP Claude
 (Criar categoria Integrações IA - para conexão com aplicativos IA e integrações externas)
 

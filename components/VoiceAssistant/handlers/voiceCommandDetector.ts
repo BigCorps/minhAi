@@ -793,6 +793,8 @@ if (lowerTranscript.includes('pix')) {
             setIsProcessing,
             sessionId,
             setActiveModal,
+            widgetMode,
+            slug,
           });
         } else {
           if (result.speechText) await playText(result.speechText);

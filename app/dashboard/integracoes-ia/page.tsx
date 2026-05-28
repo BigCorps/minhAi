@@ -10,8 +10,8 @@ import { Loader2, Link2, Link2Off, ExternalLink, Zap, AlertCircle, CheckCircle2,
 
 function ClaudeIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-      <path d="M17.304 1.273a.31.31 0 0 0-.31.086L4.922 13.43a.31.31 0 0 0 .22.529h3.978l-2.68 8.358a.31.31 0 0 0 .537.272L19.056 10.54a.31.31 0 0 0-.222-.529h-3.825l2.607-8.184a.31.31 0 0 0-.312-.554Z"/>
+    <svg className={className} viewBox="0 0 46 46" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.6 8.4c-3.8 0-6.8 1.2-9.1 3.7-2.3 2.4-3.4 5.6-3.4 9.6s1.1 7.2 3.4 9.6c2.3 2.4 5.3 3.7 9.1 3.7 2.4 0 4.5-.5 6.3-1.6 1.8-1.1 3.2-2.6 4.1-4.6l-3.9-1.8c-.6 1.3-1.5 2.3-2.6 3-1.1.7-2.4 1-3.9 1-2.4 0-4.3-.8-5.7-2.4-1.4-1.6-2.1-3.8-2.1-6.6v-.6c0-2.8.7-5 2.1-6.6 1.4-1.6 3.3-2.4 5.7-2.4 1.5 0 2.8.3 3.9 1 1.1.7 2 1.7 2.6 3l3.9-1.8c-.9-2-2.3-3.5-4.1-4.6-1.8-1.1-3.9-1.6-6.3-1.6z"/>
     </svg>
   )
 }
@@ -26,8 +26,8 @@ function ChatGPTIcon({ className }: { className?: string }) {
 
 function CursorIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-      <path d="M11.925 24l-5.975-5.975L.975 24 0 23.025l5.95-5.95L0 11.1l.975-.975 5.95 5.95L12.9.975 13.875 0l5.95 5.95L24 .975 24 2.2l-5.175 5.175 5.175 5.175V13.8l-5.95-5.95-5.95 5.95 5.95 5.95V21L11.925 24z"/>
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M5 3L19 12L12.5 13.5L9.5 21L5 3Z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -68,9 +68,9 @@ function clientLabel(name: string) {
 function ClientIcon({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' }) {
   const sz = size === 'sm' ? 'w-5 h-5' : 'w-8 h-8'
   const label = clientLabel(name)
-  if (label === 'Claude') return <ClaudeIcon className={`${sz} text-[#d97706]`} />
+  if (label === 'Claude') return <ClaudeIcon className={`${sz} text-[#c96a2d]`} />
   if (label === 'ChatGPT') return <ChatGPTIcon className={`${sz} text-[#10a37f]`} />
-  if (label === 'Cursor') return <CursorIcon className={`${sz} text-white`} />
+  if (label === 'Cursor') return <CursorIcon className={`${sz} text-slate-700 dark:text-slate-200`} />
   return <Zap className={`${sz} text-blue-400`} />
 }
 
@@ -206,7 +206,7 @@ function IntegracoesDashboardContent() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Integrações IA</h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1">
-              Conecte o minhAi ao Claude, ChatGPT e outros assistentes de IA via MCP
+              Conecte o minhAi ao Claude, ChatGPT e outros assistentes de IA via MCP e execute funções diretamente nos principais aplicativos de IA
               {selectedAssistantName && (
                 <> — assistente <span className="font-medium text-gray-900 dark:text-white">{selectedAssistantName}</span></>
               )}
@@ -214,23 +214,23 @@ function IntegracoesDashboardContent() {
           </div>
 
           {/* URL do servidor MCP */}
-          <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl p-5">
+          <div className="bg-gradient-to-r from-blue-500/10 to-blue-400/10 border border-blue-200 dark:border-blue-500/30 rounded-2xl p-5">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
-                <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 mb-1 flex items-center gap-2">
+                <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-1 flex items-center gap-2">
                   <Zap className="w-4 h-4" />
                   URL do servidor MCP
                 </p>
-                <code className="text-lg font-mono font-bold text-indigo-900 dark:text-indigo-100">
+                <code className="text-lg font-mono font-bold text-blue-900 dark:text-blue-100">
                   {MCP_URL}
                 </code>
-                <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                   Cole essa URL no campo de connector de qualquer plataforma compatível com MCP
                 </p>
               </div>
               <button
                 onClick={copyUrl}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition shadow-sm flex-shrink-0"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition shadow-sm flex-shrink-0"
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 {copied ? 'Copiado!' : 'Copiar URL'}
@@ -339,7 +339,7 @@ function IntegracoesDashboardContent() {
           {/* Catálogo de plataformas */}
           <section>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Zap className="w-5 h-5 text-indigo-500" />
+              <Zap className="w-5 h-5 text-blue-500" />
               Plataformas disponíveis
             </h2>
 

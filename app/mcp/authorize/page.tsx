@@ -13,10 +13,12 @@ import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
 function AuthorizeContent() {
   const searchParams = useSearchParams()
 
-  const redirectUri = searchParams.get('redirect_uri') ?? ''
-  const state       = searchParams.get('state') ?? ''
-  const clientId    = searchParams.get('client_id') ?? ''
-  const clientName  = clientId.toLowerCase().includes('openai') ? 'ChatGPT' : 'Claude'
+  const redirectUri         = searchParams.get('redirect_uri') ?? ''
+  const state               = searchParams.get('state') ?? ''
+  const clientId            = searchParams.get('client_id') ?? ''
+  const codeChallenge       = searchParams.get('code_challenge') ?? ''
+  const codeChallengeMethod = searchParams.get('code_challenge_method') ?? 'S256'
+  const clientName          = clientId.toLowerCase().includes('openai') ? 'ChatGPT' : 'Claude'
 
   const [step,            setStep]            = useState<'login' | 'confirm'>('login')
   const [loading,         setLoading]         = useState(false)
@@ -118,10 +120,12 @@ function AuthorizeContent() {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id:     user.id,
-          company_id:  selectedCompany,
-          client_name: clientName.toLowerCase(),
-          scopes:      ['tools'],
+          user_id:               user.id,
+          company_id:            selectedCompany,
+          client_name:           clientName.toLowerCase(),
+          scopes:                ['tools'],
+          code_challenge:        codeChallenge || undefined,
+          code_challenge_method: codeChallengeMethod || 'S256',
         }),
       })
 

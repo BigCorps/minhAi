@@ -1,4 +1,0 @@
-#Thu May 28 15:27:03 UTC 2026
-base.0=/workspaces/minhAi/app/build/intermediates/dex/release/minifyReleaseWithR8/classes.dex
-renamed.0=classes.dex
-path.0=classes.dex

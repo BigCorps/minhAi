@@ -52,6 +52,27 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'invalid_grant', error_description: 'Código inválido ou expirado' }, { status: 400 })
       }
 
+      // ── Verificar PKCE se o challenge foi salvo ─────────────────────────────────
+      const codeVerifier = params.get('code_verifier')
+      if (pending.code_challenge) {
+        if (!codeVerifier) {
+          return NextResponse.json({ error: 'invalid_grant', error_description: 'code_verifier obrigatório' }, { status: 400 })
+        }
+        let challengeOk = false
+        if (pending.code_challenge_method === 'plain') {
+          challengeOk = codeVerifier === pending.code_challenge
+        } else {
+          const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(codeVerifier))
+          const b64url = btoa(String.fromCharCode(...new Uint8Array(digest)))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+          challengeOk = b64url === pending.code_challenge
+        }
+        if (!challengeOk) {
+          return NextResponse.json({ error: 'invalid_grant', error_description: 'code_verifier inválido' }, { status: 400 })
+        }
+      }
+      // ── Fim PKCE ──────────────────────────────────────────────────────────────────────────
+
       // Marcar code como usado
       await supabase
         .from('mcp_pending_codes')

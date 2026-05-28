@@ -10,7 +10,7 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export async function POST(req: NextRequest) {
   try {
-    const { user_id, company_id, client_name, scopes } = await req.json()
+    const { user_id, company_id, client_name, scopes, code_challenge, code_challenge_method } = await req.json()
 
     if (!user_id || !company_id) {
       return NextResponse.json({ error: 'user_id e company_id obrigatórios' }, { status: 400 })
@@ -37,8 +37,10 @@ export async function POST(req: NextRequest) {
       code,
       user_id,
       company_id,
-      client_name: client_name ?? 'unknown',
-      scopes:      scopes ?? ['tools'],
+      client_name:           client_name ?? 'unknown',
+      scopes:                scopes ?? ['tools'],
+      code_challenge:        code_challenge ?? null,
+      code_challenge_method: code_challenge_method ?? 'S256',
     })
 
     return NextResponse.json({ code })

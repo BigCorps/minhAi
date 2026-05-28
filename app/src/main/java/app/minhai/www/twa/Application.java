@@ -15,15 +15,17 @@
  */
 package app.minhai.www.twa;
 
-
+import com.onesignal.OneSignal;
+import com.onesignal.debug.LogLevel;
 
 public class Application extends android.app.Application {
 
-  
+  private static final String ONESIGNAL_APP_ID = "ec886828-d0b1-4854-9986-a82a8c4b32a3";
 
   @Override
   public void onCreate() {
       super.onCreate();
-      
+      OneSignal.getDebug().setLogLevel(LogLevel.VERBOSE);
+      OneSignal.initWithContext(this, ONESIGNAL_APP_ID);
   }
 }

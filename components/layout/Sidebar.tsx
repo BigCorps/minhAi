@@ -108,9 +108,6 @@ export function Sidebar() {
                 const isActive = pathname === item.href ||
                   (item.href !== '/dashboard' && pathname.startsWith(item.href));
 
-                // Destaque especial para Integrações IA
-                const isIntegracoes = item.href === '/dashboard/integracoes-ia';
-
                 return (
                   <Link
                     key={item.href}
@@ -121,22 +118,13 @@ export function Sidebar() {
                         ? theme === 'dark'
                           ? 'bg-blue-500/10 text-blue-400 border-l-2 border-blue-400'
                           : 'bg-blue-50 text-blue-600 border-l-2 border-blue-600'
-                        : isIntegracoes && !isActive
-                          ? theme === 'dark'
-                            ? 'text-indigo-300 hover:bg-indigo-500/10 border-l-2 border-transparent hover:border-indigo-400'
-                            : 'text-indigo-600 hover:bg-indigo-50 border-l-2 border-transparent hover:border-indigo-400'
-                          : theme === 'dark'
-                            ? 'text-white hover:bg-white/5 border-l-2 border-transparent'
-                            : 'text-gray-700 hover:bg-gray-50 border-l-2 border-transparent'
+                        : theme === 'dark'
+                          ? 'text-white hover:bg-white/5 border-l-2 border-transparent'
+                          : 'text-gray-700 hover:bg-gray-50 border-l-2 border-transparent'
                     }`}
                   >
                     <Icon className="w-5 h-5 flex-shrink-0" />
                     <span>{item.label}</span>
-                    {isIntegracoes && !isActive && (
-                      <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
-                        MCP
-                      </span>
-                    )}
                   </Link>
                 );
               })}

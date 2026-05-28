@@ -631,14 +631,13 @@ modo_fila: {
   isPremium: false,
 
 handler: async ({ slug, widgetMode, playText, setActiveModal }) => {
-    if (widgetMode) {
-      await playText('Esta função está disponível na versão completa do assistente.');
-      setActiveModal?.({ type: '__widget_blocked_navigation__', data: { slug } });
-      return false;
-    }
-    try {
-      const filaUrl = getContextualRoute('fila', slug);
-      window.location.href = filaUrl;
+  if (widgetMode) { // ← esse diff foi aplicado?
+    await playText('Esta função está disponível na versão completa do assistente.');
+    setActiveModal?.({ type: '__widget_blocked_navigation__', data: { slug } });
+    return false;
+  }
+  const filaUrl = getContextualRoute('fila', slug);
+  window.location.href = filaUrl;
       return true;
     } catch {
       return false;
@@ -1388,14 +1387,13 @@ link_na_bio: {
   requiresPayment: false,
   isPremium: false,
  
-  handler: async ({ playText, slug, widgetMode, setActiveModal }) => {
-    if (widgetMode) {
-      await playText('Esta função está disponível na versão completa do assistente.');
-      setActiveModal?.({ type: '__widget_blocked_navigation__', data: { slug } });
-      return false;
-    }
-    try {
-      const linkUrl = getContextualRoute('link', slug);
+handler: async ({ playText, slug, widgetMode, setActiveModal }) => {
+  if (widgetMode) { // ← esse diff foi aplicado?
+    await playText('Esta função está disponível na versão completa do assistente.');
+    setActiveModal?.({ type: '__widget_blocked_navigation__', data: { slug } });
+    return false;
+  }
+  const linkUrl = getContextualRoute('link', slug);
       await playText('Abrindo página de links!');
       window.location.href = linkUrl;
       return true;

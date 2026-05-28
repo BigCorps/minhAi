@@ -50,7 +50,7 @@
     <string name="common_google_play_services_updating_text">%1$s нема да се извршува без услугите на Google Play што се ажурираат во моментов.</string>
     <string name="common_google_play_services_wear_update_text">Потребна е нова верзија на услугите на Google Play. Таа наскоро самата ќе се ажурира.</string>
     <string name="common_open_on_phone">Отвори на телефонот</string>
-    <string name="common_signin_button_text">Најави се</string>
+    <string name="common_signin_button_text">Најавете се</string>
     <string name="common_signin_button_text_long">Најави се со Google</string>
     <string msgid="3260749812566568062" name="copy_toast_msg">"Линкот е копиран во привремена меморија"</string>
     <string msgid="4566929209979330987" name="fallback_menu_item_copy_link">"Копирај го линкот"</string>

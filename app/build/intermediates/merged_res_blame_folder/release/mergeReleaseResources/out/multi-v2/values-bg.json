@@ -1,44 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "app.minhai.www.twa.app-mergeReleaseResources-25:/values-bg/values-bg.xml",
+            "outputFile": "app.minhai.www.twa.app-mergeReleaseResources-32:/values-bg/values-bg.xml",
             "map": [
                 {
-                    "source": "/home/codespace/.gradle/caches/8.11.1/transforms/d176d6696a4772b4ce2a6021c61f9202/transformed/play-services-basement-18.1.0/res/values-bg/values.xml",
-                    "from": {
-                        "startLines": "4",
-                        "startColumns": "0",
-                        "startOffsets": "195",
-                        "endColumns": "133",
-                        "endOffsets": "328"
-                    },
-                    "to": {
-                        "startLines": "44",
-                        "startColumns": "4",
-                        "startOffsets": "4645",
-                        "endColumns": "137",
-                        "endOffsets": "4778"
-                    }
-                },
-                {
-                    "source": "/home/codespace/.gradle/caches/8.11.1/transforms/be57bd43967b699c12a0f6b8bd2f21c6/transformed/browser-1.9.0-alpha04/res/values-bg/values-bg.xml",
-                    "from": {
-                        "startLines": "2,3,4,5",
-                        "startColumns": "4,4,4,4",
-                        "startOffsets": "55,166,274,386",
-                        "endColumns": "110,107,111,109",
-                        "endOffsets": "161,269,381,491"
-                    },
-                    "to": {
-                        "startLines": "54,55,56,57",
-                        "startColumns": "4,4,4,4",
-                        "startOffsets": "5902,6013,6121,6233",
-                        "endColumns": "110,107,111,109",
-                        "endOffsets": "6008,6116,6228,6338"
-                    }
-                },
-                {
-                    "source": "/home/codespace/.gradle/caches/8.11.1/transforms/a5429f7b20c607b890f08b5283ad4ec0/transformed/core-1.13.0/res/values-bg/values-bg.xml",
+                    "source": "/home/codespace/.gradle/caches/8.11.1/transforms/397c411bcfd49340faaac2a41b239bc0/transformed/core-1.13.0/res/values-bg/values-bg.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",
@@ -55,7 +21,24 @@
                     }
                 },
                 {
-                    "source": "/home/codespace/.gradle/caches/8.11.1/transforms/183ebbc8ed821348f80a6d36d20b75e3/transformed/appcompat-1.7.0/res/values-bg/values-bg.xml",
+                    "source": "/home/codespace/.gradle/caches/8.11.1/transforms/cba3ff32b1b40c6507f4da3f4763ade0/transformed/play-services-basement-18.9.0/res/values-bg/values.xml",
+                    "from": {
+                        "startLines": "4",
+                        "startColumns": "0",
+                        "startOffsets": "218",
+                        "endColumns": "133",
+                        "endOffsets": "351"
+                    },
+                    "to": {
+                        "startLines": "44",
+                        "startColumns": "4",
+                        "startOffsets": "4645",
+                        "endColumns": "137",
+                        "endOffsets": "4778"
+                    }
+                },
+                {
+                    "source": "/home/codespace/.gradle/caches/8.11.1/transforms/e23c1a757bcab5760da1eaa3016b408a/transformed/appcompat-1.7.0/res/values-bg/values-bg.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -72,13 +55,30 @@
                     }
                 },
                 {
-                    "source": "/home/codespace/.gradle/caches/8.11.1/transforms/02e37f92c71ffadabef41ae6f5feca22/transformed/play-services-base-18.1.0/res/values-bg/values.xml",
+                    "source": "/home/codespace/.gradle/caches/8.11.1/transforms/eeab2447f00d8b1acb9b8b3a0085f47a/transformed/browser-1.9.0-alpha04/res/values-bg/values-bg.xml",
+                    "from": {
+                        "startLines": "2,3,4,5",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,166,274,386",
+                        "endColumns": "110,107,111,109",
+                        "endOffsets": "161,269,381,491"
+                    },
+                    "to": {
+                        "startLines": "54,55,56,57",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "5902,6013,6121,6233",
+                        "endColumns": "110,107,111,109",
+                        "endOffsets": "6008,6116,6228,6338"
+                    }
+                },
+                {
+                    "source": "/home/codespace/.gradle/caches/8.11.1/transforms/672f96aa0b7801ae661f3d76487006ee/transformed/play-services-base-18.9.0/res/values-bg/values.xml",
                     "from": {
                         "startLines": "4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20",
                         "startColumns": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
-                        "startOffsets": "193,298,459,590,697,860,991,1106,1211,1376,1484,1655,1789,1942,2104,2170,2225",
+                        "startOffsets": "216,321,482,613,720,883,1014,1129,1234,1399,1507,1678,1812,1965,2127,2193,2248",
                         "endColumns": "104,160,130,106,162,130,114,104,164,107,170,133,152,161,65,54,68",
-                        "endOffsets": "297,458,589,696,859,990,1105,1210,1375,1483,1654,1788,1941,2103,2169,2224,2293"
+                        "endOffsets": "320,481,612,719,882,1013,1128,1233,1398,1506,1677,1811,1964,2126,2192,2247,2316"
                     },
                     "to": {
                         "startLines": "36,37,38,39,40,41,42,43,45,46,47,48,49,50,51,52,53",

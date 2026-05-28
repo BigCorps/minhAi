@@ -949,6 +949,7 @@ layout select_dialog_singlechoice_material
 layout support_simple_spinner_dropdown_item
 mipmap ic_launcher
 mipmap ic_maskable
+raw firebase_common_keep
 raw web_app_manifest
 string abc_action_bar_home_description
 string abc_action_bar_up_description
@@ -1007,12 +1008,19 @@ string common_open_on_phone
 string common_signin_button_text
 string common_signin_button_text_long
 string copy_toast_msg
+string default_web_client_id
 string fallbackType
 string fallback_menu_item_copy_link
 string fallback_menu_item_open_in_browser
 string fallback_menu_item_share_link
+string fcm_fallback_notification_channel_label
 string fullScopeUrl
+string gcm_defaultSenderId
 string generatorApp
+string google_api_key
+string google_app_id
+string google_crash_reporting_api_key
+string google_storage_bucket
 string hostName
 string launchUrl
 string launcherName
@@ -1020,6 +1028,7 @@ string manage_space_no_data_toast
 string manage_space_not_supported_toast
 string no_provider_toast
 string orientation
+string project_id
 string providerAuthority
 string search_menu_title
 string status_bar_notification_info_overflow

@@ -49,7 +49,7 @@
     <string msgid="6006316683626838685" name="common_google_play_services_update_title">Aggiorna Google Play Services</string>
     <string name="common_google_play_services_updating_text">%1$s non funzionerà senza Google Play Services, attualmente in fase di aggiornamento.</string>
     <string name="common_google_play_services_wear_update_text">È richiesta una nuova versione di Google Play Services. L\'aggiornamento automatico verrà eseguito a breve.</string>
-    <string name="common_open_on_phone">Apri sul telefono</string>
+    <string name="common_open_on_phone">Apri su smartphone</string>
     <string name="common_signin_button_text">Accedi</string>
     <string name="common_signin_button_text_long">Accedi con Google</string>
     <string msgid="3260749812566568062" name="copy_toast_msg">"Link copiato negli appunti"</string>

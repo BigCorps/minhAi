@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "app.minhai.www.twa.app-mergeReleaseResources-25:/values-watch-v20/values-watch-v20.xml",
+            "outputFile": "app.minhai.www.twa.app-mergeReleaseResources-32:/values-watch-v20/values-watch-v20.xml",
             "map": [
                 {
-                    "source": "/home/codespace/.gradle/caches/8.11.1/transforms/183ebbc8ed821348f80a6d36d20b75e3/transformed/appcompat-1.7.0/res/values-watch-v20/values-watch-v20.xml",
+                    "source": "/home/codespace/.gradle/caches/8.11.1/transforms/e23c1a757bcab5760da1eaa3016b408a/transformed/appcompat-1.7.0/res/values-watch-v20/values-watch-v20.xml",
                     "from": {
                         "startLines": "2,5,8",
                         "startColumns": "4,4,4",

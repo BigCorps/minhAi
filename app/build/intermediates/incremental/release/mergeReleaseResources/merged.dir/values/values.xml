@@ -361,12 +361,19 @@
     <string name="common_signin_button_text">Sign in</string>
     <string name="common_signin_button_text_long">Sign in with Google</string>
     <string name="copy_toast_msg">Link copied to clipboard</string>
+    <string name="default_web_client_id" translatable="false">417485172652-halir77cd646a24418oipi41h52s9389.apps.googleusercontent.com</string>
     <string name="fallbackType" translatable="false">customtabs</string>
     <string name="fallback_menu_item_copy_link">Copy link</string>
     <string name="fallback_menu_item_open_in_browser">Open in browser</string>
     <string name="fallback_menu_item_share_link">Share link</string>
+    <string name="fcm_fallback_notification_channel_label">Miscellaneous</string>
     <string name="fullScopeUrl" translatable="false">https://www.minhai.app/</string>
+    <string name="gcm_defaultSenderId" translatable="false">417485172652</string>
     <string name="generatorApp" translatable="false">bubblewrap-cli</string>
+    <string name="google_api_key" translatable="false">AIzaSyCxFo5wIk55y0_S5zJyIjyLrCwr7u2i4Po</string>
+    <string name="google_app_id" translatable="false">1:417485172652:android:095c91cb7f86c3bf0b9409</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyCxFo5wIk55y0_S5zJyIjyLrCwr7u2i4Po</string>
+    <string name="google_storage_bucket" translatable="false">gerente-ia-483515.firebasestorage.app</string>
     <string name="hostName" translatable="false">www.minhai.app</string>
     <string name="launchUrl" translatable="false">https://www.minhai.app/</string>
     <string name="launcherName" translatable="false">minhAi</string>
@@ -374,6 +381,7 @@
     <string name="manage_space_not_supported_toast">This app\'s data is stored in %1$s.</string>
     <string name="no_provider_toast">Please install Chrome Stable 72 or later.</string>
     <string name="orientation" translatable="false">any</string>
+    <string name="project_id" translatable="false">gerente-ia-483515</string>
     <string name="providerAuthority" translatable="false">app.minhai.www.twa.fileprovider</string>
     <string name="search_menu_title">Search</string>
     <string name="status_bar_notification_info_overflow">999+</string>

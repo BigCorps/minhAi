@@ -194,26 +194,34 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             ))}
           </div>
 
-          {/* Versões Smart vs Vendas */}
-          <div
-            className={`
-              flex items-center justify-center gap-2 mt-2 sm:mt-3
-              [@media(max-height:700px)_and_(max-width:767px)]:hidden
-            `}
-          >
-            <span className={`text-[10px] sm:text-xs ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
-              Como pagar:
-            </span>
-            <span className={`inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
-              Smart — créditos por uso
-            </span>
-            <span className={`${isDark ? 'text-white/15' : 'text-gray-200'} text-xs`}>·</span>
-            <span className={`inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-lime-400 flex-shrink-0" />
-              Vendas — grátis, só pague quando vender
-            </span>
-          </div>
+<div
+  className={`
+    flex items-center justify-center gap-2 mt-2 sm:mt-3
+    [@media(max-height:700px)_and_(max-width:767px)]:hidden
+  `}
+>
+  {/* Mobile: texto curto */}
+  <span className={`sm:hidden text-[10px] font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+    Escolha entre a versão{' '}
+    <span className={`font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>Smart</span>
+    {' '}ou{' '}
+    <span className={`font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>Vendas</span>
+  </span>
+
+  {/* Desktop: versão completa */}
+  <span className={`hidden sm:flex items-center gap-2 text-xs ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
+    Como pagar:
+  </span>
+  <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>
+    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+    Smart — créditos por uso
+  </span>
+  <span className={`hidden sm:inline ${isDark ? 'text-white/15' : 'text-gray-200'} text-xs`}>·</span>
+  <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>
+    <span className="w-1.5 h-1.5 rounded-full bg-lime-400 flex-shrink-0" />
+    Vendas — grátis, só pague quando vender
+  </span>
+</div>
 
           {/* Cards de integração — Meta / Google / Google Play */}
           <div

@@ -82,58 +82,40 @@ export function NotificationBanner({ userId }: NotificationBannerProps) {
   if (!show) return null;
 
   return (
-    <div
-      className="relative overflow-hidden rounded-2xl border"
-      style={{
-        background: 'linear-gradient(135deg, #0a1628 0%, #0d2137 50%, #0a1628 100%)',
-        borderColor: 'rgba(0, 200, 255, 0.2)',
-        boxShadow: '0 0 40px rgba(0, 200, 255, 0.08)',
-      }}
+    <div className="relative overflow-hidden rounded-2xl border border-blue-100 bg-blue-50 dark:border-cyan-500/20 dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800/80 dark:to-slate-900"
+      style={{ boxShadow: '0 0 30px rgba(0,200,255,0.04)' }}
     >
       {/* Linha de acento superior */}
-      <div
-        style={{
-          height: '2px',
-          background: 'linear-gradient(90deg, transparent, #00c8ff, #1a73e8, transparent)',
-        }}
-      />
+      <div className="h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent dark:via-cyan-400" />
 
-      {/* Efeito de brilho de fundo */}
+      {/* Efeito de brilho de fundo — só no dark */}
       <div
+        className="hidden dark:block absolute pointer-events-none"
         style={{
-          position: 'absolute',
-          top: '-40px',
-          right: '-40px',
-          width: '150px',
-          height: '150px',
+          top: '-40px', right: '-40px',
+          width: '150px', height: '150px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(0,200,255,0.08) 0%, transparent 70%)',
-          pointerEvents: 'none',
+          background: 'radial-gradient(circle, rgba(0,200,255,0.07) 0%, transparent 70%)',
         }}
       />
 
       <div className="flex items-center gap-4 p-4 md:p-5">
+
         {/* Ícone */}
-        <div
-          className="flex-shrink-0 flex items-center justify-center rounded-xl"
-          style={{
-            width: '44px',
-            height: '44px',
-            background: 'rgba(0, 200, 255, 0.1)',
-            border: '1px solid rgba(0, 200, 255, 0.2)',
-          }}
-        >
+        <div className="flex-shrink-0 flex items-center justify-center rounded-xl w-11 h-11 bg-blue-100 border border-blue-200 dark:bg-cyan-500/10 dark:border-cyan-500/20">
           {status === 'success' ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00c8ff" strokeWidth="2.5">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeWidth="2.5"
+              className="stroke-blue-500 dark:stroke-cyan-400">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           ) : status === 'denied' ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeWidth="2.5"
+              className="stroke-red-500">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00c8ff" strokeWidth="2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeWidth="2"
+              className="stroke-blue-500 dark:stroke-cyan-400">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
@@ -144,28 +126,28 @@ export function NotificationBanner({ userId }: NotificationBannerProps) {
         <div className="flex-1 min-w-0">
           {status === 'success' ? (
             <>
-              <p className="text-sm font-semibold" style={{ color: '#00c8ff' }}>
+              <p className="text-sm font-semibold text-blue-600 dark:text-cyan-400">
                 Notificações ativadas!
               </p>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
+              <p className="text-xs mt-0.5 text-blue-500/70 dark:text-white/50">
                 Você receberá alertas de PIX e atendimentos em tempo real.
               </p>
             </>
           ) : status === 'denied' ? (
             <>
-              <p className="text-sm font-semibold" style={{ color: '#f87171' }}>
+              <p className="text-sm font-semibold text-red-500">
                 Permissão negada
               </p>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
+              <p className="text-xs mt-0.5 text-gray-500 dark:text-white/50">
                 Ative nas configurações do navegador para receber alertas.
               </p>
             </>
           ) : (
             <>
-              <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>
+              <p className="text-sm font-semibold text-gray-800 dark:text-white/90">
                 {isPWA ? 'Ative as notificações do app' : 'Ative as notificações'}
               </p>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              <p className="text-xs mt-0.5 text-gray-500 dark:text-white/45">
                 Receba alertas de PIX recebido, novos atendimentos e lembretes.
               </p>
             </>
@@ -177,57 +159,27 @@ export function NotificationBanner({ userId }: NotificationBannerProps) {
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={handleEnable}
-              className="text-xs font-semibold px-3 py-2 rounded-lg transition-all"
-              style={{
-                background: 'linear-gradient(135deg, #00c8ff, #1a73e8)',
-                color: '#fff',
-                border: 'none',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
+              className="text-xs font-semibold px-3 py-2 rounded-lg transition-all text-white whitespace-nowrap"
+              style={{ background: 'linear-gradient(135deg, #1a73e8, #0ea5e9)' }}
             >
               Ativar
             </button>
             <button
               onClick={handleDismiss}
-              className="transition-all"
-              style={{
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'rgba(255,255,255,0.3)',
-                padding: '6px',
-                borderRadius: '6px',
-              }}
+              className="p-1.5 rounded-md transition-all text-gray-400 hover:text-gray-600 dark:text-white/30 dark:hover:text-white/60"
               aria-label="Fechar"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
           </div>
         )}
 
         {status === 'loading' && (
-          <div
-            className="flex-shrink-0 rounded-full border-2"
-            style={{
-              width: '28px',
-              height: '28px',
-              borderColor: '#00c8ff transparent transparent transparent',
-              animation: 'spin 0.8s linear infinite',
-            }}
-          />
+          <div className="flex-shrink-0 w-7 h-7 rounded-full border-2 border-blue-500 dark:border-cyan-400 border-t-transparent animate-spin" />
         )}
       </div>
-
-      {/* CSS animation */}
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

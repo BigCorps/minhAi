@@ -78,6 +78,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {user && <NotificationBanner userId={user.id} />}
+
       {/* Credit Card */}
       {user && <CreditsOrVendasCard userId={user.id} />}
 
@@ -86,8 +88,6 @@ export default async function DashboardPage() {
 
       {/* Banner de notificações */}
       {user && <PushNotificationSetup userId={user.id} />}
-
-      {user && <NotificationBanner userId={user.id} />}
 
       {/* Credits Progress Chart */}
       {user && <CreditsProgressChartWrapper userId={user.id} />}

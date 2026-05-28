@@ -22,9 +22,17 @@ export async function POST(req: NextRequest) {
     const grantType    = params.get('grant_type')
     const clientId     = params.get('client_id')
     const clientSecret = params.get('client_secret')
+    const codeVerifier = params.get('code_verifier')
 
     // Validar client credentials
-    if (clientId !== CLIENT_ID || clientSecret !== CLIENT_SECRET) {
+    // Suporta dois modos:
+    // 1. Confidential client: client_id + client_secret (ex: ChatGPT)
+    // 2. Public client com PKCE: apenas client_id + code_verifier (ex: Claude)
+    const isConfidential = clientSecret && clientId === CLIENT_ID && clientSecret === CLIENT_SECRET
+    const isPublicPKCE   = !clientSecret && clientId === CLIENT_ID
+    const isAnyClient    = !CLIENT_ID // fallback se env var não estiver configurada
+
+    if (!isConfidential && !isPublicPKCE && !isAnyClient) {
       return NextResponse.json({ error: 'invalid_client' }, { status: 401 })
     }
 

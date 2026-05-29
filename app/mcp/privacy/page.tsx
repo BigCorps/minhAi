@@ -92,7 +92,7 @@ export default function McpPrivacyPage() {
         <p>
           <strong>BigCorps Tecnologia Ltda</strong><br />
           Email: <a href="mailto:contato@bigcorps.com.br" style={{ color: '#3b82f6' }}>contato@bigcorps.com.br</a><br />
-          WhatsApp: (11) 98731-1425<br />
+          WhatsApp: (11) 92682-8418<br />
           Site: <a href="https://minhai.app" style={{ color: '#3b82f6' }}>minhai.app</a>
         </p>
       </Section>

@@ -6546,7 +6546,6 @@ handler: async ({ transcript, playText, setActiveModal, companyId }) => {
   try {
     if (setActiveModal && companyId) {
       setActiveModal({ type: 'FazerPedidoDisplay', data: { companyId } });
-      await playText('Serei seu assistente de vendas.');
       return true;
     }
     return false;

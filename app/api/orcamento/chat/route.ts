@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
         ).join('\n')
       : '';
 
-    const systemPrompt = `Você é um assistente de orçamento da empresa ${company.name}.
+const systemPrompt = `Você é um assistente de orçamento da empresa ${company.name}.
 
 ${company.orcamento_prompt}${produtosContext}
 
@@ -55,8 +55,10 @@ INSTRUÇÕES CRÍTICAS:
 - Use os preços reais dos produtos listados acima quando disponíveis.
 - Acumule todos os itens do orçamento conforme a conversa avança.
 - Recalcule o total a cada mensagem.
-- Quando o cliente indicar que terminou (ex: "é isso", "pode fechar", "só isso", "pronto"), defina "completo": true e pergunte se deseja salvar em PDF.
-- Quando "completo" for true, a "resposta" deve ser: "Orçamento finalizado! Deseja salvar em PDF?"
+- NUNCA peça confirmação de itens individuais — adicione diretamente ao orçamento e pergunte se há mais itens.
+- NUNCA repita o orçamento completo em texto — apenas informe o que foi adicionado e o total.
+- Quando o cliente indicar que terminou (ex: "é isso", "pode fechar", "só isso", "pronto", "não", "só isso mesmo"), defina "completo": true.
+- Quando "completo" for true, a "resposta" deve ser EXATAMENTE: "Orçamento finalizado! Deseja salvar em PDF?"
 - Nunca inclua texto fora do JSON.`;
 
     const completion = await openai.chat.completions.create({

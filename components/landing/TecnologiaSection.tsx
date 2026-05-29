@@ -6,35 +6,36 @@ interface TecnologiaSectionProps {
 
 // ── Bloco 1: Stack de IA ──────────────────────────────────────
 const AI_STACK = [
-  { label: 'ChatGPT', sub: 'LLM principal',        color: 'blue'  as const },
-  { label: 'GROQ',  sub: 'LLM alternativo',      color: 'blue'  as const },
-  { label: 'Whisper', sub: 'STT — voz para texto', color: 'green' as const },
-  { label: 'Cloud TTS', sub: 'AI Voice Generator',color: 'green' as const },
-  { label: 'Google Speech',   sub: 'voz masc/femin', color: 'blue' as const },
-  { label: 'GPT-4 Vision', sub: 'OCR & visão',     color: 'green' as const },
-  { label: 'Embeddings',   sub: 'text-embedding-3', color: 'blue' as const },
-  { label: 'RAG Pipeline', sub: 'busca semântica',  color: 'green' as const },
-  { label: 'pgvector',     sub: 'Vector DB',        color: 'blue'  as const },
+  { label: 'ChatGPT',       sub: 'LLM principal',        color: 'blue'  as const },
+  { label: 'GROQ',          sub: 'LLM alternativo',       color: 'blue'  as const },
+  { label: 'Whisper',       sub: 'STT — voz para texto',  color: 'green' as const },
+  { label: 'Cloud TTS',     sub: 'AI Voice Generator',    color: 'green' as const },
+  { label: 'Google Speech', sub: 'voz masc/femin',        color: 'blue'  as const },
+  { label: 'GPT-4 Vision',  sub: 'OCR & visão',           color: 'green' as const },
+  { label: 'Embeddings',    sub: 'text-embedding-3',      color: 'blue'  as const },
+  { label: 'RAG Pipeline',  sub: 'busca semântica',       color: 'green' as const },
+  { label: 'pgvector',      sub: 'Vector DB',             color: 'blue'  as const },
 ];
 
 // ── Bloco 2: Infra & Stack ────────────────────────────────────
 const INFRA_STACK = [
-  { label: 'Next.js 15',        category: 'Frontend'   },
-  { label: 'TypeScript',        category: 'Frontend'   },
-  { label: 'Tailwind CSS',      category: 'Frontend'   },
-  { label: 'PWA / Service Worker', category: 'Frontend' },
-  { label: 'Supabase',          category: 'Backend'    },
-  { label: 'AWS',               category: 'Backend'    },
-  { label: 'PostgreSQL',        category: 'Backend'    },
-  { label: 'Edge Functions',    category: 'Backend'    },
-  { label: 'Vercel',            category: 'Deploy'     },
-  { label: 'WhatsApp Cloud API',category: 'Integração' },
-  { label: 'Instagram API',     category: 'Integração' },
-  { label: 'Mercado Pago',      category: 'Pagamentos' },
-  { label: 'InfinitePay NFC',   category: 'Pagamentos' },
-  { label: 'Google Calendar',   category: 'Google'     },
-  { label: 'Gmail API',         category: 'Google'     },
-  { label: 'Google Maps',       category: 'Google'     },
+  { label: 'Next.js 15',           category: 'Frontend'   },
+  { label: 'TypeScript',           category: 'Frontend'   },
+  { label: 'Tailwind CSS',         category: 'Frontend'   },
+  { label: 'PWA / Service Worker', category: 'Frontend'   },
+  { label: 'Supabase',             category: 'Backend'    },
+  { label: 'AWS',                  category: 'Backend'    },
+  { label: 'PostgreSQL',           category: 'Backend'    },
+  { label: 'Edge Functions',       category: 'Backend'    },
+  { label: 'MCP Server',           category: 'Backend'    },
+  { label: 'Vercel',               category: 'Deploy'     },
+  { label: 'WhatsApp Cloud API',   category: 'Integração' },
+  { label: 'Instagram API',        category: 'Integração' },
+  { label: 'Mercado Pago',         category: 'Pagamentos' },
+  { label: 'InfinitePay NFC',      category: 'Pagamentos' },
+  { label: 'Google Calendar',      category: 'Google'     },
+  { label: 'Gmail API',            category: 'Google'     },
+  { label: 'Google Maps',          category: 'Google'     },
 ];
 
 // ── Bloco 3: Browser APIs nativas ─────────────────────────────
@@ -77,7 +78,7 @@ const BROWSER_APIS = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
       </svg>
     ),
-    label: 'Alertss e Notificações',
+    label: 'Alertas e Notificações',
     sub: 'Via Email, WhatsApp e SMS',
     color: 'green' as const,
   },
@@ -177,13 +178,7 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
           </p>
         </div>
 
-        {/* ── MOBILE: abas compactas ──────────────────────────── */}
-        {/*
-          Mobile mostra as 3 seções num layout vertical compacto:
-          1. IA chips em grid 3 colunas
-          2. Infra pills em wrap
-          3. Browser APIs em grid 3 colunas
-        */}
+        {/* ── MOBILE ─────────────────────────────────────────── */}
         <div className="flex flex-col gap-2.5 w-full sm:hidden">
 
           {/* IA Stack */}
@@ -197,7 +192,7 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
                   key={item.label}
                   className={`flex flex-col items-center text-center px-1.5 py-2 rounded-lg border ${
                     item.color === 'blue'
-                      ? isDark ? 'bg-blue-500/8 border-blue-500/15 ' : 'bg-blue-50 border-blue-100'
+                      ? isDark ? 'bg-blue-500/8 border-blue-500/15' : 'bg-blue-50 border-blue-100'
                       : isDark ? 'bg-green-500/8 border-green-500/15' : 'bg-green-50 border-green-100'
                   }`}
                 >
@@ -266,6 +261,23 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
             ))}
           </div>
 
+          {/* MCP — mobile */}
+          <div className={`rounded-xl border p-3 ${isDark ? 'bg-purple-500/5 border-purple-500/20' : 'bg-purple-50 border-purple-200'}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
+                <svg className={`w-3 h-3 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </div>
+              <span className={`text-xs font-bold ${isDark ? 'text-purple-400' : 'text-purple-700'}`}>
+                Servidor MCP — mcp.minhai.app
+              </span>
+            </div>
+            <p className={`text-[10px] leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+              Conecte ao <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>Claude</strong>, <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>ChatGPT</strong> ou <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>Cursor</strong> — seu assistente vira ferramenta nativa dentro das IAs que você já usa.
+            </p>
+          </div>
+
         </div>
 
         {/* ── DESKTOP: 3 colunas ─────────────────────────────── */}
@@ -294,7 +306,7 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
             </div>
           </div>
 
-          {/* Coluna 2: Infra + Métricas */}
+          {/* Coluna 2: Infra + Métricas + MCP */}
           <div className="flex flex-col gap-3">
             <div className={`rounded-2xl border p-4 flex-1 ${isDark ? 'bg-white/[0.02] border-white/6' : 'bg-white/80 border-gray-100 shadow-sm'}`}>
               <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-purple-400/60' : 'text-purple-600/60'}`}>
@@ -313,6 +325,7 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
                 ))}
               </div>
             </div>
+
             {/* Métricas */}
             <div className="grid grid-cols-2 gap-2">
               {METRICAS.map((m) => (
@@ -332,6 +345,23 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
                   </span>
                 </div>
               ))}
+            </div>
+
+            {/* Bloco MCP — desktop */}
+            <div className={`rounded-xl border p-3 ${isDark ? 'bg-purple-500/5 border-purple-500/20' : 'bg-purple-50 border-purple-200'}`}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
+                  <svg className={`w-3 h-3 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                </div>
+                <span className={`text-xs font-bold ${isDark ? 'text-purple-400' : 'text-purple-700'}`}>
+                  Servidor MCP — mcp.minhai.app
+                </span>
+              </div>
+              <p className={`text-[10px] leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                Conecte seu assistente ao <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>Claude</strong>, <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>ChatGPT</strong> ou <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>Cursor</strong> e use-o como ferramenta nativa. Dynamic Client Registration automático.
+              </p>
             </div>
           </div>
 

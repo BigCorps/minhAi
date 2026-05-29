@@ -266,8 +266,8 @@ const playTextSafe = useCallback(async (text: string) => {
   }
   isPlayingRef.current = false;
   // Restaura foco no input após TTS terminar
-  inputRef.current?.focus({ preventScroll: true });
-}, [playText]);
+  setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
+}, [playText, inputRef]);
 
   useEffect(() => {
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' });
@@ -424,15 +424,19 @@ const playTextSafe = useCallback(async (text: string) => {
   value={input}
   onChange={e => setInput(e.target.value)}
   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(input); } }}
-  onBlur={(e) => {
-    const relatedTarget = e.relatedTarget as HTMLElement | null;
-    if (
-      !carregando && !transcrevendo && !voiceRecorder.isRecording &&
-      (!relatedTarget || relatedTarget.tagName === 'BODY')
-    ) {
-      setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
-    }
+<input
+  ref={inputRef}
+  type="text"
+  value={input}
+  onChange={e => setInput(e.target.value)}
+  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(input); } }}
+  placeholder="Digite sua mensagem..."
+  disabled={carregando || transcrevendo}
+  style={{
+    flex: 1, padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`,
+    fontSize: '14px', backgroundColor: C.bgSecondary, color: C.text, outline: 'none',
   }}
+/>
   placeholder="Digite sua mensagem..."
   disabled={carregando || transcrevendo}
   style={{

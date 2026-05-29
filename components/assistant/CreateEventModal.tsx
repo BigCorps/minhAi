@@ -225,6 +225,7 @@ function GestorAgendaChat({
   setMensagens,
   sessaoRef,
   slots,
+  inputRef,
 }: {
   companyId: string;
   C: Cores;

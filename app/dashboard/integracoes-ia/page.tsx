@@ -10,16 +10,33 @@ import { Loader2, Link2, Link2Off, ExternalLink, Zap, AlertCircle, CheckCircle2,
 
 function ClaudeIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-      <path d="M11.69 1.343a.5.5 0 0 1 .62 0l3.75 3.033h3.84a.5.5 0 0 1 .5.5v3.84l3.033 3.75a.5.5 0 0 1 0 .62l-3.033 3.75v3.84a.5.5 0 0 1-.5.5h-3.84l-3.75 3.033a.5.5 0 0 1-.62 0l-3.75-3.033H4.1a.5.5 0 0 1-.5-.5v-3.84L.567 12.31a.5.5 0 0 1 0-.62l3.033-3.75V4.373a.5.5 0 0 1 .5-.5h3.84l3.75-3.03zM12 18.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13z"/>
+    <svg
+      className={className}
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M32 6C35 6 37.7 7.7 39 10.3L41.6 15.5L47.3 16.7C50.2 17.3 52.5 19.6 53.1 22.5L54.3 28.2L59.5 30.8C62.1 32.1 63.8 34.8 63.8 37.8C63.8 40.8 62.1 43.5 59.5 44.8L54.3 47.4L53.1 53.1C52.5 56 50.2 58.3 47.3 58.9L41.6 60.1L39 65.3C37.7 67.9 35 69.6 32 69.6C29 69.6 26.3 67.9 25 65.3L22.4 60.1L16.7 58.9C13.8 58.3 11.5 56 10.9 53.1L9.7 47.4L4.5 44.8C1.9 43.5 0.2 40.8 0.2 37.8C0.2 34.8 1.9 32.1 4.5 30.8L9.7 28.2L10.9 22.5C11.5 19.6 13.8 17.3 16.7 16.7L22.4 15.5L25 10.3C26.3 7.7 29 6 32 6Z"
+        fill="#D97706"
+      />
+      <circle cx="32" cy="38" r="11" fill="white" />
     </svg>
   )
 }
 
 function CursorIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4.5 1.5L21.5 8.5L12.5 11.5L9.5 20.5L4.5 1.5Z" />
+    <svg
+      className={className}
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M14 8L50 32L33 36L28 53L14 8Z"
+        fill="#1F2937"
+      />
     </svg>
   )
 }

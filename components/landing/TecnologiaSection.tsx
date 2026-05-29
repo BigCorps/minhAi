@@ -263,7 +263,7 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
 
           {/* MCP — mobile */}
           <div className={`rounded-xl border p-3 ${isDark ? 'bg-purple-500/5 border-purple-500/20' : 'bg-purple-50 border-purple-200'}`}>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center justify-center gap-2 mb-1">
               <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
                 <svg className={`w-3 h-3 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -273,7 +273,7 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
                 Servidor MCP — mcp.minhai.app
               </span>
             </div>
-            <p className={`text-[10px] leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+            <p className={`text-[10px] leading-relaxed text-center ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
               Conecte ao <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>Claude</strong>, <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>ChatGPT</strong> ou <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>Cursor</strong> — seu assistente vira ferramenta nativa dentro das IAs que você já usa.
             </p>
           </div>
@@ -351,7 +351,7 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
 
     {/* Bloco MCP */}
     <div className={`rounded-xl border p-3 ${isDark ? 'bg-purple-500/5 border-purple-500/20' : 'bg-purple-50 border-purple-200'}`}>
-      <div className="flex items-center gap-2 mb-1.5">
+      <div className="flex items-center justify-center gap-2 mb-1.5">
         <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
           <svg className={`w-3 h-3 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -361,7 +361,7 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
           Servidor MCP — mcp.minhai.app
         </span>
       </div>
-      <p className={`text-[10px] leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+      <p className={`text-[10px] leading-relaxed text-center ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
         Conecte seu assistente ao <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>Claude</strong>, <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>ChatGPT</strong> ou <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>Cursor</strong> e use-o como ferramenta nativa. Dynamic Client Registration automático.
       </p>
     </div>

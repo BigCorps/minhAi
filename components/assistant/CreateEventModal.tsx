@@ -424,19 +424,6 @@ const playTextSafe = useCallback(async (text: string) => {
   value={input}
   onChange={e => setInput(e.target.value)}
   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(input); } }}
-<input
-  ref={inputRef}
-  type="text"
-  value={input}
-  onChange={e => setInput(e.target.value)}
-  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(input); } }}
-  placeholder="Digite sua mensagem..."
-  disabled={carregando || transcrevendo}
-  style={{
-    flex: 1, padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`,
-    fontSize: '14px', backgroundColor: C.bgSecondary, color: C.text, outline: 'none',
-  }}
-/>
   placeholder="Digite sua mensagem..."
   disabled={carregando || transcrevendo}
   style={{

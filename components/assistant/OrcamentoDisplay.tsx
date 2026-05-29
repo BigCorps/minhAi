@@ -104,7 +104,7 @@ function IconVolumeMute() {
   );
 }
 
-// ── Componentes externos ──────────────────────────────────────
+// ── Componentes externos (evitam remount no keystroke) ────────
 
 function BotaoMutar({ audioMutado, toggleMute, C }: BotaoMutarProps) {
   return (
@@ -204,6 +204,8 @@ function InputArea({
 function PreviewOrcamento({
   orcamentoContext, completo, pdfDataUrl, isGerandoPdf, gerarPdf, baixarPdf, C,
 }: PreviewOrcamentoProps) {
+  const temItens = orcamentoContext.itens.length > 0;
+
   return (
     <div style={{ padding: '20px', overflowY: 'auto', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
@@ -211,7 +213,7 @@ function PreviewOrcamento({
         <span style={{ fontSize: '16px', fontWeight: 600, color: C.text }}>Preview do Orçamento</span>
       </div>
 
-      {/* PDF gerado — só botão de download, sem iframe */}
+      {/* PDF gerado — card + botão download */}
       {pdfDataUrl && (
         <div style={{ marginBottom: '16px' }}>
           <div style={{
@@ -257,7 +259,7 @@ function PreviewOrcamento({
       )}
 
       {/* Preview estruturado — só quando tem itens e PDF ainda não foi gerado */}
-      {!pdfDataUrl && orcamentoContext.itens.length > 0 && (
+      {!pdfDataUrl && temItens && (
         <>
           {/* Cliente */}
           {(orcamentoContext.cliente.nome || orcamentoContext.cliente.contato) && (
@@ -324,39 +326,46 @@ function PreviewOrcamento({
             padding: '12px 16px', background: C.accent + '22',
             borderRadius: '8px', border: `1px solid ${C.accent}44`,
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            marginBottom: '12px',
+            marginBottom: '16px',
           }}>
             <span style={{ fontSize: '14px', fontWeight: 700, color: C.text }}>TOTAL</span>
             <span style={{ fontSize: '18px', fontWeight: 700, color: C.accent }}>
               R$ {Number(orcamentoContext.total).toFixed(2)}
             </span>
           </div>
-
-          {/* Botão gerar PDF — só aparece quando completo */}
-          {completo && !isGerandoPdf && (
-            <button
-              onClick={gerarPdf}
-              style={{
-                width: '100%', padding: '12px', background: C.accent,
-                color: 'white', border: 'none', borderRadius: '8px',
-                fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              }}
-            >
-              <FileText className="w-4 h-4" />
-              Gerar PDF
-            </button>
-          )}
         </>
       )}
 
+      {/* ── Botão Gerar PDF — sempre visível, estado muda conforme contexto ── */}
+      {!pdfDataUrl && !isGerandoPdf && (
+        <button
+          onClick={completo && temItens ? gerarPdf : undefined}
+          disabled={!completo || !temItens}
+          title={!temItens ? 'Adicione itens ao orçamento' : !completo ? 'Conclua o orçamento para gerar o PDF' : 'Gerar PDF do orçamento'}
+          style={{
+            width: '100%', padding: '12px',
+            background: completo && temItens ? C.accent : 'transparent',
+            color: completo && temItens ? 'white' : C.textMuted,
+            border: `2px solid ${completo && temItens ? C.accent : C.border}`,
+            borderRadius: '8px', fontSize: '14px', fontWeight: 600,
+            cursor: completo && temItens ? 'pointer' : 'default',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            opacity: completo && temItens ? 1 : 0.45,
+            transition: 'all 0.3s ease',
+          }}
+        >
+          <FileText className="w-4 h-4" />
+          {isGerandoPdf ? 'Gerando...' : 'Gerar PDF'}
+        </button>
+      )}
+
       {/* Estado vazio */}
-      {orcamentoContext.itens.length === 0 && !pdfDataUrl && (
+      {!temItens && !pdfDataUrl && (
         <div style={{
-          padding: '40px 20px', textAlign: 'center',
-          color: C.textMuted, fontSize: '13px',
+          padding: '32px 20px', textAlign: 'center',
+          color: C.textMuted, fontSize: '13px', marginTop: '8px',
         }}>
-          <FileText style={{ width: '48px', height: '48px', margin: '0 auto 12px', opacity: 0.3 }} />
+          <FileText style={{ width: '40px', height: '40px', margin: '0 auto 10px', opacity: 0.2 }} />
           <p>O orçamento aparecerá aqui conforme você conversa</p>
         </div>
       )}
@@ -423,6 +432,7 @@ export default function OrcamentoDisplay({
     return playText(text);
   }, [playText]);
 
+  // ✅ playTextSafe com restauração de foco após TTS — igual ao FazerPedidoDisplay
   const playTextSafe = useCallback(async (text: string) => {
     if (audioMutadoRef.current) return;
     audioQueueRef.current.push(text);
@@ -438,6 +448,8 @@ export default function OrcamentoDisplay({
       }
     }
     isPlayingRef.current = false;
+    // ✅ Restaura foco no input após TTS terminar
+    inputRef.current?.focus({ preventScroll: true });
   }, [playTextComMute]);
 
   // ── Mensagem inicial ──────────────────────────────────────
@@ -470,6 +482,8 @@ export default function OrcamentoDisplay({
       console.error('[ORCAMENTO PDF]', err);
     } finally {
       setIsGerandoPdf(false);
+      // ✅ Restaura foco após gerar PDF
+      inputRef.current?.focus({ preventScroll: true });
     }
   }, [orcamentoContext, companyInfo]);
 
@@ -512,7 +526,7 @@ export default function OrcamentoDisplay({
 
   // ── Processar mensagem ────────────────────────────────────
   const processarMensagem = useCallback(async (textoUsuario: string) => {
-    // Bloco de confirmação de PDF — totalmente isolado, nunca cai no fluxo normal
+    // ── Bloco de confirmação de PDF — totalmente isolado ──
     if (aguardandoConfirmacao) {
       const userMsg: Message = {
         id: Date.now().toString(),
@@ -532,9 +546,9 @@ export default function OrcamentoDisplay({
         playTextSafe('Gerando o PDF do orçamento!');
         setAguardandoConfirmacao(false);
         await gerarPdf();
-        return; // ← sai sem chamar a API
+        return; // ← nunca cai no fluxo normal
       } else {
-        // Negou — volta a conversar normalmente mas sem chamar a API
+        // Negou — volta a conversar sem chamar a API
         setAguardandoConfirmacao(false);
         setCompleto(false);
         const msgVoltar: Message = {
@@ -545,11 +559,11 @@ export default function OrcamentoDisplay({
         };
         setMessages(prev => [...prev, msgVoltar]);
         playTextSafe(msgVoltar.content);
-        return; // ← sai sem chamar a API
+        return; // ← nunca cai no fluxo normal
       }
     }
 
-    // Fluxo normal — chama a API
+    // ── Fluxo normal — chama a API ────────────────────────
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -675,24 +689,22 @@ export default function OrcamentoDisplay({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Preview compacto mobile — só quando tem itens ou PDF */}
-        {(orcamentoContext.itens.length > 0 || pdfDataUrl) && (
-          <div style={{
-            maxHeight: '40vh', overflowY: 'auto',
-            borderTop: `1px solid ${C.border}`, flexShrink: 0,
-            background: C.bgSecondary,
-          }}>
-            <PreviewOrcamento
-              orcamentoContext={orcamentoContext}
-              completo={completo}
-              pdfDataUrl={pdfDataUrl}
-              isGerandoPdf={isGerandoPdf}
-              gerarPdf={gerarPdf}
-              baixarPdf={baixarPdf}
-              C={C}
-            />
-          </div>
-        )}
+        {/* Preview compacto mobile — sempre visível */}
+        <div style={{
+          maxHeight: '45vh', overflowY: 'auto',
+          borderTop: `1px solid ${C.border}`, flexShrink: 0,
+          background: C.bgSecondary,
+        }}>
+          <PreviewOrcamento
+            orcamentoContext={orcamentoContext}
+            completo={completo}
+            pdfDataUrl={pdfDataUrl}
+            isGerandoPdf={isGerandoPdf}
+            gerarPdf={gerarPdf}
+            baixarPdf={baixarPdf}
+            C={C}
+          />
+        </div>
 
         <InputArea
           inputText={inputText}
@@ -815,7 +827,7 @@ export default function OrcamentoDisplay({
             />
           </div>
 
-          {/* Preview */}
+          {/* Preview — sempre visível */}
           <div style={{
             background: C.bg, overflow: 'hidden',
             display: 'flex', flexDirection: 'column',

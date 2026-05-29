@@ -4,8 +4,7 @@
 
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões 
 
-* MCP e App ChatGPT e MCP Claude
-(Criar categoria Integrações IA - para conexão com aplicativos IA e integrações externas)
+* App ChatGPT e MCP Claude Aprovado
 
 * PagAi - Pix com confirmação automática e Bolão entre amigos (Pool).
 

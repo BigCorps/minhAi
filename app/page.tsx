@@ -93,7 +93,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Compatibilidade total',
     title: 'Funciona onde seu cliente está',
     description:
-      'Celular, computador, tablet, totem, TV ou PDV — se tem tela e navegador, roda o minhAi. Conecte também WhatsApp, Instagram e Facebook e tambem um Widget no seu site! Um assistente único que responde em todos os canais ao mesmo tempo, você apenas gerencia e se preocupa com o pós-venda.',
+      'Celular, computador, tablet, totem, TV ou PDV — se tem tela e navegador, roda o minhAi. Conecte também WhatsApp, Instagram e Facebook: um assistente único que responde em todos os canais ao mesmo tempo, sem você monitorar nada.',
     imageSrc: '/dispositivos.png',
     imageAlt: 'Dispositivos compatíveis com minhAi — celular, tablet, totem e computador',
     color: 'blue' as const,
@@ -103,7 +103,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Integrações nativas',
     title: 'Conectado ao que você já usa',
     description:
-      'Google Agenda, Meu Negocio, Drive, Gmail, YouTube, Maps, Reuniões no Meet e Video Chamadas, WhatsApp Business, Instagram, Facebook, Mercado Pago, InfinitePay — tudo nativo, sem zapier, sem desenvolvimento adicional. O minhAi já vem integrado com as ferramentas que fazem seu negócio funcionar.',
+      'Google Agenda, Drive, Gmail, Maps, Meet, WhatsApp Business, Instagram, Facebook, Mercado Pago, InfinitePay — tudo nativo, sem Zapier. E agora com servidor MCP próprio: conecte seu assistente ao Claude, ChatGPT ou Cursor e use-o como ferramenta nativa dentro das IAs que você já usa.',
     imageSrc: '/api.png',
     imageAlt: 'Integrações nativas do minhAi — Google, Meta, Mercado Pago e mais',
     color: 'green' as const,
@@ -288,9 +288,9 @@ const NAV_SECTIONS = ['inicio', 'recursos', 'funcoes', 'precos', 'contato'];
 function getSectionNavGroup(sectionId: string): string {
   if (sectionId.startsWith('funcao-')) return 'funcoes';
   if (sectionId.startsWith('recurso-')) return 'recursos';
-  if (sectionId === 'provas-sociais') return 'recursos';
+  if (sectionId === 'provas-sociais') return 'inicio';
   if (sectionId === 'como-funciona') return 'recursos';
-  if (sectionId === 'assistentes') return 'recursos';
+  if (sectionId === 'assistentes') return 'funcoes';
   if (sectionId === 'depoimentos') return 'precos';
   if (sectionId === 'faq') return 'precos';
   if (sectionId === 'tecnologia') return 'precos';

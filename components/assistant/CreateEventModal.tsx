@@ -416,21 +416,30 @@ const playTextSafe = useCallback(async (text: string) => {
         )}
       </div>
 
-      <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}`, backgroundColor: C.bg, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(input); } }}
-            placeholder="Digite sua mensagem..."
-            disabled={carregando || transcrevendo}
-            style={{
-              flex: 1, padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`,
-              fontSize: '14px', backgroundColor: C.bgSecondary, color: C.text, outline: 'none',
-            }}
-          />
+<div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}`, backgroundColor: C.bg, flexShrink: 0 }}>
+  <form onSubmit={e => { e.preventDefault(); enviarMensagem(input); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+<input
+  ref={inputRef}
+  type="text"
+  value={input}
+  onChange={e => setInput(e.target.value)}
+  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(input); } }}
+  onBlur={(e) => {
+    const relatedTarget = e.relatedTarget as HTMLElement | null;
+    if (
+      !carregando && !transcrevendo && !voiceRecorder.isRecording &&
+      (!relatedTarget || relatedTarget.tagName === 'BODY')
+    ) {
+      setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
+    }
+  }}
+  placeholder="Digite sua mensagem..."
+  disabled={carregando || transcrevendo}
+  style={{
+    flex: 1, padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`,
+    fontSize: '14px', backgroundColor: C.bgSecondary, color: C.text, outline: 'none',
+  }}
+/>
           <button
             type="button"
             onClick={voiceRecorder.isRecording ? handleStopVoice : handleStartVoice}
@@ -456,7 +465,7 @@ const playTextSafe = useCallback(async (text: string) => {
           >
             {carregando ? <IconLoader size={18} color="#fff" /> : <IconSend size={18} color="#fff" />}
           </button>
-        </div>
+        </form>
         {voiceRecorder.isRecording && (
           <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444', animation: 'pulse 1s infinite' }} />

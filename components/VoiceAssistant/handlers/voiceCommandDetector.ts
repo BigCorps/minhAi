@@ -105,6 +105,7 @@ export async function detectVoiceCommand(
   const {
     companyId,
     slug,
+    widgetMode,
     functionSettings,
     setIsProcessing,
     setQrCodeData,
@@ -140,7 +141,7 @@ export async function detectVoiceCommand(
   // ── Vendas — navega para a página de vendas ───────────────
   const modoVendaTriggers = [
     'modo venda', 'modo de venda', 'abrir loja', 'abrir modo venda',
-    'quero comprar', 'comprar agora', 'escolher produtos', 'fazer pedido',
+    'quero comprar', 'comprar agora', 'escolher produtos',
   ];
   if (modoVendaTriggers.some(t => lowerTranscript.includes(t))) {
     const isEnabled = await checkIfFunctionIsEnabled(companyId, 'modo_venda');

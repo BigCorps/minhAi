@@ -281,115 +281,140 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
         </div>
 
         {/* ── DESKTOP: 3 colunas ─────────────────────────────── */}
-        <div className="hidden sm:grid sm:grid-cols-3 gap-4 w-full">
+<div className="hidden sm:grid sm:grid-cols-3 gap-4 w-full">
 
-          {/* Coluna 1: IA Stack */}
-          <div className={`rounded-2xl border p-4 flex flex-col gap-3 ${isDark ? 'bg-white/[0.02] border-white/6' : 'bg-white/80 border-gray-100 shadow-sm'}`}>
-            <p className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-blue-400/60' : 'text-blue-600/60'}`}>
-              Stack de IA
-            </p>
-            <div className="flex flex-col gap-2">
-              {AI_STACK.map((item) => (
-                <div key={item.label} className="flex items-center justify-between gap-2">
-                  <span className={`text-xs font-semibold ${isDark ? 'text-white/80' : 'text-gray-800'}`}>
-                    {item.label}
-                  </span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${
-                    item.color === 'blue'
-                      ? isDark ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-blue-50 text-blue-600 border-blue-100'
-                      : isDark ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-green-50 text-green-600 border-green-100'
-                  }`}>
-                    {item.sub}
-                  </span>
-                </div>
-              ))}
-            </div>
+  {/* Coluna 1: IA Stack + 2 Métricas */}
+  <div className="flex flex-col gap-3">
+    <div className={`rounded-2xl border p-4 flex flex-col gap-3 flex-1 ${isDark ? 'bg-white/[0.02] border-white/6' : 'bg-white/80 border-gray-100 shadow-sm'}`}>
+      <p className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-blue-400/60' : 'text-blue-600/60'}`}>
+        Stack de IA
+      </p>
+      <div className="flex flex-col gap-2">
+        {AI_STACK.map((item) => (
+          <div key={item.label} className="flex items-center justify-between gap-2">
+            <span className={`text-xs font-semibold ${isDark ? 'text-white/80' : 'text-gray-800'}`}>
+              {item.label}
+            </span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${
+              item.color === 'blue'
+                ? isDark ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-blue-50 text-blue-600 border-blue-100'
+                : isDark ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-green-50 text-green-600 border-green-100'
+            }`}>
+              {item.sub}
+            </span>
           </div>
+        ))}
+      </div>
+    </div>
 
-          {/* Coluna 2: Infra + Métricas + MCP */}
-          <div className="flex flex-col gap-3">
-            <div className={`rounded-2xl border p-4 flex-1 ${isDark ? 'bg-white/[0.02] border-white/6' : 'bg-white/80 border-gray-100 shadow-sm'}`}>
-              <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-purple-400/60' : 'text-purple-600/60'}`}>
-                Infra & Stack
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {INFRA_STACK.map((item) => (
-                  <span
-                    key={item.label}
-                    className={`text-[10px] font-medium px-2 py-1 rounded-lg border ${
-                      isDark ? categoryColor[item.category] : categoryColorLight[item.category]
-                    }`}
-                  >
-                    {item.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Métricas */}
-            <div className="grid grid-cols-2 gap-2">
-              {METRICAS.map((m) => (
-                <div
-                  key={m.label}
-                  className={`flex flex-col items-center text-center p-3 rounded-xl border ${
-                    m.color === 'blue'
-                      ? isDark ? 'bg-blue-500/5 border-blue-500/15' : 'bg-blue-50 border-blue-100'
-                      : isDark ? 'bg-green-500/5 border-green-500/15' : 'bg-green-50 border-green-100'
-                  }`}
-                >
-                  <span className={`text-lg font-black ${m.color === 'blue' ? isDark ? 'text-blue-400' : 'text-blue-600' : isDark ? 'text-green-400' : 'text-green-600'}`}>
-                    {m.valor}
-                  </span>
-                  <span className={`text-[10px] mt-0.5 leading-tight ${isDark ? 'text-white/35' : 'text-gray-400'}`}>
-                    {m.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Bloco MCP — desktop */}
-            <div className={`rounded-xl border p-3 ${isDark ? 'bg-purple-500/5 border-purple-500/20' : 'bg-purple-50 border-purple-200'}`}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
-                  <svg className={`w-3 h-3 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                  </svg>
-                </div>
-                <span className={`text-xs font-bold ${isDark ? 'text-purple-400' : 'text-purple-700'}`}>
-                  Servidor MCP — mcp.minhai.app
-                </span>
-              </div>
-              <p className={`text-[10px] leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                Conecte seu assistente ao <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>Claude</strong>, <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>ChatGPT</strong> ou <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>Cursor</strong> e use-o como ferramenta nativa. Dynamic Client Registration automático.
-              </p>
-            </div>
-          </div>
-
-          {/* Coluna 3: Browser APIs */}
-          <div className={`rounded-2xl border p-4 flex flex-col gap-3 ${isDark ? 'bg-white/[0.02] border-white/6' : 'bg-white/80 border-gray-100 shadow-sm'}`}>
-            <p className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-green-400/60' : 'text-green-600/60'}`}>
-              APIs do Dispositivo
-            </p>
-            <div className="flex flex-col gap-2.5">
-              {BROWSER_APIS.map((api) => (
-                <div key={api.label} className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    api.color === 'blue'
-                      ? isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-100 text-blue-600'
-                      : isDark ? 'bg-green-500/15 text-green-400' : 'bg-green-100 text-green-600'
-                  } [&>svg]:w-5 [&>svg]:h-5`}>
-                    {api.icon}
-                  </div>
-                  <div>
-                    <p className={`text-xs font-semibold ${isDark ? 'text-white/80' : 'text-gray-800'}`}>{api.label}</p>
-                    <p className={`text-[10px] ${isDark ? 'text-white/35' : 'text-gray-400'}`}>{api.sub}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
+    {/* Métricas esquerda: <800ms e 128 */}
+    <div className="grid grid-cols-2 gap-2">
+      {METRICAS.filter((_, i) => i === 0 || i === 2).map((m) => (
+        <div
+          key={m.label}
+          className={`flex flex-col items-center text-center p-3 rounded-xl border ${
+            m.color === 'blue'
+              ? isDark ? 'bg-blue-500/5 border-blue-500/15' : 'bg-blue-50 border-blue-100'
+              : isDark ? 'bg-green-500/5 border-green-500/15' : 'bg-green-50 border-green-100'
+          }`}
+        >
+          <span className={`text-lg font-black ${m.color === 'blue' ? isDark ? 'text-blue-400' : 'text-blue-600' : isDark ? 'text-green-400' : 'text-green-600'}`}>
+            {m.valor}
+          </span>
+          <span className={`text-[10px] mt-0.5 leading-tight ${isDark ? 'text-white/35' : 'text-gray-400'}`}>
+            {m.label}
+          </span>
         </div>
+      ))}
+    </div>
+  </div>
+
+  {/* Coluna 2: Infra & Stack + MCP centralizado */}
+  <div className="flex flex-col gap-3">
+    <div className={`rounded-2xl border p-4 flex-1 ${isDark ? 'bg-white/[0.02] border-white/6' : 'bg-white/80 border-gray-100 shadow-sm'}`}>
+      <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-purple-400/60' : 'text-purple-600/60'}`}>
+        Infra & Stack
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {INFRA_STACK.map((item) => (
+          <span
+            key={item.label}
+            className={`text-[10px] font-medium px-2 py-1 rounded-lg border ${
+              isDark ? categoryColor[item.category] : categoryColorLight[item.category]
+            }`}
+          >
+            {item.label}
+          </span>
+        ))}
+      </div>
+    </div>
+
+    {/* Bloco MCP — centralizado na coluna do meio */}
+    <div className={`rounded-xl border p-3 ${isDark ? 'bg-purple-500/5 border-purple-500/20' : 'bg-purple-50 border-purple-200'}`}>
+      <div className="flex items-center gap-2 mb-1.5">
+        <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
+          <svg className={`w-3 h-3 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+        </div>
+        <span className={`text-xs font-bold ${isDark ? 'text-purple-400' : 'text-purple-700'}`}>
+          Servidor MCP — mcp.minhai.app
+        </span>
+      </div>
+      <p className={`text-[10px] leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+        Conecte seu assistente ao <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>Claude</strong>, <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>ChatGPT</strong> ou <strong className={isDark ? 'text-white/70' : 'text-gray-700'}>Cursor</strong> e use-o como ferramenta nativa. Dynamic Client Registration automático.
+      </p>
+    </div>
+  </div>
+
+  {/* Coluna 3: Browser APIs + 2 Métricas */}
+  <div className="flex flex-col gap-3">
+    <div className={`rounded-2xl border p-4 flex flex-col gap-3 flex-1 ${isDark ? 'bg-white/[0.02] border-white/6' : 'bg-white/80 border-gray-100 shadow-sm'}`}>
+      <p className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-green-400/60' : 'text-green-600/60'}`}>
+        APIs do Dispositivo
+      </p>
+      <div className="flex flex-col gap-2.5">
+        {BROWSER_APIS.map((api) => (
+          <div key={api.label} className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+              api.color === 'blue'
+                ? isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-100 text-blue-600'
+                : isDark ? 'bg-green-500/15 text-green-400' : 'bg-green-100 text-green-600'
+            } [&>svg]:w-5 [&>svg]:h-5`}>
+              {api.icon}
+            </div>
+            <div>
+              <p className={`text-xs font-semibold ${isDark ? 'text-white/80' : 'text-gray-800'}`}>{api.label}</p>
+              <p className={`text-[10px] ${isDark ? 'text-white/35' : 'text-gray-400'}`}>{api.sub}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Métricas direita: 99.9% e LGPD */}
+    <div className="grid grid-cols-2 gap-2">
+      {METRICAS.filter((_, i) => i === 1 || i === 3).map((m) => (
+        <div
+          key={m.label}
+          className={`flex flex-col items-center text-center p-3 rounded-xl border ${
+            m.color === 'blue'
+              ? isDark ? 'bg-blue-500/5 border-blue-500/15' : 'bg-blue-50 border-blue-100'
+              : isDark ? 'bg-green-500/5 border-green-500/15' : 'bg-green-50 border-green-100'
+          }`}
+        >
+          <span className={`text-lg font-black ${m.color === 'blue' ? isDark ? 'text-blue-400' : 'text-blue-600' : isDark ? 'text-green-400' : 'text-green-600'}`}>
+            {m.valor}
+          </span>
+          <span className={`text-[10px] mt-0.5 leading-tight ${isDark ? 'text-white/35' : 'text-gray-400'}`}>
+            {m.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  </div>
+
+</div>
 
       </div>
     </div>

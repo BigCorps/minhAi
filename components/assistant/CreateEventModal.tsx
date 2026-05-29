@@ -239,13 +239,13 @@ function GestorAgendaChat({
   setMensagens: React.Dispatch<React.SetStateAction<MensagemChat[]>>;
   sessaoRef: React.MutableRefObject<{ messages: { role: string; content: string }[] }>;
   slots: SlotHorario[];
+  inputRef: React.RefObject<HTMLInputElement>;
 }) {
   const voiceRecorder = useVoiceRecorder();
   const [input, setInput] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [transcrevendo, setTranscrevendo] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // Fila de TTS anti-duplicação
   const audioQueueRef = useRef<string[]>([]);
@@ -848,19 +848,26 @@ function GestorAgendaInner({ data: propData, onClose, theme = 'dark', playText }
 
   // FIX: mensagens e sessão no PAI — sobrevivem à troca de aba
   const [mensagens, setMensagens] = useState<MensagemChat[]>([]);
-  const sessaoRef = useRef<{ messages: { role: string; content: string }[] }>({ messages: [] });
+const sessaoRef = useRef<{ messages: { role: string; content: string }[] }>({ messages: [] });
+const inputRef = useRef<HTMLInputElement>(null);
 
-  // FIX: hasSpoken no PAI — dispara saudação uma única vez
-  const hasSpokenRef = useRef(false);
+// FIX: hasSpoken no PAI — dispara saudação uma única vez
+const hasSpokenRef = useRef(false);
 
-  useEffect(() => {
-    if (hasSpokenRef.current || mensagens.length > 0) return;
-    hasSpokenRef.current = true;
-    const saudacao = 'Olá! Sou o Gestor de Agenda. Para começar, me diga qual serviço ou compromisso deseja agendar.';
-    setMensagens([{ id: 'init', role: 'assistant', content: saudacao }]);
-    sessaoRef.current.messages.push({ role: 'assistant', content: saudacao });
-    if (!audioMutado && playText) playText(saudacao).catch(() => {});
-  }, []); // sem deps — roda uma única vez na montagem do PAI
+useEffect(() => {
+  if (hasSpokenRef.current || mensagens.length > 0) return;
+  hasSpokenRef.current = true;
+  const saudacao = 'Olá! Sou o Gestor de Agenda. Para começar, me diga qual serviço ou compromisso deseja agendar.';
+  setMensagens([{ id: 'init', role: 'assistant', content: saudacao }]);
+  sessaoRef.current.messages.push({ role: 'assistant', content: saudacao });
+  if (!audioMutado && playText) {
+    playText(saudacao)
+      .catch(() => {})
+      .finally(() => {
+        setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
+      });
+  }
+}, []);
 
   // Carrega dados iniciais
   useEffect(() => {
@@ -1159,6 +1166,7 @@ const handleConfirmarData = useCallback(async () => {
               setMensagens={setMensagens}
               sessaoRef={sessaoRef}
               slots={slots}
+              inputRef={inputRef}
             />
           </div>
 

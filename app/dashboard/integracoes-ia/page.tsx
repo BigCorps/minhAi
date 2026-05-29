@@ -18,11 +18,14 @@ function ClaudeIcon({ className }: { className?: string }) {
 
 function CursorIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M5 3L19 12L12.5 13.5L9.5 21L5 3Z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M7.343 2.112a1 1 0 0 0-1.42 1.135l3.526 17.625a1 1 0 0 0 1.834.25l3.053-5.723 5.723-3.053a1 1 0 0 0-.25-1.834L2.213 6.985Z" />
+      <path d="M6 2L20.5 8.5L13.5 11.5L16.5 17.5L13.5 19L10.5 13L5 17V2Z" />
     </svg>
   )
 }
+
+
 
 
 function ChatGPTIcon({ className }: { className?: string }) {

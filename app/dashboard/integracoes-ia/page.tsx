@@ -18,7 +18,7 @@ function ClaudeIcon({ className }: { className?: string }) {
 function CursorIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-      <path fillRule="evenodd" clipRule="evenodd" d="M6 2L21 8.5L13.5 11.5L16.5 18L13 19.5L10 13L5 17V2Z" />
+      <path d="M11.925 24l-5.975-5.975L.975 24 0 23.025l5.95-5.95L0 11.1l.975-.975 5.95 5.95L12.9.975 13.875 0l5.95 5.95L24 .975 24 2.2l-5.175 5.175 5.175 5.175V13.8l-5.95-5.95-5.95 5.95 5.95 5.95V21L11.925 24z"/>
     </svg>
   )
 }

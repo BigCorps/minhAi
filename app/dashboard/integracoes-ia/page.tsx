@@ -15,18 +15,13 @@ function ClaudeIcon({ className }: { className?: string }) {
   )
 }
 
-
 function CursorIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-      <path d="M7.343 2.112a1 1 0 0 0-1.42 1.135l3.526 17.625a1 1 0 0 0 1.834.25l3.053-5.723 5.723-3.053a1 1 0 0 0-.25-1.834L2.213 6.985Z" />
-      <path d="M6 2L20.5 8.5L13.5 11.5L16.5 17.5L13.5 19L10.5 13L5 17V2Z" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M6 2L21 8.5L13.5 11.5L16.5 18L13 19.5L10 13L5 17V2Z" />
     </svg>
   )
 }
-
-
-
 
 function ChatGPTIcon({ className }: { className?: string }) {
   return (
@@ -217,28 +212,31 @@ function IntegracoesDashboardContent() {
             </p>
           </div>
 
-          {/* URL do servidor MCP */}
+                    {/* URL do servidor MCP */}
           <div className="bg-gradient-to-r from-blue-500/10 to-blue-400/10 border border-blue-200 dark:border-blue-500/30 rounded-2xl p-5">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div>
-                <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-1 flex items-center gap-2">
-                  <Zap className="w-4 h-4" />
-                  URL do servidor MCP
-                </p>
-                <code className="text-lg font-mono font-bold text-blue-900 dark:text-blue-100">
-                  {MCP_URL}
-                </code>
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                  Cole essa URL no campo de connector de qualquer plataforma compatível com MCP
-                </p>
-              </div>
+            <div className="flex items-center justify-between gap-4 mb-2">
+              <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                <Zap className="w-4 h-4 flex-shrink-0" />
+                URL do servidor MCP
+              </p>
               <button
                 onClick={copyUrl}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition shadow-sm flex-shrink-0"
+                title="Copiar URL"
+                className="inline-flex items-center justify-center gap-2 p-2 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition shadow-sm flex-shrink-0"
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Copiado!' : 'Copiar URL'}
+                <span className="hidden sm:inline">
+                  {copied ? 'Copiado!' : 'Copiar URL'}
+                </span>
               </button>
+            </div>
+            <div>
+              <code className="text-lg sm:text-xl font-mono font-bold text-blue-900 dark:text-blue-100 break-all">
+                {MCP_URL}
+              </code>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                Cole essa URL no campo de connector de qualquer plataforma compatível com MCP
+              </p>
             </div>
           </div>
 

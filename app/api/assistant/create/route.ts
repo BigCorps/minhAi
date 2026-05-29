@@ -3,13 +3,12 @@
 // Chamado pelo Step6 ao clicar em "Criar Assistente".
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { createClient, createAdminClient } from '@/lib/supabase-server';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 // Funções permitidas no modelo Vendas.
-// Qualquer function_key fora desta lista é ignorado para type=vendas.
 const VENDAS_ALLOWED: Set<string> = new Set([
   'nossa_marca', 'endereco', 'chatgpt', 'faq',
   'cardapio', 'ver_produtos', 'fazer_pedido', 'modo_venda', 'consultar_estoque',
@@ -18,13 +17,9 @@ const VENDAS_ALLOWED: Set<string> = new Set([
 ]);
 
 interface CreateBody {
-  // Etapa 1
   assistantName: string;
-  // Tipo (vem do novo Step 0)
   assistantType: 'smart' | 'vendas';
-  // Segmento (Step 2)
   segmentKey: string;
-  // Dados da empresa (Step 3)
   step3: {
     company_name: string;
     what_offers: string;
@@ -32,11 +27,8 @@ interface CreateBody {
     hours?: string;
     extra_info?: string;
   };
-  // Prompt já gerado pelo generate-prompt (Step 6)
   systemPrompt: string;
-  // Slug — gerado no frontend a partir do nome
   slug: string;
-  // is_public vem do assistantType: vendas sempre público
   is_public?: boolean;
 }
 
@@ -61,19 +53,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── Autenticar usuário via cookie de sessão ─────────────
+    // Usa o client de usuário APENAS para getUser() — todas as
+    // escritas no banco vão pelo admin client (service_role).
     const supabase = createClient();
-
-    // ── Verificar usuário autenticado ───────────────────────
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
+    // ── Admin client — bypassa RLS para todas as escritas ───
+    const admin = createAdminClient();
+
     // ── Garantir slug único ─────────────────────────────────
-    const uniqueSlug = await resolveUniqueSlug(supabase, rawSlug);
+    const uniqueSlug = await resolveUniqueSlug(admin, rawSlug);
 
     // ── Buscar function_keys do segmento ────────────────────
-    const { data: segment } = await supabase
+    const { data: segment } = await admin
       .from('assistant_segments')
       .select('function_keys, function_keys_vendas')
       .eq('segment_key', segmentKey)
@@ -85,32 +81,27 @@ export async function POST(request: NextRequest) {
           : (segment.function_keys as string[]))
       : [];
 
-    // Filtro extra de segurança para Vendas
     const functionKeys = assistantType === 'vendas'
       ? allKeys.filter(k => VENDAS_ALLOWED.has(k))
       : allKeys;
 
-    // ── Montar dados da empresa ─────────────────────────────
-    const companyData: Record<string, any> = {
-      name:              assistantName,
-      slug:              uniqueSlug,
-      user_id:           user.id,
-      is_public:         assistantType === 'vendas' ? true : (is_public ?? true),
-      assistant_type:    assistantType,
-      segment_key:       segmentKey,
-      system_prompt:     systemPrompt,
-      onboarding_completed: true,
-      onboarding_step:   8,
-      // Campos de texto da empresa
-      brand_description: step3.what_offers,
-      business_address:  step3.location  ?? null,
-      business_hours:    step3.hours     ?? null,
-    };
-
     // ── Criar empresa ───────────────────────────────────────
-    const { data: company, error: companyError } = await supabase
+    const { data: company, error: companyError } = await admin
       .from('companies')
-      .insert(companyData)
+      .insert({
+        name:                 assistantName,
+        slug:                 uniqueSlug,
+        user_id:              user.id,
+        is_public:            assistantType === 'vendas' ? true : (is_public ?? true),
+        assistant_type:       assistantType,
+        segment_key:          segmentKey,
+        system_prompt:        systemPrompt,
+        onboarding_completed: true,
+        onboarding_step:      8,
+        brand_description:    step3.what_offers,
+        business_address:     step3.location ?? null,
+        business_hours:       step3.hours    ?? null,
+      })
       .select('id, slug')
       .single();
 
@@ -123,30 +114,27 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Ativar funções do segmento ──────────────────────────
-    // upsert seguro — pode rodar múltiplas vezes sem duplicar
     if (functionKeys.length > 0) {
       const settingsRows = functionKeys.map(fk => ({
-        company_id:  company.id,
+        company_id:   company.id,
         function_key: fk,
-        is_enabled:  true,
-        enabled_at:  new Date().toISOString(),
+        is_enabled:   true,
+        enabled_at:   new Date().toISOString(),
       }));
 
-      const { error: fnError } = await supabase
+      const { error: fnError } = await admin
         .from('company_function_settings')
         .upsert(settingsRows, { onConflict: 'company_id,function_key' });
 
       if (fnError) {
-        // Não quebra o fluxo — empresa já criada, funções podem ser ativadas depois
         console.error('Aviso: erro ao ativar funções:', fnError.message);
       }
     }
 
-    // ── Resposta de sucesso ─────────────────────────────────
     return NextResponse.json({
-      success:       true,
-      id:            company.id,
-      slug:          company.slug,
+      success:             true,
+      id:                  company.id,
+      slug:                company.slug,
       functions_activated: functionKeys.length,
     });
 
@@ -157,7 +145,7 @@ export async function POST(request: NextRequest) {
 }
 
 // ── Helper: slug único com sufixo numérico se necessário ─────
-async function resolveUniqueSlug(supabase: any, baseSlug: string): Promise<string> {
+async function resolveUniqueSlug(admin: any, baseSlug: string): Promise<string> {
   const clean = baseSlug
     .toLowerCase()
     .normalize('NFD')
@@ -166,8 +154,7 @@ async function resolveUniqueSlug(supabase: any, baseSlug: string): Promise<strin
     .replace(/^-+|-+$/g, '')
     .slice(0, 60);
 
-  // Tenta o slug limpo primeiro
-  const { data: existing } = await supabase
+  const { data: existing } = await admin
     .from('companies')
     .select('slug')
     .eq('slug', clean)
@@ -175,18 +162,15 @@ async function resolveUniqueSlug(supabase: any, baseSlug: string): Promise<strin
 
   if (!existing) return clean;
 
-  // Adiciona sufixo numérico até encontrar um livre
   for (let i = 2; i <= 99; i++) {
     const candidate = `${clean}-${i}`;
-    const { data: collision } = await supabase
+    const { data: collision } = await admin
       .from('companies')
       .select('slug')
       .eq('slug', candidate)
       .maybeSingle();
-
     if (!collision) return candidate;
   }
 
-  // Fallback com timestamp se todos os sufixos estiverem ocupados
   return `${clean}-${Date.now()}`;
 }

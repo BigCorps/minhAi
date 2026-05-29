@@ -253,20 +253,21 @@ function GestorAgendaChat({
   const audioMutadoRef = useRef(audioMutado);
   useEffect(() => { audioMutadoRef.current = audioMutado; }, [audioMutado]);
 
-  const playTextSafe = useCallback(async (text: string) => {
-    if (audioMutadoRef.current || !playText) return;
-    audioQueueRef.current.push(text);
-    if (isPlayingRef.current) return;
-    while (audioQueueRef.current.length > 0) {
-      isPlayingRef.current = true;
-      const next = audioQueueRef.current.shift();
-      if (next) {
-        try { await playText(next); await new Promise(r => setTimeout(r, 300)); } catch {}
-      }
+const playTextSafe = useCallback(async (text: string) => {
+  if (audioMutadoRef.current || !playText) return;
+  audioQueueRef.current.push(text);
+  if (isPlayingRef.current) return;
+  while (audioQueueRef.current.length > 0) {
+    isPlayingRef.current = true;
+    const next = audioQueueRef.current.shift();
+    if (next) {
+      try { await playText(next); await new Promise(r => setTimeout(r, 300)); } catch {}
     }
-    isPlayingRef.current = false;
-    inputRef.current?.focus({ preventScroll: true });
-  }, [playText]);
+  }
+  isPlayingRef.current = false;
+  // Restaura foco no input após TTS terminar
+  inputRef.current?.focus({ preventScroll: true });
+}, [playText]);
 
   useEffect(() => {
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' });

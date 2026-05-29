@@ -29,26 +29,16 @@ export async function POST(req: NextRequest) {
     // 1. Confidential client: client_id + client_secret (ex: ChatGPT)
     // 2. Public client com PKCE: apenas client_id + code_verifier (ex: Claude)
     // Aceita 3 modalidades de client:
-    // 1. Client estático configurado via env (retrocompatibilidade)
+    // 1. Client estático configurado via env
     const isStaticClient = CLIENT_ID && clientId === CLIENT_ID &&
       (!clientSecret || clientSecret === CLIENT_SECRET)
-    // 2. Client dinâmico registrado via DCR (POST /register)
-    // Verificamos no banco abaixo
+    // 2. Client dinâmico gerado via DCR — identificado pelo prefixo mcp_client_
+    const isDynamicClient = (clientId ?? '').startsWith('mcp_client_')
     // 3. Fallback: sem CLIENT_ID configurado aceita qualquer client
     const isAnyClient = !CLIENT_ID
 
-    if (!isStaticClient && !isAnyClient) {
-      // Verificar se é um client dinâmico registrado via DCR
-      const { data: dynClient } = await supabase
-        .from('mcp_registered_clients')
-        .select('client_id, client_secret')
-        .eq('client_id', clientId ?? '')
-        .single()
-
-      const isDynamic = dynClient && (!clientSecret || dynClient.client_secret === clientSecret)
-      if (!isDynamic) {
-        return NextResponse.json({ error: 'invalid_client' }, { status: 401 })
-      }
+    if (!isStaticClient && !isDynamicClient && !isAnyClient) {
+      return NextResponse.json({ error: 'invalid_client' }, { status: 401 })
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)

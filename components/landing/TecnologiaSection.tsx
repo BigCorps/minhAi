@@ -32,7 +32,7 @@ const INFRA_STACK = [
   { label: 'WhatsApp Cloud API',   category: 'Integração' },
   { label: 'Instagram API',        category: 'Integração' },
   { label: 'Mercado Pago',         category: 'Pagamentos' },
-  { label: 'InfinitePay NFC',      category: 'Pagamentos' },
+  { label: 'InfinitePay',      category: 'Pagamentos' },
   { label: 'Google Calendar',      category: 'Google'     },
   { label: 'Gmail API',            category: 'Google'     },
   { label: 'Google Maps',          category: 'Google'     },
@@ -286,7 +286,7 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
   {/* Coluna 1: IA Stack + 2 Métricas */}
   <div className="flex flex-col gap-3">
     <div className={`rounded-2xl border p-4 flex flex-col gap-3 flex-1 ${isDark ? 'bg-white/[0.02] border-white/6' : 'bg-white/80 border-gray-100 shadow-sm'}`}>
-      <p className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-blue-400/60' : 'text-blue-600/60'}`}>
+      <p className={`text-xs font-bold uppercase tracking-widest text-center ${isDark ? 'text-blue-400/60' : 'text-blue-600/60'}`}>
         Stack de IA
       </p>
       <div className="flex flex-col gap-2">
@@ -329,13 +329,13 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
     </div>
   </div>
 
-  {/* Coluna 2: Infra & Stack + MCP centralizado */}
+  {/* Coluna 2: Infraestrutura + MCP */}
   <div className="flex flex-col gap-3">
     <div className={`rounded-2xl border p-4 flex-1 ${isDark ? 'bg-white/[0.02] border-white/6' : 'bg-white/80 border-gray-100 shadow-sm'}`}>
-      <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-purple-400/60' : 'text-purple-600/60'}`}>
-        Infra & Stack
+      <p className={`text-xs font-bold uppercase tracking-widest mb-3 text-center ${isDark ? 'text-purple-400/60' : 'text-purple-600/60'}`}>
+        Infraestrutura
       </p>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5 justify-center">
         {INFRA_STACK.map((item) => (
           <span
             key={item.label}
@@ -349,7 +349,7 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
       </div>
     </div>
 
-    {/* Bloco MCP — centralizado na coluna do meio */}
+    {/* Bloco MCP */}
     <div className={`rounded-xl border p-3 ${isDark ? 'bg-purple-500/5 border-purple-500/20' : 'bg-purple-50 border-purple-200'}`}>
       <div className="flex items-center gap-2 mb-1.5">
         <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
@@ -370,7 +370,7 @@ export default function TecnologiaSection({ theme = 'dark' }: TecnologiaSectionP
   {/* Coluna 3: Browser APIs + 2 Métricas */}
   <div className="flex flex-col gap-3">
     <div className={`rounded-2xl border p-4 flex flex-col gap-3 flex-1 ${isDark ? 'bg-white/[0.02] border-white/6' : 'bg-white/80 border-gray-100 shadow-sm'}`}>
-      <p className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-green-400/60' : 'text-green-600/60'}`}>
+      <p className={`text-xs font-bold uppercase tracking-widest text-center ${isDark ? 'text-green-400/60' : 'text-green-600/60'}`}>
         APIs do Dispositivo
       </p>
       <div className="flex flex-col gap-2.5">

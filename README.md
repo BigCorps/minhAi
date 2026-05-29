@@ -2,9 +2,11 @@
 
 * enviar releases e criar LinkedIn
 
+* colocar botão de gerar pdf no orçamento e conferir saída dos inputs nos auxiliares 
+
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões 
 
-* App ChatGPT e MCP Claude Aprovado
+* App ChatGPT e MCP Claude
 
 * PagAi - Pix com confirmação automática e Bolão entre amigos (Pool).
 

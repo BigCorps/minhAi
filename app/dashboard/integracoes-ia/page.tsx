@@ -86,7 +86,7 @@ function ClientIcon({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' })
   if (label === 'Claude') return <ClaudeIcon className={`${sz} text-[#c96a2d]`} />
   if (label === 'ChatGPT') return <ChatGPTIcon className={`${sz} text-[#10a37f]`} />
   if (label === 'Cursor') return <CursorIcon className={`${sz} text-slate-700 dark:text-slate-200`} />
-  if (label === 'Manus') return <ManusIcon className={`${sz} text-slate-700 dark:text-slate-200`} />
+  if (label === 'Manus') return <ManusIcon className={`${sz} text-slate-900 dark:text-white`} />
   return <Zap className={`${sz} text-blue-400`} />
 }
 
@@ -192,7 +192,7 @@ function IntegracoesDashboardContent() {
     },
     {
       name: 'Manus',
-      icon: <ManusIcon className="w-8 h-8 text-slate-800 dark:text-slate-100" />,
+      icon: <ManusIcon className="w-8 h-8 text-slate-900 dark:text-white" />,
       bg: 'bg-slate-50 dark:bg-slate-500/10',
       border: 'border-slate-200 dark:border-slate-500/20',
       plano: 'Todos os planos',

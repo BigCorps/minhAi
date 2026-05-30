@@ -72,9 +72,9 @@ const fallbackLabel = clientNameHint?.trim()
   ? clientNameHint.charAt(0).toUpperCase() + clientNameHint.slice(1).toLowerCase()
   : clientIdParam?.trim()
   ? clientIdParam.charAt(0).toUpperCase() + clientIdParam.slice(1).toLowerCase()
-  : 'Claude' // fallback final seguro
+  : 'Claude'
 
-  return { key: 'unknown', label: fallbackLabel }
+return { key: 'unknown', label: fallbackLabel }
 }
 
 const CLIENT_META: Record<string, { icon: React.ReactNode }> = {
@@ -201,7 +201,7 @@ function AuthorizeContent() {
         body: JSON.stringify({
           user_id:               user.id,
           company_id:            selectedCompany,
-          client_name:           clientName.toLowerCase(),
+          client_name: clientName.toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'claude',
           scopes:                ['tools'],
           code_challenge:        codeChallenge || undefined,
           code_challenge_method: codeChallengeMethod || 'S256',

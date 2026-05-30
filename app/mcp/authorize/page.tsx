@@ -67,10 +67,12 @@ function detectClient(clientId: string, clientNameHint: string): { key: string; 
     return { key: 'claude', label: 'Claude' }
   }
 
-  // Fallback: usa client_name da query string se disponível, senão client_id
-  const fallbackLabel = clientNameHint
-    ? clientNameHint.charAt(0).toUpperCase() + clientNameHint.slice(1)
-    : clientId || 'Agente IA'
+
+const fallbackLabel = clientNameHint?.trim()
+  ? clientNameHint.charAt(0).toUpperCase() + clientNameHint.slice(1).toLowerCase()
+  : clientIdParam?.trim()
+  ? clientIdParam.charAt(0).toUpperCase() + clientIdParam.slice(1).toLowerCase()
+  : 'Claude' // fallback final seguro
 
   return { key: 'unknown', label: fallbackLabel }
 }

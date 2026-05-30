@@ -31,6 +31,21 @@ function ChatGPTIcon({ className }: { className?: string }) {
   )
 }
 
+function ManusIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" fillRule="evenodd" clipRule="evenodd">
+      <g transform="scale(32)">
+        <clipPath id="manus-clip">
+          <path d="M0 0h16v16H0z"/>
+        </clipPath>
+        <g clipPath="url(#manus-clip)">
+          <path d="M5.365.775a.627.627 0 01.604-.782c.287 0 .54.2.606.48.042.17.088.338.134.506l.003.011c.105.387.21.773.277 1.18a.628.628 0 01-.615.726.626.626 0 01-.616-.522c-.057-.345-.135-.633-.23-.982v-.001c-.05-.183-.105-.382-.163-.616zm-2.918 1.06a.627.627 0 00.285.835c.445.218.83.433 1.212.863a.624.624 0 00.933-.828c-.544-.613-1.104-.914-1.596-1.155a.627.627 0 00-.834.285zM10.448 14.19c-.113-.025-.237-.05-.364-.079-.467-.101-1.1-.243-1.398-.342l-.022-.007-.021-.008a6.875 6.875 0 00-.727-.189l-.069-.015c-.32-.073-.713-.163-1.086-.275-.386-.118-.863-.292-1.269-.575-.425-.297-.91-.821-.936-1.608a3.215 3.215 0 01.006-.34 1.814 1.814 0 01-.433-.827 1.755 1.755 0 01.02-.85c.055-.211.14-.396.21-.533.024-.047.049-.093.074-.137a8.607 8.607 0 01-.756-.275c-.335-.143-.812-.38-1.168-.76a1.867 1.867 0 01-.473-.885 1.7 1.7 0 01.15-1.12c.403-.806 1.172-1.09 1.855-1.115.618-.022 1.275.15 1.864.357.536.188 1.303.538 1.955.843.215-.353.498-.75.766-1.072l.053-.063.062-.056a2.285 2.285 0 011.373-.592c.237-.017.475.001.706.054l.024.005.015.005h.004l-.318 1.191.319-1.19.139.038.126.068c.643.344.826.937.874 1.25.03.2.028.403-.006.603l-.002.012v.003l-1.238-.247 1.238.248-.007.036-.2.793a1.649 1.649 0 00-.041.365.186.186 0 00.01.071c.009.02.029.064.103.176l.096.143.039.056c.053.078.116.171.182.274.416.647.456 1.268.454 1.666v.018l.158.052.069.021.102.033c.05.016.115.037.178.06.073-.135.271-.424.63-.424.468 0 .66.658.66.658.183 1.225-.653 5.342-1.863 6.109-.924.587-1.608-.285-2.117-1.625zM5.813 8.578c.079-.08.314-.247.758-.297a2.893 2.893 0 011.485.243c.415.184.702.606.822 1.112.059.247.07.487.044.683-.027.207-.085.31-.113.34-.033.04-.152.105-.48.036a2.262 2.262 0 01-.51-.177l-.004-.002a.627.627 0 00-.903.559c0 .229.127.44.33.549l.002.001.021.01a3.547 3.547 0 00.804.28c.41.087 1.167.153 1.68-.435.247-.282.366-.653.41-1a3.199 3.199 0 00-.066-1.132c-.179-.752-.651-1.574-1.532-1.965a4.145 4.145 0 00-2.13-.342 3.11 3.11 0 00-1.126.336l-.014-.004H5.29C4.5 7.149 2.93 6.701 3.318 5.927c.293-.586 1.095-.538 2.183-.156.442.155 1.056.432 1.636.701.18.083.356.167.522.245l.65.302c.462-.554.641-.86.8-1.13.108-.185.208-.353.382-.574l.016-.022.098-.12.013-.011c.428-.378.926-.24.926-.24.285.152.212.537.212.537l-.197.786c-.19.924.02 1.23.364 1.733.06.089.126.183.194.289.274.428.261.84.251 1.176-.007.216-.013.402.06.54.15.283.707.46 1.073.574.088.028.165.052.222.074l.04.015c-.052.16-.099.326-.146.491-.208.736-.415 1.468-1.033 1.687-.421.15-.842.143-1.14.104-.524-.113-1.144-.253-1.377-.33-.242-.09-.581-.167-.95-.251-.877-.2-1.922-.438-2.22-.975a.65.65 0 01-.084-.298c-.017-.493.156-.936.156-.936s-.268.001-.456-.18a.567.567 0 01-.159-.287.892.892 0 01-.017-.294c.006 0 .008-.005.008-.018 0-.156.156-.468.468-.78zM9.385.403a.627.627 0 01.21.856c-.237.39-.374.788-.524 1.388a.626.626 0 01-.607.479.627.627 0 01-.604-.782c.162-.647.336-1.185.668-1.732a.627.627 0 01.857-.21z"/>
+        </g>
+      </g>
+    </svg>
+  )
+}
+
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
 interface McpConnection {
@@ -61,6 +76,7 @@ function clientLabel(name: string) {
   if (name.includes('claude') || name.includes('anthropic')) return 'Claude'
   if (name.includes('openai') || name.includes('chatgpt') || name.includes('gpt')) return 'ChatGPT'
   if (name.includes('cursor')) return 'Cursor'
+  if (name.includes('manus')) return 'Manus'
   return name.charAt(0).toUpperCase() + name.slice(1)
 }
 
@@ -70,6 +86,7 @@ function ClientIcon({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' })
   if (label === 'Claude') return <ClaudeIcon className={`${sz} text-[#c96a2d]`} />
   if (label === 'ChatGPT') return <ChatGPTIcon className={`${sz} text-[#10a37f]`} />
   if (label === 'Cursor') return <CursorIcon className={`${sz} text-slate-700 dark:text-slate-200`} />
+  if (label === 'Manus') return <ManusIcon className={`${sz} text-slate-700 dark:text-slate-200`} />
   return <Zap className={`${sz} text-blue-400`} />
 }
 
@@ -174,25 +191,20 @@ function IntegracoesDashboardContent() {
       disponivel: true,
     },
     {
-      name: 'Gemini',
-      icon: (
-        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 24A14.304 14.304 0 0 0 0 12 14.304 14.304 0 0 0 12 0a14.305 14.305 0 0 0 12 12 14.305 14.305 0 0 0-12 12z" fill="url(#gemini-grad)"/>
-          <defs>
-            <linearGradient id="gemini-grad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#4285F4"/>
-              <stop offset="1" stopColor="#9B72CB"/>
-            </linearGradient>
-          </defs>
-        </svg>
-      ),
-      bg: 'bg-blue-50 dark:bg-blue-500/10',
-      border: 'border-blue-200 dark:border-blue-500/20',
-      plano: 'Sem diretório público ainda',
-      limite: 'Em breve — via SDK/CLI apenas',
-      instrucoes: ['Disponível em breve via diretório público do Gemini'],
-      link: null,
-      disponivel: false,
+      name: 'Manus',
+      icon: <ManusIcon className="w-8 h-8 text-slate-800 dark:text-slate-100" />,
+      bg: 'bg-slate-50 dark:bg-slate-500/10',
+      border: 'border-slate-200 dark:border-slate-500/20',
+      plano: 'Todos os planos',
+      limite: 'Agente autônomo com suporte a MCP',
+      instrucoes: [
+        'Acesse Settings → Integrations → MCP',
+        `Cole a URL: ${MCP_URL}`,
+        'Faça login com sua conta minhAi',
+        'Selecione o assistente e autorize',
+      ],
+      link: 'https://manus.im',
+      disponivel: true,
     },
   ]
 
@@ -212,7 +224,7 @@ function IntegracoesDashboardContent() {
             </p>
           </div>
 
-                    {/* URL do servidor MCP */}
+          {/* URL do servidor MCP */}
           <div className="bg-gradient-to-r from-blue-500/10 to-blue-400/10 border border-blue-200 dark:border-blue-500/30 rounded-2xl p-5">
             <div className="flex items-center justify-between gap-4 mb-2">
               <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
@@ -313,7 +325,7 @@ function IntegracoesDashboardContent() {
                 </div>
               )}
 
-              {/* Histório de conexões inativas */}
+              {/* Histórico de conexões inativas */}
               {inactive.length > 0 && (
                 <details className="mt-4">
                   <summary className="text-sm text-gray-400 dark:text-gray-500 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition">
@@ -410,8 +422,7 @@ function IntegracoesDashboardContent() {
             <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-blue-700 dark:text-blue-300">
               <strong>Registro automático:</strong> O minhAi suporta Dynamic Client Registration (RFC 7591).
-              Ao colar a URL no Claude ou ChatGPT, o connector se registra automaticamente — sem necessidade de
-              configurar manualmente um Client ID.
+              Ao colar a URL no Claude ou ChatGPT, o connector se registra automaticamente — em breve os aplicativos estarão disponíveis diretamente nos apps, nem necessidade de conexão manual.
             </div>
           </div>
 

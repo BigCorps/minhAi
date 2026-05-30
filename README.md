@@ -1,14 +1,10 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* enviar releases e criar LinkedIn
-
 * Modo teste com cada etapa como modal e depois gravar vídeo - colocar na landing as 2 opções (vídeo e guiado)
 
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões - e configurar as edges para funcionar corretamente via MCP pedindo se cobra via Pix ou descontando do saldo.
 
-* Submeter App ChatGPT (MCP Claude Enviado)
-
-* PagAi - Pix com confirmação automática e Bolão entre amigos (Pool).
+* Submeter App ChatGPT e Manus (MCP Claude Enviado)
 
 ## IDÉIAS
 
@@ -23,6 +19,10 @@
 * bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
 
 * página admin em dashboard que aparece apenas para o email que eu escolhi e somente acessível via dashboard/admin e o switch de assistente vira o botão que leva a página de admin. email appminhai@gmail.com com relatorio de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header
+
+* PagAi - Pix com confirmação automática e Bolão entre amigos (Pool).
+
+* enviar releases e criar LinkedIn
 
 * Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app / postotec.app / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
 - iapos, itend e eai já registrados (para cobranças , atendimento e funcionários IA) - relatório em anexo no email

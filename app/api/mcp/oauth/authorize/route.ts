@@ -22,9 +22,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'unsupported_response_type' }, { status: 400 })
   }
 
-  // Aceitar qualquer client_id quando CLIENT_ID não está configurado (fallback)
-  // Ou validar normalmente quando está configurado
-  if (CLIENT_ID && clientId !== CLIENT_ID) {
+  // Aceita: client estático (minhai-mcp-v1), dinâmico DCR (mcp_client_*), ou sem CLIENT_ID configurado
+  const isStatic  = !CLIENT_ID || clientId === CLIENT_ID
+  const isDynamic = (clientId ?? '').startsWith('mcp_client_')
+
+  if (!isStatic && !isDynamic) {
     return NextResponse.json({ error: 'invalid_client' }, { status: 401 })
   }
 

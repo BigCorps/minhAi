@@ -86,7 +86,7 @@ function ClientIcon({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' })
   if (label === 'Claude') return <ClaudeIcon className={`${sz} text-[#c96a2d]`} />
   if (label === 'ChatGPT') return <ChatGPTIcon className={`${sz} text-[#10a37f]`} />
   if (label === 'Cursor') return <CursorIcon className={`${sz} text-slate-700 dark:text-slate-200`} />
-  if (label === 'Manus') return <ManusIcon className={`${sz} text-slate-700 dark:text-slate-200`} />
+  if (label === 'Manus') return <ManusIcon className={`${sz} text-slate-900`} />
   return <Zap className={`${sz} text-blue-400`} />
 }
 
@@ -148,6 +148,7 @@ function IntegracoesDashboardContent() {
       icon: <ClaudeIcon className="w-8 h-8 text-[#d97706]" />,
       bg: 'bg-amber-50 dark:bg-amber-500/10',
       border: 'border-amber-200 dark:border-amber-500/20',
+      iconBg: undefined,
       plano: 'Free, Pro, Max, Team, Enterprise',
       limite: '1 connector no plano gratuito',
       instrucoes: [
@@ -164,6 +165,7 @@ function IntegracoesDashboardContent() {
       icon: <ChatGPTIcon className="w-8 h-8 text-[#10a37f]" />,
       bg: 'bg-emerald-50 dark:bg-emerald-500/10',
       border: 'border-emerald-200 dark:border-emerald-500/20',
+      iconBg: undefined,
       plano: 'Plus, Pro, Team, Enterprise',
       limite: 'Requer plano Plus ou superior',
       instrucoes: [
@@ -180,6 +182,7 @@ function IntegracoesDashboardContent() {
       icon: <CursorIcon className="w-8 h-8 text-slate-700 dark:text-slate-200" />,
       bg: 'bg-slate-50 dark:bg-slate-500/10',
       border: 'border-slate-200 dark:border-slate-500/20',
+      iconBg: undefined,
       plano: 'Todos os planos',
       limite: 'Editor de código — para devs',
       instrucoes: [
@@ -192,9 +195,10 @@ function IntegracoesDashboardContent() {
     },
     {
       name: 'Manus',
-      icon: <ManusIcon className="w-8 h-8 text-slate-700 dark:text-slate-200" />,
+      icon: <ManusIcon className="w-8 h-8 text-slate-900" />,
       bg: 'bg-slate-50 dark:bg-slate-500/10',
       border: 'border-slate-200 dark:border-slate-500/20',
+      iconBg: 'bg-white',
       plano: 'Todos os planos',
       limite: 'Agente autônomo com suporte a MCP',
       instrucoes: [
@@ -282,12 +286,9 @@ function IntegracoesDashboardContent() {
                   {active.map(conn => (
                     <div key={conn.id}
                       className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm p-4 flex items-center gap-4">
-                      {/* Ícone do cliente */}
                       <div className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-white/5 flex items-center justify-center flex-shrink-0">
                         <ClientIcon name={conn.client_name} />
                       </div>
-
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold text-gray-900 dark:text-white">
@@ -308,8 +309,6 @@ function IntegracoesDashboardContent() {
                           </span>
                         </div>
                       </div>
-
-                      {/* Revogar */}
                       <button
                         onClick={() => revoke(conn.id)}
                         disabled={revoking === conn.id}
@@ -325,7 +324,6 @@ function IntegracoesDashboardContent() {
                 </div>
               )}
 
-              {/* Histórico de conexões inativas */}
               {inactive.length > 0 && (
                 <details className="mt-4">
                   <summary className="text-sm text-gray-400 dark:text-gray-500 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition">
@@ -364,9 +362,8 @@ function IntegracoesDashboardContent() {
                     p.disponivel ? 'border-gray-100 dark:border-white/5' : 'border-gray-100 dark:border-white/5 opacity-60'
                   }`}
                 >
-                  {/* Header da plataforma */}
                   <div className={`flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10 ${p.bg}`}>
-                    <div className={`w-12 h-12 rounded-xl border flex items-center justify-center bg-white dark:bg-slate-900 ${p.border}`}>
+                    <div className={`w-12 h-12 rounded-xl border flex items-center justify-center ${p.iconBg ?? 'bg-white dark:bg-slate-900'} ${p.border}`}>
                       {p.icon}
                     </div>
                     <div className="flex-1">
@@ -393,7 +390,6 @@ function IntegracoesDashboardContent() {
                     )}
                   </div>
 
-                  {/* Instruções */}
                   <div className="px-5 py-4">
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
                       Como conectar
@@ -417,6 +413,7 @@ function IntegracoesDashboardContent() {
             </div>
           </section>
 
+          
           {/* Nota sobre DCR */}
           <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">
             <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />

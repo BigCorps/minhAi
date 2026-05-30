@@ -99,8 +99,9 @@ function AuthorizeContent() {
   async function loadCompanies(userId: string) {
     const { data: comps } = await supabase
       .from('companies')
-      .select('id, name, slug')
+      .select('id, name, slug, assistant_type')
       .eq('user_id', userId)
+      .eq('assistant_type', 'smart')   // MCP só funciona no plano Smart (cobra créditos)
       .order('created_at', { ascending: true })
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -316,6 +317,18 @@ function AuthorizeContent() {
               </div>
 
               {/* Seleção de empresa */}
+              {companies.length === 0 && (
+                <div className={`rounded-xl p-4 mb-5 text-sm ${isDark ? 'bg-amber-900/20 border border-amber-500/30 text-amber-300' : 'bg-amber-50 border border-amber-200 text-amber-700'}`}>
+                  <p className="font-semibold mb-1">⚠️ Nenhum assistente Smart encontrado</p>
+                  <p>O MCP cobra créditos por uso e funciona apenas com assistentes na versão <strong>Smart</strong>.</p>
+                  <p className="mt-2">
+                    <a href="https://minhai.app/dashboard/assistentes" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                      Criar um assistente Smart →
+                    </a>
+                  </p>
+                </div>
+              )}
+
               {companies.length > 1 && (
                 <div className="mb-4">
                   <label className={labelCls}>Qual assistente conectar?</label>
@@ -328,6 +341,9 @@ function AuthorizeContent() {
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
+                  <p className={`text-xs mt-2 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                    Apenas assistentes Smart são exibidos. Assistentes na versão Vendas não consomem créditos e não são compatíveis com MCP.
+                  </p>
                 </div>
               )}
 

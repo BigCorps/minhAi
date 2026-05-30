@@ -22,8 +22,6 @@ export async function POST(req: NextRequest) {
     const grantType    = params.get('grant_type')
     const clientId     = params.get('client_id')
     const clientSecret = params.get('client_secret')
-    const codeVerifier = params.get('code_verifier')
-
     // Validar client credentials
     // Suporta dois modos:
     // 1. Confidential client: client_id + client_secret (ex: ChatGPT)
@@ -98,19 +96,25 @@ export async function POST(req: NextRequest) {
         pending.company_id,
       )
 
-      // Salvar conexão
-      await supabase.from('mcp_connections').upsert({
-        user_id:         pending.user_id,
-        company_id:      pending.company_id,
-        access_token:    accessToken,
-        refresh_token:   refreshToken,
+      // Salvar conexão — delete anterior e insere novo (mais robusto que upsert)
+      await supabase
+        .from('mcp_connections')
+        .delete()
+        .eq('user_id', pending.user_id)
+        .eq('company_id', pending.company_id)
+
+      await supabase.from('mcp_connections').insert({
+        user_id:          pending.user_id,
+        company_id:       pending.company_id,
+        access_token:     accessToken,
+        refresh_token:    refreshToken,
         token_expires_at: expiresAt.toISOString(),
-        client_name:     pending.client_name ?? 'unknown',
-        client_id:       clientId,
-        scopes:          pending.scopes ?? ['tools'],
-        is_active:       true,
-        last_used_at:    new Date().toISOString(),
-      }, { onConflict: 'user_id,company_id,client_id' })
+        client_name:      pending.client_name ?? 'unknown',
+        client_id:        clientId ?? 'dynamic',
+        scopes:           pending.scopes ?? ['tools'],
+        is_active:        true,
+        last_used_at:     new Date().toISOString(),
+      })
 
       return NextResponse.json({
         access_token:  accessToken,

@@ -48,9 +48,10 @@ function ManusIcon({ className }: { className?: string }) {
 }
 
 // ── Detecção do cliente ───────────────────────────────────────────────────────
+// CORREÇÃO: função pura, sem JSX — só retorna key e label
 function detectClient(clientId: string, clientNameHint: string): { key: string; label: string } {
-  const id   = clientId.toLowerCase()
-  const hint = clientNameHint.toLowerCase()
+  const id   = (clientId ?? '').toLowerCase()
+  const hint = (clientNameHint ?? '').toLowerCase()
 
   if (id.includes('openai') || id.includes('chatgpt') || id.includes('gpt') ||
       hint.includes('openai') || hint.includes('chatgpt') || hint.includes('gpt')) {
@@ -67,28 +68,14 @@ function detectClient(clientId: string, clientNameHint: string): { key: string; 
     return { key: 'claude', label: 'Claude' }
   }
 
-
-const fallbackLabel = clientNameHint?.trim()
-  ? clientNameHint.charAt(0).toUpperCase() + clientNameHint.slice(1).toLowerCase()
-  : clientIdParam?.trim()
-  ? clientIdParam.charAt(0).toUpperCase() + clientIdParam.slice(1).toLowerCase()
-  : 'Claude'
-
-return { key: 'unknown', label: fallbackLabel }
-}
-
-const CLIENT_META: Record<string, { icon: React.ReactNode }> = {
-  claude:  { icon: <ClaudeIcon className="w-7 h-7 text-[#c96a2d]" /> },
-  chatgpt: { icon: <ChatGPTIcon className="w-7 h-7 text-[#10a37f]" /> },
-  cursor:  { icon: <CursorIcon className="w-7 h-7 text-slate-700 dark:text-slate-200" /> },
-  manus:   {
-    icon: (
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-white">
-        <ManusIcon className="w-5 h-5 text-slate-900" />
-      </span>
-    ),
-  },
-  unknown: { icon: <Zap className="w-7 h-7 text-blue-400" /> },
+  // CORREÇÃO: fallback seguro — nunca retorna string vazia ou inválida
+  const fallbackLabel = clientNameHint?.trim()
+    ? clientNameHint.charAt(0).toUpperCase() + clientNameHint.slice(1).toLowerCase()
+    : clientId?.trim()
+    ? clientId.charAt(0).toUpperCase() + clientId.slice(1).toLowerCase()
+    : 'Claude' // fallback final igual ao comportamento do código antigo
+  
+  return { key: 'unknown', label: fallbackLabel }
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -103,7 +90,23 @@ function AuthorizeContent() {
   const codeChallengeMethod = searchParams.get('code_challenge_method') ?? 'S256'
 
   const { key: clientKey, label: clientName } = detectClient(clientIdParam, clientNameParam)
-  const clientMeta = CLIENT_META[clientKey]
+
+  // CORREÇÃO: CLIENT_META dentro do componente para evitar JSX no escopo do módulo (causa crash SSR)
+  const CLIENT_META: Record<string, { icon: React.ReactNode }> = {
+    claude:  { icon: <ClaudeIcon className="w-7 h-7 text-[#c96a2d]" /> },
+    chatgpt: { icon: <ChatGPTIcon className="w-7 h-7 text-[#10a37f]" /> },
+    cursor:  { icon: <CursorIcon className="w-7 h-7 text-slate-700 dark:text-slate-200" /> },
+    manus:   {
+      icon: (
+        <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-white">
+          <ManusIcon className="w-5 h-5 text-slate-900" />
+        </span>
+      ),
+    },
+    unknown: { icon: <Zap className="w-7 h-7 text-blue-400" /> },
+  }
+
+  const clientMeta = CLIENT_META[clientKey] ?? CLIENT_META['unknown']
 
   const [step,            setStep]            = useState<'login' | 'confirm'>('login')
   const [loading,         setLoading]         = useState(false)
@@ -195,13 +198,16 @@ function AuthorizeContent() {
     setLoading(true)
     setError('')
     try {
+      // CORREÇÃO: sanitiza client_name — remove caracteres inválidos e garante fallback 'claude'
+      const safeClientName = clientName.toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'claude'
+
       const res = await fetch('/api/mcp/oauth/code', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id:               user.id,
           company_id:            selectedCompany,
-          client_name: clientName.toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'claude',
+          client_name:           safeClientName,
           scopes:                ['tools'],
           code_challenge:        codeChallenge || undefined,
           code_challenge_method: codeChallengeMethod || 'S256',

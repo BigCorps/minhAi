@@ -4,9 +4,9 @@
 
 * Modo teste com cada etapa como modal e depois gravar vídeo - colocar na landing as 2 opções (vídeo e guiado)
 
-* fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões 
+* fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões - e configurar as edges para funcionar corretamente via MCP pedindo se cobra via Pix ou descontando do saldo.
 
-* App ChatGPT e MCP Claude
+* Submeter App ChatGPT (MCP Claude Enviado)
 
 * PagAi - Pix com confirmação automática e Bolão entre amigos (Pool).
 

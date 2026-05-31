@@ -1,56 +1,64 @@
 // app/api/mcp/oauth/token/route.ts
-// Passo 2 do OAuth 2.0 — troca authorization_code por access_token
-// Também processa grant_type=refresh_token
-
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient }              from '@supabase/supabase-js'
 
-const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SERVICE_ROLE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const CLIENT_ID         = process.env.MCP_CLIENT_ID!
-const CLIENT_SECRET     = process.env.MCP_CLIENT_SECRET!
-const MCP_JWT_SECRET    = process.env.MCP_JWT_SECRET!
+const SUPABASE_URL     = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const CLIENT_ID        = process.env.MCP_CLIENT_ID     ?? ''
+const CLIENT_SECRET    = process.env.MCP_CLIENT_SECRET ?? ''
 
-const TOKEN_TTL_SECONDS = 60 * 60 * 24       // 24 horas
-const REFRESH_TTL_DAYS  = 90                  // 90 dias
+const TOKEN_TTL_SECONDS = 60 * 60 * 24  // 24 horas
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.text()
+    const body   = await req.text()
     const params = new URLSearchParams(body)
 
     const grantType    = params.get('grant_type')
-    const clientId     = params.get('client_id')
-    const clientSecret = params.get('client_secret')
-    // Validar client credentials
-    // Suporta dois modos:
-    // 1. Confidential client: client_id + client_secret (ex: ChatGPT)
-    // 2. Public client com PKCE: apenas client_id + code_verifier (ex: Claude)
-    // Aceita 3 modalidades de client:
-    // 1. Client estático configurado via env
-    const isStaticClient = CLIENT_ID && clientId === CLIENT_ID &&
+    const clientId     = params.get('client_id')     ?? ''
+    const clientSecret = params.get('client_secret') ?? ''
+
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+
+    // ── Validar client credentials ──────────────────────────────────────────
+    // Modo 1: client estático configurado no env
+    const isStaticClient =
+      CLIENT_ID &&
+      clientId === CLIENT_ID &&
       (!clientSecret || clientSecret === CLIENT_SECRET)
-    // 2. Client dinâmico gerado via DCR — identificado pelo prefixo mcp_client_
-    const isDynamicClient = (clientId ?? '').startsWith('mcp_client_')
-    // 3. Fallback: sem CLIENT_ID configurado aceita qualquer client
+
+    // Modo 2: client dinâmico gerado via DCR (mcp_client_*)
+    const isDynamicClient = clientId.startsWith('mcp_client_')
+
+    // Modo 3: sem CLIENT_ID configurado — aceita qualquer client
     const isAnyClient = !CLIENT_ID
 
     if (!isStaticClient && !isDynamicClient && !isAnyClient) {
       return NextResponse.json({ error: 'invalid_client' }, { status: 401 })
     }
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+    // CORREÇÃO: valida o client_secret do cliente dinâmico contra o banco
+    // Sem isso qualquer mcp_client_* forjado seria aceito
+    if (isDynamicClient && clientSecret) {
+      const { data: reg } = await supabase
+        .from('mcp_registered_clients')
+        .select('client_secret')
+        .eq('client_id', clientId)
+        .single()
+      if (!reg || reg.client_secret !== clientSecret) {
+        return NextResponse.json({ error: 'invalid_client' }, { status: 401 })
+      }
+    }
 
     // ── grant_type: authorization_code ──────────────────────────────────────
     if (grantType === 'authorization_code') {
-      const code       = params.get('code')
+      const code        = params.get('code')
       const redirectUri = params.get('redirect_uri')
 
       if (!code) {
         return NextResponse.json({ error: 'invalid_request', error_description: 'code obrigatório' }, { status: 400 })
       }
 
-      // Buscar o pending_code gerado na página /mcp/authorize
       const { data: pending, error: pendingErr } = await supabase
         .from('mcp_pending_codes')
         .select('*')
@@ -63,7 +71,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'invalid_grant', error_description: 'Código inválido ou expirado' }, { status: 400 })
       }
 
-      // ── Verificar PKCE se o challenge foi salvo ─────────────────────────────────
+      // ── Verificar PKCE ────────────────────────────────────────────────────
       const codeVerifier = params.get('code_verifier')
       if (pending.code_challenge) {
         if (!codeVerifier) {
@@ -82,7 +90,6 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: 'invalid_grant', error_description: 'code_verifier inválido' }, { status: 400 })
         }
       }
-      // ── Fim PKCE ──────────────────────────────────────────────────────────────────────────
 
       // Marcar code como usado
       await supabase
@@ -91,12 +98,9 @@ export async function POST(req: NextRequest) {
         .eq('code', code)
 
       // Gerar tokens
-      const { accessToken, refreshToken, expiresAt } = generateTokens(
-        pending.user_id,
-        pending.company_id,
-      )
+      const { accessToken, refreshToken, expiresAt } = generateTokens()
 
-      // Salvar conexão — delete anterior e insere novo (mais robusto que upsert)
+      // Salvar conexão — delete anterior e insere novo
       await supabase
         .from('mcp_connections')
         .delete()
@@ -110,7 +114,7 @@ export async function POST(req: NextRequest) {
         refresh_token:    refreshToken,
         token_expires_at: expiresAt.toISOString(),
         client_name:      pending.client_name ?? 'unknown',
-        client_id:        clientId ?? 'dynamic',
+        client_id:        clientId || 'dynamic',
         scopes:           pending.scopes ?? ['tools'],
         is_active:        true,
         last_used_at:     new Date().toISOString(),
@@ -143,8 +147,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'invalid_grant', error_description: 'refresh_token inválido' }, { status: 400 })
       }
 
-      // Gerar novo access_token (mantém o refresh_token)
-      const { accessToken, expiresAt } = generateTokens(conn.user_id, conn.company_id)
+      const { accessToken, expiresAt } = generateTokens()
 
       await supabase
         .from('mcp_connections')
@@ -171,12 +174,8 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ── Gerar tokens simples (assinados com MCP_JWT_SECRET via base64) ────────────
-// Nota: em produção considere usar jose ou similar para JWT real.
-// Aqui usamos um token opaco seguro armazenado no banco — sem decode necessário.
-
-function generateTokens(userId: string, companyId: string) {
-  const rand = () => crypto.randomUUID().replace(/-/g, '')
+function generateTokens() {
+  const rand         = () => crypto.randomUUID().replace(/-/g, '')
   const accessToken  = `mcp_at_${rand()}${rand()}`
   const refreshToken = `mcp_rt_${rand()}${rand()}`
   const expiresAt    = new Date(Date.now() + TOKEN_TTL_SECONDS * 1000)

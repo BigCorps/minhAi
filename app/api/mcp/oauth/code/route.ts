@@ -1,7 +1,4 @@
 // app/api/mcp/oauth/code/route.ts
-// Gera o authorization_code temporário após o usuário autorizar na página /mcp/authorize
-// Chamado pelo cliente (browser do usuário), não pelo cliente MCP
-
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient }              from '@supabase/supabase-js'
 
@@ -33,6 +30,8 @@ export async function POST(req: NextRequest) {
     // Gerar code único
     const code = `mcp_code_${crypto.randomUUID().replace(/-/g, '')}${crypto.randomUUID().replace(/-/g, '')}`
 
+    // CORREÇÃO: expires_at obrigatório — token/route.ts filtra por .gt('expires_at', now)
+    // Sem isso o insert falha se a coluna for NOT NULL, ou o code nunca é encontrado
     await supabase.from('mcp_pending_codes').insert({
       code,
       user_id,
@@ -41,6 +40,8 @@ export async function POST(req: NextRequest) {
       scopes:                scopes ?? ['tools'],
       code_challenge:        code_challenge ?? null,
       code_challenge_method: code_challenge_method ?? 'S256',
+      expires_at:            new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 min
+      used:                  false,
     })
 
     return NextResponse.json({ code })

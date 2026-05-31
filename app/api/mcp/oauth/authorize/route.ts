@@ -3,9 +3,12 @@
 // Claude e ChatGPT chamam esta URL quando o usuário adiciona o connector
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient }              from '@supabase/supabase-js'
 
-const APP_URL   = process.env.NEXT_PUBLIC_APP_URL ?? 'https://minhai.app'
-const CLIENT_ID = process.env.MCP_CLIENT_ID ?? ''
+const APP_URL          = process.env.NEXT_PUBLIC_APP_URL ?? 'https://minhai.app'
+const CLIENT_ID        = process.env.MCP_CLIENT_ID ?? ''
+const SUPABASE_URL     = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
@@ -34,17 +37,34 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'invalid_request', error_description: 'redirect_uri obrigatório' }, { status: 400 })
   }
 
+  // Para clientes dinâmicos (DCR), busca o client_name registrado
+  // Isso permite exibir "Conectar ao Manus" em vez de sempre "Conectar ao Claude"
+  let clientDisplayName = ''
+  if (isDynamic && clientId) {
+    try {
+      const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+      const { data } = await supabase
+        .from('mcp_registered_clients')
+        .select('client_name')
+        .eq('client_id', clientId)
+        .single()
+      if (data?.client_name) clientDisplayName = data.client_name
+    } catch (_e) { /* não bloqueia o fluxo */ }
+  }
+
   // Redireciona para a página de autorização minhAi
-  // Passa TODOS os parâmetros OAuth incluindo PKCE (code_challenge)
   const authPageUrl = new URL(`${APP_URL}/mcp/authorize`)
   authPageUrl.searchParams.set('redirect_uri',  redirectUri)
   authPageUrl.searchParams.set('state',         state ?? '')
   authPageUrl.searchParams.set('client_id',     clientId ?? '')
   authPageUrl.searchParams.set('response_type', 'code')
 
-  // Repassar parâmetros PKCE — obrigatório para Claude e ChatGPT
+  // Repassar parâmetros PKCE
   if (codeChallenge)       authPageUrl.searchParams.set('code_challenge',        codeChallenge)
   if (codeChallengeMethod) authPageUrl.searchParams.set('code_challenge_method', codeChallengeMethod)
+
+  // Repassar client_name resolvido (para o authorize page usar)
+  if (clientDisplayName)   authPageUrl.searchParams.set('client_display_name', clientDisplayName)
 
   return NextResponse.redirect(authPageUrl.toString())
 }

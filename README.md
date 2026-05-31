@@ -6,7 +6,7 @@
 
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões - e configurar as edges para funcionar corretamente via MCP pedindo se cobra via Pix ou descontando do saldo.
 
-* Submeter App ChatGPT e Manus (MCP Claude Enviado)
+* Submeter App MCP ao Gemini, ChatGPT e Manus (Claude já Enviado)
 
 ## IDÉIAS
 

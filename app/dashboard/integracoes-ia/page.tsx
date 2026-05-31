@@ -4,7 +4,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useAssistant } from '@/contexts/AssistantContext'
-import { Loader2, Link2, Link2Off, ExternalLink, Zap, AlertCircle, CheckCircle2, Clock, Copy, Check } from 'lucide-react'
+import { Loader2, Link2, Link2Off, ExternalLink, Zap, AlertCircle, CheckCircle2, Clock, Copy, Check, Smartphone, ToggleLeft, ToggleRight } from 'lucide-react'
 
 // ── Ícones SVG ────────────────────────────────────────────────────────────────
 function ClaudeIcon({ className }: { className?: string }) {
@@ -43,6 +43,24 @@ function ManusIcon({ className }: { className?: string }) {
         </g>
       </g>
     </svg>
+  )
+}
+
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+    </svg>
+  )
+}
+
+function MercadoLivreIcon({ className }: { className?: string }) {
+  return (
+    <img
+      src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.19.5/mercadolibre/logo__large_plus.png"
+      alt="Mercado Livre"
+      className={className}
+    />
   )
 }
 
@@ -101,21 +119,114 @@ function IntegracoesDashboardContent() {
   const [revoking, setRevoking]       = useState<string | null>(null)
   const [copied, setCopied]           = useState(false)
 
+  // ── Estado WhatsApp MCP ─────────────────────────────────────────────────────
+  const [mcpWaPhone,     setMcpWaPhone]     = useState('')
+  const [mcpWaEnabled,   setMcpWaEnabled]   = useState(false)
+  const [mcpWaCompanyId, setMcpWaCompanyId] = useState('')
+  const [mcpWaCompanies, setMcpWaCompanies] = useState<{ id: string; name: string }[]>([])
+  const [mcpWaSaving,    setMcpWaSaving]    = useState(false)
+  const [mcpWaSaved,     setMcpWaSaved]     = useState(false)
+  const [mcpWaUserId,    setMcpWaUserId]    = useState<string | null>(null)
+
+  // ── Estado Mercado Livre ────────────────────────────────────────────────────
+  const [mlConnection,    setMlConnection]    = useState<any>(null)
+  const [mlLoading,       setMlLoading]       = useState(false)
+  const [mlDisconnecting, setMlDisconnecting] = useState(false)
+
   const MCP_URL = 'https://mcp.minhai.app'
 
   useEffect(() => { if (companyId) load() }, [companyId])
+  useEffect(() => { if (companyId) loadMlConnection() }, [companyId])
 
   async function load() {
     setLoading(true)
     try {
-      const { data } = await supabase
-        .from('mcp_connections')
-        .select('*')
-        .eq('company_id', companyId)
-        .order('created_at', { ascending: false })
-      setConnections(data ?? [])
+      const [{ data: conns }, { data: { user } }] = await Promise.all([
+        supabase.from('mcp_connections').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
+        supabase.auth.getUser(),
+      ])
+      setConnections(conns ?? [])
+
+      if (user) {
+        setMcpWaUserId(user.id)
+
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('mcp_whatsapp, mcp_whatsapp_enabled, mcp_whatsapp_company_id')
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        if (profile) {
+          setMcpWaPhone(profile.mcp_whatsapp ?? '')
+          setMcpWaEnabled(profile.mcp_whatsapp_enabled ?? false)
+          setMcpWaCompanyId(profile.mcp_whatsapp_company_id ?? '')
+        }
+
+        const { data: comps } = await supabase
+          .from('companies')
+          .select('id, name')
+          .eq('user_id', user.id)
+          .eq('assistant_type', 'smart')
+          .order('created_at', { ascending: true })
+        setMcpWaCompanies(comps ?? [])
+        if (!mcpWaCompanyId && comps && comps.length > 0) {
+          setMcpWaCompanyId(comps[0].id)
+        }
+      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function saveMcpWa() {
+    if (!mcpWaUserId) return
+    setMcpWaSaving(true)
+    try {
+      const normalized = mcpWaPhone.replace(/\D/g, '')
+      await supabase
+        .from('user_profiles')
+        .update({
+          mcp_whatsapp:            normalized || null,
+          mcp_whatsapp_enabled:    normalized ? mcpWaEnabled : false,
+          mcp_whatsapp_company_id: mcpWaCompanyId || null,
+        })
+        .eq('user_id', mcpWaUserId)
+      setMcpWaPhone(normalized)
+      setMcpWaSaved(true)
+      setTimeout(() => setMcpWaSaved(false), 3000)
+    } finally {
+      setMcpWaSaving(false)
+    }
+  }
+
+  async function loadMlConnection() {
+    if (!companyId) return
+    setMlLoading(true)
+    try {
+      const { data } = await supabase
+        .from('ml_connections')
+        .select('seller_id, seller_nickname, seller_email, is_active, expires_at, last_token_refresh')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .maybeSingle()
+      setMlConnection(data ?? null)
+    } finally {
+      setMlLoading(false)
+    }
+  }
+
+  async function disconnectMl() {
+    if (!companyId) return
+    setMlDisconnecting(true)
+    try {
+      await fetch('/api/ml/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_id: companyId }),
+      })
+      setMlConnection(null)
+    } finally {
+      setMlDisconnecting(false)
     }
   }
 
@@ -253,6 +364,91 @@ function IntegracoesDashboardContent() {
               <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
                 Cole essa URL no campo de connector de qualquer plataforma compatível com MCP
               </p>
+            </div>
+          </div>
+
+          {/* WhatsApp MCP */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-green-50 dark:bg-green-500/10">
+              <div className="w-12 h-12 rounded-xl border border-green-200 dark:border-green-500/20 bg-white dark:bg-slate-900 flex items-center justify-center flex-shrink-0">
+                <WhatsAppIcon className="w-7 h-7 text-[#25d366]" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-gray-900 dark:text-white">WhatsApp MCP</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
+                    Novo
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Gerencie seu assistente pelo WhatsApp pessoal</p>
+              </div>
+              <button
+                onClick={() => setMcpWaEnabled(v => !v)}
+                className="flex-shrink-0"
+                title={mcpWaEnabled ? 'Desativar' : 'Ativar'}
+              >
+                {mcpWaEnabled
+                  ? <ToggleRight className="w-8 h-8 text-emerald-500" />
+                  : <ToggleLeft className="w-8 h-8 text-gray-400" />}
+              </button>
+            </div>
+
+            <div className="px-5 py-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
+                  Seu número pessoal
+                </label>
+                <div className="flex items-center gap-2">
+                  <Smartphone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <input
+                    type="tel"
+                    placeholder="+55 (11) 98765-4321"
+                    value={mcpWaPhone}
+                    onChange={e => setMcpWaPhone(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  />
+                </div>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  Formato: 5511987654321 (com DDI + DDD, sem + ou espaços)
+                </p>
+              </div>
+
+              {mcpWaCompanies.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
+                    Assistente Smart a usar
+                  </label>
+                  <select
+                    value={mcpWaCompanyId}
+                    onChange={e => setMcpWaCompanyId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  >
+                    {mcpWaCompanies.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 rounded-lg p-3 space-y-1">
+                <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Como usar após salvar:</p>
+                <p>1. Cadastre seu número e ative o toggle</p>
+                <p>2. Envie qualquer mensagem para o WhatsApp minhAi:</p>
+                <p className="font-mono font-bold text-gray-800 dark:text-gray-200">wa.me/5511987311425</p>
+                <p>3. O assistente responderá como seu MCP pessoal</p>
+              </div>
+
+              <button
+                onClick={saveMcpWa}
+                disabled={mcpWaSaving || !mcpWaPhone}
+                className="w-full py-2.5 rounded-lg text-sm font-semibold bg-[#25d366] hover:bg-[#1ebe5d] disabled:opacity-50 text-white transition flex items-center justify-center gap-2"
+              >
+                {mcpWaSaving
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : mcpWaSaved
+                    ? <><Check className="w-4 h-4" /> Salvo!</>
+                    : 'Salvar configuração'}
+              </button>
             </div>
           </div>
 
@@ -413,7 +609,108 @@ function IntegracoesDashboardContent() {
             </div>
           </section>
 
-          
+          {/* Mercado Livre */}
+          <section>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#3483FA]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+              </svg>
+              Marketplace
+            </h2>
+
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+              {/* Header do card */}
+              <div className="flex items-center gap-4 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-yellow-50 dark:bg-yellow-500/5">
+                <div className="w-12 h-12 rounded-xl border border-yellow-200 dark:border-yellow-500/20 bg-white dark:bg-slate-900 flex items-center justify-center flex-shrink-0 overflow-hidden p-1">
+                  <MercadoLivreIcon className="w-full h-full object-contain" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-bold text-gray-900 dark:text-white">Mercado Livre</h3>
+                    {mlConnection ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Conectado
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400">
+                        Não conectado
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Publique produtos do minhAi direto no seu perfil do Mercado Livre
+                  </p>
+                </div>
+              </div>
+
+              {/* Corpo do card */}
+              <div className="px-5 py-4">
+                {mlLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-yellow-500" />
+                  </div>
+                ) : mlConnection ? (
+                  /* Conectado */
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                          {mlConnection.seller_nickname || `Seller ${mlConnection.seller_id}`}
+                        </p>
+                        {mlConnection.seller_email && (
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                            {mlConnection.seller_email}
+                          </p>
+                        )}
+                        {mlConnection.last_token_refresh && (
+                          <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">
+                            Token renovado: {timeAgo(mlConnection.last_token_refresh)}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={disconnectMl}
+                        disabled={mlDisconnecting}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition border border-red-200 dark:border-red-500/20 disabled:opacity-50 flex-shrink-0"
+                      >
+                        {mlDisconnecting
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <Link2Off className="w-4 h-4" />}
+                        Desconectar
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      Gerencie quais produtos publicar em <strong>Vendas → Produtos</strong>
+                    </p>
+                  </div>
+                ) : (
+                  /* Não conectado */
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-500/10 rounded-xl border border-amber-200 dark:border-amber-500/20">
+                      <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-amber-700 dark:text-amber-300">
+                        Conecte sua conta do Mercado Livre para publicar produtos automaticamente a partir do seu catálogo minhAi.
+                      </p>
+                    </div>
+                    {companyId && (
+                      <a
+                        href={`/api/ml/authorize?company_id=${companyId}`}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#FFE600] hover:bg-yellow-400 text-gray-900 text-sm font-bold rounded-xl transition shadow-sm"
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                        Conectar conta do Mercado Livre
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
           {/* Nota sobre DCR */}
           <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">
             <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />

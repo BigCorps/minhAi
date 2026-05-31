@@ -14,8 +14,6 @@
 
 * Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
 
-* Funções demo no slug Suporte para ter demonstrativo de todas as funções
-
 * Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota. E colocar ele na header no lugar do assistente de funções.
 
 * bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.

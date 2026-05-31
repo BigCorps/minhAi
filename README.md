@@ -1,5 +1,7 @@
 ## minhAI - Uma IA pra chamar de sua!
 
+* API de entrega - oauth para conectarm produtos cadastrados ao ML - mudar impressão remota para cadastro próprio - site pessoal no webapp como página incial
+
 * Modo teste com cada etapa como modal e depois gravar vídeo - colocar na landing as 2 opções (vídeo e guiado)
 
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões - e configurar as edges para funcionar corretamente via MCP pedindo se cobra via Pix ou descontando do saldo.

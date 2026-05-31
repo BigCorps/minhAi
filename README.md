@@ -1,6 +1,6 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* Implementar Whatsapp MCP próprio e Submeter App MCP ao ChatGPT e Manus (Claude já Enviado)
+* Implementar Whatsapp MCP próprio e Submeter App MCP ao ChatGPT e Manus (Claude já Enviado) - página de Integrações em bigcorps1
 
 * Função Entrega com API de entrega lalamove - oauth para conectar produtos cadastrados ao ML
 

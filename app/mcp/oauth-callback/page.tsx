@@ -1,7 +1,4 @@
 // app/mcp/oauth-callback/page.tsx
-// Após login com Google, recupera os params MCP do sessionStorage
-// e redireciona para a tela de confirmação de empresa
-
 'use client'
 
 import { useEffect, Suspense } from 'react'
@@ -19,37 +16,50 @@ function OAuthCallbackContent() {
   useEffect(() => {
     async function handle() {
       try {
-        // Aguarda a sessão ser estabelecida pelo Supabase após OAuth
-        const { data: { session } } = await supabase.auth.getSession()
+        // Aguarda sessão ser estabelecida pelo Supabase após OAuth Google
+        let session = (await supabase.auth.getSession()).data.session
         if (!session) {
-          // Aguarda mais um pouco se a sessão ainda não chegou
           await new Promise(r => setTimeout(r, 1500))
-          const { data: { session: session2 } } = await supabase.auth.getSession()
-          if (!session2) throw new Error('Sessão não estabelecida')
+          session = (await supabase.auth.getSession()).data.session
+          if (!session) throw new Error('Sessão não estabelecida')
         }
 
-        // Recuperar params MCP salvos antes do redirect para o Google
-        const redirectUri = sessionStorage.getItem('mcp_redirect_uri') ?? ''
-        const state       = sessionStorage.getItem('mcp_state') ?? ''
-        const clientId    = sessionStorage.getItem('mcp_client_id') ?? ''
+        // CORREÇÃO: lê do cookie (onde o page.tsx salva antes do redirect Google)
+        // sessionStorage não sobrevive ao redirect para outra origem
+        const raw = document.cookie
+          .split(';')
+          .map(c => c.trim())
+          .find(c => c.startsWith('mcp_oauth_params='))
+          ?.split('=')
+          .slice(1)
+          .join('=') ?? ''
 
-        sessionStorage.removeItem('mcp_redirect_uri')
-        sessionStorage.removeItem('mcp_state')
-        sessionStorage.removeItem('mcp_client_id')
+        // Limpa o cookie imediatamente
+        document.cookie = 'mcp_oauth_params=; path=/; max-age=0; SameSite=Lax; Secure'
 
-        if (!redirectUri) {
-          // Sem params MCP — redireciona pro dashboard normal
+        if (!raw) {
+          // Sem params MCP — redirect normal para o dashboard
           router.push('/dashboard')
           return
         }
 
-        // Redireciona de volta para a tela de confirmação com os params
+        const params = JSON.parse(decodeURIComponent(raw))
+        const redirectUri = params.redirect_uri ?? ''
+        const state       = params.state        ?? ''
+        const clientId    = params.client_id    ?? ''
+
+        if (!redirectUri) {
+          router.push('/dashboard')
+          return
+        }
+
+        // Volta para a tela de confirmação com os params MCP e flag google_done
         const url = new URL('/mcp/authorize', window.location.origin)
-        url.searchParams.set('redirect_uri', redirectUri)
-        url.searchParams.set('state', state)
-        url.searchParams.set('client_id', clientId)
+        url.searchParams.set('redirect_uri',  redirectUri)
+        url.searchParams.set('state',         state)
+        url.searchParams.set('client_id',     clientId)
         url.searchParams.set('response_type', 'code')
-        url.searchParams.set('google_done', '1') // flag para pular o step de login
+        url.searchParams.set('google_done',   '1')
 
         router.replace(url.toString())
 
@@ -60,7 +70,7 @@ function OAuthCallbackContent() {
     }
 
     handle()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 gap-4">

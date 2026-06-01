@@ -2186,7 +2186,7 @@ function AbaEntrega({ companyId }: { companyId: string }) {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 w-full">
 
       {/* Toggle principal */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm p-5">
@@ -2214,8 +2214,10 @@ function AbaEntrega({ companyId }: { companyId: string }) {
         </div>
       </div>
 
-      {config.delivery_enabled && (
-        <>
+{config.delivery_enabled && (
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+    {/* COLUNA ESQUERDA */}
+    <div className="space-y-6">
           {/* Quem paga o frete */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm p-5 space-y-3">
             <p className="font-semibold text-gray-900 dark:text-white text-sm">Quem paga o frete?</p>
@@ -2319,6 +2321,7 @@ function AbaEntrega({ companyId }: { companyId: string }) {
               </div>
             </div>
           </div>
+          </div>
 
           {/* Horários */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm p-5 space-y-4">
@@ -2402,8 +2405,9 @@ function AbaEntrega({ companyId }: { companyId: string }) {
               de <strong>50%</strong> sobre o valor da corrida. Exemplo: corrida R$ 10,00 → cliente paga R$ 15,00.
             </p>
           </div>
-        </>
-      )}
+    </div>
+  </div>
+)}
 
       {/* Botão salvar */}
       <div className="flex items-center gap-3">

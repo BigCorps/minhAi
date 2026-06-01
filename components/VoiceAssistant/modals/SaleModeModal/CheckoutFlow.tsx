@@ -30,6 +30,13 @@ interface CheckoutFlowProps {
   enderecoDelivery?: string;
   deliveryEnabled?: boolean;
   deliveryWhoPays?: 'cliente' | 'empresa';
+  deliveryQuoteExterno?: {
+    quotation_id: string;
+    price_cents: number;
+    price_original_cents: number;
+    price_brl: string;
+    eta_minutes: number | null;
+  } | null;
 }
 
 function usePixTimer(expiresAt: string | null) {
@@ -52,7 +59,7 @@ function formatTime(s: number) {
   return `${m}:${(s % 60).toString().padStart(2, '0')}`;
 }
 
-export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos, profile, observacaoEntrega, onVoltar, tipoEntrega, enderecoDelivery, deliveryEnabled, deliveryWhoPays }: CheckoutFlowProps) {
+export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos, profile, observacaoEntrega, onVoltar, tipoEntrega, enderecoDelivery, deliveryEnabled, deliveryWhoPays, deliveryQuoteExterno }: CheckoutFlowProps) {
   const { itens, total, clear } = useCart();
   const isDark = theme === 'dark';
 
@@ -200,7 +207,7 @@ const div = document.createElement('div');
     price_original_cents: number;
     price_brl: string;
     eta_minutes: number | null;
-  } | null>(null);
+  } | null>(deliveryQuoteExterno ?? null);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
   const [deliveryShareLink, setDeliveryShareLink] = useState<string | null>(null);

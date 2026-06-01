@@ -208,6 +208,11 @@ const div = document.createElement('div');
     price_brl: string;
     eta_minutes: number | null;
   } | null>(deliveryQuoteExterno ?? null);
+
+  useEffect(() => {
+    if (deliveryQuoteExterno) setDeliveryQuote(deliveryQuoteExterno);
+  }, [deliveryQuoteExterno]);
+  
   const [deliveryLoading, setDeliveryLoading] = useState(false);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
   const [deliveryShareLink, setDeliveryShareLink] = useState<string | null>(null);
@@ -438,6 +443,16 @@ if (od?.status === 'paid') {
         : 0;
       const totalFinal = total + freteExtra;
       totalFinalRef.current = totalFinal;
+
+      console.log('DEBUG checkout:', {
+        total,
+        freteExtra,
+        totalFinal,
+        tipoEntrega,
+        deliveryWhoPays,
+        deliveryQuote,
+        amountCents: Math.round(totalFinal * 100),
+      });
 
       const pedido = await criarPedido({
         company_id: companyId,

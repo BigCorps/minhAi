@@ -10,13 +10,13 @@ export async function GET(req: NextRequest) {
   // Usuário recusou a autorização
   if (error) {
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/configuracoes?ml=cancelled`
+      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integracoes-ia?ml=cancelled`
     )
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/configuracoes?ml=error&reason=missing_params`
+      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integracoes-ia?ml=error&reason=missing_params`
     )
   }
 
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     userId = decoded.user_id
   } catch {
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/configuracoes?ml=error&reason=invalid_state`
+      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integracoes-ia?ml=error&reason=invalid_state`
     )
   }
 
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       const err = await tokenRes.text()
       console.error('[ml/callback] token error:', err)
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/configuracoes?ml=error&reason=token_exchange`
+        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integracoes-ia?ml=error&reason=token_exchange`
       )
     }
 
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     console.error('[ml/callback] fetch error:', e)
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/configuracoes?ml=error&reason=network`
+      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integracoes-ia?ml=error&reason=network`
     )
   }
 
@@ -107,11 +107,11 @@ export async function GET(req: NextRequest) {
   if (dbError) {
     console.error('[ml/callback] db error:', dbError)
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/configuracoes?ml=error&reason=db`
+      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integracoes-ia?ml=error&reason=db`
     )
   }
 
   return NextResponse.redirect(
-    `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/configuracoes?ml=connected`
+    `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integracoes-ia?ml=connected`
   )
 }

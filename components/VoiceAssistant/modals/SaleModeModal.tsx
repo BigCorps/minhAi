@@ -119,6 +119,8 @@ function SaleModeInner({
   const [tipoEntrega, setTipoEntrega] = useState<'retirada' | 'delivery' | 'mesa'>('retirada');
   const [enderecoDelivery, setEnderecoDelivery] = useState('');
   const [numeroMesa, setNumeroMesa] = useState('');
+  const [deliveryEnabled, setDeliveryEnabled] = useState(false);
+  const [deliveryWhoPays, setDeliveryWhoPays] = useState<'cliente' | 'empresa'>('cliente');
   const [isPortrait, setIsPortrait] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [metodosAtivos, setMetodosAtivos] = useState<string[]>([]);
@@ -217,6 +219,15 @@ useEffect(() => {
           if (r.is_enabled) ativos.push(r.function_key);
         });
         setMetodosAtivos(ativos.length > 0 ? ativos : ['pix_generate']);
+
+        // Carregar config de delivery
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('delivery_enabled, delivery_who_pays')
+          .eq('id', companyId)
+          .maybeSingle();
+        setDeliveryEnabled(!!companyData?.delivery_enabled);
+        setDeliveryWhoPays(companyData?.delivery_who_pays ?? 'cliente');
       } catch {
         setMetodosAtivos([]);
       }
@@ -617,6 +628,10 @@ useEffect(() => {
           metodosAtivos={metodosAtivos.length > 0 ? metodosAtivos : undefined}
           profile={profile}
           observacaoEntrega={getObservacaoEntrega()}
+          tipoEntrega={tipoEntrega}
+          enderecoDelivery={enderecoDelivery}
+          deliveryEnabled={deliveryEnabled}
+          deliveryWhoPays={deliveryWhoPays}
         />
         <button
           onClick={() => setShowCheckout(false)}

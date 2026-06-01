@@ -60,8 +60,7 @@ function formatTime(s: number) {
 }
 
 export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos, profile, observacaoEntrega, onVoltar, tipoEntrega, enderecoDelivery, deliveryEnabled, deliveryWhoPays, deliveryQuoteExterno }: CheckoutFlowProps) {
-  const { itens, total: totalItens, clear } = useCart();
-  const total = itens.reduce((acc, i) => acc + (i.preco_venda * i.quantidade), 0);
+  const { itens, total, clear } = useCart();
   const isDark = theme === 'dark';
 
   const [step, setStep] = useState<Step>('cliente');

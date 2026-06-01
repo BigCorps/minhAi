@@ -2320,15 +2320,6 @@ function AbaEntrega({ companyId }: { companyId: string }) {
                 />
               </div>
             </div>
-
-          {/* Info markup */}
-          <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">
-            <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              O frete é calculado em tempo real pela API Oficial Lalamove.
-            </p>
-          </div>
-            
           </div>
           </div>
     
@@ -2407,6 +2398,13 @@ function AbaEntrega({ companyId }: { companyId: string }) {
             />
           </div>
 
+          {/* Info markup */}
+          <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">
+            <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              O frete é calculado em tempo real pela API Oficial Lalamove.
+            </p>
+          </div>
     </div>
   </div>
 )}

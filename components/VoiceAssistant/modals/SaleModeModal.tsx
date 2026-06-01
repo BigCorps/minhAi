@@ -613,7 +613,7 @@ useEffect(() => {
       className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none resize-none"
       style={{ borderColor: entregaBorder, backgroundColor: entregaBgSec, color: entregaText }} />
     <p className="text-[10px] mt-1" style={{ color: entregaMuted }}>
-      Digite rua, número, bairro e cidade — ou apenas o CEP (ex: 01310-100)
+      Digite rua, número, bairro e cidade (nesta ordem)
     </p>
   </div>
 )}

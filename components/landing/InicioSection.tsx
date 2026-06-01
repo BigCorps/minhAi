@@ -230,14 +230,21 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               [@media(max-height:700px)_and_(max-width:767px)]:hidden
             `}
           >
-<img src="/cards/meta.png" alt="Integração oficial Meta" className="h-10 sm:h-12 w-auto object-contain" />
-<img src="/cards/google.png" alt="Integração verificada pelo Google" className="h-10 sm:h-12 w-auto object-contain" />
-<a
+<div className="w-[90px] sm:w-[120px] h-10 sm:h-12 flex items-center justify-center">
+  <img src="/cards/meta.png" alt="Integração oficial Meta" className="w-full h-full object-contain" />
+</div>
+
+<div className="w-[90px] sm:w-[120px] h-10 sm:h-12 flex items-center justify-center">
+  <img src="/cards/google.png" alt="Integração verificada pelo Google" className="w-full h-full object-contain" />
+</div>
+
+
   href="https://play.google.com/store/apps/details?id=app.minhai.www.twa"
   target="_blank"
   rel="noopener noreferrer"
+  className="w-[90px] sm:w-[120px] h-10 sm:h-12 flex items-center justify-center hover:opacity-80 transition-opacity"
 >
-  <img src="/cards/play.png" alt="Disponível no Google Play" className="h-10 sm:h-12 w-auto object-contain hover:opacity-80 transition-opacity" />
+  <img src="/cards/play.png" alt="Disponível no Google Play" className="w-full h-full object-contain" />
 </a>
           </div>
         </div>

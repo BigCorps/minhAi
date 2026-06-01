@@ -2322,7 +2322,8 @@ function AbaEntrega({ companyId }: { companyId: string }) {
             </div>
           </div>
           </div>
-
+    
+          <div className="space-y-6">
           {/* Horários */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm p-5 space-y-4">
             <div>

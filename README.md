@@ -36,7 +36,7 @@ Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app /
 
 * implementar sincronia entre catálogo minhAi e Meta (relatório em anexo)
 
-* Seção Integrações Externas para o usuário conectar serviços como Saipos, Ifood e outros ao minhAi e vice e versa, além de integração e webhooks para link Pix e link de pagamento - em anexo
+* Conectar serviços como Saipos, Ifood e outros ao minhAi e vice e versa, além de integração e webhooks para link Pix e link de pagamento - em anexo
 
 .
 

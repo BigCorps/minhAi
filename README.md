@@ -1,6 +1,6 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* Submeter App MCP ao ChatGPT e Manus (Claude já Enviado) - página de Integrações em bigcorps1
+* Submeter App MCP ao ChatGPT e Manus (Claude já Enviado)
 
 * Função Entrega com API de entrega lalamove e produtos ML
 

@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Zap, Smartphone, CreditCard, Banknote, ExternalLink,
   ArrowLeft, Check, Copy, CheckCheck, X,
@@ -26,6 +26,10 @@ interface CheckoutFlowProps {
   profile?: { nome: string; email?: string | null; identificador?: string | null; telefone?: string | null; endereco?: string | null } | null;
   observacaoEntrega?: string | null;
   onVoltar?: () => void;
+  tipoEntrega?: 'retirada' | 'delivery' | 'mesa';
+  enderecoDelivery?: string;
+  deliveryEnabled?: boolean;
+  deliveryWhoPays?: 'cliente' | 'empresa';
 }
 
 function usePixTimer(expiresAt: string | null) {
@@ -48,7 +52,7 @@ function formatTime(s: number) {
   return `${m}:${(s % 60).toString().padStart(2, '0')}`;
 }
 
-export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos, profile, observacaoEntrega, onVoltar }: CheckoutFlowProps) {
+export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos, profile, observacaoEntrega, onVoltar, tipoEntrega, enderecoDelivery, deliveryEnabled, deliveryWhoPays }: CheckoutFlowProps) {
   const { itens, total, clear } = useCart();
   const isDark = theme === 'dark';
 
@@ -187,6 +191,19 @@ const div = document.createElement('div');
 
   // Total salvo antes do clear() para exibir na tela de confirmado
   const [totalConfirmado, setTotalConfirmado] = useState(0);
+  const totalFinalRef = useRef(0);
+
+  // Delivery
+  const [deliveryQuote, setDeliveryQuote] = useState<{
+    quotation_id: string;
+    price_cents: number;
+    price_original_cents: number;
+    price_brl: string;
+    eta_minutes: number | null;
+  } | null>(null);
+  const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [deliveryError, setDeliveryError] = useState<string | null>(null);
+  const [deliveryShareLink, setDeliveryShareLink] = useState<string | null>(null);
 
   // Cadastro configurável
   const [showRegistration, setShowRegistration] = useState(false);
@@ -229,7 +246,8 @@ const div = document.createElement('div');
         if (!error && data?.success) {
           clearInterval(interval);
           setAutoChecking(false);
-          setTotalConfirmado(total);
+          setTotalConfirmado(totalFinalRef.current);
+          await dispatchDelivery(pedidoId!);
           setStep('confirmado');
           playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {});
           clear();
@@ -262,7 +280,8 @@ const div = document.createElement('div');
             const { data: p } = await supabase.from('pedidos').select('status').eq('id', pedidoId).single();
             if (p?.status !== 'pago') await supabase.rpc('confirmar_pedido_pago', { p_pedido_id: pedidoId });
             clearInterval(interval); setPolling(false);
-            setTotalConfirmado(total);
+            setTotalConfirmado(totalFinalRef.current);
+            await dispatchDelivery(pedidoId!);
             setStep('confirmado');
             playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {}); clear();
           }
@@ -275,7 +294,8 @@ if (od?.status === 'paid') {
             const { data: p } = await supabase.from('pedidos').select('status').eq('id', pedidoId).single();
             if (p?.status !== 'pago') await supabase.rpc('confirmar_pedido_pago', { p_pedido_id: pedidoId });
             clearInterval(interval); setPolling(false);
-            setTotalConfirmado(total);
+            setTotalConfirmado(totalFinalRef.current);
+            await dispatchDelivery(pedidoId!);
             setStep('confirmado');
             playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {}); clear();
           }
@@ -296,7 +316,8 @@ if (od?.status === 'paid') {
         body: { transaction_id: pixTransactionId },
       });
       if (!error && data?.success) {
-        setTotalConfirmado(total);
+        setTotalConfirmado(totalFinalRef.current);
+        await dispatchDelivery(pedidoId!);
         setStep('confirmado'); setAutoChecking(false);
         playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {}); clear();
       } else {
@@ -337,7 +358,8 @@ if (od?.status === 'paid') {
         const supabase = createClient();
         await supabase.rpc('confirmar_pedido_pago', { p_pedido_id: pedidoId });
       }
-      setTotalConfirmado(total);
+      setTotalConfirmado(totalFinalRef.current);
+      await dispatchDelivery(pedidoId!);
       setStep('confirmado');
       playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {});
       clear();
@@ -348,11 +370,68 @@ if (od?.status === 'paid') {
     }
   }
 
+  // Calcular frete Lalamove
+  const handleCalcularFrete = useCallback(async () => {
+    if (!enderecoDelivery?.trim()) return;
+    setDeliveryLoading(true);
+    setDeliveryError(null);
+    setDeliveryQuote(null);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.functions.invoke('lalamove-delivery', {
+        body: {
+          action: 'quote',
+          company_id: companyId,
+          delivery_address: enderecoDelivery,
+          order_total_cents: Math.round(total * 100),
+        },
+      });
+      if (error || !data?.success) throw new Error(data?.error ?? 'Erro ao calcular frete');
+      setDeliveryQuote(data);
+    } catch (e: any) {
+      setDeliveryError(e.message);
+    } finally {
+      setDeliveryLoading(false);
+    }
+  }, [companyId, enderecoDelivery, total]);
+
+  // Despachar entregador após pagamento confirmado
+  const dispatchDelivery = useCallback(async (pedidoIdParam: string) => {
+    if (tipoEntrega !== 'delivery' || !deliveryQuote || !enderecoDelivery) return;
+    try {
+      const supabase = createClient();
+      const { data: orderData } = await supabase.functions.invoke('lalamove-delivery', {
+        body: {
+          action: 'order',
+          company_id: companyId,
+          pedido_id: pedidoIdParam,
+          quotation_id: deliveryQuote.quotation_id,
+          delivery_address: enderecoDelivery,
+          cliente_nome: clienteNome || undefined,
+          cliente_telefone: clienteTel || undefined,
+          price_cents: deliveryQuote.price_cents,
+          price_original_cents: deliveryQuote.price_original_cents,
+        },
+      });
+      if (orderData?.success) setDeliveryShareLink(orderData.share_link);
+    } catch (e) {
+      console.error('Erro ao despachar entrega:', e);
+    }
+  }, [companyId, tipoEntrega, deliveryQuote, enderecoDelivery, clienteNome, clienteTel]);
+
   // Criar pedido + cobrança
   const handleConfirmarPagamento = useCallback(async () => {
     setLoading(true); setErro(null);
     try {
       const supabase = createClient();
+
+      // Total inclui frete se cliente paga
+      const freteExtra = (tipoEntrega === 'delivery' && deliveryWhoPays === 'cliente' && deliveryQuote)
+        ? deliveryQuote.price_cents / 100
+        : 0;
+      const totalFinal = total + freteExtra;
+      totalFinalRef.current = totalFinal;
+
       const pedido = await criarPedido({
         company_id: companyId,
         cliente_nome: clienteNome || undefined,
@@ -367,17 +446,29 @@ if (od?.status === 'paid') {
       });
       setPedidoId(pedido.id);
 
+      // Salvar dados de delivery no pedido
+      if (tipoEntrega === 'delivery' && deliveryQuote) {
+        const supabase = createClient();
+        await supabase.from('pedidos').update({
+          delivery_requested: true,
+          delivery_address: enderecoDelivery,
+          delivery_fee_cents: deliveryQuote.price_cents,
+          delivery_fee_original_cents: deliveryQuote.price_original_cents,
+        }).eq('id', pedido.id);
+      }
+
       if (metodo === 'dinheiro') {
         await atualizarStatusPedido(pedido.id, 'pago');
-        setTotalConfirmado(total);
+        setTotalConfirmado(totalFinal);
+        await dispatchDelivery(pedido.id);
         setStep('confirmado');
-        playText?.('Pedido registrado! Valor a receber: ' + formatarPreco(total)).catch(() => {});
+        playText?.('Pedido registrado! Valor a receber: ' + formatarPreco(totalFinal)).catch(() => {});
         clear(); return;
       }
 
       if (metodo === 'pix') {
         const { data: pixData, error: pixErr } = await supabase.functions.invoke('gerar-pix-assistente', {
-          body: { company_id: companyId, amount_cents: Math.round(total * 100) },
+          body: { company_id: companyId, amount_cents: Math.round(totalFinal * 100) },
         });
         if (pixErr || !pixData?.transaction_id) throw new Error('Erro ao gerar PIX');
         await supabase.from('pix_transactions').update({ pedido_id: pedido.id }).eq('id', pixData.transaction_id);
@@ -394,7 +485,7 @@ if (metodo === 'nfc_debito' || metodo === 'nfc_credito') {
   const { data: cobData, error: cobErr } = await supabase.functions.invoke('gerar-cobranca-infinitepay', {
     body: {
       company_id: companyId,
-      amount_cents: Math.round(total * 100),
+      amount_cents: Math.round(totalFinal * 100),
       tipo: 'NFC',
       nfc_payment_method: metodo === 'nfc_debito' ? 'debit' : 'credit',
       descricao: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`,
@@ -410,7 +501,7 @@ if (metodo === 'nfc_debito' || metodo === 'nfc_credito') {
         const { data: cobData, error: cobErr } = await supabase.functions.invoke('gerar-cobranca-infinitepay', {
           body: {
             company_id: companyId,
-            amount_cents: Math.round(total * 100),
+            amount_cents: Math.round(totalFinal * 100),
             tipo: 'LINK_PAGAMENTO',
             descricao: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`,
           },
@@ -443,7 +534,7 @@ if (metodo === 'tef_debito' || metodo === 'tef_credito') {
   const { data: orderData, error: orderErr } = await supabase.functions.invoke('criar-order-mp-point', {
     body: {
       company_id: companyId,
-      amount_cents: Math.round(total * 100),
+      amount_cents: Math.round(totalFinal * 100),
       description: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`,
       payment_type: metodo === 'tef_debito' ? 'debit_card' : 'credit_card',
     },
@@ -604,7 +695,15 @@ const handleEmitirCupom = useCallback((pedidoId: string) => {
       <div className="w-full flex flex-col gap-4">
         <div>
           <p className={`text-base font-bold mb-0.5 ${textPrimary}`}>Forma de pagamento</p>
-          <p className={`text-xs ${textMuted}`}>{formatarPreco(total)} · {itens.length} {itens.length === 1 ? 'item' : 'itens'}</p>
+          <p className={`text-xs ${textMuted}`}>
+            {formatarPreco(
+              total + (tipoEntrega === 'delivery' && deliveryWhoPays === 'cliente' && deliveryQuote
+                ? deliveryQuote.price_cents / 100 : 0)
+            )} · {itens.length} {itens.length === 1 ? 'item' : 'itens'}
+            {tipoEntrega === 'delivery' && deliveryQuote && deliveryWhoPays === 'cliente' && (
+              <span className={`ml-1 ${textMuted}`}>(frete incl.)</span>
+            )}
+          </p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           {metodosFiltrados.map(m => (
@@ -860,7 +959,30 @@ return (
         <p className={`text-xl font-bold mb-1 ${textPrimary}`}>Pagamento confirmado!</p>
         {clienteNome && <p className={`text-sm ${textSecondary}`}>Obrigado, {clienteNome}!</p>}
         <p className="text-lg font-bold mt-2 text-emerald-500">{formatarPreco(totalConfirmado)}</p>
+        {tipoEntrega === 'delivery' && deliveryQuote && (
+          <p className={`text-xs mt-1 ${textMuted}`}>
+            Inclui frete: {formatarPreco(deliveryQuote.price_cents / 100)}
+          </p>
+        )}
       </div>
+
+      {/* Botão acompanhar entrega */}
+      {deliveryShareLink && (
+        <a
+          href={deliveryShareLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95"
+        >
+          <ExternalLink className="w-4 h-4" />
+          Acompanhar entrega
+        </a>
+      )}
+      {tipoEntrega === 'delivery' && !deliveryShareLink && deliveryQuote && (
+        <p className={`text-xs text-center ${textMuted}`}>
+          Despachando entregador...
+        </p>
+      )}
       {/* Botão impressão — só aparece se print_on_purchase estiver ativo */}
       {printOnPurchase && (
         <button

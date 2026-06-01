@@ -1,12 +1,12 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* Submeter App MCP ao ChatGPT e Manus (Claude já Enviado)
-
 * Função Entrega com API de entrega lalamove - Parte do endereço precisa ser validada no frontend e não aparece a atualização que aplicamos
 
 * Produtos ML precisam aparecer no cadastro de produtos
 
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões - e configurar as edges para funcionar corretamente via MCP pedindo se cobra via Pix ou descontando do saldo.
+
+* site pessoal no webapp como página incial - ícone casa primeiro - com a chamada, transforme seu site em um app facilmente.
 
 * Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota e configuração do produto no Mercado Livre, se ambos configurados. Com tudo pronto, criar Edge para MCP também e tirar a de enviar email.
 
@@ -14,7 +14,7 @@
 
 ## IDÉIAS
 
-* site pessoal no webapp como página incial
+* ChatGPT, Claude e Cursor App MCP já Enviado (AGUARDANDO APROVAÇÃO)
 
 * Artes Instagram: Manus jiuithsu e fofopanda / GPT as 18h amanha
 

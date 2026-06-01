@@ -603,13 +603,13 @@ function IntegracoesDashboardContent() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">Publique produtos do minhAi direto no seu perfil do ML</p>
                   </div>
                 </div>
-                <div className="px-5 py-4">
+                <div className="px-5 py-4 flex flex-col gap-4">
                   {mlLoading ? (
                     <div className="flex items-center justify-center py-4">
                       <Loader2 className="w-5 h-5 animate-spin text-yellow-500" />
                     </div>
                   ) : mlConnection ? (
-                    <div className="space-y-4">
+                    <>
                       <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
                         <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
@@ -623,29 +623,31 @@ function IntegracoesDashboardContent() {
                             <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">Token renovado: {timeAgo(mlConnection.last_token_refresh)}</p>
                           )}
                         </div>
-                        <button
-                          onClick={disconnectMl}
-                          disabled={mlDisconnecting}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition border border-red-200 dark:border-red-500/20 disabled:opacity-50 flex-shrink-0"
-                        >
-                          {mlDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2Off className="w-4 h-4" />}
-                          Desconectar
-                        </button>
                       </div>
                       <p className="text-xs text-gray-400 dark:text-gray-500">Gerencie quais produtos publicar em <strong>Vendas → Produtos</strong></p>
-                    </div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 italic">Em breve mais funcionalidades com o Mercado Livre.</p>
+                      <button
+                        onClick={disconnectMl}
+                        disabled={mlDisconnecting}
+                        className="w-full py-2.5 rounded-lg text-sm font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition border border-red-200 dark:border-red-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {mlDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2Off className="w-4 h-4" />}
+                        Desconectar
+                      </button>
+                    </>
                   ) : (
-                    <div className="space-y-4">
+                    <>
                       <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-500/10 rounded-xl border border-amber-200 dark:border-amber-500/20">
                         <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
                         <p className="text-sm text-amber-700 dark:text-amber-300">
                           Conecte sua conta do Mercado Livre para publicar produtos automaticamente a partir do seu catálogo minhAi.
                         </p>
                       </div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 italic">Em breve mais funcionalidades com o Mercado Livre.</p>
                       {companyId && (
                         <a
                           href={`/api/ml/authorize?company_id=${companyId}`}
-                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#FFE600] hover:bg-yellow-400 text-gray-900 text-sm font-bold rounded-xl transition shadow-sm"
+                          className="w-full py-2.5 bg-[#FFE600] hover:bg-yellow-400 text-gray-900 text-sm font-bold rounded-lg transition shadow-sm flex items-center justify-center gap-2"
                         >
                           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -653,7 +655,7 @@ function IntegracoesDashboardContent() {
                           Conectar conta do Mercado Livre
                         </a>
                       )}
-                    </div>
+                    </>
                   )}
                 </div>
               </div>

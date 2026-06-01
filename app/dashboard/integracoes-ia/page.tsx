@@ -390,301 +390,274 @@ function IntegracoesDashboardContent() {
             </section>
           )}
 
-          {/* WhatsApp MCP */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-green-50 dark:bg-green-500/10">
-              <div className="w-12 h-12 rounded-xl border border-green-200 dark:border-green-500/20 bg-white dark:bg-slate-900 flex items-center justify-center flex-shrink-0">
-                <WhatsAppIcon className="w-7 h-7 text-[#25d366]" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-gray-900 dark:text-white">WhatsApp MCP</h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
-                    Novo
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Gerencie seu assistente pelo WhatsApp pessoal</p>
-              </div>
-              <button
-                onClick={() => setMcpWaEnabled(v => !v)}
-                className="flex-shrink-0"
-                title={mcpWaEnabled ? 'Desativar' : 'Ativar'}
-              >
-                {mcpWaEnabled
-                  ? <ToggleRight className="w-8 h-8 text-emerald-500" />
-                  : <ToggleLeft className="w-8 h-8 text-gray-400" />}
-              </button>
-            </div>
-            <div className="px-5 py-4 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
-                  Seu número pessoal
-                </label>
-                <div className="flex items-center gap-2">
-                  <Smartphone className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  <input
-                    type="tel"
-                    placeholder="+55 (11) 98765-4321"
-                    value={mcpWaPhone}
-                    onChange={e => setMcpWaPhone(e.target.value)}
-                    className="flex-1 px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
-                  />
-                </div>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  Formato: 5511987654321 (com DDI + DDD, sem + ou espaços)
-                </p>
-              </div>
-              {mcpWaCompanies.length > 0 && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
-                    Assistente Smart a usar
-                  </label>
-                  <select
-                    value={mcpWaCompanyId}
-                    onChange={e => setMcpWaCompanyId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
-                  >
-                    {mcpWaCompanies.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 rounded-lg p-3 space-y-1">
-                <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Como usar após salvar:</p>
-                <p>1. Cadastre seu número e ative o toggle</p>
-                <p>2. Envie qualquer mensagem para o WhatsApp minhAi:</p>
-                <p className="font-mono font-bold text-gray-800 dark:text-gray-200">wa.me/5511926828418</p>
-                <p>3. O assistente responderá como seu MCP pessoal</p>
-              </div>
-              <button
-                onClick={saveMcpWa}
-                disabled={mcpWaSaving || !mcpWaPhone}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold bg-[#25d366] hover:bg-[#1ebe5d] disabled:opacity-50 text-white transition flex items-center justify-center gap-2"
-              >
-                {mcpWaSaving
-                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                  : mcpWaSaved
-                    ? <><Check className="w-4 h-4" /> Salvo!</>
-                    : 'Salvar configuração'}
-              </button>
-            </div>
-          </div>
-
-          {/* Catálogo de plataformas */}
+          {/* Plataformas — único grid unificado */}
           <section>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Zap className="w-5 h-5 text-blue-500" />
               Plataformas disponíveis
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[
-                {
-                  name: 'Claude',
-                  icon: <ClaudeIcon className="w-8 h-8 text-[#d97706]" />,
-                  bg: 'bg-amber-50 dark:bg-amber-500/10',
-                  border: 'border-amber-200 dark:border-amber-500/20',
-                  badge: 'Disponível',
-                  badgeCls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
-                  limite: '1 connector no plano gratuito',
-                  plano: 'Free, Pro, Max, Team, Enterprise',
-                  link: 'https://claude.ai/settings',
-                  instrucoes: [
-                    'Acesse Settings → Connectors → Add custom connector',
-                    `Cole a URL: ${MCP_URL}`,
-                    'Faça login com sua conta minhAi',
-                    'Selecione o assistente e autorize',
-                  ],
-                },
-                {
-                  name: 'ChatGPT',
-                  icon: <ChatGPTIcon className="w-8 h-8 text-[#10a37f]" />,
-                  bg: 'bg-emerald-50 dark:bg-emerald-500/10',
-                  border: 'border-emerald-200 dark:border-emerald-500/20',
-                  badge: 'Disponível',
-                  badgeCls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
-                  limite: 'Requer plano Plus ou superior',
-                  plano: 'Plus, Pro, Team, Enterprise',
-                  link: 'https://chatgpt.com/settings',
-                  instrucoes: [
-                    'Ative o Developer Mode nas configurações',
-                    'Acesse Settings → Connectors → Add',
-                    `Cole a URL: ${MCP_URL}`,
-                    'Faça login com sua conta minhAi',
-                  ],
-                },
-                {
-                  name: 'Cursor',
-                  icon: <CursorIcon className="w-8 h-8 text-slate-700 dark:text-slate-200" />,
-                  bg: 'bg-slate-50 dark:bg-slate-500/10',
-                  border: 'border-slate-200 dark:border-slate-500/20',
-                  badge: 'Disponível',
-                  badgeCls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
-                  limite: 'Editor de código — para devs',
-                  plano: 'Todos os planos',
-                  link: 'https://cursor.sh',
-                  instrucoes: [
-                    'Abra Settings → MCP Servers',
-                    'Adicione um novo servidor com a URL',
-                    `URL: ${MCP_URL}`,
-                  ],
-                },
-                {
-                  name: 'Manus',
-                  icon: <ManusIcon className="w-8 h-8 text-slate-900" />,
-                  bg: 'bg-slate-50 dark:bg-slate-500/10',
-                  border: 'border-slate-200 dark:border-slate-500/20',
-                  iconBg: 'bg-white',
-                  badge: 'Disponível',
-                  badgeCls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
-                  limite: 'Agente autônomo com suporte a MCP',
-                  plano: 'Todos os planos',
-                  link: 'https://manus.im',
-                  instrucoes: [
-                    'Acesse Settings → Integrations → MCP',
-                    `Cole a URL: ${MCP_URL}`,
-                    'Faça login com sua conta minhAi',
-                    'Selecione o assistente e autorize',
-                  ],
-                },
-              ].map(p => (
-                <div key={p.name}
-                  className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden"
-                >
-                  <div className={`flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10 ${p.bg}`}>
-                    <div className={`w-12 h-12 rounded-xl border flex items-center justify-center ${p.iconBg ?? 'bg-white dark:bg-slate-900'} ${p.border}`}>
-                      {p.icon}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-gray-900 dark:text-white">{p.name}</h3>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.badgeCls}`}>
-                          {p.badge}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{p.limite}</p>
-                    </div>
-                    {p.link && (
-                      <a href={p.link} target="_blank" rel="noopener noreferrer"
-                        className="p-2 rounded-lg hover:bg-white/60 dark:hover:bg-white/10 transition text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    )}
-                  </div>
-                  <div className="px-5 py-4">
-                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-                      Como conectar
-                    </p>
-                    <ol className="space-y-2">
-                      {p.instrucoes.map((inst, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
-                          <span className="w-5 h-5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                            {i + 1}
-                          </span>
-                          {inst}
-                        </li>
-                      ))}
-                    </ol>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-                      Planos: {p.plano}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
 
-          {/* Mercado Livre */}
-          <section>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <MercadoLivreIcon className="w-5 h-5" />
-              Marketplace
-            </h2>
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
-              <div className="flex items-center gap-4 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-yellow-50 dark:bg-yellow-500/5">
-                <div className="w-12 h-12 rounded-xl border border-yellow-200 dark:border-yellow-500/20 bg-white dark:bg-slate-900 flex items-center justify-center flex-shrink-0 p-1">
-                  <MercadoLivreIcon className="w-full h-full" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-bold text-gray-900 dark:text-white">Mercado Livre</h3>
-                    {mlConnection ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Conectado
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400">
-                        Não conectado
-                      </span>
-                    )}
+              {/* WhatsApp */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-green-50 dark:bg-green-500/10">
+                  <div className="w-12 h-12 rounded-xl border border-green-200 dark:border-green-500/20 bg-white dark:bg-slate-900 flex items-center justify-center flex-shrink-0">
+                    <WhatsAppIcon className="w-7 h-7 text-[#25d366]" />
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Publique produtos do minhAi direto no seu perfil do Mercado Livre
-                  </p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-gray-900 dark:text-white">WhatsApp MCP</h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">Novo</span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Gerencie seu assistente pelo WhatsApp pessoal</p>
+                  </div>
+                  <button onClick={() => setMcpWaEnabled(v => !v)} className="flex-shrink-0" title={mcpWaEnabled ? 'Desativar' : 'Ativar'}>
+                    {mcpWaEnabled ? <ToggleRight className="w-8 h-8 text-emerald-500" /> : <ToggleLeft className="w-8 h-8 text-gray-400" />}
+                  </button>
+                </div>
+                <div className="px-5 py-4 space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Seu número pessoal</label>
+                    <div className="flex items-center gap-2">
+                      <Smartphone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <input
+                        type="tel"
+                        placeholder="+55 (11) 98765-4321"
+                        value={mcpWaPhone}
+                        onChange={e => setMcpWaPhone(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Formato: 5511987654321 (com DDI + DDD, sem + ou espaços)</p>
+                  </div>
+                  {mcpWaCompanies.length > 0 && (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Assistente Smart a usar</label>
+                      <select
+                        value={mcpWaCompanyId}
+                        onChange={e => setMcpWaCompanyId(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                      >
+                        {mcpWaCompanies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 rounded-lg p-3 space-y-1">
+                    <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Como usar após salvar:</p>
+                    <p>1. Cadastre seu número e ative o toggle</p>
+                    <p>2. Envie qualquer mensagem para o WhatsApp minhAi:</p>
+                    <p className="font-mono font-bold text-gray-800 dark:text-gray-200">wa.me/5511926828418</p>
+                    <p>3. O assistente responderá como seu MCP pessoal</p>
+                  </div>
+                  <button
+                    onClick={saveMcpWa}
+                    disabled={mcpWaSaving || !mcpWaPhone}
+                    className="w-full py-2.5 rounded-lg text-sm font-semibold bg-[#25d366] hover:bg-[#1ebe5d] disabled:opacity-50 text-white transition flex items-center justify-center gap-2"
+                  >
+                    {mcpWaSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : mcpWaSaved ? <><Check className="w-4 h-4" /> Salvo!</> : 'Salvar configuração'}
+                  </button>
                 </div>
               </div>
-              <div className="px-5 py-4">
-                {mlLoading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-yellow-500" />
+
+              {/* ChatGPT */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-emerald-50 dark:bg-emerald-500/10">
+                  <div className="w-12 h-12 rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-white dark:bg-slate-900 flex items-center justify-center flex-shrink-0">
+                    <ChatGPTIcon className="w-8 h-8 text-[#10a37f]" />
                   </div>
-                ) : mlConnection ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-                          {mlConnection.seller_nickname || `Seller ${mlConnection.seller_id}`}
-                        </p>
-                        {mlConnection.seller_email && (
-                          <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                            {mlConnection.seller_email}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-gray-900 dark:text-white">ChatGPT</h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">Disponível</span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Requer plano Plus ou superior</p>
+                  </div>
+                  <a href="https://chatgpt.com/settings" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-white/60 dark:hover:bg-white/10 transition text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+                <div className="px-5 py-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Como conectar</p>
+                  <ol className="space-y-2">
+                    {['Ative o Developer Mode nas configurações', 'Acesse Settings → Connectors → Add', `Cole a URL: ${MCP_URL}`, 'Faça login com sua conta minhAi'].map((inst, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <span className="w-5 h-5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                        {inst}
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">Planos: Plus, Pro, Team, Enterprise</p>
+                </div>
+              </div>
+
+              {/* Claude */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-amber-50 dark:bg-amber-500/10">
+                  <div className="w-12 h-12 rounded-xl border border-amber-200 dark:border-amber-500/20 bg-white dark:bg-slate-900 flex items-center justify-center flex-shrink-0">
+                    <ClaudeIcon className="w-8 h-8 text-[#d97706]" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-gray-900 dark:text-white">Claude</h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">Disponível</span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">1 connector no plano gratuito</p>
+                  </div>
+                  <a href="https://claude.ai/settings" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-white/60 dark:hover:bg-white/10 transition text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+                <div className="px-5 py-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Como conectar</p>
+                  <ol className="space-y-2">
+                    {['Acesse Settings → Connectors → Add custom connector', `Cole a URL: ${MCP_URL}`, 'Faça login com sua conta minhAi', 'Selecione o assistente e autorize'].map((inst, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <span className="w-5 h-5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                        {inst}
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">Planos: Free, Pro, Max, Team, Enterprise</p>
+                </div>
+              </div>
+
+              {/* Manus */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-slate-50 dark:bg-slate-500/10">
+                  <div className="w-12 h-12 rounded-xl border border-slate-200 dark:border-slate-500/20 bg-white flex items-center justify-center flex-shrink-0">
+                    <ManusIcon className="w-8 h-8 text-slate-900" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-gray-900 dark:text-white">Manus</h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">Disponível</span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Agente autônomo com suporte a MCP</p>
+                  </div>
+                  <a href="https://manus.im" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-white/60 dark:hover:bg-white/10 transition text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+                <div className="px-5 py-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Como conectar</p>
+                  <ol className="space-y-2">
+                    {['Acesse Settings → Integrations → MCP', `Cole a URL: ${MCP_URL}`, 'Faça login com sua conta minhAi', 'Selecione o assistente e autorize'].map((inst, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <span className="w-5 h-5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                        {inst}
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">Planos: Todos os planos</p>
+                </div>
+              </div>
+
+              {/* Cursor */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-slate-50 dark:bg-slate-500/10">
+                  <div className="w-12 h-12 rounded-xl border border-slate-200 dark:border-slate-500/20 bg-white dark:bg-slate-900 flex items-center justify-center flex-shrink-0">
+                    <CursorIcon className="w-8 h-8 text-slate-700 dark:text-slate-200" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-gray-900 dark:text-white">Cursor</h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">Disponível</span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Editor de código — para devs</p>
+                  </div>
+                  <a href="https://cursor.sh" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-white/60 dark:hover:bg-white/10 transition text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+                <div className="px-5 py-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Como conectar</p>
+                  <ol className="space-y-2">
+                    {['Abra Settings → MCP Servers', 'Adicione um novo servidor com a URL', `URL: ${MCP_URL}`].map((inst, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <span className="w-5 h-5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                        {inst}
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">Planos: Todos os planos</p>
+                </div>
+              </div>
+
+              {/* Mercado Livre */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-4 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-yellow-50 dark:bg-yellow-500/5">
+                  <div className="w-12 h-12 rounded-xl border border-yellow-200 dark:border-yellow-500/20 bg-white dark:bg-slate-900 flex items-center justify-center flex-shrink-0 overflow-hidden p-1">
+                    <img src="https://companieslogo.com/img/orig/MELI-ec0c0e4f.png?t=1648156112" alt="Mercado Livre" className="w-full h-full object-contain" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-bold text-gray-900 dark:text-white">Mercado Livre</h3>
+                      {mlConnection ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
+                          <CheckCircle2 className="w-3 h-3" />Conectado
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400">Não conectado</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Publique produtos do minhAi direto no seu perfil do ML</p>
+                  </div>
+                </div>
+                <div className="px-5 py-4">
+                  {mlLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-yellow-500" />
+                    </div>
+                  ) : mlConnection ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                            {mlConnection.seller_nickname || `Seller ${mlConnection.seller_id}`}
                           </p>
-                        )}
-                        {mlConnection.last_token_refresh && (
-                          <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">
-                            Token renovado: {timeAgo(mlConnection.last_token_refresh)}
-                          </p>
-                        )}
+                          {mlConnection.seller_email && (
+                            <p className="text-xs text-emerald-600 dark:text-emerald-400">{mlConnection.seller_email}</p>
+                          )}
+                          {mlConnection.last_token_refresh && (
+                            <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">Token renovado: {timeAgo(mlConnection.last_token_refresh)}</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={disconnectMl}
+                          disabled={mlDisconnecting}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition border border-red-200 dark:border-red-500/20 disabled:opacity-50 flex-shrink-0"
+                        >
+                          {mlDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2Off className="w-4 h-4" />}
+                          Desconectar
+                        </button>
                       </div>
-                      <button
-                        onClick={disconnectMl}
-                        disabled={mlDisconnecting}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition border border-red-200 dark:border-red-500/20 disabled:opacity-50 flex-shrink-0"
-                      >
-                        {mlDisconnecting
-                          ? <Loader2 className="w-4 h-4 animate-spin" />
-                          : <Link2Off className="w-4 h-4" />}
-                        Desconectar
-                      </button>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Gerencie quais produtos publicar em <strong>Vendas → Produtos</strong></p>
                     </div>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
-                      Gerencie quais produtos publicar em <strong>Vendas → Produtos</strong>
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-500/10 rounded-xl border border-amber-200 dark:border-amber-500/20">
-                      <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-amber-700 dark:text-amber-300">
-                        Conecte sua conta do Mercado Livre para publicar produtos automaticamente a partir do seu catálogo minhAi.
-                      </p>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-500/10 rounded-xl border border-amber-200 dark:border-amber-500/20">
+                        <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-amber-700 dark:text-amber-300">
+                          Conecte sua conta do Mercado Livre para publicar produtos automaticamente a partir do seu catálogo minhAi.
+                        </p>
+                      </div>
+                      {companyId && (
+                        <a
+                          href={`/api/ml/authorize?company_id=${companyId}`}
+                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#FFE600] hover:bg-yellow-400 text-gray-900 text-sm font-bold rounded-xl transition shadow-sm"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                          </svg>
+                          Conectar conta do Mercado Livre
+                        </a>
+                      )}
                     </div>
-                    {companyId && (
-                      <a
-                        href={`/api/ml/authorize?company_id=${companyId}`}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#FFE600] hover:bg-yellow-400 text-gray-900 text-sm font-bold rounded-xl transition shadow-sm"
-                      >
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                        </svg>
-                        Conectar conta do Mercado Livre
-                      </a>
-                    )}
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
+
             </div>
           </section>
 

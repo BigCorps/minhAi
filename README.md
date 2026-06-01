@@ -1,14 +1,12 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* Função Entrega com API de entrega lalamove - Parte do endereço precisa ser validada no frontend e não aparece a atualização que aplicamos
-
-* Produtos ML precisam aparecer no cadastro de produtos
+* Validar Função Entrega com API de entrega lalamove / Produtos ML no cadastro de produtos
 
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões - e configurar as edges para funcionar corretamente via MCP pedindo se cobra via Pix ou descontando do saldo.
 
 * site pessoal no webapp como página incial - ícone casa primeiro - com a chamada, transforme seu site em um app facilmente.
 
-* Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota e configuração do produto no Mercado Livre, se ambos configurados. Com tudo pronto, criar Edge para MCP também e tirar a de enviar email.
+* Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota e configuração do produto no Mercado Livre, se ambos configurados. Com tudo pronto, criar Edge para MCP no Whatsapp
 
 * Modo teste com cada etapa como modal e depois gravar vídeo - colocar na landing as 2 opções (vídeo e guiado)
 
@@ -16,19 +14,18 @@
 
 * ChatGPT, Claude e Cursor App MCP já Enviado (AGUARDANDO APROVAÇÃO)
 
-* Artes Instagram: Manus jiuithsu e fofopanda / GPT as 18h amanha
+* Artes Instagram: Manus jiuithsu e fofopanda / GPT
 
-* Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
+* enviar releases e criar LinkedIn
+
+* Sugerir site e IA para Hantars e Salão como parceria
 
 * bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
 
 * página admin em dashboard que aparece apenas para o email que eu escolhi e somente acessível via dashboard/admin e o switch de assistente vira o botão que leva a página de admin. email appminhai@gmail.com com relatorio de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header
 
 * PagAi - Pix com confirmação automática e Bolão entre amigos (Pool).
-
-* enviar releases e criar LinkedIn
-
-* Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app / postotec.app / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
+Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app / postotec.app / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
 - iapos, itend e eai já registrados (para cobranças , atendimento e funcionários IA) - relatório em anexo no email
 
 * Carrossel no footer com 15 empresas que usam a minhAi futuramente

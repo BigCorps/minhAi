@@ -409,7 +409,8 @@ if (od?.status === 'paid') {
 
   // Despachar entregador após pagamento confirmado
   const dispatchDelivery = useCallback(async (pedidoIdParam: string) => {
-    if (tipoEntrega !== 'delivery' || !deliveryQuote || !enderecoDelivery) return;
+    const quoteParaDespacho = deliveryQuote ?? deliveryQuoteExterno ?? null;
+    if (tipoEntrega !== 'delivery' || !quoteParaDespacho || !enderecoDelivery) return;
     try {
       const supabase = createClient();
       const { data: orderData } = await supabase.functions.invoke('lalamove-delivery', {
@@ -417,12 +418,12 @@ if (od?.status === 'paid') {
           action: 'order',
           company_id: companyId,
           pedido_id: pedidoIdParam,
-          quotation_id: deliveryQuote.quotation_id,
           delivery_address: enderecoDelivery,
           cliente_nome: clienteNome || undefined,
           cliente_telefone: clienteTel || undefined,
-          price_cents: deliveryQuote.price_cents,
-          price_original_cents: deliveryQuote.price_original_cents,
+          quotation_id: quoteParaDespacho.quotation_id,
+          price_cents: quoteParaDespacho.price_cents,
+          price_original_cents: quoteParaDespacho.price_original_cents,
         },
       });
       if (orderData?.success) setDeliveryShareLink(orderData.share_link);
@@ -438,8 +439,9 @@ if (od?.status === 'paid') {
       const supabase = createClient();
 
       // Total inclui frete se cliente paga
-      const freteExtra = (tipoEntrega === 'delivery' && deliveryWhoPays === 'cliente' && deliveryQuote)
-        ? deliveryQuote.price_cents / 100
+      const quoteAtivo = deliveryQuote ?? deliveryQuoteExterno ?? null;
+      const freteExtra = (tipoEntrega === 'delivery' && deliveryWhoPays === 'cliente' && quoteAtivo)
+        ? quoteAtivo.price_cents / 100
         : 0;
       const totalFinal = total + freteExtra;
       totalFinalRef.current = totalFinal;
@@ -469,13 +471,13 @@ if (od?.status === 'paid') {
       setPedidoId(pedido.id);
 
       // Salvar dados de delivery no pedido
-      if (tipoEntrega === 'delivery' && deliveryQuote) {
+      if (tipoEntrega === 'delivery' && quoteAtivo) {
         const supabase = createClient();
         await supabase.from('pedidos').update({
           delivery_requested: true,
           delivery_address: enderecoDelivery,
-          delivery_fee_cents: deliveryQuote.price_cents,
-          delivery_fee_original_cents: deliveryQuote.price_original_cents,
+          delivery_fee_cents: quoteAtivo.price_cents,
+          delivery_fee_original_cents: quoteAtivo.price_original_cents,
         }).eq('id', pedido.id);
       }
 
@@ -570,7 +572,7 @@ if (metodo === 'tef_debito' || metodo === 'tef_credito') {
     } catch (err: any) {
       setErro(err?.message || 'Erro ao processar pagamento'); setStep('erro');
     } finally { setLoading(false); }
-  }, [companyId, clienteNome, clienteTel, itens, metodo, total, playText, clear]);
+  }, [companyId, clienteNome, clienteTel, itens, metodo, total, playText, clear, deliveryQuote, deliveryQuoteExterno, tipoEntrega, deliveryWhoPays, enderecoDelivery, dispatchDelivery]);
 
   const handleFinalizar = useCallback(async () => {
   // Verificar se empresa tem NFE ativo
@@ -857,7 +859,7 @@ const handleEmitirCupom = useCallback((pedidoId: string) => {
             <div className={`rounded-lg p-2 space-y-1 ${isDark ? 'bg-white/3' : 'bg-gray-50'}`}>
               <div className="flex justify-between text-xs">
                 <span className={textMuted}>Total</span>
-                <span className="font-bold text-emerald-500">{formatarPreco(total)}</span>
+                <span className="font-bold text-emerald-500">{formatarPreco(totalFinalRef.current || total)}</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className={textMuted}>Banco</span>
@@ -943,7 +945,7 @@ const handleEmitirCupom = useCallback((pedidoId: string) => {
         <div className={`rounded-xl p-3 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
           <div className={`flex justify-between text-sm font-bold ${textPrimary}`}>
             <span>Total</span>
-            <span className="text-violet-500">{formatarPreco(total)}</span>
+            <span className="text-violet-500">{formatarPreco(totalFinalRef.current || total)}</span>
           </div>
         </div>
 
@@ -1038,7 +1040,7 @@ return (
         ? <Smartphone className={`w-10 h-10 ${textSecondary}`} />
         : <CreditCard className={`w-10 h-10 ${textSecondary}`} />}
     </div>
-        <p className="text-2xl font-bold text-emerald-500">{formatarPreco(total)}</p>
+        <p className="text-2xl font-bold text-emerald-500">{formatarPreco(totalFinalRef.current || total)}</p>
         <div className="flex items-center gap-2">
           <span className="w-4 h-4 border-2 border-emerald-500/40 border-t-emerald-500 rounded-full animate-spin" />
           <span className={`text-xs ${textMuted}`}>Aguardando pagamento...</span>

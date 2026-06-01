@@ -946,6 +946,171 @@ function VisaoGeral({
   );
 }
 
+// ─── MlPublicarModal ──────────────────────────────────────────────────────────
+
+function MlPublicarModal({
+  produto,
+  publicando,
+  onPublicar,
+  onClose,
+}: {
+  produto: ProdutoVenda;
+  publicando: boolean;
+  onPublicar: (categoryId: string) => void;
+  onClose: () => void;
+}) {
+  const [categoryId, setCategoryId] = useState(produto.ml_category_id ?? '');
+  const [suggestions, setSuggestions] = useState<{ id: string; name: string }[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (!produto.nome) return;
+    setSearching(true);
+    fetch(`https://api.mercadolibre.com/sites/MLB/domain_discovery/search?q=${encodeURIComponent(produto.nome)}&limit=5`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setSuggestions(data.map((d: any) => ({ id: d.category_id, name: d.category_name })));
+          if (data.length > 0 && !categoryId) setCategoryId(data[0].category_id);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setSearching(false));
+  }, [produto.nome]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/10">
+          <div className="flex items-center gap-3">
+            <img
+              src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.19.5/mercadolibre/logo__large_plus.png"
+              alt="ML"
+              className="h-5 object-contain"
+            />
+            <div>
+              <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+                {produto.ml_item_id ? 'Atualizar no Mercado Livre' : 'Publicar no Mercado Livre'}
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{produto.nome}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition">
+            <X className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Corpo */}
+        <div className="p-5 space-y-4">
+          {/* Preview do produto */}
+          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-white/5 rounded-xl">
+            {produto.imagem_url
+              ? <img src={produto.imagem_url} alt={produto.nome} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+              : <div className="w-12 h-12 rounded-lg bg-gray-200 dark:bg-white/10 flex items-center justify-center flex-shrink-0">
+                  <Package className="w-5 h-5 text-gray-400" />
+                </div>
+            }
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{produto.nome}</p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">{formatarPreco(produto.preco_venda)}</p>
+              {produto.ml_item_id && (
+                <a
+                  href={`https://www.mercadolivre.com.br/p/${produto.ml_item_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-500 hover:underline"
+                >
+                  Ver anúncio ↗
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Categoria */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Categoria no Mercado Livre <span className="text-red-500">*</span>
+            </label>
+            {searching ? (
+              <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Buscando categorias sugeridas...
+              </div>
+            ) : suggestions.length > 0 ? (
+              <div className="space-y-1 mb-2">
+                {suggestions.map(s => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setCategoryId(s.id)}
+                    className={`w-full text-left px-3 py-2 rounded-lg border text-xs transition ${
+                      categoryId === s.id
+                        ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-500/10 text-yellow-800 dark:text-yellow-300 font-semibold'
+                        : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="font-mono text-[10px] text-gray-400 mr-2">{s.id}</span>
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <input
+              type="text"
+              value={categoryId}
+              onChange={e => setCategoryId(e.target.value)}
+              placeholder="Ex: MLB1648 — ou selecione uma sugestão acima"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400 font-mono"
+            />
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Confirme a categoria — o ML pode rejeitar anúncios na categoria errada.
+            </p>
+          </div>
+
+          {/* Aviso imagem */}
+          {!produto.imagem_url && (
+            <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-500/10 rounded-xl border border-amber-200 dark:border-amber-500/20">
+              <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Produto sem imagem. O anúncio será criado sem foto — recomendamos adicionar uma.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-gray-200 dark:border-white/10 flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => onPublicar(categoryId)}
+            disabled={!categoryId.trim() || publicando}
+            className="inline-flex items-center gap-2 px-5 py-2 bg-[#FFE600] hover:bg-yellow-400 text-gray-900 text-sm font-bold rounded-lg transition shadow-sm disabled:opacity-50"
+          >
+            {publicando
+              ? <><Loader2 className="w-4 h-4 animate-spin" />Publicando...</>
+              : produto.ml_item_id
+                ? 'Atualizar anúncio'
+                : 'Publicar no ML'
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Aba: Produtos ────────────────────────────────────────────────────────────
 
 function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnected: boolean }) {
@@ -965,6 +1130,35 @@ function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnecte
   const [opcionaisProduto, setOpcionaisProduto] = useState<ProdutoVenda | null>(null);
   const [csvAberto, setCsvAberto] = useState(false);
   const [produtoDuplicando, setProdutoDuplicando] = useState<ProdutoVenda | null>(null);
+  const [mlModal, setMlModal] = useState<ProdutoVenda | null>(null);
+  const [mlPublicando, setMlPublicando] = useState<string | null>(null);
+
+  async function handlePublicarML(produto: ProdutoVenda, categoryId: string) {
+    setMlPublicando(produto.id);
+    try {
+      const res = await fetch('/api/ml/publicar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          produto_id: produto.id,
+          company_id: companyId,
+          ml_category_id: categoryId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Erro ao publicar');
+      setProdutos(prev => prev.map(p =>
+        p.id === produto.id
+          ? { ...p, ml_item_id: data.ml_item_id, ml_status: data.ml_status, ml_published_at: new Date().toISOString() }
+          : p
+      ));
+      setMlModal(null);
+    } catch (e: any) {
+      alert(e.message ?? 'Erro ao publicar no Mercado Livre');
+    } finally {
+      setMlPublicando(null);
+    }
+  }
 
   const [hasActivePlan, setHasActivePlan] = useState(false);
 
@@ -1262,6 +1456,21 @@ function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnecte
                               d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
                         </button>
+                        {mlConnected && (
+                          <button
+                            onClick={e => { e.stopPropagation(); setMlModal(p); }}
+                            title={p.ml_item_id ? 'Atualizar no Mercado Livre' : 'Publicar no Mercado Livre'}
+                            className={`text-xs px-2 py-1.5 rounded-lg border transition flex items-center gap-1 ${
+                              p.ml_item_id
+                                ? 'border-yellow-300 dark:border-yellow-500/30 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-500/10'
+                                : 'border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5'
+                            }`}>
+                            {mlPublicando === p.id
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.19.5/mercadolibre/logo__large_plus.png" alt="ML" className="h-3 object-contain" />
+                            }
+                          </button>
+                        )}
                         <button
                           onClick={() => { setProdutoEditando(p); setModalAberto('editar'); }}
                           className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition">
@@ -1324,6 +1533,17 @@ function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnecte
                       d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
                 </button>
+                {mlConnected && (
+                  <button
+                    onClick={e => { e.stopPropagation(); setMlModal(p); }}
+                    title={p.ml_item_id ? 'Atualizar no ML' : 'Publicar no ML'}
+                    className="absolute bottom-2 left-2 p-1.5 rounded-lg bg-yellow-50 dark:bg-yellow-500/10 hover:bg-yellow-100 dark:hover:bg-yellow-500/20 transition">
+                    {mlPublicando === p.id
+                      ? <Loader2 className="w-3 h-3 animate-spin text-yellow-600" />
+                      : <img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.19.5/mercadolibre/logo__large_plus.png" alt="ML" className="h-3 object-contain" />
+                    }
+                  </button>
+                )}
               </div>
               <div className="p-3">
                 <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{p.nome}</p>
@@ -1378,6 +1598,14 @@ function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnecte
           onImportado={(qty) => { load(); setCsvAberto(false); }}
         />
       )}
+      {mlModal && (
+        <MlPublicarModal
+          produto={mlModal}
+          publicando={mlPublicando === mlModal.id}
+          onPublicar={(categoryId) => handlePublicarML(mlModal, categoryId)}
+          onClose={() => setMlModal(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1392,10 +1620,44 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
   const [statusFiltro, setStatusFiltro] = useState<StatusPedido>('todos');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [despachando, setDespachando] = useState<string | null>(null);
 
   useEffect(() => {
     load();
   }, [companyId]);
+
+  async function handleDespacharEntregador(pedido: any) {
+    if (!pedido.delivery_share_link) {
+      setDespachando(pedido.id);
+      try {
+        const supabaseLocal = createClient();
+        const { data, error } = await supabaseLocal.functions.invoke('lalamove-delivery', {
+          body: {
+            action: 'order',
+            company_id: companyId,
+            pedido_id: pedido.id,
+            delivery_address: pedido.delivery_address,
+            cliente_nome: pedido.cliente_nome || undefined,
+            cliente_telefone: pedido.cliente_telefone || undefined,
+            quotation_id: '',
+            price_cents: pedido.delivery_fee_cents,
+            price_original_cents: pedido.delivery_fee_original_cents,
+          },
+        });
+        if (data?.success) {
+          setPedidos(prev => prev.map(p =>
+            p.id === pedido.id
+              ? { ...p, delivery_status: 'assigning', delivery_share_link: data.share_link }
+              : p
+          ));
+        }
+      } catch (e) {
+        console.error('Erro ao despachar:', e);
+      } finally {
+        setDespachando(null);
+      }
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -1602,7 +1864,32 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
                         {p.metodo_pagamento ?? '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <StatusBadge status={p.status} />
+                        <div className="flex flex-col gap-1">
+                          <StatusBadge status={p.status} />
+                          {p.delivery_requested && (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight w-fit ${
+                              p.delivery_status === 'completed'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400'
+                                : p.delivery_status === 'picked_up'
+                                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400'
+                                : p.delivery_status === 'on_going'
+                                ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400'
+                                : p.delivery_status === 'assigning'
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+                                : p.delivery_status === 'cancelled'
+                                ? 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400'
+                                : 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400'
+                            }`}>
+                              <Truck className="w-2.5 h-2.5" />
+                              {p.delivery_status === 'completed' ? 'Entregue'
+                                : p.delivery_status === 'picked_up' ? 'Coletado'
+                                : p.delivery_status === 'on_going' ? 'A caminho'
+                                : p.delivery_status === 'assigning' ? 'Buscando motoboy'
+                                : p.delivery_status === 'cancelled' ? 'Entrega cancelada'
+                                : 'Entrega pendente'}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
 
@@ -1637,6 +1924,44 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                               Obs: {p.observacoes}
                             </p>
+                          )}
+
+                          {/* Ações de entrega */}
+                          {p.delivery_requested && (
+                            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-white/10 flex items-center gap-3 flex-wrap">
+                              {p.delivery_share_link ? (
+                                <a
+                                  href={p.delivery_share_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold hover:bg-blue-100 transition"
+                                >
+                                  <Truck className="w-3.5 h-3.5" />
+                                  Acompanhar entrega
+                                </a>
+                              ) : p.status === 'pago' && !p.delivery_status ? (
+                                <button
+                                  onClick={() => handleDespacharEntregador(p)}
+                                  disabled={despachando === p.id}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold hover:bg-emerald-100 transition disabled:opacity-50"
+                                >
+                                  {despachando === p.id
+                                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Despachando...</>
+                                    : <><Truck className="w-3.5 h-3.5" />Chamar entregador</>
+                                  }
+                                </button>
+                              ) : null}
+                              {p.delivery_address && (
+                                <span className="text-xs text-gray-400 dark:text-gray-500">
+                                  📍 {p.delivery_address}
+                                </span>
+                              )}
+                              {p.delivery_fee_cents && (
+                                <span className="text-xs text-gray-400 dark:text-gray-500">
+                                  Frete: {formatarPreco(p.delivery_fee_cents / 100)}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -2602,7 +2927,7 @@ function VendasPageContent() {
             <>
               {/* Tabs */}
               <div className="bg-white dark:bg-slate-900 rounded-2xl shadow border border-gray-100 dark:border-white/5 overflow-hidden">
-                <div className="grid grid-cols-2 sm:flex border-b border-gray-200 dark:border-white/10">
+                <div className="grid grid-cols-2 sm:flex border-b border-gray-200 dark:border-white/10 [&>*:last-child:nth-child(odd)]:col-span-2">
                   {abas.map(({ key, label, icon: Icon }) => (
                     <button
                       key={key}

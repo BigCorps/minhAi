@@ -1,7 +1,5 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* Validar Função Entrega com API de entrega lalamove / Produtos ML no cadastro de produtos
-
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões - e configurar as edges para funcionar corretamente via MCP pedindo se cobra via Pix ou descontando do saldo.
 
 * site pessoal no webapp como página incial - ícone casa primeiro - com a chamada, transforme seu site em um app facilmente.

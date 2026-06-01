@@ -1,12 +1,12 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* Implementar Whatsapp MCP próprio e Submeter App MCP ao ChatGPT e Manus (Claude já Enviado) - página de Integrações em bigcorps1
+* Submeter App MCP ao ChatGPT e Manus (Claude já Enviado) - página de Integrações em bigcorps1
 
-* Função Entrega com API de entrega lalamove - oauth para conectar produtos cadastrados ao ML
+* Função Entrega com API de entrega lalamove e produtos ML
+
+* Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota e configuração do produto no Mercado Livre, se ambos configurados. Com tudo pronto, criar Edge para MCP também e tirar a de enviar email.
 
 * mudar impressão remota para cadastro próprio
-
-* site pessoal no webapp como página incial
 
 * Modo teste com cada etapa como modal e depois gravar vídeo - colocar na landing as 2 opções (vídeo e guiado)
 
@@ -14,11 +14,11 @@
 
 ## IDÉIAS
 
+* site pessoal no webapp como página incial
+
 * Artes Instagram: Manus jiuithsu e fofopanda / GPT as 18h amanha
 
 * Sugerir site e IA para Hiperlimp, Hantars e Salão como parceria
-
-* Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota. E colocar ele na header no lugar do assistente de funções.
 
 * bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
 

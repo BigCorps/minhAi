@@ -2,7 +2,7 @@
 
 * Submeter App MCP ao ChatGPT e Manus (Claude já Enviado)
 
-* Função Entrega com API de entrega lalamove
+* Função Entrega com API de entrega lalamove - Parte do endereço precisa ser validada no frontend e não aparece a atualização que aplicamos
 
 * Produtos ML precisam aparecer no cadastro de produtos
 

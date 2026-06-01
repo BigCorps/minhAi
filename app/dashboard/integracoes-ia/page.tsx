@@ -190,7 +190,7 @@ function IntegracoesDashboardContent() {
         .from('user_profiles')
         .update({
           mcp_whatsapp:            normalized || null,
-          mcp_whatsapp_enabled:    normalized ? mcpWaEnabled : false,
+          mcp_whatsapp_enabled:    !!normalized,
           mcp_whatsapp_company_id: mcpWaCompanyId || null,
         })
         .eq('user_id', mcpWaUserId)

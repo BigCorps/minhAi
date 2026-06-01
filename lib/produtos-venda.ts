@@ -22,10 +22,15 @@ export interface ProdutoVenda {
   estoque_minimo: number;
   controla_estoque: boolean;
   is_active: boolean;
-  is_favorito: boolean;        // ← ADICIONADO
+  is_favorito: boolean;
   display_order: number;
   created_at: string;
   updated_at: string;
+  ml_item_id?: string | null;
+  ml_category_id?: string | null;
+  ml_listing_type?: string | null;
+  ml_status?: string | null;
+  ml_published_at?: string | null;
 }
 
 export interface ProdutoVendaInput {

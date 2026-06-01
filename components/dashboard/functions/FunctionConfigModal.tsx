@@ -3922,6 +3922,7 @@ const PrintNodeConfigForm = ({ settings, onChange, hasActivePlan }: any) => {
   const colorEnabled = settings.print_color_enabled ?? false;
   const priceBW = settings.print_price_bw ?? 0.30;
   const priceColor = settings.print_price_color ?? 0.80;
+  const apiKey = settings.printnode_api_key ?? '';
   const computerId = settings.printnode_computer_id ?? '';
   const printerIdBW = settings.printnode_printer_id_bw ?? '';
   const printerIdColor = settings.printnode_printer_id_color ?? '';
@@ -3947,7 +3948,7 @@ const handleTestConnection = async () => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session?.access_token ?? ''}`,
       },
-      body: JSON.stringify({ computerId }),
+      body: JSON.stringify({ computerId, apiKey }),
     });
 
     if (!response.ok) throw new Error('Erro ao conectar com PrintNode');
@@ -3983,6 +3984,21 @@ const handleTestConnection = async () => {
         </ul>
       </div>
  
+      {/* API Key */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">API Key do PrintNode <span className="text-red-500">*</span></label>
+        <input
+          type="password"
+          value={apiKey}
+          onChange={e => onChange('printnode_api_key', e.target.value)}
+          placeholder="Cole sua API Key aqui"
+          className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+        />
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Encontre em <span className="font-mono">printnode.com</span> → Account → API Keys
+        </p>
+      </div>
+
       {/* Computer ID */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Computer ID <span className="text-red-500">*</span></label>
@@ -3991,7 +4007,7 @@ const handleTestConnection = async () => {
       </div>
  
       {/* Botão Detectar */}
-      {computerId && (
+      {computerId && apiKey && (
         <button type="button" onClick={handleTestConnection} disabled={testingConnection} className={`w-full px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${connectionStatus === 'success' ? 'bg-green-600 text-white' : connectionStatus === 'error' ? 'bg-red-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'} disabled:opacity-50`}>
           {testingConnection ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Testando...</> : connectionStatus === 'success' ? <>✓ Conexão OK!</> : connectionStatus === 'error' ? <>✗ Erro na Conexão</> : '🔍 Detectar Impressoras'}
         </button>

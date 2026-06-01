@@ -4,13 +4,11 @@
 
 * Função Entrega com API de entrega lalamove e produtos ML
 
+* fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões - e configurar as edges para funcionar corretamente via MCP pedindo se cobra via Pix ou descontando do saldo.
+
 * Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota e configuração do produto no Mercado Livre, se ambos configurados. Com tudo pronto, criar Edge para MCP também e tirar a de enviar email.
 
-* mudar impressão remota para cadastro próprio
-
 * Modo teste com cada etapa como modal e depois gravar vídeo - colocar na landing as 2 opções (vídeo e guiado)
-
-* fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões - e configurar as edges para funcionar corretamente via MCP pedindo se cobra via Pix ou descontando do saldo.
 
 ## IDÉIAS
 

@@ -30,6 +30,7 @@ import {
   Clock,
   BarChart2,
   X,
+  Truck,
 } from 'lucide-react';
 
 import type { ProdutoVenda, Pedido, ProdutoVendaInput } from '@/lib/produtos-venda';
@@ -40,7 +41,7 @@ import SecaoFiscalProduto from '@/components/dashboard/vendas/SecaoFiscalProduto
 
 // ─── Tipos locais ─────────────────────────────────────────────────────────────
 
-type Aba = 'visao_geral' | 'produtos' | 'pedidos' | 'pagamentos';
+type Aba = 'visao_geral' | 'produtos' | 'pedidos' | 'pagamentos' | 'entrega';
 
 type StatusPedido = Pedido['status'] | 'todos';
 
@@ -479,7 +480,7 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
             )}
           </div>
 
-{/* ── Mais Vendido (favorito) ── */}
+          {/* ── Mais Vendido (favorito) ── */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
@@ -792,7 +793,7 @@ function VisaoGeral({
     receitaHoje: 0,
   });
   const [loading, setLoading] = useState(true);
-  
+
   const [hasActivePlan, setHasActivePlan] = useState(false);
 
   useEffect(() => {
@@ -947,7 +948,7 @@ function VisaoGeral({
 
 // ─── Aba: Produtos ────────────────────────────────────────────────────────────
 
-function AbaProducts({ companyId }: { companyId: string }) {
+function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnected: boolean }) {
   const supabase = createClient();
   const [produtos, setProdutos] = useState<ProdutoVenda[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1435,11 +1436,11 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
     });
 
   function exportCSV() {
-const headers = ['Data', 'Cliente', 'Vendedor', 'Total', 'Método', 'Status'];
-const rows = filtered.map((p) => [
-  new Date(p.created_at).toLocaleString('pt-BR'),
-  p.cliente_nome ?? '—',
-  p.company_profiles?.nome ?? '—',
+    const headers = ['Data', 'Cliente', 'Vendedor', 'Total', 'Método', 'Status'];
+    const rows = filtered.map((p) => [
+      new Date(p.created_at).toLocaleString('pt-BR'),
+      p.cliente_nome ?? '—',
+      p.company_profiles?.nome ?? '—',
       formatarPreco(p.total),
       p.metodo_pagamento ?? '—',
       p.status,
@@ -1583,11 +1584,11 @@ const rows = filtered.map((p) => [
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
-  {p.company_profiles?.nome
-    ? <span className="text-gray-700 dark:text-gray-300">{p.company_profiles.nome}</span>
-    : <span className="text-gray-300 dark:text-gray-600">—</span>
-  }
-</td>
+                        {p.company_profiles?.nome
+                          ? <span className="text-gray-700 dark:text-gray-300">{p.company_profiles.nome}</span>
+                          : <span className="text-gray-300 dark:text-gray-600">—</span>
+                        }
+                      </td>
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
                         {(p.pedido_itens ?? []).length === 0
                           ? <span className="text-gray-400 dark:text-gray-500 italic text-xs">Venda Rápida</span>
@@ -1667,6 +1668,7 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
   const [salvando, setSalvando] = useState<string | null>(null);
 
   const [hasActivePlan, setHasActivePlan] = useState(false);
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -1679,22 +1681,22 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
       setConfig(data ?? {});
 
       // Verificar plano ativo
-const { data: { user } } = await supabase.auth.getUser();
-if (user) {
-  const { data: credits } = await supabase
-    .from('user_credits')
-    .select('has_active_plan, plan_expires_at')
-    .eq('user_id', user.id)
-    .maybeSingle();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: credits } = await supabase
+          .from('user_credits')
+          .select('has_active_plan, plan_expires_at')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-  setHasActivePlan(
-    credits?.has_active_plan === true &&
-    credits?.plan_expires_at != null &&
-    new Date(credits.plan_expires_at) > new Date()
-  );
-} // ← fecha o if
+        setHasActivePlan(
+          credits?.has_active_plan === true &&
+          credits?.plan_expires_at != null &&
+          new Date(credits.plan_expires_at) > new Date()
+        );
+      }
 
-setLoading(false); // ← fora do if, dentro do load()
+      setLoading(false);
     }
     load();
   }, [companyId]);
@@ -1727,49 +1729,49 @@ setLoading(false); // ← fora do if, dentro do load()
     setSalvando(null);
   }
 
-const tipoAtual = 
-  config.print_auto_type_purchase || 
-  config.print_auto_type_queue || 
-  config.print_auto_type_payment || 
-  config.print_auto_type || 
-  'local';
+  const tipoAtual =
+    config.print_auto_type_purchase ||
+    config.print_auto_type_queue ||
+    config.print_auto_type_payment ||
+    config.print_auto_type ||
+    'local';
 
-async function toggleImpressao(
-  field: 'print_auto_type_purchase' | 'print_auto_type_queue' | 'print_auto_type_payment',
-  ativo: boolean
-) {
-  if (!hasActivePlan) return;
-  const novoValor = ativo ? null : tipoAtual;
-  await supabase
-    .from('companies')
-    .update({ [field]: novoValor })
-    .eq('id', companyId);
-  setConfig(prev => ({ ...prev, [field]: novoValor }));
-}
+  async function toggleImpressao(
+    field: 'print_auto_type_purchase' | 'print_auto_type_queue' | 'print_auto_type_payment',
+    ativo: boolean
+  ) {
+    if (!hasActivePlan) return;
+    const novoValor = ativo ? null : tipoAtual;
+    await supabase
+      .from('companies')
+      .update({ [field]: novoValor })
+      .eq('id', companyId);
+    setConfig(prev => ({ ...prev, [field]: novoValor }));
+  }
 
-async function savePrintAutoType(value: 'local' | 'remota' | 'recibo') {
-  if (!hasActivePlan) return;
+  async function savePrintAutoType(value: 'local' | 'remota' | 'recibo') {
+    if (!hasActivePlan) return;
 
-  const updates: Record<string, any> = { print_auto_type: value };
-  
-  // Atualiza todos os campos que já estão ativos para o novo tipo
-  const campos = [
-    'print_auto_type_purchase',
-    'print_auto_type_queue',
-    'print_auto_type_payment',
-  ] as const;
+    const updates: Record<string, any> = { print_auto_type: value };
 
-  campos.forEach(campo => {
-    if (config[campo]) updates[campo] = value;
-  });
+    // Atualiza todos os campos que já estão ativos para o novo tipo
+    const campos = [
+      'print_auto_type_purchase',
+      'print_auto_type_queue',
+      'print_auto_type_payment',
+    ] as const;
 
-  await supabase
-    .from('companies')
-    .update(updates)
-    .eq('id', companyId);
+    campos.forEach(campo => {
+      if (config[campo]) updates[campo] = value;
+    });
 
-  setConfig(prev => ({ ...prev, ...updates }));
-}
+    await supabase
+      .from('companies')
+      .update(updates)
+      .eq('id', companyId);
+
+    setConfig(prev => ({ ...prev, ...updates }));
+  }
 
   const metodos = [
     {
@@ -2060,12 +2062,371 @@ async function savePrintAutoType(value: 'local' | 'remota' | 'recibo') {
         </div>
       ))}
 
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-slate-800/40">
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            💡 Configure a impressão final nas Funções → Impressão Local / Recibo / Remota (Requer plano Mensal).
-          </p>
+      <div className="px-5 py-3 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-slate-800/40">
+        <p className="text-xs text-gray-400 dark:text-gray-500">
+          💡 Configure a impressão final nas Funções → Impressão Local / Recibo / Remota (Requer plano Mensal).
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Aba: Entrega ─────────────────────────────────────────────────────────────
+
+function AbaEntrega({ companyId }: { companyId: string }) {
+  const supabase = createClient();
+  const [loading, setLoading] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [sucesso, setSucesso] = useState(false);
+  const [config, setConfig] = useState({
+    delivery_enabled: false,
+    delivery_auto_dispatch: true,
+    delivery_who_pays: 'cliente' as 'cliente' | 'empresa',
+    delivery_pickup_address: '',
+    delivery_max_radius_km: '' as string,
+    delivery_min_order_cents: '' as string,
+    delivery_message: '',
+    delivery_schedule: {} as Record<string, { enabled: boolean; open: string; close: string }>,
+  });
+
+  const dias = [
+    { key: 'seg', label: 'Segunda' },
+    { key: 'ter', label: 'Terça' },
+    { key: 'qua', label: 'Quarta' },
+    { key: 'qui', label: 'Quinta' },
+    { key: 'sex', label: 'Sexta' },
+    { key: 'sab', label: 'Sábado' },
+    { key: 'dom', label: 'Domingo' },
+  ];
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const { data } = await supabase
+        .from('companies')
+        .select(`
+          delivery_enabled, delivery_auto_dispatch, delivery_who_pays,
+          delivery_pickup_address, delivery_max_radius_km,
+          delivery_min_order_cents, delivery_message, delivery_schedule
+        `)
+        .eq('id', companyId)
+        .single();
+
+      if (data) {
+        setConfig({
+          delivery_enabled: data.delivery_enabled ?? false,
+          delivery_auto_dispatch: data.delivery_auto_dispatch ?? true,
+          delivery_who_pays: data.delivery_who_pays ?? 'cliente',
+          delivery_pickup_address: data.delivery_pickup_address ?? '',
+          delivery_max_radius_km: data.delivery_max_radius_km?.toString() ?? '',
+          delivery_min_order_cents: data.delivery_min_order_cents
+            ? (data.delivery_min_order_cents / 100).toFixed(2)
+            : '',
+          delivery_message: data.delivery_message ?? '',
+          delivery_schedule: data.delivery_schedule ?? {},
+        });
+      }
+      setLoading(false);
+    }
+    load();
+  }, [companyId]);
+
+  function setDia(key: string, field: 'enabled' | 'open' | 'close', value: any) {
+    setConfig(prev => ({
+      ...prev,
+      delivery_schedule: {
+        ...prev.delivery_schedule,
+        [key]: {
+          enabled: prev.delivery_schedule[key]?.enabled ?? false,
+          open: prev.delivery_schedule[key]?.open ?? '08:00',
+          close: prev.delivery_schedule[key]?.close ?? '18:00',
+          [field]: value,
+        },
+      },
+    }));
+  }
+
+  async function handleSalvar() {
+    setSalvando(true);
+    setSucesso(false);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          delivery_enabled: config.delivery_enabled,
+          delivery_auto_dispatch: config.delivery_auto_dispatch,
+          delivery_who_pays: config.delivery_who_pays,
+          delivery_pickup_address: config.delivery_pickup_address || null,
+          delivery_max_radius_km: config.delivery_max_radius_km
+            ? parseInt(config.delivery_max_radius_km)
+            : null,
+          delivery_min_order_cents: config.delivery_min_order_cents
+            ? Math.round(parseFloat(config.delivery_min_order_cents) * 100)
+            : 0,
+          delivery_message: config.delivery_message || null,
+          delivery_schedule: config.delivery_schedule,
+        })
+        .eq('id', companyId);
+      if (error) throw error;
+      setSucesso(true);
+      setTimeout(() => setSucesso(false), 3000);
+    } catch (e: any) {
+      alert('Erro ao salvar: ' + e.message);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+
+      {/* Toggle principal */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Truck className="w-5 h-5 text-emerald-500" />
+              Oferecer entrega aos clientes
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Quando ativado, o cliente pode escolher delivery no checkout
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setConfig(p => ({ ...p, delivery_enabled: !p.delivery_enabled }))}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+              config.delivery_enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-slate-600'
+            }`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+              config.delivery_enabled ? 'translate-x-6' : 'translate-x-1'
+            }`} />
+          </button>
         </div>
       </div>
+
+      {config.delivery_enabled && (
+        <>
+          {/* Quem paga o frete */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm p-5 space-y-3">
+            <p className="font-semibold text-gray-900 dark:text-white text-sm">Quem paga o frete?</p>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { key: 'cliente', label: 'Cliente paga', desc: 'Frete somado ao total da cobrança' },
+                { key: 'empresa', label: 'Empresa assume', desc: 'Descontado do seu saldo minhAi' },
+              ].map(opt => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setConfig(p => ({ ...p, delivery_who_pays: opt.key as any }))}
+                  className={`p-3 rounded-xl border-2 text-left transition-all ${
+                    config.delivery_who_pays === opt.key
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10'
+                      : 'border-gray-200 dark:border-white/10 hover:border-gray-300'
+                  }`}
+                >
+                  <p className={`text-sm font-semibold ${
+                    config.delivery_who_pays === opt.key
+                      ? 'text-emerald-700 dark:text-emerald-400'
+                      : 'text-gray-900 dark:text-white'
+                  }`}>{opt.label}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{opt.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Despacho */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-gray-900 dark:text-white text-sm">Despacho automático</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Chama o motoboy assim que o pagamento for confirmado.
+                  Se desativado, você despacha manualmente quando o pedido estiver pronto.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfig(p => ({ ...p, delivery_auto_dispatch: !p.delivery_auto_dispatch }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4 ${
+                  config.delivery_auto_dispatch ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-slate-600'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  config.delivery_auto_dispatch ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Endereço de coleta */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm p-5 space-y-3">
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-white text-sm">Endereço de coleta</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Onde o motoboy vai buscar o pedido. Se vazio, usa o endereço comercial cadastrado.
+              </p>
+            </div>
+            <input
+              type="text"
+              value={config.delivery_pickup_address}
+              onChange={e => setConfig(p => ({ ...p, delivery_pickup_address: e.target.value }))}
+              placeholder="Rua, número, bairro, cidade..."
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+
+          {/* Limites */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm p-5 space-y-4">
+            <p className="font-semibold text-gray-900 dark:text-white text-sm">Limites</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  Raio máximo (km)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={config.delivery_max_radius_km}
+                  onChange={e => setConfig(p => ({ ...p, delivery_max_radius_km: e.target.value }))}
+                  placeholder="Ex: 10 (vazio = sem limite)"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  Pedido mínimo (R$)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={config.delivery_min_order_cents}
+                  onChange={e => setConfig(p => ({ ...p, delivery_min_order_cents: e.target.value }))}
+                  placeholder="Ex: 30.00 (vazio = sem mínimo)"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Horários */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm p-5 space-y-4">
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-white text-sm">Horários de entrega</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Deixe todos desativados para aceitar entregas a qualquer horário.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {dias.map(({ key, label }) => {
+                const dia = config.delivery_schedule[key];
+                const enabled = dia?.enabled ?? false;
+                return (
+                  <div key={key} className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                    enabled
+                      ? 'border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5'
+                      : 'border-gray-100 dark:border-white/5'
+                  }`}>
+                    <button
+                      type="button"
+                      onClick={() => setDia(key, 'enabled', !enabled)}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${
+                        enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-slate-600'
+                      }`}
+                    >
+                      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                        enabled ? 'translate-x-4' : 'translate-x-0.5'
+                      }`} />
+                    </button>
+                    <span className={`text-sm w-20 flex-shrink-0 ${
+                      enabled ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'
+                    }`}>{label}</span>
+                    {enabled && (
+                      <div className="flex items-center gap-2 flex-1">
+                        <input
+                          type="time"
+                          value={dia?.open ?? '08:00'}
+                          onChange={e => setDia(key, 'open', e.target.value)}
+                          className="px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                        <span className="text-xs text-gray-400">até</span>
+                        <input
+                          type="time"
+                          value={dia?.close ?? '18:00'}
+                          onChange={e => setDia(key, 'close', e.target.value)}
+                          className="px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Mensagem WhatsApp */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm p-5 space-y-3">
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                Mensagem ao cliente (WhatsApp)
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Enviada quando o motoboy aceitar a corrida. Use <code className="bg-gray-100 dark:bg-white/10 px-1 rounded">{'{link}'}</code> para inserir o link de rastreio.
+              </p>
+            </div>
+            <textarea
+              rows={3}
+              value={config.delivery_message}
+              onChange={e => setConfig(p => ({ ...p, delivery_message: e.target.value }))}
+              placeholder="Seu pedido saiu para entrega! Acompanhe em tempo real: {link}"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            />
+          </div>
+
+          {/* Info markup */}
+          <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">
+            <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              O frete é calculado em tempo real pela Lalamove. A minhAi aplica uma taxa de conveniência
+              de <strong>50%</strong> sobre o valor da corrida. Exemplo: corrida R$ 10,00 → cliente paga R$ 15,00.
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* Botão salvar */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSalvar}
+          disabled={salvando || sucesso}
+          className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition shadow-sm disabled:opacity-60"
+        >
+          {salvando ? (
+            <><Loader2 className="w-4 h-4 animate-spin" />Salvando...</>
+          ) : sucesso ? (
+            <><CheckCircle2 className="w-4 h-4" />Salvo!</>
+          ) : (
+            <><Save className="w-4 h-4" />Salvar configurações</>
+          )}
+        </button>
+        {sucesso && (
+          <p className="text-sm text-emerald-600 dark:text-emerald-400">
+            Configurações salvas com sucesso.
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -2077,6 +2438,7 @@ function VendasPageContent() {
   const supabase = createClient();
   const [hasActivePlan, setHasActivePlan] = useState(false);
   const [isVendas, setIsVendas] = useState(false);
+  const [mlConnected, setMlConnected] = useState<boolean | null>(null);
 
   useEffect(() => {
     async function checkPlan() {
@@ -2111,8 +2473,20 @@ function VendasPageContent() {
       setIsVendas(data?.assistant_type === 'vendas');
     }
 
+    async function checkMlConnection() {
+      if (!companyId) return;
+      const { data } = await supabase
+        .from('ml_connections')
+        .select('id')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .maybeSingle();
+      setMlConnected(!!data);
+    }
+
     checkPlan();
     checkAssistantType();
+    checkMlConnection();
   }, [supabase, companyId]);
 
   const abas: { key: Aba; label: string; icon: any }[] = [
@@ -2120,6 +2494,7 @@ function VendasPageContent() {
     { key: 'produtos',    label: 'Produtos',    icon: Package },
     { key: 'pedidos',     label: 'Pedidos',     icon: ClipboardList },
     { key: 'pagamentos',  label: 'Pagamentos',  icon: ShoppingCart },
+    { key: 'entrega',     label: 'Entrega',     icon: Truck },
   ];
 
   return (
@@ -2138,6 +2513,34 @@ function VendasPageContent() {
                 )}
               </p>
             </div>
+            {companyId && mlConnected !== null && (
+              <a
+                href="/dashboard/integracoes-ia"
+                title="Gerenciar integração com Mercado Livre"
+                className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition flex-shrink-0 ${
+                  mlConnected
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
+                    : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10'
+                }`}
+              >
+                <img
+                  src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.19.5/mercadolibre/logo__large_plus.png"
+                  alt="ML"
+                  className="h-4 object-contain"
+                />
+                {mlConnected ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                    Conectado
+                  </>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                    Conectar ML
+                  </>
+                )}
+              </a>
+            )}
           </div>
 
           {/* Modo Vendas */}
@@ -2221,14 +2624,20 @@ function VendasPageContent() {
                       onIrParaPedidos={() => setAba('pedidos')}
                     />
                   )}
-                  {aba === 'produtos' && <AbaProducts companyId={companyId} />}
+                  {aba === 'produtos' && (
+                    <AbaProducts
+                      companyId={companyId}
+                      mlConnected={mlConnected ?? false}
+                    />
+                  )}
                   {aba === 'pedidos' && (
-  <AbaPedidos 
-    companyId={companyId} 
-    hasActivePlan={hasActivePlan} 
-  />
-)}
+                    <AbaPedidos
+                      companyId={companyId}
+                      hasActivePlan={hasActivePlan}
+                    />
+                  )}
                   {aba === 'pagamentos' && <AbaPagamentos companyId={companyId} />}
+                  {aba === 'entrega'    && <AbaEntrega    companyId={companyId} />}
                 </div>
               </div>
             </>

@@ -2,7 +2,9 @@
 
 * Submeter App MCP ao ChatGPT e Manus (Claude já Enviado)
 
-* Função Entrega com API de entrega lalamove e produtos ML
+* Função Entrega com API de entrega lalamove
+
+* Produtos ML precisam aparecer no cadastro de produtos
 
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões - e configurar as edges para funcionar corretamente via MCP pedindo se cobra via Pix ou descontando do saldo.
 

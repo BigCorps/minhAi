@@ -1,39 +1,20 @@
 // app/mcp/authorize/page.tsx
-// Tela OAuth do MCP — login com email/senha ou Google
-// Mesma identidade visual do login principal do minhAi
-
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams }               from 'next/navigation'
 import { createBrowserClient }           from '@supabase/ssr'
 import Image                             from 'next/image'
-import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, Loader2, AlertCircle, Coins, CalendarDays, Search, Mail, Link } from 'lucide-react'
 
 function AuthorizeContent() {
   const searchParams = useSearchParams()
 
   const redirectUri         = searchParams.get('redirect_uri') ?? ''
-  const state               = searchParams.get('state') ?? ''
-  const clientId            = searchParams.get('client_id') ?? ''
-  const codeChallenge       = searchParams.get('code_challenge') ?? ''
+  const state               = searchParams.get('state')         ?? ''
+  const clientIdParam       = searchParams.get('client_id')     ?? ''
+  const codeChallenge       = searchParams.get('code_challenge')        ?? ''
   const codeChallengeMethod = searchParams.get('code_challenge_method') ?? 'S256'
-  const clientDisplayName   = searchParams.get('client_display_name') ?? ''
-
-  // Detectar o cliente correto: usa client_display_name (DCR) ou fallback pelo client_id
-  function resolveClientName(displayName: string, id: string): string {
-    const d = displayName.toLowerCase()
-    const i = id.toLowerCase()
-    if (d.includes('claude') || d.includes('anthropic')) return 'Claude'
-    if (d.includes('openai') || d.includes('chatgpt') || d.includes('gpt')) return 'ChatGPT'
-    if (d.includes('cursor')) return 'Cursor'
-    if (d.includes('manus')) return 'Manus'
-    if (displayName) return displayName // usar o nome real do cliente DCR
-    // fallback pelo client_id
-    if (i.includes('openai')) return 'ChatGPT'
-    return 'Claude'
-  }
-  const clientName = resolveClientName(clientDisplayName, clientId)
 
   const [step,            setStep]            = useState<'login' | 'confirm'>('login')
   const [loading,         setLoading]         = useState(false)
@@ -53,7 +34,6 @@ function AuthorizeContent() {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     setTheme(isDark ? 'dark' : 'light')
 
-    // Voltou do Google OAuth já autenticado — pular direto para confirmação
     const googleDone = searchParams.get('google_done')
     if (googleDone === '1') {
       supabase.auth.getUser().then(({ data }) => {
@@ -62,7 +42,6 @@ function AuthorizeContent() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Login com email/senha ────────────────────────────────────────────────────
   async function handleEmailLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
@@ -71,10 +50,8 @@ function AuthorizeContent() {
       const formData = new FormData(e.currentTarget)
       const email    = formData.get('email') as string
       const password = formData.get('password') as string
-
       const { data, error: loginErr } = await supabase.auth.signInWithPassword({ email, password })
       if (loginErr) throw loginErr
-
       await loadCompanies(data.user!.id)
     } catch (err: any) {
       setError(err.message ?? 'Erro ao fazer login')
@@ -83,25 +60,19 @@ function AuthorizeContent() {
     }
   }
 
-  // ── Login com Google ─────────────────────────────────────────────────────────
   async function handleGoogleLogin() {
     setLoading(true)
     setError('')
     try {
-      // Salva os params MCP em cookie (sobrevive ao redirect do Google)
-      // sessionStorage não funciona pois o Google redireciona para outra origem
       const mcpParams = encodeURIComponent(JSON.stringify({
         redirect_uri: redirectUri,
-        state:        state,
-        client_id:    clientId,
+        state,
+        client_id: clientIdParam,
       }))
       document.cookie = `mcp_oauth_params=${mcpParams}; path=/; max-age=300; SameSite=Lax; Secure`
-
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
       })
       if (oauthErr) throw oauthErr
     } catch (err: any) {
@@ -110,13 +81,12 @@ function AuthorizeContent() {
     }
   }
 
-  // ── Carregar empresas após autenticação ──────────────────────────────────────
   async function loadCompanies(userId: string) {
     const { data: comps } = await supabase
       .from('companies')
       .select('id, name, slug, assistant_type')
       .eq('user_id', userId)
-      .eq('assistant_type', 'smart')   // MCP só funciona no plano Smart (cobra créditos)
+      .eq('assistant_type', 'smart')
       .order('created_at', { ascending: true })
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -126,23 +96,18 @@ function AuthorizeContent() {
     setStep('confirm')
   }
 
-  // ── Autorizar acesso ao assistente selecionado ───────────────────────────────
   async function handleAuthorize() {
     if (!selectedCompany || !user) return
     setLoading(true)
     setError('')
     try {
-      // Determinar o client_name final para armazenar
-      // Prioridade: displayName original > clientName resolvido
-      const clientNameToStore = (clientDisplayName || clientName).toLowerCase()
-
       const res = await fetch('/api/mcp/oauth/code', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id:               user.id,
           company_id:            selectedCompany,
-          client_name:           clientNameToStore,
+          client_name:           'mcp',
           scopes:                ['tools'],
           code_challenge:        codeChallenge || undefined,
           code_challenge_method: codeChallengeMethod || 'S256',
@@ -153,10 +118,9 @@ function AuthorizeContent() {
       if (!code) throw new Error('Falha ao gerar código de autorização')
 
       const callbackUrl = new URL(redirectUri)
-      callbackUrl.searchParams.set('code', code)
+      callbackUrl.searchParams.set('code',  code)
       callbackUrl.searchParams.set('state', state)
       window.location.href = callbackUrl.toString()
-
     } catch (err: any) {
       setError(err.message ?? 'Erro ao autorizar')
       setLoading(false)
@@ -164,9 +128,8 @@ function AuthorizeContent() {
   }
 
   const selectedComp = companies.find(c => c.id === selectedCompany)
+  const isDark       = theme === 'dark'
 
-  // ── Estilos reutilizáveis ────────────────────────────────────────────────────
-  const isDark   = theme === 'dark'
   const inputCls = `w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
     isDark
       ? 'bg-slate-700/50 border border-white/10 text-white placeholder-white/40'
@@ -185,9 +148,7 @@ function AuthorizeContent() {
       <button
         onClick={() => setTheme(isDark ? 'light' : 'dark')}
         className={`fixed top-6 right-6 z-50 p-3 rounded-full backdrop-blur-xl border transition-all hover:scale-110 ${
-          isDark
-            ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-            : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+          isDark ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
         }`}
       >
         {isDark ? (
@@ -203,30 +164,19 @@ function AuthorizeContent() {
 
       <div className="max-w-md w-full">
         <div className={`rounded-2xl shadow-xl p-6 sm:p-8 transition-colors ${
-          isDark
-            ? 'bg-slate-800/50 backdrop-blur-xl border border-white/10'
-            : 'bg-white'
+          isDark ? 'bg-slate-800/50 backdrop-blur-xl border border-white/10' : 'bg-white'
         }`}>
 
-          {/* Header — logo centralizado */}
+          {/* Header — só logo minhAi */}
           <div className="text-center mb-6 sm:mb-8">
-            <div className="flex justify-center mb-3">
-              <Image
-                src="/logo.png"
-                alt="minhAi"
-                width={160}
-                height={82}
-                className="rounded-xl"
-                priority
-              />
+            <div className="flex justify-center mb-4">
+              <Image src="/logo.png" alt="minhAi" width={140} height={72} className="rounded-xl" priority />
             </div>
-            <h1 className={`text-2xl font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {step === 'login' ? `Conectar ao ${clientName}` : `Autorizar ${clientName}`}
+            <h1 className={`text-xl font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {step === 'login' ? 'Conectar MCP' : 'Autorizar Acesso MCP'}
             </h1>
-            <p className={isDark ? 'text-white/60 text-sm' : 'text-gray-500 text-sm'}>
-              {step === 'login'
-                ? 'Entre com sua conta minhAi para continuar'
-                : 'Selecione qual assistente conectar'}
+            <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+              {step === 'login' ? 'Entre com sua conta minhAi para continuar' : 'Selecione qual assistente conectar'}
             </p>
           </div>
 
@@ -238,17 +188,14 @@ function AuthorizeContent() {
             </div>
           )}
 
-          {/* ── STEP: Login ─────────────────────────────────────────────────────── */}
+          {/* ── STEP: Login ── */}
           {step === 'login' && (
             <>
-              {/* Botão Google */}
               <button
                 onClick={handleGoogleLogin}
                 disabled={loading}
                 className={`w-full px-6 py-3 rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-3 mb-4 ${
-                  isDark
-                    ? 'bg-slate-700/50 border border-white/10 hover:bg-slate-700/70'
-                    : 'border border-gray-300 hover:bg-gray-50'
+                  isDark ? 'bg-slate-700/50 border border-white/10 hover:bg-slate-700/70' : 'border border-gray-300 hover:bg-gray-50'
                 }`}
               >
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
@@ -257,85 +204,60 @@ function AuthorizeContent() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                <span className={`font-medium ${isDark ? 'text-white/90' : 'text-gray-700'}`}>
-                  Continuar com Google
-                </span>
+                <span className={`font-medium ${isDark ? 'text-white/90' : 'text-gray-700'}`}>Continuar com Google</span>
               </button>
 
-              {/* Divisor */}
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
                   <div className={`w-full border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`} />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className={`px-2 ${isDark ? 'bg-slate-800/50 text-white/40' : 'bg-white text-gray-500'}`}>
-                    ou use seu e-mail
-                  </span>
+                  <span className={`px-2 ${isDark ? 'bg-slate-800/50 text-white/40' : 'bg-white text-gray-500'}`}>ou use seu e-mail</span>
                 </div>
               </div>
 
-              {/* Formulário email/senha */}
               <form onSubmit={handleEmailLogin} className="space-y-4">
                 <div>
                   <label className={labelCls}>E-mail</label>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    placeholder="seu@email.com"
-                    className={inputCls}
-                  />
+                  <input type="email" name="email" required placeholder="seu@email.com" className={inputCls} />
                 </div>
                 <div>
                   <label className={labelCls}>Senha</label>
                   <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      name="password"
-                      required
-                      placeholder="••••••••"
-                      className={inputCls}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
+                    <input type={showPassword ? 'text' : 'password'} name="password" required placeholder="••••••••" className={inputCls} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2"
-                >
+                <button type="submit" disabled={loading} className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2">
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar'}
                 </button>
               </form>
             </>
           )}
 
-          {/* ── STEP: Confirmar empresa ──────────────────────────────────────────── */}
+          {/* ── STEP: Confirmar ── */}
           {step === 'confirm' && (
             <div>
-              {/* Permissões */}
               <div className={`rounded-xl p-4 mb-5 ${isDark ? 'bg-slate-700/50 border border-white/10' : 'bg-blue-50 border border-blue-100'}`}>
                 <p className={`text-sm mb-3 font-medium ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
-                  O <strong className={isDark ? 'text-white' : 'text-gray-900'}>{clientName}</strong> terá acesso a:
+                  O agente MCP terá acesso a:
                 </p>
                 {[
-                  '💰 Gerar PIX e Link de Pagamento',
-                  '📅 Agendar e ver compromissos',
-                  '🔍 Consultas (CNPJ, CPF, CEP, Placa)',
-                  '📧 Enviar emails e notas fiscais',
-                  '🔗 QR Codes, câmbio e rastreios',
+                  { icon: <Coins        className="w-4 h-4 shrink-0" />, label: 'Gerar PIX e Link de Pagamento'     },
+                  { icon: <CalendarDays className="w-4 h-4 shrink-0" />, label: 'Agendar e ver compromissos'        },
+                  { icon: <Search       className="w-4 h-4 shrink-0" />, label: 'Consultas (CNPJ, CPF, CEP, Placa)' },
+                  { icon: <Mail         className="w-4 h-4 shrink-0" />, label: 'Enviar emails e notas fiscais'     },
+                  { icon: <Link         className="w-4 h-4 shrink-0" />, label: 'QR Codes, câmbio e rastreios'      },
                 ].map((item, i) => (
-                  <p key={i} className={`text-sm py-1 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>{item}</p>
+                  <div key={i} className={`flex items-center gap-2 py-1 text-sm ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
+                    <span className={isDark ? 'text-white/40' : 'text-gray-400'}>{item.icon}</span>
+                    {item.label}
+                  </div>
                 ))}
               </div>
 
-              {/* Seleção de empresa */}
               {companies.length === 0 && (
                 <div className={`rounded-xl p-4 mb-5 text-sm ${isDark ? 'bg-amber-900/20 border border-amber-500/30 text-amber-300' : 'bg-amber-50 border border-amber-200 text-amber-700'}`}>
                   <p className="font-semibold mb-1">⚠️ Nenhum assistente Smart encontrado</p>
@@ -351,17 +273,11 @@ function AuthorizeContent() {
               {companies.length > 1 && (
                 <div className="mb-4">
                   <label className={labelCls}>Qual assistente conectar?</label>
-                  <select
-                    value={selectedCompany}
-                    onChange={e => setSelectedCompany(e.target.value)}
-                    className={inputCls}
-                  >
-                    {companies.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                  <select value={selectedCompany} onChange={e => setSelectedCompany(e.target.value)} className={inputCls}>
+                    {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   <p className={`text-xs mt-2 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-                    Apenas assistentes Smart são exibidos. Assistentes na versão Vendas não consomem créditos e não são compatíveis com MCP.
+                    Apenas assistentes Smart são exibidos. Assistentes na versão Vendas não são compatíveis com MCP.
                   </p>
                 </div>
               )}
@@ -377,15 +293,13 @@ function AuthorizeContent() {
                 disabled={loading || !selectedCompany}
                 className="w-full px-6 py-3 bg-[#b0cb1f] hover:bg-[#8ca214] text-white rounded-lg font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2 mb-3"
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `Autorizar ${clientName}`}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Autorizar Acesso'}
               </button>
 
               <button
                 onClick={() => { setStep('login'); setUser(null); setCompanies([]) }}
                 className={`w-full py-2.5 text-sm rounded-lg border transition ${
-                  isDark
-                    ? 'border-white/10 text-white/40 hover:text-white/60 hover:bg-white/5'
-                    : 'border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  isDark ? 'border-white/10 text-white/40 hover:text-white/60 hover:bg-white/5' : 'border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 Voltar
@@ -393,7 +307,6 @@ function AuthorizeContent() {
             </div>
           )}
 
-          {/* Rodapé */}
           <p className={`text-xs text-center mt-6 leading-relaxed ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
             Seus créditos serão consumidos normalmente por cada ação executada.
             <br />

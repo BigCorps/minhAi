@@ -2409,27 +2409,28 @@ function AbaEntrega({ companyId }: { companyId: string }) {
   </div>
 )}
 
-      {/* Botão salvar */}
-      <div className="flex items-center justify-end gap-3"
-        <button
-          onClick={handleSalvar}
-          disabled={salvando || sucesso}
-          className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition shadow-sm disabled:opacity-60"
-        >
-          {salvando ? (
-            <><Loader2 className="w-4 h-4 animate-spin" />Salvando...</>
-          ) : sucesso ? (
-            <><CheckCircle2 className="w-4 h-4" />Salvo!</>
-          ) : (
-            <><Save className="w-4 h-4" />Salvar configurações</>
-          )}
-        </button>
-        {sucesso && (
-          <p className="text-sm text-emerald-600 dark:text-emerald-400">
-            Configurações salvas com sucesso.
-          </p>
-        )}
-      </div>
+{/* Botão salvar */}
+<div className="flex items-center justify-end gap-3">
+  <button
+    onClick={handleSalvar}
+    disabled={salvando || sucesso}
+    className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition shadow-sm disabled:opacity-60"
+  >
+    {salvando ? (
+      <><Loader2 className="w-4 h-4 animate-spin" />Salvando...</>
+    ) : sucesso ? (
+      <><CheckCircle2 className="w-4 h-4" />Salvo!</>
+    ) : (
+      <><Save className="w-4 h-4" />Salvar configurações</>
+    )}
+  </button>
+
+  {sucesso && (
+    <p className="text-sm text-emerald-600 dark:text-emerald-400">
+      Configurações salvas com sucesso.
+    </p>
+  )}
+</div>
     </div>
   );
 }

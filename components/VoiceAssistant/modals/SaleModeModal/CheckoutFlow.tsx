@@ -640,16 +640,93 @@ const handleEmitirCupom = useCallback((pedidoId: string) => {
           </>
         )}
 
-        <div className={`rounded-xl p-3 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
-          <div className={`flex justify-between text-sm font-bold ${textPrimary}`}>
-            <span>Total a pagar</span>
-            <span className="text-emerald-500">{formatarPreco(total)}</span>
+        {/* Frete — só aparece se delivery e empresa configurada */}
+        {tipoEntrega === 'delivery' && deliveryEnabled && (
+          <div className={`rounded-xl p-3 border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-xs font-medium ${textSecondary}`}>Frete (Lalamove)</span>
+              {!deliveryQuote && !deliveryLoading && (
+                <button
+                  onClick={handleCalcularFrete}
+                  disabled={!enderecoDelivery?.trim()}
+                  className="text-xs px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition-all disabled:opacity-40"
+                >
+                  Calcular
+                </button>
+              )}
+              {deliveryLoading && (
+                <span className="flex items-center gap-1.5 text-xs text-emerald-500">
+                  <span className="w-3 h-3 border border-emerald-500/40 border-t-emerald-500 rounded-full animate-spin" />
+                  Calculando...
+                </span>
+              )}
+              {deliveryQuote && !deliveryLoading && (
+                <button
+                  onClick={handleCalcularFrete}
+                  className={`text-xs ${textMuted} hover:underline`}
+                >
+                  Recalcular
+                </button>
+              )}
+            </div>
+
+            {deliveryError && (
+              <p className="text-xs text-red-400 mt-1">{deliveryError}</p>
+            )}
+
+            {deliveryQuote && (
+              <div className="space-y-1">
+                <div className={`flex justify-between text-xs ${textSecondary}`}>
+                  <span>Produtos</span>
+                  <span>{formatarPreco(total)}</span>
+                </div>
+                <div className={`flex justify-between text-xs ${textSecondary}`}>
+                  <span>
+                    Frete
+                    {deliveryQuote.eta_minutes && (
+                      <span className={`ml-1 ${textMuted}`}>~{deliveryQuote.eta_minutes} min</span>
+                    )}
+                  </span>
+                  <span className="text-emerald-500 font-semibold">
+                    {deliveryWhoPays === 'empresa' ? 'Grátis' : `+ ${formatarPreco(deliveryQuote.price_cents / 100)}`}
+                  </span>
+                </div>
+                <div className={`flex justify-between text-sm font-bold pt-1 border-t ${isDark ? 'border-white/10' : 'border-gray-200'} ${textPrimary}`}>
+                  <span>Total</span>
+                  <span className="text-emerald-500">
+                    {formatarPreco(total + (deliveryWhoPays === 'cliente' ? deliveryQuote.price_cents / 100 : 0))}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {!deliveryQuote && !deliveryLoading && !deliveryError && enderecoDelivery && (
+              <p className={`text-xs ${textMuted}`}>
+                Endereço: {enderecoDelivery}
+              </p>
+            )}
           </div>
-        </div>
+        )}
+
+        {/* Total simples — quando não é delivery */}
+        {tipoEntrega !== 'delivery' && (
+          <div className={`rounded-xl p-3 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
+            <div className={`flex justify-between text-sm font-bold ${textPrimary}`}>
+              <span>Total a pagar</span>
+              <span className="text-emerald-500">{formatarPreco(total)}</span>
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-2">
           <button onClick={onVoltar ?? onClose} className={btnSecondary}>Voltar</button>
-          
-          <button onClick={() => setStep('pagamento')} className={btnPrimary}>Continuar →</button>
+          <button
+            onClick={() => setStep('pagamento')}
+            disabled={tipoEntrega === 'delivery' && deliveryEnabled && !deliveryQuote}
+            className={btnPrimary + (tipoEntrega === 'delivery' && deliveryEnabled && !deliveryQuote ? ' opacity-50 cursor-not-allowed' : '')}
+          >
+            Continuar →
+          </button>
         </div>
       </div>
 

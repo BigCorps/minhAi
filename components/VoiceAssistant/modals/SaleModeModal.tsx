@@ -106,7 +106,7 @@ function SaleModeInner({
     setTheme(effectiveTheme === 'dark' ? 'light' : 'dark');
   }, [effectiveTheme, setTheme]);
 
-  const { totalItens, addItem } = useCart();
+  const { totalItens, total: totalCarrinho, addItem } = useCart();
 
   const [produtos, setProdutos] = useState<ProdutoVenda[]>([]);
   const [categorias, setCategorias] = useState<string[]>([]);
@@ -121,6 +121,15 @@ function SaleModeInner({
   const [numeroMesa, setNumeroMesa] = useState('');
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
   const [deliveryWhoPays, setDeliveryWhoPays] = useState<'cliente' | 'empresa'>('cliente');
+  const [deliveryQuote, setDeliveryQuote] = useState<{
+    quotation_id: string;
+    price_cents: number;
+    price_original_cents: number;
+    price_brl: string;
+    eta_minutes: number | null;
+  } | null>(null);
+  const [deliveryQuoteLoading, setDeliveryQuoteLoading] = useState(false);
+  const [deliveryQuoteError, setDeliveryQuoteError] = useState<string | null>(null);
   const [isPortrait, setIsPortrait] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [metodosAtivos, setMetodosAtivos] = useState<string[]>([]);
@@ -249,10 +258,37 @@ useEffect(() => {
     setShowEntrega(true);
   }, [totalItens]);
 
-  const handleConfirmarEntrega = useCallback(() => {
-    setShowEntrega(false);
-    setShowCheckout(true);
-  }, []);
+  const handleCalcularFreteEAvancar = useCallback(async () => {
+    if (tipoEntrega !== 'delivery' || !deliveryEnabled) {
+      setShowEntrega(false);
+      setShowCheckout(true);
+      return;
+    }
+
+    setDeliveryQuoteLoading(true);
+    setDeliveryQuoteError(null);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.functions.invoke('lalamove-delivery', {
+        body: {
+          action: 'quote',
+          company_id: companyId,
+          delivery_address: enderecoDelivery,
+          order_total_cents: Math.round(totalCarrinho * 100),
+        },
+      });
+      if (error || !data?.success) throw new Error(data?.error ?? 'Erro ao calcular frete');
+      setDeliveryQuote(data);
+      setShowEntrega(false);
+      setShowCheckout(true);
+    } catch (e: any) {
+      setDeliveryQuoteError(e.message);
+    } finally {
+      setDeliveryQuoteLoading(false);
+    }
+  }, [companyId, tipoEntrega, deliveryEnabled, enderecoDelivery]);
+
+  const handleConfirmarEntrega = handleCalcularFreteEAvancar;
 
   function getObservacaoEntrega(): string | null {
     if (tipoEntrega === 'delivery') return `Delivery: ${enderecoDelivery}`;
@@ -591,20 +627,30 @@ useEffect(() => {
           </div>
         )}
 
+        {deliveryQuoteError && (
+          <div className="p-3 rounded-xl text-xs"
+            style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: '#f87171' }}>
+            {deliveryQuoteError}
+          </div>
+        )}
+
         <div className="flex gap-3 pt-2">
           <button onClick={() => setShowEntrega(false)}
             className="flex-1 py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-opacity hover:opacity-80"
             style={{ backgroundColor: entregaBgSec, color: entregaText }}>
             <ArrowLeft className="w-4 h-4" /> Voltar
           </button>
-          <button onClick={handleConfirmarEntrega} disabled={!podeAvancarEntrega}
+          <button onClick={handleConfirmarEntrega} disabled={!podeAvancarEntrega || deliveryQuoteLoading}
             className="flex-1 py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2"
             style={{
               backgroundColor: podeAvancarEntrega ? entregaAccent : entregaBorder,
               color:           podeAvancarEntrega ? '#fff' : entregaMuted,
               cursor:          podeAvancarEntrega ? 'pointer' : 'not-allowed',
             }}>
-            Ir para pagamento <ArrowRight className="w-4 h-4" />
+            {deliveryQuoteLoading
+              ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Calculando frete...</>
+              : <>Ir para pagamento <ArrowRight className="w-4 h-4" /></>
+            }
           </button>
         </div>
       </div>
@@ -632,6 +678,7 @@ useEffect(() => {
           enderecoDelivery={enderecoDelivery}
           deliveryEnabled={deliveryEnabled}
           deliveryWhoPays={deliveryWhoPays}
+          deliveryQuoteExterno={deliveryQuote}
         />
         <button
           onClick={() => setShowCheckout(false)}

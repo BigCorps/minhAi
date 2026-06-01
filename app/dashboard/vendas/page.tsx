@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
@@ -946,6 +946,111 @@ function VisaoGeral({
   );
 }
 
+// ─── CategorySearch ───────────────────────────────────────────────────────────
+
+function CategorySearch({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<{ id: string; name: string }[]>([]);
+  const [searching, setSearching] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value;
+    setQuery(val);
+
+    // Se parece um ID de categoria (MLB + números), usa direto
+    if (/^MLB\d+$/i.test(val.trim())) {
+      onChange(val.trim().toUpperCase());
+      setResults([]);
+      return;
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (val.length < 3) { setResults([]); return; }
+
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(
+          `https://api.mercadolibre.com/sites/MLB/domain_discovery/search?q=${encodeURIComponent(val)}&limit=8`
+        )
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          const withNames = await Promise.all(
+            data.map(async (d: any) => {
+              try {
+                const catRes = await fetch(`https://api.mercadolibre.com/categories/${d.category_id}`)
+                const catData = await catRes.json()
+                return { id: d.category_id, name: catData.name ?? d.category_name }
+              } catch {
+                return { id: d.category_id, name: d.category_name }
+              }
+            })
+          )
+          setResults(withNames)
+        }
+      } catch {
+        setResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, 500)
+  }
+
+  function select(id: string, name: string) {
+    onChange(id);
+    setQuery(name);
+    setResults([]);
+  }
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <input
+          type="text"
+          value={query || value}
+          onChange={handleInput}
+          placeholder="Digite para buscar uma categoria..."
+          className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+        />
+        {searching && (
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+        )}
+      </div>
+
+      {/* ID selecionado */}
+      {value && (
+        <p className="text-[10px] font-mono text-gray-400 dark:text-gray-500 mt-1">
+          ID: {value}
+        </p>
+      )}
+
+      {/* Dropdown de resultados */}
+      {results.length > 0 && (
+        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg overflow-hidden">
+          {results.map(r => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => select(r.id, r.name)}
+              className="w-full text-left px-3 py-2.5 text-xs hover:bg-gray-50 dark:hover:bg-white/5 transition border-b border-gray-100 dark:border-white/5 last:border-0"
+            >
+              <span className="font-mono text-[10px] text-gray-400 mr-2">{r.id}</span>
+              <span className="text-gray-700 dark:text-gray-300">{r.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── MlPublicarModal ──────────────────────────────────────────────────────────
 
 function MlPublicarModal({
@@ -966,12 +1071,24 @@ function MlPublicarModal({
   useEffect(() => {
     if (!produto.nome) return;
     setSearching(true);
-    fetch(`https://api.mercadolibre.com/sites/MLB/domain_discovery/search?q=${encodeURIComponent(produto.nome)}&limit=5`)
+    fetch(`https://api.mercadolibre.com/sites/MLB/domain_discovery/search?q=${encodeURIComponent(produto.nome)}&limit=5&site_id=MLB`)
       .then(r => r.json())
-      .then(data => {
+      .then(async data => {
         if (Array.isArray(data)) {
-          setSuggestions(data.map((d: any) => ({ id: d.category_id, name: d.category_name })));
-          if (data.length > 0 && !categoryId) setCategoryId(data[0].category_id);
+          // Busca nome em pt-BR para cada categoria sugerida
+          const withNames = await Promise.all(
+            data.map(async (d: any) => {
+              try {
+                const catRes = await fetch(`https://api.mercadolibre.com/categories/${d.category_id}`)
+                const catData = await catRes.json()
+                return { id: d.category_id, name: catData.name ?? d.category_name }
+              } catch {
+                return { id: d.category_id, name: d.category_name }
+              }
+            })
+          )
+          setSuggestions(withNames);
+          if (withNames.length > 0 && !categoryId) setCategoryId(withNames[0].id);
         }
       })
       .catch(() => {})
@@ -1038,13 +1155,16 @@ function MlPublicarModal({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Categoria no Mercado Livre <span className="text-red-500">*</span>
             </label>
+
+            {/* Sugestões automáticas */}
             {searching ? (
               <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 Buscando categorias sugeridas...
               </div>
             ) : suggestions.length > 0 ? (
-              <div className="space-y-1 mb-2">
+              <div className="space-y-1 mb-3">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Sugestões para "{produto.nome}":</p>
                 {suggestions.map(s => (
                   <button
                     key={s.id}
@@ -1062,13 +1182,13 @@ function MlPublicarModal({
                 ))}
               </div>
             ) : null}
-            <input
-              type="text"
+
+            {/* Busca livre de categoria */}
+            <CategorySearch
               value={categoryId}
-              onChange={e => setCategoryId(e.target.value)}
-              placeholder="Ex: MLB1648 — ou selecione uma sugestão acima"
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400 font-mono"
+              onChange={setCategoryId}
             />
+
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
               Confirme a categoria — o ML pode rejeitar anúncios na categoria errada.
             </p>
@@ -1459,16 +1579,22 @@ function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnecte
                         {mlConnected && (
                           <button
                             onClick={e => { e.stopPropagation(); setMlModal(p); }}
-                            title={p.ml_item_id ? 'Atualizar no Mercado Livre' : 'Publicar no Mercado Livre'}
-                            className={`text-xs px-2 py-1.5 rounded-lg border transition flex items-center gap-1 ${
+                            title={p.ml_item_id ? 'Publicado no ML — clique para atualizar' : 'Publicar no Mercado Livre'}
+                            className={`text-xs px-2 py-1.5 rounded-lg border transition flex items-center gap-1.5 ${
                               p.ml_item_id
-                                ? 'border-yellow-300 dark:border-yellow-500/30 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-500/10'
-                                : 'border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5'
+                                ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-500/10 dark:border-yellow-500/40'
+                                : 'border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'
                             }`}>
-                            {mlPublicando === p.id
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              : <img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.19.5/mercadolibre/logo__large_plus.png" alt="ML" className="h-3 object-contain" />
-                            }
+                            {mlPublicando === p.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-yellow-500" />
+                            ) : (
+                              <>
+                                <img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.19.5/mercadolibre/logo__large_plus.png" alt="ML" className="h-3 object-contain" />
+                                {p.ml_item_id && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                                )}
+                              </>
+                            )}
                           </button>
                         )}
                         <button
@@ -1536,12 +1662,22 @@ function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnecte
                 {mlConnected && (
                   <button
                     onClick={e => { e.stopPropagation(); setMlModal(p); }}
-                    title={p.ml_item_id ? 'Atualizar no ML' : 'Publicar no ML'}
-                    className="absolute bottom-2 left-2 p-1.5 rounded-lg bg-yellow-50 dark:bg-yellow-500/10 hover:bg-yellow-100 dark:hover:bg-yellow-500/20 transition">
-                    {mlPublicando === p.id
-                      ? <Loader2 className="w-3 h-3 animate-spin text-yellow-600" />
-                      : <img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.19.5/mercadolibre/logo__large_plus.png" alt="ML" className="h-3 object-contain" />
-                    }
+                    title={p.ml_item_id ? 'Publicado no ML — clique para atualizar' : 'Publicar no ML'}
+                    className={`absolute bottom-2 left-2 p-1.5 rounded-lg transition flex items-center gap-1 ${
+                      p.ml_item_id
+                        ? 'bg-yellow-400 hover:bg-yellow-300'
+                        : 'bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700'
+                    }`}>
+                    {mlPublicando === p.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin text-gray-700" />
+                    ) : (
+                      <>
+                        <img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.19.5/mercadolibre/logo__large_plus.png" alt="ML" className="h-3 object-contain" />
+                        {p.ml_item_id && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                        )}
+                      </>
+                    )}
                   </button>
                 )}
               </div>

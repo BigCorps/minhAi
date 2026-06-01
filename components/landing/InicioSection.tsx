@@ -238,7 +238,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
   <img src="/cards/google.png" alt="Integração verificada pelo Google" className="w-full h-full object-contain" />
 </div>
 
-
+<a
   href="https://play.google.com/store/apps/details?id=app.minhai.www.twa"
   target="_blank"
   rel="noopener noreferrer"

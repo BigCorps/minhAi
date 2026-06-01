@@ -398,67 +398,6 @@ function IntegracoesDashboardContent() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-              {/* WhatsApp */}
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
-                <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-green-50 dark:bg-green-500/10">
-                  <div className="w-12 h-12 rounded-xl border border-green-200 dark:border-green-500/20 bg-white dark:bg-slate-900 flex items-center justify-center flex-shrink-0">
-                    <WhatsAppIcon className="w-7 h-7 text-[#25d366]" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-gray-900 dark:text-white">WhatsApp MCP</h3>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">Novo</span>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Gerencie seu assistente pelo WhatsApp pessoal</p>
-                  </div>
-                  <button onClick={() => setMcpWaEnabled(v => !v)} className="flex-shrink-0" title={mcpWaEnabled ? 'Desativar' : 'Ativar'}>
-                    {mcpWaEnabled ? <ToggleRight className="w-8 h-8 text-emerald-500" /> : <ToggleLeft className="w-8 h-8 text-gray-400" />}
-                  </button>
-                </div>
-                <div className="px-5 py-4 space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Seu número pessoal</label>
-                    <div className="flex items-center gap-2">
-                      <Smartphone className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <input
-                        type="tel"
-                        placeholder="+55 (11) 98765-4321"
-                        value={mcpWaPhone}
-                        onChange={e => setMcpWaPhone(e.target.value)}
-                        className="flex-1 px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Formato: 5511987654321 (com DDI + DDD, sem + ou espaços)</p>
-                  </div>
-                  {mcpWaCompanies.length > 0 && (
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Assistente Smart a usar</label>
-                      <select
-                        value={mcpWaCompanyId}
-                        onChange={e => setMcpWaCompanyId(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
-                      >
-                        {mcpWaCompanies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
-                    </div>
-                  )}
-                  <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 rounded-lg p-3 space-y-1">
-                    <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Como usar após salvar:</p>
-                    <p>1. Cadastre seu número e ative o toggle</p>
-                    <p>2. Envie qualquer mensagem para o WhatsApp minhAi:</p>
-                    <p className="font-mono font-bold text-gray-800 dark:text-gray-200">wa.me/5511926828418</p>
-                    <p>3. O assistente responderá como seu MCP pessoal</p>
-                  </div>
-                  <button
-                    onClick={saveMcpWa}
-                    disabled={mcpWaSaving || !mcpWaPhone}
-                    className="w-full py-2.5 rounded-lg text-sm font-semibold bg-[#25d366] hover:bg-[#1ebe5d] disabled:opacity-50 text-white transition flex items-center justify-center gap-2"
-                  >
-                    {mcpWaSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : mcpWaSaved ? <><Check className="w-4 h-4" /> Salvo!</> : 'Salvar configuração'}
-                  </button>
-                </div>
-              </div>
-
               {/* ChatGPT */}
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
                 <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-emerald-50 dark:bg-emerald-500/10">
@@ -580,6 +519,67 @@ function IntegracoesDashboardContent() {
                     ))}
                   </ol>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">Planos: Todos os planos</p>
+                </div>
+              </div>
+
+              {/* WhatsApp */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-green-50 dark:bg-green-500/10">
+                  <div className="w-12 h-12 rounded-xl border border-green-200 dark:border-green-500/20 bg-white dark:bg-slate-900 flex items-center justify-center flex-shrink-0">
+                    <WhatsAppIcon className="w-7 h-7 text-[#25d366]" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-gray-900 dark:text-white">WhatsApp MCP</h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">Novo</span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Gerencie seu assistente pelo WhatsApp pessoal</p>
+                  </div>
+                  <button onClick={() => setMcpWaEnabled(v => !v)} className="flex-shrink-0" title={mcpWaEnabled ? 'Desativar' : 'Ativar'}>
+                    {mcpWaEnabled ? <ToggleRight className="w-8 h-8 text-emerald-500" /> : <ToggleLeft className="w-8 h-8 text-gray-400" />}
+                  </button>
+                </div>
+                <div className="px-5 py-4 space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Seu número pessoal</label>
+                    <div className="flex items-center gap-2">
+                      <Smartphone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <input
+                        type="tel"
+                        placeholder="+55 (11) 98765-4321"
+                        value={mcpWaPhone}
+                        onChange={e => setMcpWaPhone(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Formato: 5511987654321 (com DDI + DDD, sem + ou espaços)</p>
+                  </div>
+                  {mcpWaCompanies.length > 0 && (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Assistente Smart a usar</label>
+                      <select
+                        value={mcpWaCompanyId}
+                        onChange={e => setMcpWaCompanyId(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                      >
+                        {mcpWaCompanies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 rounded-lg p-3 space-y-1">
+                    <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Como usar após salvar:</p>
+                    <p>1. Cadastre seu número e ative o toggle</p>
+                    <p>2. Envie qualquer mensagem para o WhatsApp minhAi:</p>
+                    <p className="font-mono font-bold text-gray-800 dark:text-gray-200">wa.me/5511926828418</p>
+                    <p>3. O assistente responderá como seu MCP pessoal</p>
+                  </div>
+                  <button
+                    onClick={saveMcpWa}
+                    disabled={mcpWaSaving || !mcpWaPhone}
+                    className="w-full py-2.5 rounded-lg text-sm font-semibold bg-[#25d366] hover:bg-[#1ebe5d] disabled:opacity-50 text-white transition flex items-center justify-center gap-2"
+                  >
+                    {mcpWaSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : mcpWaSaved ? <><Check className="w-4 h-4" /> Salvo!</> : 'Salvar configuração'}
+                  </button>
                 </div>
               </div>
 

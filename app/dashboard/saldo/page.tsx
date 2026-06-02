@@ -53,6 +53,7 @@ interface UnifiedTransaction {
   pix_key?: string;
   is_vendas?: boolean;
   comissao_cents?: number;
+  is_consulta_fee?: boolean;
 }
 
 interface AutoRechargeSettings {
@@ -105,13 +106,11 @@ export default function SaldoPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('confirmed');
 
   // ── Paginação ─────────────────────────────────────────────────────────────
-  // offset controla quantos registros já foram buscados em cada tabela
   const [pixOffset, setPixOffset] = useState(0);
   const [cobrancasOffset, setCobrancasOffset] = useState(0);
   const [mpOrdersOffset, setMpOrdersOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  // Contexto reutilizado pelo "carregar mais" (evita re-buscar companies/withdrawals)
   const [loadCtx, setLoadCtx] = useState<{
     companyNameMap: Record<string, string>;
     companyTypeMap: Record<string, string>;
@@ -168,9 +167,9 @@ export default function SaldoPage() {
       filtered = filtered.filter(tx => tx.source === 'cobranca');
     }
     if (statusFilter === 'confirmed') {
-filtered = filtered.filter(tx =>
-  tx.status === 'confirmed' || tx.status === 'transferred' || tx.status === 'PAGA' || tx.status === 'paid'
-);
+      filtered = filtered.filter(tx =>
+        tx.status === 'confirmed' || tx.status === 'transferred' || tx.status === 'PAGA' || tx.status === 'paid'
+      );
     } else if (statusFilter === 'cancelled') {
       filtered = filtered.filter(tx =>
         tx.status === 'cancelled' || tx.status === 'expired' || tx.status === 'CANCELADA'
@@ -200,7 +199,7 @@ filtered = filtered.filter(tx =>
       })
       .split('/')
       .reverse()
-      .join('-'); // "dd/mm/yyyy" → "yyyy-mm-dd"
+      .join('-');
   }
 
   function getTipoLabel(tipo: string, nfc_payment_method?: string | null): string {
@@ -233,11 +232,13 @@ filtered = filtered.filter(tx =>
   function getTipoBadge(tx: UnifiedTransaction) {
     const colorClass = tx.is_withdrawal
       ? 'bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400'
-      : tx.source === 'pix'
-        ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400'
-        : tx.tipo_label.includes('Link')
-          ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400'
-          : 'bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400';
+      : tx.is_consulta_fee
+        ? 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400'
+        : tx.source === 'pix'
+          ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400'
+          : tx.tipo_label.includes('Link')
+            ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400'
+            : 'bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400';
     return (
       <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter ${colorClass}`}>
         {tx.tipo_label}
@@ -370,6 +371,15 @@ filtered = filtered.filter(tx =>
           .filter((id): id is string => id !== null)
       );
 
+      // ── Consultas pagas ──────────────────────────────────────────────────
+      const { data: consultasData } = await supabase
+        .from('balance_transactions')
+        .select('id, company_id, amount_cents, description, created_at')
+        .eq('user_id', userId)
+        .eq('transaction_type', 'consulta_fee')
+        .order('created_at', { ascending: false })
+        .range(0, PAGE_SIZE - 1);
+
       // Salva contexto para reutilizar no "carregar mais"
       const ctx = { companyNameMap, companyTypeMap, companyIds, withdrawalIds, commissionsPending: commissionsData };
       setLoadCtx(ctx);
@@ -416,6 +426,7 @@ filtered = filtered.filter(tx =>
         ...normalizePix(pixData ?? [], withdrawalIds, companyNameMap, companyTypeMap, commissionsData),
         ...normalizeCobrancas(cobrancasData ?? [], companyNameMap, companyTypeMap),
         ...normalizeMpOrders(mpOrdersData ?? [], companyNameMap, companyTypeMap),
+        ...normalizeConsultaFees(consultasData ?? [], companyNameMap),
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       setAllTransactions(merged);
@@ -575,6 +586,25 @@ filtered = filtered.filter(tx =>
         comissao_cents: isVendas ? Math.round(tx.amount_cents * 0.10) : undefined,
       };
     });
+  }
+
+  function normalizeConsultaFees(
+    data: any[],
+    companyNameMap: Record<string, string>,
+  ): UnifiedTransaction[] {
+    return data.map(tx => ({
+      id: tx.id,
+      source: 'cobranca' as const,
+      is_withdrawal: false,
+      company_id: tx.company_id ?? '',
+      company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
+      amount_cents: Math.abs(tx.amount_cents),
+      status: 'confirmed',
+      date: tx.created_at,
+      tipo_label: 'Consulta',
+      notes: tx.description ?? '',
+      is_consulta_fee: true,
+    }));
   }
 
   async function loadPackages() {
@@ -749,7 +779,7 @@ filtered = filtered.filter(tx =>
           </div>
         </div>
 
-{/* ── Cards de resumo ──────────────────────────────────────────────── */}
+        {/* ── Cards de resumo ──────────────────────────────────────────────── */}
         <div className={`grid grid-cols-1 ${hasVendasCompany ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6`}>
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
             <div className="flex items-center gap-3 mb-4">
@@ -790,7 +820,6 @@ filtered = filtered.filter(tx =>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Total sacado em todo o período</p>
           </div>
 
-          {/* Card de Comissões - Aparece apenas se hasVendasCompany for true e fica separado como um irmão dos outros cards */}
           {hasVendasCompany && (
             <div className="bg-lime-50 dark:bg-lime-500/5 rounded-2xl p-6 shadow-xl border border-lime-200 dark:border-lime-500/20">
               <div className="flex items-center gap-3 mb-4">
@@ -986,8 +1015,12 @@ filtered = filtered.filter(tx =>
                                   </td>
                                   <td className="py-4">{getTipoBadge(tx)}</td>
                                   {companies.length > 1 && <td className="py-4">{getCompanyBadge(tx)}</td>}
-                                  <td className={`py-4 font-bold whitespace-nowrap ${tx.is_withdrawal ? 'text-orange-500 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
-                                    {tx.is_withdrawal ? '−' : ''}{formatCurrency(tx.amount_cents)}
+                                  <td className={`py-4 font-bold whitespace-nowrap ${
+                                    tx.is_withdrawal || tx.is_consulta_fee
+                                      ? 'text-red-500 dark:text-red-400'
+                                      : 'text-gray-900 dark:text-white'
+                                  }`}>
+                                    {(tx.is_withdrawal || tx.is_consulta_fee) ? '−' : ''}{formatCurrency(tx.amount_cents)}
                                     {tx.is_vendas && tx.comissao_cents && (
                                       <div className="text-[11px] font-medium text-amber-500 dark:text-amber-400 mt-0.5">
                                         Comissão minhAi: {formatCurrency(tx.comissao_cents)} (10%)
@@ -1031,18 +1064,18 @@ filtered = filtered.filter(tx =>
                   </div>
                 )}
                 {hasMore && (
-                <div className="flex justify-center pt-4">
-                  <button
-                    onClick={loadMore}
-                    disabled={isLoadingMore}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 transition disabled:opacity-50"
-                  >
-                    {isLoadingMore
-                      ? <><Loader2 className="w-4 h-4 animate-spin" />Carregando...</>
-                      : <><ChevronDown className="w-4 h-4" />Carregar mais 50</>}
-                  </button>
-                </div>
-              )}
+                  <div className="flex justify-center pt-4">
+                    <button
+                      onClick={loadMore}
+                      disabled={isLoadingMore}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 transition disabled:opacity-50"
+                    >
+                      {isLoadingMore
+                        ? <><Loader2 className="w-4 h-4 animate-spin" />Carregando...</>
+                        : <><ChevronDown className="w-4 h-4" />Carregar mais 50</>}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

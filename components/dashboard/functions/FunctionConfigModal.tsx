@@ -4445,8 +4445,24 @@ const CONSULTAS_INFO: Record<string, { label: string; custo: string; descricao: 
   restricoes_cnpj:     { label: 'Restrições CNPJ',     custo: 'R$ 20,00', descricao: 'Score empresarial via Quod — protestos e análise de crédito.' },
 };
 
-const ConsultasConfigForm = ({ settings, onChange, functionKey }: any) => {
+const ConsultasConfigForm = ({ settings, onChange, functionKey, companyId }: any) => {
+  const supabase = createClient();
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const metodo = settings.consultas_payment_method ?? 'balance';
+
+  const handleSave = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from('companies')
+      .update({ consultas_payment_method: metodo })
+      .eq('id', companyId);
+    if (!error) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
+    setSaving(false);
+  };
   const info = CONSULTAS_INFO[functionKey];
 
   return (
@@ -5083,7 +5099,10 @@ const { data, error } = await supabase
           >
             Cancelar
           </button>
-          {hasForm && functionData?.function_key !== 'gerar_senha' && functionData?.function_key !== 'chatgpt' && (
+          {hasForm && 
+           functionData?.function_key !== 'gerar_senha' && 
+           functionData?.function_key !== 'chatgpt' &&
+           !['dados_cpf','dados_cnpj','consultar_placa','consultar_protestos','restricoes_cpf','restricoes_cnpj'].includes(functionData?.function_key) && (
             <button
               onClick={handleSave}
               disabled={isSaving || isLoading}

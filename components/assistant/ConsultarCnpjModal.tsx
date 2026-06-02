@@ -27,6 +27,19 @@ interface ResultadoFormatado {
   value: string;
 }
 
+// ── Validação de CNPJ ────────────────────────────────────────────────────────
+const validateCNPJ = (cnpj: string): boolean => {
+  if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+  let len = 12, sum = 0, pos = len - 7;
+  for (let i = len; i >= 1; i--) { sum += parseInt(cnpj[len - i]) * pos--; if (pos < 2) pos = 9; }
+  let rem = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  if (rem !== parseInt(cnpj[12])) return false;
+  len = 13; sum = 0; pos = len - 7;
+  for (let i = len; i >= 1; i--) { sum += parseInt(cnpj[len - i]) * pos--; if (pos < 2) pos = 9; }
+  rem = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  return rem === parseInt(cnpj[13]);
+};
+
 export default function ConsultarCnpjModal({
   data,
   onClose,
@@ -84,6 +97,12 @@ export default function ConsultarCnpjModal({
       return;
     }
 
+    if (!validateCNPJ(cnpjLimpo)) {
+      setError('CNPJ inválido. Verifique os números digitados.');
+      playText?.('CNPJ inválido. Verifique os números digitados.').catch(() => {});
+      return;
+    }
+
     setStep('loading');
     setError(null);
 
@@ -99,7 +118,7 @@ export default function ConsultarCnpjModal({
 
       // Saldo insuficiente — abrir fluxo PIX
       if (res.requires_payment) {
-        setPendingParams({ company_id: companyId, action: 'dados_cpf', cpf: cpfLimpo, payment_confirmed: true });
+        setPendingParams({ company_id: companyId, action: 'dados_cnpj', cnpj: cnpjLimpo, payment_confirmed: true });
         setPixAmountBrl(res.amount_brl ?? '3,00');
         setStep('input');
 
@@ -107,7 +126,7 @@ export default function ConsultarCnpjModal({
           body: {
             company_id: companyId,
             amount_cents: res.amount_cents,
-            description: `Consulta CPF - R$ ${res.amount_brl}`,
+            description: `Consulta CNPJ - R$ ${res.amount_brl}`,
           },
         });
         if (pixRes.error) throw new Error(pixRes.error.message);

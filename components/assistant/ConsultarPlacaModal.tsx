@@ -8,6 +8,7 @@ import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleC
 import { createClient } from '@/lib/supabase-browser';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 import { generateConsultaPDF } from '@/lib/generatePDF';
+import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
 
 interface ConsultarPlacaModalProps {
   data: {
@@ -46,6 +47,9 @@ export default function ConsultarPlacaModal({
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string>('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  const [pixData, setPixData] = useState<{ qrCodeUrl: string; pixCode: string; transactionId: string } | null>(null);
+  const [pendingParams, setPendingParams] = useState<Record<string, any> | null>(null);
 
   const { isConnected: googleConnected } = useGoogleConnected(companyId);
 
@@ -91,12 +95,36 @@ export default function ConsultarPlacaModal({
 
     try {
       const supabase = createClient();
+      const params = pendingParams ?? { company_id: companyId, action: 'consultar_placa', placa: placaLimpa };
 
       const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
-        body: { company_id: companyId, action: 'consultar_placa', placa: placaLimpa },
+        body: params,
       });
 
       if (error) throw new Error(error.message);
+
+      if (res.requires_payment) {
+        setPendingParams({ company_id: companyId, action: 'consultar_placa', placa: placaLimpa, payment_confirmed: true });
+        setStep('input');
+
+        const pixRes = await supabase.functions.invoke('gerar-pix-assistente', {
+          body: {
+            company_id: companyId,
+            amount_cents: res.amount_cents,
+            description: `Consulta Placa - R$ ${res.amount_brl}`,
+          },
+        });
+        if (pixRes.error) throw new Error(pixRes.error.message);
+
+        setPixData({
+          qrCodeUrl: pixRes.data.qr_code_url,
+          pixCode: pixRes.data.pix_code,
+          transactionId: pixRes.data.transaction_id,
+        });
+        playText(`Saldo insuficiente. Gerei um PIX de R$ ${res.amount_brl}. Escaneie para pagar e a consulta será liberada.`).catch(() => {});
+        return;
+      }
+
       if (!res.success) throw new Error(res.speech_text || res.error || 'Falha na consulta');
 
       const rows: ResultadoFormatado[] = (res.resultado_formatado ?? []).map(
@@ -105,6 +133,8 @@ export default function ConsultarPlacaModal({
       setResultado(rows);
       setPdfFileName(`consulta-placa-${placaLimpa}.pdf`);
       setPdfBase64(generateConsultaPDF('Consultar Placa', res.resultado_formatado || []));
+      setPendingParams(null);
+      setPixData(null);
       setStep('result');
 
       playText('Consulta realizada com sucesso. Dados do veículo exibidos.').catch(() => {});
@@ -191,6 +221,27 @@ export default function ConsultarPlacaModal({
   // ── render ───────────────────────────────────────────────────────────────
 
   const modalMaxWidth = step === 'result' ? 'max-w-lg sm:max-w-3xl' : 'max-w-lg';
+
+  if (pixData && pendingParams) {
+    return (
+      <PIXConfirmationModal
+        transactionId={pixData.transactionId}
+        amount={String(((pendingParams.amount_cents ?? 300) / 100).toFixed(2)).replace('.', ',')}
+        qrCodeUrl={pixData.qrCodeUrl}
+        pixCode={pixData.pixCode}
+        theme={theme}
+        onConfirm={async () => {
+          setPixData(null);
+          setStep('loading');
+          await handleConsultar();
+        }}
+        onCancel={async () => {
+          setPixData(null);
+          setPendingParams(null);
+        }}
+      />
+    );
+  }
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">

@@ -224,7 +224,7 @@ export default function ConsultarCnpjModal({
     return (
       <PIXConfirmationModal
         transactionId={pixData.transactionId}
-        amount={pixAmountBrl}}
+        amount={pixAmountBrl}
         qrCodeUrl={pixData.qrCodeUrl}
         pixCode={pixData.pixCode}
         theme={theme}

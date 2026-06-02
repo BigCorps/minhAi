@@ -114,6 +114,7 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
     controla_estoque: produto?.controla_estoque ?? true,
     is_active: produto?.is_active ?? true,
     is_favorito: produto?.is_favorito ?? false,
+    marca: produto?.marca ?? '',
   });
 
   const [dadosFiscais, setDadosFiscais] = useState({
@@ -363,6 +364,18 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
 
           {/* EAN + Unidade */}
           <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Marca
+              </label>
+              <input
+                type="text"
+                value={form.marca ?? ''}
+                onChange={(e) => set('marca', e.target.value)}
+                placeholder="Ex: Nike, Samsung, Artesanal..."
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Código EAN / Código de Barras
@@ -1061,10 +1074,11 @@ function MlPublicarModal({
 }: {
   produto: ProdutoVenda;
   publicando: boolean;
-  onPublicar: (categoryId: string) => void;
+  onPublicar: (categoryId: string, listingType: string) => void;
   onClose: () => void;
 }) {
   const [categoryId, setCategoryId] = useState(produto.ml_category_id ?? '');
+  const [listingType, setListingType] = useState(produto.ml_listing_type ?? 'bronze');
   const [suggestions, setSuggestions] = useState<{ id: string; name: string }[]>([]);
   const [searching, setSearching] = useState(false);
 
@@ -1194,6 +1208,60 @@ function MlPublicarModal({
             </p>
           </div>
 
+          
+          {/* Tipo de anúncio */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tipo de anúncio
+            </label>
+            <div className="space-y-2">
+              {[
+                {
+                  key: 'free',
+                  label: 'Grátis',
+                  desc: 'Sem custo, máximo 1 unidade, sem destaque',
+                  badge: 'Grátis',
+                  badgeCls: 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400',
+                },
+                {
+                  key: 'bronze',
+                  label: 'Clássico',
+                  desc: 'Comissão ML sobre vendas, quantidade ilimitada',
+                  badge: 'Comissão',
+                  badgeCls: 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400',
+                },
+                {
+                  key: 'gold_special',
+                  label: 'Ouro Especial',
+                  desc: 'Maior visibilidade, comissão ML sobre vendas',
+                  badge: 'Destaque',
+                  badgeCls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-600',
+                },
+              ].map(opt => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setListingType(opt.key)}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg border-2 transition flex items-center justify-between gap-3 ${
+                    listingType === opt.key
+                      ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-500/10'
+                      : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
+                  }`}
+                >
+                  <div>
+                    <p className={`text-sm font-semibold ${listingType === opt.key ? 'text-yellow-800 dark:text-yellow-300' : 'text-gray-900 dark:text-white'}`}>
+                      {opt.label}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{opt.desc}</p>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${opt.badgeCls}`}>
+                    {opt.badge}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Aviso imagem */}
           {!produto.imagem_url && (
             <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-500/10 rounded-xl border border-amber-200 dark:border-amber-500/20">
@@ -1214,7 +1282,7 @@ function MlPublicarModal({
             Cancelar
           </button>
           <button
-            onClick={() => onPublicar(categoryId)}
+            onClick={() => onPublicar(categoryId, listingType)}
             disabled={!categoryId.trim() || publicando}
             className="inline-flex items-center gap-2 px-5 py-2 bg-[#FFE600] hover:bg-yellow-400 text-gray-900 text-sm font-bold rounded-lg transition shadow-sm disabled:opacity-50"
           >
@@ -1253,7 +1321,7 @@ function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnecte
   const [mlModal, setMlModal] = useState<ProdutoVenda | null>(null);
   const [mlPublicando, setMlPublicando] = useState<string | null>(null);
 
-  async function handlePublicarML(produto: ProdutoVenda, categoryId: string) {
+  async function handlePublicarML(produto: ProdutoVenda, categoryId: string, listingType: string) {
     setMlPublicando(produto.id);
     try {
       const res = await fetch('/api/ml/publicar', {
@@ -1263,6 +1331,7 @@ function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnecte
           produto_id: produto.id,
           company_id: companyId,
           ml_category_id: categoryId,
+          ml_listing_type: listingType,
         }),
       });
       const data = await res.json();
@@ -1738,7 +1807,7 @@ function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnecte
         <MlPublicarModal
           produto={mlModal}
           publicando={mlPublicando === mlModal.id}
-          onPublicar={(categoryId) => handlePublicarML(mlModal, categoryId)}
+          onPublicar={(categoryId, listingType) => handlePublicarML(mlModal, categoryId, listingType)}
           onClose={() => setMlModal(null)}
         />
       )}

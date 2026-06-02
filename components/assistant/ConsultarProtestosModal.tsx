@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 import { generateConsultaPDF } from '@/lib/generatePDF';
 
-interface ConsultarLeilaoModalProps {
+interface ConsultarProtestosModalProps {
   data: {
     companyId: string;
     cpfPrefill?: string;
@@ -31,12 +31,12 @@ const normalize = (text: string) =>
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[.,!?;:\-]+/g, '');
 
-export default function ConsultarLeilaoModal({
+export default function ConsultarProtestosModal({
   data,
   onClose,
   theme = 'dark',
   playText,
-}: ConsultarLeilaoModalProps) {
+}: ConsultarProtestosModalProps) {
   const { companyId, cpfPrefill = '' } = data;
 
   const [step, setStep] = useState<Step>('input');

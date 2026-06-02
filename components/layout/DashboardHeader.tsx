@@ -4,6 +4,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { createClient } from '@/lib/supabase-browser';
@@ -20,6 +21,18 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const supabase = createClient();
+
+  // ── oculta o seletor nas seções do menu de usuário ──────────────────────────
+const USER_MENU_ROUTES = [
+  '/dashboard/perfil',
+  '/dashboard/credits',
+  '/dashboard/saldo',
+  '/dashboard/historico',
+  '/dashboard/indicacoes',
+  '/dashboard/ajuda',
+];
+const pathname = usePathname();
+const hideAssistantSelector = USER_MENU_ROUTES.some(r => pathname.startsWith(r));
 
   const displayName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuário';
   const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
@@ -112,7 +125,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                 </button>
               )}
 
-              <AssistantSelectorHeader />
+              {!hideAssistantSelector && <AssistantSelectorHeader />}
               <ThemeToggle />
               
               <div className="relative">

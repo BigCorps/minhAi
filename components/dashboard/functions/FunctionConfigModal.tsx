@@ -4545,6 +4545,17 @@ const ConsultasConfigForm = ({ settings, onChange, functionKey, companyId }: any
         Esta configuração se aplica a todas as consultas pagas (CPF, CNPJ, Placa, Protestos, Restrições).
       </p>
 
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"
+      >
+        {saving
+          ? <><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /><span>Salvando...</span></>
+          : saved ? '✓ Salvo!' : 'Salvar'
+        }
+      </button>
+     
     </div>
   );
 };

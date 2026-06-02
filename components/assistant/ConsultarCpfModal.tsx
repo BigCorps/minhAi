@@ -46,6 +46,7 @@ export default function ConsultarCpfModal({
 
   const [pixData, setPixData] = useState<{ qrCodeUrl: string; pixCode: string; transactionId: string } | null>(null);
   const [pendingParams, setPendingParams] = useState<Record<string, any> | null>(null);
+  const [pixAmountBrl, setPixAmountBrl] = useState<string>('0,00');
 
   const { isConnected: googleConnected } = useGoogleConnected(companyId);
 
@@ -99,6 +100,7 @@ export default function ConsultarCpfModal({
       // Saldo insuficiente — abrir fluxo PIX
       if (res.requires_payment) {
         setPendingParams({ company_id: companyId, action: 'dados_cpf', cpf: cpfLimpo, payment_confirmed: true });
+        setPixAmountBrl(res.amount_brl ?? '3,00');
         setStep('input');
 
         const pixRes = await supabase.functions.invoke('gerar-pix-assistente', {
@@ -217,7 +219,7 @@ export default function ConsultarCpfModal({
     return (
       <PIXConfirmationModal
         transactionId={pixData.transactionId}
-        amount={pendingParams ? String((pendingParams.amount_cents / 100).toFixed(2)).replace('.', ',') : ''}
+        amount={pixAmountBrl}
         qrCodeUrl={pixData.qrCodeUrl}
         pixCode={pixData.pixCode}
         theme={theme}

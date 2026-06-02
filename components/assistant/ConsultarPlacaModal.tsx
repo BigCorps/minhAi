@@ -326,18 +326,6 @@ export default function ConsultarPlacaModal({
                 </p>
               </div>
 
-              <div className={`p-4 rounded-lg border ${border} ${isDark ? 'bg-blue-950/20' : 'bg-blue-50'}`}>
-                <div className="flex items-start gap-2">
-                  <FileText className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className={`text-sm font-medium ${textPrimary}`}>Custo da consulta</p>
-                    <p className={`text-xs ${textMuted} mt-1`}>
-                      2 créditos + R$ 3,00 do saldo serão consumidos ao realizar esta consulta
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               <button
                 onClick={handleConsultar}
                 disabled={!placa || placa.replace(/[^A-Z0-9]/gi, '').length < 7}

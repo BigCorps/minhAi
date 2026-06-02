@@ -4459,7 +4459,7 @@ const ConsultasConfigForm = ({ settings, onChange, functionKey, companyId }: any
       .eq('id', companyId);
     if (!error) {
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      setTimeout(() => { setSaved(false); onClose?.(); }, 1000);
     }
     setSaving(false);
   };
@@ -5093,6 +5093,7 @@ try {
     companyId={companyId}
     functionKey={functionData?.function_key}
     hasActivePlan={hasActivePlan}
+    onClose={onClose}
   />
 ) : (
   <div className="text-center py-8 text-gray-500 dark:text-gray-400">

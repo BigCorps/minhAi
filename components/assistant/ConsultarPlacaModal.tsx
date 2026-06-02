@@ -50,6 +50,7 @@ export default function ConsultarPlacaModal({
 
   const [pixData, setPixData] = useState<{ qrCodeUrl: string; pixCode: string; transactionId: string } | null>(null);
   const [pendingParams, setPendingParams] = useState<Record<string, any> | null>(null);
+  const [pixAmountBrl, setPixAmountBrl] = useState<string>('0,00');
 
   const { isConnected: googleConnected } = useGoogleConnected(companyId);
 
@@ -71,10 +72,17 @@ export default function ConsultarPlacaModal({
     setPlaca(formatarPlaca(e.target.value));
   };
 
-  const validarPlaca = (placaStr: string): boolean => {
+  // Detecta o padrão da placa para exibir no aviso
+  const detectarPadrao = (placaStr: string): 'antigo' | 'mercosul' | null => {
     const p = placaStr.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-    if (p.length !== 7) return false;
-    return /^[A-Z]{3}\d{4}$/.test(p) || /^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(p);
+    if (/^[A-Z]{3}\d{4}$/.test(p)) return 'antigo';
+    // Mercosul: 4ª posição é dígito, 5ª é letra (exceto I, O, Q), 6ª e 7ª são dígitos
+    if (/^[A-Z]{3}\d[A-HJ-NPR-Z]\d{2}$/.test(p)) return 'mercosul';
+    return null;
+  };
+
+  const validarPlaca = (placaStr: string): boolean => {
+    return detectarPadrao(placaStr) !== null;
   };
 
   // ── consultar ───────────────────────────────────────────────────────────
@@ -105,6 +113,7 @@ export default function ConsultarPlacaModal({
 
       if (res.requires_payment) {
         setPendingParams({ company_id: companyId, action: 'consultar_placa', placa: placaLimpa, payment_confirmed: true });
+        setPixAmountBrl(res.amount_brl ?? '3,00');
         setStep('input');
 
         const pixRes = await supabase.functions.invoke('gerar-pix-assistente', {
@@ -226,7 +235,7 @@ export default function ConsultarPlacaModal({
     return (
       <PIXConfirmationModal
         transactionId={pixData.transactionId}
-        amount={String(((pendingParams.amount_cents ?? 300) / 100).toFixed(2)).replace('.', ',')}
+        amount={pixAmountBrl}
         qrCodeUrl={pixData.qrCodeUrl}
         pixCode={pixData.pixCode}
         theme={theme}
@@ -291,8 +300,29 @@ export default function ConsultarPlacaModal({
                   className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} placeholder-slate-500 focus:ring-2 focus:ring-yellow-500 transition uppercase`}
                   autoFocus
                 />
-                <p className={`mt-1 text-xs ${textMuted}`}>
-                  Formatos aceitos: ABC1234 (antigo) ou ABC1D23 (Mercosul)
+                <div className="mt-1 flex items-center justify-between">
+                  <p className={`text-xs ${textMuted}`}>
+                    Formatos aceitos: ABC1234 (antigo) ou ABC1D23 (Mercosul)
+                  </p>
+                  {placa.replace(/[^A-Z0-9]/gi, '').length === 7 && (
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      detectarPadrao(placa) === 'mercosul'
+                        ? isDark ? 'bg-blue-900/40 text-blue-300' : 'bg-blue-100 text-blue-700'
+                        : detectarPadrao(placa) === 'antigo'
+                        ? isDark ? 'bg-green-900/40 text-green-300' : 'bg-green-100 text-green-700'
+                        : isDark ? 'bg-red-900/40 text-red-300' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {detectarPadrao(placa) === 'mercosul' ? 'Mercosul' : detectarPadrao(placa) === 'antigo' ? 'Padrão antigo' : 'Formato inválido'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Aviso de conferência da placa */}
+              <div className={`p-3 rounded-lg border flex items-start gap-2 ${isDark ? 'bg-yellow-900/20 border-yellow-700/50' : 'bg-yellow-50 border-yellow-200'}`}>
+                <AlertCircle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                <p className={`text-xs ${isDark ? 'text-yellow-300' : 'text-yellow-800'}`}>
+                  Confira a placa com atenção antes de consultar. A consulta consome créditos e não pode ser revertida em caso de digitação incorreta.
                 </p>
               </div>
 

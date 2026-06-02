@@ -45,6 +45,7 @@ export default function ConsultarCnpjModal({
 
   const [pixData, setPixData] = useState<{ qrCodeUrl: string; pixCode: string; transactionId: string } | null>(null);
   const [pendingParams, setPendingParams] = useState<Record<string, any> | null>(null);
+  const [pixAmountBrl, setPixAmountBrl] = useState<string>('0,00');
 
   const { isConnected: googleConnected } = useGoogleConnected(companyId);
 
@@ -98,14 +99,15 @@ export default function ConsultarCnpjModal({
 
       // Saldo insuficiente — abrir fluxo PIX
       if (res.requires_payment) {
-        setPendingParams({ company_id: companyId, action: 'dados_cnpj', cnpj: cnpjLimpo, payment_confirmed: true });
+        setPendingParams({ company_id: companyId, action: 'dados_cpf', cpf: cpfLimpo, payment_confirmed: true });
+        setPixAmountBrl(res.amount_brl ?? '3,00');
         setStep('input');
 
         const pixRes = await supabase.functions.invoke('gerar-pix-assistente', {
           body: {
             company_id: companyId,
             amount_cents: res.amount_cents,
-            description: `Consulta CNPJ - R$ ${res.amount_brl}`,
+            description: `Consulta CPF - R$ ${res.amount_brl}`,
           },
         });
         if (pixRes.error) throw new Error(pixRes.error.message);
@@ -222,7 +224,7 @@ export default function ConsultarCnpjModal({
     return (
       <PIXConfirmationModal
         transactionId={pixData.transactionId}
-        amount={pendingParams ? String((pendingParams.amount_cents / 100).toFixed(2)).replace('.', ',') : ''}
+        amount={pixAmountBrl}}
         qrCodeUrl={pixData.qrCodeUrl}
         pixCode={pixData.pixCode}
         theme={theme}

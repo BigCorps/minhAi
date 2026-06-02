@@ -27,6 +27,21 @@ interface ResultadoFormatado {
   value: string;
 }
 
+// ── Validação de CPF ─────────────────────────────────────────────────────────
+const validateCPF = (cpf: string): boolean => {
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  let sum = 0;
+  for (let i = 1; i <= 9; i++) sum += parseInt(cpf[i - 1]) * (11 - i);
+  let rem = (sum * 10) % 11;
+  if (rem === 10 || rem === 11) rem = 0;
+  if (rem !== parseInt(cpf[9])) return false;
+  sum = 0;
+  for (let i = 1; i <= 10; i++) sum += parseInt(cpf[i - 1]) * (12 - i);
+  rem = (sum * 10) % 11;
+  if (rem === 10 || rem === 11) rem = 0;
+  return rem === parseInt(cpf[10]);
+};
+
 export default function ConsultarCpfModal({
   data,
   onClose,
@@ -81,6 +96,12 @@ export default function ConsultarCpfModal({
     if (!cpfLimpo || cpfLimpo.length !== 11) {
       setError('Por favor, informe um CPF válido com 11 dígitos');
       playText?.('Por favor, informe um CPF válido com 11 dígitos').catch(() => {});
+      return;
+    }
+
+    if (!validateCPF(cpfLimpo)) {
+      setError('CPF inválido. Verifique os números digitados.');
+      playText?.('CPF inválido. Verifique os números digitados.').catch(() => {});
       return;
     }
 

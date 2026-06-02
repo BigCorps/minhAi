@@ -8,6 +8,7 @@ import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleC
 import { createClient } from '@/lib/supabase-browser';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 import { generateConsultaPDF } from '@/lib/generatePDF';
+import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
 
 interface ConsultarCnpjModalProps {
   data: {
@@ -41,6 +42,9 @@ export default function ConsultarCnpjModal({
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string>('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  const [pixData, setPixData] = useState<{ qrCodeUrl: string; pixCode: string; transactionId: string } | null>(null);
+  const [pendingParams, setPendingParams] = useState<Record<string, any> | null>(null);
 
   const { isConnected: googleConnected } = useGoogleConnected(companyId);
 
@@ -84,12 +88,37 @@ export default function ConsultarCnpjModal({
 
     try {
       const supabase = createClient();
+      const params = pendingParams ?? { company_id: companyId, action: 'dados_cnpj', cnpj: cnpjLimpo };
 
       const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
-        body: { company_id: companyId, action: 'dados_cnpj', cnpj: cnpjLimpo },
+        body: params,
       });
 
       if (error) throw new Error(error.message);
+
+      // Saldo insuficiente — abrir fluxo PIX
+      if (res.requires_payment) {
+        setPendingParams({ company_id: companyId, action: 'dados_cnpj', cnpj: cnpjLimpo, payment_confirmed: true });
+        setStep('input');
+
+        const pixRes = await supabase.functions.invoke('gerar-pix-assistente', {
+          body: {
+            company_id: companyId,
+            amount_cents: res.amount_cents,
+            description: `Consulta CNPJ - R$ ${res.amount_brl}`,
+          },
+        });
+        if (pixRes.error) throw new Error(pixRes.error.message);
+
+        setPixData({
+          qrCodeUrl: pixRes.data.qr_code_url,
+          pixCode: pixRes.data.pix_code,
+          transactionId: pixRes.data.transaction_id,
+        });
+        playText?.(`Saldo insuficiente. Gerei um PIX de R$ ${res.amount_brl}. Escaneie para pagar e a consulta será liberada.`).catch(() => {});
+        return;
+      }
+
       if (!res.success) throw new Error(res.error ?? 'Falha na consulta');
 
       const rows: ResultadoFormatado[] = (res.resultado_formatado ?? []).map(
@@ -98,7 +127,8 @@ export default function ConsultarCnpjModal({
       setResultado(rows);
       setPdfFileName(`consulta-cnpj-${cnpjLimpo}.pdf`);
       setPdfBase64(generateConsultaPDF('Dados CNPJ', res.resultado_formatado || []));
-
+      setPendingParams(null);
+      setPixData(null);
       setStep('result');
 
       const razaoSocial = rows.find((r) => r.label === 'Razão Social')?.value;
@@ -187,6 +217,27 @@ export default function ConsultarCnpjModal({
   // ── render ───────────────────────────────────────────────────────────────
 
   const modalMaxWidth = step === 'result' ? 'max-w-2xl sm:max-w-4xl' : 'max-w-2xl';
+
+  if (pixData) {
+    return (
+      <PIXConfirmationModal
+        transactionId={pixData.transactionId}
+        amount={pendingParams ? String((pendingParams.amount_cents / 100).toFixed(2)).replace('.', ',') : ''}
+        qrCodeUrl={pixData.qrCodeUrl}
+        pixCode={pixData.pixCode}
+        theme={theme}
+        onConfirm={async () => {
+          setPixData(null);
+          setStep('loading');
+          await handleConsultar();
+        }}
+        onCancel={async () => {
+          setPixData(null);
+          setPendingParams(null);
+        }}
+      />
+    );
+  }
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">

@@ -1153,7 +1153,7 @@ function MlPublicarModal({
               <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">{formatarPreco(produto.preco_venda)}</p>
               {produto.ml_item_id && (
                 <a
-                  href={`https://www.mercadolivre.com.br/p/${produto.ml_item_id}`}
+                  href={`https://produto.mercadolivre.com.br/MLB-${produto.ml_item_id?.replace('MLB', '').replace(/^0+/, '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-blue-500 hover:underline"

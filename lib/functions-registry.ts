@@ -4725,8 +4725,8 @@ consultar_placa: {
 },
 
 // ── Consultar Protestos ──────────────────────────────────────
-consultar_leilao: {
-  functionKey: 'consultar_leilao',
+consultar_protestos: {
+  functionKey: 'consultar_protestos',
   functionName: 'Consulta de Protestos',
   category: 'knowledge',
   responseType: 'voice+modal',

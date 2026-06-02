@@ -93,7 +93,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Compatibilidade total',
     title: 'Funciona onde seu cliente está',
     description:
-      'Celular, computador, tablet, totem, TV ou PDV — se tem tela e navegador, roda o minhAi. Conecte também WhatsApp, Instagram e Facebook: um assistente único que responde em todos os canais ao mesmo tempo, sem você monitorar nada.',
+      'Celular, computador, tablet, totem, TV ou PDV — se tem tela ou navegador, roda a minhAi. Conecte também WhatsApp, Instagram, Facebook, Claude, ChatGPT e Mercado Livre - Perguntas, mensagens, comentários, DMs, etc - um assistente único que responde em todos os canais ao mesmo tempo, com a mesma configuração!',
     imageSrc: '/dispositivos.png',
     imageAlt: 'Dispositivos compatíveis com minhAi — celular, tablet, totem e computador',
     color: 'blue' as const,
@@ -103,7 +103,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Integrações nativas',
     title: 'Conectado ao que você já usa',
     description:
-      'Google Agenda, Drive, Gmail, Maps, Meet, WhatsApp Business, Instagram, Facebook, Mercado Pago, InfinitePay — tudo nativo, sem Zapier. E agora com servidor MCP próprio: conecte seu assistente ao Claude, ChatGPT ou Cursor e use-o como ferramenta nativa dentro das IAs que você já usa.',
+      'Google Agenda, Drive, Gmail, Maps, Meet, WhatsApp Business, Instagram, Facebook, InfinetePay, Mercado Livre e Mercado Pago — tudo nativo, sem Zapier. E agora com servidor MCP próprio: conecte seu assistente ao Claude, ChatGPT, Manus ou Cursor e use-o como ferramenta nativa dentro dos prórpios aplicativos de IA.',
     imageSrc: '/api.png',
     imageAlt: 'Integrações nativas do minhAi — Google, Meta, Mercado Pago e mais',
     color: 'green' as const,

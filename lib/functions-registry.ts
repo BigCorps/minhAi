@@ -4769,7 +4769,7 @@ consultar_leilao: {
       const cpfPrefill = cpfMatch ? cpfMatch[0].replace(/\D/g, '') : '';
 
       setActiveModal?.({
-        type: 'ConsultarLeilaoModal',
+        type: 'ConsultarProtestosModal',
         data: { companyId, cpfPrefill }
       });
 

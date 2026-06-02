@@ -22,6 +22,21 @@ type Stage = 'input' | 'processing' | 'result' | 'error';
 const OPENING_TEXT = 'Consulta de restrições de CPF. Digite o CPF para verificar pendências.';
 const AUTO_CLOSE = 60;
 
+// ── Validação de CPF ─────────────────────────────────────────────────────────
+const validateCPF = (cpf: string): boolean => {
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  let sum = 0;
+  for (let i = 1; i <= 9; i++) sum += parseInt(cpf[i - 1]) * (11 - i);
+  let rem = (sum * 10) % 11;
+  if (rem === 10 || rem === 11) rem = 0;
+  if (rem !== parseInt(cpf[9])) return false;
+  sum = 0;
+  for (let i = 1; i <= 10; i++) sum += parseInt(cpf[i - 1]) * (12 - i);
+  rem = (sum * 10) % 11;
+  if (rem === 10 || rem === 11) rem = 0;
+  return rem === parseInt(cpf[10]);
+};
+
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -60,6 +75,7 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
 
   const [pixData, setPixData] = useState<{ qrCodeUrl: string; pixCode: string; transactionId: string } | null>(null);
   const [pendingParams, setPendingParams] = useState<Record<string, any> | null>(null);
+  const [pixAmountBrl, setPixAmountBrl] = useState<string>('0,00');
 
   useEffect(() => {
     if (stage !== 'result') return;
@@ -89,6 +105,12 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
       return;
     }
 
+    if (!validateCPF(cleanCpf)) {
+      setErrorMsg('CPF inválido. Verifique os números digitados.');
+      playText('CPF inválido. Verifique os números digitados.').catch(() => {});
+      return;
+    }
+
     setStage('processing');
     setErrorMsg(null);
 
@@ -103,6 +125,7 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
 
       if (res.requires_payment) {
         setPendingParams({ company_id: data.companyId, action: 'restricoes_cpf', cpf, payment_confirmed: true });
+        setPixAmountBrl(res.amount_brl ?? '3,00');
         setStage('input');
 
         const pixRes = await supabase.functions.invoke('gerar-pix-assistente', {
@@ -249,7 +272,7 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
     return (
       <PIXConfirmationModal
         transactionId={pixData.transactionId}
-        amount={String(((pendingParams.amount_cents ?? 1500) / 100).toFixed(2)).replace('.', ',')}
+        amount={pixAmountBrl}
         qrCodeUrl={pixData.qrCodeUrl}
         pixCode={pixData.pixCode}
         theme={theme}

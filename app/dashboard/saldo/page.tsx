@@ -787,6 +787,7 @@ filtered = filtered.filter(tx =>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
               {formatCurrency(totalBalance.total_transferred_cents)}
             </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Total sacado em todo o período</p>
           </div>
 
           {/* Card de Comissões - Aparece apenas se hasVendasCompany for true e fica separado como um irmão dos outros cards */}

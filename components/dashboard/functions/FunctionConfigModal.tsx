@@ -4445,7 +4445,7 @@ const CONSULTAS_INFO: Record<string, { label: string; custo: string; descricao: 
   restricoes_cnpj:     { label: 'Restrições CNPJ',     custo: 'R$ 20,00', descricao: 'Score empresarial via Quod — protestos e análise de crédito.' },
 };
 
-const ConsultasConfigForm = ({ settings, onChange, functionKey, companyId }: any) => {
+const ConsultasConfigForm = ({ settings, onChange, onClose, functionKey, companyId }: any) => {
   const supabase = createClient();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);

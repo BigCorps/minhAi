@@ -75,8 +75,8 @@ export default function McpReadmePage() {
 
         <SubTitle>🔍 Consultas</SubTitle>
         <Table rows={[
-          ['consultar_cnpj',   'Dados completos de empresa na Receita Federal',  '1'],
-          ['consultar_cpf',    'Dados cadastrais de CPF na Receita Federal',     '1'],
+          ['dados_cnpj',   'Dados completos de empresa na Receita Federal',  '1'],
+          ['dados_cpf',    'Dados cadastrais de CPF na Receita Federal',     '1'],
           ['restricoes_cpf',   'Score de crédito e restrições via Quod',         '2'],
           ['consultar_cep',    'Endereço completo por CEP',                      '1'],
           ['consultar_placa',  'Dados de veículo pela placa',                    '2'],

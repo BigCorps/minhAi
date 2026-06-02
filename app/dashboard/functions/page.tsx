@@ -550,7 +550,7 @@ if (assistantType === 'vendas' && companyId) {
           title="Auxiliar de Funções IA"
         >
           <Bot className="w-4 h-4" />
-          <span className="hidden lg:inline">Auxiliar IA</span>
+          <span className="hidden lg:inline">Auxiliar de Funções</span>
         </button>
       )}
     </div>

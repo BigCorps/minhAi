@@ -22,6 +22,19 @@ type Stage = 'input' | 'processing' | 'result' | 'error';
 const OPENING_TEXT = 'Consulta de restrições de CNPJ. Digite o CNPJ para verificar pendências.';
 const AUTO_CLOSE = 60;
 
+// ── Validação de CNPJ ────────────────────────────────────────────────────────
+const validateCNPJ = (cnpj: string): boolean => {
+  if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+  let len = 12, sum = 0, pos = len - 7;
+  for (let i = len; i >= 1; i--) { sum += parseInt(cnpj[len - i]) * pos--; if (pos < 2) pos = 9; }
+  let rem = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  if (rem !== parseInt(cnpj[12])) return false;
+  len = 13; sum = 0; pos = len - 7;
+  for (let i = len; i >= 1; i--) { sum += parseInt(cnpj[len - i]) * pos--; if (pos < 2) pos = 9; }
+  rem = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  return rem === parseInt(cnpj[13]);
+};
+
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -60,6 +73,7 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
 
   const [pixData, setPixData] = useState<{ qrCodeUrl: string; pixCode: string; transactionId: string } | null>(null);
   const [pendingParams, setPendingParams] = useState<Record<string, any> | null>(null);
+  const [pixAmountBrl, setPixAmountBrl] = useState<string>('0,00');
 
   useEffect(() => {
     if (stage !== 'result') return;
@@ -90,6 +104,12 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
       return;
     }
 
+    if (!validateCNPJ(cleanCnpj)) {
+      setErrorMsg('CNPJ inválido. Verifique os números digitados.');
+      playText('CNPJ inválido. Verifique os números digitados.').catch(() => {});
+      return;
+    }
+
     setStage('processing');
     setErrorMsg(null);
 
@@ -104,6 +124,7 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
 
       if (res.requires_payment) {
         setPendingParams({ company_id: data.companyId, action: 'restricoes_cnpj', cnpj, payment_confirmed: true });
+        setPixAmountBrl(res.amount_brl ?? '3,00');
         setStage('input');
 
         const pixRes = await supabase.functions.invoke('gerar-pix-assistente', {
@@ -250,7 +271,7 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
     return (
       <PIXConfirmationModal
         transactionId={pixData.transactionId}
-        amount={String(((pendingParams.amount_cents ?? 2000) / 100).toFixed(2)).replace('.', ',')}
+        amount={pixAmountBrl}
         qrCodeUrl={pixData.qrCodeUrl}
         pixCode={pixData.pixCode}
         theme={theme}

@@ -3932,8 +3932,8 @@ consultar_cep: {
 },
 
 // ── Consultar CNPJ ────────────────────────────────────────────
-consultar_cnpj: {
-  functionKey: 'consultar_cnpj',
+dados_cnpj: {
+  functionKey: 'dados_cnpj',
   functionName: 'Dados CNPJ',
   category: 'knowledge',
   responseType: 'voice+modal',
@@ -3982,8 +3982,8 @@ consultar_cnpj: {
 },
 
 // ── Consultar CPF ─────────────────────────────────────────────
-consultar_cpf: {
-  functionKey: 'consultar_cpf',
+dados_cpf: {
+  functionKey: 'dados_cpf',
   functionName: 'Dados CPF',
   category: 'knowledge',
   responseType: 'voice+modal',

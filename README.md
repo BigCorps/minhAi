@@ -8,7 +8,7 @@
 
 * Criar Auxiliar de Cadastro e com MCP whatsapp - MANUS miriamithiel
 
-* Criar Tour guiado - MANUS interpag
+* Criar Tour guiado - MANUS interpag e CLAUDE ith.almeida
 
 ## IDÉIAS
 
@@ -30,7 +30,7 @@ Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app /
 
 * Carrossel no footer com 15 empresas que usam a minhAi futuramente
 
-* App PagSeguro para postos
+* App PagSeguro para postos (AGUARDANDO RESPOSTA PAGBANK)
 
 * Link na Bio com informações do whatsapp e facebook integradas (botão para a seção Serviços Meta - relatório em anexo).
 

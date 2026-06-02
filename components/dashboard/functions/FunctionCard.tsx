@@ -127,7 +127,13 @@ const CONFIGURABLE_FUNCTIONS = [
   'responder_pesquisa',
   'gerar_senha',
   'tef_debito',
-  'tef_credito'
+  'tef_credito',
+  'dados_cpf',
+  'dados_cnpj',
+  'consultar_placa',
+  'consultar_protestos',
+  'restricoes_cpf',
+  'restricoes_cnpj'
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

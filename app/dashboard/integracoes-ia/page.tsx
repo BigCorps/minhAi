@@ -259,16 +259,28 @@ function IntegracoesDashboardContent() {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-5xl mx-auto space-y-8">
 
-          {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Integrações IA</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">
-              Conecte o minhAi ao Claude, ChatGPT e outros assistentes de IA via MCP e execute funções diretamente nos principais aplicativos de IA
-              {selectedAssistantName && (
-                <> — assistente <span className="font-medium text-gray-900 dark:text-white">{selectedAssistantName}</span></>
-              )}
-            </p>
-          </div>
+{/* Header */}
+<div>
+  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+    Integrações IA
+  </h1>
+
+  <p className="text-gray-500 dark:text-gray-400 mt-1">
+    Conecte o
+    {selectedAssistantName ? (
+      <>
+        {" "}
+        assistente{" "}
+        <span className="font-medium text-gray-900 dark:text-white">
+          {selectedAssistantName}
+        </span>
+      </>
+    ) : (
+      " assistente"
+    )}{" "}
+    ao Claude, ChatGPT e outros via MCP para usar as funções da minhAi diretamente nos principais aplicativos de IA.
+  </p>
+</div>
 
           {/* URL do servidor MCP */}
           <div className="bg-gradient-to-r from-blue-500/10 to-blue-400/10 border border-blue-200 dark:border-blue-500/30 rounded-2xl p-5">

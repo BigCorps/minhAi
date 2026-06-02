@@ -4436,6 +4436,103 @@ const VendasForm = ({ functionKey, companyId }: { functionKey: string; companyId
   );
 };
 
+const CONSULTAS_INFO: Record<string, { label: string; custo: string; descricao: string }> = {
+  dados_cpf:           { label: 'Dados CPF',          custo: 'R$ 3,00',  descricao: 'Nome, data de nascimento, situação cadastral na Receita Federal.' },
+  dados_cnpj:          { label: 'Dados CNPJ',          custo: 'R$ 3,00',  descricao: 'Razão social, CNAE, sócios, situação na Receita Federal.' },
+  consultar_placa:     { label: 'Consultar Placa',     custo: 'R$ 3,00',  descricao: 'Marca, modelo, ano, cor, chassi, IPVA e histórico do veículo.' },
+  consultar_protestos: { label: 'Protestos em Cartório', custo: 'R$ 10,00', descricao: 'Protestos, pendências tributárias, Simples Nacional e SIMEI.' },
+  restricoes_cpf:      { label: 'Restrições CPF',      custo: 'R$ 15,00', descricao: 'Score e restrições financeiras via Quod — inadimplência e protestos.' },
+  restricoes_cnpj:     { label: 'Restrições CNPJ',     custo: 'R$ 20,00', descricao: 'Score empresarial via Quod — protestos e análise de crédito.' },
+};
+
+const ConsultasConfigForm = ({ settings, onChange, functionKey }: any) => {
+  const metodo = settings.consultas_payment_method ?? 'balance';
+  const info = CONSULTAS_INFO[functionKey];
+
+  return (
+    <div className="space-y-4">
+
+      {/* Custo da consulta */}
+      {info && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+          <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">
+            Custo por consulta: {info.custo}
+          </p>
+          <p className="text-xs text-blue-800 dark:text-blue-200">
+            {info.descricao}
+          </p>
+        </div>
+      )}
+
+      {/* Toggle método de pagamento */}
+      <div className="border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden">
+
+        <button
+          type="button"
+          onClick={() => onChange('consultas_payment_method', 'balance')}
+          className={`w-full flex items-start gap-3 p-4 text-left transition-colors ${
+            metodo === 'balance'
+              ? 'bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-200 dark:border-emerald-800'
+              : 'border-b border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'
+          }`}
+        >
+          <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+            metodo === 'balance'
+              ? 'border-emerald-500 bg-emerald-500'
+              : 'border-gray-400 dark:border-gray-600'
+          }`}>
+            {metodo === 'balance' && (
+              <div className="w-1.5 h-1.5 rounded-full bg-white" />
+            )}
+          </div>
+          <div>
+            <p className={`text-sm font-semibold ${metodo === 'balance' ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-900 dark:text-white'}`}>
+              Cobrar do Saldo
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Desconta automaticamente do saldo da empresa. Se o saldo for insuficiente, gera PIX automaticamente.
+            </p>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onChange('consultas_payment_method', 'pix')}
+          className={`w-full flex items-start gap-3 p-4 text-left transition-colors ${
+            metodo === 'pix'
+              ? 'bg-blue-50 dark:bg-blue-900/20'
+              : 'hover:bg-gray-50 dark:hover:bg-white/5'
+          }`}
+        >
+          <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+            metodo === 'pix'
+              ? 'border-blue-500 bg-blue-500'
+              : 'border-gray-400 dark:border-gray-600'
+          }`}>
+            {metodo === 'pix' && (
+              <div className="w-1.5 h-1.5 rounded-full bg-white" />
+            )}
+          </div>
+          <div>
+            <p className={`text-sm font-semibold ${metodo === 'pix' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
+              Cobrar sempre via PIX
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Gera um QR Code PIX antes de cada consulta. Ideal para cobrar o cliente final diretamente.
+            </p>
+          </div>
+        </button>
+      </div>
+
+      {/* Nota: configuração é global para todas as consultas */}
+      <p className="text-xs text-gray-400 dark:text-gray-500">
+        Esta configuração se aplica a todas as consultas pagas (CPF, CNPJ, Placa, Protestos, Restrições).
+      </p>
+
+    </div>
+  );
+};
+
 // ===== MAPEAMENTO: function_key → componente =====
 const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'qrcode_whatsapp': WhatsappForm,
@@ -4509,7 +4606,14 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'pre_atendimento': PreAtendimentoConfigForm,
   'responder_pesquisa': PesquisasConfigForm,
   'emitir_nota': EmitirNotaForm,
-  'gerar_senha': GerarFilaConfigForm, 
+  'gerar_senha': GerarFilaConfigForm,
+  'dados_cpf':           ConsultasConfigForm,
+  'dados_cnpj':          ConsultasConfigForm,
+  'consultar_placa':     ConsultasConfigForm,
+  'consultar_protestos': ConsultasConfigForm,
+  'restricoes_cpf':      ConsultasConfigForm,
+  'restricoes_cnpj':     ConsultasConfigForm,
+
 };
 
 // ===== INTERFACE =====
@@ -4812,9 +4916,9 @@ try {
         setHasActivePlan(false);
       }
 
-      const { data, error } = await supabase
+const { data, error } = await supabase
         .from('companies')
-        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, groq_fallback_message, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle, wifi_network_name, wifi_network_password, cardapio_url, cardapio_description, validar_cupom, qrcode_content, qrcode_label, manual_payment_enabled, print_price_per_page, print_max_pages_per_job, print_color_enabled, print_price_bw, print_price_color, printnode_computer_id, printnode_printer_id_bw, printnode_printer_id_color, thermal_printer_id, thermal_connection_type, youtube_channel_url, youtube_channel_name, youtube_channel_description, print_on_purchase, print_on_queue, print_on_payment, print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment')        .eq('id', companyId)
+        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, groq_fallback_message, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle, wifi_network_name, wifi_network_password, cardapio_url, cardapio_description, validar_cupom, qrcode_content, qrcode_label, manual_payment_enabled, print_price_per_page, print_max_pages_per_job, print_color_enabled, print_price_bw, print_price_color, printnode_computer_id, printnode_printer_id_bw, printnode_printer_id_color, thermal_printer_id, thermal_connection_type, youtube_channel_url, youtube_channel_name, youtube_channel_description, print_on_purchase, print_on_queue, print_on_payment, print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment, consultas_payment_method')
         .single();
 
       if (data) {

@@ -1,6 +1,6 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* Mudar Lalamove para produção e testar cadastrar produto no ML
+* Implementar Respostas automáticas no Mercado Livre
 
 * fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões - e configurar as edges para funcionar corretamente via MCP pedindo se cobra via Pix ou descontando do saldo.
 

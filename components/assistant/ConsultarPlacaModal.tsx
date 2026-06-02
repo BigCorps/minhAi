@@ -322,7 +322,7 @@ export default function ConsultarPlacaModal({
               <div className={`p-3 rounded-lg border flex items-start gap-2 ${isDark ? 'bg-yellow-900/20 border-yellow-700/50' : 'bg-yellow-50 border-yellow-200'}`}>
                 <AlertCircle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
                 <p className={`text-xs ${isDark ? 'text-yellow-300' : 'text-yellow-800'}`}>
-                  Confira a placa com atenção antes de consultar. A consulta consome créditos e não pode ser revertida em caso de digitação incorreta.
+                  Confira a placa com atenção antes de consultar. A consulta não pode ser revertida em caso de digitação incorreta.
                 </p>
               </div>
 

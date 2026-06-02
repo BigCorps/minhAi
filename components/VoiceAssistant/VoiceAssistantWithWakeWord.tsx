@@ -1337,7 +1337,7 @@ case 'impressao_recibo':
         case 'consultar_placa':
           setActiveModal({ type: 'ConsultarPlacaModal', data: { companyId } });
           break;
-        case 'consultar_leilao':
+        case 'consultar_protestos':
           setActiveModal({ type: 'ConsultarProtestosModal', data: { companyId } });
           break;
         case 'cadastro':
@@ -2249,7 +2249,7 @@ const response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/proces
       consultar_feriados: { type: 'FeriadosNacionaisDisplay',         data: { companyId } },
       consultar_ddd:      { type: 'ConsultarDDDDisplay',              data: { companyId } },
       consultar_placa:    { type: 'ConsultarPlacaModal',              data: { companyId } },
-      consultar_leilao:   { type: 'ConsultarProtestosModal',          data: { companyId } },
+      consultar_protestos:   { type: 'ConsultarProtestosModal',          data: { companyId } },
       enviar_arquivo:     { type: 'EnviarArquivoDisplay',             data: { companyId } },
       gerar_qrcode:       { type: 'GerarQRCodeDisplay',               data: { companyId } },
       gerar_codigo_barras:{ type: 'GerarCodigoBarrasDisplay',         data: { companyId } },

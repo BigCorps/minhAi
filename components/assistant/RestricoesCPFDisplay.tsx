@@ -8,6 +8,7 @@ import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModal
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 import { generateConsultaPDF } from '@/lib/generatePDF';
+import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
 
 interface Props {
   data: { companyId: string };
@@ -57,6 +58,9 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
+  const [pixData, setPixData] = useState<{ qrCodeUrl: string; pixCode: string; transactionId: string } | null>(null);
+  const [pendingParams, setPendingParams] = useState<Record<string, any> | null>(null);
+
   useEffect(() => {
     if (stage !== 'result') return;
     setTimeLeft(AUTO_CLOSE);
@@ -89,17 +93,41 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
     setErrorMsg(null);
 
     try {
+      const params = pendingParams ?? { company_id: data.companyId, action: 'restricoes_cpf', cpf };
+
       const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
-        body: { company_id: data.companyId, action: 'restricoes_cpf', cpf }
+        body: params,
       });
 
       if (error) throw new Error(error.message);
+
+      if (res.requires_payment) {
+        setPendingParams({ company_id: data.companyId, action: 'restricoes_cpf', cpf, payment_confirmed: true });
+        setStage('input');
+
+        const pixRes = await supabase.functions.invoke('gerar-pix-assistente', {
+          body: {
+            company_id: data.companyId,
+            amount_cents: res.amount_cents,
+            description: `Restrições CPF - R$ ${res.amount_brl}`,
+          },
+        });
+        if (pixRes.error) throw new Error(pixRes.error.message);
+
+        setPixData({
+          qrCodeUrl: pixRes.data.qr_code_url,
+          pixCode: pixRes.data.pix_code,
+          transactionId: pixRes.data.transaction_id,
+        });
+        playText(`Saldo insuficiente. Gerei um PIX de R$ ${res.amount_brl}. Escaneie para pagar e a consulta será liberada.`).catch(() => {});
+        return;
+      }
+
       if (!res.success) throw new Error(res.error ?? 'Falha na consulta');
 
       setResultData(res.result);
       setSpeechText(res.speech_text);
 
-      // ✅ PDF já vem como data URI da edge (buscado server-side, sem CORS)
       const name = `restricoes_cpf_${cleanCpf}_${Date.now()}.pdf`;
       setFileName(name);
       setFileBase64(
@@ -107,13 +135,15 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
         generateConsultaPDF('Restrições CPF', res.resultado_formatado)
       );
 
+      setPendingParams(null);
+      setPixData(null);
       setStage('result');
       playText(res.speech_text).catch(() => {});
     } catch (err: any) {
       setErrorMsg(err.message ?? 'Erro ao consultar restrições.');
       setStage('error');
     }
-  }, [cpf, data.companyId, supabase, playText]);
+  }, [cpf, data.companyId, supabase, playText, pendingParams]);
 
   const handleCopy = useCallback(async () => {
     if (!resultData) return;
@@ -127,7 +157,7 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
   const handleDownloadPdf = useCallback(() => {
     if (!fileBase64) return;
     const a = document.createElement('a');
-    a.href = fileBase64; // data URI direto (data:application/pdf;base64,...)
+    a.href = fileBase64;
     a.download = fileName || `restricoes_cpf_${Date.now()}.pdf`;
     a.click();
     playText('PDF de restrições baixado.').catch(() => {});
@@ -214,6 +244,27 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
   });
 
   const modalMaxWidth = stage === 'result' ? 'max-w-lg sm:max-w-3xl' : 'max-w-lg';
+
+  if (pixData && pendingParams) {
+    return (
+      <PIXConfirmationModal
+        transactionId={pixData.transactionId}
+        amount={String(((pendingParams.amount_cents ?? 1500) / 100).toFixed(2)).replace('.', ',')}
+        qrCodeUrl={pixData.qrCodeUrl}
+        pixCode={pixData.pixCode}
+        theme={theme}
+        onConfirm={async () => {
+          setPixData(null);
+          setStage('processing');
+          await handleConsultar();
+        }}
+        onCancel={async () => {
+          setPixData(null);
+          setPendingParams(null);
+        }}
+      />
+    );
+  }
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">

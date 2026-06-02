@@ -27,6 +27,33 @@ interface ResultadoFormatado {
   value: string;
 }
 
+// ── Validações de documento ──────────────────────────────────────────────────
+const validateCPF = (cpf: string): boolean => {
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  let sum = 0;
+  for (let i = 1; i <= 9; i++) sum += parseInt(cpf[i - 1]) * (11 - i);
+  let rem = (sum * 10) % 11;
+  if (rem === 10 || rem === 11) rem = 0;
+  if (rem !== parseInt(cpf[9])) return false;
+  sum = 0;
+  for (let i = 1; i <= 10; i++) sum += parseInt(cpf[i - 1]) * (12 - i);
+  rem = (sum * 10) % 11;
+  if (rem === 10 || rem === 11) rem = 0;
+  return rem === parseInt(cpf[10]);
+};
+
+const validateCNPJ = (cnpj: string): boolean => {
+  if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+  let len = 12, sum = 0, pos = len - 7;
+  for (let i = len; i >= 1; i--) { sum += parseInt(cnpj[len - i]) * pos--; if (pos < 2) pos = 9; }
+  let rem = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  if (rem !== parseInt(cnpj[12])) return false;
+  len = 13; sum = 0; pos = len - 7;
+  for (let i = len; i >= 1; i--) { sum += parseInt(cnpj[len - i]) * pos--; if (pos < 2) pos = 9; }
+  rem = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  return rem === parseInt(cnpj[13]);
+};
+
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -51,6 +78,7 @@ export default function ConsultarProtestosModal({
 
   const [pixData, setPixData] = useState<{ qrCodeUrl: string; pixCode: string; transactionId: string } | null>(null);
   const [pendingParams, setPendingParams] = useState<Record<string, any> | null>(null);
+  const [pixAmountBrl, setPixAmountBrl] = useState<string>('0,00');
 
   const { isConnected: googleConnected } = useGoogleConnected(companyId);
 
@@ -86,6 +114,12 @@ export default function ConsultarProtestosModal({
       return;
     }
 
+    if (!validateCPF(cleanCpf)) {
+      setError('CPF inválido. Verifique os números digitados.');
+      playText('CPF inválido. Verifique os números digitados.').catch(() => {});
+      return;
+    }
+
     setStep('loading');
     setError(null);
     setResultado([]);
@@ -104,6 +138,7 @@ export default function ConsultarProtestosModal({
 
       if (res.requires_payment) {
         setPendingParams({ company_id: companyId, action: 'consultar_protestos', cpf: cleanCpf, payment_confirmed: true });
+        setPixAmountBrl(res.amount_brl ?? '10,00');
         setStep('input');
 
         const pixRes = await supabase.functions.invoke('gerar-pix-assistente', {
@@ -219,7 +254,7 @@ export default function ConsultarProtestosModal({
     return (
       <PIXConfirmationModal
         transactionId={pixData.transactionId}
-        amount={String(((pendingParams.amount_cents ?? 1000) / 100).toFixed(2)).replace('.', ',')}
+        amount={pixAmountBrl}
         qrCodeUrl={pixData.qrCodeUrl}
         pixCode={pixData.pixCode}
         theme={theme}

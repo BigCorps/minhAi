@@ -1316,10 +1316,10 @@ case 'impressao_recibo':
         case 'consultar_cep':
           setActiveModal({ type: 'ConsultarCEPDisplay', data: { companyId } });
           break;
-        case 'consultar_cnpj':
+        case 'dados_cnpj':
           setActiveModal({ type: 'ConsultarCnpjModal', data: { companyId } });
           break;
-        case 'consultar_cpf':
+        case 'dados_cpf':
           setActiveModal({ type: 'ConsultarCpfModal', data: { companyId } });
           break;
         case 'restricoes_cpf':
@@ -2242,8 +2242,8 @@ const response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/proces
       meu_sistema:        { type: 'MeuSistemaDisplay',                data: { companyId } },
       consultar_cambio:   { type: 'CotacaoMoedasDisplay',             data: { companyId } },
       consultar_cep:      { type: 'ConsultarCEPDisplay',              data: { companyId } },
-      consultar_cnpj:     { type: 'ConsultarCnpjModal',               data: { companyId } },
-      consultar_cpf:      { type: 'ConsultarCpfModal',                data: { companyId } },
+      dados_cnpj:     { type: 'ConsultarCnpjModal',               data: { companyId } },
+      dados_cpf:      { type: 'ConsultarCpfModal',                data: { companyId } },
       restricoes_cpf:     { type: 'RestricoesCPFDisplay',             data: { companyId } },
       restricoes_cnpj:    { type: 'RestricoesCNPJDisplay',            data: { companyId } },
       consultar_feriados: { type: 'FeriadosNacionaisDisplay',         data: { companyId } },

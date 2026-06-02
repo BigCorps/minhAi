@@ -2,13 +2,13 @@
 
 * Implementar Respostas automáticas no Mercado Livre
 
-* fazer functions config para as funções de consulta, com opção de gerar Pix ou descontar do saldo, igual impressões - e configurar as edges para funcionar corretamente via MCP pedindo se cobra via Pix ou descontando do saldo.
+* Funções de consulta gerando pix
 
-* site pessoal no webapp como página incial - ícone casa primeiro - com a chamada, transforme seu site em um app facilmente.
+* Site pessoal no webapp como página incial - ícone casa primeiro - com a chamada, transforme seu site em um app facilmente.
 
-* Criar Auxiliar de Cadastro para cadastro de produtos com sugestão de imagens para a IA mostrar de acordo com o produto. E também importar cardápio em pdf e imagens diretamente para o cadastro no dashboard já perguntando se vai preparar o produto também para emissão de nota e configuração do produto no Mercado Livre, se ambos configurados. Com tudo pronto, criar Edge para MCP no Whatsapp
+* Criar Auxiliar de Cadastro e com MCP whatsapp - MANUS miriamithiel
 
-* Modo teste com cada etapa como modal e depois gravar vídeo - colocar na landing as 2 opções (vídeo e guiado)
+* Criar Tour guiado - MANUS interpag
 
 ## IDÉIAS
 

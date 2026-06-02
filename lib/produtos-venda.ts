@@ -31,6 +31,7 @@ export interface ProdutoVenda {
   ml_listing_type?: string | null;
   ml_status?: string | null;
   ml_published_at?: string | null;
+  marca?: string | null;
 }
 
 export interface ProdutoVendaInput {
@@ -40,6 +41,7 @@ export interface ProdutoVendaInput {
   nome: string;
   descricao?: string;
   categoria?: string;
+  marca?: string;
   imagem_url?: string;
   ean?: string;
   preco_custo?: number;

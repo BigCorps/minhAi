@@ -2,7 +2,7 @@
 
 * Implementar Respostas automáticas no Mercado Livre
 
-* Funções de consulta gerando pix corretamente, aplicar correção em todos os modais de validação
+* Funções de consulta gerando pix corretamente, aplicar correção em todos os modais de validação - CLAUDE qoreco
 
 * Site pessoal no webapp como página incial - ícone casa primeiro - com a chamada, transforme seu site em um app facilmente.
 

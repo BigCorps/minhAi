@@ -34,7 +34,12 @@ export default function TourStage1() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [sceneVisible, setSceneVisible] = useState(true)
-  const { playText, stopAudio } = usePlayText()
+  const { playText: _playText, stopAudio } = usePlayText()
+  // Wrapper com velocidade aumentada para o tour (1.35x = fala mais ágil)
+  const playText = useCallback(
+    (text: string) => _playText(text, 1.35),
+    [_playText]
+  )
 
   const isPlayingRef = useRef(false)
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -136,42 +141,49 @@ export default function TourStage1() {
   }, [stopAudio])
 
   return (
-    <div className="w-full min-h-screen flex flex-col items-center justify-center gap-4 px-4 py-6"
+    <div
+      className="w-full min-h-screen flex items-center justify-center px-4 py-6"
       style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' }}
     >
-      {/* ── Área do visual da cena ── */}
-      <div
-        className="w-full transition-opacity ease-in-out"
-        style={{
-          opacity: sceneVisible ? 1 : 0,
-          transitionDuration: `${FADE_DURATION}ms`,
-          // Altura responsiva: 45vh mobile → 55vh desktop
-          height: 'clamp(280px, 50vh, 520px)',
-          maxWidth: 480,
-        }}
-      >
-        <SceneRenderer id={currentScene.id} isSpeaking={isSpeaking} />
-      </div>
+      {/*
+        Mobile  → coluna (flex-col): avatar em cima, cena abaixo, controles no fim
+        Desktop → linha (md:flex-row): coluna esquerda fixa + cena ocupando o resto
+      */}
+      <div className="w-full max-w-6xl flex flex-col md:flex-row md:items-center gap-8 md:gap-12">
 
-      {/* ── TourAssistant (avatar + legenda) ── */}
-      <div className="w-full max-w-lg">
-        <TourAssistant
-          isSpeaking={isSpeaking}
-          caption={currentScene.audioText}
-          hideAvatar={hideAvatar}
-        />
-      </div>
+        {/* ── COLUNA ESQUERDA: avatar + legenda + controles ── */}
+        <div className="flex flex-col items-center gap-6 w-full md:w-72 lg:w-80 flex-shrink-0">
+          <TourAssistant
+            isSpeaking={isSpeaking}
+            caption={currentScene.audioText}
+            hideAvatar={hideAvatar}
+          />
+          <TourControls
+            currentId={currentScene.id}
+            isPlaying={isPlaying}
+            onPrev={handlePrev}
+            onNext={handleNext}
+            onTogglePlay={handleTogglePlay}
+            onGoTo={goToScene}
+          />
+        </div>
 
-      {/* ── Controles ── */}
-      <div className="w-full max-w-lg">
-        <TourControls
-          currentId={currentScene.id}
-          isPlaying={isPlaying}
-          onPrev={handlePrev}
-          onNext={handleNext}
-          onTogglePlay={handleTogglePlay}
-          onGoTo={goToScene}
-        />
+        {/* ── COLUNA DIREITA: visual da cena ── */}
+        <div
+          className="w-full flex-1 transition-opacity ease-in-out"
+          style={{
+            opacity: sceneVisible ? 1 : 0,
+            transitionDuration: `${FADE_DURATION}ms`,
+            // Mobile: altura compacta / Desktop: ocupa a altura disponível
+            height: 'clamp(300px, 55vh, 600px)',
+            maxWidth: 560,
+            // Centraliza no mobile, alinha ao centro no desktop
+            margin: '0 auto',
+          }}
+        >
+          <SceneRenderer id={currentScene.id} isSpeaking={isSpeaking} />
+        </div>
+
       </div>
     </div>
   )

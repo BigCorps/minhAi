@@ -159,7 +159,7 @@ return (
 
 function SceneRenderer({ id, isSpeaking }: { id: SceneId; isSpeaking: boolean }) {
   switch (id) {
-    case 'intro':       return <SceneIntro />
+    case 'intro':       return <SceneIntro isSpeaking={isSpeaking} />
     case 'assistente':  return <SceneAssistente isSpeaking={isSpeaking} />
     case 'widget':      return <SceneWidget />
     case 'whatsapp':    return <SceneWhatsApp />
@@ -167,7 +167,7 @@ function SceneRenderer({ id, isSpeaking }: { id: SceneId; isSpeaking: boolean })
     case 'mercadolivre':return <SceneMercadoLivre />
     case 'mcp':         return <SceneMCP />
     case 'whatsapp-mcp':return <SceneWhatsAppMCP />
-    case 'outro':       return <SceneIntro isOutro />
+    case 'outro':       return <SceneIntro isOutro isSpeaking={isSpeaking} />
     default:            return null
   }
 }

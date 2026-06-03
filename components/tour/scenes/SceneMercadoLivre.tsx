@@ -1,6 +1,8 @@
 'use client'
 // components/tour/scenes/SceneMercadoLivre.tsx
 
+import { useEffect, useState } from 'react'
+
 const QA = [
   {
     question: 'O produto acompanha nota fiscal?',
@@ -8,11 +10,30 @@ const QA = [
   },
   {
     question: 'Qual o prazo de entrega para São Paulo?',
-    answer: 'Para SP capital o prazo é de 2 dias úteis via Mercado Envios. Posso verificar seu CEP específico!',
+    answer: 'Para SP capital o prazo é de 2 dias úteis via Mercado Envios.',
   },
 ]
 
+// Cada "passo" da animação:
+// 0 = nada visível
+// 1 = pergunta 1
+// 2 = resposta 1
+// 3 = pergunta 2
+// 4 = resposta 2
+const STEP_DELAY = 900 // ms entre cada passo
+
 export default function SceneMercadoLivre() {
+  const [step, setStep] = useState(0)
+
+  useEffect(() => {
+    setStep(0)
+    const timers: ReturnType<typeof setTimeout>[] = []
+    for (let i = 1; i <= QA.length * 2; i++) {
+      timers.push(setTimeout(() => setStep(i), i * STEP_DELAY))
+    }
+    return () => timers.forEach(clearTimeout)
+  }, [])
+
   return (
     <div className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none bg-white">
 
@@ -48,26 +69,47 @@ export default function SceneMercadoLivre() {
         </div>
       </div>
 
-      {/* Q&A list */}
-      <div
-        className="flex-1 flex flex-col overflow-hidden divide-y"
-        style={{ borderColor: 'rgba(0,0,0,0.06)' }}
-      >
-        {QA.map((item, i) => (
-          <div key={i} className="px-4 py-3 flex flex-col gap-2">
-            <div className="flex items-start gap-2">
-              <span className="text-xs font-bold flex-shrink-0 mt-0.5" style={{ color: '#3483fa' }}>P:</span>
-              <p className="text-xs text-gray-700 leading-relaxed">{item.question}</p>
+      {/* Q&A animado */}
+      <div className="flex-1 flex flex-col overflow-hidden divide-y" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+        {QA.map((item, i) => {
+          const questionStep = i * 2 + 1
+          const answerStep = i * 2 + 2
+          const showQuestion = step >= questionStep
+          const showAnswer = step >= answerStep
+
+          return (
+            <div key={i} className="px-4 py-3 flex flex-col gap-2">
+
+              {/* Pergunta */}
+              <div
+                className="flex items-start gap-2"
+                style={{
+                  opacity: showQuestion ? 1 : 0,
+                  transform: showQuestion ? 'translateY(0)' : 'translateY(8px)',
+                  transition: 'opacity 0.4s ease, transform 0.4s ease',
+                }}
+              >
+                <span className="text-xs font-bold flex-shrink-0 mt-0.5" style={{ color: '#3483fa' }}>P:</span>
+                <p className="text-xs text-gray-700 leading-relaxed">{item.question}</p>
+              </div>
+
+              {/* Resposta */}
+              <div
+                className="flex items-start gap-2 rounded-lg px-2.5 py-2"
+                style={{
+                  background: '#f0f7ff',
+                  opacity: showAnswer ? 1 : 0,
+                  transform: showAnswer ? 'translateY(0)' : 'translateY(8px)',
+                  transition: 'opacity 0.4s ease, transform 0.4s ease',
+                }}
+              >
+                <span className="text-xs font-bold flex-shrink-0 mt-0.5" style={{ color: '#00a650' }}>R:</span>
+                <p className="text-xs text-gray-700 leading-relaxed">{item.answer}</p>
+              </div>
+
             </div>
-            <div
-              className="flex items-start gap-2 rounded-lg px-2.5 py-2"
-              style={{ background: '#f0f7ff' }}
-            >
-              <span className="text-xs font-bold flex-shrink-0 mt-0.5" style={{ color: '#00a650' }}>R:</span>
-              <p className="text-xs text-gray-700 leading-relaxed">{item.answer}</p>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Input */}

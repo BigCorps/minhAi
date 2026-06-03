@@ -120,7 +120,7 @@ export default function SiteClient({ company }: SiteClientProps) {
       />
 
       {/* Iframe area */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0, height: '100%' }}>
 
         {/* Loading skeleton */}
         {iframeStatus === 'loading' && (

@@ -778,10 +778,22 @@ const [mlQuestions,        setMlQuestions]        = useState<any[]>([])
                         </div>
                       )}
 
-                      {/* Link produtos */}
-                      <p className="text-xs text-gray-400 dark:text-gray-500">
-                        Publique produtos em <strong className="text-gray-600 dark:text-gray-300">Vendas → Produtos</strong>
-                      </p>
+                      {/* Funcionalidades ativas */}
+                      <div className="space-y-1.5">
+                        {[
+                          { label: 'Publicar produtos', sub: 'em Vendas → Produtos' },
+                          { label: 'Preço e estoque sincronizados', sub: 'atualiza ao editar o produto' },
+                          { label: 'Respostas com IA', sub: mlReplyEnabled ? (mlAutoReply ? 'modo automático ativo' : 'aguardando aprovação manual') : 'ativar toggle acima' },
+                        ].map((item, i) => (
+                          <div key={i} className="flex items-start gap-2">
+                            <span className="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500 flex-shrink-0 mt-1.5" />
+                            <div>
+                              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{item.label}</span>
+                              <span className="text-xs text-gray-400 dark:text-gray-500"> · {item.sub}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
 
                       {/* Botões */}
                       <div className="flex gap-2">
@@ -820,7 +832,7 @@ const [mlQuestions,        setMlQuestions]        = useState<any[]>([])
                         {[
                           'Publicar produtos do catálogo minhAi no ML',
                           'Sincronizar preço e estoque automaticamente',
-                          'Responder perguntas dos anúncios com GPT-4o',
+                          'Responder perguntas dos anúncios com IA',
                           'Modo automático ou com aprovação manual',
                         ].map((item, i) => (
                           <p key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5">

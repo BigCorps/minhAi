@@ -203,7 +203,7 @@ const isVendas = company.assistant_type === 'vendas';
       redirect(`/link`);
     }
     if (home === 'site' && company.website) {
-      redirect(company.website);
+      redirect(`/site`);
     }
   }
 

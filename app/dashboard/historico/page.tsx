@@ -44,6 +44,7 @@ const META_FUNCTIONS = [
   'ver_agenda', 'horarios_disponiveis', 'agendar_compromisso',
   'cancelar_agendamento', 'confirmar_presenca', 'reagendar_compromisso',
   'enviar_email',
+  'ml_responder_pergunta',
 ];
 const RICH_FUNCTIONS = [...DIALOGUE_FUNCTIONS, ...META_FUNCTIONS];
 const CONVERSATION_KEYS = RICH_FUNCTIONS;

@@ -26,14 +26,14 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'intro',
     label: 'Introdução',
     audioText:
-      'Olá! Eu sou o assistente da minhAi. Posso atuar em qualquer lugar onde o seu cliente esteja — telas, aplicativos, redes sociais e ferramentas de desenvolvimento.',
+      'Olá! Eu sou a minhAi, mas também posso ser a Sua IA ou Nossa IA! Posso atuar em qualquer lugar onde o seu cliente esteja — telas, aplicativos de IA, Whatsapp, Instagram, Facebook e Mercado Livre',
     fallbackDuration: 7000,
   },
   {
     id: 'assistente',
     label: 'Tela & Totem',
     audioText:
-      'Diretamente na tela do seu estabelecimento ou em um totem de autoatendimento, com três modos de exibição: padrão com avatar, modo imersivo em tela cheia, e modo texto para digitação.',
+      'Diretamente na tela do seu estabelecimento ou em um totem de autoatendimento, tenho três modos de exibição: padrão com avatar, modo imersivo em tela cheia, e modo texto para digitação.',
     fallbackDuration: 9000,
   },
   {
@@ -54,35 +54,35 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'instagram',
     label: 'Instagram',
     audioText:
-      'No Instagram, respondendo mensagens diretas automaticamente, convertendo seguidores em clientes.',
+      'No Instagram e Facebook, respondendo mensagens diretas automaticamente, convertendo seguidores em clientes.',
     fallbackDuration: 6000,
   },
   {
     id: 'mercadolivre',
     label: 'Mercado Livre',
     audioText:
-      'No Mercado Livre, respondendo perguntas de compradores e mensagens pós-venda de forma automática e inteligente.',
+      'No Mercado Livre, respondendo perguntas de compradores e tambem postando produtos diretamente do nosso dashboard.',
     fallbackDuration: 6000,
   },
   {
     id: 'mcp',
     label: 'MCP',
     audioText:
-      'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus — onde desenvolvedores e equipes já trabalham, o assistente da minhAi está disponível como ferramenta nativa.',
+      'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus — onde você pode pedir tarefas para a minhAi diretamente pelo seu app de IA favorito.',
     fallbackDuration: 8000,
   },
   {
     id: 'whatsapp-mcp',
     label: 'WhatsApp MCP',
     audioText:
-      'E também no WhatsApp com MCP ativo, trazendo capacidades de ferramentas inteligentes para dentro da conversa — consultas, ações e integrações sem sair do aplicativo.',
+      'E também pode pedir tarefas diretamente para o WhatsApp minhAi — consultas, ações e integrações sem sair do aplicativo.',
     fallbackDuration: 7000,
   },
   {
     id: 'outro',
     label: 'Conclusão',
     audioText:
-      'Em qualquer canal. Com a mesma inteligência. Conheça a minhAi.',
+      'Em qualquer canal, tudo com a mesma inteligência, configuração simples e rápida, sem conhecimentos tecnicos avançados ou entender sobre programação.',
     fallbackDuration: 4000,
   },
 ]

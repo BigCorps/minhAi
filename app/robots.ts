@@ -48,7 +48,7 @@ export default function robots(): MetadataRoute.Robots {
           'Meta-ExternalAgent', // Meta AI
           'Bytespider',        // ByteDance / TikTok AI
         ],
-              allow: [
+      allow: [
         '/',
         '/precos',
         '/sobre',
@@ -57,6 +57,7 @@ export default function robots(): MetadataRoute.Robots {
         '/blog',
         '/para/',
         '/ia/suporte',   // ← demo pública — crawlers de IA podem indexar
+        '/tour', 
       ],
       disallow: [
         '/dashboard/',

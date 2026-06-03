@@ -85,7 +85,7 @@ export async function middleware(request: NextRequest) {
       }
 
       const url = request.nextUrl.clone();
-      const SPECIAL_ROUTES = ['/vendas', '/fila', '/pay', '/cliente', '/link'];
+      const SPECIAL_ROUTES = ['/vendas', '/fila', '/pay', '/cliente', '/link', '/site'];
       const isSpecialRoute = SPECIAL_ROUTES.some(route => pathname.startsWith(route));
 
       if (isSpecialRoute) {

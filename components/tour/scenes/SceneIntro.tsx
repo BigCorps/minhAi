@@ -1,30 +1,19 @@
 'use client'
 // components/tour/scenes/SceneIntro.tsx
-// Usada tanto na cena 'intro' quanto na 'outro'.
-// Exibe o logotipo minhAi + tagline, com o avatar já sendo
-// renderizado pelo TourAssistant (não duplicamos aqui).
+import Image from 'next/image'
 
 export default function SceneIntro({ isOutro = false }: { isOutro?: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center gap-6 w-full h-full select-none">
-      {/* Logo / wordmark */}
-      <div className="flex items-center gap-3">
-        {/* Ícone orbe pequeno decorativo */}
-        <div
-          className="rounded-full flex-shrink-0"
-          style={{
-            width: 'clamp(32px, 6vw, 56px)',
-            height: 'clamp(32px, 6vw, 56px)',
-            background: 'radial-gradient(circle at 40% 40%, #3b82f6, #1d4ed8)',
-            boxShadow: '0 0 32px rgba(59,130,246,0.5)',
-          }}
+      {/* Logo real */}
+      <div style={{ width: 'clamp(140px, 28vw, 260px)', position: 'relative', aspectRatio: '3/1' }}>
+        <Image
+          src="/logo.png"
+          alt="minhAi"
+          fill
+          className="object-contain"
+          priority
         />
-        <span
-          className="font-bold tracking-tight text-white"
-          style={{ fontSize: 'clamp(1.8rem, 5vw, 3.5rem)' }}
-        >
-          minhAi
-        </span>
       </div>
 
       {/* Tagline */}

@@ -46,31 +46,30 @@ export default function SceneWidget() {
           <div className="h-3 bg-gray-200 rounded w-2/3" />
         </div>
 
-        {/* ── Widget flutuante minhAi ── */}
-        <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2">
-          {/* Balão de boas-vindas */}
-          <div className="bg-white rounded-2xl rounded-br-sm shadow-lg px-3 py-2 max-w-[160px] border border-gray-100">
-            <p className="text-gray-700 text-xs leading-snug">
-              Olá! 👋 Posso ajudar com cardápio, reservas ou pedidos?
-            </p>
-          </div>
-
-          {/* Botão do widget */}
-          <div
-            className="rounded-full shadow-xl flex items-center justify-center cursor-pointer"
-            style={{
-              width: 'clamp(44px, 8vw, 56px)',
-              height: 'clamp(44px, 8vw, 56px)',
-              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-              boxShadow: '0 4px 24px rgba(59,130,246,0.5)',
-            }}
-          >
-            {/* Ícone de chat */}
-            <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5">
-              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
-            </svg>
-          </div>
-        </div>
+{/* ── Widget flutuante minhAi ── */}
+<div className="absolute bottom-4 right-4 flex flex-col items-end gap-2">
+  {/* Balão de boas-vindas */}
+  <div className="bg-white rounded-2xl rounded-br-sm shadow-lg px-3 py-2 max-w-[160px] border border-gray-100">
+    <p className="text-gray-700 text-xs leading-snug">
+      Olá! 👋 Posso ajudar com cardápio, reservas ou pedidos?
+    </p>
+  </div>
+  {/* Botão pill no padrão minhAi */}
+  <div
+    className="flex items-center gap-2 rounded-full shadow-xl cursor-pointer px-4 py-2.5"
+    style={{
+      background: '#de691b',
+      boxShadow: '0 4px 20px rgba(222,105,27,0.45)',
+    }}
+  >
+    <span className="text-white text-xs font-semibold whitespace-nowrap">
+      Gerente Café
+    </span>
+    <svg viewBox="0 0 24 24" fill="white" className="w-3.5 h-3.5 flex-shrink-0">
+      <path d="M7 10l5 5 5-5z" />
+    </svg>
+  </div>
+</div>
       </div>
     </div>
   )

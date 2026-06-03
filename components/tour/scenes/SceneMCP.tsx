@@ -51,24 +51,28 @@ const LOGOS = [
     name: 'Claude',
     color: '#c96a2d',
     bgLight: '#fff7ed',
+    iconBg: '#c96a2d',        // fundo do círculo = color
     icon: <ClaudeIcon className="w-5 h-5" />,
   },
   {
     name: 'ChatGPT',
     color: '#10a37f',
     bgLight: '#f0fdf4',
+    iconBg: '#10a37f',
     icon: <ChatGPTIcon className="w-5 h-5" />,
   },
   {
     name: 'Cursor',
     color: '#334155',
     bgLight: '#f8fafc',
+    iconBg: '#334155',
     icon: <CursorIcon className="w-5 h-5" />,
   },
   {
     name: 'Manus',
     color: '#1e293b',
     bgLight: '#f8fafc',
+    iconBg: '#ffffff',        // ← fundo branco só pro Manus
     icon: <ManusIcon className="w-5 h-5" />,
   },
 ]
@@ -76,7 +80,7 @@ const LOGOS = [
 // ── Sequência de ferramentas reais ────────────────────────────────────────────
 const TOOL_SCENES = [
   {
-    userMsg: 'Gera um PIX de R$ 150,00 para o cliente João.',
+    userMsg: 'Gerar um PIX de R$ 150,00 para o cliente João.',
     toolName: 'minhai · gerar_pix',
     toolArgs: [{ label: 'valor', value: '150.00' }, { label: 'descricao', value: 'Pagamento João' }],
     response: '💰 PIX Gerado! R$ 150,00\n📷 QR Code disponível\nCópia e cola: 00020126...',
@@ -85,7 +89,7 @@ const TOOL_SCENES = [
     accentBorder: '#bbf7d0',
   },
   {
-    userMsg: 'Consulta o CPF 123.456.789-09, nascido em 15/03/1985.',
+    userMsg: 'Consulta o CPF 123.456.789-09',
     toolName: 'minhai · consultar_cpf',
     toolArgs: [{ label: 'cpf', value: '123.456.789-09' }, { label: 'data_nasc.', value: '15/03/1985' }],
     response: '👤 Consulta CPF\n\nNome: JOÃO DA SILVA\nSituação: Regular\nData nasc.: 15/03/1985',
@@ -147,7 +151,7 @@ export default function SceneMCP() {
       >
         <div
           className="rounded-lg flex items-center justify-center flex-shrink-0 transition-colors duration-500"
-          style={{ width: 32, height: 32, background: logo.color, color: 'white' }}
+          style={{ width: 32, height: 32, background: logo.iconBg, color: logo.iconBg === '#ffffff' ? logo.color : 'white' }}
         >
           {logo.icon}
         </div>
@@ -246,7 +250,7 @@ export default function SceneMCP() {
           >
             <div
               className="rounded-lg flex items-center justify-center"
-              style={{ width: 28, height: 28, background: l.color, color: 'white' }}
+              style={{ width: 28, height: 28, background: l.iconBg, color: l.iconBg === '#ffffff' ? l.color : 'white' }}
             >
               {l.icon}
             </div>

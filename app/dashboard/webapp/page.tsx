@@ -47,11 +47,11 @@ const THEME_COLORS = [
 ];
 
 const WEBAPP_HOME_OPTIONS = [
-  { value: 'ia',     label: 'Assistente IA',        desc: 'Abre direto no assistente de voz (padrão)',},
+  { value: 'ia',     label: 'Assistente IA',         desc: 'Abre direto no seu assistente minhAi',},
   { value: 'vendas', label: 'Modo Vendas',           desc: 'Abre no catálogo de produtos',            },
   { value: 'fila',   label: 'Fila de Atendimento',   desc: 'Abre no painel de senhas',                },
   { value: 'links',  label: 'Página de Links',       desc: 'Abre na página de contatos e links',      },
-  { value: 'site',   label: 'Meu Site',              desc: 'Redireciona para o site da empresa',      },
+  { value: 'site',   label: 'Meu Site',              desc: 'Mostra o site da empresa como página inicial',      },
 ];
 
 async function prepareLogoFor512(file: File): Promise<{ blob: Blob; previewUrl: string }> {
@@ -170,6 +170,24 @@ export default function WebAppPage() {
   const [finalSlug, setFinalSlug]           = useState('');
   const [finalDomain, setFinalDomain]       = useState('minhai.app');
   const [webappHome, setWebappHome]         = useState('ia');
+
+  const [iframeTestStatus, setIframeTestStatus] = useState<'idle' | 'testing' | 'ok' | 'blocked'>('idle');
+  const [iframeTestReason, setIframeTestReason] = useState('');
+
+async function testIframeCompatibility() {
+  if (!selectedCompany?.website) return;
+  setIframeTestStatus('testing');
+  setIframeTestReason('');
+  try {
+    const res = await fetch(`/api/check-iframe?url=${encodeURIComponent(selectedCompany.website)}`);
+    const data = await res.json();
+    setIframeTestStatus(data.compatible ? 'ok' : 'blocked');
+    setIframeTestReason(data.reason || '');
+  } catch {
+    setIframeTestStatus('blocked');
+    setIframeTestReason('Não foi possível verificar o site.');
+  }
+}
 
   useEffect(() => {
     async function init() {
@@ -578,6 +596,89 @@ export default function WebAppPage() {
                 );
               })}
             </div>
+
+            {/* ── Testador de iframe — só aparece quando site está selecionado ── */}
+{webappHome === 'site' && (
+  <div style={{
+    background: ROWBG, border: `1px solid ${BORDER}`,
+    borderRadius: 14, padding: '16px 20px', marginBottom: 24,
+  }}>
+    {!selectedCompany?.website ? (
+      <p style={{ color: '#ef4444', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+        </svg>
+        Nenhum site cadastrado. Vá em Configurações → Dados da Empresa para adicionar.
+      </p>
+    ) : (
+      <>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: iframeTestStatus !== 'idle' ? 12 : 0 }}>
+          <div>
+            <p style={{ color: WHITE, fontSize: 13, fontWeight: 600, marginBottom: 2 }}>
+              🌐 {selectedCompany.website}
+            </p>
+            <p style={{ color: MUTED, fontSize: 12 }}>
+              Teste se o seu site pode ser exibido dentro do WebApp
+            </p>
+          </div>
+          <button
+            onClick={testIframeCompatibility}
+            disabled={iframeTestStatus === 'testing'}
+            style={{
+              padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+              background: iframeTestStatus === 'testing' ? INPUTBG : `linear-gradient(135deg, ${ORANGE}, #ea580c)`,
+              border: 'none', color: '#fff', cursor: iframeTestStatus === 'testing' ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
+            }}
+          >
+            {iframeTestStatus === 'testing' ? (
+              <>
+                <div style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                Testando...
+              </>
+            ) : 'Testar compatibilidade'}
+          </button>
+        </div>
+
+        {/* Resultado do teste */}
+        {iframeTestStatus === 'ok' && (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10,
+            padding: '12px 16px', borderRadius: 10,
+            background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)',
+          }}>
+            <svg width="16" height="16" fill="none" stroke="#10b981" viewBox="0 0 24 24" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p style={{ color: '#10b981', fontSize: 13, fontWeight: 600, marginBottom: 2 }}>Site compatível!</p>
+              <p style={{ color: MUTED, fontSize: 12 }}>Seu site será exibido dentro do WebApp normalmente.</p>
+            </div>
+          </div>
+        )}
+
+        {iframeTestStatus === 'blocked' && (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10,
+            padding: '12px 16px', borderRadius: 10,
+            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+          }}>
+            <svg width="16" height="16" fill="none" stroke="#ef4444" viewBox="0 0 24 24" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p style={{ color: '#ef4444', fontSize: 13, fontWeight: 600, marginBottom: 2 }}>Site incompatível</p>
+              <p style={{ color: MUTED, fontSize: 12, lineHeight: 1.5 }}>{iframeTestReason}</p>
+              <p style={{ color: MUTED, fontSize: 12, marginTop: 6 }}>
+                Você ainda pode usar esta opção — o app exibirá um botão para abrir o site em nova aba.
+              </p>
+            </div>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+)}
 
             {/* Preview do endereço final */}
             <div style={{ background: ROWBG, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '16px 20px', marginBottom: 28 }}>

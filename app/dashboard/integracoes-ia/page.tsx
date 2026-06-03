@@ -643,32 +643,38 @@ const [mlQuestions,        setMlQuestions]        = useState<any[]>([])
                   </button>
                 </div>
                 <div className="px-5 py-4 space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Seu número pessoal</label>
-                    <div className="flex items-center gap-2">
-                      <Smartphone className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <input
-                        type="tel"
-                        placeholder="+55 (11) 98765-4321"
-                        value={mcpWaPhone}
-                        onChange={e => setMcpWaPhone(e.target.value)}
-                        className="flex-1 px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
-                      />
+                <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                    <div className="flex-1">
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Seu número pessoal</label>
+                      <div className="flex items-center gap-2">
+                        <Smartphone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <input
+                          type="tel"
+                          placeholder="5511987654321"
+                          value={mcpWaPhone}
+                          onChange={e => setMcpWaPhone(e.target.value)}
+                          className="flex-1 px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Com DDI + DDD, sem + ou espaços</p>
                     </div>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Formato: 5511987654321 (com DDI + DDD, sem + ou espaços)</p>
+                    {mcpWaCompanies.length > 0 && (
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Assistente Smart</label>
+                        <select
+                          value={mcpWaCompanyId}
+                          onChange={e => setMcpWaCompanyId(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                        >
+                          {mcpWaCompanies.map(c => (
+                            <option key={c.id} value={c.id} className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
-                  {mcpWaCompanies.length > 0 && (
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Assistente Smart a usar</label>
-                      <select
-                        value={mcpWaCompanyId}
-                        onChange={e => setMcpWaCompanyId(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
-                      >
-                        {mcpWaCompanies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
-                    </div>
-                  )}
                   <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 rounded-lg p-3 space-y-1">
                     <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Como usar após salvar:</p>
                     <p>1. Cadastre seu número e ative o toggle</p>
@@ -740,7 +746,7 @@ const [mlQuestions,        setMlQuestions]        = useState<any[]>([])
                               </span>
                             )}
                           </p>
-                          <p className="text-xs text-gray-400 dark:text-gray-500">GPT-4o · 2 créditos por resposta</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500">Mesma configuração do assistente · 2 créditos por resposta</p>
                         </div>
                         <button
                           type="button"

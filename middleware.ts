@@ -92,9 +92,13 @@ export async function middleware(request: NextRequest) {
         const cleanPath = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname;
         url.pathname = `${cleanPath}/${slug}`;
       } else if (pathname === '/' || pathname === '/ia') {
-        // '/' → página inicial (webapp_home decide em /ia/[slug]/page.tsx)
-        // '/ia' → forçar o assistente mesmo quando webapp_home = 'site'
         url.pathname = `/ia/${slug}`;
+        // Sinaliza para o page.tsx se veio da raiz (deve redirecionar) ou de /ia (não redireciona)
+        const response = NextResponse.rewrite(url);
+        if (pathname === '/') {
+          response.headers.set('x-came-from-root', '1');
+        }
+        return response;
       } else {
         url.pathname = `/ia/${slug}${pathname}`;
       }

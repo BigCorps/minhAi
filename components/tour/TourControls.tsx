@@ -1,6 +1,6 @@
 'use client'
 // components/tour/TourControls.tsx
-
+import { useEffect, useState } from 'react'
 import { STAGE1_SCRIPT, SceneId } from '@/lib/tour/stage1-script'
 
 interface TourControlsProps {
@@ -21,9 +21,29 @@ export default function TourControls({
   onGoTo,
 }: TourControlsProps) {
   const currentIndex = STAGE1_SCRIPT.findIndex((s) => s.id === currentId)
+  const [hidden, setHidden] = useState(false)
+
+  // Reaparecer quando o tour terminar (isPlaying volta a false)
+  useEffect(() => {
+    if (!isPlaying) setHidden(false)
+  }, [isPlaying])
+
+  const handleToggle = () => {
+    if (!isPlaying) {
+      setHidden(true)
+    }
+    onTogglePlay()
+  }
 
   return (
-    <div className="flex flex-col items-center gap-3 w-full">
+    <div
+      className="flex flex-col items-center gap-3 w-full transition-all duration-500"
+      style={{
+        opacity: hidden ? 0 : 1,
+        pointerEvents: hidden ? 'none' : 'auto',
+        transform: hidden ? 'translateY(12px)' : 'translateY(0)',
+      }}
+    >
       {/* Dots de progresso */}
       <div className="flex items-center gap-2">
         {STAGE1_SCRIPT.map((scene, i) => (
@@ -49,7 +69,6 @@ export default function TourControls({
 
       {/* Botões prev / play-pause / next */}
       <div className="flex items-center gap-4">
-        {/* Prev */}
         <button
           onClick={onPrev}
           disabled={currentIndex === 0}
@@ -63,9 +82,8 @@ export default function TourControls({
           </svg>
         </button>
 
-        {/* Play / Pause */}
         <button
-          onClick={onTogglePlay}
+          onClick={handleToggle}
           aria-label={isPlaying ? 'Pausar' : 'Reproduzir'}
           className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200
             bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/40
@@ -82,7 +100,6 @@ export default function TourControls({
           )}
         </button>
 
-        {/* Next */}
         <button
           onClick={onNext}
           disabled={currentIndex === STAGE1_SCRIPT.length - 1}

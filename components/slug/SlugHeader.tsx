@@ -278,13 +278,51 @@ export default function SlugHeader({
         )}
 
         {showAssistenteButton && (
-          <button onClick={handleNavigateToIA} className={btn()} title="Ir para Assistente">
-            <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
-            </svg>
-          </button>
-        )}
+  <button
+    onClick={handleNavigateToIA}
+    className={btn()}
+    title="Ir para Assistente"
+  >
+    <svg
+      className={sz}
+      viewBox="0 0 512 512"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      aria-hidden="true"
+    >
+      {/* Círculo externo */}
+      <circle
+        cx="256"
+        cy="256"
+        r="145"
+        stroke="currentColor"
+        strokeWidth="18"
+      />
+
+      {/* Círculo do rosto */}
+      <circle
+        cx="256"
+        cy="256"
+        r="122"
+        stroke="currentColor"
+        strokeWidth="18"
+      />
+
+      {/* Olhos */}
+      <ellipse cx="218" cy="230" rx="18" ry="24" fill="currentColor" />
+      <ellipse cx="294" cy="230" rx="18" ry="24" fill="currentColor" />
+
+      {/* Boca */}
+      <path
+        d="M216 296C237 314 275 314 296 296"
+        stroke="currentColor"
+        strokeWidth="16"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  </button>
+)}
 
         {showVendasButton && (
           <button onClick={handleNavigateToVendas} className={btn()} title="Ir para Vendas">

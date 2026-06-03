@@ -111,7 +111,16 @@ export default function SlugHeader({
   const showClienteButton    = pageType !== 'cliente';
   const showLinksButton      = company.modo_links_enabled === true && pageType !== 'link'; 
 
-  const handleNavigateToIA     = () => navigateContextual(router, 'ia',      slug);
+    const handleNavigateToIA = () => {
+    // No subdomínio com webapp_home = 'site', ir para /ia diretamente
+    // para evitar loop com o redirect da raiz
+    if (company.webapp_home === 'site') {
+      router.push('/ia');
+    } else {
+      navigateContextual(router, 'ia', slug);
+    }
+  };
+  
   const handleNavigateToVendas = () => navigateContextual(router, 'vendas',  slug);
   const handleNavigateToFila   = () => navigateContextual(router, 'fila',    slug);
   const handleNavigateToLinks  = () => navigateContextual(router, 'link',    slug);

@@ -4,15 +4,18 @@
 import { useRef, useCallback } from 'react';
 
 /**
- * Hook reutilizável de TTS — mesma lógica do useAudioPlayer,
- * mas standalone para uso fora do assistente (ex: dashboard).
+ * Hook reutilizável de TTS.
  * Chama /api/google-tts e toca o áudio retornado.
+ *
+ * playText(text, speed?)
+ *   speed: multiplica a velocidade de síntese E de playback.
+ *   Padrão: 1.05 (comportamento original).
+ *   Tour usa 1.35 para fala mais ágil.
  */
 export function usePlayText() {
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const playText = useCallback(async (text: string): Promise<void> => {
-    // Para áudio anterior se estiver tocando
+  const playText = useCallback(async (text: string, speed = 1.05): Promise<void> => {
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current.currentTime = 0;
@@ -25,7 +28,7 @@ export function usePlayText() {
       const response = await fetch('/api/google-tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, speed: 1.05 }),
+        body: JSON.stringify({ text, speed }),
       });
 
       if (!response.ok) throw new Error(`TTS error: ${response.status}`);
@@ -33,7 +36,7 @@ export function usePlayText() {
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
-      audio.playbackRate = 1.05;
+      audio.playbackRate = speed;
       currentAudioRef.current = audio;
 
       await new Promise<void>((resolve, reject) => {

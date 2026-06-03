@@ -4,7 +4,7 @@
 
 * Criar Auxiliar de Cadastro e com MCP whatsapp - MANUS miriamithiel
 
-* Criar Tour guiado - MANUS interpag e CLAUDE ith.almeida
+* Tour guiado - MANUS interpag e CLAUDE ith.almeida
 
 * página admin no dashboard
 

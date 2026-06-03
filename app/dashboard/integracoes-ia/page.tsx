@@ -785,7 +785,7 @@ const [mlQuestions,        setMlQuestions]        = useState<any[]>([])
                       )}
 
                       {/* Funcionalidades ativas */}
-                      <div className="space-y-1">
+                      <div className="space-y-0.5">
                         {[
                           { label: 'Publicar produtos', sub: 'em Vendas → Produtos' },
                           { label: 'Preço e estoque sincronizados', sub: 'atualiza ao editar o produto' },
@@ -833,7 +833,7 @@ const [mlQuestions,        setMlQuestions]        = useState<any[]>([])
                         </p>
                       </div>
                       {/* Funcionalidades disponíveis */}
-                      <div className="space-y-2.5">
+                      <div className="space-y-3">
                         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">O que você poderá fazer:</p>
                         {[
                           'Publicar produtos do catálogo minhAi no ML',

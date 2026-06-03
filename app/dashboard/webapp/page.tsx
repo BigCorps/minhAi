@@ -650,7 +650,7 @@ async function testIframeCompatibility() {
       </p>
     ) : (
       <>
-        <div style={{ ... }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: iframeTestStatus !== 'idle' ? 12 : 0 }}>
           <div>
             <p style={{ color: WHITE, fontSize: 13, fontWeight: 600, marginBottom: 2 }}>
               🌐 {customWebsite}

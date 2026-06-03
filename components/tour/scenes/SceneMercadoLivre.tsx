@@ -37,7 +37,7 @@ export default function SceneMercadoLivre() {
         style={{ borderColor: 'rgba(0,0,0,0.07)' }}
       >
         <img
-          src="/cafe.png"
+          src="/cafe.jpg"
           alt="Kit Café Especial Premium"
           className="rounded-md flex-shrink-0 object-cover"
           style={{ width: 44, height: 44 }}

@@ -96,12 +96,12 @@ export default function SlugHeader({
     pageType !== 'site' &&
     !(company.webapp_home === 'site' && isKioskMode);
 
-  const handleHomeClick = () => {
+   const handleHomeClick = () => {
     if (company.webapp_home === 'site' && company.website) {
       if (!isKioskMode) {
-        window.open(company.website, '_blank', 'noopener noreferrer');
+        // Navega para a página do iframe, não abre em nova aba diretamente
+        navigateContextual(router, 'site', slug);
       }
-      // No modo totem não faz nada — botão fica visível mas inativo
       return;
     }
     navigateContextual(router, 'ia', slug);

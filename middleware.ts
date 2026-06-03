@@ -91,8 +91,12 @@ export async function middleware(request: NextRequest) {
       if (isSpecialRoute) {
         const cleanPath = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname;
         url.pathname = `${cleanPath}/${slug}`;
+      } else if (pathname === '/' || pathname === '/ia') {
+        // '/' → página inicial (webapp_home decide em /ia/[slug]/page.tsx)
+        // '/ia' → forçar o assistente mesmo quando webapp_home = 'site'
+        url.pathname = `/ia/${slug}`;
       } else {
-        url.pathname = `/ia/${slug}${pathname === '/' ? '' : pathname}`;
+        url.pathname = `/ia/${slug}${pathname}`;
       }
 
       return NextResponse.rewrite(url);

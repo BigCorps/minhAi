@@ -15,7 +15,7 @@ import SceneMercadoLivre from './scenes/SceneMercadoLivre'
 import SceneMCP from './scenes/SceneMCP'
 import SceneWhatsAppMCP from './scenes/SceneWhatsAppMCP'
 
-const SCENES_WITH_OWN_AVATAR: SceneId[] = ['assistente']
+const SCENES_WITH_OWN_AVATAR: SceneId[] = ['assistente', 'intro', 'outro']
 const FADE_DURATION = 300
 
 export default function TourStage1() {

@@ -643,7 +643,7 @@ const [mlQuestions,        setMlQuestions]        = useState<any[]>([])
                   </button>
                 </div>
                 <div className="px-5 py-4 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                     <div className="flex-1">
                       <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Seu número pessoal</label>
                       <div className="flex items-center gap-2">

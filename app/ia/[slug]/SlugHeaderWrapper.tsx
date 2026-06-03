@@ -54,7 +54,7 @@ interface SlugHeaderWrapperProps {
     modo_links_enabled?: boolean;
   };
   slug?: string;
-  pageType?: 'ia' | 'vendas' | 'fila' | 'cliente' | 'link';
+  pageType?: 'ia' | 'vendas' | 'fila' | 'cliente' | 'link' | 'site';
   overlayMode?: boolean;
   forceTheme?: 'dark' | 'light';
   onClose?: () => void;

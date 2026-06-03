@@ -93,7 +93,6 @@ export default function SlugHeader({
 
   const showHomeButton = !!company.webapp_home &&
     company.webapp_home !== 'ia' &&
-    pageType !== 'ia' &&
     pageType !== 'site';
 
   const handleHomeClick = () => {

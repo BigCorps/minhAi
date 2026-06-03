@@ -2,7 +2,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Tour Interativo — minhAi',
+  title: 'Tour Interativo',
   description:
     'Veja ao vivo onde o assistente minhAi pode atuar: telas, widgets, WhatsApp, Instagram, Mercado Livre e integrações MCP com Claude, ChatGPT, Cursor e Manus.',
   alternates: { canonical: 'https://www.minhai.app/tour' },

@@ -23,7 +23,7 @@ export default function SceneIntro({ isOutro = false }: { isOutro?: boolean }) {
       >
         {isOutro
           ? 'Em qualquer canal. Com a mesma inteligência.'
-          : 'Seu assistente inteligente, em qualquer lugar.'}
+          : 'Uma IA pra chamar de sua!'}
       </p>
 
       {/* Linha decorativa */}

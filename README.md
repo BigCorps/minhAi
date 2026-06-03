@@ -8,6 +8,8 @@
 
 * Criar Tour guiado - MANUS interpag e CLAUDE ith.almeida
 
+* página admin no dashboard
+
 ## IDÉIAS
 
 * ChatGPT, Claude e Cursor App MCP já Enviado (AGUARDANDO APROVAÇÃO)
@@ -17,16 +19,6 @@
 * enviar releases e criar LinkedIn
 
 * Sugerir site e IA para Hantars e Salão como parceria
-
-* bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
-
-* página admin em dashboard que aparece apenas para o email que eu escolhi e somente acessível via dashboard/admin e o switch de assistente vira o botão que leva a página de admin. email appminhai@gmail.com com relatorio de planos ativos, indicações, após, consumo e tudo mais, bem simples, branco e sem header
-
-* PagAi - Pix com confirmação automática e Bolão entre amigos (Pool).
-Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app / postotec.app / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
-- iapos, itend e eai já registrados (para cobranças , atendimento e funcionários IA) - relatório em anexo no email
-
-* Carrossel no footer com 15 empresas que usam a minhAi futuramente
 
 * App PagSeguro para postos (AGUARDANDO RESPOSTA PAGBANK)
 
@@ -39,6 +31,14 @@ Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app /
 .
 
 ## BREVE
+
+* bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
+
+* PagAi - Pix com confirmação automática e Bolão entre amigos (Pool).
+Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app / postotec.app / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
+- iapos, itend e eai já registrados (para cobranças , atendimento e funcionários IA) - relatório em anexo no email
+
+* Carrossel no footer com 15 empresas que usam a minhAi futuramente
 
 * Implementar seleção de cores e key inter/asaas/MercadoPago para pix de clientes full, além de seletor de tema no assistente. Sempre light, sempre dark, de acordo com o tema do usuário ou de acordo com a hora do dia e se aparece ou não o seletor no header. Pensar na possibilidade do avatar ser o logo carregado pelo cliente, com animações react
 

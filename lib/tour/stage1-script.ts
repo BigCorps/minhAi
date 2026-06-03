@@ -27,16 +27,16 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'intro',
     label: 'Introdução',
     audioText:
-      'Sou a minha I A, mas também posso ser a Sua I A ou Nossa I A! Posso atuar em qualquer lugar onde o seu cliente esteja: telas, aplicativos de I A, Whatsapp, Instagram, Facebook e Mercado Livre',
+      'Sou a minha I A, mas também posso ser Sua I A ou Nossa I A, você escolhe como me chamar! Estou em qualquer lugar onde o seu cliente esteja: telas, aplicativos de I A, Whatsapp, Instagram, Facebook e Mercado Livre',
     displayText:
-      'Sou a minhAi, mas também posso ser a Sua IA ou Nossa IA! Posso atuar em qualquer lugar onde o seu cliente esteja: telas, aplicativos de IA, Whatsapp, Instagram, Facebook e Mercado Livre',
+      'Sou a minhAi, mas também posso ser Sua IA ou Nossa IA, você escolhe como me chamar! Estou em qualquer lugar onde o seu cliente esteja: telas, aplicativos de IA, Whatsapp, Instagram, Facebook e Mercado Livre',
     fallbackDuration: 7000,
   },
   {
     id: 'assistente',
     label: 'Tela & Totem',
     audioText:
-      'Diretamente na tela do seu estabelecimento ou em um totem de autoatendimento, tenho três modos de exibição: padrão com avatar, modo imersivo em tela cheia, e modo texto para digitação.',
+      'Funciono como uma Alexa, você define qual palavra de ativação me ativa, também funciono com botão de microfone, interagindo com botões ou digitando um texto. Diretamente na tela do seu estabelecimento ou em um totem de autoatendimento, tenho três modos de exibição: padrão, modo imersivo em tela cheia, e modo texto para digitação.',
     fallbackDuration: 9000,
   },
   {
@@ -50,21 +50,21 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'whatsapp',
     label: 'WhatsApp',
     audioText:
-      'No WhatsApp, com a naturalidade que seus clientes já conhecem. Responde mensagens, envia cobranças, agenda atendimentos e muito mais.',
+      'No WhatsApp, com a naturalidade que seus clientes já conhecem. Responde mensagens, entende o que o cliente precisa, envia e confirma cobranças Pix, marca eventos na sua Agenda do Google, calcula o frete da entrega, criar orçamentos e muito mais.',
     fallbackDuration: 7000,
   },
   {
     id: 'instagram',
     label: 'Instagram',
     audioText:
-      'No Instagram e Facebook, respondendo mensagens diretas automaticamente, convertendo seguidores em clientes.',
+      'No Instagram e Facebook, respondendo mensagens diretas, comentários e enviando DMs automaticamente, com as mesmas funcionalidades do Whatsapp, convertendo seguidores em clientes.',
     fallbackDuration: 6000,
   },
   {
     id: 'mercadolivre',
     label: 'Mercado Livre',
     audioText:
-      'No Mercado Livre, respondendo perguntas de compradores e tambem postando produtos diretamente do nosso dashboard.',
+      'No Mercado Livre, respondendo perguntas de compradores e tambem postando produtos diretamente vinculado aos seus produtos no dashboard.',
     fallbackDuration: 6000,
   },
   {

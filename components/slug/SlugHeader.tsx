@@ -28,7 +28,7 @@ interface SlugHeaderProps {
   };
   slug?: string;
   theme: 'dark' | 'light';
-  pageType?: 'ia' | 'vendas' | 'fila' | 'cliente' | 'link'; 
+  pageType?: 'ia' | 'vendas' | 'fila' | 'cliente' | 'link' | 'site';
   overlayMode?: boolean;
   isKioskMode?: boolean;
   isWakeLockActive?: boolean;
@@ -93,7 +93,8 @@ export default function SlugHeader({
 
   const showHomeButton = !!company.webapp_home &&
     company.webapp_home !== 'ia' &&
-    pageType !== 'ia';
+    pageType !== 'ia' &&
+    pageType !== 'site';
 
   const handleHomeClick = () => {
     if (company.webapp_home === 'site' && company.website) {

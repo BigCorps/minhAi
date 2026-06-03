@@ -37,7 +37,7 @@ export default function TourStage1() {
   const { playText: _playText, stopAudio } = usePlayText()
   // Wrapper com velocidade aumentada para o tour (1.35x = fala mais ágil)
   const playText = useCallback(
-    (text: string) => _playText(text, 1.2),
+    (text: string) => _playText(text, 1.15),
     [_playText]
   )
 
@@ -149,7 +149,7 @@ export default function TourStage1() {
         Mobile  → coluna (flex-col): avatar em cima, cena abaixo, controles no fim
         Desktop → linha (md:flex-row): coluna esquerda fixa + cena ocupando o resto
       */}
-      <div className="w-full max-w-6xl flex flex-col md:flex-row md:items-center gap-8 md:gap-12">
+      <div className="w-full max-w-6xl flex flex-col md:flex-row-reverse md:items-center gap-8 md:gap-12">
 
         {/* ── COLUNA ESQUERDA: avatar + legenda + controles ── */}
         <div className="flex flex-col items-center gap-6 w-full md:w-72 lg:w-80 flex-shrink-0">

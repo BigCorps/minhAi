@@ -121,7 +121,7 @@ export default function SiteClient({ company }: SiteClientProps) {
       />
 
       {/* Iframe area */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0, height: '100%' }}>
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
 
         {/* Loading skeleton */}
         {iframeStatus === 'loading' && (
@@ -209,12 +209,12 @@ export default function SiteClient({ company }: SiteClientProps) {
           onLoad={handleIframeLoad}
           onError={handleIframeError}
           style={{
+            position: 'absolute',
+            inset: 0,
             width: '100%',
             height: '100%',
-            minHeight: 0,
             border: 'none',
             display: 'block',
-            flex: 1,
             opacity: iframeStatus === 'ok' ? 1 : 0,
             transition: 'opacity 0.3s ease',
           }}

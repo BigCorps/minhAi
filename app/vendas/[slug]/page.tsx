@@ -339,6 +339,9 @@ const onInactivityVendas = useCallback(() => {
           companyName={companyData?.name}
           companyLogo={companyData?.logo_url}
           assistantRole={companyData?.assistant_role}
+          webapp_home={companyData?.webapp_home ?? null}
+          website={companyData?.website ?? null}
+          avatarType={companyData?.assistant_avatar_type}
           avatarType={companyData?.assistant_avatar_type}
           modo_vendas_enabled={companyData?.modo_vendas_enabled ?? true}
           modo_fila_enabled={companyData?.modo_fila_enabled ?? false}

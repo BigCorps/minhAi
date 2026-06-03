@@ -1,6 +1,6 @@
 'use client'
 // components/tour/TourAssistant.tsx
-
+import Image from 'next/image'
 import { AvatarFace } from '@/components/AvatarFace'
 
 interface TourAssistantProps {
@@ -17,27 +17,35 @@ export default function TourAssistant({
 }: TourAssistantProps) {
   return (
     <div className="flex flex-col items-center gap-4 w-full">
-      {/* Avatar — some com fade quando hideAvatar=true */}
-      <div
-        className="transition-all duration-500 ease-in-out"
-        style={{
-          opacity: hideAvatar ? 0 : 1,
-          height: hideAvatar ? 0 : undefined,
-          overflow: hideAvatar ? 'hidden' : undefined,
-          // Tamanho responsivo: 120px mobile → 160px desktop
-          width: 'clamp(100px, 20vw, 160px)',
-          aspectRatio: '1/1',
-        }}
-      >
-        <AvatarFace
-          isSpeaking={isSpeaking}
-          isListening={false}
-          isProcessing={false}
-          theme="dark"
-          avatarType={isSpeaking ? 'orb' : 'face'}
-          hasActivePlan={true}
-        />
-      </div>
+      {/* Avatar ou Logo */}
+      {hideAvatar ? (
+        <div style={{ width: 'clamp(140px, 28vw, 260px)', position: 'relative', aspectRatio: '3/1' }}>
+          <Image
+            src="/logo.png"
+            alt="minhAi"
+            fill
+            className="object-contain"
+            priority
+          />
+        </div>
+      ) : (
+        <div
+          className="transition-all duration-500 ease-in-out"
+          style={{
+            width: 'clamp(100px, 20vw, 160px)',
+            aspectRatio: '1/1',
+          }}
+        >
+          <AvatarFace
+            isSpeaking={isSpeaking}
+            isListening={false}
+            isProcessing={false}
+            theme="dark"
+            avatarType={isSpeaking ? 'orb' : 'face'}
+            hasActivePlan={true}
+          />
+        </div>
+      )}
 
       {/* Legenda */}
       <div

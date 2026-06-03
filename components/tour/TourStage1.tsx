@@ -155,6 +155,7 @@ return (
 
   </div>
 )
+  )
 
 function SceneRenderer({ id, isSpeaking }: { id: SceneId; isSpeaking: boolean }) {
   switch (id) {

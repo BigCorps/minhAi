@@ -134,11 +134,17 @@ function IntegracoesDashboardContent() {
   const [mlConnection,    setMlConnection]    = useState<any>(null)
   const [mlLoading,       setMlLoading]       = useState(false)
   const [mlDisconnecting, setMlDisconnecting] = useState(false)
+  const [mlSaving,        setMlSaving]        = useState(false)
+  const [mlSaved,         setMlSaved]         = useState(false)
+  const [mlReplyEnabled,  setMlReplyEnabled]  = useState(false)
+  const [mlAutoReply,     setMlAutoReply]     = useState(false)
+  const [mlPendingCount,  setMlPendingCount]  = useState(0)
 
   const MCP_URL = 'https://mcp.minhai.app'
 
   useEffect(() => { if (companyId) load() }, [companyId])
   useEffect(() => { if (companyId) loadMlConnection() }, [companyId])
+  useEffect(() => { if (companyId && mlConnection) loadMlQuestions() }, [companyId, mlConnection])
 
   async function load() {
     setLoading(true)
@@ -207,13 +213,83 @@ function IntegracoesDashboardContent() {
     try {
       const { data } = await supabase
         .from('ml_connections')
-        .select('seller_id, seller_nickname, seller_email, is_active, expires_at, last_token_refresh')
+        .select('seller_id, seller_nickname, seller_email, is_active, expires_at, last_token_refresh, ml_reply_enabled, ml_auto_reply')
         .eq('company_id', companyId)
         .eq('is_active', true)
         .maybeSingle()
       setMlConnection(data ?? null)
+      if (data) {
+        setMlReplyEnabled(data.ml_reply_enabled ?? false)
+        setMlAutoReply(data.ml_auto_reply ?? false)
+      }
+      const { count } = await supabase
+        .from('ml_questions')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('status', 'pending')
+      setMlPendingCount(count ?? 0)
     } finally {
       setMlLoading(false)
+    }
+  }
+
+const [mlQuestions,        setMlQuestions]        = useState<any[]>([])
+  const [mlQuestionsLoading, setMlQuestionsLoading] = useState(false)
+  const [mlSendingId,        setMlSendingId]        = useState<string | null>(null)
+  const [mlIgnoringId,       setMlIgnoringId]       = useState<string | null>(null)
+
+  async function loadMlQuestions() {
+    if (!companyId) return
+    setMlQuestionsLoading(true)
+    try {
+      const { data } = await supabase
+        .from('ml_questions')
+        .select('*')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      setMlQuestions(data ?? [])
+    } finally {
+      setMlQuestionsLoading(false)
+    }
+  }
+
+  async function handleSendAnswer(q: any) {
+    setMlSendingId(q.id)
+    try {
+      const res = await fetch('/api/ml/responder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company_id: companyId,
+          question_id: q.ml_question_id,
+          resposta: q.resposta_gerada,
+        }),
+      })
+      if (res.ok) {
+        setMlQuestions(prev => prev.map(item =>
+          item.id === q.id ? { ...item, status: 'sent', sent_at: new Date().toISOString() } : item
+        ))
+        setMlPendingCount(c => Math.max(0, c - 1))
+      }
+    } finally {
+      setMlSendingId(null)
+    }
+  }
+
+  async function handleIgnoreQuestion(q: any) {
+    setMlIgnoringId(q.id)
+    try {
+      await supabase
+        .from('ml_questions')
+        .update({ status: 'ignored' })
+        .eq('id', q.id)
+      setMlQuestions(prev => prev.map(item =>
+        item.id === q.id ? { ...item, status: 'ignored' } : item
+      ))
+      setMlPendingCount(c => Math.max(0, c - 1))
+    } finally {
+      setMlIgnoringId(null)
     }
   }
 
@@ -229,6 +305,21 @@ function IntegracoesDashboardContent() {
       setMlConnection(null)
     } finally {
       setMlDisconnecting(false)
+    }
+  }
+
+  async function saveMlConfig() {
+    if (!companyId) return
+    setMlSaving(true)
+    try {
+      await supabase
+        .from('ml_connections')
+        .update({ ml_reply_enabled: mlReplyEnabled, ml_auto_reply: mlAutoReply })
+        .eq('company_id', companyId)
+      setMlSaved(true)
+      setTimeout(() => setMlSaved(false), 3000)
+    } finally {
+      setMlSaving(false)
     }
   }
 
@@ -622,30 +713,98 @@ function IntegracoesDashboardContent() {
                     </div>
                   ) : mlConnection ? (
                     <>
-                      <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                      {/* Seller info compacto */}
+                      <div className="flex items-center gap-2 p-2.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                          <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200 truncate">
                             {mlConnection.seller_nickname || `Seller ${mlConnection.seller_id}`}
+                            {mlConnection.seller_email && (
+                              <span className="font-normal text-emerald-600 dark:text-emerald-400"> · {mlConnection.seller_email}</span>
+                            )}
                           </p>
-                          {mlConnection.seller_email && (
-                            <p className="text-xs text-emerald-600 dark:text-emerald-400">{mlConnection.seller_email}</p>
-                          )}
-                          {mlConnection.last_token_refresh && (
-                            <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">Token renovado: {timeAgo(mlConnection.last_token_refresh)}</p>
-                          )}
+                          <p className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70">
+                            Token renovado {timeAgo(mlConnection.last_token_refresh)}
+                          </p>
                         </div>
                       </div>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">Gerencie quais produtos publicar em <strong>Vendas → Produtos</strong></p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 italic">Em breve mais funcionalidades com o Mercado Livre.</p>
-                      <button
-                        onClick={disconnectMl}
-                        disabled={mlDisconnecting}
-                        className="w-full py-2.5 rounded-lg text-sm font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition border border-red-200 dark:border-red-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        {mlDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2Off className="w-4 h-4" />}
-                        Desconectar
-                      </button>
+
+                      {/* Toggle: Responder perguntas */}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-1.5">
+                            Responder perguntas com IA
+                            {mlPendingCount > 0 && (
+                              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
+                                {mlPendingCount} pendente{mlPendingCount !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500">GPT-4o · 2 créditos por resposta</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setMlReplyEnabled(v => !v)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ${
+                            mlReplyEnabled ? 'bg-yellow-400' : 'bg-gray-300 dark:bg-slate-600'
+                          }`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                            mlReplyEnabled ? 'translate-x-6' : 'translate-x-1'
+                          }`} />
+                        </button>
+                      </div>
+
+                      {/* Toggle: Envio automático */}
+                      {mlReplyEnabled && (
+                        <div className="flex items-center justify-between gap-3 pl-3 border-l-2 border-yellow-300 dark:border-yellow-500/40">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">Envio automático</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500">
+                              {mlAutoReply ? 'Responde sem aprovação' : 'Aguarda sua aprovação no painel'}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setMlAutoReply(v => !v)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ${
+                              mlAutoReply ? 'bg-yellow-400' : 'bg-gray-300 dark:bg-slate-600'
+                            }`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              mlAutoReply ? 'translate-x-6' : 'translate-x-1'
+                            }`} />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Link produtos */}
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        Publique produtos em <strong className="text-gray-600 dark:text-gray-300">Vendas → Produtos</strong>
+                      </p>
+
+                      {/* Botões */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={saveMlConfig}
+                          disabled={mlSaving || mlSaved}
+                          className="flex-1 py-2 rounded-lg text-sm font-semibold bg-[#FFE600] hover:bg-yellow-400 text-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {mlSaving
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : mlSaved
+                              ? <><Check className="w-4 h-4" /> Salvo!</>
+                              : 'Salvar'
+                          }
+                        </button>
+                        <button
+                          onClick={disconnectMl}
+                          disabled={mlDisconnecting}
+                          className="px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition border border-red-200 dark:border-red-500/20 disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          {mlDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2Off className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <>
@@ -674,6 +833,122 @@ function IntegracoesDashboardContent() {
 
             </div>
           </section>
+
+{/* Painel de perguntas ML */}
+          {companyId && mlConnection && mlReplyEnabled && (
+            <section>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <img
+                  src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.19.5/mercadolibre/logo__large_plus.png"
+                  alt="ML"
+                  className="h-5 object-contain"
+                />
+                Perguntas do Mercado Livre
+                {mlPendingCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
+                    {mlPendingCount} pendente{mlPendingCount !== 1 ? 's' : ''}
+                  </span>
+                )}
+                <button
+                  onClick={loadMlQuestions}
+                  disabled={mlQuestionsLoading}
+                  className="ml-auto p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition text-gray-400"
+                >
+                  <svg className={`w-4 h-4 ${mlQuestionsLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              </h2>
+
+              {mlQuestionsLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="w-6 h-6 animate-spin text-yellow-500" />
+                </div>
+              ) : mlQuestions.length === 0 ? (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 p-8 text-center">
+                  <p className="font-semibold text-gray-900 dark:text-white mb-1">Nenhuma pergunta ainda</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    As perguntas dos seus anúncios aparecerão aqui assim que chegarem
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {mlQuestions.map(q => (
+                    <div key={q.id}
+                      className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+
+                      {/* Header da pergunta */}
+                      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate">
+                            {q.produto_nome ?? `Anúncio ${q.ml_item_id}`}
+                          </p>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500 flex-shrink-0">
+                            {new Date(q.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 ${
+                          q.status === 'sent'    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' :
+                          q.status === 'ignored' ? 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400' :
+                          q.status === 'error'   ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' :
+                                                   'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                        }`}>
+                          {q.status === 'sent'    ? '✓ Enviada' :
+                           q.status === 'ignored' ? 'Ignorada'  :
+                           q.status === 'error'   ? 'Erro'      : 'Pendente'}
+                        </span>
+                      </div>
+
+                      <div className="p-4 space-y-3">
+                        {/* Pergunta */}
+                        <div>
+                          <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Pergunta</p>
+                          <p className="text-sm text-gray-800 dark:text-gray-200">{q.texto_pergunta}</p>
+                        </div>
+
+                        {/* Resposta gerada */}
+                        {q.resposta_gerada && (
+                          <div className={`rounded-xl p-3 ${
+                            q.status === 'sent'
+                              ? 'bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20'
+                              : 'bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/20'
+                          }`}>
+                            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">
+                              Resposta {q.status === 'sent' ? 'enviada' : 'sugerida pela IA'}
+                            </p>
+                            <p className="text-sm text-gray-800 dark:text-gray-200">{q.resposta_gerada}</p>
+                          </div>
+                        )}
+
+                        {/* Ações — só para pendentes */}
+                        {q.status === 'pending' && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleSendAnswer(q)}
+                              disabled={mlSendingId === q.id}
+                              className="flex-1 py-2 rounded-lg text-sm font-semibold bg-[#FFE600] hover:bg-yellow-400 text-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                              {mlSendingId === q.id
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : 'Enviar resposta'
+                              }
+                            </button>
+                            <button
+                              onClick={() => handleIgnoreQuestion(q)}
+                              disabled={mlIgnoringId === q.id}
+                              className="px-4 py-2 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition border border-gray-200 dark:border-white/10 disabled:opacity-50"
+                            >
+                              {mlIgnoringId === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Ignorar'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Nota sobre DCR */}
           <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">

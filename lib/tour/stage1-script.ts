@@ -1,5 +1,4 @@
 // lib/tour/stage1-script.ts
-
 export type SceneId =
   | 'intro'
   | 'assistente'
@@ -13,8 +12,10 @@ export type SceneId =
 
 export interface SceneScript {
   id: SceneId
-  /** Texto enviado para /api/google-tts */
+  /** Texto enviado para /api/google-tts — otimizado para pronúncia */
   audioText: string
+  /** Texto exibido na legenda — formatado para leitura. Se omitido, usa audioText */
+  displayText?: string
   /** Duração de fallback em ms caso o TTS falhe */
   fallbackDuration: number
   /** Label curto exibido nos dots de progresso (acessibilidade) */
@@ -26,7 +27,9 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'intro',
     label: 'Introdução',
     audioText:
-      'Sou a minhAi, mas também posso ser a Sua I A ou Nossa I A! Posso atuar em qualquer lugar onde o seu cliente esteja — telas, aplicativos de I A, Whatsapp, Instagram, Facebook e Mercado Livre',
+      'Sou a minha I A, mas também posso ser a Sua I A ou Nossa I A! Posso atuar em qualquer lugar onde o seu cliente esteja: telas, aplicativos de I A, Whatsapp, Instagram, Facebook e Mercado Livre',
+    displayText:
+      'Sou a minhAi, mas também posso ser a Sua IA ou Nossa IA! Posso atuar em qualquer lugar onde o seu cliente esteja: telas, aplicativos de IA, Whatsapp, Instagram, Facebook e Mercado Livre',
     fallbackDuration: 7000,
   },
   {
@@ -68,13 +71,17 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'mcp',
     label: 'MCP',
     audioText:
-      'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus — onde você pode pedir tarefas para a minhAi diretamente pelo seu app de I A favorito.',
+      'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus — onde você pode pedir tarefas para a minha I A diretamente pelo seu app de I A favorito.',
+    displayText:
+      'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus — onde você pode pedir tarefas para a minhAi diretamente pelo seu app de IA favorito.',
     fallbackDuration: 8000,
   },
   {
     id: 'whatsapp-mcp',
     label: 'WhatsApp MCP',
     audioText:
+      'E também pode pedir tarefas diretamente para o WhatsApp minha I A — consultas, ações e integrações sem sair do aplicativo.',
+    displayText:
       'E também pode pedir tarefas diretamente para o WhatsApp minhAi — consultas, ações e integrações sem sair do aplicativo.',
     fallbackDuration: 7000,
   },

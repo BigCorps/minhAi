@@ -26,7 +26,7 @@
 
 * implementar sincronia entre catálogo minhAi e Meta (relatório em anexo)
 
-* Conectar serviços como Saipos, Ifood e outros ao minhAi e vice e versa, além de integração e webhooks para link Pix e link de pagamento - em anexo
+* Conectar serviços como Ifood, Rappi, Nuvemshop e Bling e outros ao minhAi e vice e versa, além de integração e webhooks para link Pix e link de pagamento - em anexo
 
 .
 

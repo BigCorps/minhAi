@@ -26,7 +26,7 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'intro',
     label: 'Introdução',
     audioText:
-      'Olá! Eu sou a minhAi, mas também posso ser a Sua IA ou Nossa IA! Posso atuar em qualquer lugar onde o seu cliente esteja — telas, aplicativos de IA, Whatsapp, Instagram, Facebook e Mercado Livre',
+      'Sou a minhAi, mas também posso ser a Sua I A ou Nossa I A! Posso atuar em qualquer lugar onde o seu cliente esteja — telas, aplicativos de I A, Whatsapp, Instagram, Facebook e Mercado Livre',
     fallbackDuration: 7000,
   },
   {
@@ -68,7 +68,7 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'mcp',
     label: 'MCP',
     audioText:
-      'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus — onde você pode pedir tarefas para a minhAi diretamente pelo seu app de IA favorito.',
+      'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus — onde você pode pedir tarefas para a minhAi diretamente pelo seu app de I A favorito.',
     fallbackDuration: 8000,
   },
   {

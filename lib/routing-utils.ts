@@ -36,7 +36,7 @@ const MINHAI_DOMAINS = [
   for (const domain of MINHAI_DOMAINS) {
     if (hostname.endsWith(domain) && !hostname.startsWith('www.')) {
       const slug = hostname.replace(domain, '');
-      return { isSubdomain: true, currentSlug: slug };
+      return { domain: true, currentSlug: slug };
     }
   }
 
@@ -44,11 +44,11 @@ const MINHAI_DOMAINS = [
   const isDevSub = hostname.includes('.localhost');
   if (isDevSub) {
     const slug = hostname.split('.')[0];
-    return { isSubdomain: true, currentSlug: slug };
+    return { domain: true, currentSlug: slug };
   }
 
   // Está em minhai.app (sem subdomínio)
-  return { isSubdomain: false, currentSlug: null };
+  return { domain: false, currentSlug: null };
 }
 
 /**
@@ -73,12 +73,11 @@ export function getContextualRoute(
   route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk' | 'cliente' | 'link' | 'site',
   slug?: string
 ): string {
-  const { isSubdomain, currentSlug } = detectSubdomainContext();
+  const { domain, currentSlug } = detectSubdomainContext();
 
   // Se está em subdomínio
   if (isSubdomain) {
     if (route === 'ia') return '/';
-    if (route === 'site') return '/'; // site externo tratado no onClick do botão
     return `/${route}`;
   }
 
@@ -87,7 +86,6 @@ export function getContextualRoute(
     return '/';
   }
 
-  if (route === 'site') return '/'; // site externo tratado no onClick do botão
   return `/${route}/${slug}`;
 }
 

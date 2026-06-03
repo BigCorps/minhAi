@@ -1,7 +1,5 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* Implementar Respostas automáticas no Mercado Livre
-
 * Site pessoal no webapp como página incial - ícone casa primeiro - com a chamada, transforme seu site em um app facilmente.
 
 * Criar Auxiliar de Cadastro e com MCP whatsapp - MANUS miriamithiel

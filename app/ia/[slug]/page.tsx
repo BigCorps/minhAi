@@ -190,21 +190,15 @@ const isVendas = company.assistant_type === 'vendas';
     );
   }
 
-  if (viaSubdomain) {
-    const home = company.webapp_home ?? 'ia';
+  const headersList2 = await headers();
+  const cameFromRoot = headersList2.get('x-came-from-root') === '1';
 
-    if (home === 'vendas' && company.modo_vendas_enabled) {
-      redirect(`/vendas`);
-    }
-    if (home === 'fila' && company.modo_fila_enabled) {
-      redirect(`/fila`);
-    }
-    if (home === 'links' && company.modo_links_enabled) {
-      redirect(`/link`);
-    }
-    if (home === 'site' && company.website) {
-      redirect(`/site`);
-    }
+  if (viaSubdomain && cameFromRoot) {
+    const home = company.webapp_home ?? 'ia';
+    if (home === 'vendas' && company.modo_vendas_enabled) redirect(`/vendas`);
+    if (home === 'fila' && company.modo_fila_enabled) redirect(`/fila`);
+    if (home === 'links' && company.modo_links_enabled) redirect(`/link`);
+    if (home === 'site' && company.website) redirect(`/site`);
   }
 
   return (

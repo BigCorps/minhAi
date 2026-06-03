@@ -285,7 +285,7 @@ export default function SlugHeader({
   >
     <svg
       className={sz}
-      viewBox="0 0 512 512"
+      viewBox="96 96 320 320"
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       aria-hidden="true"

@@ -302,7 +302,9 @@ async function testIframeCompatibility() {
           webapp_domain: webappDomain,
           webapp_home: webappHome,
           webapp_configured_at: new Date().toISOString(),
-          ...(webappHome === 'site' && customWebsite ? { website: customWebsite } : {}),
+          ...(webappHome === 'site' && customWebsite ? {
+            website: customWebsite.startsWith('http') ? customWebsite : `https://${customWebsite}`,
+          } : {}),
           ...(logo_url ? { webapp_logo_url: logo_url } : {}),
         })
         .eq('id', selectedId);
@@ -567,7 +569,7 @@ async function testIframeCompatibility() {
                   (opt.value === 'vendas' && !selectedCompany?.modo_vendas_enabled) ||
                   (opt.value === 'fila'   && !selectedCompany?.modo_fila_enabled) ||
                   (opt.value === 'links'  && !selectedCompany?.modo_links_enabled) ||
-                  (opt.value === 'site'   && !selectedCompany?.website);
+                  (opt.value === 'site'   && !customWebsite && !selectedCompany?.website);
                 return (
                   <button
                     key={opt.value}
@@ -607,12 +609,19 @@ async function testIframeCompatibility() {
       URL do Site
     </label>
     <input
-      type="url"
+      type="text"
       value={customWebsite}
       onChange={e => {
         setCustomWebsite(e.target.value);
         setIframeTestStatus('idle');
         setIframeTestReason('');
+      }}
+      onBlur={e => {
+        let url = e.target.value.trim();
+        if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+          url = `https://${url}`;
+          setCustomWebsite(url);
+        }
       }}
       placeholder="https://seusite.com.br"
       style={{

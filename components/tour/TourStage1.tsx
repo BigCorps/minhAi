@@ -110,46 +110,51 @@ export default function TourStage1() {
     }
   }, [stopAudio])
 
-  return (
-    <div
-      className="w-full min-h-screen flex items-center justify-center px-6 py-6 md:px-12"
-      style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' }}
-    >
-      <div className="w-full max-w-5xl mx-auto flex flex-col md:flex-row md:items-center gap-8 md:gap-12">
+return (
+  <div
+    className="w-full min-h-screen flex flex-col items-center justify-center px-6 py-6 md:px-12"
+    style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' }}
+  >
+    {/* Conteúdo principal */}
+    <div className="w-full max-w-5xl mx-auto flex flex-col md:flex-row md:items-center gap-8 md:gap-12 flex-1">
 
-{/* ── Cena (esquerda no desktop) ── */}
-<div
-  className="flex-1 transition-opacity ease-in-out"
-  style={{
-    opacity: sceneVisible ? 1 : 0,
-    transitionDuration: `${FADE_DURATION}ms`,
-    height: 'clamp(300px, 55vh, 600px)',
-  }}
->
-  <SceneRenderer id={currentScene.id} isSpeaking={isSpeaking} />
-</div>
-
-{/* ── Avatar + controles (direita no desktop) ── */}
-<div className="flex flex-col items-center gap-6 w-full md:w-72 lg:w-80 flex-shrink-0">
-  <TourAssistant
-    isSpeaking={isSpeaking}
-    caption={currentScene.audioText}
-    hideAvatar={hideAvatar}
-  />
-  <TourControls
-    currentId={currentScene.id}
-    isPlaying={isPlaying}
-    onPrev={handlePrev}
-    onNext={handleNext}
-    onTogglePlay={handleTogglePlay}
-    onGoTo={goToScene}
-  />
-</div>
-
+      {/* ── Cena (esquerda no desktop) ── */}
+      <div
+        className="flex-1 transition-opacity ease-in-out"
+        style={{
+          opacity: sceneVisible ? 1 : 0,
+          transitionDuration: `${FADE_DURATION}ms`,
+          height: 'clamp(300px, 55vh, 600px)',
+        }}
+      >
+        <SceneRenderer id={currentScene.id} isSpeaking={isSpeaking} />
       </div>
+
+      {/* ── Avatar + legenda (direita no desktop) ── */}
+      <div className="flex flex-col items-center gap-6 w-full md:w-72 lg:w-80 flex-shrink-0">
+        <TourAssistant
+          isSpeaking={isSpeaking}
+          caption={currentScene.audioText}
+          hideAvatar={hideAvatar}
+        />
+      </div>
+
     </div>
-  )
-}
+
+    {/* ── Controls fixo no rodapé centralizado ── */}
+    <div className="w-full flex justify-center py-4">
+      <TourControls
+        currentId={currentScene.id}
+        isPlaying={isPlaying}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        onTogglePlay={handleTogglePlay}
+        onGoTo={goToScene}
+      />
+    </div>
+
+  </div>
+)
 
 function SceneRenderer({ id, isSpeaking }: { id: SceneId; isSpeaking: boolean }) {
   switch (id) {

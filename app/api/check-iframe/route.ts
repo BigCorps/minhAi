@@ -21,6 +21,15 @@ if (!targetUrl.startsWith('https://')) {
   });
 }
 
+const BLOCKED_DOMAINS = ['minhai.app', 'minhai.com.br', 'minhaia.app', 'nossaia.app', 'suaia.app'];
+const urlObj = new URL(targetUrl);
+if (BLOCKED_DOMAINS.some(d => urlObj.hostname.endsWith(d))) {
+  return NextResponse.json({
+    compatible: false,
+    reason: 'Não é possível usar o próprio minhAi como site da página inicial.',
+  });
+}
+
   try {
     const response = await fetch(targetUrl, {
       method: 'HEAD', // só queremos os headers, não o body

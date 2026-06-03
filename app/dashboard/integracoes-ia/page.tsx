@@ -814,7 +814,20 @@ const [mlQuestions,        setMlQuestions]        = useState<any[]>([])
                           Conecte sua conta do Mercado Livre para publicar produtos automaticamente a partir do seu catálogo minhAi.
                         </p>
                       </div>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 italic">Em breve mais funcionalidades com o Mercado Livre.</p>
+                      {/* Funcionalidades disponíveis */}
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">O que você poderá fazer:</p>
+                        {[
+                          'Publicar produtos do catálogo minhAi no ML',
+                          'Sincronizar preço e estoque automaticamente',
+                          'Responder perguntas dos anúncios com GPT-4o',
+                          'Modo automático ou com aprovação manual',
+                        ].map((item, i) => (
+                          <p key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5">
+                            <span>{item}</span>
+                          </p>
+                        ))}
+                      </div>
                       {companyId && (
                         <a
                           href={`/api/ml/authorize?company_id=${companyId}`}

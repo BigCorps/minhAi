@@ -100,6 +100,8 @@ export default function SiteClient({ company }: SiteClientProps) {
       flexDirection: 'column',
       background: isDark ? '#0f172a' : '#f8fafc',
       overflow: 'hidden',
+      paddingBottom: 32, // altura do SlugFooter (h-8 = 32px)
+      boxSizing: 'border-box',
     }}>
       {/* Header */}
       <SlugHeaderWrapper

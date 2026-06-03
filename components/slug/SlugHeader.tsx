@@ -113,10 +113,15 @@ export default function SlugHeader({
   const showClienteButton    = pageType !== 'cliente';
   const showLinksButton      = company.modo_links_enabled === true && pageType !== 'link'; 
 
-    const handleNavigateToIA = () => {
-    // No subdomínio com webapp_home = 'site', ir para /ia diretamente
-    // para evitar loop com o redirect da raiz
-    if (company.webapp_home === 'site') {
+  const handleNavigateToIA = () => {
+    // /ia no subdomínio → middleware reescreve para /ia/[slug] sem passar por webapp_home
+    // no domínio principal → navigateContextual usa /ia/[slug] normalmente
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+    const isSubdomain = ['minhai.com.br', 'minhaia.app', 'nossaia.app', 'suaia.app', 'minhai.app']
+      .some(d => hostname.endsWith(`.${d}`) && !hostname.startsWith('www.'))
+      || hostname.includes('.localhost');
+
+    if (isSubdomain) {
       router.push('/ia');
     } else {
       navigateContextual(router, 'ia', slug);

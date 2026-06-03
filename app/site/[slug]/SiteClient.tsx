@@ -95,10 +95,11 @@ export default function SiteClient({ company }: SiteClientProps) {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      height: '100vh',
       display: 'flex',
       flexDirection: 'column',
       background: isDark ? '#0f172a' : '#f8fafc',
+      overflow: 'hidden',
     }}>
       {/* Header */}
       <SlugHeaderWrapper
@@ -210,8 +211,10 @@ export default function SiteClient({ company }: SiteClientProps) {
           style={{
             width: '100%',
             height: '100%',
+            minHeight: 0,
             border: 'none',
             display: 'block',
+            flex: 1,
             opacity: iframeStatus === 'ok' ? 1 : 0,
             transition: 'opacity 0.3s ease',
           }}

@@ -1,127 +1,97 @@
 'use client'
 // components/tour/scenes/SceneMercadoLivre.tsx
-// Mock visual da interface de mensagens do Mercado Livre.
 
-const MESSAGES = [
-  { from: 'user', text: 'O produto acompanha nota fiscal?', time: '09:30' },
-  { from: 'bot', text: 'Olá! Sim, todos os produtos acompanham nota fiscal eletrônica. ✅', time: '09:30' },
-  { from: 'user', text: 'Qual o prazo de entrega para São Paulo?', time: '09:31' },
+function MercadoLivreIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 35">
+      <rect width="52" height="35" rx="4" fill="#FFE600"/>
+      <path d="M19.5 25c-.3 0-.5-.1-.7-.3l-5.3-5.3c-.4-.4-.4-1 0-1.4.4-.4 1-.4 1.4 0l4.6 4.6 11-11c.4-.4 1-.4 1.4 0s.4 1 0 1.4L20.2 24.7c-.2.2-.4.3-.7.3z" fill="#2D3277"/>
+      <path d="M13.8 22.5c-.3 0-.5-.1-.7-.3-.4-.4-.4-1 0-1.4l5.3-5.3c.4-.4 1-.4 1.4 0s.4 1 0 1.4l-5.3 5.3c-.2.2-.4.3-.7.3z" fill="#2D3277"/>
+      <path d="M30.7 25.5c-.3 0-.5-.1-.7-.3l-3.2-3.2c-.4-.4-.4-1 0-1.4.4-.4 1-.4 1.4 0l3.2 3.2c.4.4.4 1 0 1.4-.2.2-.4.3-.7.3z" fill="#2D3277"/>
+      <path d="M37.5 19c-.3 0-.5-.1-.7-.3l-5.3-5.3c-.4-.4-.4-1 0-1.4.4-.4 1-.4 1.4 0l5.3 5.3c.4.4.4 1 0 1.4-.2.2-.4.3-.7.3z" fill="#2D3277"/>
+    </svg>
+  )
+}
+
+const QA = [
   {
-    from: 'bot',
-    text: 'Para São Paulo capital o prazo é de 2 dias úteis via Mercado Envios. 🚚 Posso verificar o CEP específico se quiser!',
-    time: '09:31',
+    question: 'O produto acompanha nota fiscal?',
+    answer: 'Sim! Todos os produtos acompanham nota fiscal eletrônica.',
+  },
+  {
+    question: 'Qual o prazo de entrega para São Paulo?',
+    answer: 'Para SP capital o prazo é de 2 dias úteis via Mercado Envios. Posso verificar seu CEP específico!',
   },
 ]
 
 export default function SceneMercadoLivre() {
   return (
-    <div
-      className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
-      style={{ background: '#fff' }}
-    >
-      {/* ── Header ML ── */}
+    <div className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none bg-white">
+
+      {/* Header */}
       <div
-        className="flex items-center gap-3 px-4 py-3 flex-shrink-0"
-        style={{ background: '#fff159', borderBottom: '1px solid rgba(0,0,0,0.1)' }}
+        className="flex items-center gap-3 px-4 py-2.5 flex-shrink-0"
+        style={{ background: '#FFE600', borderBottom: '1px solid rgba(0,0,0,0.1)' }}
       >
-        {/* Logo ML simplificado */}
-        <svg viewBox="0 0 80 24" className="h-5 flex-shrink-0">
-          <text
-            x="0"
-            y="18"
-            fontFamily="Arial"
-            fontWeight="bold"
-            fontSize="14"
-            fill="#333"
-          >
-            mercadolivre
-          </text>
-        </svg>
-        <div className="flex-1" />
-        <svg viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth={2} className="w-5 h-5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
+        <MercadoLivreIcon className="h-5 flex-shrink-0" />
+        <span className="text-xs font-semibold text-gray-800 flex-1">Perguntas e respostas</span>
       </div>
 
-      {/* ── Sub-header conversa ── */}
-      <div
-        className="flex items-center gap-3 px-4 py-2 flex-shrink-0 border-b"
-        style={{ borderColor: 'rgba(0,0,0,0.08)' }}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth={2} className="w-4 h-4">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 18l-6-6 6-6" />
-        </svg>
-        <div
-          className="rounded-full flex items-center justify-center flex-shrink-0"
-          style={{ width: 32, height: 32, background: '#3483fa' }}
-        >
-          <span className="text-white text-xs font-bold">C</span>
-        </div>
+      {/* Produto */}
+      <div className="flex items-center gap-3 px-4 py-2.5 border-b flex-shrink-0 bg-gray-50"
+        style={{ borderColor: 'rgba(0,0,0,0.07)' }}>
+        <div className="rounded-md flex-shrink-0" style={{ width: 44, height: 44, background: '#e8e8e8' }} />
         <div className="flex-1 min-w-0">
-          <p className="text-gray-800 text-xs font-semibold leading-none truncate">Café Exemplo Oficial</p>
-          <div className="flex items-center gap-1 mt-0.5">
-            <span className="text-xs" style={{ color: '#00a650' }}>● MercadoLíder</span>
-          </div>
+          <p className="text-xs font-semibold text-gray-800 truncate">Kit Café Especial Premium 250g</p>
+          <p className="text-xs text-gray-400 mt-0.5">R$ 89,90 · 47 vendidos</p>
         </div>
       </div>
 
-      {/* ── Produto referência ── */}
-      <div
-        className="flex items-center gap-3 px-4 py-2 flex-shrink-0 border-b"
-        style={{ background: '#f5f5f5', borderColor: 'rgba(0,0,0,0.08)' }}
-      >
-        <div
-          className="rounded flex-shrink-0"
-          style={{ width: 40, height: 40, background: '#e8e8e8' }}
-        />
-        <div className="flex-1 min-w-0">
-          <p className="text-gray-700 text-xs font-medium leading-snug truncate">
-            Kit Café Especial Premium 250g
-          </p>
-          <p className="text-gray-500 text-xs">R$ 89,90</p>
-        </div>
-      </div>
-
-      {/* ── Mensagens ── */}
-      <div className="flex-1 flex flex-col justify-end gap-2 px-3 py-3 overflow-hidden bg-white">
-        {MESSAGES.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className="rounded-2xl px-3 py-2 max-w-[78%]"
-              style={{
-                fontSize: 'clamp(0.7rem, 1.8vw, 0.8rem)',
-                background: msg.from === 'user' ? '#3483fa' : '#f0f0f0',
-                color: msg.from === 'user' ? 'white' : '#333',
-              }}
-            >
-              <p className="leading-snug">{msg.text}</p>
-              <p
-                className="mt-0.5 text-right"
-                style={{ fontSize: '0.6rem', opacity: 0.6 }}
-              >
-                {msg.time}
-              </p>
+      {/* Q&A list */}
+      <div className="flex-1 flex flex-col overflow-hidden divide-y" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+        {QA.map((item, i) => (
+          <div key={i} className="px-4 py-3 flex flex-col gap-2">
+            <div className="flex items-start gap-2">
+              <span className="text-xs font-bold flex-shrink-0 mt-0.5" style={{ color: '#3483fa' }}>P:</span>
+              <p className="text-xs text-gray-700 leading-relaxed">{item.question}</p>
+            </div>
+            <div className="flex items-start gap-2 rounded-lg px-2.5 py-2" style={{ background: '#f0f7ff' }}>
+              <span className="text-xs font-bold flex-shrink-0 mt-0.5" style={{ color: '#00a650' }}>R:</span>
+              <div className="flex-1">
+                <p className="text-xs text-gray-700 leading-relaxed mb-1.5">{item.answer}</p>
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className="rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ width: 14, height: 14, background: '#00a650' }}
+                  >
+                    <svg viewBox="0 0 10 10" className="w-2.5 h-2.5">
+                      <path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-semibold" style={{ color: '#00a650', fontSize: '0.6rem' }}>
+                    Respondido por minhAi
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ── Input ── */}
-      <div className="flex items-center gap-2 px-3 py-2 border-t flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
+      {/* Input */}
+      <div className="flex items-center gap-2 px-3 py-2 border-t flex-shrink-0"
+        style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
         <div
           className="flex-1 rounded-full border px-4 py-2 text-xs text-gray-400"
-          style={{ borderColor: '#ddd' }}
+          style={{ borderColor: '#ddd', background: '#f5f5f5' }}
         >
-          Escreva uma mensagem...
+          Faça uma pergunta sobre o produto...
         </div>
         <div
           className="rounded-full flex items-center justify-center flex-shrink-0"
-          style={{ width: 36, height: 36, background: '#3483fa' }}
+          style={{ width: 32, height: 32, background: '#3483fa' }}
         >
-          <svg viewBox="0 0 24 24" fill="white" className="w-4 h-4">
+          <svg viewBox="0 0 24 24" fill="white" className="w-3.5 h-3.5">
             <path d="M2 21l21-9L2 3v7l15 2-15 2z" />
           </svg>
         </div>

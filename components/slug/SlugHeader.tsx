@@ -93,13 +93,15 @@ export default function SlugHeader({
 
   const showHomeButton = !!company.webapp_home &&
     company.webapp_home !== 'ia' &&
-    pageType !== 'site';
+    pageType !== 'site' &&
+    !(company.webapp_home === 'site' && isKioskMode);
 
   const handleHomeClick = () => {
     if (company.webapp_home === 'site' && company.website) {
       if (!isKioskMode) {
         window.open(company.website, '_blank', 'noopener noreferrer');
       }
+      // No modo totem não faz nada — botão fica visível mas inativo
       return;
     }
     navigateContextual(router, 'ia', slug);

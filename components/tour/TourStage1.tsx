@@ -37,7 +37,7 @@ export default function TourStage1() {
   const { playText: _playText, stopAudio } = usePlayText()
   // Wrapper com velocidade aumentada para o tour (1.35x = fala mais ágil)
   const playText = useCallback(
-    (text: string) => _playText(text, 1.35),
+    (text: string) => _playText(text, 1.2),
     [_playText]
   )
 

@@ -45,7 +45,7 @@ export default function FilaPage({ params }: FilaPageProps) {
       // FIX: busca todos os campos de modo para o header ter navegação completa
       const { data, error } = await supabase
         .from('companies')
-        .select('id, name, slug, logo_url, assistant_role, webapp_enabled, modo_vendas_enabled, modo_fila_enabled, modo_links_enabled')
+        .select('id, name, slug, logo_url, assistant_role, webapp_enabled, webapp_home, website, modo_vendas_enabled, modo_fila_enabled, modo_links_enabled')
         .eq('slug', slug)
         .single();
 
@@ -106,9 +106,11 @@ export default function FilaPage({ params }: FilaPageProps) {
             logo_url: companyData?.logo_url,
             assistant_role: companyData?.assistant_role,
             webapp_enabled: companyData?.webapp_enabled,
+            webapp_home: companyData?.webapp_home ?? null,
+            website: companyData?.website ?? null,
             modo_vendas_enabled: companyData?.modo_vendas_enabled,
             modo_fila_enabled: companyData?.modo_fila_enabled,
-            modo_links_enabled: companyData?.modo_links_enabled,  // FIX: estava faltando
+            modo_links_enabled: companyData?.modo_links_enabled,
           }}
           slug={slug}
           pageType="fila"

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "tts:pregenerate": "ts-node --project tsconfig.json scripts/pregenerate-tour-audio.ts"
   },
   "dependencies": {
     "@daily-co/daily-js": "^0.89.1",
@@ -74,6 +75,7 @@
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
-    "@bubblewrap/cli": "latest"
+    "@bubblewrap/cli": "latest",
+    "ts-node": "^10.9.2"
   }
 }

@@ -170,16 +170,17 @@ export default function WebAppPage() {
   const [finalSlug, setFinalSlug]           = useState('');
   const [finalDomain, setFinalDomain]       = useState('minhai.app');
   const [webappHome, setWebappHome]         = useState('ia');
+  const [customWebsite, setCustomWebsite]   = useState('');
 
   const [iframeTestStatus, setIframeTestStatus] = useState<'idle' | 'testing' | 'ok' | 'blocked'>('idle');
   const [iframeTestReason, setIframeTestReason] = useState('');
 
 async function testIframeCompatibility() {
-  if (!selectedCompany?.website) return;
+  if (!customWebsite) return;
   setIframeTestStatus('testing');
   setIframeTestReason('');
   try {
-    const res = await fetch(`/api/check-iframe?url=${encodeURIComponent(selectedCompany.website)}`);
+    const res = await fetch(`/api/check-iframe?url=${encodeURIComponent(customWebsite)}`);
     const data = await res.json();
     setIframeTestStatus(data.compatible ? 'ok' : 'blocked');
     setIframeTestReason(data.reason || '');
@@ -236,6 +237,7 @@ async function testIframeCompatibility() {
         setThemeColor(ativo.webapp_theme_color || '#f97316');
         setWebappDomain(ativo.webapp_domain || 'minhai.app');
         setWebappHome(ativo.webapp_home || 'ia');
+        setCustomWebsite(ativo.website || '');
         if (ativo.logo_url) setLogoPreview(ativo.logo_url);
         setPublished(true);
         setFinalSlug(ativo.slug);
@@ -300,6 +302,7 @@ async function testIframeCompatibility() {
           webapp_domain: webappDomain,
           webapp_home: webappHome,
           webapp_configured_at: new Date().toISOString(),
+          ...(webappHome === 'site' && customWebsite ? { website: customWebsite } : {}),
           ...(logo_url ? { webapp_logo_url: logo_url } : {}),
         })
         .eq('id', selectedId);
@@ -424,6 +427,7 @@ async function testIframeCompatibility() {
                       setThemeColor(c.webapp_theme_color || '#f97316');
                       setWebappDomain(c.webapp_domain || 'minhai.app');
                       setWebappHome(c.webapp_home || 'ia');
+                      setCustomWebsite(c.website || '');
                       setLogoPreview(c.logo_url || null);
                       setLogoFile(null);
                     }
@@ -597,25 +601,59 @@ async function testIframeCompatibility() {
               })}
             </div>
 
+{webappHome === 'site' && (
+  <div style={{ marginBottom: 16 }}>
+    <label style={{ display: 'block', color: MUTED, fontSize: 13, fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+      URL do Site
+    </label>
+    <input
+      type="url"
+      value={customWebsite}
+      onChange={e => {
+        setCustomWebsite(e.target.value);
+        setIframeTestStatus('idle');
+        setIframeTestReason('');
+      }}
+      placeholder="https://seusite.com.br"
+      style={{
+        width: '100%', padding: '12px 16px', borderRadius: 12,
+        background: INPUTBG, border: `1px solid ${BORDER}`,
+        color: WHITE, fontSize: 14, outline: 'none', boxSizing: 'border-box',
+      }}
+    />
+    {!customWebsite && selectedCompany?.website && (
+      <p style={{ color: MUTED, fontSize: 12, marginTop: 6 }}>
+        Site atual: <span style={{ color: WHITE }}>{selectedCompany.website}</span>
+        <button
+          onClick={() => setCustomWebsite(selectedCompany.website!)}
+          style={{ marginLeft: 8, color: ORANGE, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12 }}
+        >
+          Usar este
+        </button>
+      </p>
+    )}
+  </div>
+)}
+            
             {/* ── Testador de iframe — só aparece quando site está selecionado ── */}
 {webappHome === 'site' && (
   <div style={{
     background: ROWBG, border: `1px solid ${BORDER}`,
     borderRadius: 14, padding: '16px 20px', marginBottom: 24,
   }}>
-    {!selectedCompany?.website ? (
+    {!customWebsite ? (
       <p style={{ color: '#ef4444', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
         </svg>
-        Nenhum site cadastrado. Vá em Configurações → Dados da Empresa para adicionar.
+        Digite a URL do site abaixo para testar.
       </p>
     ) : (
       <>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: iframeTestStatus !== 'idle' ? 12 : 0 }}>
+        <div style={{ ... }}>
           <div>
             <p style={{ color: WHITE, fontSize: 13, fontWeight: 600, marginBottom: 2 }}>
-              🌐 {selectedCompany.website}
+              🌐 {customWebsite}
             </p>
             <p style={{ color: MUTED, fontSize: 12 }}>
               Teste se o seu site pode ser exibido dentro do WebApp

@@ -51,7 +51,7 @@ export default function SceneWidget() {
   {/* Balão de boas-vindas */}
   <div className="bg-white rounded-2xl rounded-br-sm shadow-lg px-3 py-2 max-w-[160px] border border-gray-100">
     <p className="text-gray-700 text-xs leading-snug">
-      Olá! 👋 Posso ajudar com cardápio, reservas ou pedidos?
+      Olá! Posso ajudar com cardápio, reservas ou pedidos?
     </p>
   </div>
   {/* Botão pill no padrão minhAi */}

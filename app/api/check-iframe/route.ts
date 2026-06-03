@@ -13,6 +13,14 @@ export async function GET(request: NextRequest) {
   // Garantir que tem protocolo
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
+// Verificar se o site usa HTTPS
+if (!targetUrl.startsWith('https://')) {
+  return NextResponse.json({
+    compatible: false,
+    reason: 'O site usa HTTP (não seguro). Apenas sites com HTTPS podem ser exibidos dentro do WebApp.',
+  });
+}
+
   try {
     const response = await fetch(targetUrl, {
       method: 'HEAD', // só queremos os headers, não o body

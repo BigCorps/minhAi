@@ -1,7 +1,5 @@
 ## minhAI - Uma IA pra chamar de sua!
 
-* Site pessoal no webapp como página incial - ícone casa primeiro - com a chamada, transforme seu site em um app facilmente.
-
 * Criar Auxiliar de Cadastro e com MCP whatsapp - MANUS miriamithiel
 
 * Tour guiado - MANUS interpag e CLAUDE ith.almeida

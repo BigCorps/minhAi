@@ -42,6 +42,8 @@ export interface SaleModeModalProps {
   companyLogo?: string | null;
   assistantRole?: string;
   avatarType?: string;                    // ← NOVO: orbe vs avatar
+  webapp_home?: string | null;
+  website?: string | null;
   modo_vendas_enabled?: boolean;
   modo_fila_enabled?: boolean;
   modo_links_enabled?: boolean;
@@ -78,6 +80,8 @@ function SaleModeInner({
   companyLogo,
   assistantRole,
   avatarType,                             // ← NOVO
+  webapp_home,
+  website,
   modo_vendas_enabled = true,
   modo_fila_enabled = false,
   modo_links_enabled = false,
@@ -723,6 +727,9 @@ useEffect(() => {
             logo_url: companyLogo,
             assistant_role: assistantRole,
             webapp_enabled: true,
+            webapp_home: webapp_home ?? null,
+            website: website ?? null,
+            modo_vendas_enabled: modo_vendas_enabled,
             modo_vendas_enabled: modo_vendas_enabled,
             modo_fila_enabled: modo_fila_enabled,
             modo_links_enabled: modo_links_enabled,

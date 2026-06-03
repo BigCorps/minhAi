@@ -1,13 +1,5 @@
 'use client'
 // components/tour/TourStage1.tsx
-// Orquestrador do Stage 1: "Onde o minhAi atua"
-//
-// Responsabilidades:
-//  - Gerencia a cena atual e o estado de reprodução
-//  - Chama usePlayText para TTS de cada cena
-//  - Avança automaticamente ao fim do áudio (+ 1.2s de pausa)
-//  - Controla o fade entre cenas (opacity + pointer-events)
-//  - Oculta o TourAssistant nas cenas que têm avatar próprio (SceneAssistente)
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { STAGE1_SCRIPT, SceneId } from '@/lib/tour/stage1-script'
@@ -23,10 +15,7 @@ import SceneMercadoLivre from './scenes/SceneMercadoLivre'
 import SceneMCP from './scenes/SceneMCP'
 import SceneWhatsAppMCP from './scenes/SceneWhatsAppMCP'
 
-// Cenas que têm avatar embutido — TourAssistant fica oculto
 const SCENES_WITH_OWN_AVATAR: SceneId[] = ['assistente']
-
-// Duração do fade entre cenas (ms)
 const FADE_DURATION = 300
 
 export default function TourStage1() {
@@ -35,7 +24,6 @@ export default function TourStage1() {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [sceneVisible, setSceneVisible] = useState(true)
   const { playText: _playText, stopAudio } = usePlayText()
-  // Wrapper com velocidade aumentada para o tour (1.35x = fala mais ágil)
   const playText = useCallback(
     (text: string) => _playText(text, 1.15),
     [_playText]
@@ -47,39 +35,27 @@ export default function TourStage1() {
   const currentScene = STAGE1_SCRIPT[sceneIndex]
   const hideAvatar = SCENES_WITH_OWN_AVATAR.includes(currentScene.id)
 
-  // ── Função que executa uma cena completa ──────────────────────────────────
   const runScene = useCallback(
     async (index: number) => {
       if (!isPlayingRef.current) return
-
       const scene = STAGE1_SCRIPT[index]
-
-      // Fade out
       setSceneVisible(false)
       await delay(FADE_DURATION)
       setSceneIndex(index)
       setSceneVisible(true)
-
-      // TTS
       setIsSpeaking(true)
       try {
         await playText(scene.audioText)
       } catch {
-        // Fallback: aguarda duração estimada
         await delay(scene.fallbackDuration)
       }
       setIsSpeaking(false)
-
-      // Pausa entre cenas
       await delay(1200)
-
-      // Avança automaticamente se ainda estiver tocando
       if (!isPlayingRef.current) return
       const next = index + 1
       if (next < STAGE1_SCRIPT.length) {
         runScene(next)
       } else {
-        // Chegou ao fim
         isPlayingRef.current = false
         setIsPlaying(false)
       }
@@ -87,7 +63,6 @@ export default function TourStage1() {
     [playText]
   )
 
-  // ── Play / Pause ──────────────────────────────────────────────────────────
   const handlePlay = useCallback(() => {
     isPlayingRef.current = true
     setIsPlaying(true)
@@ -103,14 +78,10 @@ export default function TourStage1() {
   }, [stopAudio])
 
   const handleTogglePlay = useCallback(() => {
-    if (isPlaying) {
-      handlePause()
-    } else {
-      handlePlay()
-    }
+    if (isPlaying) handlePause()
+    else handlePlay()
   }, [isPlaying, handlePlay, handlePause])
 
-  // ── Navegação manual ──────────────────────────────────────────────────────
   const goToScene = useCallback(
     (index: number) => {
       handlePause()
@@ -131,7 +102,6 @@ export default function TourStage1() {
     if (sceneIndex < STAGE1_SCRIPT.length - 1) goToScene(sceneIndex + 1)
   }, [sceneIndex, goToScene])
 
-  // ── Cleanup ───────────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
       isPlayingRef.current = false
@@ -142,16 +112,12 @@ export default function TourStage1() {
 
   return (
     <div
-      className="w-full min-h-screen flex items-center justify-center px-4 py-6"
+      className="w-full min-h-screen flex items-center justify-center px-6 py-6 md:px-12"
       style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' }}
     >
-      {/*
-        Mobile  → coluna (flex-col): avatar em cima, cena abaixo, controles no fim
-        Desktop → linha (md:flex-row): coluna esquerda fixa + cena ocupando o resto
-      */}
-      <div className="w-full max-w-6xl flex flex-col md:flex-row-reverse md:items-center gap-8 md:gap-12">
+      <div className="w-full max-w-5xl mx-auto flex flex-col md:flex-row-reverse md:items-center gap-8 md:gap-12">
 
-        {/* ── COLUNA ESQUERDA: avatar + legenda + controles ── */}
+        {/* ── Avatar + controles (direita no desktop) ── */}
         <div className="flex flex-col items-center gap-6 w-full md:w-72 lg:w-80 flex-shrink-0">
           <TourAssistant
             isSpeaking={isSpeaking}
@@ -168,17 +134,13 @@ export default function TourStage1() {
           />
         </div>
 
-        {/* ── COLUNA DIREITA: visual da cena ── */}
+        {/* ── Cena (esquerda no desktop) ── */}
         <div
-          className="w-full flex-1 transition-opacity ease-in-out"
+          className="flex-1 transition-opacity ease-in-out"
           style={{
             opacity: sceneVisible ? 1 : 0,
             transitionDuration: `${FADE_DURATION}ms`,
-            // Mobile: altura compacta / Desktop: ocupa a altura disponível
             height: 'clamp(300px, 55vh, 600px)',
-            maxWidth: 560,
-            // Centraliza no mobile, alinha ao centro no desktop
-            margin: '0 auto',
           }}
         >
           <SceneRenderer id={currentScene.id} isSpeaking={isSpeaking} />
@@ -189,33 +151,21 @@ export default function TourStage1() {
   )
 }
 
-// ── Renderer de cena isolado ──────────────────────────────────────────────────
 function SceneRenderer({ id, isSpeaking }: { id: SceneId; isSpeaking: boolean }) {
   switch (id) {
-    case 'intro':
-      return <SceneIntro />
-    case 'assistente':
-      return <SceneAssistente isSpeaking={isSpeaking} />
-    case 'widget':
-      return <SceneWidget />
-    case 'whatsapp':
-      return <SceneWhatsApp />
-    case 'instagram':
-      return <SceneInstagram />
-    case 'mercadolivre':
-      return <SceneMercadoLivre />
-    case 'mcp':
-      return <SceneMCP />
-    case 'whatsapp-mcp':
-      return <SceneWhatsAppMCP />
-    case 'outro':
-      return <SceneIntro isOutro />
-    default:
-      return null
+    case 'intro':       return <SceneIntro />
+    case 'assistente':  return <SceneAssistente isSpeaking={isSpeaking} />
+    case 'widget':      return <SceneWidget />
+    case 'whatsapp':    return <SceneWhatsApp />
+    case 'instagram':   return <SceneInstagram />
+    case 'mercadolivre':return <SceneMercadoLivre />
+    case 'mcp':         return <SceneMCP />
+    case 'whatsapp-mcp':return <SceneWhatsAppMCP />
+    case 'outro':       return <SceneIntro isOutro />
+    default:            return null
   }
 }
 
-// ── Util ──────────────────────────────────────────────────────────────────────
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }

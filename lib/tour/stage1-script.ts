@@ -50,14 +50,14 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'whatsapp',
     label: 'WhatsApp',
     audioText:
-      'No WhatsApp, com a naturalidade que seus clientes já conhecem. Responde mensagens, entende o que o cliente precisa, envia e confirma cobranças Pix, marca eventos na sua Agenda do Google, calcula o frete da entrega, criar orçamentos e muito mais.',
+      'No WhatsApp, com a naturalidade que seus clientes já conhecem. Responde mensagens, entende o que o cliente precisa, envia e confirma cobranças Pix, marca eventos na sua Agenda do Google, calcula o frete da entrega, gera orçamentos e muito mais.',
     fallbackDuration: 7000,
   },
   {
     id: 'instagram',
     label: 'Instagram',
     audioText:
-      'No Instagram e Facebook, respondendo mensagens diretas, comentários e enviando de eme automaticamente, com as mesmas funcionalidades do Whatsapp, convertendo seguidores em clientes.',
+      'No Instagram e Facebook, respondendo mensagens diretas, comentários e enviando Dê Emê automaticamente, com as mesmas funcionalidades do Whatsapp, convertendo seguidores em clientes.',
     displayText:
       'No Instagram e Facebook, respondendo mensagens diretas, comentários e enviando DMs automaticamente, com as mesmas funcionalidades do Whatsapp, convertendo seguidores em clientes.',
     fallbackDuration: 6000,

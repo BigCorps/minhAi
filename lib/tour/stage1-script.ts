@@ -27,9 +27,9 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'intro',
     label: 'Introdução',
     audioText:
-      'Sou a minha I A, mas também posso ser Sua I A ou Nossa I A, você escolhe como me chamar! Estou em qualquer lugar onde o seu cliente esteja: telas, aplicativos de I A, Whatsapp, Instagram, Facebook e Mercado Livre',
+      'Sou a minha I A, mas também posso ser Sua I A ou Nossa I A, você escolhe como me chamar! Estou em qualquer lugar onde o seu cliente esteja: aparelhos com telas. Computadores, tablets e celulares. totens, Whatsapp, Instagram, Facebook, aplicativos de I A e até no Mercado Livre',
     displayText:
-      'Sou a minhAi, mas também posso ser Sua IA ou Nossa IA, você escolhe como me chamar! Estou em qualquer lugar onde o seu cliente esteja: telas, aplicativos de IA, Whatsapp, Instagram, Facebook e Mercado Livre',
+      'Sou a minhAi, mas também posso ser Sua IA ou Nossa IA, você escolhe como me chamar! Estou em qualquer lugar onde o seu cliente esteja: Aparelhos com telas (computadores, tablets e celulares), Totens, Whatsapp, Instagram, Facebook, aplicativos de IA e até no Mercado Livre.',
     fallbackDuration: 7000,
   },
   {
@@ -57,6 +57,8 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'instagram',
     label: 'Instagram',
     audioText:
+      'No Instagram e Facebook, respondendo mensagens diretas, comentários e enviando D Ms automaticamente, com as mesmas funcionalidades do Whatsapp, convertendo seguidores em clientes.',
+    displayText:
       'No Instagram e Facebook, respondendo mensagens diretas, comentários e enviando DMs automaticamente, com as mesmas funcionalidades do Whatsapp, convertendo seguidores em clientes.',
     fallbackDuration: 6000,
   },

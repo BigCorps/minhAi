@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { LandingAvatarFace } from './LandingAvatarFace';
 import { WordCarousel } from '@/components/landing/WordCarousel';
 import { DomainPreviewPicker } from '@/components/landing/DomainPreviewPicker';
+import TourTrigger from '@/components/tour/TourTrigger';
 
 interface InicioSectionProps {
   theme?: 'dark' | 'light';
@@ -49,11 +50,11 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
         `}
       >
 
-        {/* ── AVATAR ─────────────────────────────────────────── */}
+        {/* ── AVATAR + TourTrigger desktop ───────────────────── */}
         <div
           className={`
             flex-shrink-0 order-1 md:order-2
-            flex items-center justify-center
+            flex flex-col items-center justify-center gap-4
             [@media(max-height:580px)_and_(max-width:767px)]:hidden
           `}
         >
@@ -72,6 +73,11 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             `}
           >
             <LandingAvatarFace theme={theme} />
+          </div>
+
+          {/* TourTrigger — só desktop (abaixo do avatar) */}
+          <div className="hidden md:block w-full">
+            <TourTrigger theme={theme} delay={5000} />
           </div>
         </div>
 
@@ -126,25 +132,23 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </span>
           </h1>
 
-{/* Parágrafo — versão curta no mobile, completa no desktop */}
-<p
-  className={`
-    text-xs sm:text-base md:text-lg max-w-lg leading-relaxed transition-colors mx-auto
-    mb-1.5
-    [@media(max-height:660px)_and_(max-width:767px)]:hidden
-    ${isDark ? 'text-white/55' : 'text-gray-600'}
-  `}
->
-  {/* Mobile: texto curto */}
-  <span className="sm:hidden">
-    A única IA que vende, atende, agenda e cobra automaticamente.
-  </span>
-  {/* Desktop: texto completo */}
-  <span className="hidden sm:inline">
-    A única IA que atende seus clientes no virtual e no presencial, cobra, agenda, confirma pagamentos via Pix e nunca deixa uma venda sem resposta.
-    Configure tudo em minutos, sem programar e automatize atendimentos, cobranças, agendamentos e operações enquanto sua empresa lucra mais.
-  </span>
-</p>
+          {/* Parágrafo */}
+          <p
+            className={`
+              text-xs sm:text-base md:text-lg max-w-lg leading-relaxed transition-colors mx-auto
+              mb-1.5
+              [@media(max-height:660px)_and_(max-width:767px)]:hidden
+              ${isDark ? 'text-white/55' : 'text-gray-600'}
+            `}
+          >
+            <span className="sm:hidden">
+              A única IA que vende, atende, agenda e cobra automaticamente.
+            </span>
+            <span className="hidden sm:inline">
+              A única IA que atende seus clientes no virtual e no presencial, cobra, agenda, confirma pagamentos via Pix e nunca deixa uma venda sem resposta.
+              Configure tudo em minutos, sem programar e automatize atendimentos, cobranças, agendamentos e operações enquanto sua empresa lucra mais.
+            </span>
+          </p>
 
           {/* DomainPreviewPicker */}
           <DomainPreviewPicker isDark={isDark} />
@@ -194,59 +198,65 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             ))}
           </div>
 
-<div
-  className={`
-    flex items-center justify-center gap-2 mt-2 sm:mt-3
-    [@media(max-height:700px)_and_(max-width:767px)]:hidden
-  `}
->
-  {/* Mobile: texto curto */}
-  <span className={`sm:hidden text-[10px] font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-    Escolha entre a versão{' '}
-    <span className={`font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>Smart</span>
-    {' '}ou{' '}
-    <span className={`font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>Vendas</span>
-  </span>
+          <div
+            className={`
+              flex items-center justify-center gap-2 mt-2 sm:mt-3
+              [@media(max-height:700px)_and_(max-width:767px)]:hidden
+            `}
+          >
+            <span className={`sm:hidden text-[10px] font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+              Escolha entre a versão{' '}
+              <span className={`font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>Smart</span>
+              {' '}ou{' '}
+              <span className={`font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>Vendas</span>
+            </span>
+            <span className={`hidden sm:flex items-center gap-2 text-xs ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
+              Como pagar:
+            </span>
+            <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+              Smart — créditos por uso
+            </span>
+            <span className={`hidden sm:inline ${isDark ? 'text-white/15' : 'text-gray-200'} text-xs`}>·</span>
+            <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-lime-400 flex-shrink-0" />
+              Vendas — grátis, só pague quando vender
+            </span>
+          </div>
 
-  {/* Desktop: versão completa */}
-  <span className={`hidden sm:flex items-center gap-2 text-xs ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
-    Como pagar:
-  </span>
-  <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>
-    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
-    Smart — créditos por uso
-  </span>
-  <span className={`hidden sm:inline ${isDark ? 'text-white/15' : 'text-gray-200'} text-xs`}>·</span>
-  <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>
-    <span className="w-1.5 h-1.5 rounded-full bg-lime-400 flex-shrink-0" />
-    Vendas — grátis, só pague quando vender
-  </span>
-</div>
-
-          {/* Cards de integração — Meta / Google / Google Play */}
+          {/* Cards de integração */}
           <div
             className={`
               flex items-center justify-center gap-2 sm:gap-3 mt-2 sm:mt-3
               [@media(max-height:700px)_and_(max-width:767px)]:hidden
             `}
           >
-<div className="w-[90px] sm:w-[120px] h-10 sm:h-12 flex items-center justify-center">
-  <img src="/cards/meta.png" alt="Integração oficial Meta" className="w-full h-full object-contain" />
-</div>
-
-<div className="w-[90px] sm:w-[120px] h-10 sm:h-12 flex items-center justify-center">
-  <img src="/cards/google.png" alt="Integração verificada pelo Google" className="w-full h-full object-contain" />
-</div>
-
-<a
-  href="https://play.google.com/store/apps/details?id=app.minhai.www.twa"
-  target="_blank"
-  rel="noopener noreferrer"
-  className="w-[90px] sm:w-[120px] h-10 sm:h-12 flex items-center justify-center hover:opacity-80 transition-opacity"
->
-  <img src="/cards/play.png" alt="Disponível no Google Play" className="w-full h-full object-contain" />
-</a>
+            <div className="w-[90px] sm:w-[120px] h-10 sm:h-12 flex items-center justify-center">
+              <img src="/cards/meta.png" alt="Integração oficial Meta" className="w-full h-full object-contain" />
+            </div>
+            <div className="w-[90px] sm:w-[120px] h-10 sm:h-12 flex items-center justify-center">
+              <img src="/cards/google.png" alt="Integração verificada pelo Google" className="w-full h-full object-contain" />
+            </div>
+            <a
+              href="https://play.google.com/store/apps/details?id=app.minhai.www.twa"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-[90px] sm:w-[120px] h-10 sm:h-12 flex items-center justify-center hover:opacity-80 transition-opacity"
+            >
+              <img src="/cards/play.png" alt="Disponível no Google Play" className="w-full h-full object-contain" />
+            </a>
           </div>
+
+          {/* TourTrigger — só mobile (abaixo dos cards) */}
+          <div
+            className={`
+              md:hidden mt-3
+              [@media(max-height:700px)_and_(max-width:767px)]:hidden
+            `}
+          >
+            <TourTrigger theme={theme} delay={5000} />
+          </div>
+
         </div>
       </div>
     </div>

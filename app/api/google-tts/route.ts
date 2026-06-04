@@ -8,7 +8,11 @@ import crypto from 'crypto';
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-const CACHE_DIR = path.join(process.cwd(), 'public', 'audio-cache');
+// /tmp é o único diretório gravável no Vercel em produção
+// Em desenvolvimento, usa public/audio-cache para persistência entre deploys
+const CACHE_DIR = process.env.NODE_ENV === 'production'
+  ? '/tmp/audio-cache'
+  : path.join(process.cwd(), 'public', 'audio-cache');
 
 function getCacheKey(text: string, voice: string, speed: number): string {
   return crypto
@@ -17,23 +21,37 @@ function getCacheKey(text: string, voice: string, speed: number): string {
     .digest('hex');
 }
 
-function ensureCacheDir() {
-  if (!fs.existsSync(CACHE_DIR)) {
-    fs.mkdirSync(CACHE_DIR, { recursive: true });
+// Retorna false se falhar — nunca lança exceção
+function ensureCacheDir(): boolean {
+  try {
+    if (!fs.existsSync(CACHE_DIR)) {
+      fs.mkdirSync(CACHE_DIR, { recursive: true });
+    }
+    return true;
+  } catch {
+    return false;
   }
 }
 
 function readFromCache(key: string): Buffer | null {
-  const filePath = path.join(CACHE_DIR, `${key}.mp3`);
-  if (fs.existsSync(filePath)) {
-    return fs.readFileSync(filePath);
+  try {
+    const filePath = path.join(CACHE_DIR, `${key}.mp3`);
+    if (fs.existsSync(filePath)) {
+      return fs.readFileSync(filePath);
+    }
+  } catch {
+    // cache indisponível — ignora
   }
   return null;
 }
 
-function writeToCache(key: string, buffer: Buffer) {
-  const filePath = path.join(CACHE_DIR, `${key}.mp3`);
-  fs.writeFileSync(filePath, buffer);
+function writeToCache(key: string, buffer: Buffer): void {
+  try {
+    const filePath = path.join(CACHE_DIR, `${key}.mp3`);
+    fs.writeFileSync(filePath, buffer);
+  } catch {
+    // falha silenciosa — cache é opcional
+  }
 }
 
 function audioResponse(buffer: Buffer, fromCache: boolean, durationMs?: number) {
@@ -54,7 +72,8 @@ function audioResponse(buffer: Buffer, fromCache: boolean, durationMs?: number) 
  * POST /api/google-tts
  *
  * Sintetiza texto em áudio usando Google Text-to-Speech.
- * Resultados são cacheados em disco em /public/audio-cache/.
+ * Cache em /tmp (Vercel) ou public/audio-cache (dev).
+ * O cache é best-effort — falha silenciosa, nunca bloqueia o fluxo.
  * Body: { text: string, voice?: string, speed?: number }
  */
 export async function POST(request: NextRequest) {
@@ -77,16 +96,16 @@ export async function POST(request: NextRequest) {
     const resolvedSpeed = speed ?? 1.2;
     const cacheKey = getCacheKey(text, resolvedVoice, resolvedSpeed);
 
-    ensureCacheDir();
-
-    // ✅ Cache hit — sem custo, sem latência
-    const cached = readFromCache(cacheKey);
-    if (cached) {
-      console.log(`🎯 TTS cache HIT (${cacheKey.slice(0, 8)}…) — ${cached.length} bytes`);
-      return audioResponse(cached, true);
+    // Cache — best effort, nunca bloqueia
+    const cacheReady = ensureCacheDir();
+    if (cacheReady) {
+      const cached = readFromCache(cacheKey);
+      if (cached) {
+        console.log(`🎯 TTS cache HIT (${cacheKey.slice(0, 8)}…) — ${cached.length} bytes`);
+        return audioResponse(cached, true);
+      }
     }
 
-    // ❌ Cache miss — chama o Google TTS e persiste
     console.log('🔊 Gerando TTS:', {
       text: text.substring(0, 50) + (text.length > 50 ? '…' : ''),
       length: text.length,
@@ -104,9 +123,12 @@ export async function POST(request: NextRequest) {
     });
 
     const duration = Date.now() - startTime;
-    console.log(`✅ TTS gerado em ${duration}ms (${audioBuffer.length} bytes) — salvando cache`);
+    console.log(`✅ TTS gerado em ${duration}ms (${audioBuffer.length} bytes)`);
 
-    writeToCache(cacheKey, audioBuffer as Buffer);
+    // Persiste no cache se disponível
+    if (cacheReady) {
+      writeToCache(cacheKey, audioBuffer as Buffer);
+    }
 
     return audioResponse(audioBuffer as Buffer, false, duration);
 
@@ -121,8 +143,6 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/google-tts?text=...
- *
- * Alternativa via query params (útil para testes). Também usa cache.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -140,12 +160,13 @@ export async function GET(request: NextRequest) {
     const resolvedSpeed = 1.2;
     const cacheKey = getCacheKey(text, resolvedVoice, resolvedSpeed);
 
-    ensureCacheDir();
-
-    const cached = readFromCache(cacheKey);
-    if (cached) {
-      console.log(`🎯 TTS cache HIT (GET) — ${cacheKey.slice(0, 8)}…`);
-      return audioResponse(cached, true);
+    const cacheReady = ensureCacheDir();
+    if (cacheReady) {
+      const cached = readFromCache(cacheKey);
+      if (cached) {
+        console.log(`🎯 TTS cache HIT (GET) — ${cacheKey.slice(0, 8)}…`);
+        return audioResponse(cached, true);
+      }
     }
 
     const audioBuffer = await synthesizeSpeech({
@@ -155,7 +176,9 @@ export async function GET(request: NextRequest) {
       audioEncoding: 'MP3',
     });
 
-    writeToCache(cacheKey, audioBuffer as Buffer);
+    if (cacheReady) {
+      writeToCache(cacheKey, audioBuffer as Buffer);
+    }
 
     return audioResponse(audioBuffer as Buffer, false);
 
@@ -165,9 +188,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * OPTIONS para CORS
- */
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,

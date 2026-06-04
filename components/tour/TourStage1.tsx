@@ -64,6 +64,18 @@ export default function TourStage1() {
   )
 
   const handlePlay = useCallback(() => {
+    // Desbloqueia o contexto de áudio no mobile de forma síncrona,
+    // dentro do event handler do clique do usuário.
+    // Isso não afeta o usePlayText — é apenas um unlock silencioso.
+    try {
+      const silentAudio = new Audio()
+      silentAudio.play().catch(() => {
+        // Ignorado intencionalmente — só precisamos do gesto de desbloqueio
+      })
+    } catch {
+      // Ignorado — ambiente sem Web Audio API (SSR, etc.)
+    }
+
     isPlayingRef.current = true
     setIsPlaying(true)
     runScene(sceneIndex)
@@ -110,65 +122,102 @@ export default function TourStage1() {
     }
   }, [stopAudio])
 
-return (
-  <div
-    className="w-full min-h-screen flex flex-col items-center justify-center px-6 py-6 md:px-12"
-    style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' }}
-  >
-    {/* Conteúdo principal */}
-    <div className="w-full max-w-5xl mx-auto flex flex-col md:flex-row md:items-center gap-8 md:gap-12 flex-1">
+  return (
+    /*
+     * Container raiz com altura real (100dvh) em vez de min-h-screen.
+     * 100dvh desconta a barra do browser mobile (Chrome/Safari), garantindo
+     * que nada ultrapasse a tela e que os filhos com flex-1 tenham referência
+     * de altura para calcular h-full corretamente.
+     */
+    <div
+      className="w-full flex flex-col overflow-hidden"
+      style={{
+        height: '100dvh',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+      }}
+    >
+      {/* ── Área principal: cena + assistente ── */}
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row items-stretch md:items-center gap-0 md:gap-12 px-4 md:px-12 pt-4 md:pt-6 pb-2 md:pb-4 w-full max-w-5xl mx-auto">
 
-      {/* ── Cena (esquerda no desktop) ── */}
-      <div
-        className="flex-1 transition-opacity ease-in-out"
-        style={{
-          opacity: sceneVisible ? 1 : 0,
-          transitionDuration: `${FADE_DURATION}ms`,
-          height: 'clamp(300px, 55vh, 600px)',
-        }}
-      >
-        <SceneRenderer id={currentScene.id} isSpeaking={isSpeaking} />
+        {/*
+         * Wrapper da cena.
+         *
+         * Mobile (flex-col):
+         *   - flex-1 min-h-0 → ocupa o espaço disponível sem ultrapassar
+         *   - max-h limitado para sobrar espaço para a legenda abaixo
+         *
+         * Desktop (flex-row):
+         *   - flex-1 → divide o espaço horizontal com o assistente
+         *   - h-full → preenche toda a altura da linha
+         */}
+        <div
+          className="flex-1 min-h-0 w-full md:h-full"
+          style={{
+            // Mobile: limita a cena a ~55% da viewport para sobrar espaço à legenda
+            // Desktop: altura controlada pelo flex-row do pai
+            maxHeight: 'clamp(240px, 55dvh, 520px)',
+          }}
+        >
+          <div
+            className="w-full h-full transition-opacity ease-in-out"
+            style={{
+              opacity: sceneVisible ? 1 : 0,
+              transitionDuration: `${FADE_DURATION}ms`,
+            }}
+          >
+            <SceneRenderer id={currentScene.id} isSpeaking={isSpeaking} />
+          </div>
+        </div>
+
+        {/*
+         * Assistente (avatar/logo + legenda).
+         *
+         * Mobile: altura automática, limitada para não empurrar os controls
+         * Desktop: largura fixa, altura total da linha
+         */}
+        <div
+          className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-72 lg:w-80"
+          style={{
+            // Mobile: max para não ultrapassar o espaço restante
+            maxHeight: 'clamp(140px, 38dvh, 300px)',
+          }}
+        >
+          <TourAssistant
+            isSpeaking={isSpeaking}
+            caption={currentScene.displayText ?? currentScene.audioText}
+            hideAvatar={hideAvatar}
+          />
+        </div>
+
       </div>
 
-      {/* ── Avatar + legenda (direita no desktop) ── */}
-      <div className="flex flex-col items-center gap-6 w-full md:w-72 lg:w-80 flex-shrink-0">
-        <TourAssistant
-          isSpeaking={isSpeaking}
-          caption={currentScene.audioText}
-          hideAvatar={hideAvatar}
+      {/* ── Controls: altura fixa no rodapé ── */}
+      <div className="flex-shrink-0 flex justify-center items-center py-3 md:py-4">
+        <TourControls
+          currentId={currentScene.id}
+          isPlaying={isPlaying}
+          onPrev={handlePrev}
+          onNext={handleNext}
+          onTogglePlay={handleTogglePlay}
+          onGoTo={goToScene}
         />
       </div>
-
     </div>
-
-    {/* ── Controls fixo no rodapé centralizado ── */}
-    <div className="w-full flex justify-center py-4">
-      <TourControls
-        currentId={currentScene.id}
-        isPlaying={isPlaying}
-        onPrev={handlePrev}
-        onNext={handleNext}
-        onTogglePlay={handleTogglePlay}
-        onGoTo={goToScene}
-      />
-    </div>
-
-  </div>
-)
+  )
 }
 
 function SceneRenderer({ id, isSpeaking }: { id: SceneId; isSpeaking: boolean }) {
   switch (id) {
-    case 'intro':       return <SceneIntro isSpeaking={isSpeaking} />
-    case 'assistente':  return <SceneAssistente isSpeaking={isSpeaking} />
-    case 'widget':      return <SceneWidget />
-    case 'whatsapp':    return <SceneWhatsApp />
-    case 'instagram':   return <SceneInstagram />
-    case 'mercadolivre':return <SceneMercadoLivre />
-    case 'mcp':         return <SceneMCP />
-    case 'whatsapp-mcp':return <SceneWhatsAppMCP />
-    case 'outro':       return <SceneIntro isOutro isSpeaking={isSpeaking} />
-    default:            return null
+    case 'intro':        return <SceneIntro isSpeaking={isSpeaking} />
+    case 'assistente':   return <SceneAssistente isSpeaking={isSpeaking} />
+    case 'widget':       return <SceneWidget />
+    case 'whatsapp':     return <SceneWhatsApp />
+    case 'instagram':    return <SceneInstagram />
+    case 'mercadolivre': return <SceneMercadoLivre />
+    case 'mcp':          return <SceneMCP />
+    case 'whatsapp-mcp': return <SceneWhatsAppMCP />
+    case 'outro':        return <SceneIntro isOutro isSpeaking={isSpeaking} />
+    default:             return null
   }
 }
 

@@ -150,8 +150,15 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </span>
           </p>
 
-          {/* DomainPreviewPicker */}
-          <DomainPreviewPicker isDark={isDark} />
+          {/* DomainPreviewPicker — oculto no mobile, substituído pelo TourTrigger */}
+          <div className="hidden sm:block">
+            <DomainPreviewPicker isDark={isDark} />
+          </div>
+
+          {/* TourTrigger mobile — no lugar do DomainPreviewPicker */}
+          <div className="sm:hidden mb-1.5">
+            <TourTrigger theme={theme} delay={5000} />
+          </div>
 
           {/* CTAs */}
           <div className="flex flex-row items-center justify-center gap-2 sm:gap-4">
@@ -224,10 +231,10 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </span>
           </div>
 
-          {/* Cards de integração */}
+          {/* Cards de integração — só desktop (sm+) */}
           <div
             className={`
-              flex items-center justify-center gap-2 sm:gap-3 mt-2 sm:mt-3
+              hidden sm:flex items-center justify-center gap-2 sm:gap-3 mt-2 sm:mt-3
               [@media(max-height:700px)_and_(max-width:767px)]:hidden
             `}
           >
@@ -245,16 +252,6 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             >
               <img src="/cards/play.png" alt="Disponível no Google Play" className="w-full h-full object-contain" />
             </a>
-          </div>
-
-          {/* TourTrigger — só mobile (abaixo dos cards) */}
-          <div
-            className={`
-              md:hidden mt-3
-              [@media(max-height:700px)_and_(max-width:767px)]:hidden
-            `}
-          >
-            <TourTrigger theme={theme} delay={5000} />
           </div>
 
         </div>

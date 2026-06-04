@@ -1,11 +1,5 @@
 'use client'
 // components/tour/TourModal.tsx
-//
-// Monta o TourStage1 em um overlay fullscreen via createPortal.
-// Gerencia 3 estados internos:
-//   'playing'   → TourStage1 visível e tocando
-//   'selecting' → TourManager visível (pausa ou fim)
-//   'closed'    → desmontado (controlado pelo pai)
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
@@ -28,39 +22,32 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
   const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>(initialTheme)
   const selectorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Monta no cliente (evita SSR mismatch com createPortal)
   useEffect(() => { setMounted(true) }, [])
 
-  // Controla animação de entrada/saída
   useEffect(() => {
     if (isOpen) {
       setModalState('playing')
       setActiveStage(1)
-      // Tick para acionar a transição CSS
       requestAnimationFrame(() => setVisible(true))
     } else {
       setVisible(false)
     }
   }, [isOpen])
 
-  // Pausa ou fim do stage → mostra seletor após 2s
   const handleStageComplete = useCallback(() => {
     selectorTimerRef.current = setTimeout(() => {
       setModalState('selecting')
     }, 2000)
   }, [])
 
-  // Usuário escolhe um stage no seletor
   const handleSelectStage = useCallback((stage: number) => {
     setActiveStage(stage)
     setModalState('playing')
   }, [])
 
-  // Fecha o modal — anima saída e notifica pai
   const handleClose = useCallback(() => {
     if (selectorTimerRef.current) clearTimeout(selectorTimerRef.current)
     setVisible(false)
-    // Aguarda animação de saída antes de notificar pai
     setTimeout(onClose, 300)
   }, [onClose])
 
@@ -70,8 +57,7 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
     }
   }, [])
 
-  // Ao abrir: remove overflow hidden de body E do wrapper da landing
-  // para garantir que position:fixed do portal cubra tudo no mobile
+  // Ao abrir: fixa o body para que position:fixed escape do overflow:hidden da landing
   useEffect(() => {
     const landingWrapper = document.querySelector<HTMLElement>('[data-landing-wrapper]')
     if (isOpen) {
@@ -97,7 +83,7 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center"
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
       style={{
         background: 'rgba(0,0,0,0.75)',
         backdropFilter: 'blur(8px)',
@@ -108,44 +94,53 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
       }}
     >
       {/*
-       * Mobile: fullscreen (inset-0), sem rounded, sem max constraints.
-       * Desktop: caixinha centralizada com rounded e shadow.
-       * A animação no mobile sobe de baixo (translateY), no desktop escala.
+       * Mobile: fullscreen real — w-full h-full sem max constraints, sem rounded.
+       * Desktop (md+): caixinha centralizada com max-width/height e rounded.
+       * Os constraints do desktop são aplicados via className, não inline style,
+       * para que o mobile não herde maxWidth/maxHeight.
        */}
       <div
-        className="relative w-full md:rounded-2xl md:overflow-hidden md:shadow-2xl"
+        className={[
+          'relative w-full h-full',
+          // Desktop only: limita tamanho e arredonda
+          'md:w-auto md:h-auto md:rounded-2xl md:overflow-hidden md:shadow-2xl',
+        ].join(' ')}
         style={{
-          height: '100dvh',
-          maxWidth: '900px',
-          maxHeight: '640px',
+          // Desktop: max constraints via style (Tailwind não tem md:max-h-[640px] sem config)
+          maxWidth: 'min(900px, 100vw)',
+          // No mobile maxHeight é 100% da tela — no desktop limita a 640px
+          maxHeight: '100%',
           transform: visible
             ? 'translateY(0) scale(1)'
-            : 'translateY(40px) scale(0.97)',
+            : 'translateY(20px) scale(0.97)',
           transition: 'transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1)',
         }}
       >
-        {/* ── TourStage1 ── */}
-        {modalState === 'playing' && (
-          <TourStage1
-            key={`stage-${activeStage}`}
-            initialTheme={currentTheme}
-            autoPlay={true}
-            inModal={true}
-            onClose={handleClose}
-            onComplete={handleStageComplete}
-            onThemeChange={setCurrentTheme}
-          />
-        )}
+        {/* Desktop: div adicional que aplica maxHeight de 640px apenas em md+ */}
+        <div
+          className="w-full h-full md:max-h-[640px]"
+        >
+          {modalState === 'playing' && (
+            <TourStage1
+              key={`stage-${activeStage}`}
+              initialTheme={currentTheme}
+              autoPlay={true}
+              inModal={true}
+              onClose={handleClose}
+              onComplete={handleStageComplete}
+              onThemeChange={setCurrentTheme}
+            />
+          )}
 
-        {/* ── TourManager (seletor de stages) ── */}
-        {modalState === 'selecting' && (
-          <TourManager
-            activeStage={activeStage}
-            initialTheme={currentTheme}
-            onSelectStage={handleSelectStage}
-            onClose={handleClose}
-          />
-        )}
+          {modalState === 'selecting' && (
+            <TourManager
+              activeStage={activeStage}
+              initialTheme={currentTheme}
+              onSelectStage={handleSelectStage}
+              onClose={handleClose}
+            />
+          )}
+        </div>
       </div>
     </div>,
     document.body

@@ -7,17 +7,20 @@ interface TourAssistantProps {
   isSpeaking: boolean
   caption: string
   hideAvatar?: boolean
+  theme?: 'dark' | 'light'
 }
 
 export default function TourAssistant({
   isSpeaking,
   caption,
   hideAvatar = false,
+  theme = 'dark',
 }: TourAssistantProps) {
+  const isDark = theme === 'dark'
+
   return (
     <div className="flex flex-col items-center gap-2 md:gap-3 w-full">
 
-      {/* ── Avatar ou Logo ── */}
       {hideAvatar ? (
         <div
           style={{
@@ -36,11 +39,6 @@ export default function TourAssistant({
           />
         </div>
       ) : (
-        /*
-         * Avatar com tamanho baseado em dvh para não encolher em portrait mobile.
-         * O AvatarFace usa w-full h-full internamente — só precisamos do wrapper correto.
-         * overflow-visible garante que os halos/anéis não sejam cortados.
-         */
         <div
           style={{
             width: 'clamp(140px, 26dvh, 200px)',
@@ -53,20 +51,21 @@ export default function TourAssistant({
             isSpeaking={isSpeaking}
             isListening={false}
             isProcessing={false}
-            theme="dark"
+            theme={isDark ? 'dark' : 'light'}
             avatarType={isSpeaking ? 'orb' : 'face'}
             hasActivePlan={true}
           />
         </div>
       )}
 
-      {/* ── Legenda ── */}
+      {/* Legenda */}
       <div className="w-full max-w-2xl px-4 md:px-6 text-center">
         <p
-          className="text-white/90 leading-relaxed transition-opacity duration-300"
+          className="leading-relaxed transition-all duration-300"
           style={{
             fontSize: 'clamp(0.78rem, 1.9vw, 1rem)',
             opacity: caption ? 1 : 0,
+            color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(15,23,42,0.85)',
             display: '-webkit-box',
             WebkitLineClamp: 5,
             WebkitBoxOrient: 'vertical',

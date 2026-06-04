@@ -70,14 +70,27 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
     }
   }, [])
 
-  // Bloqueia scroll do body quando aberto
+  // Ao abrir: remove overflow hidden de body E do wrapper da landing
+  // para garantir que position:fixed do portal cubra tudo no mobile
   useEffect(() => {
+    const landingWrapper = document.querySelector<HTMLElement>('[data-landing-wrapper]')
     if (isOpen) {
       document.body.style.overflow = 'hidden'
+      document.body.style.position = 'fixed'
+      document.body.style.width = '100%'
+      if (landingWrapper) landingWrapper.style.overflow = 'visible'
     } else {
       document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.width = ''
+      if (landingWrapper) landingWrapper.style.overflow = ''
     }
-    return () => { document.body.style.overflow = '' }
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.width = ''
+      if (landingWrapper) landingWrapper.style.overflow = ''
+    }
   }, [isOpen])
 
   if (!mounted || !isOpen) return null

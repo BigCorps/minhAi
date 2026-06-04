@@ -62,6 +62,7 @@ export default function TourStage1() {
 
   const currentScene = STAGE1_SCRIPT[sceneIndex]
   const hideAvatar = SCENES_WITH_OWN_AVATAR.includes(currentScene.id)
+  const isDark = theme === 'dark'
 
   const handleToggleTheme = useCallback(() => {
     setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
@@ -148,8 +149,6 @@ export default function TourStage1() {
     }
   }, [stopAudio])
 
-  const isDark = theme === 'dark'
-
   return (
     <div
       className="w-full flex flex-col overflow-hidden"
@@ -163,20 +162,22 @@ export default function TourStage1() {
     >
       {/* ── Área principal ── */}
       <div
-        className="flex-1 min-h-0 flex flex-col md:flex-row items-center md:items-center gap-0 md:gap-12 px-4 md:px-12 w-full max-w-5xl mx-auto"
+        className="flex-1 min-h-0 flex flex-col md:flex-row md:items-center gap-0 md:gap-12 px-4 md:px-12 w-full max-w-5xl mx-auto"
         style={{
-          // Mobile: padding top menor para centralizar melhor verticalmente
-          paddingTop: 'clamp(8px, 2dvh, 32px)',
-          paddingBottom: 'clamp(4px, 1dvh, 16px)',
+          /*
+           * Mobile: justify-content center para distribuir verticalmente.
+           * paddingTop menor — o conjunto (cena + legenda) fica centralizado.
+           * Desktop: padding normal.
+           */
+          paddingTop: 'clamp(16px, 4dvh, 48px)',
+          paddingBottom: 'clamp(8px, 2dvh, 24px)',
+          justifyContent: 'center',
         }}
       >
         {/* Wrapper da cena */}
         <div
-          className="min-h-0 w-full"
-          style={{
-            flex: '1 1 0',
-            maxHeight: 'clamp(220px, 52dvh, 520px)',
-          }}
+          className="min-h-0 w-full md:flex-1"
+          style={{ maxHeight: 'clamp(220px, 52dvh, 520px)' }}
         >
           <div
             className="w-full h-full transition-opacity ease-in-out"
@@ -192,9 +193,7 @@ export default function TourStage1() {
         {/* Assistente */}
         <div
           className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-72 lg:w-80 overflow-visible"
-          style={{
-            maxHeight: 'clamp(170px, 42dvh, 340px)',
-          }}
+          style={{ maxHeight: 'clamp(170px, 42dvh, 340px)' }}
         >
           <TourAssistant
             isSpeaking={isSpeaking}
@@ -205,7 +204,7 @@ export default function TourStage1() {
         </div>
       </div>
 
-      {/* ── Controls: rodapé fixo ── */}
+      {/* ── Controls ── */}
       <div className="flex-shrink-0 flex justify-center items-center py-3 md:py-4">
         <TourControls
           currentId={currentScene.id}
@@ -235,15 +234,15 @@ function SceneRenderer({
   theme: 'dark' | 'light'
 }) {
   switch (id) {
-    case 'intro':        return <SceneIntro isSpeaking={isSpeaking} />
-    case 'assistente':   return <SceneAssistente isSpeaking={isSpeaking} />
+    case 'intro':        return <SceneIntro isSpeaking={isSpeaking} theme={theme} />
+    case 'assistente':   return <SceneAssistente isSpeaking={isSpeaking} theme={theme} />
     case 'widget':       return <SceneWidget />
     case 'whatsapp':     return <SceneWhatsApp />
     case 'instagram':    return <SceneInstagram />
     case 'mercadolivre': return <SceneMercadoLivre />
     case 'mcp':          return <SceneMCP />
     case 'whatsapp-mcp': return <SceneWhatsAppMCP />
-    case 'outro':        return <SceneIntro isOutro isSpeaking={isSpeaking} />
+    case 'outro':        return <SceneIntro isOutro isSpeaking={isSpeaking} theme={theme} />
     default:             return null
   }
 }

@@ -110,10 +110,10 @@ export default function SceneWidget() {
         <div
           className="absolute flex flex-col"
           style={{
-            bottom: 52,
+            top: 8,        // alinha logo abaixo das linhas de conteúdo simulado
+            bottom: 52,    // para logo acima do botão pill
             right: 8,
             width:  'clamp(190px, 46vw, 250px)',
-            height: 'clamp(230px, 54vw, 290px)',   // altura FIXA
             borderRadius: 16,
             overflow: 'hidden',
             boxShadow: '0 16px 48px rgba(0,0,0,0.18), 0 4px 12px rgba(0,0,0,0.08)',

@@ -6,6 +6,8 @@
 
 ## Roadmap e Features Planejadas
 
+* Ajustar recebimento das consultas - segunda
+
 * Criar Auxiliar de Cadastro e com MCP whatsapp - MANUS miriamithiel
 
 * Tour guiado - áudio não funcionando no mobile - implementar cache (pedidoslj), fazer o tour abrir com um modal na landing page - no intervalo entre os scripts, sempre aparece a mesma tela para o usuário pular para um script específico ou continuar o tour (com botões de cada script criado) - MANUS interpag e CLAUDE ith.almeida

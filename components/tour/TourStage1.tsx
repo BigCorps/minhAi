@@ -77,6 +77,13 @@ interface TourStage1Props {
    * O pai usa para passar o tema correto ao TourManager quando ele abrir.
    */
   onThemeChange?: (theme: 'dark' | 'light') => void
+
+  /**
+   * Quando true, adapta o layout para dentro do modal:
+   * - usa height: 100% em vez de 100dvh
+   * - controles ficam em overlayMode (sobre a cena, revelados por hover/click)
+   */
+  inModal?: boolean
 }
 
 export default function TourStage1({
@@ -86,6 +93,7 @@ export default function TourStage1({
   managerDelay = 2000,
   autoPlay = false,
   onThemeChange,
+  inModal = false,
 }: TourStage1Props) {
   const [sceneIndex, setSceneIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -109,10 +117,22 @@ export default function TourStage1({
   const isPlayingRef = useRef(false)
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const autoPlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const controlsHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Estado de visibilidade dos controles no overlayMode (modal)
+  const [controlsVisible, setControlsVisible] = useState(!inModal)
 
   const currentScene = STAGE1_SCRIPT[sceneIndex]
   const hideAvatar = SCENES_WITH_OWN_AVATAR.includes(currentScene.id)
   const isDark = theme === 'dark'
+
+  // Handler de interação no modal — revela controles por 3s
+  const handleModalInteraction = useCallback(() => {
+    if (!inModal) return
+    setControlsVisible(true)
+    if (controlsHideTimerRef.current) clearTimeout(controlsHideTimerRef.current)
+    controlsHideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000)
+  }, [inModal])
 
   const handleToggleTheme = useCallback(() => {
     setTheme((t) => {
@@ -241,6 +261,7 @@ export default function TourStage1({
       stopAudio()
       if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current)
       if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current)
+      if (controlsHideTimerRef.current) clearTimeout(controlsHideTimerRef.current)
     }
   }, [stopAudio])
 
@@ -248,17 +269,21 @@ export default function TourStage1({
     <div
       className="w-full flex flex-col overflow-hidden relative"
       style={{
-        height: '100dvh',
+        // inModal: respeita o maxHeight do container pai (640px desktop)
+        // standalone: ocupa a viewport inteira
+        height: inModal ? '100%' : '100dvh',
         background: isDark
           ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
           : '#ffffff',
         transition: 'background 400ms ease',
       }}
+      onMouseMove={inModal ? handleModalInteraction : undefined}
+      onClick={inModal ? handleModalInteraction : undefined}
     >
-      {/* ── Botão fechar (apenas quando onClose presente) ── */}
+      {/* ── Botão fechar ── */}
       {onClose && (
         <button
-          onClick={onClose}
+          onClick={(e) => { e.stopPropagation(); onClose() }}
           aria-label="Fechar tour"
           className="absolute top-4 right-4 z-50 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
           style={{
@@ -277,20 +302,9 @@ export default function TourStage1({
         className="flex-1 min-h-0 flex flex-col md:flex-row md:items-center gap-0 md:gap-12 px-4 md:px-12 w-full max-w-5xl mx-auto"
         style={{
           paddingTop: 'clamp(16px, 4dvh, 48px)',
-          paddingBottom: 'clamp(8px, 2dvh, 24px)',
+          paddingBottom: inModal ? '8px' : 'clamp(8px, 2dvh, 24px)',
         }}
       >
-        {/*
-         * Wrapper da cena.
-         *
-         * MOBILE (flex-col): flex-1 min-h-0 ocupa espaço disponível.
-         * height explícito via clamp garante que h-full do filho tenha
-         * referência — sem isso os cards crescem com o conteúdo.
-         *
-         * DESKTOP (flex-row): md:items-center no pai centraliza verticalmente.
-         * height explícito via clamp garante referência para h-full.
-         * Sem height explícito, flex-row não propaga altura para filhos.
-         */}
         <div
           className="flex-1 min-h-0 w-full"
           style={{ height: 'clamp(220px, 52dvh, 520px)' }}
@@ -320,8 +334,12 @@ export default function TourStage1({
         </div>
       </div>
 
-      {/* ── Controls ── */}
-      <div className="flex-shrink-0 flex justify-center items-center py-3 md:py-4">
+      {/*
+       * Controls:
+       * - inModal: overlay absoluto centralizado, revelado por hover/click
+       * - standalone: rodapé fixo normal
+       */}
+      {inModal ? (
         <TourControls
           currentId={currentScene.id}
           isPlaying={isPlaying}
@@ -334,8 +352,26 @@ export default function TourStage1({
           onGoTo={goToScene}
           onToggleTheme={handleToggleTheme}
           onToggleWakeLock={handleToggleWakeLock}
+          overlayMode={true}
+          forceVisible={controlsVisible}
         />
-      </div>
+      ) : (
+        <div className="flex-shrink-0 flex justify-center items-center py-3 md:py-4">
+          <TourControls
+            currentId={currentScene.id}
+            isPlaying={isPlaying}
+            theme={theme}
+            isWakeLockActive={isWakeLockActive}
+            isWakeLockSupported={isWakeLockSupported}
+            onPrev={handlePrev}
+            onNext={handleNext}
+            onTogglePlay={handleTogglePlay}
+            onGoTo={goToScene}
+            onToggleTheme={handleToggleTheme}
+            onToggleWakeLock={handleToggleWakeLock}
+          />
+        </div>
+      )}
     </div>
   )
 }

@@ -1,9 +1,5 @@
 'use client'
 // components/tour/TourTrigger.tsx
-//
-// Botão "Como Funciono?" que aparece após 5s na landing page.
-// Abre o TourModal com autoPlay=true.
-// O unlockAudioContext roda no clique — mesmo contexto do gesto do usuário.
 
 import { useState, useEffect, useCallback } from 'react'
 import TourModal from './TourModal'
@@ -30,21 +26,29 @@ interface TourTriggerProps {
   theme?: 'dark' | 'light'
   /** Delay em ms antes de aparecer. Padrão: 5000 */
   delay?: number
+  /**
+   * Quando true, exibe um X para dispensar o botão.
+   * Usado no mobile onde o trigger flutua sobre o DomainPreviewPicker.
+   */
+  dismissible?: boolean
 }
 
-export default function TourTrigger({ theme = 'dark', delay = 5000 }: TourTriggerProps) {
+export default function TourTrigger({
+  theme = 'dark',
+  delay = 5000,
+  dismissible = false,
+}: TourTriggerProps) {
   const [visible, setVisible] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const isDark = theme === 'dark'
 
-  // Aparece após delay
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), delay)
     return () => clearTimeout(t)
   }, [delay])
 
   const handleOpen = useCallback(() => {
-    // Desbloqueia áudio de forma síncrona no clique
     unlockAudioContext()
     setModalOpen(true)
   }, [])
@@ -53,18 +57,19 @@ export default function TourTrigger({ theme = 'dark', delay = 5000 }: TourTrigge
     setModalOpen(false)
   }, [])
 
+  const handleDismiss = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setDismissed(true)
+  }, [])
+
+  // Dispensado ou ainda não apareceu: não renderiza nada (deixa o picker visível)
+  if (dismissed || !visible) return null
+
   return (
     <>
-      {/* ── Botão trigger ── */}
-      <div
-        className="flex justify-center w-full"
-        style={{
-          opacity: visible ? 1 : 0,
-          transform: visible ? 'translateY(0)' : 'translateY(8px)',
-          transition: 'opacity 600ms ease, transform 600ms ease',
-          pointerEvents: visible ? 'auto' : 'none',
-        }}
-      >
+      {/* ── Wrapper do botão + X ── */}
+      <div className="flex items-center gap-1.5">
+        {/* Botão principal */}
         <button
           onClick={handleOpen}
           className="group flex items-center gap-2.5 rounded-full font-semibold transition-all duration-300 hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
@@ -93,16 +98,18 @@ export default function TourTrigger({ theme = 'dark', delay = 5000 }: TourTrigge
             <svg
               viewBox="0 0 24 24"
               fill="currentColor"
-              style={{ width: 'clamp(10px, 1.5vw, 13px)', height: 'clamp(10px, 1.5vw, 13px)', marginLeft: '1px' }}
+              style={{
+                width: 'clamp(10px, 1.5vw, 13px)',
+                height: 'clamp(10px, 1.5vw, 13px)',
+                marginLeft: '1px',
+              }}
             >
               <path d="M8 5v14l11-7z" />
             </svg>
           </span>
 
-          {/* Texto */}
           <span>Como Funciono? <span className="font-bold">Fazer Tour</span></span>
 
-          {/* Seta */}
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -111,11 +118,34 @@ export default function TourTrigger({ theme = 'dark', delay = 5000 }: TourTrigge
             strokeLinecap="round"
             strokeLinejoin="round"
             className="flex-shrink-0 transition-transform duration-300 group-hover:translate-x-0.5"
-            style={{ width: 'clamp(12px, 1.8vw, 15px)', height: 'clamp(12px, 1.8vw, 15px)' }}
+            style={{
+              width: 'clamp(12px, 1.8vw, 15px)',
+              height: 'clamp(12px, 1.8vw, 15px)',
+            }}
           >
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </button>
+
+        {/* Botão X para dispensar — só quando dismissible */}
+        {dismissible && (
+          <button
+            onClick={handleDismiss}
+            aria-label="Fechar sugestão de tour"
+            className="flex items-center justify-center rounded-full flex-shrink-0 transition-all duration-200 hover:scale-110 active:scale-95"
+            style={{
+              width: 28,
+              height: 28,
+              background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+              color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" className="w-3 h-3">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* ── Modal ── */}

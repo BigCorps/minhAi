@@ -197,14 +197,21 @@ export default function TourControls({
     return (
       <div
         className="absolute bottom-0 left-0 right-0 flex justify-center pb-4 pointer-events-none"
-        style={{ zIndex: 40 }}
+        style={{
+          zIndex: 40,
+          // Esconde completamente quando não visível — opacity:0 não basta
+          // porque backdropFilter continua criando um retângulo visível
+          opacity: isVisible ? 1 : 0,
+          visibility: isVisible ? 'visible' : 'hidden',
+          transition: 'opacity 300ms ease, visibility 300ms ease',
+        }}
       >
         <div
           className="pointer-events-auto rounded-2xl px-4 py-3"
           style={{
             background: isDark
-              ? 'rgba(15,23,42,0.75)'
-              : 'rgba(255,255,255,0.85)',
+              ? 'rgba(15,23,42,0.85)'
+              : 'rgba(255,255,255,0.92)',
             backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)',
             border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,

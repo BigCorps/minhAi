@@ -16,20 +16,54 @@ const iconClass = "w-6 h-6 flex-shrink-0"
 const STAGES: Stage[] = [
   {
     id: 1,
-    label: 'Onde Estou',
-    description: 'Canais de atendimento',
+    label: 'Apresentação',
+    description: 'Multifuncional e Multicanal',
     available: true,
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
-        <circle cx="12" cy="12" r="10" />
-        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-      </svg>
+      <svg
+      className={sz}
+      viewBox="96 96 320 320"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      aria-hidden="true"
+    >
+      {/* Círculo externo */}
+      <circle
+        cx="256"
+        cy="256"
+        r="145"
+        stroke="currentColor"
+        strokeWidth="18"
+      />
+
+      {/* Círculo do rosto */}
+      <circle
+        cx="256"
+        cy="256"
+        r="122"
+        stroke="currentColor"
+        strokeWidth="18"
+      />
+
+      {/* Olhos */}
+      <ellipse cx="218" cy="230" rx="18" ry="24" fill="currentColor" />
+      <ellipse cx="294" cy="230" rx="18" ry="24" fill="currentColor" />
+
+      {/* Boca */}
+      <path
+        d="M216 296C237 314 275 314 296 296"
+        stroke="currentColor"
+        strokeWidth="16"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
     ),
   },
   {
     id: 2,
-    label: 'Como Atendo',
-    description: 'Assistente, modos e voz',
+    label: 'Página do Assistente',
+    description: 'Modos do avatar e funções de voz',
     available: false,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
@@ -42,7 +76,7 @@ const STAGES: Stage[] = [
   },
   {
     id: 3,
-    label: 'Como Cobro',
+    label: 'Modos de Cobrança',
     description: 'PIX, links e pagamentos',
     available: false,
     icon: (
@@ -56,8 +90,8 @@ const STAGES: Stage[] = [
   },
   {
     id: 4,
-    label: 'Como Organizo',
-    description: 'Dashboard, agenda e relatórios',
+    label: 'Meu Dashboard',
+    description: 'configurações, integrações e mais',
     available: false,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
@@ -82,7 +116,7 @@ const STAGES: Stage[] = [
   {
     id: 6,
     label: 'Negócio Digital',
-    description: 'Webapp, indicação e fila',
+    description: 'App próprio e indicação',
     available: false,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
@@ -93,8 +127,8 @@ const STAGES: Stage[] = [
   },
   {
     id: 7,
-    label: '100 Funções',
-    description: 'Tour pelas principais funções',
+    label: 'Funções e Habilidades',
+    description: 'Conheça as categorias e funções',
     available: false,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
@@ -105,7 +139,7 @@ const STAGES: Stage[] = [
   {
     id: 8,
     label: 'Planos e Valores',
-    description: 'Smart vs Vendas, o que inclui',
+    description: 'Smart, Vendas, full e créditos',
     available: false,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>

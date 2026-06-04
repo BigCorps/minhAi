@@ -148,10 +148,10 @@ Pagamentos 🔁- Enviar Pix | Pagar Boleto | Auxiliar de Pagamentos
 
 ## INFORMAÇÕES ADICIONAIS
 
-*Analise de arquivos mortos - Manus pedidos
-*MODO KIOSK - claude ith.almeida
-*Landing - Claude jiuitsu 
-*App Vixus - Manus ith.almeida
+* Analise de arquivos mortos - Manus pedidos
+* MODO KIOSK - claude ith.almeida
+* Landing - Claude jiuitsu 
+* App Vixus - Manus ith.almeida
 
 .
 

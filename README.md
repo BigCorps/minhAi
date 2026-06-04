@@ -12,7 +12,9 @@
 
 * página admin no dashboard
 
-## IDÉIAS
+.
+
+## Idéias
 
 * ChatGPT, Claude e Cursor App MCP já Enviado (AGUARDANDO APROVAÇÃO)
 
@@ -30,9 +32,7 @@
 
 * Conectar serviços como Ifood, Rappi, Nuvemshop e Bling e outros ao minhAi e vice e versa, além de integração e webhooks para link Pix e link de pagamento - em anexo
 
-.
-
-## BREVE
+## Em Breve
 
 * bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
 
@@ -56,7 +56,7 @@ Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app /
 
 .
 
-## FUNÇÕES
+## Funções e Categorias
 
 * Contatos - ✅ Site | Whatsapp | Telefone
              Instagram | Facebook | Tiktok
@@ -121,6 +121,8 @@ Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app /
 
 .
 
+## Futuramente
+
 6 categorias para o futuro:
 Análise 🔁- Analise de Currículos | Gerar Currículo | Radar de Mercado
      Risco de Fornecedores | Analise de Licitações | Qualificar Empresa
@@ -151,6 +153,7 @@ Pagamentos 🔁- Enviar Pix | Pagar Boleto | Auxiliar de Pagamentos
 *Landing - Claude jiuitsu 
 *App Vixus - Manus ith.almeida
 
+.
 
 ## Índice
 

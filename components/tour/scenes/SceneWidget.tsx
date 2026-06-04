@@ -76,7 +76,8 @@ export default function SceneWidget() {
       </div>
 
       {/* ── Conteúdo do site (fundo) ── */}
-      <div className="flex-1 relative overflow-hidden">
+      {/* overflow:visible para que o card absoluto não seja clipado por este container intermediário */}
+      <div className="flex-1 relative" style={{ overflow: 'visible' }}>
 
         {/* Hero do café */}
         <div className="bg-gradient-to-br from-amber-800 to-amber-950 px-4 py-5 flex flex-col gap-2 flex-shrink-0">

@@ -36,7 +36,7 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'assistente',
     label: 'Tela & Totem',
     audioText:
-      'Funciono como uma Alexa, você define qual palavra de ativação me ativa, também funciono com botão de microfone, interagindo com botões ou digitando um texto. Diretamente na tela do seu estabelecimento ou em um totem de autoatendimento, tenho três modos de exibição: padrão, modo imersivo em tela cheia, e modo texto para digitação.',
+      'Funciono como uma Alexa, você define qual palavra de ativação me chama, também funciono com botão de microfone, interagindo com botões ou digitando um texto. Diretamente na tela do seu estabelecimento ou em um totem de autoatendimento, tenho três modos de exibição: padrão, modo imersivo em tela cheia, e modo texto para digitação.',
     fallbackDuration: 9000,
   },
   {
@@ -71,7 +71,7 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'mcp',
     label: 'MCP',
     audioText:
-      'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus — onde você pode pedir tarefas para a minha I A diretamente pelo seu app de I A favorito.',
+      'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus, onde você pode pedir tarefas para a minha I A diretamente pelo seu app de I A favorito.',
     displayText:
       'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus — onde você pode pedir tarefas para a minhAi diretamente pelo seu app de IA favorito.',
     fallbackDuration: 8000,

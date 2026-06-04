@@ -2,12 +2,11 @@
 // components/tour/TourAssistant.tsx
 
 import Image from 'next/image'
-import AvatarFace from '@/components/AvatarFace'
+import { AvatarFace } from '@/components/AvatarFace'
 
 interface TourAssistantProps {
   isSpeaking: boolean
   caption: string
-  /** Quando true, exibe logo em vez do avatar (cenas com avatar próprio) */
   hideAvatar?: boolean
 }
 
@@ -19,7 +18,6 @@ export default function TourAssistant({
   return (
     <div className="flex flex-col items-center gap-4 w-full">
 
-      {/* Avatar ou Logo — tamanho fixo, não muda com conteúdo */}
       {hideAvatar ? (
         <div
           style={{
@@ -56,7 +54,6 @@ export default function TourAssistant({
         </div>
       )}
 
-      {/* Legenda — altura mínima fixa para não deslocar o layout */}
       <div
         className="w-full px-4 text-center"
         style={{ minHeight: '5rem', maxWidth: 380 }}

@@ -1,6 +1,5 @@
 'use client'
 // components/tour/scenes/SceneIntro.tsx
-import Image from 'next/image'
 import { AvatarFace } from '@/components/AvatarFace'
 
 export default function SceneIntro({
@@ -15,8 +14,10 @@ export default function SceneIntro({
   const isDark = theme === 'dark'
 
   return (
-    <div className="flex flex-col items-center justify-center gap-4 w-full h-full select-none">
-      {/* Avatar — maior pois tem espaço livre sem cards competindo */}
+    <div
+      className="flex flex-col items-center justify-center gap-4 w-full h-full select-none rounded-2xl"
+    >
+      {/* Avatar */}
       <div
         style={{
           width: 'clamp(180px, 38dvh, 320px)',
@@ -37,7 +38,7 @@ export default function SceneIntro({
 
       {/* Tagline */}
       <p
-        className="text-center max-w-sm transition-colors duration-400"
+        className="text-center max-w-sm"
         style={{
           fontSize: 'clamp(0.85rem, 2.2vw, 1.05rem)',
           color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(15,23,42,0.5)',
@@ -45,8 +46,7 @@ export default function SceneIntro({
       >
         {isOutro
           ? 'Uma IA pra chamar de sua!'
-          : 'Uma IA pra chamar de sua!
-O Assistente IA que vende e atende 24 horas.'}
+          : 'Uma IA pra chamar de sua! O Assistente IA que vende e atende 24 horas.'}
       </p>
 
       {/* Linha decorativa */}

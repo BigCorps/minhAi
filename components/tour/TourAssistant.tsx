@@ -6,7 +6,6 @@ import { AvatarFace } from '@/components/AvatarFace'
 interface TourAssistantProps {
   isSpeaking: boolean
   caption: string
-  /** Quando true o avatar some — usado nas cenas que já têm avatar no mock */
   hideAvatar?: boolean
 }
 
@@ -16,16 +15,16 @@ export default function TourAssistant({
   hideAvatar = false,
 }: TourAssistantProps) {
   return (
-    <div className="flex flex-col items-center gap-2 md:gap-4 w-full">
+    <div className="flex flex-col items-center gap-2 md:gap-3 w-full">
 
       {/* ── Avatar ou Logo ── */}
       {hideAvatar ? (
-        // Logo minhAi — proporcional em qualquer viewport
         <div
           style={{
-            width: 'clamp(160px, 30vw, 280px)',
+            width: 'clamp(180px, 35vw, 300px)',
             position: 'relative',
             aspectRatio: '3/1',
+            flexShrink: 0,
           }}
         >
           <Image
@@ -37,12 +36,17 @@ export default function TourAssistant({
           />
         </div>
       ) : (
-        // Avatar — usa dvh em vez de vw para não encolher em portrait mobile
+        /*
+         * Avatar com tamanho baseado em dvh para não encolher em portrait mobile.
+         * O AvatarFace usa w-full h-full internamente — só precisamos do wrapper correto.
+         * overflow-visible garante que os halos/anéis não sejam cortados.
+         */
         <div
           style={{
-            width: 'clamp(100px, 18dvh, 160px)',
+            width: 'clamp(140px, 26dvh, 200px)',
             aspectRatio: '1/1',
             flexShrink: 0,
+            overflow: 'visible',
           }}
         >
           <AvatarFace
@@ -61,9 +65,8 @@ export default function TourAssistant({
         <p
           className="text-white/90 leading-relaxed transition-opacity duration-300"
           style={{
-            fontSize: 'clamp(0.8rem, 2vw, 1.05rem)',
+            fontSize: 'clamp(0.78rem, 1.9vw, 1rem)',
             opacity: caption ? 1 : 0,
-            // Limita a altura da legenda em mobile para não empurrar controls
             display: '-webkit-box',
             WebkitLineClamp: 5,
             WebkitBoxOrient: 'vertical',

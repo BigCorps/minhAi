@@ -77,7 +77,7 @@ export default function TourStage1({
   initialTheme = 'dark',
   onClose,
   onComplete,
-  managerDelay = 2000,
+  managerDelay = 200,
   autoPlay = false,
 }: TourStage1Props) {
   const [sceneIndex, setSceneIndex] = useState(0)

@@ -50,14 +50,14 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'whatsapp',
     label: 'WhatsApp',
     audioText:
-      'No WhatsApp, com a naturalidade que seus clientes já conhecem. Responde mensagens, entende o que o cliente precisa, envia e confirma cobranças Pix, marca eventos na sua Agenda do Google, calcula o frete da entrega, gera orçamentos e muito mais.',
+      'No seu próprio WhatsApp, com a naturalidade que seus clientes já conhecem. Respondo mensagens, entendo o que o cliente precisa, envio e confirmo cobranças Pix, Débito e Crédito, marco eventos na sua Agenda Google, calculo frete de entrega, gero orçamentos e muito mais.',
     fallbackDuration: 7000,
   },
   {
     id: 'instagram',
     label: 'Instagram',
     audioText:
-      'No Instagram e Facebook, respondendo mensagens diretas, comentários e enviando Dê Emê automaticamente, com as mesmas funcionalidades do Whatsapp, convertendo seguidores em clientes.',
+      'No seu Instagram e Facebook, respondendo mensagens diretas, comentários e enviando De M automaticamente, com as mesmas funcionalidades do Whatsapp, convertendo seguidores em clientes.',
     displayText:
       'No Instagram e Facebook, respondendo mensagens diretas, comentários e enviando DMs automaticamente, com as mesmas funcionalidades do Whatsapp, convertendo seguidores em clientes.',
     fallbackDuration: 6000,
@@ -66,7 +66,7 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'mercadolivre',
     label: 'Mercado Livre',
     audioText:
-      'No Mercado Livre, respondendo perguntas de compradores e tambem postando produtos diretamente vinculado aos seus produtos no dashboard.',
+      'No Mercado Livre, respondendo perguntas de compradores e tambem postando produtos diretamente vinculados aos seus produtos no dashboard.',
     fallbackDuration: 6000,
   },
   {
@@ -75,14 +75,14 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     audioText:
       'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus, onde você pode pedir tarefas para a minha I A diretamente pelo seu app de I A favorito.',
     displayText:
-      'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus — onde você pode pedir tarefas para a minhAi diretamente pelo seu app de IA favorito.',
+      'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus, onde você pode pedir tarefas para a minhAi diretamente pelo seu app de IA favorito.',
     fallbackDuration: 8000,
   },
   {
     id: 'whatsapp-mcp',
     label: 'WhatsApp MCP',
     audioText:
-      'E também pode pedir tarefas diretamente para o WhatsApp minha I A — consultas, ações e integrações sem sair do aplicativo.',
+      'E também pode pedir tarefas diretamente para o WhatsApp minha I A, consultas, ações e integrações sem sair do aplicativo.',
     displayText:
       'E também pode pedir tarefas diretamente para o WhatsApp minhAi — consultas, ações e integrações sem sair do aplicativo.',
     fallbackDuration: 7000,
@@ -91,7 +91,9 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'outro',
     label: 'Conclusão',
     audioText:
-      'Um assistente multifuncional e multicanal, tudo com a mesma praticidade, inteligência, configuração simples e rápida, sem conhecimentos técnicos avançados ou entender sobre programação. Teste gratuitamente agora mesmo!',
+      'Resumindo, sou multifuncional e multicanal, para quem precisa de um funcionário, assistente pessoal ou um aplicativo de I A próprio, tudo com a mesma praticidade, inteligência, com configuração simples e rápida, sem precisar de conhecimento sobre programação. Venha me testar gratuitamente!',
+     displayText:
+      'Resumindo, sou multifuncional e multicanal, para quem precisa de um funcionário, assistente pessoal ou um aplicativo de IA próprio, tudo com a mesma praticidade, inteligência, com configuração simples e rápida, sem precisar de conhecimento sobre programação. Venha me testar gratuitamente!',
     fallbackDuration: 4000,
   },
 ]

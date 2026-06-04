@@ -37,7 +37,12 @@ export default function SceneWhatsApp() {
           className="rounded-full flex-shrink-0 flex items-center justify-center"
           style={{ width: 40, height: 40, background: '#3b82f6' }}
         >
-          <span className="text-white text-sm font-bold">C</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+            <path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z" />
+            <path d="M16 9h2.5a2.5 2.5 0 0 1 0 5H16" />
+            <path d="M6 2v2" /><path d="M10 2v2" /><path d="M14 2v2" />
+            <path d="M3 21h16" />
+          </svg>
         </div>
         {/* Info */}
         <div className="flex-1 min-w-0">

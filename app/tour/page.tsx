@@ -10,16 +10,19 @@ type PageState = 'playing' | 'selecting'
 export default function TourPage() {
   const [pageState, setPageState] = useState<PageState>('playing')
   const [activeStage, setActiveStage] = useState(1)
+  const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>('dark')
 
-  // Chamado quando o stage termina ou o usuário pausa
   const handleComplete = useCallback(() => {
     setPageState('selecting')
   }, [])
 
-  // Usuário escolhe um stage no manager
   const handleSelectStage = useCallback((stage: number) => {
     setActiveStage(stage)
     setPageState('playing')
+  }, [])
+
+  const handleThemeChange = useCallback((theme: 'dark' | 'light') => {
+    setCurrentTheme(theme)
   }, [])
 
   return (
@@ -27,16 +30,17 @@ export default function TourPage() {
       {pageState === 'playing' && (
         <TourStage1
           key={`stage-${activeStage}`}
+          initialTheme={currentTheme}
           onComplete={handleComplete}
+          onThemeChange={handleThemeChange}
         />
       )}
 
       {pageState === 'selecting' && (
         <TourManager
           activeStage={activeStage}
+          initialTheme={currentTheme}
           onSelectStage={handleSelectStage}
-          // Na página standalone não tem onClose — passa undefined
-          // TourManager precisa lidar com onClose opcional
           onClose={() => setPageState('playing')}
         />
       )}

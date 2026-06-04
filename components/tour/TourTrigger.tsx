@@ -76,14 +76,17 @@ export default function TourTrigger({
           style={{
             padding: 'clamp(8px, 1.5vw, 12px) clamp(16px, 3vw, 28px)',
             fontSize: 'clamp(0.78rem, 1.8vw, 0.95rem)',
-            background: isDark
-              ? 'rgba(59,130,246,0.15)'
-              : 'rgba(59,130,246,0.08)',
+            // dismissible = overlay sobre o picker = precisa de fundo sólido para legibilidade
+            background: dismissible
+              ? isDark ? '#1e3a5f' : '#2563eb'
+              : isDark ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.08)',
             border: `1.5px solid ${isDark ? 'rgba(59,130,246,0.4)' : 'rgba(59,130,246,0.3)'}`,
-            color: isDark ? '#60a5fa' : '#2563eb',
-            boxShadow: isDark
-              ? '0 4px 24px rgba(59,130,246,0.15)'
-              : '0 4px 24px rgba(59,130,246,0.08)',
+            color: dismissible
+              ? '#ffffff'
+              : isDark ? '#60a5fa' : '#2563eb',
+            boxShadow: dismissible
+              ? '0 4px 20px rgba(37,99,235,0.35)'
+              : isDark ? '0 4px 24px rgba(59,130,246,0.15)' : '0 4px 24px rgba(59,130,246,0.08)',
           }}
         >
           {/* Ícone play */}
@@ -92,7 +95,9 @@ export default function TourTrigger({
             style={{
               width: 'clamp(22px, 3vw, 28px)',
               height: 'clamp(22px, 3vw, 28px)',
-              background: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.15)',
+              background: dismissible
+                ? 'rgba(255,255,255,0.2)'
+                : isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.15)',
             }}
           >
             <svg

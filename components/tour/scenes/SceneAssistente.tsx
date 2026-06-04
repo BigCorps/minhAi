@@ -10,7 +10,7 @@
 // O sub-ciclo padrao→full→texto roda automaticamente via timer interno.
 
 import { useEffect, useState } from 'react'
-import AvatarFace from '@/components/AvatarFace'
+import { AvatarFace } from '@/components/AvatarFace'
 
 type SubMode = 'padrao' | 'full' | 'texto'
 
@@ -29,11 +29,11 @@ const CAROUSEL_ITEMS = [
   { icon: '📊', label: 'Relatório' },
 ]
 
-// Tempo (ms) que cada sub-modo fica visível — texto fica mais pois tem animação interna
+// Tempo (ms) que cada sub-modo fica visível
 const SUB_DURATIONS: Record<SubMode, number> = {
   padrao: 3000,
   full: 3000,
-  texto: 6000,
+  texto: 3000,
 }
 const SUB_SEQUENCE: SubMode[] = ['padrao', 'full', 'texto']
 
@@ -44,8 +44,7 @@ interface SceneAssistenteProps {
 
 export default function SceneAssistente({ isSpeaking }: SceneAssistenteProps) {
   const [subMode, setSubMode] = useState<SubMode>('padrao')
-  const [visible, setVisible] = useState(true)
-  const [chatVisible, setChatVisible] = useState(1) // mensagens visíveis no modo texto
+  const [visible, setVisible] = useState(true) // fade entre sub-modos
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>
@@ -69,14 +68,6 @@ export default function SceneAssistente({ isSpeaking }: SceneAssistenteProps) {
     return () => clearTimeout(timeoutId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // Anima mensagens quando está no modo texto
-  useEffect(() => {
-    if (subMode !== 'texto') { setChatVisible(1); return }
-    if (chatVisible >= CHAT_MESSAGES.length) return
-    const t = setTimeout(() => setChatVisible(v => v + 1), 1400)
-    return () => clearTimeout(t)
-  }, [subMode, chatVisible])
 
   return (
     <div
@@ -179,7 +170,7 @@ export default function SceneAssistente({ isSpeaking }: SceneAssistenteProps) {
 
           {/* Mensagens */}
           <div className="flex-1 flex flex-col justify-end gap-2 px-4 py-4 overflow-hidden">
-            {CHAT_MESSAGES.slice(0, chatVisible).map((msg, i) => (
+            {CHAT_MESSAGES.map((msg, i) => (
               <div
                 key={i}
                 className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}

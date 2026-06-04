@@ -66,10 +66,6 @@ export default function TourAssistant({
             fontSize: 'clamp(0.78rem, 1.9vw, 1rem)',
             opacity: caption ? 1 : 0,
             color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(15,23,42,0.85)',
-            display: '-webkit-box',
-            WebkitLineClamp: 5,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
           }}
         >
           {caption}

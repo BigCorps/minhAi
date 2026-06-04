@@ -20,11 +20,11 @@ const MOCK_CATEGORIES = [
 const DUPLICATED = Array.from({ length: 8 }, () => MOCK_CATEGORIES).flat()
 
 const CHAT_SEQUENCE = [
-  { from: 'bot',  text: 'Olá! Posso ajudar com cardápio, reservas ou pedidos?' },
+  { from: 'bot',  text: 'Olá! 👋 Posso ajudar com cardápio, reservas ou pedidos?' },
   { from: 'user', text: 'Tem mesa disponível hoje às 19h?' },
-  { from: 'bot',  text: 'Sim! Mesa para até 4 pessoas disponível. Posso reservar agora?' },
+  { from: 'bot',  text: '✅ Sim! Mesa para até 4 pessoas disponível. Posso reservar agora?' },
   { from: 'user', text: 'Sim, pra 2 pessoas!' },
-  { from: 'bot',  text: 'Reservado! Mesa 7 às 19h. Até logo!' },
+  { from: 'bot',  text: '🎉 Reservado! Mesa 7 às 19h. Até logo!' },
 ]
 
 const BRAND = '#de691b'
@@ -110,10 +110,10 @@ export default function SceneWidget() {
         <div
           className="absolute flex flex-col"
           style={{
-            top: 8,        // alinha logo abaixo das linhas de conteúdo simulado
-            bottom: 52,    // para logo acima do botão pill
+            bottom: 52,
             right: 8,
             width:  'clamp(190px, 46vw, 250px)',
+            height: 'clamp(300px, 72vw, 380px)',
             borderRadius: 16,
             overflow: 'hidden',
             boxShadow: '0 16px 48px rgba(0,0,0,0.18), 0 4px 12px rgba(0,0,0,0.08)',

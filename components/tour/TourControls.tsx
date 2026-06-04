@@ -168,17 +168,33 @@ export default function TourControls({
             )}
           </button>
 
-          {/* Next */}
-          <button
-            onClick={onNext}
-            disabled={currentIndex === STAGE1_SCRIPT.length - 1}
-            aria-label="Próxima cena"
-            className={`${iconBtn} ${iconBtnColors} ${iconBtnDisabled}`}
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-              <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z" />
-            </svg>
-          </button>
+          {/* Next — na última cena vira botão de menu/manager */}
+          {currentIndex === STAGE1_SCRIPT.length - 1 ? (
+            <button
+              onClick={onNext}
+              aria-label="Ver todos os stages"
+              title="Ver todos os stages"
+              className={`${iconBtn} ${iconBtnColors}`}
+            >
+              {/* Ícone grid 2x2 — indica seletor de stages */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              onClick={onNext}
+              aria-label="Próxima cena"
+              className={`${iconBtn} ${iconBtnColors}`}
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z" />
+              </svg>
+            </button>
+          )}
 
           {/* Wake Lock — só se suportado */}
           {isWakeLockSupported && (

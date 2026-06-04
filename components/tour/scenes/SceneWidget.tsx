@@ -64,7 +64,7 @@ export default function SceneWidget() {
     <div className="w-full h-full rounded-2xl overflow-hidden relative bg-slate-100 flex flex-col select-none">
 
       {/* ── Barra do browser ── */}
-      <div className="flex items-center gap-2 bg-white border-b border-gray-200 px-3 py-2 flex-shrink-0">
+      <div className="flex items-center gap-2 bg-white border-b border-gray-200 px-3 py-2 flex-shrink-0 rounded-t-2xl">
         <div className="flex gap-1.5">
           <div className="w-3 h-3 rounded-full bg-red-400" />
           <div className="w-3 h-3 rounded-full bg-yellow-400" />
@@ -76,8 +76,7 @@ export default function SceneWidget() {
       </div>
 
       {/* ── Conteúdo do site (fundo) ── */}
-      {/* overflow:visible para que o card absoluto não seja clipado por este container intermediário */}
-      <div className="flex-1 relative" style={{ overflow: 'visible' }}>
+      <div className="flex-1 relative overflow-hidden rounded-b-2xl">
 
         {/* Hero do café */}
         <div className="bg-gradient-to-br from-amber-800 to-amber-950 px-4 py-5 flex flex-col gap-2 flex-shrink-0">

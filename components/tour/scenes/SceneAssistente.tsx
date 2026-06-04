@@ -101,7 +101,14 @@ export default function SceneAssistente({ isSpeaking }: SceneAssistenteProps) {
           {/* Header mock */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-blue-600/60" />
+              <div className="w-7 h-7 rounded-full bg-blue-600/60 flex items-center justify-center flex-shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                  <path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z" />
+                  <path d="M16 9h2.5a2.5 2.5 0 0 1 0 5H16" />
+                  <path d="M6 2v2" /><path d="M10 2v2" /><path d="M14 2v2" />
+                  <path d="M3 21h16" />
+                </svg>
+              </div>
               <span className="text-white/80 text-sm font-medium">Café Exemplo</span>
             </div>
             <span className="text-white/30 text-xs">minhAi</span>
@@ -146,7 +153,14 @@ export default function SceneAssistente({ isSpeaking }: SceneAssistenteProps) {
         <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
           {/* Header */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10">
-            <div className="w-7 h-7 rounded-full bg-blue-600/60 flex-shrink-0" />
+            <div className="w-7 h-7 rounded-full bg-blue-600/60 flex-shrink-0 flex items-center justify-center">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                  <path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z" />
+                  <path d="M16 9h2.5a2.5 2.5 0 0 1 0 5H16" />
+                  <path d="M6 2v2" /><path d="M10 2v2" /><path d="M14 2v2" />
+                  <path d="M3 21h16" />
+                </svg>
+              </div>
             <div>
               <p className="text-white/80 text-sm font-medium leading-none">Café Exemplo</p>
               <p className="text-green-400/70 text-xs mt-0.5">● online</p>

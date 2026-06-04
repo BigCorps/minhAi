@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { STAGE1_SCRIPT, SceneId } from '@/lib/tour/stage1-script'
 import { usePlayText } from '@/hooks/usePlayText'
+import { useWakeLock } from '@/hooks/useWakeLock'
 import TourAssistant from './TourAssistant'
 import TourControls from './TourControls'
 import SceneIntro from './scenes/SceneIntro'
@@ -18,35 +19,21 @@ import SceneWhatsAppMCP from './scenes/SceneWhatsAppMCP'
 const SCENES_WITH_OWN_AVATAR: SceneId[] = ['assistente', 'intro', 'outro']
 const FADE_DURATION = 300
 
-/**
- * Desbloqueia o contexto de áudio do browser mobile de forma síncrona.
- * Cria um AudioContext, gera um buffer de silêncio de 0.1s e toca.
- * Isso satisfaz a política de autoplay do Chrome/Safari Android/iOS —
- * uma vez desbloqueado, Audio.play() funciona mesmo após awaits assíncronos.
- * Deve ser chamado diretamente dentro do event handler de clique do usuário,
- * antes de qualquer await.
- */
 function unlockAudioContext(): void {
   try {
     const AudioCtx =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     if (!AudioCtx) return
-
     const ctx = new AudioCtx()
-    // Buffer de silêncio real: 1 canal, 1024 samples, 22050hz
     const buffer = ctx.createBuffer(1, 1024, 22050)
     const source = ctx.createBufferSource()
     source.buffer = buffer
     source.connect(ctx.destination)
     source.start(0)
-
-    // Resume caso o contexto já exista mas esteja suspenso (iOS)
-    if (ctx.state === 'suspended') {
-      ctx.resume()
-    }
+    if (ctx.state === 'suspended') ctx.resume()
   } catch {
-    // Ignorado — SSR ou ambiente sem Web Audio API
+    // SSR ou sem Web Audio API
   }
 }
 
@@ -55,17 +42,35 @@ export default function TourStage1() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [sceneVisible, setSceneVisible] = useState(true)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+
   const { playText: _playText, stopAudio } = usePlayText()
   const playText = useCallback(
     (text: string) => _playText(text, 1.15),
     [_playText]
   )
 
+  const {
+    isSupported: isWakeLockSupported,
+    isActive: isWakeLockActive,
+    requestWakeLock,
+    releaseWakeLock,
+  } = useWakeLock()
+
   const isPlayingRef = useRef(false)
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const currentScene = STAGE1_SCRIPT[sceneIndex]
   const hideAvatar = SCENES_WITH_OWN_AVATAR.includes(currentScene.id)
+
+  const handleToggleTheme = useCallback(() => {
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
+  }, [])
+
+  const handleToggleWakeLock = useCallback(() => {
+    if (isWakeLockActive) releaseWakeLock()
+    else requestWakeLock()
+  }, [isWakeLockActive, requestWakeLock, releaseWakeLock])
 
   const runScene = useCallback(
     async (index: number) => {
@@ -96,9 +101,7 @@ export default function TourStage1() {
   )
 
   const handlePlay = useCallback(() => {
-    // Unlock síncrono ANTES de qualquer await — obrigatório para mobile
     unlockAudioContext()
-
     isPlayingRef.current = true
     setIsPlaying(true)
     runScene(sceneIndex)
@@ -145,22 +148,29 @@ export default function TourStage1() {
     }
   }, [stopAudio])
 
+  const isDark = theme === 'dark'
+
   return (
     <div
       className="w-full flex flex-col overflow-hidden"
       style={{
         height: '100dvh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+        background: isDark
+          ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
+          : 'linear-gradient(135deg, #f0f4ff 0%, #e8edf8 50%, #f0f4ff 100%)',
+        transition: 'background 400ms ease',
       }}
     >
       {/* ── Área principal ── */}
-      <div className="flex-1 min-h-0 flex flex-col md:flex-row items-stretch md:items-center gap-0 md:gap-12 px-4 md:px-12 pt-4 md:pt-6 pb-2 md:pb-4 w-full max-w-5xl mx-auto">
-
-        {/*
-         * Wrapper da cena.
-         * Mobile: ocupa até 52dvh — sobra ~40dvh para avatar+legenda+controls.
-         * Desktop: flex-1 divide espaço horizontal com o assistente.
-         */}
+      <div
+        className="flex-1 min-h-0 flex flex-col md:flex-row items-center md:items-center gap-0 md:gap-12 px-4 md:px-12 w-full max-w-5xl mx-auto"
+        style={{
+          // Mobile: padding top menor para centralizar melhor verticalmente
+          paddingTop: 'clamp(8px, 2dvh, 32px)',
+          paddingBottom: 'clamp(4px, 1dvh, 16px)',
+        }}
+      >
+        {/* Wrapper da cena */}
         <div
           className="min-h-0 w-full"
           style={{
@@ -175,14 +185,11 @@ export default function TourStage1() {
               transitionDuration: `${FADE_DURATION}ms`,
             }}
           >
-            <SceneRenderer id={currentScene.id} isSpeaking={isSpeaking} />
+            <SceneRenderer id={currentScene.id} isSpeaking={isSpeaking} theme={theme} />
           </div>
         </div>
 
-        {/*
-         * Assistente (avatar/logo + legenda).
-         * overflow-visible para os halos do AvatarFace não serem cortados.
-         */}
+        {/* Assistente */}
         <div
           className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-72 lg:w-80 overflow-visible"
           style={{
@@ -193,9 +200,9 @@ export default function TourStage1() {
             isSpeaking={isSpeaking}
             caption={currentScene.displayText ?? currentScene.audioText}
             hideAvatar={hideAvatar}
+            theme={theme}
           />
         </div>
-
       </div>
 
       {/* ── Controls: rodapé fixo ── */}
@@ -203,17 +210,30 @@ export default function TourStage1() {
         <TourControls
           currentId={currentScene.id}
           isPlaying={isPlaying}
+          theme={theme}
+          isWakeLockActive={isWakeLockActive}
+          isWakeLockSupported={isWakeLockSupported}
           onPrev={handlePrev}
           onNext={handleNext}
           onTogglePlay={handleTogglePlay}
           onGoTo={goToScene}
+          onToggleTheme={handleToggleTheme}
+          onToggleWakeLock={handleToggleWakeLock}
         />
       </div>
     </div>
   )
 }
 
-function SceneRenderer({ id, isSpeaking }: { id: SceneId; isSpeaking: boolean }) {
+function SceneRenderer({
+  id,
+  isSpeaking,
+  theme,
+}: {
+  id: SceneId
+  isSpeaking: boolean
+  theme: 'dark' | 'light'
+}) {
   switch (id) {
     case 'intro':        return <SceneIntro isSpeaking={isSpeaking} />
     case 'assistente':   return <SceneAssistente isSpeaking={isSpeaking} />

@@ -84,9 +84,8 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center"
       style={{
-        // Overlay escuro com blur
         background: 'rgba(0,0,0,0.75)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
@@ -96,16 +95,20 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
       }}
     >
       {/*
-       * Container do tour — fullscreen no mobile, caixinha no desktop.
-       * No desktop tem borda e border-radius para parecer modal.
+       * Mobile: fullscreen (inset-0), sem rounded, sem max constraints.
+       * Desktop: caixinha centralizada com rounded e shadow.
+       * A animação no mobile sobe de baixo (translateY), no desktop escala.
        */}
       <div
-        className="relative w-full h-full md:rounded-2xl md:overflow-hidden md:shadow-2xl"
+        className="relative w-full md:rounded-2xl md:overflow-hidden md:shadow-2xl"
         style={{
+          height: '100dvh',
           maxWidth: '900px',
           maxHeight: '640px',
-          transform: visible ? 'scale(1)' : 'scale(0.96)',
-          transition: 'transform 300ms ease',
+          transform: visible
+            ? 'translateY(0) scale(1)'
+            : 'translateY(40px) scale(0.97)',
+          transition: 'transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1)',
         }}
       >
         {/* ── TourStage1 ── */}
@@ -114,6 +117,7 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
             key={`stage-${activeStage}`}
             initialTheme={currentTheme}
             autoPlay={true}
+            inModal={true}
             onClose={handleClose}
             onComplete={handleStageComplete}
             onThemeChange={setCurrentTheme}

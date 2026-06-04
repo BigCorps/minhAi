@@ -184,16 +184,19 @@ export default function TourStage1() {
          * h-full no filho interno garante que SceneRenderer preencha tudo.
          */}
         <div
-          className="flex-1 min-h-0 w-full"
-          style={{ maxHeight: 'clamp(220px, 52dvh, 520px)' }}
-        >
-          <div
-            className="w-full h-full transition-opacity ease-in-out"
-            style={{
-              opacity: sceneVisible ? 1 : 0,
-              transitionDuration: `${FADE_DURATION}ms`,
-            }}
-          >
+  className="flex-1 min-h-0 w-full"
+  style={{
+    maxHeight: 'clamp(220px, 52dvh, 520px)',
+    height: 'clamp(220px, 52dvh, 520px)',   // ← ADICIONAR: altura explícita
+  }}                                          //   propaga h-full para os filhos
+>
+  <div
+    className="w-full h-full transition-opacity ease-in-out"
+    style={{
+      opacity: sceneVisible ? 1 : 0,
+      transitionDuration: `${FADE_DURATION}ms`,
+    }}
+  >
             <SceneRenderer id={currentScene.id} isSpeaking={isSpeaking} theme={theme} />
           </div>
         </div>

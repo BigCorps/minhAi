@@ -18,6 +18,7 @@ import SceneWhatsAppMCP from './scenes/SceneWhatsAppMCP'
 
 const SCENES_WITH_OWN_AVATAR: SceneId[] = ['assistente', 'intro', 'outro']
 const FADE_DURATION = 300
+const AUTO_PLAY_DELAY = 2000  // ms após mount para auto-play no modal
 
 function unlockAudioContext(): void {
   try {
@@ -37,12 +38,44 @@ function unlockAudioContext(): void {
   }
 }
 
-export default function TourStage1() {
+interface TourStage1Props {
+  /**
+   * Tema visual inicial. Padrão: 'dark'.
+   * O usuário pode trocar via botão interno, mas o pai pode forçar o inicial.
+   */
+  initialTheme?: 'dark' | 'light'
+
+  /**
+   * Quando presente, exibe botão X no canto superior direito.
+   * Chamado quando o usuário fecha o tour (modal).
+   */
+  onClose?: () => void
+
+  /**
+   * Chamado quando o último script do stage termina de tocar.
+   * O pai usa para exibir o TourManager/seletor de stages.
+   */
+  onComplete?: () => void
+
+  /**
+   * Se true, inicia a reprodução automaticamente após AUTO_PLAY_DELAY ms.
+   * Requer que o AudioContext já tenha sido desbloqueado pelo gesto
+   * que abriu o modal (o clique no TourTrigger faz isso).
+   */
+  autoPlay?: boolean
+}
+
+export default function TourStage1({
+  initialTheme = 'dark',
+  onClose,
+  onComplete,
+  autoPlay = false,
+}: TourStage1Props) {
   const [sceneIndex, setSceneIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [sceneVisible, setSceneVisible] = useState(true)
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [theme, setTheme] = useState<'dark' | 'light'>(initialTheme)
 
   const { playText: _playText, stopAudio } = usePlayText()
   const playText = useCallback(
@@ -59,6 +92,7 @@ export default function TourStage1() {
 
   const isPlayingRef = useRef(false)
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const autoPlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const currentScene = STAGE1_SCRIPT[sceneIndex]
   const hideAvatar = SCENES_WITH_OWN_AVATAR.includes(currentScene.id)
@@ -73,6 +107,7 @@ export default function TourStage1() {
     else requestWakeLock()
   }, [isWakeLockActive, requestWakeLock, releaseWakeLock])
 
+  // ── runScene: núcleo da reprodução ──────────────────────────
   const runScene = useCallback(
     async (index: number) => {
       if (!isPlayingRef.current) return
@@ -94,13 +129,19 @@ export default function TourStage1() {
       if (next < STAGE1_SCRIPT.length) {
         runScene(next)
       } else {
+        // Stage completo
         isPlayingRef.current = false
         setIsPlaying(false)
+        // Notifica o pai após 2s (tempo para o usuário ver a última cena)
+        if (onComplete) {
+          autoAdvanceTimerRef.current = setTimeout(onComplete, 2000)
+        }
       }
     },
-    [playText]
+    [playText, onComplete]
   )
 
+  // ── handlePlay: desbloqueia áudio e inicia ──────────────────
   const handlePlay = useCallback(() => {
     unlockAudioContext()
     isPlayingRef.current = true
@@ -108,18 +149,27 @@ export default function TourStage1() {
     runScene(sceneIndex)
   }, [sceneIndex, runScene])
 
+  // ── handlePause ─────────────────────────────────────────────
   const handlePause = useCallback(() => {
     isPlayingRef.current = false
     setIsPlaying(false)
     setIsSpeaking(false)
     stopAudio()
     if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current)
+    if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current)
   }, [stopAudio])
 
   const handleTogglePlay = useCallback(() => {
-    if (isPlaying) handlePause()
-    else handlePlay()
-  }, [isPlaying, handlePlay, handlePause])
+    if (isPlaying) {
+      handlePause()
+      // Pausa → notifica onComplete para mostrar o seletor após 2s
+      if (onComplete) {
+        autoAdvanceTimerRef.current = setTimeout(onComplete, 2000)
+      }
+    } else {
+      handlePlay()
+    }
+  }, [isPlaying, handlePlay, handlePause, onComplete])
 
   const goToScene = useCallback(
     (index: number) => {
@@ -141,17 +191,35 @@ export default function TourStage1() {
     if (sceneIndex < STAGE1_SCRIPT.length - 1) goToScene(sceneIndex + 1)
   }, [sceneIndex, goToScene])
 
+  // ── Auto-play: dispara após mount se prop estiver ativa ─────
+  useEffect(() => {
+    if (!autoPlay) return
+    autoPlayTimerRef.current = setTimeout(() => {
+      // AudioContext já foi desbloqueado pelo clique que abriu o modal
+      isPlayingRef.current = true
+      setIsPlaying(true)
+      runScene(0)
+    }, AUTO_PLAY_DELAY)
+    return () => {
+      if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current)
+    }
+    // Só roda uma vez no mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── Cleanup ao desmontar ────────────────────────────────────
   useEffect(() => {
     return () => {
       isPlayingRef.current = false
       stopAudio()
       if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current)
+      if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current)
     }
   }, [stopAudio])
 
   return (
     <div
-      className="w-full flex flex-col overflow-hidden"
+      className="w-full flex flex-col overflow-hidden relative"
       style={{
         height: '100dvh',
         background: isDark
@@ -160,16 +228,24 @@ export default function TourStage1() {
         transition: 'background 400ms ease',
       }}
     >
-      {/*
-       * Área principal — flex-col no mobile, flex-row no desktop.
-       *
-       * CRÍTICO: flex-1 + min-h-0 no container garante que os filhos
-       * com h-full tenham referência de altura. Sem min-h-0, flex-col
-       * não propaga altura para filhos e os cards crescem com conteúdo.
-       *
-       * NÃO usar justifyContent: center — quebra o min-h-0.
-       * Centralização vertical é feita pelo padding calculado.
-       */}
+      {/* ── Botão fechar (apenas quando onClose presente) ── */}
+      {onClose && (
+        <button
+          onClick={onClose}
+          aria-label="Fechar tour"
+          className="absolute top-4 right-4 z-50 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+          style={{
+            background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+            color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)',
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-4 h-4">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+
+      {/* ── Área principal ── */}
       <div
         className="flex-1 min-h-0 flex flex-col md:flex-row md:items-center gap-0 md:gap-12 px-4 md:px-12 w-full max-w-5xl mx-auto"
         style={{
@@ -177,34 +253,23 @@ export default function TourStage1() {
           paddingBottom: 'clamp(8px, 2dvh, 24px)',
         }}
       >
-        {/*
-         * Wrapper da cena.
-         * flex-1 min-h-0: ocupa espaço disponível sem ultrapassar.
-         * maxHeight: limita em mobile para sobrar espaço ao assistente.
-         * h-full no filho interno garante que SceneRenderer preencha tudo.
-         */}
+        {/* Wrapper da cena */}
         <div
-  className="flex-1 min-h-0 w-full"
-  style={{
-    maxHeight: 'clamp(220px, 52dvh, 520px)',
-    height: 'clamp(220px, 52dvh, 520px)',   // ← ADICIONAR: altura explícita
-  }}                                          //   propaga h-full para os filhos
->
-  <div
-    className="w-full h-full transition-opacity ease-in-out"
-    style={{
-      opacity: sceneVisible ? 1 : 0,
-      transitionDuration: `${FADE_DURATION}ms`,
-    }}
-  >
+          className="flex-1 min-h-0 w-full"
+          style={{ maxHeight: 'clamp(220px, 52dvh, 520px)' }}
+        >
+          <div
+            className="w-full h-full transition-opacity ease-in-out"
+            style={{
+              opacity: sceneVisible ? 1 : 0,
+              transitionDuration: `${FADE_DURATION}ms`,
+            }}
+          >
             <SceneRenderer id={currentScene.id} isSpeaking={isSpeaking} theme={theme} />
           </div>
         </div>
 
-        {/*
-         * Assistente — flex-shrink-0 para não ser comprimido pela cena.
-         * overflow-visible para os halos do AvatarFace não serem cortados.
-         */}
+        {/* Assistente */}
         <div
           className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-72 lg:w-80 overflow-visible"
           style={{ maxHeight: 'clamp(170px, 42dvh, 340px)' }}
@@ -218,7 +283,7 @@ export default function TourStage1() {
         </div>
       </div>
 
-      {/* Controls */}
+      {/* ── Controls ── */}
       <div className="flex-shrink-0 flex justify-center items-center py-3 md:py-4">
         <TourControls
           currentId={currentScene.id}

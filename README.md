@@ -10,7 +10,7 @@
 
 * Criar Auxiliar de Cadastro e com MCP whatsapp - MANUS miriamithiel
 
-* Tour guiado - implementar cache (pedidoslj) - MANUS interpag e CLAUDE ith.almeida
+* Tour guiado - implementar cache (pedidoslj) - MANUS interpag
 
 * página admin no dashboard
 

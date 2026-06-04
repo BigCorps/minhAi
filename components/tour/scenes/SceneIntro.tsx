@@ -6,10 +6,14 @@ import { AvatarFace } from '@/components/AvatarFace'
 export default function SceneIntro({
   isOutro = false,
   isSpeaking = false,
+  theme = 'dark',
 }: {
   isOutro?: boolean
   isSpeaking?: boolean
+  theme?: 'dark' | 'light'
 }) {
+  const isDark = theme === 'dark'
+
   return (
     <div className="flex flex-col items-center justify-center gap-4 w-full h-full select-none">
       {/* Avatar — maior pois tem espaço livre sem cards competindo */}
@@ -25,7 +29,7 @@ export default function SceneIntro({
           isSpeaking={isSpeaking}
           isListening={false}
           isProcessing={false}
-          theme="dark"
+          theme={isDark ? 'dark' : 'light'}
           avatarType={isSpeaking ? 'orb' : 'face'}
           hasActivePlan={true}
         />
@@ -33,12 +37,16 @@ export default function SceneIntro({
 
       {/* Tagline */}
       <p
-        className="text-white/50 text-center max-w-sm"
-        style={{ fontSize: 'clamp(0.85rem, 2.2vw, 1.05rem)' }}
+        className="text-center max-w-sm transition-colors duration-400"
+        style={{
+          fontSize: 'clamp(0.85rem, 2.2vw, 1.05rem)',
+          color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(15,23,42,0.5)',
+        }}
       >
         {isOutro
           ? 'Uma IA pra chamar de sua!'
-          : 'Uma IA pra chamar de sua! O Assistente IA que vende e atende 24 horas.'}
+          : 'Uma IA pra chamar de sua!
+O Assistente IA que vende e atende 24 horas.'}
       </p>
 
       {/* Linha decorativa */}

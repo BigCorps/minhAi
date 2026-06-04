@@ -20,44 +20,10 @@ const STAGES: Stage[] = [
     description: 'Multifuncional e Multicanal',
     available: true,
     icon: (
-      <svg
-      className={sz}
-      viewBox="96 96 320 320"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      aria-hidden="true"
-    >
-      {/* Círculo externo */}
-      <circle
-        cx="256"
-        cy="256"
-        r="145"
-        stroke="currentColor"
-        strokeWidth="18"
-      />
-
-      {/* Círculo do rosto */}
-      <circle
-        cx="256"
-        cy="256"
-        r="122"
-        stroke="currentColor"
-        strokeWidth="18"
-      />
-
-      {/* Olhos */}
-      <ellipse cx="218" cy="230" rx="18" ry="24" fill="currentColor" />
-      <ellipse cx="294" cy="230" rx="18" ry="24" fill="currentColor" />
-
-      {/* Boca */}
-      <path
-        d="M216 296C237 314 275 314 296 296"
-        stroke="currentColor"
-        strokeWidth="16"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
     ),
   },
   {
@@ -66,11 +32,18 @@ const STAGES: Stage[] = [
     description: 'Modos do avatar e funções de voz',
     available: false,
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
-        <path d="M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5z" />
-        <path d="M19 10a7 7 0 0 1-14 0" />
-        <line x1="12" y1="19" x2="12" y2="22" />
-        <line x1="8" y1="22" x2="16" y2="22" />
+      <svg
+        className={iconClass}
+        viewBox="96 96 320 320"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        aria-hidden="true"
+      >
+        <circle cx="256" cy="256" r="145" stroke="currentColor" strokeWidth="18" />
+        <circle cx="256" cy="256" r="122" stroke="currentColor" strokeWidth="18" />
+        <ellipse cx="218" cy="230" rx="18" ry="24" fill="currentColor" />
+        <ellipse cx="294" cy="230" rx="18" ry="24" fill="currentColor" />
+        <path d="M216 296C237 314 275 314 296 296" stroke="currentColor" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -91,7 +64,7 @@ const STAGES: Stage[] = [
   {
     id: 4,
     label: 'Meu Dashboard',
-    description: 'configurações, integrações e mais',
+    description: 'Configurações, integrações e mais',
     available: false,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
@@ -171,7 +144,6 @@ export default function TourManager({
     <div
       className="w-full flex flex-col overflow-hidden"
       style={{
-        // Funciona tanto standalone (100dvh) quanto dentro do modal (h-full do pai)
         height: '100dvh',
         background: isDark
           ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
@@ -198,7 +170,6 @@ export default function TourManager({
           </p>
         </div>
 
-        {/* Botão fechar — só aparece quando onClose está presente */}
         {onClose && (
           <button
             onClick={onClose}

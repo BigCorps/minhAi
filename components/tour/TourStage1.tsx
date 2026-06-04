@@ -64,16 +64,20 @@ export default function TourStage1() {
   )
 
   const handlePlay = useCallback(() => {
-    // Desbloqueia o contexto de áudio no mobile de forma síncrona,
-    // dentro do event handler do clique do usuário.
-    // Isso não afeta o usePlayText — é apenas um unlock silencioso.
+    // Desbloqueia o AudioContext de forma síncrona dentro do event handler.
+    // AudioContext.resume() é o mecanismo correto para Chrome/Safari mobile —
+    // diferente de new Audio().play() que não garante unlock sem src real.
+    // Uma vez desbloqueado, o contexto persiste na sessão inteira,
+    // permitindo que Audio.play() funcione mesmo após awaits.
+    // Não toca no usePlayText — apenas prepara o ambiente de áudio.
     try {
-      const silentAudio = new Audio()
-      silentAudio.play().catch(() => {
-        // Ignorado intencionalmente — só precisamos do gesto de desbloqueio
-      })
+      const AudioCtx = window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (AudioCtx) {
+        const ctx = new AudioCtx()
+        ctx.resume()
+      }
     } catch {
-      // Ignorado — ambiente sem Web Audio API (SSR, etc.)
+      // Ignorado — SSR ou ambiente sem Web Audio API
     }
 
     isPlayingRef.current = true
@@ -123,12 +127,6 @@ export default function TourStage1() {
   }, [stopAudio])
 
   return (
-    /*
-     * Container raiz com altura real (100dvh) em vez de min-h-screen.
-     * 100dvh desconta a barra do browser mobile (Chrome/Safari), garantindo
-     * que nada ultrapasse a tela e que os filhos com flex-1 tenham referência
-     * de altura para calcular h-full corretamente.
-     */
     <div
       className="w-full flex flex-col overflow-hidden"
       style={{
@@ -136,26 +134,21 @@ export default function TourStage1() {
         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
       }}
     >
-      {/* ── Área principal: cena + assistente ── */}
+      {/* ── Área principal ── */}
       <div className="flex-1 min-h-0 flex flex-col md:flex-row items-stretch md:items-center gap-0 md:gap-12 px-4 md:px-12 pt-4 md:pt-6 pb-2 md:pb-4 w-full max-w-5xl mx-auto">
 
         {/*
          * Wrapper da cena.
-         *
-         * Mobile (flex-col):
-         *   - flex-1 min-h-0 → ocupa o espaço disponível sem ultrapassar
-         *   - max-h limitado para sobrar espaço para a legenda abaixo
-         *
-         * Desktop (flex-row):
-         *   - flex-1 → divide o espaço horizontal com o assistente
-         *   - h-full → preenche toda a altura da linha
+         * Mobile: flex-1 min-h-0 garante que a cena preencha o espaço
+         * disponível sem ultrapassar — o maxHeight limita para sobrar
+         * espaço ao assistente abaixo.
+         * Desktop: flex-1 divide o espaço horizontal com o assistente.
          */}
         <div
-          className="flex-1 min-h-0 w-full md:h-full"
+          className="min-h-0 w-full"
           style={{
-            // Mobile: limita a cena a ~55% da viewport para sobrar espaço à legenda
-            // Desktop: altura controlada pelo flex-row do pai
-            maxHeight: 'clamp(240px, 55dvh, 520px)',
+            flex: '1 1 0',
+            maxHeight: 'clamp(220px, 52dvh, 520px)',
           }}
         >
           <div
@@ -171,15 +164,13 @@ export default function TourStage1() {
 
         {/*
          * Assistente (avatar/logo + legenda).
-         *
-         * Mobile: altura automática, limitada para não empurrar os controls
-         * Desktop: largura fixa, altura total da linha
+         * Mobile: abaixo da cena, altura suficiente para avatar maior + legenda.
+         * Desktop: coluna direita com largura fixa.
          */}
         <div
           className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-72 lg:w-80"
           style={{
-            // Mobile: max para não ultrapassar o espaço restante
-            maxHeight: 'clamp(140px, 38dvh, 300px)',
+            maxHeight: 'clamp(160px, 42dvh, 340px)',
           }}
         >
           <TourAssistant
@@ -191,7 +182,7 @@ export default function TourStage1() {
 
       </div>
 
-      {/* ── Controls: altura fixa no rodapé ── */}
+      {/* ── Controls: rodapé fixo ── */}
       <div className="flex-shrink-0 flex justify-center items-center py-3 md:py-4">
         <TourControls
           currentId={currentScene.id}

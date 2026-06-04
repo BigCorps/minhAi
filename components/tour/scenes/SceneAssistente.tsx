@@ -10,7 +10,7 @@
 // O sub-ciclo padrao→full→texto roda automaticamente via timer interno.
 
 import { useEffect, useState } from 'react'
-import AvatarFace from '@/components/AvatarFace'
+import { AvatarFace } from '@/components/AvatarFace
 
 type SubMode = 'padrao' | 'full' | 'texto'
 

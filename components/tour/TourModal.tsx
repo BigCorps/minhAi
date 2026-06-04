@@ -25,6 +25,7 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
   const [visible, setVisible] = useState(false)
   const [modalState, setModalState] = useState<ModalState>('playing')
   const [activeStage, setActiveStage] = useState(1)
+  const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>(initialTheme)
   const selectorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Monta no cliente (evita SSR mismatch com createPortal)
@@ -111,10 +112,11 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
         {modalState === 'playing' && (
           <TourStage1
             key={`stage-${activeStage}`}
-            initialTheme={initialTheme}
+            initialTheme={currentTheme}
             autoPlay={true}
             onClose={handleClose}
             onComplete={handleStageComplete}
+            onThemeChange={setCurrentTheme}
           />
         )}
 
@@ -122,7 +124,7 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
         {modalState === 'selecting' && (
           <TourManager
             activeStage={activeStage}
-            initialTheme={initialTheme}
+            initialTheme={currentTheme}
             onSelectStage={handleSelectStage}
             onClose={handleClose}
           />

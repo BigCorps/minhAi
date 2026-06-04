@@ -150,14 +150,15 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </span>
           </p>
 
-          {/* DomainPreviewPicker — oculto no mobile, substituído pelo TourTrigger */}
-          <div className="hidden sm:block">
+          {/* DomainPreviewPicker — sempre visível em todos os tamanhos */}
+          {/* No mobile, o TourTrigger flutua sobre ele até o usuário dispensar */}
+          <div className="relative">
             <DomainPreviewPicker isDark={isDark} />
-          </div>
 
-          {/* TourTrigger mobile — no lugar do DomainPreviewPicker */}
-          <div className="sm:hidden mb-1.5">
-            <TourTrigger theme={theme} delay={5000} />
+            {/* TourTrigger overlay — só mobile, some quando dispensado */}
+            <div className="sm:hidden absolute inset-0 flex items-center justify-center">
+              <TourTrigger theme={theme} delay={5000} dismissible />
+            </div>
           </div>
 
           {/* CTAs */}

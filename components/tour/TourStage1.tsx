@@ -253,9 +253,15 @@ export default function TourStage1({
           paddingBottom: 'clamp(8px, 2dvh, 24px)',
         }}
       >
-        {/* Wrapper da cena */}
+        {/*
+         * Wrapper da cena.
+         * Mobile (flex-col): flex-1 min-h-0 + maxHeight limitam altura.
+         * Desktop (flex-row): md:self-stretch faz o wrapper preencher a
+         * altura total da linha — sem isso flex-row não propaga altura
+         * para filhos e os cards crescem com o conteúdo.
+         */}
         <div
-          className="flex-1 min-h-0 w-full"
+          className="flex-1 min-h-0 w-full md:self-stretch"
           style={{ maxHeight: 'clamp(220px, 52dvh, 520px)' }}
         >
           <div

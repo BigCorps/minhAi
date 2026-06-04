@@ -1,12 +1,13 @@
 'use client'
 // components/tour/TourAssistant.tsx
+
 import Image from 'next/image'
-import { AvatarFace } from '@/components/AvatarFace'
+import AvatarFace from '@/components/AvatarFace'
 
 interface TourAssistantProps {
   isSpeaking: boolean
   caption: string
-  /** Quando true o avatar some — usado nas cenas que já têm avatar no mock */
+  /** Quando true, exibe logo em vez do avatar (cenas com avatar próprio) */
   hideAvatar?: boolean
 }
 
@@ -17,9 +18,17 @@ export default function TourAssistant({
 }: TourAssistantProps) {
   return (
     <div className="flex flex-col items-center gap-4 w-full">
-      {/* Avatar ou Logo */}
+
+      {/* Avatar ou Logo — tamanho fixo, não muda com conteúdo */}
       {hideAvatar ? (
-        <div style={{ width: 'clamp(140px, 28vw, 260px)', position: 'relative', aspectRatio: '3/1' }}>
+        <div
+          style={{
+            width: 'clamp(120px, 22vw, 200px)',
+            position: 'relative',
+            aspectRatio: '3/1',
+            flexShrink: 0,
+          }}
+        >
           <Image
             src="/logo.png"
             alt="minhAi"
@@ -30,10 +39,10 @@ export default function TourAssistant({
         </div>
       ) : (
         <div
-          className="transition-all duration-500 ease-in-out"
           style={{
-            width: 'clamp(100px, 20vw, 160px)',
+            width: 'clamp(90px, 16vw, 140px)',
             aspectRatio: '1/1',
+            flexShrink: 0,
           }}
         >
           <AvatarFace
@@ -47,21 +56,23 @@ export default function TourAssistant({
         </div>
       )}
 
-      {/* Legenda */}
+      {/* Legenda — altura mínima fixa para não deslocar o layout */}
       <div
-        className="w-full max-w-2xl px-6 text-center"
-        style={{ minHeight: '4rem' }}
+        className="w-full px-4 text-center"
+        style={{ minHeight: '5rem', maxWidth: 380 }}
       >
         <p
-          className="text-white/90 leading-relaxed transition-opacity duration-300"
+          className="text-white/90 leading-relaxed"
           style={{
-            fontSize: 'clamp(0.85rem, 2.2vw, 1.1rem)',
+            fontSize: 'clamp(0.82rem, 2vw, 1rem)',
             opacity: caption ? 1 : 0,
+            transition: 'opacity 300ms',
           }}
         >
           {caption}
         </p>
       </div>
+
     </div>
   )
 }

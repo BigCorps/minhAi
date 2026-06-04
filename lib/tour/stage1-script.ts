@@ -57,7 +57,7 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'instagram',
     label: 'Instagram',
     audioText:
-      'No Instagram e Facebook, respondendo mensagens diretas, comentários e enviando D Ms automaticamente, com as mesmas funcionalidades do Whatsapp, convertendo seguidores em clientes.',
+      'No Instagram e Facebook, respondendo mensagens diretas, comentários e enviando de eme automaticamente, com as mesmas funcionalidades do Whatsapp, convertendo seguidores em clientes.',
     displayText:
       'No Instagram e Facebook, respondendo mensagens diretas, comentários e enviando DMs automaticamente, com as mesmas funcionalidades do Whatsapp, convertendo seguidores em clientes.',
     fallbackDuration: 6000,

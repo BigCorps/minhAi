@@ -49,7 +49,7 @@ export default function SceneWidget() {
       {/* ── Conteúdo do site ── */}
       <div className="flex-1 relative overflow-hidden">
         {/* Hero */}
-        <div className="bg-gradient-to-br from-amber-800 to-amber-950 px-6 py-8 flex flex-col gap-3">
+        <div className="bg-gradient-to-br from-amber-800 to-amber-950 px-4 py-5 flex flex-col gap-2 flex-shrink-0">
           <div className="flex items-center gap-2">
             {/* Ícone xícara no logo do Café */}
             <div className="w-8 h-8 rounded-full bg-amber-400/30 flex items-center justify-center flex-shrink-0">
@@ -72,11 +72,9 @@ export default function SceneWidget() {
         </div>
 
         {/* Linhas de conteúdo simulado */}
-        <div className="bg-white p-4 flex flex-col gap-3">
-          <div className="h-3 bg-gray-200 rounded w-3/4" />
-          <div className="h-3 bg-gray-200 rounded w-1/2" />
-          <div className="h-3 bg-gray-200 rounded w-5/6" />
-          <div className="h-3 bg-gray-200 rounded w-2/3" />
+        <div className="bg-white px-4 py-3 flex flex-col gap-2 flex-shrink-0">
+          <div className="h-2.5 bg-gray-200 rounded w-3/4" />
+          <div className="h-2.5 bg-gray-200 rounded w-1/2" />
         </div>
 
         {/* ── Widget flutuante ── */}

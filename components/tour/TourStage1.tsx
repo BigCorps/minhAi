@@ -156,27 +156,35 @@ export default function TourStage1() {
         height: '100dvh',
         background: isDark
           ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
-          : 'linear-gradient(135deg, #f0f4ff 0%, #e8edf8 50%, #f0f4ff 100%)',
+          : '#ffffff',
         transition: 'background 400ms ease',
       }}
     >
-      {/* ── Área principal ── */}
+      {/*
+       * Área principal — flex-col no mobile, flex-row no desktop.
+       *
+       * CRÍTICO: flex-1 + min-h-0 no container garante que os filhos
+       * com h-full tenham referência de altura. Sem min-h-0, flex-col
+       * não propaga altura para filhos e os cards crescem com conteúdo.
+       *
+       * NÃO usar justifyContent: center — quebra o min-h-0.
+       * Centralização vertical é feita pelo padding calculado.
+       */}
       <div
         className="flex-1 min-h-0 flex flex-col md:flex-row md:items-center gap-0 md:gap-12 px-4 md:px-12 w-full max-w-5xl mx-auto"
         style={{
-          /*
-           * Mobile: justify-content center para distribuir verticalmente.
-           * paddingTop menor — o conjunto (cena + legenda) fica centralizado.
-           * Desktop: padding normal.
-           */
           paddingTop: 'clamp(16px, 4dvh, 48px)',
           paddingBottom: 'clamp(8px, 2dvh, 24px)',
-          justifyContent: 'center',
         }}
       >
-        {/* Wrapper da cena */}
+        {/*
+         * Wrapper da cena.
+         * flex-1 min-h-0: ocupa espaço disponível sem ultrapassar.
+         * maxHeight: limita em mobile para sobrar espaço ao assistente.
+         * h-full no filho interno garante que SceneRenderer preencha tudo.
+         */}
         <div
-          className="min-h-0 w-full md:flex-1"
+          className="flex-1 min-h-0 w-full"
           style={{ maxHeight: 'clamp(220px, 52dvh, 520px)' }}
         >
           <div
@@ -190,7 +198,10 @@ export default function TourStage1() {
           </div>
         </div>
 
-        {/* Assistente */}
+        {/*
+         * Assistente — flex-shrink-0 para não ser comprimido pela cena.
+         * overflow-visible para os halos do AvatarFace não serem cortados.
+         */}
         <div
           className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-72 lg:w-80 overflow-visible"
           style={{ maxHeight: 'clamp(170px, 42dvh, 340px)' }}
@@ -204,7 +215,7 @@ export default function TourStage1() {
         </div>
       </div>
 
-      {/* ── Controls ── */}
+      {/* Controls */}
       <div className="flex-shrink-0 flex justify-center items-center py-3 md:py-4">
         <TourControls
           currentId={currentScene.id}

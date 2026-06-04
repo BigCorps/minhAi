@@ -91,7 +91,7 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'outro',
     label: 'Conclusão',
     audioText:
-      'Em qualquer canal, tudo com a mesma inteligência, configuração simples e rápida, sem conhecimentos tecnicos avançados ou entender sobre programação.',
+      'Um assistente multifuncional e multicanal, tudo com a mesma praticidade, inteligência, configuração simples e rápida, sem conhecimentos técnicos avançados ou entender sobre programação. Teste gratuitamente agora mesmo!',
     fallbackDuration: 4000,
   },
 ]

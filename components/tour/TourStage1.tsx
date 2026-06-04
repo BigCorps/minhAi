@@ -247,22 +247,29 @@ export default function TourStage1({
 
       {/* ── Área principal ── */}
       <div
-        className="flex-1 min-h-0 flex flex-col md:flex-row md:items-center gap-0 md:gap-12 px-4 md:px-12 w-full max-w-5xl mx-auto"
+        className="flex-1 min-h-0 flex flex-col md:flex-row gap-0 md:gap-12 px-4 md:px-12 w-full max-w-5xl mx-auto"
         style={{
           paddingTop: 'clamp(16px, 4dvh, 48px)',
           paddingBottom: 'clamp(8px, 2dvh, 24px)',
+          /*
+           * Mobile: centraliza verticalmente via flex-col.
+           * Desktop: items-stretch (padrão do flex) propaga altura para
+           * os filhos — sem isso os cards crescem com o conteúdo.
+           * O alinhamento central no desktop é feito via justify-content
+           * nos filhos internos (SceneIntro, SceneAssistente etc.).
+           */
+          alignItems: 'stretch',
         }}
       >
         {/*
          * Wrapper da cena.
-         * Mobile (flex-col): flex-1 min-h-0 + maxHeight limitam altura.
-         * Desktop (flex-row): md:self-stretch faz o wrapper preencher a
-         * altura total da linha — sem isso flex-row não propaga altura
-         * para filhos e os cards crescem com o conteúdo.
+         * Mobile: flex-1 min-h-0 + maxHeight limitam altura.
+         * Desktop: height explícito + margin auto centralizam a cena
+         * verticalmente dentro do container stretch.
          */}
         <div
-          className="flex-1 min-h-0 w-full md:self-stretch"
-          style={{ maxHeight: 'clamp(220px, 52dvh, 520px)' }}
+          className="flex-1 min-h-0 w-full flex flex-col justify-center"
+          style={{ maxHeight: 'clamp(220px, 52dvh, 520px)', margin: 'auto 0' }}
         >
           <div
             className="w-full h-full transition-opacity ease-in-out"
@@ -278,7 +285,7 @@ export default function TourStage1({
         {/* Assistente */}
         <div
           className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-72 lg:w-80 overflow-visible"
-          style={{ maxHeight: 'clamp(170px, 42dvh, 340px)' }}
+          style={{ maxHeight: 'clamp(170px, 42dvh, 340px)', margin: 'auto 0' }}
         >
           <TourAssistant
             isSpeaking={isSpeaking}

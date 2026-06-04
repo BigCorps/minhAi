@@ -67,15 +67,18 @@ export default function SceneAssistente({ isSpeaking, theme = 'dark' }: SceneAss
       {subMode === 'padrao' && (
         <div className="absolute inset-0 flex flex-col" style={{ background: BG }}>
 
-          {/* Conteúdo principal — split */}
-          <div className="flex-1 flex min-h-0 p-3 gap-3">
+          {/* Header mock */}
+          <MockHeader />
+
+          {/* Conteúdo principal — split com altura controlada */}
+          <div className="flex min-h-0 p-3 gap-3" style={{ height: 'clamp(140px, 38%, 260px)' }}>
 
             {/* Esquerda: avatar */}
             <div
               className="flex-1 rounded-xl flex items-center justify-center min-w-0"
               style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
             >
-              <div style={{ width: 'clamp(80px, 18vw, 180px)', aspectRatio: '1/1' }}>
+              <div style={{ width: 'clamp(60px, 14vw, 140px)', aspectRatio: '1/1' }}>
                 <AvatarFace
                   isSpeaking={isSpeaking}
                   isListening={false}
@@ -170,6 +173,9 @@ export default function SceneAssistente({ isSpeaking, theme = 'dark' }: SceneAss
       {subMode === 'texto' && (
         <div className="absolute inset-0 flex flex-col" style={{ background: BG }}>
 
+          {/* Header mock */}
+          <MockHeader />
+
           {/* Área central com frase */}
           <div className="flex-1 flex flex-col items-center justify-center px-6 min-h-0">
             <p
@@ -229,9 +235,12 @@ export default function SceneAssistente({ isSpeaking, theme = 'dark' }: SceneAss
       {subMode === 'full' && (
         <div className="absolute inset-0 flex flex-col" style={{ background: BG }}>
 
+          {/* Header mock — no full mode usa logo minhAi no canto direito */}
+          <MockHeaderFull />
+
           {/* Avatar centralizado */}
           <div className="flex-1 flex items-center justify-center min-h-0">
-            <div style={{ width: 'clamp(120px, 30vw, 280px)', aspectRatio: '1/1' }}>
+            <div style={{ width: 'clamp(100px, 24vw, 220px)', aspectRatio: '1/1' }}>
               <AvatarFace
                 isSpeaking={isSpeaking}
                 isListening={false}
@@ -272,7 +281,118 @@ export default function SceneAssistente({ isSpeaking, theme = 'dark' }: SceneAss
   )
 }
 
-/* ── Sub-componentes internos ── */
+/* ── Header mock — modo padrão e texto ── */
+function MockHeader() {
+  return (
+    <div
+      className="flex items-center justify-between px-4 py-2.5 flex-shrink-0"
+      style={{
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        background: 'linear-gradient(to right, rgba(15,23,42,0.8), rgba(30,41,59,0.7), rgba(15,23,42,0.8))',
+        backdropFilter: 'blur(12px)',
+      }}
+    >
+      {/* Esquerda: logo + nome */}
+      <div className="flex items-center gap-2">
+        {/* Logo circle placeholder */}
+        <div
+          className="rounded-lg flex-shrink-0"
+          style={{
+            width: 'clamp(22px, 5vw, 32px)',
+            height: 'clamp(22px, 5vw, 32px)',
+            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+          }}
+        />
+        <div className="flex flex-col">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="font-bold text-white leading-none"
+              style={{ fontSize: 'clamp(0.6rem, 1.5vw, 0.85rem)' }}
+            >
+              Café Exemplo
+            </span>
+            {/* Badge verificado */}
+            <span
+              className="inline-flex items-center justify-center rounded-full flex-shrink-0"
+              style={{
+                width: 'clamp(10px, 2vw, 14px)',
+                height: 'clamp(10px, 2vw, 14px)',
+                background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3}
+                style={{ width: '60%', height: '60%' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </span>
+          </div>
+          <span
+            className="uppercase tracking-wider"
+            style={{ fontSize: 'clamp(0.4rem, 0.9vw, 0.5rem)', color: 'rgba(255,255,255,0.3)' }}
+          >
+            Agente IA
+          </span>
+        </div>
+      </div>
+
+      {/* Direita: botões de controle simulados + logo minhAi */}
+      <div className="flex items-center gap-1">
+        {[0,1,2,3,4,5].map(i => (
+          <div
+            key={i}
+            className="rounded-lg"
+            style={{
+              width: 'clamp(16px, 3.5vw, 24px)',
+              height: 'clamp(16px, 3.5vw, 24px)',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+          />
+        ))}
+        {/* Logo minhAi circle */}
+        <div
+          className="rounded-lg flex-shrink-0 ml-1"
+          style={{
+            width: 'clamp(20px, 4vw, 30px)',
+            height: 'clamp(20px, 4vw, 30px)',
+            background: 'linear-gradient(135deg, #22c55e, #3b82f6)',
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+/* ── Header mock — modo full (minimalista: só logo nos cantos) ── */
+function MockHeaderFull() {
+  return (
+    <div
+      className="flex items-center justify-between px-4 py-3 flex-shrink-0 absolute top-0 left-0 right-0 z-10"
+    >
+      {/* Logo minhAi texto (canto esquerdo) */}
+      <div
+        className="font-bold italic"
+        style={{
+          fontSize: 'clamp(0.7rem, 1.8vw, 1rem)',
+          background: 'linear-gradient(135deg, #22c55e, #86efac)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+        }}
+      >
+        minhAi
+      </div>
+      {/* Logo circle (canto direito) */}
+      <div
+        className="rounded-lg flex-shrink-0"
+        style={{
+          width: 'clamp(20px, 4vw, 30px)',
+          height: 'clamp(20px, 4vw, 30px)',
+          background: 'linear-gradient(135deg, #22c55e, #3b82f6)',
+        }}
+      />
+    </div>
+  )
+}
 
 function CarouselBar() {
   return (

@@ -43,7 +43,12 @@ export default function SceneInstagram() {
               className="rounded-full border-2 border-black flex items-center justify-center"
               style={{ width: 36, height: 36, background: '#3b82f6' }}
             >
-              <span className="text-white text-xs font-bold">C</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z" />
+                <path d="M16 9h2.5a2.5 2.5 0 0 1 0 5H16" />
+                <path d="M6 2v2" /><path d="M10 2v2" /><path d="M14 2v2" />
+                <path d="M3 21h16" />
+              </svg>
             </div>
           </div>
         </div>
@@ -75,7 +80,12 @@ export default function SceneInstagram() {
                 className="rounded-full flex-shrink-0 flex items-center justify-center"
                 style={{ width: 24, height: 24, background: '#3b82f6' }}
               >
-                <span className="text-white text-xs font-bold">C</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
+                  <path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z" />
+                  <path d="M16 9h2.5a2.5 2.5 0 0 1 0 5H16" />
+                  <path d="M6 2v2" /><path d="M10 2v2" /><path d="M14 2v2" />
+                  <path d="M3 21h16" />
+                </svg>
               </div>
             )}
             <div

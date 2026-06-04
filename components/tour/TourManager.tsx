@@ -122,7 +122,7 @@ interface TourManagerProps {
   activeStage: number
   initialTheme?: 'dark' | 'light'
   onSelectStage: (stage: number) => void
-  onClose: () => void
+  onClose?: () => void
 }
 
 export default function TourManager({
@@ -135,8 +135,10 @@ export default function TourManager({
 
   return (
     <div
-      className="w-full h-full flex flex-col overflow-hidden"
+      className="w-full flex flex-col overflow-hidden"
       style={{
+        // Funciona tanto standalone (100dvh) quanto dentro do modal (h-full do pai)
+        height: '100dvh',
         background: isDark
           ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
           : '#ffffff',
@@ -152,7 +154,7 @@ export default function TourManager({
             className="font-bold text-lg"
             style={{ color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(15,23,42,0.9)' }}
           >
-            Tour minhAi
+            Tour Interativo
           </h2>
           <p
             className="text-xs mt-0.5"
@@ -162,23 +164,26 @@ export default function TourManager({
           </p>
         </div>
 
-        <button
-          onClick={onClose}
-          aria-label="Fechar tour"
-          className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200"
-          style={{
-            background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-            color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
-          }}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-4 h-4">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
+        {/* Botão fechar — só aparece quando onClose está presente */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            aria-label="Fechar tour"
+            className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200"
+            style={{
+              background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+              color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-4 h-4">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* ── Grid de stages ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {STAGES.map((stage) => {
             const isCurrent = stage.id === activeStage
@@ -207,10 +212,8 @@ export default function TourManager({
                   minHeight: '110px',
                 }}
               >
-                {/* Ícone SVG */}
                 {stage.icon}
 
-                {/* Textos */}
                 <div className="flex flex-col items-center gap-0.5">
                   <p
                     className="font-semibold text-sm leading-tight"
@@ -226,7 +229,6 @@ export default function TourManager({
                   </p>
                 </div>
 
-                {/* Badge atual */}
                 {isCurrent && (
                   <span
                     className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
@@ -236,7 +238,6 @@ export default function TourManager({
                   </span>
                 )}
 
-                {/* Badge em breve */}
                 {!isAvailable && (
                   <span
                     className="absolute top-2 right-2 text-[10px] font-medium px-1.5 py-0.5 rounded-full"

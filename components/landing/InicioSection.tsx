@@ -232,10 +232,10 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </span>
           </div>
 
-          {/* Cards de integração — só desktop (sm+) */}
+          {/* Cards de integração — visíveis em todos os tamanhos com media query de altura */}
           <div
             className={`
-              hidden sm:flex items-center justify-center gap-2 sm:gap-3 mt-2 sm:mt-3
+              flex items-center justify-center gap-2 sm:gap-3 mt-2 sm:mt-3
               [@media(max-height:700px)_and_(max-width:767px)]:hidden
             `}
           >

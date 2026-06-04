@@ -20,11 +20,11 @@ const MOCK_CATEGORIES = [
 const DUPLICATED = Array.from({ length: 8 }, () => MOCK_CATEGORIES).flat()
 
 const CHAT_SEQUENCE = [
-  { from: 'bot',  text: 'Olá! 👋 Posso ajudar com cardápio, reservas ou pedidos?' },
+  { from: 'bot',  text: 'Olá! Posso ajudar com cardápio, reservas ou pedidos?' },
   { from: 'user', text: 'Tem mesa disponível hoje às 19h?' },
-  { from: 'bot',  text: '✅ Sim! Mesa para até 4 pessoas disponível. Posso reservar agora?' },
+  { from: 'bot',  text: 'Sim! Mesa para até 4 pessoas disponível. Posso reservar agora?' },
   { from: 'user', text: 'Sim, pra 2 pessoas!' },
-  { from: 'bot',  text: '🎉 Reservado! Mesa 7 às 19h. Até logo!' },
+  { from: 'bot',  text: 'Reservado! Mesa 7 às 19h. Até logo!' },
 ]
 
 const BRAND = '#de691b'

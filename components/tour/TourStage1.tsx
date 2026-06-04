@@ -71,14 +71,21 @@ interface TourStage1Props {
    * que abriu o modal (o clique no TourTrigger faz isso).
    */
   autoPlay?: boolean
+
+  /**
+   * Chamado sempre que o usuário troca o tema via botão interno.
+   * O pai usa para passar o tema correto ao TourManager quando ele abrir.
+   */
+  onThemeChange?: (theme: 'dark' | 'light') => void
 }
 
 export default function TourStage1({
   initialTheme = 'dark',
   onClose,
   onComplete,
-  managerDelay = 200,
+  managerDelay = 2000,
   autoPlay = false,
+  onThemeChange,
 }: TourStage1Props) {
   const [sceneIndex, setSceneIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -108,8 +115,12 @@ export default function TourStage1({
   const isDark = theme === 'dark'
 
   const handleToggleTheme = useCallback(() => {
-    setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
-  }, [])
+    setTheme((t) => {
+      const next = t === 'dark' ? 'light' : 'dark'
+      onThemeChange?.(next)
+      return next
+    })
+  }, [onThemeChange])
 
   const handleToggleWakeLock = useCallback(() => {
     if (isWakeLockActive) releaseWakeLock()

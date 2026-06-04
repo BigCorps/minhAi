@@ -89,24 +89,47 @@ export default function SceneWidget() {
       <div className="flex-1 relative overflow-hidden">
 
         {/* Hero do café */}
-        <div className="bg-gradient-to-br from-amber-800 to-amber-950 px-4 py-5 flex flex-col gap-2 flex-shrink-0">
+        <div className="bg-slate-50 px-4 py-5 flex flex-col gap-2 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-amber-400/30 flex items-center justify-center flex-shrink-0">
-              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+            <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke={BRAND}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-4 h-4"
+              >
                 <path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z" />
                 <path d="M16 9h2.5a2.5 2.5 0 0 1 0 5H16" />
-                <path d="M6 2v2" /><path d="M10 2v2" /><path d="M14 2v2" />
+                <path d="M6 2v2" />
+                <path d="M10 2v2" />
+                <path d="M14 2v2" />
                 <path d="M3 21h18" />
               </svg>
             </div>
-            <span className="text-amber-100 font-semibold text-sm">Café Exemplo</span>
+
+            <span className="text-slate-700 font-semibold text-sm">
+              Café Exemplo
+            </span>
           </div>
-          <p className="text-white font-bold" style={{ fontSize: 'clamp(1rem, 3vw, 1.5rem)' }}>
+
+          <p
+            className="text-slate-900 font-bold"
+            style={{ fontSize: 'clamp(1rem, 3vw, 1.5rem)' }}
+          >
             O melhor café da cidade
           </p>
+
           <div className="flex gap-2">
-            <div className="bg-amber-500 text-white text-xs px-4 py-1.5 rounded-full">Ver cardápio</div>
-            <div className="bg-white/10 text-white text-xs px-4 py-1.5 rounded-full">Reservar mesa</div>
+            <div className="bg-amber-500 text-white text-xs px-4 py-1.5 rounded-full">
+              Ver cardápio
+            </div>
+
+            <div className="bg-slate-200 text-slate-700 text-xs px-4 py-1.5 rounded-full">
+              Reservar mesa
+            </div>
           </div>
         </div>
 

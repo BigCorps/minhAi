@@ -145,6 +145,7 @@ export default function ConsultarProtestosModal({
           body: {
             company_id: companyId,
             amount_cents: res.amount_cents,
+            purpose: 'consulta_fee',
             description: `Consulta Protestos - R$ ${res.amount_brl}`,
           },
         });

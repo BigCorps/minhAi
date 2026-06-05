@@ -73,7 +73,13 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
       </div>
 
       {/* ── Avatar + input ── */}
-      <div className="flex-1 flex flex-col items-center justify-start gap-2 min-h-0 px-4">
+      <div
+  className="flex-1 flex flex-col items-center justify-center gap-2 min-h-0 px-4"
+  style={{
+    paddingBottom: keyboardOpen ? 'clamp(120px, 30%, 180px)' : '0',
+    transition: 'padding-bottom 400ms cubic-bezier(0.34,1.56,0.64,1)',
+  }}
+>
         <p className="text-white font-bold text-center" style={{ fontSize: 'clamp(0.7rem, 1.8vw, 1rem)' }}>
           Como Posso te Ajudar Hoje?
         </p>

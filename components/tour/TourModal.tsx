@@ -95,15 +95,14 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
       }}
     >
       {/*
-       * Container do tour — sempre 90vw × 90dvh.
-       * Simples, sem media queries, sem max constraints complicados.
-       * Rounded e shadow em todos os tamanhos para parecer modal.
+       * Container do tour — 80vw × 80dvh.
+       * Menor que antes para eliminar espaço vazio excessivo.
        */}
       <div
         className="relative rounded-2xl overflow-hidden shadow-2xl"
         style={{
-          width: '90vw',
-          height: '90dvh',
+          width: '80vw',
+          height: '80dvh',
           transform: visible
             ? 'scale(1)'
             : 'scale(0.95)',

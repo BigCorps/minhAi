@@ -96,7 +96,7 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
     >
       {/*
        * Mobile: 90vw × 90dvh — aproveita a tela pequena.
-       * Desktop (md+): 80vw × 80dvh — elimina espaço vazio excessivo.
+       * Desktop (md+): 70vw × 70dvh — elimina espaço vazio excessivo.
        */}
       <div
         className="relative rounded-2xl overflow-hidden shadow-2xl w-[90vw] h-[90dvh] md:w-[80vw] md:h-[80dvh]"

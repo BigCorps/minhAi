@@ -132,6 +132,7 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
           body: {
             company_id: data.companyId,
             amount_cents: res.amount_cents,
+            purpose: 'consulta_fee',
             description: `Restrições CPF - R$ ${res.amount_brl}`,
           },
         });

@@ -13,7 +13,6 @@ const QR_DATA: Record<QRType, {
   icon: React.ReactNode
   displayText: string
   qrContent: string
-  amount?: string
 }> = {
   whatsapp: {
     label: 'WhatsApp',
@@ -31,7 +30,6 @@ const QR_DATA: Record<QRType, {
     color: '#32BCAD',
     displayText: '00020126580014br.gov.bcb.pix',
     qrContent: '00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-426655440000',
-    amount: '89,90',
     icon: (
       <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
         <path d="M12.5 2.5L20 10l-7.5 7.5M4 10h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/>
@@ -127,30 +125,6 @@ export default function SceneQRCode() {
     className="w-full h-full object-contain"
   />
 </div>
-
-        {/* PIX amount */}
-        {data.amount && (
-          <div
-            className="px-3 py-1.5 border-b"
-            style={{
-              borderColor: 'rgba(255,255,255,0.08)',
-              background: 'rgba(59,130,246,0.1)',
-            }}
-          >
-            <p
-              className="font-bold text-center"
-              style={{ color: '#60a5fa', fontSize: 'clamp(0.75rem, 2vw, 1rem)' }}
-            >
-              R$ {data.amount}
-            </p>
-            <p
-              className="text-center"
-              style={{ color: 'rgba(255,255,255,0.4)', fontSize: 'clamp(0.38rem, 0.85vw, 0.48rem)' }}
-            >
-              Café Exemplo
-            </p>
-          </div>
-        )}
 
         {/* Display text + copy */}
         <div className="flex items-center gap-2 px-3 py-2">

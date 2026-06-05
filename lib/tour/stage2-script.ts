@@ -51,9 +51,9 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
     id: 'assistente-qrcode',
     label: 'QR Code',
     audioText:
-      'Com um único toque, o assistente gera um QR Code na tela — ' +
-      'para o WhatsApp da empresa, para uma cobrança PIX, para o Instagram ou qualquer link cadastrado. ' +
-      'O cliente escaneia com o celular e já está conectado. ' +
+      'Com um único toque ou comando, o assistente gera um card na tela — ' +
+      'para o WhatsApp da empresa, para uma cobrança PIX, ou qualquer outra das mais de 100 funções. ' +
+      'O cliente interage por voz, digitando, lendo o qrcode - ele escolhe. ' +
       'Sem papel, sem digitação, sem atrito.',
     fallbackDuration: 7000,
   },
@@ -61,11 +61,10 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
     id: 'assistente-vendas',
     label: 'Modo Vendas',
     audioText:
-      'No Modo Vendas, o assistente vira um vendedor digital completo. ' +
+      'No Modo Vendas, você tem uma página de vendas completa, com todos os seus produtos. ' +
       'Exibe produtos com foto, descrição e preço, organizados por categoria. ' +
       'O cliente monta o carrinho, escolhe entre retirar no balcão, sentar na mesa ' +
-      'ou receber em casa com entrega — o sistema já calcula o frete automaticamente. ' +
-      'Tudo sem sair da tela, sem atendente presente.',
+      'ou receber em casa com entrega — o sistema já calcula o frete automaticamente. ',
     fallbackDuration: 9000,
   },
   {
@@ -76,7 +75,7 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
       'O cliente retira a senha pelo totem, a senha atual aparece em destaque na tela, ' +
       'e as próximas ficam visíveis em tempo real para todos na sala. ' +
       'Quando a senha é chamada, o sistema fala o número em voz alta automaticamente. ' +
-      'Sem papel, sem confusão.',
+      'Podendo acompanhar pelo qrcode, sem papel, sem confusão.',
     fallbackDuration: 8000,
   },
   {

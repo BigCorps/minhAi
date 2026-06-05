@@ -1,16 +1,9 @@
 'use client'
 // components/tour/scenes/SceneTotem.tsx
-// Mock do Modo Totem/Kiosk — fullscreen escuro, teclado virtual, sem botões de saída
 
 import { useEffect, useState } from 'react'
 import { AvatarFace } from '@/components/AvatarFace'
-
-const KEYBOARD_ROWS = [
-  ['1','2','3','4','5','6','7','8','9','0'],
-  ['q','w','e','r','t','y','u','i','o','p'],
-  ['a','s','d','f','g','h','j','k','l'],
-  ['z','x','c','v','b','n','m','⌫'],
-]
+import VirtualKeyboard from '@/components/assistant/VirtualKeyboard'
 
 const TYPED_SEQUENCE = 'expresso'
 
@@ -19,9 +12,9 @@ interface SceneTotemProps {
 }
 
 export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
-  const [typed, setTyped]           = useState('')
+  const [typed, setTyped]               = useState('')
   const [keyboardOpen, setKeyboardOpen] = useState(false)
-  const [typingIdx, setTypingIdx]   = useState(0)
+  const [typingIdx, setTypingIdx]       = useState(0)
 
   // Abre teclado após 1s
   useEffect(() => {
@@ -33,7 +26,6 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
   useEffect(() => {
     if (!keyboardOpen) return
     if (typingIdx >= TYPED_SEQUENCE.length) {
-      // Reseta após pausa
       const t = setTimeout(() => { setTyped(''); setTypingIdx(0) }, 2000)
       return () => clearTimeout(t)
     }
@@ -44,14 +36,12 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
     return () => clearTimeout(t)
   }, [keyboardOpen, typingIdx])
 
-  const activeKey = typingIdx < TYPED_SEQUENCE.length ? TYPED_SEQUENCE[typingIdx] : null
-
   return (
     <div
       className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none relative"
       style={{ background: '#0f172a' }}
     >
-      {/* ── Header mínimo (sem botões de saída) ── */}
+      {/* ── Header ── */}
       <div
         className="flex items-center justify-between px-4 py-2 flex-shrink-0"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
@@ -65,7 +55,6 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
           </div>
           <span className="text-white/60 font-semibold" style={{ fontSize: 'clamp(0.5rem, 1.2vw, 0.65rem)' }}>Café Exemplo</span>
         </div>
-        {/* Badge Modo Kiosk */}
         <div
           className="flex items-center gap-1 rounded-full px-2 py-0.5"
           style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)' }}
@@ -97,7 +86,10 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
         {/* Campo de input mockado */}
         <div
           className="w-full max-w-xs rounded-xl border flex items-center gap-2 px-3 py-2"
-          style={{ background: 'rgba(255,255,255,0.05)', borderColor: keyboardOpen ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)' }}
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            borderColor: keyboardOpen ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)',
+          }}
           onClick={() => setKeyboardOpen(true)}
         >
           <span
@@ -125,83 +117,17 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
         </div>
       </div>
 
-      {/* ── Teclado virtual ── */}
-      <div
-        className="flex-shrink-0 w-full"
-        style={{
-          background: 'rgba(15,23,42,0.95)',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          padding: '6px 4px 8px',
-          transform: keyboardOpen ? 'translateY(0)' : 'translateY(100%)',
-          transition: 'transform 400ms cubic-bezier(0.34,1.56,0.64,1)',
-        }}
-      >
-        {/* Linha de fechar */}
-        <div className="flex justify-end px-2 mb-1">
-          <button
-            className="rounded-full flex items-center justify-center"
-            style={{
-              background: 'rgba(255,255,255,0.08)',
-              width: 'clamp(14px, 3vw, 18px)',
-              height: 'clamp(14px, 3vw, 18px)',
-              color: 'rgba(255,255,255,0.4)',
-            }}
-            onClick={() => setKeyboardOpen(false)}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-2.5 h-2.5">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-
-        {KEYBOARD_ROWS.map((row, ri) => (
-          <div key={ri} className="flex justify-center gap-0.5 mb-0.5">
-            {row.map(key => {
-              const isActive = key === activeKey
-              return (
-                <div
-                  key={key}
-                  className="flex items-center justify-center rounded font-semibold transition-all duration-100"
-                  style={{
-                    width: 'clamp(18px, 4.5vw, 28px)',
-                    height: 'clamp(16px, 3.5vw, 22px)',
-                    fontSize: 'clamp(0.38rem, 0.9vw, 0.52rem)',
-                    background: isActive
-                      ? '#3b82f6'
-                      : key === '⌫' ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.08)',
-                    color: isActive ? 'white' : key === '⌫' ? '#f87171' : 'rgba(255,255,255,0.7)',
-                    border: `1px solid ${isActive ? '#3b82f6' : 'rgba(255,255,255,0.06)'}`,
-                    transform: isActive ? 'scale(1.15)' : 'scale(1)',
-                  }}
-                >
-                  {key}
-                </div>
-              )
-            })}
-          </div>
-        ))}
-
-        {/* Barra de espaço */}
-        <div className="flex justify-center gap-0.5 mt-0.5">
-          {['123@7.', 'espaço', '⏎ Enviar'].map((k, i) => (
-            <div
-              key={k}
-              className="flex items-center justify-center rounded font-semibold"
-              style={{
-                height: 'clamp(16px, 3.5vw, 22px)',
-                fontSize: 'clamp(0.35rem, 0.85vw, 0.48rem)',
-                background: i === 2 ? '#10b981' : 'rgba(255,255,255,0.08)',
-                color: i === 2 ? 'white' : 'rgba(255,255,255,0.6)',
-                border: '1px solid rgba(255,255,255,0.06)',
-                flex: i === 1 ? 3 : 1,
-                padding: '0 6px',
-              }}
-            >
-              {k}
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* ── VirtualKeyboard real ── */}
+      {keyboardOpen && (
+        <VirtualKeyboard
+          theme="dark"
+          onKey={(char) => setTyped(prev => prev + char)}
+          onBackspace={() => setTyped(prev => prev.slice(0, -1))}
+          onEnter={() => { setTyped(''); setKeyboardOpen(false) }}
+          onClose={() => setKeyboardOpen(false)}
+          onReplace={(char) => setTyped(prev => prev.slice(0, -1) + char)}
+        />
+      )}
 
       {/* Footer */}
       <div
@@ -213,7 +139,7 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
           borderTop: '1px solid rgba(255,255,255,0.05)',
         }}
       >
-        suporte.<strong>minhai.app</strong> — Uma IA pra chamar de sua!
+        <strong>minhai.app</strong> — Uma IA pra chamar de sua!
       </div>
     </div>
   )

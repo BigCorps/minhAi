@@ -326,7 +326,7 @@ function FooterBar() {
   return (
     <div className="text-center px-3 py-1 flex-shrink-0"
       style={{ fontSize: 'clamp(0.38rem, 0.85vw, 0.48rem)', color: 'rgba(255,255,255,0.2)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-      suporte.<strong>minhai.app</strong> — Uma IA pra chamar de sua!
+      <strong>minhai.app</strong> — Uma IA pra chamar de sua!
     </div>
   )
 }

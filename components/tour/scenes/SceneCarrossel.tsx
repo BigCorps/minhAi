@@ -278,7 +278,7 @@ export default function SceneCarrossel() {
           borderTop: '1px solid rgba(255,255,255,0.05)',
         }}
       >
-        suporte.<strong>minhai.app</strong> — Uma IA pra chamar de sua!
+        <strong>minhai.app</strong> — Uma IA pra chamar de sua!
       </div>
 
       <style>{`

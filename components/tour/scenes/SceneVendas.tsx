@@ -5,12 +5,12 @@
 import { useEffect, useState } from 'react'
 
 const PRODUCTS = [
-  { id: '1', name: 'Expresso',       price: 'R$ 8,00',  category: 'Cafés',    img: '☕', fav: true  },
-  { id: '2', name: 'Cappuccino',     price: 'R$ 12,00', category: 'Cafés',    img: '🍵', fav: true  },
-  { id: '3', name: 'Croissant',      price: 'R$ 9,50',  category: 'Lanches',  img: '🥐', fav: false },
-  { id: '4', name: 'Pão de Queijo',  price: 'R$ 5,00',  category: 'Lanches',  img: '🧀', fav: false },
-  { id: '5', name: 'Suco Laranja',   price: 'R$ 10,00', category: 'Bebidas',  img: '🍊', fav: false },
-  { id: '6', name: 'Água Mineral',   price: 'R$ 4,00',  category: 'Bebidas',  img: '💧', fav: false },
+  { id: '1', name: 'Expresso',      price: 'R$ 8,00',  category: 'Cafés',   img: '/vendas1.jpg',  fav: true  },
+  { id: '2', name: 'Cappuccino',    price: 'R$ 12,00', category: 'Cafés',   img: '/vendas2.jpg',  fav: true  },
+  { id: '3', name: 'Croissant',     price: 'R$ 9,50',  category: 'Lanches', img: '/vendas3.jpg',  fav: false },
+  { id: '4', name: 'Pão de Queijo', price: 'R$ 5,00',  category: 'Lanches', img: '/vendas4.jpg',  fav: false },
+  { id: '5', name: 'Suco Laranja',  price: 'R$ 10,00', category: 'Bebidas', img: '/vendas5.jpg',  fav: false },
+  { id: '6', name: 'Água Mineral',  price: 'R$ 4,00',  category: 'Bebidas', img: '/vendas6.jpg',  fav: false },
 ]
 
 const CATEGORIES = ['Todos', 'Cafés', 'Lanches', 'Bebidas']
@@ -65,7 +65,7 @@ export default function SceneVendas() {
               <path d="M6 2v2" /><path d="M10 2v2" /><path d="M14 2v2" /><path d="M3 21h18" />
             </svg>
           </div>
-          <span className="text-white/70 font-semibold" style={{ fontSize: 'clamp(0.5rem, 1.2vw, 0.65rem)' }}>Modo Vendas · Café Exemplo</span>
+          <span className="text-white/70 font-semibold" style={{ fontSize: 'clamp(0.5rem, 1.2vw, 0.65rem)' }}>Café Exemplo</span>
         </div>
         {totalItems > 0 && (
           <div
@@ -120,32 +120,29 @@ export default function SceneVendas() {
                     onClick={() => handleAdd(p.id)}
                   >
                     {/* Imagem mock */}
-                    <div
-                      className="flex items-center justify-center"
-                      style={{
-                        aspectRatio: '4/3',
-                        background: 'rgba(255,255,255,0.03)',
-                        fontSize: 'clamp(1.2rem, 3vw, 2rem)',
-                      }}
-                    >
-                      {p.img}
-                      {p.fav && (
-                        <span className="absolute top-1 left-1 text-amber-400" style={{ fontSize: '0.5rem' }}>★</span>
-                      )}
-                      {cart[p.id] > 0 && (
-                        <div
-                          className="absolute top-0.5 right-0.5 rounded-full text-white font-bold flex items-center justify-center"
-                          style={{
-                            background: '#10b981',
-                            width: 'clamp(10px, 2.5vw, 14px)',
-                            height: 'clamp(10px, 2.5vw, 14px)',
-                            fontSize: 'clamp(0.38rem, 0.85vw, 0.48rem)',
-                          }}
-                        >
-                          {cart[p.id]}
-                        </div>
-                      )}
-                    </div>
+<div className="relative" style={{ aspectRatio: '4/3' }}>
+  <img
+    src={p.img}
+    alt={p.name}
+    className="w-full h-full object-cover"
+  />
+  {p.fav && (
+    <span className="absolute top-1 left-1 text-amber-400" style={{ fontSize: '0.5rem' }}>★</span>
+  )}
+  {cart[p.id] > 0 && (
+    <div
+      className="absolute top-0.5 right-0.5 rounded-full text-white font-bold flex items-center justify-center"
+      style={{
+        background: '#10b981',
+        width: 'clamp(10px, 2.5vw, 14px)',
+        height: 'clamp(10px, 2.5vw, 14px)',
+        fontSize: 'clamp(0.38rem, 0.85vw, 0.48rem)',
+      }}
+    >
+      {cart[p.id]}
+    </div>
+  )}
+</div>
                     {/* Info */}
                     <div className="p-1">
                       <p className="text-white font-semibold truncate" style={{ fontSize: 'clamp(0.42rem, 1vw, 0.55rem)' }}>{p.name}</p>

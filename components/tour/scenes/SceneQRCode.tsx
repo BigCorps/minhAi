@@ -54,15 +54,13 @@ const QR_DATA: Record<QRType, {
 
 const BG = 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
 
-export default function SceneQRCode({ company_id }: { company_id: string }) {
+export default function SceneQRCode() {
   const [typeIndex, setTypeIndex] = useState(0)
   const [visible, setVisible] = useState(true)
   const [timeLeft, setTimeLeft] = useState(12)
 
   const currentType = QR_SEQUENCE[typeIndex]
   const data = QR_DATA[currentType]
-
-  const qrUrl = `https://minhai.app/api/qrcode?size=300&data=${encodeURIComponent(data.qrContent)}&company_id=${company_id}&color=%23000080`
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -122,13 +120,13 @@ export default function SceneQRCode({ company_id }: { company_id: string }) {
         </div>
 
         {/* QR Code via API */}
-        <div className="bg-white p-3" style={{ aspectRatio: '1/1' }}>
-          <img
-            src={qrUrl}
-            alt={`QR Code ${data.label}`}
-            className="w-full h-full object-contain"
-          />
-        </div>
+<div className="bg-white p-3" style={{ aspectRatio: '1/1' }}>
+  <img
+    src="/qrcode.png"
+    alt={`QR Code ${data.label}`}
+    className="w-full h-full object-contain"
+  />
+</div>
 
         {/* PIX amount */}
         {data.amount && (

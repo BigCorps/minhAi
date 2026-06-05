@@ -56,14 +56,9 @@ const ACTIVE_CATEGORY = 'Comercial'
 const BG = 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
 
 export default function SceneCarrossel() {
-  const [panelVisible, setPanelVisible] = useState(false)
+  const [panelVisible, setPanelVisible] = useState(true)
   const [highlightedFn, setHighlightedFn] = useState<number | null>(null)
   const [hoveredFn, setHoveredFn] = useState<number | null>(null)
-
-  useEffect(() => {
-    const t = setTimeout(() => setPanelVisible(true), 800)
-    return () => clearTimeout(t)
-  }, [])
 
   useEffect(() => {
     if (!panelVisible) return
@@ -129,21 +124,19 @@ export default function SceneCarrossel() {
           style={{
             // Centralizado horizontalmente sobre o botão "Comercial"
             left: '50%',
-            transform: panelVisible
-              ? 'translateX(-50%) translateY(0)'
-              : 'translateX(-50%) translateY(8px)',
+            transform: 'translateX(-50%) translateY(0)',
             // Ancora na borda superior do carrossel, sobe para cima
             bottom: '100%',
             marginBottom: 6,
             // Mesma largura/altura do card no SceneWidget
             width: 'clamp(150px, 48%, 240px)',
-            maxHeight: 'clamp(180px, 65%, 300px)',
-            overflowY: 'auto',
+            maxHeight: 'none',
+            overflow: 'hidden',
             zIndex: 10,
             background: 'linear-gradient(135deg, rgba(30,41,59,0.98), rgba(51,65,85,0.98))',
             borderColor: 'rgba(59,130,246,0.3)',
             boxShadow: '0 -8px 32px rgba(0,0,0,0.4), 0 -2px 8px rgba(59,130,246,0.25)',
-            opacity: panelVisible ? 1 : 0,
+            opacity: 1,
             transition: 'opacity 400ms ease, transform 400ms ease',
           }}
         >

@@ -6,13 +6,11 @@
 
 ## Roadmap e Features Planejadas
 
-* Ajustar recebimento das consultas
-
 * Criar Auxiliar de Cadastro e com MCP whatsapp
 
 * Tour guiado - implementar cache (pedidoslj)
 
-* página admin no dashboard
+* página admin no dashboard (colocar controle de consultas tambem)
 
 .
 

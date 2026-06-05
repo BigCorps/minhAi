@@ -78,7 +78,7 @@ export default function SceneAssistente({ isSpeaking, theme = 'dark' }: SceneAss
           {/* Split cards — cada card é position:relative com aspectRatio 1/1
               O halo do avatar fica em overflow:visible fora do card mas não
               afeta o layout porque o card tem position:relative e tamanho fixo */}
-          <div className="flex-1 flex min-h-0 p-3 gap-3 items-center justify-center">
+          <div className="flex-1 flex min-h-0 p-3 gap-3 items-start justify-center">
 
             {/* Card esquerdo: avatar */}
             <div className="relative flex-shrink-0"

@@ -72,21 +72,25 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
     label: 'Modo Fila',
     audioText:
       'O Modo Fila organiza o atendimento presencial com senhas digitais. ' +
-      'O cliente retira a senha pelo totem, a senha atual aparece em destaque na tela, ' +
-      'e as próximas ficam visíveis em tempo real para todos na sala. ' +
-      'Quando a senha é chamada, o sistema fala o número em voz alta automaticamente. ' +
-      'Podendo acompanhar pelo qrcode, sem papel, sem confusão.',
-    fallbackDuration: 8000,
+      'O cliente retira a senha pelo totem, acompanha em tempo real pela tela ' +
+      'e o sistema anuncia cada chamada em voz alta — sem papel, sem confusão. ' +
+      'E para facilitar ainda mais o acesso, tem também uma página de links — ' +
+      'uma página rápida da empresa com WhatsApp, Instagram, site e todos os contatos, ' +
+      'Um único endereço para o cliente encontrar tudo.',
+    fallbackDuration: 10000,
   },
   {
     id: 'assistente-totem',
     label: 'Modo Totem',
     audioText:
       'No Modo Totem, a tela entra em modo quiosque com teclado virtual embutido — ' +
-      'sem botões de saída, sem distrações, sem acesso ao sistema. ' +
-      'A saída é protegida por uma senha definida pelo proprietário. ' +
-      'Ideal para totens de autoatendimento em lojas, clínicas e restaurantes.',
-    fallbackDuration: 8000,
+      'sem botões de saída, sem acesso ao sistema, ' +
+      'com saída protegida por senha do proprietário. ' +
+      'E para personalizar ainda mais a experiência, tem também a tela de login' +
+      'o cliente cria uma conta em segundos tem acesso as suas compras.' +
+      'e os colaboradores entram com identificador e PIN cadastrados no painel. ' +
+      'Cada pessoa com o seu nível de acesso, tudo integrado.',
+    fallbackDuration: 10000,
   },
   {
     id: 'assistente-outro',

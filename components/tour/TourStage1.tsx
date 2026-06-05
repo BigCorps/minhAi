@@ -308,7 +308,11 @@ export default function TourStage1({
       >
         <div
           className="flex-1 min-h-0 w-full"
-          style={{ height: 'clamp(220px, 52dvh, 520px)' }}
+          style={{
+            // inModal: 52% da altura do container (90dvh × 52% ≈ 47dvh)
+            // standalone: clamp baseado em dvh do viewport
+            height: inModal ? '52%' : 'clamp(220px, 52dvh, 520px)',
+          }}
         >
           <div
             className="w-full h-full transition-opacity ease-in-out"
@@ -324,7 +328,9 @@ export default function TourStage1({
         {/* Assistente */}
         <div
           className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-72 lg:w-80 overflow-visible"
-          style={{ height: 'clamp(170px, 42dvh, 340px)' }}
+          style={{
+            height: inModal ? '38%' : 'clamp(170px, 42dvh, 340px)',
+          }}
         >
           <TourAssistant
             isSpeaking={isSpeaking}

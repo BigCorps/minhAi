@@ -371,8 +371,18 @@ export default function SaldoPage() {
           .filter((id): id is string => id !== null)
       );
 
-      // ── Consultas pagas ──────────────────────────────────────────────────
+      // ── Consultas pagas ──────────────────────────────────────────────
       const { data: consultasData } = await supabase
+        .from('pix_transactions')
+        .select('id, company_id, amount_cents, status, requested_at, notes, purpose')
+        .eq('user_id', userId)
+        .eq('purpose', 'consulta_fee')
+        .eq('status', 'confirmed')
+        .order('requested_at', { ascending: false })
+        .range(0, PAGE_SIZE - 1);
+
+      // ── Consultas pagas via saldo ────────────────────────────────────
+      const { data: consultasSaldoData } = await supabase
         .from('balance_transactions')
         .select('id, company_id, amount_cents, description, created_at')
         .eq('user_id', userId)
@@ -427,6 +437,7 @@ export default function SaldoPage() {
         ...normalizeCobrancas(cobrancasData ?? [], companyNameMap, companyTypeMap),
         ...normalizeMpOrders(mpOrdersData ?? [], companyNameMap, companyTypeMap),
         ...normalizeConsultaFees(consultasData ?? [], companyNameMap),
+        ...normalizeConsultaFeesSaldo(consultasSaldoData ?? [], companyNameMap),
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       setAllTransactions(merged);
@@ -591,6 +602,25 @@ export default function SaldoPage() {
   }
 
   function normalizeConsultaFees(
+    data: any[],
+    companyNameMap: Record<string, string>,
+  ): UnifiedTransaction[] {
+    return data.map(tx => ({
+      id: tx.id,
+      source: 'cobranca' as const,
+      is_withdrawal: false,
+      company_id: tx.company_id ?? '',
+      company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
+      amount_cents: tx.amount_cents,
+      status: 'confirmed',
+      date: tx.requested_at,
+      tipo_label: 'Consulta',
+      notes: tx.notes ?? '',
+      is_consulta_fee: true,
+    }));
+  }
+
+    function normalizeConsultaFeesSaldo(         // ← adiciona aqui
     data: any[],
     companyNameMap: Record<string, string>,
   ): UnifiedTransaction[] {

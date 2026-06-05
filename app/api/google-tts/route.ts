@@ -1,6 +1,7 @@
 // app/api/google-tts/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { synthesizeSpeech, BRAZILIAN_VOICES } from '@/lib/google-tts';
+import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -8,11 +9,16 @@ import crypto from 'crypto';
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-// /tmp é o único diretório gravável no Vercel em produção
-// Em desenvolvimento, usa public/audio-cache para persistência entre deploys
-const CACHE_DIR = process.env.NODE_ENV === 'production'
-  ? '/tmp/audio-cache'
-  : path.join(process.cwd(), 'public', 'audio-cache');
+const LOCAL_CACHE_DIR = path.join(process.cwd(), 'public', 'audio-cache');
+const IS_PROD = process.env.NODE_ENV === 'production';
+const SUPABASE_BUCKET = 'audio-cache';
+
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 function getCacheKey(text: string, voice: string, speed: number): string {
   return crypto
@@ -21,11 +27,12 @@ function getCacheKey(text: string, voice: string, speed: number): string {
     .digest('hex');
 }
 
-// Retorna false se falhar — nunca lança exceção
-function ensureCacheDir(): boolean {
+// ─── Cache local (desenvolvimento) ───────────────────────────────────────────
+
+function ensureLocalCacheDir(): boolean {
   try {
-    if (!fs.existsSync(CACHE_DIR)) {
-      fs.mkdirSync(CACHE_DIR, { recursive: true });
+    if (!fs.existsSync(LOCAL_CACHE_DIR)) {
+      fs.mkdirSync(LOCAL_CACHE_DIR, { recursive: true });
     }
     return true;
   } catch {
@@ -33,26 +40,70 @@ function ensureCacheDir(): boolean {
   }
 }
 
-function readFromCache(key: string): Buffer | null {
+function readLocalCache(key: string): Buffer | null {
   try {
-    const filePath = path.join(CACHE_DIR, `${key}.mp3`);
-    if (fs.existsSync(filePath)) {
-      return fs.readFileSync(filePath);
-    }
-  } catch {
-    // cache indisponível — ignora
-  }
+    const filePath = path.join(LOCAL_CACHE_DIR, `${key}.mp3`);
+    if (fs.existsSync(filePath)) return fs.readFileSync(filePath);
+  } catch {}
   return null;
 }
 
-function writeToCache(key: string, buffer: Buffer): void {
+function writeLocalCache(key: string, buffer: Buffer): void {
   try {
-    const filePath = path.join(CACHE_DIR, `${key}.mp3`);
-    fs.writeFileSync(filePath, buffer);
+    fs.writeFileSync(path.join(LOCAL_CACHE_DIR, `${key}.mp3`), buffer);
+  } catch {}
+}
+
+// ─── Cache Supabase Storage (produção) ───────────────────────────────────────
+
+async function readSupabaseCache(key: string): Promise<Buffer | null> {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase.storage
+      .from(SUPABASE_BUCKET)
+      .download(`${key}.mp3`);
+
+    if (error || !data) return null;
+
+    const arrayBuffer = await data.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  } catch {
+    return null;
+  }
+}
+
+async function writeSupabaseCache(key: string, buffer: Buffer): Promise<void> {
+  try {
+    const supabase = getSupabase();
+    await supabase.storage
+      .from(SUPABASE_BUCKET)
+      .upload(`${key}.mp3`, buffer, {
+        contentType: 'audio/mpeg',
+        upsert: true,
+      });
   } catch {
     // falha silenciosa — cache é opcional
   }
 }
+
+// ─── Helpers unificados ───────────────────────────────────────────────────────
+
+async function readCache(key: string): Promise<Buffer | null> {
+  if (IS_PROD) return readSupabaseCache(key);
+  ensureLocalCacheDir();
+  return readLocalCache(key);
+}
+
+async function writeCache(key: string, buffer: Buffer): Promise<void> {
+  if (IS_PROD) {
+    await writeSupabaseCache(key, buffer);
+  } else {
+    ensureLocalCacheDir();
+    writeLocalCache(key, buffer);
+  }
+}
+
+// ─── Response ─────────────────────────────────────────────────────────────────
 
 function audioResponse(buffer: Buffer, fromCache: boolean, durationMs?: number) {
   return new NextResponse(buffer as any, {
@@ -68,23 +119,52 @@ function audioResponse(buffer: Buffer, fromCache: boolean, durationMs?: number) 
   });
 }
 
-/**
- * POST /api/google-tts
- *
- * Sintetiza texto em áudio usando Google Text-to-Speech.
- * Cache em /tmp (Vercel) ou public/audio-cache (dev).
- * O cache é best-effort — falha silenciosa, nunca bloqueia o fluxo.
- * Body: { text: string, voice?: string, speed?: number }
- */
+// ─── Síntese com cache ────────────────────────────────────────────────────────
+
+async function synthesizeWithCache(
+  text: string,
+  voice: string,
+  speed: number
+): Promise<{ buffer: Buffer; fromCache: boolean; durationMs?: number }> {
+  const cacheKey = getCacheKey(text, voice, speed);
+
+  const cached = await readCache(cacheKey);
+  if (cached) {
+    console.log(`🎯 TTS cache HIT (${cacheKey.slice(0, 8)}…) — ${cached.length} bytes`);
+    return { buffer: cached, fromCache: true };
+  }
+
+  console.log('🔊 Gerando TTS:', {
+    text: text.substring(0, 50) + (text.length > 50 ? '…' : ''),
+    length: text.length,
+    voice,
+    speed,
+  });
+
+  const startTime = Date.now();
+  const audioBuffer = await synthesizeSpeech({
+    text,
+    voiceName: voice,
+    speakingRate: speed,
+    audioEncoding: 'MP3',
+  });
+  const durationMs = Date.now() - startTime;
+
+  console.log(`✅ TTS gerado em ${durationMs}ms (${audioBuffer.length} bytes) — salvando cache`);
+  await writeCache(cacheKey, audioBuffer as Buffer);
+
+  return { buffer: audioBuffer as Buffer, fromCache: false, durationMs };
+}
+
+// ─── Rotas ────────────────────────────────────────────────────────────────────
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { text, voice, speed } = body;
+    const { text, voice, speed } = await request.json();
 
     if (!text || typeof text !== 'string') {
       return NextResponse.json({ error: 'Texto não fornecido' }, { status: 400 });
     }
-
     if (text.length > 5000) {
       return NextResponse.json(
         { error: 'Texto muito longo (máximo 5000 caracteres)' },
@@ -92,45 +172,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const resolvedVoice = voice ?? BRAZILIAN_VOICES.NEURAL_MALE;
-    const resolvedSpeed = speed ?? 1.2;
-    const cacheKey = getCacheKey(text, resolvedVoice, resolvedSpeed);
-
-    // Cache — best effort, nunca bloqueia
-    const cacheReady = ensureCacheDir();
-    if (cacheReady) {
-      const cached = readFromCache(cacheKey);
-      if (cached) {
-        console.log(`🎯 TTS cache HIT (${cacheKey.slice(0, 8)}…) — ${cached.length} bytes`);
-        return audioResponse(cached, true);
-      }
-    }
-
-    console.log('🔊 Gerando TTS:', {
-      text: text.substring(0, 50) + (text.length > 50 ? '…' : ''),
-      length: text.length,
-      voice: resolvedVoice,
-      speed: resolvedSpeed,
-    });
-
-    const startTime = Date.now();
-
-    const audioBuffer = await synthesizeSpeech({
+    const { buffer, fromCache, durationMs } = await synthesizeWithCache(
       text,
-      voiceName: resolvedVoice,
-      speakingRate: resolvedSpeed,
-      audioEncoding: 'MP3',
-    });
+      voice ?? BRAZILIAN_VOICES.NEURAL_MALE,
+      speed ?? 1.2
+    );
 
-    const duration = Date.now() - startTime;
-    console.log(`✅ TTS gerado em ${duration}ms (${audioBuffer.length} bytes)`);
-
-    // Persiste no cache se disponível
-    if (cacheReady) {
-      writeToCache(cacheKey, audioBuffer as Buffer);
-    }
-
-    return audioResponse(audioBuffer as Buffer, false, duration);
+    return audioResponse(buffer, fromCache, durationMs);
 
   } catch (error: any) {
     console.error('❌ Erro Google TTS:', error);
@@ -141,13 +189,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * GET /api/google-tts?text=...
- */
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const text = searchParams.get('text');
+    const text = request.nextUrl.searchParams.get('text');
 
     if (!text) {
       return NextResponse.json(
@@ -156,31 +200,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const resolvedVoice = BRAZILIAN_VOICES.NEURAL_MALE;
-    const resolvedSpeed = 1.2;
-    const cacheKey = getCacheKey(text, resolvedVoice, resolvedSpeed);
-
-    const cacheReady = ensureCacheDir();
-    if (cacheReady) {
-      const cached = readFromCache(cacheKey);
-      if (cached) {
-        console.log(`🎯 TTS cache HIT (GET) — ${cacheKey.slice(0, 8)}…`);
-        return audioResponse(cached, true);
-      }
-    }
-
-    const audioBuffer = await synthesizeSpeech({
+    const { buffer, fromCache, durationMs } = await synthesizeWithCache(
       text,
-      voiceName: resolvedVoice,
-      speakingRate: resolvedSpeed,
-      audioEncoding: 'MP3',
-    });
+      BRAZILIAN_VOICES.NEURAL_MALE,
+      1.2
+    );
 
-    if (cacheReady) {
-      writeToCache(cacheKey, audioBuffer as Buffer);
-    }
-
-    return audioResponse(audioBuffer as Buffer, false);
+    return audioResponse(buffer, fromCache, durationMs);
 
   } catch (error: any) {
     console.error('❌ Erro Google TTS (GET):', error);

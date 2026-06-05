@@ -63,3 +63,4 @@ config/secrets.*app/google-services.json
 app/build/generated/
 .gradle/
 app/build/
+public/audio-cache/

@@ -337,6 +337,7 @@ export default function TourStage1({
             caption={currentScene.displayText ?? currentScene.audioText}
             hideAvatar={hideAvatar}
             theme={theme}
+            inModal={inModal}
           />
         </div>
       </div>

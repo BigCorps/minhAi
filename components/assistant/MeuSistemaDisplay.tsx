@@ -71,12 +71,13 @@ export default function MeuSistemaDisplay({
     return () => clearInterval(interval);
   }, [countdownActive, onClose]);
 
-  // Abre o tour — desbloqueia áudio no clique (síncrono) e pausa o countdown
+  // Abre o tour — para o speech, desbloqueia áudio e pausa countdown
   const handleOpenTour = useCallback(() => {
-    unlockAudioContext();
-    setCountdownActive(false);
-    setTourOpen(true);
-  }, []);
+    window.speechSynthesis.cancel()
+    unlockAudioContext()
+    setCountdownActive(false)
+    setTourOpen(true)
+  }, [])
 
   // Fecha o tour → opção A: fecha o MeuSistemaDisplay também
   const handleTourClose = useCallback(() => {
@@ -86,8 +87,11 @@ export default function MeuSistemaDisplay({
 
   return createPortal(
     <>
-      {/* ── Card principal ── */}
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      {/* ── Card principal — oculto quando tour está aberto ── */}
+      <div
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+        style={{ display: tourOpen ? 'none' : undefined }}
+      >
         <div
           className={`relative w-full max-w-4xl rounded-2xl shadow-2xl transition-colors overflow-hidden animate-in zoom-in duration-300
             ${theme === 'dark'

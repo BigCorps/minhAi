@@ -118,10 +118,9 @@ export default function SceneWidget() {
           style={{
             bottom: 44,
             right: 8,
-            // Largura: 48% do container (não do viewport)
             width: 'clamp(150px, 48%, 240px)',
-            // Altura máxima: 82% da área disponível
-            maxHeight: '82%',
+            // height fixo — não cresce com o conteúdo das mensagens
+            height: 'clamp(200px, 72%, 320px)',
             borderRadius: 14,
             overflow: 'hidden',
             boxShadow: '0 12px 40px rgba(0,0,0,0.16), 0 3px 10px rgba(0,0,0,0.07)',

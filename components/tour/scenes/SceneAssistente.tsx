@@ -75,27 +75,29 @@ export default function SceneAssistente({ isSpeaking, theme = 'dark' }: SceneAss
         <div className="absolute inset-0 flex flex-col" style={{ background: BG }}>
           <MockHeader />
 
-          {/* Split cards — flex-1 para ocupar o espaço disponível */}
-          <div className="flex-1 flex min-h-0 p-3 gap-3">
-
-            {/* Esquerda: avatar */}
-            <div
-              className="flex-1 rounded-xl flex items-center justify-center min-w-0 overflow-visible"
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-            >
+          {/* Split cards — quadrados, altura = min(available, width/2) */}
+          <div className="flex-1 flex min-h-0 p-3 gap-3 items-stretch">
+            {/* Wrapper que força proporção quadrada nos cards */}
+            <div className="flex-1 flex min-w-0" style={{ aspectRatio: '1/1', maxHeight: '100%' }}>
+              <div
+                className="w-full h-full rounded-xl flex items-center justify-center overflow-visible"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+              >
               <div style={{ width: 'clamp(60px, 13vw, 130px)', aspectRatio: '1/1' }}>
                 <AvatarFace
                   isSpeaking={isSpeaking} isListening={false} isProcessing={false}
                   theme="dark" avatarType={isSpeaking ? 'orb' : 'face'} hasActivePlan
                 />
               </div>
+              </div>
             </div>
 
-            {/* Direita: mic + wake word + input */}
-            <div
-              className="flex-1 rounded-xl flex flex-col items-center justify-center gap-2 px-3 min-w-0"
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-            >
+            {/* Direita: mic + wake word + input — mesmo aspecto quadrado */}
+            <div className="flex-1 flex min-w-0" style={{ aspectRatio: '1/1', maxHeight: '100%' }}>
+              <div
+                className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-2 px-3"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+              >
               <div
                 className="rounded-full flex items-center justify-center flex-shrink-0"
                 style={{
@@ -137,6 +139,7 @@ export default function SceneAssistente({ isSpeaking, theme = 'dark' }: SceneAss
               <p className="text-white/20" style={{ fontSize: 'clamp(0.38rem, 0.85vw, 0.48rem)' }}>
                 Pressione Enter para enviar
               </p>
+              </div>
             </div>
           </div>
 
@@ -194,18 +197,14 @@ export default function SceneAssistente({ isSpeaking, theme = 'dark' }: SceneAss
             <Image src="/logo-circle.png" alt="minhAi" width={32} height={32} className="rounded-lg object-contain" style={{ width: 'clamp(20px, 4vw, 28px)', height: 'clamp(20px, 4vw, 28px)' }} />
           </div>
 
-          {/* Avatar centralizado — flex-1 para empurrar textos para baixo */}
-          <div className="flex-1 flex items-center justify-center min-h-0">
+          {/* Avatar + textos agrupados no centro */}
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 min-h-0">
             <div style={{ width: 'clamp(100px, 26vw, 220px)', aspectRatio: '1/1' }}>
               <AvatarFace
                 isSpeaking={isSpeaking} isListening={false} isProcessing={false}
                 theme="dark" avatarType={isSpeaking ? 'orb' : 'face'} hasActivePlan
               />
             </div>
-          </div>
-
-          {/* Textos logo abaixo do avatar — igual ao print */}
-          <div className="flex flex-col items-center pb-2 flex-shrink-0">
             <p className="text-white/30 text-center" style={{ fontSize: 'clamp(0.42rem, 1vw, 0.58rem)' }}>
               clique para falar
             </p>

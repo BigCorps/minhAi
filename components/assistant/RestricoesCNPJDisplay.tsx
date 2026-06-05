@@ -131,6 +131,7 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
           body: {
             company_id: data.companyId,
             amount_cents: res.amount_cents,
+            purpose: 'consulta_fee',
             description: `Restrições CNPJ - R$ ${res.amount_brl}`,
           },
         });

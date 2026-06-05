@@ -75,13 +75,20 @@ export default function SceneAssistente({ isSpeaking, theme = 'dark' }: SceneAss
         <div className="absolute inset-0 flex flex-col" style={{ background: BG }}>
           <MockHeader />
 
-          {/* Split cards — quadrados, altura = min(available, width/2) */}
-          <div className="flex-1 flex min-h-0 p-3 gap-3 items-stretch">
-            {/* Wrapper que força proporção quadrada nos cards */}
-            <div className="flex-1 flex min-w-0" style={{ aspectRatio: '1/1', maxHeight: '100%' }}>
+          {/* Split cards — quadrados baseados na altura disponível */}
+          <div className="flex-1 flex min-h-0 p-3 gap-3 justify-center items-center">
+
+            {/* Wrapper que força quadrado: usa height do pai como referência */}
+            <div className="h-full flex items-center">
               <div
-                className="w-full h-full rounded-xl flex items-center justify-center overflow-visible"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                className="rounded-xl flex items-center justify-center overflow-visible"
+                style={{
+                  aspectRatio: '1/1',
+                  height: '100%',
+                  maxWidth: '48%',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
               >
               <div style={{ width: 'clamp(60px, 13vw, 130px)', aspectRatio: '1/1' }}>
                 <AvatarFace
@@ -92,11 +99,17 @@ export default function SceneAssistente({ isSpeaking, theme = 'dark' }: SceneAss
               </div>
             </div>
 
-            {/* Direita: mic + wake word + input — mesmo aspecto quadrado */}
-            <div className="flex-1 flex min-w-0" style={{ aspectRatio: '1/1', maxHeight: '100%' }}>
+            {/* Direita: mic + wake word + input — mesmo tamanho quadrado */}
+            <div className="h-full flex items-center">
               <div
-                className="w-full h-full rounded-xl flex flex-col items-center justify-center gap-2 px-3"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                className="rounded-xl flex flex-col items-center justify-center gap-2 px-3"
+                style={{
+                  aspectRatio: '1/1',
+                  height: '100%',
+                  maxWidth: '48%',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
               >
               <div
                 className="rounded-full flex items-center justify-center flex-shrink-0"

@@ -188,8 +188,8 @@ export default function TourManager({
       </div>
 
       {/* ── Grid de stages ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center px-4 py-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-2xl mx-auto">
           {STAGES.map((stage) => {
             const isCurrent = stage.id === activeStage
             const isAvailable = stage.available

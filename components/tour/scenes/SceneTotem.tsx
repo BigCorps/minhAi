@@ -215,7 +215,7 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
               height: 'clamp(22px, 4vw, 32px)',
               fontSize: 'clamp(0.45rem, 1vw, 0.58rem)',
               background: '#0f172a',
-              color: '#f87171',
+              color: 'white',
               border: '1px solid rgba(255,255,255,0.06)',
             }}
           >

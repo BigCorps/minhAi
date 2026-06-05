@@ -1,8 +1,7 @@
 'use client'
 // components/tour/scenes/SceneCarrossel.tsx
-// Mock visual do CategoryCarousel com painel de funções
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 const CATEGORIES = [
   { name: 'Conhecimento', color: '#3B82F6' },
@@ -21,9 +20,19 @@ const CATEGORIES = [
   { name: 'Serviços',     color: '#10B981' },
 ]
 
+// Duplicar mantendo "Comercial" no centro do scroll inicial
+// Vamos montar: [...antes], Comercial, [...depois] repetido
+// Para o carrossel parado, montamos a lista estática com Comercial centralizado
+const STATIC_VISIBLE = [
+  { name: 'Conhecimento', color: '#3B82F6' },
+  { name: 'Financeiro',   color: '#3B82F6' },
+  { name: 'Comercial',    color: '#10B981' }, // ativo — centro
+  { name: 'Informação',   color: '#10B981' },
+  { name: 'Multimídia',   color: '#3B82F6' },
+]
+
 const DUPLICATED = Array.from({ length: 6 }, () => CATEGORIES).flat()
 
-// Funções mockadas com descrições reais (sem cor rosa, apenas dados)
 interface FnItem {
   name: string
   description: string
@@ -44,7 +53,6 @@ const MOCK_FUNCTIONS: Record<string, FnItem[]> = {
 }
 
 const ACTIVE_CATEGORY = 'Comercial'
-
 const BG = 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
 
 export default function SceneCarrossel() {
@@ -52,13 +60,11 @@ export default function SceneCarrossel() {
   const [highlightedFn, setHighlightedFn] = useState<number | null>(null)
   const [hoveredFn, setHoveredFn] = useState<number | null>(null)
 
-  // Painel aparece após 800ms
   useEffect(() => {
     const t = setTimeout(() => setPanelVisible(true), 800)
     return () => clearTimeout(t)
   }, [])
 
-  // Cicla highlight nas funções (apenas quando não há hover)
   useEffect(() => {
     if (!panelVisible) return
     if (hoveredFn !== null) return
@@ -71,20 +77,14 @@ export default function SceneCarrossel() {
   }, [panelVisible, hoveredFn])
 
   const fns = MOCK_FUNCTIONS[ACTIVE_CATEGORY] ?? []
-
-  // Item ativo: hover tem prioridade, depois highlight automático
   const activeFn = hoveredFn !== null ? hoveredFn : highlightedFn
 
   return (
     <div
-  className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
-  style={{
-    background: BG,
-    // Garante que % no clamp do painel seja calculado corretamente
-    position: 'relative',
-  }}
->
-      {/* ── Header mock ── */}
+      className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
+      style={{ background: BG, position: 'relative' }}
+    >
+      {/* ── Header ── */}
       <div
         className="flex items-center justify-between px-3 py-2 flex-shrink-0"
         style={{
@@ -110,40 +110,54 @@ export default function SceneCarrossel() {
         <span className="text-white/20" style={{ fontSize: 'clamp(0.42rem, 1vw, 0.52rem)' }}>minhAi</span>
       </div>
 
-      {/* ── Área principal — pergunta + painel ── */}
-      <div className="flex-1 flex flex-col items-center justify-start px-4 pt-3 gap-2 min-h-0 relative overflow-hidden">
-
-        {/* Pergunta central */}
+      {/* ── Área principal — só título, painel é absoluto ── */}
+      <div className="flex-1 flex flex-col items-center justify-start px-4 pt-3 min-h-0 relative">
         <p
           className="text-white font-bold text-center flex-shrink-0"
           style={{ fontSize: 'clamp(0.75rem, 2vw, 1.1rem)' }}
         >
           Como Posso te Ajudar Hoje?
         </p>
+      </div>
 
-        {/* Painel de funções — aparece com animação, overflow-y auto para scroll se necessário */}
+      {/* ── Carrossel de categorias ── */}
+      <div className="w-full flex-shrink-0 relative" style={{ paddingTop: 5, paddingBottom: 5 }}>
+
+        {/* Painel absoluto — sobe do centro do carrossel */}
         <div
-          className="rounded-2xl border overflow-hidden flex-shrink-0"
-  style={{
-    width: 'clamp(150px, 48%, 240px)',   // ← mesmo do SceneWidget
-    height: 'clamp(200px, 72%, 320px)',  // ← mesmo do SceneWidget
-    overflowY: 'auto',                   // scroll interno se funções não couberem
-    alignSelf: 'center',                 // centraliza no flex column
+          className="absolute rounded-2xl border overflow-hidden"
+          style={{
+            // Centralizado horizontalmente sobre o botão "Comercial"
+            left: '50%',
+            transform: panelVisible
+              ? 'translateX(-50%) translateY(0)'
+              : 'translateX(-50%) translateY(8px)',
+            // Ancora na borda superior do carrossel, sobe para cima
+            bottom: '100%',
+            marginBottom: 6,
+            // Mesma largura/altura do card no SceneWidget
+            width: 'clamp(150px, 48%, 240px)',
+            maxHeight: 'clamp(180px, 65%, 300px)',
+            overflowY: 'auto',
+            zIndex: 10,
             background: 'linear-gradient(135deg, rgba(30,41,59,0.98), rgba(51,65,85,0.98))',
             borderColor: 'rgba(59,130,246,0.3)',
             boxShadow: '0 -8px 32px rgba(0,0,0,0.4), 0 -2px 8px rgba(59,130,246,0.25)',
             opacity: panelVisible ? 1 : 0,
-            transform: panelVisible ? 'translateY(0)' : 'translateY(12px)',
             transition: 'opacity 400ms ease, transform 400ms ease',
           }}
         >
-          {/* Header do painel com seta */}
+          {/* Header do painel */}
           <div
             className="px-3 py-1.5 font-semibold border-b flex items-center justify-between"
             style={{
               borderColor: 'rgba(59,130,246,0.25)',
               color: 'rgba(226,232,240,1)',
               fontSize: 'clamp(0.52rem, 1.2vw, 0.65rem)',
+              position: 'sticky',
+              top: 0,
+              background: 'rgba(30,41,59,0.98)',
+              zIndex: 1,
             }}
           >
             <span>{ACTIVE_CATEGORY}</span>
@@ -161,9 +175,7 @@ export default function SceneCarrossel() {
                 <div
                   key={fn.name}
                   className="border-b transition-all duration-200 cursor-pointer"
-                  style={{
-                    borderColor: 'rgba(255,255,255,0.05)',
-                  }}
+                  style={{ borderColor: 'rgba(255,255,255,0.05)' }}
                   onMouseEnter={() => setHoveredFn(i)}
                   onMouseLeave={() => setHoveredFn(null)}
                 >
@@ -173,14 +185,11 @@ export default function SceneCarrossel() {
                       fontSize: 'clamp(0.5rem, 1.15vw, 0.62rem)',
                       fontWeight: isActive ? 600 : 400,
                       color: 'rgba(226,232,240,1)',
-                      background: isActive
-                        ? 'rgba(59,130,246,0.2)'
-                        : 'rgba(51,65,85,0.5)',
+                      background: isActive ? 'rgba(59,130,246,0.2)' : 'rgba(51,65,85,0.5)',
                     }}
                   >
                     {fn.name}
                   </div>
-                  {/* Descrição — expande ao hover, sem corte */}
                   <div
                     style={{
                       maxHeight: isActive ? 80 : 0,
@@ -195,7 +204,6 @@ export default function SceneCarrossel() {
                         fontSize: 'clamp(0.42rem, 0.95vw, 0.54rem)',
                         color: 'rgba(148,163,184,1)',
                         lineHeight: 1.5,
-                        // sem line-clamp — texto completo sempre
                       }}
                     >
                       {fn.description}
@@ -206,39 +214,66 @@ export default function SceneCarrossel() {
             })}
           </div>
         </div>
-      </div>
 
-      {/* ── Carrossel de categorias — PARADO quando painel visível ── */}
-      <div className="w-full overflow-hidden flex-shrink-0" style={{ paddingTop: 5, paddingBottom: 5 }}>
-        <div
-          className="flex gap-2 pl-2 w-max"
-          style={{
-            // Carrossel para quando painel está visível
-            animation: panelVisible ? 'none' : 'stage2-carousel-scroll 16s linear infinite',
-            willChange: 'transform',
-          }}
-        >
-          {DUPLICATED.map((cat, i) => (
+        {/* Carrossel — parado quando painel visível, "Comercial" centralizado */}
+        <div className="w-full overflow-hidden">
+          {panelVisible ? (
+            // Estado parado: lista estática com Comercial no centro
+            <div className="flex gap-2 items-center justify-center px-2">
+              {STATIC_VISIBLE.map((cat, i) => (
+                <div
+                  key={i}
+                  className="flex-shrink-0 flex items-center rounded-xl"
+                  style={{
+                    fontSize: 'clamp(0.48rem, 1.1vw, 0.62rem)',
+                    fontWeight: cat.name === ACTIVE_CATEGORY ? 700 : 600,
+                    color: cat.name === ACTIVE_CATEGORY ? 'white' : 'rgba(255,255,255,0.75)',
+                    background: cat.name === ACTIVE_CATEGORY
+                      ? 'rgba(59,130,246,0.35)'
+                      : 'rgba(255,255,255,0.06)',
+                    border: `1px solid ${cat.name === ACTIVE_CATEGORY ? 'rgba(59,130,246,0.6)' : 'rgba(255,255,255,0.08)'}`,
+                    borderLeft: `3px solid ${cat.color}`,
+                    padding: '5px 10px',
+                    whiteSpace: 'nowrap',
+                    transform: cat.name === ACTIVE_CATEGORY ? 'scale(1.05)' : 'scale(1)',
+                  }}
+                >
+                  {cat.name}
+                </div>
+              ))}
+            </div>
+          ) : (
+            // Animando antes do painel aparecer
             <div
-              key={i}
-              className="flex-shrink-0 flex items-center rounded-xl transition-all"
+              className="flex gap-2 pl-2 w-max"
               style={{
-                fontSize: 'clamp(0.48rem, 1.1vw, 0.62rem)',
-                fontWeight: cat.name === ACTIVE_CATEGORY ? 700 : 600,
-                color: cat.name === ACTIVE_CATEGORY ? 'white' : 'rgba(255,255,255,0.75)',
-                background: cat.name === ACTIVE_CATEGORY
-                  ? 'rgba(59,130,246,0.35)'
-                  : 'rgba(255,255,255,0.06)',
-                border: `1px solid ${cat.name === ACTIVE_CATEGORY ? 'rgba(59,130,246,0.6)' : 'rgba(255,255,255,0.08)'}`,
-                borderLeft: `3px solid ${cat.color}`,
-                padding: '5px 10px',
-                whiteSpace: 'nowrap',
-                transform: cat.name === ACTIVE_CATEGORY ? 'scale(1.05)' : 'scale(1)',
+                animation: 'stage2-carousel-scroll 16s linear infinite',
+                willChange: 'transform',
               }}
             >
-              {cat.name}
+              {DUPLICATED.map((cat, i) => (
+                <div
+                  key={i}
+                  className="flex-shrink-0 flex items-center rounded-xl"
+                  style={{
+                    fontSize: 'clamp(0.48rem, 1.1vw, 0.62rem)',
+                    fontWeight: cat.name === ACTIVE_CATEGORY ? 700 : 600,
+                    color: cat.name === ACTIVE_CATEGORY ? 'white' : 'rgba(255,255,255,0.75)',
+                    background: cat.name === ACTIVE_CATEGORY
+                      ? 'rgba(59,130,246,0.35)'
+                      : 'rgba(255,255,255,0.06)',
+                    border: `1px solid ${cat.name === ACTIVE_CATEGORY ? 'rgba(59,130,246,0.6)' : 'rgba(255,255,255,0.08)'}`,
+                    borderLeft: `3px solid ${cat.color}`,
+                    padding: '5px 10px',
+                    whiteSpace: 'nowrap',
+                    transform: cat.name === ACTIVE_CATEGORY ? 'scale(1.05)' : 'scale(1)',
+                  }}
+                >
+                  {cat.name}
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       </div>
 

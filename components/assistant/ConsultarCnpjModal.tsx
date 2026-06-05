@@ -126,6 +126,7 @@ export default function ConsultarCnpjModal({
           body: {
             company_id: companyId,
             amount_cents: res.amount_cents,
+            purpose: 'consulta_fee',
             description: `Consulta CNPJ - R$ ${res.amount_brl}`,
           },
         });

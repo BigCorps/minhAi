@@ -6,11 +6,11 @@
 
 ## Roadmap e Features Planejadas
 
-* Ajustar recebimento das consultas - segunda
+* Ajustar recebimento das consultas
 
-* Criar Auxiliar de Cadastro e com MCP whatsapp - MANUS miriamithiel
+* Criar Auxiliar de Cadastro e com MCP whatsapp
 
-* Tour guiado - implementar cache (pedidoslj) - MANUS interpag
+* Tour guiado - implementar cache (pedidoslj)
 
 * página admin no dashboard
 

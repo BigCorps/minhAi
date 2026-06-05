@@ -77,9 +77,13 @@ export default function SceneCarrossel() {
 
   return (
     <div
-      className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
-      style={{ background: BG }}
-    >
+  className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
+  style={{
+    background: BG,
+    // Garante que % no clamp do painel seja calculado corretamente
+    position: 'relative',
+  }}
+>
       {/* ── Header mock ── */}
       <div
         className="flex items-center justify-between px-3 py-2 flex-shrink-0"
@@ -119,9 +123,12 @@ export default function SceneCarrossel() {
 
         {/* Painel de funções — aparece com animação, overflow-y auto para scroll se necessário */}
         <div
-          className="w-full rounded-2xl border overflow-hidden flex-shrink-0"
-          style={{
-            maxWidth: 340,
+          className="rounded-2xl border overflow-hidden flex-shrink-0"
+  style={{
+    width: 'clamp(150px, 48%, 240px)',   // ← mesmo do SceneWidget
+    height: 'clamp(200px, 72%, 320px)',  // ← mesmo do SceneWidget
+    overflowY: 'auto',                   // scroll interno se funções não couberem
+    alignSelf: 'center',                 // centraliza no flex column
             background: 'linear-gradient(135deg, rgba(30,41,59,0.98), rgba(51,65,85,0.98))',
             borderColor: 'rgba(59,130,246,0.3)',
             boxShadow: '0 -8px 32px rgba(0,0,0,0.4), 0 -2px 8px rgba(59,130,246,0.25)',

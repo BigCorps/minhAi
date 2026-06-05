@@ -25,7 +25,7 @@ export default function TourAssistant({
   const isDark = theme === 'dark'
 
   return (
-    <div className="flex flex-col items-center gap-1.5 md:gap-3 w-full">
+    <div className="flex flex-col items-center gap-1.5 md:gap-3 w-full h-full">
 
       {hideAvatar ? (
         <div
@@ -41,8 +41,6 @@ export default function TourAssistant({
       ) : (
         <div
           style={{
-            // inModal: avatar menor para não comprimir a legenda
-            // standalone: tamanho normal
             width: inModal
               ? 'clamp(80px, 14dvh, 130px)'
               : 'clamp(140px, 26dvh, 200px)',
@@ -62,21 +60,18 @@ export default function TourAssistant({
         </div>
       )}
 
-      {/* Legenda */}
-      <div className="w-full max-w-2xl px-3 md:px-6 text-center">
+      {/* Legenda — sem line-clamp, texto sempre completo */}
+      <div className="w-full max-w-2xl px-3 md:px-6 text-center flex-1 min-h-0 overflow-y-auto">
         <p
           className="leading-relaxed transition-all duration-300"
           style={{
-            // Fonte menor no modal para caber em telas pequenas
             fontSize: inModal
               ? 'clamp(0.7rem, 1.6vw, 0.9rem)'
               : 'clamp(0.78rem, 1.9vw, 1rem)',
             opacity: caption ? 1 : 0,
             color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(15,23,42,0.85)',
-            display: '-webkit-box',
-            WebkitLineClamp: inModal ? 4 : 5,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            // Removido: display, WebkitLineClamp, WebkitBoxOrient, overflow: hidden
+            // O texto agora nunca é truncado
           }}
         >
           {caption}

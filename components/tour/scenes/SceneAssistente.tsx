@@ -75,83 +75,71 @@ export default function SceneAssistente({ isSpeaking, theme = 'dark' }: SceneAss
         <div className="absolute inset-0 flex flex-col" style={{ background: BG }}>
           <MockHeader />
 
-          {/* Split cards — quadrados baseados na altura disponível */}
-          <div className="flex-1 flex min-h-0 p-3 gap-3 justify-center items-center">
+          {/* Split cards — cada card é position:relative com aspectRatio 1/1
+              O halo do avatar fica em overflow:visible fora do card mas não
+              afeta o layout porque o card tem position:relative e tamanho fixo */}
+          <div className="flex-1 flex min-h-0 p-3 gap-3 items-center justify-center">
 
-            {/* Wrapper que força quadrado: usa height do pai como referência */}
-            <div className="h-full flex items-center">
-              <div
-                className="rounded-xl flex items-center justify-center overflow-visible"
-                style={{
-                  aspectRatio: '1/1',
-                  height: '100%',
-                  maxWidth: '48%',
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}
-              >
-              <div style={{ width: 'clamp(60px, 13vw, 130px)', aspectRatio: '1/1' }}>
-                <AvatarFace
-                  isSpeaking={isSpeaking} isListening={false} isProcessing={false}
-                  theme="dark" avatarType={isSpeaking ? 'orb' : 'face'} hasActivePlan
-                />
-              </div>
+            {/* Card esquerdo: avatar */}
+            <div className="relative flex-shrink-0"
+              style={{ width: 'min(46%, 46vh)', aspectRatio: '1/1' }}>
+              {/* Fundo do card — overflow hidden para não vazar */}
+              <div className="absolute inset-0 rounded-xl"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }} />
+              {/* Avatar — overflow visible para o halo */}
+              <div className="absolute inset-0 flex items-center justify-center" style={{ overflow: 'visible' }}>
+                <div style={{ width: '68%', aspectRatio: '1/1' }}>
+                  <AvatarFace isSpeaking={isSpeaking} isListening={false} isProcessing={false}
+                    theme="dark" avatarType={isSpeaking ? 'orb' : 'face'} hasActivePlan />
+                </div>
               </div>
             </div>
 
-            {/* Direita: mic + wake word + input — mesmo tamanho quadrado */}
-            <div className="h-full flex items-center">
-              <div
-                className="rounded-xl flex flex-col items-center justify-center gap-2 px-3"
-                style={{
-                  aspectRatio: '1/1',
-                  height: '100%',
-                  maxWidth: '48%',
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}
-              >
-              <div
-                className="rounded-full flex items-center justify-center flex-shrink-0"
-                style={{
-                  width: 'clamp(32px, 7vw, 56px)', height: 'clamp(32px, 7vw, 56px)',
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
-                  boxShadow: '0 0 18px rgba(16,185,129,0.4)',
-                }}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-                  style={{ width: 'clamp(14px, 3.5vw, 24px)', height: 'clamp(14px, 3.5vw, 24px)' }}>
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="23" />
-                  <line x1="8" y1="23" x2="16" y2="23" />
-                </svg>
-              </div>
-              <p className="text-white/30 text-center leading-none" style={{ fontSize: 'clamp(0.45rem, 1vw, 0.58rem)' }}>
-                clique para falar ou
-              </p>
-              <p className="text-white font-bold text-center leading-snug" style={{ fontSize: 'clamp(0.55rem, 1.4vw, 0.78rem)' }}>
-                diga: "minhAi" + sua solicitação
-              </p>
-              <p className="text-white/30 text-center" style={{ fontSize: 'clamp(0.4rem, 0.9vw, 0.52rem)' }}>
-                Utilize a palavra de ativação apenas no modo voz.
-              </p>
-              <div className="w-full flex items-center gap-1.5">
-                <div className="flex-1 rounded-lg px-2.5 py-1.5"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.25)', fontSize: 'clamp(0.45rem, 1vw, 0.58rem)' }}>
-                  Ou digite sua mensagem...
-                </div>
-                <div className="rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ width: 'clamp(20px, 4.5vw, 28px)', height: 'clamp(20px, 4.5vw, 28px)', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth={2} strokeLinecap="round"
+            {/* Card direito: mic + wake word + input */}
+            <div className="relative flex-shrink-0"
+              style={{ width: 'min(46%, 46vh)', aspectRatio: '1/1' }}>
+              <div className="absolute inset-0 rounded-xl flex flex-col items-center justify-center gap-2 px-3 overflow-hidden"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                {/* Botão mic */}
+                <div className="rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ width: 'clamp(28px, 7%, 52px)', height: 'clamp(28px, 7%, 52px)',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    boxShadow: '0 0 16px rgba(16,185,129,0.4)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
                     style={{ width: '55%', height: '55%' }}>
-                    <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
                   </svg>
                 </div>
-              </div>
-              <p className="text-white/20" style={{ fontSize: 'clamp(0.38rem, 0.85vw, 0.48rem)' }}>
-                Pressione Enter para enviar
-              </p>
+                <p className="text-white/30 text-center leading-none" style={{ fontSize: 'clamp(0.42rem, 1vw, 0.56rem)' }}>
+                  clique para falar ou
+                </p>
+                <p className="text-white font-bold text-center leading-snug" style={{ fontSize: 'clamp(0.52rem, 1.3vw, 0.75rem)' }}>
+                  diga: "minhAi" + sua solicitação
+                </p>
+                <p className="text-white/30 text-center" style={{ fontSize: 'clamp(0.38rem, 0.9vw, 0.5rem)' }}>
+                  Utilize a palavra de ativação apenas no modo voz.
+                </p>
+                <div className="w-full flex items-center gap-1.5">
+                  <div className="flex-1 rounded-lg px-2 py-1"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: 'rgba(255,255,255,0.25)', fontSize: 'clamp(0.42rem, 1vw, 0.56rem)' }}>
+                    Ou digite sua mensagem...
+                  </div>
+                  <div className="rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ width: 'clamp(18px, 4.5vw, 26px)', height: 'clamp(18px, 4.5vw, 26px)',
+                      background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth={2} strokeLinecap="round"
+                      style={{ width: '55%', height: '55%' }}>
+                      <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-white/20" style={{ fontSize: 'clamp(0.36rem, 0.85vw, 0.46rem)' }}>
+                  Pressione Enter para enviar
+                </p>
               </div>
             </div>
           </div>

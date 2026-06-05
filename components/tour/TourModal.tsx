@@ -95,17 +95,13 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
       }}
     >
       {/*
-       * Container do tour — 80vw × 80dvh.
-       * Menor que antes para eliminar espaço vazio excessivo.
+       * Mobile: 90vw × 90dvh — aproveita a tela pequena.
+       * Desktop (md+): 80vw × 80dvh — elimina espaço vazio excessivo.
        */}
       <div
-        className="relative rounded-2xl overflow-hidden shadow-2xl"
+        className="relative rounded-2xl overflow-hidden shadow-2xl w-[90vw] h-[90dvh] md:w-[80vw] md:h-[80dvh]"
         style={{
-          width: '80vw',
-          height: '80dvh',
-          transform: visible
-            ? 'scale(1)'
-            : 'scale(0.95)',
+          transform: visible ? 'scale(1)' : 'scale(0.95)',
           transition: 'transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1)',
         }}
       >

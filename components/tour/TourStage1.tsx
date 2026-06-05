@@ -279,6 +279,7 @@ export default function TourStage1({
       }}
       onMouseMove={inModal ? handleModalInteraction : undefined}
       onClick={inModal ? handleModalInteraction : undefined}
+      onTouchStart={inModal ? handleModalInteraction : undefined}
     >
       {/* ── Botão fechar ── */}
       {onClose && (

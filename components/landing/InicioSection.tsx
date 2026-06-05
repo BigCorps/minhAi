@@ -54,7 +54,8 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
         <div
           className={`
             flex-shrink-0 order-1 md:order-2
-            flex flex-col items-center justify-center gap-4
+            flex flex-col items-center justify-center
+            relative
             [@media(max-height:580px)_and_(max-width:767px)]:hidden
           `}
         >
@@ -75,8 +76,15 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             <LandingAvatarFace theme={theme} />
           </div>
 
-          {/* TourTrigger — só desktop (abaixo do avatar) */}
-          <div className="hidden md:block w-full">
+          {/*
+           * TourTrigger desktop — absolute abaixo do avatar.
+           * position:absolute garante que não desloca o avatar quando aparece.
+           * top: 100% + mt-3 posiciona logo abaixo do wrapper do avatar.
+           */}
+          <div
+            className="hidden md:flex justify-center w-full absolute"
+            style={{ top: 'calc(100% + 12px)' }}
+          >
             <TourTrigger theme={theme} delay={5000} />
           </div>
         </div>

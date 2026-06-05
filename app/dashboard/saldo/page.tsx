@@ -387,7 +387,7 @@ export default function SaldoPage() {
       // ── Primeira página: PIX ─────────────────────────────────────────────
       const { data: pixData } = await supabase
         .from('pix_transactions')
-        .select('id, company_id, amount_cents, status, requested_at, notes, destination_pix_key')
+        .select('id, company_id, amount_cents, status, requested_at, notes, destination_pix_key, purpose')
         .eq('user_id', userId)
         .order('requested_at', { ascending: false })
         .range(0, PAGE_SIZE - 1);
@@ -446,7 +446,7 @@ export default function SaldoPage() {
       const [{ data: pixData }, { data: cobrancasData }, { data: mpOrdersData }] = await Promise.all([
         supabase
           .from('pix_transactions')
-          .select('id, company_id, amount_cents, status, requested_at, notes, destination_pix_key')
+          .select('id, company_id, amount_cents, status, requested_at, notes, destination_pix_key, purpose')
           .eq('user_id', userId)
           .order('requested_at', { ascending: false })
           .range(pixOffset, pixOffset + PAGE_SIZE - 1),
@@ -508,7 +508,9 @@ export default function SaldoPage() {
     companyTypeMap: Record<string, string>,
     commissions: CommissionPending[],
   ): UnifiedTransaction[] {
-    return data.map(tx => {
+    return data
+      .filter(tx => !tx.purpose || tx.purpose === 'payment')
+      .map(tx => {
       const isWithdrawal = withdrawalIds.has(tx.id);
       const isVendas = companyTypeMap[tx.company_id] === 'vendas';
       const comissaoEntry = isVendas && !isWithdrawal

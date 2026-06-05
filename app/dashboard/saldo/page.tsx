@@ -371,14 +371,13 @@ export default function SaldoPage() {
           .filter((id): id is string => id !== null)
       );
 
-      // ── Consultas pagas ──────────────────────────────────────────────
-      const { data: consultasData } = await supabase
-        .from('pix_transactions')
-        .select('id, company_id, amount_cents, status, requested_at, notes, purpose')
+// ── Consultas pagas via saldo ────────────────────────────────────
+      const { data: consultasSaldoData } = await supabase
+        .from('balance_transactions')
+        .select('id, company_id, amount_cents, description, created_at')
         .eq('user_id', userId)
-        .eq('purpose', 'consulta_fee')
-        .eq('status', 'confirmed')
-        .order('requested_at', { ascending: false })
+        .eq('transaction_type', 'consulta_fee')
+        .order('created_at', { ascending: false })
         .range(0, PAGE_SIZE - 1);
 
       // ── Consultas pagas via saldo ────────────────────────────────────
@@ -397,7 +396,7 @@ export default function SaldoPage() {
       // ── Primeira página: PIX ─────────────────────────────────────────────
       const { data: pixData } = await supabase
         .from('pix_transactions')
-        .select('id, company_id, amount_cents, status, requested_at, notes, destination_pix_key, purpose')
+        .select('id, company_id, amount_cents, status, requested_at, notes, destination_pix_key')
         .eq('user_id', userId)
         .order('requested_at', { ascending: false })
         .range(0, PAGE_SIZE - 1);
@@ -436,7 +435,6 @@ export default function SaldoPage() {
         ...normalizePix(pixData ?? [], withdrawalIds, companyNameMap, companyTypeMap, commissionsData),
         ...normalizeCobrancas(cobrancasData ?? [], companyNameMap, companyTypeMap),
         ...normalizeMpOrders(mpOrdersData ?? [], companyNameMap, companyTypeMap),
-        ...normalizeConsultaFees(consultasData ?? [], companyNameMap),
         ...normalizeConsultaFeesSaldo(consultasSaldoData ?? [], companyNameMap),
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -520,7 +518,6 @@ export default function SaldoPage() {
     commissions: CommissionPending[],
   ): UnifiedTransaction[] {
     return data
-      .filter(tx => !tx.purpose || tx.purpose === 'payment')
       .map(tx => {
       const isWithdrawal = withdrawalIds.has(tx.id);
       const isVendas = companyTypeMap[tx.company_id] === 'vendas';
@@ -601,26 +598,7 @@ export default function SaldoPage() {
     });
   }
 
-  function normalizeConsultaFees(
-    data: any[],
-    companyNameMap: Record<string, string>,
-  ): UnifiedTransaction[] {
-    return data.map(tx => ({
-      id: tx.id,
-      source: 'cobranca' as const,
-      is_withdrawal: false,
-      company_id: tx.company_id ?? '',
-      company_name: companyNameMap[tx.company_id] ?? 'Desconhecido',
-      amount_cents: tx.amount_cents,
-      status: 'confirmed',
-      date: tx.requested_at,
-      tipo_label: 'Consulta',
-      notes: tx.notes ?? '',
-      is_consulta_fee: true,
-    }));
-  }
-
-    function normalizeConsultaFeesSaldo(         // ← adiciona aqui
+    function normalizeConsultaFees(         // ← adiciona aqui
     data: any[],
     companyNameMap: Record<string, string>,
   ): UnifiedTransaction[] {

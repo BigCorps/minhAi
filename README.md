@@ -8,7 +8,7 @@
 
 * Criar Auxiliar de Cadastro e com MCP whatsapp
 
-* Tour guiado - implementar cache (pedidoslj)
+* Tour guiado - chache implementado, quando finalizar todos os stages, aplicar o cache no restante (pedidoslj)
 
 * página admin no dashboard (colocar controle de consultas tambem)
 

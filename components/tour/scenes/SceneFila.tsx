@@ -36,11 +36,7 @@ const CONTACTS = [
   },
 ]
 
-const CUSTOM_LINKS = [
-  { id: '1', titulo: 'Cardápio Digital' },
-  { id: '2', titulo: 'Agendar Horário' },
-  { id: '3', titulo: 'Programa de Fidelidade' },
-]
+
 
 // ── Componente Fila ───────────────────────────────────────────────
 function PainelFila() {
@@ -166,55 +162,60 @@ function PaginaLink() {
 
   return (
     <div
-      className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
-      style={{ background: BG }}
+      className="w-full h-full rounded-2xl flex flex-col select-none"
+      style={{ background: BG, overflow: 'hidden' }}
     >
-      <div
-        className="flex-1 overflow-y-auto"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          padding: 'clamp(10px, 3%, 18px) clamp(10px, 5%, 22px)',
-          gap: 'clamp(6px, 1.5%, 12px)',
-        }}
-      >
-        {/* Logo + nome */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+      {/* Conteúdo — sem overflow-y, tudo cabe na tela */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '10px 18px',
+        gap: 8,
+        overflow: 'hidden',
+      }}>
+
+        {/* Logo + nome — ícone de café SVG igual ao SceneTotem */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
           <div style={{
-            width: 'clamp(36px, 9vw, 54px)',
-            height: 'clamp(36px, 9vw, 54px)',
+            width: 'clamp(36px, 9vw, 52px)',
+            height: 'clamp(36px, 9vw, 52px)',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #1e3a2f, #0f172a)',
-            border: '2.5px solid rgba(74,222,128,0.35)',
+            background: 'rgba(245,158,11,0.15)',
+            border: '2px solid rgba(245,158,11,0.4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <svg viewBox="0 0 40 22" style={{ width: '75%' }}>
-              <text x="50%" y="75%" textAnchor="middle" dominantBaseline="middle"
-                style={{ fontSize: 15, fontWeight: 900, fill: '#4ade80', fontFamily: 'sans-serif', letterSpacing: -1 }}>
-                nhA
-              </text>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth={1.8} strokeLinecap="round"
+              style={{ width: '55%', height: '55%' }}>
+              <path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z" />
+              <path d="M16 9h2.5a2.5 2.5 0 0 1 0 5H16" />
+              <path d="M6 2v2" /><path d="M10 2v2" /><path d="M14 2v2" />
+              <path d="M3 21h18" />
             </svg>
           </div>
-          <p className="font-bold text-white text-center" style={{ fontSize: 'clamp(0.65rem, 1.6vw, 0.9rem)', margin: 0 }}>
+          <p style={{ color: '#fff', fontWeight: 700, fontSize: 'clamp(0.65rem, 1.6vw, 0.88rem)', margin: 0, textAlign: 'center' }}>
             Café Exemplo
           </p>
-          <p style={{ fontSize: 'clamp(0.45rem, 1.1vw, 0.6rem)', color: ACCENT_LINK, fontWeight: 600, margin: 0 }}>
+          <p style={{ fontSize: 'clamp(0.42rem, 1vw, 0.58rem)', color: ACCENT_LINK, fontWeight: 600, margin: 0 }}>
             Agente IA
           </p>
         </div>
 
-        {/* Contatos */}
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <p style={{
-            textAlign: 'center', fontSize: 'clamp(0.35rem, 0.8vw, 0.46rem)',
-            fontWeight: 600, color: 'rgba(255,255,255,0.35)',
-            letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0,
-          }}>Contato</p>
+        {/* Label CONTATO */}
+        <p style={{
+          textAlign: 'center', fontSize: 'clamp(0.32rem, 0.75vw, 0.43rem)',
+          fontWeight: 600, color: 'rgba(255,255,255,0.35)',
+          letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0,
+        }}>Contato</p>
+
+        {/* Contatos — largura limitada para não esticar até a borda */}
+        <div style={{ width: '80%', maxWidth: 260, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {CONTACTS.map((c) => (
             <div key={c.label} style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              padding: 'clamp(5px, 1.2%, 8px) clamp(8px, 2.5%, 14px)',
+              padding: '5px 10px',
               borderRadius: 10,
               background: hovered === c.label ? 'rgba(255,255,255,0.07)' : BG_CARD,
               border: '1px solid rgba(255,255,255,0.07)',
@@ -224,50 +225,21 @@ function PaginaLink() {
               onMouseLeave={() => setHovered(null)}
             >
               <span style={{ color: c.color, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{c.icon}</span>
-              <span style={{ flex: 1, textAlign: 'center', color: 'rgba(255,255,255,0.85)', fontSize: 'clamp(0.45rem, 1.1vw, 0.62rem)', fontWeight: 600 }}>
+              <span style={{ flex: 1, textAlign: 'center', color: 'rgba(255,255,255,0.85)', fontSize: 'clamp(0.42rem, 1vw, 0.58rem)', fontWeight: 600 }}>
                 {c.label}
               </span>
             </div>
           ))}
         </div>
 
-        {/* Links customizados */}
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <p style={{
-            textAlign: 'center', fontSize: 'clamp(0.35rem, 0.8vw, 0.46rem)',
-            fontWeight: 600, color: 'rgba(255,255,255,0.35)',
-            letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0,
-          }}>Links</p>
-          {CUSTOM_LINKS.map((link) => (
-            <div key={link.id} style={{
-              display: 'flex', alignItems: 'center',
-              padding: 'clamp(5px, 1.2%, 8px) clamp(8px, 2.5%, 14px)',
-              borderRadius: 10,
-              background: hovered === link.id ? 'rgba(255,255,255,0.07)' : BG_CARD,
-              border: '1px solid rgba(255,255,255,0.07)',
-              cursor: 'pointer', transition: 'background 0.15s',
-            }}
-              onMouseEnter={() => setHovered(link.id)}
-              onMouseLeave={() => setHovered(null)}
-            >
-              <span style={{ flex: 1, color: 'rgba(255,255,255,0.85)', fontSize: 'clamp(0.45rem, 1.1vw, 0.62rem)', fontWeight: 600 }}>
-                {link.titulo}
-              </span>
-              <svg fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth={2} viewBox="0 0 24 24" style={{ width: 11, height: 11, flexShrink: 0 }}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
-              </svg>
-            </div>
-          ))}
-        </div>
-
         {/* Botão assistente */}
-        <div style={{ width: '100%' }}>
+        <div style={{ width: '80%', maxWidth: 260 }}>
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 'clamp(7px, 1.8%, 11px) 14px',
+            padding: '8px 14px',
             borderRadius: 12,
             background: `linear-gradient(135deg, ${ACCENT_LINK}, #10b981)`,
-            color: '#ffffff', fontSize: 'clamp(0.5rem, 1.2vw, 0.68rem)', fontWeight: 700,
+            color: '#ffffff', fontSize: 'clamp(0.48rem, 1.1vw, 0.65rem)', fontWeight: 700,
             boxShadow: `0 4px 20px ${ACCENT_LINK}40`, cursor: 'pointer',
           }}>
             Falar com o Assistente

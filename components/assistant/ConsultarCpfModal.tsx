@@ -128,6 +128,7 @@ export default function ConsultarCpfModal({
           body: {
             company_id: companyId,
             amount_cents: res.amount_cents,
+            purpose: 'consulta_fee',
             description: `Consulta CPF - R$ ${res.amount_brl}`,
           },
         });

@@ -3,12 +3,13 @@
 
 import { useState, useCallback } from 'react'
 import TourStage1 from '@/components/tour/TourStage1'
+import TourStage2 from '@/components/tour/TourStage2'
 import TourManager from '@/components/tour/TourManager'
 
 type PageState = 'playing' | 'selecting'
 
 export default function TourPage() {
-  const [pageState, setPageState] = useState<PageState>('playing')
+  const [pageState, setPageState]     = useState<PageState>('playing')
   const [activeStage, setActiveStage] = useState(1)
   const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>('dark')
 
@@ -27,9 +28,18 @@ export default function TourPage() {
 
   return (
     <>
-      {pageState === 'playing' && (
+      {pageState === 'playing' && activeStage === 1 && (
         <TourStage1
-          key={`stage-${activeStage}`}
+          key="stage-1"
+          initialTheme={currentTheme}
+          onComplete={handleComplete}
+          onThemeChange={handleThemeChange}
+        />
+      )}
+
+      {pageState === 'playing' && activeStage === 2 && (
+        <TourStage2
+          key="stage-2"
           initialTheme={currentTheme}
           onComplete={handleComplete}
           onThemeChange={handleThemeChange}

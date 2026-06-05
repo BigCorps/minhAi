@@ -30,7 +30,7 @@ const STAGES: Stage[] = [
     id: 2,
     label: 'Página do Assistente',
     description: 'Modos do avatar e funções de voz',
-    available: false,
+    available: true,
     icon: (
       <svg
         className={iconClass}

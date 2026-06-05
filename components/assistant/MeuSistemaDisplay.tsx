@@ -71,9 +71,11 @@ export default function MeuSistemaDisplay({
     return () => clearInterval(interval);
   }, [countdownActive, onClose]);
 
-  // Abre o tour — para o speech, desbloqueia áudio e pausa countdown
+  // Abre o tour — para ambos os sistemas de áudio e pausa countdown
   const handleOpenTour = useCallback(() => {
     window.speechSynthesis.cancel()
+    // Para o áudio HTML do VoiceAssistant (useAudioPlayer / currentAudioRef)
+    window.dispatchEvent(new CustomEvent('eai:stopAudio'))
     unlockAudioContext()
     setCountdownActive(false)
     setTourOpen(true)

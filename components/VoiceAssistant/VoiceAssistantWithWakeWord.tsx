@@ -564,6 +564,17 @@ usePresenceDetector({
     };
     window.addEventListener('keydown', handleKeyPress);
 
+    // ── Para áudio quando MeuSistemaDisplay abre o tour ──
+    const handleStopAudio = () => {
+      stopAudioImmediately()
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel()
+      }
+      setIsPlayingAudio(false)
+      setIsProcessing(false)
+    }
+    window.addEventListener('eai:stopAudio', handleStopAudio)
+
 // ── Listener para chamada de vídeo recebida do dashboard ──
     const handleIncomingCall = (event: any) => {
       const { callId, roomUrl, receiverToken, callerName } = event.detail;
@@ -607,6 +618,7 @@ window.addEventListener('eai:incomingVideoCall', handleIncomingCall);
       window.removeEventListener('verProdutoPix', handleVerProdutoPix);
       window.removeEventListener('voiceAssistantFunctionClick', handleExternalFunctionClick);
       window.removeEventListener('keydown', handleKeyPress);
+      window.removeEventListener('eai:stopAudio', handleStopAudio);
       window.removeEventListener('eai:incomingVideoCall', handleIncomingCall);
       window.removeEventListener('eai:solicitarIdentificacaoCliente', handleSolicitarIdentificacao);
       window.removeEventListener('eai:enviarConfirmacaoCliente', handleEnviarConfirmacao);

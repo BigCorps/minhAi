@@ -97,16 +97,14 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
       'clicar no botão e falar, navegar pelos botões do carrossel, ' +
       'ou simplesmente digitar. ' +
       'Cada pessoa interage do jeito que prefere — ' +
-      'e a minha I A está pronta para todas elas, vinte e quatro horas por dia, ' +
-      'sem precisar de um atendente humano.',
+      'e a minha I A está pronta para todas elas, vinte e quatro horas por dia, ',
     displayText:
       'E o grande diferencial da minhAi é a liberdade de interação. ' +
       'O cliente pode chamar como uma Alexa usando a palavra de ativação, ' +
       'clicar no botão e falar, navegar pelos botões do carrossel, ' +
       'ou simplesmente digitar. ' +
       'Cada pessoa interage do jeito que prefere — ' +
-      'e a minhAi está pronta para todas elas, 24 horas por dia, ' +
-      'sem precisar de um atendente humano.',
+      'e a minhAi está pronta para todas elas, 24 horas por dia! ',
     fallbackDuration: 9000,
   },
 ]

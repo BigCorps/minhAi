@@ -371,8 +371,8 @@ export default function SaldoPage() {
           .filter((id): id is string => id !== null)
       );
 
-      // ── Consultas pagas via saldo ────────────────────────────────────
-      const { data: consultasSaldoData } = await supabase
+      // ── Consultas pagas ──────────────────────────────────────────────────
+      const { data: consultasData } = await supabase
         .from('balance_transactions')
         .select('id, company_id, amount_cents, description, created_at')
         .eq('user_id', userId)
@@ -426,7 +426,7 @@ export default function SaldoPage() {
         ...normalizePix(pixData ?? [], withdrawalIds, companyNameMap, companyTypeMap, commissionsData),
         ...normalizeCobrancas(cobrancasData ?? [], companyNameMap, companyTypeMap),
         ...normalizeMpOrders(mpOrdersData ?? [], companyNameMap, companyTypeMap),
-        ...normalizeConsultaFeesSaldo(consultasSaldoData ?? [], companyNameMap),
+        ...normalizeConsultaFees(consultasData ?? [], companyNameMap),
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       setAllTransactions(merged);
@@ -446,7 +446,7 @@ export default function SaldoPage() {
       const [{ data: pixData }, { data: cobrancasData }, { data: mpOrdersData }] = await Promise.all([
         supabase
           .from('pix_transactions')
-          .select('id, company_id, amount_cents, status, requested_at, notes, destination_pix_key, purpose')
+          .select('id, company_id, amount_cents, status, requested_at, notes, destination_pix_key')
           .eq('user_id', userId)
           .order('requested_at', { ascending: false })
           .range(pixOffset, pixOffset + PAGE_SIZE - 1),
@@ -508,8 +508,7 @@ export default function SaldoPage() {
     companyTypeMap: Record<string, string>,
     commissions: CommissionPending[],
   ): UnifiedTransaction[] {
-    return data
-      .map(tx => {
+    return data.map(tx => {
       const isWithdrawal = withdrawalIds.has(tx.id);
       const isVendas = companyTypeMap[tx.company_id] === 'vendas';
       const comissaoEntry = isVendas && !isWithdrawal
@@ -589,7 +588,7 @@ export default function SaldoPage() {
     });
   }
 
-    function normalizeConsultaFees(         // ← adiciona aqui
+  function normalizeConsultaFees(
     data: any[],
     companyNameMap: Record<string, string>,
   ): UnifiedTransaction[] {

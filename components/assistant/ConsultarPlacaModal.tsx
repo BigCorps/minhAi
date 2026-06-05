@@ -120,6 +120,7 @@ export default function ConsultarPlacaModal({
           body: {
             company_id: companyId,
             amount_cents: res.amount_cents,
+            purpose: 'consulta_fee',
             description: `Consulta Placa - R$ ${res.amount_brl}`,
           },
         });

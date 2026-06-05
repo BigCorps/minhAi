@@ -101,18 +101,6 @@ export default function SceneCarrossel() {
             </svg>
           </div>
           <span className="text-white/70 font-semibold" style={{ fontSize: 'clamp(0.55rem, 1.3vw, 0.72rem)' }}>Café Exemplo</span>
-        </div>
-        <span className="text-white/20" style={{ fontSize: 'clamp(0.42rem, 1vw, 0.52rem)' }}>minhAi</span>
-      </div>
-
-      {/* ── Área principal — só título, painel é absoluto ── */}
-      <div className="flex-1 flex flex-col items-center justify-start px-4 pt-3 min-h-0 relative">
-        <p
-          className="text-white font-bold text-center flex-shrink-0"
-          style={{ fontSize: 'clamp(0.75rem, 2vw, 1.1rem)' }}
-        >
-          Como Posso te Ajudar Hoje?
-        </p>
       </div>
 
       {/* ── Carrossel de categorias ── */}

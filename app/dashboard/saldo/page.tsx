@@ -371,15 +371,6 @@ export default function SaldoPage() {
           .filter((id): id is string => id !== null)
       );
 
-// ── Consultas pagas via saldo ────────────────────────────────────
-      const { data: consultasSaldoData } = await supabase
-        .from('balance_transactions')
-        .select('id, company_id, amount_cents, description, created_at')
-        .eq('user_id', userId)
-        .eq('transaction_type', 'consulta_fee')
-        .order('created_at', { ascending: false })
-        .range(0, PAGE_SIZE - 1);
-
       // ── Consultas pagas via saldo ────────────────────────────────────
       const { data: consultasSaldoData } = await supabase
         .from('balance_transactions')

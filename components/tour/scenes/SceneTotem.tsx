@@ -73,18 +73,7 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
       </div>
 
       {/* ── Avatar + input ── */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-2 min-h-0 px-4">
-        <div style={{ width: 'clamp(60px, 14vw, 100px)', aspectRatio: '1/1' }}>
-          <AvatarFace
-            isSpeaking={isSpeaking}
-            isListening={false}
-            isProcessing={false}
-            theme="dark"
-            avatarType={isSpeaking ? 'orb' : 'face'}
-            hasActivePlan={true}
-          />
-        </div>
-
+      <div className="flex-1 flex flex-col items-center justify-start gap-2 min-h-0 px-4">
         <p className="text-white font-bold text-center" style={{ fontSize: 'clamp(0.7rem, 1.8vw, 1rem)' }}>
           Como Posso te Ajudar Hoje?
         </p>

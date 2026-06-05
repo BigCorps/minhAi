@@ -95,7 +95,7 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
       }}
     >
       {/*
-       * Mobile: 90vw × 90dvh — aproveita a tela pequena.
+       * Mobile: 95vw × 95dvh — aproveita a tela pequena.
        * Desktop (md+): 70vw × 70dvh — elimina espaço vazio excessivo.
        */}
       <div

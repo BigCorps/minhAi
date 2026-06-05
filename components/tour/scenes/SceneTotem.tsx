@@ -3,7 +3,13 @@
 
 import { useEffect, useState } from 'react'
 import { AvatarFace } from '@/components/AvatarFace'
-import VirtualKeyboard from '@/components/assistant/VirtualKeyboard'
+
+const KEYBOARD_ROWS = [
+  ['1','2','3','4','5','6','7','8','9','0'],
+  ['q','w','e','r','t','y','u','i','o','p'],
+  ['a','s','d','f','g','h','j','k','l'],
+  ['z','x','c','v','b','n','m'],
+]
 
 const TYPED_SEQUENCE = 'expresso'
 
@@ -16,13 +22,11 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
   const [keyboardOpen, setKeyboardOpen] = useState(false)
   const [typingIdx, setTypingIdx]       = useState(0)
 
-  // Abre teclado após 1s
   useEffect(() => {
     const t = setTimeout(() => setKeyboardOpen(true), 1000)
     return () => clearTimeout(t)
   }, [])
 
-  // Digita letra por letra após teclado abrir
   useEffect(() => {
     if (!keyboardOpen) return
     if (typingIdx >= TYPED_SEQUENCE.length) {
@@ -35,6 +39,8 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
     }, 220)
     return () => clearTimeout(t)
   }, [keyboardOpen, typingIdx])
+
+  const activeKey = typingIdx < TYPED_SEQUENCE.length ? TYPED_SEQUENCE[typingIdx] : null
 
   return (
     <div
@@ -83,7 +89,6 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
           Como Posso te Ajudar Hoje?
         </p>
 
-        {/* Campo de input mockado */}
         <div
           className="w-full max-w-xs rounded-xl border flex items-center gap-2 px-3 py-2"
           style={{
@@ -117,17 +122,131 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
         </div>
       </div>
 
-      {/* ── VirtualKeyboard real ── */}
-      {keyboardOpen && (
-        <VirtualKeyboard
-          theme="dark"
-          onKey={(char) => setTyped(prev => prev + char)}
-          onBackspace={() => setTyped(prev => prev.slice(0, -1))}
-          onEnter={() => { setTyped(''); setKeyboardOpen(false) }}
-          onClose={() => setKeyboardOpen(false)}
-          onReplace={(char) => setTyped(prev => prev.slice(0, -1) + char)}
-        />
-      )}
+      {/* ── Teclado mock — position absolute, de ponta a ponta dentro do card ── */}
+      <div
+        className="flex-shrink-0 w-full absolute bottom-0 left-0"
+        style={{
+          background: '#1e293b',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          padding: '8px 6px 10px',
+          transform: keyboardOpen ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 400ms cubic-bezier(0.34,1.56,0.64,1)',
+        }}
+      >
+        {/* Botão fechar */}
+        <div className="flex justify-end px-1 mb-1.5">
+          <button
+            className="rounded-full flex items-center justify-center"
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              width: 20, height: 20,
+              color: 'rgba(255,255,255,0.5)',
+              border: 'none',
+              fontSize: 13,
+              cursor: 'pointer',
+            }}
+            onClick={() => setKeyboardOpen(false)}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Linhas de teclas */}
+        {KEYBOARD_ROWS.map((row, ri) => (
+          <div key={ri} className="flex justify-center gap-1 mb-1">
+            {row.map(key => {
+              const isActive = key === activeKey
+              return (
+                <div
+                  key={key}
+                  className="flex items-center justify-center rounded-lg font-medium transition-all duration-100"
+                  style={{
+                    flex: 1,
+                    maxWidth: ri === 0 ? '10%' : undefined,
+                    height: 'clamp(22px, 4vw, 32px)',
+                    fontSize: 'clamp(0.45rem, 1.1vw, 0.6rem)',
+                    background: isActive ? '#3b82f6' : '#334155',
+                    color: isActive ? 'white' : 'rgba(255,255,255,0.75)',
+                    border: `1px solid ${isActive ? '#3b82f6' : 'rgba(255,255,255,0.06)'}`,
+                    transform: isActive ? 'scale(1.12)' : 'scale(1)',
+                  }}
+                >
+                  {key}
+                </div>
+              )
+            })}
+          </div>
+        ))}
+
+        {/* Linha de controles */}
+        <div className="flex gap-1 mt-1">
+          <div
+            className="flex items-center justify-center rounded-lg font-semibold"
+            style={{
+              flex: 1.4,
+              height: 'clamp(22px, 4vw, 32px)',
+              fontSize: 'clamp(0.38rem, 0.9vw, 0.5rem)',
+              background: '#0f172a',
+              color: 'rgba(255,255,255,0.5)',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            ⬆
+          </div>
+          <div
+            className="flex items-center justify-center rounded-lg font-semibold"
+            style={{
+              flex: 1.4,
+              height: 'clamp(22px, 4vw, 32px)',
+              fontSize: 'clamp(0.38rem, 0.9vw, 0.5rem)',
+              background: '#0f172a',
+              color: 'rgba(255,255,255,0.5)',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            123@?,
+          </div>
+          <div
+            className="flex items-center justify-center rounded-lg"
+            style={{
+              flex: 4,
+              height: 'clamp(22px, 4vw, 32px)',
+              fontSize: 'clamp(0.38rem, 0.9vw, 0.5rem)',
+              background: '#334155',
+              color: 'rgba(255,255,255,0.35)',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            espaço
+          </div>
+          <div
+            className="flex items-center justify-center rounded-lg font-semibold"
+            style={{
+              flex: 1.4,
+              height: 'clamp(22px, 4vw, 32px)',
+              fontSize: 'clamp(0.45rem, 1vw, 0.58rem)',
+              background: '#0f172a',
+              color: '#f87171',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            ⌫
+          </div>
+          <div
+            className="flex items-center justify-center rounded-lg font-semibold"
+            style={{
+              flex: 2,
+              height: 'clamp(22px, 4vw, 32px)',
+              fontSize: 'clamp(0.38rem, 0.9vw, 0.5rem)',
+              background: '#16a34a',
+              color: 'white',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            ↵ Enviar
+          </div>
+        </div>
+      </div>
 
       {/* Footer */}
       <div
@@ -139,7 +258,7 @@ export default function SceneTotem({ isSpeaking = false }: SceneTotemProps) {
           borderTop: '1px solid rgba(255,255,255,0.05)',
         }}
       >
-        <strong>minhai.app</strong> — Uma IA pra chamar de sua!
+        suporte.<strong>minhai.app</strong> — Uma IA pra chamar de sua!
       </div>
     </div>
   )

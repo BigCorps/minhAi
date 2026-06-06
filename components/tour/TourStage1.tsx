@@ -306,12 +306,14 @@ export default function TourStage1({
           paddingBottom: inModal ? '8px' : 'clamp(8px, 2dvh, 24px)',
         }}
       >
+        {/* Cena — mobile: flex-1 (ocupa o que sobra acima do assistente)
+                desktop: altura fixa alinhada com o assistente em flex-row */}
         <div
-          className="flex-1 min-h-0 w-full"
+          className="flex-1 min-h-0 md:flex-shrink-0 w-full"
           style={{
-            // inModal: 52% da altura do container (90dvh × 52% ≈ 47dvh)
-            // standalone: clamp baseado em dvh do viewport
-            height: inModal ? '52%' : 'clamp(220px, 52dvh, 520px)',
+            height: inModal
+              ? 'clamp(180px, 42dvh, 420px)'
+              : 'clamp(220px, 52dvh, 520px)',
           }}
         >
           <div
@@ -325,14 +327,10 @@ export default function TourStage1({
           </div>
         </div>
 
-        {/* Assistente */}
+        {/* Assistente — sem altura fixa, flui naturalmente */}
         <div
-          className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-72 lg:w-80"
-          style={{
-            height: inModal ? '38%' : 'clamp(170px, 42dvh, 340px)',
-            overflow: 'hidden',
-            gap: 'clamp(6px, 1.5dvh, 16px)',
-          }}
+          className="flex-shrink-0 flex flex-col items-center w-full md:w-72 lg:w-80"
+          style={{ gap: 'clamp(6px, 1.5dvh, 16px)' }}
         >
           <TourAssistant
             isSpeaking={isSpeaking}

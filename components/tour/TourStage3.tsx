@@ -199,19 +199,15 @@ export default function TourStage3({
         className="flex-1 min-h-0 flex flex-col md:flex-row md:items-center gap-0 md:gap-12 px-4 md:px-12 w-full max-w-5xl mx-auto"
         style={{ paddingTop: 'clamp(16px, 4dvh, 48px)', paddingBottom: inModal ? '8px' : 'clamp(8px, 2dvh, 24px)' }}
       >
-        <div className="flex-1 min-h-0 w-full" style={{ height: inModal ? '52%' : 'clamp(220px, 52dvh, 520px)' }}>
+        <div className="flex-1 min-h-0 md:flex-shrink-0 w-full" style={{ height: inModal ? 'clamp(180px, 42dvh, 420px)' : 'clamp(220px, 52dvh, 520px)' }}>
           <div className="w-full h-full transition-opacity ease-in-out" style={{ opacity: sceneVisible ? 1 : 0, transitionDuration: `${FADE_DURATION}ms` }}>
             <SceneRenderer3 id={currentScene.id} isSpeaking={isSpeaking} theme={theme} />
           </div>
         </div>
 
         <div
-          className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-72 lg:w-80"
-          style={{
-            height: inModal ? '38%' : 'clamp(170px, 42dvh, 340px)',
-            overflow: 'hidden',
-            gap: 'clamp(6px, 1.5dvh, 16px)',
-          }}
+          className="flex-shrink-0 flex flex-col items-center w-full md:w-72 lg:w-80"
+          style={{ gap: 'clamp(6px, 1.5dvh, 16px)' }}
         >
           <TourAssistant
             isSpeaking={isSpeaking}

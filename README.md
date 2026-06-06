@@ -6,6 +6,8 @@
 
 ## Roadmap e Features Planejadas
 
+* corrigir aprovação do app ChatGPT 
+
 * Criar Auxiliar de Cadastro e com MCP whatsapp
 
 * Tour guiado - chache implementado, quando finalizar todos os stages, aplicar o cache no restante (pedidoslj)

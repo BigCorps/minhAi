@@ -74,31 +74,33 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
     audioText:
       'O Auxiliar de Produção calcula custo e margem a partir dos insumos informados ' +
       'e já cria o produto no catálogo com o preço sugerido. ' +
+'O Auxiliar de Relatórios transforma planilhas e PDFs em relatórios formatados. ' +
       'O Assistente de Orçamentos vai além — ' +
-      'descreva o pedido por voz ou texto, ' +
-      'ele monta o orçamento completo com produtos, margens e desconto, ' +
-      'gera o documento com logo da empresa e já envia o link do PIX para o cliente pagar na hora.',
+      'ele monta o orçamento completo com produtos, data e desconto, ' +
+      'gera o documento com logo da empresa e o Pix.',
     fallbackDuration: 10000,
   },
   {
     id: 'auxiliares-extras',
     label: 'Mais Auxiliares',
     audioText:
-      'O Investigador Antifraude analisa boletos, comprovantes e U R Ls suspeitas ' +
+      'O Investigador Antifraude analisa boletos, comprovantes e U R L suspeitas ' +
       'e emite um laudo com nível de risco em segundos — ' +
+ 
       'protegendo seu negócio antes de fechar qualquer negociação. ' +
-      'O Auxiliar de Relatórios transforma planilhas e PDFs em relatórios formatados com resumos e insights. ' +
       'O Auxiliar de Funções te ajuda a escolher as melhores funções de acordo com o seu ramo. ' +
       'E o Auxiliar de Cadastro cria produtos completos por voz ou texto — ' +
       'nome, descrição, categoria, preço e margem, com recomendação de imagem automática. ' +
       'O produto já fica disponível no catálogo para venda na hora.',
     displayText:
-      'O Investigador Antifraude analisa boletos, comprovantes e URLs suspeitas ' +
-      'e emite um laudo com nível de risco em segundos. ' +
-      'O Auxiliar de Relatórios transforma planilhas e PDFs em relatórios formatados. ' +
+          'O Investigador Antifraude analisa boletos, comprovantes e URLs suspeitas ' +
+      'e emite um laudo com nível de risco em segundos — ' +
+ 
+      'protegendo seu negócio antes de fechar qualquer negociação. ' +
       'O Auxiliar de Funções te ajuda a escolher as melhores funções de acordo com o seu ramo. ' +
       'E o Auxiliar de Cadastro cria produtos completos por voz ou texto — ' +
-      'nome, descrição, categoria, preço e margem, com recomendação de imagem automática.',
+      'nome, descrição, categoria, preço e margem, com recomendação de imagem automática. ' +
+      'O produto já fica disponível no catálogo para venda na hora.',
     fallbackDuration: 11000,
   },
 {

@@ -8,21 +8,26 @@ import {
   Receipt,
   Factory,
   CalendarClock,
-  Settings2,
+  Package,
   ShieldAlert,
   FileBarChart2,
+  Settings2,
 } from 'lucide-react'
 
+// 3 cores alternadas: lime, blue, amber
+const COLORS = ['#84cc16', '#3b82f6', '#f59e0b']
+
 const ESPECIALISTAS = [
-  { nome: 'Vendas',      tagline: 'Do pedido ao pagamento',        color: '#84cc16', Icon: ShoppingCart },
-  { nome: 'Orçamentos',  tagline: 'Orçamento em segundos', color: '#3b82f6', Icon: FileText },
-  { nome: 'Fiscal',      tagline: 'Emite NFe, NFSe e NFCe',        color: '#f59e0b', Icon: Receipt },
-  { nome: 'Produção',    tagline: 'Custo e margem calculados',      color: '#3b82f6', Icon: Factory },
-  { nome: 'Agenda',      tagline: 'Consultas, salões e reuniões',   color: '#84cc16', Icon: CalendarClock },
-  { nome: 'Cadastro',    tagline: 'Produtos criados por voz',       color: '#3b82f6', Icon: Settings2 },
-  { nome: 'Antifraude',  tagline: 'Detecção ágil de fraudes',    color: '#f59e0b', Icon: ShieldAlert },
-  { nome: 'Relatórios',  tagline: 'Arquivos viram relatórios',      color: '#3b82f6', Icon: FileBarChart2 },
-]
+  { nome: 'Vendas',      tagline: 'Do pedido ao pagamento',      Icon: ShoppingCart },
+  { nome: 'Orçamentos',  tagline: 'Orçamento em segundos',       Icon: FileText     },
+  { nome: 'Fiscal',      tagline: 'Emite NFe, NFSe e NFCe',      Icon: Receipt      },
+  { nome: 'Produção',    tagline: 'Custo e margem calculados',    Icon: Factory      },
+  { nome: 'Agenda',      tagline: 'Consultas, salões e reuniões', Icon: CalendarClock},
+  { nome: 'Cadastro',    tagline: 'Produtos criados por voz',     Icon: Package      },
+  { nome: 'Antifraude',  tagline: 'Detecção ágil de fraudes',    Icon: ShieldAlert  },
+  { nome: 'Relatórios',  tagline: 'Arquivos viram relatórios',    Icon: FileBarChart2},
+  { nome: 'Funções',     tagline: 'Configura sem código',         Icon: Settings2    },
+].map((e, i) => ({ ...e, color: COLORS[i % COLORS.length] }))
 
 const BG = 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
 
@@ -57,12 +62,12 @@ export default function SceneAuxiliaresIntro() {
         </h2>
       </div>
 
-      {/* Grid 4×2 */}
-      <div className="flex-1 min-h-0 grid grid-cols-4 gap-2 p-3 content-center">
+      {/* Grid 3×3 — tudo centralizado */}
+      <div className="flex-1 min-h-0 grid grid-cols-3 gap-2 p-3 content-center">
         {ESPECIALISTAS.map((e, i) => (
           <div
             key={e.nome}
-            className="flex flex-col gap-1 p-2 rounded-xl border transition-all duration-300"
+            className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl border transition-all duration-300 text-center"
             style={{
               background: `${e.color}08`,
               borderColor: `${e.color}20`,
@@ -82,7 +87,7 @@ export default function SceneAuxiliaresIntro() {
             >
               <e.Icon
                 style={{ color: e.color }}
-                size="clamp(10px, 2vw, 14px)"
+                size={14}
                 strokeWidth={1.8}
               />
             </div>
@@ -97,12 +102,12 @@ export default function SceneAuxiliaresIntro() {
 
             {/* Tagline */}
             <span
-              className="rounded-full px-1.5 py-0.5 font-semibold self-start leading-none"
+              className="rounded-full px-1.5 py-0.5 font-semibold leading-none"
               style={{
                 background: `${e.color}15`,
                 color: e.color,
                 border: `1px solid ${e.color}25`,
-                fontSize: 'clamp(0.35rem, 0.8vw, 0.46rem)',
+                fontSize: 'clamp(0.32rem, 0.75vw, 0.42rem)',
               }}
             >
               {e.tagline}

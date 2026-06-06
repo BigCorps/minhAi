@@ -1,187 +1,231 @@
 'use client'
 // components/tour/scenes/SceneVendasAux.tsx
-// Mock visual fiel ao FazerPedidoDisplay — cicla pelas 3 etapas automaticamente
+// Assistente de Vendas — padrão visual unificado com SceneVendas
+// Cicla automaticamente: pedido (chat+carrinho) → entrega → pagamento (QR → confirmado)
 
 import { useEffect, useState, useRef } from 'react'
 
-// ─── Paleta (espelho do FazerPedidoDisplay dark) ──────────────────────────────
-const C = {
-  bg:              '#1e293b',
-  bgSecondary:     '#334155',
-  bgChat:          '#0f172a',
-  text:            '#f1f5f9',
-  textMuted:       '#94a3b8',
-  border:          '#475569',
-  accent:          '#10b981',
-  accentBlue:      '#3b82f6',
-  userBubble:      '#10b981',
-  assistantBubble: '#334155',
-}
+// ─── Paleta (espelho exato do SceneVendas / FazerPedidoDisplay dark) ──────────
+const BG_DARK   = '#0f172a'
+const BG_CARD   = 'rgba(255,255,255,0.04)'
+const BG_CHAT   = '#0f172a'
+const BG_SEC    = '#1e293b'
+const BG_SEC2   = '#334155'
+const BORDER    = 'rgba(255,255,255,0.08)'
+const BORDER2   = '#475569'
+const ACCENT    = '#10b981'
+const ACCENT_B  = '#3b82f6'
+const TXT       = '#f1f5f9'
+const TXT_MUTED = '#94a3b8'
+const USER_BUB  = '#10b981'
+const BOT_BUB   = '#334155'
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-type Step = 'pedido' | 'entrega' | 'pagamento'
+const PRODUCTS = [
+  { id: '1', name: 'Expresso',      price: 8.00,  img: '/vendas1.jpg', fav: true  },
+  { id: '2', name: 'Cappuccino',    price: 12.00, img: '/vendas2.jpg', fav: true  },
+  { id: '3', name: 'Croissant',     price: 9.50,  img: '/vendas3.jpg', fav: false },
+  { id: '4', name: 'Pão de Queijo', price: 5.00,  img: '/vendas4.jpg', fav: false },
+]
 
 interface Msg { from: 'user' | 'bot'; text: string; produto?: true }
-
 const MSGS: Msg[] = [
   { from: 'user', text: 'Quero um cappuccino e um croissant' },
   { from: 'bot',  text: 'Ótima escolha! Adicionei ao carrinho:', produto: true },
   { from: 'user', text: 'Pode finalizar' },
-  { from: 'bot',  text: 'Perfeito! Escolha o tipo de entrega.' },
+  { from: 'bot',  text: 'Perfeito! Avançando para entrega.' },
 ]
 
+type Step = 'pedido' | 'entrega' | 'pagamento'
 const STEPS: Step[] = ['pedido', 'entrega', 'pagamento']
-const STEP_LABELS = { pedido: 'Pedido', entrega: 'Entrega', pagamento: 'Pagamento' }
 
-// ─── Mini ícones SVG inline ───────────────────────────────────────────────────
-const IconCart = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-full h-full">
+// ─── Ícones ───────────────────────────────────────────────────────────────────
+const IconCart = ({ size = 16, color = 'white' }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round">
     <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
   </svg>
 )
-const IconSend = () => (
-  <svg viewBox="0 0 24 24" fill="white" className="w-full h-full"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+const IconSend = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="white"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
 )
-const IconMic = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-full h-full">
-    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+const IconMic = ({ size = 14, color = 'white' }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round">
+    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+    <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
   </svg>
 )
-const IconPix = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="w-full h-full">
-    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-  </svg>
-)
-const IconCheck = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" className="w-full h-full">
+const IconCheck = ({ size = 20, color = ACCENT }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round">
     <polyline points="20 6 9 17 4 12"/>
   </svg>
 )
+const IconSearch = ({ size = 12, color = TXT_MUTED }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round">
+    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  </svg>
+)
 
-// ─── Produto card mini ─────────────────────────────────────────────────────────
-function ProdutoCard({ fs }: { fs: (n: number) => number }) {
-  return (
-    <div className="rounded-xl border overflow-hidden" style={{ borderColor: C.border, backgroundColor: C.bg, marginTop: 4 }}>
-      <div style={{ background: 'linear-gradient(135deg, #134e4a, #0f766e)', height: fs(36) }} />
-      <div style={{ padding: `${fs(5)}px ${fs(8)}px ${fs(7)}px` }}>
-        <div style={{ fontWeight: 700, fontSize: fs(7.5), color: C.text, marginBottom: fs(1) }}>Cappuccino + Croissant</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: fs(3) }}>
-          <span style={{ fontWeight: 800, fontSize: fs(8), color: C.accent }}>R$ 21,50</span>
-          <div style={{
-            background: C.accent, color: '#fff', borderRadius: fs(5),
-            padding: `${fs(2)}px ${fs(6)}px`, fontSize: fs(6.5), fontWeight: 700,
-            display: 'flex', alignItems: 'center', gap: fs(2),
-          }}>
-            <span style={{ fontSize: fs(8), lineHeight: 1 }}>+</span> Adicionar
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+// ─── Helper ───────────────────────────────────────────────────────────────────
+const R = (n: number, w: number) => Math.round((n * w) / 360)
 
-// ─── Etapa Pedido ─────────────────────────────────────────────────────────────
-function StepPedido({ msgCount, fs }: { msgCount: number; fs: (n: number) => number }) {
+// ─── StepPedido ───────────────────────────────────────────────────────────────
+function StepPedido({ msgCount, w }: { msgCount: number; w: number }) {
+  const r = (n: number) => R(n, w)
+  const cartItems = msgCount >= 2
+    ? [{ id: '2', qty: 1 }, { id: '3', qty: 1 }]
+    : []
+  const total = cartItems.reduce((s, i) => {
+    const p = PRODUCTS.find(x => x.id === i.id)
+    return s + (p ? p.price * i.qty : 0)
+  }, 0)
+
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
-      {/* Coluna Chat */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: `1px solid ${C.border}`, overflow: 'hidden' }}>
-        <div style={{ flex: 1, overflowY: 'hidden', padding: `${fs(8)}px ${fs(10)}px`, display: 'flex', flexDirection: 'column', gap: fs(6), justifyContent: 'flex-end', backgroundColor: C.bgChat }}>
-          {/* Mensagem inicial do bot */}
-          {msgCount >= 0 && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-              <div style={{ maxWidth: '82%', backgroundColor: C.assistantBubble, borderRadius: fs(10), padding: `${fs(5)}px ${fs(8)}px`, fontSize: fs(7), color: C.text, lineHeight: 1.4 }}>
-                Olá! Me diga o que deseja. Posso buscar no cardápio.
-              </div>
+
+      {/* ── Coluna Chat ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: `1px solid ${BORDER2}`, overflow: 'hidden' }}>
+        {/* Mensagens */}
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+          gap: r(6), padding: `${r(8)}px ${r(10)}px`, backgroundColor: BG_CHAT, overflow: 'hidden',
+        }}>
+          {/* Boas-vindas */}
+          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <div style={{
+              backgroundColor: BOT_BUB, color: TXT, borderRadius: r(10),
+              padding: `${r(5)}px ${r(8)}px`, fontSize: r(7), lineHeight: 1.4, maxWidth: '85%',
+            }}>
+              Olá! Me diga o que deseja. Posso buscar no cardápio.
             </div>
-          )}
+          </div>
+
           {MSGS.slice(0, msgCount).map((m, i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.from === 'user' ? 'flex-end' : 'flex-start', gap: fs(3) }}>
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.from === 'user' ? 'flex-end' : 'flex-start', gap: r(4) }}>
               <div style={{
-                maxWidth: '82%',
-                backgroundColor: m.from === 'user' ? C.userBubble : C.assistantBubble,
-                color: '#fff',
-                borderRadius: fs(10),
-                padding: `${fs(5)}px ${fs(8)}px`,
-                fontSize: fs(7),
-                lineHeight: 1.4,
+                backgroundColor: m.from === 'user' ? USER_BUB : BOT_BUB,
+                color: '#fff', borderRadius: r(10),
+                padding: `${r(5)}px ${r(8)}px`, fontSize: r(7), lineHeight: 1.4, maxWidth: '85%',
               }}>
                 {m.text}
               </div>
-              {m.produto && <ProdutoCard fs={fs} />}
+
+              {/* Card produto inline (igual FazerPedidoDisplay) */}
+              {m.produto && (
+                <div style={{
+                  border: `1px solid ${BORDER2}`, borderRadius: r(10), overflow: 'hidden',
+                  backgroundColor: BG_SEC, width: '88%',
+                }}>
+                  <div style={{ display: 'flex', height: r(36) }}>
+                    <img src="/vendas2.jpg" alt="Cappuccino" style={{ width: '50%', objectFit: 'cover' }} />
+                    <img src="/vendas3.jpg" alt="Croissant"  style={{ width: '50%', objectFit: 'cover' }} />
+                  </div>
+                  <div style={{ padding: `${r(5)}px ${r(8)}px ${r(7)}px` }}>
+                    <div style={{ fontWeight: 700, fontSize: r(7.5), color: TXT }}>Cappuccino + Croissant</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: r(4) }}>
+                      <span style={{ fontWeight: 800, fontSize: r(8), color: ACCENT }}>R$ 21,50</span>
+                      <div style={{
+                        backgroundColor: ACCENT, color: '#fff', borderRadius: r(6),
+                        padding: `${r(2)}px ${r(7)}px`, fontSize: r(6.5), fontWeight: 700,
+                        display: 'flex', alignItems: 'center', gap: r(2),
+                      }}>
+                        + Adicionar
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
+
         {/* Input bar */}
-        <div style={{ padding: `${fs(6)}px ${fs(10)}px`, borderTop: `1px solid ${C.border}`, backgroundColor: C.bg, display: 'flex', gap: fs(5), alignItems: 'center' }}>
-          <div style={{ flex: 1, backgroundColor: C.bgSecondary, borderRadius: fs(8), border: `1px solid ${C.border}`, padding: `${fs(5)}px ${fs(8)}px`, fontSize: fs(6.5), color: C.textMuted }}>
+        <div style={{
+          padding: `${r(6)}px ${r(10)}px`, borderTop: `1px solid ${BORDER2}`,
+          backgroundColor: BG_SEC, display: 'flex', gap: r(5), alignItems: 'center', flexShrink: 0,
+        }}>
+          <div style={{
+            flex: 1, backgroundColor: BG_SEC2, borderRadius: r(8), border: `1px solid ${BORDER2}`,
+            padding: `${r(5)}px ${r(8)}px`, fontSize: r(6.5), color: TXT_MUTED,
+          }}>
             Digite sua mensagem...
           </div>
-          <div style={{ width: fs(22), height: fs(22), backgroundColor: C.accentBlue, borderRadius: fs(7), display: 'flex', alignItems: 'center', justifyContent: 'center', padding: fs(5), color: '#fff' }}>
-            <IconMic />
+          <div style={{
+            width: r(22), height: r(22), backgroundColor: ACCENT_B, borderRadius: r(7),
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <IconMic size={r(12)} />
           </div>
-          <div style={{ width: fs(22), height: fs(22), backgroundColor: C.accent, borderRadius: fs(7), display: 'flex', alignItems: 'center', justifyContent: 'center', padding: fs(5) }}>
-            <IconSend />
+          <div style={{
+            width: r(22), height: r(22), backgroundColor: ACCENT, borderRadius: r(7),
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <IconSend size={r(12)} />
           </div>
         </div>
       </div>
 
-      {/* Coluna Carrinho */}
-      <div style={{ width: '38%', display: 'flex', flexDirection: 'column', backgroundColor: C.bg }}>
+      {/* ── Coluna Carrinho ── */}
+      <div style={{ width: `${r(136)}px`, display: 'flex', flexDirection: 'column', backgroundColor: BG_SEC, flexShrink: 0 }}>
         {/* Busca */}
-        <div style={{ padding: `${fs(8)}px ${fs(10)}px ${fs(6)}px`, borderBottom: `1px solid ${C.border}` }}>
-          <div style={{ fontSize: fs(5.5), fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: fs(4) }}>Adicionar produto</div>
+        <div style={{ padding: `${r(8)}px ${r(8)}px ${r(6)}px`, borderBottom: `1px solid ${BORDER2}`, flexShrink: 0 }}>
+          <div style={{ fontSize: r(5.5), fontWeight: 700, color: TXT_MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: r(5) }}>
+            Adicionar produto
+          </div>
           <div style={{ position: 'relative' }}>
-            <div style={{ position: 'absolute', left: fs(7), top: '50%', transform: 'translateY(-50%)', width: fs(10), height: fs(10), color: C.textMuted }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-full h-full"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <div style={{ position: 'absolute', left: r(7), top: '50%', transform: 'translateY(-50%)' }}>
+              <IconSearch size={r(10)} />
             </div>
-            <div style={{ backgroundColor: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: fs(8), paddingLeft: fs(22), paddingRight: fs(8), paddingTop: fs(5), paddingBottom: fs(5), fontSize: fs(6.5), color: C.textMuted }}>
+            <div style={{
+              backgroundColor: BG_SEC2, border: `1px solid ${BORDER2}`, borderRadius: r(8),
+              paddingLeft: r(22), paddingRight: r(8), paddingTop: r(5), paddingBottom: r(5),
+              fontSize: r(6.5), color: TXT_MUTED,
+            }}>
               Buscar produto...
             </div>
           </div>
         </div>
 
         {/* Itens */}
-        <div style={{ flex: 1, overflowY: 'hidden', padding: fs(8), backgroundColor: C.bgChat, display: 'flex', flexDirection: 'column', gap: fs(5) }}>
-          {msgCount >= 2 ? (
-            <>
-              {[
-                { nome: 'Cappuccino', preco: 'R$ 12,00', qtd: 1 },
-                { nome: 'Croissant',  preco: 'R$ 9,50',  qtd: 1 },
-              ].map((item, i) => (
-                <div key={i} style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: fs(10), padding: `${fs(7)}px ${fs(8)}px`, display: 'flex', alignItems: 'center', gap: fs(7) }}>
-                  <div style={{ width: fs(26), height: fs(26), borderRadius: fs(7), background: i === 0 ? 'linear-gradient(135deg,#134e4a,#0f766e)' : 'linear-gradient(135deg,#78350f,#92400e)', flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: fs(7), fontWeight: 700, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.nome}</div>
-                    <div style={{ fontSize: fs(5.5), color: C.textMuted }}>{item.preco} / un</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: fs(3), backgroundColor: C.bgSecondary, borderRadius: fs(6), padding: `${fs(2)}px ${fs(4)}px` }}>
-                    <span style={{ fontSize: fs(7), color: C.textMuted }}>−</span>
-                    <span style={{ fontSize: fs(7), fontWeight: 700, color: C.text, minWidth: fs(8), textAlign: 'center' }}>{item.qtd}</span>
-                    <span style={{ fontSize: fs(7), color: C.textMuted }}>+</span>
-                  </div>
-                </div>
-              ))}
-            </>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: fs(6), color: C.textMuted }}>
-              <div style={{ width: fs(32), height: fs(32), opacity: 0.2, color: C.textMuted }}>
-                <IconCart />
-              </div>
-              <span style={{ fontSize: fs(7) }}>Carrinho vazio</span>
+        <div style={{ flex: 1, overflowY: 'hidden', padding: `${r(6)}px ${r(7)}px`, backgroundColor: BG_CHAT, display: 'flex', flexDirection: 'column', gap: r(5) }}>
+          {cartItems.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: r(6), color: TXT_MUTED, opacity: 0.5 }}>
+              <IconCart size={r(28)} color={TXT_MUTED} />
+              <span style={{ fontSize: r(7) }}>Carrinho vazio</span>
             </div>
-          )}
+          ) : cartItems.map(ci => {
+            const p = PRODUCTS.find(x => x.id === ci.id)!
+            return (
+              <div key={ci.id} style={{
+                backgroundColor: BG_SEC, border: `1px solid ${BORDER2}`, borderRadius: r(9),
+                padding: `${r(6)}px ${r(7)}px`, display: 'flex', alignItems: 'center', gap: r(6),
+              }}>
+                <img src={p.img} alt={p.name} style={{ width: r(28), height: r(28), borderRadius: r(6), objectFit: 'cover', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: r(7), fontWeight: 700, color: TXT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                  <div style={{ fontSize: r(5.5), color: TXT_MUTED }}>R$ {p.price.toFixed(2).replace('.', ',')} / un</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: r(2), backgroundColor: BG_SEC2, borderRadius: r(6), padding: `${r(2)}px ${r(3)}px`, flexShrink: 0 }}>
+                  <span style={{ fontSize: r(7), color: TXT_MUTED, lineHeight: 1 }}>−</span>
+                  <span style={{ fontSize: r(7), fontWeight: 700, color: TXT, minWidth: r(8), textAlign: 'center' }}>{ci.qty}</span>
+                  <span style={{ fontSize: r(7), color: TXT_MUTED, lineHeight: 1 }}>+</span>
+                </div>
+              </div>
+            )
+          })}
         </div>
 
         {/* Total + botão */}
-        {msgCount >= 2 && (
-          <div style={{ padding: `${fs(6)}px ${fs(8)}px`, borderTop: `1px solid ${C.border}`, backgroundColor: C.bg }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: fs(5) }}>
-              <span style={{ fontSize: fs(6.5), color: C.textMuted }}>2 itens</span>
-              <span style={{ fontSize: fs(8), fontWeight: 800, color: C.text }}>R$ 21,50</span>
+        {cartItems.length > 0 && (
+          <div style={{ padding: `${r(6)}px ${r(7)}px`, borderTop: `1px solid ${BORDER2}`, backgroundColor: BG_SEC, flexShrink: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: r(5) }}>
+              <span style={{ fontSize: r(6.5), color: TXT_MUTED }}>2 itens</span>
+              <span style={{ fontSize: r(8), fontWeight: 800, color: TXT }}>R$ {total.toFixed(2).replace('.', ',')}</span>
             </div>
-            <div style={{ backgroundColor: C.accent, color: '#fff', borderRadius: fs(9), padding: `${fs(7)}px`, fontSize: fs(7), fontWeight: 700, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: fs(4) }}>
-              <span style={{ width: fs(11), height: fs(11), display: 'inline-block', color: '#fff' }}><IconCart /></span>
+            <div style={{
+              backgroundColor: ACCENT, color: '#fff', borderRadius: r(9), padding: `${r(7)}px`,
+              fontSize: r(7), fontWeight: 700, textAlign: 'center', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', gap: r(4),
+            }}>
+              <IconCart size={r(11)} />
               Finalizar Venda
             </div>
           </div>
@@ -191,40 +235,52 @@ function StepPedido({ msgCount, fs }: { msgCount: number; fs: (n: number) => num
   )
 }
 
-// ─── Etapa Entrega ────────────────────────────────────────────────────────────
-function StepEntrega({ selected, fs }: { selected: number; fs: (n: number) => number }) {
+// ─── StepEntrega ──────────────────────────────────────────────────────────────
+function StepEntrega({ selected, w }: { selected: number; w: number }) {
+  const r = (n: number) => R(n, w)
   const opcoes = [
-    { label: 'Retirada no local',  desc: 'Cliente retira no balcão',        icon: '🏪' },
-    { label: 'Delivery',           desc: 'Entrega no endereço do cliente',   icon: '🚗' },
-    { label: 'Mesa / Comanda',     desc: 'Consumo no estabelecimento',       icon: '🪑' },
+    {
+      label: 'Retirada no local', desc: 'Cliente retira no balcão',
+      icon: <svg width={r(16)} height={r(16)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+    },
+    {
+      label: 'Delivery', desc: 'Entrega no endereço do cliente',
+      icon: <svg width={r(16)} height={r(16)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+    },
+    {
+      label: 'Mesa / Comanda', desc: 'Consumo no estabelecimento',
+      icon: <svg width={r(16)} height={r(16)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><path d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>,
+    },
   ]
+
   return (
-    <div style={{ padding: `${fs(12)}px ${fs(16)}px`, display: 'flex', flexDirection: 'column', gap: fs(8), height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-      <div style={{ fontSize: fs(7), color: C.textMuted }}>Como o pedido será entregue?</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: fs(6) }}>
+    <div style={{ padding: `${r(12)}px ${r(16)}px`, display: 'flex', flexDirection: 'column', gap: r(8), height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+      <div style={{ fontSize: r(7), color: TXT_MUTED }}>Como o pedido será entregue?</div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: r(6) }}>
         {opcoes.map((op, i) => (
           <div key={i} style={{
-            border: `1px solid ${i === selected ? C.accent : C.border}`,
-            backgroundColor: i === selected ? 'rgba(16,185,129,0.08)' : C.bgSecondary,
-            borderRadius: fs(10),
-            padding: `${fs(10)}px ${fs(12)}px`,
-            display: 'flex', alignItems: 'center', gap: fs(10),
+            border: `1px solid ${i === selected ? ACCENT : BORDER2}`,
+            backgroundColor: i === selected ? 'rgba(16,185,129,0.08)' : BG_SEC2,
+            borderRadius: r(10), padding: `${r(10)}px ${r(12)}px`,
+            display: 'flex', alignItems: 'center', gap: r(10),
             transition: 'all 300ms',
+            color: i === selected ? ACCENT : TXT_MUTED,
           }}>
-            <span style={{ fontSize: fs(14) }}>{op.icon}</span>
+            {op.icon}
             <div>
-              <div style={{ fontSize: fs(8), fontWeight: 700, color: C.text }}>{op.label}</div>
-              <div style={{ fontSize: fs(6.5), color: C.textMuted, marginTop: fs(1) }}>{op.desc}</div>
+              <div style={{ fontSize: r(8), fontWeight: 700, color: TXT }}>{op.label}</div>
+              <div style={{ fontSize: r(6.5), color: TXT_MUTED, marginTop: r(1) }}>{op.desc}</div>
             </div>
           </div>
         ))}
       </div>
-      {/* Botões */}
-      <div style={{ display: 'flex', gap: fs(8), marginTop: 'auto' }}>
-        <div style={{ flex: 1, backgroundColor: C.bgSecondary, color: C.text, borderRadius: fs(9), padding: `${fs(9)}px`, fontSize: fs(7.5), fontWeight: 700, textAlign: 'center' }}>
+
+      <div style={{ display: 'flex', gap: r(8), marginTop: 'auto' }}>
+        <div style={{ flex: 1, backgroundColor: BG_SEC2, color: TXT, borderRadius: r(9), padding: `${r(9)}px`, fontSize: r(7.5), fontWeight: 700, textAlign: 'center' }}>
           ← Voltar
         </div>
-        <div style={{ flex: 1, backgroundColor: C.accent, color: '#fff', borderRadius: fs(9), padding: `${fs(9)}px`, fontSize: fs(7.5), fontWeight: 700, textAlign: 'center' }}>
+        <div style={{ flex: 1, backgroundColor: ACCENT, color: '#fff', borderRadius: r(9), padding: `${r(9)}px`, fontSize: r(7.5), fontWeight: 700, textAlign: 'center' }}>
           Ir para pagamento →
         </div>
       </div>
@@ -232,82 +288,83 @@ function StepEntrega({ selected, fs }: { selected: number; fs: (n: number) => nu
   )
 }
 
-// ─── Etapa Pagamento ──────────────────────────────────────────────────────────
-function StepPagamento({ phase, fs }: { phase: number; fs: (n: number) => number }) {
+// ─── StepPagamento ────────────────────────────────────────────────────────────
+function StepPagamento({ phase, w }: { phase: number; w: number }) {
+  const r = (n: number) => R(n, w)
   const metodos = [
-    { key: 'pix',     label: 'PIX',          icon: <IconPix />,  cor: '#10b981' },
-    { key: 'debito',  label: 'Débito NFC',    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="w-full h-full"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>, cor: '#3b82f6' },
-    { key: 'credito', label: 'Crédito NFC',   icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="w-full h-full"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>, cor: '#8b5cf6' },
-    { key: 'cash',    label: 'Dinheiro',      icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="w-full h-full"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>, cor: '#f59e0b' },
+    { label: 'PIX',         cor: ACCENT,    icon: <svg width={r(16)} height={r(16)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> },
+    { label: 'Débito NFC',  cor: ACCENT_B,  icon: <svg width={r(16)} height={r(16)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> },
+    { label: 'Crédito NFC', cor: '#8b5cf6', icon: <svg width={r(16)} height={r(16)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> },
+    { label: 'Dinheiro',    cor: '#f59e0b', icon: <svg width={r(16)} height={r(16)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg> },
   ]
 
   return (
-    <div style={{ padding: `${fs(10)}px ${fs(16)}px`, display: 'flex', flexDirection: 'column', gap: fs(8), height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-      {/* Resumo */}
-      <div style={{ backgroundColor: C.bgSecondary, borderRadius: fs(10), border: `1px solid ${C.border}`, padding: `${fs(8)}px ${fs(10)}px`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div style={{ padding: `${r(10)}px ${r(16)}px`, display: 'flex', flexDirection: 'column', gap: r(7), height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+      {/* Resumo do pedido */}
+      <div style={{
+        backgroundColor: BG_SEC2, borderRadius: r(10), border: `1px solid ${BORDER2}`,
+        padding: `${r(8)}px ${r(10)}px`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0,
+      }}>
         <div>
-          <div style={{ fontSize: fs(6), color: C.textMuted }}>Total do pedido</div>
-          <div style={{ fontSize: fs(12), fontWeight: 800, color: C.text, marginTop: fs(1) }}>R$ 21,50</div>
+          <div style={{ fontSize: r(6), color: TXT_MUTED }}>Total do pedido</div>
+          <div style={{ fontSize: r(13), fontWeight: 800, color: TXT, marginTop: r(1) }}>R$ 21,50</div>
         </div>
-        <div style={{ fontSize: fs(6.5), color: C.textMuted, textAlign: 'right' }}>
-          <div>Cappuccino × 1</div>
-          <div>Croissant × 1</div>
+        <div style={{ textAlign: 'right' }}>
+          {[{ img: '/vendas2.jpg', label: 'Cappuccino × 1' }, { img: '/vendas3.jpg', label: 'Croissant × 1' }].map((item, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: r(4), justifyContent: 'flex-end', marginBottom: i === 0 ? r(3) : 0 }}>
+              <span style={{ fontSize: r(6.5), color: TXT_MUTED }}>{item.label}</span>
+              <img src={item.img} alt="" style={{ width: r(18), height: r(18), borderRadius: r(4), objectFit: 'cover' }} />
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Métodos */}
-      <div style={{ fontSize: fs(6), fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Forma de pagamento</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: fs(6) }}>
+      {/* Grid de métodos */}
+      <div style={{ fontSize: r(6), fontWeight: 700, color: TXT_MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
+        Forma de pagamento
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: r(6), flexShrink: 0 }}>
         {metodos.map((m, i) => (
-          <div key={m.key} style={{
-            border: `1px solid ${i === 0 && phase >= 1 ? m.cor : C.border}`,
-            backgroundColor: i === 0 && phase >= 1 ? `${m.cor}18` : C.bgSecondary,
-            borderRadius: fs(9),
-            padding: `${fs(9)}px ${fs(8)}px`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: fs(4),
+          <div key={m.label} style={{
+            border: `1px solid ${i === 0 && phase >= 1 ? m.cor : BORDER2}`,
+            backgroundColor: i === 0 && phase >= 1 ? `${m.cor}1a` : BG_SEC2,
+            borderRadius: r(9), padding: `${r(9)}px ${r(8)}px`,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: r(4),
+            color: i === 0 && phase >= 1 ? m.cor : TXT_MUTED,
             transition: 'all 300ms',
           }}>
-            <div style={{ width: fs(18), height: fs(18), color: i === 0 && phase >= 1 ? m.cor : C.textMuted }}>
-              {m.icon}
-            </div>
-            <span style={{ fontSize: fs(6.5), fontWeight: 700, color: i === 0 && phase >= 1 ? m.cor : C.textMuted }}>{m.label}</span>
+            {m.icon}
+            <span style={{ fontSize: r(6.5), fontWeight: 700 }}>{m.label}</span>
           </div>
         ))}
       </div>
 
-      {/* QR Code / Confirmação */}
+      {/* QR Code → Confirmação */}
       {phase >= 1 && (
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: fs(5), transition: 'all 400ms' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: r(5), flex: 1, justifyContent: 'center', transition: 'all 400ms' }}>
           {phase === 1 && (
             <>
-              {/* QR Code mock */}
-              <div style={{ width: fs(64), height: fs(64), backgroundColor: '#fff', borderRadius: fs(8), padding: fs(6), display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: fs(1.5) }}>
-                {Array.from({ length: 49 }).map((_, i) => {
-                  const pattern = [
-                    1,1,1,1,1,1,1,
-                    1,0,0,0,0,0,1,
-                    1,0,1,1,1,0,1,
-                    1,0,1,0,1,0,1,
-                    1,0,1,1,1,0,1,
-                    1,0,0,0,0,0,1,
-                    1,1,1,1,1,1,1,
-                  ]
-                  const row = Math.floor(i / 7), col = i % 7
-                  const isEdge = row < 7 && col < 7
-                  const on = isEdge ? pattern[i] : Math.random() > 0.55 ? 1 : 0
-                  return <div key={i} style={{ backgroundColor: on ? '#000' : '#fff', borderRadius: fs(0.5) }} />
-                })}
-              </div>
-              <div style={{ fontSize: fs(6.5), color: C.textMuted }}>Aguardando pagamento PIX...</div>
+              <img
+                src="/qrcode.png"
+                alt="QR Code PIX"
+                style={{ width: r(72), height: r(72), borderRadius: r(8), objectFit: 'contain', backgroundColor: '#fff', padding: r(4) }}
+              />
+              <div style={{ fontSize: r(6.5), color: TXT_MUTED }}>Aguardando pagamento PIX...</div>
             </>
           )}
           {phase >= 2 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: fs(5) }}>
-              <div style={{ width: fs(36), height: fs(36), backgroundColor: 'rgba(16,185,129,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${C.accent}` }}>
-                <div style={{ width: fs(20), height: fs(20), color: C.accent }}><IconCheck /></div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: r(5) }}>
+              <div style={{
+                width: r(40), height: r(40),
+                backgroundColor: 'rgba(16,185,129,0.15)',
+                border: `2px solid ${ACCENT}`,
+                borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <IconCheck size={r(22)} />
               </div>
-              <div style={{ fontSize: fs(9), fontWeight: 800, color: C.accent }}>Pagamento confirmado!</div>
-              <div style={{ fontSize: fs(6.5), color: C.textMuted }}>Venda registrada com sucesso</div>
+              <div style={{ fontSize: r(9), fontWeight: 800, color: ACCENT }}>Pagamento confirmado!</div>
+              <div style={{ fontSize: r(6.5), color: TXT_MUTED }}>Venda registrada com sucesso</div>
             </div>
           )}
         </div>
@@ -318,61 +375,52 @@ function StepPagamento({ phase, fs }: { phase: number; fs: (n: number) => number
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function SceneVendasAux() {
-  const [step, setStep]         = useState<Step>('pedido')
-  const [msgCount, setMsgCount] = useState(0)
-  const [entregaSel, setEntregaSel] = useState(0)
-  const [pagPhase, setPagPhase] = useState(0)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [size, setSize] = useState({ w: 320, h: 220 })
+  const [step, setStep]           = useState<Step>('pedido')
+  const [msgCount, setMsgCount]   = useState(0)
+  const [entregaSel, setEntregaSel] = useState(-1)
+  const [pagPhase, setPagPhase]   = useState(0)
+  const containerRef              = useRef<HTMLDivElement>(null)
+  const [w, setW]                 = useState(360)
 
   // Escala responsiva
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const ro = new ResizeObserver(([e]) => {
-      setSize({ w: e.contentRect.width, h: e.contentRect.height })
-    })
+    const ro = new ResizeObserver(([e]) => setW(e.contentRect.width))
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
 
-  // fs: escala de fonte relativa ao container
-  const fs = (n: number) => (n * size.w) / 360
+  const r = (n: number) => R(n, w)
 
-  // ─── Sequência de animações ──────────────────────────────────────────────
+  // ─── Sequência automática ────────────────────────────────────────────────
   useEffect(() => {
     let t: ReturnType<typeof setTimeout>
 
     if (step === 'pedido') {
-      // Revela mensagens uma a uma
       if (msgCount < MSGS.length) {
-        t = setTimeout(() => setMsgCount(c => c + 1), msgCount === 0 ? 800 : 1200)
+        t = setTimeout(() => setMsgCount(c => c + 1), msgCount === 0 ? 700 : 1100)
       } else {
-        // Após último msg, avança para entrega
-        t = setTimeout(() => { setStep('entrega'); setEntregaSel(0) }, 1400)
+        t = setTimeout(() => { setStep('entrega'); setEntregaSel(-1) }, 1200)
       }
     }
 
     if (step === 'entrega') {
       if (entregaSel < 1) {
-        t = setTimeout(() => setEntregaSel(1), 900)   // seleciona "Delivery"
+        t = setTimeout(() => setEntregaSel(s => s + 1), entregaSel === -1 ? 600 : 800)
       } else {
-        t = setTimeout(() => { setStep('pagamento'); setPagPhase(0) }, 1400)
+        t = setTimeout(() => { setStep('pagamento'); setPagPhase(0) }, 1200)
       }
     }
 
     if (step === 'pagamento') {
       if (pagPhase === 0) {
-        t = setTimeout(() => setPagPhase(1), 700)   // mostra QR
+        t = setTimeout(() => setPagPhase(1), 600)
       } else if (pagPhase === 1) {
-        t = setTimeout(() => setPagPhase(2), 2000)  // confirmado
+        t = setTimeout(() => setPagPhase(2), 2200)
       } else {
-        // Reinicia loop
         t = setTimeout(() => {
-          setStep('pedido')
-          setMsgCount(0)
-          setEntregaSel(0)
-          setPagPhase(0)
+          setStep('pedido'); setMsgCount(0); setEntregaSel(-1); setPagPhase(0)
         }, 2200)
       }
     }
@@ -386,28 +434,31 @@ export default function SceneVendasAux() {
     <div
       ref={containerRef}
       className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
-      style={{ backgroundColor: C.bg, fontFamily: 'system-ui, -apple-system, sans-serif' }}
+      style={{ backgroundColor: BG_SEC, fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
-      {/* ── Header (espelho fiel do FazerPedidoDisplay) ── */}
+      {/* ── Header — idêntico ao FazerPedidoDisplay ── */}
       <div style={{
-        padding: `${fs(8)}px ${fs(12)}px`,
-        borderBottom: `1px solid ${C.border}`,
+        padding: `${r(8)}px ${r(12)}px`,
+        borderBottom: `1px solid ${BORDER2}`,
         backgroundColor: 'rgba(16,185,129,0.08)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         flexShrink: 0,
       }}>
-        {/* Ícone + título */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: fs(8) }}>
-          <div style={{ width: fs(26), height: fs(26), borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', padding: fs(6), flexShrink: 0 }}>
-            <IconCart />
+        <div style={{ display: 'flex', alignItems: 'center', gap: r(8) }}>
+          <div style={{
+            width: r(28), height: r(28), borderRadius: '50%',
+            backgroundColor: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <IconCart size={r(14)} />
           </div>
           <div>
-            <div style={{ fontSize: fs(9), fontWeight: 800, color: C.text, lineHeight: 1.2 }}>
+            <div style={{ fontSize: r(9), fontWeight: 800, color: TXT, lineHeight: 1.2 }}>
               {step === 'pedido' ? 'Assistente de Vendas'
                 : step === 'entrega' ? 'Tipo de Entrega'
                 : 'Pagamento'}
             </div>
-            <div style={{ fontSize: fs(6), color: C.textMuted, marginTop: fs(1) }}>
+            <div style={{ fontSize: r(6), color: TXT_MUTED, marginTop: r(1) }}>
               {step === 'pedido' ? 'Monte seu pedido com o assistente'
                 : step === 'entrega' ? 'Como deseja receber seu pedido?'
                 : 'Escolha a forma de pagamento'}
@@ -415,28 +466,28 @@ export default function SceneVendasAux() {
           </div>
         </div>
 
-        {/* Indicador de progresso — dots + linhas */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: fs(4) }}>
+        {/* Dots de progresso */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: r(3) }}>
           {STEPS.map((s, i) => (
-            <div key={s} style={{ display: 'flex', alignItems: 'center', gap: fs(3) }}>
+            <div key={s} style={{ display: 'flex', alignItems: 'center', gap: r(3) }}>
               <div style={{
-                width: fs(6), height: fs(6), borderRadius: '50%',
-                backgroundColor: i <= stepIndex ? C.accent : C.border,
+                width: r(6), height: r(6), borderRadius: '50%',
+                backgroundColor: i <= stepIndex ? ACCENT : BORDER2,
                 transition: 'background-color 400ms',
               }} />
               {i < STEPS.length - 1 && (
-                <div style={{ width: fs(10), height: fs(1), backgroundColor: C.border }} />
+                <div style={{ width: r(10), height: r(1), backgroundColor: BORDER2 }} />
               )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Conteúdo por etapa ── */}
-      <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-        {step === 'pedido' && <StepPedido msgCount={msgCount} fs={fs} />}
-        {step === 'entrega' && <StepEntrega selected={entregaSel} fs={fs} />}
-        {step === 'pagamento' && <StepPagamento phase={pagPhase} fs={fs} />}
+      {/* ── Conteúdo ── */}
+      <div style={{ flex: 1, overflow: 'hidden' }}>
+        {step === 'pedido'    && <StepPedido    msgCount={msgCount}  w={w} />}
+        {step === 'entrega'   && <StepEntrega   selected={entregaSel} w={w} />}
+        {step === 'pagamento' && <StepPagamento phase={pagPhase}      w={w} />}
       </div>
     </div>
   )

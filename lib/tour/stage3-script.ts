@@ -21,11 +21,11 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
     id: 'auxiliares-intro',
     label: 'Especialistas',
     audioText:
-      'Além das mais de 100 funções, a minha I A conta com oito especialistas de I A ' +
+      'Além das mais de 100 funções, a minha I A conta com nove especialistas de I A ' +
       'integrados ao seu negócio — cada um focado em conduzir processos complexos do início ao fim, ' +
       'por voz ou texto, em qualquer canal.',
     displayText:
-      'Além das mais de 100 funções, a minhAi conta com oito especialistas de IA ' +
+      'Além das mais de 100 funções, a minhAi conta com 9 especialistas de IA ' +
       'integrados ao seu negócio — cada um focado em conduzir processos complexos do início ao fim, ' +
       'por voz ou texto, em qualquer canal.',
     fallbackDuration: 7000,
@@ -88,6 +88,7 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
       'e emite um laudo com nível de risco em segundos — ' +
       'protegendo seu negócio antes de fechar qualquer negociação. ' +
       'O Auxiliar de Relatórios transforma planilhas e PDFs em relatórios formatados com resumos e insights. ' +
+      'O Auxiliar de Funções te ajuda a escolher as melhores funções de acordo com o seu ramo. ' +
       'E o Auxiliar de Cadastro cria produtos completos por voz ou texto — ' +
       'nome, descrição, categoria, preço e margem, com recomendação de imagem automática. ' +
       'O produto já fica disponível no catálogo para venda na hora.',
@@ -95,6 +96,7 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
       'O Investigador Antifraude analisa boletos, comprovantes e URLs suspeitas ' +
       'e emite um laudo com nível de risco em segundos. ' +
       'O Auxiliar de Relatórios transforma planilhas e PDFs em relatórios formatados. ' +
+      'O Auxiliar de Funções te ajuda a escolher as melhores funções de acordo com o seu ramo. ' +
       'E o Auxiliar de Cadastro cria produtos completos por voz ou texto — ' +
       'nome, descrição, categoria, preço e margem, com recomendação de imagem automática.',
     fallbackDuration: 11000,
@@ -103,11 +105,11 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
   id: 'auxiliares-conclusao',
   label: 'Conclusão',
   audioText:
-    'Oito especialistas I A, cada um conduzindo processos complexos do início ao fim — ' +
+    'Nove especialistas I A, cada um conduzindo processos complexos do início ao fim — ' +
     'Tudo por voz ou texto, em qualquer canal, sem precisar de um sistema separado para cada área. ' +
     'É a sua equipe digital completa, integrada em um único assistente.',
   displayText:
-    'Oito especialistas IA, cada um conduzindo processos complexos do início ao fim — ' +
+    '9 especialistas IA, cada um conduzindo processos complexos do início ao fim — ' +
     'Tudo por voz ou texto, em qualquer canal, sem precisar de um sistema separado para cada área. ' +
     'É a sua equipe digital completa, integrada em um único assistente.',
   fallbackDuration: 9000,

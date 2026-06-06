@@ -21,11 +21,11 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
     id: 'auxiliares-intro',
     label: 'Especialistas',
     audioText:
-      'Além das mais de 100 funções, a minha I A conta com nove especialistas de I A ' +
+      'Além de executar mais de 100 funções, a minha I A conta com nove especialistas de I A ' +
       'integrados ao seu negócio — cada um focado em conduzir processos complexos do início ao fim, ' +
       'por voz ou texto, em qualquer canal.',
     displayText:
-      'Além das mais de 100 funções, a minhAi conta com 9 especialistas de IA ' +
+      'Além de executar mais de 100 funções, a minhAi conta com 9 especialistas de IA ' +
       'integrados ao seu negócio — cada um focado em conduzir processos complexos do início ao fim, ' +
       'por voz ou texto, em qualquer canal.',
     fallbackDuration: 7000,

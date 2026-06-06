@@ -99,4 +99,17 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
       'nome, descrição, categoria, preço e margem, com recomendação de imagem automática.',
     fallbackDuration: 11000,
   },
+{
+  id: 'auxiliares-conclusao',
+  label: 'Conclusão',
+  audioText:
+    'Oito especialistas I A, cada um conduzindo processos complexos do início ao fim — ' +
+    'Tudo por voz ou texto, em qualquer canal, sem precisar de um sistema separado para cada área. ' +
+    'É a sua equipe digital completa, integrada em um único assistente.',
+  displayText:
+    'Oito especialistas IA, cada um conduzindo processos complexos do início ao fim — ' +
+    'Tudo por voz ou texto, em qualquer canal, sem precisar de um sistema separado para cada área. ' +
+    'É a sua equipe digital completa, integrada em um único assistente.',
+  fallbackDuration: 9000,
+},
 ]

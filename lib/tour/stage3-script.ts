@@ -49,6 +49,11 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
       'Informe os dados, ele preenche N C M, C F O P e C S O S N automaticamente ' +
       'e envia direto para a S E F A Z. ' +
       'Integrado aos produtos e clientes cadastrados no dashboard.',
+    displayText:
+      'O Auxiliar Fiscal emite nota fiscal por voz ou texto — NFe, NFSe e NFCe. ' +
+      'Informe os dados, ele preenche NCM, CFOP e CSOSN automaticamente ' +
+      'e envia direto para a SEFAZ. ' +
+      'Integrado aos produtos e clientes cadastrados no dashboard.',
     fallbackDuration: 8000,
   },
   {

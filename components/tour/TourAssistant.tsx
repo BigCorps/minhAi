@@ -60,10 +60,16 @@ export default function TourAssistant({
         </div>
       )}
 
-      {/* Legenda */}
+      {/* Legenda — ocupa o espaço restante, rola invisível se necessário */}
       <div
-        className="w-full max-w-2xl px-3 md:px-6 text-center flex-shrink-0"
-        style={{ overflowY: 'auto', scrollbarWidth: 'none' }}
+        className="w-full max-w-2xl px-3 md:px-6 text-center"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}
       >
         <p
           className="leading-relaxed transition-all duration-300"

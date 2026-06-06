@@ -331,6 +331,7 @@ export default function TourStage1({
           style={{
             height: inModal ? '38%' : 'clamp(170px, 42dvh, 340px)',
             overflow: 'hidden',
+            gap: 'clamp(6px, 1.5dvh, 16px)',
           }}
         >
           <TourAssistant

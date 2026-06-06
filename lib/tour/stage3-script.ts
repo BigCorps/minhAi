@@ -42,6 +42,18 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
     fallbackDuration: 9000,
   },
   {
+    id: 'auxiliares-agenda',
+    label: 'Agenda',
+    audioText:
+      'O Gestor de Agenda conduz todo o processo de agendamento de ponta a ponta. ' +
+      'Pergunta qual serviço ou produto o cliente quer, ' +
+      'mostra os horários disponíveis em tempo real, ' +
+      'pode cobrar na hora com link de pagamento, ' +
+      'marca direto no Google Agenda e envia confirmação por e-mail — ' +
+      'tudo por voz ou texto, sem o cliente sair do canal.',
+    fallbackDuration: 9000,
+  },
+ {
     id: 'auxiliares-fiscal',
     label: 'Fiscal',
     audioText:
@@ -55,18 +67,6 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
       'e envia direto para a SEFAZ. ' +
       'Integrado aos produtos e clientes cadastrados no dashboard.',
     fallbackDuration: 8000,
-  },
-  {
-    id: 'auxiliares-agenda',
-    label: 'Agenda',
-    audioText:
-      'O Gestor de Agenda conduz todo o processo de agendamento de ponta a ponta. ' +
-      'Pergunta qual serviço ou produto o cliente quer, ' +
-      'mostra os horários disponíveis em tempo real, ' +
-      'pode cobrar na hora com link de pagamento, ' +
-      'marca direto no Google Agenda e envia confirmação por e-mail — ' +
-      'tudo por voz ou texto, sem o cliente sair do canal.',
-    fallbackDuration: 9000,
   },
   {
     id: 'auxiliares-producao',

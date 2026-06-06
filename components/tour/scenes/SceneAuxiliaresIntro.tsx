@@ -15,12 +15,12 @@ import {
 
 const ESPECIALISTAS = [
   { nome: 'Vendas',      tagline: 'Do pedido ao pagamento',        color: '#84cc16', Icon: ShoppingCart },
-  { nome: 'Orçamentos',  tagline: 'Orçamento completo em segundos', color: '#3b82f6', Icon: FileText },
+  { nome: 'Orçamentos',  tagline: 'Orçamento completo em PDF', color: '#3b82f6', Icon: FileText },
   { nome: 'Fiscal',      tagline: 'Emite NFe, NFSe e NFCe',        color: '#f59e0b', Icon: Receipt },
   { nome: 'Produção',    tagline: 'Custo e margem calculados',      color: '#3b82f6', Icon: Factory },
   { nome: 'Agenda',      tagline: 'Consultas, salões e reuniões',   color: '#84cc16', Icon: CalendarClock },
   { nome: 'Cadastro',    tagline: 'Produtos criados por voz',       color: '#3b82f6', Icon: Settings2 },
-  { nome: 'Antifraude',  tagline: 'Detecta fraudes em segundos',    color: '#f59e0b', Icon: ShieldAlert },
+  { nome: 'Antifraude',  tagline: 'Detecção ágil de fraudes',    color: '#f59e0b', Icon: ShieldAlert },
   { nome: 'Relatórios',  tagline: 'Arquivos viram relatórios',      color: '#3b82f6', Icon: FileBarChart2 },
 ]
 

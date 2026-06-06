@@ -41,10 +41,8 @@ export default function TourAssistant({
       ) : (
         <div
           style={{
-            // inModal: avatar menor para não comprimir a legenda
-            // standalone: tamanho normal
             width: inModal
-              ? 'clamp(80px, 14dvh, 130px)'
+              ? 'clamp(60px, 11dvh, 110px)'
               : 'clamp(140px, 26dvh, 200px)',
             aspectRatio: '1/1',
             flexShrink: 0,
@@ -63,14 +61,16 @@ export default function TourAssistant({
       )}
 
       {/* Legenda */}
-      <div className="w-full max-w-2xl px-3 md:px-6 text-center overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
-        <style>{`.tour-caption::-webkit-scrollbar { display: none; }`}</style>
+      <div
+        className="w-full max-w-2xl px-3 md:px-6 text-center flex-shrink-0"
+        style={{ overflowY: 'auto', scrollbarWidth: 'none' }}
+      >
         <p
-          className="tour-caption leading-relaxed transition-all duration-300"
+          className="leading-relaxed transition-all duration-300"
           style={{
             fontSize: inModal
-              ? 'clamp(0.7rem, 1.6vw, 0.9rem)'
-              : 'clamp(0.78rem, 1.9vw, 1rem)',
+              ? 'clamp(0.62rem, 1.4vw, 0.82rem)'
+              : 'clamp(0.7rem, 1.8vw, 1rem)',
             opacity: caption ? 1 : 0,
             color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(15,23,42,0.85)',
           }}

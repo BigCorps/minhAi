@@ -264,12 +264,13 @@ export default function TourStage3({
 
 function SceneRenderer3({ id, isSpeaking, theme }: { id: Stage3SceneId; isSpeaking: boolean; theme: 'dark' | 'light' }) {
   switch (id) {
-    case 'auxiliares-intro':    return <SceneAuxiliaresIntro />
-    case 'auxiliares-vendas':   return <SceneVendasAux />
-    case 'auxiliares-fiscal':   return <SceneFiscal />
-    case 'auxiliares-agenda':   return <SceneAgenda />
-    case 'auxiliares-producao': return <SceneProducaoOrcamentos />
-    case 'auxiliares-extras':   return <SceneExtrasAux />
-    default:                    return null
+    case 'auxiliares-intro':      return <SceneAuxiliaresIntro />
+    case 'auxiliares-vendas':     return <SceneVendasAux />
+    case 'auxiliares-fiscal':     return <SceneFiscal />
+    case 'auxiliares-agenda':     return <SceneAgenda />
+    case 'auxiliares-producao':   return <SceneProducaoOrcamentos />
+    case 'auxiliares-extras':     return <SceneExtrasAux />
+    case 'auxiliares-conclusao':  return <SceneAuxiliaresIntro />
+    default:                      return null
   }
 }

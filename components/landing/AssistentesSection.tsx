@@ -1,5 +1,5 @@
 // app/components/landing/AssistentesSection.tsx — Server Component
-import { ShoppingCart, FileText, Factory, Receipt, Settings2, CalendarClock, FileBarChart2, ShieldAlert } from 'lucide-react';
+import { ShoppingCart, FileText, Factory, Receipt, Settings2, CalendarClock, FileBarChart2, ShieldAlert, Package } from 'lucide-react';
 
 interface AssistentesSectionProps {
   theme?: 'dark' | 'light';
@@ -35,7 +35,7 @@ const ASSISTENTES = [
     Icon: Factory,
     nome: 'Auxiliar de Produção',
     tagline: 'Custo e margem calculados',
-    color: 'blue' as const,
+    color: 'lime' as const,
     descricao: 'Informe os insumos por voz — o auxiliar calcula o custo, sugere o preço com margem e cria o produto no catálogo.',
   },
   {
@@ -43,23 +43,23 @@ const ASSISTENTES = [
     Icon: CalendarClock,
     nome: 'Gestor de Agenda',
     tagline: 'Consultas, salões e reuniões',
-    color: 'lime' as const,
+    color: 'blue' as const,
     descricao: 'Gerencia agendamentos com Google Agenda e Meet. Confirma presença, envia lembretes e cria links de videochamada.',
   },
   {
-    id: 'funcoes',
-    Icon: Settings2,
+    id: 'cadastro',
+    Icon: Package,
     nome: 'Auxiliar de Cadastro',
     tagline: 'Cadastre produtos facilmente',
-    color: 'blue' as const,
-    descricao: 'Com sugestão de imagens, categorias, campos para NF, MercadoLivre e mais',
+    color: 'amber' as const,
+    descricao: 'Com sugestão de imagens, categorias, campos para NF, MercadoLivre e mais.',
   },
   {
     id: 'antifraude',
     Icon: ShieldAlert,
     nome: 'Investigador Antifraude',
     tagline: 'Detecta fraudes em arquivos e sites',
-    color: 'amber' as const,
+    color: 'lime' as const,
     descricao: 'Carregue boletos, contratos ou URLs — o investigador analisa inconsistências e emite laudo com nível de risco.',
   },
   {
@@ -69,6 +69,14 @@ const ASSISTENTES = [
     tagline: 'Arquivos viram relatórios',
     color: 'blue' as const,
     descricao: 'Carregue planilhas ou PDFs e o auxiliar extrai, organiza e gera relatório com resumos e insights formatados.',
+  },
+  {
+    id: 'funcoes',
+    Icon: Settings2,
+    nome: 'Gerenciador de Funções',
+    tagline: 'Configura assistentes sem código',
+    color: 'amber' as const,
+    descricao: 'Guia na criação de assistentes e ativação de funções. Recomenda combinações por segmento e aplica em tempo real.',
   },
 ];
 
@@ -129,11 +137,11 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
             <span className={isDark ? 'text-lime-400' : 'text-lime-600'}>completa</span>
           </h2>
           <p className={`text-xs sm:text-sm max-w-xl mx-auto mt-1 [@media(max-height:640px)_and_(max-width:767px)]:hidden ${isDark ? 'text-white/45' : 'text-gray-500'}`}>
-            Além das mais de 100 funções, você conta tambem 8 especialistas de IA integrados ao seu negócio — cada um com foco em uma área específica.
+            Além das mais de 100 funções, você conta com 9 especialistas de IA integrados ao seu negócio — cada um com foco em uma área específica.
           </p>
         </div>
 
-        {/* ── MOBILE: lista compacta ──────────────────────────── */}
+        {/* ── MOBILE: lista compacta — todos os 9 ── */}
         <div className="flex flex-col gap-1.5 w-full sm:hidden">
           {ASSISTENTES.map(({ id, Icon, nome, tagline, color }) => {
             const c = colorMap[color][isDark ? 'dark' : 'light'];
@@ -152,13 +160,8 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
           })}
         </div>
 
-        {/* ── DESKTOP: grid 4×2 ──────────────────────────────── */}
-        {/*
-          8 cards em 4 colunas = 2 linhas exatas de 4.
-          Cards compactos: sem lista de recursos, só ícone + nome + tagline + descrição curta.
-          Padding reduzido para caber as 2 linhas sem scroll.
-        */}
-        <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-3 w-full">
+        {/* ── DESKTOP: grid 3×3 ── */}
+        <div className="hidden sm:grid sm:grid-cols-3 gap-2.5 md:gap-3 w-full">
           {ASSISTENTES.map(({ id, Icon, nome, tagline, descricao, color }) => {
             const c = colorMap[color][isDark ? 'dark' : 'light'];
             return (

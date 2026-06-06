@@ -49,10 +49,10 @@ const ASSISTENTES = [
   {
     id: 'funcoes',
     Icon: Settings2,
-    nome: 'Gerenciador de Funções',
-    tagline: 'Configura assistentes sem código',
+    nome: 'Auxiliar de Cadastro',
+    tagline: 'Cadastre produtos facilmente',
     color: 'blue' as const,
-    descricao: 'Guia na criação de assistentes e ativação de funções. Recomenda combinações por segmento e aplica em tempo real.',
+    descricao: 'Com sugestão de imagens, categorias, campos para NF, MercadoLivre e mais',
   },
   {
     id: 'antifraude',

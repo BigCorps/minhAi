@@ -4,6 +4,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import TourStage1 from './TourStage1'
+import TourStage2 from './TourStage2'
+import TourStage3 from './TourStage3'
 import TourManager from './TourManager'
 
 interface TourModalProps {
@@ -95,8 +97,8 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
       }}
     >
       {/*
-       * Mobile: 95vw × 95dvh — aproveita a tela pequena.
-       * Desktop (md+): 70vw × 70dvh — elimina espaço vazio excessivo.
+       * Mobile: 90vw × 90dvh — aproveita a tela pequena.
+       * Desktop (md+): 80vw × 80dvh — elimina espaço vazio excessivo.
        */}
       <div
         className="relative rounded-2xl overflow-hidden shadow-2xl w-[90vw] h-[90dvh] md:w-[80vw] md:h-[80dvh]"
@@ -105,9 +107,33 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
           transition: 'transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1)',
         }}
       >
-        {modalState === 'playing' && (
+        {modalState === 'playing' && activeStage === 1 && (
           <TourStage1
-            key={`stage-${activeStage}`}
+            key="stage-1"
+            initialTheme={currentTheme}
+            autoPlay={true}
+            inModal={true}
+            onClose={handleClose}
+            onComplete={handleStageComplete}
+            onThemeChange={setCurrentTheme}
+          />
+        )}
+
+        {modalState === 'playing' && activeStage === 2 && (
+          <TourStage3
+            key="stage-2"
+            initialTheme={currentTheme}
+            autoPlay={true}
+            inModal={true}
+            onClose={handleClose}
+            onComplete={handleStageComplete}
+            onThemeChange={setCurrentTheme}
+          />
+        )}
+
+        {modalState === 'playing' && activeStage === 3 && (
+          <TourStage2
+            key="stage-3"
             initialTheme={currentTheme}
             autoPlay={true}
             inModal={true}

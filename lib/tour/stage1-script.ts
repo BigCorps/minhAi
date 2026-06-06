@@ -2,11 +2,11 @@
 export type SceneId =
   | 'intro'
   | 'assistente'
-  | 'widget'
   | 'whatsapp'
   | 'instagram'
-  | 'mercadolivre'
+  | 'widget'
   | 'mcp'
+  | 'mercadolivre'
   | 'whatsapp-mcp'
   | 'outro'
 
@@ -40,13 +40,6 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     fallbackDuration: 9000,
   },
   {
-    id: 'widget',
-    label: 'Widget',
-    audioText:
-      'Como widget flutuante no seu site, pronto para responder visitantes a qualquer hora do dia, sem precisar de um atendente humano.',
-    fallbackDuration: 6000,
-  },
-  {
     id: 'whatsapp',
     label: 'WhatsApp',
     audioText:
@@ -63,10 +56,10 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     fallbackDuration: 6000,
   },
   {
-    id: 'mercadolivre',
-    label: 'Mercado Livre',
+    id: 'widget',
+    label: 'Widget',
     audioText:
-      'No Mercado Livre, respondendo perguntas de compradores e tambem postando produtos diretamente vinculados aos seus produtos no dashboard.',
+      'Como widget flutuante no seu site, pronto para responder visitantes a qualquer hora do dia, sem precisar de um atendente humano.',
     fallbackDuration: 6000,
   },
   {
@@ -77,6 +70,13 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     displayText:
       'Via protocolo MCP, integrado diretamente ao Claude, ChatGPT, Cursor e Manus, onde você pode pedir tarefas para a minhAi diretamente pelo seu app de IA favorito.',
     fallbackDuration: 8000,
+  },
+    {
+    id: 'mercadolivre',
+    label: 'Mercado Livre',
+    audioText:
+      'No Mercado Livre, respondendo perguntas de compradores e tambem postando produtos diretamente vinculados aos seus produtos no dashboard.',
+    fallbackDuration: 6000,
   },
   {
     id: 'whatsapp-mcp',

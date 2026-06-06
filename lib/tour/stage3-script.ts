@@ -1,0 +1,97 @@
+// lib/tour/stage3-script.ts
+
+export type Stage3SceneId =
+  | 'auxiliares-intro'
+  | 'auxiliares-vendas'
+  | 'auxiliares-fiscal'
+  | 'auxiliares-agenda'
+  | 'auxiliares-producao'
+  | 'auxiliares-extras'
+
+export interface Stage3Script {
+  id: Stage3SceneId
+  label: string
+  audioText: string
+  displayText?: string
+  fallbackDuration: number
+}
+
+export const STAGE3_SCRIPT: Stage3Script[] = [
+  {
+    id: 'auxiliares-intro',
+    label: 'Especialistas',
+    audioText:
+      'Além das mais de 100 funções, a minha I A conta com oito especialistas de I A ' +
+      'integrados ao seu negócio — cada um focado em conduzir processos complexos do início ao fim, ' +
+      'por voz ou texto, em qualquer canal.',
+    displayText:
+      'Além das mais de 100 funções, a minhAi conta com oito especialistas de IA ' +
+      'integrados ao seu negócio — cada um focado em conduzir processos complexos do início ao fim, ' +
+      'por voz ou texto, em qualquer canal.',
+    fallbackDuration: 7000,
+  },
+  {
+    id: 'auxiliares-vendas',
+    label: 'Vendas',
+    audioText:
+      'O Assistente de Vendas atua como um vendedor digital completo — ' +
+      'sugere produtos com base no que o cliente pede, ' +
+      'monta o carrinho, oferece opções de retirada, mesa ou entrega com cálculo de frete automático, ' +
+      'e envia o link de pagamento direto para o cliente finalizar. ' +
+      'Funciona no WhatsApp, na tela, no totem — em qualquer canal.',
+    fallbackDuration: 9000,
+  },
+  {
+    id: 'auxiliares-fiscal',
+    label: 'Fiscal',
+    audioText:
+      'O Auxiliar Fiscal emite nota fiscal por voz ou texto — N F e, N F S e e N F C e. ' +
+      'Informe os dados, ele preenche N C M, C F O P e C S O S N automaticamente ' +
+      'e envia direto para a S E F A Z. ' +
+      'Integrado aos produtos e clientes cadastrados no dashboard.',
+    fallbackDuration: 8000,
+  },
+  {
+    id: 'auxiliares-agenda',
+    label: 'Agenda',
+    audioText:
+      'O Gestor de Agenda conduz todo o processo de agendamento de ponta a ponta. ' +
+      'Pergunta qual serviço ou produto o cliente quer, ' +
+      'mostra os horários disponíveis em tempo real, ' +
+      'pode cobrar na hora com link de pagamento, ' +
+      'marca direto no Google Agenda e envia confirmação por e-mail — ' +
+      'tudo por voz ou texto, sem o cliente sair do canal.',
+    fallbackDuration: 9000,
+  },
+  {
+    id: 'auxiliares-producao',
+    label: 'Produção & Orçamentos',
+    audioText:
+      'O Auxiliar de Produção calcula custo e margem a partir dos insumos informados ' +
+      'e já cria o produto no catálogo com o preço sugerido. ' +
+      'O Assistente de Orçamentos vai além — ' +
+      'descreva o pedido por voz ou texto, ' +
+      'ele monta o orçamento completo com produtos, margens e desconto, ' +
+      'gera o documento com logo da empresa e já envia o link do PIX para o cliente pagar na hora.',
+    fallbackDuration: 10000,
+  },
+  {
+    id: 'auxiliares-extras',
+    label: 'Mais Auxiliares',
+    audioText:
+      'O Investigador Antifraude analisa boletos, comprovantes e U R Ls suspeitas ' +
+      'e emite um laudo com nível de risco em segundos — ' +
+      'protegendo seu negócio antes de fechar qualquer negociação. ' +
+      'O Auxiliar de Relatórios transforma planilhas e PDFs em relatórios formatados com resumos e insights. ' +
+      'E o Auxiliar de Cadastro cria produtos completos por voz ou texto — ' +
+      'nome, descrição, categoria, preço e margem, com recomendação de imagem automática. ' +
+      'O produto já fica disponível no catálogo para venda na hora.',
+    displayText:
+      'O Investigador Antifraude analisa boletos, comprovantes e URLs suspeitas ' +
+      'e emite um laudo com nível de risco em segundos. ' +
+      'O Auxiliar de Relatórios transforma planilhas e PDFs em relatórios formatados. ' +
+      'E o Auxiliar de Cadastro cria produtos completos por voz ou texto — ' +
+      'nome, descrição, categoria, preço e margem, com recomendação de imagem automática.',
+    fallbackDuration: 11000,
+  },
+]

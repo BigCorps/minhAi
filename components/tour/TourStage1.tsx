@@ -327,9 +327,10 @@ export default function TourStage1({
 
         {/* Assistente */}
         <div
-          className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-72 lg:w-80 overflow-visible"
+          className="flex-shrink-0 flex flex-col items-center justify-start w-full md:w-72 lg:w-80 overflow-y-auto"
           style={{
             height: inModal ? '38%' : 'clamp(170px, 42dvh, 340px)',
+            scrollbarWidth: 'none',
           }}
         >
           <TourAssistant

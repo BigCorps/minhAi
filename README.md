@@ -8,6 +8,8 @@
 
 * Editar postagens no Manus com o logo e postar (imagem um dia, vídeo outro dia)
 
+* Colocar ActionModals na seção de funções, com um botão para utilizar as funções diretamente no dashboard 
+
 * Criar Auxiliar de Cadastro e com MCP whatsapp
 
 * Criar 3 novas funções em Conhecimento:
@@ -53,8 +55,6 @@ Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app /
 
 * 3 novas funções nas categorias com apenas 6 e também 6 novas categorias futuramente, aproveitando para testar offline, implementando e testando com localhost, sem modificar o main no GitHub
 
-* Novas funções de transcrições já no Claude
-
 * Encontre Agora - função Pesquisar na região: tabela de clientes , se não encontrar, pesquisa no Maps.
 
 * Após tudo pronto, pensar em evoluir para um modelo inteligente como  com criação de funções autônomas e mesclar funções automaticamente de acordo com a escolha do cliente.
@@ -91,7 +91,7 @@ Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app /
            Notícias | Feriados Nacionais | Pesquisar Produto
          Converter Medidas | Calculadora de Juros | Calculadora IMC
 
-* Conhecimento - 6️⃣ ChatGPT | Orçamento | Respostas Rápidas 
+* Conhecimento - ✅ ChatGPT | Orçamento | Respostas Rápidas 
             Traduzir Texto | Transcrever Áudio | Clima e Tempo
            Criador de Mídia | Transcrever Vídeos | Texto em Audio
 

@@ -6,11 +6,11 @@
 
 ## Roadmap e Features Planejadas
 
-* corrigir aprovação do app ChatGPT 
+* Editar postagens no Manus com o logo e postar (imagem um dia, vídeo outro dia)
 
 * Criar Auxiliar de Cadastro e com MCP whatsapp
 
-* Tour guiado - chache implementado, quando finalizar todos os stages, aplicar o cache no restante (pedidoslj)
+* Tour guiado - quando finalizar todos os stages, aplicar o cache no restante (pedidoslj)
 
 * página admin no dashboard (colocar controle de consultas tambem)
 

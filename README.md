@@ -10,9 +10,12 @@
 
 * Criar Auxiliar de Cadastro e com MCP whatsapp
 
+* Criar 3 novas funções em Conhecimento:
+Criador de Mídia | Transcrever Vídeos | Texto em Audio
+
 * Tour guiado - quando finalizar todos os stages, aplicar o cache no restante (pedidoslj)
 
-* Sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
+* Quando o Tour estiver pronto, sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
 
 * página admin no dashboard (colocar controle de consultas tambem)
 
@@ -90,8 +93,7 @@ Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app /
 
 * Conhecimento - 6️⃣ ChatGPT | Orçamento | Respostas Rápidas 
             Traduzir Texto | Transcrever Áudio | Clima e Tempo
-(Criador de Mídia | Transcrever Vídeos | Texto em Audio)
-
+           Criador de Mídia | Transcrever Vídeos | Texto em Audio
 
 * Agendamento - 6️⃣ Marcar Evento | Ver Agenda | Confirmar Presença 
      Reagendamento | Cancelar Agendamento | Horários Disponíveis

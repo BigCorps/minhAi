@@ -90,7 +90,7 @@ Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app /
 
 * Conhecimento - 6️⃣ ChatGPT | Orçamento | Respostas Rápidas 
             Traduzir Texto | Transcrever Áudio | Clima e Tempo
-(Criador de Mídia | Transcrever Vídeos | Arquivos em Audio)
+(Criador de Mídia | Transcrever Vídeos | Texto em Audio)
 
 
 * Agendamento - 6️⃣ Marcar Evento | Ver Agenda | Confirmar Presença 

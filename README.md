@@ -12,6 +12,8 @@
 
 * Tour guiado - quando finalizar todos os stages, aplicar o cache no restante (pedidoslj)
 
+* Sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
+
 * página admin no dashboard (colocar controle de consultas tambem)
 
 .
@@ -23,8 +25,6 @@
 * Artes Instagram: Manus jiuithsu e fofopanda / GPT
 
 * enviar releases e criar LinkedIn
-
-* Sugerir site e IA para Hantars e Salão como parceria
 
 * App PagSeguro para postos (AGUARDANDO RESPOSTA PAGBANK)
 
@@ -64,7 +64,7 @@ Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app /
              Instagram | Facebook | Tiktok
              Linkedin | Email | Twitter/X
 
-* Multimidia - ✅Tocar Vídeo | Vídeo de Instruções | Painel de Ofertas
+* Multimidia - ✅ Tocar Vídeo | Vídeo de Instruções | Painel de Ofertas
          Iniciar Playlist | Sequência de Vídeos | Canal do Youtube
                  Tocar Música | Porta Retrato | Vídeo Chamada
 
@@ -76,21 +76,21 @@ Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app /
           Lista de Compras  | Chamar Gerente | Enviar SMS
         Impressão Remota | Impressão Local | Impressão Cupom
 
-* Câmera - ✅. Ler QR Code | Ler Código de Barras | Identificar Fraude
+* Câmera - ✅ Ler QR Code | Ler Código de Barras | Identificar Fraude
             Enviar Arquivo | Gerar QR Code | Criar Código de Barras
              Imagem em texto | Tabela em Texto | Contrato em Texto
                 
-* Comercial - ✅ Nossos Produtos |Link na Bio| Registrar Venda
+* Comercial - ✅ Nossos Produtos | Link na Bio | Registrar Venda
              Venda Rápida | Fazer Pedido | Auxiliar de Produção
               Gerar Cupom | Enviar E-mail | Cadastrar Produto
 
-* Informação - ✅Meu Sistema | Nossa Marca | Câmbio
+* Informação - ✅ Meu Sistema | Nossa Marca | Câmbio
            Notícias | Feriados Nacionais | Pesquisar Produto
          Converter Medidas | Calculadora de Juros | Calculadora IMC
 
 * Conhecimento - 6️⃣ ChatGPT | Orçamento | Respostas Rápidas 
             Traduzir Texto | Transcrever Áudio | Clima e Tempo
-(Transcrever Reuniões | Transcrever Vídeos | Transcrever PDF)
+(Criador de Mídia | Transcrever Vídeos | Arquivos em Audio)
 
 
 * Agendamento - 6️⃣ Marcar Evento | Ver Agenda | Confirmar Presença 
@@ -103,9 +103,9 @@ Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app /
 (Liberar Acesso | Facial e Biometria | Registro de Ponto)
 
 
-* Consultas - 6️⃣ ConsultarDados CNPJ | Dados CPF | Placa
-           Consultar Leilão | Restrições CPF | Restrições CNPJ
-(Tabela FIPE | Protesto Nacional | Consulta CRLV)
+* Consultas - 6️⃣ Dados CNPJ | Dados CPF | Consultar Placa
+           Consultar Protesto | Restrições CPF | Restrições CNPJ
+(Tabela FIPE | Protesto Leilão | Consulta CRLV)
 
 * Arquivos - 6️⃣ Remover Fundo | Duplicar Imagem | Analisar Planílha
              Editar Imagem | Converter Arquivos| Juntar PDFs

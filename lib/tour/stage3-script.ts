@@ -59,7 +59,7 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
     audioText:
       'O Auxiliar Fiscal emite nota fiscal por voz ou texto — N F e, N F S e e N F C e. ' +
       'Informe os dados, ele preenche N C M, C F O P e C S O S N automaticamente ' +
-      'e envia direto para a S E F A Z. ' +
+      'e envia direto para a SEFAZ. ' +
       'Integrado aos produtos e clientes cadastrados no dashboard.',
     displayText:
       'O Auxiliar Fiscal emite nota fiscal por voz ou texto — NFe, NFSe e NFCe. ' +
@@ -77,7 +77,7 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
 'O Auxiliar de Relatórios transforma planilhas e PDFs em relatórios formatados. ' +
       'O Assistente de Orçamentos vai além — ' +
       'ele monta o orçamento completo com produtos, data e desconto, ' +
-      'gera o documento com logo da empresa e o Pix.',
+      'gera o documento com o logotipo da empresa e o Pix.',
     fallbackDuration: 10000,
   },
   {

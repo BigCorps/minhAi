@@ -21,7 +21,7 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
     id: 'auxiliares-intro',
     label: 'Especialistas',
     audioText:
-      'Além de executar mais de 100 funções, a minha I A conta com nove especialistas de I A ' +
+      'Além de executar mais de 100 funções, a minha I Á conta com nove especialistas de I Á ' +
       'integrados ao seu negócio — cada um focado em conduzir processos complexos do início ao fim, ' +
       'por voz ou texto, em qualquer canal.',
     displayText:
@@ -57,7 +57,7 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
     id: 'auxiliares-fiscal',
     label: 'Fiscal',
     audioText:
-      'O Auxiliar Fiscal emite nota fiscal por voz ou texto — N F e, N F S e e N F C e. ' +
+      'O Auxiliar Fiscal emite nota fiscal por voz ou texto — N F ê, N F S ê e N F C ê. ' +
       'Informe os dados, ele preenche N C M, C F O P e C S O S N automaticamente ' +
       'e envia direto para a SEFAZ. ' +
       'Integrado aos produtos e clientes cadastrados no dashboard.',
@@ -107,7 +107,7 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
   id: 'auxiliares-conclusao',
   label: 'Conclusão',
   audioText:
-    'Nove especialistas I A, cada um conduzindo processos complexos do início ao fim — ' +
+    'Nove especialistas I Á, cada um conduzindo processos complexos do início ao fim — ' +
     'Tudo por voz ou texto, em qualquer canal, sem precisar de um sistema separado para cada área. ' +
     'É a sua equipe digital completa, integrada em um único assistente.',
   displayText:

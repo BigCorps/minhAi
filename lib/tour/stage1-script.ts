@@ -27,7 +27,7 @@ export const STAGE1_SCRIPT: SceneScript[] = [
     id: 'intro',
     label: 'Introdução',
     audioText:
-      'Sou a minha I Á A, mas também posso ser Sua I Á ou Nossa I Á, você escolhe como me chamar! Estou em qualquer lugar onde o seu cliente esteja: aparelhos com telas. Computadores, tablets e celulares. totens, Whatsapp, Instagram, Facebook, aplicativos de I Á A e até no Mercado Livre',
+      'Sou a minha I Á, mas também posso ser Sua I Á ou Nossa I Á, você escolhe como me chamar! Estou em qualquer lugar onde o seu cliente esteja: aparelhos com telas. Computadores, tablets e celulares. totens, Whatsapp, Instagram, Facebook, aplicativos de I Á A e até no Mercado Livre',
     displayText:
       'Sou a minhAi, mas também posso ser Sua IA ou Nossa IA, você escolhe como me chamar! Estou em qualquer lugar onde o seu cliente esteja: Aparelhos com telas (computadores, tablets e celulares), Totens, Whatsapp, Instagram, Facebook, aplicativos de IA e até no Mercado Livre.',
     fallbackDuration: 7000,

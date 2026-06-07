@@ -27,7 +27,7 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
       'o modo padrão com microfone e carrossel de funções, ' +
       'o modo texto para digitação livre, ' +
       'ou o modo imersivo em tela cheia com o avatar centralizado. ' +
-      'Cada negócio tem o seu jeito — e a minha I A se adapta a ele.',
+      'Cada negócio tem o seu jeito — e a minha I Á se adapta a ele.',
     displayText:
       'Esta é a página do seu assistente — ela roda em qualquer tela, tablet, totem ou computador. ' +
       'Você escolhe qual dos três modos apresentar para o seu cliente: ' +
@@ -86,22 +86,22 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
       'No Modo Totem, a tela entra em modo quiosque com teclado virtual embutido — ' +
       'sem botões de saída, sem acesso ao sistema, ' +
       'com saída protegida por senha do proprietário. ' +
-      'E para personalizar ainda mais a experiência, tem também a tela de login' +
+      'E para personalizar ainda mais a experiência, tem também a tela de login, ' +
       'o cliente cria uma conta em segundos tem acesso as suas compras.' +
-      'e os colaboradores entram com identificador e PIN cadastrados no painel. ' +
-      'Cada pessoa com o seu nível de acesso, tudo integrado.',
+      'Os colaboradores entram com identificador e PIN cadastrados no painel. ' +
+      'Cada pessoa com o seu nível de acesso, clientes, funcionários, gerente, caixa, entre outros.',
     fallbackDuration: 10000,
   },
   {
     id: 'assistente-outro',
     label: 'Conclusão',
     audioText:
-      'E o grande diferencial da minha I A é a liberdade de interação. ' +
+      'E o grande diferencial da minha I Á é a liberdade de interação. ' +
       'O cliente pode chamar como uma Alexa usando a palavra de ativação, ' +
       'clicar no botão e falar, navegar pelos botões do carrossel, ' +
       'ou simplesmente digitar. ' +
       'Cada pessoa interage do jeito que prefere — ' +
-      'e a minha I A está pronta para todas elas, vinte e quatro horas por dia, ',
+      'e a minha I Á está pronta para todas elas, vinte e quatro horas por dia, ',
     displayText:
       'E o grande diferencial da minhAi é a liberdade de interação. ' +
       'O cliente pode chamar como uma Alexa usando a palavra de ativação, ' +

@@ -598,6 +598,128 @@ handler: async ({ playText, setActiveModal, companyId, transcript, sessionId }) 
     },
   },
 
+criar_midia: {
+  functionKey: 'criar_midia',
+  functionName: 'Criador de Posts',
+  category: 'ai_assistant',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'criar post', 'criar arte', 'criar conteúdo', 'criar conteudo',
+    'postar no instagram', 'postar no facebook',
+    'criador de posts', 'gerar arte', 'criar publicação', 'criar publicacao',
+    'post para redes sociais', 'arte para post',
+  ],
+
+  examplePhrases: [
+    'Criar um post de promoção',
+    'Gerar arte para o Instagram',
+    'Criar publicação para o Facebook',
+    'Fazer um post de oferta',
+  ],
+
+  requiresInput: false,
+  description: 'Cria artes para postagens em redes sociais com IA. O assistente conversa com o usuário para definir todos os detalhes antes de gerar a arte, incluindo o logo da empresa na posição escolhida. Após aprovação, gera descrição e hashtags otimizadas automaticamente e permite publicar diretamente no Facebook ou baixar a arte.',
+  shortDescription: 'Cria artes e posts para redes sociais com IA',
+  icon: '🔵',
+  color: '#0000FF',
+
+  saveToHistory: true,
+  creditsPerUse: 15,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ playText, setActiveModal, companyId, slug }) => {
+    try {
+      setActiveModal?.({
+        type: 'CriarMidiaDisplay',
+        data: { companyId, slug },
+      });
+      // SEM playText aqui — o modal fala no useEffect de mount
+      return true;
+    } catch {
+      await playText('Não consegui abrir o Criador de Posts.');
+      return false;
+    }
+  },
+},
+
+texto_em_audio: {
+  functionKey: 'texto_em_audio',
+  functionName: 'Texto em Áudio',
+  category: 'ai_assistant',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'texto em áudio', 'texto em audio',
+    'converter texto em áudio', 'converter texto em audio',
+    'gerar áudio', 'gerar audio',
+    'transformar texto em voz', 'narrar texto',
+    'text to speech', 'falar texto', 'mp3',
+  ],
+
+  examplePhrases: [
+    'Transformar esse texto em áudio',
+    'Gerar MP3 desse texto',
+    'Converter para voz feminina',
+    'Narrar esse conteúdo',
+  ],
+
+  requiresInput: false,
+  description: 'Converte qualquer texto em áudio MP3 com voz feminina ou masculina em português. O arquivo pode ser baixado diretamente.',
+  shortDescription: 'Transforma texto em áudio MP3 para download',
+  icon: '🔵',
+  color: '#0000FF',
+
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    setActiveModal?.({ type: 'TextoEmAudioDisplay', data: { companyId } });
+    return true;
+  },
+},
+
+transcrever_video: {
+  functionKey: 'transcrever_video',
+  functionName: 'Transcrever Vídeo',
+  category: 'ai_assistant',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'transcrever vídeo', 'transcrever video',
+    'transcrever arquivo', 'vídeo para texto', 'video para texto',
+    'áudio para texto', 'audio para texto',
+    'transcrição de vídeo', 'transcricao de video',
+    'legenda', 'converter vídeo', 'converter video',
+  ],
+
+  examplePhrases: [
+    'Transcrever esse vídeo',
+    'Converter áudio para texto',
+    'Gerar transcrição do arquivo',
+    'Transcrever reunião',
+  ],
+
+  requiresInput: false,
+  description: 'Faz upload de vídeo ou áudio (MP4, MOV, WEBM, MP3, M4A, WAV) e transcreve o conteúdo para texto. O resultado pode ser copiado ou baixado como PDF. O custo é calculado pela duração antes do envio.',
+  shortDescription: 'Transcreve vídeos e áudios para texto com IA',
+  icon: '🔵',
+  color: '#0000FF',
+
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    setActiveModal?.({ type: 'TranscreverVideoDisplay', data: { companyId } });
+    return true;
+  },
+},
+  
 // ========================================
 // MODO FILA
 // ========================================

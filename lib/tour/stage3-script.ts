@@ -7,6 +7,7 @@ export type Stage3SceneId =
   | 'auxiliares-agenda'
   | 'auxiliares-producao'
   | 'auxiliares-extras'
+  | 'auxiliares-midia'
 
 export interface Stage3Script {
   id: Stage3SceneId
@@ -21,11 +22,11 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
     id: 'auxiliares-intro',
     label: 'Especialistas',
     audioText:
-      'Além de executar mais de 100 funções, a minha I Á conta com nove especialistas de I Á ' +
+      'Além de executar mais de 100 funções, a minha I Á conta com dez especialistas de I Á ' +
       'integrados ao seu negócio — cada um focado em conduzir processos complexos do início ao fim, ' +
       'por voz ou texto, em qualquer canal.',
     displayText:
-      'Além de executar mais de 100 funções, a minhAi conta com 9 especialistas de IA ' +
+      'Além de executar mais de 100 funções, a minhAi conta com 10 especialistas de IA ' +
       'integrados ao seu negócio — cada um focado em conduzir processos complexos do início ao fim, ' +
       'por voz ou texto, em qualquer canal.',
     fallbackDuration: 7000,
@@ -53,6 +54,18 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
       'tudo por voz ou texto, sem o cliente sair do canal.',
     fallbackDuration: 9000,
   },
+{
+  id: 'auxiliares-midia',
+  label: 'Posts',
+  audioText:
+    'O Criador de Posts transforma uma ideia em arte pronta para as redes sociais em segundos. ' +
+    'Você descreve por voz ou texto — uma promoção, um lançamento, uma dica — ' +
+    'e a IA gera a imagem com a identidade visual da sua marca já aplicada. ' +
+    'A descrição e as hashtags saem prontas para copiar, ' +
+    'e você ainda pode publicar direto no Instagram e Facebook. — ' +
+    'sem sair do assistente, sem abrir outro app.',
+  fallbackDuration: 10000,
+},
  {
     id: 'auxiliares-fiscal',
     label: 'Fiscal',

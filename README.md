@@ -9,8 +9,7 @@
 
 * Colocar ActionModals na seção de funções, com um botão para utilizar as funções diretamente no dashboard 
 
-* Criar Auxiliar de Cadastro e com MCP whatsapp e criar 3 novas funções em Conhecimento: Criador de Mídia | Transcrever Vídeos | Texto em Audio
-(tudo já implementado, mas com erros nas edges)
+* Auxiliar de Cadastro e com MCP whatsapp e Criador de Posts - já implementado, mas com erros nas edges
 
 * Tour guiado - quando finalizar todos os stages, aplicar o cache no restante (pedidoslj)
 

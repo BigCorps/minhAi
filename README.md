@@ -7,8 +7,6 @@
 
 * Editar postagens no Manus com o logo e postar (imagem um dia, vídeo outro dia)
 
-* Colocar ActionModals na seção de funções, com um botão para utilizar as funções diretamente no dashboard 
-
 * Auxiliar de Cadastro e com MCP whatsapp e Criador de Posts - já implementado, mas com erros nas edges
 
 * Tour guiado - quando finalizar todos os stages, aplicar o cache no restante (pedidoslj)

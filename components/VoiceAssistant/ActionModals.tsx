@@ -302,7 +302,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     { ssr: false }
   ),
 
-  'CadastrarProdutoDisplay': dynamic(
+'CadastrarProdutoDisplay': dynamic(
     () => import('@/components/assistant/CadastrarProdutoDisplay').then(mod => ({
       default: ({ data, onClose, theme, playText }: any) => (
         <mod.default
@@ -311,9 +311,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
           theme={theme}
           playText={playText}
           onSalvo={() => {
-            import('@/components/VoiceAssistant/handlers/functionUsage').then(({ registerFunctionUsage }) => {
-              registerFunctionUsage(data.companyId, 'cadastrar_produto', 1);
-            });
+            // Crédito cobrado internamente pelo modal via register_function_usage RPC
           }}
         />
       )

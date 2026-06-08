@@ -6,6 +6,7 @@ import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
 import ModoToggle from '@/components/dashboard/ModoToggle';
 import { triggerEmbeddingUpdate, triggerBulkEmbeddingSync } from '@/lib/embeddings'; // PATCH 1.1
+import CadastrarProdutoDisplay from '@/components/VoiceAssistant/modals/CadastrarProdutoDisplay';
 
 import {
   ShoppingCart,
@@ -1317,6 +1318,7 @@ function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnecte
   const [importarAberto, setImportarAberto] = useState(false);
   const [opcionaisProduto, setOpcionaisProduto] = useState<ProdutoVenda | null>(null);
   const [csvAberto, setCsvAberto] = useState(false);
+  const [auxiliarAberto, setAuxiliarAberto] = useState(false);
   const [produtoDuplicando, setProdutoDuplicando] = useState<ProdutoVenda | null>(null);
   const [mlModal, setMlModal] = useState<ProdutoVenda | null>(null);
   const [mlPublicando, setMlPublicando] = useState<string | null>(null);
@@ -1490,14 +1492,11 @@ function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnecte
             CSV
           </button>
 
-          {/* Importar CSV */}
-          <button onClick={() => setCsvAberto(true)}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg border border-gray-200 dark:border-white/10 transition">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            CSV
+        {/* Auxiliar de Cadastro */}
+          <button onClick={() => setAuxiliarAberto(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition shadow-sm">
+            <Package className="w-4 h-4" />
+            Auxiliar de Cadastro
           </button>
 
           {/* Importar da Produção */}
@@ -1801,6 +1800,14 @@ function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnecte
           companyId={companyId}
           onClose={() => setCsvAberto(false)}
           onImportado={(qty) => { load(); setCsvAberto(false); }}
+        />
+      )}
+      {auxiliarAberto && (
+        <CadastrarProdutoDisplay
+          data={{ companyId }}
+          onClose={() => setAuxiliarAberto(false)}
+          theme="light"
+          onSalvo={() => { load(); setAuxiliarAberto(false); }}
         />
       )}
       {mlModal && (

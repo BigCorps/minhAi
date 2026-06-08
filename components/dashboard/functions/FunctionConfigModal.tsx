@@ -4292,6 +4292,74 @@ const EmitirNotaForm = () => {
   );
 };
 
+const TextoEmAudioForm = () => (
+  <div className="space-y-4">
+    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Como funciona</h4>
+      <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+        <li>• Cole ou digite qualquer texto no campo</li>
+        <li>• Escolha a voz: Feminina ou Masculina (pt-BR Neural)</li>
+        <li>• O custo é calculado automaticamente: 1 crédito a cada 500 caracteres</li>
+        <li>• Ouça a prévia e baixe o arquivo MP3</li>
+        <li>• Máximo de 10.000 caracteres por geração</li>
+      </ul>
+    </div>
+    <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+      <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">Comandos de voz</h5>
+      <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+        <li>• "Texto em áudio"</li>
+        <li>• "Gerar áudio"</li>
+        <li>• "Converter texto em voz"</li>
+        <li>• "Narrar texto"</li>
+      </ul>
+    </div>
+    <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-200 dark:border-indigo-800">
+      <p className="text-xs text-indigo-800 dark:text-indigo-200">
+        💡 <strong>Uso ideal:</strong> Narração de comunicados, roteiros, textos de marketing, descrições de produtos e conteúdo para redes sociais.
+      </p>
+    </div>
+  </div>
+);
+
+const TranscreverVideoForm = () => (
+  <div className="space-y-4">
+    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Como funciona</h4>
+      <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+        <li>• Faça upload do arquivo de vídeo ou áudio (até 25MB)</li>
+        <li>• O sistema lê a duração localmente antes do envio</li>
+        <li>• Mostra quantos créditos serão usados antes de confirmar</li>
+        <li>• Custo: mínimo 2 créditos · 1 crédito por minuto adicional</li>
+        <li>• Resultado pode ser copiado ou baixado em PDF</li>
+      </ul>
+    </div>
+    <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+      <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">Formatos suportados</h5>
+      <div className="flex flex-wrap gap-2">
+        {['MP4', 'MOV', 'WEBM', 'MP3', 'M4A', 'WAV'].map(fmt => (
+          <span key={fmt} className="px-2 py-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded text-xs font-mono text-gray-700 dark:text-gray-300">
+            {fmt}
+          </span>
+        ))}
+      </div>
+    </div>
+    <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+      <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">Comandos de voz</h5>
+      <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+        <li>• "Transcrever vídeo"</li>
+        <li>• "Transcrever arquivo"</li>
+        <li>• "Vídeo para texto"</li>
+        <li>• "Transcrição de reunião"</li>
+      </ul>
+    </div>
+    <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+      <p className="text-xs text-amber-800 dark:text-amber-200">
+        ⚠️ Os créditos são descontados <strong>somente após a transcrição ser concluída com sucesso</strong>.
+      </p>
+    </div>
+  </div>
+);
+
 const VendasForm = ({ functionKey, companyId }: { functionKey: string; companyId: string }) => {
   const router = useRouter();
 
@@ -4640,7 +4708,8 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'consultar_protestos': ConsultasConfigForm,
   'restricoes_cpf':      ConsultasConfigForm,
   'restricoes_cnpj':     ConsultasConfigForm,
-
+  'texto_em_audio':   TextoEmAudioForm,
+  'transcrever_video': TranscreverVideoForm,
 };
 
 // ===== INTERFACE =====

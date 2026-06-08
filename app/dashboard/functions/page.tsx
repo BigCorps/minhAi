@@ -11,10 +11,156 @@ import { Search, Settings, User } from 'lucide-react';
 import FunctionCard from '@/components/dashboard/functions/FunctionCard';
 import FunctionConfigModal from '@/components/dashboard/functions/FunctionConfigModal';
 import VendasConfigPanel from '@/components/dashboard/functions/VendasConfigPanel';
+import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
 import dynamic from 'next/dynamic';
 import { usePlayText, useStopAudio } from '@/hooks/usePlayText';
 
 const FuncoesChat = dynamic(() => import('@/components/dashboard/FuncoesChat'), { ssr: false });
+
+// ── Mapa functionKey (snake_case) → nome do componente no ActionModals ─────────
+// Excluídos intencionalmente: pix_generate, link_pagamento, modo_venda, modo_fila,
+// nfc_credito, nfc_debito, tef_credito, tef_debito, faq
+// (esses têm fluxos próprios no dashboard e não devem abrir via ActionModals)
+const FUNCTION_KEY_TO_MODAL: Record<string, string> = {
+  // ── Informações da empresa ──────────────────────────────────────────────────
+  nossa_marca:                    'NossaMarcaDisplay',
+  meu_sistema:                    'MeuSistemaDisplay',
+  endereco:                       'EnderecoDisplay',
+  video_instrucoes:               'VideoInstrucoesDisplay',
+  orcamento:                      'OrcamentoDisplay',
+
+  // ── QR Codes ────────────────────────────────────────────────────────────────
+  qrcode_whatsapp:                'QRCodeDisplay',
+  qrcode_instagram:               'QRCodeDisplay',
+  qrcode_website:                 'QRCodeDisplay',
+  qrcode_facebook:                'QRCodeDisplay',
+  qrcode_email:                   'QRCodeDisplay',
+  qrcode_linkedin:                'QRCodeDisplay',
+  qrcode_tiktok:                  'QRCodeDisplay',
+  qrcode_twitter:                 'QRCodeDisplay',
+  qrcode_telefone:                'QRCodeDisplay',
+  wifi_qrcode:                    'WifiQRCodeDisplay',
+  nosso_qrcode:                   'NossoQRCodeDisplay',
+  gerar_qrcode:                   'GerarQRCodeDisplay',
+  gerar_codigo_barras:            'GerarCodigoBarrasDisplay',
+  canal_youtube:                  'CanalYoutubeDisplay',
+
+  // ── Agenda ──────────────────────────────────────────────────────────────────
+  ver_agenda:                     'ViewAgendaModal',
+  agendar_compromisso:            'CreateEventModal',
+  enviar_email:                   'SendEmailModal',
+  cancelar_agendamento:           'CancelAppointmentModal',
+  confirmar_presenca:             'ConfirmPresenceModal',
+  reagendar_compromisso:          'RescheduleModal',
+
+  // ── Câmera e leitura ────────────────────────────────────────────────────────
+  ler_qrcode:                     'LerQRCodeDisplay',
+  ler_codigo_barras:              'LerCodigoBarrasDisplay',
+  validar_cupom:                  'ValidarCupomDisplay',
+  imagem_em_texto:                'ImagemEmTextoDisplay',
+  tabela_em_texto:                'TabelaEmTextoDisplay',
+  contrato_em_texto:              'ContratoEmTextoDisplay',
+  identificar_fraude:             'IdentificarFraudeDisplay',
+
+  // ── Arquivo e imagem ────────────────────────────────────────────────────────
+  enviar_arquivo:                 'EnviarArquivoDisplay',
+  converter_arquivo:              'ConverterArquivoDisplay',
+  duplicar_imagem:                'DuplicarImagemDisplay',
+  editar_imagem:                  'EditarImagemDisplay',
+  remover_fundo:                  'RemoverFundoDisplay',
+  analisar_planilha:              'AnalisarPlanilhaDisplay',
+  juntar_pdfs:                    'JuntarPdfsDisplay',
+
+  // ── IA — Texto e Áudio ──────────────────────────────────────────────────────
+  criar_midia:                    'CriarMidiaDisplay',
+  texto_em_audio:                 'TextoEmAudioDisplay',
+  transcrever_video:              'TranscreverVideoDisplay',
+
+  // ── Consultas ───────────────────────────────────────────────────────────────
+  dados_cpf:                      'ConsultarCpfModal',
+  dados_cnpj:                     'ConsultarCnpjModal',
+  consultar_placa:                'ConsultarPlacaModal',
+  consultar_protestos:            'ConsultarProtestosModal',
+  restricoes_cpf:                 'RestricoesCPFDisplay',
+  restricoes_cnpj:                'RestricoesCNPJDisplay',
+  cotacao_moedas:                 'CotacaoMoedasDisplay',
+  consultar_cep:                  'ConsultarCEPDisplay',
+  feriados_nacionais:             'FeriadosNacionaisDisplay',
+  consultar_ddd:                  'ConsultarDDDDisplay',
+  clima_tempo:                    'ClimaTempoDisplay',
+  segunda_via_boleto:             'SegundaViaBoletoDisplay',
+  rastreio_correios:              'RastreioCorreiosDisplay',
+  buscar_endereco:                'BuscarEnderecoDisplay',
+  tracar_rota:                    'TracarRotaDisplay',
+  ver_noticias:                   'VerNoticiasDisplay',
+
+  // ── Utilitários de tempo ────────────────────────────────────────────────────
+  cronometro:                     'CronometroDisplay',
+  temporizador:                   'TemporizadorDisplay',
+  relogio_mundial:                'RelogioMundialDisplay',
+  alarme:                         'AlarmeDisplay',
+  lembrete_remedios:              'LembreteRemediosDisplay',
+  criar_nota:                     'CriarNotaDisplay',
+  criar_lembrete:                 'CriarLembreteDisplay',
+
+  // ── Mídia ───────────────────────────────────────────────────────────────────
+  tocar_video:                    'TocarVideoDisplay',
+  tocar_musica:                   'TocarMusicaDisplay',
+  playlist:                       'PlaylistDisplay',
+  porta_retrato:                  'PortaRetratoDisplay',
+  painel_ofertas:                 'PainelOfertasDisplay',
+  sequencia_videos:               'SequenciaVideosDisplay',
+  cardapio:                       'CardapioDisplay',
+
+  // ── Impressão ───────────────────────────────────────────────────────────────
+  impressao_local:                'ImpressaoLocalDisplay',
+  impressao_remota:               'ImpressaoRemotaDisplay',
+  impressao_recibo:               'ImpressaoReciboDisplay',
+
+  // ── Vendas e estoque ────────────────────────────────────────────────────────
+  procurar_produto:               'ProcurarProdutoDisplay',
+  lista_compras:                  'ListaComprasDisplay',
+  registrar_venda:                'RegistrarVendaDisplay',
+  ver_clientes:                   'VerClientesDisplay',
+  fechar_caixa:                   'FecharCaixaDisplay',
+  trocar_turno:                   'TrocarTurnoDisplay',
+  relatorio_vendas:               'RelatorioVendasDisplay',
+  minhas_compras:                 'MinhasComprasDisplay',
+  chamar_gerente:                 'ChamarGerenteDisplay',
+  fazer_pedido:                   'FazerPedidoDisplay',
+  meu_cupom:                      'MeuCupomDisplay',
+  enviar_sms:                     'EnviarSmsDisplay',
+
+  // ── Cadastro e perfil ───────────────────────────────────────────────────────
+  cadastro:                       'RegistrationDisplay',
+  login_cliente:                  'LoginClienteDisplay',
+
+  // ── Fichas de produção ──────────────────────────────────────────────────────
+  fichas_producao:                'FichaProducaoDisplay',
+  fichas_producao_conversacional: 'FichaProducaoConversacionalDisplay',
+
+  // ── Fila de atendimento ─────────────────────────────────────────────────────
+  fila_atendimento:               'FilaAtendimentoDisplay',
+  gerar_senha:                    'GerarSenhaDisplay',
+  painel_fila:                    'PainelFilaDisplay',
+  pre_atendimento:                'PreAtendimentoDisplay',
+  responder_pesquisa:             'ResponderPesquisaDisplay',
+
+  // ── Fiscal ──────────────────────────────────────────────────────────────────
+  emitir_nota:                    'EmitirNotaModal',
+
+  // ── Smart home ──────────────────────────────────────────────────────────────
+  aparelhos_smart:                'AparelhosSmartDisplay',
+
+  // ── Tradução e transcrição ──────────────────────────────────────────────────
+  translate_text:                 'TranslateTextModal',
+  transcribe_audio:               'TranscribeAudioModal',
+
+  // ── Calculadoras ────────────────────────────────────────────────────────────
+  converter_medidas:              'ConverterMedidasDisplay',
+  calculadora_juros:              'CalculadoraJurosDisplay',
+  calculadora_imc:                'CalculadoraIMCDisplay',
+};
 
 interface AssistantFunction {
   id: string;
@@ -259,7 +405,12 @@ function ProfileTypeSelector({ selectedTipo, tiposDisponiveis, onSelect }: {
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 function FunctionsPageContent() {
-  const { selectedAssistantId: companyId, selectedAssistantName } = useAssistant();
+  const {
+    selectedAssistantId: companyId,
+    selectedAssistantName,
+    availableAssistants,
+  } = useAssistant();
+
   const [functions, setFunctions] = useState<AssistantFunction[]>([]);
   const [settings, setSettings] = useState<CompanyFunctionSetting[]>([]);
   const [loading, setLoading] = useState(false);
@@ -272,6 +423,9 @@ function FunctionsPageContent() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [editingFunction, setEditingFunction] = useState<AssistantFunction | null>(null);
+
+  // ── Estado para ActionModals ─────────────────────────────────────────────────
+  const [activeModal, setActiveModal] = useState<{ type: string; data: any } | null>(null);
 
   const [assistantType, setAssistantType] = useState<string>('smart');
   const supabase = createClient();
@@ -295,26 +449,26 @@ function FunctionsPageContent() {
     return () => obs.disconnect();
   }, []);
 
-async function handleSendSuggestion() {
-  if (suggestionText.trim().length < 10) {
-    toast({ title: "Sugestão muito curta", description: "Por favor, descreva com mais detalhes.", variant: "destructive" });
-    return;
+  async function handleSendSuggestion() {
+    if (suggestionText.trim().length < 10) {
+      toast({ title: "Sugestão muito curta", description: "Por favor, descreva com mais detalhes.", variant: "destructive" });
+      return;
+    }
+    setIsSendingSuggestion(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-suggestion', {
+        body: { suggestion: suggestionText },
+      });
+      if (error) throw error;
+      toast({ title: "Sugestão Enviada!", description: "Obrigado! Sua opinião é muito importante para nós." });
+      setSuggestionText('');
+      setIsSuggestionOpen(false);
+    } catch (error: any) {
+      toast({ title: "Erro ao enviar", description: error.message || "Tente novamente mais tarde.", variant: "destructive" });
+    } finally {
+      setIsSendingSuggestion(false);
+    }
   }
-  setIsSendingSuggestion(true);
-  try {
-    const { error } = await supabase.functions.invoke('send-suggestion', {
-      body: { suggestion: suggestionText },
-    });
-    if (error) throw error;
-    toast({ title: "Sugestão Enviada!", description: "Obrigado! Sua opinião é muito importante para nós." });
-    setSuggestionText('');
-    setIsSuggestionOpen(false);
-  } catch (error: any) {
-    toast({ title: "Erro ao enviar", description: error.message || "Tente novamente mais tarde.", variant: "destructive" });
-  } finally {
-    setIsSendingSuggestion(false);
-  }
-}
 
   useEffect(() => {
     if (companyId) {
@@ -326,7 +480,7 @@ async function handleSendSuggestion() {
     }
   }, [companyId]);
 
-async function loadData(selectedCompanyId: string) {
+  async function loadData(selectedCompanyId: string) {
     try {
       setLoading(true);
       const { data: companyType } = await supabase
@@ -355,39 +509,39 @@ async function loadData(selectedCompanyId: string) {
     } finally {
       setLoading(false);
     }
-  }  // ← fecha loadData aqui
-
-async function toggleFunction(functionKey: string, currentlyEnabled: boolean) {
-  if (!companyId) return;
-  setUpdating(functionKey);
-  try {
-    const setting = settings.find(s => s.function_key === functionKey);
-    if (setting) {
-      await supabase.from('company_function_settings').update({
-        is_enabled: !currentlyEnabled,
-        ...(currentlyEnabled ? { disabled_at: new Date().toISOString() } : { enabled_at: new Date().toISOString() }),
-      }).eq('id', setting.id);
-    } else {
-      await supabase.from('company_function_settings').insert({
-        company_id: companyId, function_key: functionKey,
-        is_enabled: !currentlyEnabled,
-        ...(currentlyEnabled ? { disabled_at: new Date().toISOString() } : { enabled_at: new Date().toISOString() }),
-      });
-    }
-    await loadData(companyId);
-  } catch (error) {
-    console.error('Erro ao toggling função:', error);
-  } finally {
-    setUpdating(null);
   }
-}
 
-function isFunctionEnabled(functionKey: string): boolean {
-  const setting = settings.find(s => s.function_key === functionKey);
-  if (setting) return setting.is_enabled;
-  const fn = functions.find(f => f.function_key === functionKey);
-  return fn?.default_enabled ?? false;
-}
+  async function toggleFunction(functionKey: string, currentlyEnabled: boolean) {
+    if (!companyId) return;
+    setUpdating(functionKey);
+    try {
+      const setting = settings.find(s => s.function_key === functionKey);
+      if (setting) {
+        await supabase.from('company_function_settings').update({
+          is_enabled: !currentlyEnabled,
+          ...(currentlyEnabled ? { disabled_at: new Date().toISOString() } : { enabled_at: new Date().toISOString() }),
+        }).eq('id', setting.id);
+      } else {
+        await supabase.from('company_function_settings').insert({
+          company_id: companyId, function_key: functionKey,
+          is_enabled: !currentlyEnabled,
+          ...(currentlyEnabled ? { disabled_at: new Date().toISOString() } : { enabled_at: new Date().toISOString() }),
+        });
+      }
+      await loadData(companyId);
+    } catch (error) {
+      console.error('Erro ao toggling função:', error);
+    } finally {
+      setUpdating(null);
+    }
+  }
+
+  function isFunctionEnabled(functionKey: string): boolean {
+    const setting = settings.find(s => s.function_key === functionKey);
+    if (setting) return setting.is_enabled;
+    const fn = functions.find(f => f.function_key === functionKey);
+    return fn?.default_enabled ?? false;
+  }
 
   function getFunctionStats(functionKey: string) {
     const setting = settings.find(s => s.function_key === functionKey);
@@ -405,6 +559,26 @@ function isFunctionEnabled(functionKey: string): boolean {
 
   function handleEdit(fn: AssistantFunction) {
     setEditingFunction(fn);
+  }
+
+  // ── Abre o modal de preview da função ────────────────────────────────────────
+  function handlePlay(fn: AssistantFunction) {
+    if (!companyId) return;
+    const modalType = FUNCTION_KEY_TO_MODAL[fn.function_key];
+    if (!modalType) return;
+
+    // Resolve o slug do assistente atual a partir do contexto
+    const currentSlug =
+      availableAssistants?.find((a: any) => a.id === companyId)?.slug ?? '';
+
+    setActiveModal({
+      type: modalType,
+      data: {
+        companyId,
+        companyName: selectedAssistantName ?? '',
+        slug: currentSlug,
+      },
+    });
   }
 
   const isAllSelected = selectedCategories.length === 0;
@@ -445,6 +619,7 @@ function isFunctionEnabled(functionKey: string): boolean {
         if (!fn || !fn.function_key) return null;
         const enabled = isFunctionEnabled(fn.function_key);
         const stats = getFunctionStats(fn.function_key);
+        const hasPlay = !!FUNCTION_KEY_TO_MODAL[fn.function_key];
         return (
           <FunctionCard
             key={fn.id}
@@ -453,6 +628,7 @@ function isFunctionEnabled(functionKey: string): boolean {
             stats={stats}
             onToggle={() => toggleFunction(fn.function_key, enabled)}
             onEdit={() => handleEdit(fn)}
+            onPlay={hasPlay ? () => handlePlay(fn) : undefined}
             isUpdating={updating === fn.function_key}
             theme={theme}
             viewMode={mode}
@@ -480,6 +656,7 @@ function isFunctionEnabled(functionKey: string): boolean {
             if (!fn || !fn.function_key) return null;
             const enabled = isFunctionEnabled(fn.function_key);
             const stats = getFunctionStats(fn.function_key);
+            const hasPlay = !!FUNCTION_KEY_TO_MODAL[fn.function_key];
             return (
               <FunctionCard
                 key={fn.id}
@@ -488,6 +665,7 @@ function isFunctionEnabled(functionKey: string): boolean {
                 stats={stats}
                 onToggle={() => toggleFunction(fn.function_key, enabled)}
                 onEdit={() => handleEdit(fn)}
+                onPlay={hasPlay ? () => handlePlay(fn) : undefined}
                 isUpdating={updating === fn.function_key}
                 theme={theme}
                 viewMode="grid"
@@ -499,7 +677,7 @@ function isFunctionEnabled(functionKey: string): boolean {
     });
   }
 
-if (assistantType === 'vendas' && companyId) {
+  if (assistantType === 'vendas' && companyId) {
     return (
       <div className="min-h-screen bg-transparent py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
@@ -518,79 +696,79 @@ if (assistantType === 'vendas' && companyId) {
         <div className="max-w-6xl mx-auto">
 
           {/* ── Header ── */}
-<div className="mb-4 sm:mb-8">
-  {/* Desktop */}
-  <div className="hidden sm:flex items-start justify-between gap-4 mb-6">
-    <div className="flex-1">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-        Funções do Assistente
-      </h1>
-      <p className="text-gray-600 dark:text-gray-400">
-        Defina as funções que seu assistente {selectedAssistantName} pode executar
-      </p>
-    </div>
-   
-    <div className="flex items-center gap-2 flex-shrink-0">
-      {companyId && (
-        <a
-          href={`/dashboard/assistentes/${companyId}`}
-          className="flex-shrink-0 p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 transition"
-          title="Configurar assistente"
-        >
-          <Settings className="w-5 h-5" />
-        </a>
-      )}
+          <div className="mb-4 sm:mb-8">
+            {/* Desktop */}
+            <div className="hidden sm:flex items-start justify-between gap-4 mb-6">
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  Funções do Assistente
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Defina as funções que seu assistente {selectedAssistantName} pode executar
+                </p>
+              </div>
 
-      {companyId && (
-        <button
-          onClick={() => setShowFuncoesChat(true)}
-          className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
-            text-blue-600 border border-blue-300 hover:bg-blue-50
-            dark:text-blue-400 dark:border-blue-500/40 dark:hover:bg-blue-500/10 transition"
-          title="Auxiliar de Funções IA"
-        >
-          <Bot className="w-4 h-4" />
-          <span className="hidden lg:inline">Auxiliar de Funções</span>
-        </button>
-      )}
-    </div>
-  </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {companyId && (
+                  <a
+                    href={`/dashboard/assistentes/${companyId}`}
+                    className="flex-shrink-0 p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 transition"
+                    title="Configurar assistente"
+                  >
+                    <Settings className="w-5 h-5" />
+                  </a>
+                )}
 
-  {/* Mobile */}
-  <div className="sm:hidden flex flex-col gap-3 mb-4">
-    <div className="flex items-start justify-between gap-2">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Funções e Habilidades
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Defina as funções que seu assistente {selectedAssistantName} pode executar
-        </p>
-      </div>
-      <div className="flex items-center gap-1 flex-shrink-0 mt-1">
-        {companyId && (
-          <a
-            href={`/dashboard/assistentes/${companyId}`}
-            className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 transition"
-            title="Configurar assistente"
-          >
-            <Settings className="w-5 h-5" />
-          </a>
-        )}
+                {companyId && (
+                  <button
+                    onClick={() => setShowFuncoesChat(true)}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
+                      text-blue-600 border border-blue-300 hover:bg-blue-50
+                      dark:text-blue-400 dark:border-blue-500/40 dark:hover:bg-blue-500/10 transition"
+                    title="Auxiliar de Funções IA"
+                  >
+                    <Bot className="w-4 h-4" />
+                    <span className="hidden lg:inline">Auxiliar de Funções</span>
+                  </button>
+                )}
+              </div>
+            </div>
 
-        {companyId && (
-          <button
-            onClick={() => setShowFuncoesChat(true)}
-            className="p-2 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition"
-            title="Auxiliar de Funções IA"
-          >
-            <Bot className="w-5 h-5" />
-          </button>
-        )}
-      </div>
-    </div>
-  </div>
-</div>
+            {/* Mobile */}
+            <div className="sm:hidden flex flex-col gap-3 mb-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                    Funções e Habilidades
+                  </h1>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Defina as funções que seu assistente {selectedAssistantName} pode executar
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0 mt-1">
+                  {companyId && (
+                    <a
+                      href={`/dashboard/assistentes/${companyId}`}
+                      className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 transition"
+                      title="Configurar assistente"
+                    >
+                      <Settings className="w-5 h-5" />
+                    </a>
+                  )}
+
+                  {companyId && (
+                    <button
+                      onClick={() => setShowFuncoesChat(true)}
+                      className="p-2 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition"
+                      title="Auxiliar de Funções IA"
+                    >
+                      <Bot className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* ── Sem assistente selecionado ── */}
           {!companyId && (
@@ -724,6 +902,7 @@ if (assistantType === 'vendas' && companyId) {
                     {filteredFunctions.map(fn => {
                       const enabled = isFunctionEnabled(fn.function_key);
                       const stats = getFunctionStats(fn.function_key);
+                      const hasPlay = !!FUNCTION_KEY_TO_MODAL[fn.function_key];
                       return (
                         <FunctionCard
                           key={fn.id}
@@ -732,6 +911,7 @@ if (assistantType === 'vendas' && companyId) {
                           stats={stats}
                           onToggle={() => toggleFunction(fn.function_key, enabled)}
                           onEdit={() => handleEdit(fn)}
+                          onPlay={hasPlay ? () => handlePlay(fn) : undefined}
                           isUpdating={updating === fn.function_key}
                           theme={theme}
                           viewMode="grid"
@@ -751,7 +931,7 @@ if (assistantType === 'vendas' && companyId) {
             </>
           )}
 
-{editingFunction && companyId && (
+          {editingFunction && companyId && (
             <FunctionConfigModal
               isOpen={!!editingFunction}
               onClose={() => setEditingFunction(null)}
@@ -762,18 +942,18 @@ if (assistantType === 'vendas' && companyId) {
           )}
 
           {/* ── Link de sugestões ── */}
-<div className="mt-10 text-center">
-  <div className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
-    Não encontrou a função que precisa?
-    <button
-      onClick={() => setIsSuggestionOpen(true)}
-      className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-medium"
-    >
-      <Lightbulb className="w-4 h-4" />
-      Envie uma sugestão
-    </button>
-  </div>
-</div>
+          <div className="mt-10 text-center">
+            <div className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+              Não encontrou a função que precisa?
+              <button
+                onClick={() => setIsSuggestionOpen(true)}
+                className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              >
+                <Lightbulb className="w-4 h-4" />
+                Envie uma sugestão
+              </button>
+            </div>
+          </div>
 
           {/* ── Modal de sugestões ── */}
           {isSuggestionOpen && (
@@ -841,6 +1021,16 @@ if (assistantType === 'vendas' && companyId) {
                 loadData(companyId);
                 setShowFuncoesChat(false);
               }}
+            />
+          )}
+
+          {/* ── ActionModals — preview de funções ── */}
+          {companyId && (
+            <ActionModals
+              activeModal={activeModal}
+              onClose={() => setActiveModal(null)}
+              theme={theme}
+              playText={playText}
             />
           )}
 

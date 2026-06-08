@@ -561,7 +561,7 @@ if (assistantType === 'vendas' && companyId) {
     <div className="flex items-start justify-between gap-2">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Funções do Assistente
+          Funções e Habilidades
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
           Defina as funções que seu assistente {selectedAssistantName} pode executar

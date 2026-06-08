@@ -562,7 +562,7 @@ function FunctionsPageContent() {
   }
 
   // ── Abre o modal de preview da função ────────────────────────────────────────
-  function handlePlay(fn: AssistantFunction) {
+  async function handlePlay(fn: AssistantFunction) {
     if (!companyId) return;
     const modalType = FUNCTION_KEY_TO_MODAL[fn.function_key];
     if (!modalType) return;
@@ -571,6 +571,51 @@ function FunctionsPageContent() {
     const currentSlug =
       availableAssistants?.find((a: any) => a.id === companyId)?.slug ?? '';
 
+    // ── QR Codes: precisam buscar conteúdo configurado antes de abrir o modal ──
+    // O QRCodeDisplay exige: type, qrCodeUrl, qrContent, displayText, companyName
+    // Sem esses dados a API de geração falha. Usamos a mesma edge function
+    // que o VoiceAssistant usa em handleQRCodeCommand.
+    const QR_TYPES: Record<string, string> = {
+      qrcode_whatsapp:  'whatsapp',
+      qrcode_instagram: 'instagram',
+      qrcode_website:   'website',
+      qrcode_facebook:  'facebook',
+      qrcode_email:     'email',
+      qrcode_linkedin:  'linkedin',
+      qrcode_tiktok:    'tiktok',
+      qrcode_twitter:   'twitter',
+      qrcode_telefone:  'telefone',
+    };
+
+    const qrType = QR_TYPES[fn.function_key];
+    if (qrType) {
+      try {
+        const { data, error } = await supabase.functions.invoke('gerar-qrcode-contato', {
+          body: { company_id: companyId, qr_type: qrType },
+        });
+        if (error) throw error;
+        setActiveModal({
+          type: 'QRCodeDisplay',
+          data: {
+            type: qrType,
+            qrCodeUrl: data.qr_code_url,
+            qrContent: data.qr_content,
+            displayText: data.display_text,
+            companyName: data.company_name,
+          },
+        });
+      } catch (err) {
+        console.error(`[handlePlay] Erro ao buscar QR Code (${qrType}):`, err);
+        toast({
+          title: 'QR Code não configurado',
+          description: `Configure o ${fn.function_name} nas configurações da função.`,
+          variant: 'destructive',
+        });
+      }
+      return;
+    }
+
+    // ── Demais funções: passam contexto básico da empresa ──
     setActiveModal({
       type: modalType,
       data: {
@@ -1028,7 +1073,10 @@ function FunctionsPageContent() {
           {companyId && (
             <ActionModals
               activeModal={activeModal}
-              onClose={() => setActiveModal(null)}
+              onClose={() => {
+                stopAudio();
+                setActiveModal(null);
+              }}
               theme={theme}
               playText={playText}
             />

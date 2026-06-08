@@ -59,11 +59,10 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
   label: 'Posts',
   audioText:
     'O Criador de Posts transforma uma ideia em arte pronta para as redes sociais em segundos. ' +
-    'Você descreve por voz ou texto — uma promoção, um lançamento, uma dica — ' +
-    'e a IA gera a imagem com a identidade visual da sua marca já aplicada. ' +
+    'Uma promoção, um lançamento, uma dica — ' +
+    'e o auxiliar gera a imagem com a identidade visual da sua marca já aplicada. ' +
     'A descrição e as hashtags saem prontas para copiar, ' +
-    'e você ainda pode publicar direto no Instagram e Facebook. — ' +
-    'sem sair do assistente, sem abrir outro app.',
+    'e você ainda pode publicar direto no Instagram e Facebook. — ',
   fallbackDuration: 10000,
 },
  {

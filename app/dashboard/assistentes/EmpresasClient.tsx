@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase-browser';
 import {
   Settings, ExternalLink, QrCode, Zap, Plus, Copy, Check,
   Lock, Globe, X, Download, Mail, MessageSquare, Users,
-  Sparkles, Globe2, CheckCircle, XCircle, Loader2, Trash2, Bot,
+  Sparkles, Globe2, CheckCircle, XCircle, Loader2, Bot, Trash2
 } from 'lucide-react';
 
 interface AssistentesClientProps {
@@ -14,6 +14,28 @@ interface AssistentesClientProps {
   user: any;
   hasConsultingPlan: boolean;
   activeWebappCompanyId: string | null;
+}
+
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+  );
+}
+
+function MetaIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M6.2 7.8C7.9 7.8 9.5 9.8 12 13.2C14.5 9.8 16.1 7.8 17.8 7.8C19.6 7.8 21 9.6 21 12C21 14.4 19.6 16.2 17.8 16.2C16.1 16.2 14.5 14.2 12 10.8C9.5 14.2 7.9 16.2 6.2 16.2C4.4 16.2 3 14.4 3 12C3 9.6 4.4 7.8 6.2 7.8Z"
+        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export default function AssistentesClient({
@@ -53,7 +75,7 @@ export default function AssistentesClient({
     return `/api/qrcode?size=300&data=${encodeURIComponent(baseUrl)}&color=%23000080&company_id=${companyId}`;
   };
 
-const handleDuplicate = (assistant: any) => {
+  const handleDuplicate = (assistant: any) => {
     setDupName(`${assistant.name} (cópia)`);
     const baseSlug = `${assistant.slug}-copia`;
     setDupSlug(baseSlug);
@@ -240,7 +262,7 @@ const handleDuplicate = (assistant: any) => {
                           bg-red-50 text-red-600 hover:bg-red-100
                           dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 border border-red-100 dark:border-red-500/20"
                       >
-                        <Mail className="w-4 h-4 mr-2" />
+                        <GoogleIcon className="w-4 h-4 mr-2" />
                         Serviços Google
                       </Link>
                       <Link
@@ -249,7 +271,7 @@ const handleDuplicate = (assistant: any) => {
                           bg-green-50 text-green-600 hover:bg-green-100
                           dark:bg-green-500/10 dark:text-green-400 dark:hover:bg-green-500/20 border border-green-100 dark:border-green-500/20"
                       >
-                        <MessageSquare className="w-4 h-4 mr-2" />
+                        <MetaIcon className="w-4 h-4 mr-2" />
                         Whatsapp / Instagram / Facebook
                       </Link>
                     </div>
@@ -310,7 +332,7 @@ const handleDuplicate = (assistant: any) => {
                           : 'Trocar para Vendas'}
                       </button>
 
-<Link
+                      <Link
                         href={`/dashboard/assistentes/${assistant.id}`}
                         className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
                           bg-gray-100 text-gray-700 hover:bg-gray-200
@@ -372,7 +394,7 @@ const handleDuplicate = (assistant: any) => {
           )}
         </div>
 
-{/* Modal de Duplicar */}
+        {/* Modal de Duplicar */}
         {showDuplicateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-200 dark:border-white/10 relative">
@@ -511,7 +533,7 @@ const handleDuplicate = (assistant: any) => {
           </div>
         )}
 
-        {/* Modal de QR Code — igual ao original */}
+        {/* Modal de QR Code */}
         {showQrModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-white/10 relative">
@@ -541,7 +563,6 @@ const handleDuplicate = (assistant: any) => {
                   >
                     Fechar
                   </button>
-
                   <a
                     href={generateQrUrl(showQrModal.slug, showQrModal.is_public, showQrModal.private_slug, showQrModal.id)}
                     download={`qrcode-${showQrModal.slug}.png`}
@@ -589,7 +610,6 @@ function WebAppIndicator({
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
             WebApp ativo
           </span>
-
           <a
             href={webappUrl}
             target="_blank"
@@ -599,7 +619,7 @@ function WebAppIndicator({
             {webappUrl.replace('https://', '')}
           </a>
         </div>
-      <div className="flex items-center gap-2 justify-center sm:justify-end">
+        <div className="flex items-center gap-2 justify-center sm:justify-end">
           <Link
             href={`/dashboard/webapp?companyId=${assistant.id}`}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
@@ -625,8 +645,7 @@ function WebAppIndicator({
     );
   }
 
-  // ── Estado 2: tem plano Consulting, mas outro assistente tem o webapp
-  //    (apenas 1 webapp por conta — informar qual está ativo)
+  // ── Estado 2: tem plano Consulting, mas outro assistente tem o webapp ──
   if (hasConsultingPlan && activeWebappCompanyId && activeWebappCompanyId !== assistant.id) {
     return (
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-3 flex-wrap">

@@ -211,6 +211,52 @@ export async function detectVoiceCommand(
     return true;
   }
 
+  // ── Criador de Posts / Mídia ──────────────────────────────
+const criarMidiaTriggers = [
+  'criar post', 'criar arte', 'criar conteúdo', 'criar conteudo',
+  'postar no instagram', 'postar no facebook',
+  'criador de posts', 'gerar arte', 'criar publicação', 'criar publicacao',
+  'post para redes sociais', 'arte para post',
+];
+if (criarMidiaTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'criar_midia');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  setActiveModal({ type: 'CriarMidiaDisplay', data: { companyId, slug } });
+  playText('Abrindo o Criador de Posts. Me conte o que você quer criar.').catch(() => {});
+  await registerFunctionUsage(companyId, 'criar_midia', 15);
+  return true;
+}
+
+// ── Texto em Áudio ────────────────────────────────────────
+const textoEmAudioTriggers = [
+  'texto em áudio', 'texto em audio',
+  'converter texto em áudio', 'converter texto em audio',
+  'transformar texto em voz', 'narrar texto',
+  'text to speech', 'falar texto',
+];
+if (textoEmAudioTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'texto_em_audio');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  setActiveModal({ type: 'TextoEmAudioDisplay', data: { companyId } });
+  await registerFunctionUsage(companyId, 'texto_em_audio', 2);
+  return true;
+}
+
+// ── Transcrever Vídeo ─────────────────────────────────────
+const transcreverVideoTriggers = [
+  'transcrever vídeo', 'transcrever video',
+  'transcrever arquivo', 'vídeo para texto', 'video para texto',
+  'transcrição de vídeo', 'transcricao de video',
+  'converter vídeo em texto', 'converter video em texto',
+];
+if (transcreverVideoTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'transcrever_video');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  setActiveModal({ type: 'TranscreverVideoDisplay', data: { companyId } });
+  await registerFunctionUsage(companyId, 'transcrever_video', 2);
+  return true;
+}
+
   // ── QR Codes ──────────────────────────────────────────────
   const qrcodeTypes: Array<{ triggers: string[]; key: string }> = [
     { triggers: ['whatsapp', 'whats', 'zap', 'número', 'contato'], key: 'qrcode_whatsapp' },

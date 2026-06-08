@@ -1,7 +1,7 @@
 // components/dashboard/functions/FunctionCard.tsx
 'use client';
 
-import { Settings, CreditCard } from 'lucide-react';
+import { Settings, CreditCard, Play } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
 interface FunctionCardProps {
@@ -34,6 +34,7 @@ interface FunctionCardProps {
   };
   onToggle: () => void;
   onEdit?: () => void;
+  onPlay?: () => void;
   isUpdating: boolean;
   theme?: 'dark' | 'light';
   viewMode?: 'grid' | 'list';
@@ -188,6 +189,7 @@ export default function FunctionCard({
   stats,
   onToggle,
   onEdit,
+  onPlay,
   isUpdating,
   theme = 'dark',
   viewMode = 'grid',
@@ -196,6 +198,7 @@ export default function FunctionCard({
   if (!fn) return null;
 
   const hasEditModal = CONFIGURABLE_FUNCTIONS.includes(fn.function_key);
+  const hasPlayButton = typeof onPlay === 'function';
   const categoryName = CATEGORY_NAMES[fn.function_category] || fn.function_category;
   const isSystemFunction = SYSTEM_FUNCTIONS.includes(fn.function_key);
 
@@ -240,6 +243,23 @@ export default function FunctionCard({
 
         {/* Ações */}
         <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+          {/* Botão Play */}
+          {hasPlayButton && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onPlay!();
+              }}
+              className="p-1.5 rounded-md hover:bg-green-100 dark:hover:bg-green-500/20 transition-colors"
+              disabled={isUpdating}
+              aria-label="Testar função"
+              title="Testar função"
+            >
+              <Play className="w-4 h-4 text-green-500 dark:text-green-400" />
+            </button>
+          )}
+
           {hasEditModal && onEdit && (
             <button
               onClick={(e) => {
@@ -340,6 +360,23 @@ export default function FunctionCard({
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Botão Play */}
+          {hasPlayButton && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onPlay!();
+              }}
+              className="p-2 rounded-md hover:bg-green-100 dark:hover:bg-green-500/20 transition-colors"
+              disabled={isUpdating}
+              aria-label="Testar função"
+              title="Testar função"
+            >
+              <Play className="w-5 h-5 text-green-500 dark:text-green-400" />
+            </button>
+          )}
+
           {hasEditModal && onEdit && (
             <button
               onClick={(e) => {

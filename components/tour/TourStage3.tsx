@@ -11,6 +11,7 @@ import SceneAuxiliaresIntro from './scenes/SceneAuxiliaresIntro'
 import SceneVendasAux from './scenes/SceneVendasAux'
 import SceneFiscal from './scenes/SceneFiscal'
 import SceneAgenda from './scenes/SceneAgenda'
+import SceneMidia from './scenes/SceneMidia'
 import SceneProducaoOrcamentos from './scenes/SceneProducaoOrcamentos'
 import SceneExtrasAux from './scenes/SceneExtrasAux'
 
@@ -268,6 +269,7 @@ function SceneRenderer3({ id, isSpeaking, theme }: { id: Stage3SceneId; isSpeaki
     case 'auxiliares-vendas':     return <SceneVendasAux />
     case 'auxiliares-fiscal':     return <SceneFiscal />
     case 'auxiliares-agenda':     return <SceneAgenda />
+    case 'auxiliares-midia':      return <SceneMidia />
     case 'auxiliares-producao':   return <SceneProducaoOrcamentos />
     case 'auxiliares-extras':     return <SceneExtrasAux />
     case 'auxiliares-conclusao':  return <SceneAuxiliaresIntro />

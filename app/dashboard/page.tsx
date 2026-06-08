@@ -1,7 +1,7 @@
 // app/dashboard/page.tsx
 import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
-import { Settings, Wallet, ShoppingCart, UserPlus, Calendar, Bot } from 'lucide-react';
+import { Settings, Wallet, ShoppingCart, UserPlus, Bot, HelpCircle } from 'lucide-react';
 import { CreditsOrVendasCard } from '@/components/CreditsOrVendasCard';
 import { WebAppButton } from '@/components/WebAppButton';
 import { CreditsProgressChartWrapper } from '@/components/CreditsProgressChartWrapper';
@@ -137,6 +137,8 @@ export default async function DashboardPage() {
 
       {/* Stats Cards */}
       <div className="grid md:grid-cols-3 gap-6">
+
+        {/* Assistentes — azul */}
         <Link href="/dashboard/assistentes">
           <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-blue-500 dark:hover:border-blue-500/50 transition cursor-pointer h-full">
             <div className="flex flex-col items-center text-center gap-3 mb-4">
@@ -148,61 +150,64 @@ export default async function DashboardPage() {
                 <p className="text-sm text-gray-500 dark:text-white/40">{totalCompanies} assistentes</p>
               </div>
             </div>
-            <p className="text-sm text-center text-gray-600 dark:text-white/60">Gerencie seus assistentes virtuais</p>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Gerencie seus assistentes minhAi</p>
           </div>
         </Link>
 
+        {/* Histórico — verde */}
         <Link href="/dashboard/historico">
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-cyan-500 dark:hover:border-cyan-500/50 transition cursor-pointer h-full">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-green-500 dark:hover:border-green-500/50 transition cursor-pointer h-full">
             <div className="flex flex-col items-center text-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-lg bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Histórico</h3>
-                <p className="text-sm text-gray-500 dark:text-white/40">{totalConversations} conversas</p>
+                <p className="text-sm text-gray-500 dark:text-white/40">{totalConversations} interações</p>
               </div>
             </div>
-            <p className="text-sm text-center text-gray-600 dark:text-white/60">Visualize conversas anteriores</p>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Visualize interações anteriores</p>
           </div>
         </Link>
 
+        {/* Respostas Rápidas — azul */}
         <Link href="/dashboard/faqs">
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-green-500 dark:hover:border-green-500/50 transition cursor-pointer h-full">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-blue-500 dark:hover:border-blue-500/50 transition cursor-pointer h-full">
             <div className="flex flex-col items-center text-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+              <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
+                <HelpCircle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Respostas Rápidas</h3>
                 <p className="text-sm text-gray-500 dark:text-white/40">{totalFAQs} respostas</p>
               </div>
             </div>
-            <p className="text-sm text-center text-gray-600 dark:text-white/60">Configure respostas automáticas do seu assistente</p>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Configure respostas a perguntas automaticamente</p>
           </div>
         </Link>
       </div>
 
       {/* Quick Actions */}
       <div className="grid md:grid-cols-2 gap-6">
+
+        {/* Funções — verde */}
         <Link href="/dashboard/functions">
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-gray-300 dark:hover:border-white/20 transition cursor-pointer">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-green-500 dark:hover:border-green-500/50 transition cursor-pointer">
             <div className="flex flex-col items-center text-center gap-2 mb-2">
-              <Bot className="w-5 h-5 text-gray-600 dark:text-white/70" />
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Funções e Habilidades</h3>
+              <Bot className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Funções</h3>
             </div>
-            <p className="text-sm text-center text-gray-600 dark:text-white/60">Configure funções do assistente</p>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Configure e habilite funções</p>
           </div>
         </Link>
 
+        {/* Saldo — azul */}
         <Link href="/dashboard/saldo">
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-gray-300 dark:hover:border-white/20 transition cursor-pointer">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-blue-500 dark:hover:border-blue-500/50 transition cursor-pointer">
             <div className="flex flex-col items-center text-center gap-2 mb-2">
-              <Wallet className="w-5 h-5 text-gray-600 dark:text-white/70" />
+              <Wallet className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">Recebimentos</h3>
             </div>
             <p className="text-sm text-center text-gray-600 dark:text-white/60">Pix, pagamentos e saques</p>
@@ -212,40 +217,45 @@ export default async function DashboardPage() {
 
       {/* New Feature Cards */}
       <div className="grid md:grid-cols-2 gap-6">
+
+        {/* Vendas — verde */}
         <Link href="/dashboard/vendas">
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-emerald-500 dark:hover:border-emerald-500/50 transition cursor-pointer">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-green-500 dark:hover:border-green-500/50 transition cursor-pointer">
             <div className="flex flex-col items-center text-center gap-2 mb-2">
-              <ShoppingCart className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <ShoppingCart className="w-5 h-5 text-green-600 dark:text-green-400" />
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">Vendas e Produtos</h3>
             </div>
-            <p className="text-sm text-center text-gray-600 dark:text-white/60">Gerencie sua loja virtual e pedidos</p>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Gerencie sueus produtos e pedidos</p>
           </div>
         </Link>
 
+        {/* Controle de Usuários — azul */}
         <Link href="/dashboard/cadastros">
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-orange-500 dark:hover:border-orange-500/50 transition cursor-pointer">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-blue-500 dark:hover:border-blue-500/50 transition cursor-pointer">
             <div className="flex flex-col items-center text-center gap-2 mb-2">
-              <UserPlus className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              <UserPlus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">Controle de Usuários</h3>
             </div>
             <p className="text-sm text-center text-gray-600 dark:text-white/60">Gerencie perfis e permissões de acesso</p>
           </div>
         </Link>
 
+        {/* Serviços Google — verde */}
         <Link href="/dashboard/agenda">
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-blue-500 dark:hover:border-blue-500/50 transition cursor-pointer">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-green-500 dark:hover:border-green-500/50 transition cursor-pointer">
             <div className="flex flex-col items-center text-center gap-2 mb-2">
-              <GoogleIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <GoogleIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">Serviços Google</h3>
             </div>
-            <p className="text-sm text-center text-gray-600 dark:text-white/60">Integração com Agenda, Gmail, Drive e Smarts</p>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Integração com Agenda, Gmail, Drive e outros</p>
           </div>
         </Link>
 
+        {/* Serviços Meta — azul */}
         <Link href="/dashboard/atendimentos">
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-pink-500 dark:hover:border-pink-500/50 transition cursor-pointer">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-blue-500 dark:hover:border-blue-500/50 transition cursor-pointer">
             <div className="flex flex-col items-center text-center gap-2 mb-2">
-              <MetaIcon className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+              <MetaIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">Serviços Meta</h3>
             </div>
             <p className="text-sm text-center text-gray-600 dark:text-white/60">Integração com WhatsApp, Instagram e Facebook</p>

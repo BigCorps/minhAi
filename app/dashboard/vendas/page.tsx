@@ -6,7 +6,7 @@ import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
 import ModoToggle from '@/components/dashboard/ModoToggle';
 import { triggerEmbeddingUpdate, triggerBulkEmbeddingSync } from '@/lib/embeddings'; // PATCH 1.1
-import CadastrarProdutoDisplay from '@/components/VoiceAssistant/modals/CadastrarProdutoDisplay';
+import CadastrarProdutoDisplay from '@/components/assistant/CadastrarProdutoDisplay';
 
 import {
   ShoppingCart,

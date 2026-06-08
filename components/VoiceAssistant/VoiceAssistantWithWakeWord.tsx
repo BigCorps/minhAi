@@ -1126,7 +1126,6 @@ case 'transcrever_video':
 case 'criar_midia':
   await stopGoogleSpeech();
   setActiveModal({ type: 'CriarMidiaDisplay', data: { companyId, slug } });
-  pt('Abrindo o Criador de Posts. Me conte o que você quer criar.').catch(() => {});
   break;
           
 case 'solicitar_video_chamada':

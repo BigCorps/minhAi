@@ -455,10 +455,10 @@ useEffect(() => {
   // ── Tabs config ───────────────────────────────────────────
 
 const tabs: { key: ActiveTab; label: string; icon: React.ReactNode; count?: number }[] = [
-  { key: 'calendar', label: 'Calendário',      icon: <CalendarIcon className="w-4 h-4" />, count: events.length },
+  { key: 'calendar', label: 'Agenda',      icon: <CalendarIcon className="w-4 h-4" />, count: events.length },
   { key: 'email',    label: 'Emails Enviados', icon: <Send className="w-4 h-4" />,         count: sentEmails.length },
   { key: 'gbp',      label: 'Meu Negócio',     icon: <Star className="w-4 h-4" /> },
-  { key: 'meet',     label: 'Google Meet',     icon: <PhoneCall className="w-4 h-4" /> },
+  { key: 'meet',     label: 'Vídeo - Meet',     icon: <PhoneCall className="w-4 h-4" /> },
 ];
 
   const isLoading = loadingEvents || loadingEmails || loadingImages || loadingDevices || loadingGbp;
@@ -512,7 +512,7 @@ const tabs: { key: ActiveTab; label: string; icon: React.ReactNode; count?: numb
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Conta Google Não Conectada</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                Conecte uma conta Google para usar calendário, emails, Drive, Smart Home e Google Meu Negócio.
+                Conecte uma conta Google para usar Agenda, Gmail, Drive, Video Chamadas e Google Meu Negócio.
               </p>
               <button onClick={handleGoToConnect} className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
                 <Settings className="w-5 h-5" /> Conectar Conta Google

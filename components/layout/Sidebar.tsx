@@ -55,7 +55,7 @@ function ChatGPTMenuIcon({ className }: { className?: string }) {
 const menuItems = [
   { href: '/dashboard',                   label: 'Dashboard',           icon: LayoutDashboard },
   { href: '/dashboard/assistentes',       label: 'Assistentes',         icon: Bot },
-  { href: '/dashboard/functions',         label: 'Funções',             icon: Settings },
+  { href: '/dashboard/functions',         label: 'Funções e Habilidades',             icon: Settings },
   { href: '/dashboard/vendas',            label: 'Vendas e Produtos',   icon: ShoppingCart },
   { href: '/dashboard/cadastros',         label: 'Controle de Usuários',icon: UserPlus },
   { href: '/dashboard/producao',          label: 'Linha de Produção',   icon: ClipboardList },

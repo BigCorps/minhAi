@@ -2315,6 +2315,9 @@ const response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/proces
       lista_compras:      { type: 'ListaComprasDisplay',              data: { companyId } },
       orcamento:          { type: 'OrcamentoDisplay',                data: { companyId, transcriptInicial: '' } },
       analisar_planilha:  { type: 'AnalisarPlanilhaDisplay',          data: { companyId } },
+      texto_em_audio:     { type: 'TextoEmAudioDisplay',     data: { companyId } },
+      transcrever_video:  { type: 'TranscreverVideoDisplay',  data: { companyId } },
+      criar_midia: { type: 'CriarMidiaDisplay', data: { companyId, slug: slug ?? '' } },
     };
 
     const modal = modalOnlyFunctions[functionKey];

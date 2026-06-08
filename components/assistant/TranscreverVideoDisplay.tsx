@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useAssistant } from '@/hooks/useAssistant';
-import { playText } from '@/lib/tts';
 
 // ── Palette ─────────────────────────────────────────────
 const DARK = {
@@ -110,13 +108,16 @@ interface FileInfo {
 }
 
 interface Props {
+  data: {
+    companyId: string;
+  };
   onClose: () => void;
   isDark?: boolean;
 }
 
-export default function TranscreverVideoDisplay({ onClose, isDark = true }: Props) {
+export default function TranscreverVideoDisplay({ data, onClose, isDark = true }: Props) {
   const P = isDark ? DARK : LIGHT;
-  const { companyId } = useAssistant();
+  const { companyId } = data;
 
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
   const [fileError, setFileError] = useState('');
@@ -201,7 +202,6 @@ export default function TranscreverVideoDisplay({ onClose, isDark = true }: Prop
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Erro ao transcrever');
       setTranscricao(data.transcricao);
-      playText(data.speech_text);
     } catch (e: any) {
       setApiError(e.message);
     } finally {

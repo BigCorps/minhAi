@@ -135,6 +135,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'AlarmeDisplay': dynamic(() => import('@/components/assistant/AlarmeDisplay'), { ssr: false }),
   'LembreteRemediosDisplay': dynamic(() => import('@/components/assistant/LembreteRemediosDisplay'), { ssr: false }),
   'CriarNotaDisplay': dynamic(() => import('@/components/assistant/CriarNotaDisplay'), { ssr: false }),
+  
 
   // ── Câmera e leitura ──────────────────────────────────────
   'LerQRCodeDisplay': dynamic(() => import('@/components/assistant/LerQRCodeDisplay'), { ssr: false }),
@@ -159,6 +160,17 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     () => import('@/components/assistant/JuntarPdfsDisplay'),
     { ssr: false }
   ),
+  
+  // ── IA — Texto e Áudio ────────────────────────────────────
+'CriarMidiaDisplay': dynamic(() => import('@/components/assistant/CriarMidiaDisplay'), { ssr: false }),
+'TextoEmAudioDisplay': dynamic(
+  () => import('@/components/assistant/TextoEmAudioDisplay'),
+  { ssr: false }
+),
+'TranscreverVideoDisplay': dynamic(
+  () => import('@/components/assistant/TranscreverVideoDisplay'),
+  { ssr: false }
+),
 
   // ── Consultas ─────────────────────────────────────────────
   'ConsultarCpfModal': dynamic(() => import('@/components/assistant/ConsultarCpfModal'), { ssr: false }),

@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useAssistant } from '@/hooks/useAssistant';
-import { playText } from '@/lib/tts';
 
 // ── Palette ─────────────────────────────────────────────
 const DARK = {
@@ -73,13 +71,16 @@ const IconCopy = () => (
 
 // ── Component ────────────────────────────────────────────
 interface Props {
+  data: {
+    companyId: string;
+  };
   onClose: () => void;
   isDark?: boolean;
 }
 
-export default function TextoEmAudioDisplay({ onClose, isDark = true }: Props) {
+export default function TextoEmAudioDisplay({ data, onClose, isDark = true }: Props) {
   const P = isDark ? DARK : LIGHT;
-  const { companyId } = useAssistant();
+  const { companyId } = data;
 
   const [text, setText] = useState('');
   const [voice, setVoice] = useState<'feminina' | 'masculina'>('feminina');
@@ -116,7 +117,6 @@ export default function TextoEmAudioDisplay({ onClose, isDark = true }: Props) {
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Erro ao gerar áudio');
       setAudioBase64(data.audio_base64);
-      playText(data.speech_text);
     } catch (e: any) {
       setError(e.message);
     } finally {

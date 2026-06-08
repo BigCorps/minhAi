@@ -1,5 +1,5 @@
 // app/components/landing/AssistentesSection.tsx — Server Component
-import { ShoppingCart, FileText, Factory, Receipt, Settings2, CalendarClock, FileBarChart2, ShieldAlert, Package } from 'lucide-react';
+import { ShoppingCart, FileText, Factory, Receipt, Settings2, CalendarClock, FileBarChart2, ShieldAlert, Package, Sparkles } from 'lucide-react';
 
 interface AssistentesSectionProps {
   theme?: 'dark' | 'light';
@@ -23,11 +23,19 @@ const ASSISTENTES = [
     descricao: 'Descreva o pedido e o assistente monta o orçamento com produtos, margens e desconto — gera o documento pronto.',
   },
   {
+    id: 'midia',
+    Icon: Sparkles,
+    nome: 'Criador de Posts',
+    tagline: 'Arte gerada por IA',
+    color: 'amber' as const,
+    descricao: 'Descreva o post por voz ou texto — a IA gera a arte com a identidade da sua marca e publica direto nas redes sociais.',
+  },
+  {
     id: 'fiscal',
     Icon: Receipt,
     nome: 'Auxiliar Fiscal',
     tagline: 'Emite NFe, NFSe e NFCe por voz',
-    color: 'amber' as const,
+    color: 'lime' as const,
     descricao: 'Fale os dados, o auxiliar preenche NCM, CFOP e CSOSN e emite a nota direto na SEFAZ — integrado aos seus produtos.',
   },
   {
@@ -35,7 +43,7 @@ const ASSISTENTES = [
     Icon: Factory,
     nome: 'Auxiliar de Produção',
     tagline: 'Custo e margem calculados',
-    color: 'lime' as const,
+    color: 'blue' as const,
     descricao: 'Informe os insumos por voz — o auxiliar calcula o custo, sugere o preço com margem e cria o produto no catálogo.',
   },
   {
@@ -43,7 +51,7 @@ const ASSISTENTES = [
     Icon: CalendarClock,
     nome: 'Gestor de Agenda',
     tagline: 'Consultas, salões e reuniões',
-    color: 'blue' as const,
+    color: 'amber' as const,
     descricao: 'Gerencia agendamentos com Google Agenda e Meet. Confirma presença, envia lembretes e cria links de videochamada.',
   },
   {
@@ -51,7 +59,7 @@ const ASSISTENTES = [
     Icon: Package,
     nome: 'Auxiliar de Cadastro',
     tagline: 'Cadastre produtos facilmente',
-    color: 'amber' as const,
+    color: 'lime' as const,
     descricao: 'Com sugestão de imagens, categorias, campos para NF, MercadoLivre e mais.',
   },
   {
@@ -59,7 +67,7 @@ const ASSISTENTES = [
     Icon: ShieldAlert,
     nome: 'Investigador Antifraude',
     tagline: 'Detecta fraudes em arquivos e sites',
-    color: 'lime' as const,
+    color: 'blue' as const,
     descricao: 'Carregue boletos, contratos ou URLs — o investigador analisa inconsistências e emite laudo com nível de risco.',
   },
   {
@@ -67,7 +75,7 @@ const ASSISTENTES = [
     Icon: FileBarChart2,
     nome: 'Auxiliar de Relatórios',
     tagline: 'Arquivos viram relatórios',
-    color: 'blue' as const,
+    color: 'amber' as const,
     descricao: 'Carregue planilhas ou PDFs e o auxiliar extrai, organiza e gera relatório com resumos e insights formatados.',
   },
   {
@@ -75,7 +83,7 @@ const ASSISTENTES = [
     Icon: Settings2,
     nome: 'Gerenciador de Funções',
     tagline: 'Configura assistentes sem código',
-    color: 'amber' as const,
+    color: 'lime' as const,
     descricao: 'Guia na criação de assistentes e ativação de funções. Recomenda combinações por segmento e aplica em tempo real.',
   },
 ];
@@ -97,6 +105,13 @@ const colorMap = {
 
 export default function AssistentesSection({ theme = 'dark' }: AssistentesSectionProps) {
   const isDark = theme === 'dark';
+
+  // Linhas do grid desktop: 3 + 4 + 3
+  const linhas = [
+    ASSISTENTES.slice(0, 3),
+    ASSISTENTES.slice(3, 7),
+    ASSISTENTES.slice(7, 10),
+  ];
 
   return (
     <div
@@ -137,11 +152,11 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
             <span className={isDark ? 'text-lime-400' : 'text-lime-600'}>completa</span>
           </h2>
           <p className={`text-xs sm:text-sm max-w-xl mx-auto mt-1 [@media(max-height:640px)_and_(max-width:767px)]:hidden ${isDark ? 'text-white/45' : 'text-gray-500'}`}>
-            Além das mais de 100 funções, você conta com 9 especialistas de IA integrados ao seu negócio — cada um com foco em uma área específica.
+            Além das mais de 100 funções, você conta com 10 especialistas de IA integrados ao seu negócio — cada um com foco em uma área específica.
           </p>
         </div>
 
-        {/* ── MOBILE: lista compacta — todos os 9 ── */}
+        {/* ── MOBILE: lista compacta — todos os 10 ── */}
         <div className="flex flex-col gap-1.5 w-full sm:hidden">
           {ASSISTENTES.map(({ id, Icon, nome, tagline, color }) => {
             const c = colorMap[color][isDark ? 'dark' : 'light'];
@@ -160,41 +175,46 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
           })}
         </div>
 
-        {/* ── DESKTOP: grid 3×3 ── */}
-        <div className="hidden sm:grid sm:grid-cols-3 gap-2.5 md:gap-3 w-full">
-          {ASSISTENTES.map(({ id, Icon, nome, tagline, descricao, color }) => {
-            const c = colorMap[color][isDark ? 'dark' : 'light'];
-            return (
-              <article
-                key={id}
-                className={`
-                  flex flex-col gap-2.5 p-3.5 md:p-4 rounded-2xl border
-                  transition-all duration-300 hover:scale-[1.02]
-                  ${c.cardBg} ${c.border}
-                `}
-              >
-                {/* Ícone + nome */}
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${c.iconBg}`}>
-                    <Icon className={`w-4 h-4 ${c.iconText}`} />
-                  </div>
-                  <h3 className={`text-xs font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    {nome}
-                  </h3>
-                </div>
+        {/* ── DESKTOP: 3 linhas — 3 + 4 + 3 ── */}
+        <div className="hidden sm:flex sm:flex-col gap-2.5 md:gap-3 w-full">
+          {linhas.map((linha, li) => (
+            <div key={li} className="flex justify-center gap-2.5 md:gap-3">
+              {linha.map(({ id, Icon, nome, tagline, descricao, color }) => {
+                const c = colorMap[color][isDark ? 'dark' : 'light'];
+                return (
+                  <article
+                    key={id}
+                    className={`
+                      flex flex-col gap-2.5 p-3.5 md:p-4 rounded-2xl border
+                      transition-all duration-300 hover:scale-[1.02]
+                      ${c.cardBg} ${c.border}
+                    `}
+                    style={{ flex: 1, maxWidth: li === 1 ? '25%' : '33.333%' }}
+                  >
+                    {/* Ícone + nome */}
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${c.iconBg}`}>
+                        <Icon className={`w-4 h-4 ${c.iconText}`} />
+                      </div>
+                      <h3 className={`text-xs font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        {nome}
+                      </h3>
+                    </div>
 
-                {/* Tagline */}
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border self-start ${c.tag}`}>
-                  {tagline}
-                </span>
+                    {/* Tagline */}
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border self-start ${c.tag}`}>
+                      {tagline}
+                    </span>
 
-                {/* Descrição */}
-                <p className={`text-[11px] leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                  {descricao}
-                </p>
-              </article>
-            );
-          })}
+                    {/* Descrição */}
+                    <p className={`text-[11px] leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                      {descricao}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+          ))}
         </div>
 
         {/* Rodapé */}

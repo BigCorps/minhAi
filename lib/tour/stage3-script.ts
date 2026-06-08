@@ -124,7 +124,7 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
     'Tudo por voz ou texto, em qualquer canal, sem precisar de um sistema separado para cada área. ' +
     'É a sua equipe digital completa, integrada em um único assistente.',
   displayText:
-    '9 especialistas IA, cada um conduzindo processos complexos do início ao fim — ' +
+    '10 especialistas IA, cada um conduzindo processos complexos do início ao fim — ' +
     'Tudo por voz ou texto, em qualquer canal, sem precisar de um sistema separado para cada área. ' +
     'É a sua equipe digital completa, integrada em um único assistente.',
   fallbackDuration: 9000,

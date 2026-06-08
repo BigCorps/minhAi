@@ -6713,7 +6713,7 @@ handler: async ({ playText, setActiveModal, companyId }) => {
       type: 'CadastrarProdutoDisplay',
       data: { companyId },
     });
-    await playText('Vou te guiar no cadastro do produto. Qual o nome?');
+    await playText('Auxiliar de cadastro aberto. Pode me dizer o nome e o preço do produto.');
     return true;
   } catch {
     return false;

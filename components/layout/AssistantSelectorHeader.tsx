@@ -1,9 +1,33 @@
 // components/layout/AssistantSelectorHeader.tsx
 'use client';
 import { useState } from 'react';
-import { Bot, ChevronDown, Plus } from 'lucide-react';
+import { ChevronDown, Plus } from 'lucide-react';
 import { useAssistant } from '@/contexts/AssistantContext';
 import Link from 'next/link';
+
+function BotIA({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="96 96 320 320"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="256" cy="256" r="145" stroke="currentColor" strokeWidth="18" />
+      <circle cx="256" cy="256" r="122" stroke="currentColor" strokeWidth="18" />
+      <ellipse cx="218" cy="230" rx="18" ry="24" fill="currentColor" />
+      <ellipse cx="294" cy="230" rx="18" ry="24" fill="currentColor" />
+      <path
+        d="M216 296C237 314 275 314 296 296"
+        stroke="currentColor"
+        strokeWidth="16"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 export function AssistantSelectorHeader() {
   const {
@@ -31,7 +55,7 @@ export function AssistantSelectorHeader() {
             hover:bg-gray-50 dark:hover:bg-slate-700"
           aria-label="Assistentes"
         >
-          <Bot className="w-4 h-4 text-blue-500" />
+          <BotIA className="w-4 h-4 text-blue-500" />
         </button>
 
         {/* Desktop: botão com texto */}
@@ -43,7 +67,7 @@ export function AssistantSelectorHeader() {
             text-gray-500 dark:text-gray-400
             hover:bg-gray-50 dark:hover:bg-slate-700"
         >
-          <Bot className="w-4 h-4 text-blue-500 flex-shrink-0" />
+          <BotIA className="w-4 h-4 text-blue-500 flex-shrink-0" />
           <span>Nenhum assistente</span>
           <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
@@ -93,7 +117,7 @@ export function AssistantSelectorHeader() {
           hover:bg-gray-50 dark:hover:bg-slate-700"
         aria-label={current?.name || 'Selecione Assistente'}
       >
-        <Bot className={`w-4 h-4 ${currentIsVendas ? 'text-lime-500' : 'text-blue-500'}`} />
+        <BotIA className={`w-4 h-4 ${currentIsVendas ? 'text-lime-500' : 'text-blue-500'}`} />
       </button>
 
       {/* Desktop: botão completo com nome */}
@@ -105,7 +129,7 @@ export function AssistantSelectorHeader() {
           text-gray-900 dark:text-white
           hover:bg-gray-50 dark:hover:bg-slate-700"
       >
-        <Bot className={`w-4 h-4 flex-shrink-0 ${currentIsVendas ? 'text-lime-500' : 'text-blue-500'}`} />
+        <BotIA className={`w-4 h-4 flex-shrink-0 ${currentIsVendas ? 'text-lime-500' : 'text-blue-500'}`} />
         <span className="truncate max-w-[120px]">
           {current?.name || 'Selecione Assistente'}
         </span>
@@ -121,7 +145,7 @@ export function AssistantSelectorHeader() {
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-            <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 rounded-lg border shadow-xl z-50 overflow-hidden
+          <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 rounded-lg border shadow-xl z-50 overflow-hidden
             bg-white dark:bg-slate-800
             border-gray-300 dark:border-slate-700">
             <div className="max-h-72 overflow-y-auto">
@@ -148,7 +172,7 @@ export function AssistantSelectorHeader() {
                         ? isVendas ? 'bg-lime-500/30' : 'bg-blue-500/30'
                         : 'bg-gray-100 dark:bg-slate-700'
                       }`}>
-                      <Bot className={`w-4 h-4 ${isVendas ? 'text-lime-500' : 'text-blue-500'}`} />
+                      <BotIA className={`w-4 h-4 ${isVendas ? 'text-lime-500' : 'text-blue-500'}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">

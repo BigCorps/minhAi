@@ -52,9 +52,53 @@ function ChatGPTMenuIcon({ className }: { className?: string }) {
   );
 }
 
+
+function BotIA({ className }: { className?: string }) {
+  return (
+<svg
+      className={sz}
+      viewBox="96 96 320 320"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      aria-hidden="true"
+    >
+      {/* Círculo externo */}
+      <circle
+        cx="256"
+        cy="256"
+        r="145"
+        stroke="currentColor"
+        strokeWidth="18"
+      />
+
+      {/* Círculo do rosto */}
+      <circle
+        cx="256"
+        cy="256"
+        r="122"
+        stroke="currentColor"
+        strokeWidth="18"
+      />
+
+      {/* Olhos */}
+      <ellipse cx="218" cy="230" rx="18" ry="24" fill="currentColor" />
+      <ellipse cx="294" cy="230" rx="18" ry="24" fill="currentColor" />
+
+      {/* Boca */}
+      <path
+        d="M216 296C237 314 275 314 296 296"
+        stroke="currentColor"
+        strokeWidth="16"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+);
+}
+
 const menuItems = [
   { href: '/dashboard',                   label: 'Dashboard',           icon: LayoutDashboard },
-  { href: '/dashboard/assistentes',       label: 'Assistentes',         icon: Bot },
+  { href: '/dashboard/assistentes',       label: 'Assistentes',         icon: BotIA },
   { href: '/dashboard/functions',         label: 'Funções e Habilidades',             icon: Settings },
   { href: '/dashboard/vendas',            label: 'Vendas e Produtos',   icon: ShoppingCart },
   { href: '/dashboard/cadastros',         label: 'Controle de Usuários',icon: UserPlus },

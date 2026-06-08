@@ -43,7 +43,6 @@ function MetaIcon({ className }: { className?: string }) {
   );
 }
 
-// ícone ChatGPT usado no item de menu Integrações IA
 function ChatGPTMenuIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -52,39 +51,19 @@ function ChatGPTMenuIcon({ className }: { className?: string }) {
   );
 }
 
-
 function BotIA({ className }: { className?: string }) {
   return (
-<svg
-      className={sz}
+    <svg
+      className={className}
       viewBox="96 96 320 320"
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       aria-hidden="true"
     >
-      {/* Círculo externo */}
-      <circle
-        cx="256"
-        cy="256"
-        r="145"
-        stroke="currentColor"
-        strokeWidth="18"
-      />
-
-      {/* Círculo do rosto */}
-      <circle
-        cx="256"
-        cy="256"
-        r="122"
-        stroke="currentColor"
-        strokeWidth="18"
-      />
-
-      {/* Olhos */}
+      <circle cx="256" cy="256" r="145" stroke="currentColor" strokeWidth="18" />
+      <circle cx="256" cy="256" r="122" stroke="currentColor" strokeWidth="18" />
       <ellipse cx="218" cy="230" rx="18" ry="24" fill="currentColor" />
       <ellipse cx="294" cy="230" rx="18" ry="24" fill="currentColor" />
-
-      {/* Boca */}
       <path
         d="M216 296C237 314 275 314 296 296"
         stroke="currentColor"
@@ -93,22 +72,22 @@ function BotIA({ className }: { className?: string }) {
         strokeLinejoin="round"
       />
     </svg>
-);
+  );
 }
 
 const menuItems = [
-  { href: '/dashboard',                   label: 'Dashboard',           icon: LayoutDashboard },
-  { href: '/dashboard/assistentes',       label: 'Assistentes',         icon: BotIA },
-  { href: '/dashboard/functions',         label: 'Funções e Habilidades',             icon: Settings },
-  { href: '/dashboard/vendas',            label: 'Vendas e Produtos',   icon: ShoppingCart },
-  { href: '/dashboard/cadastros',         label: 'Controle de Usuários',icon: UserPlus },
-  { href: '/dashboard/producao',          label: 'Linha de Produção',   icon: ClipboardList },
-  { href: '/dashboard/agenda',            label: 'Serviços Google',     icon: GoogleIcon },
-  { href: '/dashboard/atendimentos',      label: 'Serviços Meta',       icon: MetaIcon },
-  { href: '/dashboard/integracoes-ia',    label: 'Integrações IA',      icon: ChatGPTMenuIcon },
-  { href: '/dashboard/faqs',              label: 'Respostas Rápidas',   icon: HelpCircle },
-  { href: '/dashboard/fiscal',            label: 'Notas Fiscais',       icon: Receipt },
-  { href: '/dashboard/arquivos',          label: 'Arquivos',            icon: FolderOpen },
+  { href: '/dashboard',                   label: 'Dashboard',             icon: LayoutDashboard },
+  { href: '/dashboard/assistentes',       label: 'Assistentes',           icon: BotIA },
+  { href: '/dashboard/functions',         label: 'Funções e Habilidades', icon: Bot },
+  { href: '/dashboard/vendas',            label: 'Vendas e Produtos',     icon: ShoppingCart },
+  { href: '/dashboard/cadastros',         label: 'Controle de Usuários',  icon: UserPlus },
+  { href: '/dashboard/producao',          label: 'Linha de Produção',     icon: ClipboardList },
+  { href: '/dashboard/agenda',            label: 'Serviços Google',       icon: GoogleIcon },
+  { href: '/dashboard/atendimentos',      label: 'Serviços Meta',         icon: MetaIcon },
+  { href: '/dashboard/integracoes-ia',    label: 'Integrações IA',        icon: ChatGPTMenuIcon },
+  { href: '/dashboard/faqs',              label: 'Respostas Rápidas',     icon: HelpCircle },
+  { href: '/dashboard/fiscal',            label: 'Notas Fiscais',         icon: Receipt },
+  { href: '/dashboard/arquivos',          label: 'Arquivos',              icon: FolderOpen },
 ];
 
 export function Sidebar() {

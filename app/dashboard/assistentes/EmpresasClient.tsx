@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase-browser';
 import {
   Settings, ExternalLink, QrCode, Zap, Plus, Copy, Check,
   Lock, Globe, X, Download, Mail, MessageSquare, Users,
-  Sparkles, Globe2, CheckCircle, XCircle, Loader2, Trash2
+  Sparkles, Globe2, CheckCircle, XCircle, Loader2, Trash2, Bot,
 } from 'lucide-react';
 
 interface AssistentesClientProps {
@@ -271,7 +271,7 @@ const handleDuplicate = (assistant: any) => {
                           bg-blue-50 text-blue-600 hover:bg-blue-100
                           dark:bg-blue-600/10 dark:text-blue-400 dark:hover:bg-blue-600/20 border border-blue-100 dark:border-blue-500/20"
                       >
-                        <Settings className="w-4 h-4 mr-2" />
+                        <Bot className="w-4 h-4 mr-2" />
                         Funções
                       </Link>
                       <button

@@ -8,8 +8,18 @@ import { usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { createClient } from '@/lib/supabase-browser';
-import { User, CreditCard, LogOut, LifeBuoy, Users, Wallet, MessageSquare, Download } from 'lucide-react';
+import { User, CreditCard, LogOut, LifeBuoy, Users, Wallet, Download } from 'lucide-react';
 import { AssistantSelectorHeader } from '@/components/layout/AssistantSelectorHeader';
+
+// ─── Ícone SVG customizado ────────────────────────────────────────────────
+
+function HistoricoIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+    </svg>
+  );
+}
 
 interface DashboardHeaderProps {
   user: any;
@@ -158,8 +168,8 @@ const hideAssistantSelector = USER_MENU_ROUTES.some(r => pathname.startsWith(r))
                     <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                     <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/10 py-2 z-50">
                       <div className="px-4 py-2 border-b border-gray-100 dark:border-white/5 mb-1">
-  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">Menu Usuário</p>
-</div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">Menu Usuário</p>
+                      </div>
 
                       <Link 
                         href="/dashboard/perfil" 
@@ -190,7 +200,7 @@ const hideAssistantSelector = USER_MENU_ROUTES.some(r => pathname.startsWith(r))
                         className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        <MessageSquare className="w-4 h-4" />
+                        <HistoricoIcon className="w-4 h-4" />
                         <span>Histórico</span>
                       </Link>
                       <Link

@@ -62,7 +62,7 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
     'Uma promoção, um lançamento, uma dica — ' +
     'e o auxiliar gera a imagem com a identidade visual da sua marca já aplicada. ' +
     'A descrição e as hashtags saem prontas para copiar, ' +
-    'e você ainda pode publicar direto no Instagram e Facebook. — ',
+    'e você ainda pode publicar direto no Instagram e Facebook. ',
   fallbackDuration: 10000,
 },
  {

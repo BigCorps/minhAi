@@ -193,7 +193,7 @@ export default async function DashboardPage() {
           <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-gray-300 dark:hover:border-white/20 transition cursor-pointer">
             <div className="flex flex-col items-center text-center gap-2 mb-2">
               <Bot className="w-5 h-5 text-gray-600 dark:text-white/70" />
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Funções</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Funções e Habilidades</h3>
             </div>
             <p className="text-sm text-center text-gray-600 dark:text-white/60">Configure funções do assistente</p>
           </div>
@@ -203,9 +203,9 @@ export default async function DashboardPage() {
           <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-gray-300 dark:hover:border-white/20 transition cursor-pointer">
             <div className="flex flex-col items-center text-center gap-2 mb-2">
               <Wallet className="w-5 h-5 text-gray-600 dark:text-white/70" />
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Saldo</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Recebimentos</h3>
             </div>
-            <p className="text-sm text-center text-gray-600 dark:text-white/60">PIX recebidos e saques</p>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Pix, pagamentos e saques</p>
           </div>
         </Link>
       </div>

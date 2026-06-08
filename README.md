@@ -10,16 +10,13 @@
 
 * Colocar ActionModals na seção de funções, com um botão para utilizar as funções diretamente no dashboard 
 
-* Criar Auxiliar de Cadastro e com MCP whatsapp
-
-* Criar 3 novas funções em Conhecimento:
-Criador de Mídia | Transcrever Vídeos | Texto em Audio
+* Criar Auxiliar de Cadastro e com MCP whatsapp e criar 3 novas funções em Conhecimento: Criador de Mídia | Transcrever Vídeos | Texto em Audio (tudo já implementado, só falta os patches, atualizar o script 3 e testar)
 
 * Tour guiado - quando finalizar todos os stages, aplicar o cache no restante (pedidoslj)
 
 * Quando o Tour estiver pronto, sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
 
-* página admin no dashboard (colocar controle de consultas tambem)
+* página admin no dashboard (colocar controle de APIs tambem)
 
 .
 

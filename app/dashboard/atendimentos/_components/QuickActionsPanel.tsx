@@ -61,9 +61,9 @@ function Notifications({ items, onDismiss }: { items: Notification[]; onDismiss:
 // ─── Badge de plataforma ──────────────────────────────────────────────────
 function PlatformBadge({ platform }: { platform: string }) {
   const map: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-    facebook:  { icon: <Facebook  className="h-3 w-3" />, label: 'Facebook',  color: 'text-blue-600 bg-blue-600/10'   },
-    instagram: { icon: <Instagram className="h-3 w-3" />, label: 'Instagram', color: 'text-pink-600 bg-pink-600/10'   },
-    whatsapp:  { icon: <Phone     className="h-3 w-3" />, label: 'WhatsApp',  color: 'text-green-600 bg-green-600/10' },
+    facebook:  { icon: <FacebookIcon  className="h-3 w-3" />, label: 'Facebook',  color: 'text-blue-600 bg-blue-600/10'   },
+instagram: { icon: <InstagramIcon className="h-3 w-3" />, label: 'Instagram', color: 'text-pink-600 bg-pink-600/10'   },
+whatsapp:  { icon: <WhatsAppIcon  className="h-3 w-3" />, label: 'WhatsApp',  color: 'text-green-600 bg-green-600/10' },
   };
   const p = map[platform] ?? { icon: <MessageSquare className="h-3 w-3" />, label: platform, color: 'text-gray-500 bg-gray-100 dark:bg-white/10' };
   return (

@@ -1113,6 +1113,22 @@ async function handleFunctionClick(functionKey: string, event?: any) {
           pt('Qual vídeo você quer assistir? Me diga o assunto.').catch(() => {});
           break;
 
+case 'texto_em_audio':
+  await stopGoogleSpeech();
+  setActiveModal({ type: 'TextoEmAudioDisplay', data: { companyId } });
+  break;
+
+case 'transcrever_video':
+  await stopGoogleSpeech();
+  setActiveModal({ type: 'TranscreverVideoDisplay', data: { companyId } });
+  break;
+
+case 'criar_midia':
+  await stopGoogleSpeech();
+  setActiveModal({ type: 'CriarMidiaDisplay', data: { companyId, slug } });
+  pt('Abrindo o Criador de Posts. Me conte o que você quer criar.').catch(() => {});
+  break;
+          
 case 'solicitar_video_chamada':
   await stopGoogleSpeech();
   {

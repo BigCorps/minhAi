@@ -133,7 +133,9 @@ const CONFIGURABLE_FUNCTIONS = [
   'consultar_placa',
   'consultar_protestos',
   'restricoes_cpf',
-  'restricoes_cnpj'
+  'restricoes_cnpj',
+  'texto_em_audio',
+  'transcrever_video'
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

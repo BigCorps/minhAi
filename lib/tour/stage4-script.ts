@@ -69,15 +69,15 @@ export const STAGE4_SCRIPT: Stage4Script[] = [
     id: 'zeroaoar-webapp',
     label: 'Seu WebApp',
     audioText:
-      'Além do assistente, você pode criar seu próprio aplicativo web — ' +
+      'Você também pode criar seu próprio aplicativo web: ' +
       'sem programar, sem contratar desenvolvedor. ' +
       'Escolha um subdomínio personalizado, ' +
-      'Seu negócio com endereço próprio na internet, em minutos.',
+      'Seu site e endereço com endereço próprio na internet, em minutos.',
     displayText:
-      'Além do assistente, você pode criar seu próprio aplicativo web — ' +
+      'Você também pode criar seu próprio aplicativo web: ' +
       'sem programar, sem contratar desenvolvedor. ' +
       'Escolha um subdomínio personalizado (como cafeexemplo.minhaia.app), ' +
-      'Seu negócio com endereço próprio na internet, em minutos.',
+      'Seu site e assistente com endereço próprio na internet, em minutos.',
     fallbackDuration: 9000,
   },
   {

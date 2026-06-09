@@ -19,16 +19,16 @@ import {
 const COLORS = ['#84cc16', '#3b82f6', '#f59e0b']
 
 const ESPECIALISTAS = [
-  { nome: 'Vendas',          tagline: 'Do pedido ao pagamento',      Icon: ShoppingCart },
-  { nome: 'Orçamentos',      tagline: 'Orçamento em segundos',       Icon: FileText     },
-  { nome: 'Criador de Posts', tagline: 'Arte gerada por IA',         Icon: Sparkles     },
-  { nome: 'Fiscal',          tagline: 'Emite NFe, NFSe e NFCe',      Icon: Receipt      },
-  { nome: 'Produção',        tagline: 'Custo e margem calculados',    Icon: Factory      },
-  { nome: 'Agenda',          tagline: 'Consultas, salões e reuniões', Icon: CalendarClock},
-  { nome: 'Cadastro',        tagline: 'Produtos criados por voz',     Icon: Package      },
-  { nome: 'Antifraude',      tagline: 'Detecção ágil de fraudes',    Icon: ShieldAlert  },
-  { nome: 'Relatórios',      tagline: 'Arquivos viram relatórios',    Icon: FileBarChart2},
-  { nome: 'Funções',         tagline: 'Configura sem código',         Icon: Settings2    },
+  { nome: 'Vendas',           tagline: 'Do pedido ao pagamento',       Icon: ShoppingCart },
+  { nome: 'Orçamentos',       tagline: 'Orçamento em segundos',        Icon: FileText     },
+  { nome: 'Criador de Posts', tagline: 'Arte gerada por IA',           Icon: Sparkles     },
+  { nome: 'Agenda',           tagline: 'Consultas, salões e reuniões', Icon: CalendarClock},
+  { nome: 'Fiscal',           tagline: 'Emite NFe, NFSe e NFCe',       Icon: Receipt      },
+  { nome: 'Cadastro',         tagline: 'Produtos criados por voz',     Icon: Package      },
+  { nome: 'Produção',         tagline: 'Custo e margem calculados',    Icon: Factory      },
+  { nome: 'Antifraude',       tagline: 'Detecção ágil de fraudes',     Icon: ShieldAlert  },
+  { nome: 'Relatórios',       tagline: 'Arquivos viram relatórios',    Icon: FileBarChart2},
+  { nome: 'Funções',          tagline: 'Configura sem código',         Icon: Settings2    },
 ].map((e, i) => ({ ...e, color: COLORS[i % COLORS.length] }))
 
 // Linhas: 3 + 4 + 3

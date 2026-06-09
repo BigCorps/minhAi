@@ -74,7 +74,7 @@ function Dot({ n, step }: { n: number; step: number }) {
 function StepBar({ step }: { step: number }) {
   const labels = ['Visual', 'Domínio', 'Publicar']
   return (
-    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
+    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
       {labels.map((label, i) => {
         const n = i + 1
         const active = step === n
@@ -259,9 +259,9 @@ export default function SceneWebApp() {
           </div>
 
           {/* Body */}
-          <div style={{ flex: 1, padding: '16px 20px', overflow: 'hidden', display: 'flex', gap: 20 }}>
+          <div style={{ flex: 1, padding: '14px 20px', overflow: 'hidden', display: 'flex' }}>
 
-            {/* Coluna esquerda — wizard */}
+            {/* Wizard — ocupa tudo */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
 
               <StepBar step={Math.min(step, 3)} />
@@ -346,14 +346,14 @@ export default function SceneWebApp() {
 
                 {/* ── PASSO 2: Domínio ─────────────────────────────────────── */}
                 {step === 2 && (
-                  <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, overflow: 'hidden' }}>
+                  <div style={{ padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1, overflow: 'hidden' }}>
                     <div>
                       <div style={{ color: WHITE, fontWeight: 700, fontSize: 14, marginBottom: 2 }}>Escolha seu domínio</div>
                       <div style={{ color: MUTED, fontSize: 10 }}>Selecione como seus clientes vão encontrar o assistente</div>
                     </div>
 
                     {/* Lista de domínios */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {DOMAINS.map((d, i) => {
                         const sel = domainIdx === i
                         return (
@@ -391,7 +391,7 @@ export default function SceneWebApp() {
 
                     {/* Página inicial */}
                     <div style={{ color: MUTED, fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Página Inicial</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {HOME_OPTIONS.map((o, i) => {
                         const sel = homeIdx === i
                         return (
@@ -542,103 +542,7 @@ export default function SceneWebApp() {
                 )}
 
               </div>{/* /card */}
-            </div>{/* /coluna esquerda */}
-
-            {/* Coluna direita — preview do webapp */}
-            <div style={{
-              width: 180, flexShrink: 0,
-              display: 'flex', flexDirection: 'column', gap: 10,
-            }}>
-              <div style={{ color: MUTED, fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Preview
-              </div>
-
-              {/* Mock do browser */}
-              <div style={{
-                flex: 1, background: '#0f172a',
-                border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden',
-                display: 'flex', flexDirection: 'column',
-              }}>
-                {/* Browser bar */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', flexShrink: 0,
-                  background: 'rgba(255,255,255,0.04)', borderBottom: `1px solid ${BORDER}`,
-                }}>
-                  <div style={{ display: 'flex', gap: 3 }}>
-                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(239,68,68,0.5)' }} />
-                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(234,179,8,0.5)' }} />
-                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(34,197,94,0.5)' }} />
-                  </div>
-                  <div style={{
-                    flex: 1, borderRadius: 100, padding: '2px 6px', textAlign: 'center',
-                    background: 'rgba(255,255,255,0.06)',
-                    color: 'rgba(255,255,255,0.3)', fontSize: 7, fontFamily: 'monospace',
-                    transition: 'all 0.4s',
-                  }}>
-                    cafeexemplo.{domain.label}
-                  </div>
-                </div>
-
-                {/* Conteúdo do webapp */}
-                <div style={{
-                  flex: 1, display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px 12px',
-                }}>
-                  <div style={{
-                    width: 44, height: 44, borderRadius: 11, background: '#de691b',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                    border: `3px solid ${themeColor}`,
-                    transition: 'border-color 0.4s',
-                  }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" style={{ width: '52%', height: '52%' }}>
-                      <path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z"/>
-                      <path d="M16 9h2.5a2.5 2.5 0 0 1 0 5H16"/>
-                      <path d="M6 2v2"/><path d="M10 2v2"/><path d="M14 2v2"/>
-                    </svg>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ color: WHITE, fontWeight: 800, fontSize: 11 }}>Café Exemplo</div>
-                    <div style={{ color: MUTED, fontSize: 8, marginTop: 2 }}>Agente IA</div>
-                  </div>
-                  <div style={{
-                    width: '100%', borderRadius: 9, padding: '7px 0', textAlign: 'center',
-                    fontWeight: 700, fontSize: 9, color: '#fff',
-                    background: `linear-gradient(135deg, ${themeColor}, ${themeColor}bb)`,
-                    transition: 'background 0.4s',
-                  }}>
-                    Falar com o Assistente
-                  </div>
-
-                  {/* Indicador de domínio */}
-                  <div style={{
-                    width: '100%', borderRadius: 7, padding: '5px 8px',
-                    background: ROWBG, border: `1px solid ${BORDER}`,
-                    display: 'flex', alignItems: 'center', gap: 4,
-                  }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth={2} style={{ width: 8, height: 8, flexShrink: 0 }}>
-                      <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                    </svg>
-                    <span style={{ color: SUB, fontSize: 7, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {domain.label}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Cor selecionada */}
-              <div style={{
-                background: ROWBG, border: `1px solid ${BORDER}`,
-                borderRadius: 8, padding: '7px 10px',
-                display: 'flex', alignItems: 'center', gap: 7,
-              }}>
-                <div style={{
-                  width: 14, height: 14, borderRadius: '50%', background: themeColor,
-                  flexShrink: 0, transition: 'background 0.4s',
-                }} />
-                <span style={{ color: MUTED, fontSize: 9, fontWeight: 600 }}>{themeLabel}</span>
-              </div>
-            </div>
+            </div>{/* /wizard */}
 
           </div>{/* /body */}
         </div>{/* /shell */}

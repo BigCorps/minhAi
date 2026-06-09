@@ -1,174 +1,395 @@
 'use client'
 // components/tour/scenes/ScenePublicar.tsx
-// Assistente criado — link, QR Code e canais de conexão
 
-import { useEffect, useState } from 'react'
+import Image from 'next/image'
+import { useEffect, useRef, useState, useCallback } from 'react'
 
-const BG = 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
-const LINK = 'cafeexemplo.minhai.app'
+// ─── Base sizes ──────────────────────────────────────────────────────────────
+const BASE_W = 900
+const BASE_H = 560
 
-const CANAIS = [
-  { nome: 'WhatsApp',  color: '#25D366', icon: (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-    </svg>
-  )},
-  { nome: 'Instagram', color: '#E1306C', icon: (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
-      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
-    </svg>
-  )},
-  { nome: 'Facebook',  color: '#1877F2', icon: (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
-      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-    </svg>
-  )},
-  { nome: 'Site/Totem', color: '#6366f1', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-3.5 h-3.5">
-      <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-    </svg>
-  )},
-]
+// ─── Ícones inline (sem dependência de lucide) ───────────────────────────────
+const IconCopy     = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:14,height:14}}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+const IconQR       = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:14,height:14}}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="3" y="3" width="2" height="2" fill="currentColor"/><rect x="14" y="3" width="2" height="2" fill="currentColor"/><rect x="3" y="14" width="2" height="2" fill="currentColor"/><path d="M14 14h2v2h-2z"/><path d="M18 14h2v2h-2z"/><path d="M14 18h2v2h-2z"/><path d="M18 18h2v2h-2z"/></svg>
+const IconGoogle   = () => <svg viewBox="0 0 24 24" fill="currentColor" style={{width:14,height:14}}><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+const IconMeta     = () => <svg viewBox="0 0 287.56 191" fill="currentColor" style={{width:14,height:14,color:'#1877F2'}}><path d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/><path d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/><path d="M82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78C38.61,71.62,31.06,99.34,31.06,126c0,11,2.41,19.41,5.56,24.51L10.14,167.91C3.34,156.6,0,141.76,0,124.85,0,94.1,8.44,62.05,24.49,37.3,38.73,15.35,59.28,0,82.85,0Z"/></svg>
+const IconUsers    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:14,height:14}}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+const IconBot      = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:14,height:14}}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
+const IconCopy2    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:14,height:14}}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+const IconZap      = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:14,height:14}}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+const IconSettings = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:14,height:14}}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+const IconTrash    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:14,height:14}}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+const IconExternal = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:14,height:14}}><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+const IconX        = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:16,height:16}}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+const IconDownload = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:14,height:14}}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+const IconGlobe    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:10,height:10}}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+const IconZapSm    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:10,height:10}}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
 
-function MockQR() {
+// ─── Botão reutilizável ───────────────────────────────────────────────────────
+function Btn({
+  children, bg, color, border, onClick,
+}: {
+  children: React.ReactNode
+  bg: string; color: string; border?: string; onClick?: () => void
+}) {
   return (
-    <svg viewBox="0 0 80 80" className="w-full h-full">
-      <rect x="4" y="4" width="24" height="24" rx="2" fill="none" stroke="#3b82f6" strokeWidth="3"/>
-      <rect x="10" y="10" width="12" height="12" rx="1" fill="#3b82f6"/>
-      <rect x="52" y="4" width="24" height="24" rx="2" fill="none" stroke="#3b82f6" strokeWidth="3"/>
-      <rect x="58" y="10" width="12" height="12" rx="1" fill="#3b82f6"/>
-      <rect x="4" y="52" width="24" height="24" rx="2" fill="none" stroke="#3b82f6" strokeWidth="3"/>
-      <rect x="10" y="58" width="12" height="12" rx="1" fill="#3b82f6"/>
-      {[34,40,46,34,40,34,46,40,46,52,58,64,70,52,64,70,52,64,58,70,52,58,70].map((x, i) => {
-        const positions = [[34,4],[40,4],[46,4],[34,12],[46,12],[34,20],[40,20],[46,20],[52,28],[58,28],[64,28],[70,28],[52,36],[70,36],[52,44],[58,44],[70,44],[34,52],[34,60],[40,60],[46,52],[46,60],[34,68],[40,68],[46,68]]
-        if (i >= positions.length) return null
-        return <rect key={i} x={positions[i][0]} y={positions[i][1]} width="4" height="4" fill="#3b82f6"/>
-      })}
-    </svg>
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 5,
+        padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
+        background: bg, color, fontSize: 11, fontWeight: 600,
+        border: border ?? 'none', whiteSpace: 'nowrap', userSelect: 'none',
+      }}
+    >
+      {children}
+    </div>
   )
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  COMPONENTE PRINCIPAL
+// ═══════════════════════════════════════════════════════════════════════════════
 export default function ScenePublicar() {
-  const [step, setStep] = useState(0)
+  const containerRef              = useRef<HTMLDivElement>(null)
+  const [scale, setScale]         = useState(1)
+  const [showModal, setShowModal] = useState(false)
+  const [modalOpacity, setModalOpacity] = useState(0)
+
+  // ── Escala responsiva ─────────────────────────────────────────────────────
+  const recalc = useCallback(() => {
+    const el = containerRef.current
+    if (!el) return
+    const { width: cw, height: ch } = el.getBoundingClientRect()
+    setScale(Math.min(1, (cw - 24) / BASE_W, (ch - 24) / BASE_H))
+  }, [])
 
   useEffect(() => {
-    if (step >= 3) return
-    const t = setTimeout(() => setStep(v => v + 1), 800)
-    return () => clearTimeout(t)
-  }, [step])
+    recalc()
+    const ro = new ResizeObserver(recalc)
+    if (containerRef.current) ro.observe(containerRef.current)
+    return () => ro.disconnect()
+  }, [recalc])
 
+  // ── Animação: abre o modal do QR automaticamente após 1.8s ───────────────
+  useEffect(() => {
+    const t1 = setTimeout(() => {
+      setShowModal(true)
+      setTimeout(() => setModalOpacity(1), 30)
+    }, 1800)
+
+    // Fecha o modal depois de 4s → recomeça o ciclo
+    const t2 = setTimeout(() => {
+      setModalOpacity(0)
+      setTimeout(() => setShowModal(false), 350)
+    }, 6500)
+
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
+
+  // ── Ciclo de re-abertura ─────────────────────────────────────────────────
+  const [cycle, setCycle] = useState(0)
+  useEffect(() => {
+    if (cycle === 0) return
+    const t1 = setTimeout(() => {
+      setShowModal(true)
+      setTimeout(() => setModalOpacity(1), 30)
+    }, 1800)
+    const t2 = setTimeout(() => {
+      setModalOpacity(0)
+      setTimeout(() => { setShowModal(false); setCycle(c => c + 1) }, 350)
+    }, 6500)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cycle])
+
+  useEffect(() => {
+    // Inicia o ciclo após a primeira sequência terminar
+    const t = setTimeout(() => setCycle(1), 7000)
+    return () => clearTimeout(t)
+  }, [])
+
+  // ════════════════════════════════════════════════════════════════════════════
   return (
     <div
-      className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
-      style={{ background: BG }}
+      ref={containerRef}
+      style={{
+        width: '100%', height: '100%',
+        background: 'linear-gradient(135deg,#020617 0%,#0f172a 50%,#020617 100%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden', position: 'relative',
+      }}
     >
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-3 py-2 flex-shrink-0"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(15,23,42,0.8)' }}
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth={2.5} strokeLinecap="round" className="w-2.5 h-2.5">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          </div>
-          <span className="text-white/60 font-semibold" style={{ fontSize: 'clamp(0.48rem, 1.1vw, 0.62rem)' }}>
-            Assistente publicado
-          </span>
-        </div>
-        <span
-          className="rounded-full px-2 py-0.5 font-semibold"
-          style={{ background: 'rgba(132,204,22,0.15)', color: '#84cc16', border: '1px solid rgba(132,204,22,0.3)', fontSize: 'clamp(0.35rem, 0.8vw, 0.44rem)' }}
-        >
-          Ao vivo agora
-        </span>
-      </div>
+      {/* ── Conteúdo escalável ── */}
+      <div style={{
+        width: BASE_W, height: BASE_H,
+        transform: `scale(${scale})`,
+        transformOrigin: 'center center',
+        flexShrink: 0, position: 'relative',
+      }}>
 
-      <div className="flex-1 min-h-0 flex gap-3 px-3 py-3 overflow-hidden">
+        {/* ── Página Assistentes (fundo) ── */}
+        <div style={{
+          width: '100%', height: '100%',
+          background: '#0f172a',
+          borderRadius: 16,
+          border: '0.5px solid rgba(255,255,255,0.08)',
+          overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+        }}>
 
-        {/* QR Code */}
-        <div
-          className="flex-shrink-0 flex flex-col items-center gap-2"
-          style={{
-            width: 'clamp(80px, 28%, 120px)',
-            opacity: step >= 1 ? 1 : 0,
-            transform: step >= 1 ? 'scale(1)' : 'scale(0.9)',
-            transition: 'opacity 400ms ease, transform 400ms ease',
-          }}
-        >
-          <div
-            className="w-full rounded-xl p-2 bg-white"
-            style={{ aspectRatio: '1/1' }}
-          >
-            <MockQR />
-          </div>
-          <p className="text-white/40 text-center" style={{ fontSize: 'clamp(0.35rem, 0.8vw, 0.44rem)' }}>
-            QR Code pronto
-          </p>
-        </div>
-
-        {/* Link e canais */}
-        <div className="flex-1 flex flex-col gap-2 overflow-hidden">
-
-          {/* Link */}
-          <div
-            className="rounded-xl px-3 py-2 flex items-center gap-2"
-            style={{
-              background: 'rgba(59,130,246,0.1)',
-              border: '1px solid rgba(59,130,246,0.3)',
-              opacity: step >= 1 ? 1 : 0,
-              transition: 'opacity 400ms ease 200ms',
-            }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth={2} strokeLinecap="round" className="w-3 h-3 flex-shrink-0">
-              <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
-            </svg>
-            <span className="text-blue-300 font-mono font-semibold truncate" style={{ fontSize: 'clamp(0.42rem, 1vw, 0.55rem)' }}>
-              {LINK}
-            </span>
-            <div className="ml-auto flex-shrink-0 rounded-lg px-1.5 py-0.5" style={{ background: 'rgba(59,130,246,0.2)', fontSize: 'clamp(0.32rem, 0.75vw, 0.42rem)', color: '#93c5fd' }}>
-              Copiar
+          {/* Header da página */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 20px',
+            borderBottom: '0.5px solid rgba(255,255,255,0.08)',
+            flexShrink: 0,
+          }}>
+            <div>
+              <div style={{ color: '#fff', fontSize: 20, fontWeight: 800 }}>Assistentes</div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, marginTop: 2 }}>
+                Gerencie seus assistentes virtuais e configurações personalizadas
+              </div>
+            </div>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: '#2563eb', borderRadius: 10, padding: '8px 16px',
+              color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" style={{width:14,height:14}}>
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Novo Assistente
             </div>
           </div>
 
-          {/* Canais */}
-          <p
-            className="text-white/40 font-semibold uppercase tracking-wider"
-            style={{
-              fontSize: 'clamp(0.32rem, 0.75vw, 0.42rem)',
-              opacity: step >= 2 ? 1 : 0,
-              transition: 'opacity 300ms ease',
-            }}
-          >
-            Conectar canais
-          </p>
+          {/* Body */}
+          <div style={{ flex: 1, padding: '16px 20px', overflow: 'hidden' }}>
 
-          <div className="grid grid-cols-2 gap-1.5">
-            {CANAIS.map((c, i) => (
-              <div
-                key={c.nome}
-                className="flex items-center gap-2 rounded-xl px-2.5 py-2"
-                style={{
-                  background: `${c.color}10`,
-                  border: `1px solid ${c.color}25`,
-                  opacity: step >= 2 ? 1 : 0,
-                  transform: step >= 2 ? 'translateY(0)' : 'translateY(6px)',
-                  transition: `opacity 300ms ease ${i * 80}ms, transform 300ms ease ${i * 80}ms`,
-                }}
-              >
-                <span style={{ color: c.color }}>{c.icon}</span>
-                <span className="text-white/70 font-medium" style={{ fontSize: 'clamp(0.38rem, 0.85vw, 0.5rem)' }}>{c.nome}</span>
-                <div className="ml-auto w-3 h-3 rounded-full flex-shrink-0" style={{ background: `${c.color}30`, border: `1px solid ${c.color}50` }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke={c.color} strokeWidth={2.5} strokeLinecap="round" className="w-full h-full p-0.5">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                  </svg>
+            {/* Card do Assistente */}
+            <div style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '0.5px solid rgba(255,255,255,0.1)',
+              borderRadius: 16, padding: '16px 20px',
+            }}>
+
+              {/* Linha principal: logo + nome + badges | botões */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+
+                {/* Esquerda: avatar + nome + badges */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+                  {/* Avatar — xícara laranja igual às outras cenas */}
+                  <div style={{
+                    width: 56, height: 56, borderRadius: 14, background: '#de691b',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: '55%', height: '55%' }}>
+                      <path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z"/>
+                      <path d="M16 9h2.5a2.5 2.5 0 0 1 0 5H16"/>
+                      <path d="M6 2v2"/><path d="M10 2v2"/><path d="M14 2v2"/>
+                      <path d="M3 21h18"/>
+                    </svg>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ color: '#fff', fontSize: 17, fontWeight: 800 }}>Café Exemplo</span>
+                      {/* badge público */}
+                      <span style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        fontSize: 10, padding: '2px 8px', borderRadius: 99,
+                        background: 'rgba(34,197,94,0.15)', color: '#4ade80',
+                        border: '1px solid rgba(34,197,94,0.3)', fontWeight: 600,
+                      }}>
+                        <IconGlobe /> Público
+                      </span>
+                      {/* badge vendas */}
+                      <span style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        fontSize: 10, padding: '2px 8px', borderRadius: 99,
+                        background: 'rgba(168,85,247,0.15)', color: '#c084fc',
+                        border: '1px solid rgba(168,85,247,0.3)', fontWeight: 700,
+                      }}>
+                        <IconZapSm /> Versão Vendas · 10% comissão
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Direita: botões em 2 linhas */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                  {/* Linha 1 */}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <Btn bg="rgba(255,255,255,0.06)" color="rgba(255,255,255,0.75)" border="0.5px solid rgba(255,255,255,0.1)">
+                      <IconCopy /> Copiar Link
+                    </Btn>
+                    <Btn
+                      bg="rgba(255,255,255,0.06)" color="rgba(255,255,255,0.75)"
+                      border="0.5px solid rgba(255,255,255,0.1)"
+                      onClick={() => { setShowModal(true); setTimeout(() => setModalOpacity(1), 30) }}
+                    >
+                      <IconQR /> QR Code
+                    </Btn>
+                    <Btn bg="rgba(239,68,68,0.1)" color="#f87171" border="0.5px solid rgba(239,68,68,0.2)">
+                      <IconGoogle /> Serviços Google
+                    </Btn>
+                    <Btn bg="rgba(34,197,94,0.1)" color="#4ade80" border="0.5px solid rgba(34,197,94,0.2)">
+                      <IconMeta /> WhatsApp / Instagram / Facebook
+                    </Btn>
+                  </div>
+                  {/* Linha 2 */}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <Btn bg="rgba(168,85,247,0.1)" color="#c084fc" border="0.5px solid rgba(168,85,247,0.2)">
+                      <IconUsers /> Usuários / Totens
+                    </Btn>
+                    <Btn bg="rgba(59,130,246,0.1)" color="#60a5fa" border="0.5px solid rgba(59,130,246,0.2)">
+                      <IconBot /> Funções
+                    </Btn>
+                    <Btn bg="rgba(255,255,255,0.06)" color="rgba(255,255,255,0.75)" border="0.5px solid rgba(255,255,255,0.1)">
+                      <IconCopy2 /> Duplicar
+                    </Btn>
+                    <Btn bg="rgba(168,85,247,0.1)" color="#c084fc" border="0.5px solid rgba(168,85,247,0.2)">
+                      <IconZap /> Trocar para Smart
+                    </Btn>
+                    <Btn bg="rgba(255,255,255,0.06)" color="rgba(255,255,255,0.75)" border="0.5px solid rgba(255,255,255,0.1)">
+                      <IconSettings /> Configurar
+                    </Btn>
+                    <Btn bg="#dc2626" color="#fff">
+                      <IconTrash />
+                    </Btn>
+                    <Btn bg="#2563eb" color="#fff">
+                      <IconExternal /> Abrir
+                    </Btn>
+                  </div>
                 </div>
               </div>
-            ))}
+
+              {/* Rodapé do card — webapp */}
+              <div style={{
+                marginTop: 14, paddingTop: 12,
+                borderTop: '0.5px solid rgba(255,255,255,0.06)',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <span style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  fontSize: 10, padding: '3px 10px', borderRadius: 99,
+                  background: 'rgba(245,158,11,0.1)', color: '#fbbf24',
+                  border: '1px solid rgba(245,158,11,0.25)', fontWeight: 600,
+                }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:10,height:10}}>
+                    <path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/>
+                    <path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 010 20"/>
+                  </svg>
+                  WebApp disponível
+                </span>
+                <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>
+                  Ative seu subdomínio próprio
+                </span>
+                <div style={{ marginLeft: 'auto' }}>
+                  <Btn bg="rgba(245,158,11,0.1)" color="#fbbf24" border="0.5px solid rgba(245,158,11,0.25)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{width:10,height:10}}>
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                    Configurar WebApp
+                  </Btn>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
+
+        {/* ── Modal QR Code (overlay dentro do conteúdo escalado) ── */}
+        {showModal && (
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(4px)',
+            borderRadius: 16,
+            opacity: modalOpacity,
+            transition: 'opacity 300ms ease',
+            zIndex: 10,
+          }}>
+            <div style={{
+              background: '#1e293b',
+              border: '0.5px solid rgba(255,255,255,0.12)',
+              borderRadius: 20,
+              padding: '28px 32px',
+              width: 300,
+              boxShadow: '0 25px 60px rgba(0,0,0,0.6)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              position: 'relative',
+            }}>
+              {/* Botão fechar */}
+              <button
+                onClick={() => { setModalOpacity(0); setTimeout(() => setShowModal(false), 300) }}
+                style={{
+                  position: 'absolute', top: 14, right: 14,
+                  width: 28, height: 28, borderRadius: 8,
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '0.5px solid rgba(255,255,255,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: 'rgba(255,255,255,0.5)',
+                }}
+              >
+                <IconX />
+              </button>
+
+              <div style={{ color: '#fff', fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
+                QR Code do Assistente
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginBottom: 18 }}>
+                Café Exemplo
+              </div>
+
+              {/* QR Code image */}
+              <div style={{
+                background: '#fff',
+                borderRadius: 12, padding: 12,
+                marginBottom: 16,
+                border: '1px solid rgba(0,0,0,0.08)',
+                boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.06)',
+              }}>
+                <Image
+                  src="/qrcode.png"
+                  alt="QR Code"
+                  width={160}
+                  height={160}
+                  style={{ display: 'block', borderRadius: 4 }}
+                />
+              </div>
+
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, textAlign: 'center', marginBottom: 20, lineHeight: 1.5 }}>
+                Aponte a câmera para o código<br />para abrir o assistente.
+              </div>
+
+              {/* Botões */}
+              <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                <button
+                  onClick={() => { setModalOpacity(0); setTimeout(() => setShowModal(false), 300) }}
+                  style={{
+                    flex: 1, padding: '9px 0', borderRadius: 10,
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '0.5px solid rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  Fechar
+                </button>
+                <button style={{
+                  flex: 1, padding: '9px 0', borderRadius: 10,
+                  background: '#2563eb', border: 'none',
+                  color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}>
+                  <IconDownload /> Baixar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

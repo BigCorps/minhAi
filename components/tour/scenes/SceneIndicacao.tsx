@@ -80,15 +80,15 @@ function SummaryCard({
   return (
     <div style={{
       background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14,
-      padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8,
+      padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 5,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ padding: 6, borderRadius: 8, background: c.bg, color: c.text }}>
+        <div style={{ padding: 5, borderRadius: 7, background: c.bg, color: c.text, flexShrink: 0 }}>
           {icon}
         </div>
-        <span style={{ color: MUTED, fontSize: 10, fontWeight: 500 }}>{label}</span>
+        <span style={{ color: MUTED, fontSize: 9, fontWeight: 500, lineHeight: 1.2 }}>{label}</span>
       </div>
-      <span style={{ color: WHITE, fontWeight: 800, fontSize: 20 }}>{value}</span>
+      <span style={{ color: WHITE, fontWeight: 800, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</span>
     </div>
   )
 }

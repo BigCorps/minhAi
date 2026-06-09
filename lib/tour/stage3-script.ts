@@ -49,7 +49,7 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
       'O Gestor de Agenda conduz todo o processo de agendamento de ponta a ponta. ' +
       'Pergunta qual serviço ou produto o cliente quer, ' +
       'mostra os horários disponíveis em tempo real, ' +
-      'pode cobrar na hora com link de pagamento, ' +
+      'pode cobrar na hora com Pix ou Link de pagamento, ' +
       'marca direto no Google Agenda e envia confirmação por e-mail — ' +
       'tudo por voz ou texto, sem o cliente sair do canal.',
     fallbackDuration: 9000,
@@ -70,12 +70,12 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
     label: 'Fiscal',
     audioText:
       'O Auxiliar Fiscal emite nota fiscal por voz ou texto — N F ê, N F S ê e N F C ê. ' +
-      'Informe os dados, ele preenche N C M, C F O P e C S O S N automaticamente ' +
+      'Informe os dados, ele preenche dados técnicos automaticamente ' +
       'e envia direto para a SEFAZ. ' +
       'Integrado aos produtos e clientes cadastrados no dashboard.',
     displayText:
       'O Auxiliar Fiscal emite nota fiscal por voz ou texto — NFe, NFSe e NFCe. ' +
-      'Informe os dados, ele preenche NCM, CFOP e CSOSN automaticamente ' +
+      'Informe os dados, ele preenche dados técnicos automaticamente ' +
       'e envia direto para a SEFAZ. ' +
       'Integrado aos produtos e clientes cadastrados no dashboard.',
     fallbackDuration: 8000,
@@ -96,22 +96,16 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
     id: 'auxiliares-extras',
     label: 'Mais Auxiliares',
     audioText:
-      'O Investigador Antifraude analisa boletos, comprovantes e U R L suspeitas ' +
+      'O Investigador Antifraude analisa boletos, comprovantes e U R L suspeitos ' +
       'e emite um laudo com nível de risco em segundos — ' +
- 
-      'protegendo seu negócio antes de fechar qualquer negociação. ' +
       'O Auxiliar de Funções te ajuda a escolher as melhores funções de acordo com o seu ramo. ' +
       'E o Auxiliar de Cadastro cria produtos completos por voz ou texto — ' +
-      'nome, descrição, categoria, preço e margem, com recomendação de imagem automática. ' +
       'O produto já fica disponível no catálogo para venda na hora.',
     displayText:
-          'O Investigador Antifraude analisa boletos, comprovantes e URLs suspeitas ' +
+      'O Investigador Antifraude analisa boletos, comprovantes e URLs suspeitos ' +
       'e emite um laudo com nível de risco em segundos — ' +
- 
-      'protegendo seu negócio antes de fechar qualquer negociação. ' +
       'O Auxiliar de Funções te ajuda a escolher as melhores funções de acordo com o seu ramo. ' +
       'E o Auxiliar de Cadastro cria produtos completos por voz ou texto — ' +
-      'nome, descrição, categoria, preço e margem, com recomendação de imagem automática. ' +
       'O produto já fica disponível no catálogo para venda na hora.',
     fallbackDuration: 11000,
   },

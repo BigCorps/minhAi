@@ -6,6 +6,7 @@ import { useState, useCallback } from 'react'
 import TourStage1 from '@/components/tour/TourStage1'
 import TourStage2 from '@/components/tour/TourStage2'
 import TourStage3 from '@/components/tour/TourStage3'
+import TourStage4 from '@/components/tour/TourStage4'
 import TourManager from '@/components/tour/TourManager'
 
 type PageState = 'playing' | 'selecting'
@@ -32,6 +33,9 @@ export default function TourMenuPage() {
       )}
       {pageState === 'playing' && activeStage === 3 && (
         <TourStage2 key="s3" initialTheme={currentTheme} onComplete={handleComplete} onThemeChange={handleThemeChange} />
+      )}
+      {pageState === 'playing' && activeStage === 4 && (
+        <TourStage4 key="s4" initialTheme={currentTheme} onComplete={handleComplete} onThemeChange={handleThemeChange} />
       )}
       {pageState === 'selecting' && (
         <TourManager

@@ -5,11 +5,11 @@
 
 ## Roadmap e Features Planejadas
 
+* Tour guiado - quando finalizar todos os stages, aplicar o cache no restante (pedidoslj)
+
 * Editar postagens no Manus com o logo e postar (imagem um dia, vídeo outro dia)
 
-* Auxiliar de Cadastro e com MCP whatsapp e Criador de Posts - já implementado, mas com erros nas edges
-
-* Tour guiado - quando finalizar todos os stages, aplicar o cache no restante (pedidoslj)
+* Testar Auxiliar de Cadastro no MCP whatsapp
 
 * Quando o Tour estiver pronto, sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
 

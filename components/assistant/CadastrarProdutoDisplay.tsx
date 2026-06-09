@@ -1103,49 +1103,20 @@ function AuxiliarCadastroInner({
           },
         ];
 
-        // Chama GPT-4o Vision direto
-        const openaiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY ?? '';
-        const visionRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        // Chama API route server-side (nunca expõe a OpenAI key no cliente)
+        const visionRes = await fetch('/api/vision/extract-products', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o',
-            max_tokens: 2000,
-            messages: [{ role: 'user', content: userContent }],
-          }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64: b64, mediaType, fileName: file.name }),
         });
 
         if (!visionRes.ok) {
-          throw new Error(`Erro na API de visão: ${visionRes.status}`);
+          const errData = await visionRes.json().catch(() => ({}));
+          throw new Error(errData.error ?? `Erro ao processar arquivo: ${visionRes.status}`);
         }
 
         const visionData = await visionRes.json();
-        const rawText = visionData.choices?.[0]?.message?.content ?? '{}';
-
-        // Parse do JSON retornado
-        let produtosExtraidos: ItemProduto[] = [];
-        try {
-          const clean = rawText.replace(/```json|```/g, '').trim();
-          const parsed = JSON.parse(clean);
-          produtosExtraidos = (parsed.produtos ?? []).map((p: any) => ({
-            nome:           String(p.nome ?? '').trim(),
-            descricao:      p.descricao ?? '',
-            categoria:      p.categoria ?? '',
-            preco_venda:    parseFloat(p.preco_venda) || 0,
-            preco_custo:    0,
-            unidade:        'un',
-            estoque_atual:  0,
-            estoque_minimo: 0,
-            imagem_url:     '',
-            ean:            '',
-            marca:          '',
-          })).filter((p: ItemProduto) => p.nome);
-        } catch {
-          throw new Error('Não consegui interpretar os produtos do arquivo. Tente um arquivo com texto mais legível.');
-        }
+        let produtosExtraidos: ItemProduto[] = visionData.produtos ?? [];
 
         if (produtosExtraidos.length === 0) {
           throw new Error('Nenhum produto encontrado no arquivo. Verifique se o conteúdo está legível.');

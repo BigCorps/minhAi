@@ -52,7 +52,7 @@ function BtnGrid({ items }: { items: React.ReactNode[] }) {
       {rows.map((row, ri) => (
         <div key={ri} style={{ display: 'flex', gap: 5 }}>
           {row.map((btn, bi) => (
-            <div key={bi} style={{ flex: 1, minWidth: 0 }}>{btn}</div>
+            <div key={bi}>{btn}</div>
           ))}
         </div>
       ))}

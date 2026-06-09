@@ -179,7 +179,7 @@ export default function ScenePublicar() {
 
                 {/* Esquerda: avatar + nome + badges */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
-                  {/* Avatar — xícara laranja igual às outras cenas */}
+                  {/* Avatar */}
                   <div style={{
                     width: 56, height: 56, borderRadius: 14, background: '#de691b',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -193,9 +193,10 @@ export default function ScenePublicar() {
                     </svg>
                   </div>
 
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ color: '#fff', fontSize: 17, fontWeight: 800 }}>Café Exemplo</span>
+                  {/* Nome + badges em coluna */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <span style={{ color: '#fff', fontSize: 17, fontWeight: 800, lineHeight: 1 }}>Café Exemplo</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {/* badge público */}
                       <span style={{
                         display: 'flex', alignItems: 'center', gap: 4,

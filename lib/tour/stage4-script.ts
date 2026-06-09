@@ -50,8 +50,8 @@ export const STAGE4_SCRIPT: Stage4Script[] = [
     audioText:
       'Assistente criado. Agora é só compartilhar. ' +
       'Você recebe um link próprio, um QR Code pronto para imprimir ou exibir na tela, ' +
-      'e conexões diretas com WhatsApp, Instagram e Facebook. ' +
-      'Cole o link em qualquer lugar — site, bio, cardápio, recibo — e seu assistente já está atendendo.',
+      'e já pode configurar as integrações com Google, WhatsApp, Instagram e Facebook. ' +
+      'Divulge o link a vontade, seu assistente já está atendendo.',
     fallbackDuration: 8000,
   },
 {

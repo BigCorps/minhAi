@@ -29,7 +29,7 @@ const STAGES: Stage[] = [
   {
     id: 2,
     label: 'Auxiliares de IA',
-    description: 'Os 9 especialistas do seu negócio',
+    description: 'Os 10 especialistas do seu negócio',
     available: true,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>

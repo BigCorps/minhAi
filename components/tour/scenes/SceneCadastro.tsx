@@ -94,19 +94,31 @@ export default function SceneCadastro() {
   const addTimer = (t: ReturnType<typeof setTimeout>) => { timers.current.push(t); return t }
   const clearAll = () => { timers.current.forEach(clearTimeout); timers.current = [] }
 
+  // ── Fade-in reativo à mudança de phase ────────────────────────────────
+  // Garante que o fade-in só começa DEPOIS do React ter re-renderizado
+  // com o novo phase — evita race condition entre setState + setTimeout.
+  useEffect(() => {
+    if (phase === 'dash') {
+      setDashOpacity(0)
+      const t = setTimeout(() => setDashOpacity(1), 50)
+      return () => clearTimeout(t)
+    }
+    if (phase === 'form') {
+      setFormOpacity(0)
+      const t = setTimeout(() => setFormOpacity(1), 50)
+      return () => clearTimeout(t)
+    }
+  }, [phase])
+
   // ── Restart ───────────────────────────────────────────────────────────
   const restart = () => {
     clearAll()
-    // fade out dash
     setDashOpacity(0)
     addTimer(setTimeout(() => {
-      setPhase('form')
       setEmailTyped('')
       setPassTyped('')
       setSubmitting(false)
-      // fade in form
-      setFormOpacity(0)
-      addTimer(setTimeout(() => setFormOpacity(1), 50))
+      setPhase('form') // useEffect acima cuida do fade-in
     }, 400))
   }
 
@@ -132,15 +144,11 @@ export default function SceneCadastro() {
       addTimer(setTimeout(() => {
         setSubmitting(true)
         addTimer(setTimeout(() => {
-          // fade out form → fade in dash
+          // fade out form, depois muda phase → useEffect cuida do fade-in do dash
           setFormOpacity(0)
           addTimer(setTimeout(() => {
-            setPhase('dash')
-            setDashOpacity(0)
-            addTimer(setTimeout(() => {
-              setDashOpacity(1)
-              addTimer(setTimeout(() => restart(), 6000))
-            }, 80))
+            setPhase('dash') // dispara o useEffect acima
+            addTimer(setTimeout(() => restart(), 6000))
           }, 400))
         }, 1100))
       }, 500))
@@ -188,6 +196,7 @@ export default function SceneCadastro() {
                 alt="minhAi"
                 width={90}
                 height={28}
+                loading="eager"
                 style={{ height: 28, width: 'auto', margin: '0 auto', display: 'block', objectFit: 'contain' }}
               />
               <p style={{ color: '#fff', fontWeight: 700, fontSize: 14, marginTop: 6 }}>Criar Conta</p>
@@ -324,7 +333,7 @@ export default function SceneCadastro() {
               borderBottom: '0.5px solid rgba(255,255,255,0.08)',
               flexShrink: 0,
             }}>
-              <Image src="/logo.png" alt="minhAi" width={60} height={20}
+              <Image src="/logo.png" alt="minhAi" width={60} height={20} loading="eager"
                 style={{ height: 20, width: 'auto', objectFit: 'contain' }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{

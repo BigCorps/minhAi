@@ -357,6 +357,7 @@ function ChatMidia({
           historico: historicoRef.current,
           formato,
           logo_position: logoPosition,
+          is_correcao: ehCorrecao,
           company_context: {
             name: company?.name,
             logo_url: company?.logo_url,
@@ -544,6 +545,7 @@ export default function CriarMidiaDisplay({ data, onClose, theme = 'dark', playT
   const [temConexaoFacebook, setTemConexaoFacebook] = useState(false);
   const [publicadoFacebook, setPublicadoFacebook] = useState(false);
   const [audioMutado, setAudioMutado] = useState(false);
+  const [ehCorrecao, setEhCorrecao] = useState(false);
   const audioMutadoRef = useRef(false);
 
   const effectivePlayText = useCallback(async (text: string) => {
@@ -579,6 +581,7 @@ export default function CriarMidiaDisplay({ data, onClose, theme = 'dark', playT
       return;
     }
 
+    setEhCorrecao(true);
     let imageUrlFinal = novaArte.image_url;
 
     if (novaArte.image_url && company?.logo_url) {

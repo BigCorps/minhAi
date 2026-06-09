@@ -131,85 +131,79 @@ export default function SceneCadastro() {
         pointerEvents: phase === 'form' ? 'auto' : 'none',
         transition: 'opacity 350ms ease',
       }}>
-        <div style={{ width: '100%', maxWidth: 320 }}>
+        <div style={{ width: '100%', maxWidth: 340 }}>
           <div style={{
-            background: 'rgba(22,32,50,0.92)',
-            border: '0.5px solid rgba(255,255,255,0.08)',
+            background: 'rgba(30,41,59,0.6)',
+            border: '0.5px solid rgba(255,255,255,0.1)',
             backdropFilter: 'blur(12px)',
-            borderRadius: 20, padding: '28px 24px 20px',
+            borderRadius: 16, padding: 24,
             display: 'flex', flexDirection: 'column', gap: 0,
           }}>
-            {/* Logo grande centralizado */}
-            <div style={{ textAlign: 'center', marginBottom: 18 }}>
-              <Image src="/logo.png" alt="minhAi" width={120} height={38} loading="eager"
-                style={{ height: 38, width: 'auto', margin: '0 auto', display: 'block', objectFit: 'contain' }} />
+            {/* Logo + títulos */}
+            <div style={{ textAlign: 'center' }}>
+              <Image src="/logo.png" alt="minhAi" width={90} height={28} loading="eager"
+                style={{ height: 28, width: 'auto', margin: '0 auto', display: 'block', objectFit: 'contain' }} />
+              <p style={{ color: '#fff', fontWeight: 700, fontSize: 14, marginTop: 6 }}>Criar Conta</p>
+              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Crie sua conta para começar</p>
             </div>
 
-            {/* Título */}
-            <div style={{ textAlign: 'center', marginBottom: 18 }}>
-              <p style={{ color: '#fff', fontWeight: 700, fontSize: 18, margin: 0 }}>Criar Conta</p>
-              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 4 }}>Acesse sua conta</p>
+
+            {/* Divisor */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0', color: 'rgba(255,255,255,0.25)', fontSize: 10 }}>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+              <span>ou</span>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
             </div>
 
             {/* Campos */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
-              {/* Email */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
               <div>
-                <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: 600, marginBottom: 5 }}>Email</div>
+                <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginBottom: 3 }}>Email</div>
                 <div style={{
-                  background: 'rgba(255,255,255,0.07)',
-                  border: `1px solid ${emailTyped.length > 0 ? 'rgba(176,203,31,0.6)' : 'rgba(255,255,255,0.12)'}`,
-                  borderRadius: 10, padding: '9px 12px',
-                  color: 'rgba(255,255,255,0.9)', fontFamily: 'monospace', fontSize: 11,
-                  minHeight: 36, display: 'flex', alignItems: 'center', transition: 'border-color 300ms',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: `0.5px solid ${emailTyped.length > 0 ? 'rgba(176,203,31,0.5)' : 'rgba(255,255,255,0.12)'}`,
+                  borderRadius: 8, padding: '7px 10px',
+                  color: 'rgba(255,255,255,0.85)', fontFamily: 'monospace', fontSize: 11,
+                  minHeight: 30, display: 'flex', alignItems: 'center', transition: 'border-color 300ms',
                 }}>
                   <span>{emailTyped}</span>
                   {emailTyped.length < EMAIL.length && (
-                    <span style={{ display: 'inline-block', width: 1, height: 13, background: 'rgba(255,255,255,0.7)', marginLeft: 1, animation: 'cadastro-blink 0.8s step-end infinite' }} />
+                    <span style={{ display: 'inline-block', width: 1, height: 12, background: 'rgba(255,255,255,0.7)', marginLeft: 1, animation: 'cadastro-blink 0.8s step-end infinite' }} />
                   )}
                 </div>
               </div>
-              {/* Senha */}
               <div>
-                <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: 600, marginBottom: 5 }}>Senha</div>
+                <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginBottom: 3 }}>Senha</div>
                 <div style={{
-                  background: 'rgba(255,255,255,0.07)',
-                  border: `1px solid ${passTyped.length > 0 ? 'rgba(176,203,31,0.6)' : 'rgba(255,255,255,0.12)'}`,
-                  borderRadius: 10, padding: '9px 12px',
-                  color: passTyped.length > 0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.2)',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: `0.5px solid ${passTyped.length > 0 ? 'rgba(176,203,31,0.5)' : 'rgba(255,255,255,0.12)'}`,
+                  borderRadius: 8, padding: '7px 10px',
+                  color: passTyped.length > 0 ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.2)',
                   fontFamily: 'monospace', fontSize: 11,
-                  minHeight: 36, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  transition: 'border-color 300ms',
+                  minHeight: 30, display: 'flex', alignItems: 'center', transition: 'border-color 300ms',
                 }}>
-                  <span style={{ display: 'flex', alignItems: 'center' }}>
-                    {passTyped.length > 0 ? (
-                      <>
-                        <span>{passTyped}</span>
-                        {passTyped.length < PASS.length && (
-                          <span style={{ display: 'inline-block', width: 1, height: 13, background: 'rgba(255,255,255,0.7)', marginLeft: 1, animation: 'cadastro-blink 0.8s step-end infinite' }} />
-                        )}
-                      </>
-                    ) : <span>••••••</span>}
-                  </span>
-                  {/* Ícone olho */}
-                  <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth={2} style={{ width: 14, height: 14, flexShrink: 0 }}>
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
-                  </svg>
+                  {passTyped.length > 0 ? (
+                    <>
+                      <span>{passTyped}</span>
+                      {passTyped.length < PASS.length && (
+                        <span style={{ display: 'inline-block', width: 1, height: 12, background: 'rgba(255,255,255,0.7)', marginLeft: 1, animation: 'cadastro-blink 0.8s step-end infinite' }} />
+                      )}
+                    </>
+                  ) : <span>••••••••</span>}
                 </div>
               </div>
             </div>
 
-            {/* Botão principal largo */}
+            {/* Botão principal */}
             <button style={{
               background: submitting ? 'rgba(176,203,31,0.5)' : '#b0cb1f',
-              color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', borderRadius: 10,
-              padding: '11px 0', width: '100%', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: 7, cursor: 'pointer', transition: 'background 300ms',
-              marginBottom: 14,
+              color: '#fff', fontWeight: 700, fontSize: 11, border: 'none', borderRadius: 10,
+              padding: 9, width: '100%', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', gap: 6, cursor: 'pointer', transition: 'background 300ms',
             }}>
               {submitting ? (
                 <>
-                  <span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'cadastro-spin 0.7s linear infinite' }} />
+                  <span style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'cadastro-spin 0.7s linear infinite' }} />
                   Criando conta...
                 </>
               ) : 'Criar Conta'}
@@ -221,7 +215,7 @@ export default function SceneCadastro() {
               <span>ou</span>
               <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
             </div>
-
+ 
             {/* Botões sociais empilhados */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
               {[
@@ -238,20 +232,10 @@ export default function SceneCadastro() {
                 </div>
               ))}
             </div>
-
+ 
             {/* Link login */}
             <p style={{ textAlign: 'center', color: 'rgba(96,165,250,0.8)', fontSize: 11, margin: 0 }}>
               Não tem conta? Criar conta
-            </p>
-          </div>
-
-          {/* Footer fora do card */}
-          <div style={{ textAlign: 'center', marginTop: 14, display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10, margin: 0 }}>
-              Termos de Uso &nbsp;•&nbsp; Aviso de Privacidade
-            </p>
-            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 600, margin: 0 }}>
-              minhAi — Uma IA pra chamar de sua!
             </p>
           </div>
         </div>
@@ -416,12 +400,12 @@ export default function SceneCadastro() {
                   </svg>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h4 style={{ color: '#fff', fontSize: 11, fontWeight: 700, margin: 0 }}>Configure seu Assistente</h4>
+                  <h4 style={{ color: '#fff', fontSize: 11, fontWeight: 700, margin: 0 }}>Crie seu Assistente</h4>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                     <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden', maxWidth: 300 }}>
-                      <div style={{ height: '100%', width: '67%', background: '#3b82f6', borderRadius: 3 }} />
+                      <div style={{ height: '100%', width: '1%', background: '#3b82f6', borderRadius: 3 }} />
                     </div>
-                    <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9 }}>67% concluído</span>
+                    <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9 }}>1% concluído</span>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>

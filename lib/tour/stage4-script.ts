@@ -22,7 +22,7 @@ export const STAGE4_SCRIPT: Stage4Script[] = [
     id: 'zeroaoar-cadastro',
     label: 'Criar Conta',
     audioText:
-      'Criar sua conta é rápido e gratuito — sem cartão de crédito. ' +
+      'Criar sua conta é rápido e gratuito! Sem cartão de crédito. ' +
       'Basta e-mail e senha, ou também, entrar com Google ou Facebook com um único clique. ' +
       'Em segundos você já está no dashboard, pronto para criar seu assistente.',
     fallbackDuration: 7000,
@@ -84,13 +84,13 @@ export const STAGE4_SCRIPT: Stage4Script[] = [
     id: 'zeroaoar-indicacao',
     label: 'Indicação',
     audioText:
-      'E tem mais — cada cliente que você indicar para a minha I A gera créditos para sua conta. ' +
-      'Quanto mais negócios você apresentar, mais créditos acumula para usar nas funções premium. ' +
-      'Seu assistente trabalha, você indica, e os créditos chegam automaticamente.',
+      'E tem mais: cada cliente que você indicar para a minha I A, você recebe 50% da mensalidade todos os meses ' +
+      'Quanto mais negócios você apresentar, mais você ganha! ' +
+      'Seu assistente trabalha, você indica, e todos saem ganhando!!!',
     displayText:
-      'E tem mais — cada cliente que você indicar para a minhAi gera créditos para sua conta. ' +
-      'Quanto mais negócios você apresentar, mais créditos acumula para usar nas funções premium. ' +
-      'Seu assistente trabalha, você indica, e os créditos chegam automaticamente.',
+      'E tem mais: cada cliente que você indicar para a minhAi, você recebe 50% da mensalidade todos os meses ' +
+      'Quanto mais negócios você apresentar, mais você ganha! ' +
+      'Seu assistente trabalha, você indica, e todos saem ganhando!!!',
     fallbackDuration: 8000,
   },
   {
@@ -98,7 +98,7 @@ export const STAGE4_SCRIPT: Stage4Script[] = [
     label: 'Conclusão',
     audioText:
       'Do cadastro ao assistente funcionando: menos de cinco minutos. ' +
-      'Sem técnico, sem código, sem contrato. ' +
+      'Sem programador, sem código, sem contrato. ' +
       'Comece grátis e escale conforme seu negócio crescer.',
     fallbackDuration: 6000,
   },

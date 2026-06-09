@@ -570,73 +570,67 @@ export default function CriarMidiaDisplay({ data, onClose, theme = 'dark', playT
     load();
   }, [companyId]);
 
-const handleArteGerada = useCallback(async (novaArte: ArteGerada, novaEtapa: Etapa) => {
-  if (novaEtapa === 'gerando') {
-    setEtapa('gerando');
-    if (isMobile) setAbaAtiva('preview');
-    return;
-  }
-
-  // Compor logo sobre a arte no frontend via Canvas
-  let imageUrlFinal = novaArte.image_url;
-
-  if (novaArte.image_url && company?.logo_url) {
-    try {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-
-      // Carregar arte
-      const arte = new Image();
-      arte.crossOrigin = 'anonymous';
-      await new Promise<void>((res, rej) => {
-        arte.onload = () => res();
-        arte.onerror = rej;
-        arte.src = novaArte.image_url;
-      });
-
-      canvas.width = arte.naturalWidth;
-      canvas.height = arte.naturalHeight;
-      ctx.drawImage(arte, 0, 0);
-
-      // Carregar logo
-      const logo = new Image();
-      logo.crossOrigin = 'anonymous';
-      await new Promise<void>((res, rej) => {
-        logo.onload = () => res();
-        logo.onerror = rej;
-        logo.src = company.logo_url!;
-      });
-
-      // Logo ocupa 18% da largura
-      const logoW = Math.round(canvas.width * 0.18);
-      const logoH = Math.round(logo.naturalHeight * (logoW / logo.naturalWidth));
-      const margin = Math.round(canvas.width * 0.03);
-
-      // Posição baseada em logoPosition
-      const posMap: Record<LogoPosition, { x: number; y: number }> = {
-        top_left:     { x: margin,                       y: margin },
-        top_right:    { x: canvas.width - logoW - margin, y: margin },
-        bottom_left:  { x: margin,                       y: canvas.height - logoH - margin },
-        bottom_right: { x: canvas.width - logoW - margin, y: canvas.height - logoH - margin },
-        auto:         { x: canvas.width - logoW - margin, y: margin },
-      };
-
-      const pos = posMap[logoPosition];
-      ctx.drawImage(logo, pos.x, pos.y, logoW, logoH);
-
-      imageUrlFinal = canvas.toDataURL('image/png');
-    } catch (e) {
-      console.warn('[CriarMidia] Logo compose falhou (não crítico):', e);
-      // Continua sem logo
+  const handleArteGerada = useCallback(async (novaArte: ArteGerada, novaEtapa: Etapa) => {
+    if (novaEtapa === 'gerando') {
+      setEtapa('gerando');
+      if (isMobile) setAbaAtiva('preview');
+      return;
     }
-  }
 
-  setArte({ ...novaArte, image_url: imageUrlFinal });
-  setCaption(novaArte.caption);
-  setHashtags(novaArte.hashtags);
-  setEtapa(novaEtapa);
-  if (isMobile) setAbaAtiva('preview');
-}, [isMobile, company, logoPosition]);
+    let imageUrlFinal = novaArte.image_url;
+
+    if (novaArte.image_url && company?.logo_url) {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d')!;
+
+        const carregarImagem = (src: string): Promise<HTMLImageElement> =>
+          new Promise((res, rej) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => res(img);
+            img.onerror = rej;
+            img.src = src;
+          });
+
+        const [arte, logo] = await Promise.all([
+          carregarImagem(novaArte.image_url),
+          carregarImagem(company.logo_url!),
+        ]);
+
+        canvas.width  = arte.naturalWidth  || arte.width;
+        canvas.height = arte.naturalHeight || arte.height;
+
+        ctx.drawImage(arte, 0, 0, canvas.width, canvas.height);
+
+        const logoW = Math.round(canvas.width * 0.18);
+        const ratio = logo.naturalHeight / logo.naturalWidth;
+        const logoH = Math.round(logoW * ratio);
+        const margin = Math.round(canvas.width * 0.03);
+
+        const posMap: Record<LogoPosition, { x: number; y: number }> = {
+          top_left:     { x: margin,                         y: margin },
+          top_right:    { x: canvas.width  - logoW - margin, y: margin },
+          bottom_left:  { x: margin,                         y: canvas.height - logoH - margin },
+          bottom_right: { x: canvas.width  - logoW - margin, y: canvas.height - logoH - margin },
+          auto:         { x: canvas.width  - logoW - margin, y: margin },
+        };
+
+        const pos = posMap[logoPosition] ?? posMap.bottom_right;
+        ctx.drawImage(logo, pos.x, pos.y, logoW, logoH);
+
+        imageUrlFinal = canvas.toDataURL('image/png');
+      } catch (e) {
+        console.warn('[CriarMidia] Logo compose falhou:', e);
+      }
+    }
+
+    setArte({ ...novaArte, image_url: imageUrlFinal });
+    setCaption(novaArte.caption);
+    setHashtags(novaArte.hashtags);
+    setEtapa(novaEtapa);
+    if (isMobile) setAbaAtiva('preview');
+  }, [isMobile, company, logoPosition]);
 
   const handleCopiarCaption = useCallback(() => {
     const texto = `${caption}\n\n${hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}`;
@@ -645,12 +639,22 @@ const handleArteGerada = useCallback(async (novaArte: ArteGerada, novaEtapa: Eta
     setTimeout(() => setCopiado(false), 2000);
   }, [caption, hashtags]);
 
-  const handleBaixar = useCallback(() => {
+  const handleBaixar = useCallback(async () => {
     if (!arte?.image_url) return;
-    const a = document.createElement('a');
-    a.href = arte.image_url;
-    a.download = `post-${Date.now()}.jpg`;
-    a.click();
+    try {
+      const res = await fetch(arte.image_url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `post-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch {
+      window.open(arte.image_url, '_blank');
+    }
   }, [arte]);
 
   const handlePublicarFacebook = useCallback(async () => {

@@ -12,7 +12,7 @@ import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import {
   X, Send, Mic, Loader2, Download, Copy, Share2,
   Image as ImageIcon, Check, AlertCircle, RefreshCw,
-  Instagram, Facebook, ChevronDown, Sparkles,
+  Instagram, Facebook, ChevronDown, Sparkles, Volume2, VolumeX,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -541,6 +541,13 @@ export default function CriarMidiaDisplay({ data, onClose, theme = 'dark', playT
   const [publicando, setPublicando] = useState(false);
   const [temConexaoFacebook, setTemConexaoFacebook] = useState(false);
   const [publicadoFacebook, setPublicadoFacebook] = useState(false);
+  const [audioMutado, setAudioMutado] = useState(false);
+  const audioMutadoRef = useRef(false);
+
+  const effectivePlayText = useCallback(async (text: string) => {
+    if (audioMutadoRef.current || !playText) return;
+    return playText(text);
+  }, [playText]);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -641,9 +648,30 @@ export default function CriarMidiaDisplay({ data, onClose, theme = 'dark', playT
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-full hover:opacity-70 transition-opacity">
-            <X className="w-5 h-5" style={{ color: C.textMuted }} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setAudioMutado(prev => {
+                  audioMutadoRef.current = !prev;
+                  return !prev;
+                });
+              }}
+              className="p-2 rounded-lg transition-colors"
+              style={{
+                backgroundColor: audioMutado
+                  ? 'rgba(239,68,68,0.1)'
+                  : `${INSTAGRAM_PURPLE}20`,
+                color: audioMutado ? '#ef4444' : INSTAGRAM_PURPLE,
+              }}
+            >
+              {audioMutado
+                ? <VolumeX className="w-5 h-5" />
+                : <Volume2 className="w-5 h-5" />}
+            </button>
+            <button onClick={onClose} className="p-2 rounded-full hover:opacity-70 transition-opacity">
+              <X className="w-5 h-5" style={{ color: C.textMuted }} />
+            </button>
+          </div>
         </div>
 
         {/* Tabs mobile */}
@@ -675,7 +703,7 @@ export default function CriarMidiaDisplay({ data, onClose, theme = 'dark', playT
               formato={formato}
               logoPosition={logoPosition}
               onArteGerada={handleArteGerada}
-              playText={playText}
+              playText={effectivePlayText}
             />
           </div>
 

@@ -1053,27 +1053,117 @@ function AuxiliarCadastroInner({
         })).filter((p: ItemProduto) => p.nome);
         msgArquivo = `Encontrei ${produtosExtraidos.length} produto(s) na planilha. Verifique e confirme os dados.`;
 
-      } else if (ext === 'pdf' || ['jpg', 'jpeg', 'png', 'webp'].includes(ext ?? '')) {
-        // PDF/Imagem → base64 → GPT-4o Vision via edge
+} else if (ext === 'pdf' || ['jpg', 'jpeg', 'png', 'webp'].includes(ext ?? '')) {
+        // PDF/Imagem → GPT-4o Vision direto no frontend
+
+        // Adiciona mensagem de status
+        const msgUser: MensagemChat = {
+          role: 'user',
+          content: `📎 ${file.name}`,
+          timestamp: Date.now(),
+        };
+        const msgProcessando: MensagemChat = {
+          role: 'assistant',
+          content: `Analisando ${ext === 'pdf' ? 'o PDF' : 'a imagem'}... aguarde.`,
+          timestamp: Date.now(),
+        };
+        setHistorico(h => [...h, msgUser, msgProcessando]);
+        if (isMobile) setAbaAtiva('chat');
+
+        // Converte para base64
         const toBase64 = (f: File): Promise<string> => new Promise((res, rej) => {
           const reader = new FileReader();
-          reader.onload = () => res((reader.result as string).split(',')[1]);
+          reader.onload = () => res(reader.result as string); // data URL completa
           reader.onerror = rej;
           reader.readAsDataURL(f);
         });
 
-        const b64 = await toBase64(file);
-        const mediaType = ext === 'pdf' ? 'application/pdf' : `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+        const dataUrl = await toBase64(file);
+        const mediaType = ext === 'pdf'
+          ? 'application/pdf'
+          : `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+        const b64 = dataUrl.split(',')[1];
 
-        // Chama a edge com o arquivo em base64 para o GPT-4o extrair
-        const prompt = ext === 'pdf'
-          ? 'Este é um cardápio ou lista de produtos em PDF. Extraia todos os produtos com nome, descrição e preço em JSON.'
-          : 'Esta é uma imagem de cardápio ou lista de produtos. Extraia todos os produtos com nome, descrição e preço em JSON.';
+        // Monta conteúdo para GPT-4o Vision
+        // PDFs: GPT-4o aceita application/pdf diretamente via API
+        // Imagens: image/jpeg, image/png, image/webp
+        const userContent: any[] = [
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mediaType};base64,${b64}`,
+              detail: 'high',
+            },
+          },
+          {
+            type: 'text',
+            text: ext === 'pdf'
+              ? 'Este é um cardápio ou lista de produtos. Extraia TODOS os produtos que encontrar. Para cada produto retorne: nome, descrição (se houver), preço de venda. Retorne SOMENTE um JSON válido no formato: {"produtos": [{"nome": "...", "descricao": "...", "preco_venda": 0.00, "categoria": "..."}]}. Não inclua texto fora do JSON.'
+              : 'Esta é uma imagem de cardápio ou lista de produtos. Extraia TODOS os produtos visíveis. Para cada produto retorne: nome, descrição (se houver), preço de venda. Retorne SOMENTE um JSON válido no formato: {"produtos": [{"nome": "...", "descricao": "...", "preco_venda": 0.00, "categoria": "..."}]}. Não inclua texto fora do JSON.',
+          },
+        ];
 
-        await enviarMensagem(
-          `[ARQUIVO: ${file.name}]\nPor favor, analise este arquivo e extraia os produtos.\nTipo: ${mediaType}\nDados: data:${mediaType};base64,${b64.substring(0, 50)}...`
-        );
-        return; // A edge vai processar
+        // Chama GPT-4o Vision direto
+        const openaiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY ?? '';
+        const visionRes = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            max_tokens: 2000,
+            messages: [{ role: 'user', content: userContent }],
+          }),
+        });
+
+        if (!visionRes.ok) {
+          throw new Error(`Erro na API de visão: ${visionRes.status}`);
+        }
+
+        const visionData = await visionRes.json();
+        const rawText = visionData.choices?.[0]?.message?.content ?? '{}';
+
+        // Parse do JSON retornado
+        let produtosExtraidos: ItemProduto[] = [];
+        try {
+          const clean = rawText.replace(/```json|```/g, '').trim();
+          const parsed = JSON.parse(clean);
+          produtosExtraidos = (parsed.produtos ?? []).map((p: any) => ({
+            nome:           String(p.nome ?? '').trim(),
+            descricao:      p.descricao ?? '',
+            categoria:      p.categoria ?? '',
+            preco_venda:    parseFloat(p.preco_venda) || 0,
+            preco_custo:    0,
+            unidade:        'un',
+            estoque_atual:  0,
+            estoque_minimo: 0,
+            imagem_url:     '',
+            ean:            '',
+            marca:          '',
+          })).filter((p: ItemProduto) => p.nome);
+        } catch {
+          throw new Error('Não consegui interpretar os produtos do arquivo. Tente um arquivo com texto mais legível.');
+        }
+
+        if (produtosExtraidos.length === 0) {
+          throw new Error('Nenhum produto encontrado no arquivo. Verifique se o conteúdo está legível.');
+        }
+
+        // Atualiza estado
+        setItens(produtosExtraidos);
+        if (isMobile) setAbaAtiva('produtos');
+        setStatusIA('ready');
+
+        // Substitui a mensagem "processando" pelo resultado
+        const msgResultado: MensagemChat = {
+          role: 'assistant',
+          content: `Encontrei ${produtosExtraidos.length} produto${produtosExtraidos.length !== 1 ? 's' : ''} em ${file.name}! ✅\n\nRevisão os dados no painel ao lado — você pode editar qualquer campo antes de salvar.\n\n💡 Lembre-se de adicionar as imagens de cada produto (campo URL de imagem).`,
+          timestamp: Date.now(),
+        };
+        setHistorico(h => [...h.slice(0, -1), msgResultado]); // substitui o "processando"
+        return;
 
       } else {
         await enviarMensagem(`Arquivo não suportado: ${file.name}. Use CSV, XLS, XLSX, PDF ou imagem.`);

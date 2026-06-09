@@ -151,6 +151,7 @@ const AI_ASSISTANT_FUNCTIONS = new Set([
   'criar_midia',
   'analisar_planilha',
   'emitir_nota',
+  'cadastrar_produto',
 ]);
 
 // ── Badge helper ───────────────────────────────────────────────────────────────

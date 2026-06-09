@@ -106,8 +106,8 @@ export default function ScenePublicar() {
     <Btn key="copy"   {...GRAY}  onClick={openModal}><IconCopy /> Copiar Link</Btn>,
     <Btn key="qr"     {...GRAY}  onClick={openModal}><IconQR /> QR Code</Btn>,
     <Btn key="google" {...GRAY}><IconGoogle /> Serviços Google</Btn>,
-    <Btn key="meta"   {...GRAY}><IconMeta /> WhatsApp / Instagram / Facebook</Btn>,
   ]
+  const row1Extra = <Btn key="meta" {...GRAY}><IconMeta /> WhatsApp / Instagram / Facebook</Btn>
   const row2 = [
     <Btn key="users"  {...INDG}><IconUsers /> Usuários / Totens</Btn>,
     <Btn key="bot"    {...INDG}><IconBot /> Funções</Btn>,
@@ -212,8 +212,9 @@ export default function ScenePublicar() {
                 </div>
 
                 {/* Direita: 2 grupos de botões, 2 por linha */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
                   <BtnGrid items={row1} />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>{row1Extra}</div>
                   <BtnGrid items={row2} />
                 </div>
               </div>

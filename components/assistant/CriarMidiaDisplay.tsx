@@ -55,6 +55,7 @@ interface ArteGerada {
   caption: string;
   hashtags: string[];
   prompt_used: string;
+  logo_base64?: string | null;
 }
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
@@ -377,6 +378,7 @@ function ChatMidia({
         caption: data.caption ?? '',
         hashtags: data.hashtags ?? [],
         prompt_used: data.prompt_used ?? '',
+        logo_base64: data.logo_base64 ?? null,
       }, 'preview');
 
       playText?.('Sua arte está pronta! Confira o preview ao lado.');
@@ -595,7 +597,7 @@ export default function CriarMidiaDisplay({ data, onClose, theme = 'dark', playT
 
         const [arte, logo] = await Promise.all([
           carregarImagem(novaArte.image_url),
-          carregarImagem(company.logo_url!),
+          carregarImagem(novaArte.logo_base64),
         ]);
 
         canvas.width  = arte.naturalWidth  || arte.width;
@@ -622,6 +624,8 @@ export default function CriarMidiaDisplay({ data, onClose, theme = 'dark', playT
         imageUrlFinal = canvas.toDataURL('image/png');
       } catch (e) {
         console.warn('[CriarMidia] Logo compose falhou:', e);
+        // Se falhou por CORS, a imageUrlFinal ainda é a original — não corta nada
+        imageUrlFinal = novaArte.image_url;
       }
     }
 

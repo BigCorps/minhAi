@@ -1,7 +1,7 @@
 // components/dashboard/functions/FunctionCard.tsx
 'use client';
 
-import { Settings, CreditCard, Play } from 'lucide-react';
+import { Settings, CreditCard, Play, Sparkles } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
 interface FunctionCardProps {
@@ -141,6 +141,18 @@ const CONFIGURABLE_FUNCTIONS = [
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];
 
+// ── Funções com IA generativa — exibem badge Sparks em vez de "IA" ────────────
+const AI_ASSISTANT_FUNCTIONS = new Set([
+  'identificar_fraude',
+  'fazer_pedido',
+  'agendar_compromisso',
+  'orcamento',
+  'fichas_producao_conversacional',
+  'criar_midia',
+  'analisar_planilha',
+  'emitir_nota',
+]);
+
 // ── Badge helper ───────────────────────────────────────────────────────────────
 function FunctionBadges({
   fn,
@@ -153,12 +165,20 @@ function FunctionBadges({
     ? 'text-[10px] font-semibold px-1.5 py-0.5 rounded-full'
     : 'text-xs font-medium px-2 py-0.5 rounded-full';
 
+  const isAiAssistant = AI_ASSISTANT_FUNCTIONS.has(fn.function_key);
+
   return (
     <div className="flex items-center gap-1 flex-shrink-0">
-      {/* Todas as funções funcionam na IA */}
-      <span className={`${base} bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300`}>
-        IA
-      </span>
+      {/* Badge principal: Sparkles (roxo) para funções com IA generativa, "IA" (azul) para as demais */}
+      {isAiAssistant ? (
+        <span className={`${base} inline-flex items-center gap-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300`}>
+          <Sparkles className={compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
+        </span>
+      ) : (
+        <span className={`${base} bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300`}>
+          IA
+        </span>
+      )}
 
       {/* Disponível também nos serviços Meta */}
       {fn.enabled_meta && (

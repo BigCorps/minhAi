@@ -1,14 +1,15 @@
 'use client'
 // app/tour/page.tsx
-// Stage 1 = Apresentação
-// Stage 2 = Auxiliares de IA       → TourStage3
-// Stage 3 = Página do Assistente   → TourStage2
-// Stage 4 = Do Zero ao Ar          → (futuro)
+// 1 = Apresentação       → TourStage1
+// 2 = Auxiliares de IA   → TourStage3
+// 3 = Página Assistente  → TourStage2
+// 4 = Do Zero ao Ar      → TourStage4
 
 import { useState, useCallback } from 'react'
 import TourStage1 from '@/components/tour/TourStage1'
 import TourStage2 from '@/components/tour/TourStage2'
 import TourStage3 from '@/components/tour/TourStage3'
+import TourStage4 from '@/components/tour/TourStage4'
 import TourManager from '@/components/tour/TourManager'
 
 type PageState = 'playing' | 'selecting'
@@ -19,25 +20,17 @@ export default function TourPage() {
   const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>('dark')
 
   const handleComplete    = useCallback(() => setPageState('selecting'), [])
-  const handleSelectStage = useCallback((stage: number) => {
-    setActiveStage(stage)
-    setPageState('playing')
-  }, [])
+  const handleSelectStage = useCallback((stage: number) => { setActiveStage(stage); setPageState('playing') }, [])
   const handleThemeChange = useCallback((t: 'dark' | 'light') => setCurrentTheme(t), [])
 
-  // Stage 2 (Auxiliares) → TourStage3
-  // Stage 3 (Página do Assistente) → TourStage2
+  const common = { initialTheme: currentTheme, onComplete: handleComplete, onThemeChange: handleThemeChange }
+
   return (
     <>
-      {pageState === 'playing' && activeStage === 1 && (
-        <TourStage1 key="s1" initialTheme={currentTheme} onComplete={handleComplete} onThemeChange={handleThemeChange} />
-      )}
-      {pageState === 'playing' && activeStage === 2 && (
-        <TourStage3 key="s2" initialTheme={currentTheme} onComplete={handleComplete} onThemeChange={handleThemeChange} />
-      )}
-      {pageState === 'playing' && activeStage === 3 && (
-        <TourStage2 key="s3" initialTheme={currentTheme} onComplete={handleComplete} onThemeChange={handleThemeChange} />
-      )}
+      {pageState === 'playing' && activeStage === 1 && <TourStage1 key="s1" {...common} />}
+      {pageState === 'playing' && activeStage === 2 && <TourStage3 key="s2" {...common} />}
+      {pageState === 'playing' && activeStage === 3 && <TourStage2 key="s3" {...common} />}
+      {pageState === 'playing' && activeStage === 4 && <TourStage4 key="s4" {...common} />}
       {pageState === 'selecting' && (
         <TourManager
           activeStage={activeStage}

@@ -6,7 +6,14 @@ import { createPortal } from 'react-dom'
 import TourStage1 from './TourStage1'
 import TourStage2 from './TourStage2'
 import TourStage3 from './TourStage3'
+import TourStage4 from './TourStage4'
 import TourManager from './TourManager'
+
+// Mapeamento: ID do stage no Manager → componente
+// 1 = Apresentação       → TourStage1
+// 2 = Auxiliares de IA   → TourStage3
+// 3 = Página Assistente  → TourStage2
+// 4 = Do Zero ao Ar      → TourStage4
 
 interface TourModalProps {
   isOpen: boolean
@@ -17,10 +24,10 @@ interface TourModalProps {
 type ModalState = 'playing' | 'selecting'
 
 export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: TourModalProps) {
-  const [mounted, setMounted] = useState(false)
-  const [visible, setVisible] = useState(false)
-  const [modalState, setModalState] = useState<ModalState>('playing')
-  const [activeStage, setActiveStage] = useState(1)
+  const [mounted, setMounted]           = useState(false)
+  const [visible, setVisible]           = useState(false)
+  const [modalState, setModalState]     = useState<ModalState>('playing')
+  const [activeStage, setActiveStage]   = useState(1)
   const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>(initialTheme)
   const selectorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -37,9 +44,7 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
   }, [isOpen])
 
   const handleStageComplete = useCallback(() => {
-    selectorTimerRef.current = setTimeout(() => {
-      setModalState('selecting')
-    }, 2000)
+    selectorTimerRef.current = setTimeout(() => setModalState('selecting'), 2000)
   }, [])
 
   const handleSelectStage = useCallback((stage: number) => {
@@ -54,12 +59,9 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
   }, [onClose])
 
   useEffect(() => {
-    return () => {
-      if (selectorTimerRef.current) clearTimeout(selectorTimerRef.current)
-    }
+    return () => { if (selectorTimerRef.current) clearTimeout(selectorTimerRef.current) }
   }, [])
 
-  // Fixa o body para que position:fixed escape do overflow:hidden da landing
   useEffect(() => {
     const landingWrapper = document.querySelector<HTMLElement>('[data-landing-wrapper]')
     if (isOpen) {
@@ -83,8 +85,16 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
 
   if (!mounted || !isOpen) return null
 
+  const stageProps = {
+    initialTheme: currentTheme,
+    autoPlay: true,
+    inModal: true,
+    onClose: handleClose,
+    onComplete: handleStageComplete,
+    onThemeChange: setCurrentTheme,
+  }
+
   return createPortal(
-    /* Overlay escuro */
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center"
       style={{
@@ -96,10 +106,6 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
         pointerEvents: visible ? 'auto' : 'none',
       }}
     >
-      {/*
-       * Mobile: 90vw × 90dvh — aproveita a tela pequena.
-       * Desktop (md+): 80vw × 80dvh — elimina espaço vazio excessivo.
-       */}
       <div
         className="relative rounded-2xl overflow-hidden shadow-2xl w-[90vw] h-[90dvh] md:w-[80vw] md:h-[80dvh]"
         style={{
@@ -107,41 +113,10 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
           transition: 'transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1)',
         }}
       >
-        {modalState === 'playing' && activeStage === 1 && (
-          <TourStage1
-            key="stage-1"
-            initialTheme={currentTheme}
-            autoPlay={true}
-            inModal={true}
-            onClose={handleClose}
-            onComplete={handleStageComplete}
-            onThemeChange={setCurrentTheme}
-          />
-        )}
-
-        {modalState === 'playing' && activeStage === 2 && (
-          <TourStage3
-            key="stage-2"
-            initialTheme={currentTheme}
-            autoPlay={true}
-            inModal={true}
-            onClose={handleClose}
-            onComplete={handleStageComplete}
-            onThemeChange={setCurrentTheme}
-          />
-        )}
-
-        {modalState === 'playing' && activeStage === 3 && (
-          <TourStage2
-            key="stage-3"
-            initialTheme={currentTheme}
-            autoPlay={true}
-            inModal={true}
-            onClose={handleClose}
-            onComplete={handleStageComplete}
-            onThemeChange={setCurrentTheme}
-          />
-        )}
+        {modalState === 'playing' && activeStage === 1 && <TourStage1 key="s1" {...stageProps} />}
+        {modalState === 'playing' && activeStage === 2 && <TourStage3 key="s2" {...stageProps} />}
+        {modalState === 'playing' && activeStage === 3 && <TourStage2 key="s3" {...stageProps} />}
+        {modalState === 'playing' && activeStage === 4 && <TourStage4 key="s4" {...stageProps} />}
 
         {modalState === 'selecting' && (
           <TourManager

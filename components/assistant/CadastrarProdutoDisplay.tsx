@@ -845,7 +845,7 @@ function AuxiliarCadastroInner({
     audioMutadoRef.current = audioMutado;
   }, [audioMutado]);
 
-  const playText = useCallback(async (text: string) => {
+const playText = useCallback(async (text: string) => {
     if (audioMutadoRef.current) return;
     audioQueueRef.current.push(text);
     if (isPlayingRef.current) return;
@@ -860,6 +860,8 @@ function AuxiliarCadastroInner({
       }
     }
     isPlayingRef.current = false;
+    // Restaura foco no input após TTS terminar (igual FazerPedidoDisplay)
+    inputRef.current?.focus({ preventScroll: true });
   }, [playTextProp]);
 
 // Carrega pdfjs via CDN (mesma abordagem do ConverterArquivoDisplay)
@@ -1258,7 +1260,7 @@ function AuxiliarCadastroInner({
             imagem_url:       item.imagem_url?.trim() || null,
             ean:              item.ean?.trim() || null,
             marca:            item.marca?.trim() || null,
-            controla_estoque: true,
+            controla_estoque: false,
             is_active:        true,
             is_favorito:      false,
           })
@@ -1645,8 +1647,19 @@ function AuxiliarCadastroInner({
                     CSV / Excel / PDF / Imagem
                   </button>
 
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
+<button
+                    onClick={() => {
+                      const header = 'nome,preco_venda,preco_custo,categoria,unidade,estoque_atual,ean,imagem_url,marca';
+                      const exemplo = 'Pizza Margherita,45.90,18.00,Pizzas,un,0,,https://exemplo.com/foto.jpg,';
+                      const csv = `${header}\n${exemplo}`;
+                      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'modelo-produtos.csv';
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 5,
                       padding: '5px 10px', borderRadius: 8,
@@ -1656,7 +1669,7 @@ function AuxiliarCadastroInner({
                     }}
                   >
                     <IcoCsv c={C.textMuted} />
-                    Importar CSV
+                    Baixar modelo CSV
                   </button>
                 </div>
 

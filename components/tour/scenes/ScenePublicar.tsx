@@ -48,9 +48,9 @@ function BtnGrid({ items }: { items: React.ReactNode[] }) {
   const rows: React.ReactNode[][] = []
   for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2))
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end' }}>
       {rows.map((row, ri) => (
-        <div key={ri} style={{ display: 'flex', gap: 5 }}>
+        <div key={ri} style={{ display: 'flex', gap: 5, justifyContent: 'flex-end' }}>
           {row.map((btn, bi) => (
             <div key={bi}>{btn}</div>
           ))}

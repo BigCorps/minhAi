@@ -862,6 +862,19 @@ function AuxiliarCadastroInner({
     isPlayingRef.current = false;
   }, [playTextProp]);
 
+// Carrega pdfjs via CDN (mesma abordagem do ConverterArquivoDisplay)
+  useEffect(() => {
+    if (typeof window === 'undefined' || (window as any).pdfjsLib) return;
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.async = true;
+    script.onload = () => {
+      (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    };
+    document.body.appendChild(script);
+  }, []);
+  
   // ── Saudação inicial ────────────────────────────────────────────────────────
   useEffect(() => {
     const saudacao: MensagemChat = {
@@ -981,9 +994,8 @@ function AuxiliarCadastroInner({
         fd.append('model', 'whisper-1');
         fd.append('language', 'pt');
         try {
-          const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        const res = await fetch('/api/voice/transcribe', {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY ?? ''}` },
             body: fd,
           });
           const json = await res.json();
@@ -1054,9 +1066,8 @@ function AuxiliarCadastroInner({
         msgArquivo = `Encontrei ${produtosExtraidos.length} produto(s) na planilha. Verifique e confirme os dados.`;
 
 } else if (ext === 'pdf' || ['jpg', 'jpeg', 'png', 'webp'].includes(ext ?? '')) {
-        // PDF/Imagem → GPT-4o Vision direto no frontend
 
-        // Adiciona mensagem de status
+        // Mensagens de status no chat
         const msgUser: MensagemChat = {
           role: 'user',
           content: `📎 ${file.name}`,
@@ -1064,76 +1075,126 @@ function AuxiliarCadastroInner({
         };
         const msgProcessando: MensagemChat = {
           role: 'assistant',
-          content: `Analisando ${ext === 'pdf' ? 'o PDF' : 'a imagem'}... aguarde.`,
+          content: `Analisando ${ext === 'pdf' ? 'o PDF' : 'a imagem'}... aguarde ⏳`,
           timestamp: Date.now(),
         };
         setHistorico(h => [...h, msgUser, msgProcessando]);
         if (isMobile) setAbaAtiva('chat');
 
-        // Converte para base64
-        const toBase64 = (f: File): Promise<string> => new Promise((res, rej) => {
-          const reader = new FileReader();
-          reader.onload = () => res(reader.result as string); // data URL completa
-          reader.onerror = rej;
-          reader.readAsDataURL(f);
-        });
-
-        const dataUrl = await toBase64(file);
-        const mediaType = ext === 'pdf'
-          ? 'application/pdf'
-          : `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-        const b64 = dataUrl.split(',')[1];
-
-        // Monta conteúdo para GPT-4o Vision
-        // PDFs: GPT-4o aceita application/pdf diretamente via API
-        // Imagens: image/jpeg, image/png, image/webp
-        const userContent: any[] = [
-          {
-            type: 'image_url',
-            image_url: {
-              url: `data:${mediaType};base64,${b64}`,
-              detail: 'high',
-            },
-          },
-          {
-            type: 'text',
-            text: ext === 'pdf'
-              ? 'Este é um cardápio ou lista de produtos. Extraia TODOS os produtos que encontrar. Para cada produto retorne: nome, descrição (se houver), preço de venda. Retorne SOMENTE um JSON válido no formato: {"produtos": [{"nome": "...", "descricao": "...", "preco_venda": 0.00, "categoria": "..."}]}. Não inclua texto fora do JSON.'
-              : 'Esta é uma imagem de cardápio ou lista de produtos. Extraia TODOS os produtos visíveis. Para cada produto retorne: nome, descrição (se houver), preço de venda. Retorne SOMENTE um JSON válido no formato: {"produtos": [{"nome": "...", "descricao": "...", "preco_venda": 0.00, "categoria": "..."}]}. Não inclua texto fora do JSON.',
-          },
-        ];
-
-        // Chama API route server-side (nunca expõe a OpenAI key no cliente)
-        const visionRes = await fetch('/api/vision/extract-products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64: b64, mediaType, fileName: file.name }),
-        });
-
-        if (!visionRes.ok) {
-          const errData = await visionRes.json().catch(() => ({}));
-          throw new Error(errData.error ?? `Erro ao processar arquivo: ${visionRes.status}`);
+        // ── Helpers ──────────────────────────────────────────────────────────
+        function canvasToBase64(canvas: HTMLCanvasElement, quality = 0.80): string {
+          return canvas.toDataURL('image/jpeg', quality).split(',')[1];
+        }
+        function resizeCanvas(src: HTMLCanvasElement, maxDim = 1600): HTMLCanvasElement {
+          const scale = Math.min(maxDim / src.width, maxDim / src.height, 1);
+          if (scale === 1) return src;
+          const dst = document.createElement('canvas');
+          dst.width  = Math.round(src.width  * scale);
+          dst.height = Math.round(src.height * scale);
+          dst.getContext('2d')!.drawImage(src, 0, 0, dst.width, dst.height);
+          return dst;
+        }
+        async function extrairDePagina(b64: string): Promise<any[]> {
+          const res = await fetch('/api/vision/extract-products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ base64: b64, mediaType: 'image/jpeg', fileName: file.name }),
+          });
+          if (!res.ok) return [];
+          const data = await res.json();
+          return data.produtos ?? [];
         }
 
-        const visionData = await visionRes.json();
-        let produtosExtraidos: ItemProduto[] = visionData.produtos ?? [];
+        let todosOsProdutos: any[] = [];
 
-        if (produtosExtraidos.length === 0) {
-          throw new Error('Nenhum produto encontrado no arquivo. Verifique se o conteúdo está legível.');
+        if (ext === 'pdf') {
+          // ── PDF: aguarda pdfjs (carregado via CDN no useEffect) ────────────
+          let attempts = 0;
+          while (!(window as any).pdfjsLib && attempts < 20) {
+            await new Promise(r => setTimeout(r, 250));
+            attempts++;
+          }
+          if (!(window as any).pdfjsLib) {
+            throw new Error('Biblioteca PDF não carregou. Tente novamente.');
+          }
+          const pdfjsLib = (window as any).pdfjsLib;
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          const numPages = pdf.numPages;
+
+          setHistorico(h => {
+            const u = [...h];
+            u[u.length - 1] = { role: 'assistant', content: `Processando ${numPages} página${numPages > 1 ? 's' : ''} do PDF...`, timestamp: Date.now() };
+            return u;
+          });
+
+          for (let i = 1; i <= numPages; i++) {
+            const page     = await pdf.getPage(i);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas   = document.createElement('canvas');
+            canvas.width   = viewport.width;
+            canvas.height  = viewport.height;
+            await page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise;
+            const b64 = canvasToBase64(resizeCanvas(canvas, 1600), 0.80);
+
+            setHistorico(h => {
+              const u = [...h];
+              u[u.length - 1] = { role: 'assistant', content: `Analisando página ${i} de ${numPages}...`, timestamp: Date.now() };
+              return u;
+            });
+
+            const produtos = await extrairDePagina(b64);
+            todosOsProdutos = [...todosOsProdutos, ...produtos];
+          }
+
+        } else {
+          // ── Imagem direta: redimensionar via canvas e enviar ───────────────
+          const dataUrl = await new Promise<string>((res, rej) => {
+            const reader = new FileReader();
+            reader.onload  = () => res(reader.result as string);
+            reader.onerror = rej;
+            reader.readAsDataURL(file);
+          });
+          const img = await new Promise<HTMLImageElement>((res, rej) => {
+            const el = new Image();
+            el.onload  = () => res(el);
+            el.onerror = rej;
+            el.src = dataUrl;
+          });
+          const canvas = document.createElement('canvas');
+          canvas.width  = img.width;
+          canvas.height = img.height;
+          canvas.getContext('2d')!.drawImage(img, 0, 0);
+          const b64 = canvasToBase64(resizeCanvas(canvas, 1600), 0.85);
+          todosOsProdutos = await extrairDePagina(b64);
         }
 
-        // Atualiza estado
-        setItens(produtosExtraidos);
+        // ── Deduplicar por nome ───────────────────────────────────────────────
+        const vistos = new Set<string>();
+        const produtosUnicos = todosOsProdutos.filter(p => {
+          const key = p.nome?.toLowerCase().trim();
+          if (!key || vistos.has(key)) return false;
+          vistos.add(key);
+          return true;
+        });
+
+        if (produtosUnicos.length === 0) {
+          throw new Error('Nenhum produto encontrado. Verifique se o arquivo está legível.');
+        }
+
+        setItens(produtosUnicos);
         if (isMobile) setAbaAtiva('produtos');
         setStatusIA('ready');
 
-        // Substitui a mensagem "processando" pelo resultado
-        const msgResultado: MensagemChat = {
-          role: 'assistant',
-          content: `Encontrei ${produtosExtraidos.length} produto${produtosExtraidos.length !== 1 ? 's' : ''} em ${file.name}! ✅\n\nRevisão os dados no painel ao lado — você pode editar qualquer campo antes de salvar.\n\n💡 Lembre-se de adicionar as imagens de cada produto (campo URL de imagem).`,
-          timestamp: Date.now(),
-        };
-        setHistorico(h => [...h.slice(0, -1), msgResultado]); // substitui o "processando"
+        setHistorico(h => {
+          const u = [...h];
+          u[u.length - 1] = {
+            role: 'assistant',
+            content: `Encontrei ${produtosUnicos.length} produto${produtosUnicos.length !== 1 ? 's' : ''} em ${file.name}! ✅\n\nRevise os dados no painel ao lado — você pode editar qualquer campo antes de salvar.\n\n💡 Para adicionar imagens, use o campo URL em cada produto ou clique em 🔍 Google.`,
+            timestamp: Date.now(),
+          };
+          return u;
+        });
         return;
 
       } else {

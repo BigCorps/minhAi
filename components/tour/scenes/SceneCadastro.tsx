@@ -2,7 +2,7 @@
 // components/tour/scenes/SceneCadastro.tsx
 
 import Image from 'next/image'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 
 // ─── Ícones sociais ────────────────────────────────────────────────────────
 const GoogleIcon = () => (
@@ -19,21 +19,51 @@ const FacebookIcon = () => (
   </svg>
 )
 
+// ─── Tamanhos base de cada "cena" ──────────────────────────────────────────
+// Form: 340px wide, ~520px tall (estimado com todos os campos)
+// Dash: 900px wide, 560px tall
+const FORM_BASE_W = 340
+const FORM_BASE_H = 520
+const DASH_BASE_W = 900
+const DASH_BASE_H = 560
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  COMPONENTE PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════════════
 export default function SceneCadastro() {
-  const [phase, setPhase]         = useState<'form' | 'dash'>('form')
+  const [phase, setPhase]             = useState<'form' | 'dash'>('form')
   const [formOpacity, setFormOpacity] = useState(1)
   const [dashOpacity, setDashOpacity] = useState(0)
   const [emailTyped, setEmailTyped]   = useState('')
   const [passTyped, setPassTyped]     = useState('')
   const [submitting, setSubmitting]   = useState(false)
 
+  // ─── Escala responsiva ─────────────────────────────────────────────────
+  const containerRef              = useRef<HTMLDivElement>(null)
+  const [formScale, setFormScale] = useState(1)
+  const [dashScale, setDashScale] = useState(1)
+
+  const recalcScale = useCallback(() => {
+    const el = containerRef.current
+    if (!el) return
+    const { width: cw, height: ch } = el.getBoundingClientRect()
+    const pad = 24 // breathing room
+    const aw  = cw - pad
+    const ah  = ch - pad
+    setFormScale(Math.min(1, aw / FORM_BASE_W, ah / FORM_BASE_H))
+    setDashScale(Math.min(1, aw / DASH_BASE_W, ah / DASH_BASE_H))
+  }, [])
+
+  useEffect(() => {
+    recalcScale()
+    const ro = new ResizeObserver(recalcScale)
+    if (containerRef.current) ro.observe(containerRef.current)
+    return () => ro.disconnect()
+  }, [recalcScale])
+
   const EMAIL = 'cafe@exemplo.com.br'
   const PASS  = '••••••••'
 
-  // Timers separados por responsabilidade para evitar cancelamento indevido
   const seqTimers  = useRef<ReturnType<typeof setTimeout>[]>([])
   const loopTimers = useRef<ReturnType<typeof setTimeout>[]>([])
 
@@ -60,7 +90,6 @@ export default function SceneCadastro() {
   useEffect(() => {
     if (phase !== 'dash') return
     clearLoop()
-    // Fica 5s no dash, depois faz fade-out e volta ao form
     addLoop(setTimeout(() => {
       setDashOpacity(0)
       addLoop(setTimeout(() => {
@@ -75,7 +104,7 @@ export default function SceneCadastro() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
-  // ── Sequência de digitação (só roda no form) ──────────────────────────
+  // ── Sequência de digitação ─────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'form') return
     clearSeq()
@@ -100,7 +129,7 @@ export default function SceneCadastro() {
         addSeq(setTimeout(() => {
           setFormOpacity(0)
           addSeq(setTimeout(() => {
-            setPhase('dash') // loop-effect acima assume daqui
+            setPhase('dash')
           }, 400))
         }, 1100))
       }, 500))
@@ -115,23 +144,30 @@ export default function SceneCadastro() {
   //  RENDER
   // ═══════════════════════════════════════════════════════════════════════
   return (
-    <div style={{
-      width: '100%', height: '100%',
-      background: 'linear-gradient(135deg,#020617 0%,#0f172a 50%,#020617 100%)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 16, boxSizing: 'border-box', position: 'relative', overflow: 'hidden',
-    }}>
+    <div
+      ref={containerRef}
+      style={{
+        width: '100%', height: '100%',
+        background: 'linear-gradient(135deg,#020617 0%,#0f172a 50%,#020617 100%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden', position: 'relative',
+      }}
+    >
 
       {/* ══════════ FORMULÁRIO ══════════ */}
       <div style={{
         position: 'absolute', inset: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 16, boxSizing: 'border-box',
         opacity: phase === 'form' ? formOpacity : 0,
         pointerEvents: phase === 'form' ? 'auto' : 'none',
         transition: 'opacity 350ms ease',
       }}>
-        <div style={{ width: '100%', maxWidth: 340 }}>
+        {/* Wrapper escalável — tamanho fixo base, reduzido via scale */}
+        <div style={{
+          width: FORM_BASE_W,
+          transform: `scale(${formScale})`,
+          transformOrigin: 'center center',
+        }}>
           <div style={{
             background: 'rgba(30,41,59,0.6)',
             border: '0.5px solid rgba(255,255,255,0.1)',
@@ -146,7 +182,6 @@ export default function SceneCadastro() {
               <p style={{ color: '#fff', fontWeight: 700, fontSize: 14, marginTop: 6 }}>Criar Conta</p>
               <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Crie sua conta para começar</p>
             </div>
-
 
             {/* Divisor */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0', color: 'rgba(255,255,255,0.25)', fontSize: 10 }}>
@@ -210,13 +245,13 @@ export default function SceneCadastro() {
             </button>
 
             {/* Divisor */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, marginTop: 14, color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>
               <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
               <span>ou</span>
               <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
             </div>
- 
-            {/* Botões sociais empilhados */}
+
+            {/* Botões sociais */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
               {[
                 { label: 'Continuar com Google',   icon: <GoogleIcon /> },
@@ -232,7 +267,7 @@ export default function SceneCadastro() {
                 </div>
               ))}
             </div>
- 
+
             {/* Link login */}
             <p style={{ textAlign: 'center', color: 'rgba(96,165,250,0.8)', fontSize: 11, margin: 0 }}>
               Não tem conta? Criar conta
@@ -245,12 +280,18 @@ export default function SceneCadastro() {
       <div style={{
         position: 'absolute', inset: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 16, boxSizing: 'border-box',
         opacity: phase === 'dash' ? dashOpacity : 0,
         pointerEvents: phase === 'dash' ? 'auto' : 'none',
         transition: 'opacity 350ms ease',
       }}>
-        <div style={{ width: '100%', maxWidth: 900, height: '100%', maxHeight: 560 }}>
+        {/* Wrapper escalável — tamanho base 900×560, reduzido via scale */}
+        <div style={{
+          width: DASH_BASE_W,
+          height: DASH_BASE_H,
+          transform: `scale(${dashScale})`,
+          transformOrigin: 'center center',
+          flexShrink: 0,
+        }}>
           <div style={{
             width: '100%', height: '100%',
             display: 'flex', flexDirection: 'column',
@@ -267,7 +308,6 @@ export default function SceneCadastro() {
               <Image src="/logo.png" alt="minhAi" width={60} height={20} loading="eager"
                 style={{ height: 20, width: 'auto', objectFit: 'contain' }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {/* Workspace selector */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)',
@@ -276,12 +316,11 @@ export default function SceneCadastro() {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 14, height: 14 }}>
                     <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
                   </svg>
-                  Casa
+                  Café
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 10, height: 10 }}>
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </div>
-                {/* Sol */}
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth={2} style={{ width: 14, height: 14 }}>
                     <circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
@@ -289,7 +328,6 @@ export default function SceneCadastro() {
                     <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
                   </svg>
                 </div>
-                {/* Avatar — xícara laranja igual SceneMidia */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <div style={{
                     width: 28, height: 28, borderRadius: '50%', background: '#de691b',
@@ -307,7 +345,7 @@ export default function SceneCadastro() {
               </div>
             </div>
 
-            {/* ── Body — overflow hidden, sem scroll ── */}
+            {/* ── Body ── */}
             <div style={{ flex: 1, padding: 16, display: 'flex', flexDirection: 'column', gap: 10, overflow: 'hidden' }}>
 
               {/* Welcome row */}
@@ -367,18 +405,18 @@ export default function SceneCadastro() {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9 }}>Progresso de Uso</span>
-                    <span style={{ color: '#60a5fa', fontSize: 9, fontWeight: 600 }}>8853 disponíveis</span>
+                    <span style={{ color: '#60a5fa', fontSize: 9, fontWeight: 600 }}>20 disponíveis</span>
                   </div>
                   <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: '85%', background: '#3b82f6', borderRadius: 3 }} />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 8 }}>1568 gastos</span>
-                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 8 }}>Total: 10421</span>
+                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 8 }}>0 gastos</span>
+                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 8 }}>Total: 20</span>
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, flexShrink: 0 }}>
-                  <div style={{ color: '#fff', fontSize: 20, fontWeight: 700, lineHeight: 1 }}>8853</div>
+                  <div style={{ color: '#fff', fontSize: 20, fontWeight: 700, lineHeight: 1 }}>20</div>
                   <button style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 7, padding: '5px 10px', fontSize: 9, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 10, height: 10 }}>
                       <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 102.13-9.36L1 10" />

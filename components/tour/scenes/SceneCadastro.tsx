@@ -1,27 +1,23 @@
 'use client'
 // components/tour/scenes/SceneCadastro.tsx
 
+import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 
-// ─── Logo em base64 (mesmo usado no minhai_tour_loop.html) ───────────────────
-// Se preferir usar o arquivo público, troque por: const LOGO_SRC = '/logo.png'
-const LOGO_SRC =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAG8AAAAoCAYAAADwmKS0AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAAcO0lEQVR42u2beXBc133+3nv37gYQi0AI4r4fBAiS4CqCFEVRFCVLlCzJkmXLjuN0avfYjZNJJ+14mibpxGnaJk7ipJO6TtJJmiZtJm3qJm5sR7YpW7YsUhJFgSS4gyQAEgcBEMR+773XP4gFRR4gFiCxUH+ZeTPvzr3nnvN9598591cAyNvv7AhQhUAIAcBb/yRAyf/YY3gPvA9kMBWQGgqJngUNW7IorXChGXD2WBkTHdFfm1Xfg/c9AkOkBsmSu3+ojP/+8Q+TkwemJCOrnoY8oshNz7XW1VzjsD/fgeqce+R8Z+R8Z+R8Z+R8Z+R8Z+R8Z+R8Z+T+Z+R8bOR8Y+R8Y+R8Y+R8Y+R8Y+R8Y+R8Y+R8YOR8YOR8YOR8YOR8YOR8YOR8YOR8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOT8YOAAAAABJRU5ErkJggg=='
-
-// ─── Dados do gráfico (extraídos do HTML original) ─────────────────────────
+// ─── Dados do gráfico ──────────────────────────────────────────────────────
 const CHART_PTS = [
-  { d: '10/05', b: 9900, a: 0, c: 0 }, { d: '11/05', b: 9820, a: 0, c: 80 },
-  { d: '12/05', b: 9740, a: 0, c: 80 }, { d: '13/05', b: 9620, a: 0, c: 120 },
-  { d: '14/05', b: 9550, a: 0, c: 70 }, { d: '15/05', b: 9480, a: 0, c: 70 },
-  { d: '16/05', b: 9400, a: 0, c: 80 }, { d: '17/05', b: 9350, a: 0, c: 50 },
-  { d: '18/05', b: 9280, a: 0, c: 70 }, { d: '19/05', b: 9200, a: 0, c: 80 },
-  { d: '20/05', b: 9150, a: 0, c: 50 }, { d: '21/05', b: 9080, a: 0, c: 70 },
-  { d: '22/05', b: 9010, a: 0, c: 70 }, { d: '23/05', b: 8950, a: 0, c: 60 },
-  { d: '24/05', b: 8900, a: 0, c: 50 }, { d: '25/05', b: 8850, a: 0, c: 50 },
-  { d: '26/05', b: 8780, a: 0, c: 70 }, { d: '27/05', b: 8720, a: 0, c: 60 },
-  { d: '28/05', b: 8680, a: 0, c: 40 }, { d: '29/05', b: 8620, a: 0, c: 60 },
-  { d: '30/05', b: 8560, a: 0, c: 60 }, { d: '31/05', b: 8500, a: 0, c: 60 },
-  { d: '01/06', b: 8440, a: 0, c: 60 }, { d: '02/06', b: 8900, a: 500, c: 40 },
+  { d: '10/05', b: 9900, a: 0, c: 0 },   { d: '11/05', b: 9820, a: 0, c: 80 },
+  { d: '12/05', b: 9740, a: 0, c: 80 },  { d: '13/05', b: 9620, a: 0, c: 120 },
+  { d: '14/05', b: 9550, a: 0, c: 70 },  { d: '15/05', b: 9480, a: 0, c: 70 },
+  { d: '16/05', b: 9400, a: 0, c: 80 },  { d: '17/05', b: 9350, a: 0, c: 50 },
+  { d: '18/05', b: 9280, a: 0, c: 70 },  { d: '19/05', b: 9200, a: 0, c: 80 },
+  { d: '20/05', b: 9150, a: 0, c: 50 },  { d: '21/05', b: 9080, a: 0, c: 70 },
+  { d: '22/05', b: 9010, a: 0, c: 70 },  { d: '23/05', b: 8950, a: 0, c: 60 },
+  { d: '24/05', b: 8900, a: 0, c: 50 },  { d: '25/05', b: 8850, a: 0, c: 50 },
+  { d: '26/05', b: 8780, a: 0, c: 70 },  { d: '27/05', b: 8720, a: 0, c: 60 },
+  { d: '28/05', b: 8680, a: 0, c: 40 },  { d: '29/05', b: 8620, a: 0, c: 60 },
+  { d: '30/05', b: 8560, a: 0, c: 60 },  { d: '31/05', b: 8500, a: 0, c: 60 },
+  { d: '01/06', b: 8440, a: 0, c: 60 },  { d: '02/06', b: 8900, a: 500, c: 40 },
   { d: '03/06', b: 8853, a: 0, c: 47 },
 ]
 
@@ -64,7 +60,7 @@ function buildChart() {
   return { W, H, padL, padR, padB, balLine, addLine, consLine, balArea, gridLines, xLabels, dots, xOf, yOf }
 }
 
-// ─── Ícone SVG inline genérico ─────────────────────────────────────────────
+// ─── Ícones sociais ────────────────────────────────────────────────────────
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" style={{ width: 12, height: 12, flexShrink: 0 }}>
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -83,10 +79,10 @@ const FacebookIcon = () => (
 //  COMPONENTE PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════════════
 export default function SceneCadastro() {
-  // ── Estado da máquina ──────────────────────────────────────────────────
+  // ── Estado ────────────────────────────────────────────────────────────
   const [phase, setPhase] = useState<'form' | 'dash'>('form')
-  const [formVisible, setFormVisible] = useState(true)
-  const [dashVisible, setDashVisible] = useState(false)
+  const [formOpacity, setFormOpacity] = useState(1)
+  const [dashOpacity, setDashOpacity] = useState(0)
   const [emailTyped, setEmailTyped] = useState('')
   const [passTyped, setPassTyped] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -94,99 +90,90 @@ export default function SceneCadastro() {
   const EMAIL = 'cafe@exemplo.com.br'
   const PASS = '••••••••'
 
-  // refs para cancelar timers no cleanup
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const addTimer = (t: ReturnType<typeof setTimeout>) => { timers.current.push(t); return t }
   const clearAll = () => { timers.current.forEach(clearTimeout); timers.current = [] }
 
-  // ── Restart do loop ────────────────────────────────────────────────────
+  // ── Restart ───────────────────────────────────────────────────────────
   const restart = () => {
     clearAll()
-    setDashVisible(false)
-    // fade out do dash → volta ao form
+    // fade out dash
+    setDashOpacity(0)
     addTimer(setTimeout(() => {
       setPhase('form')
-      setFormVisible(false)
       setEmailTyped('')
       setPassTyped('')
       setSubmitting(false)
-      // fade in do form
-      addTimer(setTimeout(() => setFormVisible(true), 50))
-    }, 350))
+      // fade in form
+      setFormOpacity(0)
+      addTimer(setTimeout(() => setFormOpacity(1), 50))
+    }, 400))
   }
 
   // ── Sequência de digitação ─────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'form') return
 
-    // digitar email letra a letra
     let i = 0
     const typeEmail = () => {
       if (i > EMAIL.length) { typePass(); return }
-      setEmailTyped(EMAIL.slice(0, i))
-      i++
+      setEmailTyped(EMAIL.slice(0, i++))
       addTimer(setTimeout(typeEmail, 60))
     }
 
-    // digitar senha
     let j = 0
     const typePass = () => {
       if (j > PASS.length) { doSubmit(); return }
-      setPassTyped(PASS.slice(0, j))
-      j++
+      setPassTyped(PASS.slice(0, j++))
       addTimer(setTimeout(typePass, 80))
     }
 
-    // submeter
     const doSubmit = () => {
       addTimer(setTimeout(() => {
         setSubmitting(true)
-        // ir para o dashboard
         addTimer(setTimeout(() => {
-          setFormVisible(false)
+          // fade out form → fade in dash
+          setFormOpacity(0)
           addTimer(setTimeout(() => {
             setPhase('dash')
-            setDashVisible(false)
+            setDashOpacity(0)
             addTimer(setTimeout(() => {
-              setDashVisible(true)
-              // voltar ao form após 6 segundos
+              setDashOpacity(1)
               addTimer(setTimeout(() => restart(), 6000))
             }, 80))
-          }, 350))
+          }, 400))
         }, 1100))
       }, 500))
     }
 
-    addTimer(setTimeout(typeEmail, 400)) // pequeno delay inicial
-
+    addTimer(setTimeout(typeEmail, 400))
     return clearAll
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
-  // ── Montagem do gráfico ────────────────────────────────────────────────
   const chart = buildChart()
 
-  // ═════════════════════════════════════════════════════════════════════
-  //  RENDER
-  // ═════════════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════
+  //  RENDER — ambas as fases ficam no DOM, visibilidade via opacity+pointer-events
+  // ═══════════════════════════════════════════════════════════════════════
   return (
-    <div
-      style={{
-        width: '100%', minHeight: 560,
-        background: 'linear-gradient(135deg,#020617 0%,#0f172a 50%,#020617 100%)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 16, boxSizing: 'border-box', position: 'relative',
-      }}
-    >
+    <div style={{
+      width: '100%', height: '100%',
+      background: 'linear-gradient(135deg,#020617 0%,#0f172a 50%,#020617 100%)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 16, boxSizing: 'border-box', position: 'relative', overflow: 'hidden',
+    }}>
 
-      {/* ══════════════ TELA DE FORMULÁRIO ══════════════ */}
-      {phase === 'form' && (
-        <div style={{
-          width: '100%', maxWidth: 340,
-          opacity: formVisible ? 1 : 0,
-          transform: formVisible ? 'translateY(0)' : 'translateY(8px)',
-          transition: 'opacity 400ms ease, transform 400ms ease',
-        }}>
+      {/* ══════════ FORMULÁRIO ══════════ */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16, boxSizing: 'border-box',
+        opacity: phase === 'form' ? formOpacity : 0,
+        pointerEvents: phase === 'form' ? 'auto' : 'none',
+        transition: 'opacity 350ms ease',
+      }}>
+        <div style={{ width: '100%', maxWidth: 340 }}>
           <div style={{
             background: 'rgba(30,41,59,0.6)',
             border: '0.5px solid rgba(255,255,255,0.1)',
@@ -194,9 +181,15 @@ export default function SceneCadastro() {
             borderRadius: 16, padding: 24,
             display: 'flex', flexDirection: 'column', gap: 0,
           }}>
-            {/* Logo */}
+            {/* Logo + títulos */}
             <div style={{ textAlign: 'center' }}>
-              <img src={LOGO_SRC} alt="minhAi" style={{ height: 28, objectFit: 'contain', margin: '0 auto', display: 'block' }} />
+              <Image
+                src="/logo.png"
+                alt="minhAi"
+                width={90}
+                height={28}
+                style={{ height: 28, width: 'auto', margin: '0 auto', display: 'block', objectFit: 'contain' }}
+              />
               <p style={{ color: '#fff', fontWeight: 700, fontSize: 14, marginTop: 6 }}>Criar Conta</p>
               <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Crie sua conta para começar</p>
             </div>
@@ -243,7 +236,7 @@ export default function SceneCadastro() {
                     <span style={{
                       display: 'inline-block', width: 1, height: 12,
                       background: 'rgba(255,255,255,0.7)', marginLeft: 1,
-                      animation: 'blink 0.8s step-end infinite',
+                      animation: 'cadastro-blink 0.8s step-end infinite',
                     }} />
                   )}
                 </div>
@@ -268,7 +261,7 @@ export default function SceneCadastro() {
                         <span style={{
                           display: 'inline-block', width: 1, height: 12,
                           background: 'rgba(255,255,255,0.7)', marginLeft: 1,
-                          animation: 'blink 0.8s step-end infinite',
+                          animation: 'cadastro-blink 0.8s step-end infinite',
                         }} />
                       )}
                     </>
@@ -293,7 +286,7 @@ export default function SceneCadastro() {
                     width: 12, height: 12,
                     border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff',
                     borderRadius: '50%', display: 'inline-block',
-                    animation: 'spin 0.7s linear infinite',
+                    animation: 'cadastro-spin 0.7s linear infinite',
                   }} />
                   Criando conta...
                 </>
@@ -305,18 +298,20 @@ export default function SceneCadastro() {
             </p>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* ══════════════ DASHBOARD ══════════════ */}
-      {phase === 'dash' && (
-        <div style={{
-          width: '100%', maxWidth: 900, minHeight: 560,
-          opacity: dashVisible ? 1 : 0,
-          transform: dashVisible ? 'translateY(0)' : 'translateY(8px)',
-          transition: 'opacity 400ms ease, transform 400ms ease',
-        }}>
+      {/* ══════════ DASHBOARD ══════════ */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16, boxSizing: 'border-box',
+        opacity: phase === 'dash' ? dashOpacity : 0,
+        pointerEvents: phase === 'dash' ? 'auto' : 'none',
+        transition: 'opacity 350ms ease',
+      }}>
+        <div style={{ width: '100%', maxWidth: 900, height: '100%', maxHeight: 560 }}>
           <div style={{
-            width: '100%', minHeight: 560,
+            width: '100%', height: '100%',
             display: 'flex', flexDirection: 'column',
             background: '#0f172a', borderRadius: 16, overflow: 'hidden',
             border: '0.5px solid rgba(255,255,255,0.08)',
@@ -327,10 +322,11 @@ export default function SceneCadastro() {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '10px 16px', background: '#0f172a',
               borderBottom: '0.5px solid rgba(255,255,255,0.08)',
+              flexShrink: 0,
             }}>
-              <img src={LOGO_SRC} alt="minhAi" style={{ height: 20, objectFit: 'contain' }} />
+              <Image src="/logo.png" alt="minhAi" width={60} height={20}
+                style={{ height: 20, width: 'auto', objectFit: 'contain' }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {/* Seletor de workspace */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)',
@@ -344,19 +340,18 @@ export default function SceneCadastro() {
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </div>
-                {/* Ícone sol */}
                 <div style={{
                   width: 30, height: 30, borderRadius: 8,
                   background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                 }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth={2} style={{ width: 14, height: 14 }}>
-                    <circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                    <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+                    <circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
                   </svg>
                 </div>
-                {/* Avatar */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                   <div style={{
                     width: 28, height: 28, borderRadius: '50%',
@@ -369,7 +364,7 @@ export default function SceneCadastro() {
               </div>
             </div>
 
-            {/* ── Body ── */}
+            {/* ── Body scrollável ── */}
             <div style={{ flex: 1, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
 
               {/* Welcome row */}
@@ -381,7 +376,6 @@ export default function SceneCadastro() {
                   </p>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
-                  {/* Botão webapp */}
                   <button style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     background: 'linear-gradient(135deg,#10b981,#059669)',
@@ -389,8 +383,7 @@ export default function SceneCadastro() {
                     color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
                   }}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 14, height: 14 }}>
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="2" y1="12" x2="22" y2="12" />
+                      <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" />
                       <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
                     </svg>
                     loja.minhai.com.br
@@ -399,7 +392,6 @@ export default function SceneCadastro() {
                       <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
                     </svg>
                   </button>
-                  {/* Link na Bio */}
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
@@ -411,7 +403,6 @@ export default function SceneCadastro() {
                     </svg>
                     <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>Link na Bio</span>
                     <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>Inativo</span>
-                    {/* Toggle */}
                     <div style={{
                       width: 32, height: 18, background: 'rgba(255,255,255,0.1)',
                       borderRadius: 9, position: 'relative', cursor: 'pointer',
@@ -536,7 +527,6 @@ export default function SceneCadastro() {
                   </div>
                 </div>
 
-                {/* Controles do gráfico */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: 4,
@@ -554,7 +544,6 @@ export default function SceneCadastro() {
                     </svg>
                   </div>
                   <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
-                    {/* Botão linha (ativo) */}
                     <div style={{
                       width: 28, height: 28, borderRadius: 6,
                       background: 'rgba(59,130,246,0.2)', border: '0.5px solid rgba(59,130,246,0.4)',
@@ -565,11 +554,10 @@ export default function SceneCadastro() {
                         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                       </svg>
                     </div>
-                    {/* Outros botões de tipo */}
                     {[
-                      <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></>,
-                      <><polyline points="2 20 8 10 14 16 20 6" /></>,
-                      <><circle cx="12" cy="12" r="10" /></>,
+                      <><line key="a" x1="18" y1="20" x2="18" y2="10" /><line key="b" x1="12" y1="20" x2="12" y2="4" /><line key="c" x1="6" y1="20" x2="6" y2="14" /></>,
+                      <><polyline key="d" points="2 20 8 10 14 16 20 6" /></>,
+                      <><circle key="e" cx="12" cy="12" r="10" /></>,
                     ].map((d, i) => (
                       <div key={i} style={{
                         width: 28, height: 28, borderRadius: 6,
@@ -583,10 +571,8 @@ export default function SceneCadastro() {
                   </div>
                 </div>
 
-                {/* SVG do gráfico */}
                 <div style={{ height: 180, position: 'relative', overflow: 'hidden' }}>
                   <svg viewBox={`0 0 ${chart.W} ${chart.H}`} style={{ width: '100%', height: '100%' }}>
-                    {/* Linhas de grade */}
                     {chart.gridLines.map(({ y, label }) => (
                       <g key={label}>
                         <line x1={chart.padL} y1={y} x2={chart.W - chart.padR} y2={y}
@@ -594,18 +580,17 @@ export default function SceneCadastro() {
                         <text x={chart.padL - 4} y={y + 3} textAnchor="end" fill="rgba(255,255,255,0.3)" fontSize={9}>{label}</text>
                       </g>
                     ))}
-                    {/* Labels do eixo X */}
                     {chart.xLabels.map(p => (
                       <text key={p.d} x={chart.xOf(p.i)} y={chart.H - 6}
                         textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize={8}>{p.d}</text>
                     ))}
                     <defs>
-                      <linearGradient id="balGrad" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="cad-balGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.25} />
                         <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <path d={chart.balArea} fill="url(#balGrad)" />
+                    <path d={chart.balArea} fill="url(#cad-balGrad)" />
                     <path d={chart.consLine} fill="none" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="4,3" />
                     <path d={chart.addLine} fill="none" stroke="#26de81" strokeWidth={1.5} strokeDasharray="4,3" />
                     <path d={chart.balLine} fill="none" stroke="#3b82f6" strokeWidth={2} />
@@ -619,7 +604,6 @@ export default function SceneCadastro() {
                   </svg>
                 </div>
 
-                {/* Legenda */}
                 <div style={{ display: 'flex', gap: 12, marginTop: 8, justifyContent: 'center' }}>
                   {[
                     { color: '#26de81', label: 'Adicionados' },
@@ -656,7 +640,6 @@ export default function SceneCadastro() {
                   <div key={card.label} style={{
                     background: 'rgba(30,41,59,0.5)', border: '0.5px solid rgba(255,255,255,0.08)',
                     borderRadius: 10, padding: 14, textAlign: 'center', cursor: 'pointer',
-                    transition: 'border-color 200ms',
                   }}>
                     <div style={{
                       width: 38, height: 38, borderRadius: 8, background: card.bg,
@@ -695,8 +678,7 @@ export default function SceneCadastro() {
                 ].map(card => (
                   <div key={card.label} style={{
                     background: 'rgba(30,41,59,0.5)', border: '0.5px solid rgba(255,255,255,0.08)',
-                    borderRadius: 10, padding: 14, cursor: 'pointer',
-                    transition: 'border-color 200ms', textAlign: 'center',
+                    borderRadius: 10, padding: 14, cursor: 'pointer', textAlign: 'center',
                   }}>
                     <svg viewBox="0 0 24 24" fill="none" stroke={card.blue ? '#3b82f6' : '#10b981'} strokeWidth={2}
                       style={{ width: 18, height: 18, margin: '0 auto' }}>
@@ -711,12 +693,11 @@ export default function SceneCadastro() {
             </div>{/* /dash-body */}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Keyframes globais injetados no head via style tag */}
       <style>{`
-        @keyframes blink { 50% { opacity: 0; } }
-        @keyframes spin  { to { transform: rotate(360deg); } }
+        @keyframes cadastro-blink { 50% { opacity: 0; } }
+        @keyframes cadastro-spin  { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   )

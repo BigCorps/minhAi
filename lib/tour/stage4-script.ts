@@ -32,16 +32,16 @@ export const STAGE4_SCRIPT: Stage4Script[] = [
     label: 'Criar com IA',
     audioText:
       'No dashboard, um card te convida a criar seu primeiro assistente com I A. ' +
-      'O processo é uma conversa — o auxiliar faz perguntas simples sobre seu negócio: ' +
+      'O processo é uma conversa: o auxiliar faz perguntas simples sobre seu negócio: ' +
       'nome, ramo de atividade, tom de voz, o que o assistente deve fazer. ' +
-      'Com base nas respostas, ela gera o prompt, seleciona as funções ideais para o seu segmento ' +
-      'e já cria o assistente completo automaticamente.',
+      'Com base nas respostas, gera o prompt, seleciona as funções ideais para o seu segmento ' +
+      'e já cria o assistente automaticamente.',
     displayText:
       'No dashboard, um card te convida a criar seu primeiro assistente com IA. ' +
-      'O processo é uma conversa — o auxiliar faz perguntas simples sobre seu negócio: ' +
+      'O processo é uma conversa: o auxiliar faz perguntas simples sobre seu negócio: ' +
       'nome, ramo de atividade, tom de voz, o que o assistente deve fazer. ' +
-      'Com base nas respostas, ela gera o prompt, seleciona as funções ideais para o seu segmento ' +
-      'e já cria o assistente completo automaticamente.',
+      'Com base nas respostas, gera o prompt, seleciona as funções ideais para o seu segmento ' +
+      'e já cria o assistente automaticamente.',
     fallbackDuration: 10000,
   },
   {

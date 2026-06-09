@@ -119,7 +119,7 @@ export const STAGE3_SCRIPT: Stage3Script[] = [
   id: 'auxiliares-conclusao',
   label: 'Conclusão',
   audioText:
-    'Nove especialistas I Á, cada um conduzindo processos complexos do início ao fim — ' +
+    'Dez especialistas I Á, cada um conduzindo processos complexos do início ao fim — ' +
     'Tudo por voz ou texto, em qualquer canal, sem precisar de um sistema separado para cada área. ' +
     'É a sua equipe digital completa, integrada em um único assistente.',
   displayText:

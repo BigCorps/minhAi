@@ -609,9 +609,9 @@ export default function SceneDashboardVisao() {
             ))}
           </div>
 
-        </div> {/* ← fecha o wrapper do BODY */}
-      </div>   {/* ← fecha o div interno de coluna (visual) */}
-    </div>     {/* ← fecha o wrapper externo (scale) */}
-  </div>       {/* ← fecha o containerRef (raiz) */}
+        </div>
+      </div>
+    </div>
+  </div>
   )
 }

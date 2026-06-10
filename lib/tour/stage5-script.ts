@@ -21,7 +21,7 @@ export const STAGE5_SCRIPT: Stage5Script[] = [
     id: 'dashboard-visao',
     label: 'O Dashboard',
     audioText:
-      'Este é o seu painel de controle — onde você gerencia tudo relacionado ao seu assistente. ' +
+      'Este é o seu painel de controle: onde você gerencia tudo relacionado ao seu assistente. ' +
       'No menu lateral você acessa todas as seções: ' +
       'funções, vendas, produção, agenda, integrações com Google e Meta, ' +
       'inteligências artificiais externas, notas fiscais, arquivos e muito mais. ' +
@@ -79,10 +79,15 @@ export const STAGE5_SCRIPT: Stage5Script[] = [
     id: 'dashboard-conclusao',
     label: 'Conclusão',
     audioText:
-      'O dashboard é o centro de operações do seu negócio digital — ' +
+      'O dashboard minha I Á é o centro de operações do seu negócio digital, ' +
       'simples o suficiente para qualquer pessoa usar sem treinamento, ' +
-      'e completo o suficiente para escalar de um assistente para vários, ' +
-      'de um canal para todos os canais.',
+      'e completo o suficiente para escalar ' +
+      'e vender em todos os canais.',
+    displayText:
+      'O dashboard minhAi é o centro de operações do seu negócio digital, ' +
+      'simples o suficiente para qualquer pessoa usar sem treinamento, ' +
+      'e completo o suficiente para escalar ' +
+      'e vender em todos os canais.',
     fallbackDuration: 7000,
   },
 ]

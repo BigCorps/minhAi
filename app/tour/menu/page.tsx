@@ -38,7 +38,7 @@ export default function TourMenuPage() {
       {pageState === 'playing' && activeStage === 4 && (
         <TourStage5 key="s5" initialTheme={currentTheme} onComplete={handleComplete} onThemeChange={handleThemeChange} />
       )}
-      {pageState === 'playing' && activeStage === 4 && (
+      {pageState === 'playing' && activeStage === 5 && (
         <TourStage5 key="s5" initialTheme={currentTheme} onComplete={handleComplete} onThemeChange={handleThemeChange} />
       )}
       {pageState === 'selecting' && (

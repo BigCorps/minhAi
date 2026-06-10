@@ -1,0 +1,88 @@
+// lib/tour/stage5-script.ts
+
+export type Stage5SceneId =
+  | 'dashboard-visao'
+  | 'dashboard-funcoes'
+  | 'dashboard-integracoes'
+  | 'dashboard-gestao'
+  | 'dashboard-perfil'
+  | 'dashboard-conclusao'
+
+export interface Stage5Script {
+  id: Stage5SceneId
+  label: string
+  audioText: string
+  displayText?: string
+  fallbackDuration: number
+}
+
+export const STAGE5_SCRIPT: Stage5Script[] = [
+  {
+    id: 'dashboard-visao',
+    label: 'O Dashboard',
+    audioText:
+      'Este é o seu painel de controle — onde você gerencia tudo relacionado ao seu assistente. ' +
+      'No menu lateral você acessa todas as seções: ' +
+      'funções, vendas, produção, agenda, integrações com Google e Meta, ' +
+      'inteligências artificiais externas, notas fiscais, arquivos e muito mais. ' +
+      'Tudo em um único lugar, sem precisar sair do painel.',
+    fallbackDuration: 9000,
+  },
+  {
+    id: 'dashboard-funcoes',
+    label: 'Funções',
+    audioText:
+      'Em Funções e Habilidades você ativa ou desativa cada uma das mais de 100 funções ' +
+      'com um simples toggle. ' +
+      'O assistente só mostra no carrossel o que está ativo — ' +
+      'então você controla exatamente o que o cliente pode acessar, ' +
+      'por categoria e por função.',
+    fallbackDuration: 8000,
+  },
+  {
+    id: 'dashboard-integracoes',
+    label: 'Integrações',
+    audioText:
+      'Em Serviços Google você conecta o Google Agenda, Gmail, Drive e Maps. ' +
+      'Em Serviços Meta você integra WhatsApp Business, Instagram e Facebook ' +
+      'para o assistente responder mensagens e comentários diretamente. ' +
+      'E em Integrações de I A você conecta o assistente ao ChatGPT, ao Claude e a outros modelos.',
+    displayText:
+      'Em Serviços Google você conecta o Google Agenda, Gmail, Drive e Maps. ' +
+      'Em Serviços Meta você integra WhatsApp Business, Instagram e Facebook ' +
+      'para o assistente responder mensagens e comentários diretamente. ' +
+      'E em Integrações de IA você conecta o assistente ao ChatGPT, ao Claude e a outros modelos.',
+    fallbackDuration: 9000,
+  },
+  {
+    id: 'dashboard-gestao',
+    label: 'Gestão',
+    audioText:
+      'Em Vendas e Produtos você cadastra seu catálogo completo com fotos, preços e categorias. ' +
+      'Em Linha de Produção você gerencia fichas técnicas e custos. ' +
+      'Em Controle de Usuários você vê seus clientes cadastrados e colaboradores. ' +
+      'E em Notas Fiscais e Arquivos você acessa o histórico fiscal e os documentos enviados pelo assistente.',
+    fallbackDuration: 9000,
+  },
+  {
+    id: 'dashboard-perfil',
+    label: 'Meu Perfil',
+    audioText:
+      'No menu do usuário você tem acesso ao seu perfil, ' +
+      'ao painel de créditos com o saldo disponível e o histórico de consumo, ' +
+      'aos seus recebimentos do programa de indicações, ' +
+      'ao histórico completo de interações do assistente ' +
+      'e à seção de ajuda com suporte direto.',
+    fallbackDuration: 8000,
+  },
+  {
+    id: 'dashboard-conclusao',
+    label: 'Conclusão',
+    audioText:
+      'O dashboard é o centro de operações do seu negócio digital — ' +
+      'simples o suficiente para qualquer pessoa usar sem treinamento, ' +
+      'e completo o suficiente para escalar de um assistente para vários, ' +
+      'de um canal para todos os canais.',
+    fallbackDuration: 7000,
+  },
+]

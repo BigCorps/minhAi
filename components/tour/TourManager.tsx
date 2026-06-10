@@ -40,7 +40,7 @@ const STAGES: Stage[] = [
   {
     id: 3,
     label: 'Página do Assistente',
-    description: 'Modos do avatar e funções de voz',
+    description: 'Apresentação, Modos e Funções',
     available: true,
     icon: (
       <svg className={iconClass} viewBox="96 96 320 320" xmlns="http://www.w3.org/2000/svg" fill="none" aria-hidden="true">
@@ -67,7 +67,7 @@ const STAGES: Stage[] = [
     id: 5,
     label: 'Meu Dashboard',
     description: 'Configurações, integrações e mais',
-    available: false,
+    available: true,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
         <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />

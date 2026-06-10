@@ -7,6 +7,7 @@ import TourStage1 from './TourStage1'
 import TourStage2 from './TourStage2'
 import TourStage3 from './TourStage3'
 import TourStage4 from './TourStage4'
+import TourStage5 from './TourStage5'
 import TourManager from './TourManager'
 
 // Mapeamento: ID do stage no Manager → componente
@@ -14,6 +15,7 @@ import TourManager from './TourManager'
 // 2 = Auxiliares de IA   → TourStage3
 // 3 = Página Assistente  → TourStage2
 // 4 = Do Zero ao Ar      → TourStage4
+// 5 = Meu Dashboard      → TourStage5
 
 interface TourModalProps {
   isOpen: boolean
@@ -117,6 +119,7 @@ export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: To
         {modalState === 'playing' && activeStage === 2 && <TourStage3 key="s2" {...stageProps} />}
         {modalState === 'playing' && activeStage === 3 && <TourStage2 key="s3" {...stageProps} />}
         {modalState === 'playing' && activeStage === 4 && <TourStage4 key="s4" {...stageProps} />}
+        {modalState === 'playing' && activeStage === 5 && <TourStage5 key="s5" {...stageProps} />}
 
         {modalState === 'selecting' && (
           <TourManager

@@ -265,17 +265,16 @@ export default function SceneDashboardVisao() {
         overflow: 'hidden',
       }}
     >
-<div style={{
+<div style={{                // wrapper: só escala
   width: BASE_W,
   height: BASE_H,
   transform: `scale(${scale})`,
   transformOrigin: 'center center',
   flexShrink: 0,
-  position: 'relative',
 }}>
-  <div style={{
-    width: BASE_W,
-    height: BASE_H,
+  <div style={{              // visual: flex + aparência
+    width: '100%',
+    height: '100%',
     display: 'flex',
     flexDirection: 'column',
     background: '#0f172a',

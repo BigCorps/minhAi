@@ -20,10 +20,8 @@ const FacebookIcon = () => (
 )
 
 // ─── Tamanhos base de cada "cena" ──────────────────────────────────────────
-// Form: 340px wide, ~520px tall (estimado com todos os campos)
-// Dash: 900px wide, 560px tall
 const FORM_BASE_W = 340
-const FORM_BASE_H = 520
+const FORM_BASE_H = 580  // aumentado para acomodar o campo Nome
 const DASH_BASE_W = 900
 const DASH_BASE_H = 560
 
@@ -34,6 +32,7 @@ export default function SceneCadastro() {
   const [phase, setPhase]             = useState<'form' | 'dash'>('form')
   const [formOpacity, setFormOpacity] = useState(1)
   const [dashOpacity, setDashOpacity] = useState(0)
+  const [nameTyped, setNameTyped]     = useState('')   // NOVO
   const [emailTyped, setEmailTyped]   = useState('')
   const [passTyped, setPassTyped]     = useState('')
   const [submitting, setSubmitting]   = useState(false)
@@ -47,7 +46,7 @@ export default function SceneCadastro() {
     const el = containerRef.current
     if (!el) return
     const { width: cw, height: ch } = el.getBoundingClientRect()
-    const pad = 24 // breathing room
+    const pad = 24
     const aw  = cw - pad
     const ah  = ch - pad
     setFormScale(Math.min(1, aw / FORM_BASE_W, ah / FORM_BASE_H))
@@ -61,6 +60,7 @@ export default function SceneCadastro() {
     return () => ro.disconnect()
   }, [recalcScale])
 
+  const NAME  = 'André Santos'
   const EMAIL = 'cafe@exemplo.com.br'
   const PASS  = '••••••••'
 
@@ -94,6 +94,7 @@ export default function SceneCadastro() {
       setDashOpacity(0)
       addLoop(setTimeout(() => {
         clearSeq()
+        setNameTyped('')    // NOVO
         setEmailTyped('')
         setPassTyped('')
         setSubmitting(false)
@@ -104,25 +105,36 @@ export default function SceneCadastro() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
-  // ── Sequência de digitação ─────────────────────────────────────────────
+  // ── Sequência de digitação: Nome → Email → Senha → Submit ─────────────
   useEffect(() => {
     if (phase !== 'form') return
     clearSeq()
 
+    // 1. Digita nome
     let i = 0
+    const typeName = () => {
+      if (i > NAME.length) { typeEmail(); return }
+      setNameTyped(NAME.slice(0, i++))
+      addSeq(setTimeout(typeName, 65))
+    }
+
+    // 2. Digita email
+    let j = 0
     const typeEmail = () => {
-      if (i > EMAIL.length) { typePass(); return }
-      setEmailTyped(EMAIL.slice(0, i++))
+      if (j > EMAIL.length) { typePass(); return }
+      setEmailTyped(EMAIL.slice(0, j++))
       addSeq(setTimeout(typeEmail, 60))
     }
 
-    let j = 0
+    // 3. Digita senha
+    let k = 0
     const typePass = () => {
-      if (j > PASS.length) { doSubmit(); return }
-      setPassTyped(PASS.slice(0, j++))
+      if (k > PASS.length) { doSubmit(); return }
+      setPassTyped(PASS.slice(0, k++))
       addSeq(setTimeout(typePass, 80))
     }
 
+    // 4. Submete
     const doSubmit = () => {
       addSeq(setTimeout(() => {
         setSubmitting(true)
@@ -135,7 +147,7 @@ export default function SceneCadastro() {
       }, 500))
     }
 
-    addSeq(setTimeout(typeEmail, 400))
+    addSeq(setTimeout(typeName, 400))
     return clearSeq
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
@@ -162,7 +174,6 @@ export default function SceneCadastro() {
         pointerEvents: phase === 'form' ? 'auto' : 'none',
         transition: 'opacity 350ms ease',
       }}>
-        {/* Wrapper escalável — tamanho fixo base, reduzido via scale */}
         <div style={{
           width: FORM_BASE_W,
           transform: `scale(${formScale})`,
@@ -190,8 +201,33 @@ export default function SceneCadastro() {
               <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
             </div>
 
-            {/* Campos */}
+            {/* ── Campos ── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+
+              {/* NOVO: Nome Completo */}
+              <div>
+                <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginBottom: 3 }}>Nome Completo</div>
+                <div style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: `0.5px solid ${nameTyped.length > 0 ? 'rgba(176,203,31,0.5)' : 'rgba(255,255,255,0.12)'}`,
+                  borderRadius: 8, padding: '7px 10px',
+                  color: 'rgba(255,255,255,0.85)', fontFamily: 'monospace', fontSize: 11,
+                  minHeight: 30, display: 'flex', alignItems: 'center', transition: 'border-color 300ms',
+                }}>
+                  {nameTyped.length > 0 ? (
+                    <>
+                      <span>{nameTyped}</span>
+                      {nameTyped.length < NAME.length && (
+                        <span style={{ display: 'inline-block', width: 1, height: 12, background: 'rgba(255,255,255,0.7)', marginLeft: 1, animation: 'cadastro-blink 0.8s step-end infinite' }} />
+                      )}
+                    </>
+                  ) : (
+                    <span style={{ color: 'rgba(255,255,255,0.2)' }}>Seu nome</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Email */}
               <div>
                 <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginBottom: 3 }}>Email</div>
                 <div style={{
@@ -201,12 +237,20 @@ export default function SceneCadastro() {
                   color: 'rgba(255,255,255,0.85)', fontFamily: 'monospace', fontSize: 11,
                   minHeight: 30, display: 'flex', alignItems: 'center', transition: 'border-color 300ms',
                 }}>
-                  <span>{emailTyped}</span>
-                  {emailTyped.length < EMAIL.length && (
-                    <span style={{ display: 'inline-block', width: 1, height: 12, background: 'rgba(255,255,255,0.7)', marginLeft: 1, animation: 'cadastro-blink 0.8s step-end infinite' }} />
+                  {emailTyped.length > 0 ? (
+                    <>
+                      <span>{emailTyped}</span>
+                      {emailTyped.length < EMAIL.length && (
+                        <span style={{ display: 'inline-block', width: 1, height: 12, background: 'rgba(255,255,255,0.7)', marginLeft: 1, animation: 'cadastro-blink 0.8s step-end infinite' }} />
+                      )}
+                    </>
+                  ) : (
+                    <span style={{ color: 'rgba(255,255,255,0.2)' }}>seu@email.com</span>
                   )}
                 </div>
               </div>
+
+              {/* Senha */}
               <div>
                 <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginBottom: 3 }}>Senha</div>
                 <div style={{
@@ -270,7 +314,7 @@ export default function SceneCadastro() {
 
             {/* Link login */}
             <p style={{ textAlign: 'center', color: 'rgba(96,165,250,0.8)', fontSize: 11, margin: 0 }}>
-              Não tem conta? Criar conta
+              Já tem conta? Fazer login
             </p>
           </div>
         </div>
@@ -284,7 +328,6 @@ export default function SceneCadastro() {
         pointerEvents: phase === 'dash' ? 'auto' : 'none',
         transition: 'opacity 350ms ease',
       }}>
-        {/* Wrapper escalável — tamanho base 900×560, reduzido via scale */}
         <div style={{
           width: DASH_BASE_W,
           height: DASH_BASE_H,
@@ -351,7 +394,7 @@ export default function SceneCadastro() {
               {/* Welcome row */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexShrink: 0 }}>
                 <div>
-                  <h1 style={{ color: '#fff', fontSize: 16, fontWeight: 700, lineHeight: 1.2, margin: 0 }}>Olá, Café Exemplo!</h1>
+                  <h1 style={{ color: '#fff', fontSize: 16, fontWeight: 700, lineHeight: 1.2, margin: 0 }}>Olá, André!</h1>
                   <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 3, lineHeight: 1.5 }}>
                     Bem-vindo ao seu painel de controle.
                   </p>

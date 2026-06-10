@@ -23,7 +23,7 @@ export const STAGE4_SCRIPT: Stage4Script[] = [
     label: 'Criar Conta',
     audioText:
       'Criar sua conta é rápido e gratuito! Sem cartão de crédito. ' +
-      'Basta e-mail e senha, ou também, entrar com Google ou Facebook com um único clique. ' +
+      'Basta nome, email e senha, ou também, entrar com Google ou Facebook com um único clique. ' +
       'Em segundos você já está no dashboard, pronto para criar seu assistente.',
     fallbackDuration: 7000,
   },

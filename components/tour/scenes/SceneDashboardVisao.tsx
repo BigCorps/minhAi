@@ -2,6 +2,7 @@
 // components/tour/scenes/SceneDashboardVisao.tsx
 // Mock animado do Dashboard — header real + sidebar real + menu usuário + conteúdo
 
+import Image from 'next/image'
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 // ─── SVGs dos ícones (equivalentes aos lucide/custom usados no Sidebar/Header reais) ─
@@ -42,12 +43,11 @@ const IcoClipboard = () => (
     <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
   </svg>
 )
+// ─── Google icon: branco/monocromático (igual aos demais ícones do menu) ───
 const IcoGoogle = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: '100%', height: '100%' }}>
-    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
-    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: '100%', height: '100%' }}>
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92" />
+    <path d="M5.84 14.09A6.5 6.5 0 0112 5.38c1.62 0 3.06.56 4.21 1.64l2.36-2.36A11 11 0 1023 12.25" />
   </svg>
 )
 const IcoMeta = () => (
@@ -167,29 +167,20 @@ const USER_ITEMS = [
   { label: 'Ajuda',           Icon: IcoLifeBuoy    },
 ]
 
-const STATS = [
-  { label: 'Interações hoje', value: '247',   color: '#3b82f6' },
-  { label: 'Assistentes',     value: '3',     color: '#84cc16' },
-  { label: 'Créditos',        value: '1.840', color: '#f59e0b' },
-  { label: 'Canais ativos',   value: '5',     color: '#10b981' },
-]
-
 type Phase = 'idle' | 'sidebar' | 'user-menu'
 
-const BASE_W = 480
-const BASE_H = 400
+const BASE_W = 900
+const BASE_H = 560
 
 export default function SceneDashboardVisao() {
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
 
-  const [phase, setPhase]             = useState<Phase>('idle')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [phase, setPhase]               = useState<Phase>('idle')
+  const [sidebarOpen, setSidebarOpen]   = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [sidebarItems, setSidebarItems] = useState(0)
-  const [userItems, setUserItems]     = useState(0)
-  const [statsVisible, setStatsVisible] = useState(false)
-  const [activityVisible, setActivityVisible] = useState(false)
+  const [userItems, setUserItems]       = useState(0)
 
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const add = (t: ReturnType<typeof setTimeout>) => { timers.current.push(t); return t }
@@ -208,14 +199,6 @@ export default function SceneDashboardVisao() {
     if (containerRef.current) ro.observe(containerRef.current)
     return () => ro.disconnect()
   }, [recalc])
-
-  // Stats aparecem na carga inicial
-  useEffect(() => {
-    const t1 = add(setTimeout(() => setStatsVisible(true), 500))
-    const t2 = add(setTimeout(() => setActivityVisible(true), 900))
-    return clearAll
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   // Loop principal de animação
   useEffect(() => {
@@ -291,9 +274,9 @@ export default function SceneDashboardVisao() {
         display: 'flex',
         flexDirection: 'column',
         background: '#0f172a',
-        borderRadius: 14,
+        borderRadius: 16,
         overflow: 'hidden',
-        border: '0.5px solid rgba(255,255,255,0.1)',
+        border: '0.5px solid rgba(255,255,255,0.08)',
         position: 'relative',
       }}>
 
@@ -304,8 +287,8 @@ export default function SceneDashboardVisao() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 14px',
-          background: 'rgba(15,23,42,0.98)',
+          padding: '0 16px',
+          background: '#0f172a',
           borderBottom: '0.5px solid rgba(255,255,255,0.08)',
           position: 'relative',
           zIndex: 30,
@@ -326,76 +309,66 @@ export default function SceneDashboardVisao() {
                 {sidebarOpen ? <IcoX /> : <IcoMenu />}
               </div>
             </div>
-            <span style={{ color: '#fff', fontWeight: 800, fontSize: 13, letterSpacing: '-0.3px' }}>
-              minhAi
-            </span>
+            <Image
+              src="/logo.png"
+              alt="minhAi"
+              width={60}
+              height={20}
+              loading="eager"
+              style={{ height: 20, width: 'auto', objectFit: 'contain' }}
+            />
           </div>
 
           {/* Right: theme + assistant selector + avatar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{
-              width: 28, height: 28, borderRadius: 7,
-              background: 'rgba(255,255,255,0.05)',
-              border: '0.5px solid rgba(255,255,255,0.08)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'rgba(255,255,255,0.55)',
-              flexShrink: 0,
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'rgba(255,255,255,0.06)',
+              border: '0.5px solid rgba(255,255,255,0.1)',
+              borderRadius: 8, padding: '5px 10px',
+              color: 'rgba(255,255,255,0.7)', fontSize: 11,
             }}>
-              <div style={{ width: 13, height: 13 }}><IcoSun /></div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 14, height: 14 }}>
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+              </svg>
+              Café
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 10, height: 10 }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
             </div>
 
-            {/* Assistant selector */}
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 5,
+              width: 30, height: 30, borderRadius: 8,
               background: 'rgba(255,255,255,0.05)',
               border: '0.5px solid rgba(255,255,255,0.1)',
-              borderRadius: 7, padding: '4px 8px',
-              color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: 500,
-              maxWidth: 130,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <div style={{
-                width: 16, height: 16, borderRadius: 4,
-                background: 'rgba(222,105,27,0.2)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#de691b" strokeWidth={2} strokeLinecap="round" style={{ width: 10, height: 10 }}>
-                  <path d="M4 8h12v5a5 5 0 01-5 5H9a5 5 0 01-5-5V8z" />
-                  <path d="M16 9h2.5a2.5 2.5 0 010 5H16" />
-                  <path d="M6 2v2M10 2v2M14 2v2" />
-                  <path d="M3 21h18" />
-                </svg>
-              </div>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                Loja de Serviços
-              </span>
-              <div style={{ width: 10, height: 10, flexShrink: 0, color: 'rgba(255,255,255,0.35)' }}>
-                <IcoChevronDown />
-              </div>
+              <div style={{ width: 13, height: 13, color: 'rgba(255,255,255,0.55)' }}><IcoSun /></div>
             </div>
 
             {/* Avatar + nome */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              padding: '3px 8px 3px 3px',
-              borderRadius: 8,
               background: userMenuOpen ? 'rgba(255,255,255,0.07)' : 'transparent',
               transition: 'background 200ms',
               cursor: 'pointer',
+              padding: '3px 6px 3px 3px',
+              borderRadius: 8,
             }}>
               <div style={{
-                width: 26, height: 26, borderRadius: '50%',
-                background: '#10b981',
+                width: 28, height: 28, borderRadius: '50%',
+                background: '#de691b',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', fontSize: 9, fontWeight: 700,
-                border: '1.5px solid #84cc16',
                 flexShrink: 0,
               }}>
-                CE
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: '60%', height: '60%' }}>
+                  <path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z" />
+                  <path d="M16 9h2.5a2.5 2.5 0 0 1 0 5H16" />
+                  <path d="M6 2v2" /><path d="M10 2v2" /><path d="M14 2v2" />
+                  <path d="M3 21h18" />
+                </svg>
               </div>
-              <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 10, fontWeight: 500 }}>
-                Café Exemplo
-              </span>
+              <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: 600 }}>Café Exemplo</span>
             </div>
           </div>
 
@@ -492,92 +465,141 @@ export default function SceneDashboardVisao() {
         </div>
 
         {/* ══ BODY ════════════════════════════════════════════════════════ */}
-        <div style={{ flex: 1, padding: '14px 16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ flex: 1, padding: 16, display: 'flex', flexDirection: 'column', gap: 10, overflow: 'hidden' }}>
 
-          <p style={{ color: '#fff', fontWeight: 700, fontSize: 13, margin: 0, flexShrink: 0 }}>
-            Visão Geral
-          </p>
+          {/* Welcome row */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexShrink: 0 }}>
+            <div>
+              <h1 style={{ color: '#fff', fontSize: 16, fontWeight: 700, lineHeight: 1.2, margin: 0 }}>Olá, André!</h1>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 3, lineHeight: 1.5 }}>
+                Bem-vindo ao seu painel de controle.
+              </p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+              <button style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: 'linear-gradient(135deg,#10b981,#059669)',
+                border: 'none', borderRadius: 8, padding: '6px 10px',
+                color: '#fff', fontSize: 10, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 12, height: 12 }}>
+                  <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" />
+                  <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+                </svg>
+                cafe.minhai.com.br
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 9, height: 9 }}>
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                  <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </button>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
+                borderRadius: 8, padding: '4px 8px',
+              }}>
+                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>Link na Bio</span>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>Inativo</span>
+                <div style={{ width: 28, height: 16, background: 'rgba(255,255,255,0.1)', borderRadius: 8, position: 'relative', border: '0.5px solid rgba(255,255,255,0.15)' }}>
+                  <div style={{ width: 10, height: 10, background: 'rgba(255,255,255,0.4)', borderRadius: '50%', position: 'absolute', top: 2, left: 2 }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Credits card */}
+          <div style={{
+            background: 'rgba(30,41,59,0.8)', border: '0.5px solid rgba(255,255,255,0.1)',
+            borderRadius: 12, padding: '12px 16px',
+            display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0,
+          }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth={2} style={{ width: 20, height: 20 }}>
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+            </div>
+            <div style={{ flex: '0 0 auto' }}>
+              <h3 style={{ color: '#fff', fontSize: 12, fontWeight: 700, margin: 0 }}>Seus Créditos</h3>
+              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, marginTop: 1 }}>Saldo para interações de IA</p>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9 }}>Progresso de Uso</span>
+                <span style={{ color: '#60a5fa', fontSize: 9, fontWeight: 600 }}>20 disponíveis</span>
+              </div>
+              <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: '85%', background: '#3b82f6', borderRadius: 3 }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 8 }}>0 gastos</span>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 8 }}>Total: 20</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, flexShrink: 0 }}>
+              <div style={{ color: '#fff', fontSize: 20, fontWeight: 700, lineHeight: 1 }}>20</div>
+              <button style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 7, padding: '5px 10px', fontSize: 9, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 10, height: 10 }}>
+                  <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+                </svg>
+                Recarregar
+              </button>
+            </div>
+          </div>
+
+          {/* Setup banner */}
+          <div style={{
+            background: 'rgba(30,41,59,0.5)', border: '0.5px solid rgba(255,255,255,0.08)',
+            borderRadius: 12, padding: '10px 14px',
+            display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
+          }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth={2} style={{ width: 16, height: 16 }}>
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ color: '#fff', fontSize: 11, fontWeight: 700, margin: 0 }}>Crie seu Assistente</h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden', maxWidth: 300 }}>
+                  <div style={{ height: '100%', width: '1%', background: '#3b82f6', borderRadius: 3 }} />
+                </div>
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9 }}>1% concluído</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+              {['›', '×'].map((ch, i) => (
+                <div key={i} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{ch}</div>
+              ))}
+            </div>
+          </div>
 
           {/* Stats grid */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8,
-            opacity: statsVisible ? 1 : 0,
-            transition: 'opacity 400ms ease',
-            flexShrink: 0,
-          }}>
-            {STATS.map(s => (
-              <div key={s.label} style={{
-                background: 'rgba(30,41,59,0.8)',
-                border: '0.5px solid rgba(255,255,255,0.08)',
-                borderRadius: 10, padding: '10px 10px 8px',
-              }}>
-                <p style={{ fontSize: 18, fontWeight: 700, color: s.color, margin: 0, lineHeight: 1 }}>
-                  {s.value}
-                </p>
-                <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', margin: '3px 0 0' }}>
-                  {s.label}
-                </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, flexShrink: 0 }}>
+            {[
+              { label: 'Assistentes',      sub: '1 assistente',    color: '#3b82f6', bg: 'rgba(59,130,246,0.15)',  icon: <><circle cx="12" cy="12" r="9" /><circle cx="8" cy="9" r="1" fill="#3b82f6" /><circle cx="16" cy="9" r="1" fill="#3b82f6" /><path d="M8 14s1.5 2 4 2 4-2 4-2" strokeLinecap="round" /></> },
+              { label: 'Histórico',         sub: '1568 interações', color: '#10b981', bg: 'rgba(16,185,129,0.15)', icon: <><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></> },
+              { label: 'Respostas Rápidas', sub: '24 respostas',    color: '#3b82f6', bg: 'rgba(59,130,246,0.15)', icon: <><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></> },
+            ].map(card => (
+              <div key={card.label} style={{ background: 'rgba(30,41,59,0.5)', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                <div style={{ width: 34, height: 34, borderRadius: 8, background: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke={card.color} strokeWidth={2} style={{ width: 18, height: 18 }}>{card.icon}</svg>
+                </div>
+                <h4 style={{ color: '#fff', fontSize: 11, fontWeight: 700, margin: 0 }}>{card.label}</h4>
+                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, marginTop: 2 }}>{card.sub}</p>
               </div>
             ))}
           </div>
 
-          {/* Atividade recente */}
-          <div style={{
-            background: 'rgba(30,41,59,0.6)',
-            border: '0.5px solid rgba(255,255,255,0.07)',
-            borderRadius: 10, overflow: 'hidden',
-            opacity: activityVisible ? 1 : 0,
-            transition: 'opacity 400ms ease',
-            flexShrink: 0,
-          }}>
-            <div style={{ padding: '7px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                Atividade recente
-              </span>
-            </div>
+          {/* Quick actions grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, flexShrink: 0 }}>
             {[
-              { text: 'PIX gerado — R$ 89,90',         time: '14:32', color: '#10b981' },
-              { text: 'Agendamento confirmado — Maria', time: '13:15', color: '#3b82f6' },
-              { text: 'NFe emitida — João Silva',       time: '11:40', color: '#f59e0b' },
-              { text: 'NFC crédito — R$ 145,00',        time: '10:22', color: '#84cc16' },
-            ].map((a, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '6px 12px',
-                borderBottom: i < 3 ? '0.5px solid rgba(255,255,255,0.04)' : 'none',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: a.color, flexShrink: 0 }} />
-                  <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 9.5 }}>{a.text}</span>
-                </div>
-                <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: 8.5 }}>{a.time}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Quick actions */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8,
-            opacity: activityVisible ? 1 : 0,
-            transition: 'opacity 500ms ease 100ms',
-            flexShrink: 0,
-          }}>
-            {[
-              { label: 'Funções',    color: '#10b981', Icon: IcoZap        },
-              { label: 'Pagamentos', color: '#3b82f6', Icon: IcoCreditCard },
-              { label: 'Vendas',     color: '#10b981', Icon: IcoCart       },
-              { label: 'Usuários',   color: '#3b82f6', Icon: IcoUsers      },
-            ].map(c => (
-              <div key={c.label} style={{
-                background: 'rgba(30,41,59,0.5)',
-                border: '0.5px solid rgba(255,255,255,0.07)',
-                borderRadius: 9, padding: '9px 6px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-              }}>
-                <div style={{ width: 15, height: 15, color: c.color }}>
-                  <c.Icon />
-                </div>
-                <span style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: 600 }}>{c.label}</span>
+              { label: 'Funções',       blue: false, icon: <><path d="M12 2a10 10 0 110 20 10 10 0 010-20z" /><path d="M12 8v4l3 3" /></> },
+              { label: 'Recebimentos', blue: true,  icon: <><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></> },
+              { label: 'Vendas',        blue: false, icon: <><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6" /></> },
+              { label: 'Usuários',      blue: true,  icon: <><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></> },
+            ].map(card => (
+              <div key={card.label} style={{ background: 'rgba(30,41,59,0.5)', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke={card.blue ? '#3b82f6' : '#10b981'} strokeWidth={2} style={{ width: 16, height: 16, margin: '0 auto' }}>{card.icon}</svg>
+                <h4 style={{ color: '#fff', fontSize: 10, fontWeight: 700, marginTop: 5, marginBottom: 0 }}>{card.label}</h4>
               </div>
             ))}
           </div>

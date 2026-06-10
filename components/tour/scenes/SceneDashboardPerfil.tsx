@@ -1,6 +1,5 @@
 'use client'
 // components/tour/scenes/SceneDashboardPerfil.tsx
-// Menu usuário como dropdown no header — igual ao SceneDashboardVisao
 
 import Image from 'next/image'
 import { useEffect, useRef, useState, useCallback } from 'react'
@@ -124,7 +123,8 @@ const AJUDA_CARDS = [
 type Section = 'perfil' | 'creditos' | 'recebimentos' | 'historico' | 'indique' | 'ajuda'
 const SECTION_ORDER: Section[] = ['perfil', 'creditos', 'recebimentos', 'historico', 'indique', 'ajuda']
 
-type Phase = 'menu-open' | 'content'
+// phase: 'content' → exibe seção por 3s → 'menu-open' → anima dropdown → troca seção → 'content'
+type Phase = 'content' | 'menu-open'
 
 const BASE_W = 520
 const BASE_H = 420
@@ -133,10 +133,14 @@ export default function SceneDashboardPerfil() {
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
 
-  const [phase, setPhase]                 = useState<Phase>('menu-open')
-  const [menuOpen, setMenuOpen]           = useState(true)
+  // Começa direto no conteúdo da primeira seção
+  const [phase, setPhase]                 = useState<Phase>('content')
+  const [menuOpen, setMenuOpen]           = useState(false)
   const [menuItems, setMenuItems]         = useState(0)
-  const [activeSection, setActiveSection] = useState<Section>('perfil')
+  // visibleSection = seção que aparece no body (não muda durante menu-open)
+  const [visibleSection, setVisibleSection] = useState<Section>('perfil')
+  // nextSection = seção que vai aparecer após o menu fechar
+  const nextSectionRef = useRef<Section>('creditos')
   const [rowStep, setRowStep]             = useState(0)
 
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -157,53 +161,63 @@ export default function SceneDashboardPerfil() {
     return () => ro.disconnect()
   }, [recalc])
 
-  useEffect(() => { setRowStep(0) }, [activeSection])
+  // Anima linhas progressivamente quando entra em 'content'
+  useEffect(() => {
+    if (phase !== 'content') return
+    setRowStep(0)
+  }, [visibleSection, phase])
 
   useEffect(() => {
     const maxRows =
-      activeSection === 'recebimentos' ? HISTORICO_ROWS.length :
-      activeSection === 'historico'    ? HISTORICO_CHAT.length :
-      activeSection === 'ajuda'        ? AJUDA_CARDS.length    : 0
+      visibleSection === 'recebimentos' ? HISTORICO_ROWS.length :
+      visibleSection === 'historico'    ? HISTORICO_CHAT.length :
+      visibleSection === 'ajuda'        ? AJUDA_CARDS.length    : 0
     if (phase !== 'content' || maxRows === 0 || rowStep >= maxRows) return
     const t = setTimeout(() => setRowStep(v => v + 1), 280)
     timers.current.push(t)
     return () => clearTimeout(t)
-  }, [phase, activeSection, rowStep])
+  }, [phase, visibleSection, rowStep])
 
+  // ── Loop principal ────────────────────────────────────────────────────
   useEffect(() => {
     clearAll()
 
-    if (phase === 'menu-open') {
-      setMenuOpen(true)
-      const tick = (i: number) => {
-        if (i > MENU_ITEMS.length) {
-          add(setTimeout(() => {
-            setMenuOpen(false)
-            add(setTimeout(() => setPhase('content'), 300))
-          }, 1200))
-          return
-        }
-        setMenuItems(i)
-        add(setTimeout(() => tick(i + 1), 110))
-      }
-      add(setTimeout(() => tick(0), 400))
+    if (phase === 'content') {
+      // Exibe conteúdo por 3.5s, depois abre o menu de transição
+      add(setTimeout(() => {
+        const idx = SECTION_ORDER.indexOf(visibleSection)
+        nextSectionRef.current = SECTION_ORDER[(idx + 1) % SECTION_ORDER.length]
+        setMenuItems(0)
+        setMenuOpen(true)
+        setPhase('menu-open')
+      }, 3500))
       return
     }
 
-    if (phase === 'content') {
-      add(setTimeout(() => {
-        const idx = SECTION_ORDER.indexOf(activeSection)
-        const next = SECTION_ORDER[(idx + 1) % SECTION_ORDER.length]
-        setActiveSection(next)
-        setMenuItems(0)
-        setPhase('menu-open')
-      }, 4000))
+    if (phase === 'menu-open') {
+      // Anima itens do menu um a um
+      const tick = (i: number) => {
+        if (i > MENU_ITEMS.length) {
+          // Todos apareceram → espera brevemente → fecha e troca seção
+          add(setTimeout(() => {
+            setMenuOpen(false)
+            add(setTimeout(() => {
+              setVisibleSection(nextSectionRef.current)
+              setPhase('content')
+            }, 250))
+          }, 800))
+          return
+        }
+        setMenuItems(i)
+        add(setTimeout(() => tick(i + 1), 100))
+      }
+      tick(0)
       return
     }
 
     return clearAll
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, activeSection])
+  }, [phase, visibleSection])
 
   return (
     <div
@@ -335,7 +349,7 @@ export default function SceneDashboardPerfil() {
                   </span>
                 </div>
                 {MENU_ITEMS.slice(0, menuItems).map(item => {
-                  const isActive = item.key === activeSection && phase === 'content'
+                  const isActive = item.key === nextSectionRef.current
                   return (
                     <div
                       key={item.key}
@@ -368,13 +382,12 @@ export default function SceneDashboardPerfil() {
             )}
           </div>
 
-          {/* ══ BODY ════════════════════════════════════════════════════ */}
+          {/* ══ BODY — sempre renderiza visibleSection ══════════════════ */}
           <div style={{ flex: 1, padding: 16, display: 'flex', flexDirection: 'column', gap: 10, overflow: 'hidden' }}>
 
             {/* ── PERFIL ── */}
-            {activeSection === 'perfil' && phase === 'content' && (
+            {visibleSection === 'perfil' && (
               <>
-                {/* Biometria */}
                 <div style={{
                   background: 'rgba(30,41,59,0.8)', border: '0.5px solid rgba(255,255,255,0.1)',
                   borderRadius: 12, padding: '12px 16px', flexShrink: 0,
@@ -396,8 +409,6 @@ export default function SceneDashboardPerfil() {
                     <button style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 9.5, fontWeight: 600, cursor: 'pointer' }}>Cadastrar Biometria</button>
                   </div>
                 </div>
-
-                {/* Informações + PIX */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, flex: 1 }}>
                   <div style={{ background: 'rgba(30,41,59,0.5)', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -422,7 +433,6 @@ export default function SceneDashboardPerfil() {
                       Salvar Informações
                     </button>
                   </div>
-
                   <div style={{ background: 'rgba(30,41,59,0.5)', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ width: 14, height: 14, color: '#10b981' }}><IcoWallet /></div>
@@ -450,7 +460,7 @@ export default function SceneDashboardPerfil() {
             )}
 
             {/* ── CRÉDITOS ── */}
-            {activeSection === 'creditos' && phase === 'content' && (
+            {visibleSection === 'creditos' && (
               <>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
                   <div>
@@ -516,7 +526,7 @@ export default function SceneDashboardPerfil() {
             )}
 
             {/* ── RECEBIMENTOS ── */}
-            {activeSection === 'recebimentos' && phase === 'content' && (
+            {visibleSection === 'recebimentos' && (
               <>
                 <div style={{ flexShrink: 0 }}>
                   <h2 style={{ color: '#fff', fontSize: 15, fontWeight: 700, margin: 0 }}>Recebimentos</h2>
@@ -556,7 +566,7 @@ export default function SceneDashboardPerfil() {
             )}
 
             {/* ── HISTÓRICO ── */}
-            {activeSection === 'historico' && phase === 'content' && (
+            {visibleSection === 'historico' && (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                   <div>
@@ -592,7 +602,7 @@ export default function SceneDashboardPerfil() {
             )}
 
             {/* ── INDIQUE E GANHE ── */}
-            {activeSection === 'indique' && phase === 'content' && (
+            {visibleSection === 'indique' && (
               <>
                 <div style={{ flexShrink: 0 }}>
                   <h2 style={{ color: '#fff', fontSize: 15, fontWeight: 700, margin: 0 }}>Indique e Ganhe</h2>
@@ -641,7 +651,7 @@ export default function SceneDashboardPerfil() {
             )}
 
             {/* ── AJUDA ── */}
-            {activeSection === 'ajuda' && phase === 'content' && (
+            {visibleSection === 'ajuda' && (
               <>
                 <div style={{ flexShrink: 0 }}>
                   <h2 style={{ color: '#fff', fontSize: 15, fontWeight: 700, margin: 0 }}>Central de Ajuda</h2>
@@ -664,17 +674,6 @@ export default function SceneDashboardPerfil() {
                   ))}
                 </div>
               </>
-            )}
-
-            {/* Estado vazio enquanto o menu está aberto */}
-            {phase === 'menu-open' && (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11 }}>
-                    {MENU_ITEMS.find(m => m.key === activeSection)?.label}
-                  </div>
-                </div>
-              </div>
             )}
 
           </div>

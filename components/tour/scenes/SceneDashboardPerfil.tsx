@@ -121,8 +121,8 @@ const SECTION_ORDER: Section[] = ['perfil', 'creditos', 'recebimentos', 'histori
 // Fases: menu abre → itens aparecem → fecha → conteúdo exibido → próxima seção
 type Phase = 'menu-open' | 'content'
 
-const BASE_W = 900
-const BASE_H = 560
+const BASE_W = 520
+const BASE_H = 420
 
 export default function SceneDashboardPerfil() {
   const containerRef = useRef<HTMLDivElement>(null)

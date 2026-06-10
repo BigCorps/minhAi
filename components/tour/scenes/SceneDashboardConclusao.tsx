@@ -265,20 +265,25 @@ export default function SceneDashboardVisao() {
         overflow: 'hidden',
       }}
     >
-      <div style={{
-        width: BASE_W,
-        height: BASE_H,
-        transform: `scale(${scale})`,
-        transformOrigin: 'center center',
-        flexShrink: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        background: '#0f172a',
-        borderRadius: 16,
-        overflow: 'hidden',
-        border: '0.5px solid rgba(255,255,255,0.08)',
-        position: 'relative',
-      }}>
+<div style={{
+  width: BASE_W,
+  height: BASE_H,
+  transform: `scale(${scale})`,
+  transformOrigin: 'center center',
+  flexShrink: 0,
+  position: 'relative',
+}}>
+  <div style={{
+    width: BASE_W,
+    height: BASE_H,
+    display: 'flex',
+    flexDirection: 'column',
+    background: '#0f172a',
+    borderRadius: 16,
+    overflow: 'hidden',
+    border: '0.5px solid rgba(255,255,255,0.08)',
+    position: 'relative',
+  }}>
 
         {/* ══ HEADER ══════════════════════════════════════════════════════ */}
         <div style={{
@@ -606,6 +611,8 @@ export default function SceneDashboardVisao() {
 
         </div>
       </div>
-    </div>
+    </div>  {/* ← fecha o novo div interno (visual) */}
+  </div>    {/* ← fecha o wrapper externo (scale) */}
+    </div>  {/* ← fecha o containerRef */}
   )
 }

@@ -22,19 +22,19 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
     id: 'assistente-intro',
     label: 'A Página',
     audioText:
-      'Esta é a página do seu assistente — ela roda em qualquer tela, tablet, totem ou computador. ' +
+      'Esta é a página do seu assistente :ela roda em qualquer tela, tablet, totem ou computador. ' +
       'Você escolhe qual dos três modos apresentar para o seu cliente: ' +
       'o modo padrão com microfone e carrossel de funções, ' +
       'o modo texto para digitação livre, ' +
       'ou o modo imersivo em tela cheia com o avatar centralizado. ' +
-      'Cada negócio tem o seu jeito — e a minha I Á se adapta a ele.',
+      'Cada negócio tem o seu jeito, e a minha I Á se adapta a ele.',
     displayText:
-      'Esta é a página do seu assistente — ela roda em qualquer tela, tablet, totem ou computador. ' +
+      'Esta é a página do seu assistente: ela roda em qualquer tela, tablet, totem ou computador. ' +
       'Você escolhe qual dos três modos apresentar para o seu cliente: ' +
       'o modo padrão com microfone e carrossel de funções, ' +
       'o modo texto para digitação livre, ' +
       'ou o modo imersivo em tela cheia com o avatar centralizado. ' +
-      'Cada negócio tem o seu jeito — e a minhAi se adapta a ele.',
+      'Cada negócio tem o seu jeito, e a minhAi se adapta a ele.',
     fallbackDuration: 10000,
   },
   {
@@ -43,7 +43,7 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
     audioText:
       'O carrossel de categorias organiza mais de 100 funções em grupos como ' +
       'Comercial, Financeiro, Agendamento, Serviços e muito mais. ' +
-      'O cliente toca numa categoria, vê as funções disponíveis e escolhe o que precisa — ' +
+      'O cliente toca numa categoria, vê as funções disponíveis e escolhe o que precisa, ' +
       'ou simplesmente usa a palavra de ativação e fala diretamente o que quer.',
     fallbackDuration: 8000,
   },
@@ -51,9 +51,9 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
     id: 'assistente-qrcode',
     label: 'QR Code',
     audioText:
-      'Com um único toque ou comando, o assistente gera um card na tela — ' +
+      'Com um único toque ou comando, o assistente gera um card na tela, ' +
       'para o WhatsApp da empresa, para uma cobrança PIX, ou qualquer outra das mais de 100 funções. ' +
-      'O cliente interage por voz, digitando, lendo o qrcode - ele escolhe. ' +
+      'O cliente interage por voz, digitando, lendo o qrcode. Ele escolhe. ' +
       'Sem papel, sem digitação, sem atrito.',
     fallbackDuration: 7000,
   },
@@ -64,7 +64,7 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
       'No Modo Vendas, você tem uma página de vendas completa, com todos os seus produtos. ' +
       'Exibe produtos com foto, descrição e preço, organizados por categoria. ' +
       'O cliente monta o carrinho, escolhe entre retirar no balcão, sentar na mesa ' +
-      'ou receber em casa com entrega — o sistema já calcula o frete automaticamente. ',
+      'ou receber em casa com entrega, o sistema já calcula o frete automaticamente. ',
     fallbackDuration: 9000,
   },
   {
@@ -73,8 +73,8 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
     audioText:
       'O Modo Fila organiza o atendimento presencial com senhas digitais. ' +
       'O cliente retira a senha pelo totem, acompanha em tempo real pela tela ' +
-      'e o sistema anuncia cada chamada em voz alta — sem papel, sem confusão. ' +
-      'E para facilitar ainda mais o acesso, tem também uma página de links — ' +
+      'e o sistema anuncia cada chamada em voz alta, sem papel, sem confusão. ' +
+      'E para facilitar ainda mais o acesso, tem também uma página de links: ' +
       'uma página rápida da empresa com WhatsApp, Instagram, site e todos os contatos, ' +
       'Um único endereço para o cliente encontrar tudo.',
     fallbackDuration: 10000,
@@ -83,7 +83,7 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
     id: 'assistente-totem',
     label: 'Modo Totem',
     audioText:
-      'No Modo Totem, a tela entra em modo quiosque com teclado virtual embutido — ' +
+      'No Modo Totem, a tela entra em modo quiosque com teclado virtual embutido: ' +
       'sem botões de saída, sem acesso ao sistema, ' +
       'com saída protegida por senha do proprietário. ' +
       'E para personalizar ainda mais a experiência, tem também a tela de login, ' +
@@ -100,14 +100,14 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
       'O cliente pode chamar como uma Alexa usando a palavra de ativação, ' +
       'clicar no botão e falar, navegar pelos botões do carrossel, ' +
       'ou simplesmente digitar. ' +
-      'Cada pessoa interage do jeito que prefere — ' +
+      'Cada pessoa interage do jeito que prefere, ' +
       'e a minha I Á está pronta para todas elas, vinte e quatro horas por dia, ',
     displayText:
       'E o grande diferencial da minhAi é a liberdade de interação. ' +
       'O cliente pode chamar como uma Alexa usando a palavra de ativação, ' +
       'clicar no botão e falar, navegar pelos botões do carrossel, ' +
       'ou simplesmente digitar. ' +
-      'Cada pessoa interage do jeito que prefere — ' +
+      'Cada pessoa interage do jeito que prefere, ' +
       'e a minhAi está pronta para todas elas, 24 horas por dia! ',
     fallbackDuration: 9000,
   },

@@ -61,7 +61,7 @@ export const STAGE4_SCRIPT: Stage4Script[] = [
     'Voce ainda tem as configurações personalizadas, ' +
     'onde define a palavra de ativação, escolhe entre voz masculina ou feminina, ' +
     'se prefere o Avatar ou Orbe e ativar a detecção por câmera para saudar clientes automaticamente. ' +
-    'Você também ajusta a sensibilidade ao ambiente — escritório silencioso, loja movimentada ou balcão ruidoso — ' +
+    'Você também ajusta a sensibilidade ao ambiente — escritório silencioso, loja movimentada ou balcão ruidoso ' +
     'e decide o que acontece quando o assistente fica ocioso.',
   fallbackDuration: 9000,
 },

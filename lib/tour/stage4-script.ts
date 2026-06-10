@@ -33,13 +33,13 @@ export const STAGE4_SCRIPT: Stage4Script[] = [
     audioText:
       'Ao clicar no card para criar seu primeiro assistente com I A, ' +
       'o processo é bem simples e intuitivo: perguntas simples sobre seu negócio: ' +
-      'nome, ramo de atividade, tom de voz, o que o assistente deve fazer. ' +
+      'nome, ramo de atividade, tom de voz e o que o assistente deve fazer. ' +
       'Com base nas respostas, o sistema gera toda a parte técnica, seleciona as funções ideais para o seu segmento ' +
       'e já cria o assistente automaticamente.',
     displayText:
       'Ao clicar no card para criar seu primeiro assistente com IA, ' +
       'o processo é bem simples e intuitivo: perguntas simples sobre seu negócio: ' +
-      'nome, ramo de atividade, tom de voz, o que o assistente deve fazer. ' +
+      'nome, ramo de atividade, tom de voz e o que o assistente deve fazer. ' +
       'Com base nas respostas, o sistema gera toda a parte técnica, seleciona as funções ideais para o seu segmento ' +
       'e já cria o assistente automaticamente.',
     fallbackDuration: 10000,
@@ -58,10 +58,10 @@ export const STAGE4_SCRIPT: Stage4Script[] = [
   id: 'zeroaoar-config',
   label: 'Configurações',
   audioText:
-    'Voce ainda tem as configurações personalizadas, ' +
+    'Ainda tem as configurações personalizadas, ' +
     'onde define a palavra de ativação, escolhe entre voz masculina ou feminina, ' +
     'se prefere o Avatar ou Orbe e ativar a detecção por câmera para saudar clientes automaticamente. ' +
-    'Você também ajusta a sensibilidade ao ambiente — escritório silencioso, loja movimentada ou balcão ruidoso ' +
+    'Ajusta a sensibilidade ao ambiente: escritório silencioso, loja movimentada ou balcão ruidoso ' +
     'e decide o que acontece quando o assistente fica ocioso.',
   fallbackDuration: 9000,
 },

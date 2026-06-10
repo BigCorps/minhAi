@@ -169,8 +169,8 @@ const USER_ITEMS = [
 
 type Phase = 'idle' | 'sidebar' | 'user-menu'
 
-const BASE_W = 900
-const BASE_H = 560
+const BASE_W = 520
+const BASE_H = 420
 
 export default function SceneDashboardVisao() {
   const containerRef = useRef<HTMLDivElement>(null)

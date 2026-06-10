@@ -613,6 +613,5 @@ export default function SceneDashboardVisao() {
       </div>
     </div>  {/* ← fecha o novo div interno (visual) */}
   </div>    {/* ← fecha o wrapper externo (scale) */}
-    </div>  {/* ← fecha o containerRef */}
   )
 }

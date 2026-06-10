@@ -2,9 +2,15 @@
 // components/tour/scenes/SceneDashboardPerfil.tsx
 // Menu usuário como dropdown no header — igual ao SceneDashboardVisao
 
+import Image from 'next/image'
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 // ─── Ícones ────────────────────────────────────────────────────────────────
+const IcoMenu = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: '100%', height: '100%' }}>
+    <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+)
 const IcoUser = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: '100%', height: '100%' }}>
     <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
@@ -118,7 +124,6 @@ const AJUDA_CARDS = [
 type Section = 'perfil' | 'creditos' | 'recebimentos' | 'historico' | 'indique' | 'ajuda'
 const SECTION_ORDER: Section[] = ['perfil', 'creditos', 'recebimentos', 'historico', 'indique', 'ajuda']
 
-// Fases: menu abre → itens aparecem → fecha → conteúdo exibido → próxima seção
 type Phase = 'menu-open' | 'content'
 
 const BASE_W = 520
@@ -128,11 +133,11 @@ export default function SceneDashboardPerfil() {
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
 
-  const [phase, setPhase]               = useState<Phase>('menu-open')
-  const [menuOpen, setMenuOpen]         = useState(true)
-  const [menuItems, setMenuItems]       = useState(0)       // quantos itens aparecem
+  const [phase, setPhase]                 = useState<Phase>('menu-open')
+  const [menuOpen, setMenuOpen]           = useState(true)
+  const [menuItems, setMenuItems]         = useState(0)
   const [activeSection, setActiveSection] = useState<Section>('perfil')
-  const [rowStep, setRowStep]           = useState(0)
+  const [rowStep, setRowStep]             = useState(0)
 
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const add = (t: ReturnType<typeof setTimeout>) => { timers.current.push(t); return t }
@@ -152,10 +157,8 @@ export default function SceneDashboardPerfil() {
     return () => ro.disconnect()
   }, [recalc])
 
-  // Reset row animation quando a seção muda
   useEffect(() => { setRowStep(0) }, [activeSection])
 
-  // Anima linhas nas seções com lista
   useEffect(() => {
     const maxRows =
       activeSection === 'recebimentos' ? HISTORICO_ROWS.length :
@@ -167,16 +170,13 @@ export default function SceneDashboardPerfil() {
     return () => clearTimeout(t)
   }, [phase, activeSection, rowStep])
 
-  // ── Loop principal ────────────────────────────────────────────────────
   useEffect(() => {
     clearAll()
 
     if (phase === 'menu-open') {
-      // Abre dropdown e anima itens um a um
       setMenuOpen(true)
       const tick = (i: number) => {
         if (i > MENU_ITEMS.length) {
-          // Após todos os itens aparecerem, espera e fecha
           add(setTimeout(() => {
             setMenuOpen(false)
             add(setTimeout(() => setPhase('content'), 300))
@@ -191,7 +191,6 @@ export default function SceneDashboardPerfil() {
     }
 
     if (phase === 'content') {
-      // Exibe conteúdo por 4s, depois abre menu da próxima seção
       add(setTimeout(() => {
         const idx = SECTION_ORDER.indexOf(activeSection)
         const next = SECTION_ORDER[(idx + 1) % SECTION_ORDER.length]
@@ -216,18 +215,16 @@ export default function SceneDashboardPerfil() {
         overflow: 'hidden',
       }}
     >
-      {/* Wrapper de escala */}
-<div style={{
-  width: BASE_W,
-  height: BASE_H,
-  transform: `scale(${scale})`,
-  transformOrigin: 'center center',
-  flexShrink: 0,
-}}>
-  <div style={{
-    width: '100%',         // ← '100%' herda do wrapper
-    height: '100%',        // ← '100%' herda do wrapper
-    position: 'relative',
+      <div style={{
+        width: BASE_W,
+        height: BASE_H,
+        transform: `scale(${scale})`,
+        transformOrigin: 'center center',
+        flexShrink: 0,
+      }}>
+        <div style={{
+          width: '100%',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
           background: '#0f172a',
@@ -247,11 +244,26 @@ export default function SceneDashboardPerfil() {
             position: 'relative',
             zIndex: 30,
           }}>
-            {/* Left: logo */}
+            {/* Left: hamburguer + logo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <svg viewBox="0 0 80 24" style={{ height: 18, width: 'auto' }}>
-                <text x="0" y="18" fontFamily="monospace" fontWeight="800" fontSize="18" fill="white">minhAi</text>
-              </svg>
+              <div style={{
+                width: 28, height: 28,
+                borderRadius: 7,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'transparent',
+                color: 'rgba(255,255,255,0.85)',
+                flexShrink: 0,
+              }}>
+                <div style={{ width: 14, height: 14 }}><IcoMenu /></div>
+              </div>
+              <Image
+                src="/logo.png"
+                alt="minhAi"
+                width={60}
+                height={20}
+                loading="eager"
+                style={{ height: 20, width: 'auto', objectFit: 'contain' }}
+              />
             </div>
 
             {/* Right: theme + assistant selector + avatar */}
@@ -278,7 +290,7 @@ export default function SceneDashboardPerfil() {
                 <div style={{ width: 13, height: 13, color: 'rgba(255,255,255,0.55)' }}><IcoSun /></div>
               </div>
 
-              {/* Avatar + nome — clicável, destaca quando menu aberto */}
+              {/* Avatar + nome */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 background: menuOpen ? 'rgba(255,255,255,0.07)' : 'transparent',

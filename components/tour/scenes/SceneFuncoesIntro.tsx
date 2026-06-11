@@ -100,7 +100,7 @@ export default function SceneFuncoesIntro() {
             border: '1px solid rgba(50,188,173,0.3)',
           }}>
             <span style={{ fontWeight: 700, color: '#32bcad', fontSize: px(9) }}>
-              + de 100 funções
+              105+ funções · 14 categorias
             </span>
           </div>
         )}

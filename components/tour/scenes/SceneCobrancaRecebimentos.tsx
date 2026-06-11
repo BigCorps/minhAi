@@ -27,7 +27,7 @@ const IcoArrowDown = () => (
 // ─── Dados ────────────────────────────────────────────────────────────────
 const TRANSACTIONS = [
   { label: 'PIX',           color: '#32bcad', bg: 'rgba(50,188,173,0.15)',  valor: 89.90,  isSaldo: true,  hora: '14:32', },
-  { label: 'TEF Crédito 3×',color: '#3b82f6', bg: 'rgba(59,130,246,0.15)', valor: 149.70, isSaldo: false, hora: '14:29', },
+  { label: 'TEF Crédito',color: '#3b82f6', bg: 'rgba(59,130,246,0.15)', valor: 149.70, isSaldo: false, hora: '14:29', },
   { label: 'PIX',           color: '#32bcad', bg: 'rgba(50,188,173,0.15)',  valor: 57.50,  isSaldo: true,  hora: '14:17', },
   { label: 'NFC Débito',    color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)', valor: 32.00,  isSaldo: false, hora: '13:59', },
   { label: 'PIX',           color: '#32bcad', bg: 'rgba(50,188,173,0.15)',  valor: 110.90, isSaldo: true,  hora: '11:37', },

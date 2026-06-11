@@ -24,10 +24,15 @@ export const STAGE7_SCRIPT: Stage7Script[] = [
     id: 'funcoes-intro',
     label: 'Intro',
     audioText:
-      'O assistente tem mais de 100 funções organizadas em categorias, ' +
-      'cada uma ativável por voz, por toque ou digitando. ' +
+      'A minha I Á tem mais de 100 funções organizadas em categorias, ' +
+      'cada uma ativável por voz, por texto ou por clique. ' +
       'O assistente só executa o que você deixou ativo. ' +
-      'Você controla tudo pelo dashboard, com um simples clique.',
+      'controlando tudo pelo dashboard, com simples cliques.',
+    displayText:
+      'A minhAi tem mais de 100 funções organizadas em categorias, ' +
+      'cada uma ativável por voz, por texto ou por clique. ' +
+      'O assistente só executa o que você deixou ativo, ' +
+      'controlando tudo pelo dashboard, com simples cliques.',
     fallbackDuration: 8000,
   },
   {

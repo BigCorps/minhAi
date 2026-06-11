@@ -104,7 +104,7 @@ export default function ScenePlanosFullPlan() {
           className="rounded-xl px-3 py-1.5 font-bold flex-shrink-0"
           style={{ background: 'rgba(176,203,31,0.15)', border: '1px solid rgba(176,203,31,0.3)', color: '#b0cb1f', fontSize: 'clamp(0.45rem, 1vw, 0.6rem)' }}
         >
-          Falar com consultor
+          Ilimitado
         </div>
       </div>
 

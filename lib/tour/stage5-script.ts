@@ -54,8 +54,9 @@ export const STAGE5_SCRIPT: Stage5Script[] = [
     label: 'Gestão',
     audioText:
       'Em Vendas e Produtos você cadastra seu catálogo completo com fotos, preços e categorias. ' +
-      'Em Linha de Produção você tem a lista fichas técnicas e custos. ' +
-      'Em Controle de Usuários você gerencia seus clientes e colaboradores cadastrados. ' +
+      'Na Linha de Produção você tem a lista fichas técnicas e custos. ' +
+      'O Controle de Usuários você gerencia seus clientes e colaboradores cadastrados. ' +
+      'Você também pode configurar respostas rápidas para perguntas específicas ou frequentes. ' +
       'E em Notas Fiscais e Arquivos você acessa o histórico fiscal e os documentos enviados no assistente.',
     fallbackDuration: 9000,
   },

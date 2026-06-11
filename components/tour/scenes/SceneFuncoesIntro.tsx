@@ -42,6 +42,9 @@ const CARROSSEL_RESET = `${parseFloat(((1 / CARROSSEL_COPIES) * 100).toFixed(4))
 const CAROUSEL_COPIES = 4
 const RESET_PERCENT = `${((1 / CAROUSEL_COPIES) * 100).toFixed(4)}%`
 
+const FORM_BASE_W = 340
+const FORM_BASE_H = 580
+
 export default function SceneFuncoesIntro() {
   const [catVisible, setCatVisible] = useState(0)
   const [totalVisible, setTotalVisible] = useState(false)
@@ -69,7 +72,8 @@ export default function SceneFuncoesIntro() {
     return () => clearTimeout(t)
   }, [catVisible])
 
-  const s = w ? w / 540 : 1
+  const s = w ? w / FORM_BASE_W : 1
+  const sH = h ? h / FORM_BASE_H : 1
   const px = (n: number) => `${n * s}px`
 
   return (

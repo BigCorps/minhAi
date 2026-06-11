@@ -136,29 +136,26 @@ function TelaCards({ onPixClick }: { onPixClick: () => void }) {
 }
 
 // ── Tela 2 — Digitar valor (Print 1) ─────────────────────────────
-function TelaValor({ onConfirm, onBack }: { onConfirm: (v: string) => void; onBack: () => void }) {
+function TelaValor({ onConfirm, onBack }: { onConfirm: () => void; onBack: () => void }) {
   const [value, setValue] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
 
   // auto-type animation: "100,00"
   useEffect(() => {
-    const digits = ['1', '0', '0', ',', '0', '0']
+    const chars = '100,00'.split('')
     let i = 0
+    setValue('')
     const t = setInterval(() => {
-      if (i < digits.length) {
-        setValue(prev => prev + digits[i])
+      if (i < chars.length) {
+        const ch = chars[i]
+        setValue(prev => prev + ch)
         i++
       } else {
         clearInterval(t)
-        setTimeout(() => onConfirm('100,00'), 700)
+        setTimeout(() => onConfirm(), 700)
       }
     }, 180)
     return () => clearInterval(t)
   }, [onConfirm])
-
-  const formatted = value
-    ? `R$  ${value}`
-    : ''
 
   return (
     <div className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"

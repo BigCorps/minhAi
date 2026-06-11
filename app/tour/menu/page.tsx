@@ -8,6 +8,7 @@ import TourStage2 from '@/components/tour/TourStage2'
 import TourStage3 from '@/components/tour/TourStage3'
 import TourStage4 from '@/components/tour/TourStage4'
 import TourStage5 from '@/components/tour/TourStage5'
+import TourStage6 from '@/components/tour/TourStage6'
 import TourManager from '@/components/tour/TourManager'
 
 type PageState = 'playing' | 'selecting'
@@ -40,6 +41,9 @@ export default function TourMenuPage() {
       )}
       {pageState === 'playing' && activeStage === 5 && (
         <TourStage5 key="s5" initialTheme={currentTheme} onComplete={handleComplete} onThemeChange={handleThemeChange} />
+      )}
+      {pageState === 'playing' && activeStage === 6 && (
+        <TourStage6 key="s6" initialTheme={currentTheme} onComplete={handleComplete} onThemeChange={handleThemeChange} />
       )}
       {pageState === 'selecting' && (
         <TourManager

@@ -36,17 +36,17 @@ export const STAGE8_SCRIPT: Stage8Script[] = [
     id: 'planos-smart-mensal',
     label: 'Smart — Planos',
     audioText:
-      'No Smart, os planos mensais desbloqueiam recursos avançados. ' +
-      'O plano Top por quarenta e nove reais e noventa por mês, inclui cinquenta créditos, ' +
-      'Serviços Google, Serviços Meta, Linha de Produção, QR Codes com seu logo e impressão. ' +
-      'O plano Consulting por duzentos e noventa e nove reais e noventa, ' +
-      'inclui trezentos créditos, webapp com subdomínio próprio e consultoria incluída.',
+      'No Smart, os planos mensais desbloqueiam recursos avançados: ' +
+      'O plano Top, ' +
+      'com Serviços Google, Serviços Meta, Linha de Produção, QR Codes com seu logo e funções de impressão. ' +
+      'O plano Consulting, ' +
+      'com tudo isso e mais: Webapp com subdomínio próprio e consultoria.',
     displayText:
-      'No Smart, os planos mensais desbloqueiam recursos avançados. ' +
-      'O plano Top por R$ 49,90/mês, inclui 50 créditos, ' +
-      'Serviços Google, Serviços Meta, Linha de Produção, QR Codes com seu logo e impressão. ' +
-      'O plano Consulting por R$ 299,90/mês, ' +
-      'inclui 300 créditos, webapp com subdomínio próprio e consultoria incluída.',
+      'No Smart, os planos mensais desbloqueiam recursos avançados: ' +
+      'O plano Tops, ' +
+      'com Serviços Google, Serviços Meta, Linha de Produção, QR Codes com seu logo e funções de impressão. ' +
+      'O plano Consulting, ' +
+      'com tudo isso e mais: Webapp com subdomínio próprio e consultoria.',
     fallbackDuration: 10000,
   },
   {
@@ -54,17 +54,17 @@ export const STAGE8_SCRIPT: Stage8Script[] = [
     label: 'Smart — Créditos',
     audioText:
       'Além dos planos mensais, você pode comprar créditos avulsos a qualquer momento. ' +
-      'O pacote Starter tem duzentas interações ' +
-      'O Professional, mais popular, tem mil interações ' +
-      'O Business tem três mil e seiscentas interações. ' +
-      'E o Enterprise tem dez mil interações. ' +
+      'O pacote Starter tem duzentas créditos ' +
+      'O Professional, mais popular, tem mil créditos ' +
+      'O Business tem três mil e seiscentas créditos. ' +
+      'E o Enterprise tem dez mil créditos. ' +
       'Todos pagos via Pix. E para começar, você já recebe vinte créditos grátis.',
     displayText:
       'Além dos planos mensais, você pode comprar créditos avulsos a qualquer momento. ' +
-      'Starter: 200 interações por R$ 29,90. ' +
-      'Professional (mais popular): 1.000 interações por R$ 99,90. ' +
-      'Business: 3.600 interações por R$ 249,90. ' +
-      'Enterprise: 10.000 interações por R$ 499,90. ' +
+      'Starter: 200 créditos. ' +
+      'Professional (mais popular): 1.000 créditos. ' +
+      'Business: 3.600 créditos. ' +
+      'Enterprise: 10.000 créditos. ' +
       'Todos pagos via PIX. E para começar, você já recebe 20 créditos grátis.',
     fallbackDuration: 12000,
   },
@@ -73,13 +73,13 @@ export const STAGE8_SCRIPT: Stage8Script[] = [
     label: 'Plano Full',
     audioText:
       'Para quem quer uma solução completa e personalizada, existe o Plano Full. ' +
-      'Créditos ilimitados, domínio e subdomínios próprios, landing page personalizada, ' +
+      'Créditos ilimitados, domínio próprio, site personalizado, ' +
       'implementação e configuração completa pela equipe minha I A, ' +
       'e suporte vinte e quatro horas. ' +
       'É a solução ideal para agências, franquias e grandes operações.',
     displayText:
       'Para quem quer uma solução completa e personalizada, existe o Plano Full. ' +
-      'Créditos ilimitados, domínio e subdomínios próprios, landing page personalizada, ' +
+      'Créditos ilimitados, domínio próprio, site personalizado, ' +
       'implementação e configuração completa pela equipe minhAi, ' +
       'e suporte 24 horas. ' +
       'É a solução ideal para agências, franquias e grandes operações.',

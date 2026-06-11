@@ -22,6 +22,16 @@ const FUNCOES = [
 export default function ScenePlanosVendas() {
   const [formasVisible, setFormasVisible] = useState(0)
   const [funcoesVisible, setFuncoesVisible] = useState(0)
+  const [ref, setRef] = useState<HTMLDivElement | null>(null)
+  const [w, setW] = useState(0)
+
+  useEffect(() => {
+    if (!ref) return
+    const ro = new ResizeObserver(([e]) => setW(e.contentRect.width))
+    ro.observe(ref)
+    setW(ref.getBoundingClientRect().width)
+    return () => ro.disconnect()
+  }, [ref])
 
   useEffect(() => {
     if (formasVisible >= FORMAS.length) return
@@ -36,59 +46,107 @@ export default function ScenePlanosVendas() {
     return () => clearTimeout(t)
   }, [formasVisible, funcoesVisible])
 
+  // Escala proporcional à largura real do container
+  const s = w ? w / 540 : 1
+
+  const px = (n: number) => `${n * s}px`
+
   return (
     <div
+      ref={setRef}
       className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
       style={{ background: BG }}
     >
       {/* Header */}
-      <div className="px-5 pt-4 pb-3 flex-shrink-0" style={{ borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#b0cb1f' }} />
-          <span className="font-bold text-white text-base tracking-tight">minhAi Vendas</span>
+      <div
+        className="flex-shrink-0"
+        style={{
+          padding: `${12 * s}px ${20 * s}px`,
+          borderBottom: '0.5px solid rgba(255,255,255,0.08)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: px(8), marginBottom: px(10) }}>
+          <div style={{ width: px(8), height: px(8), borderRadius: '50%', background: '#b0cb1f', flexShrink: 0 }} />
+          <span style={{ fontWeight: 700, color: '#fff', fontSize: px(13) }}>minhAi Vendas</span>
         </div>
 
         {/* Card gratuito */}
         <div
-          className="rounded-2xl px-5 py-4 flex items-center justify-between"
-          style={{ background: 'rgba(176,203,31,0.07)', border: '1px solid rgba(176,203,31,0.22)' }}
+          style={{
+            borderRadius: px(14),
+            padding: `${12 * s}px ${18 * s}px`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'rgba(176,203,31,0.07)',
+            border: '1px solid rgba(176,203,31,0.22)',
+          }}
         >
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2.5">
-              <span className="font-extrabold text-2xl" style={{ color: '#b0cb1f' }}>Gratuito</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: px(5) }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: px(8) }}>
+              <span style={{ fontWeight: 800, color: '#b0cb1f', fontSize: px(22) }}>Gratuito</span>
               <span
-                className="rounded-full px-2.5 py-1 font-semibold text-xs"
-                style={{ background: 'rgba(176,203,31,0.18)', color: '#b0cb1f', border: '1px solid rgba(176,203,31,0.3)' }}
+                style={{
+                  borderRadius: 999,
+                  padding: `${3 * s}px ${8 * s}px`,
+                  fontWeight: 600,
+                  fontSize: px(9),
+                  background: 'rgba(176,203,31,0.18)',
+                  color: '#b0cb1f',
+                  border: '1px solid rgba(176,203,31,0.3)',
+                }}
               >
                 para o lojista
               </span>
             </div>
-            <p className="text-white/45 text-sm">Sem mensalidade, sem créditos, sem surpresa.</p>
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: px(10), margin: 0 }}>
+              Sem mensalidade, sem créditos, sem surpresa.
+            </p>
           </div>
-          <div className="text-right flex-shrink-0 ml-4">
-            <p className="font-extrabold leading-none" style={{ color: '#b0cb1f', fontSize: '2.8rem' }}>10%</p>
-            <p className="text-white/45 text-sm mt-0.5">por venda confirmada</p>
-            <p className="text-white/30 text-xs mt-0.5">descontado no saque</p>
+          <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: px(12) }}>
+            <p style={{ fontWeight: 800, color: '#b0cb1f', fontSize: px(42), lineHeight: 1, margin: 0 }}>10%</p>
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: px(10), marginTop: px(3) }}>por venda confirmada</p>
+            <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: px(9), marginTop: px(1) }}>descontado no saque</p>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col px-5 py-4 gap-4 overflow-hidden">
+      <div
+        className="flex-1 min-h-0 flex flex-col overflow-hidden"
+        style={{ padding: `${12 * s}px ${20 * s}px`, gap: px(14) }}
+      >
 
         {/* Formas de recebimento */}
-        <div className="flex-shrink-0">
-          <p className="text-white/35 uppercase font-semibold tracking-widest text-xs mb-2.5">
+        <div style={{ flexShrink: 0 }}>
+          <p
+            style={{
+              color: 'rgba(255,255,255,0.35)',
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              fontSize: px(8),
+              marginBottom: px(8),
+            }}
+          >
             Formas de recebimento
           </p>
-          <div className="grid grid-cols-3 gap-2.5">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: px(8) }}>
             {FORMAS.slice(0, formasVisible).map((f) => (
               <div
                 key={f.label}
-                className="rounded-2xl p-3.5 flex flex-col items-center justify-center gap-1"
-                style={{ background: `${f.color}12`, border: `1px solid ${f.color}30` }}
+                style={{
+                  borderRadius: px(12),
+                  padding: `${10 * s}px ${8 * s}px`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: px(4),
+                  background: `${f.color}12`,
+                  border: `1px solid ${f.color}30`,
+                }}
               >
-                <p className="font-bold text-white text-base">{f.label}</p>
-                <p className="text-white/40 text-xs text-center leading-tight">{f.sub}</p>
+                <p style={{ fontWeight: 700, color: '#fff', fontSize: px(12), margin: 0 }}>{f.label}</p>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: px(9), margin: 0, textAlign: 'center', lineHeight: 1.3 }}>{f.sub}</p>
               </div>
             ))}
           </div>
@@ -96,21 +154,38 @@ export default function ScenePlanosVendas() {
 
         {/* Funções incluídas */}
         {funcoesVisible > 0 && (
-          <div className="flex-1 min-h-0 flex flex-col">
-            <p className="text-white/35 uppercase font-semibold tracking-widest text-xs mb-2.5 flex-shrink-0">
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <p
+              style={{
+                color: 'rgba(255,255,255,0.35)',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                letterSpacing: '0.08em',
+                fontSize: px(8),
+                marginBottom: px(8),
+                flexShrink: 0,
+              }}
+            >
               18 funções incluídas — ative ou desative no painel
             </p>
-            <div className="flex flex-wrap gap-2 content-start overflow-hidden">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(5), alignContent: 'flex-start', overflow: 'hidden' }}>
               {FUNCOES.slice(0, funcoesVisible).map((fn) => (
                 <div
                   key={fn}
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
-                  style={{ background: 'rgba(176,203,31,0.08)', border: '1px solid rgba(176,203,31,0.22)' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: px(5),
+                    borderRadius: 999,
+                    padding: `${4 * s}px ${10 * s}px`,
+                    background: 'rgba(176,203,31,0.08)',
+                    border: '1px solid rgba(176,203,31,0.22)',
+                  }}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#b0cb1f" strokeWidth={2.5} strokeLinecap="round" style={{ width: 11, height: 11, flexShrink: 0 }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#b0cb1f" strokeWidth={2.5} strokeLinecap="round" style={{ width: px(9), height: px(9), flexShrink: 0 }}>
                     <polyline points="20 6 9 17 4 12"/>
                   </svg>
-                  <span className="text-white/65 font-medium text-xs">{fn}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.65)', fontWeight: 500, fontSize: px(9) }}>{fn}</span>
                 </div>
               ))}
             </div>
@@ -120,4 +195,3 @@ export default function ScenePlanosVendas() {
     </div>
   )
 }
-

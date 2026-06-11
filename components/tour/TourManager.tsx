@@ -79,7 +79,7 @@ const STAGES: Stage[] = [
     id: 6,
     label: 'Modos de Cobrança',
     description: 'PIX, links e pagamentos',
-    available: false,
+    available: true,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
         <rect x="2" y="5" width="20" height="14" rx="2" />
@@ -93,7 +93,7 @@ const STAGES: Stage[] = [
     id: 7,
     label: 'Funções e Habilidades',
     description: 'Conheça as categorias e funções',
-    available: false,
+    available: true,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
         <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
@@ -103,8 +103,8 @@ const STAGES: Stage[] = [
   {
     id: 8,
     label: 'Planos e Valores',
-    description: 'Smart, Vendas, full e créditos',
-    available: false,
+    description: 'Smart, Vendas, Full e Créditos',
+    available: true,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
         <circle cx="12" cy="12" r="10" />

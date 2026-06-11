@@ -6,9 +6,9 @@ import { useEffect, useState } from 'react'
 const BG = 'linear-gradient(135deg, #020617 0%, #0f172a 50%, #020617 100%)'
 
 const STATS = [
-  { label: 'Funções',    value: '105+',  color: '#32bcad' },
+  { label: 'Funções',    value: '+105',  color: '#32bcad' },
   { label: 'Categorias', value: '14',    color: '#8b5cf6' },
-  { label: 'Com IA',     value: '9',     color: '#a78bfa' },
+  { label: 'Auxiliares',     value: '10',     color: '#a78bfa' },
   { label: 'Premium',    value: '18',    color: '#f59e0b' },
 ]
 
@@ -68,7 +68,7 @@ export default function SceneFuncoesConclusao() {
           style={{ opacity: phraseVisible ? 1 : 0, transition: 'opacity 600ms ease' }}
         >
           <p className="text-white/60 italic" style={{ fontSize: 'clamp(0.48rem, 1.1vw, 0.62rem)', lineHeight: 1.6 }}>
-            "O assistente que nunca dorme —<br />e nunca para de aprender."
+            "Realmente uma IA pra chamar de sua!"
           </p>
         </div>
       )}

@@ -32,9 +32,9 @@ export const STAGE6_SCRIPT: Stage6Script[] = [
     label: 'PIX',
     audioText:
       'Com o Pix, o assistente gera o QR Code na hora. ' +
-      'O cliente escaneia, paga, e a confirmação automática, ' +
-      'sem você precisar verificar comprovantes. ' +
-      'O saldo é atualizado em tempo real na página de recebimentos, e você não sai no prejuízo com fraudes.',
+      'O cliente escaneia, paga, e a confirmação é automática, ' +
+      'sem precisar verificar comprovantes. ' +
+      'Seu saldo é atualizado em tempo real, e você não sai no prejuízo com fraudes.',
     fallbackDuration: 8000,
   },
   {
@@ -43,11 +43,11 @@ export const STAGE6_SCRIPT: Stage6Script[] = [
     audioText:
       'Com o Téfi, o assistente envia a cobrança direto para sua maquininha Mercado Pago Point conectada. ' +
       'O cliente insere ou aproxima o cartão, débito ou crédito, e o pagamento é processado na hora. ' +
-      'Parcelamento em até 12 vezes, com o calculo de cada parcela automaticamente.',
+      'Parcelamento em até 12 vezes, com o calculo de cada parcela automático.',
     displayText:
       'Com o TEF, o assistente envia a cobrança direto para sua maquininha Mercado Pago Point conectada. ' +
       'O cliente insere ou aproxima o cartão, débito ou crédito, e o pagamento é processado na hora. ' +
-      'Parcelamento em até 12 vezes, com o calculo de cada parcela automaticamente.',
+      'Parcelamento em até 12 vezes, com o calculo de cada parcela automático.',
     fallbackDuration: 8000,
   },
   {

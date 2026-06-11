@@ -1,9 +1,12 @@
 'use client'
 // components/tour/scenes/SceneFuncoesIntro.tsx
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 
 const BG = 'linear-gradient(135deg, #020617 0%, #0f172a 50%, #020617 100%)'
+
+const FORM_BASE_W = 340
+const FORM_BASE_H = 580
 
 const CATEGORIAS = [
   { nome: 'Financeiro',    color: '#32bcad' },
@@ -40,21 +43,26 @@ const CARROSSEL_RESET = `${parseFloat(((1 / CARROSSEL_COPIES) * 100).toFixed(4))
 export default function SceneFuncoesIntro() {
   const [catVisible, setCatVisible] = useState(0)
   const [totalVisible, setTotalVisible] = useState(false)
-  const [w, setW] = useState(0)
-  const [h, setH] = useState(0)
-  const ref = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(1)
+
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const recalcScale = useCallback(() => {
+    const el = containerRef.current
+    if (!el) return
+    const { width: cw, height: ch } = el.getBoundingClientRect()
+    const pad = 24
+    const aw = cw - pad
+    const ah = ch - pad
+    setScale(Math.min(1, aw / FORM_BASE_W, ah / FORM_BASE_H))
+  }, [])
 
   useEffect(() => {
-    if (!ref.current) return
-    const ro = new ResizeObserver(([e]) => {
-      setW(e.contentRect.width)
-      setH(e.contentRect.height)
-    })
-    ro.observe(ref.current)
-    setW(ref.current.getBoundingClientRect().width)
-    setH(ref.current.getBoundingClientRect().height)
+    recalcScale()
+    const ro = new ResizeObserver(recalcScale)
+    if (containerRef.current) ro.observe(containerRef.current)
     return () => ro.disconnect()
-  }, [])
+  }, [recalcScale])
 
   // Aparecimento progressivo das categorias
   useEffect(() => {
@@ -69,159 +77,160 @@ export default function SceneFuncoesIntro() {
     return () => clearTimeout(t)
   }, [catVisible])
 
-  // Mesma lógica do SceneCarrossel — escala baseada na largura do container
-  const s = w ? w / 540 : 1
-  const R = (n: number) => `${n * s}px`
-
   return (
     <div
-      ref={ref}
+      ref={containerRef}
       style={{
         width: '100%',
         height: '100%',
-        borderRadius: R(16),
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        userSelect: 'none',
         background: BG,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        position: 'relative',
       }}
     >
-      {/* ── Header ── */}
-      <div
-        style={{
+      {/* Wrapper escalável — largura fixa, scale dinâmico */}
+      <div style={{
+        width: FORM_BASE_W,
+        height: FORM_BASE_H,
+        transform: `scale(${scale})`,
+        transformOrigin: 'center center',
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: 16,
+        overflow: 'hidden',
+        border: '0.5px solid rgba(255,255,255,0.08)',
+      }}>
+
+        {/* ── Header ── */}
+        <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: `${12 * s}px ${20 * s}px`,
+          padding: '12px 20px',
           flexShrink: 0,
           borderBottom: '0.5px solid rgba(255,255,255,0.08)',
-        }}
-      >
-        <p style={{ color: '#fff', fontWeight: 700, fontSize: R(13), margin: 0 }}>
-          Funções e Habilidades
-        </p>
-        {totalVisible && (
-          <div style={{
-            borderRadius: 999,
-            padding: `${4 * s}px ${10 * s}px`,
-            background: 'rgba(50,188,173,0.15)',
-            border: '1px solid rgba(50,188,173,0.3)',
-          }}>
-            <span style={{ fontWeight: 700, color: '#32bcad', fontSize: R(9) }}>
-              + de 100 funções
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* ── Carrossel superior ── */}
-      <div
-        style={{
-          flexShrink: 0,
-          paddingTop: `${10 * s}px`,
-          paddingBottom: `${10 * s}px`,
-          borderBottom: '0.5px solid rgba(255,255,255,0.06)',
-        }}
-      >
-        <p style={{
-          color: 'rgba(255,255,255,0.3)',
-          fontSize: R(8),
-          textTransform: 'uppercase',
-          letterSpacing: '0.08em',
-          margin: `0 0 ${R(8)} 0`,
-          textAlign: 'center',
         }}>
-          Carrossel do assistente
-        </p>
+          <p style={{ color: '#fff', fontWeight: 700, fontSize: 13, margin: 0 }}>
+            Funções e Habilidades
+          </p>
+          {totalVisible && (
+            <div style={{
+              borderRadius: 999,
+              padding: '4px 10px',
+              background: 'rgba(50,188,173,0.15)',
+              border: '1px solid rgba(50,188,173,0.3)',
+            }}>
+              <span style={{ fontWeight: 700, color: '#32bcad', fontSize: 9 }}>
+                + de 100 funções
+              </span>
+            </div>
+          )}
+        </div>
 
-        <div style={{ width: '100%', overflow: 'hidden' }}>
-          <div
-            style={{
+        {/* ── Carrossel superior ── */}
+        <div style={{
+          flexShrink: 0,
+          paddingTop: 10,
+          paddingBottom: 10,
+          borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+        }}>
+          <p style={{
+            color: 'rgba(255,255,255,0.3)',
+            fontSize: 8,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            margin: '0 0 8px 0',
+            textAlign: 'center',
+          }}>
+            Carrossel do assistente
+          </p>
+
+          <div style={{ width: '100%', overflow: 'hidden' }}>
+            <div style={{
               display: 'flex',
-              gap: R(8),
-              paddingLeft: R(8),
+              gap: 8,
+              paddingLeft: 8,
               width: 'max-content',
               animation: `funcos-carousel-scroll 18s linear infinite`,
               willChange: 'transform',
-            }}
-          >
-            {DUPLICATED_CARROSSEL.map((item, i) => (
-              <div
-                key={i}
-                style={{
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  borderRadius: R(10),
-                  padding: `${8 * s}px ${12 * s}px`,
-                  background: 'rgba(255,255,255,0.08)',
-                  borderLeft: `${3 * s}px solid ${item.color}`,
-                  borderTop: '1px solid rgba(255,255,255,0.06)',
-                  borderRight: '1px solid rgba(255,255,255,0.06)',
-                  borderBottom: '1px solid rgba(255,255,255,0.06)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <span style={{
-                  color: 'rgba(255,255,255,0.85)',
-                  fontWeight: 600,
-                  fontSize: R(10),
-                }}>
-                  {item.nome}
-                </span>
-              </div>
-            ))}
+            }}>
+              {DUPLICATED_CARROSSEL.map((item, i) => (
+                <div
+                  key={i}
+                  style={{
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRadius: 10,
+                    padding: '8px 12px',
+                    background: 'rgba(255,255,255,0.08)',
+                    borderLeft: `3px solid ${item.color}`,
+                    borderTop: '1px solid rgba(255,255,255,0.06)',
+                    borderRight: '1px solid rgba(255,255,255,0.06)',
+                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600, fontSize: 10 }}>
+                    {item.nome}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Grid de categorias ── */}
-      <div
-        style={{
+        {/* ── Grid de categorias ── */}
+        <div style={{
           flex: 1,
           minHeight: 0,
-          padding: `${12 * s}px ${20 * s}px`,
+          padding: '12px 20px',
           display: 'flex',
           flexWrap: 'wrap',
-          gap: R(7),
+          gap: 7,
           alignContent: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
-        }}
-      >
-        {CATEGORIAS.slice(0, catVisible).map((cat) => (
-          <div
-            key={cat.nome}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: R(6),
-              borderRadius: 999,
-              padding: `${7 * s}px ${14 * s}px`,
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.1)',
-            }}
-          >
-            <span style={{
-              display: 'inline-block',
-              width: R(7),
-              height: R(7),
-              borderRadius: '50%',
-              background: cat.color,
-              flexShrink: 0,
-            }} />
-            <p style={{
-              fontWeight: 600,
-              color: 'rgba(255,255,255,0.85)',
-              fontSize: R(11),
-              margin: 0,
-              whiteSpace: 'nowrap',
-            }}>
-              {cat.nome}
-            </p>
-          </div>
-        ))}
+          background: BG,
+        }}>
+          {CATEGORIAS.slice(0, catVisible).map((cat) => (
+            <div
+              key={cat.nome}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                borderRadius: 999,
+                padding: '7px 14px',
+                background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}
+            >
+              <span style={{
+                display: 'inline-block',
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: cat.color,
+                flexShrink: 0,
+              }} />
+              <p style={{
+                fontWeight: 600,
+                color: 'rgba(255,255,255,0.85)',
+                fontSize: 11,
+                margin: 0,
+                whiteSpace: 'nowrap',
+              }}>
+                {cat.nome}
+              </p>
+            </div>
+          ))}
+        </div>
+
       </div>
 
       <style>{`

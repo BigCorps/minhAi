@@ -16,7 +16,7 @@ const FEATURES = [
     ),
   },
   {
-    label: 'Landing Page Personalizada',
+    label: 'Site Personalizado',
     color: '#3b82f6',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth={2} strokeLinecap="round" style={{ width: 14, height: 14, flexShrink: 0 }}>
@@ -35,7 +35,7 @@ const FEATURES = [
     ),
   },
   {
-    label: 'Domínio e Subdomínios',
+    label: 'Domínio Próprio',
     color: '#32bcad',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="#32bcad" strokeWidth={2} strokeLinecap="round" style={{ width: 14, height: 14, flexShrink: 0 }}>

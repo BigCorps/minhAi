@@ -37,15 +37,15 @@ export const STAGE8_SCRIPT: Stage8Script[] = [
     label: 'Smart — Planos',
     audioText:
       'No Smart, os planos mensais desbloqueiam recursos avançados. ' +
-      'O plano Top por quarenta e nove reais e noventa por mês inclui cinquenta créditos, ' +
+      'O plano Top por quarenta e nove reais e noventa por mês, inclui cinquenta créditos, ' +
       'Serviços Google, Serviços Meta, Linha de Produção, QR Codes com seu logo e impressão. ' +
-      'O plano Consulting por duzentos e noventa e nove reais e noventa' +
+      'O plano Consulting por duzentos e noventa e nove reais e noventa, ' +
       'inclui trezentos créditos, webapp com subdomínio próprio e consultoria incluída.',
     displayText:
       'No Smart, os planos mensais desbloqueiam recursos avançados. ' +
-      'O plano Top por R$ 49,90/mês inclui 50 créditos, ' +
+      'O plano Top por R$ 49,90/mês, inclui 50 créditos, ' +
       'Serviços Google, Serviços Meta, Linha de Produção, QR Codes com seu logo e impressão. ' +
-      'O plano Consulting por R$ 299,90/mês' +
+      'O plano Consulting por R$ 299,90/mês, ' +
       'inclui 300 créditos, webapp com subdomínio próprio e consultoria incluída.',
     fallbackDuration: 10000,
   },

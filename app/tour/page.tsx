@@ -1,10 +1,5 @@
 'use client'
 // app/tour/page.tsx
-// 1 = Apresentação       → TourStage1
-// 2 = Auxiliares de IA   → TourStage3
-// 3 = Página Assistente  → TourStage2
-// 4 = Do Zero ao Ar      → TourStage4
-// 5 = Meu Dashboard      → TourStage5
 
 import { useState, useCallback } from 'react'
 import TourStage1 from '@/components/tour/TourStage1'
@@ -12,6 +7,9 @@ import TourStage2 from '@/components/tour/TourStage2'
 import TourStage3 from '@/components/tour/TourStage3'
 import TourStage4 from '@/components/tour/TourStage4'
 import TourStage5 from '@/components/tour/TourStage5'
+import TourStage6 from '@/components/tour/TourStage6'
+import TourStage7 from '@/components/tour/TourStage7'
+import TourStage8 from '@/components/tour/TourStage8'
 import TourManager from '@/components/tour/TourManager'
 
 type PageState = 'playing' | 'selecting'
@@ -34,6 +32,9 @@ export default function TourPage() {
       {pageState === 'playing' && activeStage === 3 && <TourStage2 key="s3" {...common} />}
       {pageState === 'playing' && activeStage === 4 && <TourStage4 key="s4" {...common} />}
       {pageState === 'playing' && activeStage === 5 && <TourStage5 key="s5" {...common} />}
+      {pageState === 'playing' && activeStage === 6 && <TourStage6 key="s6" {...common} />}
+      {pageState === 'playing' && activeStage === 7 && <TourStage7 key="s7" {...common} />}
+      {pageState === 'playing' && activeStage === 8 && <TourStage8 key="s8" {...common} />}
       {pageState === 'selecting' && (
         <TourManager
           activeStage={activeStage}

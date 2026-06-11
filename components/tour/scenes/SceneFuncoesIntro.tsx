@@ -5,8 +5,8 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 
 const BG = 'linear-gradient(135deg, #020617 0%, #0f172a 50%, #020617 100%)'
 
-const FORM_BASE_W = 340
-const FORM_BASE_H = 580
+const FORM_BASE_W = 580
+const FORM_BASE_H = 500
 
 const CATEGORIAS = [
   { nome: 'Financeiro',    color: '#32bcad' },

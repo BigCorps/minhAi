@@ -127,8 +127,9 @@ function TelaValor({ onConfirm }: { onConfirm: () => void }) {
     setValue('')
     const t = setInterval(() => {
       if (i < chars.length) {
-        setValue(prev => prev + chars[i])
+        const ch = chars[i]
         i++
+        setValue(prev => prev + ch)
       } else {
         clearInterval(t)
         setTimeout(() => onConfirm(), 700)

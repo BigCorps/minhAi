@@ -87,7 +87,7 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
       'sem botões de saída, sem acesso ao sistema, ' +
       'com saída protegida por senha do proprietário. ' +
       'E para personalizar ainda mais a experiência, tem também o Modo Cliente, ' +
-      'seus clientes e colaboradores criam uma conta em segundos: Clientes tendo acesso as suas compras.' +
+      'seus clientes e colaboradores criam uma conta em segundos: Clientes tendo acesso as suas compras. ' +
       'Os colaboradores, cada um com seu nível de acesso, com identificador e PIN cadastrados. ' +
       'E você tem o controle de tudo no dashboard, clientes, funcionários, gerente, caixa, totens, entre outros.',
     fallbackDuration: 10000,
@@ -106,7 +106,7 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
       'E o grande diferencial da minhAi é a liberdade de interação. ' +
       'O cliente pode chamar como uma Alexa usando a palavra de ativação, ' +
       'clicar no botão e falar, navegar pelos botões do carrossel, ' +
-      'digitar, ou interagir pelos modos.' +
+      'digitar, ou interagir pelos modos. ' +
       'Cada pessoa utiliza do jeito que prefere, ' +
       'e a minhAi está pronta para todas elas, 24 horas por dia! ',
     fallbackDuration: 9000,

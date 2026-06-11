@@ -24,28 +24,32 @@ const BG = 'linear-gradient(135deg, #020617 0%, #0f172a 50%, #020617 100%)'
 
 // ─── Carrossel de nomes ──────────────────────────────────────────────────────
 
-function NamesCarousel({ names, color }: { names: string[]; color: string }) {
+function NamesCarousel({ names, color, reverse = false }: { names: string[]; color: string; reverse?: boolean }) {
   const [offset, setOffset] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
+  const unitWidth = useRef(0)
 
   useEffect(() => {
     const t = setInterval(() => setOffset(v => v + 1), 40)
     return () => clearInterval(t)
   }, [])
 
-  // Duplica para loop infinito
+  useEffect(() => {
+    if (ref.current) unitWidth.current = ref.current.scrollWidth / 3
+  })
+
   const doubled = [...names, ...names, ...names]
+  const unit = unitWidth.current || 9999
+  const shift = reverse
+    ? (unit - (offset % unit))  // rola da esquerda para direita
+    : (offset % unit)            // rola da direita para esquerda
 
   return (
     <div className="w-full overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)' }}>
       <div
         ref={ref}
         className="flex items-center whitespace-nowrap"
-        style={{
-          transform: `translateX(-${offset % (ref.current ? ref.current.scrollWidth / 3 : 9999)}px)`,
-          transition: 'none',
-          gap: 0,
-        }}
+        style={{ transform: `translateX(-${shift}px)`, transition: 'none', gap: 0 }}
       >
         {doubled.map((name, i) => (
           <span key={i} className="flex items-center flex-shrink-0">
@@ -144,10 +148,10 @@ function ModalTranscreverVideo() {
               </p>
             </div>
             <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-              <div style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: '1px solid rgba(99,102,241,0.4)', textAlign: 'center' }}>
+              <div style={{ flex: 1, padding: '3px 8px', borderRadius: 6, border: '1px solid rgba(99,102,241,0.4)', textAlign: 'center' }}>
                 <span style={{ color: '#818cf8', fontSize: 'clamp(0.3rem, 0.7vw, 0.38rem)', fontWeight: 600 }}>Copiar texto</span>
               </div>
-              <div style={{ flex: 1, padding: '5px 8px', borderRadius: 6, background: '#6366f1', textAlign: 'center' }}>
+              <div style={{ flex: 1, padding: '3px 8px', borderRadius: 6, background: '#6366f1', textAlign: 'center' }}>
                 <span style={{ color: 'white', fontSize: 'clamp(0.3rem, 0.7vw, 0.38rem)', fontWeight: 600 }}>Baixar PDF</span>
               </div>
             </div>
@@ -289,10 +293,10 @@ function ModalConsultarPlaca() {
               ))}
             </div>
             <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-              <div style={{ flex: 1, padding: '5px', borderRadius: 6, background: '#eab308', textAlign: 'center' }}>
+              <div style={{ flex: 1, padding: '3px 6px', borderRadius: 6, background: '#eab308', textAlign: 'center' }}>
                 <span style={{ color: 'black', fontSize: 'clamp(0.28rem, 0.65vw, 0.36rem)', fontWeight: 700 }}>Baixar PDF</span>
               </div>
-              <div style={{ flex: 1, padding: '5px', borderRadius: 6, background: '#2563eb', textAlign: 'center' }}>
+              <div style={{ flex: 1, padding: '3px 6px', borderRadius: 6, background: '#2563eb', textAlign: 'center' }}>
                 <span style={{ color: 'white', fontSize: 'clamp(0.28rem, 0.65vw, 0.36rem)', fontWeight: 700 }}>Enviar por e-mail</span>
               </div>
             </div>
@@ -371,10 +375,10 @@ function ModalRestricoesCNPJ() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-              <div style={{ flex: 1, padding: '5px', borderRadius: 6, background: 'rgba(255,255,255,0.08)', textAlign: 'center' }}>
+              <div style={{ flex: 1, padding: '3px 6px', borderRadius: 6, background: 'rgba(255,255,255,0.08)', textAlign: 'center' }}>
                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 'clamp(0.28rem, 0.65vw, 0.36rem)', fontWeight: 600 }}>Copiar</span>
               </div>
-              <div style={{ flex: 1, padding: '5px', borderRadius: 6, background: '#dc2626', textAlign: 'center' }}>
+              <div style={{ flex: 1, padding: '3px 6px', borderRadius: 6, background: '#dc2626', textAlign: 'center' }}>
                 <span style={{ color: 'white', fontSize: 'clamp(0.28rem, 0.65vw, 0.36rem)', fontWeight: 700 }}>Baixar PDF</span>
               </div>
             </div>
@@ -420,7 +424,7 @@ export default function SceneFuncoesConhecimento() {
             {CAT1_NOME}
           </span>
         </div>
-        <NamesCarousel names={CAT1_FUNCOES} color={CAT1_COLOR} />
+        <NamesCarousel names={CAT1_FUNCOES} color={CAT1_COLOR} reverse={false} />
       </div>
 
       {/* Modal em loop */}
@@ -455,18 +459,18 @@ export default function SceneFuncoesConhecimento() {
         </div>
       </div>
 
-      {/* Categoria 2 — carrossel abaixo */}
+      {/* Categoria 2 — carrossel abaixo, label direita, rola para direita */}
       <div
         className="flex-shrink-0 flex items-center py-1.5"
         style={{ borderTop: `1px solid ${CAT2_COLOR}20` }}
       >
+        <NamesCarousel names={CAT2_FUNCOES} color={CAT2_COLOR} reverse={true} />
         <div className="flex items-center gap-1.5 px-3 flex-shrink-0">
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: CAT2_COLOR }} />
           <span className="font-bold" style={{ color: CAT2_COLOR, fontSize: 'clamp(0.3rem, 0.7vw, 0.38rem)', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
             {CAT2_NOME}
           </span>
         </div>
-        <NamesCarousel names={CAT2_FUNCOES} color={CAT2_COLOR} />
       </div>
 
       <style>{`

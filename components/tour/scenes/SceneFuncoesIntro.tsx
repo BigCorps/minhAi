@@ -22,7 +22,6 @@ const CATEGORIAS = [
   { nome: 'Consultas',     color: '#fbbf24' },
 ]
 
-// Carrossel superior: itens do assistente duplicados para scroll CSS infinito
 const CARROSSEL_ITEMS = [
   { nome: 'Gerar PIX',       color: '#32bcad' },
   { nome: 'Modo Venda',      color: '#3b82f6' },
@@ -38,24 +37,22 @@ const CARROSSEL_COPIES = 6
 const DUPLICATED_CARROSSEL = Array.from({ length: CARROSSEL_COPIES }, () => CARROSSEL_ITEMS).flat()
 const CARROSSEL_RESET = `${parseFloat(((1 / CARROSSEL_COPIES) * 100).toFixed(4))}%`
 
-// Grid de categorias: duplicação para scroll contínuo (não usado, mantido por consistência)
-const CAROUSEL_COPIES = 4
-const RESET_PERCENT = `${((1 / CAROUSEL_COPIES) * 100).toFixed(4)}%`
-
-const FORM_BASE_W = 340
-const FORM_BASE_H = 580
-
 export default function SceneFuncoesIntro() {
   const [catVisible, setCatVisible] = useState(0)
   const [totalVisible, setTotalVisible] = useState(false)
   const [w, setW] = useState(0)
+  const [h, setH] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!ref.current) return
-    const ro = new ResizeObserver(([e]) => setW(e.contentRect.width))
+    const ro = new ResizeObserver(([e]) => {
+      setW(e.contentRect.width)
+      setH(e.contentRect.height)
+    })
     ro.observe(ref.current)
     setW(ref.current.getBoundingClientRect().width)
+    setH(ref.current.getBoundingClientRect().height)
     return () => ro.disconnect()
   }, [])
 
@@ -72,15 +69,23 @@ export default function SceneFuncoesIntro() {
     return () => clearTimeout(t)
   }, [catVisible])
 
-  const s = w ? w / FORM_BASE_W : 1
-  const sH = h ? h / FORM_BASE_H : 1
-  const px = (n: number) => `${n * s}px`
+  // Mesma lógica do SceneCarrossel — escala baseada na largura do container
+  const s = w ? w / 540 : 1
+  const R = (n: number) => `${n * s}px`
 
   return (
     <div
       ref={ref}
-      className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
-      style={{ background: BG }}
+      style={{
+        width: '100%',
+        height: '100%',
+        borderRadius: R(16),
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        userSelect: 'none',
+        background: BG,
+      }}
     >
       {/* ── Header ── */}
       <div
@@ -93,7 +98,7 @@ export default function SceneFuncoesIntro() {
           borderBottom: '0.5px solid rgba(255,255,255,0.08)',
         }}
       >
-        <p style={{ color: '#fff', fontWeight: 700, fontSize: px(13), margin: 0 }}>
+        <p style={{ color: '#fff', fontWeight: 700, fontSize: R(13), margin: 0 }}>
           Funções e Habilidades
         </p>
         {totalVisible && (
@@ -103,14 +108,14 @@ export default function SceneFuncoesIntro() {
             background: 'rgba(50,188,173,0.15)',
             border: '1px solid rgba(50,188,173,0.3)',
           }}>
-            <span style={{ fontWeight: 700, color: '#32bcad', fontSize: px(9) }}>
-              105+ funções · 14 categorias
+            <span style={{ fontWeight: 700, color: '#32bcad', fontSize: R(9) }}>
+              + de 100 funções
             </span>
           </div>
         )}
       </div>
 
-      {/* ── Carrossel superior — scroll CSS infinito (igual SceneCarrossel) ── */}
+      {/* ── Carrossel superior ── */}
       <div
         style={{
           flexShrink: 0,
@@ -119,25 +124,23 @@ export default function SceneFuncoesIntro() {
           borderBottom: '0.5px solid rgba(255,255,255,0.06)',
         }}
       >
-        {/* Label centralizado */}
         <p style={{
           color: 'rgba(255,255,255,0.3)',
-          fontSize: px(8),
+          fontSize: R(8),
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
-          margin: `0 0 ${px(8)} 0`,
+          margin: `0 0 ${R(8)} 0`,
           textAlign: 'center',
         }}>
           Carrossel do assistente
         </p>
 
-        {/* Faixa rolante — overflow hidden no wrapper, w-max + animation no inner */}
         <div style={{ width: '100%', overflow: 'hidden' }}>
           <div
             style={{
               display: 'flex',
-              gap: px(8),
-              paddingLeft: px(8),
+              gap: R(8),
+              paddingLeft: R(8),
               width: 'max-content',
               animation: `funcos-carousel-scroll 18s linear infinite`,
               willChange: 'transform',
@@ -150,7 +153,7 @@ export default function SceneFuncoesIntro() {
                   flexShrink: 0,
                   display: 'flex',
                   alignItems: 'center',
-                  borderRadius: px(10),
+                  borderRadius: R(10),
                   padding: `${8 * s}px ${12 * s}px`,
                   background: 'rgba(255,255,255,0.08)',
                   borderLeft: `${3 * s}px solid ${item.color}`,
@@ -163,7 +166,7 @@ export default function SceneFuncoesIntro() {
                 <span style={{
                   color: 'rgba(255,255,255,0.85)',
                   fontWeight: 600,
-                  fontSize: px(10),
+                  fontSize: R(10),
                 }}>
                   {item.nome}
                 </span>
@@ -173,7 +176,7 @@ export default function SceneFuncoesIntro() {
         </div>
       </div>
 
-      {/* ── Grid de categorias (pill escuro + bullet colorido, centralizado) ── */}
+      {/* ── Grid de categorias ── */}
       <div
         style={{
           flex: 1,
@@ -181,9 +184,10 @@ export default function SceneFuncoesIntro() {
           padding: `${12 * s}px ${20 * s}px`,
           display: 'flex',
           flexWrap: 'wrap',
-          gap: px(7),
+          gap: R(7),
           alignContent: 'center',
           justifyContent: 'center',
+          overflow: 'hidden',
         }}
       >
         {CATEGORIAS.slice(0, catVisible).map((cat) => (
@@ -192,7 +196,7 @@ export default function SceneFuncoesIntro() {
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: px(6),
+              gap: R(6),
               borderRadius: 999,
               padding: `${7 * s}px ${14 * s}px`,
               background: 'rgba(255,255,255,0.07)',
@@ -201,8 +205,8 @@ export default function SceneFuncoesIntro() {
           >
             <span style={{
               display: 'inline-block',
-              width: px(7),
-              height: px(7),
+              width: R(7),
+              height: R(7),
               borderRadius: '50%',
               background: cat.color,
               flexShrink: 0,
@@ -210,7 +214,7 @@ export default function SceneFuncoesIntro() {
             <p style={{
               fontWeight: 600,
               color: 'rgba(255,255,255,0.85)',
-              fontSize: px(11),
+              fontSize: R(11),
               margin: 0,
               whiteSpace: 'nowrap',
             }}>

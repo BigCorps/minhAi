@@ -92,14 +92,12 @@ export const STAGE8_SCRIPT: Stage8Script[] = [
       'A minha I A Vendas é gratuito para o lojista. ' +
       'Sem mensalidade, sem créditos, sem surpresa. ' +
       'Você só paga dez por cento por venda confirmada, descontado automaticamente no saque. ' +
-      'Vem com dezoito funções incluídas: modo venda, catálogo, pedidos, agendamento, ' +
-      'pagamentos, cadastro e muito mais — tudo ativo desde o primeiro dia.',
+      'Vem com funções específicas com foco total em vendas.',
     displayText:
       'A minhAi Vendas é gratuito para o lojista. ' +
       'Sem mensalidade, sem créditos, sem surpresa. ' +
       'Você só paga 10% por venda confirmada, descontado automaticamente no saque. ' +
-      'Vem com 18 funções incluídas: modo venda, catálogo, pedidos, agendamento, ' +
-      'pagamentos, cadastro e muito mais — tudo ativo desde o primeiro dia.',
+      'Vem com funções específicas com foco total em vendas.',
     fallbackDuration: 11000,
   },
   {

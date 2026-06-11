@@ -53,7 +53,7 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
     audioText:
       'Com um único toque ou comando, o assistente gera um card na tela, ' +
       'para o WhatsApp da empresa, para uma cobrança PIX, ou qualquer outra das mais de 100 funções. ' +
-      'O cliente interage por voz, digitando, lendo o qrcode. Ele escolhe. ' +
+      'O cliente interage por voz, digitando ou lendo o qrcode. Ele escolhe. ' +
       'Sem papel, sem digitação, sem atrito.',
     fallbackDuration: 7000,
   },
@@ -76,7 +76,7 @@ export const STAGE2_SCRIPT: Stage2Script[] = [
       'e o sistema anuncia cada chamada em voz alta, sem papel, sem confusão. ' +
       'E para facilitar ainda mais o acesso, tem também o Modo Link: ' +
       'uma página rápida da empresa com WhatsApp, Instagram, site e todos os contatos, ' +
-      'Um único endereço para o cliente encontrar todas os seus contatos',
+      'Um único endereço para o cliente encontrar todos os seus contatos',
     fallbackDuration: 10000,
   },
   {

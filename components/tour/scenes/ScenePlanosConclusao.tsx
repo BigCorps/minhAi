@@ -84,13 +84,13 @@ export default function ScenePlanosConclusao() {
             className="rounded-full px-4 py-2 font-bold text-white"
             style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', fontSize: 'clamp(0.38rem, 0.9vw, 0.5rem)', boxShadow: '0 4px 16px rgba(59,130,246,0.3)' }}
           >
-            Começar grátis
+            Começe grátis
           </button>
           <button
             className="rounded-full px-4 py-2 font-semibold text-white/60"
             style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: 'clamp(0.38rem, 0.9vw, 0.5rem)' }}
           >
-            Ver planos
+            Escolha seu plano
           </button>
         </div>
       )}

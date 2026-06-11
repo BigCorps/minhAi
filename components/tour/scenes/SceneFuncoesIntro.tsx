@@ -22,6 +22,7 @@ const CATEGORIAS = [
   { nome: 'Consultas',     color: '#fbbf24' },
 ]
 
+// Carrossel superior: itens do assistente duplicados para scroll CSS infinito
 const CARROSSEL_ITEMS = [
   { nome: 'Gerar PIX',       color: '#32bcad' },
   { nome: 'Modo Venda',      color: '#3b82f6' },
@@ -33,8 +34,15 @@ const CARROSSEL_ITEMS = [
   { nome: 'Tocar Música',    color: '#ec4899' },
 ]
 
+const CARROSSEL_COPIES = 6
+const DUPLICATED_CARROSSEL = Array.from({ length: CARROSSEL_COPIES }, () => CARROSSEL_ITEMS).flat()
+const CARROSSEL_RESET = `${parseFloat(((1 / CARROSSEL_COPIES) * 100).toFixed(4))}%`
+
+// Grid de categorias: duplicação para scroll contínuo (não usado, mantido por consistência)
+const CAROUSEL_COPIES = 4
+const RESET_PERCENT = `${((1 / CAROUSEL_COPIES) * 100).toFixed(4)}%`
+
 export default function SceneFuncoesIntro() {
-  const [carouselOffset, setCarouselOffset] = useState(0)
   const [catVisible, setCatVisible] = useState(0)
   const [totalVisible, setTotalVisible] = useState(false)
   const [w, setW] = useState(0)
@@ -48,11 +56,7 @@ export default function SceneFuncoesIntro() {
     return () => ro.disconnect()
   }, [])
 
-  useEffect(() => {
-    const t = setInterval(() => setCarouselOffset(v => v + 1), 1200)
-    return () => clearInterval(t)
-  }, [])
-
+  // Aparecimento progressivo das categorias
   useEffect(() => {
     if (catVisible >= CATEGORIAS.length) return
     const t = setTimeout(() => setCatVisible(v => v + 1), 120)
@@ -74,7 +78,7 @@ export default function SceneFuncoesIntro() {
       className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
       style={{ background: BG }}
     >
-      {/* Header */}
+      {/* ── Header ── */}
       <div
         style={{
           display: 'flex',
@@ -96,107 +100,128 @@ export default function SceneFuncoesIntro() {
             border: '1px solid rgba(50,188,173,0.3)',
           }}>
             <span style={{ fontWeight: 700, color: '#32bcad', fontSize: px(9) }}>
-              105+ funções · 14 categorias
+              + de 100 funções
             </span>
           </div>
         )}
       </div>
 
-      {/* Carrossel */}
+      {/* ── Carrossel superior — scroll CSS infinito (igual SceneCarrossel) ── */}
       <div
         style={{
           flexShrink: 0,
-          padding: `${10 * s}px ${20 * s}px`,
+          paddingTop: `${10 * s}px`,
+          paddingBottom: `${10 * s}px`,
           borderBottom: '0.5px solid rgba(255,255,255,0.06)',
         }}
       >
+        {/* Label centralizado */}
         <p style={{
           color: 'rgba(255,255,255,0.3)',
           fontSize: px(8),
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
-          marginBottom: px(8),
           margin: `0 0 ${px(8)} 0`,
+          textAlign: 'center',
         }}>
           Carrossel do assistente
         </p>
-        <div style={{ display: 'flex', gap: px(8), overflow: 'hidden' }}>
-          {Array.from({ length: 4 }).map((_, i) => {
-            const item = CARROSSEL_ITEMS[(carouselOffset + i) % CARROSSEL_ITEMS.length]
-            return (
+
+        {/* Faixa rolante — overflow hidden no wrapper, w-max + animation no inner */}
+        <div style={{ width: '100%', overflow: 'hidden' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: px(8),
+              paddingLeft: px(8),
+              width: 'max-content',
+              animation: `funcos-carousel-scroll 18s linear infinite`,
+              willChange: 'transform',
+            }}
+          >
+            {DUPLICATED_CARROSSEL.map((item, i) => (
               <div
                 key={i}
                 style={{
-                  flex: 1,
+                  flexShrink: 0,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
                   borderRadius: px(10),
-                  padding: `${10 * s}px ${8 * s}px`,
-                  background: `${item.color}12`,
-                  border: `1px solid ${item.color}25`,
-                  transition: 'all 400ms ease',
+                  padding: `${8 * s}px ${12 * s}px`,
+                  background: 'rgba(255,255,255,0.08)',
+                  borderLeft: `${3 * s}px solid ${item.color}`,
+                  borderTop: '1px solid rgba(255,255,255,0.06)',
+                  borderRight: '1px solid rgba(255,255,255,0.06)',
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                <span style={{ color: 'rgba(255,255,255,0.75)', fontWeight: 600, fontSize: px(10), textAlign: 'center' }}>
+                <span style={{
+                  color: 'rgba(255,255,255,0.85)',
+                  fontWeight: 600,
+                  fontSize: px(10),
+                }}>
                   {item.nome}
                 </span>
               </div>
-            )
-          })}
-          <div style={{
-            flexShrink: 0,
-            width: px(28),
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: px(10),
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}>
-            <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: px(14) }}>›</span>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Grid de categorias */}
+      {/* ── Grid de categorias (pill escuro + bullet colorido, centralizado) ── */}
       <div
         style={{
           flex: 1,
           minHeight: 0,
           padding: `${12 * s}px ${20 * s}px`,
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          display: 'flex',
+          flexWrap: 'wrap',
           gap: px(7),
           alignContent: 'center',
+          justifyContent: 'center',
         }}
       >
         {CATEGORIAS.slice(0, catVisible).map((cat) => (
           <div
             key={cat.nome}
             style={{
-              borderRadius: px(10),
-              padding: `${10 * s}px ${8 * s}px`,
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              background: `${cat.color}12`,
-              border: `1px solid ${cat.color}28`,
+              gap: px(6),
+              borderRadius: 999,
+              padding: `${7 * s}px ${14 * s}px`,
+              background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.1)',
             }}
           >
+            <span style={{
+              display: 'inline-block',
+              width: px(7),
+              height: px(7),
+              borderRadius: '50%',
+              background: cat.color,
+              flexShrink: 0,
+            }} />
             <p style={{
-              fontWeight: 700,
-              color: cat.color,
+              fontWeight: 600,
+              color: 'rgba(255,255,255,0.85)',
               fontSize: px(11),
               margin: 0,
-              textAlign: 'center',
-              lineHeight: 1.2,
+              whiteSpace: 'nowrap',
             }}>
               {cat.nome}
             </p>
           </div>
         ))}
       </div>
+
+      <style>{`
+        @keyframes funcos-carousel-scroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-${CARROSSEL_RESET}); }
+        }
+      `}</style>
     </div>
   )
 }

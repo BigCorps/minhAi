@@ -168,7 +168,7 @@ export default function ScenePlanosVendas() {
             >
               18 funções incluídas — ative ou desative no painel
             </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(5), alignContent: 'flex-start', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(5), alignContent: 'center', justifyContent: 'center', overflow: 'hidden' }}>
               {FUNCOES.slice(0, funcoesVisible).map((fn) => (
                 <div
                   key={fn}

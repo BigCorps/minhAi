@@ -24,10 +24,10 @@ export const STAGE7_SCRIPT: Stage7Script[] = [
     id: 'funcoes-intro',
     label: 'Intro',
     audioText:
-      'O assistente tem mais de 100 funções organizadas em 14 categorias — ' +
-      'cada uma ativável por voz, por toque ou automaticamente. ' +
-      'No carrossel da página do assistente, o cliente vê só o que está ativo. ' +
-      'Você controla tudo pelo dashboard, com um simples toggle.',
+      'O assistente tem mais de 100 funções organizadas em categorias, ' +
+      'cada uma ativável por voz, por toque ou digitando. ' +
+      'O assistente só executa o que você deixou ativo. ' +
+      'Você controla tudo pelo dashboard, com um simples clique.',
     fallbackDuration: 8000,
   },
   {
@@ -35,12 +35,11 @@ export const STAGE7_SCRIPT: Stage7Script[] = [
     label: 'Conhecimento · Consultas',
     audioText:
       'Em Conhecimento, o assistente responde perguntas gerais com ChatGPT, ' +
-      'executa respostas rápidas configuradas por você, ' +
-      'cria posts para redes sociais, gera orçamentos, transcreve áudios e vídeos ' +
-      'e mostra o clima em tempo real. ' +
-      'Em Consultas, ele acessa dados de CPF e CNPJ, ' +
-      'verifica restrições de crédito, protestos em cartório e dados de veículos por placa — ' +
-      'funções premium para quem precisa de mais segurança nas transações.',
+      'executa respostas rápidas, cria posts ' +
+      'gera orçamentos, mostra o clima e transcreve áudios e vídeos. ' +
+      'Em Consultas, acessa dados de CPF e CNPJ, ' +
+      'verifica restrições de crédito, protestos em cartório e dados de veículos por placa. ' +
+      'funções para quem precisa de inteligência e segurança nas transações.',
     fallbackDuration: 12000,
   },
   {
@@ -49,7 +48,7 @@ export const STAGE7_SCRIPT: Stage7Script[] = [
     audioText:
       'Em Comercial, o assistente abre o catálogo de produtos, monta o carrinho por voz, ' +
       'registra vendas, gera cupons de desconto e cadastra produtos com sugestão de imagens. ' +
-      'Em Financeiro, cobra via PIX, TEF, NFC e link de pagamento — ' +
+      'Em Financeiro, temos as funções de cobraça no Pix, Débito e Crédito, ' +
       'tudo integrado, sem sair do assistente.',
     fallbackDuration: 9000,
   },
@@ -58,7 +57,7 @@ export const STAGE7_SCRIPT: Stage7Script[] = [
     label: 'Agendamento · Identificação',
     audioText:
       'Em Agendamento, o assistente marca, reagenda, cancela e confirma compromissos ' +
-      'direto no Google Agenda — com lembretes automáticos e links pelo Google Meet. ' +
+      'direto no Google Agenda — com lembretes automáticos. ' +
       'Em Identificação, faz login de clientes, gera senhas de fila, ' +
       'coleta pré-atendimento, aplica pesquisas de satisfação e gerencia cadastros configuráveis.',
     fallbackDuration: 10000,
@@ -67,7 +66,7 @@ export const STAGE7_SCRIPT: Stage7Script[] = [
     id: 'funcoes-contato',
     label: 'Contato · Serviços',
     audioText:
-      'Em Contato, cada canal da empresa vira um QR Code — ' +
+      'Em Contato, cada canal da empresa vira um QR Code: ' +
       'WhatsApp, Instagram, Facebook, TikTok, LinkedIn, site, e-mail e telefone. ' +
       'Em Serviços, exibe cardápio digital, compartilha Wi-Fi por QR Code, ' +
       'envia SMS, aciona o gerente com notificação urgente, ' +
@@ -89,9 +88,8 @@ export const STAGE7_SCRIPT: Stage7Script[] = [
     id: 'funcoes-midia',
     label: 'Multimídia · Utilitários',
     audioText:
-      'Em Multimídia, toca músicas e vídeos do YouTube por voz, ' +
-      'exibe slideshows de ofertas, inicia videochamadas pelo Google Meet ' +
-      'e reproduz playlists automaticamente. ' +
+      'Em Multimídia, toca músicas, vídeos e playlists solicitados ou programados, ' +
+      'exibe slideshows de ofertas, inicia videochamadas pelo Google Meet ou entre usuários. ' +
       'Em Utilitários, emite notas fiscais, cria lembretes e alarmes por voz, ' +
       'configura lembretes de remédios, gera segunda via de boleto ' +
       'e salva anotações direto no dashboard.',
@@ -104,7 +102,7 @@ export const STAGE7_SCRIPT: Stage7Script[] = [
       'Em Localização, mostra o endereço da empresa no mapa, ' +
       'traça rotas, consulta CEP e rastreia encomendas dos Correios. ' +
       'Em Informação, exibe cotação de câmbio, previsão do tempo, ' +
-      'notícias do momento, calculadora de juros e de IMC, ' +
+      'notícias do momento, calculadora de juros, IMC, ' +
       'conversor de medidas e feriados nacionais.',
     fallbackDuration: 9000,
   },
@@ -112,8 +110,11 @@ export const STAGE7_SCRIPT: Stage7Script[] = [
     id: 'funcoes-conclusao',
     label: 'Conclusão',
     audioText:
-      'Mais de 100 funções, 14 categorias, ativadas só quando fazem sentido pro seu negócio. ' +
-      'O assistente que nunca dorme — e nunca para de aprender.',
+      'Mais de 100 funções, ativadas só quando fazem sentido pro seu negócio. ' +
+      'Você pode escolher uma ou todas as funções. Realmente uma I Á pra chamar de sua!',
+    displayText:
+      'Mais de 100 funções, ativadas só quando fazem sentido pro seu negócio. ' +
+      'Você pode escolher 1 ou todas as funções. Realmente uma IA pra chamar de sua!',
     fallbackDuration: 5000,
   },
 ]

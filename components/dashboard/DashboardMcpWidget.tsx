@@ -33,7 +33,7 @@ const MCP_FUNCTIONS = [
 
   // Lista de Compras
   { key: 'lista',      label: 'Lista Compras',       color: '#10B981', needsInput: false, autoMsg: 'ver lista de compras', prompt: '', placeholder: '' },
-  { key: 'add_lista',  label: 'Add na Lista',        color: '#3B82F6', needsInput: true,  autoMsg: '', prompt: '*Adicionar na Lista*\n\nQual item deseja adicionar?', placeholder: 'Ex: pão de forma' },
+  { key: 'add_lista',  label: 'Adicionar na Lista',        color: '#3B82F6', needsInput: true,  autoMsg: '', prompt: '*Adicionar na Lista*\n\nQual item deseja adicionar?', placeholder: 'Ex: pão de forma' },
   { key: 'rm_lista',   label: 'Remover da Lista',    color: '#10B981', needsInput: true,  autoMsg: '', prompt: '*Remover da Lista*\n\nQual item deseja remover?', placeholder: 'Ex: pão de forma' },
 
   // Consultas gratuitas

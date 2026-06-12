@@ -333,7 +333,7 @@ export default function TourStage1({
         {/* Cena — mobile: flex-1 (ocupa o que sobra acima do assistente)
                 desktop: altura fixa alinhada com o assistente em flex-row */}
         <div
-          className={inModal ? 'w-full flex-shrink-0' : 'flex-1 min-h-0 md:flex-shrink-0 w-full'}
+          className="flex-1 min-h-0 md:flex-shrink-0 w-full"
           style={{
             height: inModal
               ? 'clamp(160px, 38dvh, 400px)'

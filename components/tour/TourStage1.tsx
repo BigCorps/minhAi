@@ -293,7 +293,7 @@ export default function TourStage1({
         // standalone: ocupa a viewport inteira
         height: inModal ? '100%' : '100dvh',
         background: isDark
-          ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
+          ? 'linear-gradient(135deg, #020617 0%, #0f172a 50%, #020617 100%)'
           : '#ffffff',
         transition: 'background 400ms ease',
       }}

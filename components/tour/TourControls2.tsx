@@ -1,6 +1,6 @@
 'use client'
 // components/tour/TourControls2.tsx
-// Versão genérica de TourControls que aceita qualquer script (Stage 2+)
+// Versão com botão Menu (esquerda) e botão Velocidade (direita)
 
 import { useEffect, useRef, useState } from 'react'
 
@@ -8,6 +8,8 @@ interface ScriptItem {
   id: string
   label: string
 }
+
+type SpeedOption = 1 | 1.5 | 2
 
 interface TourControls2Props {
   currentIndex: number
@@ -18,12 +20,15 @@ interface TourControls2Props {
   isWakeLockActive: boolean
   isWakeLockSupported: boolean
   script: ScriptItem[]
+  speed?: SpeedOption
   onPrev: () => void
   onNext: () => void
   onTogglePlay: () => void
   onGoTo: (index: number) => void
   onToggleTheme: () => void
   onToggleWakeLock: () => void
+  onGoToMenu?: () => void
+  onCycleSpeed?: (speed: SpeedOption) => void
   overlayMode?: boolean
   forceVisible?: boolean
 }
@@ -37,12 +42,15 @@ export default function TourControls2({
   isWakeLockActive,
   isWakeLockSupported,
   script,
+  speed = 1,
   onPrev,
   onNext,
   onTogglePlay,
   onGoTo,
   onToggleTheme,
   onToggleWakeLock,
+  onGoToMenu,
+  onCycleSpeed,
   overlayMode = false,
   forceVisible = false,
 }: TourControls2Props) {
@@ -51,6 +59,26 @@ export default function TourControls2({
   const isDark = theme === 'dark'
   const isLast = currentIndex === total - 1
   const isVisible = overlayMode ? forceVisible : !hidden
+
+  // Cicla 1 → 1.5 → 2 → 1
+  const handleCycleSpeed = () => {
+    if (!onCycleSpeed) return
+    const next: SpeedOption = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1
+    onCycleSpeed(next)
+  }
+
+  const speedLabel = speed === 1 ? '1×' : speed === 1.5 ? '1.5×' : '2×'
+  // Cor do badge de velocidade: cinza em 1x, âmbar em 1.5x, laranja em 2x
+  const speedColor = speed === 1
+    ? (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.10)')
+    : speed === 1.5
+    ? 'rgba(245,158,11,0.25)'
+    : 'rgba(249,115,22,0.30)'
+  const speedTextColor = speed === 1
+    ? (isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)')
+    : speed === 1.5
+    ? '#f59e0b'
+    : '#f97316'
 
   useEffect(() => {
     if (!isPlaying) setHidden(false)
@@ -78,7 +106,8 @@ export default function TourControls2({
   const iconBtnColors = isDark ? 'bg-white/15 hover:bg-white/25 text-white' : 'bg-black/10 hover:bg-black/20 text-gray-800'
 
   const content = (
-    <div className="flex flex-col items-center gap-3 w-full transition-all duration-400"
+    <div
+      className="flex flex-col items-center gap-3 w-full transition-all duration-400"
       style={{ opacity: isVisible ? 1 : 0, pointerEvents: isVisible ? 'auto' : 'none', transform: isVisible ? 'translateY(0)' : 'translateY(6px)' }}
     >
       {/* Dots */}
@@ -103,8 +132,27 @@ export default function TourControls2({
         ))}
       </div>
 
-      {/* Botões */}
+      {/* Botões — layout: [menu] [tema] [prev] [play] [next/manager] [wakelock] [speed] */}
       <div className="flex items-center gap-2">
+
+        {/* ── Menu (volta para o TourManager) ── */}
+        {onGoToMenu && (
+          <button
+            onClick={onGoToMenu}
+            aria-label="Ver menu de stages"
+            title="Menu"
+            className={`${iconBtn} ${iconBtnColors}`}
+          >
+            {/* Ícone grid 2×2 */}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </button>
+        )}
+
         {/* Tema */}
         <button onClick={onToggleTheme} aria-label="Alternar tema" className={`${iconBtn} ${iconBtnColors}`}>
           {isDark ? (
@@ -134,7 +182,7 @@ export default function TourControls2({
           )}
         </button>
 
-        {/* Next / Manager */}
+        {/* Next — se for a última cena mostra o ícone de grid (manager), senão seta */}
         {isLast ? (
           <button onClick={onNext} aria-label="Ver todos os stages" className={`${iconBtn} ${iconBtnColors}`}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-4 h-4">
@@ -163,6 +211,25 @@ export default function TourControls2({
             )}
           </button>
         )}
+
+        {/* ── Velocidade (cicla 1× → 1.5× → 2× → 1×) ── */}
+        {onCycleSpeed && (
+          <button
+            onClick={handleCycleSpeed}
+            aria-label={`Velocidade atual: ${speedLabel}. Clique para alterar.`}
+            title={`Velocidade: ${speedLabel}`}
+            className="h-10 min-w-[44px] px-2 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 font-semibold tabular-nums"
+            style={{
+              background: speedColor,
+              color: speedTextColor,
+              fontSize: '0.72rem',
+              letterSpacing: '0.01em',
+            }}
+          >
+            {speedLabel}
+          </button>
+        )}
+
       </div>
     </div>
   )

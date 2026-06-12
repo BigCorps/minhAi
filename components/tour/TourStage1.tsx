@@ -319,26 +319,18 @@ export default function TourStage1({
       )}
 
       {/* ── Área principal ── */}
-<div
-  className={`flex-1 min-h-0 flex gap-0 px-4 w-full max-w-5xl mx-auto ${
-    inModal
-      ? 'flex-col items-center px-4'
-      : 'flex-col md:flex-row md:items-center md:gap-12 md:px-12'
-  }`}
-  style={{
-    paddingTop: 'clamp(16px, 4dvh, 48px)',
-    paddingBottom: inModal ? '0px' : 'clamp(8px, 2dvh, 24px)',
-  }}
->
+      <div
+        className="flex-1 min-h-0 flex flex-col md:flex-row md:items-center gap-0 md:gap-12 px-4 md:px-12 w-full max-w-5xl mx-auto"
+        style={{
+          paddingTop: 'clamp(16px, 4dvh, 48px)',
+          paddingBottom: inModal ? '8px' : 'clamp(8px, 2dvh, 24px)',
+        }}
+      >
         {/* Cena — mobile: flex-1 (ocupa o que sobra acima do assistente)
                 desktop: altura fixa alinhada com o assistente em flex-row */}
         <div
           className="flex-1 min-h-0 md:flex-shrink-0 w-full"
-          style={{
-            height: inModal
-              ? 'clamp(160px, 38dvh, 400px)'
-              : 'clamp(220px, 52dvh, 520px)',
-          }}
+          style={{ paddingTop: inModal ? '8px' : 'clamp(16px, 4dvh, 48px)', paddingBottom: inModal ? '4px' : 'clamp(8px, 2dvh, 24px)' }}
         >
           <div
             className="w-full h-full transition-opacity ease-in-out"
@@ -353,7 +345,7 @@ export default function TourStage1({
 
         {/* Assistente — sem altura fixa, flui naturalmente */}
         <div
-          className={`flex-shrink-0 flex flex-col items-center w-full ${inModal ? '' : 'md:w-72 lg:w-80'}`}
+          className="flex-shrink-0 flex flex-col items-center w-full md:w-72 lg:w-80"
           style={{ gap: 'clamp(6px, 1.5dvh, 16px)' }}
         >
           <TourAssistant

@@ -330,11 +330,7 @@ export default function TourStage1({
                 desktop: altura fixa alinhada com o assistente em flex-row */}
         <div
           className="flex-1 min-h-0 md:flex-shrink-0 w-full"
-          style={{
-            height: inModal
-              ? 'clamp(160px, 38dvh, 400px)'
-              : 'clamp(220px, 52dvh, 520px)',
-          }}
+          style={{ height: 'clamp(220px, 52dvh, 520px)' }}
         >
           <div
             className="w-full h-full transition-opacity ease-in-out"

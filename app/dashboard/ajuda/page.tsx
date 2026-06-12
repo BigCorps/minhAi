@@ -42,6 +42,30 @@ const cardsDeAjuda: AjudaCard[] = [
     textoBotao: 'Contatar Suporte' 
   },
   { 
+    id: 'ia-suporte', 
+    titulo: 'Assistente de Suporte', 
+    descricao: 'Tire suas dúvidas instantaneamente com nossa IA treinada para te ajudar com o minhAi.', 
+    icone: <UserCheck className="w-6 h-6" />, 
+    acao: { tipo: 'link', valor: 'https://suporte.suaia.app' }, 
+    textoBotao: 'Falar com a IA' 
+  },
+  { 
+    id: 'tour', 
+    titulo: 'Tour pelo minhAi', 
+    descricao: 'Conheça todas as funcionalidades do minhAi em um tour interativo guiado passo a passo.', 
+    icone: <BookOpen className="w-6 h-6" />, 
+    acao: { tipo: 'link', valor: 'https://minhai.app/tour' }, 
+    textoBotao: 'Iniciar Tour' 
+  },
+  { 
+    id: 'youtube', 
+    titulo: 'Canal no YouTube', 
+    descricao: 'Assista tutoriais, demonstrações e novidades do minhAi diretamente no nosso canal.', 
+    icone: <Youtube className="w-6 h-6" />, 
+    acao: { tipo: 'link', valor: 'https://www.youtube.com/@appminhai' }, 
+    textoBotao: 'Acessar Canal' 
+  },
+  { 
     id: 'instagram', 
     titulo: 'Nosso Instagram', 
     descricao: 'Acompanhe todas as nossas dicas, vídeos, promoções e novidades em nossa rede social.', 

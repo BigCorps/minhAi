@@ -6,15 +6,9 @@
 
 ## Roadmap e Features Planejadas
 
-* Tour guiado - quando finalizar todos os stages, aplicar o cache no restante (pedidoslj)
-
 * Editar postagens no Manus com o logo e postar (imagem um dia, vídeo outro dia)
 
-* Colocar o Whatsapp de volta (na quinta) e testar Auxiliar de Cadastro no MCP whatsapp
-
-* suporte com toda a lógica do backend no whatsapp MCP e widget suporte no dashboard.
-
-* canal YouTube, tour e ia/suporte na página de ajuda.
+* Colocar o Whatsapp de volta (na quinta) e testar Auxiliar de Cadastro no MCP whatsapp e suporte com toda a lógica do backend no whatsapp MCP e widget suporte no dashboard.
 
 * Quando o Tour estiver pronto, sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
 
@@ -155,6 +149,8 @@ Pagamentos 🔁- Enviar Pix | Pagar Boleto | Auxiliar de Pagamentos
 * MODO KIOSK - claude ith.almeida
 * Landing - Claude jiuitsu 
 * App Vixus - Manus ith.almeida
+* Cache TTS no tour - Claude pedidoslj
+
 
 .
 

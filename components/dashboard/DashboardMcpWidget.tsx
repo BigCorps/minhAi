@@ -11,45 +11,54 @@ import { useAssistant } from '@/contexts/AssistantContext';
 // needsInput: false → executa diretamente ao clicar
 const MCP_FUNCTIONS = [
   // Pagamentos
-  { key: 'pix',        label: 'Gerar PIX',           cat: '💰', color: '#3B82F6', needsInput: true,  autoMsg: '',               prompt: '💰 *Gerar PIX*\n\nQual o valor da cobrança?', placeholder: 'Ex: 50,00' },
-  { key: 'venda',      label: 'Registrar Venda',      cat: '💰', color: '#3B82F6', needsInput: true,  autoMsg: '',               prompt: '💰 *Registrar Venda*\n\nValor e forma de pagamento:', placeholder: 'Ex: 100 pix' },
-  { key: 'caixa',      label: 'Fechar Caixa',         cat: '💰', color: '#3B82F6', needsInput: false, autoMsg: 'fechar caixa',    prompt: '', placeholder: '' },
+  { key: 'pix',        label: 'Gerar PIX',           color: '#3B82F6', needsInput: true,  autoMsg: '', prompt: '*Gerar PIX*\n\nQual o valor da cobrança?', placeholder: 'Ex: 50,00' },
+  { key: 'venda',      label: 'Registrar Venda',     color: '#10B981', needsInput: true,  autoMsg: '', prompt: '*Registrar Venda*\n\nValor e forma de pagamento:', placeholder: 'Ex: 100 pix' },
+  { key: 'caixa',      label: 'Fechar Caixa',        color: '#3B82F6', needsInput: false, autoMsg: 'fechar caixa', prompt: '', placeholder: '' },
+
   // Produtos & Estoque
-  { key: 'produtos',   label: 'Ver Produtos',         cat: '🛍️', color: '#8B5CF6', needsInput: false, autoMsg: 'ver produtos',   prompt: '', placeholder: '' },
-  { key: 'estoque',    label: 'Estoque',               cat: '🛍️', color: '#8B5CF6', needsInput: true,  autoMsg: '',              prompt: '📦 *Consultar Estoque*\n\nQual produto? (Enter para todos)', placeholder: 'Ex: camiseta' },
+  { key: 'produtos',   label: 'Ver Produtos',        color: '#10B981', needsInput: false, autoMsg: 'ver produtos', prompt: '', placeholder: '' },
+  { key: 'estoque',    label: 'Estoque',             color: '#3B82F6', needsInput: true,  autoMsg: '', prompt: '*Consultar Estoque*\n\nQual produto? (Enter para todos)', placeholder: 'Ex: camiseta' },
+
   // Pedidos
-  { key: 'pedidos',    label: 'Ver Pedidos',           cat: '📊', color: '#06B6D4', needsInput: false, autoMsg: 'ver pedidos',    prompt: '', placeholder: '' },
+  { key: 'pedidos',    label: 'Ver Pedidos',         color: '#10B981', needsInput: false, autoMsg: 'ver pedidos', prompt: '', placeholder: '' },
+
   // Agenda
-  { key: 'agenda',     label: 'Ver Agenda',            cat: '📅', color: '#10B981', needsInput: false, autoMsg: 'ver agenda',     prompt: '', placeholder: '' },
-  { key: 'agendar',    label: 'Agendar',               cat: '📅', color: '#10B981', needsInput: true,  autoMsg: '',              prompt: '📅 *Novo Agendamento*\n\nDescreva o evento com data e hora:', placeholder: 'Ex: reunião amanhã às 14h' },
-  { key: 'horarios',   label: 'Horários Livres',       cat: '📅', color: '#10B981', needsInput: false, autoMsg: 'horários disponíveis', prompt: '', placeholder: '' },
+  { key: 'agenda',     label: 'Ver Agenda',          color: '#3B82F6', needsInput: false, autoMsg: 'ver agenda', prompt: '', placeholder: '' },
+  { key: 'agendar',    label: 'Agendar',             color: '#10B981', needsInput: true,  autoMsg: '', prompt: '*Novo Agendamento*\n\nDescreva o evento com data e hora:', placeholder: 'Ex: reunião amanhã às 14h' },
+  { key: 'horarios',   label: 'Horários Livres',     color: '#3B82F6', needsInput: false, autoMsg: 'horários disponíveis', prompt: '', placeholder: '' },
+
   // Notas
-  { key: 'nota',       label: 'Criar Nota',            cat: '📝', color: '#F59E0B', needsInput: true,  autoMsg: '',              prompt: '📝 *Criar Nota*\n\nO que deseja anotar?', placeholder: 'Ex: reunião com fornecedor amanhã às 10h' },
-  { key: 'ver_notas',  label: 'Ver Notas',             cat: '📝', color: '#F59E0B', needsInput: false, autoMsg: 'ver notas',      prompt: '', placeholder: '' },
+  { key: 'nota',       label: 'Criar Nota',          color: '#10B981', needsInput: true,  autoMsg: '', prompt: '*Criar Nota*\n\nO que deseja anotar?', placeholder: 'Ex: reunião com fornecedor amanhã às 10h' },
+  { key: 'ver_notas',  label: 'Ver Notas',           color: '#3B82F6', needsInput: false, autoMsg: 'ver notas', prompt: '', placeholder: '' },
+
   // Lista de Compras
-  { key: 'lista',      label: 'Lista Compras',         cat: '🛒', color: '#EC4899', needsInput: false, autoMsg: 'ver lista de compras', prompt: '', placeholder: '' },
-  { key: 'add_lista',  label: 'Add na Lista',          cat: '🛒', color: '#EC4899', needsInput: true,  autoMsg: '',              prompt: '🛒 *Adicionar na Lista*\n\nQual item deseja adicionar?', placeholder: 'Ex: pão de forma' },
-  { key: 'rm_lista',   label: 'Remover da Lista',      cat: '🛒', color: '#EC4899', needsInput: true,  autoMsg: '',              prompt: '🛒 *Remover da Lista*\n\nQual item deseja remover?', placeholder: 'Ex: pão de forma' },
+  { key: 'lista',      label: 'Lista Compras',       color: '#10B981', needsInput: false, autoMsg: 'ver lista de compras', prompt: '', placeholder: '' },
+  { key: 'add_lista',  label: 'Add na Lista',        color: '#3B82F6', needsInput: true,  autoMsg: '', prompt: '*Adicionar na Lista*\n\nQual item deseja adicionar?', placeholder: 'Ex: pão de forma' },
+  { key: 'rm_lista',   label: 'Remover da Lista',    color: '#10B981', needsInput: true,  autoMsg: '', prompt: '*Remover da Lista*\n\nQual item deseja remover?', placeholder: 'Ex: pão de forma' },
+
   // Consultas gratuitas
-  { key: 'cnpj',       label: 'Consultar CNPJ',        cat: '🔍', color: '#6366F1', needsInput: true,  autoMsg: '',              prompt: '🏢 *Consultar CNPJ*\n\nInforme o CNPJ (14 dígitos):', placeholder: 'Ex: 14282244000119' },
-  { key: 'cpf',        label: 'Consultar CPF',         cat: '🔍', color: '#6366F1', needsInput: true,  autoMsg: '',              prompt: '👤 *Consultar CPF*\n\nInforme o CPF (11 dígitos):', placeholder: 'Ex: 12345678900' },
-  { key: 'cep',        label: 'Consultar CEP',         cat: '🔍', color: '#6366F1', needsInput: true,  autoMsg: '',              prompt: '📍 *Consultar CEP*\n\nInforme o CEP (8 dígitos):', placeholder: 'Ex: 01310100' },
-  { key: 'placa',      label: 'Consultar Placa',       cat: '🔍', color: '#6366F1', needsInput: true,  autoMsg: '',              prompt: '🚗 *Consultar Placa*\n\nInforme a placa do veículo:', placeholder: 'Ex: ABC1234' },
-  { key: 'dolar',      label: 'Câmbio',                cat: '🔍', color: '#6366F1', needsInput: true,  autoMsg: '',              prompt: '💱 *Cotação de Câmbio*\n\nQual moeda?', placeholder: 'Ex: dólar, euro, bitcoin' },
-  { key: 'rastreio',   label: 'Rastreio Correios',     cat: '🔍', color: '#6366F1', needsInput: true,  autoMsg: '',              prompt: '📦 *Rastreio Correios*\n\nInforme o código de rastreamento:', placeholder: 'Ex: AA123456789BR' },
-  { key: 'ddd',        label: 'Consultar DDD',         cat: '🔍', color: '#6366F1', needsInput: true,  autoMsg: '',              prompt: '📱 *Consultar DDD*\n\nInforme o DDD (2 dígitos):', placeholder: 'Ex: 11' },
-  { key: 'feriados',   label: 'Feriados',              cat: '🔍', color: '#6366F1', needsInput: true,  autoMsg: '',              prompt: '📅 *Feriados Nacionais*\n\nQual ano?', placeholder: `Ex: ${new Date().getFullYear()}` },
-  { key: 'clima',      label: 'Clima',                 cat: '🔍', color: '#6366F1', needsInput: true,  autoMsg: '',              prompt: '☀️ *Clima*\n\nQual cidade?', placeholder: 'Ex: São Paulo' },
+  { key: 'cnpj',       label: 'Consultar CNPJ',      color: '#3B82F6', needsInput: true,  autoMsg: '', prompt: '*Consultar CNPJ*\n\nInforme o CNPJ (14 dígitos):', placeholder: 'Ex: 14282244000119' },
+  { key: 'cpf',        label: 'Consultar CPF',       color: '#10B981', needsInput: true,  autoMsg: '', prompt: '*Consultar CPF*\n\nInforme o CPF (11 dígitos):', placeholder: 'Ex: 12345678900' },
+  { key: 'cep',        label: 'Consultar CEP',       color: '#3B82F6', needsInput: true,  autoMsg: '', prompt: '*Consultar CEP*\n\nInforme o CEP (8 dígitos):', placeholder: 'Ex: 01310100' },
+  { key: 'placa',      label: 'Consultar Placa',     color: '#10B981', needsInput: true,  autoMsg: '', prompt: '*Consultar Placa*\n\nInforme a placa do veículo:', placeholder: 'Ex: ABC1234' },
+  { key: 'dolar',      label: 'Câmbio',              color: '#3B82F6', needsInput: true,  autoMsg: '', prompt: '*Cotação de Câmbio*\n\nQual moeda?', placeholder: 'Ex: dólar, euro, bitcoin' },
+  { key: 'rastreio',   label: 'Rastreio Correios',   color: '#10B981', needsInput: true,  autoMsg: '', prompt: '*Rastreio Correios*\n\nInforme o código de rastreamento:', placeholder: 'Ex: AA123456789BR' },
+  { key: 'ddd',        label: 'Consultar DDD',       color: '#3B82F6', needsInput: true,  autoMsg: '', prompt: '*Consultar DDD*\n\nInforme o DDD (2 dígitos):', placeholder: 'Ex: 11' },
+  { key: 'feriados',   label: 'Feriados',            color: '#10B981', needsInput: true,  autoMsg: '', prompt: '*Feriados Nacionais*\n\nQual ano?', placeholder: `Ex: ${new Date().getFullYear()}` },
+  { key: 'clima',      label: 'Clima',               color: '#3B82F6', needsInput: true,  autoMsg: '', prompt: '*Clima*\n\nQual cidade?', placeholder: 'Ex: São Paulo' },
+
   // Consultas pagas
-  { key: 'rest_cpf',   label: 'Restrições CPF',        cat: '🔒', color: '#EF4444', needsInput: true,  autoMsg: '',              prompt: '🔒 *Restrições CPF* (consulta paga)\n\nInforme o CPF (11 dígitos):', placeholder: 'Ex: 12345678900' },
-  { key: 'rest_cnpj',  label: 'Restrições CNPJ',       cat: '🔒', color: '#EF4444', needsInput: true,  autoMsg: '',              prompt: '🔒 *Restrições CNPJ* (consulta paga)\n\nInforme o CNPJ (14 dígitos):', placeholder: 'Ex: 14282244000119' },
-  { key: 'protestos',  label: 'Protestos CPF',         cat: '🔒', color: '#EF4444', needsInput: true,  autoMsg: '',              prompt: '🔒 *Protestos CPF* (consulta paga)\n\nInforme o CPF (11 dígitos):', placeholder: 'Ex: 12345678900' },
+  { key: 'rest_cpf',   label: 'Restrições CPF',      color: '#10B981', needsInput: true,  autoMsg: '', prompt: '*Restrições CPF* (consulta paga)\n\nInforme o CPF (11 dígitos):', placeholder: 'Ex: 12345678900' },
+  { key: 'rest_cnpj',  label: 'Restrições CNPJ',     color: '#3B82F6', needsInput: true,  autoMsg: '', prompt: '*Restrições CNPJ* (consulta paga)\n\nInforme o CNPJ (14 dígitos):', placeholder: 'Ex: 14282244000119' },
+  { key: 'protestos',  label: 'Protestos CPF',       color: '#10B981', needsInput: true,  autoMsg: '', prompt: '*Protestos CPF* (consulta paga)\n\nInforme o CPF (11 dígitos):', placeholder: 'Ex: 12345678900' },
+
   // Ferramentas
-  { key: 'fraude',     label: 'Anti-fraude',           cat: '🛠️', color: '#F97316', needsInput: true,  autoMsg: '',              prompt: '🔍 *Anti-fraude*\n\nInforme a URL ou linha digitável do boleto:', placeholder: 'Ex: https://site.com' },
-  { key: 'traduzir',   label: 'Traduzir Texto',        cat: '🛠️', color: '#F97316', needsInput: true,  autoMsg: '',              prompt: '🌎 *Traduzir Texto*\n\nInforme o texto e o idioma destino:', placeholder: 'Ex: olá para inglês' },
-  { key: 'email',      label: 'Ver E-mails',           cat: '🛠️', color: '#F97316', needsInput: false, autoMsg: 'ver emails',     prompt: '', placeholder: '' },
+  { key: 'fraude',     label: 'Anti-fraude',         color: '#3B82F6', needsInput: true,  autoMsg: '', prompt: '*Anti-fraude*\n\nInforme a URL ou linha digitável do boleto:', placeholder: 'Ex: https://site.com' },
+  { key: 'traduzir',   label: 'Traduzir Texto',      color: '#10B981', needsInput: true,  autoMsg: '', prompt: '*Traduzir Texto*\n\nInforme o texto e o idioma destino:', placeholder: 'Ex: olá para inglês' },
+  { key: 'email',      label: 'Ver E-mails',         color: '#3B82F6', needsInput: false, autoMsg: 'ver emails', prompt: '', placeholder: '' },
+
   // Geral
-  { key: 'ajuda',      label: 'Ajuda',                 cat: '❓', color: '#64748B', needsInput: false, autoMsg: 'ajuda',          prompt: '', placeholder: '' },
+  { key: 'ajuda',      label: 'Ajuda',               color: '#10B981', needsInput: false, autoMsg: 'ajuda', prompt: '', placeholder: '' },
 ] as const;
 
 type McpFn = typeof MCP_FUNCTIONS[number];
@@ -111,7 +120,7 @@ function FunctionCarousel({ onSelect, isDark }: { onSelect: (fn: McpFn) => void;
               className={`flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-white hover:bg-gray-50 text-gray-900 shadow-sm'}`}
               style={{ borderLeft: `3px solid ${fn.color}` }}
             >
-              {fn.cat} {fn.label}
+              {fn.label}
             </button>
           ))}
         </div>
@@ -305,7 +314,7 @@ export default function DashboardMcpWidget() {
         {pendingFn && (
           <div className="flex items-center gap-2 mb-2 px-1">
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-white" style={{ background: pendingFn.color }}>
-              <span>{pendingFn.cat} {pendingFn.label}</span>
+              <span>{pendingFn.label}</span>
               <button onClick={() => { setPendingFn(null); setInput(''); }} className="opacity-70 hover:opacity-100 ml-0.5">
                 <X className="w-3 h-3" />
               </button>

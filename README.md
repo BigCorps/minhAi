@@ -6,11 +6,11 @@
 
 ## Roadmap e Features Planejadas
 
-* Editar postagens no Manus com o logo e postar (imagem um dia, vídeo outro dia)
+* widget MCP sem emojis e corrigir erro 400 (fofo 20h20)
 
 * Colocar o Whatsapp de volta (aguardando suporte meta)
 
-* Quando o Tour estiver pronto, sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
+* Sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
 
 * página admin no dashboard (colocar controle de APIs tambem)
 

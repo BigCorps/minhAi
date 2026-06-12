@@ -4,6 +4,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
+import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -33,8 +34,10 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   // ── Tour ──────────────────────────────────────────────────────────────────
-  const [tourOpen, setTourOpen]           = useState(false);
-  const [tourExpanded, setTourExpanded]   = useState(false);
+const [tourOpen, setTourOpen]         = useState(false);
+const [tourExpanded, setTourExpanded] = useState(false);
+const { resolvedTheme }               = useTheme();
+const tourTheme                       = resolvedTheme === 'light' ? 'light' : 'dark';
 
   const supabase = createClient();
 
@@ -238,11 +241,12 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
       <div className="h-16" />
 
       {/* Tour Modal — abre direto no menu */}
-      <TourModal
-        isOpen={tourOpen}
-        onClose={handleTourClose}
-        startOnMenu={true}
-      />
+<TourModal
+  isOpen={tourOpen}
+  onClose={handleTourClose}
+  startOnMenu={true}
+  initialTheme={tourTheme as 'dark' | 'light'}
+/>
     </>
   );
 }

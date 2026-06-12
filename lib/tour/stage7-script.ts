@@ -106,7 +106,7 @@ export const STAGE7_SCRIPT: Stage7Script[] = [
     audioText:
       'Em Localização, mostra o endereço da empresa no mapa, ' +
       'traça rotas, consulta CEP e rastreia encomendas dos Correios. ' +
-      'Em Informação, exibe cotação de câmbio, previsão do tempo, ' +
+      'Em Informação, exibe cotação de câmbio em tempo real, ' +
       'notícias do momento, calculadora de juros, IMC, ' +
       'conversor de medidas e feriados nacionais.',
     fallbackDuration: 9000,

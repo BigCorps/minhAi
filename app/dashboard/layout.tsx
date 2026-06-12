@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { DashboardClientGate } from '@/components/layout/DashboardClientGate';
 import { Toaster } from '@/components/ui/toaster';
+import DashboardMcpWidget from '@/components/dashboard/DashboardMcpWidget'
 
 export default async function DashboardLayout({
   children,
@@ -32,6 +33,7 @@ export default async function DashboardLayout({
 
       {/* Toast notifications */}
       <Toaster />
+      <DashboardMcpWidget />
     </div>
   );
 }

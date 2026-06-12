@@ -8,7 +8,7 @@
 
 * Editar postagens no Manus com o logo e postar (imagem um dia, vídeo outro dia)
 
-* Colocar o Whatsapp de volta (na quinta) e testar Auxiliar de Cadastro no MCP whatsapp e suporte com toda a lógica do backend no whatsapp MCP e widget suporte no dashboard.
+* Colocar o Whatsapp de volta (na quinta) e testar Auxiliar de Cadastro no MCP whatsapp
 
 * Quando o Tour estiver pronto, sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
 

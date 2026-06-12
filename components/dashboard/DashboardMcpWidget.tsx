@@ -218,7 +218,7 @@ export default function DashboardMcpWidget() {
 
   const inputPlaceholder = pendingFn
     ? (pendingFn.placeholder || 'Digite a informação...')
-    : 'Digite... Ex: pix de 50, cnpj 14282...';
+    : 'Digite... Ex: gerar pix de 50,00';
 
   // ── Botão flutuante ─────────────────────────────────────────────────────
   const button = (

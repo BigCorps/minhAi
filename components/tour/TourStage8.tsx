@@ -203,7 +203,7 @@ const goToScene = useCallback((index: number) => {
 
       <div
         className="flex-1 min-h-0 flex flex-col md:flex-row md:items-center gap-0 md:gap-12 px-4 md:px-12 w-full max-w-5xl mx-auto"
-        style={{ paddingTop: 'clamp(16px, 4dvh, 48px)', paddingBottom: inModal ? '0px' : 'clamp(8px, 2dvh, 24px)' }}
+        style={{ paddingTop: 'clamp(16px, 4dvh, 48px)', paddingBottom: inModal ? 'clamp(56px, 11dvh, 88px)' : 'clamp(8px, 2dvh, 24px)' }}
       >
         <div
           className="flex-1 min-h-0 md:flex-shrink-0 w-full"

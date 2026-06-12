@@ -137,7 +137,7 @@ export default function TourManager({
       style={{
         height: '100dvh',
         background: isDark
-          ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
+          ? 'linear-gradient(135deg, #020617 0%, #0f172a 50%, #020617 100%)'
           : '#ffffff',
       }}
     >

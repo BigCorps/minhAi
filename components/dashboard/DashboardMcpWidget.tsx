@@ -117,7 +117,7 @@ function FunctionCarousel({ onSelect, isDark }: { onSelect: (fn: McpFn) => void;
             <button
               key={`${fn.key}-${idx}`}
               onClick={() => onSelect(fn)}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-white hover:bg-gray-50 text-gray-900 shadow-sm'}`}
+              className={`flex-shrink-0 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-white hover:bg-gray-50 text-gray-900 shadow-sm'}`}
               style={{ borderLeft: `3px solid ${fn.color}` }}
             >
               {fn.label}
@@ -177,9 +177,9 @@ export default function DashboardMcpWidget() {
         body: JSON.stringify({ message: msg, assistantId: selectedAssistantId ?? null, assistantName: currentAssistant?.name ?? null }),
       });
       const data = await res.json();
-      setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: data.reply ?? '❌ Sem resposta.', timestamp: new Date() }]);
+      setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: data.reply ?? 'Sem resposta.', timestamp: new Date() }]);
     } catch {
-      setMessages(prev => [...prev, { id: `e-${Date.now()}`, role: 'assistant', content: '❌ Erro de conexão. Tente novamente.', timestamp: new Date() }]);
+      setMessages(prev => [...prev, { id: `e-${Date.now()}`, role: 'assistant', content: 'Erro de conexão. Tente novamente.', timestamp: new Date() }]);
     } finally {
       setLoading(false);
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -224,7 +224,7 @@ export default function DashboardMcpWidget() {
   const button = (
     <button
       onClick={() => setIsOpen(o => !o)}
-      className="fixed bottom-6 right-6 z-[9998] flex items-center gap-2 px-5 py-3 rounded-full font-bold text-sm text-white shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl active:scale-95"
+      className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-[9998] flex items-center gap-2 px-4 sm:px-5 py-3 rounded-full font-bold text-sm text-white shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl active:scale-95"
       style={{ background: 'linear-gradient(135deg, #3B82F6, #10B981)' }}
     >
       <Bot className="w-4 h-4" />
@@ -236,9 +236,12 @@ export default function DashboardMcpWidget() {
   // ── Painel de chat ──────────────────────────────────────────────────────
   const panel = isOpen && (
     <div
-      className="fixed bottom-20 right-6 z-[9997] flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+      className="fixed bottom-20 right-3 sm:right-6 z-[9997] flex flex-col rounded-2xl shadow-2xl overflow-hidden"
       style={{
-        width: '420px', height: '640px',
+        width: 'min(420px, calc(100vw - 24px))',
+        height: 'min(640px, calc(100dvh - 120px))',
+        maxWidth: 'calc(100vw - 24px)',
+        maxHeight: 'calc(100dvh - 120px)',
         background: isDark ? 'linear-gradient(to bottom, rgb(2,6,23), rgb(15,23,42))' : 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))',
         border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
       }}
@@ -309,7 +312,7 @@ export default function DashboardMcpWidget() {
       </div>
 
       {/* Input */}
-      <div className="flex-shrink-0 px-3 py-3 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
+      <div className="flex-shrink-0 px-2 sm:px-3 py-3 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
         {/* Badge da função pendente */}
         {pendingFn && (
           <div className="flex items-center gap-2 mb-2 px-1">

@@ -8,9 +8,7 @@
 
 * Editar postagens no Manus com o logo e postar (imagem um dia, vídeo outro dia)
 
-* widget esta executando a função com as informações demo, mas é o usuario que precisa informar o que ele quer executar. ao clicar no carrossel ele tem que perguntar o que o usuario vai querer executar ou qual a informação. E as funções executadas tambem precisam aparecer no historico do assistente, cobrando creditos, igual funciona no MCP e MCP whatsapp. Você tem acesso ao supabase, pode verificar as edges que são chamadas aqui para ver o que esta acontecendo.
-
-* Colocar o Whatsapp de volta (na quinta) e testar Auxiliar de Cadastro no MCP whatsapp
+* Colocar o Whatsapp de volta (aguardando suporte meta)
 
 * Quando o Tour estiver pronto, sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
 

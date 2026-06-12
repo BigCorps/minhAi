@@ -16,8 +16,6 @@
 
 * canal YouTube, tour e ia/suporte na página de ajuda.
 
-* botão tour no header do dashboard desktop
-
 * Quando o Tour estiver pronto, sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
 
 * página admin no dashboard (colocar controle de APIs tambem)

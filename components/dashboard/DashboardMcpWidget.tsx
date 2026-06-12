@@ -249,9 +249,6 @@ export default function DashboardMcpWidget() {
           <div className="flex items-center justify-center h-full">
             <p className={`text-sm text-center ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
               Como posso te ajudar hoje?<br />
-              <span className="text-xs">
-                Clique em uma função abaixo ou digite um comando
-              </span>
             </p>
           </div>
         )}

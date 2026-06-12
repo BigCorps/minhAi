@@ -252,7 +252,7 @@ export default function TourStage2({
           className="flex-1 min-h-0 md:flex-shrink-0 w-full"
           style={{
             height: inModal
-              ? 'clamp(180px, 42dvh, 420px)'
+              ? 'clamp(160px, 38dvh, 400px'
               : 'clamp(220px, 52dvh, 520px)',
           }}
         >

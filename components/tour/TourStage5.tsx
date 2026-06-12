@@ -183,7 +183,7 @@ export default function TourStage5({
       style={{
         height: inModal ? '100%' : '100dvh',
         background: isDark
-          ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
+          ? 'linear-gradient(135deg, #020617 0%, #0f172a 50%, #020617 100%)'
           : '#f8fafc',
         transition: 'background 400ms ease',
       }}
@@ -205,11 +205,11 @@ export default function TourStage5({
 
       <div
         className="flex-1 min-h-0 flex flex-col md:flex-row md:items-center gap-0 md:gap-12 px-4 md:px-12 w-full max-w-5xl mx-auto"
-        style={{ paddingTop: 'clamp(16px, 4dvh, 48px)', paddingBottom: inModal ? '8px' : 'clamp(8px, 2dvh, 24px)' }}
+        style={{ paddingTop: 'clamp(16px, 4dvh, 48px)', paddingBottom: inModal ? 'clamp(56px, 11dvh, 88px)' : 'clamp(8px, 2dvh, 24px)' }}
       >
         <div
           className="flex-1 min-h-0 md:flex-shrink-0 w-full"
-          style={{ height: inModal ? 'clamp(160px, 38dvh, 400px)' : 'clamp(220px, 52dvh, 520px)' }}
+          style={{ height: 'clamp(220px, 52dvh, 520px)' }}
         >
           <div className="w-full h-full transition-opacity ease-in-out" style={{ opacity: sceneVisible ? 1 : 0, transitionDuration: `${FADE_DURATION}ms` }}>
             <SceneRenderer5 id={currentScene.id} isSpeaking={isSpeaking} theme={theme} />

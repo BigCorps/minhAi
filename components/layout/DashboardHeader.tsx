@@ -132,8 +132,6 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                 </>
               )}
 
-              {!hideAssistantSelector && <AssistantSelectorHeader />}
-
               {/* ── Botão Tour (expande no hover/focus) ── */}
               <button
                 onClick={handleTourOpen}
@@ -175,6 +173,8 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                   Tour
                 </span>
               </button>
+
+              {!hideAssistantSelector && <AssistantSelectorHeader />}
 
               <ThemeToggle />
 

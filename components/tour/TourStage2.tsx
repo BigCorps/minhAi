@@ -44,6 +44,8 @@ interface TourStage2Props {
   autoPlay?: boolean
   onThemeChange?: (theme: 'dark' | 'light') => void
   inModal?: boolean
+  onGoToMenu?: () => void
+  initialSpeed?: 1 | 1.5 | 2
 }
 
 export default function TourStage2({
@@ -54,16 +56,24 @@ export default function TourStage2({
   autoPlay = false,
   onThemeChange,
   inModal = false,
+  onGoToMenu,
+  initialSpeed = 1,
 }: TourStage2Props) {
   const [sceneIndex, setSceneIndex]   = useState(0)
   const [isPlaying, setIsPlaying]     = useState(false)
   const [isSpeaking, setIsSpeaking]   = useState(false)
   const [sceneVisible, setSceneVisible] = useState(true)
   const [theme, setTheme]             = useState<'dark' | 'light'>(initialTheme)
+  const [speed, setSpeed] = useState<1 | 1.5 | 2>(initialSpeed)
   const [controlsVisible, setControlsVisible] = useState(!inModal)
 
   const { playText: _playText, stopAudio } = usePlayText()
-  const playText = useCallback((text: string) => _playText(text, 1.15), [_playText])
+  // Base: 1x = speakingRate 1.15, 1.5x = 1.73, 2x = 2.30
+  const SPEED_RATE: Record<1 | 1.5 | 2, number> = { 1: 1.15, 1.5: 1.73, 2: 2.30 }
+  const playText = useCallback(
+    (text: string) => _playText(text, SPEED_RATE[speed]),
+    [_playText, speed]
+  )
 
   const {
     isSupported: isWakeLockSupported,
@@ -93,6 +103,10 @@ export default function TourStage2({
     if (isWakeLockActive) releaseWakeLock()
     else requestWakeLock()
   }, [isWakeLockActive, requestWakeLock, releaseWakeLock])
+
+  const handleCycleSpeed = useCallback((next: 1 | 1.5 | 2) => {
+    setSpeed(next)
+  }, [])
 
   const handleModalInteraction = useCallback(() => {
     if (!inModal) return
@@ -234,7 +248,6 @@ export default function TourStage2({
         }}
       >
         {/* Cena */}
-        {/* Cena */}
         <div
           className="flex-1 min-h-0 md:flex-shrink-0 w-full"
           style={{
@@ -285,6 +298,9 @@ export default function TourStage2({
           overlayMode={true}
           forceVisible={controlsVisible}
           script={STAGE2_SCRIPT}
+          onGoToMenu={onGoToMenu}
+          speed={speed}
+          onCycleSpeed={handleCycleSpeed}
         />
       ) : (
         <div className="flex-shrink-0 flex justify-center items-center py-3 md:py-4">
@@ -303,6 +319,9 @@ export default function TourStage2({
             onToggleTheme={handleToggleTheme}
             onToggleWakeLock={handleToggleWakeLock}
             script={STAGE2_SCRIPT}
+            onGoToMenu={onGoToMenu}
+            speed={speed}
+            onCycleSpeed={handleCycleSpeed}
           />
         </div>
       )}

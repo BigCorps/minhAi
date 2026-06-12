@@ -92,6 +92,10 @@ function FunctionCarousel({
           0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
+        .mcp-messages::-webkit-scrollbar { width: 4px; }
+        .mcp-messages::-webkit-scrollbar-track { background: transparent; }
+        .mcp-messages::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+        .mcp-messages:hover::-webkit-scrollbar-thumb { background: rgba(150,150,150,0.3); }
       `}</style>
     </>
   );
@@ -244,7 +248,7 @@ export default function DashboardMcpWidget() {
       </div>
 
       {/* ── Mensagens ───────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-2 space-y-3 min-h-0">
+      <div className="mcp-messages flex-1 overflow-x-hidden px-4 py-2 space-y-3 min-h-0" style={{ overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: 'transparent transparent' }}>
         {messages.length === 0 && !loading && (
           <div className="flex items-center justify-center h-full">
             <p className={`text-sm text-center ${isDark ? 'text-white/40' : 'text-gray-400'}`}>

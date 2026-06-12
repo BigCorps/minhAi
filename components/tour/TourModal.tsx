@@ -1,6 +1,5 @@
 'use client'
 // components/tour/TourModal.tsx
-// Versão com prop startOnMenu — abre direto no TourManager sem autoPlay
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
@@ -14,29 +13,27 @@ import TourStage7 from './TourStage7'
 import TourStage8 from './TourStage8'
 import TourManager from './TourManager'
 
+// 1 = Apresentação       → TourStage1
+// 2 = Auxiliares de IA   → TourStage3
+// 3 = Página Assistente  → TourStage2
+// 4 = Do Zero ao Ar      → TourStage4
+// 5 = Meu Dashboard      → TourStage5
+// 6 = Modos de Cobrança  → TourStage6
+// 7 = Funções e Hab.     → TourStage7
+// 8 = Planos e Valores   → TourStage8
+
 interface TourModalProps {
   isOpen: boolean
   onClose: () => void
   initialTheme?: 'dark' | 'light'
-  /**
-   * Quando true, abre diretamente no TourManager (menu de stages)
-   * em vez de iniciar a reprodução do Stage 1.
-   * Usado no botão Tour do DashboardHeader.
-   */
-  startOnMenu?: boolean
 }
 
 type ModalState = 'playing' | 'selecting'
 
-export default function TourModal({
-  isOpen,
-  onClose,
-  initialTheme = 'dark',
-  startOnMenu = false,
-}: TourModalProps) {
+export default function TourModal({ isOpen, onClose, initialTheme = 'dark' }: TourModalProps) {
   const [mounted, setMounted]           = useState(false)
   const [visible, setVisible]           = useState(false)
-  const [modalState, setModalState]     = useState<ModalState>(startOnMenu ? 'selecting' : 'playing')
+  const [modalState, setModalState]     = useState<ModalState>('playing')
   const [activeStage, setActiveStage]   = useState(1)
   const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>(initialTheme)
   const selectorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -45,14 +42,13 @@ export default function TourModal({
 
   useEffect(() => {
     if (isOpen) {
-      // Se startOnMenu, vai direto para o menu; senão começa tocando o stage 1
-      setModalState(startOnMenu ? 'selecting' : 'playing')
+      setModalState('playing')
       setActiveStage(1)
       requestAnimationFrame(() => setVisible(true))
     } else {
       setVisible(false)
     }
-  }, [isOpen, startOnMenu])
+  }, [isOpen])
 
   const handleStageComplete = useCallback(() => {
     selectorTimerRef.current = setTimeout(() => setModalState('selecting'), 2000)
@@ -68,12 +64,6 @@ export default function TourModal({
     setVisible(false)
     setTimeout(onClose, 300)
   }, [onClose])
-
-  // Callback para o botão Menu dos TourControls — vai para o seletor
-  const handleGoToMenu = useCallback(() => {
-    if (selectorTimerRef.current) clearTimeout(selectorTimerRef.current)
-    setModalState('selecting')
-  }, [])
 
   useEffect(() => {
     return () => { if (selectorTimerRef.current) clearTimeout(selectorTimerRef.current) }
@@ -109,8 +99,6 @@ export default function TourModal({
     onClose: handleClose,
     onComplete: handleStageComplete,
     onThemeChange: setCurrentTheme,
-    // Passa o handler de menu para todos os stages — eles repassam para TourControls
-    onGoToMenu: handleGoToMenu,
   }
 
   return createPortal(

@@ -43,16 +43,16 @@ export default function TourModal({
 
   useEffect(() => { setMounted(true) }, [])
 
-  useEffect(() => {
-    if (isOpen) {
-      // Se startOnMenu, vai direto para o menu; senão começa tocando o stage 1
-      setModalState(startOnMenu ? 'selecting' : 'playing')
-      setActiveStage(1)
-      requestAnimationFrame(() => setVisible(true))
-    } else {
-      setVisible(false)
-    }
-  }, [isOpen, startOnMenu])
+useEffect(() => {
+  if (isOpen) {
+    setModalState(startOnMenu ? 'selecting' : 'playing')
+    setActiveStage(1)
+    setCurrentTheme(initialTheme)          // ← sincroniza tema ao abrir
+    requestAnimationFrame(() => setVisible(true))
+  } else {
+    setVisible(false)
+  }
+}, [isOpen, startOnMenu, initialTheme])
 
   const handleStageComplete = useCallback(() => {
     selectorTimerRef.current = setTimeout(() => setModalState('selecting'), 2000)

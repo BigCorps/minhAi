@@ -627,13 +627,43 @@ export function ConnectionManager({
     notify(enabled ? '🤖 Respostas automáticas ativadas' : '⏸️ Respostas automáticas pausadas', 'success');
   };
 
-  const handleDisconnect = async (connectionId: string) => {
-    if (!confirm('Tem certeza que deseja desconectar esta conta?')) return;
-    const { error: deleteError } = await supabase.from('meta_connections').delete().eq('id', connectionId);
-    if (deleteError) { notify(deleteError.message, 'error'); return; }
-    notify('Conta desconectada com sucesso.', 'success');
+// SUBSTITUIR a função handleDisconnect (linhas 630-636) por:
+
+const handleDisconnect = async (connectionId: string) => {
+  const conn = connections.find((c) => c.id === connectionId);
+  const hasWA = !!conn?.whatsapp_number;
+  const confirmMsg = hasWA
+    ? `Desconectar "${conn?.page_name}"?\n\nO número WhatsApp ${conn?.whatsapp_number} será desregistrado da Cloud API da Meta antes da remoção.`
+    : `Tem certeza que deseja desconectar "${conn?.page_name}"?`;
+
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/meta-disconnect`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ connection_id: connectionId }),
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao desconectar');
+
+    if (data.deregister_attempted && !data.deregister_success) {
+      notify(`⚠️ Conta removida, mas o desregistro do WhatsApp falhou na Meta: ${data.deregister_error}. Se o número ficar bloqueado, aguarde 72h ou abra ticket no suporte da Meta.`, 'error');
+    } else {
+      notify('✅ Conta desconectada com sucesso.', 'success');
+    }
     await fetchConnections();
-  };
+  } catch (err: any) {
+    notify(err.message, 'error');
+  }
+};
 
   // ── Botões de conexão ──────────────────────────────────────────────────
 

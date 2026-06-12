@@ -69,7 +69,7 @@ export default function TourStage2({
 
   const { playText: _playText, stopAudio } = usePlayText()
   // Base: 1x = speakingRate 1.15, 1.5x = 1.73, 2x = 2.30
-  const SPEED_RATE: Record<1 | 1.5 | 2, number> = { 1: 1.15, 1.5: 1.73, 2: 2.30 }
+  const SPEED_RATE: Record<1 | 1.5 | 2, number> = { 1: 1.15, 1.5: 1.3, 2: 1.5 }
   const playText = useCallback(
     (text: string) => _playText(text, SPEED_RATE[speed]),
     [_playText, speed]

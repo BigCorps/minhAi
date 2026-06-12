@@ -6,8 +6,6 @@
 
 ## Roadmap e Features Planejadas
 
-* widget MCP sem emojis e corrigir erro 400 (fofo 20h20)
-
 * Colocar o Whatsapp de volta (aguardando suporte meta)
 
 * Sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem

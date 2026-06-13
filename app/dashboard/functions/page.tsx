@@ -616,6 +616,18 @@ function FunctionsPageContent() {
     }
 
     // ── Demais funções: passam contexto básico da empresa ──
+
+    // Registrar uso (fire-and-forget)
+    const credits = getFunctionCredits(fn.function_key);
+    supabase.rpc('register_function_usage', {
+      p_company_id: companyId,
+      p_function_key: fn.function_key,
+      p_credits_consumed: credits,
+      p_metadata: { source: 'dashboard_preview' },
+    }).then(({ error }) => {
+      if (error) console.error('[handlePlay] register_function_usage:', error);
+    });
+
     setActiveModal({
       type: modalType,
       data: {

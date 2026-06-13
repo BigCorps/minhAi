@@ -594,6 +594,18 @@ function FunctionsPageContent() {
           body: { company_id: companyId, qr_type: qrType },
         });
         if (error) throw error;
+
+        // Registrar uso
+        const credits = getFunctionCredits(fn.function_key);
+        supabase.rpc('register_function_usage', {
+          p_company_id: companyId,
+          p_function_key: fn.function_key,
+          p_credits_consumed: credits,
+          p_metadata: { source: 'dashboard_preview' },
+        }).then(({ error: rpcErr }) => {
+          if (rpcErr) console.error('[handlePlay QR] register_function_usage:', rpcErr);
+        });
+
         setActiveModal({
           type: 'QRCodeDisplay',
           data: {

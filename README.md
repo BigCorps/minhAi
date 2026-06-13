@@ -6,8 +6,6 @@
 
 ## Roadmap e Features Planejadas
 
-* Atualizar cobrança de crédito pelas funções no dashboard (gpt)
-
 * Colocar o Whatsapp de volta (aguardando suporte meta)
 
 * Sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem

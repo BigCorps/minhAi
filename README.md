@@ -6,6 +6,10 @@
 
 ## Roadmap e Features Planejadas
 
+* criar app e whats lojIA vinculado a minhAi com um assistente dedicado para revenda com todos os produtos da Scan com acréscimo de 100% no valor e as opções de retirada já com o número do pedido em ordem (criar um login lojIA). Com o projeto pronto, colocar na loja para pedidos autônomos e mostrar para a scan sugerindo parceria.
+
+* Adicionar criador de sites ao WebApp (liberar o WebApp e bloquear ele apenas após 14 dias ou plano Consulting)
+
 * Colocar o Whatsapp de volta (aguardando suporte meta)
 
 * Sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem

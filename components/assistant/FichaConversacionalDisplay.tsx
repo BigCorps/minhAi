@@ -541,8 +541,19 @@ const { error: ingError } = await supabase
         content: `Ficha "${fichaPreview.nome}" salva com sucesso! Custo total: R$ ${fichaCompleta?.custo_total?.toFixed(2) ?? '0,00'}. ${isFichaPreparo ? 'O ingrediente foi criado automaticamente.' : `Preço sugerido: R$ ${fichaCompleta?.preco_venda_sugerido?.toFixed(2) ?? '—'}.`} Quer criar outra ficha?`,
         timestamp: new Date(),
       };
+
       setMessages(prev => [...prev, msgSucesso]);
       playTextSafe(msgSucesso.content);
+
+      // ── Cobrar créditos: 3 por ficha criada ──────────────────
+      supabase.rpc('register_function_usage', {
+        p_company_id: companyId,
+        p_function_key: 'fichas_producao_conversacional',
+        p_credits_consumed: 3,
+        p_metadata: { source: 'dashboard_producao', ficha_nome: fichaPreview.nome },
+      }).then(({ error }) => {
+        if (error) console.error('[salvarFicha] register_function_usage:', error);
+      });
 
       setFichaPreview({
         nome: '',

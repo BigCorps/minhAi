@@ -415,7 +415,7 @@ export default function SceneFuncoesMidia() {
   const Modal = MODALS[activeModal].component
 
   return (
-    <div className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none" style={{ background: BG }}>
+    <div className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none" style={{ background: BG, maxWidth: 500, margin: '0 auto' }}>
       <div className="flex-shrink-0 flex items-center py-1.5" style={{ borderBottom: `1px solid ${CAT1_COLOR}20` }}>
         <div className="flex items-center gap-1.5 px-3 flex-shrink-0">
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: CAT1_COLOR }} />

@@ -8,11 +8,9 @@
 
 * artefinal.app
 
-* Adicionar criador de sites ao WebApp (liberar o WebApp e bloquear ele apenas após 14 dias ou plano Consulting)
+* Sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
 
 * Colocar o Whatsapp de volta (aguardando suporte meta)
-
-* Sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
 
 * página admin no dashboard (colocar controle de APIs tambem)
 
@@ -23,6 +21,8 @@
 * ChatGPT, Claude e Cursor App MCP já Enviado (AGUARDANDO APROVAÇÃO)
 
 * Artes Instagram: Manus jiuithsu e fofopanda / GPT
+
+* Adicionar criador de sites ao WebApp (liberar o WebApp e bloquear ele apenas após 14 dias ou plano Consulting)
 
 * enviar releases e criar LinkedIn
 

@@ -6,7 +6,7 @@
 
 ## Roadmap e Features Planejadas
 
-* Editar vídeo e publicar no YouTube o vídeo completo e os 8 separados
+* Publicar no YouTube os 8 separados adiados, 1 pra cada dia com as descrições do Instagram 
 
 * artefinal.app
 

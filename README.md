@@ -6,8 +6,6 @@
 
 ## Roadmap e Features Planejadas
 
-* Publicar no YouTube os 8 separados adiados, 1 pra cada dia com as descrições do Instagram 
-
 * artefinal.app
 
 * Sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem

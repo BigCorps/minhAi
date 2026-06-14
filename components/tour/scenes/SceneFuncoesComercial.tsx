@@ -432,7 +432,7 @@ export default function SceneFuncoesComercial() {
   const Modal = MODALS[activeModal].component
 
   return (
-    <div className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none" style={{ background: BG }}>
+    <div className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none" style={{ background: BG, maxWidth: 500, margin: '0 auto' }}>
 
       {/* Cat 1 — acima, label esquerda, rola esquerda */}
       <div className="flex-shrink-0 flex items-center py-1.5" style={{ borderBottom: `1px solid ${CAT1_COLOR}20` }}>

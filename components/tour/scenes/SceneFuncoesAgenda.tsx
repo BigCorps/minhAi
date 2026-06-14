@@ -440,7 +440,7 @@ export default function SceneFuncoesAgenda() {
   const Modal = MODALS[activeModal].component
 
   return (
-    <div className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none" style={{ background: BG, maxWidth: 320, margin: '0 auto' }}>
+    <div className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none" style={{ background: BG, maxWidth: 420, margin: '0 auto' }}>
       {/* Cat 1 — acima, label esquerda, rola esquerda */}
       <div className="flex-shrink-0 flex items-center py-1.5" style={{ borderBottom: `1px solid ${CAT1_COLOR}20` }}>
         <div className="flex items-center gap-1.5 px-3 flex-shrink-0">

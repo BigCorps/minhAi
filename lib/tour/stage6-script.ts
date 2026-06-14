@@ -75,7 +75,7 @@ export const STAGE6_SCRIPT: Stage6Script[] = [
       'A minhAi ainda oferece dois tipos de link de cobrança: ' +
       'O link Pix gera um QR Code personalizado, o cliente abre, escolhe o valor se quiser, e paga. ' +
       'O link InfinitePay gera uma cobrança avulsa, o cliente informa o telefone e paga no crédito pelo celular. ' +
-      'Ambos com com confirmação automática e link curto, prontos para compartilhar no WhatsApp, Instagram ou onde precisar.',
+      'Ambos com confirmação automática e link curto, prontos para compartilhar no WhatsApp, Instagram ou onde precisar.',
     fallbackDuration: 10000,
   },
   {

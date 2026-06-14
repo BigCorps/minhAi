@@ -411,7 +411,7 @@ export default function SceneFuncoesConhecimento() {
   return (
     <div
       className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
-      style={{ background: BG }}
+      style={{ background: BG, maxWidth: 500, margin: '0 auto' }}
     >
       {/* Categoria 1 — carrossel acima */}
       <div

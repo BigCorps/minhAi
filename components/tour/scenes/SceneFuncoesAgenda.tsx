@@ -457,7 +457,7 @@ export default function SceneFuncoesAgenda() {
             <button key={m.key} onClick={() => setActiveModal(i)} style={{ width: activeModal === i ? 16 : 5, height: 5, borderRadius: 3, background: activeModal === i ? CAT1_COLOR : 'rgba(255,255,255,0.2)', border: 'none', padding: 0, cursor: 'pointer', transition: 'all 300ms ease' }} />
           ))}
         </div>
-        <div className="flex-1 min-h-0" key={activeModal} style={{ animation: 'fadeIn 300ms ease' }}>
+        <div className="flex-1 min-h-0" key={activeModal} style={{ animation: 'fadeIn 300ms ease', maxWidth: 240, width: '100%', margin: '0 auto' }}>
           <Modal />
         </div>
       </div>

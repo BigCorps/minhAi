@@ -6,6 +6,8 @@
 
 ## Roadmap e Features Planejadas
 
+* Editar vídeo e publicar no YouTube o vídeo completo e os 8 separados
+
 * artefinal.app
 
 * Sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem

@@ -15,6 +15,8 @@ const RESERVED_SUBDOMAINS = [
 
 const CRAWLER_PASSTHROUGH = ['/robots.txt', '/sitemap.xml', '/sitemap.ts'];
 
+const ARTEFINAL_DOMAINS = ['artefinal.app', 'www.artefinal.app'];
+
 // ── Todos os domínios de subdomínio de cliente ─────────────────────────────
 const SUBDOMAIN_DOMAINS = [
   { suffix: '.minhai.com.br',  pattern: /^(.+)\.minhai\.com\.br$/ },
@@ -44,8 +46,24 @@ function isSubdomainHost(hostname: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
-  const hostname = request.headers.get('host') || '';
+  const host = request.headers.get('host') || '';
+  const hostname = host.split(':')[0].toLowerCase();
   const pathname = request.nextUrl.pathname;
+
+  // ── 0. DOMÍNIO ARTEFINAL.APP ──────────────────────────────────────────────
+  if (ARTEFINAL_DOMAINS.includes(hostname)) {
+    if (pathname === '/') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/arte';
+      return NextResponse.rewrite(url);
+    }
+
+    if (pathname === '/arte') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      return NextResponse.redirect(url);
+    }
+  }
 
   // ── 0. PASSTHROUGH PARA CRAWLERS ──────────────────────────────────────────
   if (CRAWLER_PASSTHROUGH.some(p => pathname.startsWith(p))) {

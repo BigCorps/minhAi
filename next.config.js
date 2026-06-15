@@ -3,6 +3,13 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+
+module.exports = {
+  outputFileTracingIncludes: {
+    '/api/arte/gstest': ['./node_modules/@jspawn/ghostscript-wasm/**'],
+  },
+};
+
   // Permitir imagens do Supabase Storage para logos
   images: {
     remotePatterns: [

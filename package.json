@@ -23,6 +23,7 @@
     "@google/generative-ai": "^0.24.1",
     "@heroicons/react": "^2.1.1",
     "@imgly/background-removal": "^1.7.0",
+    "@jspawn/ghostscript-wasm": "^0.0.2",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
     "@ricky0123/vad-web": "^0.0.30",
@@ -63,6 +64,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@bubblewrap/cli": "latest",
     "@types/jsbarcode": "^3.11.4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
@@ -74,8 +76,7 @@
     "eslint-config-next": "14.1.0",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5",
-    "@bubblewrap/cli": "latest",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
   }
 }

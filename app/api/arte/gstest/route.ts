@@ -13,16 +13,21 @@ export async function GET() {
     const wasmBinary = fs.readFileSync(path.join(pkgDir, 'gs.wasm'));
 
     // @ts-ignore — pacote sem types
-    const GSFactory = (await import('@jspawn/ghostscript-wasm')).default;
-    let out = '';
-    const mod = await GSFactory({
-      wasmBinary,                 // entrega os bytes prontos; o Emscripten não tenta resolver caminho
-      print:    (s: string) => { out += s + '\n'; },
-      printErr: (s: string) => { out += s + '\n'; },
+    const Module = (await import('@jspawn/ghostscript-wasm')).default;
+
+    const out: string[] = [];
+    const mod = await Module({
+      noInitialRun: true,          // não roda nada sozinho
+      wasmBinary,                  // bytes prontos: sem fetch, sem path
+      print:    (s: string) => out.push(s),
+      printErr: (s: string) => out.push(s),
     });
-    mod.callMain(['--version']);
-    return NextResponse.json({ ok: true, gs: out.trim() });
+
+    // exit status (número). 0 = ok.
+    const status = mod.callMain(['--version']);
+
+    return NextResponse.json({ ok: true, status, gs: out.join('\n').trim() });
   } catch (e) {
-    return NextResponse.json({ ok: false, error: String((e as Error).message ?? e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: String((e as Error)?.stack ?? (e as Error)?.message ?? e) }, { status: 500 });
   }
 }

@@ -158,7 +158,7 @@ export default function ArtePage() {
             <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
           </div>
           <div>
-            <p className="text-sm font-bold" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>ArteFinal</p>
+            <p className="text-sm font-bold" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>ArteFinal.app</p>
             <p className="text-[11px]" style={{ color: isDark ? 'rgba(255,255,255,0.4)' : '#64748b' }}>Sua arte com sangria e corte com IA.</p>
           </div>
         </div>
@@ -185,10 +185,10 @@ export default function ArtePage() {
             <div className="w-16 h-16 rounded-2xl overflow-hidden mb-1 shadow-sm bg-white">
               <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
             </div>
-            <p className="text-base font-semibold" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>
+            <p className="af-empty-title text-base font-semibold">
               O que você precisa preparar?
             </p>
-            <p className="text-sm" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#64748b' }}>
+            <p className="af-empty-desc text-sm">
               Envie sua arte e receba o PDF na medida exata, com sangria e corte — pronto para sua gráfica parceira.
               Clique em uma função abaixo ou digite o que precisa.
             </p>
@@ -209,6 +209,13 @@ export default function ArtePage() {
           </div>
         )}
       </main>
+
+      <style>{`
+        .af-empty-title { color: #0f172a !important; }
+        .af-empty-desc { color: #64748b !important; }
+        .dark .af-empty-title { color: #ffffff !important; }
+        .dark .af-empty-desc { color: rgba(255,255,255,0.5) !important; }
+      `}</style>
 
       {/* Carrossel de habilidades */}
       {ready && hasUser && (

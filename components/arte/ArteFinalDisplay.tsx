@@ -144,7 +144,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
       setResultName(out.file_name ?? `${nome}.pdf`);
       setSaldo(typeof out.saldo === 'number' ? out.saldo : null);
       setStage('result');
-      playText('Arquivo pronto! Já está no padrão da gráfica.').catch(() => {});
+      playText('Arquivo pronto! Já está no padrão gráfico.').catch(() => {});
     } catch (e) {
       setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error');
     }
@@ -215,7 +215,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
               }}
             >
               <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste sua arte</div>
-              <div style={{ fontSize: 12 }}>PNG ou JPEG (RGB). A alta resolução fica protegida no servidor.</div>
+              <div style={{ fontSize: 12 }}>PNG ou JPEG (RGB).</div>
               <input ref={fileRef} type="file" accept="image/png,image/jpeg" style={{ display: 'none' }}
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
             </div>

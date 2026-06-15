@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bot, Send, Sparkles } from 'lucide-react';
+import { Bot, Send, LoggOut, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
 
@@ -159,13 +159,30 @@ export default function ArtePage() {
     </div>
     {/* créditos */}
 {hasUser ? (
-  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
-    style={{ background: 'rgba(0,174,239,0.1)', color: CMYK.cyan }}>
-    <Sparkles className="w-3.5 h-3.5" />
-    {saldo ?? '—'} créditos
+  <div className="flex items-center gap-2">
+    {/* Visor de Créditos */}
+    <div 
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
+      style={{ background: 'rgba(0,174,239,0.1)', color: CMYK.cyan }}
+    >
+      <Sparkles className="w-3.5 h-3.5" />
+      {saldo ?? '—'} créditos
+    </div>
+
+    {/* Botão de Sair */}
+    <button
+      onClick={() => {
+        // Coloque sua função de logout do Supabase aqui
+        // ex: await supabase.auth.signOut();
+      }}
+      className="flex items-center justify-center p-1.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors active:scale-95"
+      title="Sair"
+    >
+      <LogOut className="w-4 h-4" />
+    </button>
   </div>
 ) : (
-   <a
+  <a
     href="/arte/login"
     className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-95"
     style={{ background: `linear-gradient(135deg, ${CMYK.cyan} 0%, ${CMYK.magenta} 100%)` }}

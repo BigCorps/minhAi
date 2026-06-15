@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useTheme } from 'next-themes';
 import { Bot, Send, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
@@ -60,8 +59,6 @@ interface Msg { id: string; role: 'user' | 'assistant'; content: string }
 type ActiveModal = { type: string; data: { companyId: string } } | null;
 
 export default function ArtePage() {
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
   const supabase = createClient();
 
   const [ready, setReady] = useState(false);
@@ -144,26 +141,22 @@ export default function ArtePage() {
     if (session?.user) await refreshSaldo(session.user.id); // atualiza saldo após consumo
   }, [supabase, refreshSaldo]);
 
-  const bgPage = isDark
-    ? 'linear-gradient(to bottom, rgb(2,6,23), rgb(15,23,42))'
-    : 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))';
-
   return (
-    <div className="flex flex-col h-[100dvh]" style={{ background: bgPage }}>
+    <div className="flex flex-col h-[100dvh]" style={{ background: 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))' }}>
       {/* Header */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b flex-shrink-0"
-        style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
+        style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center bg-white shadow-sm">
             <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
           </div>
           <div>
-            <p className="text-sm font-bold" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>ArteFinal</p>
-            <p className="text-[11px]" style={{ color: isDark ? 'rgba(255,255,255,0.4)' : '#64748b' }}>Sua arte com sangria e corte com IA.</p>
+            <p className="text-sm font-bold" style={{ color: '#0f172a' }}>ArteFinal</p>
+            <p className="text-[11px]" style={{ color: '#64748b' }}>Sua arte com sangria e corte com IA.</p>
           </div>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
-          style={{ background: isDark ? 'rgba(0,174,239,0.15)' : 'rgba(0,174,239,0.1)', color: CMYK.cyan }}>
+          style={{ background: 'rgba(0,174,239,0.1)', color: CMYK.cyan }}>
           <Sparkles className="w-3.5 h-3.5" />
           {hasUser ? `${saldo ?? '—'} créditos` : 'entrar'}
         </div>
@@ -173,12 +166,12 @@ export default function ArtePage() {
       <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 min-h-0">
         {!ready ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-sm" style={{ color: isDark ? 'rgba(255,255,255,0.4)' : '#9ca3af' }}>Carregando…</p>
+            <p className="text-sm" style={{ color: '#9ca3af' }}>Carregando…</p>
           </div>
         ) : !hasUser ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2">
-            <Bot className={`w-10 h-10 ${isDark ? 'text-white/30' : 'text-gray-300'}`} />
-            <p className="text-sm" style={{ color: isDark ? 'rgba(255,255,255,0.6)' : '#6b7280' }}>Entre na sua conta para usar o app ArteFinal.</p>
+            <Bot className="w-10 h-10 text-gray-300" />
+            <p className="text-sm" style={{ color: '#6b7280' }}>Entre na sua conta para usar o app ArteFinal.</p>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 max-w-md mx-auto">
@@ -200,7 +193,7 @@ export default function ArtePage() {
                 <div className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow"
                   style={m.role === 'user'
                     ? { background: BRAND_GRADIENT, color: '#fff' }
-                    : { background: isDark ? 'rgba(51,65,85,0.8)' : 'rgba(255,255,255,0.95)', color: isDark ? '#e2e8f0' : '#1e293b' }}>
+                    : { background: 'rgba(255,255,255,0.95)', color: '#1e293b' }}>
                   {m.content}
                 </div>
               </div>
@@ -213,13 +206,11 @@ export default function ArtePage() {
       <style>{`
         .af-empty-title { color: #0f172a !important; }
         .af-empty-desc { color: #64748b !important; }
-        .dark .af-empty-title { color: #ffffff !important; }
-        .dark .af-empty-desc { color: rgba(255,255,255,0.5) !important; }
       `}</style>
 
       {/* Carrossel de habilidades */}
       {ready && hasUser && (
-        <div className="flex-shrink-0 px-3 sm:px-6 pt-2 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
+        <div className="flex-shrink-0 px-3 sm:px-6 pt-2 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
           <div className="flex gap-2 overflow-x-auto pb-2 max-w-2xl mx-auto" style={{ scrollbarWidth: 'none' }}>
             {SKILLS.map((sk) => (
               <button key={sk.key} onClick={() => openSkill(sk)}
@@ -235,16 +226,16 @@ export default function ArtePage() {
 
       {/* Input */}
       {ready && hasUser && (
-        <div className="flex-shrink-0 px-3 sm:px-6 py-3 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
+        <div className="flex-shrink-0 px-3 sm:px-6 py-3 border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
           <div className="flex items-end gap-2 rounded-xl px-3 py-2 max-w-2xl mx-auto"
-            style={{ background: isDark ? 'rgba(30,41,59,0.95)' : 'rgba(255,255,255,0.95)', border: `1px solid ${isDark ? 'rgba(0,174,239,0.3)' : 'rgba(0,174,239,0.25)'}` }}>
+            style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); } }}
               placeholder="Ex: arte final, sangria e corte…"
               className="flex-1 bg-transparent outline-none text-sm"
-              style={{ color: isDark ? '#e2e8f0' : '#1e293b' }}
+              style={{ color: '#1e293b' }}
             />
             <button onClick={handleSubmit} disabled={!input.trim()}
               className="p-1.5 rounded-lg transition-all disabled:opacity-30 hover:scale-110 active:scale-95"
@@ -252,6 +243,20 @@ export default function ArtePage() {
               <Send className="w-4 h-4 text-white" />
             </button>
           </div>
+
+          {/* Powered by */}
+          <p className="text-center text-[10px] mt-2" style={{ color: '#94a3b8' }}>
+            Powered by{' '}
+            <a
+              href="https://minhai.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline"
+              style={{ color: CMYK.cyan, fontWeight: 600 }}
+            >
+              minhAi.app
+            </a>
+          </p>
         </div>
       )}
 
@@ -260,7 +265,7 @@ export default function ArtePage() {
         <ArteFinalDisplay
           data={activeModal.data}
           onClose={closeModal}
-          theme={isDark ? 'dark' : 'light'}
+          theme="light"
           playText={playText}
         />
       )}

@@ -3,23 +3,22 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 import { NextResponse } from 'next/server';
 import path from 'node:path';
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
 
 export async function GET() {
   try {
-    // resolve a pasta real do pacote em runtime
     const require = createRequire(import.meta.url);
-    const pkgJson = require.resolve('@jspawn/ghostscript-wasm/package.json');
-    const pkgDir = path.dirname(pkgJson);
+    const pkgDir = path.dirname(require.resolve('@jspawn/ghostscript-wasm/package.json'));
+    const wasmBinary = fs.readFileSync(path.join(pkgDir, 'gs.wasm'));
 
     // @ts-ignore — pacote sem types
     const GSFactory = (await import('@jspawn/ghostscript-wasm')).default;
     let out = '';
     const mod = await GSFactory({
-      print: (s: string) => { out += s + '\n'; },
+      wasmBinary,                 // entrega os bytes prontos; o Emscripten não tenta resolver caminho
+      print:    (s: string) => { out += s + '\n'; },
       printErr: (s: string) => { out += s + '\n'; },
-      // força o caminho de disco do .wasm (resolve o "Failed to parse URL")
-      locateFile: (file: string) => path.join(pkgDir, file),
     });
     mod.callMain(['--version']);
     return NextResponse.json({ ok: true, gs: out.trim() });

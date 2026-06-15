@@ -1,7 +1,5 @@
 # minhAI - Uma IA pra chamar de sua!
-
 > ** Este README contém todo o contexto necessário para entender a arquitetura, convenções e regras do projeto. Leia-o completamente antes de sugerir qualquer modificação.
-
 ---
 
 ## Roadmap e Features Planejadas

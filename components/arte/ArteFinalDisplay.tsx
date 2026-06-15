@@ -16,12 +16,7 @@ interface Props {
 }
 
 // ── Paleta CMYK (mesma do app /arte) ─────────────────────────────────────
-const CMYK = {
-  cyan: '#00AEEF',
-  magenta: '#EC008C',
-  yellow: '#FFD500',
-  key: '#1A1A1A',
-};
+const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
 
 const DARK = {
   bg: '#1e293b', bgSecondary: '#0f172a', border: 'rgba(255,255,255,0.08)',
@@ -34,13 +29,14 @@ const LIGHT = {
   primary: CMYK.cyan, accent: CMYK.cyan, warn: '#d97706',
 };
 
-const OPENING_TEXT = 'Envie a arte. Depois informe a medida final e a sangria, e eu gero o arquivo pronto para a gráfica.';
+const OPENING_TEXT = 'Envie a arte. Informe a medida final do arquivo e a sangria, posicione, e eu gero o arquivo pronto para a gráfica.';
 const CREDITS = 5;
 const DPI_MIN = 96;
-const SAFE_MM = 5; // margem de segurança visual no preview
+const SAFE_MM = 5; // margem de segurança visual (a partir do corte)
 const AUTO_CLOSE = 90;
 
 const mmToPt = (v: number) => (v * 72) / 25.4;
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playText }: Props) {
   const isDark = theme === 'dark';
@@ -49,10 +45,16 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
 
   const [stage, setStage] = useState<Stage>('input');
   const [upload, setUpload] = useState<ArteUpload | null>(null);
-  const [trimW, setTrimW] = useState<number>(90);
-  const [trimH, setTrimH] = useState<number>(50);
+
+  // medida digitada = TAMANHO FINAL do arquivo (sangria já inclusa por dentro)
+  const [finalW, setFinalW] = useState<number>(90);
+  const [finalH, setFinalH] = useState<number>(50);
   const [bleed, setBleed] = useState<number>(3);
   const [nome, setNome] = useState<string>('arte-final');
+
+  // transform de posicionamento da arte dentro do arquivo
+  const [zoom, setZoom] = useState<number>(1);            // 1 = preenche (cover)
+  const [offset, setOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 }); // fração, centro-base
 
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [resultBase64, setResultBase64] = useState<string>('');
@@ -64,6 +66,8 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
 
   const spoke = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ px: number; py: number; ox: number; oy: number } | null>(null);
 
   // TTS de abertura — só no mount
   useEffect(() => {
@@ -80,19 +84,54 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
     return () => clearInterval(id);
   }, [stage, onClose]);
 
-  // ── DPI estimado no client (espelha a conta da edge: overscan-cover) ──
-  const mediaW = trimW + 2 * bleed;
-  const mediaH = trimH + 2 * bleed;
+  // ── Geometria de posicionamento (mesma conta da edge) ──
+  // ratioX/ratioY = "cover": a arte preenche o eixo limitante e transborda no outro.
+  const imgAspect = upload ? upload.width / upload.height : 1;
+  const boxAspect = finalH > 0 ? finalW / finalH : 1;
+  const ratioX = imgAspect > boxAspect ? imgAspect / boxAspect : 1;
+  const ratioY = imgAspect > boxAspect ? 1 : boxAspect / imgAspect;
+  const rx = ratioX * zoom;
+  const ry = ratioY * zoom;
+  const maxOffX = Math.max(0, (rx - 1) / 2);
+  const maxOffY = Math.max(0, (ry - 1) / 2);
+  const offX = clamp(offset.x, -maxOffX, maxOffX);
+  const offY = clamp(offset.y, -maxOffY, maxOffY);
+
+  // mantém o offset dentro dos limites quando zoom/medida/sangria mudam
+  useEffect(() => {
+    setOffset((o) => ({ x: clamp(o.x, -maxOffX, maxOffX), y: clamp(o.y, -maxOffY, maxOffY) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoom, finalW, finalH, bleed]);
+
+  // DPI real considerando o zoom
   let estDpi = 0;
-  if (upload && trimW > 0 && trimH > 0) {
-    const boxW = mmToPt(mediaW), boxH = mmToPt(mediaH);
-    const imgAspect = upload.width / upload.height;
-    const boxAspect = boxW / boxH;
-    const drawW = imgAspect > boxAspect ? boxH * imgAspect : boxW;
-    estDpi = Math.round(upload.width / (drawW / 72));
+  if (upload && finalW > 0 && finalH > 0) {
+    const drawWpt = mmToPt(finalW) * rx;
+    estDpi = Math.round(upload.width / (drawWpt / 72));
   }
   const dpiBaixo = upload != null && estDpi > 0 && estDpi < DPI_MIN;
-  const medidaInvalida = !(trimW > 0) || !(trimH > 0);
+  const sangriaInvalida = finalW - 2 * bleed <= 0 || finalH - 2 * bleed <= 0;
+  const medidaInvalida = !(finalW > 0) || !(finalH > 0) || sangriaInvalida;
+
+  // ── Drag para posicionar ──
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    if (!boxRef.current) return;
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    dragRef.current = { px: e.clientX, py: e.clientY, ox: offX, oy: offY };
+  }, [offX, offY]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d || !boxRef.current) return;
+    const r = boxRef.current.getBoundingClientRect();
+    const dx = (e.clientX - d.px) / r.width;   // fração da largura
+    const dy = (e.clientY - d.py) / r.height;  // fração da altura
+    setOffset({ x: clamp(d.ox + dx, -maxOffX, maxOffX), y: clamp(d.oy + dy, -maxOffY, maxOffY) });
+  }, [maxOffX, maxOffY]);
+
+  const onPointerUp = useCallback(() => { dragRef.current = null; }, []);
+
+  const resetPos = useCallback(() => { setZoom(1); setOffset({ x: 0, y: 0 }); }, []);
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) { setErrorMsg('Envie uma imagem (PNG ou JPEG).'); setStage('error'); return; }
@@ -100,6 +139,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
     try {
       const up = await prepareArteUpload(file, data.companyId);
       setUpload(up);
+      setZoom(1); setOffset({ x: 0, y: 0 });
       setNome((file.name.replace(/\.[^.]+$/, '') || 'arte-final').replace(/[^\w\-]+/g, '-').slice(0, 40));
       setStage('configuring');
     } catch (e) {
@@ -118,13 +158,16 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
         body: JSON.stringify({
           companyId: data.companyId,
           uploadPath: upload.uploadPath,
-          spec: { trim_w_mm: trimW, trim_h_mm: trimH, bleed_mm: bleed, nome, dpi_min: DPI_MIN },
+          spec: {
+            final_w_mm: finalW, final_h_mm: finalH, bleed_mm: bleed,
+            zoom, offset_x: offX, offset_y: offY,
+            nome, dpi_min: DPI_MIN,
+          },
         }),
       });
       const out = await res.json();
 
       if (!res.ok || !out.success) {
-        // 402 = sem créditos ; 422 = DPI/formato ; outros = erro genérico
         if (res.status === 402) {
           setErrorMsg(`Créditos insuficientes. Esta arte custa ${CREDITS} créditos e seu saldo é ${out.saldo ?? 0}.`);
         } else {
@@ -144,11 +187,11 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
       setResultName(out.file_name ?? `${nome}.pdf`);
       setSaldo(typeof out.saldo === 'number' ? out.saldo : null);
       setStage('result');
-      playText('Arquivo pronto! Já está no padrão gráfico.').catch(() => {});
+      playText('Arquivo pronto! Já está no tamanho final.').catch(() => {});
     } catch (e) {
       setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error');
     }
-  }, [upload, medidaInvalida, dpiBaixo, supabase, data.companyId, trimW, trimH, bleed, nome, playText]);
+  }, [upload, medidaInvalida, dpiBaixo, supabase, data.companyId, finalW, finalH, bleed, zoom, offX, offY, nome, playText]);
 
   const handleDownload = useCallback(() => {
     if (!resultBlob || !resultName) return;
@@ -161,6 +204,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
   const handleReset = useCallback(() => {
     setStage('input'); setUpload(null); setResultBlob(null);
     setResultBase64(''); setErrorMsg(''); setNome('arte-final');
+    setZoom(1); setOffset({ x: 0, y: 0 });
   }, []);
 
   // ── estilos util ──
@@ -170,11 +214,20 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
     background: c.bgSecondary, border: `1px solid ${c.border}`, color: c.text, outline: 'none',
   };
 
-  // proporções para o overlay de preview (em % do MediaBox)
-  const bleedPctX = mediaW > 0 ? (bleed / mediaW) * 100 : 0;
-  const bleedPctY = mediaH > 0 ? (bleed / mediaH) * 100 : 0;
-  const safePctX = mediaW > 0 ? ((bleed + SAFE_MM) / mediaW) * 100 : 0;
-  const safePctY = mediaH > 0 ? ((bleed + SAFE_MM) / mediaH) * 100 : 0;
+  // overlays do preview (% do MediaBox = medida final)
+  const bleedPctX = finalW > 0 ? (bleed / finalW) * 100 : 0;
+  const bleedPctY = finalH > 0 ? (bleed / finalH) * 100 : 0;
+  const safePctX = finalW > 0 ? ((bleed + SAFE_MM) / finalW) * 100 : 0;
+  const safePctY = finalH > 0 ? ((bleed + SAFE_MM) / finalH) * 100 : 0;
+
+  // posição/tamanho da arte no preview (%, espelha a edge)
+  const imgStyle: React.CSSProperties = {
+    position: 'absolute',
+    width: `${rx * 100}%`, height: `${ry * 100}%`,
+    left: `${(0.5 - rx / 2 + offX) * 100}%`,
+    top: `${(0.5 - ry / 2 + offY) * 100}%`,
+    userSelect: 'none', pointerEvents: 'none', display: 'block',
+  };
 
   return createPortal(
     <div style={{
@@ -191,15 +244,10 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Arte Final</h2>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '4px 10px', border: `1px solid ${c.border}`, borderRadius: 8,
-              background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13, fontWeight: 600,
-            }}
-          >
-            Fechar
-          </button>
+          <button onClick={onClose} style={{
+            padding: '4px 10px', border: `1px solid ${c.border}`, borderRadius: 8,
+            background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+          }}>Fechar</button>
         </div>
 
         {/* INPUT */}
@@ -225,41 +273,63 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
         {/* CONFIGURING */}
         {stage === 'configuring' && upload && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Preview com sangria/corte */}
+            {/* Preview interativo */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <div style={{
-                position: 'relative', width: 'min(100%, 360px)',
-                aspectRatio: `${mediaW} / ${mediaH}`,
-                backgroundImage: `url(${upload.previewDataUrl})`,
-                backgroundSize: 'cover', backgroundPosition: 'center',
-                border: `1px solid ${c.border}`, borderRadius: 4, overflow: 'hidden',
-              }}>
-                {/* linha de corte (trim) */}
+              <div
+                ref={boxRef}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+                style={{
+                  position: 'relative', width: 'min(100%, 360px)',
+                  aspectRatio: `${finalW} / ${finalH}`,
+                  background: c.bgSecondary,
+                  border: `1px solid ${c.border}`, borderRadius: 4, overflow: 'hidden',
+                  cursor: 'grab', touchAction: 'none',
+                }}
+              >
+                <img src={upload.previewDataUrl} alt="" style={imgStyle} draggable={false} />
+                {/* linha de corte (trim) — recuada pela sangria */}
                 <div style={{
                   position: 'absolute', left: `${bleedPctX}%`, top: `${bleedPctY}%`,
                   right: `${bleedPctX}%`, bottom: `${bleedPctY}%`,
-                  border: '1px solid rgba(220,38,38,0.95)', boxSizing: 'border-box',
+                  border: '1px solid rgba(220,38,38,0.95)', boxSizing: 'border-box', pointerEvents: 'none',
                 }} />
                 {/* área de segurança */}
                 <div style={{
                   position: 'absolute', left: `${safePctX}%`, top: `${safePctY}%`,
                   right: `${safePctX}%`, bottom: `${safePctY}%`,
-                  border: '1px dashed rgba(16,185,129,0.9)', boxSizing: 'border-box',
+                  border: '1px dashed rgba(16,185,129,0.9)', boxSizing: 'border-box', pointerEvents: 'none',
                 }} />
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', fontSize: 11, color: c.textMuted }}>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', fontSize: 11, color: c.textMuted }}>
               <span><span style={{ color: '#dc2626' }}>—</span> corte</span>
               <span><span style={{ color: '#10b981' }}>┄</span> área segura</span>
-              <span>sangria {bleed}mm</span>
+              <span>arraste para posicionar</span>
             </div>
 
-            {/* Campos */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-              <div><label style={label}>Largura (mm)</label><input type="number" min={1} value={trimW} onChange={(e) => setTrimW(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
-              <div><label style={label}>Altura (mm)</label><input type="number" min={1} value={trimH} onChange={(e) => setTrimH(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
-              <div><label style={label}>Sangria (mm)</label><input type="number" min={0} max={10} step={0.5} value={bleed} onChange={(e) => setBleed(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
+            {/* Zoom */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <label style={{ fontSize: 12, color: c.textMuted }}>Zoom: {Math.round(zoom * 100)}%</label>
+                <button onClick={resetPos} style={{ fontSize: 11, color: c.accent, background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Centralizar</button>
+              </div>
+              <input type="range" min={1} max={5} step={0.01} value={zoom}
+                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                style={{ width: '100%', accentColor: c.accent }} />
             </div>
+
+            {/* Medidas */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+              <div><label style={label}>Largura final (mm)</label><input type="number" min={1} value={finalW} onChange={(e) => setFinalW(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
+              <div><label style={label}>Altura final (mm)</label><input type="number" min={1} value={finalH} onChange={(e) => setFinalH(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
+              <div><label style={label}>Sangria (mm)</label><input type="number" min={0} max={20} step={0.5} value={bleed} onChange={(e) => setBleed(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
+            </div>
+            <p style={{ margin: '-6px 0 0', fontSize: 11, color: c.textMuted }}>
+              A medida é o tamanho final do arquivo entregue à gráfica. A sangria fica por dentro: o corte (linha vermelha) recua {bleed}mm das bordas.
+            </p>
             <div><label style={label}>Nome do arquivo</label><input type="text" value={nome} onChange={(e) => setNome(e.target.value.replace(/[^\w\-]+/g, '-').slice(0, 40))} style={inputStyle} /></div>
 
             {/* DPI + custo */}
@@ -274,21 +344,23 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
               <span style={{ color: c.textMuted }}>Custo: <strong style={{ color: c.text }}>{CREDITS} créditos</strong></span>
             </div>
 
-            {dpiBaixo && (
+            {sangriaInvalida && (
+              <div style={{ fontSize: 12, color: c.error, lineHeight: 1.4 }}>
+                A sangria é maior que a medida. Reduza a sangria ou aumente a medida final.
+              </div>
+            )}
+            {dpiBaixo && !sangriaInvalida && (
               <div style={{ fontSize: 12, color: c.warn, lineHeight: 1.4 }}>
-                A arte é pequena para essa medida — sairia borrada na impressão. Reduza a medida final ou envie um arquivo maior. (Não cobramos enquanto estiver abaixo do mínimo.)
+                Resolução baixa para essa medida/zoom — sairia borrado na impressão. Reduza o zoom ou envie uma arte maior. (Não cobramos enquanto estiver abaixo do mínimo.)
               </div>
             )}
 
-            <button
-              onClick={handleGenerate}
-              disabled={medidaInvalida || dpiBaixo}
+            <button onClick={handleGenerate} disabled={medidaInvalida || dpiBaixo}
               style={{
                 padding: 14, borderRadius: 10, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700,
                 cursor: (medidaInvalida || dpiBaixo) ? 'not-allowed' : 'pointer',
                 background: (medidaInvalida || dpiBaixo) ? c.border : c.accent,
-              }}
-            >
+              }}>
               Liberar PDF de produção ({CREDITS} créditos)
             </button>
             <button onClick={handleReset} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 13 }}>
@@ -300,11 +372,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
         {/* PROCESSING */}
         {stage === 'processing' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '34px 0' }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: '50%',
-              border: `3px solid ${c.border}`, borderTopColor: c.accent,
-              animation: 'af-spin 0.8s linear infinite',
-            }} />
+            <div style={{ width: 28, height: 28, borderRadius: '50%', border: `3px solid ${c.border}`, borderTopColor: c.accent, animation: 'af-spin 0.8s linear infinite' }} />
             <p style={{ margin: 0, fontSize: 14, color: c.textMuted }}>{progress}</p>
           </div>
         )}
@@ -325,16 +393,12 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
                 <div style={{ padding: 12, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
                   <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>Arquivo: <strong style={{ color: c.text }}>{resultName}</strong></p>
                   <p style={{ margin: '4px 0 0', fontSize: 12, color: c.textMuted }}>
-                    {trimW}×{trimH}mm · sangria {bleed}mm{saldo != null ? ` · saldo: ${saldo} créditos` : ''}
+                    {finalW}×{finalH}mm · sangria {bleed}mm{saldo != null ? ` · saldo: ${saldo} créditos` : ''}
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={handleDownload} style={{ flex: 1, padding: 10, borderRadius: 8, border: 'none', background: c.accent, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
-                    Baixar PDF
-                  </button>
-                  <button onClick={handleReset} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
-                    Nova arte
-                  </button>
+                  <button onClick={handleDownload} style={{ flex: 1, padding: 10, borderRadius: 8, border: 'none', background: c.accent, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Baixar PDF</button>
+                  <button onClick={handleReset} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Nova arte</button>
                 </div>
               </div>
               <div className="af-qr-desktop" style={{ display: 'none', flexShrink: 0, width: 224 }}>
@@ -351,12 +415,8 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
         {/* ERROR */}
         {stage === 'error' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: `1px solid ${c.error}`, color: c.error, fontSize: 14, lineHeight: 1.4 }}>
-              {errorMsg}
-            </div>
-            <button onClick={handleReset} style={{ padding: 12, borderRadius: 8, border: 'none', background: c.error, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
-              Tentar novamente
-            </button>
+            <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: `1px solid ${c.error}`, color: c.error, fontSize: 14, lineHeight: 1.4 }}>{errorMsg}</div>
+            <button onClick={handleReset} style={{ padding: 12, borderRadius: 8, border: 'none', background: c.error, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Tentar novamente</button>
           </div>
         )}
       </div>

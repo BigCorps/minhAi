@@ -144,23 +144,27 @@ export default function ArtePage() {
   return (
     <div className="flex flex-col h-[100dvh]" style={{ background: 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))' }}>
       {/* Header */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b flex-shrink-0"
-        style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center bg-white shadow-sm">
-            <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
-          </div>
-          <div>
-            <p className="text-sm font-bold" style={{ color: '#0f172a' }}>ArteFinal</p>
-            <p className="text-[11px]" style={{ color: '#64748b' }}>Sua arte com sangria e corte com IA.</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
-          style={{ background: 'rgba(0,174,239,0.1)', color: CMYK.cyan }}>
-          <Sparkles className="w-3.5 h-3.5" />
-          {hasUser ? `${saldo ?? '—'} créditos` : 'entrar'}
-        </div>
-      </header>
+<header className="flex justify-center px-4 sm:px-6 py-3 border-b flex-shrink-0"
+  style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+  <div className="flex items-center justify-between w-full max-w-2xl">
+    {/* logo + nome */}
+    <div className="flex items-center gap-2.5">
+      <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center">
+        <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
+      </div>
+      <div>
+        <p className="text-sm font-bold" style={{ color: '#0f172a' }}>ArteFinal</p>
+        <p className="text-[11px]" style={{ color: '#64748b' }}>Sua arte com sangria e corte com IA.</p>
+      </div>
+    </div>
+    {/* créditos */}
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
+      style={{ background: 'rgba(0,174,239,0.1)', color: CMYK.cyan }}>
+      <Sparkles className="w-3.5 h-3.5" />
+      {hasUser ? `${saldo ?? '—'} créditos` : 'entrar'}
+    </div>
+  </div>
+</header>
 
       {/* Conteúdo / mensagens */}
       <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 min-h-0">
@@ -175,9 +179,9 @@ export default function ArtePage() {
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 max-w-md mx-auto">
-            <div className="w-16 h-16 rounded-2xl overflow-hidden mb-1 shadow-sm bg-white">
-              <img src="/arte/arte.png" alt="ArteFinal.app" className="w-full h-full object-cover" />
-            </div>
+<div className="w-24 h-24 overflow-hidden mb-1">
+  <img src="/arte/arte.png" alt="ArteFinal.app" className="w-full h-full object-cover" />
+</div>
             <p className="af-empty-title text-base font-semibold">
               O que você precisa preparar?
             </p>

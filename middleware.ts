@@ -50,21 +50,57 @@ export async function middleware(request: NextRequest) {
   const hostname = host.split(':')[0].toLowerCase();
   const pathname = request.nextUrl.pathname;
 
-  // ── 0. DOMÍNIO ARTEFINAL.APP ──────────────────────────────────────────────
-  if (ARTEFINAL_DOMAINS.includes(hostname)) {
-    if (pathname === '/') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/arte';
-      return NextResponse.rewrite(url);
-    }
+// ── 0. DOMÍNIO ARTEFINAL.APP ──────────────────────────────────────────────
+if (ARTEFINAL_DOMAINS.includes(hostname)) {
 
-    if (pathname === '/arte') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/';
-      return NextResponse.redirect(url);
-    }
+  // Rewrite raiz → /arte
+  if (pathname === '/') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/arte';
+    return NextResponse.rewrite(url);
   }
 
+  // Evita loop: /arte não redireciona de volta para /
+  if (pathname === '/arte') {
+    // Deixa passar — será tratado abaixo com verificação de sessão
+  }
+
+  // Redireciona /arte/login para /arte se já estiver logado
+  if (pathname === '/arte/login') {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name) { return request.cookies.get(name)?.value; },
+          set() {},
+          remove() {},
+        },
+      }
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) return NextResponse.redirect(new URL('/arte', request.url));
+    return NextResponse.next();
+  }
+
+  // Protege /arte: redireciona para /arte/login se não logado
+  if (pathname === '/arte') {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name) { return request.cookies.get(name)?.value; },
+          set() {},
+          remove() {},
+        },
+      }
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.redirect(new URL('/arte/login', request.url));
+    return NextResponse.next();
+  }
+}
   // ── 0. PASSTHROUGH PARA CRAWLERS ──────────────────────────────────────────
   if (CRAWLER_PASSTHROUGH.some(p => pathname.startsWith(p))) {
     return NextResponse.next();

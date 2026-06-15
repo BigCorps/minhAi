@@ -141,6 +141,11 @@ export default function ArtePage() {
     if (session?.user) await refreshSaldo(session.user.id); // atualiza saldo após consumo
   }, [supabase, refreshSaldo]);
 
+const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.reload(); // Recarrega a página para limpar os estados e voltar à tela inicial
+  };
+  
   return (
     <div className="flex flex-col h-[100dvh]" style={{ background: 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))' }}>
       {/* Header */}
@@ -171,12 +176,9 @@ export default function ArtePage() {
 
     {/* Botão de Sair */}
     <button
-      onClick={() => {
-        // Coloque sua função de logout do Supabase aqui
-        // ex: await supabase.auth.signOut();
-      }}
-      className="flex items-center justify-center p-1.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors active:scale-95"
-      title="Sair"
+      onClick={handleLogout}
+      className="flex items-center justify-center p-2 rounded-full text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors active:scale-95"
+      title="Sair da conta"
     >
       <LogOut className="w-4 h-4" />
     </button>

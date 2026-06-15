@@ -33,7 +33,7 @@ const SKILLS: Skill[] = [
   {
     key: 'arte_final',
     label: 'Arte Final',
-    color: CMYK.magenta,
+    color: CMYK.cyan,
     desc: 'PDF pronto pra gráfica (medida + sangria + corte)',
     credits: 5,
     triggers: ['arte final', 'arquivo pra grafica', 'arquivo para grafica', 'sangria', 'corte', 'fechar arquivo', 'gerar pdf', 'pdf de producao'],
@@ -158,12 +158,12 @@ export default function ArtePage() {
             <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
           </div>
           <div>
-            <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>ArteFinal</p>
-            <p className={`text-[11px] ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Sua arte com sangria e corte com IA.</p>
+            <p className="text-sm font-bold" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>ArteFinal</p>
+            <p className="text-[11px]" style={{ color: isDark ? 'rgba(255,255,255,0.4)' : '#64748b' }}>Sua arte com sangria e corte com IA.</p>
           </div>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
-          style={{ background: isDark ? 'rgba(236,0,140,0.15)' : 'rgba(236,0,140,0.1)', color: CMYK.magenta }}>
+          style={{ background: isDark ? 'rgba(0,174,239,0.15)' : 'rgba(0,174,239,0.1)', color: CMYK.cyan }}>
           <Sparkles className="w-3.5 h-3.5" />
           {hasUser ? `${saldo ?? '—'} créditos` : 'entrar'}
         </div>
@@ -173,20 +173,22 @@ export default function ArtePage() {
       <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 min-h-0">
         {!ready ? (
           <div className="flex items-center justify-center h-full">
-            <p className={`text-sm ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Carregando…</p>
+            <p className="text-sm" style={{ color: isDark ? 'rgba(255,255,255,0.4)' : '#9ca3af' }}>Carregando…</p>
           </div>
         ) : !hasUser ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2">
             <Bot className={`w-10 h-10 ${isDark ? 'text-white/30' : 'text-gray-300'}`} />
-            <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-500'}`}>Entre na sua conta para usar o app ArteFinal.</p>
+            <p className="text-sm" style={{ color: isDark ? 'rgba(255,255,255,0.6)' : '#6b7280' }}>Entre na sua conta para usar o app ArteFinal.</p>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 max-w-md mx-auto">
             <div className="w-16 h-16 rounded-2xl overflow-hidden mb-1 shadow-sm bg-white">
               <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
             </div>
-            <p className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>O que você precisa preparar?</p>
-            <p className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+            <p className="text-base font-semibold" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>
+              O que você precisa preparar?
+            </p>
+            <p className="text-sm" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#64748b' }}>
               Envie sua arte e receba o PDF na medida exata, com sangria e corte — pronto para sua gráfica parceira.
               Clique em uma função abaixo ou digite o que precisa.
             </p>

@@ -427,7 +427,7 @@ export default function ArteLoginPage() {
             </div>
             <p className="mt-3 text-center text-xs text-gray-300">
               Powered by{' '}
-              
+              <a
                 href="https://minhai.app" target="_blank" rel="noopener noreferrer"
                 className="font-semibold hover:underline"
                 style={{ color: CMYK.cyan }}

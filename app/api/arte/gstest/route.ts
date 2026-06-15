@@ -7,10 +7,10 @@ import fs from 'node:fs';
 
 export async function GET() {
   try {
-    // require de runtime que o webpack NÃO reescreve
     const nodeRequire = eval('require') as NodeRequire;
     const pkgDir = path.dirname(nodeRequire.resolve('@jspawn/ghostscript-wasm/package.json'));
-    const wasmBinary = fs.readFileSync(path.join(pkgDir, 'gs.wasm'));
+    const wasmBytes = fs.readFileSync(path.join(pkgDir, 'gs.wasm'));
+    const wasmModule = await WebAssembly.compile(wasmBytes); // compilo eu mesmo
 
     // @ts-ignore — pacote sem types
     const Module = (await import('@jspawn/ghostscript-wasm')).default;
@@ -18,7 +18,11 @@ export async function GET() {
     const out: string[] = [];
     const mod = await Module({
       noInitialRun: true,
-      wasmBinary,
+      // intercepta a instanciação: o glue não tenta fetch nenhum
+      instantiateWasm: (imports: WebAssembly.Imports, cb: (inst: WebAssembly.Instance) => void) => {
+        WebAssembly.instantiate(wasmModule, imports).then((inst) => cb(inst));
+        return {}; // sinaliza que estamos cuidando da instanciação
+      },
       print:    (s: string) => out.push(s),
       printErr: (s: string) => out.push(s),
     });

@@ -158,11 +158,22 @@ export default function ArtePage() {
       </div>
     </div>
     {/* créditos */}
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
-      style={{ background: 'rgba(0,174,239,0.1)', color: CMYK.cyan }}>
-      <Sparkles className="w-3.5 h-3.5" />
-      {hasUser ? `${saldo ?? '—'} créditos` : 'entrar'}
-    </div>
+{hasUser ? (
+  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
+    style={{ background: 'rgba(0,174,239,0.1)', color: CMYK.cyan }}>
+    <Sparkles className="w-3.5 h-3.5" />
+    {saldo ?? '—'} créditos
+  </div>
+) : (
+   <a
+    href="/arte/login"
+    className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-95"
+    style={{ background: `linear-gradient(135deg, ${CMYK.cyan} 0%, ${CMYK.magenta} 100%)` }}
+  >
+    <Sparkles className="w-3.5 h-3.5" />
+    Entrar
+  </a>
+)}
   </div>
 </header>
 

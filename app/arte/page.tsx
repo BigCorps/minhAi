@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bot, Send, LoggOut, Sparkles } from 'lucide-react';
+import { Bot, Send, LogOut, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
 

@@ -186,7 +186,7 @@ export default function ArtePage() {
               O que você precisa preparar?
             </p>
             <p className="af-empty-desc text-sm">
-              Envie sua arte e receba o PDF na medida exata, com sangria e corte — pronto para sua gráfica parceira.
+              Envie sua arte e receba o PDF na medida exata, em CMYK, com margem, sangria e corte prontos para sua gráfica parceira.
               Clique em uma função abaixo ou digite o que precisa.
             </p>
           </div>

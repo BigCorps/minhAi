@@ -6,6 +6,7 @@ const nextConfig = {
   
   outputFileTracingIncludes: {
     '/api/arte/gstest': ['./node_modules/@jspawn/ghostscript-wasm/**'],
+  serverExternalPackages: ['@jspawn/ghostscript-wasm'],
   },
 
   // Permitir imagens do Supabase Storage para logos

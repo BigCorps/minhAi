@@ -158,7 +158,7 @@ export default function ArtePage() {
             <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
           </div>
           <div>
-            <p className="text-sm font-bold" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>ArteFinal.app</p>
+            <p className="text-sm font-bold" style={{ color: isDark ? '#ffffff' : '#0f172a' }}>ArteFinal</p>
             <p className="text-[11px]" style={{ color: isDark ? 'rgba(255,255,255,0.4)' : '#64748b' }}>Sua arte com sangria e corte com IA.</p>
           </div>
         </div>
@@ -183,7 +183,7 @@ export default function ArtePage() {
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 max-w-md mx-auto">
             <div className="w-16 h-16 rounded-2xl overflow-hidden mb-1 shadow-sm bg-white">
-              <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
+              <img src="/arte/arte.png" alt="ArteFinal.app" className="w-full h-full object-cover" />
             </div>
             <p className="af-empty-title text-base font-semibold">
               O que você precisa preparar?

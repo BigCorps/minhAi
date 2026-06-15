@@ -2,9 +2,20 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTheme } from 'next-themes';
-import { Bot, Send, Sparkles, Wand2 } from 'lucide-react';
+import { Bot, Send, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
+
+// ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
+const CMYK = {
+  cyan: '#00AEEF',
+  magenta: '#EC008C',
+  yellow: '#FFD500',
+  key: '#1A1A1A',
+};
+
+// Gradiente "AF" do logo: azul → magenta → amarelo
+const BRAND_GRADIENT = `linear-gradient(135deg, ${CMYK.cyan} 0%, ${CMYK.magenta} 55%, ${CMYK.yellow} 100%)`;
 
 // ── Registry local do ArteFinal ──────────────────────────────────────────
 // Adicionar habilidade nova = uma entrada aqui (e o componente correspondente).
@@ -22,7 +33,7 @@ const SKILLS: Skill[] = [
   {
     key: 'arte_final',
     label: 'Arte Final',
-    color: '#ea580c',
+    color: CMYK.magenta,
     desc: 'PDF pronto pra gráfica (medida + sangria + corte)',
     credits: 5,
     triggers: ['arte final', 'arquivo pra grafica', 'arquivo para grafica', 'sangria', 'corte', 'fechar arquivo', 'gerar pdf', 'pdf de producao'],
@@ -143,16 +154,16 @@ export default function ArtePage() {
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b flex-shrink-0"
         style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #ea580c, #f59e0b)' }}>
-            <Wand2 className="w-4.5 h-4.5 text-white" />
+          <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center bg-white shadow-sm">
+            <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
           </div>
           <div>
             <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>ArteFinal</p>
-            <p className={`text-[11px] ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Arquivo pronto pra gráfica, sem Corel</p>
+            <p className={`text-[11px] ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Sua arte com sangria e corte com IA.</p>
           </div>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
-          style={{ background: isDark ? 'rgba(234,88,12,0.15)' : 'rgba(234,88,12,0.1)', color: '#ea580c' }}>
+          style={{ background: isDark ? 'rgba(236,0,140,0.15)' : 'rgba(236,0,140,0.1)', color: CMYK.magenta }}>
           <Sparkles className="w-3.5 h-3.5" />
           {hasUser ? `${saldo ?? '—'} créditos` : 'entrar'}
         </div>
@@ -167,17 +178,17 @@ export default function ArtePage() {
         ) : !hasUser ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2">
             <Bot className={`w-10 h-10 ${isDark ? 'text-white/30' : 'text-gray-300'}`} />
-            <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-500'}`}>Entre na sua conta para usar o ArteFinal.</p>
+            <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-500'}`}>Entre na sua conta para usar o app ArteFinal.</p>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 max-w-md mx-auto">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-1" style={{ background: 'linear-gradient(135deg, #ea580c, #f59e0b)' }}>
-              <Wand2 className="w-6 h-6 text-white" />
+            <div className="w-16 h-16 rounded-2xl overflow-hidden mb-1 shadow-sm bg-white">
+              <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
             </div>
             <p className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>O que você precisa preparar?</p>
             <p className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-              Envie sua arte e receba o PDF na medida exata, com sangria e corte — pronto para enviar à gráfica.
-              Toque numa habilidade abaixo ou digite o que precisa.
+              Envie sua arte e receba o PDF na medida exata, com sangria e corte — pronto para sua gráfica parceira.
+              Clique em uma função abaixo ou digite o que precisa.
             </p>
           </div>
         ) : (
@@ -186,7 +197,7 @@ export default function ArtePage() {
               <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow"
                   style={m.role === 'user'
-                    ? { background: 'linear-gradient(135deg, #ea580c, #f59e0b)', color: '#fff' }
+                    ? { background: BRAND_GRADIENT, color: '#fff' }
                     : { background: isDark ? 'rgba(51,65,85,0.8)' : 'rgba(255,255,255,0.95)', color: isDark ? '#e2e8f0' : '#1e293b' }}>
                   {m.content}
                 </div>
@@ -203,10 +214,10 @@ export default function ArtePage() {
           <div className="flex gap-2 overflow-x-auto pb-2 max-w-2xl mx-auto" style={{ scrollbarWidth: 'none' }}>
             {SKILLS.map((sk) => (
               <button key={sk.key} onClick={() => openSkill(sk)}
-                className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-white hover:bg-gray-50 text-gray-900 shadow-sm'}`}
-                style={{ borderLeft: `3px solid ${sk.color}` }}>
+                className="flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 text-white shadow-sm"
+                style={{ background: sk.color }}>
                 {sk.label}
-                <span className={`block text-[10px] font-normal mt-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{sk.credits} créditos</span>
+                <span className="block text-[10px] font-normal mt-0.5 text-white/70">{sk.credits} créditos</span>
               </button>
             ))}
           </div>
@@ -217,7 +228,7 @@ export default function ArtePage() {
       {ready && hasUser && (
         <div className="flex-shrink-0 px-3 sm:px-6 py-3 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
           <div className="flex items-end gap-2 rounded-xl px-3 py-2 max-w-2xl mx-auto"
-            style={{ background: isDark ? 'rgba(30,41,59,0.95)' : 'rgba(255,255,255,0.95)', border: `1px solid ${isDark ? 'rgba(234,88,12,0.3)' : 'rgba(234,88,12,0.2)'}` }}>
+            style={{ background: isDark ? 'rgba(30,41,59,0.95)' : 'rgba(255,255,255,0.95)', border: `1px solid ${isDark ? 'rgba(0,174,239,0.3)' : 'rgba(0,174,239,0.25)'}` }}>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -228,7 +239,7 @@ export default function ArtePage() {
             />
             <button onClick={handleSubmit} disabled={!input.trim()}
               className="p-1.5 rounded-lg transition-all disabled:opacity-30 hover:scale-110 active:scale-95"
-              style={{ background: 'linear-gradient(135deg, #ea580c, #f59e0b)' }}>
+              style={{ background: BRAND_GRADIENT }}>
               <Send className="w-4 h-4 text-white" />
             </button>
           </div>

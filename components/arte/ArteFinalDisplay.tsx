@@ -15,15 +15,23 @@ interface Props {
   playText: (text: string) => Promise<void>;
 }
 
+// ── Paleta CMYK (mesma do app /arte) ─────────────────────────────────────
+const CMYK = {
+  cyan: '#00AEEF',
+  magenta: '#EC008C',
+  yellow: '#FFD500',
+  key: '#1A1A1A',
+};
+
 const DARK = {
   bg: '#1e293b', bgSecondary: '#0f172a', border: 'rgba(255,255,255,0.08)',
   text: '#e2e8f0', textMuted: '#94a3b8', success: '#10b981', error: '#ef4444',
-  primary: '#3b82f6', accent: '#ea580c', warn: '#f59e0b',
+  primary: CMYK.cyan, accent: CMYK.cyan, warn: CMYK.yellow,
 };
 const LIGHT = {
   bg: '#ffffff', bgSecondary: '#f8fafc', border: '#e2e8f0',
   text: '#0f172a', textMuted: '#64748b', success: '#059669', error: '#dc2626',
-  primary: '#2563eb', accent: '#ea580c', warn: '#d97706',
+  primary: CMYK.cyan, accent: CMYK.cyan, warn: '#d97706',
 };
 
 const OPENING_TEXT = 'Envie a arte. Depois informe a medida final e a sangria, e eu gero o arquivo pronto para a gráfica.';
@@ -33,14 +41,6 @@ const SAFE_MM = 5; // margem de segurança visual no preview
 const AUTO_CLOSE = 90;
 
 const mmToPt = (v: number) => (v * 72) / 25.4;
-
-// ── Ícones SVG inline (sem lucide dentro de modal) ──
-const IconX = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>);
-const IconCheck = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>);
-const IconDownload = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>);
-const IconRefresh = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>);
-const IconUpload = () => (<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>);
-const IconLoader = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'af-spin 1s linear infinite' }}><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>);
 
 export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playText }: Props) {
   const isDark = theme === 'dark';
@@ -190,8 +190,16 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
       }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>🖨️ Arte Final</h2>
-          <button onClick={onClose} style={{ padding: 6, border: 'none', background: 'transparent', color: c.textMuted, cursor: 'pointer' }}><IconX /></button>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Arte Final</h2>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '4px 10px', border: `1px solid ${c.border}`, borderRadius: 8,
+              background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+            }}
+          >
+            Fechar
+          </button>
         </div>
 
         {/* INPUT */}
@@ -206,7 +214,6 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
                 textAlign: 'center', background: c.bgSecondary, cursor: 'pointer', color: c.textMuted,
               }}
             >
-              <div style={{ color: c.accent, display: 'flex', justifyContent: 'center', marginBottom: 12 }}><IconUpload /></div>
               <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste sua arte</div>
               <div style={{ fontSize: 12 }}>PNG ou JPEG (RGB). A alta resolução fica protegida no servidor.</div>
               <input ref={fileRef} type="file" accept="image/png,image/jpeg" style={{ display: 'none' }}
@@ -280,10 +287,9 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
                 padding: 14, borderRadius: 10, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700,
                 cursor: (medidaInvalida || dpiBaixo) ? 'not-allowed' : 'pointer',
                 background: (medidaInvalida || dpiBaixo) ? c.border : c.accent,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}
             >
-              <IconDownload /> Liberar PDF de produção ({CREDITS} créditos)
+              Liberar PDF de produção ({CREDITS} créditos)
             </button>
             <button onClick={handleReset} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 13 }}>
               Trocar arte
@@ -294,7 +300,11 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
         {/* PROCESSING */}
         {stage === 'processing' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '34px 0' }}>
-            <div style={{ color: c.primary }}><IconLoader /></div>
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              border: `3px solid ${c.border}`, borderTopColor: c.accent,
+              animation: 'af-spin 0.8s linear infinite',
+            }} />
             <p style={{ margin: 0, fontSize: 14, color: c.textMuted }}>{progress}</p>
           </div>
         )}
@@ -306,7 +316,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
               display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderRadius: 8,
               background: 'rgba(16,185,129,0.1)', border: `1px solid ${c.success}`, color: c.success, fontSize: 14, fontWeight: 600,
             }}>
-              <IconCheck /><span>PDF de produção pronto!</span>
+              <span>PDF de produção pronto!</span>
               <span style={{ marginLeft: 'auto', fontSize: 12, opacity: 0.8 }}>{(resultBlob.size / 1024).toFixed(0)} KB</span>
             </div>
 
@@ -319,11 +329,11 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={handleDownload} style={{ flex: 1, padding: 10, borderRadius: 8, border: 'none', background: c.accent, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <IconDownload /> Baixar PDF
+                  <button onClick={handleDownload} style={{ flex: 1, padding: 10, borderRadius: 8, border: 'none', background: c.accent, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+                    Baixar PDF
                   </button>
-                  <button onClick={handleReset} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <IconRefresh /> Nova arte
+                  <button onClick={handleReset} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+                    Nova arte
                   </button>
                 </div>
               </div>
@@ -344,8 +354,8 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
             <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: `1px solid ${c.error}`, color: c.error, fontSize: 14, lineHeight: 1.4 }}>
               {errorMsg}
             </div>
-            <button onClick={handleReset} style={{ padding: 12, borderRadius: 8, border: 'none', background: c.error, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              <IconRefresh /> Tentar novamente
+            <button onClick={handleReset} style={{ padding: 12, borderRadius: 8, border: 'none', background: c.error, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+              Tentar novamente
             </button>
           </div>
         )}

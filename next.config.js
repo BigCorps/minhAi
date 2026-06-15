@@ -3,12 +3,10 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-
-module.exports = {
+  
   outputFileTracingIncludes: {
     '/api/arte/gstest': ['./node_modules/@jspawn/ghostscript-wasm/**'],
   },
-};
 
   // Permitir imagens do Supabase Storage para logos
   images: {
@@ -20,6 +18,7 @@ module.exports = {
       },
     ],
   },
+  
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -58,8 +57,6 @@ module.exports = {
   },
 
   // ── Rewrites: proxy mcp.minhai.app → Supabase Edge Function ─────────────────
-  // beforeFiles garante que o proxy acontece ANTES do Next.js tentar servir
-  // qualquer página ou arquivo do app principal no subdomínio mcp.minhai.app
   async rewrites() {
     return {
       beforeFiles: [

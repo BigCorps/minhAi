@@ -2,23 +2,65 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-admin';
 
+const ARTEFINAL_DOMAINS = ['artefinal.app', 'www.artefinal.app'];
+
 export async function GET(request: NextRequest) {
-  const hostname = request.headers.get('host') || '';
+  const host = request.headers.get('host') || '';
+  const hostname = host.split(':')[0].toLowerCase();
+
+  // ── Manifest próprio do ArteFinal.app ─────────────────────────────────────
+  if (ARTEFINAL_DOMAINS.includes(hostname)) {
+    return NextResponse.json({
+      name: 'ArteFinal.app',
+      short_name: 'ArteFinal',
+      description: 'Sua arte pronta para impressão com IA.',
+      start_url: '/',
+      scope: '/',
+      display: 'standalone',
+      background_color: '#ffffff',
+      theme_color: '#000000',
+      icons: [
+        {
+          src: '/brands/artefinal/favicon.png',
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'any maskable',
+        },
+        {
+          src: '/brands/artefinal/favicon.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'any maskable',
+        },
+      ],
+    }, {
+      headers: {
+        'Content-Type': 'application/manifest+json',
+        'Cache-Control': 'public, max-age=3600',
+      },
+    });
+  }
 
   // Slug pode vir via query param (rewrite do middleware) ou via hostname
   const slugFromQuery = request.nextUrl.searchParams.get('slug');
-const MINHAI_DOMAINS = [
-    '.minhai.app', '.minhai.com.br',
-    '.minhaia.app', '.nossaia.app', '.suaia.app',
+
+  const MINHAI_DOMAINS = [
+    '.minhai.app',
+    '.minhai.com.br',
+    '.minhaia.app',
+    '.nossaia.app',
+    '.suaia.app',
   ];
+
   const matchedDomain = MINHAI_DOMAINS.find(d =>
     hostname.endsWith(d) && !hostname.startsWith('www.')
   );
+
   const slugFromHost = matchedDomain ? hostname.replace(matchedDomain, '') : null;
 
   const slug = slugFromQuery || slugFromHost;
 
-  // Manifest padrão eAi (sem subdomínio)
+  // Manifest padrão minhAi (sem subdomínio)
   if (!slug) {
     return NextResponse.json({
       name: 'minhAi',
@@ -28,15 +70,26 @@ const MINHAI_DOMAINS = [
       background_color: '#0f172a',
       theme_color: '#f97316',
       icons: [
-    { src: 'https://www.minhai.app/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-    { src: 'https://www.minhai.app/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-  ],
+        {
+          src: 'https://www.minhai.app/icons/icon-192.png',
+          sizes: '192x192',
+          type: 'image/png',
+        },
+        {
+          src: 'https://www.minhai.app/icons/icon-512.png',
+          sizes: '512x512',
+          type: 'image/png',
+        },
+      ],
     }, {
-      headers: { 'Content-Type': 'application/manifest+json' }
+      headers: {
+        'Content-Type': 'application/manifest+json',
+      },
     });
   }
 
   const supabase = createAdminClient();
+
   const { data: company } = await supabase
     .from('companies')
     .select('name, webapp_logo_url, webapp_theme_color')
@@ -44,12 +97,8 @@ const MINHAI_DOMAINS = [
     .single();
 
   return NextResponse.json({
-    // 1. Coloque o nome da empresa primeiro no 'name' (ou deixe apenas company.name)
-    name: company?.name ? `${company.name} - minhAi` : 'minhAi', 
-    
-    // 2. Inverta a ordem lógica do 'short_name' para priorizar a empresa
-    short_name: company?.name || 'minhAi', 
-    
+    name: company?.name ? `${company.name} - minhAi` : 'minhAi',
+    short_name: company?.name || 'minhAi',
     start_url: '/',
     display: 'standalone',
     background_color: '#0f172a',
@@ -70,8 +119,16 @@ const MINHAI_DOMAINS = [
           },
         ]
       : [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          {
+            src: '/icons/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: '/icons/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
         ],
   }, {
     headers: {

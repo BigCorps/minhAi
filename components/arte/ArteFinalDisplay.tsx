@@ -63,6 +63,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [progress, setProgress] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
+  const [dpiTarget, setDpiTarget] = useState<number>(300);
 
   const spoke = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -162,6 +163,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
             final_w_mm: finalW, final_h_mm: finalH, bleed_mm: bleed,
             zoom, offset_x: offX, offset_y: offY,
             nome, dpi_min: DPI_MIN,
+            dpi_target: dpiTarget,
           },
         }),
       });
@@ -333,15 +335,19 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
             <div><label style={label}>Nome do arquivo</label><input type="text" value={nome} onChange={(e) => setNome(e.target.value.replace(/[^\w\-]+/g, '-').slice(0, 40))} style={inputStyle} /></div>
 
             {/* DPI + custo */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '10px 12px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}`, fontSize: 13,
-            }}>
-              <span style={{ color: dpiBaixo ? c.warn : c.textMuted }}>
-                Resolução: <strong style={{ color: dpiBaixo ? c.warn : c.text }}>{estDpi || '—'} DPI</strong>
-                {dpiBaixo ? ` (mínimo ${DPI_MIN})` : ''}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 12px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}`, fontSize: 13, gap: 12 }}>
+              <span style={{ color: dpiBaixo ? c.warn : c.textMuted, whiteSpace: 'nowrap' }}>
+                DPI atual: <strong style={{ color: dpiBaixo ? c.warn : c.text }}>{estDpi || '—'}</strong>
               </span>
-              <span style={{ color: c.textMuted }}>Custo: <strong style={{ color: c.text }}>{CREDITS} créditos</strong></span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: c.textMuted }}>
+                alvo
+                <input type="number" min={72} max={300} value={dpiTarget}
+                  onChange={(e) => setDpiTarget(clamp(parseInt(e.target.value) || 0, 72, 300))}
+                  style={{ width: 64, padding: '6px 8px', borderRadius: 6, background: c.bg,
+                    border: `1px solid ${c.border}`, color: c.text, fontSize: 13 }} />
+              </span>
+              <span style={{ color: c.textMuted, whiteSpace: 'nowrap' }}>Custo: <strong style={{ color: c.text }}>{CREDITS}</strong></span>
             </div>
 
             {sangriaInvalida && (

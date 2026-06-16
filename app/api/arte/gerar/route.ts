@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 6. Pixels-alvo p/ 300dpi no tamanho desenhado (downsampling; nunca amplia)
-    const targetPx = Math.min(imgW, Math.round((drawWpt / 72) * DPI_TARGET));
+    const targetPx = Math.min(imgW, Math.round((drawWpt / 72) * dpiTarget));
 
     // 7. RGB → CMYK (ISO Coated v2). flatten OBRIGATÓRIO antes do ICC CMYK (alpha quebra).
     if (!fs.existsSync(ICC_PATH)) return json({ error: 'Perfil ICC ausente no servidor' }, 500);
@@ -130,7 +130,8 @@ export async function POST(req: NextRequest) {
     const b64 = x1aBuf.toString('base64');
     const nomeBase = (spec.nome ? String(spec.nome).replace(/[^\w\-]+/g, '_') : 'arte-final');
     const fileName = `${nomeBase}_${finalW}x${finalH}mm_x1a.pdf`;
-
+    const dpiTarget = Math.min(300, Math.max(72, Number(spec.dpi_target ?? 300)));
+    
     // 11. GATE fail-closed: cobra por último. Sem saldo, não entrega.
     const { data: charge, error: chErr } = await admin.rpc('cobrar_credito_se_suficiente', {
       p_company_id: companyId,

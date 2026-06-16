@@ -266,11 +266,6 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
   const safePctX = finalW > 0 ? ((bleed + SAFE_MM) / finalW) * 100 : 0;
   const safePctY = finalH > 0 ? ((bleed + SAFE_MM) / finalH) * 100 : 0;
 
-// tamanho/posição da arte no preview, em PIXELS reais (espelha a rota, sem distorcer)
-  const imgWpx = rx * boxSize.w;
-  const imgHpx = imgAspect > 0 ? imgWpx / imgAspect : 0;   // altura derivada da largura: nunca estica
-  const imgLeftPx = (boxSize.w - imgWpx) / 2 + offX * boxSize.w;
-  const imgTopPx = (boxSize.h - imgHpx) / 2 + offY * boxSize.h;
   const imgStyle: React.CSSProperties = {
     position: 'absolute', inset: 0, width: '100%', height: '100%',
     objectFit: 'cover', objectPosition: 'center',

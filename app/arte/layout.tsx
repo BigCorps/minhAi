@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: {
-      absolute: isArteFinal ? 'ArteFinal.app' : brand.title,
+      absolute: isArteFinal ? 'ArteFinal.app - Seu arte-finalista com IA' : brand.title,
     },
     description: brand.description,
     applicationName: brand.name,
@@ -35,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
 
     openGraph: {
-      title: isArteFinal ? 'ArteFinal.app' : brand.title,
+      title: isArteFinal ? 'ArteFinal.app - Seu arte-finalista com IA' : brand.title,
       description: brand.description,
       siteName: brand.name,
       type: 'website',
@@ -53,7 +53,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
     twitter: {
       card: 'summary',
-      title: isArteFinal ? 'ArteFinal.app' : brand.title,
+      title: isArteFinal ? 'ArteFinal.app - Seu arte-finalista com IA' : brand.title,
       description: brand.description,
       images: [
         isArteFinal

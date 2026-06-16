@@ -110,7 +110,6 @@ export async function POST(req: NextRequest) {
     form.append('file', new Blob([rgbPdf], { type: 'application/pdf' }), 'arte.pdf');
     form.append('output_type', 'PDF/X-1a');
     form.append('output', 'arte-final-x1a');
-    form.append('id', String(companyId).slice(0, 36)); // rótulo de rastreio (opcional)
 
     const pdfxRes = await fetch('https://api.pdfrest.com/pdfx', {
       method: 'POST',

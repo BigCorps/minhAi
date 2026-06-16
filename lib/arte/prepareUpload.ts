@@ -1,16 +1,18 @@
 // lib/arte/prepareUpload.ts
 import { createClient } from '@/lib/supabase-browser';
 
-export interface ArteUpload {
-  previewDataUrl: string;
-  uploadPath: string;
+export interface ArtePreview {
+  previewDataUrl: string;  // 200px — único pixel que fica visível no client
   width: number;
   height: number;
+  source: Blob;            // ALTA em memória (PNG rasterizado p/ PDF, ou o próprio arquivo)
+  contentType: string;
+  ext: string;
 }
 
 const PREVIEW_MAX = 200;
 const PDF_TARGET_DPI = 300;
-const PDF_MAX_SIDE = 4000; // teto p/ não estourar memória do canvas
+const PDF_MAX_SIDE = 4000;
 
 function previewFromCanvas(src: HTMLCanvasElement): string {
   const s = PREVIEW_MAX / Math.max(src.width, src.height);
@@ -37,7 +39,7 @@ async function rasterizePdfFirstPage(file: File): Promise<{ blob: Blob; width: n
   const pdf = await pdfjs.getDocument({ data }).promise;
   const page = await pdf.getPage(1);
 
-  const base = page.getViewport({ scale: 1 }); // pt @ 72dpi
+  const base = page.getViewport({ scale: 1 });
   let scale = PDF_TARGET_DPI / 72;
   const longest = Math.max(base.width, base.height) * scale;
   if (longest > PDF_MAX_SIDE) scale *= PDF_MAX_SIDE / longest;
@@ -47,40 +49,43 @@ async function rasterizePdfFirstPage(file: File): Promise<{ blob: Blob; width: n
   canvas.width = Math.round(viewport.width);
   canvas.height = Math.round(viewport.height);
   const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); // fundo branco
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
   await page.render({ canvasContext: ctx, viewport }).promise;
 
   const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b as Blob), 'image/png'));
   return { blob, width: canvas.width, height: canvas.height, previewDataUrl: previewFromCanvas(canvas) };
 }
 
-export async function prepareArteUpload(file: File, companyId: string): Promise<ArteUpload> {
-  const supabase = createClient();
+// PREVIEW: roda só no navegador. Sem upload, sem login. Guarda a alta em memória (source).
+export async function makeArtePreview(file: File): Promise<ArtePreview> {
   const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
-
-  let uploadBlob: Blob;
-  let contentType: string;
-  let ext: string;
-  let width: number, height: number, previewDataUrl: string;
 
   if (isPdf) {
     const r = await rasterizePdfFirstPage(file);
-    uploadBlob = r.blob; contentType = 'image/png'; ext = 'png';
-    width = r.width; height = r.height; previewDataUrl = r.previewDataUrl;
-  } else {
-    const bitmap = await createImageBitmap(file);
-    width = bitmap.width; height = bitmap.height;
-    const canvas = document.createElement('canvas');
-    canvas.width = width; canvas.height = height;
-    canvas.getContext('2d')!.drawImage(bitmap, 0, 0);
-    bitmap.close?.();
-    previewDataUrl = previewFromCanvas(canvas);
-    uploadBlob = file; contentType = file.type; ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+    return { previewDataUrl: r.previewDataUrl, width: r.width, height: r.height, source: r.blob, contentType: 'image/png', ext: 'png' };
   }
 
-  const uploadPath = `${companyId}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from('arte-uploads').upload(uploadPath, uploadBlob, { contentType, upsert: false });
-  if (error) throw new Error(`Falha no upload: ${error.message}`);
+  const bitmap = await createImageBitmap(file);
+  const width = bitmap.width, height = bitmap.height;
+  const s = PREVIEW_MAX / Math.max(width, height);
+  const pc = document.createElement('canvas');
+  pc.width = Math.max(1, Math.round(width * s));
+  pc.height = Math.max(1, Math.round(height * s));
+  pc.getContext('2d')!.drawImage(bitmap, 0, 0, pc.width, pc.height);
+  bitmap.close?.();
 
-  return { previewDataUrl, uploadPath, width, height };
+  return {
+    previewDataUrl: pc.toDataURL('image/jpeg', 0.7),
+    width, height, source: file, contentType: file.type,
+    ext: (file.name.split('.').pop() || 'bin').toLowerCase(),
+  };
+}
+
+// UPLOAD: só no "Liberar", com usuário logado. Sobe a alta e devolve o caminho.
+export async function uploadArteSource(p: ArtePreview, companyId: string): Promise<string> {
+  const supabase = createClient();
+  const uploadPath = `${companyId}/${crypto.randomUUID()}.${p.ext}`;
+  const { error } = await supabase.storage.from('arte-uploads').upload(uploadPath, p.source, { contentType: p.contentType, upsert: false });
+  if (error) throw new Error(`Falha no upload: ${error.message}`);
+  return uploadPath;
 }

@@ -26,14 +26,16 @@ function previewFromCanvas(src: HTMLCanvasElement): string {
 // Rasteriza a 1ª página do PDF em alta (PNG). Vetor/fonte viram pixel — elimina curvas.
 async function rasterizePdfFirstPage(file: File): Promise<{ blob: Blob; width: number; height: number; previewDataUrl: string }> {
   const pdfjs: any = await import('pdfjs-dist');
-  // Se o projeto já configura o worker do pdf.js em outro lugar, pode remover este if.
-  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    try {
-      // @ts-ignore
-      const w = await import('pdfjs-dist/build/pdf.worker.min.mjs');
-      pdfjs.GlobalWorkerOptions.workerSrc = (w as any).default ?? '';
-    } catch { /* usa o worker já setado pelo projeto */ }
-  }
+
+// Se o projeto já configura o worker do pdf.js em outro lugar, pode remover este if.
+if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+  const v = pdfjs.version;
+  const major = Number(String(v).split('.')[0]);
+  const ext = major >= 4 ? 'mjs' : 'js';
+
+  pdfjs.GlobalWorkerOptions.workerSrc =
+    `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${v}/pdf.worker.min.${ext}`;
+}
 
   const data = await file.arrayBuffer();
   const pdf = await pdfjs.getDocument({ data }).promise;

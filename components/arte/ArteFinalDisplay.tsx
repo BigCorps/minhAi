@@ -266,8 +266,11 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
   const safePctX = finalW > 0 ? ((bleed + SAFE_MM) / finalW) * 100 : 0;
   const safePctY = finalH > 0 ? ((bleed + SAFE_MM) / finalH) * 100 : 0;
   const imgStyle: React.CSSProperties = {
-    position: 'absolute', width: `${rx * 100}%`, height: `${ry * 100}%`,
-    left: `${(0.5 - rx / 2 + offX) * 100}%`, top: `${(0.5 - ry / 2 + offY) * 100}%`,
+    position: 'absolute',
+    width: `${rx * 100}%`,
+    aspectRatio: `${effW} / ${effH}`,   // altura derivada da largura: nunca distorce
+    left: `${(0.5 - rx / 2 + offX) * 100}%`,
+    top: `${(0.5 - ry / 2 + offY) * 100}%`,
     userSelect: 'none', pointerEvents: 'none', display: 'block',
   };
 

@@ -53,6 +53,18 @@ export async function middleware(request: NextRequest) {
 // ── 0. DOMÍNIO ARTEFINAL.APP ──────────────────────────────────────────────
 if (ARTEFINAL_DOMAINS.includes(hostname)) {
 
+if (pathname === '/favicon.ico') {
+  const url = request.nextUrl.clone();
+  url.pathname = '/brands/artefinal/favicon.png';
+  return NextResponse.rewrite(url);
+}
+
+if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
+  const url = request.nextUrl.clone();
+  url.pathname = '/brands/artefinal/manifest.webmanifest';
+  return NextResponse.rewrite(url);
+}
+
   // Rewrite raiz → /arte
   if (pathname === '/') {
     const url = request.nextUrl.clone();

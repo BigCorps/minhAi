@@ -16,7 +16,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const isArteFinal = brandKey === 'artefinal';
 
   return {
-    title: brand.title,
+    title: {
+      absolute: isArteFinal ? 'ArteFinal.app' : brand.title,
+    },
     description: brand.description,
     applicationName: brand.name,
 
@@ -33,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
 
     openGraph: {
-      title: brand.title,
+      title: isArteFinal ? 'ArteFinal.app' : brand.title,
       description: brand.description,
       siteName: brand.name,
       type: 'website',
@@ -51,7 +53,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
     twitter: {
       card: 'summary',
-      title: brand.title,
+      title: isArteFinal ? 'ArteFinal.app' : brand.title,
       description: brand.description,
       images: [
         isArteFinal

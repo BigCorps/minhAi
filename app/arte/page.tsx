@@ -6,27 +6,12 @@ import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
-const CMYK = {
-  cyan: '#00AEEF',
-  magenta: '#EC008C',
-  yellow: '#FFD500',
-  key: '#1A1A1A',
-};
-
-// Gradiente "AF" do logo: azul → magenta → amarelo
+const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
 const BRAND_GRADIENT = `linear-gradient(135deg, ${CMYK.cyan} 0%, ${CMYK.magenta} 55%, ${CMYK.yellow} 100%)`;
+const LOGIN_URL = '/arte/login';
 
 // ── Registry local do ArteFinal ──────────────────────────────────────────
-// Adicionar habilidade nova = uma entrada aqui (e o componente correspondente).
-interface Skill {
-  key: string;
-  label: string;
-  color: string;
-  desc: string;
-  credits: number;
-  triggers: string[];
-  modal: string;
-}
+interface Skill { key: string; label: string; color: string; desc: string; credits: number; triggers: string[]; modal: string }
 
 const SKILLS: Skill[] = [
   {
@@ -40,18 +25,11 @@ const SKILLS: Skill[] = [
   },
 ];
 
-const norm = (s: string) =>
-  s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-
+const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 function detectSkill(text: string): Skill | null {
   const t = norm(text);
-  let best: Skill | null = null;
-  let bestLen = 0;
-  for (const sk of SKILLS) {
-    for (const trig of sk.triggers) {
-      if (t.includes(trig) && trig.length > bestLen) { best = sk; bestLen = trig.length; }
-    }
-  }
+  let best: Skill | null = null, bestLen = 0;
+  for (const sk of SKILLS) for (const trig of sk.triggers) if (t.includes(trig) && trig.length > bestLen) { best = sk; bestLen = trig.length; }
   return best;
 }
 
@@ -71,35 +49,20 @@ export default function ArtePage() {
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
 
   const endRef = useRef<HTMLDivElement>(null);
-
-  // playText desligado nesta superfície (sem infra de TTS). Plugar rota TTS aqui se quiser áudio.
   const playText = useCallback(async (_text: string) => {}, []);
 
   const refreshSaldo = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from('user_credits')
-      .select('available_credits')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data } = await supabase.from('user_credits').select('available_credits').eq('user_id', userId).maybeSingle();
     setSaldo(data?.available_credits ?? 0);
   }, [supabase]);
 
-  // Init: sessão → empresa → saldo
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
       if (!user) { setHasUser(false); setReady(true); return; }
       setHasUser(true);
-
-      const { data: company } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
+      const { data: company } = await supabase.from('companies').select('id').eq('user_id', user.id).order('created_at', { ascending: true }).limit(1).maybeSingle();
       setCompanyId(company?.id ?? null);
       await refreshSaldo(user.id);
       setReady(true);
@@ -108,12 +71,9 @@ export default function ArtePage() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
+  // Abre o modal mesmo sem login — o preview é livre; o gate de login fica no "Liberar".
   const openSkill = useCallback((sk: Skill) => {
-    if (!companyId) {
-      setMessages((p) => [...p, { id: `a-${Date.now()}`, role: 'assistant', content: 'Não encontrei sua empresa. Entre na sua conta para usar as ferramentas.' }]);
-      return;
-    }
-    setActiveModal({ type: sk.modal, data: { companyId } });
+    setActiveModal({ type: sk.modal, data: { companyId: companyId ?? '' } });
   }, [companyId]);
 
   const handleSubmit = useCallback(() => {
@@ -121,80 +81,58 @@ export default function ArtePage() {
     if (!text) return;
     setInput('');
     setMessages((p) => [...p, { id: `u-${Date.now()}`, role: 'user', content: text }]);
-
     const sk = detectSkill(text);
     if (sk) {
       openSkill(sk);
     } else {
       const disponiveis = SKILLS.map((s) => s.label).join(', ');
-      setMessages((p) => [...p, {
-        id: `a-${Date.now()}`,
-        role: 'assistant',
-        content: `Essa ferramenta ainda não está disponível. Por enquanto eu faço: ${disponiveis}. Toque na habilidade abaixo para começar.`,
-      }]);
+      setMessages((p) => [...p, { id: `a-${Date.now()}`, role: 'assistant', content: `Essa ferramenta ainda não está disponível. Por enquanto eu faço: ${disponiveis}. Toque na habilidade abaixo para começar.` }]);
     }
   }, [input, openSkill]);
 
   const closeModal = useCallback(async () => {
     setActiveModal(null);
     const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) await refreshSaldo(session.user.id); // atualiza saldo após consumo
+    if (session?.user) await refreshSaldo(session.user.id);
   }, [supabase, refreshSaldo]);
 
-const handleLogout = async () => {
+  const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.reload(); // Recarrega a página para limpar os estados e voltar à tela inicial
+    window.location.reload();
   };
-  
+
   return (
     <div className="flex flex-col h-[100dvh]" style={{ background: 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))' }}>
       {/* Header */}
-<header className="flex justify-center px-4 sm:px-6 py-3 border-b flex-shrink-0"
-  style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
-  <div className="flex items-center justify-between w-full max-w-2xl">
-    {/* logo + nome */}
-    <div className="flex items-center gap-2.5">
-      <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center">
-        <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
-      </div>
-      <div>
-        <p className="text-sm font-bold" style={{ color: '#0f172a' }}>ArteFinal</p>
-        <p className="text-[11px]" style={{ color: '#64748b' }}>Seu arte-finalista com IA.</p>
-      </div>
-    </div>
-    {/* créditos */}
-{hasUser ? (
-  <div className="flex items-center gap-2">
-    {/* Visor de Créditos */}
-    <div 
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
-      style={{ background: 'rgba(0,174,239,0.1)', color: CMYK.cyan }}
-    >
-      <Sparkles className="w-3.5 h-3.5" />
-      {saldo ?? '—'} créditos
-    </div>
-
-    {/* Botão de Sair */}
-    <button
-      onClick={handleLogout}
-      className="flex items-center justify-center p-2 rounded-full text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors active:scale-95"
-      title="Sair da conta"
-    >
-      <LogOut className="w-4 h-4" />
-    </button>
-  </div>
-) : (
-  <a
-    href="/arte/login"
-    className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-95"
-    style={{ background: `linear-gradient(135deg, ${CMYK.cyan} 0%, ${CMYK.magenta} 100%)` }}
-  >
-    <Sparkles className="w-3.5 h-3.5" />
-    Entrar
-  </a>
-)}
-  </div>
-</header>
+      <header className="flex justify-center px-4 sm:px-6 py-3 border-b flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+        <div className="flex items-center justify-between w-full max-w-2xl">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center">
+              <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
+            </div>
+            <div>
+              <p className="text-sm font-bold" style={{ color: '#0f172a' }}>ArteFinal</p>
+              <p className="text-[11px]" style={{ color: '#64748b' }}>Seu arte-finalista com IA.</p>
+            </div>
+          </div>
+          {hasUser ? (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold" style={{ background: 'rgba(0,174,239,0.1)', color: CMYK.cyan }}>
+                <Sparkles className="w-3.5 h-3.5" />
+                {saldo ?? '—'} créditos
+              </div>
+              <button onClick={handleLogout} className="flex items-center justify-center p-2 rounded-full text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors active:scale-95" title="Sair da conta">
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <a href={LOGIN_URL} className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-95" style={{ background: `linear-gradient(135deg, ${CMYK.cyan} 0%, ${CMYK.magenta} 100%)` }}>
+              <Sparkles className="w-3.5 h-3.5" />
+              Entrar
+            </a>
+          )}
+        </div>
+      </header>
 
       {/* Conteúdo / mensagens */}
       <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 min-h-0">
@@ -202,22 +140,16 @@ const handleLogout = async () => {
           <div className="flex items-center justify-center h-full">
             <p className="text-sm" style={{ color: '#9ca3af' }}>Carregando…</p>
           </div>
-        ) : !hasUser ? (
-          <div className="flex flex-col items-center justify-center h-full text-center gap-2">
-            <Bot className="w-10 h-10 text-gray-300" />
-            <p className="text-sm" style={{ color: '#6b7280' }}>Entre na sua conta para usar o app ArteFinal.</p>
-          </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 max-w-md mx-auto">
-<div className="w-24 h-24 overflow-hidden mb-1">
-  <img src="/arte/arte.png" alt="ArteFinal.app" className="w-full h-full object-cover" />
-</div>
-            <p className="af-empty-title text-base font-semibold">
-              O que você precisa preparar?
-            </p>
+            <div className="w-24 h-24 overflow-hidden mb-1">
+              <img src="/arte/arte.png" alt="ArteFinal.app" className="w-full h-full object-cover" />
+            </div>
+            <p className="af-empty-title text-base font-semibold">O que você precisa preparar?</p>
             <p className="af-empty-desc text-sm">
-              Envie sua arte e receba o PDF na medida exata, em CMYK, com margem, sangria e corte prontos para sua gráfica parceira.
-              Clique em uma função abaixo ou digite o que precisa.
+              Envie sua arte e veja o preview na hora — medida exata, CMYK, margem, sangria e corte prontos para sua gráfica.
+              {!hasUser && ' O preview é livre; ao criar a conta você ganha 20 créditos para baixar seus primeiros arquivos.'}
+              {' '}Clique em uma função abaixo ou digite o que precisa.
             </p>
           </div>
         ) : (
@@ -225,9 +157,7 @@ const handleLogout = async () => {
             {messages.map((m) => (
               <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow"
-                  style={m.role === 'user'
-                    ? { background: BRAND_GRADIENT, color: '#fff' }
-                    : { background: 'rgba(255,255,255,0.95)', color: '#1e293b' }}>
+                  style={m.role === 'user' ? { background: BRAND_GRADIENT, color: '#fff' } : { background: 'rgba(255,255,255,0.95)', color: '#1e293b' }}>
                   {m.content}
                 </div>
               </div>
@@ -242,8 +172,8 @@ const handleLogout = async () => {
         .af-empty-desc { color: #64748b !important; }
       `}</style>
 
-      {/* Carrossel de habilidades */}
-      {ready && hasUser && (
+      {/* Carrossel de habilidades (livre, inclusive anônimo) */}
+      {ready && (
         <div className="flex-shrink-0 px-3 sm:px-6 pt-2 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
           <div className="flex gap-2 overflow-x-auto pb-2 max-w-2xl mx-auto" style={{ scrollbarWidth: 'none' }}>
             {SKILLS.map((sk) => (
@@ -258,11 +188,10 @@ const handleLogout = async () => {
         </div>
       )}
 
-      {/* Input */}
-      {ready && hasUser && (
+      {/* Input (livre, inclusive anônimo) */}
+      {ready && (
         <div className="flex-shrink-0 px-3 sm:px-6 py-3 border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
-          <div className="flex items-end gap-2 rounded-xl px-3 py-2 max-w-2xl mx-auto"
-            style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
+          <div className="flex items-end gap-2 rounded-xl px-3 py-2 max-w-2xl mx-auto" style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -271,25 +200,13 @@ const handleLogout = async () => {
               className="flex-1 bg-transparent outline-none text-sm"
               style={{ color: '#1e293b' }}
             />
-            <button onClick={handleSubmit} disabled={!input.trim()}
-              className="p-1.5 rounded-lg transition-all disabled:opacity-30 hover:scale-110 active:scale-95"
-              style={{ background: BRAND_GRADIENT }}>
+            <button onClick={handleSubmit} disabled={!input.trim()} className="p-1.5 rounded-lg transition-all disabled:opacity-30 hover:scale-110 active:scale-95" style={{ background: BRAND_GRADIENT }}>
               <Send className="w-4 h-4 text-white" />
             </button>
           </div>
-
-          {/* Powered by */}
           <p className="text-center text-[10px] mt-2" style={{ color: '#94a3b8' }}>
             Powered by{' '}
-            <a
-              href="https://minhai.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:underline"
-              style={{ color: CMYK.cyan, fontWeight: 600 }}
-            >
-              minhAi.app
-            </a>
+            <a href="https://minhai.app" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: CMYK.cyan, fontWeight: 600 }}>minhAi.app</a>
           </p>
         </div>
       )}
@@ -301,6 +218,7 @@ const handleLogout = async () => {
           onClose={closeModal}
           theme="light"
           playText={playText}
+          onRequireLogin={() => { window.location.href = LOGIN_URL; }}
         />
       )}
     </div>

@@ -159,7 +159,7 @@ const handleLogout = async () => {
       </div>
       <div>
         <p className="text-sm font-bold" style={{ color: '#0f172a' }}>ArteFinal</p>
-        <p className="text-[11px]" style={{ color: '#64748b' }}>Sua arte com sangria e corte com IA.</p>
+        <p className="text-[11px]" style={{ color: '#64748b' }}>Seu artefinalista com IA.</p>
       </div>
     </div>
     {/* créditos */}

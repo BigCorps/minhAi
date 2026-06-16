@@ -85,6 +85,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [progress, setProgress] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
+  const [boxSize, setBoxSize] = useState({ w: 0, h: 0 });
 
   const spoke = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -118,6 +119,17 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
     rotateDataUrl(cur.upload.previewDataUrl, cur.rotation).then((u) => { if (!cancelled) setRotPreview(u); });
     return () => { cancelled = true; };
   }, [cur.upload, cur.rotation]);
+
+// mede a caixa do preview em pixels (some a ambiguidade de % de largura vs altura)
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const update = () => setBoxSize({ w: el.clientWidth, h: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [stage, finalW, finalH]);
 
   // ── Geometria da face ativa (espelha a rota) ──
   const swap = cur.rotation % 180 !== 0;
@@ -265,12 +277,18 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
   const bleedPctY = finalH > 0 ? (bleed / finalH) * 100 : 0;
   const safePctX = finalW > 0 ? ((bleed + SAFE_MM) / finalW) * 100 : 0;
   const safePctY = finalH > 0 ? ((bleed + SAFE_MM) / finalH) * 100 : 0;
+  
+// tamanho/posição da arte no preview, em PIXELS reais (espelha a rota, sem distorcer)
+  const imgWpx = rx * boxSize.w;
+  const imgHpx = imgAspect > 0 ? imgWpx / imgAspect : 0;   // altura derivada da largura: nunca estica
+  const imgLeftPx = (boxSize.w - imgWpx) / 2 + offX * boxSize.w;
+  const imgTopPx = (boxSize.h - imgHpx) / 2 + offY * boxSize.h;
   const imgStyle: React.CSSProperties = {
     position: 'absolute',
-    width: `${rx * 100}%`,
-    aspectRatio: `${effW} / ${effH}`,   // altura derivada da largura: nunca distorce
-    left: `${(0.5 - rx / 2 + offX) * 100}%`,
-    top: `${(0.5 - ry / 2 + offY) * 100}%`,
+    width: `${imgWpx}px`,
+    height: `${imgHpx}px`,
+    left: `${imgLeftPx}px`,
+    top: `${imgTopPx}px`,
     userSelect: 'none', pointerEvents: 'none', display: 'block',
   };
 

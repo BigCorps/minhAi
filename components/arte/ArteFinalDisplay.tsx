@@ -3,14 +3,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
-import { prepareArteUpload, type ArteUpload } from '@/lib/arte/prepareUpload';
+import { makeArtePreview, uploadArteSource, type ArtePreview } from '@/lib/arte/prepareUpload';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 
-type Stage = 'input' | 'configuring' | 'processing' | 'result' | 'error';
+type Stage = 'input' | 'configuring' | 'processing' | 'login' | 'result' | 'error';
 type SideKey = 'frente' | 'verso';
 
 interface Side {
-  upload: ArteUpload | null;
+  art: ArtePreview | null;
   zoom: number;
   offset: { x: number; y: number };
   rotation: number; // 0, 90, 180, 270
@@ -21,6 +21,7 @@ interface Props {
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText: (text: string) => Promise<void>;
+  onRequireLogin?: () => void; // opcional: a página pode abrir seu próprio login
 }
 
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -41,7 +42,7 @@ const AUTO_CLOSE = 90;
 
 const mmToPt = (v: number) => (v * 72) / 25.4;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-const emptySide = (): Side => ({ upload: null, zoom: 1, offset: { x: 0, y: 0 }, rotation: 0 });
+const emptySide = (): Side => ({ art: null, zoom: 1, offset: { x: 0, y: 0 }, rotation: 0 });
 
 function loadImg(src: string): Promise<HTMLImageElement> {
   return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
@@ -61,7 +62,9 @@ async function rotateDataUrl(src: string, deg: number): Promise<string> {
   return canvas.toDataURL('image/jpeg', 0.85);
 }
 
-export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playText }: Props) {
+const fileOk = (f: File) => f.type.startsWith('image/') || f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+
+export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playText, onRequireLogin }: Props) {
   const isDark = theme === 'dark';
   const c = isDark ? DARK : LIGHT;
   const supabase = createClient();
@@ -78,6 +81,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
   const [dpiTarget, setDpiTarget] = useState<number>(300);
   const [nome, setNome] = useState<string>('arte-final');
 
+  const [companyId, setCompanyId] = useState<string>(data.companyId || '');
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [resultBase64, setResultBase64] = useState<string>('');
   const [resultName, setResultName] = useState<string>('');
@@ -111,18 +115,17 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
     return () => clearInterval(id);
   }, [stage, onClose]);
 
-  // preview rotacionado da face ativa
   useEffect(() => {
     let cancelled = false;
-    if (!cur.upload) { setRotPreview(''); return; }
-    rotateDataUrl(cur.upload.previewDataUrl, cur.rotation).then((u) => { if (!cancelled) setRotPreview(u); });
+    if (!cur.art) { setRotPreview(''); return; }
+    rotateDataUrl(cur.art.previewDataUrl, cur.rotation).then((u) => { if (!cancelled) setRotPreview(u); });
     return () => { cancelled = true; };
-  }, [cur.upload, cur.rotation]);
+  }, [cur.art, cur.rotation]);
 
   // ── Geometria da face ativa (espelha a rota) ──
   const swap = cur.rotation % 180 !== 0;
-  const effW = cur.upload ? (swap ? cur.upload.height : cur.upload.width) : 1;
-  const effH = cur.upload ? (swap ? cur.upload.width : cur.upload.height) : 1;
+  const effW = cur.art ? (swap ? cur.art.height : cur.art.width) : 1;
+  const effH = cur.art ? (swap ? cur.art.width : cur.art.height) : 1;
   const imgAspect = effW / effH;
   const boxAspect = finalH > 0 ? finalW / finalH : 1;
   const ratioX = imgAspect > boxAspect ? imgAspect / boxAspect : 1;
@@ -140,21 +143,21 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
   }, [cur.zoom, cur.rotation, finalW, finalH, active]);
 
   const sideDpi = useCallback((s: Side): number => {
-    if (!s.upload || !(finalW > 0) || !(finalH > 0)) return 0;
+    if (!s.art || !(finalW > 0) || !(finalH > 0)) return 0;
     const sw = s.rotation % 180 !== 0;
-    const ew = sw ? s.upload.height : s.upload.width;
-    const eh = sw ? s.upload.width : s.upload.height;
+    const ew = sw ? s.art.height : s.art.width;
+    const eh = sw ? s.art.width : s.art.height;
     const ia = ew / eh, ba = finalW / finalH;
     const rX = (ia > ba ? ia / ba : 1) * s.zoom;
     return Math.round(ew / ((mmToPt(finalW) * rX) / 72));
   }, [finalW, finalH]);
 
   const estDpi = sideDpi(cur);
-  const dpiBaixoAtiva = !!cur.upload && estDpi > 0 && estDpi < DPI_MIN;
-  const dpiBaixoAny = (frente.upload && sideDpi(frente) < DPI_MIN) || (verso?.upload && sideDpi(verso) < DPI_MIN);
+  const dpiBaixoAtiva = !!cur.art && estDpi > 0 && estDpi < DPI_MIN;
+  const dpiBaixoAny = (frente.art && sideDpi(frente) < DPI_MIN) || (verso?.art && sideDpi(verso) < DPI_MIN);
   const sangriaInvalida = finalW - 2 * bleed <= 0 || finalH - 2 * bleed <= 0;
   const medidaInvalida = !(finalW > 0) || !(finalH > 0) || sangriaInvalida;
-  const bloqueado = medidaInvalida || !!dpiBaixoAny || !frente.upload;
+  const bloqueado = medidaInvalida || !!dpiBaixoAny || !frente.art;
 
   // ── Drag ──
   const onPointerDown = useCallback((e: React.PointerEvent) => {
@@ -177,46 +180,58 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
   }, [cur.rotation, setCur]);
   const resetPos = useCallback(() => { setCur({ zoom: 1, offset: { x: 0, y: 0 } }); }, [setCur]);
 
+  // Seleção de arquivo: SÓ preview no client. NÃO sobe nada, NÃO exige login.
   const handleFile = useCallback(async (file: File, side: SideKey) => {
-    if (!file.type.startsWith('image/')) { setErrorMsg('Envie uma imagem (PNG ou JPEG).'); setStage('error'); return; }
+    if (!fileOk(file)) { setErrorMsg('Envie uma imagem (PNG/JPEG) ou um PDF.'); setStage('error'); return; }
     const prev = stage;
-    setStage('processing'); setProgress('Enviando arte...');
+    setStage('processing'); setProgress('Preparando preview...');
     try {
-      const up = await prepareArteUpload(file, data.companyId);
+      const art = await makeArtePreview(file);
       if (side === 'frente') {
-        setFrente((s) => ({ ...s, upload: up }));
+        setFrente((s) => ({ ...s, art }));
         if (!nome || nome === 'arte-final') setNome((file.name.replace(/\.[^.]+$/, '') || 'arte-final').replace(/[^\w\-]+/g, '-').slice(0, 40));
       } else {
-        setVerso({ ...emptySide(), upload: up });
+        setVerso({ ...emptySide(), art });
         setActive('verso');
       }
       setStage('configuring');
     } catch (e) {
-      setErrorMsg((e as Error).message ?? 'Falha ao enviar a arte.'); setStage(prev === 'input' ? 'error' : 'configuring');
+      setErrorMsg((e as Error).message ?? 'Falha ao preparar a arte.'); setStage(prev === 'input' ? 'error' : 'configuring');
     }
-  }, [data.companyId, nome, stage]);
+  }, [nome, stage]);
 
   const removerVerso = useCallback(() => { setVerso(null); setActive('frente'); }, []);
 
-  const handleGenerate = useCallback(async () => {
+  // "Liberar": aqui sim exige login. Sem sessão → tela de cadastro (20 créditos).
+  const handleRelease = useCallback(async () => {
     if (bloqueado) return;
-    setStage('processing'); setProgress(verso ? 'Gerando PDF (frente e verso)...' : 'Gerando PDF de produção...');
-    try {
-      const sidesArr = [frente, ...(verso ? [verso] : [])]
-        .filter((s) => s.upload)
-        .map((s) => ({
-          upload_path: s.upload!.uploadPath,
-          zoom: s.zoom, offset_x: clamp(s.offset.x, -9, 9), offset_y: clamp(s.offset.y, -9, 9), rotation: s.rotation,
-        }));
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) { setStage('login'); return; }
 
-      const { data: { session } } = await supabase.auth.getSession();
+    setStage('processing'); setProgress('Enviando arte...');
+    try {
+      let cid = companyId;
+      if (!cid) {
+        const { data: comp } = await supabase.from('companies').select('id').eq('user_id', user.id).order('created_at', { ascending: true }).limit(1).maybeSingle();
+        cid = comp?.id ?? '';
+      }
+      if (!cid) { setErrorMsg('Não encontrei uma empresa nesta conta.'); setStage('error'); return; }
+      setCompanyId(cid);
+
+      // sobe a ALTA de cada face só agora
+      const sidesArr: { upload_path: string; zoom: number; offset_x: number; offset_y: number; rotation: number }[] = [];
+      for (const s of [frente, ...(verso ? [verso] : [])]) {
+        if (!s.art) continue;
+        const uploadPath = await uploadArteSource(s.art, cid);
+        sidesArr.push({ upload_path: uploadPath, zoom: s.zoom, offset_x: clamp(s.offset.x, -9, 9), offset_y: clamp(s.offset.y, -9, 9), rotation: s.rotation });
+      }
+
+      setProgress(verso ? 'Gerando PDF (frente e verso)...' : 'Gerando PDF de produção...');
       const res = await fetch(`/api/arte/gerar`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
-        body: JSON.stringify({
-          companyId: data.companyId,
-          spec: { final_w_mm: finalW, final_h_mm: finalH, bleed_mm: bleed, dpi_target: dpiTarget, nome, sides: sidesArr },
-        }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ companyId: cid, spec: { final_w_mm: finalW, final_h_mm: finalH, bleed_mm: bleed, dpi_target: dpiTarget, nome, sides: sidesArr } }),
       });
       const out = await res.json();
       if (!res.ok || !out.success) {
@@ -237,7 +252,12 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
     } catch (e) {
       setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error');
     }
-  }, [bloqueado, frente, verso, supabase, data.companyId, finalW, finalH, bleed, dpiTarget, nome, playText]);
+  }, [bloqueado, supabase, companyId, frente, verso, finalW, finalH, bleed, dpiTarget, nome, playText]);
+
+  const irParaLogin = useCallback(() => {
+    if (onRequireLogin) onRequireLogin();
+    else window.location.href = '/login';
+  }, [onRequireLogin]);
 
   const handleDownload = useCallback(() => {
     if (!resultBlob || !resultName) return;
@@ -252,14 +272,8 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
   }, []);
 
   const label: React.CSSProperties = { display: 'block', fontSize: 12, color: c.textMuted, marginBottom: 4 };
-  const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14,
-    background: c.bgSecondary, border: `1px solid ${c.border}`, color: c.text, outline: 'none',
-  };
-  const tabStyle = (on: boolean): React.CSSProperties => ({
-    flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-    border: `1px solid ${on ? c.accent : c.border}`, background: on ? c.accent : 'transparent', color: on ? '#fff' : c.textMuted,
-  });
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14, background: c.bgSecondary, border: `1px solid ${c.border}`, color: c.text, outline: 'none' };
+  const tabStyle = (on: boolean): React.CSSProperties => ({ flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? c.accent : c.border}`, background: on ? c.accent : 'transparent', color: on ? '#fff' : c.textMuted });
 
   const bleedPctX = finalW > 0 ? (bleed / finalW) * 100 : 0;
   const bleedPctY = finalH > 0 ? (bleed / finalH) * 100 : 0;
@@ -270,8 +284,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
     position: 'absolute', inset: 0, width: '100%', height: '100%',
     objectFit: 'cover', objectPosition: 'center',
     transform: `translate(${offX * 100}%, ${offY * 100}%) scale(${cur.zoom})`,
-    transformOrigin: 'center',
-    userSelect: 'none', pointerEvents: 'none', display: 'block',
+    transformOrigin: 'center', userSelect: 'none', pointerEvents: 'none', display: 'block',
   };
 
   return createPortal(
@@ -288,15 +301,14 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
             onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f, 'frente'); }}
             style={{ border: `2px dashed ${c.border}`, borderRadius: 12, padding: '46px 20px', textAlign: 'center', background: c.bgSecondary, cursor: 'pointer', color: c.textMuted }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste sua arte</div>
-            <div style={{ fontSize: 12 }}>PNG ou JPEG (RGB).</div>
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f, 'frente'); }} />
+            <div style={{ fontSize: 12 }}>PNG, JPEG ou PDF.</div>
+            <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f, 'frente'); }} />
           </div>
         )}
 
         {/* CONFIGURING */}
-        {stage === 'configuring' && frente.upload && (
+        {stage === 'configuring' && frente.art && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {/* Tabs frente/verso */}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <button onClick={() => setActive('frente')} style={tabStyle(active === 'frente')}>Frente</button>
               {verso ? (
@@ -304,13 +316,12 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
               ) : (
                 <button onClick={() => versoFileRef.current?.click()} style={{ flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1px dashed ${c.border}`, background: 'transparent', color: c.textMuted }}>+ Adicionar verso</button>
               )}
-              <input ref={versoFileRef} type="file" accept="image/png,image/jpeg" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f, 'verso'); }} />
+              <input ref={versoFileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f, 'verso'); }} />
             </div>
             {verso && active === 'verso' && (
               <button onClick={removerVerso} style={{ alignSelf: 'flex-start', fontSize: 11, color: c.error, background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600, marginTop: -6 }}>Remover verso</button>
             )}
 
-            {/* Preview */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <div ref={boxRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
                 style={{ position: 'relative', width: 'min(100%, 360px)', aspectRatio: `${finalW} / ${finalH}`, background: c.bgSecondary, border: `1px solid ${c.border}`, borderRadius: 4, overflow: 'hidden', cursor: 'grab', touchAction: 'none' }}>
@@ -325,7 +336,6 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
               <span>arraste para posicionar</span>
             </div>
 
-            {/* Zoom + rotação */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -338,7 +348,6 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
               <button onClick={() => rotate(1)} title="Girar +90°" style={{ width: 38, height: 38, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 16 }}>↻</button>
             </div>
 
-            {/* Medidas (compartilhadas) */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
               <div><label style={label}>Largura final (mm)</label><input type="number" min={1} value={finalW} onChange={(e) => setFinalW(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
               <div><label style={label}>Altura final (mm)</label><input type="number" min={1} value={finalH} onChange={(e) => setFinalH(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
@@ -347,7 +356,6 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
             <p style={{ margin: '-4px 0 0', fontSize: 11, color: c.textMuted }}>Tamanho final do arquivo (sangria por dentro). Vale para frente e verso.</p>
             <div><label style={label}>Nome do arquivo</label><input type="text" value={nome} onChange={(e) => setNome(e.target.value.replace(/[^\w\-]+/g, '-').slice(0, 40))} style={inputStyle} /></div>
 
-            {/* DPI + custo */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}`, fontSize: 13, gap: 12 }}>
               <span style={{ color: dpiBaixoAtiva ? c.warn : c.textMuted, whiteSpace: 'nowrap' }}>DPI atual: <strong style={{ color: dpiBaixoAtiva ? c.warn : c.text }}>{estDpi || '—'}</strong></span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: c.textMuted }}>alvo
@@ -359,10 +367,24 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
             {sangriaInvalida && <div style={{ fontSize: 12, color: c.error }}>A sangria é maior que a medida. Reduza a sangria ou aumente a medida.</div>}
             {dpiBaixoAny && !sangriaInvalida && <div style={{ fontSize: 12, color: c.warn, lineHeight: 1.4 }}>Uma das faces está com resolução baixa para essa medida/zoom. Reduza o zoom ou envie arte maior. (Não cobramos enquanto estiver abaixo do mínimo.)</div>}
 
-            <button onClick={handleGenerate} disabled={bloqueado} style={{ padding: 14, borderRadius: 10, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: bloqueado ? 'not-allowed' : 'pointer', background: bloqueado ? c.border : c.accent }}>
+            <button onClick={handleRelease} disabled={bloqueado} style={{ padding: 14, borderRadius: 10, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: bloqueado ? 'not-allowed' : 'pointer', background: bloqueado ? c.border : c.accent }}>
               Liberar PDF de produção ({CREDITS} créditos){verso ? ' · frente e verso' : ''}
             </button>
             <button onClick={handleReset} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 13 }}>Recomeçar</button>
+          </div>
+        )}
+
+        {/* LOGIN (não logado tentou liberar) */}
+        {stage === 'login' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center', padding: '8px 4px' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: c.text }}>Crie sua conta para liberar o arquivo</div>
+            <p style={{ margin: 0, fontSize: 14, color: c.textMuted, lineHeight: 1.5 }}>
+              O preview é livre. Para baixar o PDF de produção pronto pra gráfica, entre na sua conta — e ao se <strong style={{ color: c.accent }}>cadastrar você ganha 20 créditos iniciais</strong> para gerar suas primeiras artes.
+            </p>
+            <button onClick={irParaLogin} style={{ padding: 14, borderRadius: 10, border: 'none', background: c.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+              Entrar / Cadastrar e ganhar 20 créditos
+            </button>
+            <button onClick={() => setStage('configuring')} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13 }}>Voltar ao preview</button>
           </div>
         )}
 
@@ -393,11 +415,11 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
                 </div>
               </div>
               <div className="af-qr-desktop" style={{ display: 'none', flexShrink: 0, width: 224 }}>
-                <ResultDownloadQR companyId={data.companyId} fileName={resultName} fileType="application/pdf" fileBase64={resultBase64} isDark={isDark} enabled={stage === 'result' && !!resultBase64} />
+                <ResultDownloadQR companyId={companyId} fileName={resultName} fileType="application/pdf" fileBase64={resultBase64} isDark={isDark} enabled={stage === 'result' && !!resultBase64} />
               </div>
             </div>
             <div className="af-qr-mobile" style={{ display: 'block' }}>
-              <ResultDownloadQR companyId={data.companyId} fileName={resultName} fileType="application/pdf" fileBase64={resultBase64} isDark={isDark} enabled={stage === 'result' && !!resultBase64} />
+              <ResultDownloadQR companyId={companyId} fileName={resultName} fileType="application/pdf" fileBase64={resultBase64} isDark={isDark} enabled={stage === 'result' && !!resultBase64} />
             </div>
             <p style={{ textAlign: 'center', fontSize: 11, color: c.textMuted, margin: 0 }}>Fecha automaticamente em {timeLeft}s</p>
           </div>
@@ -407,7 +429,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
         {stage === 'error' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: `1px solid ${c.error}`, color: c.error, fontSize: 14, lineHeight: 1.4 }}>{errorMsg}</div>
-            <button onClick={() => setStage(frente.upload ? 'configuring' : 'input')} style={{ padding: 12, borderRadius: 8, border: 'none', background: c.error, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Voltar</button>
+            <button onClick={() => setStage(frente.art ? 'configuring' : 'input')} style={{ padding: 12, borderRadius: 8, border: 'none', background: c.error, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Voltar</button>
           </div>
         )}
       </div>

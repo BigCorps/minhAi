@@ -650,7 +650,7 @@ const [mlQuestions,        setMlQuestions]        = useState<any[]>([])
                         <Smartphone className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <input
                           type="tel"
-                          placeholder="5511987654321"
+                          placeholder="551139519468"
                           value={mcpWaPhone}
                           onChange={e => setMcpWaPhone(e.target.value)}
                           className="flex-1 px-3 py-2 rounded-lg text-sm bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
@@ -679,7 +679,7 @@ const [mlQuestions,        setMlQuestions]        = useState<any[]>([])
                     <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Como usar após salvar:</p>
                     <p>1. Cadastre seu número e ative o toggle</p>
                     <p>2. Envie qualquer mensagem para o WhatsApp minhAi:</p>
-                    <p className="font-mono font-bold text-gray-800 dark:text-gray-200">wa.me/5511926828418</p>
+                    <p className="font-mono font-bold text-gray-800 dark:text-gray-200">wa.me/551139519468</p>
                     <p>3. O assistente responderá como seu MCP pessoal</p>
                   </div>
                   <button

@@ -7,7 +7,7 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/api/arte/gstest': ['./node_modules/@jspawn/ghostscript-wasm/**'],
   },
-  serverExternalPackages: ['@jspawn/ghostscript-wasm'],
+  serverExternalPackages: ['@jspawn/ghostscript-wasm', 'sharp'],
 
   images: {
     remotePatterns: [

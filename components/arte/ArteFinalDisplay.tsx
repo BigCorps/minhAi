@@ -152,7 +152,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
     setStage('processing'); setProgress('Gerando PDF de produção...');
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/gerar-arte-final`, {
+      const res = await fetch(`/api/arte/gerar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
         body: JSON.stringify({

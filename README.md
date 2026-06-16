@@ -10,7 +10,7 @@
 
 * Sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
 
-* Colocar o Whatsapp de volta (aguardando suporte meta)
+* Colocar o whatsapp BigCorps como whatsApp normal apenas para suporte e criar o whatsapp minhAi para MCP
 
 * página admin no dashboard (colocar controle de APIs tambem)
 

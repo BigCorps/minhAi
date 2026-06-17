@@ -568,8 +568,8 @@ async function testIframeCompatibility() {
                 const disabled =
                   (opt.value === 'vendas' && !selectedCompany?.modo_vendas_enabled) ||
                   (opt.value === 'fila'   && !selectedCompany?.modo_fila_enabled) ||
-                  (opt.value === 'links'  && !selectedCompany?.modo_links_enabled) ||
-                  (opt.value === 'site'   && !customWebsite && !selectedCompany?.website);
+                  (opt.value === 'links'  && !selectedCompany?.modo_links_enabled);
+                  // 'site' nunca é desabilitado — o campo de URL aparece após selecionar
                 return (
                   <button
                     key={opt.value}
@@ -588,9 +588,7 @@ async function testIframeCompatibility() {
                     <div style={{ flex: 1 }}>
                       <div style={{ color: isSelected ? WHITE : MUTED, fontWeight: 600, fontSize: 14 }}>{opt.label}</div>
                       <div style={{ color: SUB, fontSize: 12, marginTop: 2 }}>
-                        {disabled && opt.value !== 'site' ? 'Modo não ativado neste assistente' :
-                         disabled && opt.value === 'site' ? 'Site não cadastrado nas configurações' :
-                         opt.desc}
+                        {disabled ? 'Modo não ativado neste assistente' : opt.desc}
                       </div>
                     </div>
                     {isSelected && (

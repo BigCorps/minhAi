@@ -217,22 +217,48 @@ export default function ArteLoginPage() {
       <div className="max-w-md w-full">
         <div className="rounded-2xl shadow-xl p-5 sm:p-8 bg-white border border-gray-100">
 
-          {/* Logo + título */}
+          {/* ── CORREÇÃO 1: Logo duplo ArteFinal | minhAi ── */}
           <div className="text-center mb-6">
-            <div className="w-20 h-20 mx-auto mb-3 overflow-hidden rounded-full">
-              <Image
-                src="/arte/arte.png"
-                alt="ArteFinal"
-                width={80}
-                height={80}
-                className="w-full h-full object-cover"
-              />
+            <div className="flex items-center justify-center gap-3 mb-3">
+              {/* Logo ArteFinal */}
+              <div className="w-16 h-16 overflow-hidden rounded-full flex-shrink-0">
+                <Image
+                  src="/arte/arte.png"
+                  alt="ArteFinal"
+                  width={64}
+                  height={64}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Divisor */}
+              <span
+                className="text-2xl font-thin select-none flex-shrink-0"
+                style={{ color: '#d1d5db' }}
+              >
+                |
+              </span>
+
+              {/* Logo minhAi (menor) */}
+              <div className="w-10 h-10 overflow-hidden rounded-full flex-shrink-0">
+                <Image
+                  src="/icon.png"
+                  alt="minhAi"
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-cover"
+                />
+              </div>
             </div>
+
+            {/* ── CORREÇÃO 2 + 3: Título e subtítulo corrigidos ── */}
             <h1 className="text-xl font-bold mb-1" style={{ color: CMYK.key }}>
               {mode === 'login' ? 'Entrar na ArteFinal' : 'Criar sua conta'}
             </h1>
             <p className="text-sm text-gray-500">
-              {mode === 'login' ? 'Acesse sua arte com sangria e corte' : 'Crie sua conta para começar'}
+              {mode === 'login'
+                ? 'Entre com sua conta minhAi para utilizar o app ArteFinal'
+                : 'Crie sua conta minhAi para utilizar o app ArteFinal'}
             </p>
           </div>
 
@@ -300,7 +326,7 @@ export default function ArteLoginPage() {
             </div>
           ) : null}
 
-          {/* Formulário email/senha */}
+          {/* ── CORREÇÃO 4: Formulário com inputs brancos ── */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
             {mode === 'signup' && (
               <div>
@@ -310,8 +336,8 @@ export default function ArteLoginPage() {
                 <input
                   type="text" id="name" name="name" required={mode === 'signup'}
                   placeholder="Seu nome"
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 transition-colors"
-                  style={{ '--tw-ring-color': CMYK.cyan } as any}
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 transition-colors"
+                  style={{ background: '#ffffff', color: '#1e293b', '--tw-ring-color': CMYK.cyan } as any}
                 />
               </div>
             )}
@@ -323,7 +349,8 @@ export default function ArteLoginPage() {
               <input
                 type="email" id="email" name="email" required
                 placeholder="seu@email.com"
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 transition-colors"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 transition-colors"
+                style={{ background: '#ffffff', color: '#1e293b', '--tw-ring-color': CMYK.cyan } as any}
               />
             </div>
 
@@ -336,7 +363,8 @@ export default function ArteLoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   id="password" name="password" required
                   placeholder="••••••••" minLength={6}
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 transition-colors"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 transition-colors"
+                  style={{ background: '#ffffff', color: '#1e293b', '--tw-ring-color': CMYK.cyan } as any}
                 />
                 <button
                   type="button"

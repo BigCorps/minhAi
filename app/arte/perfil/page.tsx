@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import {
   User, Mail, Lock, Save, Loader2, AlertCircle, CheckCircle2,
-  Unlink, Zap, TrendingUp, Shield, Clock,
+  Unlink, Zap, TrendingUp, Shield,
   ExternalLink, Sparkles, QrCode, CreditCard, ArrowLeft
 } from 'lucide-react';
 import Image from 'next/image';
@@ -536,7 +536,8 @@ export default function ArtePerfilPage() {
                           R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}
                         </p>
                         <div className={`flex items-center gap-1 text-xs mt-1 ${pkg.is_highlighted ? 'text-white/70' : 'text-gray-400'}`}>
-                          <Clock className="w-3 h-3" /> Não expiram
+                          <Zap className="w-3 h-3" />
+                          R$ {(pkg.price_cents / pkg.interactions / 100).toFixed(4).replace('.', ',')} por crédito
                         </div>
                       </>
                     )
@@ -596,7 +597,7 @@ export default function ArtePerfilPage() {
               </div>
               <p className="font-bold text-gray-900">{paymentData.packageName}</p>
               <p className="text-2xl font-black mt-1" style={{ color: C.magenta }}>
-                R$ {(paymentData.amount / 100).toFixed(2).replace('.', ',')}
+                R$ {Number(paymentData.amount).toFixed(2).replace('.', ',')}
               </p>
             </div>
 

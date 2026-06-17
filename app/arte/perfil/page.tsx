@@ -4,12 +4,9 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import {
   User, Mail, Lock, Save, Loader2, AlertCircle, CheckCircle2,
-  Fingerprint, Trash2, Smartphone, ShieldCheck, Key, Unlink,
-  Zap, TrendingUp, Shield, Clock, Smile,
-  LifeBuoy, ExternalLink, MessageCircle, Sparkles, QrCode,
-  CreditCard, Globe
+  Unlink, Zap, TrendingUp, Shield, Clock,
+  ExternalLink, Sparkles, QrCode, CreditCard, ArrowLeft
 } from 'lucide-react';
-import { startRegistration, startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser';
 import Image from 'next/image';
 
 // ── Paleta CMYK ArteFinal ─────────────────────────────────────────────────
@@ -46,33 +43,59 @@ interface PaymentData {
   packageName: string;
 }
 
+// ── Ícones customizados ───────────────────────────────────────────────────
+function BotIA({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="96 96 320 320" xmlns="http://www.w3.org/2000/svg" fill="none" aria-hidden="true">
+      <circle cx="256" cy="256" r="145" stroke="currentColor" strokeWidth="18" />
+      <circle cx="256" cy="256" r="122" stroke="currentColor" strokeWidth="18" />
+      <ellipse cx="218" cy="230" rx="18" ry="24" fill="currentColor" />
+      <ellipse cx="294" cy="230" rx="18" ry="24" fill="currentColor" />
+      <path d="M216 296C237 314 275 314 296 296" stroke="currentColor" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function BigCorpsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" fill="currentColor" aria-hidden="true">
+      <path d="M 2.589 26.923c3.905 4.641 19.9 4.741 24.488 .154 4.465-4.465 4.465-19.689 0-24.154s-19.689-4.465-24.154 0c-4.236 4.236-4.443 19.117-.334 24zm0.411-12.146c0-10.652 1.147-11.777 12-11.777 6.667 0 8.333 .333 10 2s2 3.333 2 10c0 10.995-1.042 12-12.443 12-10.698 0-11.557-.908-11.557-12.223zm3.667-6.111c-1.06 1.06-.772 12.15 .333 12.833 .631.39 1-1.99 1-6.441 0-7.097-.109-7.617-1.333-6.392zm4.333 .333v12.121l3.75-.31c4.302-.356 5.123-2.708 1.5-4.297-2.258-.991-3.059-2.513-1.321-2.513 1.49 0 4.143-3.075 3.522-4.081-.313-.506-2.117-.919-4.009-.919zm9.526 4.331c-1.299 1.299-1.299 1.542 0 2.04 .88.338 1.48 1.89 1.49 3.847 .012 2.487 .25 2.918 .985 1.781 .533-.825.969-3.525 .969-6s-.436-5.175-.969-6c-.789-1.221-.972-1.095-.985.679-.008 1.198-.679 2.842-1.49 3.653z" />
+    </svg>
+  );
+}
+
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
+
 // ── Cards de ajuda ────────────────────────────────────────────────────────
 const HELP_CARDS = [
   {
     id: 'minhai',
-    titulo: 'Conheça o minhAi',
+    titulo: 'Conheça a minhAi',
     descricao: 'Mais de 100 funções de IA para o seu negócio. Os seus créditos ArteFinal também funcionam lá.',
-    icon: <Sparkles className="w-5 h-5" />,
+    icon: <BotIA className="w-5 h-5" />,
     href: 'https://minhai.app',
-    botao: 'Acessar minhAi',
     color: C.cyan,
   },
   {
     id: 'bigcorps',
     titulo: 'BigCorps',
-    descricao: 'Conheça a empresa por trás da ArteFinal e do minhAi. Tecnologia para impulsionar o seu negócio.',
-    icon: <Globe className="w-5 h-5" />,
+    descricao: 'Conheça a empresa por trás da ArteFinal e da minhAi. Tecnologia para impulsionar o seu negócio.',
+    icon: <BigCorpsIcon className="w-5 h-5" />,
     href: 'https://bigcorps.com.br',
-    botao: 'Visitar BigCorps',
-    color: C.magenta,
+    color: '#F97316',
   },
   {
     id: 'suporte',
     titulo: 'Suporte ArteFinal',
     descricao: 'Precisa de ajuda com a ArteFinal? Nossa equipe de suporte técnico está pronta para te auxiliar.',
-    icon: <LifeBuoy className="w-5 h-5" />,
+    icon: <WhatsAppIcon className="w-5 h-5" />,
     href: 'https://api.whatsapp.com/send/?phone=5511926828418&text=Preciso%20de%20suporte%20URGENTE%20no%20app%20ArteFinal&type=phone_number&app_absent=0',
-    botao: 'Falar no WhatsApp',
     color: '#25D366',
   },
 ];
@@ -92,11 +115,6 @@ export default function ArtePerfilPage() {
   const [newPassword, setNewPassword]     = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPass, setShowPass]           = useState(false);
-
-  // ── Biometria ────────────────────────────────────────────────────────
-  const [authenticators, setAuthenticators] = useState<any[]>([]);
-  const [biometrySupported, setBiometrySupported] = useState(false);
-  const [registeringBiometry, setRegisteringBiometry] = useState(false);
 
   // ── Google linking ───────────────────────────────────────────────────
   const [linkedIdentities, setLinkedIdentities] = useState<string[]>([]);
@@ -127,14 +145,6 @@ export default function ArtePerfilPage() {
         setUser(authUser);
         setUserName(authUser.user_metadata?.name || '');
         setLinkedIdentities(authUser.identities?.map((i: any) => i.provider) || []);
-
-        // Biometria
-        setBiometrySupported(browserSupportsWebAuthn());
-        const { data: authData } = await supabase
-          .from('webauthn_credentials')
-          .select('*')
-          .eq('user_id', authUser.id);
-        if (authData) setAuthenticators(authData);
 
         // Créditos
         const { data: credData } = await supabase
@@ -236,54 +246,6 @@ export default function ArtePerfilPage() {
     }
   }
 
-  // ── Biometria ─────────────────────────────────────────────────────────
-  async function registerBiometry() {
-    setRegisteringBiometry(true);
-    setMessage(null);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Não autenticado.');
-
-      const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const SUPA_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-      const headers = { 'Content-Type': 'application/json', apikey: SUPA_KEY, Authorization: `Bearer ${session.access_token}` };
-
-      const optRes = await fetch(`${SUPA_URL}/functions/v1/webauthn-registration-options`, { method: 'POST', headers });
-      if (!optRes.ok) throw new Error((await optRes.json()).error || 'Erro ao iniciar registro.');
-      const options = await optRes.json();
-
-      const regResponse = await startRegistration(options);
-
-      const verRes = await fetch(`${SUPA_URL}/functions/v1/webauthn-verify-registration`, {
-        method: 'POST', headers,
-        body: JSON.stringify({ attestationResponse: regResponse, expectedChallenge: options.challenge }),
-      });
-      const verification = await verRes.json();
-      if (!verification.verified) throw new Error(verification?.error || 'Falha na verificação.');
-
-      const { data: authData } = await supabase.from('webauthn_credentials').select('*').eq('user_id', user.id);
-      if (authData) setAuthenticators(authData);
-      localStorage.setItem('lastLoggedInUser', user.email);
-      setMessage({ type: 'success', text: 'Biometria cadastrada com sucesso!' });
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message });
-    } finally {
-      setRegisteringBiometry(false);
-    }
-  }
-
-  async function removeAuthenticator(credentialId: string) {
-    if (!confirm('Remover este acesso biométrico?')) return;
-    try {
-      const { data: result, error } = await supabase.functions.invoke('webauthn-remove-credential', { body: { credentialId } });
-      if (error || !result.success) throw new Error(result?.error || 'Erro ao remover.');
-      setAuthenticators(a => a.filter(x => x.credential_id !== credentialId));
-      setMessage({ type: 'success', text: 'Acesso biométrico removido.' });
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message });
-    }
-  }
-
   // ── Compra de créditos ────────────────────────────────────────────────
   async function handlePurchase(packageId: string) {
     if (!user) { alert('Você precisa estar logado.'); return; }
@@ -322,7 +284,7 @@ export default function ArtePerfilPage() {
   // ── Loading ───────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #e0f7fe 0%, #ffffff 50%, #fce4f3 100%)' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))' }}>
         <Loader2 className="w-8 h-8 animate-spin" style={{ color: C.cyan }} />
       </div>
     );
@@ -332,16 +294,25 @@ export default function ArtePerfilPage() {
   return (
     <div
       className="min-h-screen py-8 px-4"
-      style={{ background: 'linear-gradient(135deg, #e0f7fe 0%, #ffffff 50%, #fce4f3 100%)' }}
+      style={{ background: 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))' }}
     >
       <div className="max-w-2xl mx-auto space-y-6">
 
-        {/* ── Header ────────────────────────────────────────────────── */}
+        {/* ── Botão Voltar + Header ─────────────────────────────────── */}
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-8 h-8 rounded-full overflow-hidden">
-            <Image src="/arte/arte.png" alt="ArteFinal" width={32} height={32} className="w-full h-full object-cover" />
+          <a
+            href="/arte"
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all shrink-0"
+            title="Voltar"
+          >
+            <ArrowLeft className="w-4 h-4 text-gray-500" />
+          </a>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full overflow-hidden">
+              <Image src="/arte/arte.png" alt="ArteFinal" width={28} height={28} className="w-full h-full object-cover" />
+            </div>
+            <h1 className="text-xl font-bold" style={{ color: C.key }}>Meu Perfil</h1>
           </div>
-          <h1 className="text-xl font-bold" style={{ color: C.key }}>Meu Perfil</h1>
         </div>
 
         {/* ── Feedback global ────────────────────────────────────────── */}
@@ -386,11 +357,6 @@ export default function ArtePerfilPage() {
               <span className="px-2.5 py-1 rounded-full text-xs font-bold text-white" style={{ background: GRAD }}>
                 {isGoogleUser ? 'Google' : 'E-mail'}
               </span>
-              {authenticators.length > 0 && (
-                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3" /> Biometria
-                </span>
-              )}
             </div>
           </div>
 
@@ -493,63 +459,8 @@ export default function ArtePerfilPage() {
         </section>
 
         {/* ══════════════════════════════════════════════════════════════
-            BLOCO 2 — BIOMETRIA
+            BLOCO 2 — CRÉDITOS
         ══════════════════════════════════════════════════════════════ */}
-        <section className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl" style={{ background: 'rgba(0,174,239,0.1)' }}>
-                <Fingerprint className="w-5 h-5" style={{ color: C.cyan }} />
-              </div>
-              <div>
-                <p className="font-bold text-gray-900">Login por Biometria</p>
-                <p className="text-xs text-gray-500">
-                  {!biometrySupported
-                    ? 'Não suportado neste navegador'
-                    : `${authenticators.length} dispositivo${authenticators.length !== 1 ? 's' : ''} cadastrado${authenticators.length !== 1 ? 's' : ''}`
-                  }
-                </p>
-              </div>
-            </div>
-            {biometrySupported && (
-              <button
-                onClick={registerBiometry}
-                disabled={registeringBiometry}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-all"
-                style={{ background: GRAD }}
-              >
-                {registeringBiometry ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
-                Cadastrar
-              </button>
-            )}
-          </div>
-
-          {biometrySupported && authenticators.length > 0 && (
-            <div className="space-y-2 mt-2">
-              {authenticators.map((auth) => (
-                <div key={auth.credential_id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <Smartphone className="w-4 h-4 text-gray-400" />
-                    <div>
-                      <p className="text-sm font-semibold text-gray-800">Dispositivo Confiável</p>
-                      <p className="text-xs text-gray-400">Cadastrado em {new Date(auth.created_at).toLocaleDateString('pt-BR')}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => removeAuthenticator(auth.credential_id)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
-                    title="Remover"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* ══════════════════════════════════════════════════════════════
-            BLOCO 3 — CRÉDITOS
         ══════════════════════════════════════════════════════════════ */}
         <section className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
 
@@ -562,7 +473,7 @@ export default function ArtePerfilPage() {
               <p className="font-bold text-gray-900">Créditos</p>
             </div>
             <p className="text-xs text-gray-500 mt-1 ml-11">
-              Compartilhados entre <strong>ArteFinal</strong> e <strong>minhAi</strong> — o mesmo saldo vale nos dois.
+              Compartilhados entre <strong>ArteFinal</strong> e <strong>minhAi</strong> — o mesmo saldo vale nas duas.
             </p>
           </div>
 
@@ -585,8 +496,8 @@ export default function ArtePerfilPage() {
           <div className="mx-6 my-4 p-3 rounded-2xl border flex items-start gap-3" style={{ background: 'rgba(0,174,239,0.05)', borderColor: 'rgba(0,174,239,0.2)' }}>
             <Sparkles className="w-4 h-4 shrink-0 mt-0.5" style={{ color: C.cyan }} />
             <p className="text-xs text-gray-600">
-              Seus créditos são <strong>compartilhados automaticamente</strong> entre a ArteFinal e o minhAi. No minhAi você encontra mais de <strong>100 funções de IA</strong> para o seu negócio — assistente de voz, gestão, vendas, integrações Google e Meta, e muito mais.
-              {' '}<a href="https://minhai.app" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2" style={{ color: C.cyan }}>Conhecer minhAi →</a>
+              Seus créditos são <strong>compartilhados automaticamente</strong> entre a ArteFinal e a minhAi. Na minhAi você encontra mais de <strong>100 funções de IA</strong> para o seu negócio — assistente de voz, gestão, vendas, integrações Google e Meta, e muito mais.
+              {' '}<a href="https://minhai.app" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2" style={{ color: C.cyan }}>Conhecer a minhAi →</a>
             </p>
           </div>
 
@@ -638,7 +549,7 @@ export default function ArtePerfilPage() {
         </section>
 
         {/* ══════════════════════════════════════════════════════════════
-            BLOCO 4 — AJUDA
+            BLOCO 3 — AJUDA
         ══════════════════════════════════════════════════════════════ */}
         <section className="space-y-3">
           <p className="text-sm font-semibold text-gray-500 px-1">Ajuda & Links</p>

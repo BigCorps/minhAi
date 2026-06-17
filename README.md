@@ -6,13 +6,13 @@
 
 ## Roadmap e Features Planejadas
 
+* pix.wiki - App com confirmação automática de pix
+
 * seletor de tema nas configurações e se quer que apareça o ícone ou não, além de fazer o mesmo com o ícone do kiosk, trava tela e usuario
 
 * ao mudar as configurações do webapp no domínio e no logo, não está aplicando as correções, e verificar porque não aparece a opção de mostrar o site
 
 * no card do passo a passo do Wizard está mostrando 100% sem os opcionais, e só pode mostrar 100% se os opcionais também estiverem configurados
-
-* artefinal.app
 
 * market4u.suaia.app - mostrar funcionando para o Leandro e os clientes market4u com vídeo, respostas e ajuda
 

@@ -442,28 +442,93 @@ export default function DuplicarImagemDisplay({
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Configurações avançadas</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
-                    <label style={label}>Tamanho (cm): {maxSize.toFixed(1)}</label>
-                    <input type="range" min={2} max={15} step={0.5} value={maxSize}
-                      onChange={(e) => setMaxSize(parseFloat(e.target.value))}
-                      style={{ width: '100%', accentColor: c.accent }} />
+                    <label style={label}>Tamanho máximo (cm)</label>
+                    <input
+                      type="number" min={0.5} max={15} step={0.1} value={maxSize}
+                      onChange={(e) => setMaxSize(Math.max(0.5, Math.min(15, parseFloat(e.target.value) || 0.5)))}
+                      style={{ ...inputStyle }}
+                    />
                   </div>
                   <div>
-                    <label style={label}>Espaçamento (mm): {spacing.toFixed(1)}</label>
-                    <input type="range" min={0} max={5} step={0.5} value={spacing}
-                      onChange={(e) => setSpacing(parseFloat(e.target.value))}
-                      style={{ width: '100%', accentColor: c.accent }} />
+                    <label style={label}>Espaçamento entre imagens (mm)</label>
+                    <input
+                      type="number" min={0} max={5} step={0.5} value={spacing}
+                      onChange={(e) => setSpacing(Math.max(0, Math.min(5, parseFloat(e.target.value) || 0)))}
+                      style={{ ...inputStyle }}
+                    />
                   </div>
                   <div>
-                    <label style={label}>Colunas: {manualCols}</label>
-                    <input type="range" min={1} max={10} step={1} value={manualCols}
-                      onChange={(e) => setManualCols(parseInt(e.target.value))}
-                      style={{ width: '100%', accentColor: c.accent }} />
+                    <label style={label}>Colunas</label>
+                    <input
+                      type="number" min={1} max={20} step={1} value={manualCols}
+                      onChange={(e) => setManualCols(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                      style={{ ...inputStyle }}
+                    />
                   </div>
                   <div>
-                    <label style={label}>Linhas: {manualRows}</label>
-                    <input type="range" min={1} max={15} step={1} value={manualRows}
-                      onChange={(e) => setManualRows(parseInt(e.target.value))}
-                      style={{ width: '100%', accentColor: c.accent }} />
+                    <label style={label}>Linhas</label>
+                    <input
+                      type="number" min={1} max={30} step={1} value={manualRows}
+                      onChange={(e) => setManualRows(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
+                      style={{ ...inputStyle }}
+                    />
+                  </div>
+                </div>
+                <div style={{
+                  marginTop: 10, padding: '8px 12px', borderRadius: 6,
+                  background: isDark ? 'rgba(0,174,239,0.08)' : '#f0f8ff',
+                  border: `1px solid ${isDark ? 'rgba(0,174,239,0.2)' : '#d0e8f8'}`,
+                  fontSize: 12, color: c.textMuted, lineHeight: 1.5,
+                }}>
+                  💡 O espaçamento de 1mm facilita o corte com estilete.
+                </div>
+              </div>
+            )}
+
+            {/* Preview do grid A4 */}
+            {layoutInfo.totalImages > 0 && (
+              <div style={{
+                padding: 14, borderRadius: 8, background: c.bgSecondary,
+                border: `1px solid ${c.border}`,
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: c.textMuted, marginBottom: 10 }}>
+                  📋 Preview do Layout A4
+                </div>
+                {/* Simulação proporcional do A4 */}
+                <div style={{
+                  position: 'relative',
+                  width: '100%',
+                  maxWidth: 320,
+                  margin: '0 auto',
+                  aspectRatio: '210 / 297',
+                  background: '#fff',
+                  border: '1px solid #ccc',
+                  borderRadius: 2,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                  overflow: 'hidden',
+                  padding: '3.33%', // ~1cm / 30cm total height equivalent
+                }}>
+                  {/* Grid de miniaturas */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${layoutInfo.perRow}, 1fr)`,
+                    gap: `${Math.max(1, (spacing / 10) * 4)}px`,
+                    width: '100%',
+                    height: '100%',
+                    alignContent: 'start',
+                  }}>
+                    {Array.from({ length: layoutInfo.totalImages }).map((_, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          background: art?.previewDataUrl ? `url(${art.previewDataUrl}) center/cover no-repeat` : c.accent,
+                          borderRadius: 1,
+                          opacity: 0.85,
+                          aspectRatio: `${layoutInfo.finalWidth} / ${layoutInfo.finalHeight}`,
+                          border: `0.5px solid rgba(0,0,0,0.08)`,
+                        }}
+                      />
+                    ))}
                   </div>
                 </div>
               </div>

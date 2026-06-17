@@ -117,10 +117,14 @@ export default function ArtePage() {
           </div>
           {hasUser ? (
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold" style={{ background: 'rgba(0,174,239,0.1)', color: CMYK.cyan }}>
-                <Sparkles className="w-3.5 h-3.5" />
-                {saldo ?? '—'} créditos
-              </div>
+              <a
+  href="/arte/perfil"
+  className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-opacity hover:opacity-75 active:scale-95"
+  style={{ background: 'rgba(0,174,239,0.1)', color: CMYK.cyan }}
+>
+  <Sparkles className="w-3.5 h-3.5" />
+  {saldo ?? '—'} créditos
+</a>
               <button onClick={handleLogout} className="flex items-center justify-center p-2 rounded-full text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors active:scale-95" title="Sair da conta">
                 <LogOut className="w-4 h-4" />
               </button>

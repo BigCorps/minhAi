@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
-import { makeArtePreview, uploadArteSource, type ArtePreview } from '@/lib/arte/prepareUpload';
+import { makeImagePreview, openPdf, rasterizePdfPage, uploadArteSource, isPdfFile, type ArtePreview } from '@/lib/arte/prepareUpload';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 
-type Stage = 'input' | 'configuring' | 'processing' | 'login' | 'result' | 'error';
+type Stage = 'input' | 'page-select' | 'configuring' | 'processing' | 'login' | 'result' | 'error';
 type SideKey = 'frente' | 'verso';
 
 interface Side {
@@ -21,7 +21,7 @@ interface Props {
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText: (text: string) => Promise<void>;
-  onRequireLogin?: () => void; // opcional: a página pode abrir seu próprio login
+  onRequireLogin?: () => void;
 }
 
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -43,6 +43,7 @@ const AUTO_CLOSE = 90;
 const mmToPt = (v: number) => (v * 72) / 25.4;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const emptySide = (): Side => ({ art: null, zoom: 1, offset: { x: 0, y: 0 }, rotation: 0 });
+const cleanName = (s: string) => s.replace(/[^\w\-]+/g, '-').slice(0, 40);
 
 function loadImg(src: string): Promise<HTMLImageElement> {
   return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
@@ -62,7 +63,7 @@ async function rotateDataUrl(src: string, deg: number): Promise<string> {
   return canvas.toDataURL('image/jpeg', 0.85);
 }
 
-const fileOk = (f: File) => f.type.startsWith('image/') || f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+const fileOk = (f: File) => f.type.startsWith('image/') || isPdfFile(f);
 
 export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playText, onRequireLogin }: Props) {
   const isDark = theme === 'dark';
@@ -74,6 +75,10 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
   const [verso, setVerso] = useState<Side | null>(null);
   const [active, setActive] = useState<SideKey>('frente');
   const [rotPreview, setRotPreview] = useState<string>('');
+
+  // seletor de página de PDF multipágina
+  const [pdfPending, setPdfPending] = useState<{ file: File; pages: number; side: SideKey } | null>(null);
+  const [pageChoice, setPageChoice] = useState<number>(1);
 
   const [finalW, setFinalW] = useState<number>(90);
   const [finalH, setFinalH] = useState<number>(50);
@@ -180,25 +185,53 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
   }, [cur.rotation, setCur]);
   const resetPos = useCallback(() => { setCur({ zoom: 1, offset: { x: 0, y: 0 } }); }, [setCur]);
 
-  // Seleção de arquivo: SÓ preview no client. NÃO sobe nada, NÃO exige login.
+  // aplica a arte preparada na face certa (sem upload — só preview)
+  const applyArt = useCallback((art: ArtePreview, side: SideKey, fileName: string) => {
+    if (side === 'frente') {
+      setFrente((s) => ({ ...s, art }));
+      setNome((prev) => (!prev || prev === 'arte-final' ? (cleanName(fileName.replace(/\.[^.]+$/, '')) || 'arte-final') : prev));
+    } else {
+      setVerso({ ...emptySide(), art });
+      setActive('verso');
+    }
+  }, []);
+
+  // Seleção de arquivo: SÓ preview no client. Imagem → direto. PDF → conta páginas.
   const handleFile = useCallback(async (file: File, side: SideKey) => {
     if (!fileOk(file)) { setErrorMsg('Envie uma imagem (PNG/JPEG) ou um PDF.'); setStage('error'); return; }
-    const prev = stage;
     setStage('processing'); setProgress('Preparando preview...');
     try {
-      const art = await makeArtePreview(file);
-      if (side === 'frente') {
-        setFrente((s) => ({ ...s, art }));
-        if (!nome || nome === 'arte-final') setNome((file.name.replace(/\.[^.]+$/, '') || 'arte-final').replace(/[^\w\-]+/g, '-').slice(0, 40));
+      if (isPdfFile(file)) {
+        const h = await openPdf(file);
+        if (h.pages >= 2) {
+          setPdfPending({ file, pages: h.pages, side });
+          setPageChoice(side === 'verso' ? Math.min(2, h.pages) : 1);
+          setStage('page-select');
+          return;
+        }
+        applyArt(await rasterizePdfPage(file, 1), side, file.name);
       } else {
-        setVerso({ ...emptySide(), art });
-        setActive('verso');
+        applyArt(await makeImagePreview(file), side, file.name);
       }
       setStage('configuring');
     } catch (e) {
-      setErrorMsg((e as Error).message ?? 'Falha ao preparar a arte.'); setStage(prev === 'input' ? 'error' : 'configuring');
+      setErrorMsg((e as Error).message ?? 'Falha ao preparar a arte.'); setStage(frente.art ? 'configuring' : 'error');
     }
-  }, [nome, stage]);
+  }, [applyArt, frente.art]);
+
+  // confirma a página escolhida no PDF multipágina
+  const confirmPage = useCallback(async () => {
+    if (!pdfPending) return;
+    const { file, side } = pdfPending;
+    setStage('processing'); setProgress(`Importando página ${pageChoice}...`);
+    try {
+      applyArt(await rasterizePdfPage(file, pageChoice), side, file.name);
+      setPdfPending(null);
+      setStage('configuring');
+    } catch (e) {
+      setErrorMsg((e as Error).message ?? 'Falha ao importar a página.'); setStage('error');
+    }
+  }, [pdfPending, pageChoice, applyArt]);
 
   const removerVerso = useCallback(() => { setVerso(null); setActive('frente'); }, []);
 
@@ -219,7 +252,6 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
       if (!cid) { setErrorMsg('Não encontrei uma empresa nesta conta.'); setStage('error'); return; }
       setCompanyId(cid);
 
-      // sobe a ALTA de cada face só agora
       const sidesArr: { upload_path: string; zoom: number; offset_x: number; offset_y: number; rotation: number }[] = [];
       for (const s of [frente, ...(verso ? [verso] : [])]) {
         if (!s.art) continue;
@@ -268,7 +300,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
 
   const handleReset = useCallback(() => {
     setStage('input'); setFrente(emptySide()); setVerso(null); setActive('frente');
-    setResultBlob(null); setResultBase64(''); setErrorMsg(''); setNome('arte-final');
+    setPdfPending(null); setResultBlob(null); setResultBase64(''); setErrorMsg(''); setNome('arte-final');
   }, []);
 
   const label: React.CSSProperties = { display: 'block', fontSize: 12, color: c.textMuted, marginBottom: 4 };
@@ -302,7 +334,29 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
             style={{ border: `2px dashed ${c.border}`, borderRadius: 12, padding: '46px 20px', textAlign: 'center', background: c.bgSecondary, cursor: 'pointer', color: c.textMuted }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste sua arte</div>
             <div style={{ fontSize: 12 }}>PNG, JPEG ou PDF.</div>
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f, 'frente'); }} />
+            <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f, 'frente'); e.currentTarget.value = ''; }} />
+          </div>
+        )}
+
+        {/* PAGE-SELECT (PDF com 2+ páginas) */}
+        {stage === 'page-select' && pdfPending && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 2px' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: c.text }}>Esse PDF tem {pdfPending.pages} páginas</div>
+            <p style={{ margin: 0, fontSize: 13, color: c.textMuted, lineHeight: 1.5 }}>
+              Qual página usar {pdfPending.side === 'verso' ? 'no verso' : 'na frente'}?
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button onClick={() => setPageChoice((p) => clamp(p - 1, 1, pdfPending.pages))} style={{ width: 40, height: 40, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 18 }}>‹</button>
+              <input type="number" min={1} max={pdfPending.pages} value={pageChoice}
+                onChange={(e) => setPageChoice(clamp(parseInt(e.target.value) || 1, 1, pdfPending.pages))}
+                style={{ ...inputStyle, textAlign: 'center', width: 90, flex: 'none' }} />
+              <span style={{ fontSize: 13, color: c.textMuted }}>de {pdfPending.pages}</span>
+              <button onClick={() => setPageChoice((p) => clamp(p + 1, 1, pdfPending.pages))} style={{ width: 40, height: 40, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 18 }}>›</button>
+            </div>
+            <button onClick={confirmPage} style={{ padding: 14, borderRadius: 10, border: 'none', background: c.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+              Usar página {pageChoice}
+            </button>
+            <button onClick={() => { setPdfPending(null); setStage(frente.art ? 'configuring' : 'input'); }} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
           </div>
         )}
 
@@ -316,7 +370,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
               ) : (
                 <button onClick={() => versoFileRef.current?.click()} style={{ flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1px dashed ${c.border}`, background: 'transparent', color: c.textMuted }}>+ Adicionar verso</button>
               )}
-              <input ref={versoFileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f, 'verso'); }} />
+              <input ref={versoFileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f, 'verso'); e.currentTarget.value = ''; }} />
             </div>
             {verso && active === 'verso' && (
               <button onClick={removerVerso} style={{ alignSelf: 'flex-start', fontSize: 11, color: c.error, background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600, marginTop: -6 }}>Remover verso</button>
@@ -354,7 +408,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
               <div><label style={label}>Sangria (mm)</label><input type="number" min={0} max={20} step={0.5} value={bleed} onChange={(e) => setBleed(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
             </div>
             <p style={{ margin: '-4px 0 0', fontSize: 11, color: c.textMuted }}>Tamanho final do arquivo (sangria por dentro). Vale para frente e verso.</p>
-            <div><label style={label}>Nome do arquivo</label><input type="text" value={nome} onChange={(e) => setNome(e.target.value.replace(/[^\w\-]+/g, '-').slice(0, 40))} style={inputStyle} /></div>
+            <div><label style={label}>Nome do arquivo</label><input type="text" value={nome} onChange={(e) => setNome(cleanName(e.target.value))} style={inputStyle} /></div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}`, fontSize: 13, gap: 12 }}>
               <span style={{ color: dpiBaixoAtiva ? c.warn : c.textMuted, whiteSpace: 'nowrap' }}>DPI atual: <strong style={{ color: dpiBaixoAtiva ? c.warn : c.text }}>{estDpi || '—'}</strong></span>

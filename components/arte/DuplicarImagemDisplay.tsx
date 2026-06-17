@@ -14,7 +14,8 @@ import {
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 
 type Stage = 'input' | 'page-select' | 'configuring' | 'processing' | 'login' | 'result' | 'error';
-type Preset = 'grid_3x3' | 'grid_4x4' | 'a4_completo' | 'custom';
+type Preset = 'grid_2x2' | 'grid_3x3' | 'grid_4x4' | 'a4_completo' | 'custom';
+type PageMode = 'a4' | 'custom_page';
 
 interface Props {
   data: { companyId: string; slug?: string }; // companyId pode ser '' (anônimo)
@@ -58,12 +59,16 @@ const IconRefresh = () => (
 const OPENING_TEXT = 'Envie a imagem para duplicar. Configure o grid e eu gero o PDF para impressão.';
 const CREDITS = 2;
 const AUTO_CLOSE = 90;
+const PAGE_MAX_CM = 200;   // limite de largura/altura da página personalizada
+const PAGE_MAX_H_CM = 120;
+const MARGIN_CM = 1;       // margem de cada lado, igual ao A4
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const fileOk = (f: File) => f.type.startsWith('image/') || isPdfFile(f);
 
 // ── Presets de layout ─────────────────────────────────────────────────────
 const PRESETS: Record<Preset, { name: string; desc: string; size: number; spacing: number; cols: number; rows: number }> = {
+  grid_2x2:    { name: 'Grid 2×2',    desc: '4 imagens',       size: 8,   spacing: 1,   cols: 2, rows: 2 },
   grid_3x3:    { name: 'Grid 3×3',    desc: '9 imagens',       size: 5.5, spacing: 0.8, cols: 3, rows: 3 },
   grid_4x4:    { name: 'Grid 4×4',    desc: '16 imagens',      size: 4,   spacing: 0.5, cols: 4, rows: 4 },
   a4_completo: { name: 'A4 Completo', desc: 'Máximo possível', size: 3,   spacing: 0.5, cols: 0, rows: 0 },
@@ -97,6 +102,9 @@ export default function DuplicarImagemDisplay({
 
   const [selectedPreset, setSelectedPreset] = useState<Preset>('grid_3x3');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [pageMode, setPageMode] = useState<PageMode>('a4');
+  const [customPageW, setCustomPageW] = useState<number>(96);
+  const [customPageH, setCustomPageH] = useState<number>(52);
   const [maxSize, setMaxSize] = useState(5.5);
   const [spacing, setSpacing] = useState(0.8);
   const [manualCols, setManualCols] = useState(3);
@@ -113,7 +121,6 @@ export default function DuplicarImagemDisplay({
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [progress, setProgress] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
-  const [logado, setLogado] = useState<boolean>(false);
 
   const spoke = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -136,36 +143,45 @@ export default function DuplicarImagemDisplay({
     return () => clearInterval(id);
   }, [stage, onClose]);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setLogado(!!session?.user));
-  }, [supabase]);
-
   // ── Cálculo de layout (espelha a rota no servidor) ────────────────────
+  const pageWValid = clamp(customPageW || 0, 1, PAGE_MAX_CM);
+  const pageHValid = clamp(customPageH || 0, 1, PAGE_MAX_H_CM);
+  const pageDimsInvalid = pageMode === 'custom_page' && (
+    !(customPageW > 0) || !(customPageH > 0) ||
+    customPageW > PAGE_MAX_CM || customPageH > PAGE_MAX_H_CM
+  );
+
   useEffect(() => {
     if (!art) return;
     const aspect = art.width / art.height;
     const finalH = maxSize;
     const finalW = maxSize * aspect;
     const spacingCm = spacing / 10;
-    const availableW = 19;   // A4 21cm − 2×1cm margem
-    const availableH = 27.7; // A4 29.7cm − 2×1cm margem
+
+    // Página: A4 fixo, ou personalizada (com limite 200×120cm)
+    const pageW = pageMode === 'a4' ? 21 : pageWValid;
+    const pageH = pageMode === 'a4' ? 29.7 : pageHValid;
+    const availableW = pageW - 2 * MARGIN_CM;
+    const availableH = pageH - 2 * MARGIN_CM;
 
     let perRow: number, perColumn: number;
     if (selectedPreset === 'custom' && showAdvanced) {
       const maxCols = Math.floor((availableW + spacingCm) / (finalW + spacingCm));
       const maxRows = Math.floor((availableH + spacingCm) / (finalH + spacingCm));
-      perRow    = Math.min(manualCols, maxCols);
-      perColumn = Math.min(manualRows, maxRows);
+      perRow    = Math.min(manualCols, Math.max(0, maxCols));
+      perColumn = Math.min(manualRows, Math.max(0, maxRows));
     } else {
-      perRow    = Math.floor((availableW + spacingCm) / (finalW + spacingCm));
-      perColumn = Math.floor((availableH + spacingCm) / (finalH + spacingCm));
+      perRow    = Math.max(0, Math.floor((availableW + spacingCm) / (finalW + spacingCm)));
+      perColumn = Math.max(0, Math.floor((availableH + spacingCm) / (finalH + spacingCm)));
     }
     const totalImages = perRow * perColumn;
     const usedW = perRow * finalW + (perRow - 1) * spacingCm;
     const usedH = perColumn * finalH + (perColumn - 1) * spacingCm;
-    const usedArea = (usedW * usedH) / (availableW * availableH) * 100;
+    const usedArea = availableW > 0 && availableH > 0
+      ? (usedW * usedH) / (availableW * availableH) * 100
+      : 0;
     setLayoutInfo({ finalWidth: finalW, finalHeight: finalH, perRow, perColumn, totalImages, usedArea });
-  }, [art, maxSize, spacing, selectedPreset, showAdvanced, manualCols, manualRows]);
+  }, [art, maxSize, spacing, selectedPreset, showAdvanced, manualCols, manualRows, pageMode, pageWValid, pageHValid]);
 
   const handleSelectPreset = useCallback((preset: Preset) => {
     setSelectedPreset(preset);
@@ -178,6 +194,15 @@ export default function DuplicarImagemDisplay({
       setSpacing(cfg.spacing);
       setManualCols(cfg.cols || 3);
       setManualRows(cfg.rows || 3);
+    }
+  }, []);
+
+  const handleSelectPageMode = useCallback((mode: PageMode) => {
+    setPageMode(mode);
+    if (mode === 'custom_page') {
+      // ao entrar em personalizado, já abre as configurações avançadas
+      setSelectedPreset('custom');
+      setShowAdvanced(true);
     }
   }, []);
 
@@ -222,7 +247,7 @@ export default function DuplicarImagemDisplay({
 
   // ── Liberar: gate de login → upload da alta → rota → cobrar ──────────
   const handleRelease = useCallback(async () => {
-    if (!art || layoutInfo.totalImages === 0) return;
+    if (!art || layoutInfo.totalImages === 0 || pageDimsInvalid) return;
 
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
@@ -264,6 +289,9 @@ export default function DuplicarImagemDisplay({
             preset: selectedPreset,
             manualCols: selectedPreset === 'custom' ? manualCols : undefined,
             manualRows: selectedPreset === 'custom' ? manualRows : undefined,
+            pageMode,
+            pageWidthCm: pageMode === 'custom_page' ? pageWValid : undefined,
+            pageHeightCm: pageMode === 'custom_page' ? pageHValid : undefined,
           },
         }),
       });
@@ -293,7 +321,7 @@ export default function DuplicarImagemDisplay({
     } catch (e) {
       setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error');
     }
-  }, [art, layoutInfo, supabase, companyId, maxSize, spacing, selectedPreset, manualCols, manualRows, playText]);
+  }, [art, layoutInfo, pageDimsInvalid, supabase, companyId, maxSize, spacing, selectedPreset, manualCols, manualRows, pageMode, pageWValid, pageHValid, playText]);
 
   const irParaLogin = useCallback(() => {
     if (onRequireLogin) onRequireLogin();
@@ -311,7 +339,7 @@ export default function DuplicarImagemDisplay({
   const handleReset = useCallback(() => {
     setStage('input'); setArt(null); setPdfPending(null);
     setResultBlob(null); setResultBase64(''); setErrorMsg('');
-    setSelectedPreset('grid_3x3'); setShowAdvanced(false);
+    setSelectedPreset('grid_3x3'); setShowAdvanced(false); setPageMode('a4');
   }, []);
 
   const label: React.CSSProperties = { display: 'block', fontSize: 12, color: c.textMuted, marginBottom: 4 };
@@ -412,115 +440,122 @@ export default function DuplicarImagemDisplay({
               </div>
             </div>
 
-            {/* Presets */}
+            {/* Modo de página: A4 ou Personalizado */}
             <div>
-              <label style={{ ...label, marginBottom: 8 }}>Escolha o layout:</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
-                {(Object.keys(PRESETS) as Preset[]).map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => handleSelectPreset(preset)}
-                    style={{
-                      padding: '10px 8px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
-                      fontSize: 13, fontWeight: 500,
-                      border: selectedPreset === preset ? `2px solid ${c.accent}` : `1px solid ${c.border}`,
-                      background: selectedPreset === preset ? 'rgba(0,174,239,0.1)' : c.bgSecondary,
-                      color: c.text,
-                    }}
-                  >
-                    {PRESETS[preset].name}
-                    <div style={{ fontSize: 11, color: c.textMuted, marginTop: 3 }}>{PRESETS[preset].desc}</div>
-                  </button>
-                ))}
+              <label style={{ ...label, marginBottom: 8 }}>Tamanho da página:</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <button
+                  onClick={() => handleSelectPageMode('a4')}
+                  style={{
+                    padding: '10px 8px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                    fontSize: 13, fontWeight: 600,
+                    border: pageMode === 'a4' ? `2px solid ${c.accent}` : `1px solid ${c.border}`,
+                    background: pageMode === 'a4' ? 'rgba(0,174,239,0.1)' : c.bgSecondary,
+                    color: c.text,
+                  }}
+                >
+                  Tamanho A4
+                </button>
+                <button
+                  onClick={() => handleSelectPageMode('custom_page')}
+                  style={{
+                    padding: '10px 8px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                    fontSize: 13, fontWeight: 600,
+                    border: pageMode === 'custom_page' ? `2px solid ${c.accent}` : `1px solid ${c.border}`,
+                    background: pageMode === 'custom_page' ? 'rgba(0,174,239,0.1)' : c.bgSecondary,
+                    color: c.text,
+                  }}
+                >
+                  Tamanho Personalizado
+                </button>
               </div>
+              <p style={{ margin: '6px 0 0', fontSize: 11, color: c.textMuted }}>
+                {pageMode === 'a4'
+                  ? 'Folha A4 (21×29,7cm) — ideal para impressão doméstica.'
+                  : `Página única no tamanho que você definir (até ${PAGE_MAX_CM}×${PAGE_MAX_H_CM}cm) — ideal para rolos de adesivo.`}
+              </p>
             </div>
 
+            {/* Dimensões da página personalizada */}
+            {pageMode === 'custom_page' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={label}>Largura da página (cm)</label>
+                  <input type="number" min={1} max={PAGE_MAX_CM} step={0.5} value={customPageW}
+                    onChange={(e) => setCustomPageW(parseFloat(e.target.value) || 0)}
+                    style={inputStyle} />
+                </div>
+                <div>
+                  <label style={label}>Altura da página (cm)</label>
+                  <input type="number" min={1} max={PAGE_MAX_H_CM} step={0.5} value={customPageH}
+                    onChange={(e) => setCustomPageH(parseFloat(e.target.value) || 0)}
+                    style={inputStyle} />
+                </div>
+                {pageDimsInvalid && (
+                  <div style={{ gridColumn: '1 / -1', fontSize: 12, color: c.error }}>
+                    Use largura até {PAGE_MAX_CM}cm e altura até {PAGE_MAX_H_CM}cm.
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Preview do grid A4 — células posicionadas em % do A4 real */}
-            {layoutInfo.totalImages > 0 && (() => {
-              const a4W = 210; const a4H = 297;
-              const availW = 190; const availH = 277; // A4 menos 10mm de margem cada lado
-              const gapMm = spacing; // spacing já é mm
-              const cellWmm = (availW - (layoutInfo.perRow    - 1) * gapMm) / layoutInfo.perRow;
-              const cellHmm = (availH - (layoutInfo.perColumn - 1) * gapMm) / layoutInfo.perColumn;
-              const mPctW = (10 / a4W) * 100;
-              const mPctH = (10 / a4H) * 100;
-              const cWpct = (cellWmm / a4W) * 100;
-              const cHpct = (cellHmm / a4H) * 100;
-              const gWpct = (gapMm   / a4W) * 100;
-              const gHpct = (gapMm   / a4H) * 100;
-              return (
-                <div style={{ padding: 14, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: c.textMuted, marginBottom: 10 }}>
-                    📋 Preview do Layout A4
-                  </div>
-                  <div style={{
-                    position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto',
-                    aspectRatio: '210 / 297', background: '#fff',
-                    border: '1px solid #d0d0d0', borderRadius: 2,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.12)', overflow: 'hidden',
-                  }}>
-                    {Array.from({ length: layoutInfo.perColumn }).flatMap((_, row) =>
-                      Array.from({ length: layoutInfo.perRow }).map((__, col) => (
-                        <div key={`${row}-${col}`} style={{
-                          position: 'absolute',
-                          left:   `${mPctW + col * (cWpct + gWpct)}%`,
-                          top:    `${mPctH + row * (cHpct + gHpct)}%`,
-                          width:  `${cWpct}%`,
-                          height: `${cHpct}%`,
-                          background: art?.previewDataUrl
-                            ? `url(${art.previewDataUrl}) center/cover no-repeat`
-                            : c.accent,
-                          borderRadius: 1,
-                          border: '0.5px solid rgba(0,0,0,0.1)',
-                        }} />
-                      ))
-                    )}
-                  </div>
+            {/* Presets — só no modo A4 */}
+            {pageMode === 'a4' && (
+              <div>
+                <label style={{ ...label, marginBottom: 8 }}>Escolha o layout:</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
+                  {(Object.keys(PRESETS) as Preset[]).filter((p) => p !== 'custom' || pageMode === 'a4').map((preset) => (
+                    <button
+                      key={preset}
+                      onClick={() => handleSelectPreset(preset)}
+                      style={{
+                        padding: '10px 8px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                        fontSize: 13, fontWeight: 500,
+                        border: selectedPreset === preset ? `2px solid ${c.accent}` : `1px solid ${c.border}`,
+                        background: selectedPreset === preset ? 'rgba(0,174,239,0.1)' : c.bgSecondary,
+                        color: c.text,
+                      }}
+                    >
+                      {PRESETS[preset].name}
+                      <div style={{ fontSize: 11, color: c.textMuted, marginTop: 3 }}>{PRESETS[preset].desc}</div>
+                    </button>
+                  ))}
                 </div>
-              );
-            })()}
+              </div>
+            )}
 
-          {/* Configurações avançadas */}
+            {/* Configurações avançadas */}
             {showAdvanced && (
               <div style={{ padding: 14, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Configurações avançadas</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
-                    <label style={label}>Tamanho máximo (cm)</label>
-                    <input
-                      type="number" min={0.5} max={15} step={0.1} value={maxSize}
-                      onChange={(e) => setMaxSize(Math.max(0.5, Math.min(15, parseFloat(e.target.value) || 0.5)))}
-                      style={{ ...inputStyle }}
-                    />
+                    <label style={label}>Tamanho (cm): {maxSize.toFixed(1)}</label>
+                    <input type="range" min={2} max={15} step={0.5} value={maxSize}
+                      onChange={(e) => setMaxSize(parseFloat(e.target.value))}
+                      style={{ width: '100%', accentColor: c.accent }} />
                   </div>
                   <div>
-                    <label style={label}>Espaçamento entre imagens (mm)</label>
-                    <input
-                      type="number" min={0} max={5} step={0.5} value={spacing}
-                      onChange={(e) => setSpacing(Math.max(0, Math.min(5, parseFloat(e.target.value) || 0)))}
-                      style={{ ...inputStyle }}
-                    />
+                    <label style={label}>Espaçamento (mm): {spacing.toFixed(1)}</label>
+                    <input type="range" min={0} max={5} step={0.5} value={spacing}
+                      onChange={(e) => setSpacing(parseFloat(e.target.value))}
+                      style={{ width: '100%', accentColor: c.accent }} />
                   </div>
                   <div>
-                    <label style={label}>Colunas</label>
-                    <input
-                      type="number" min={1} max={20} step={1} value={manualCols}
-                      onChange={(e) => setManualCols(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-                      style={{ ...inputStyle }}
-                    />
+                    <label style={label}>Colunas: {manualCols}</label>
+                    <input type="range" min={1} max={10} step={1} value={manualCols}
+                      onChange={(e) => setManualCols(parseInt(e.target.value))}
+                      style={{ width: '100%', accentColor: c.accent }} />
                   </div>
                   <div>
-                    <label style={label}>Linhas</label>
-                    <input
-                      type="number" min={1} max={30} step={1} value={manualRows}
-                      onChange={(e) => setManualRows(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
-                      style={{ ...inputStyle }}
-                    />
+                    <label style={label}>Linhas: {manualRows}</label>
+                    <input type="range" min={1} max={15} step={1} value={manualRows}
+                      onChange={(e) => setManualRows(parseInt(e.target.value))}
+                      style={{ width: '100%', accentColor: c.accent }} />
                   </div>
                 </div>
+              </div>
+            )}
 
             {/* Info do layout calculado */}
             <div style={{
@@ -542,33 +577,31 @@ export default function DuplicarImagemDisplay({
             </div>
 
             {/* Custo */}
-            {logado && (
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-                padding: '8px 12px', borderRadius: 8, background: c.bgSecondary,
-                border: `1px solid ${c.border}`, fontSize: 13,
-              }}>
-                <span style={{ color: c.textMuted }}>Custo: <strong style={{ color: c.text }}>{CREDITS} créditos</strong></span>
-              </div>
-            )}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+              padding: '8px 12px', borderRadius: 8, background: c.bgSecondary,
+              border: `1px solid ${c.border}`, fontSize: 13,
+            }}>
+              <span style={{ color: c.textMuted }}>Custo: <strong style={{ color: c.text }}>{CREDITS} créditos</strong></span>
+            </div>
 
-            {layoutInfo.totalImages === 0 && (
+            {layoutInfo.totalImages === 0 && !pageDimsInvalid && (
               <div style={{ fontSize: 12, color: c.error }}>
-                A imagem é grande demais para caber no A4 com este tamanho. Reduza o tamanho em cm.
+                A imagem é grande demais para caber na página com este tamanho. Reduza o tamanho em cm.
               </div>
             )}
 
             <button
               onClick={handleRelease}
-              disabled={layoutInfo.totalImages === 0}
+              disabled={layoutInfo.totalImages === 0 || pageDimsInvalid}
               style={{
                 padding: 14, borderRadius: 10, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700,
-                cursor: layoutInfo.totalImages === 0 ? 'not-allowed' : 'pointer',
-                background: layoutInfo.totalImages === 0 ? c.border : c.accent,
+                cursor: (layoutInfo.totalImages === 0 || pageDimsInvalid) ? 'not-allowed' : 'pointer',
+                background: (layoutInfo.totalImages === 0 || pageDimsInvalid) ? c.border : c.accent,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}
             >
-          <IconDownload /> Gerar PDF para impressão{logado ? ` (${CREDITS} créditos)` : ''}
+              <IconDownload /> Gerar PDF para impressão ({CREDITS} créditos)
             </button>
             <button onClick={handleReset} style={{
               padding: 10, borderRadius: 8, border: `1px solid ${c.border}`,

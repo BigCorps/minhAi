@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Bot, Send, LogOut, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
+import DuplicarImagemDisplay from '@/components/arte/DuplicarImagemDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -22,6 +23,15 @@ const SKILLS: Skill[] = [
     credits: 5,
     triggers: ['arte final', 'arquivo pra grafica', 'arquivo para grafica', 'sangria', 'corte', 'cartões', 'folhetos', 'fechar arquivo', 'gerar pdf', 'pdf de producao'],
     modal: 'ArteFinalDisplay',
+  },
+  {
+    key: 'duplicar_imagem',
+    label: 'Duplicar Imagem',
+    color: CMYK.magenta,
+    desc: 'Grid de cópias da imagem em PDF A4 para impressão',
+    credits: 2,
+    triggers: ['duplicar', 'duplicar imagem', 'copiar imagem', 'grid de imagem', 'multiplas copias', 'varias copias', 'repetir imagem', 'imagem em grade'],
+    modal: 'DuplicarImagemDisplay',
   },
 ];
 
@@ -151,9 +161,8 @@ export default function ArtePage() {
             </div>
             <p className="af-empty-title text-base font-semibold">O que você precisa preparar?</p>
             <p className="af-empty-desc text-sm">
-              Envie sua arte e veja o preview na hora — medida exata, CMYK, margem, sangria e corte prontos para sua gráfica.
-              {!hasUser && ' O preview é livre; ao criar a conta você ganha 20 créditos para baixar seus primeiros arquivos.'}
-              {' '}Clique em uma função abaixo ou digite o que precisa.
+              Envie sua arte e veja o preview na hora: medida exata, CMYK, margem, sangria e corte prontos para sua gráfica.
+              Clique em uma função abaixo ou digite o que precisa.
             </p>
           </div>
         ) : (
@@ -220,6 +229,15 @@ export default function ArtePage() {
       {/* Modais */}
       {activeModal?.type === 'ArteFinalDisplay' && (
         <ArteFinalDisplay
+          data={activeModal.data}
+          onClose={closeModal}
+          theme="light"
+          playText={playText}
+          onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+        />
+      )}
+      {activeModal?.type === 'DuplicarImagemDisplay' && (
+        <DuplicarImagemDisplay
           data={activeModal.data}
           onClose={closeModal}
           theme="light"

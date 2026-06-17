@@ -3,10 +3,17 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
-import { makeArtePreview, uploadArteSource, type ArtePreview } from '@/lib/arte/prepareUpload';
+import {
+  makeImagePreview,
+  openPdf,
+  rasterizePdfPage,
+  uploadArteSource,
+  isPdfFile,
+  type ArtePreview,
+} from '@/lib/arte/prepareUpload';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 
-type Stage = 'input' | 'configuring' | 'processing' | 'login' | 'result' | 'error';
+type Stage = 'input' | 'page-select' | 'configuring' | 'processing' | 'login' | 'result' | 'error';
 type Preset = 'grid_2x2' | 'grid_3x3' | 'grid_4x4' | 'a4_completo' | 'custom';
 
 interface Props {
@@ -52,6 +59,9 @@ const OPENING_TEXT = 'Envie a imagem para duplicar. Configure o grid e eu gero o
 const CREDITS = 2;
 const AUTO_CLOSE = 90;
 
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+const fileOk = (f: File) => f.type.startsWith('image/') || isPdfFile(f);
+
 // ── Presets de layout ─────────────────────────────────────────────────────
 const PRESETS: Record<Preset, { name: string; desc: string; size: number; spacing: number; cols: number; rows: number }> = {
   grid_2x2:    { name: 'Grid 2×2',    desc: '4 imagens',       size: 8,   spacing: 1,   cols: 2, rows: 2 },
@@ -80,7 +90,11 @@ export default function DuplicarImagemDisplay({
 
   const [stage, setStage] = useState<Stage>('input');
   // ArtePreview guarda a alta em memória (source: Blob) — sem upload até o liberar
-  const [preview, setPreview] = useState<ArtePreview | null>(null);
+  const [art, setArt] = useState<ArtePreview | null>(null);
+
+  // seletor de página de PDF multipágina (mesmo padrão do ArteFinalDisplay)
+  const [pdfPending, setPdfPending] = useState<{ file: File; pages: number } | null>(null);
+  const [pageChoice, setPageChoice] = useState<number>(1);
 
   const [selectedPreset, setSelectedPreset] = useState<Preset>('grid_3x3');
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -92,11 +106,10 @@ export default function DuplicarImagemDisplay({
     finalWidth: 0, finalHeight: 0, perRow: 0, perColumn: 0, totalImages: 0, usedArea: 0,
   });
 
+  const [companyId, setCompanyId] = useState<string>(data.companyId || '');
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [resultBase64, setResultBase64] = useState<string>('');
   const [resultName, setResultName] = useState<string>('');
-  // companyId resolvido no momento do liberar (pode vir '' do prop se anônimo)
-  const [resolvedCompanyId, setResolvedCompanyId] = useState<string>(data.companyId);
   const [saldo, setSaldo] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [progress, setProgress] = useState<string>('');
@@ -125,8 +138,8 @@ export default function DuplicarImagemDisplay({
 
   // ── Cálculo de layout (espelha a rota no servidor) ────────────────────
   useEffect(() => {
-    if (!preview) return;
-    const aspect = preview.width / preview.height;
+    if (!art) return;
+    const aspect = art.width / art.height;
     const finalH = maxSize;
     const finalW = maxSize * aspect;
     const spacingCm = spacing / 10;
@@ -148,7 +161,7 @@ export default function DuplicarImagemDisplay({
     const usedH = perColumn * finalH + (perColumn - 1) * spacingCm;
     const usedArea = (usedW * usedH) / (availableW * availableH) * 100;
     setLayoutInfo({ finalWidth: finalW, finalHeight: finalH, perRow, perColumn, totalImages, usedArea });
-  }, [preview, maxSize, spacing, selectedPreset, showAdvanced, manualCols, manualRows]);
+  }, [art, maxSize, spacing, selectedPreset, showAdvanced, manualCols, manualRows]);
 
   const handleSelectPreset = useCallback((preset: Preset) => {
     setSelectedPreset(preset);
@@ -164,59 +177,73 @@ export default function DuplicarImagemDisplay({
     }
   }, []);
 
-  // ── Seleção de arquivo: só preview, sem upload, sem login ─────────────
+  // ── Seleção de arquivo: SÓ preview no client. Imagem → direto. PDF → conta páginas ──
   const handleFile = useCallback(async (file: File) => {
-    const isImage = file.type.startsWith('image/');
-    const isPdf   = file.type === 'application/pdf';
-    if (!isImage && !isPdf) {
-      setErrorMsg('Envie uma imagem (PNG/JPEG) ou PDF.'); setStage('error'); return;
+    if (!fileOk(file)) {
+      setErrorMsg('Envie uma imagem (PNG/JPEG) ou um PDF.'); setStage('error'); return;
     }
     setStage('processing'); setProgress('Preparando preview…');
     try {
-      const pv = await makeArtePreview(file);
-      setPreview(pv);
+      if (isPdfFile(file)) {
+        const h = await openPdf(file);
+        if (h.pages >= 2) {
+          setPdfPending({ file, pages: h.pages });
+          setPageChoice(1);
+          setStage('page-select');
+          return;
+        }
+        setArt(await rasterizePdfPage(file, 1));
+      } else {
+        setArt(await makeImagePreview(file));
+      }
       setStage('configuring');
     } catch (e) {
-      setErrorMsg((e as Error).message ?? 'Falha ao preparar o preview.'); setStage('error');
+      setErrorMsg((e as Error).message ?? 'Falha ao preparar a imagem.'); setStage('error');
     }
   }, []);
 
+  // confirma a página escolhida no PDF multipágina
+  const confirmPage = useCallback(async () => {
+    if (!pdfPending) return;
+    const { file } = pdfPending;
+    setStage('processing'); setProgress(`Importando página ${pageChoice}…`);
+    try {
+      setArt(await rasterizePdfPage(file, pageChoice));
+      setPdfPending(null);
+      setStage('configuring');
+    } catch (e) {
+      setErrorMsg((e as Error).message ?? 'Falha ao importar a página.'); setStage('error');
+    }
+  }, [pdfPending, pageChoice]);
+
   // ── Liberar: gate de login → upload da alta → rota → cobrar ──────────
   const handleRelease = useCallback(async () => {
-    if (!preview || layoutInfo.totalImages === 0) return;
+    if (!art || layoutInfo.totalImages === 0) return;
 
-    // 1. Checa sessão
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      // Sem login → estágio login (não bloqueia o preview já exibido)
-      setStage('login');
-      return;
-    }
+    const user = session?.user;
+    if (!user) { setStage('login'); return; }
 
     setStage('processing'); setProgress('Enviando imagem…');
     try {
-      // 2. Resolve companyId (prop pode vir '' para anônimo que acabou de logar)
-      let cId = data.companyId;
-      if (!cId) {
-        const { data: company } = await supabase
+      let cid = companyId;
+      if (!cid) {
+        const { data: comp } = await supabase
           .from('companies')
           .select('id')
-          .eq('user_id', session.user.id)
+          .eq('user_id', user.id)
           .order('created_at', { ascending: true })
           .limit(1)
           .maybeSingle();
-        cId = company?.id ?? '';
+        cid = comp?.id ?? '';
       }
-      if (!cId) {
-        setErrorMsg('Empresa não encontrada. Entre na sua conta.'); setStage('error'); return;
+      if (!cid) {
+        setErrorMsg('Não encontrei uma empresa nesta conta.'); setStage('error'); return;
       }
-      setResolvedCompanyId(cId);
+      setCompanyId(cid);
 
-      // 3. Sobe a alta agora (único momento em que ela vai pro servidor)
-      setProgress('Enviando imagem…');
-      const uploadPath = await uploadArteSource(preview, cId);
+      const uploadPath = await uploadArteSource(art, cid);
 
-      // 4. Chama a rota de geração
       setProgress('Gerando PDF de impressão…');
       const res = await fetch('/api/arte/duplicar', {
         method: 'POST',
@@ -225,7 +252,7 @@ export default function DuplicarImagemDisplay({
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          companyId: cId,
+          companyId: cid,
           uploadPath,
           spec: {
             maxSize,
@@ -262,7 +289,12 @@ export default function DuplicarImagemDisplay({
     } catch (e) {
       setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error');
     }
-  }, [preview, layoutInfo, supabase, data.companyId, maxSize, spacing, selectedPreset, manualCols, manualRows, playText]);
+  }, [art, layoutInfo, supabase, companyId, maxSize, spacing, selectedPreset, manualCols, manualRows, playText]);
+
+  const irParaLogin = useCallback(() => {
+    if (onRequireLogin) onRequireLogin();
+    else window.location.href = '/login';
+  }, [onRequireLogin]);
 
   const handleDownload = useCallback(() => {
     if (!resultBlob || !resultName) return;
@@ -273,8 +305,8 @@ export default function DuplicarImagemDisplay({
   }, [resultBlob, resultName]);
 
   const handleReset = useCallback(() => {
-    setStage('input'); setPreview(null); setResultBlob(null);
-    setResultBase64(''); setErrorMsg('');
+    setStage('input'); setArt(null); setPdfPending(null);
+    setResultBlob(null); setResultBase64(''); setErrorMsg('');
     setSelectedPreset('grid_3x3'); setShowAdvanced(false);
   }, []);
 
@@ -319,21 +351,57 @@ export default function DuplicarImagemDisplay({
             <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste a imagem</div>
             <div style={{ fontSize: 12 }}>PNG, JPEG ou PDF — será duplicada em grid no A4.</div>
             <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }}
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.currentTarget.value = ''; }} />
+          </div>
+        )}
+
+        {/* PAGE-SELECT (PDF com 2+ páginas) */}
+        {stage === 'page-select' && pdfPending && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 2px' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: c.text }}>Esse PDF tem {pdfPending.pages} páginas</div>
+            <p style={{ margin: 0, fontSize: 13, color: c.textMuted, lineHeight: 1.5 }}>
+              Qual página você quer duplicar?
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button onClick={() => setPageChoice((p) => clamp(p - 1, 1, pdfPending.pages))} style={{
+                width: 40, height: 40, borderRadius: 8, border: `1px solid ${c.border}`,
+                background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 18,
+              }}>‹</button>
+              <input type="number" min={1} max={pdfPending.pages} value={pageChoice}
+                onChange={(e) => setPageChoice(clamp(parseInt(e.target.value) || 1, 1, pdfPending.pages))}
+                style={{ ...inputStyle, textAlign: 'center', width: 90, flex: 'none' }} />
+              <span style={{ fontSize: 13, color: c.textMuted }}>de {pdfPending.pages}</span>
+              <button onClick={() => setPageChoice((p) => clamp(p + 1, 1, pdfPending.pages))} style={{
+                width: 40, height: 40, borderRadius: 8, border: `1px solid ${c.border}`,
+                background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 18,
+              }}>›</button>
+            </div>
+            <button onClick={confirmPage} style={{
+              padding: 14, borderRadius: 10, border: 'none', background: c.accent,
+              color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+            }}>
+              Usar página {pageChoice}
+            </button>
+            <button onClick={() => { setPdfPending(null); setStage(art ? 'configuring' : 'input'); }} style={{
+              padding: 10, borderRadius: 8, border: `1px solid ${c.border}`,
+              background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13,
+            }}>
+              Cancelar
+            </button>
           </div>
         )}
 
         {/* CONFIGURING */}
-        {stage === 'configuring' && preview && (
+        {stage === 'configuring' && art && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Preview — object-fit:cover conforme §10 */}
+            {/* Preview da imagem enviada */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <div style={{
                 width: 180, height: 140, borderRadius: 8,
                 border: `1px solid ${c.border}`, overflow: 'hidden', flexShrink: 0,
               }}>
                 <img
-                  src={preview.previewDataUrl}
+                  src={art.previewDataUrl}
                   alt="Preview"
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
@@ -451,6 +519,29 @@ export default function DuplicarImagemDisplay({
           </div>
         )}
 
+        {/* LOGIN (não logado tentou liberar) */}
+        {stage === 'login' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center', padding: '8px 4px' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: c.text }}>Crie sua conta para liberar o arquivo</div>
+            <p style={{ margin: 0, fontSize: 14, color: c.textMuted, lineHeight: 1.5 }}>
+              O preview é livre. Para baixar o PDF, entre na sua conta — e ao se{' '}
+              <strong style={{ color: c.accent }}>cadastrar você ganha 20 créditos iniciais</strong> para gerar seus primeiros arquivos.
+            </p>
+            <button onClick={irParaLogin} style={{
+              padding: 14, borderRadius: 10, border: 'none', background: c.accent,
+              color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+            }}>
+              Entrar / Cadastrar e ganhar 20 créditos
+            </button>
+            <button onClick={() => setStage('configuring')} style={{
+              padding: 10, borderRadius: 8, border: `1px solid ${c.border}`,
+              background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13,
+            }}>
+              Voltar ao preview
+            </button>
+          </div>
+        )}
+
         {/* PROCESSING */}
         {stage === 'processing' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '34px 0' }}>
@@ -460,40 +551,6 @@ export default function DuplicarImagemDisplay({
               animation: 'di-spin 0.8s linear infinite',
             }} />
             <p style={{ margin: 0, fontSize: 14, color: c.textMuted }}>{progress}</p>
-          </div>
-        )}
-
-        {/* LOGIN — gate de 20 créditos */}
-        {stage === 'login' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '8px 0' }}>
-            <div style={{
-              padding: 16, borderRadius: 10, background: 'rgba(0,174,239,0.08)',
-              border: `1px solid ${c.accent}`, fontSize: 14, lineHeight: 1.6, color: c.text,
-            }}>
-              <strong>Crie sua conta grátis</strong> e ganhe <strong>20 créditos</strong> para gerar seus primeiros arquivos.
-              Seu preview já está configurado — só confirmar o login para liberar.
-            </div>
-            <button
-              onClick={() => {
-                if (onRequireLogin) {
-                  onRequireLogin();
-                } else {
-                  window.location.href = '/arte/login';
-                }
-              }}
-              style={{
-                padding: 14, borderRadius: 10, border: 'none', color: '#fff',
-                fontSize: 15, fontWeight: 700, cursor: 'pointer', background: c.accent,
-              }}
-            >
-              Entrar / Criar conta
-            </button>
-            <button onClick={() => setStage('configuring')} style={{
-              padding: 10, borderRadius: 8, border: `1px solid ${c.border}`,
-              background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 13,
-            }}>
-              Voltar ao preview
-            </button>
           </div>
         )}
 
@@ -541,7 +598,7 @@ export default function DuplicarImagemDisplay({
               </div>
               <div className="di-qr-desktop" style={{ display: 'none', flexShrink: 0, width: 224 }}>
                 <ResultDownloadQR
-                  companyId={resolvedCompanyId} fileName={resultName}
+                  companyId={companyId} fileName={resultName}
                   fileType="application/pdf" fileBase64={resultBase64}
                   isDark={isDark} enabled={stage === 'result' && !!resultBase64}
                 />
@@ -549,7 +606,7 @@ export default function DuplicarImagemDisplay({
             </div>
             <div className="di-qr-mobile" style={{ display: 'block' }}>
               <ResultDownloadQR
-                companyId={resolvedCompanyId} fileName={resultName}
+                companyId={companyId} fileName={resultName}
                 fileType="application/pdf" fileBase64={resultBase64}
                 isDark={isDark} enabled={stage === 'result' && !!resultBase64}
               />
@@ -569,11 +626,11 @@ export default function DuplicarImagemDisplay({
             }}>
               {errorMsg}
             </div>
-            <button onClick={handleReset} style={{
+            <button onClick={() => setStage(art ? 'configuring' : 'input')} style={{
               padding: 12, borderRadius: 8, border: 'none',
               background: c.error, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600,
             }}>
-              Tentar novamente
+              Voltar
             </button>
           </div>
         )}

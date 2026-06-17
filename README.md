@@ -8,15 +8,13 @@
 
 * pix.wiki - App com confirmação automática de pix direcionando para /pixwiki para os usuários usarem /slug diretamente (reservar apenas o dashboard)
 
-* seletor de tema nas configurações e se quer que apareça o ícone ou não, além de fazer o mesmo com o ícone do kiosk, trava tela e usuario
+* seletor de tema nas configurações e se quer que apareça o ícone ou não.
 
 * ao mudar as configurações do webapp no domínio e no logo, não está aplicando as correções, e verificar porque não aparece a opção de mostrar o site
 
 * no card do passo a passo do Wizard está mostrando 100% sem os opcionais, e só pode mostrar 100% se os opcionais também estiverem configurados
 
-* market4u.suaia.app - mostrar funcionando para o Leandro e os clientes market4u com vídeo, respostas e ajuda
-
-Após o ArteFinal e Pix.Wiki estarem prontos, oferecer ao mau o Auxiliar de Produção no mesmo molde, apenas com mensalidade para ele vender (com tela de admin para ambos controlarem os usuários e envio de e-mail quando chega um novo cliente para ele, e mensalmente com o relatório dos pagamentos). Fazer ele sugerir o nome
+* Após o ArteFinal e Pix.Wiki estarem prontos, oferecer ao mau o Auxiliar de Produção no mesmo molde, apenas com mensalidade para ele vender (com tela de admin para ambos controlarem os usuários e envio de e-mail quando chega um novo cliente para ele, e mensalmente com o relatório dos pagamentos). Fazer ele sugerir o nome
 
 * Sugerir parceria com Site e aplicativo PlayStore para Hantars, Salão e empresa de Aluguel de Totem
 

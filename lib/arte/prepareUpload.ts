@@ -10,9 +10,29 @@ export interface ArtePreview {
   ext: string;
 }
 
+// Resultado de abrir um PDF: quantas páginas tem (p/ decidir se pergunta qual usar)
+export interface PdfHandle {
+  file: File;
+  pages: number;
+}
+
 const PREVIEW_MAX = 200;
 const PDF_TARGET_DPI = 300;
 const PDF_MAX_SIDE = 4000;
+
+let pdfjsCache: any = null;
+async function getPdfjs(): Promise<any> {
+  if (pdfjsCache) return pdfjsCache;
+  const pdfjs: any = await import('pdfjs-dist');
+  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+    // Worker pela CDN, casado com a versão instalada (à prova de 3.x .js e 4.x+ .mjs).
+    const v = pdfjs.version || '4.0.379';
+    const ext = Number(v.split('.')[0]) >= 4 ? 'mjs' : 'js';
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${v}/pdf.worker.min.${ext}`;
+  }
+  pdfjsCache = pdfjs;
+  return pdfjs;
+}
 
 function previewFromCanvas(src: HTMLCanvasElement): string {
   const s = PREVIEW_MAX / Math.max(src.width, src.height);
@@ -23,23 +43,23 @@ function previewFromCanvas(src: HTMLCanvasElement): string {
   return pc.toDataURL('image/jpeg', 0.7);
 }
 
-// Rasteriza a 1ª página do PDF em alta (PNG). Vetor/fonte viram pixel — elimina curvas.
-async function rasterizePdfFirstPage(file: File): Promise<{ blob: Blob; width: number; height: number; previewDataUrl: string }> {
-  const pdfjs: any = await import('pdfjs-dist');
+export const isPdfFile = (file: File) => file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
 
-// Se o projeto já configura o worker do pdf.js em outro lugar, pode remover este if.
-if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-  const v = pdfjs.version;
-  const major = Number(String(v).split('.')[0]);
-  const ext = major >= 4 ? 'mjs' : 'js';
-
-  pdfjs.GlobalWorkerOptions.workerSrc =
-    `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${v}/pdf.worker.min.${ext}`;
-}
-
+// Abre o PDF só para CONTAR páginas (leve, não rasteriza nada).
+export async function openPdf(file: File): Promise<PdfHandle> {
+  const pdfjs = await getPdfjs();
   const data = await file.arrayBuffer();
   const pdf = await pdfjs.getDocument({ data }).promise;
-  const page = await pdf.getPage(1);
+  return { file, pages: pdf.numPages };
+}
+
+// Rasteriza UMA página do PDF em alta (PNG) → vira a arte daquela face.
+export async function rasterizePdfPage(file: File, pageNum: number): Promise<ArtePreview> {
+  const pdfjs = await getPdfjs();
+  const data = await file.arrayBuffer();
+  const pdf = await pdfjs.getDocument({ data }).promise;
+  const n = Math.min(Math.max(1, pageNum), pdf.numPages);
+  const page = await pdf.getPage(n);
 
   const base = page.getViewport({ scale: 1 });
   let scale = PDF_TARGET_DPI / 72;
@@ -55,18 +75,15 @@ if (!pdfjs.GlobalWorkerOptions.workerSrc) {
   await page.render({ canvasContext: ctx, viewport }).promise;
 
   const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b as Blob), 'image/png'));
-  return { blob, width: canvas.width, height: canvas.height, previewDataUrl: previewFromCanvas(canvas) };
+  return {
+    previewDataUrl: previewFromCanvas(canvas),
+    width: canvas.width, height: canvas.height,
+    source: blob, contentType: 'image/png', ext: 'png',
+  };
 }
 
-// PREVIEW: roda só no navegador. Sem upload, sem login. Guarda a alta em memória (source).
-export async function makeArtePreview(file: File): Promise<ArtePreview> {
-  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
-
-  if (isPdf) {
-    const r = await rasterizePdfFirstPage(file);
-    return { previewDataUrl: r.previewDataUrl, width: r.width, height: r.height, source: r.blob, contentType: 'image/png', ext: 'png' };
-  }
-
+// PREVIEW de IMAGEM: client puro, sem upload. (PDF não passa por aqui — vai pelo seletor.)
+export async function makeImagePreview(file: File): Promise<ArtePreview> {
   const bitmap = await createImageBitmap(file);
   const width = bitmap.width, height = bitmap.height;
   const s = PREVIEW_MAX / Math.max(width, height);
@@ -75,7 +92,6 @@ export async function makeArtePreview(file: File): Promise<ArtePreview> {
   pc.height = Math.max(1, Math.round(height * s));
   pc.getContext('2d')!.drawImage(bitmap, 0, 0, pc.width, pc.height);
   bitmap.close?.();
-
   return {
     previewDataUrl: pc.toDataURL('image/jpeg', 0.7),
     width, height, source: file, contentType: file.type,

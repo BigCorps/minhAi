@@ -6,7 +6,7 @@
 
 ## Roadmap e Features Planejadas
 
-* pix.wiki - App com confirmação automática de pix
+* pix.wiki - App com confirmação automática de pix direcionando para /pixwiki para os usuários usarem /slug diretamente (reservar apenas o dashboard)
 
 * seletor de tema nas configurações e se quer que apareça o ícone ou não, além de fazer o mesmo com o ícone do kiosk, trava tela e usuario
 

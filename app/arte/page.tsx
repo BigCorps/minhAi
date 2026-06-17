@@ -27,7 +27,7 @@ const SKILLS: Skill[] = [
   {
     key: 'duplicar_imagem',
     label: 'Duplicar Imagem',
-    color: CMYK.magenta,
+    color: CMYK.cyan,
     desc: 'Grid de cópias da imagem em PDF A4 para impressão',
     credits: 2,
     triggers: ['duplicar', 'duplicar imagem', 'copiar imagem', 'grid de imagem', 'multiplas copias', 'varias copias', 'repetir imagem', 'imagem em grade'],

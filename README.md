@@ -16,7 +16,9 @@
 
 * market4u.suaia.app - mostrar funcionando para o Leandro e os clientes market4u com vídeo, respostas e ajuda
 
-* Sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
+Após o ArteFinal e Pix.Wiki estarem prontos, oferecer ao mau o Auxiliar de Produção no mesmo molde, apenas com mensalidade para ele vender (com tela de admin para ambos controlarem os usuários e envio de e-mail quando chega um novo cliente para ele, e mensalmente com o relatório dos pagamentos). Fazer ele sugerir o nome
+
+* Sugerir parceria com Site e aplicativo PlayStore para Hantars, Salão e empresa de Aluguel de Totem
 
 * página admin no dashboard (colocar controle de APIs tambem)
 

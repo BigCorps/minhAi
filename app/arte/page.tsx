@@ -185,7 +185,9 @@ export default function ArtePage() {
                 className="flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 text-white shadow-sm"
                 style={{ background: sk.color }}>
                 {sk.label}
-                <span className="block text-[10px] font-normal mt-0.5 text-white/70">{sk.credits} créditos</span>
+                {hasUser && (
+                  <span className="block text-[10px] font-normal mt-0.5 text-white/70">{sk.credits} créditos</span>
+                )}
               </button>
             ))}
           </div>

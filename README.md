@@ -10,9 +10,7 @@
 
 * seletor de tema nas configurações e se quer que apareça o ícone ou não.
 
-* ao mudar as configurações do webapp no domínio e no logo, não está aplicando as correções, e verificar porque não aparece a opção de mostrar o site
-
-* no card do passo a passo do Wizard está mostrando 100% sem os opcionais, e só pode mostrar 100% se os opcionais também estiverem configurados
+* ao mudar as configurações do webapp no domínio e no logo, não está aplicando as correções, e mostrar o site, mesmo quando não tiver um site preenchido, pois ele pode preencher ali mesmo.
 
 * Após o ArteFinal e Pix.Wiki estarem prontos, oferecer ao mau o Auxiliar de Produção no mesmo molde, apenas com mensalidade para ele vender (com tela de admin para ambos controlarem os usuários e envio de e-mail quando chega um novo cliente para ele, e mensalmente com o relatório dos pagamentos). Fazer ele sugerir o nome
 

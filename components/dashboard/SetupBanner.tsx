@@ -99,10 +99,17 @@ export default function SetupBanner() {
     { id: 'nota', label: 'Nota Fiscal', done: status.nota, link: '/dashboard/arquivos', optional: true },
   ];
 
-  const completedCount = steps.filter(s => s.done && !s.optional).length;
-  const totalRequired = steps.filter(s => !s.optional).length;
-  const progressPercentage = Math.round((completedCount / totalRequired) * 100);
-  const isAllCompleted = completedCount === totalRequired;
+  // Conta todas as etapas que estão com status done = true
+  const completedCount = steps.filter(s => s.done).length;
+  
+  // Pega o total absoluto de etapas no array
+  const totalSteps = steps.length;
+  
+  // Calcula a porcentagem com base no total de etapas
+  const progressPercentage = Math.round((completedCount / totalSteps) * 100);
+  
+  // Verifica se todas foram completadas
+  const isAllCompleted = completedCount === totalSteps;
 
   // Quando 100%, não permite expandir e esconde o corpo
   const showContent = isExpanded && !isAllCompleted;

@@ -46,7 +46,7 @@ const SKILLS: Skill[] = [
   },
   {
     key: 'vetorizar_imagem',
-    label: 'Vetorizar Imagem',
+    label: 'Vetorizar em SVG/PDF',
     color: CMYK.cyan, // mesma cor de todas as skills, conforme o próprio comentário do componente
     desc: 'Transforma imagem em SVG (silhueta ou contorno)',
     credits: 1,

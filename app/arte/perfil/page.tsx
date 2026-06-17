@@ -461,7 +461,6 @@ export default function ArtePerfilPage() {
         {/* ══════════════════════════════════════════════════════════════
             BLOCO 2 — CRÉDITOS
         ══════════════════════════════════════════════════════════════ */}
-        ══════════════════════════════════════════════════════════════ */}
         <section className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
 
           {/* Header créditos */}

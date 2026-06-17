@@ -114,6 +114,7 @@ export default function DuplicarImagemDisplay({
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [progress, setProgress] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
+  const [logado, setLogado] = useState<boolean>(false);
 
   const spoke = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -135,6 +136,10 @@ export default function DuplicarImagemDisplay({
     }), 1000);
     return () => clearInterval(id);
   }, [stage, onClose]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setLogado(!!session?.user));
+  }, [supabase]);
 
   // ── Cálculo de layout (espelha a rota no servidor) ────────────────────
   useEffect(() => {
@@ -484,13 +489,15 @@ export default function DuplicarImagemDisplay({
             </div>
 
             {/* Custo */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-              padding: '8px 12px', borderRadius: 8, background: c.bgSecondary,
-              border: `1px solid ${c.border}`, fontSize: 13,
-            }}>
-              <span style={{ color: c.textMuted }}>Custo: <strong style={{ color: c.text }}>{CREDITS} créditos</strong></span>
-            </div>
+            {logado && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+                padding: '8px 12px', borderRadius: 8, background: c.bgSecondary,
+                border: `1px solid ${c.border}`, fontSize: 13,
+              }}>
+                <span style={{ color: c.textMuted }}>Custo: <strong style={{ color: c.text }}>{CREDITS} créditos</strong></span>
+              </div>
+            )}
 
             {layoutInfo.totalImages === 0 && (
               <div style={{ fontSize: 12, color: c.error }}>
@@ -508,7 +515,7 @@ export default function DuplicarImagemDisplay({
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}
             >
-              <IconDownload /> Gerar PDF para impressão ({CREDITS} créditos)
+          <IconDownload /> Gerar PDF para impressão{logado ? ` (${CREDITS} créditos)` : ''}
             </button>
             <button onClick={handleReset} style={{
               padding: 10, borderRadius: 8, border: `1px solid ${c.border}`,

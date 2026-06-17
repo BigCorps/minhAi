@@ -2,19 +2,16 @@
 import { createClient } from '@/lib/supabase-browser';
 
 export interface ArtePreview {
-  previewDataUrl: string;  // 200px — único pixel que fica visível no client
+  previewDataUrl: string;
   width: number;
   height: number;
-  source: Blob;            // ALTA em memória (PNG rasterizado p/ PDF, ou o próprio arquivo)
+  source: Blob;
   contentType: string;
   ext: string;
+  hasAlpha: boolean; // true = tem transparência (silhueta p/ recorte); PDF/JPEG = false
 }
 
-// Resultado de abrir um PDF: quantas páginas tem (p/ decidir se pergunta qual usar)
-export interface PdfHandle {
-  file: File;
-  pages: number;
-}
+export interface PdfHandle { file: File; pages: number; }
 
 const PREVIEW_MAX = 200;
 const PDF_TARGET_DPI = 300;
@@ -25,7 +22,6 @@ async function getPdfjs(): Promise<any> {
   if (pdfjsCache) return pdfjsCache;
   const pdfjs: any = await import('pdfjs-dist');
   if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    // Worker pela CDN, casado com a versão instalada (à prova de 3.x .js e 4.x+ .mjs).
     const v = pdfjs.version || '4.0.379';
     const ext = Number(v.split('.')[0]) >= 4 ? 'mjs' : 'js';
     pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${v}/pdf.worker.min.${ext}`;
@@ -45,7 +41,6 @@ function previewFromCanvas(src: HTMLCanvasElement): string {
 
 export const isPdfFile = (file: File) => file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
 
-// Abre o PDF só para CONTAR páginas (leve, não rasteriza nada).
 export async function openPdf(file: File): Promise<PdfHandle> {
   const pdfjs = await getPdfjs();
   const data = await file.arrayBuffer();
@@ -53,7 +48,6 @@ export async function openPdf(file: File): Promise<PdfHandle> {
   return { file, pages: pdf.numPages };
 }
 
-// Rasteriza UMA página do PDF em alta (PNG) → vira a arte daquela face.
 export async function rasterizePdfPage(file: File, pageNum: number): Promise<ArtePreview> {
   const pdfjs = await getPdfjs();
   const data = await file.arrayBuffer();
@@ -78,28 +72,36 @@ export async function rasterizePdfPage(file: File, pageNum: number): Promise<Art
   return {
     previewDataUrl: previewFromCanvas(canvas),
     width: canvas.width, height: canvas.height,
-    source: blob, contentType: 'image/png', ext: 'png',
+    source: blob, contentType: 'image/png', ext: 'png', hasAlpha: false, // rasterizado em branco
   };
 }
 
-// PREVIEW de IMAGEM: client puro, sem upload. (PDF não passa por aqui — vai pelo seletor.)
 export async function makeImagePreview(file: File): Promise<ArtePreview> {
   const bitmap = await createImageBitmap(file);
   const width = bitmap.width, height = bitmap.height;
   const s = PREVIEW_MAX / Math.max(width, height);
+  const pw = Math.max(1, Math.round(width * s));
+  const ph = Math.max(1, Math.round(height * s));
   const pc = document.createElement('canvas');
-  pc.width = Math.max(1, Math.round(width * s));
-  pc.height = Math.max(1, Math.round(height * s));
-  pc.getContext('2d')!.drawImage(bitmap, 0, 0, pc.width, pc.height);
+  pc.width = pw; pc.height = ph;
+  const ctx = pc.getContext('2d')!;
+  ctx.drawImage(bitmap, 0, 0, pw, ph); // canvas transparente por padrão → alfa preservado
   bitmap.close?.();
+
+  // detecta transparência amostrando o canal alfa do preview
+  let hasAlpha = false;
+  try {
+    const px = ctx.getImageData(0, 0, pw, ph).data;
+    for (let i = 3; i < px.length; i += 4) { if (px[i] < 128) { hasAlpha = true; break; } }
+  } catch { /* canvas tainted (raro p/ arquivo local) — assume sem alfa */ }
+
   return {
     previewDataUrl: pc.toDataURL('image/jpeg', 0.7),
     width, height, source: file, contentType: file.type,
-    ext: (file.name.split('.').pop() || 'bin').toLowerCase(),
+    ext: (file.name.split('.').pop() || 'bin').toLowerCase(), hasAlpha,
   };
 }
 
-// UPLOAD: só no "Liberar", com usuário logado. Sobe a alta e devolve o caminho.
 export async function uploadArteSource(p: ArtePreview, companyId: string): Promise<string> {
   const supabase = createClient();
   const uploadPath = `${companyId}/${crypto.randomUUID()}.${p.ext}`;

@@ -5,6 +5,7 @@ import { Bot, Send, LogOut, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
 import DuplicarImagemDisplay from '@/components/arte/DuplicarImagemDisplay';
+import AdesivoContornoDisplay from '@/components/arte/AdesivoContornoDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -32,6 +33,15 @@ const SKILLS: Skill[] = [
     credits: 2,
     triggers: ['duplicar', 'duplicar imagem', 'copiar imagem', 'grid de imagem', 'multiplas copias', 'varias copias', 'repetir imagem', 'imagem em grade'],
     modal: 'DuplicarImagemDisplay',
+  },
+{
+    key: 'adesivo_contorno',
+    label: 'Adesivo com Recorte',
+    color: CMYK.cyan,
+    desc: 'PDF com arte + linha de corte (die-cut)',
+    credits: 8,
+    triggers: ['adesivo', 'sticker', 'recorte', 'corte de contorno', 'die cut', 'die-cut'],
+    modal: 'AdesivoContornoDisplay',
   },
 ];
 
@@ -238,6 +248,15 @@ export default function ArtePage() {
       )}
       {activeModal?.type === 'DuplicarImagemDisplay' && (
         <DuplicarImagemDisplay
+          data={activeModal.data}
+          onClose={closeModal}
+          theme="light"
+          playText={playText}
+          onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+        />
+      )}
+      {activeModal?.type === 'AdesivoContornoDisplay' && (
+        <AdesivoContornoDisplay
           data={activeModal.data}
           onClose={closeModal}
           theme="light"

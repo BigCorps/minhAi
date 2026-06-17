@@ -179,7 +179,7 @@ export default function ArtePage() {
       {/* Carrossel de habilidades (livre, inclusive anônimo) */}
       {ready && (
         <div className="flex-shrink-0 px-3 sm:px-6 pt-2 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
-          <div className="flex gap-2 overflow-x-auto pb-2 max-w-2xl mx-auto" style={{ scrollbarWidth: 'none' }}>
+          <div className="flex gap-2 overflow-x-auto pb-2 max-w-2xl mx-auto justify-center" style={{ scrollbarWidth: 'none' }}>
             {SKILLS.map((sk) => (
               <button key={sk.key} onClick={() => openSkill(sk)}
                 className="flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 text-white shadow-sm"

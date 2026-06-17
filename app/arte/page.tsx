@@ -35,7 +35,7 @@ const SKILLS: Skill[] = [
     triggers: ['duplicar', 'duplicar imagem', 'copiar imagem', 'grid de imagem', 'multiplas copias', 'varias copias', 'repetir imagem', 'imagem em grade'],
     modal: 'DuplicarImagemDisplay',
   },
-{
+  {
     key: 'adesivo_contorno',
     label: 'Adesivo com Recorte',
     color: CMYK.cyan,
@@ -44,15 +44,15 @@ const SKILLS: Skill[] = [
     triggers: ['adesivo', 'sticker', 'recorte', 'corte de contorno', 'die cut', 'die-cut'],
     modal: 'AdesivoContornoDisplay',
   },
-{
-  key: 'vetorizar_imagem',
-  label: 'Vetorizar Imagem',
-  color: CMYK.cyan, // mesma cor de todas as skills, conforme o próprio comentário do componente
-  desc: 'Transforma imagem em SVG (silhueta ou contorno)',
-  credits: 1,
-  triggers: ['vetorizar', 'vetorizar imagem', 'vetor', 'svg', 'transformar em vetor', 'contorno vetorial', 'silhueta'],
-  modal: 'VetorizarImagemDisplay',
-},
+  {
+    key: 'vetorizar_imagem',
+    label: 'Vetorizar Imagem',
+    color: CMYK.cyan, // mesma cor de todas as skills, conforme o próprio comentário do componente
+    desc: 'Transforma imagem em SVG (silhueta ou contorno)',
+    credits: 1,
+    triggers: ['vetorizar', 'vetorizar imagem', 'vetor', 'svg', 'transformar em vetor', 'contorno vetorial', 'silhueta'],
+    modal: 'VetorizarImagemDisplay',
+  },
 ];
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -61,6 +61,17 @@ function detectSkill(text: string): Skill | null {
   let best: Skill | null = null, bestLen = 0;
   for (const sk of SKILLS) for (const trig of sk.triggers) if (t.includes(trig) && trig.length > bestLen) { best = sk; bestLen = trig.length; }
   return best;
+}
+
+// ── Carrossel infinito de habilidades ─────────────────────────────────────
+// Mesma técnica do CategoryCarousel do assistente: duplica a lista N vezes e
+// anima um translateX contínuo até -(1/N)*100%, criando um loop sem costura
+// (a Nª cópia termina exatamente onde a 1ª cópia começou). Pausa em
+// hover/touch — sem isso o usuário não consegue ler nem clicar com calma.
+const CAROUSEL_MIN_COPIES = 8;
+function calcScrollDuration(count: number, isMobile: boolean): number {
+  const perItem = isMobile ? 3.5 : 2.5;
+  return Math.max(8, Math.min(60, count * perItem));
 }
 
 interface Msg { id: string; role: 'user' | 'assistant'; content: string }
@@ -77,6 +88,9 @@ export default function ArtePage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+
+  const [isMobile, setIsMobile] = useState(false);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   const endRef = useRef<HTMLDivElement>(null);
   const playText = useCallback(async (_text: string) => {}, []);
@@ -100,6 +114,14 @@ export default function ArtePage() {
   }, [supabase, refreshSaldo]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  // detecta mobile pra ajustar a velocidade do carrossel (igual ao CategoryCarousel)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   // Abre o modal mesmo sem login — o preview é livre; o gate de login fica no "Liberar".
   const openSkill = useCallback((sk: Skill) => {
@@ -131,6 +153,23 @@ export default function ArtePage() {
     window.location.reload();
   };
 
+  // ── Mecânica do scroll infinito (igual ao CategoryCarousel) ─────────────
+  const scrollDuration = calcScrollDuration(SKILLS.length, isMobile);
+  const copies = CAROUSEL_MIN_COPIES;
+  const duplicatedSkills = Array.from({ length: copies }, () => SKILLS).flat();
+  const resetPercent = (1 / copies) * 100; // ex.: 1/8 = 12.5% — onde a animação reinicia sem costura
+
+  const pauseCarousel = useCallback(() => {
+    if (carouselRef.current) carouselRef.current.style.animationPlayState = 'paused';
+  }, []);
+  const resumeCarousel = useCallback(() => {
+    if (carouselRef.current) carouselRef.current.style.animationPlayState = 'running';
+  }, []);
+  // stopPropagation evita que um swipe global da página capture o gesto do carrossel
+  const onTouchStartCarousel = useCallback((e: React.TouchEvent) => { e.stopPropagation(); pauseCarousel(); }, [pauseCarousel]);
+  const onTouchEndCarousel = useCallback((e: React.TouchEvent) => { e.stopPropagation(); resumeCarousel(); }, [resumeCarousel]);
+  const onTouchCancelCarousel = useCallback((e: React.TouchEvent) => { e.stopPropagation(); resumeCarousel(); }, [resumeCarousel]);
+
   return (
     <div className="flex flex-col h-[100dvh]" style={{ background: 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))' }}>
       {/* Header */}
@@ -148,13 +187,13 @@ export default function ArtePage() {
           {hasUser ? (
             <div className="flex items-center gap-2">
               <a
-  href="/arte/perfil"
-  className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-opacity hover:opacity-75 active:scale-95"
-  style={{ background: 'rgba(0,174,239,0.1)', color: CMYK.cyan }}
->
-  <Sparkles className="w-3.5 h-3.5" />
-  {saldo ?? '—'} créditos
-</a>
+                href="/arte/perfil"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-opacity hover:opacity-75 active:scale-95"
+                style={{ background: 'rgba(0,174,239,0.1)', color: CMYK.cyan }}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                {saldo ?? '—'} créditos
+              </a>
               <button onClick={handleLogout} className="flex items-center justify-center p-2 rounded-full text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors active:scale-95" title="Sair da conta">
                 <LogOut className="w-4 h-4" />
               </button>
@@ -205,20 +244,41 @@ export default function ArtePage() {
         .af-empty-desc { color: #64748b !important; }
       `}</style>
 
-      {/* Carrossel de habilidades (livre, inclusive anônimo) */}
+      {/* Carrossel de habilidades — scroll infinito, pausa em hover/touch */}
       {ready && (
-        <div className="flex-shrink-0 px-3 sm:px-6 pt-2 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
-          <div className="flex gap-2 overflow-x-auto pb-2 max-w-2xl mx-auto justify-center" style={{ scrollbarWidth: 'none' }}>
-            {SKILLS.map((sk) => (
-              <button key={sk.key} onClick={() => openSkill(sk)}
-                className="flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 text-white shadow-sm"
-                style={{ background: sk.color }}>
-                {sk.label}
-                {hasUser && (
-                  <span className="block text-[10px] font-normal mt-0.5 text-white/70">{sk.credits} créditos</span>
-                )}
-              </button>
-            ))}
+        <div className="flex-shrink-0 px-3 sm:px-6 pt-2 border-t overflow-hidden" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+          <div
+            className="w-full overflow-x-auto md:overflow-hidden"
+            style={{ scrollbarWidth: 'none' }}
+            onMouseEnter={pauseCarousel}
+            onMouseLeave={resumeCarousel}
+            onTouchStart={onTouchStartCarousel}
+            onTouchEnd={onTouchEndCarousel}
+            onTouchCancel={onTouchCancelCarousel}
+          >
+            <div
+              ref={carouselRef}
+              className="flex gap-2 pb-2 w-max"
+              style={{
+                animation: `af-skills-scroll ${scrollDuration}s linear infinite`,
+                animationPlayState: 'running',
+                willChange: 'transform',
+              }}
+            >
+              {duplicatedSkills.map((sk, i) => (
+                <button
+                  key={`${sk.key}-${i}`}
+                  onClick={() => openSkill(sk)}
+                  className="flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 text-white shadow-sm"
+                  style={{ background: sk.color }}
+                >
+                  {sk.label}
+                  {hasUser && (
+                    <span className="block text-[10px] font-normal mt-0.5 text-white/70">{sk.credits} créditos</span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -274,15 +334,22 @@ export default function ArtePage() {
           onRequireLogin={() => { window.location.href = LOGIN_URL; }}
         />
       )}
-{activeModal?.type === 'VetorizarImagemDisplay' && (
-  <VetorizarImagemDisplay
-    data={activeModal.data}
-    onClose={closeModal}
-    theme="light"
-    playText={playText}
-    onRequireLogin={() => { window.location.href = LOGIN_URL; }}
-  />
-)}
+      {activeModal?.type === 'VetorizarImagemDisplay' && (
+        <VetorizarImagemDisplay
+          data={activeModal.data}
+          onClose={closeModal}
+          theme="light"
+          playText={playText}
+          onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+        />
+      )}
+
+      <style jsx>{`
+        @keyframes af-skills-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-${resetPercent}%); }
+        }
+      `}</style>
     </div>
   );
 }

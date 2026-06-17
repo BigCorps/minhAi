@@ -141,12 +141,13 @@ export async function POST(req: NextRequest) {
     const fileName  = `duplicar-${layout.perRow}x${layout.perColumn}-${Date.now()}.pdf`;
 
     // 9. Cobra por último — fail-closed
-    const { data: cobranca } = await serviceClient.rpc('cobrar_credito_se_suficiente', {
+    const { data: cobrancaRaw } = await serviceClient.rpc('cobrar_credito_se_suficiente', {
       p_company_id:  companyId,
       p_function_key: FUNCTION_KEY,
       p_credits:     CREDITS,
       p_metadata:    { preset, perRow: layout.perRow, perColumn: layout.perColumn, totalImages: layout.totalImages },
     });
+    const cobranca = Array.isArray(cobrancaRaw) ? cobrancaRaw[0] : cobrancaRaw;
 
     if (!cobranca?.sucesso) {
       return NextResponse.json({ error: 'Créditos insuficientes.', saldo: cobranca?.saldo_anterior ?? 0 }, { status: 402 });

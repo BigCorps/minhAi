@@ -16,11 +16,11 @@ interface Skill { key: string; label: string; color: string; desc: string; credi
 const SKILLS: Skill[] = [
   {
     key: 'arte_final',
-    label: 'Arte Final',
+    label: 'Cartões e Folhetos',
     color: CMYK.cyan,
     desc: 'PDF pronto pra gráfica (medida + sangria + corte)',
     credits: 5,
-    triggers: ['arte final', 'arquivo pra grafica', 'arquivo para grafica', 'sangria', 'corte', 'fechar arquivo', 'gerar pdf', 'pdf de producao'],
+    triggers: ['arte final', 'arquivo pra grafica', 'arquivo para grafica', 'sangria', 'corte', 'cartões', 'folhetos', 'fechar arquivo', 'gerar pdf', 'pdf de producao'],
     modal: 'ArteFinalDisplay',
   },
 ];
@@ -200,7 +200,7 @@ export default function ArtePage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); } }}
-              placeholder="Ex: arte final, sangria e corte…"
+              placeholder="Ex: cartões e folhetos, converter, corte…"
               className="flex-1 bg-transparent outline-none text-sm"
               style={{ color: '#1e293b' }}
             />

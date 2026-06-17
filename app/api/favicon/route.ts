@@ -19,6 +19,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/favicon.ico', request.url));
   }
 
-  // Redireciona para o logo da empresa no Supabase Storage
-  return NextResponse.redirect(company.webapp_logo_url);
+  // Redireciona para o logo da empresa no Supabase Storage — sem cache
+  return NextResponse.redirect(company.webapp_logo_url, {
+    headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+  });
 }

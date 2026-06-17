@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
 import DuplicarImagemDisplay from '@/components/arte/DuplicarImagemDisplay';
 import AdesivoContornoDisplay from '@/components/arte/AdesivoContornoDisplay';
+import VetorizarImagemDisplay from '@/components/arte/VetorizarImagemDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -43,6 +44,15 @@ const SKILLS: Skill[] = [
     triggers: ['adesivo', 'sticker', 'recorte', 'corte de contorno', 'die cut', 'die-cut'],
     modal: 'AdesivoContornoDisplay',
   },
+{
+  key: 'vetorizar_imagem',
+  label: 'Vetorizar Imagem',
+  color: CMYK.cyan, // mesma cor de todas as skills, conforme o próprio comentário do componente
+  desc: 'Transforma imagem em SVG (silhueta ou contorno)',
+  credits: 1,
+  triggers: ['vetorizar', 'vetorizar imagem', 'vetor', 'svg', 'transformar em vetor', 'contorno vetorial', 'silhueta'],
+  modal: 'VetorizarImagemDisplay',
+},
 ];
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -264,6 +274,15 @@ export default function ArtePage() {
           onRequireLogin={() => { window.location.href = LOGIN_URL; }}
         />
       )}
+{activeModal?.type === 'VetorizarImagemDisplay' && (
+  <VetorizarImagemDisplay
+    data={activeModal.data}
+    onClose={closeModal}
+    theme="light"
+    playText={playText}
+    onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+  />
+)}
     </div>
   );
 }

@@ -92,27 +92,33 @@ export async function GET(request: NextRequest) {
 
   const { data: company } = await supabase
     .from('companies')
-    .select('name, webapp_logo_url, webapp_theme_color')
+    .select('name, webapp_logo_url, webapp_theme_color, webapp_domain')
     .eq('slug', slug)
     .single();
 
+  // start_url absoluto com o domínio ATUAL configurado — evita PWA "presa" no domínio antigo
+  const activeDomain = company?.webapp_domain || 'minhai.app';
+  const absoluteStartUrl = `https://${slug}.${activeDomain}/?source=pwa`;
+
   return NextResponse.json({
+    id: absoluteStartUrl,
     name: company?.name ? `${company.name} - minhAi` : 'minhAi',
     short_name: company?.name || 'minhAi',
-    start_url: '/',
+    start_url: absoluteStartUrl,
+    scope: `https://${slug}.${activeDomain}/`,
     display: 'standalone',
     background_color: '#0f172a',
     theme_color: company?.webapp_theme_color || '#f97316',
     icons: company?.webapp_logo_url
       ? [
           {
-            src: company.webapp_logo_url,
+            src: `${company.webapp_logo_url}?v=${Date.now()}`,
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any maskable',
           },
           {
-            src: company.webapp_logo_url,
+            src: `${company.webapp_logo_url}?v=${Date.now()}`,
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',
@@ -133,7 +139,7 @@ export async function GET(request: NextRequest) {
   }, {
     headers: {
       'Content-Type': 'application/manifest+json',
-      'Cache-Control': 'public, max-age=3600',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
     },
   });
 }

@@ -14,7 +14,7 @@ import {
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 
 type Stage = 'input' | 'page-select' | 'configuring' | 'processing' | 'login' | 'result' | 'error';
-type Preset = 'grid_2x2' | 'grid_3x3' | 'grid_4x4' | 'a4_completo' | 'custom';
+type Preset = 'grid_3x3' | 'grid_4x4' | 'a4_completo' | 'custom';
 
 interface Props {
   data: { companyId: string; slug?: string }; // companyId pode ser '' (anônimo)
@@ -64,7 +64,6 @@ const fileOk = (f: File) => f.type.startsWith('image/') || isPdfFile(f);
 
 // ── Presets de layout ─────────────────────────────────────────────────────
 const PRESETS: Record<Preset, { name: string; desc: string; size: number; spacing: number; cols: number; rows: number }> = {
-  grid_2x2:    { name: 'Grid 2×2',    desc: '4 imagens',       size: 8,   spacing: 1,   cols: 2, rows: 2 },
   grid_3x3:    { name: 'Grid 3×3',    desc: '9 imagens',       size: 5.5, spacing: 0.8, cols: 3, rows: 3 },
   grid_4x4:    { name: 'Grid 4×4',    desc: '16 imagens',      size: 4,   spacing: 0.5, cols: 4, rows: 4 },
   a4_completo: { name: 'A4 Completo', desc: 'Máximo possível', size: 3,   spacing: 0.5, cols: 0, rows: 0 },
@@ -474,65 +473,54 @@ export default function DuplicarImagemDisplay({
                     />
                   </div>
                 </div>
-                <div style={{
-                  marginTop: 10, padding: '8px 12px', borderRadius: 6,
-                  background: isDark ? 'rgba(0,174,239,0.08)' : '#f0f8ff',
-                  border: `1px solid ${isDark ? 'rgba(0,174,239,0.2)' : '#d0e8f8'}`,
-                  fontSize: 12, color: c.textMuted, lineHeight: 1.5,
-                }}>
-                  💡 O espaçamento de 1mm facilita o corte com estilete.
-                </div>
+
               </div>
             )}
 
-            {/* Preview do grid A4 */}
-            {layoutInfo.totalImages > 0 && (
-              <div style={{
-                padding: 14, borderRadius: 8, background: c.bgSecondary,
-                border: `1px solid ${c.border}`,
-              }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: c.textMuted, marginBottom: 10 }}>
-                  📋 Preview do Layout A4
-                </div>
-                {/* Simulação proporcional do A4 */}
-                <div style={{
-                  position: 'relative',
-                  width: '100%',
-                  maxWidth: 320,
-                  margin: '0 auto',
-                  aspectRatio: '210 / 297',
-                  background: '#fff',
-                  border: '1px solid #ccc',
-                  borderRadius: 2,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                  overflow: 'hidden',
-                  padding: '3.33%', // ~1cm / 30cm total height equivalent
-                }}>
-                  {/* Grid de miniaturas */}
+            {/* Preview do grid A4 — células posicionadas em % do A4 real */}
+            {layoutInfo.totalImages > 0 && (() => {
+              const a4W = 210; const a4H = 297;
+              const availW = 190; const availH = 277; // A4 menos 10mm de margem cada lado
+              const gapMm = spacing; // spacing já é mm
+              const cellWmm = (availW - (layoutInfo.perRow    - 1) * gapMm) / layoutInfo.perRow;
+              const cellHmm = (availH - (layoutInfo.perColumn - 1) * gapMm) / layoutInfo.perColumn;
+              const mPctW = (10 / a4W) * 100;
+              const mPctH = (10 / a4H) * 100;
+              const cWpct = (cellWmm / a4W) * 100;
+              const cHpct = (cellHmm / a4H) * 100;
+              const gWpct = (gapMm   / a4W) * 100;
+              const gHpct = (gapMm   / a4H) * 100;
+              return (
+                <div style={{ padding: 14, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: c.textMuted, marginBottom: 10 }}>
+                    📋 Preview do Layout A4
+                  </div>
                   <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${layoutInfo.perRow}, 1fr)`,
-                    gap: `${Math.max(1, (spacing / 10) * 4)}px`,
-                    width: '100%',
-                    height: '100%',
-                    alignContent: 'start',
+                    position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto',
+                    aspectRatio: '210 / 297', background: '#fff',
+                    border: '1px solid #d0d0d0', borderRadius: 2,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.12)', overflow: 'hidden',
                   }}>
-                    {Array.from({ length: layoutInfo.totalImages }).map((_, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          background: art?.previewDataUrl ? `url(${art.previewDataUrl}) center/cover no-repeat` : c.accent,
+                    {Array.from({ length: layoutInfo.perColumn }).flatMap((_, row) =>
+                      Array.from({ length: layoutInfo.perRow }).map((__, col) => (
+                        <div key={`${row}-${col}`} style={{
+                          position: 'absolute',
+                          left:   `${mPctW + col * (cWpct + gWpct)}%`,
+                          top:    `${mPctH + row * (cHpct + gHpct)}%`,
+                          width:  `${cWpct}%`,
+                          height: `${cHpct}%`,
+                          background: art?.previewDataUrl
+                            ? `url(${art.previewDataUrl}) center/cover no-repeat`
+                            : c.accent,
                           borderRadius: 1,
-                          opacity: 0.85,
-                          aspectRatio: `${layoutInfo.finalWidth} / ${layoutInfo.finalHeight}`,
-                          border: `0.5px solid rgba(0,0,0,0.08)`,
-                        }}
-                      />
-                    ))}
+                          border: '0.5px solid rgba(0,0,0,0.1)',
+                        }} />
+                      ))
+                    )}
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Info do layout calculado */}
             <div style={{

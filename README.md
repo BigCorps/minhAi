@@ -6,6 +6,8 @@
 
 ## Roadmap e Features Planejadas
 
+* ao mudar as configurações do webapp no domínio e no logo, não está aplicando as correções, e verificar porque não aparece a opção de mostrar o site
+
 * artefinal.app
 
 * market4u.suaia.app - configurar funções e mostrar funcionando para o Leandro e os clientes market4u com vídeo, respostas e ajuda

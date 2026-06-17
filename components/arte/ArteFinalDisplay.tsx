@@ -94,6 +94,7 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [progress, setProgress] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
+  const [logado, setLogado] = useState<boolean>(false);
 
   const spoke = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -126,6 +127,10 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
     rotateDataUrl(cur.art.previewDataUrl, cur.rotation).then((u) => { if (!cancelled) setRotPreview(u); });
     return () => { cancelled = true; };
   }, [cur.art, cur.rotation]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setLogado(!!session?.user));
+  }, [supabase]);
 
   // ── Geometria da face ativa (espelha a rota) ──
   const swap = cur.rotation % 180 !== 0;
@@ -415,7 +420,9 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
               <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: c.textMuted }}>alvo
                 <input type="number" min={72} max={300} value={dpiTarget} onChange={(e) => setDpiTarget(clamp(parseInt(e.target.value) || 0, 72, 300))} style={{ width: 64, padding: '6px 8px', borderRadius: 6, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontSize: 13 }} />
               </span>
-              <span style={{ color: c.textMuted, whiteSpace: 'nowrap' }}>Custo: <strong style={{ color: c.text }}>{CREDITS}</strong></span>
+              {logado && (
+                <span style={{ color: c.textMuted, whiteSpace: 'nowrap' }}>Custo: <strong style={{ color: c.text }}>{CREDITS}</strong></span>
+              )}
             </div>
 
             {sangriaInvalida && <div style={{ fontSize: 12, color: c.error }}>A sangria é maior que a medida. Reduza a sangria ou aumente a medida.</div>}

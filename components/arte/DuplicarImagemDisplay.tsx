@@ -435,45 +435,6 @@ export default function DuplicarImagemDisplay({
               </div>
             </div>
 
-            {/* Configurações avançadas */}
-            {showAdvanced && (
-              <div style={{ padding: 14, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Configurações avançadas</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div>
-                    <label style={label}>Tamanho máximo (cm)</label>
-                    <input
-                      type="number" min={0.5} max={15} step={0.1} value={maxSize}
-                      onChange={(e) => setMaxSize(Math.max(0.5, Math.min(15, parseFloat(e.target.value) || 0.5)))}
-                      style={{ ...inputStyle }}
-                    />
-                  </div>
-                  <div>
-                    <label style={label}>Espaçamento entre imagens (mm)</label>
-                    <input
-                      type="number" min={0} max={5} step={0.5} value={spacing}
-                      onChange={(e) => setSpacing(Math.max(0, Math.min(5, parseFloat(e.target.value) || 0)))}
-                      style={{ ...inputStyle }}
-                    />
-                  </div>
-                  <div>
-                    <label style={label}>Colunas</label>
-                    <input
-                      type="number" min={1} max={20} step={1} value={manualCols}
-                      onChange={(e) => setManualCols(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-                      style={{ ...inputStyle }}
-                    />
-                  </div>
-                  <div>
-                    <label style={label}>Linhas</label>
-                    <input
-                      type="number" min={1} max={30} step={1} value={manualRows}
-                      onChange={(e) => setManualRows(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
-                      style={{ ...inputStyle }}
-                    />
-                  </div>
-                </div>
-
               </div>
             )}
 
@@ -521,6 +482,45 @@ export default function DuplicarImagemDisplay({
                 </div>
               );
             })()}
+
+          {/* Configurações avançadas */}
+            {showAdvanced && (
+              <div style={{ padding: 14, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Configurações avançadas</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={label}>Tamanho máximo (cm)</label>
+                    <input
+                      type="number" min={0.5} max={15} step={0.1} value={maxSize}
+                      onChange={(e) => setMaxSize(Math.max(0.5, Math.min(15, parseFloat(e.target.value) || 0.5)))}
+                      style={{ ...inputStyle }}
+                    />
+                  </div>
+                  <div>
+                    <label style={label}>Espaçamento entre imagens (mm)</label>
+                    <input
+                      type="number" min={0} max={5} step={0.5} value={spacing}
+                      onChange={(e) => setSpacing(Math.max(0, Math.min(5, parseFloat(e.target.value) || 0)))}
+                      style={{ ...inputStyle }}
+                    />
+                  </div>
+                  <div>
+                    <label style={label}>Colunas</label>
+                    <input
+                      type="number" min={1} max={20} step={1} value={manualCols}
+                      onChange={(e) => setManualCols(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                      style={{ ...inputStyle }}
+                    />
+                  </div>
+                  <div>
+                    <label style={label}>Linhas</label>
+                    <input
+                      type="number" min={1} max={30} step={1} value={manualRows}
+                      onChange={(e) => setManualRows(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
+                      style={{ ...inputStyle }}
+                    />
+                  </div>
+                </div>
 
             {/* Info do layout calculado */}
             <div style={{

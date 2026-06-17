@@ -537,7 +537,7 @@ export default function ArtePerfilPage() {
                         </p>
                         <div className={`flex items-center gap-1 text-xs mt-1 ${pkg.is_highlighted ? 'text-white/70' : 'text-gray-400'}`}>
                           <Zap className="w-3 h-3" />
-                          R$ {(pkg.price_cents / pkg.interactions / 100).toFixed(4).replace('.', ',')} por crédito
+                          R$ {(pkg.price_cents / pkg.interactions / 100).toFixed(2).replace('.', ',')} por crédito
                         </div>
                       </>
                     )

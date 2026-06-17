@@ -17,9 +17,9 @@ interface Skill { key: string; label: string; color: string; desc: string; credi
 const SKILLS: Skill[] = [
   {
     key: 'arte_final',
-    label: 'Cartões e Folhetos',
+    label: 'Margem e Sangria',
     color: CMYK.cyan,
-    desc: 'PDF pronto pra gráfica (medida + sangria + corte)',
+    desc: 'PDF pronto pra gráfica (medida + sangria)',
     credits: 5,
     triggers: ['arte final', 'arquivo pra grafica', 'arquivo para grafica', 'sangria', 'corte', 'cartões', 'folhetos', 'fechar arquivo', 'gerar pdf', 'pdf de producao'],
     modal: 'ArteFinalDisplay',

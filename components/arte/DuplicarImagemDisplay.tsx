@@ -3,17 +3,18 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
-import { prepareArteUpload, type ArteUpload } from '@/lib/arte/prepareUpload';
+import { makeArtePreview, uploadArteSource, type ArtePreview } from '@/lib/arte/prepareUpload';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 
-type Stage = 'input' | 'configuring' | 'processing' | 'result' | 'error';
+type Stage = 'input' | 'configuring' | 'processing' | 'login' | 'result' | 'error';
 type Preset = 'grid_2x2' | 'grid_3x3' | 'grid_4x4' | 'a4_completo' | 'custom';
 
 interface Props {
-  data: { companyId: string; slug?: string };
+  data: { companyId: string; slug?: string }; // companyId pode ser '' (anônimo)
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText: (text: string) => Promise<void>;
+  onRequireLogin?: () => void;
 }
 
 // ── Paleta CMYK (mesma do ArteFinal) ─────────────────────────────────────
@@ -53,11 +54,11 @@ const AUTO_CLOSE = 90;
 
 // ── Presets de layout ─────────────────────────────────────────────────────
 const PRESETS: Record<Preset, { name: string; desc: string; size: number; spacing: number; cols: number; rows: number }> = {
-  grid_2x2:    { name: 'Grid 2×2',    desc: '4 imagens',        size: 8,   spacing: 1,   cols: 2, rows: 2 },
-  grid_3x3:    { name: 'Grid 3×3',    desc: '9 imagens',        size: 5.5, spacing: 0.8, cols: 3, rows: 3 },
-  grid_4x4:    { name: 'Grid 4×4',    desc: '16 imagens',       size: 4,   spacing: 0.5, cols: 4, rows: 4 },
-  a4_completo: { name: 'A4 Completo', desc: 'Máximo possível',  size: 3,   spacing: 0.5, cols: 0, rows: 0 },
-  custom:      { name: 'Avançado',    desc: 'Personalizado',    size: 5,   spacing: 1,   cols: 3, rows: 3 },
+  grid_2x2:    { name: 'Grid 2×2',    desc: '4 imagens',       size: 8,   spacing: 1,   cols: 2, rows: 2 },
+  grid_3x3:    { name: 'Grid 3×3',    desc: '9 imagens',       size: 5.5, spacing: 0.8, cols: 3, rows: 3 },
+  grid_4x4:    { name: 'Grid 4×4',    desc: '16 imagens',      size: 4,   spacing: 0.5, cols: 4, rows: 4 },
+  a4_completo: { name: 'A4 Completo', desc: 'Máximo possível', size: 3,   spacing: 0.5, cols: 0, rows: 0 },
+  custom:      { name: 'Avançado',    desc: 'Personalizado',   size: 5,   spacing: 1,   cols: 3, rows: 3 },
 };
 
 interface LayoutInfo {
@@ -66,13 +67,20 @@ interface LayoutInfo {
   totalImages: number; usedArea: number;
 }
 
-export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', playText }: Props) {
+export default function DuplicarImagemDisplay({
+  data,
+  onClose,
+  theme = 'dark',
+  playText,
+  onRequireLogin,
+}: Props) {
   const isDark = theme === 'dark';
   const c = isDark ? DARK : LIGHT;
   const supabase = createClient();
 
   const [stage, setStage] = useState<Stage>('input');
-  const [upload, setUpload] = useState<ArteUpload | null>(null);
+  // ArtePreview guarda a alta em memória (source: Blob) — sem upload até o liberar
+  const [preview, setPreview] = useState<ArtePreview | null>(null);
 
   const [selectedPreset, setSelectedPreset] = useState<Preset>('grid_3x3');
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -80,11 +88,15 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
   const [spacing, setSpacing] = useState(0.8);
   const [manualCols, setManualCols] = useState(3);
   const [manualRows, setManualRows] = useState(3);
-  const [layoutInfo, setLayoutInfo] = useState<LayoutInfo>({ finalWidth: 0, finalHeight: 0, perRow: 0, perColumn: 0, totalImages: 0, usedArea: 0 });
+  const [layoutInfo, setLayoutInfo] = useState<LayoutInfo>({
+    finalWidth: 0, finalHeight: 0, perRow: 0, perColumn: 0, totalImages: 0, usedArea: 0,
+  });
 
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [resultBase64, setResultBase64] = useState<string>('');
   const [resultName, setResultName] = useState<string>('');
+  // companyId resolvido no momento do liberar (pode vir '' do prop se anônimo)
+  const [resolvedCompanyId, setResolvedCompanyId] = useState<string>(data.companyId);
   const [saldo, setSaldo] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [progress, setProgress] = useState<string>('');
@@ -104,19 +116,22 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
   useEffect(() => {
     if (stage !== 'result') return;
     setTimeLeft(AUTO_CLOSE);
-    const id = setInterval(() => setTimeLeft((p) => { if (p <= 1) { onClose(); return 0; } return p - 1; }), 1000);
+    const id = setInterval(() => setTimeLeft((p) => {
+      if (p <= 1) { onClose(); return 0; }
+      return p - 1;
+    }), 1000);
     return () => clearInterval(id);
   }, [stage, onClose]);
 
   // ── Cálculo de layout (espelha a rota no servidor) ────────────────────
   useEffect(() => {
-    if (!upload) return;
-    const aspect = upload.width / upload.height;
+    if (!preview) return;
+    const aspect = preview.width / preview.height;
     const finalH = maxSize;
     const finalW = maxSize * aspect;
     const spacingCm = spacing / 10;
-    const availableW = 19;   // A4 com margem 1cm
-    const availableH = 27.7;
+    const availableW = 19;   // A4 21cm − 2×1cm margem
+    const availableH = 27.7; // A4 29.7cm − 2×1cm margem
 
     let perRow: number, perColumn: number;
     if (selectedPreset === 'custom' && showAdvanced) {
@@ -133,7 +148,7 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
     const usedH = perColumn * finalH + (perColumn - 1) * spacingCm;
     const usedArea = (usedW * usedH) / (availableW * availableH) * 100;
     setLayoutInfo({ finalWidth: finalW, finalHeight: finalH, perRow, perColumn, totalImages, usedArea });
-  }, [upload, maxSize, spacing, selectedPreset, showAdvanced, manualCols, manualRows]);
+  }, [preview, maxSize, spacing, selectedPreset, showAdvanced, manualCols, manualRows]);
 
   const handleSelectPreset = useCallback((preset: Preset) => {
     setSelectedPreset(preset);
@@ -149,40 +164,75 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
     }
   }, []);
 
+  // ── Seleção de arquivo: só preview, sem upload, sem login ─────────────
   const handleFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setErrorMsg('Envie uma imagem PNG ou JPEG.'); setStage('error'); return;
+    const isImage = file.type.startsWith('image/');
+    const isPdf   = file.type === 'application/pdf';
+    if (!isImage && !isPdf) {
+      setErrorMsg('Envie uma imagem (PNG/JPEG) ou PDF.'); setStage('error'); return;
     }
-    setStage('processing'); setProgress('Enviando imagem…');
+    setStage('processing'); setProgress('Preparando preview…');
     try {
-      const up = await prepareArteUpload(file, data.companyId);
-      setUpload(up);
+      const pv = await makeArtePreview(file);
+      setPreview(pv);
       setStage('configuring');
     } catch (e) {
-      setErrorMsg((e as Error).message ?? 'Falha ao enviar a imagem.'); setStage('error');
+      setErrorMsg((e as Error).message ?? 'Falha ao preparar o preview.'); setStage('error');
     }
-  }, [data.companyId]);
+  }, []);
 
-  const handleGenerate = useCallback(async () => {
-    if (!upload || layoutInfo.totalImages === 0) return;
-    setStage('processing'); setProgress('Gerando PDF de impressão…');
+  // ── Liberar: gate de login → upload da alta → rota → cobrar ──────────
+  const handleRelease = useCallback(async () => {
+    if (!preview || layoutInfo.totalImages === 0) return;
+
+    // 1. Checa sessão
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      // Sem login → estágio login (não bloqueia o preview já exibido)
+      setStage('login');
+      return;
+    }
+
+    setStage('processing'); setProgress('Enviando imagem…');
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // 2. Resolve companyId (prop pode vir '' para anônimo que acabou de logar)
+      let cId = data.companyId;
+      if (!cId) {
+        const { data: company } = await supabase
+          .from('companies')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        cId = company?.id ?? '';
+      }
+      if (!cId) {
+        setErrorMsg('Empresa não encontrada. Entre na sua conta.'); setStage('error'); return;
+      }
+      setResolvedCompanyId(cId);
+
+      // 3. Sobe a alta agora (único momento em que ela vai pro servidor)
+      setProgress('Enviando imagem…');
+      const uploadPath = await uploadArteSource(preview, cId);
+
+      // 4. Chama a rota de geração
+      setProgress('Gerando PDF de impressão…');
       const res = await fetch('/api/arte/duplicar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token ?? ''}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          companyId: data.companyId,
-          uploadPath: upload.uploadPath,
+          companyId: cId,
+          uploadPath,
           spec: {
             maxSize,
             spacing,
+            preset: selectedPreset,
             manualCols: selectedPreset === 'custom' ? manualCols : undefined,
             manualRows: selectedPreset === 'custom' ? manualRows : undefined,
-            preset: selectedPreset,
           },
         }),
       });
@@ -212,7 +262,7 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
     } catch (e) {
       setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error');
     }
-  }, [upload, layoutInfo, supabase, data.companyId, maxSize, spacing, selectedPreset, manualCols, manualRows, playText]);
+  }, [preview, layoutInfo, supabase, data.companyId, maxSize, spacing, selectedPreset, manualCols, manualRows, playText]);
 
   const handleDownload = useCallback(() => {
     if (!resultBlob || !resultName) return;
@@ -223,7 +273,7 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
   }, [resultBlob, resultName]);
 
   const handleReset = useCallback(() => {
-    setStage('input'); setUpload(null); setResultBlob(null);
+    setStage('input'); setPreview(null); setResultBlob(null);
     setResultBase64(''); setErrorMsg('');
     setSelectedPreset('grid_3x3'); setShowAdvanced(false);
   }, []);
@@ -267,22 +317,27 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
             }}
           >
             <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste a imagem</div>
-            <div style={{ fontSize: 12 }}>PNG ou JPEG — será duplicada em grid no A4.</div>
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg" style={{ display: 'none' }}
+            <div style={{ fontSize: 12 }}>PNG, JPEG ou PDF — será duplicada em grid no A4.</div>
+            <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
           </div>
         )}
 
         {/* CONFIGURING */}
-        {stage === 'configuring' && upload && (
+        {stage === 'configuring' && preview && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Preview da imagem enviada */}
+            {/* Preview — object-fit:cover conforme §10 */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <img
-                src={upload.previewDataUrl}
-                alt="Preview"
-                style={{ maxWidth: 180, maxHeight: 140, borderRadius: 8, border: `1px solid ${c.border}`, objectFit: 'contain' }}
-              />
+              <div style={{
+                width: 180, height: 140, borderRadius: 8,
+                border: `1px solid ${c.border}`, overflow: 'hidden', flexShrink: 0,
+              }}>
+                <img
+                  src={preview.previewDataUrl}
+                  alt="Preview"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              </div>
             </div>
 
             {/* Presets */}
@@ -294,7 +349,8 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
                     key={preset}
                     onClick={() => handleSelectPreset(preset)}
                     style={{
-                      padding: '10px 8px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 13, fontWeight: 500,
+                      padding: '10px 8px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                      fontSize: 13, fontWeight: 500,
                       border: selectedPreset === preset ? `2px solid ${c.accent}` : `1px solid ${c.border}`,
                       background: selectedPreset === preset ? 'rgba(0,174,239,0.1)' : c.bgSecondary,
                       color: c.text,
@@ -343,17 +399,18 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
             {/* Info do layout calculado */}
             <div style={{
               display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12,
-              padding: '10px 12px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}`, fontSize: 13,
+              padding: '10px 12px', borderRadius: 8, background: c.bgSecondary,
+              border: `1px solid ${c.border}`, fontSize: 13,
             }}>
               {[
-                { label: 'Tamanho', value: `${layoutInfo.finalWidth.toFixed(1)}×${layoutInfo.finalHeight.toFixed(1)}cm` },
-                { label: 'Grid', value: `${layoutInfo.perRow}×${layoutInfo.perColumn}` },
-                { label: 'Total', value: String(layoutInfo.totalImages) },
-                { label: 'Área', value: `${layoutInfo.usedArea.toFixed(1)}%` },
-              ].map(({ label: l, value }) => (
+                { l: 'Tamanho', v: `${layoutInfo.finalWidth.toFixed(1)}×${layoutInfo.finalHeight.toFixed(1)}cm` },
+                { l: 'Grid',    v: `${layoutInfo.perRow}×${layoutInfo.perColumn}` },
+                { l: 'Total',   v: String(layoutInfo.totalImages) },
+                { l: 'Área',    v: `${layoutInfo.usedArea.toFixed(1)}%` },
+              ].map(({ l, v }) => (
                 <div key={l} style={{ textAlign: 'center' }}>
                   <div style={{ color: c.textMuted, fontSize: 11 }}>{l}</div>
-                  <div style={{ fontWeight: 600, color: c.text, marginTop: 2 }}>{value}</div>
+                  <div style={{ fontWeight: 600, color: c.text, marginTop: 2 }}>{v}</div>
                 </div>
               ))}
             </div>
@@ -361,7 +418,8 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
             {/* Custo */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-              padding: '8px 12px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}`, fontSize: 13,
+              padding: '8px 12px', borderRadius: 8, background: c.bgSecondary,
+              border: `1px solid ${c.border}`, fontSize: 13,
             }}>
               <span style={{ color: c.textMuted }}>Custo: <strong style={{ color: c.text }}>{CREDITS} créditos</strong></span>
             </div>
@@ -373,7 +431,7 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
             )}
 
             <button
-              onClick={handleGenerate}
+              onClick={handleRelease}
               disabled={layoutInfo.totalImages === 0}
               style={{
                 padding: 14, borderRadius: 10, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700,
@@ -396,8 +454,46 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
         {/* PROCESSING */}
         {stage === 'processing' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '34px 0' }}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', border: `3px solid ${c.border}`, borderTopColor: c.accent, animation: 'di-spin 0.8s linear infinite' }} />
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              border: `3px solid ${c.border}`, borderTopColor: c.accent,
+              animation: 'di-spin 0.8s linear infinite',
+            }} />
             <p style={{ margin: 0, fontSize: 14, color: c.textMuted }}>{progress}</p>
+          </div>
+        )}
+
+        {/* LOGIN — gate de 20 créditos */}
+        {stage === 'login' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '8px 0' }}>
+            <div style={{
+              padding: 16, borderRadius: 10, background: 'rgba(0,174,239,0.08)',
+              border: `1px solid ${c.accent}`, fontSize: 14, lineHeight: 1.6, color: c.text,
+            }}>
+              <strong>Crie sua conta grátis</strong> e ganhe <strong>20 créditos</strong> para gerar seus primeiros arquivos.
+              Seu preview já está configurado — só confirmar o login para liberar.
+            </div>
+            <button
+              onClick={() => {
+                if (onRequireLogin) {
+                  onRequireLogin();
+                } else {
+                  window.location.href = '/arte/login';
+                }
+              }}
+              style={{
+                padding: 14, borderRadius: 10, border: 'none', color: '#fff',
+                fontSize: 15, fontWeight: 700, cursor: 'pointer', background: c.accent,
+              }}
+            >
+              Entrar / Criar conta
+            </button>
+            <button onClick={() => setStage('configuring')} style={{
+              padding: 10, borderRadius: 8, border: `1px solid ${c.border}`,
+              background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 13,
+            }}>
+              Voltar ao preview
+            </button>
           </div>
         )}
 
@@ -406,10 +502,13 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderRadius: 8,
-              background: 'rgba(16,185,129,0.1)', border: `1px solid ${c.success}`, color: c.success, fontSize: 14, fontWeight: 600,
+              background: 'rgba(16,185,129,0.1)', border: `1px solid ${c.success}`,
+              color: c.success, fontSize: 14, fontWeight: 600,
             }}>
               <span>PDF para impressão pronto!</span>
-              <span style={{ marginLeft: 'auto', fontSize: 12, opacity: 0.8 }}>{(resultBlob.size / 1024).toFixed(0)} KB</span>
+              <span style={{ marginLeft: 'auto', fontSize: 12, opacity: 0.8 }}>
+                {(resultBlob.size / 1024).toFixed(0)} KB
+              </span>
             </div>
 
             <div style={{ display: 'flex', gap: 16 }} className="di-result">
@@ -442,7 +541,7 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
               </div>
               <div className="di-qr-desktop" style={{ display: 'none', flexShrink: 0, width: 224 }}>
                 <ResultDownloadQR
-                  companyId={data.companyId} fileName={resultName}
+                  companyId={resolvedCompanyId} fileName={resultName}
                   fileType="application/pdf" fileBase64={resultBase64}
                   isDark={isDark} enabled={stage === 'result' && !!resultBase64}
                 />
@@ -450,7 +549,7 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
             </div>
             <div className="di-qr-mobile" style={{ display: 'block' }}>
               <ResultDownloadQR
-                companyId={data.companyId} fileName={resultName}
+                companyId={resolvedCompanyId} fileName={resultName}
                 fileType="application/pdf" fileBase64={resultBase64}
                 isDark={isDark} enabled={stage === 'result' && !!resultBase64}
               />
@@ -464,7 +563,10 @@ export default function DuplicarImagemDisplay({ data, onClose, theme = 'dark', p
         {/* ERROR */}
         {stage === 'error' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: `1px solid ${c.error}`, color: c.error, fontSize: 14, lineHeight: 1.4 }}>
+            <div style={{
+              padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)',
+              border: `1px solid ${c.error}`, color: c.error, fontSize: 14, lineHeight: 1.4,
+            }}>
               {errorMsg}
             </div>
             <button onClick={handleReset} style={{

@@ -8,7 +8,7 @@
 
 * artefinal.app
 
-* market4u.minhai.com.br - configurar funções e mostrar funcionando para o Leandro e os clientes market4u com vídeo, e ajuda
+* market4u.suaia.app - configurar funções e mostrar funcionando para o Leandro e os clientes market4u com vídeo, respostas e ajuda
 
 * Sugerir parceria com Site e aplicativo PlayStore para Giro Digital, Hantars, Salão e Aluguel de Totem
 

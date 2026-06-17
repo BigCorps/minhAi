@@ -45,6 +45,20 @@
  *
  * Dependências novas: npm install potrace-plus jspdf svg2pdf.js
  * 'potrace-plus' não publica @types — o import dinâmico usa // @ts-ignore.
+ *
+ * CORREÇÃO (preview do SVG estourando o modal): o wrapper que recebe o
+ * dangerouslySetInnerHTML do svgMarkup só limitava o tamanho via
+ * maxWidth/maxHeight no DIV — mas o <svg> injetado tem width/height em
+ * pixels (vêm de pathData.width/height, ex. 928x961), e atributo de
+ * width/height em px não encolhe por causa de maxWidth/maxHeight do pai.
+ * Resultado: na tela de "configuring" ficava só cortado (porque o painel
+ * tem overflow:hidden), e na tela de "result" não tinha overflow:hidden
+ * nenhum, então o SVG vazava pra fora do modal inteiro.
+ * Fix: classe `.vet-svg-frame` força `width:100%; height:100%` no <svg>
+ * filho via CSS (CSS tem precedência sobre atributo de apresentação), e o
+ * viewBox + preserveAspectRatio padrão ("xMidYMid meet") cuidam de encaixar
+ * a arte proporcionalmente dentro da caixa, sem distorcer. Adicionei
+ * overflow:hidden nos contêineres como rede de segurança.
  */
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -423,7 +437,7 @@ export default function VetorizarImagemDisplay({ data, onClose, theme = 'dark', 
                   ) : traceFailed ? (
                     <span style={{ fontSize: 12, color: c.warn, textAlign: 'center' }}>Não foi possível vetorizar. Ajuste o limiar.</span>
                   ) : svgMarkup ? (
-                    <div style={{ maxWidth: '100%', maxHeight: 220 }} dangerouslySetInnerHTML={{ __html: svgMarkup }} />
+                    <div className="vet-svg-frame" style={{ height: 220 }} dangerouslySetInnerHTML={{ __html: svgMarkup }} />
                   ) : (
                     <span style={{ fontSize: 12, color: c.textMuted }}>Ajuste as opções para gerar</span>
                   )}
@@ -508,8 +522,8 @@ export default function VetorizarImagemDisplay({ data, onClose, theme = 'dark', 
               <span>Arquivo liberado!</span>
               <span style={{ marginLeft: 'auto', fontSize: 12, opacity: 0.8 }}>{pathData.width}×{pathData.height}{saldo !== null ? ` · saldo: ${saldo}` : ''}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', padding: 12, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
-              <div style={{ maxWidth: 260, maxHeight: 260 }} dangerouslySetInnerHTML={{ __html: svgMarkup ?? '' }} />
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 12, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
+              <div className="vet-svg-frame" style={{ width: 260, height: 260 }} dangerouslySetInnerHTML={{ __html: svgMarkup ?? '' }} />
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button onClick={handleCopy} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>{copied ? 'Copiado!' : 'Copiar código'}</button>
@@ -530,7 +544,11 @@ export default function VetorizarImagemDisplay({ data, onClose, theme = 'dark', 
         )}
       </div>
 
-      <style>{`@keyframes vet-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes vet-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+        .vet-svg-frame { width: 100%; height: 100%; }
+        .vet-svg-frame svg { display: block; width: 100%; height: 100%; }
+      `}</style>
     </div>,
     document.body
   );

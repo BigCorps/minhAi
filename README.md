@@ -6,13 +6,13 @@
 
 ## Roadmap e Features Planejadas
 
-* pix.wiki - App com confirmação automática de pix direcionando para /pixwiki para os usuários usarem /slug diretamente (reservar apenas o dashboard)
+* Pix.Wiki - App com confirmação automática de pix direcionando para /pixwiki para os usuários usarem /slug diretamente (reservar apenas o dashboard)
 
 * ArteFinal.app - Manus qpreco
 
 * seletor de tema nas configurações e se quer que apareça o ícone ou não.
 
-* Após o ArteFinal e Pix.Wiki estarem prontos, oferecer ao mau o Auxiliar de Produção no mesmo molde, apenas com mensalidade para ele vender (com tela de admin para ambos controlarem os usuários e envio de e-mail quando chega um novo cliente para ele, e mensalmente com o relatório dos pagamentos). Fazer ele sugerir o nome
+* FichaTec ou FichAi.app - após o ArteFinal e Pix.Wiki estarem prontos, oferecer ao mau o Auxiliar de Produção no mesmo molde, apenas com mensalidade,usando grow, para ele vender (com tela de admin para ambos controlarem os usuários e envio de e-mail quando chega um novo cliente para ele, e mensalmente com o relatório dos pagamentos). Fazer ele sugerir o nome
 
 * Sugerir parceria com Site e aplicativo PlayStore para Hantars, Salão e empresa de Aluguel de Totem
 

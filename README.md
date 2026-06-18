@@ -10,7 +10,7 @@
 
 * Carrossel no footer com 10 empresas que usam a tecnologia minhAi.
 PRONTAS: Vixus - Loja de Serviços - ArteFinal
-BREVES: iAPix - Ficha.Pro - Postos.Pro - iTend - Post-ai.app - Agenda.Gratis - NotAi)
+BREVES: iAPix - Ficha.Pro - Postos.Pro - iTend - Post-ai.app - Agenda.Gratis - Not.it)
 
 * iAPix.net - App com confirmação automática de pix direcionando para /pix para os usuários usarem /slug diretamente (reservar apenas o /meu) e usar o principal para ser a página principal identificando logado e não logado.
 

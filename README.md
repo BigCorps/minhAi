@@ -12,11 +12,11 @@
 
 * ArteFinal.app - Manus qpreco
 
-* seletor de tema nas configurações e se quer que apareça o ícone ou não.
-
 * FichaTec ou FichAi.app ou Linha.pro ou PreparAi.me ou FichaPronta - após o ArteFinal e Pix.Wiki estarem prontos, oferecer ao mau o Auxiliar de Produção no mesmo molde, apenas com mensalidade,usando grow, para ele vender (com tela de admin para ambos controlarem os usuários e envio de e-mail quando chega um novo cliente para ele, e mensalmente com o relatório dos pagamentos). Fazer ele sugerir o nome
 
 * Sugerir parceria com Site e aplicativo PlayStore para Hantars, Salão e empresa de Aluguel de Totem
+
+* seletor de tema nas configurações e se quer que apareça o ícone ou não.
 
 * página admin no dashboard (colocar controle de APIs tambem)
 
@@ -45,11 +45,11 @@
 * bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
 
 * Post-ai.app (App Criador de Post)
-Conv.it ou Convite.ai ou Convite.shop (App Criador de convites virtuais)
+Convite.ai ou Convite.shop (App Criador de convites virtuais)
 Totem.plus / Agendai.me / iaWhats.com / postotec.app / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
 - iapos, itend e eai já registrados (para cobranças , atendimento e funcionários IA) - relatório em anexo no email
 
-* Carrossel no footer com 10 empresas que usam a minhAi futuramente (Vixus - iAPix - Ficha.Pro - ArteFinal - Post-Ai - Conv.it - Loja de Serviços - iTend - PostoTec - Agendai.me)
+* Carrossel no footer com 10 empresas que usam a minhAi futuramente (Vixus - iAPix - Ficha.Pro - ArteFinal - Post-Ai - Loja de Serviços - iTend - PostoTec - Agendai.me - NotAi)
 
 * Implementar seleção de cores e key inter/asaas/MercadoPago para pix de clientes full, além de seletor de tema no assistente. Sempre light, sempre dark, de acordo com o tema do usuário ou de acordo com a hora do dia e se aparece ou não o seletor no header. Pensar na possibilidade do avatar ser o logo carregado pelo cliente, com animações react
 

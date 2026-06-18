@@ -131,6 +131,41 @@ export default function ArtePerfilPage() {
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed]   = useState(false);
 
+// ── Polling automático enquanto modal PIX está aberto ────────────────
+  useEffect(() => {
+    if (!pixModalOpen || confirmed || !paymentData) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/credits/verify-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payment_id: paymentData.payment_id }),
+        });
+        const data = await res.json();
+        if (data.success && data.status === 'paid') {
+          setConfirmed(true);
+          clearInterval(interval);
+          const { data: credData } = await supabase
+            .from('user_credits')
+            .select('available_credits, total_purchased, total_used')
+            .eq('user_id', user!.id)
+            .maybeSingle();
+          if (credData) setCredits(credData);
+          setTimeout(() => {
+            setPixModalOpen(false);
+            setConfirmed(false);
+            setPaymentData(null);
+          }, 2500);
+        }
+      } catch {
+        // silencia erros de rede no polling
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [pixModalOpen, confirmed, paymentData]);
+
   // ── Load ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -637,13 +672,18 @@ async function copyPix() {
             </div>
 
             {/* QR Code */}
-            {paymentData.pix_qrcode && (
-              <div className="flex justify-center">
-                <div className="p-3 rounded-2xl border border-gray-100 bg-gray-50">
-                  <img src={paymentData.pix_qrcode} alt="QR Code PIX" className="w-44 h-44" />
-                </div>
+            <div className="flex justify-center">
+              <div className="p-3 rounded-2xl border border-gray-100 bg-gray-50">
+                <img
+                  src={
+                    paymentData.pix_qrcode ||
+                    `/api/qrcode?size=300&data=${encodeURIComponent(paymentData.pix_code)}&color=%231A1A1A`
+                  }
+                  alt="QR Code PIX"
+                  className="w-44 h-44"
+                />
               </div>
-            )}
+            </div>
 
             {/* Código copia e cola */}
             <div className="space-y-2">

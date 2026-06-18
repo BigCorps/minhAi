@@ -67,11 +67,11 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 const fileOk = (f: File) => f.type.startsWith('image/') || isPdfFile(f);
 
 // ── Presets de layout (sem 2×2) ─────────────────────────────────────────
-const PRESETS: Record<Preset, { name: string; desc: string; size: number; spacing: number; cols: number; rows: number }> = {
-  grid_3x3:    { name: 'Grid 3×3',    desc: '9 imagens',       size: 5.5, spacing: 0.8, cols: 3, rows: 3 },
-  grid_4x4:    { name: 'Grid 4×4',    desc: '16 imagens',      size: 4,   spacing: 0.5, cols: 4, rows: 4 },
-  a4_completo: { name: 'A4 Completo', desc: 'Máximo possível', size: 3,   spacing: 0.5, cols: 0, rows: 0 },
-  custom:      { name: 'Avançado',    desc: 'Personalizado',   size: 5,   spacing: 1,   cols: 3, rows: 3 },
+const PRESETS: Record<Preset, { name: string; desc: string; size: number; spacing: number }> = {
+  grid_3x3:    { name: 'Grid 3×3',    desc: '9 imagens',       size: 5.5, spacing: 0.8 },
+  grid_4x4:    { name: 'Grid 4×4',    desc: '16 imagens',      size: 4,   spacing: 0.5 },
+  a4_completo: { name: 'A4 Completo', desc: 'Máximo possível', size: 3,   spacing: 0.5 },
+  custom:      { name: 'Avançado',    desc: 'Personalizado',   size: 5,   spacing: 1 },
 };
 
 interface LayoutInfo {
@@ -106,8 +106,6 @@ export default function DuplicarImagemDisplay({
   const [customPageH, setCustomPageH] = useState<number>(52);
   const [maxSize, setMaxSize] = useState(5.5);
   const [spacing, setSpacing] = useState(0.8);
-  const [manualCols, setManualCols] = useState(3);
-  const [manualRows, setManualRows] = useState(3);
   const [layoutInfo, setLayoutInfo] = useState<LayoutInfo>({
     finalWidth: 0, finalHeight: 0, perRow: 0, perColumn: 0, totalImages: 0, usedArea: 0,
   });
@@ -168,16 +166,12 @@ export default function DuplicarImagemDisplay({
     const availableW = pageW - 2 * MARGIN_CM;
     const availableH = pageH - 2 * MARGIN_CM;
 
-    let perRow: number, perColumn: number;
-    if (selectedPreset === 'custom' && showAdvanced) {
-      const maxCols = Math.floor((availableW + spacingCm) / (finalW + spacingCm));
-      const maxRows = Math.floor((availableH + spacingCm) / (finalH + spacingCm));
-      perRow    = Math.min(manualCols, Math.max(0, maxCols));
-      perColumn = Math.min(manualRows, Math.max(0, maxRows));
-    } else {
-      perRow    = Math.max(0, Math.floor((availableW + spacingCm) / (finalW + spacingCm)));
-      perColumn = Math.max(0, Math.floor((availableH + spacingCm) / (finalH + spacingCm)));
-    }
+    // O tamanho da célula (finalW/finalH) é sempre fixo e definido pelo usuário —
+    // colunas/linhas são SEMPRE a consequência de quantas células cabem na página,
+    // nunca um valor imposto manualmente (senão a proporção/tamanho real quebra).
+    // Isso vale tanto para os grids fixos quanto para o preset "Avançado".
+    const perRow    = Math.max(0, Math.floor((availableW + spacingCm) / (finalW + spacingCm)));
+    const perColumn = Math.max(0, Math.floor((availableH + spacingCm) / (finalH + spacingCm)));
     const totalImages = perRow * perColumn;
     const usedW = perRow * finalW + (perRow - 1) * spacingCm;
     const usedH = perColumn * finalH + (perColumn - 1) * spacingCm;
@@ -185,7 +179,7 @@ export default function DuplicarImagemDisplay({
       ? (usedW * usedH) / (availableW * availableH) * 100
       : 0;
     setLayoutInfo({ finalWidth: finalW, finalHeight: finalH, perRow, perColumn, totalImages, usedArea });
-  }, [art, maxSize, spacing, selectedPreset, showAdvanced, manualCols, manualRows, pageMode, pageWValid, pageHValid]);
+  }, [art, maxSize, spacing, pageMode, pageWValid, pageHValid]);
 
   const handleSelectPreset = useCallback((preset: Preset) => {
     setSelectedPreset(preset);
@@ -196,8 +190,6 @@ export default function DuplicarImagemDisplay({
       const cfg = PRESETS[preset];
       setMaxSize(cfg.size);
       setSpacing(cfg.spacing);
-      setManualCols(cfg.cols || 3);
-      setManualRows(cfg.rows || 3);
     }
   }, []);
 
@@ -259,13 +251,21 @@ export default function DuplicarImagemDisplay({
 
     setStage('processing'); setProgress('Enviando imagem…');
     try {
-let cid = data.companyId || companyId;
-if (!cid) {
-  const { data: ensured } = await supabase.rpc('ensure_my_arte_company');
-  cid = (ensured as string) ?? '';
-}
-if (!cid) { setErrorMsg('Não foi possível preparar sua conta. Recarregue e tente de novo.'); setStage('error'); return; }
-setCompanyId(cid);
+      let cid = companyId;
+      if (!cid) {
+        const { data: comp } = await supabase
+          .from('companies')
+          .select('id')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        cid = comp?.id ?? '';
+      }
+      if (!cid) {
+        setErrorMsg('Não encontrei uma empresa nesta conta.'); setStage('error'); return;
+      }
+      setCompanyId(cid);
 
       const uploadPath = await uploadArteSource(art, cid);
 
@@ -283,8 +283,6 @@ setCompanyId(cid);
             maxSize,
             spacing,
             preset: selectedPreset,
-            manualCols: selectedPreset === 'custom' ? manualCols : undefined,
-            manualRows: selectedPreset === 'custom' ? manualRows : undefined,
             pageMode,
             pageWidthCm: pageMode === 'custom_page' ? pageWValid : undefined,
             pageHeightCm: pageMode === 'custom_page' ? pageHValid : undefined,
@@ -317,7 +315,7 @@ setCompanyId(cid);
     } catch (e) {
       setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error');
     }
-  }, [art, layoutInfo, pageDimsInvalid, supabase, companyId, maxSize, spacing, selectedPreset, manualCols, manualRows, pageMode, pageWValid, pageHValid, playText]);
+  }, [art, layoutInfo, pageDimsInvalid, supabase, companyId, maxSize, spacing, selectedPreset, pageMode, pageWValid, pageHValid, playText]);
 
   const irParaLogin = useCallback(() => {
     if (onRequireLogin) onRequireLogin();
@@ -396,6 +394,7 @@ setCompanyId(cid);
                 background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 18,
               }}>‹</button>
               <input type="number" min={1} max={pdfPending.pages} value={pageChoice}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => setPageChoice(clamp(parseInt(e.target.value) || 1, 1, pdfPending.pages))}
                 style={{ ...inputStyle, textAlign: 'center', width: 90, flex: 'none' }} />
               <span style={{ fontSize: 13, color: c.textMuted }}>de {pdfPending.pages}</span>
@@ -478,12 +477,14 @@ setCompanyId(cid);
                 <div>
                   <label style={label}>Largura da página (cm)</label>
                   <input type="number" min={1} max={PAGE_MAX_CM} step={0.5} value={customPageW}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setCustomPageW(parseFloat(e.target.value) || 0)}
                     style={inputStyle} />
                 </div>
                 <div>
                   <label style={label}>Altura da página (cm)</label>
                   <input type="number" min={1} max={PAGE_MAX_H_CM} step={0.5} value={customPageH}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setCustomPageH(parseFloat(e.target.value) || 0)}
                     style={inputStyle} />
                 </div>
@@ -572,11 +573,16 @@ setCompanyId(cid);
             {showAdvanced && (
               <div style={{ padding: 14, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Configurações avançadas</div>
+                <p style={{ margin: '0 0 12px', fontSize: 11, color: c.textMuted, lineHeight: 1.4 }}>
+                  O tamanho definido aqui é mantido sempre. Colunas e linhas são calculadas automaticamente
+                  para preencher a página sem distorcer a proporção.
+                </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
                     <label style={label}>Tamanho máximo (cm)</label>
                     <input
                       type="number" min={0.5} max={15} step={0.1} value={maxSize}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setMaxSize(clamp(parseFloat(e.target.value) || 0.5, 0.5, 15))}
                       style={inputStyle}
                     />
@@ -585,23 +591,8 @@ setCompanyId(cid);
                     <label style={label}>Espaçamento entre imagens (mm)</label>
                     <input
                       type="number" min={0} max={5} step={0.5} value={spacing}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setSpacing(clamp(parseFloat(e.target.value) || 0, 0, 5))}
-                      style={inputStyle}
-                    />
-                  </div>
-                  <div>
-                    <label style={label}>Colunas</label>
-                    <input
-                      type="number" min={1} max={20} step={1} value={manualCols}
-                      onChange={(e) => setManualCols(clamp(parseInt(e.target.value) || 1, 1, 20))}
-                      style={inputStyle}
-                    />
-                  </div>
-                  <div>
-                    <label style={label}>Linhas</label>
-                    <input
-                      type="number" min={1} max={30} step={1} value={manualRows}
-                      onChange={(e) => setManualRows(clamp(parseInt(e.target.value) || 1, 1, 30))}
                       style={inputStyle}
                     />
                   </div>

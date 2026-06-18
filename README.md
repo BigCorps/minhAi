@@ -8,11 +8,13 @@
 
 * Identificar bug de Processando no Assistente 
 
-* Carrossel no footer com 10 empresas que usam a tecnologia minhAi.
-** PRONTAS: Vixus - Loja de Serviços - ArteFinal
-** BREVES: iAPix - Ficha.Pro - Postos.Pro - ConsultAi.net.br - Post-ai.app - Agenda.Gratis - Nota.net.br)
+* min.ia.br - app mini da minhAi - registrar dominio e criar assistente rapido, para funções rápidas no app. Com uma lógica parecida com o ArteFinal, o usuário vê todas as funções e se cadastra para utilizar as funções diretamente no mini - aproveitando para divulgar a minhAi para o usuário utilizar na empresa dele.
 
-* ArteFinal.app - Manus qpreco (Deixar o domínio principal no repositório e ia.artefinal.app no assistente)
+* Carrossel no footer (bem pequeno mesmo no mobile) com 10 empresas que usam a tecnologia minhAi.
+** PRONTAS: Vixus - Loja de Serviços - ArteFinal
+** BREVES: iAPix - Ficha.Pro - Postos.Pro - Consulta.tec.br - Post-ai.app - Agenda.tec.br - Nota.net.br)
+
+* ArteFinal.app - Manus qpreco (Deixar o domínio principal no repositório e ia.artefinal.app no assistente - executar bubblewrap e testar na Playstore se aprova.
 
 * iAPix.net - App com confirmação automática de pix direcionando para /pix para os usuários usarem /slug diretamente (reservar apenas o /meu) e usar o principal para ser a página principal identificando logado e não logado.
 

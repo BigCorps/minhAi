@@ -5,7 +5,7 @@ export type BrandKey = 'minhai' | 'artefinal';
 export function getBrandByHost(hostname: string): BrandKey {
   const cleanHost = hostname.split(':')[0].toLowerCase();
 
-  if (cleanHost === 'artefinal.app' || cleanHost === 'www.artefinal.app') {
+  if (cleanHost === 'ia.artefinal.app') {
     return 'artefinal';
   }
 

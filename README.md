@@ -10,13 +10,13 @@
 
 * Carrossel no footer com 10 empresas que usam a tecnologia minhAi.
 PRONTAS: Vixus - Loja de Serviços - ArteFinal
-BREVES: iAPix - Ficha.Pro - Postos.Pro - iTend - Post-ai.app - Agenda.Gratis - Not.it)
+BREVES: iAPix - Ficha.Pro - Postos.Pro - iTend - Post-ai.app - Agenda.Gratis - Nota.net.br)
 
 * iAPix.net - App com confirmação automática de pix direcionando para /pix para os usuários usarem /slug diretamente (reservar apenas o /meu) e usar o principal para ser a página principal identificando logado e não logado.
 
 * ArteFinal.app - Manus qpreco
 
-* FichaTec ou FichAi.app ou Linha.pro ou PreparAi.me ou FichaPronta - após o ArteFinal e Pix.Wiki estarem prontos, oferecer ao mau o Auxiliar de Produção no mesmo molde, apenas com mensalidade,usando grow, para ele vender (com tela de admin para ambos controlarem os usuários e envio de e-mail quando chega um novo cliente para ele, e mensalmente com o relatório dos pagamentos). Fazer ele sugerir o nome
+* FichaTec ou Ficha.pro ou Linha.pro ou PreparAi.me ou FichaPronta - após o ArteFinal e Pix.Wiki estarem prontos, oferecer ao mau o Auxiliar de Produção no mesmo molde, apenas com mensalidade,usando grow, para ele vender (com tela de admin para ambos controlarem os usuários e envio de e-mail quando chega um novo cliente para ele, e mensalmente com o relatório dos pagamentos). Fazer ele sugerir o nome
 
 * Sugerir parceria com Site e aplicativo PlayStore para Hantars, Salão e empresa de Aluguel de Totem
 

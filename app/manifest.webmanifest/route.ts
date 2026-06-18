@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-admin';
 
-const ARTEFINAL_DOMAINS = ['artefinal.app', 'www.artefinal.app'];
+const ARTEFINAL_DOMAINS = ['ia.artefinal.app'];
 
 export async function GET(request: NextRequest) {
   const host = request.headers.get('host') || '';

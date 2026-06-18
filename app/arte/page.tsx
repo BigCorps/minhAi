@@ -41,7 +41,7 @@ const SKILLS: Skill[] = [
     label: 'Adesivo com Recorte',
     color: CMYK.cyan,
     desc: 'PDF com arte + linha de corte (die-cut)',
-    credits: 8,
+    credits: 5,
     triggers: ['adesivo', 'sticker', 'recorte', 'corte de contorno', 'die cut', 'die-cut'],
     modal: 'AdesivoContornoDisplay',
   },

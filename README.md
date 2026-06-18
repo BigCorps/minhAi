@@ -8,11 +8,13 @@
 
 * Identificar bug de Processando no Assistente 
 
+* colocar logo via link no qrcode e fazer do código de barras (BigCorps1)
+
 * min.ia.br - app mini da minhAi - registrar dominio e criar assistente rapido, para funções rápidas no app. Com uma lógica parecida com o ArteFinal, o usuário vê todas as funções e se cadastra para utilizar as funções diretamente no mini - escolhe seu assistente e executa funções diretamente dali. e utilizar já essa logica no lugar do widget e aproveitando para divulgar a minhAi para o usuário utilizar na empresa dele.
 
 * Carrossel no footer (bem pequeno mesmo no mobile) com 10 empresas que usam a tecnologia minhAi.
 ** PRONTAS: Vixus - Loja de Serviços - ArteFinal
-** BREVES: Pix.Wiki - Ficha.Pro - Postos.Pro - Consulta.tec.br - Post-ai.app - Agenda.tec.br - Nota.net.br)
+** BREVES: Pix.Wiki - Ficha.Pro - Postos.Pro - Consulta.tec.br - Post-ai.app - Agenda.tec.br - Nota.net.br - LembreteRemedio)
 
 * ArteFinal.app - Manus qpreco (Deixar o domínio principal no repositório e ia.artefinal.app no assistente - executar bubblewrap e testar na Playstore se aprova.
 

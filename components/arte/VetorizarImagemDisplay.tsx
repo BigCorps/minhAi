@@ -2,63 +2,6 @@
 
 /**
  * Modal "Vetorizar Imagem" — ArteFinal.
- *
- * FUNÇÃO NOVA (regra do §8): o destino final é um SVG/PDF vetorial (silhueta
- * ou contorno), não a página retangular CMYK sangrada do gerar_arte_final.
- * Decisões confirmadas: cobra 1 crédito; PDF de saída fica RGB simples (sem
- * CMYK/ICC, sem selagem PDF/X-1a) — a vetorização (potrace-plus) e o PDF
- * (jsPDF + svg2pdf.js) rodam inteiros no navegador, igual ao HTML original.
- *
- * Reescrito depois de ver o ArteFinalDisplay.tsx/prepareUpload.ts/route.ts
- * reais — principais correções em relação ao primeiro rascunho:
- *   - Client Supabase: `createClient()` de '@/lib/supabase-browser' (não um
- *     singleton 'supabase' exportado).
- *   - Paleta: objeto local DARK/LIGHT no formato real do projeto
- *     ({ bg, bgSecondary, border, text, textMuted, success, error, accent,
- *     warn }, com cores tiradas do CMYK), não a paleta inventada na v1.
- *     Usei `accent: CMYK.magenta` pra esta função — o cyan já é do
- *     gerar_arte_final; o guia usa magenta como exemplo hipotético pra
- *     'adesivo_contorno' (ainda não construída), então não há conflito real
- *     hoje. Se vocês já tiverem um plano de cores por função, troquem aqui.
- *   - Sem SVG/lucide decorativo: o componente real não usa ícones, só texto e
- *     um spinner via CSS (div com border-top colorido), então segui o mesmo
- *     caminho em vez do conjunto de ícones que eu tinha desenhado na v1.
- *   - Entrada por imagem OU PDF, reaproveitando makeImagePreview / openPdf /
- *     rasterizePdfPage / isPdfFile de '@/lib/arte/prepareUpload' em vez de
- *     reimplementar leitura de arquivo — ganha suporte a PDF "de graça" e
- *     fica consistente com o resto da superfície (§11 menciona isso como
- *     padrão esperado).
- *   - Atenção: como agora a entrada pode não ter alfa (PDF rasterizado em
- *     fundo branco, ou JPEG), adicionei um segundo modo de limiarização por
- *     LUMINÂNCIA quando `art.hasAlpha` é false. Sem isso, o algoritmo do HTML
- *     original (que só olha o canal alfa) sairia totalmente preto ou
- *     totalmente branco em qualquer entrada sem transparência — o threshold
- *     por alfa só faz sentido pra PNG com fundo recortado.
- *   - Resolução de empresa, mount de playText (com guarda 'spoke'), aviso de
- *     "Custo" só quando logado, e auto-close em 90s na tela de resultado:
- *     copiados do padrão do ArteFinalDisplay.tsx.
- *
- * NÃO copiei: o componente ResultDownloadQR (QR pra baixar no celular) que o
- * gerar_arte_final usa — ele assume um único arquivo de resultado, e aqui o
- * usuário pode querer SVG ou PDF. Se vocês quiserem o QR mesmo assim (ex.:
- * só pro PDF), me avisem que eu encaixo.
- *
- * Dependências novas: npm install potrace-plus jspdf svg2pdf.js
- * 'potrace-plus' não publica @types — o import dinâmico usa // @ts-ignore.
- *
- * CORREÇÃO (preview do SVG estourando o modal): o wrapper que recebe o
- * dangerouslySetInnerHTML do svgMarkup só limitava o tamanho via
- * maxWidth/maxHeight no DIV — mas o <svg> injetado tem width/height em
- * pixels (vêm de pathData.width/height, ex. 928x961), e atributo de
- * width/height em px não encolhe por causa de maxWidth/maxHeight do pai.
- * Resultado: na tela de "configuring" ficava só cortado (porque o painel
- * tem overflow:hidden), e na tela de "result" não tinha overflow:hidden
- * nenhum, então o SVG vazava pra fora do modal inteiro.
- * Fix: classe `.vet-svg-frame` força `width:100%; height:100%` no <svg>
- * filho via CSS (CSS tem precedência sobre atributo de apresentação), e o
- * viewBox + preserveAspectRatio padrão ("xMidYMid meet") cuidam de encaixar
- * a arte proporcionalmente dentro da caixa, sem distorcer. Adicionei
- * overflow:hidden nos contêineres como rede de segurança.
  */
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -280,7 +223,7 @@ export default function VetorizarImagemDisplay({ data, onClose, theme = 'dark', 
 
     setStage('processing'); setProgress('Confirmando liberação...');
     try {
-      let cid = data.companyId || companyId;
+let cid = data.companyId || companyId;
 if (!cid) {
   const { data: ensured } = await supabase.rpc('ensure_my_arte_company');
   cid = (ensured as string) ?? '';

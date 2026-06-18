@@ -63,7 +63,15 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
   const [cutH, setCutH] = useState<number>(50);
   const [radius, setRadius] = useState<number>(6);
   const [offset, setOffset] = useState<number>(3);
-  const [sangria, setSangria] = useState<number>(3);
+  
+const minSangria = (cutW < 30 || cutH < 30) ? 2 : 3;
+const [sangria, setSangria] = useState<number>(minSangria);
+
+// e quando cutW/cutH mudar, corrigir se a sangria ficou abaixo do mínimo:
+useEffect(() => {
+  if (sangria < minSangria) setSangria(minSangria);
+}, [minSangria]);
+  
   const [bleedMode, setBleedMode] = useState<'externa' | 'interna'>('externa');
   const [cutColor, setCutColor] = useState<string>('magenta');
   const [nome, setNome] = useState<string>('adesivo');
@@ -138,9 +146,16 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
       setCompanyId(cid);
 
       const uploadPath = await uploadArteSource(art, cid);
-      const spec: any = isAuto
-        ? { shape: 'auto', cut_w_mm: cutW, offset_mm: offset, cut_color: cutColor, nome }
-        : { shape, cut_w_mm: cutW, cut_h_mm: cutH, radius_mm: radius, sangria_mm: sangria, bleed_mode: bleedMode, cut_color: cutColor, nome };
+const docW = bleedMode === 'externa' ? cutW + 2 * sangria : cutW;
+const docH = bleedMode === 'externa' ? cutH + 2 * sangria : cutH;
+
+const spec: any = {
+  shape, cut_w_mm: cutW, cut_h_mm: cutH,
+  doc_w_mm: docW, doc_h_mm: docH,   // ← dimensões reais do arquivo PDF gerado
+  sangria_mm: sangria,
+  bleed_mode: bleedMode,
+  ...
+};
 
       setProgress('Gerando arte e corte...');
       const res = await fetch('/api/arte/adesivo', {
@@ -247,7 +262,7 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
               {isAuto
                 ? `O corte segue a silhueta da arte (recuo ${offset}mm).`
                 : bleedMode === 'externa'
-                  ? `Corte ${cutW}×${cutH}mm · arte transborda ${sangria}mm para fora da linha.`
+                  ? `Corte ${cutW}×${cutH}mm · arquivo ${docW}×${docH}mm (sangria ${sangria}mm por lado).`
                   : `Arte ${cutW}×${cutH}mm · corte entra ${sangria}mm (adesivo fica ${Math.max(5, cutW - 2 * sangria)}×${Math.max(5, cutH - 2 * sangria)}mm).`}
             </p>
 
@@ -282,7 +297,25 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
             {/* sangria + modo (só formas geométricas) */}
             {!isAuto && (
               <>
-                <div><label style={label}>Sangria: {sangria}mm</label><input type="range" min={0} max={10} step={0.5} value={sangria} onChange={(e) => setSangria(parseFloat(e.target.value))} style={{ width: '100%', accentColor: c.accent }} /></div>
+              <div>
+  <label style={label}>
+    Sangria: {sangria}mm
+    {sangria < minSangria && (
+      <span style={{ color: c.error, marginLeft: 6 }}>
+        mínimo {minSangria}mm exigido pela gráfica
+      </span>
+    )}
+  </label>
+  <input
+    type="range"
+    min={minSangria}   // ← trava no mínimo exigido
+    max={10}
+    step={0.5}
+    value={sangria}
+    onChange={(e) => setSangria(parseFloat(e.target.value))}
+    style={{ width: '100%', accentColor: c.accent }}
+  />
+</div>
                 <div>
                   <label style={label}>Como aplicar a sangria</label>
                   <div style={{ display: 'flex', gap: 6 }}>

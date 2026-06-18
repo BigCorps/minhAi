@@ -181,6 +181,19 @@ export default function DuplicarImagemDisplay({
     setLayoutInfo({ finalWidth: finalW, finalHeight: finalH, perRow, perColumn, totalImages, usedArea });
   }, [art, maxSize, spacing, pageMode, pageWValid, pageHValid]);
 
+  // Teto do "Tamanho máximo (cm)": no A4 mantém 15cm fixo (não há razão para célula maior
+  // que isso numa folha A4). No modo Personalizado NÃO há trava arbitrária — o teto é o menor
+  // lado da própria página que o usuário definiu (célula não pode ser maior que a página).
+  const A4_MAX_SIZE_CM = 15;
+  const maxSizeCeiling = pageMode === 'a4' ? A4_MAX_SIZE_CM : Math.max(0.5, Math.min(pageWValid, pageHValid));
+
+  // Se o teto mudar (ex: trocou de A4 para Personalizado com página pequena) e o valor
+  // atual ultrapassar o novo teto, reclampa automaticamente — sem isso o cálculo de layout
+  // usaria um maxSize maior que a própria página e travaria o grid em 0×0.
+  useEffect(() => {
+    setMaxSize((v) => clamp(v, 0.5, maxSizeCeiling));
+  }, [maxSizeCeiling]);
+
   const handleSelectPreset = useCallback((preset: Preset) => {
     setSelectedPreset(preset);
     if (preset === 'custom') {
@@ -526,11 +539,12 @@ export default function DuplicarImagemDisplay({
               const pageWmm = (pageMode === 'a4' ? 21 : pageWValid) * 10;
               const pageHmm = (pageMode === 'a4' ? 29.7 : pageHValid) * 10;
               const marginMm = MARGIN_CM * 10;
-              const availW = pageWmm - 2 * marginMm;
-              const availH = pageHmm - 2 * marginMm;
               const gapMm = spacing; // spacing já é mm
-              const cellWmm = (availW - (layoutInfo.perRow    - 1) * gapMm) / layoutInfo.perRow;
-              const cellHmm = (availH - (layoutInfo.perColumn - 1) * gapMm) / layoutInfo.perColumn;
+              // Tamanho da célula é SEMPRE o real e fixo (igual ao que será impresso),
+              // nunca esticado para preencher a área disponível — senão a imagem
+              // distorce/corta visualmente quando há poucas colunas/linhas (ex: 1 coluna).
+              const cellWmm = layoutInfo.finalWidth  * 10;
+              const cellHmm = layoutInfo.finalHeight * 10;
               const mPctW = (marginMm / pageWmm) * 100;
               const mPctH = (marginMm / pageHmm) * 100;
               const cWpct = (cellWmm / pageWmm) * 100;
@@ -579,11 +593,13 @@ export default function DuplicarImagemDisplay({
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
-                    <label style={label}>Tamanho máximo (cm)</label>
+                    <label style={label}>
+                      Tamanho máximo (cm){pageMode === 'custom_page' ? ` — até ${maxSizeCeiling.toFixed(1)}cm` : ''}
+                    </label>
                     <input
-                      type="number" min={0.5} max={15} step={0.1} value={maxSize}
+                      type="number" min={0.5} max={maxSizeCeiling} step={0.1} value={maxSize}
                       onFocus={(e) => e.target.select()}
-                      onChange={(e) => setMaxSize(clamp(parseFloat(e.target.value) || 0.5, 0.5, 15))}
+                      onChange={(e) => setMaxSize(clamp(parseFloat(e.target.value) || 0.5, 0.5, maxSizeCeiling))}
                       style={inputStyle}
                     />
                   </div>

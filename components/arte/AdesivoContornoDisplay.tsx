@@ -129,58 +129,56 @@ useEffect(() => {
     } catch (e) { setErrorMsg((e as Error).message ?? 'Falha ao importar a página.'); setStage('error'); }
   }, [pdfPending, pageChoice]);
 
-  const handleRelease = useCallback(async () => {
-    if (!art) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    const user = session?.user;
-    if (!user) { setStage('login'); return; }
+const handleRelease = useCallback(async () => {
+  if (!art) return;
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) { setStage('login'); return; }
 
-    setStage('processing'); setProgress('Enviando arte...');
-    try {
-      let cid = data.companyId || companyId;
-      if (!cid) {
-        const { data: ensured } = await supabase.rpc('ensure_my_arte_company');
-        cid = (ensured as string) ?? '';
-      }
-      if (!cid) { setErrorMsg('Não foi possível preparar sua conta. Recarregue e tente de novo.'); setStage('error'); return; }
-      setCompanyId(cid);
+  setStage('processing'); setProgress('Enviando arte...');
+  try {
+    let cid = data.companyId || companyId;
+    if (!cid) {
+      const { data: ensured } = await supabase.rpc('ensure_my_arte_company');
+      cid = (ensured as string) ?? '';
+    }
+    if (!cid) { setErrorMsg('Não foi possível preparar sua conta. Recarregue e tente de novo.'); setStage('error'); return; }
+    setCompanyId(cid);
 
-      const uploadPath = await uploadArteSource(art, cid);
-const docW = bleedMode === 'externa' ? cutW + 2 * sangria : cutW;
-const docH = bleedMode === 'externa' ? cutH + 2 * sangria : cutH;
+    const uploadPath = await uploadArteSource(art, cid);
 
-const spec: any = {
-  shape, cut_w_mm: cutW, cut_h_mm: cutH,
-  doc_w_mm: docW, doc_h_mm: docH,   // ← dimensões reais do arquivo PDF gerado
-  sangria_mm: sangria,
-  bleed_mode: bleedMode,
-  ...
-};
+    // ← NOVO: calcula dimensões reais do arquivo com sangria inclusa
+    const docW = bleedMode === 'externa' ? cutW + 2 * sangria : cutW;
+    const docH = bleedMode === 'externa' ? cutH + 2 * sangria : cutH;
 
-      setProgress('Gerando arte e corte...');
-      const res = await fetch('/api/arte/adesivo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ companyId: cid, uploadPath, spec }),
-      });
-      const out = await res.json();
-      if (!res.ok || !out.success) {
-        setErrorMsg(res.status === 402
-          ? `Créditos insuficientes. Este adesivo custa ${CREDITS} créditos e seu saldo é ${out.saldo ?? 0}.`
-          : (out.error ?? 'Não foi possível gerar o arquivo.'));
-        setStage('error'); return;
-      }
-      const bin = atob(out.pdf_base64);
-      const arr = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-      setResultBlob(new Blob([arr], { type: 'application/pdf' }));
-      setResultBase64(out.pdf_base64);
-      setResultName(out.file_name ?? `${nome}.pdf`);
-      setSaldo(typeof out.saldo === 'number' ? out.saldo : null);
-      setStage('result');
-      playText('Adesivo pronto! Página 1 com a arte, página 2 com o corte.').catch(() => {});
-    } catch (e) { setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error'); }
-  }, [art, isAuto, shape, cutW, cutH, radius, offset, sangria, bleedMode, cutColor, nome, supabase, companyId, playText]);
+    const spec: any = isAuto
+      ? { shape: 'auto', cut_w_mm: cutW, offset_mm: offset, cut_color: cutColor, nome }
+      : { shape, cut_w_mm: cutW, cut_h_mm: cutH, doc_w_mm: docW, doc_h_mm: docH, radius_mm: radius, sangria_mm: sangria, bleed_mode: bleedMode, cut_color: cutColor, nome }; // ← NOVO: doc_w_mm e doc_h_mm
+
+    setProgress('Gerando arte e corte...');
+    const res = await fetch('/api/arte/adesivo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ companyId: cid, uploadPath, spec }),
+    });
+    const out = await res.json();
+    if (!res.ok || !out.success) {
+      setErrorMsg(res.status === 402
+        ? `Créditos insuficientes. Este adesivo custa ${CREDITS} créditos e seu saldo é ${out.saldo ?? 0}.`
+        : (out.error ?? 'Não foi possível gerar o arquivo.'));
+      setStage('error'); return;
+    }
+    const bin = atob(out.pdf_base64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    setResultBlob(new Blob([arr], { type: 'application/pdf' }));
+    setResultBase64(out.pdf_base64);
+    setResultName(out.file_name ?? `${nome}.pdf`);
+    setSaldo(typeof out.saldo === 'number' ? out.saldo : null);
+    setStage('result');
+    playText('Adesivo pronto! Página 1 com a arte, página 2 com o corte.').catch(() => {});
+  } catch (e) { setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error'); }
+}, [art, isAuto, shape, cutW, cutH, radius, offset, sangria, bleedMode, cutColor, nome, supabase, companyId, playText]);
 
   const irParaLogin = useCallback(() => { if (onRequireLogin) onRequireLogin(); else window.location.href = '/login'; }, [onRequireLogin]);
   const handleDownload = useCallback(() => {

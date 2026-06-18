@@ -68,7 +68,8 @@ const SKILLS: Skill[] = [
 {
   key:      'gerar_qr_code',
   label:    'Gerar QR Code',
-  color:    '#e94560',          // accent da paleta ArteFinal
+  color:     CMYK.cyan,  
+  desc:     'Gera QR Code com cor, tamanho e logo personalizados',
   credits:  1,                  // utilitário gratuito; ajuste se quiser cobrar
   triggers: [
     'qr', 'qr code', 'qrcode', 'gerar qr', 'criar qr',
@@ -375,14 +376,13 @@ export default function ArtePage() {
     onRequireLogin={() => { window.location.href = LOGIN_URL; }}
   />
 )}
-
-{activeSkill === 'gerar_qr_code' && (
+{activeModal?.type === 'gerar_qr_code' && (
   <QRCodeDisplay
-    data={{ companyId: companyId ?? '' }}
-    onClose={() => setActiveSkill(null)}
-    onRequireLogin={() => router.push('/arte/login')}
-    theme={theme}
+    data={activeModal.data}
+    onClose={closeModal}
+    theme="light"
     playText={playText}
+    onRequireLogin={() => { window.location.href = LOGIN_URL; }}
   />
 )}
 

@@ -63,6 +63,8 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
   const [cutH, setCutH] = useState<number>(50);
   const [radius, setRadius] = useState<number>(6);
   const [offset, setOffset] = useState<number>(3);
+  const [sangria, setSangria] = useState<number>(3);
+  const [bleedMode, setBleedMode] = useState<'externa' | 'interna'>('externa');
   const [cutColor, setCutColor] = useState<string>('magenta');
   const [nome, setNome] = useState<string>('adesivo');
 
@@ -127,18 +129,18 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
 
     setStage('processing'); setProgress('Enviando arte...');
     try {
-      let cid = companyId;
+      let cid = data.companyId || companyId;
       if (!cid) {
-        const { data: comp } = await supabase.from('companies').select('id').eq('user_id', user.id).order('created_at', { ascending: true }).limit(1).maybeSingle();
-        cid = comp?.id ?? '';
+        const { data: ensured } = await supabase.rpc('ensure_my_arte_company');
+        cid = (ensured as string) ?? '';
       }
-      if (!cid) { setErrorMsg('Não encontrei uma empresa nesta conta.'); setStage('error'); return; }
+      if (!cid) { setErrorMsg('Não foi possível preparar sua conta. Recarregue e tente de novo.'); setStage('error'); return; }
       setCompanyId(cid);
 
       const uploadPath = await uploadArteSource(art, cid);
       const spec: any = isAuto
         ? { shape: 'auto', cut_w_mm: cutW, offset_mm: offset, cut_color: cutColor, nome }
-        : { shape, cut_w_mm: cutW, cut_h_mm: cutH, radius_mm: radius, cut_color: cutColor, nome };
+        : { shape, cut_w_mm: cutW, cut_h_mm: cutH, radius_mm: radius, sangria_mm: sangria, bleed_mode: bleedMode, cut_color: cutColor, nome };
 
       setProgress('Gerando arte e corte...');
       const res = await fetch('/api/arte/adesivo', {
@@ -163,7 +165,7 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
       setStage('result');
       playText('Adesivo pronto! Página 1 com a arte, página 2 com o corte.').catch(() => {});
     } catch (e) { setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error'); }
-  }, [art, isAuto, shape, cutW, cutH, radius, offset, cutColor, nome, supabase, companyId, playText]);
+  }, [art, isAuto, shape, cutW, cutH, radius, offset, sangria, bleedMode, cutColor, nome, supabase, companyId, playText]);
 
   const irParaLogin = useCallback(() => { if (onRequireLogin) onRequireLogin(); else window.location.href = '/login'; }, [onRequireLogin]);
   const handleDownload = useCallback(() => {
@@ -181,10 +183,14 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14, background: c.bgSecondary, border: `1px solid ${c.border}`, color: c.text, outline: 'none' };
   const semAlfa = isAuto && !!art && !art.hasAlpha;
 
-  // preview: caixa na proporção do corte, arte cobrindo, overlay da forma
-  const boxW = 220, boxH = isAuto ? 220 : Math.round(220 * (cutH / Math.max(1, cutW)));
-  const rxPct = shape === 'rounded' ? clamp((radius / Math.max(1, cutW)) * 100, 0, 50) : 0;
-  const ryPct = shape === 'rounded' ? clamp((radius / Math.max(1, cutH)) * 100, 0, 50) : 0;
+  // preview: a caixa = área impressa (arte); o corte aparece recuado pela sangria
+  // externa: arte = corte+sangria  | interna: arte = tamanho digitado, corte entra pra dentro
+  const coverWmm = bleedMode === 'interna' ? cutW : cutW + 2 * sangria;
+  const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
+  const insetXpct = clamp((sangria / Math.max(1, coverWmm)) * 100, 0, 49);
+  const insetYpct = clamp((sangria / Math.max(1, coverHmm)) * 100, 0, 49);
+  const radiusPct = shape === 'rounded' ? clamp((radius / Math.max(1, coverWmm)) * 100, 0, 50) : 0;
+  const boxW = 220, boxH = isAuto ? 220 : Math.round(220 * (coverHmm / Math.max(1, coverWmm)));
 
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', padding: 16 }}>
@@ -231,14 +237,18 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
                 {!isAuto && (
                   <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
                     {shape === 'circle'
-                      ? <ellipse cx="50" cy="50" rx="49.5" ry="49.5" fill="none" stroke={swatch} strokeWidth="1" vectorEffect="non-scaling-stroke" />
-                      : <rect x="0.5" y="0.5" width="99" height="99" rx={rxPct} ry={ryPct} fill="none" stroke={swatch} strokeWidth="1" vectorEffect="non-scaling-stroke" />}
+                      ? <ellipse cx="50" cy="50" rx={50 - insetXpct} ry={50 - insetYpct} fill="none" stroke={swatch} strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                      : <rect x={insetXpct} y={insetYpct} width={100 - 2 * insetXpct} height={100 - 2 * insetYpct} rx={radiusPct} ry={radiusPct} fill="none" stroke={swatch} strokeWidth="1" vectorEffect="non-scaling-stroke" />}
                   </svg>
                 )}
               </div>
             </div>
             <p style={{ margin: 0, textAlign: 'center', fontSize: 11, color: c.textMuted }}>
-              {isAuto ? 'O corte segue a silhueta da arte (recuo ' + offset + 'mm).' : `Corte ${shape === 'circle' ? 'redondo' : shape === 'rounded' ? 'arredondado' : 'quadrado'} de ${cutW}×${cutH}mm. A arte preenche até a borda.`}
+              {isAuto
+                ? `O corte segue a silhueta da arte (recuo ${offset}mm).`
+                : bleedMode === 'externa'
+                  ? `Corte ${cutW}×${cutH}mm · arte transborda ${sangria}mm para fora da linha.`
+                  : `Arte ${cutW}×${cutH}mm · corte entra ${sangria}mm (adesivo fica ${Math.max(5, cutW - 2 * sangria)}×${Math.max(5, cutH - 2 * sangria)}mm).`}
             </p>
 
             {semAlfa && (
@@ -259,15 +269,35 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
 
             {/* tamanho */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div><label style={label}>Largura (mm)</label><input type="number" min={10} value={cutW} onChange={(e) => setCutW(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
+              <div><label style={label}>{isAuto ? 'Largura (mm)' : bleedMode === 'externa' ? 'Largura do corte (mm)' : 'Largura da arte (mm)'}</label><input type="number" min={10} value={cutW} onChange={(e) => setCutW(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
               {isAuto
                 ? <div><label style={label}>Altura (auto)</label><input type="text" value={`${autoH.toFixed(0)} mm`} readOnly style={{ ...inputStyle, color: c.textMuted }} /></div>
-                : <div><label style={label}>Altura (mm)</label><input type="number" min={10} value={cutH} onChange={(e) => setCutH(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>}
+                : <div><label style={label}>{bleedMode === 'externa' ? 'Altura do corte (mm)' : 'Altura da arte (mm)'}</label><input type="number" min={10} value={cutH} onChange={(e) => setCutH(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>}
             </div>
 
             {shape === 'rounded' && (
               <div><label style={label}>Raio dos cantos: {radius}mm</label><input type="range" min={1} max={Math.min(cutW, cutH) / 2} step={0.5} value={radius} onChange={(e) => setRadius(parseFloat(e.target.value))} style={{ width: '100%', accentColor: c.accent }} /></div>
             )}
+
+            {/* sangria + modo (só formas geométricas) */}
+            {!isAuto && (
+              <>
+                <div><label style={label}>Sangria: {sangria}mm</label><input type="range" min={0} max={10} step={0.5} value={sangria} onChange={(e) => setSangria(parseFloat(e.target.value))} style={{ width: '100%', accentColor: c.accent }} /></div>
+                <div>
+                  <label style={label}>Como aplicar a sangria</label>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => setBleedMode('externa')} style={{ flex: 1, padding: '8px 6px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: c.bgSecondary, border: bleedMode === 'externa' ? `2px solid ${c.accent}` : `1px solid ${c.border}`, color: c.text }}>Por fora (transborda)</button>
+                    <button onClick={() => setBleedMode('interna')} style={{ flex: 1, padding: '8px 6px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: c.bgSecondary, border: bleedMode === 'interna' ? `2px solid ${c.accent}` : `1px solid ${c.border}`, color: c.text }}>Por dentro (recorta)</button>
+                  </div>
+                  <p style={{ margin: '6px 0 0', fontSize: 11, color: c.textMuted, lineHeight: 1.4 }}>
+                    {bleedMode === 'externa'
+                      ? 'A medida é o corte. A arte é ampliada e transborda. Ideal quando a arte tem fundo/moldura de sobra (ex.: foto, círculo cheio).'
+                      : 'A medida é a arte inteira. O corte entra para dentro. Ideal quando a arte não pode ser cortada nas bordas (ex.: logo com texto na margem).'}
+                  </p>
+                </div>
+              </>
+            )}
+
             {isAuto && (
               <div><label style={label}>Recuo do corte: {offset}mm</label><input type="range" min={0} max={8} step={0.5} value={offset} onChange={(e) => setOffset(parseFloat(e.target.value))} style={{ width: '100%', accentColor: c.accent }} /></div>
             )}

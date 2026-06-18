@@ -10,7 +10,7 @@
 
 * Carrossel no footer com 10 empresas que usam a tecnologia minhAi.
 PRONTAS: Vixus - Loja de Serviços - ArteFinal
-BREVES: iAPix - Ficha.Pro - Postos.Pro - iTend - Post-ai.app - Agenda.Gratis - Nota.net.br)
+BREVES: iAPix - Ficha.Pro - Postos.Pro - ConsultAi.net.br - Post-ai.app - Agenda.Gratis - Nota.net.br)
 
 * ArteFinal.app - Manus qpreco (Deixar o domínio principal no repositório e ia.artefinal.app no assistente)
 

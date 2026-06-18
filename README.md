@@ -14,7 +14,7 @@
 
 * Carrossel no footer (bem pequeno mesmo no mobile) com 10 empresas que usam a tecnologia minhAi.
 ** PRONTAS: Vixus - Loja de Serviços - ArteFinal
-** BREVES: Pix.Wiki - Ficha.Pro - Postos.Pro - Consulta.tec.br - Post-ai.app - Agenda.tec.br - Nota.net.br - LembreteRemedio)
+** BREVES: Pix.Wiki - Ficha.Pro - Postos.Pro - Consulta.tec.br - Post-ai.app - Agenda.tec.br - Nota.net.br - Remed.ia.br)
 
 * ArteFinal.app - Manus qpreco (Deixar o domínio principal no repositório e ia.artefinal.app no assistente - executar bubblewrap e testar na Playstore se aprova.
 

@@ -20,7 +20,6 @@ import { drawImageCmyk } from '@/lib/arte/cmykImage';
 const FUNCTION_KEY = 'gerar_adesivo_contorno';
 const CREDITS = 5;
 const SIMPLIFY_MM = 0.3;
-const GEO_BLEED_MM = 2;   // sangria das formas geométricas (arte transborda o corte)
 const HANDLE_MM = 5;      // folga de papel ao redor
 const DPI = 300;
 const mm = (v: number) => (v * 72) / 25.4;
@@ -94,19 +93,31 @@ export async function POST(req: NextRequest) {
       const targetPx = Math.round((artWmm / 25.4) * DPI);
       await drawImageCmyk(doc, p1, srcBuf, { x: mm(margem), y: mm(margem), width: mm(artWmm), height: mm(artHmm), resizeWidth: targetPx });
     } else {
-      // ── forma geométrica: corte no tamanho exato + sangria por cobertura ──
-      const cutWmm = Number(spec.cut_w_mm), cutHmm = Number(spec.cut_h_mm);
-      const radius = clamp(Number(spec.radius_mm ?? 0), 0, Math.min(cutWmm, cutHmm) / 2);
-      if (!(cutWmm > 0) || !(cutHmm > 0)) return json({ error: 'Medida inválida' }, 400);
+      // ── forma geométrica: tamanho exato + sangria controlável ──
+      const typedW = Number(spec.cut_w_mm), typedH = Number(spec.cut_h_mm);
+      if (!(typedW > 0) || !(typedH > 0)) return json({ error: 'Medida inválida' }, 400);
+      const sangria = clamp(Number(spec.sangria_mm ?? 3), 0, 15);
+      const mode: 'externa' | 'interna' = spec.bleed_mode === 'interna' ? 'interna' : 'externa';
 
-      // arte cobre o corte + 2mm (transborda → sem borda branca)
-      const coverW = cutWmm + 2 * GEO_BLEED_MM, coverH = cutHmm + 2 * GEO_BLEED_MM;
+      // externa: a medida digitada é o CORTE; a arte cobre corte+sangria e transborda
+      // interna: a medida digitada é a ARTE/papel; o corte entra 'sangria' pra dentro
+      let cutWmm: number, cutHmm: number, coverW: number, coverH: number;
+      if (mode === 'interna') {
+        coverW = typedW; coverH = typedH;
+        cutWmm = Math.max(5, typedW - 2 * sangria); cutHmm = Math.max(5, typedH - 2 * sangria);
+      } else {
+        cutWmm = typedW; cutHmm = typedH;
+        coverW = typedW + 2 * sangria; coverH = typedH + 2 * sangria;
+      }
+      const radius = clamp(Number(spec.radius_mm ?? 0), 0, Math.min(cutWmm, cutHmm) / 2);
+
+      // arte cobre coverW×coverH (cover, centrada)
       let drawW: number, drawH: number;
       if (artAspect > coverW / coverH) { drawH = coverH; drawW = coverH * artAspect; }
       else { drawW = coverW; drawH = coverW / artAspect; }
 
-      pageWmm = Math.max(cutWmm, drawW) + 2 * HANDLE_MM;
-      pageHmm = Math.max(cutHmm, drawH) + 2 * HANDLE_MM;
+      pageWmm = Math.max(coverW, drawW, cutWmm) + 2 * HANDLE_MM;
+      pageHmm = Math.max(coverH, drawH, cutHmm) + 2 * HANDLE_MM;
       const cx = pageWmm / 2, cy = pageHmm / 2;
       cutPts = shape === 'circle' ? ellipsePoints(cutWmm, cutHmm, cx, cy) : rectPoints(cutWmm, cutHmm, cx, cy, shape === 'rounded' ? radius : 0);
       reportW = cutWmm; reportH = cutHmm;
@@ -148,7 +159,7 @@ export async function POST(req: NextRequest) {
     // cobra por último — RPC retorna TABLE → [0]
     const { data: chargeRaw, error: chErr } = await admin.rpc('cobrar_credito_se_suficiente', {
       p_company_id: companyId, p_function_key: FUNCTION_KEY, p_credits: CREDITS,
-      p_metadata: { shape, size: `${Math.round(reportW)}x${Math.round(reportH)}`, has_alpha: hasAlpha, pdfx_id: pdfxData.outputId },
+      p_metadata: { shape, size: `${Math.round(reportW)}x${Math.round(reportH)}`, sangria_mm: spec.sangria_mm ?? null, bleed_mode: spec.bleed_mode ?? null, has_alpha: hasAlpha, pdfx_id: pdfxData.outputId },
     });
     if (chErr) return json({ error: 'Falha na cobrança' }, 500);
     const charge = Array.isArray(chargeRaw) ? chargeRaw[0] : chargeRaw;

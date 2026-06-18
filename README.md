@@ -8,6 +8,10 @@
 
 * Identificar bug de Processando no Assistente 
 
+* Carrossel no footer com 10 empresas que usam a tecnologia minhAi.
+PRONTAS: Vixus - Loja de Serviços - ArteFinal
+BREVES: iAPix - Ficha.Pro - Postos.Pro - iTend - Post-ai.app - Agenda.Gratis - NotAi)
+
 * iAPix.net - App com confirmação automática de pix direcionando para /pix para os usuários usarem /slug diretamente (reservar apenas o /meu) e usar o principal para ser a página principal identificando logado e não logado.
 
 * ArteFinal.app - Manus qpreco
@@ -46,10 +50,8 @@
 
 * Post-ai.app (App Criador de Post)
 Convite.ai ou Convite.shop (App Criador de convites virtuais)
-Totem.plus / Agendai.me / iaWhats.com / postotec.app / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
+Totem.plus / Agendai.me / iaWhats.com / Postos.pro / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
 - iapos, itend e eai já registrados (para cobranças , atendimento e funcionários IA) - relatório em anexo no email
-
-* Carrossel no footer com 10 empresas que usam a minhAi futuramente (Vixus - iAPix - Ficha.Pro - ArteFinal - Post-Ai - Loja de Serviços - iTend - PostoTec - Agendai.me - NotAi)
 
 * Implementar seleção de cores e key inter/asaas/MercadoPago para pix de clientes full, além de seletor de tema no assistente. Sempre light, sempre dark, de acordo com o tema do usuário ou de acordo com a hora do dia e se aparece ou não o seletor no header. Pensar na possibilidade do avatar ser o logo carregado pelo cliente, com animações react
 

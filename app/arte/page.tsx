@@ -7,6 +7,7 @@ import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
 import DuplicarImagemDisplay from '@/components/arte/DuplicarImagemDisplay';
 import AdesivoContornoDisplay from '@/components/arte/AdesivoContornoDisplay';
 import VetorizarImagemDisplay from '@/components/arte/VetorizarImagemDisplay';
+import FolhaRecorteDisplay from '@/components/arte/FolhaRecorteDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -53,6 +54,15 @@ const SKILLS: Skill[] = [
     triggers: ['vetorizar', 'vetorizar imagem', 'vetor', 'svg', 'transformar em vetor', 'contorno vetorial', 'silhueta'],
     modal: 'VetorizarImagemDisplay',
   },
+{
+  key: 'folha_recorte',
+  label: 'Folha de Recorte',
+  color: CMYK.cyan,
+  desc: 'Várias cópias com arte + corte em uma folha (A4 ou personalizada)',
+  credits: 10,
+  triggers: ['folha de recorte', 'folha recorte', 'grade de adesivo', 'grade de corte', 'varios adesivos', 'varias pecas', 'multiplos adesivos', 'repetir adesivo', 'repetir corte', 'folha completa de adesivo'],
+  modal: 'FolhaRecorteDisplay',
+},
 ];
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -343,6 +353,15 @@ export default function ArtePage() {
           onRequireLogin={() => { window.location.href = LOGIN_URL; }}
         />
       )}
+{activeModal?.type === 'FolhaRecorteDisplay' && (
+  <FolhaRecorteDisplay
+    data={activeModal.data}
+    onClose={closeModal}
+    theme="light"
+    playText={playText}
+    onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+  />
+)}
 
       <style jsx>{`
         @keyframes af-skills-scroll {

@@ -8,9 +8,9 @@
 
 * pix.wiki - App com confirmação automática de pix direcionando para /pixwiki para os usuários usarem /slug diretamente (reservar apenas o dashboard)
 
-* seletor de tema nas configurações e se quer que apareça o ícone ou não.
+* ArteFinal.app - Manus qpreco
 
-* ao mudar as configurações do webapp no domínio e no logo, não está aplicando as correções, e mostrar o site, mesmo quando não tiver um site preenchido, pois ele pode preencher ali mesmo.
+* seletor de tema nas configurações e se quer que apareça o ícone ou não.
 
 * Após o ArteFinal e Pix.Wiki estarem prontos, oferecer ao mau o Auxiliar de Produção no mesmo molde, apenas com mensalidade para ele vender (com tela de admin para ambos controlarem os usuários e envio de e-mail quando chega um novo cliente para ele, e mensalmente com o relatório dos pagamentos). Fazer ele sugerir o nome
 

@@ -128,6 +128,8 @@ export default function ArtePerfilPage() {
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [pixModalOpen, setPixModalOpen] = useState(false);
   const [copied, setCopied]         = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmed, setConfirmed]   = useState(false);
 
   // ── Load ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -268,11 +270,44 @@ export default function ArtePerfilPage() {
     }
   }
 
-  async function copyPix() {
+async function copyPix() {
     if (!paymentData?.pix_code) return;
     await navigator.clipboard.writeText(paymentData.pix_code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  }
+
+  async function handleConfirmPayment() {
+    if (!paymentData || confirming) return;
+    setConfirming(true);
+    try {
+      const res = await fetch('/api/credits/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_id: paymentData.payment_id }),
+      });
+      const data = await res.json();
+      if (data.success && data.status === 'paid') {
+        setConfirmed(true);
+        const { data: credData } = await supabase
+          .from('user_credits')
+          .select('available_credits, total_purchased, total_used')
+          .eq('user_id', user!.id)
+          .maybeSingle();
+        if (credData) setCredits(credData);
+        setTimeout(() => {
+          setPixModalOpen(false);
+          setConfirmed(false);
+          setPaymentData(null);
+        }, 2500);
+      } else {
+        alert('Pagamento ainda não detectado. Aguarde alguns segundos após realizar o PIX.');
+      }
+    } catch {
+      alert('Erro ao verificar pagamento. Tente novamente.');
+    } finally {
+      setConfirming(false);
+    }
   }
 
   // ── Derivados ─────────────────────────────────────────────────────────
@@ -627,6 +662,25 @@ export default function ArtePerfilPage() {
                 {copied ? '✓ Copiado!' : 'Copiar código PIX'}
               </button>
             </div>
+
+            {confirmed ? (
+              <div className="w-full py-3 rounded-xl font-bold text-white text-sm text-center flex items-center justify-center gap-2" style={{ background: '#22c55e' }}>
+                <CheckCircle2 className="w-5 h-5" />
+                Créditos adicionados com sucesso!
+              </div>
+            ) : (
+              <button
+                onClick={handleConfirmPayment}
+                disabled={confirming}
+                className="w-full py-3 rounded-xl font-bold text-white transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                style={{ background: GRAD }}
+              >
+                {confirming
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>
+                  : <><CheckCircle2 className="w-4 h-4" /> Já paguei, confirmar</>
+                }
+              </button>
+            )}
 
             <button
               onClick={() => setPixModalOpen(false)}

@@ -7,6 +7,7 @@ import { makeImagePreview, openPdf, rasterizePdfPage, uploadArteSource, isPdfFil
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 
 type Stage = 'input' | 'page-select' | 'configuring' | 'processing' | 'login' | 'result' | 'error';
+type Shape = 'square' | 'rounded' | 'circle' | 'auto';
 
 interface Props {
   data: { companyId: string; slug?: string };
@@ -26,15 +27,21 @@ const LIGHT = {
   text: '#0f172a', textMuted: '#64748b', success: '#059669', error: '#dc2626', accent: CMYK.magenta, warn: '#d97706',
 };
 
-const OPENING_TEXT = 'Envie a arte do adesivo, de preferência um PNG com fundo transparente. Eu gero a página com a arte e a página com o corte.';
-const CREDITS = 8;
+const OPENING_TEXT = 'Envie a arte do adesivo. Escolha a forma do corte e o tamanho, e eu gero a arte e o corte.';
+const CREDITS = 5;
 const AUTO_CLOSE = 90;
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const cleanName = (s: string) => s.replace(/[^\w\-]+/g, '-').slice(0, 40);
 const fileOk = (f: File) => f.type.startsWith('image/') || isPdfFile(f);
 
-const CUT_OPTS: { key: string; label: string; swatch: string }[] = [
+const SHAPES: { key: Shape; label: string }[] = [
+  { key: 'square', label: 'Quadrado' },
+  { key: 'rounded', label: 'Arredondado' },
+  { key: 'circle', label: 'Redondo' },
+  { key: 'auto', label: 'Automático' },
+];
+const CUT_OPTS = [
   { key: 'magenta', label: 'Magenta', swatch: CMYK.magenta },
   { key: 'cyan', label: 'Ciano', swatch: CMYK.cyan },
   { key: 'yellow', label: 'Amarelo', swatch: CMYK.yellow },
@@ -51,8 +58,11 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
   const [pdfPending, setPdfPending] = useState<{ file: File; pages: number } | null>(null);
   const [pageChoice, setPageChoice] = useState<number>(1);
 
-  const [artW, setArtW] = useState<number>(80);        // largura final (mm)
-  const [offset, setOffset] = useState<number>(3);     // recuo do corte (mm)
+  const [shape, setShape] = useState<Shape>('circle');
+  const [cutW, setCutW] = useState<number>(50);
+  const [cutH, setCutH] = useState<number>(50);
+  const [radius, setRadius] = useState<number>(6);
+  const [offset, setOffset] = useState<number>(3);
   const [cutColor, setCutColor] = useState<string>('magenta');
   const [nome, setNome] = useState<string>('adesivo');
 
@@ -71,7 +81,6 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
 
   useEffect(() => { if (spoke.current) return; spoke.current = true; playText(OPENING_TEXT).catch(() => {}); }, [playText]);
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => setLogado(!!session?.user)); }, [supabase]);
-
   useEffect(() => {
     if (stage !== 'result') return;
     setTimeLeft(AUTO_CLOSE);
@@ -79,7 +88,9 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
     return () => clearInterval(id);
   }, [stage, onClose]);
 
-  const artH = art ? artW * (art.height / art.width) : 0;
+  const isAuto = shape === 'auto';
+  const autoH = art ? cutW * (art.height / art.width) : 0; // altura derivada no modo automático
+  const swatch = CUT_OPTS.find((o) => o.key === cutColor)?.swatch ?? CMYK.magenta;
 
   const handleFile = useCallback(async (file: File) => {
     if (!fileOk(file)) { setErrorMsg('Envie uma imagem (PNG/JPEG) ou um PDF.'); setStage('error'); return; }
@@ -94,9 +105,7 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
       }
       setNome((prev) => (!prev || prev === 'adesivo' ? (cleanName(file.name.replace(/\.[^.]+$/, '')) || 'adesivo') : prev));
       setStage('configuring');
-    } catch (e) {
-      setErrorMsg((e as Error).message ?? 'Falha ao preparar a arte.'); setStage('error');
-    }
+    } catch (e) { setErrorMsg((e as Error).message ?? 'Falha ao preparar a arte.'); setStage('error'); }
   }, []);
 
   const confirmPage = useCallback(async () => {
@@ -111,7 +120,7 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
   }, [pdfPending, pageChoice]);
 
   const handleRelease = useCallback(async () => {
-    if (!art || !(artW > 0)) return;
+    if (!art) return;
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
     if (!user) { setStage('login'); return; }
@@ -127,12 +136,15 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
       setCompanyId(cid);
 
       const uploadPath = await uploadArteSource(art, cid);
+      const spec: any = isAuto
+        ? { shape: 'auto', cut_w_mm: cutW, offset_mm: offset, cut_color: cutColor, nome }
+        : { shape, cut_w_mm: cutW, cut_h_mm: cutH, radius_mm: radius, cut_color: cutColor, nome };
 
       setProgress('Gerando arte e corte...');
       const res = await fetch('/api/arte/adesivo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ companyId: cid, uploadPath, spec: { art_w_mm: artW, offset_mm: offset, cut_color: cutColor, nome } }),
+        body: JSON.stringify({ companyId: cid, uploadPath, spec }),
       });
       const out = await res.json();
       if (!res.ok || !out.success) {
@@ -150,10 +162,8 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
       setSaldo(typeof out.saldo === 'number' ? out.saldo : null);
       setStage('result');
       playText('Adesivo pronto! Página 1 com a arte, página 2 com o corte.').catch(() => {});
-    } catch (e) {
-      setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error');
-    }
-  }, [art, artW, offset, cutColor, nome, supabase, companyId, playText]);
+    } catch (e) { setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error'); }
+  }, [art, isAuto, shape, cutW, cutH, radius, offset, cutColor, nome, supabase, companyId, playText]);
 
   const irParaLogin = useCallback(() => { if (onRequireLogin) onRequireLogin(); else window.location.href = '/login'; }, [onRequireLogin]);
   const handleDownload = useCallback(() => {
@@ -169,7 +179,12 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
 
   const label: React.CSSProperties = { display: 'block', fontSize: 12, color: c.textMuted, marginBottom: 4 };
   const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14, background: c.bgSecondary, border: `1px solid ${c.border}`, color: c.text, outline: 'none' };
-  const semAlfa = !!art && !art.hasAlpha;
+  const semAlfa = isAuto && !!art && !art.hasAlpha;
+
+  // preview: caixa na proporção do corte, arte cobrindo, overlay da forma
+  const boxW = 220, boxH = isAuto ? 220 : Math.round(220 * (cutH / Math.max(1, cutW)));
+  const rxPct = shape === 'rounded' ? clamp((radius / Math.max(1, cutW)) * 100, 0, 50) : 0;
+  const ryPct = shape === 'rounded' ? clamp((radius / Math.max(1, cutH)) * 100, 0, 50) : 0;
 
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', padding: 16 }}>
@@ -185,7 +200,7 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
             onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
             style={{ border: `2px dashed ${c.border}`, borderRadius: 12, padding: '46px 20px', textAlign: 'center', background: c.bgSecondary, cursor: 'pointer', color: c.textMuted }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste a arte do adesivo</div>
-            <div style={{ fontSize: 12 }}>PNG com fundo transparente (recorte na forma). JPEG/PDF = corte retangular.</div>
+            <div style={{ fontSize: 12 }}>PNG, JPEG ou PDF. O modo "Automático" recorta na forma do PNG transparente.</div>
             <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.currentTarget.value = ''; }} />
           </div>
         )}
@@ -209,31 +224,55 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
         {/* CONFIGURING */}
         {stage === 'configuring' && art && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* preview com overlay do corte */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <div style={{ position: 'relative', width: 200, height: 200, borderRadius: 8, border: `1px dashed ${c.accent}`, padding: 10, background: c.bgSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src={art.previewDataUrl} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
+              <div style={{ position: 'relative', width: boxW, height: boxH, background: c.bgSecondary, border: `1px solid ${c.border}`, borderRadius: 4, overflow: 'hidden' }}>
+                <img src={art.previewDataUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: isAuto ? 'contain' : 'cover', display: 'block' }} />
+                {!isAuto && (
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                    {shape === 'circle'
+                      ? <ellipse cx="50" cy="50" rx="49.5" ry="49.5" fill="none" stroke={swatch} strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                      : <rect x="0.5" y="0.5" width="99" height="99" rx={rxPct} ry={ryPct} fill="none" stroke={swatch} strokeWidth="1" vectorEffect="non-scaling-stroke" />}
+                  </svg>
+                )}
               </div>
             </div>
             <p style={{ margin: 0, textAlign: 'center', fontSize: 11, color: c.textMuted }}>
-              A linha tracejada é só ilustrativa. O corte real segue {semAlfa ? 'a moldura retangular' : 'a silhueta da arte'} com {offset}mm de recuo.
+              {isAuto ? 'O corte segue a silhueta da arte (recuo ' + offset + 'mm).' : `Corte ${shape === 'circle' ? 'redondo' : shape === 'rounded' ? 'arredondado' : 'quadrado'} de ${cutW}×${cutH}mm. A arte preenche até a borda.`}
             </p>
 
             {semAlfa && (
               <div style={{ fontSize: 12, color: c.warn, lineHeight: 1.4, padding: '8px 10px', borderRadius: 8, background: 'rgba(217,119,6,0.08)', border: `1px solid ${c.warn}` }}>
-                Esta imagem não tem fundo transparente — o corte sairá retangular. Para recorte na forma da arte, envie um PNG com fundo transparente.
+                Sem fundo transparente, o "Automático" vira um retângulo. Para recorte na forma, envie um PNG transparente — ou escolha uma forma acima.
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div><label style={label}>Largura final (mm)</label><input type="number" min={10} value={artW} onChange={(e) => setArtW(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
-              <div><label style={label}>Altura (auto)</label><input type="text" value={`${artH.toFixed(0)} mm`} readOnly style={{ ...inputStyle, color: c.textMuted }} /></div>
-            </div>
-
+            {/* forma */}
             <div>
-              <label style={label}>Recuo do corte: {offset}mm</label>
-              <input type="range" min={0} max={8} step={0.5} value={offset} onChange={(e) => setOffset(parseFloat(e.target.value))} style={{ width: '100%', accentColor: c.accent }} />
+              <label style={label}>Forma do corte</label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {SHAPES.map((s) => (
+                  <button key={s.key} onClick={() => setShape(s.key)} style={{ flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: c.bgSecondary, border: shape === s.key ? `2px solid ${c.accent}` : `1px solid ${c.border}`, color: c.text }}>{s.label}</button>
+                ))}
+              </div>
             </div>
 
+            {/* tamanho */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div><label style={label}>Largura (mm)</label><input type="number" min={10} value={cutW} onChange={(e) => setCutW(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
+              {isAuto
+                ? <div><label style={label}>Altura (auto)</label><input type="text" value={`${autoH.toFixed(0)} mm`} readOnly style={{ ...inputStyle, color: c.textMuted }} /></div>
+                : <div><label style={label}>Altura (mm)</label><input type="number" min={10} value={cutH} onChange={(e) => setCutH(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>}
+            </div>
+
+            {shape === 'rounded' && (
+              <div><label style={label}>Raio dos cantos: {radius}mm</label><input type="range" min={1} max={Math.min(cutW, cutH) / 2} step={0.5} value={radius} onChange={(e) => setRadius(parseFloat(e.target.value))} style={{ width: '100%', accentColor: c.accent }} /></div>
+            )}
+            {isAuto && (
+              <div><label style={label}>Recuo do corte: {offset}mm</label><input type="range" min={0} max={8} step={0.5} value={offset} onChange={(e) => setOffset(parseFloat(e.target.value))} style={{ width: '100%', accentColor: c.accent }} /></div>
+            )}
+
+            {/* cor do corte */}
             <div>
               <label style={label}>Cor da linha de corte</label>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -255,7 +294,7 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
               </div>
             )}
 
-            <button onClick={handleRelease} disabled={!(artW > 0)} style={{ padding: 14, borderRadius: 10, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: artW > 0 ? 'pointer' : 'not-allowed', background: artW > 0 ? c.accent : c.border }}>
+            <button onClick={handleRelease} style={{ padding: 14, borderRadius: 10, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', background: c.accent }}>
               Liberar adesivo com corte{logado ? ` (${CREDITS} créditos)` : ''}
             </button>
             <button onClick={handleReset} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 13 }}>Trocar arte</button>
@@ -293,7 +332,7 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 0 }}>
                 <div style={{ padding: 12, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
                   <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>Arquivo: <strong style={{ color: c.text }}>{resultName}</strong></p>
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: c.textMuted }}>Pág 1: arte · Pág 2: corte ({offset}mm){saldo != null ? ` · saldo: ${saldo}` : ''}</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: c.textMuted }}>Pág 1: arte · Pág 2: corte{saldo != null ? ` · saldo: ${saldo}` : ''}</p>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={handleDownload} style={{ flex: 1, padding: 10, borderRadius: 8, border: 'none', background: c.accent, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Baixar PDF</button>

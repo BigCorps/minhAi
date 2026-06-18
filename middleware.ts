@@ -15,7 +15,7 @@ const RESERVED_SUBDOMAINS = [
 
 const CRAWLER_PASSTHROUGH = ['/robots.txt', '/sitemap.xml', '/sitemap.ts'];
 
-const ARTEFINAL_DOMAINS = ['artefinal.app', 'www.artefinal.app'];
+const ARTEFINAL_DOMAINS = ['ia.artefinal.app'];
 
 // ── Todos os domínios de subdomínio de cliente ─────────────────────────────
 const SUBDOMAIN_DOMAINS = [

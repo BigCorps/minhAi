@@ -12,8 +12,11 @@ const supabaseAnon = createClient(
 )
 
 function getDefaultLogoBuffer(): Buffer {
-  const logoPath = path.join(process.cwd(), 'public', 'icon192.png')
-  return fs.readFileSync(logoPath)
+  // Tenta o logo da ArteFinal primeiro, cai no minhAi como segurança
+  const artePath = path.join(process.cwd(), 'public', 'arte', 'arte.png')
+  if (fs.existsSync(artePath)) return fs.readFileSync(artePath)
+  const fallbackPath = path.join(process.cwd(), 'public', 'icon192.png')
+  return fs.readFileSync(fallbackPath)
 }
 
 async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {

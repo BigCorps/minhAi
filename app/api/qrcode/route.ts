@@ -93,6 +93,7 @@ export async function GET(req: NextRequest) {
   const bgColor   = searchParams.get('bg')     || '#ffffff'
   const size      = Math.min(parseInt(searchParams.get('size') || '300'), 500)
   const companyId = searchParams.get('company_id') || null
+  const noLogo    = searchParams.get('no_logo') === '1'
 
   if (!data) {
     return NextResponse.json({ error: 'Parâmetro data é obrigatório' }, { status: 400 })
@@ -133,7 +134,7 @@ export async function GET(req: NextRequest) {
       .png()
       .toBuffer()
 
-    const logoBuffer = await getLogoBuffer(companyId)
+    const logoBuffer = noLogo ? null : await getLogoBuffer(companyId)
 
     let finalBuffer: Buffer
 

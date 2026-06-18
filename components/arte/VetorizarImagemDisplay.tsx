@@ -280,13 +280,13 @@ export default function VetorizarImagemDisplay({ data, onClose, theme = 'dark', 
 
     setStage('processing'); setProgress('Confirmando liberação...');
     try {
-      let cid = companyId;
-      if (!cid) {
-        const { data: comp } = await supabase.from('companies').select('id').eq('user_id', user.id).order('created_at', { ascending: true }).limit(1).maybeSingle();
-        cid = comp?.id ?? '';
-      }
-      if (!cid) { setErrorMsg('Não encontrei uma empresa nesta conta.'); setStage('error'); return; }
-      setCompanyId(cid);
+      let cid = data.companyId || companyId;
+if (!cid) {
+  const { data: ensured } = await supabase.rpc('ensure_my_arte_company');
+  cid = (ensured as string) ?? '';
+}
+if (!cid) { setErrorMsg('Não foi possível preparar sua conta. Recarregue e tente de novo.'); setStage('error'); return; }
+setCompanyId(cid);
 
       const res = await fetch('/api/arte/vetorizar', {
         method: 'POST',

@@ -20,7 +20,6 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 function calcLayout(
   imgW: number, imgH: number,
   maxSizeCm: number, spacingMm: number,
-  preset: string, manualCols: number | undefined, manualRows: number | undefined,
   pageWCm: number, pageHCm: number,
 ) {
   const aspect      = imgW / imgH;
@@ -30,16 +29,10 @@ function calcLayout(
   const availableW  = pageWCm - 2 * MARGIN_CM;
   const availableH  = pageHCm - 2 * MARGIN_CM;
 
-  let perRow: number, perColumn: number;
-  if (preset === 'custom' && manualCols && manualRows) {
-    const maxCols = Math.floor((availableW + spacingCm) / (finalW + spacingCm));
-    const maxRows = Math.floor((availableH + spacingCm) / (finalH + spacingCm));
-    perRow    = Math.min(manualCols, Math.max(0, maxCols));
-    perColumn = Math.min(manualRows, Math.max(0, maxRows));
-  } else {
-    perRow    = Math.max(0, Math.floor((availableW + spacingCm) / (finalW + spacingCm)));
-    perColumn = Math.max(0, Math.floor((availableH + spacingCm) / (finalH + spacingCm)));
-  }
+  // O tamanho da célula é sempre fixo (definido pelo usuário em cm) — colunas/linhas
+  // são sempre a consequência de quantas células cabem, nunca um valor imposto.
+  const perRow    = Math.max(0, Math.floor((availableW + spacingCm) / (finalW + spacingCm)));
+  const perColumn = Math.max(0, Math.floor((availableH + spacingCm) / (finalH + spacingCm)));
   return { finalW, finalH, perRow, perColumn, spacingCm, totalImages: perRow * perColumn };
 }
 
@@ -61,7 +54,7 @@ export async function POST(req: NextRequest) {
     // 2. Lê body
     const { companyId, uploadPath, spec } = await req.json();
     const {
-      maxSize, spacing, preset, manualCols, manualRows,
+      maxSize, spacing, preset,
       pageMode, pageWidthCm, pageHeightCm,
     } = spec ?? {};
 
@@ -129,7 +122,7 @@ export async function POST(req: NextRequest) {
       .toBuffer();
 
     // 6. Calcula layout (página A4 ou personalizada, já validada acima)
-    const layout = calcLayout(meta.width, meta.height, maxSize, spacing, preset, manualCols, manualRows, pageWCm, pageHCm);
+    const layout = calcLayout(meta.width, meta.height, maxSize, spacing, pageWCm, pageHCm);
     if (layout.totalImages === 0) {
       return NextResponse.json({ error: 'Imagem grande demais para a página com este tamanho.' }, { status: 400 });
     }
@@ -162,7 +155,7 @@ export async function POST(req: NextRequest) {
     const fileName  = `duplicar-${layout.perRow}x${layout.perColumn}-${pageTag}-${Date.now()}.pdf`;
 
     // 9. Cobra por último — fail-closed
-    const { data: cobranca } = await serviceClient.rpc('cobrar_credito_se_suficiente', {
+    const { data: cobrancaRaw } = await serviceClient.rpc('cobrar_credito_se_suficiente', {
       p_company_id:  companyId,
       p_function_key: FUNCTION_KEY,
       p_credits:     CREDITS,
@@ -172,6 +165,9 @@ export async function POST(req: NextRequest) {
         pageWCm, pageHCm,
       },
     });
+    // RPC retorna TABLE → vem como array. Ler raw[0] antes de checar .sucesso
+    // (bug 402-com-saldo: ler direto dá undefined e devolve 402 mesmo já tendo debitado).
+    const cobranca = Array.isArray(cobrancaRaw) ? cobrancaRaw[0] : cobrancaRaw;
 
     if (!cobranca?.sucesso) {
       return NextResponse.json({ error: 'Créditos insuficientes.', saldo: cobranca?.saldo_anterior ?? 0 }, { status: 402 });

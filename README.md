@@ -42,11 +42,12 @@
 
 * bot auxiliar com slide pra cima no footer que abre um modal com os a opção de abrir um dos 8 auxiliares diretamente no dashboard.
 
-* PagAi - Pix com confirmação automática e Bolão entre amigos (Pool).
+* Post-ai.app (App Criador de Post)
+Conv.it ou Convite.ai ou Convite.shop (App Criador de convites virtuais)
 Totem.plus / tIAtend.com / Agendai.me /  lojia.app / iaWhats.com gráficas.app / postotec.app / mercado.chat / filasenha.com /painelmidia.com.br / saboreia.app / roboatendente.com
 - iapos, itend e eai já registrados (para cobranças , atendimento e funcionários IA) - relatório em anexo no email
 
-* Carrossel no footer com 15 empresas que usam a minhAi futuramente
+* Carrossel no footer com 10 empresas que usam a minhAi futuramente (Vixus - Pix.Wiki - Ficha.Pro - ArteFinal - Post-Ai - 
 
 * Implementar seleção de cores e key inter/asaas/MercadoPago para pix de clientes full, além de seletor de tema no assistente. Sempre light, sempre dark, de acordo com o tema do usuário ou de acordo com a hora do dia e se aparece ou não o seletor no header. Pensar na possibilidade do avatar ser o logo carregado pelo cliente, com animações react
 

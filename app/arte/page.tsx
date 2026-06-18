@@ -8,6 +8,8 @@ import DuplicarImagemDisplay from '@/components/arte/DuplicarImagemDisplay';
 import AdesivoContornoDisplay from '@/components/arte/AdesivoContornoDisplay';
 import VetorizarImagemDisplay from '@/components/arte/VetorizarImagemDisplay';
 import FolhaRecorteDisplay from '@/components/arte/FolhaRecorteDisplay';
+import QRCodeDisplay from '@/components/arte/QRCodeDisplay';
+
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -62,6 +64,17 @@ const SKILLS: Skill[] = [
   credits: 10,
   triggers: ['folha de recorte', 'folha recorte', 'grade de adesivo', 'grade de corte', 'varios adesivos', 'varias pecas', 'multiplos adesivos', 'repetir adesivo', 'repetir corte', 'folha completa de adesivo'],
   modal: 'FolhaRecorteDisplay',
+},
+{
+  key:      'gerar_qr_code',
+  label:    'Gerar QR Code',
+  color:    '#e94560',          // accent da paleta ArteFinal
+  credits:  1,                  // utilitário gratuito; ajuste se quiser cobrar
+  triggers: [
+    'qr', 'qr code', 'qrcode', 'gerar qr', 'criar qr',
+    'link qr', 'código qr', 'código de barras 2d',
+  ],
+  modal: 'gerar_qr_code',
 },
 ];
 
@@ -360,6 +373,16 @@ export default function ArtePage() {
     theme="light"
     playText={playText}
     onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+  />
+)}
+
+{activeSkill === 'gerar_qr_code' && (
+  <QRCodeDisplay
+    data={{ companyId: companyId ?? '' }}
+    onClose={() => setActiveSkill(null)}
+    onRequireLogin={() => router.push('/arte/login')}
+    theme={theme}
+    playText={playText}
   />
 )}
 

@@ -6,6 +6,8 @@
 
 ## Roadmap e Features Planejadas
 
+* Identificar bug de Processando no Assistente 
+
 * Pix.Wiki - App com confirmação automática de pix direcionando para /pixwiki para os usuários usarem /slug diretamente (reservar apenas o dashboard)
 
 * ArteFinal.app - Manus qpreco

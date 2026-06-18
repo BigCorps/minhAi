@@ -8,8 +8,6 @@
 
 * Identificar bug de Processando no Assistente 
 
-* Criar uma nova função que une a função Adesivo com corte e duplicar, onde o usuario vai poder colocar varios na folha e ja determinar o corte, com os espaçamentos e sangria do da função Adesivo com Recorte. O nome pode ser Folha de Recorte, cobrando 7 creditos
-
 * min.ia.br - app mini da minhAi - registrar dominio e criar assistente rapido, para funções rápidas no app. Com uma lógica parecida com o ArteFinal, o usuário vê todas as funções e se cadastra para utilizar as funções diretamente no mini - escolhe seu assistente e executa funções diretamente dali. e utilizar já essa logica no lugar do widget e aproveitando para divulgar a minhAi para o usuário utilizar na empresa dele.
 
 * Carrossel no footer (bem pequeno mesmo no mobile) com 10 empresas que usam a tecnologia minhAi.

@@ -147,10 +147,6 @@ const handleRelease = useCallback(async () => {
 
     const uploadPath = await uploadArteSource(art, cid);
 
-    // ← NOVO: calcula dimensões reais do arquivo com sangria inclusa
-    const docW = bleedMode === 'externa' ? cutW + 2 * sangria : cutW;
-    const docH = bleedMode === 'externa' ? cutH + 2 * sangria : cutH;
-
     const spec: any = isAuto
       ? { shape: 'auto', cut_w_mm: cutW, offset_mm: offset, cut_color: cutColor, nome }
       : { shape, cut_w_mm: cutW, cut_h_mm: cutH, doc_w_mm: docW, doc_h_mm: docH, radius_mm: radius, sangria_mm: sangria, bleed_mode: bleedMode, cut_color: cutColor, nome }; // ← NOVO: doc_w_mm e doc_h_mm
@@ -198,8 +194,12 @@ const handleRelease = useCallback(async () => {
 
   // preview: a caixa = área impressa (arte); o corte aparece recuado pela sangria
   // externa: arte = corte+sangria  | interna: arte = tamanho digitado, corte entra pra dentro
-  const coverWmm = bleedMode === 'interna' ? cutW : cutW + 2 * sangria;
-  const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
+
+  
+const docW = bleedMode === 'externa' ? cutW + 2 * sangria : cutW;
+const docH = bleedMode === 'externa' ? cutH + 2 * sangria : cutH;
+const coverWmm = bleedMode === 'interna' ? cutW : cutW + 2 * sangria;
+const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
   const insetXpct = clamp((sangria / Math.max(1, coverWmm)) * 100, 0, 49);
   const insetYpct = clamp((sangria / Math.max(1, coverHmm)) * 100, 0, 49);
   const radiusPct = shape === 'rounded' ? clamp((radius / Math.max(1, coverWmm)) * 100, 0, 50) : 0;

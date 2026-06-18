@@ -147,7 +147,7 @@ const BG_COLORS = [
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-type Stage = 'input' | 'generating' | 'result' | 'error';
+type Stage = 'input' | 'generating' | 'result' | 'login' | 'error';
 
 interface QROpts {
   size:     200 | 300 | 400;
@@ -157,6 +157,8 @@ interface QROpts {
 }
 
 const DEFAULT_OPTS: QROpts = { size: 300, color: '#000080', bgColor: '#ffffff', showLogo: true };
+
+const CREDITS = 1;
 
 export interface QRCodeDisplayProps {
   data: {
@@ -189,6 +191,7 @@ export default function QRCodeDisplay({
   const [inputText,    setInputText]    = useState(data.prefill ?? '');
   const [qrUrl,        setQrUrl]        = useState<string | null>(null);
   const [errorMsg,     setErrorMsg]     = useState<string | null>(null);
+  const [saldo,        setSaldo]        = useState<number | null>(null);
   const [emailSent,    setEmailSent]    = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [showOpts,     setShowOpts]     = useState(false);
@@ -260,7 +263,7 @@ export default function QRCodeDisplay({
     return `/api/qrcode?${p.toString()}`;
   }, []);
 
-  // ── Gerar ────────────────────────────────────────────────────────────────────
+  // ── Gerar (requer login + crédito) ───────────────────────────────────────────
 
   const handleGenerate = useCallback(async (
     text: string,
@@ -273,23 +276,46 @@ export default function QRCodeDisplay({
       return;
     }
 
+    // Checa sessão — anônimo vai para tela de login (igual ao ArteFinalDisplay)
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setStage('login'); return; }
+
     setStage('generating');
     setErrorMsg(null);
 
     try {
-      // Para gerar o QR não precisamos de auth (a rota /api/qrcode é pública),
-      // mas se quisermos logo da empresa, precisamos do companyId.
-      // ensureCompany só quando logado e sem cid.
+      // ensure_my_arte_company lazy (§7)
       let resolvedCid = cid;
       if (!resolvedCid) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          const found = await ensureCompany();
-          resolvedCid = found ?? '';
-        }
+        const found = await ensureCompany();
+        if (!found) return; // ensureCompany já setou o erro
+        resolvedCid = found;
       }
 
-      setQrUrl(buildUrl(trimmed, o, resolvedCid));
+      // Monta a URL (a rota /api/qrcode não cobra — cobramos aqui, fail-closed)
+      const url = buildUrl(trimmed, o, resolvedCid);
+
+      // Cobrança após montar, antes de mostrar o resultado (§5 fail-closed)
+      const { data: raw, error: errCobranca } = await supabase.rpc(
+        'cobrar_credito_se_suficiente',
+        {
+          p_company_id:   resolvedCid,
+          p_function_key: 'gerar_qr_code',
+          p_credits:      CREDITS,
+          p_metadata:     { conteudo: trimmed },
+        }
+      );
+      // RPC retorna TABLE → sempre array (§10: bug 402-com-saldo)
+      const resultado = Array.isArray(raw) ? raw[0] : raw;
+      if (errCobranca || !resultado?.sucesso) {
+        const saldoAtual = resultado?.saldo_atual ?? 0;
+        setErrorMsg(`Créditos insuficientes. Este QR Code custa ${CREDITS} crédito e seu saldo é ${saldoAtual}.`);
+        setStage('error');
+        return;
+      }
+
+      setSaldo(typeof resultado.saldo_atual === 'number' ? resultado.saldo_atual : null);
+      setQrUrl(url);
       setStage('result');
       playText?.('QR Code gerado!').catch(() => {});
     } catch (err: any) {
@@ -377,9 +403,15 @@ export default function QRCodeDisplay({
     setInputText('');
     setQrUrl(null);
     setErrorMsg(null);
+    setSaldo(null);
     setEmailSent(false);
     setShowOpts(false);
   }, []);
+
+  const irParaLogin = useCallback(() => {
+    if (onRequireLogin) onRequireLogin();
+    else window.location.href = '/login';
+  }, [onRequireLogin]);
 
   // ─── Estilos derivados da paleta (inline, §5) ─────────────────────────────────
 
@@ -717,7 +749,7 @@ export default function QRCodeDisplay({
             {/* Custo — oculto para anônimos (§6) */}
             {logado && (
               <p style={{ fontSize: 11, color: C.muted, textAlign: 'center', margin: 0 }}>
-                Grátis · sem cobrança de créditos
+                Custo: <strong style={{ color: C.text }}>{CREDITS}</strong> crédito
               </p>
             )}
           </div>
@@ -775,6 +807,13 @@ export default function QRCodeDisplay({
               </p>
             )}
 
+            {/* Saldo restante após cobrança */}
+            {saldo !== null && (
+              <p style={{ fontSize: 11, color: C.muted, textAlign: 'center', margin: 0 }}>
+                Saldo restante: <strong style={{ color: C.text }}>{saldo}</strong> créditos
+              </p>
+            )}
+
             {/* Ajuste rápido de opções */}
             {renderOptsToggle(true)}
             {showOpts && (
@@ -817,6 +856,28 @@ export default function QRCodeDisplay({
             <button onClick={handleReset} style={btnGhost}>
               <IconRefresh s={icon(C.sub, 14)} />
               Gerar novo QR Code
+            </button>
+          </div>
+        )}
+
+        {/* ── Stage: login (anônimo tentou gerar) ── */}
+        {stage === 'login' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center', padding: '8px 4px' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Entre para gerar o QR Code</div>
+            <p style={{ margin: 0, fontSize: 14, color: C.sub, lineHeight: 1.5 }}>
+              Ao se <strong style={{ color: C.accent }}>cadastrar você ganha 20 créditos iniciais</strong> para usar as ferramentas do ArteFinal.
+            </p>
+            <button
+              onClick={irParaLogin}
+              style={{ padding: 14, borderRadius: 12, border: 'none', background: C.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Entrar / Cadastrar e ganhar 20 créditos
+            </button>
+            <button
+              onClick={() => setStage('input')}
+              style={{ padding: 10, borderRadius: 10, border: `1px solid ${C.border}`, background: 'transparent', color: C.sub, cursor: 'pointer', fontSize: 13 }}
+            >
+              Voltar
             </button>
           </div>
         )}

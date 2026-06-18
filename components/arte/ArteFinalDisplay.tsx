@@ -249,13 +249,13 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
 
     setStage('processing'); setProgress('Enviando arte...');
     try {
-      let cid = companyId;
-      if (!cid) {
-        const { data: comp } = await supabase.from('companies').select('id').eq('user_id', user.id).order('created_at', { ascending: true }).limit(1).maybeSingle();
-        cid = comp?.id ?? '';
-      }
-      if (!cid) { setErrorMsg('Não encontrei uma empresa nesta conta.'); setStage('error'); return; }
-      setCompanyId(cid);
+let cid = data.companyId || companyId;
+if (!cid) {
+  const { data: ensured } = await supabase.rpc('ensure_my_arte_company');
+  cid = (ensured as string) ?? '';
+}
+if (!cid) { setErrorMsg('Não foi possível preparar sua conta. Recarregue e tente de novo.'); setStage('error'); return; }
+setCompanyId(cid);
 
       const sidesArr: { upload_path: string; zoom: number; offset_x: number; offset_y: number; rotation: number }[] = [];
       for (const s of [frente, ...(verso ? [verso] : [])]) {

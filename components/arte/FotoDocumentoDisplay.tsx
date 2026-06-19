@@ -196,7 +196,7 @@ export default function FotoDocumentoDisplay({
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const cropperInstanceRef = useRef<any>(null);
-  const bgUrlRef      = useRef<string | null>(null); // URL.createObjectURL para cleanup
+  const bgUrlRef      = useRef<string | null>(null);
 
   // ── Mount ────────────────────────────────────────────────────────────────────
 

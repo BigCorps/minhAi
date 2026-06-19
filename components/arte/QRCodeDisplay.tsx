@@ -627,12 +627,45 @@ export default function QRCodeDisplay({
         </button>
       </div>
 
-     {opts.showLogo && (
-       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-         <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>
-           URL do logo (opcional)
-         </span>
-         <input
+      {opts.showLogo && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          
+          {/* 1. Caixa de Preview da Imagem */}
+          <div style={{
+            width: 50,
+            height: 50,
+            borderRadius: 8,
+            border: `1px solid ${C.border}`,
+            background: C.dim || 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+            flexShrink: 0
+          }}>
+            {opts.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img 
+                src={opts.logoUrl} 
+                alt="Preview do Logo" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+              />
+            ) : (
+              // Ícone de placeholder de imagem quando vazio
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+            )}
+          </div>
+
+          {/* 2. Campo de Input (URL) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+            <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>
+              URL do logo (opcional)
+            </span>
+            <input
            type="url"
            value={logoUrl}
            onChange={e => { setLogoUrl(e.target.value); }}
@@ -659,6 +692,7 @@ export default function QRCodeDisplay({
            Deixe vazio para usar o logo ArteFinal
          </span>
        </div>
+      </div>
      )}
     </div>
   );

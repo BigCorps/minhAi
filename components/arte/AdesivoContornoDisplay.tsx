@@ -279,6 +279,7 @@ const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
                 )}
               </div>
             </div>
+          </div>
             <p style={{ margin: 0, textAlign: 'center', fontSize: 11, color: c.textMuted }}>
               {isAuto
                 ? `O corte segue a silhueta da arte (recuo ${offset}mm).`

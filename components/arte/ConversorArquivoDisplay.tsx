@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createClient } from '@/lib/supabase-browser';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 
@@ -70,11 +69,6 @@ const LIGHT = {
 const OPENING_TEXT = 'Carregue o arquivo que deseja converter. Esta função é gratuita.';
 const AUTO_CLOSE = 60;
 
-const normalize = (text: string) =>
-  text.toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[.,!?;:\-]+/g, '');
-
 // SVG inline (proibido lucide-react dentro do modal — §5)
 const IconCheck = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -118,82 +112,12 @@ const IconLoader = () => (
   </svg>
 );
 
-const IconMic = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-    <line x1="12" y1="19" x2="12" y2="23"></line>
-    <line x1="8" y1="23" x2="16" y2="23"></line>
-  </svg>
-);
-
-const IconGift = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <polyline points="20 12 20 22 4 22 4 12"></polyline>
-    <rect x="2" y="7" width="20" height="5"></rect>
-    <line x1="12" y1="22" x2="12" y2="7"></line>
-    <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
-    <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
-  </svg>
-);
-
 const IconUpload = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
     <polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
   </svg>
 );
-
-function VoiceHint({ commands, isDark }: { commands: string[]; isDark: boolean }) {
-  const colors = isDark ? DARK : LIGHT;
-  return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '8px 12px',
-      borderRadius: '12px',
-      fontSize: '12px',
-      backgroundColor: isDark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(249, 250, 251, 1)',
-      color: colors.textMuted,
-    }}>
-      <IconMic />
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-        {commands.map(cmd => (
-          <span key={cmd} style={{
-            padding: '2px 6px',
-            borderRadius: '4px',
-            fontFamily: 'monospace',
-            fontSize: '11px',
-            backgroundColor: isDark ? 'rgba(51, 65, 85, 1)' : 'rgba(229, 231, 235, 1)',
-            color: isDark ? 'rgba(147, 197, 253, 1)' : 'rgba(29, 78, 216, 1)',
-          }}>
-            {cmd}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function GratisBadge({ isDark }: { isDark: boolean }) {
-  const colors = isDark ? DARK : LIGHT;
-  return (
-    <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '4px',
-      padding: '3px 8px',
-      borderRadius: '999px',
-      fontSize: '11px',
-      fontWeight: 600,
-      backgroundColor: 'rgba(16, 185, 129, 0.12)',
-      color: colors.success,
-    }}>
-      <IconGift /> Grátis
-    </span>
-  );
-}
 
 const FORMAT_SUPPORT: Record<string, { name: string; desc: string }> = {
   jpg: { name: 'JPEG', desc: 'Comprimido' },
@@ -546,47 +470,6 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
     setResultBlob(null);
     setErrorMsg(null);
   }, []);
-
-  useModalVoiceCommand({
-    active: true,
-    onTranscript: (transcript) => {
-      const t = normalize(transcript);
-
-      if (['fechar', 'cancelar', 'sair', 'voltar'].some(c => t.includes(c))) {
-        onClose(); return;
-      }
-
-      if (stage === 'selecting_format') {
-        const formatMap: Record<string, string> = {
-          jpg: 'jpg', jpeg: 'jpg', 'jota pe ge': 'jpg',
-          png: 'png', 'pe ene ge': 'png',
-          webp: 'webp', 'web pe': 'webp',
-          pdf: 'pdf', 'pe de efe': 'pdf',
-        };
-
-        for (const [trigger, format] of Object.entries(formatMap)) {
-          if (t.includes(trigger) && availableFormats.includes(format)) {
-            setSelectedFormat(format);
-            return;
-          }
-        }
-
-        if (['converter', 'iniciar', 'comecar', 'processar'].some(c => t.includes(c))) {
-          if (selectedFormat) handleConvert();
-          return;
-        }
-      }
-
-      if (stage === 'result') {
-        if (['baixar', 'download', 'salvar'].some(c => t.includes(c))) { handleDownload(); return; }
-        if (['novo', 'nova', 'outro arquivo'].some(c => t.includes(c))) { handleReset(); return; }
-      }
-
-      if (stage === 'error') {
-        if (['tentar', 'novamente'].some(c => t.includes(c))) { handleReset(); return; }
-      }
-    },
-  });
 
   return createPortal(
     <div style={{

@@ -223,10 +223,12 @@ const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
         A sangria é adicionada automaticamente conforme o padrão exigido.
       </p>
     </div>
-    <div onClick={() => fileRef.current?.click()} ...>
-      <div>Clique ou arraste...</div>
-      <div>PNG, JPEG ou PDF...</div>
-      <input ... />
+    <div onClick={() => fileRef.current?.click()} onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
+      style={{ border: `2px dashed ${c.border}`, borderRadius: 12, padding: '46px 20px', textAlign: 'center', background: c.bgSecondary, cursor: 'pointer', color: c.textMuted }}>
+      <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste a arte do adesivo</div>
+      <div style={{ fontSize: 12 }}>PNG, JPEG ou PDF. O modo "Automático" recorta na forma do PNG transparente.</div>
+      <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.currentTarget.value = ''; }} />
     </div>
   </>
 )}

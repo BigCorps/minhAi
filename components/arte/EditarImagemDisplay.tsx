@@ -160,57 +160,6 @@ const IconUpload = () => (
   </svg>
 );
 
-function VoiceHint({ commands, isDark }: { commands: string[]; isDark: boolean }) {
-  const colors = isDark ? DARK : LIGHT;
-  return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '8px 12px',
-      borderRadius: '12px',
-      fontSize: '12px',
-      backgroundColor: isDark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(249, 250, 251, 1)',
-      color: colors.textMuted,
-    }}>
-      <IconMic />
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-        {commands.map(cmd => (
-          <span key={cmd} style={{
-            padding: '2px 6px',
-            borderRadius: '4px',
-            fontFamily: 'monospace',
-            fontSize: '11px',
-            backgroundColor: isDark ? 'rgba(51, 65, 85, 1)' : 'rgba(229, 231, 235, 1)',
-            color: isDark ? 'rgba(147, 197, 253, 1)' : 'rgba(29, 78, 216, 1)',
-          }}>
-            {cmd}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function CreditBadge({ isDark, credits }: { isDark: boolean; credits: number }) {
-  const colors = isDark ? DARK : LIGHT;
-  return (
-    <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '4px',
-      padding: '3px 8px',
-      borderRadius: '999px',
-      fontSize: '11px',
-      fontWeight: 600,
-      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(37, 99, 235, 0.1)',
-      color: colors.primary,
-    }}>
-      <IconGift /> {credits} crédito{credits > 1 ? 's' : ''}
-    </span>
-  );
-}
-
 // Aplica filtros e transformações no canvas
 function createFilteredCanvas(
   image: HTMLImageElement,
@@ -560,8 +509,7 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>🌐 Editar Imagem</h2>
-            <CreditBadge isDark={isDark} credits={CREDITS_COST} />
+            <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Editar Imagem</h2>
           </div>
           <button onClick={onClose} style={{
             padding: '6px', borderRadius: '8px', border: 'none',
@@ -613,7 +561,6 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
               style={{ display: 'none' }}
             />
 
-            <VoiceHint commands={['"fechar"']} isDark={isDark} />
           </div>
         )}
 
@@ -755,7 +702,6 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
               </div>
             </div>
 
-            <VoiceHint commands={['"resetar"', '"salvar"', '"fechar"']} isDark={isDark} />
           </div>
         )}
 
@@ -835,7 +781,6 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
               />
             </div>
 
-            <VoiceHint commands={['"baixar"', '"nova"', '"fechar"']} isDark={isDark} />
           </div>
         )}
 

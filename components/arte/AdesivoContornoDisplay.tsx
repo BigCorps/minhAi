@@ -330,7 +330,7 @@ const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
   </label>
   <input
     type="range"
-    min={minSangria}   // ← trava no mínimo exigido
+    min={minSangria}
     max={10}
     step={0.5}
     value={sangria}

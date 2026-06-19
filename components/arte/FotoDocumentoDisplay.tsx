@@ -193,6 +193,8 @@ export default function FotoDocumentoDisplay({
   const fileInputRef  = useRef<HTMLInputElement>(null);
   const cropImgRef    = useRef<HTMLImageElement>(null);
   const cropperRef    = useRef<any>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const cropperInstanceRef = useRef<any>(null);
   const bgUrlRef      = useRef<string | null>(null); // URL.createObjectURL para cleanup
 
   // ── Mount ────────────────────────────────────────────────────────────────────
@@ -249,8 +251,29 @@ export default function FotoDocumentoDisplay({
 
   // Zoom
   useEffect(() => {
-    cropperRef.current?.zoomTo(zoom);
-  }, [zoom]);
+  if (imageRef.current && imageUrl) {
+    if (cropperInstanceRef.current) {
+      cropperInstanceRef.current.destroy();
+    }
+
+    cropperInstanceRef.current = new Cropper(imageRef.current, {
+      aspectRatio: 3 / 4,
+      viewMode: 2,
+      responsive: true,
+      background: false,
+    });
+  }
+
+  return () => {
+    if (cropperInstanceRef.current) {
+      cropperInstanceRef.current.destroy();
+    }
+  };
+}, [imageUrl]);
+
+const handleZoom = (val: number) => {
+  imageRef.current?.zoomTo(val);
+};
 
   // ── Upload + remoção de fundo ─────────────────────────────────────────────────
 

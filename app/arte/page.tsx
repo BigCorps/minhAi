@@ -11,6 +11,8 @@ import FolhaRecorteDisplay from '@/components/arte/FolhaRecorteDisplay';
 import QRCodeDisplay from '@/components/arte/QRCodeDisplay';
 import CodigoBarrasDisplay from '@/components/arte/CodigoBarrasDisplay';
 import OrcamentoPdfDisplay from '@/components/arte/OrcamentoPdfDisplay';
+import FotoDocumentoDisplay from '@/components/arte/FotoDocumentoDisplay';
+import PolaroidDisplay from '@/components/arte/PolaroidDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -30,6 +32,31 @@ const SKILLS: Skill[] = [
     triggers: ['arte final', 'arquivo pra grafica', 'arquivo para grafica', 'sangria', 'corte', 'cartões', 'folhetos', 'fechar arquivo', 'gerar pdf', 'pdf de producao'],
     modal: 'ArteFinalDisplay',
   },
+{
+  key:      'foto_documento',
+  label:    'Foto para Documento',
+  color: CMYK.cyan,
+  desc:     'Gera fotos 2x2, 3x4 ou 5x7 em PDF com remoção de fundo automática',
+  credits:  0,   // gratuito
+  triggers: [
+    'foto documento', 'foto para documento', 'foto 3x4', '3x4', 'foto 2x2', '2x2',
+    'foto 5x7', '5x7', 'foto passaporte', 'remover fundo foto', 'foto identidade',
+    'foto cnh', 'foto rg', 'foto carteira', 'fotos documento',
+  ],
+  modal: 'foto_documento',
+},
+{
+  key:      'polaroid',
+  label:    'Polaroids para A4',
+  color: CMYK.cyan,
+  desc:     'Monta grid de polaroids (Padrão ou Mini) em PDF pronto para imprimir e cortar',
+  credits:  0,   // gratuito
+  triggers: [
+    'polaroid', 'polaroids', 'foto polaroid', 'montagem de fotos',
+    'grid de fotos', 'colagem de fotos', 'mural de fotos', 'fotos a4',
+  ],
+  modal: 'polaroid',
+},
   {
     key: 'duplicar_imagem',
     label: 'Duplicar Imagem',
@@ -429,6 +456,21 @@ export default function ArtePage() {
     onRequireLogin={() => { window.location.href = LOGIN_URL; }}
   />
 )}
+{activeModal?.type === 'foto_documento' && (
+  <FotoDocumentoDisplay
+    onClose={closeModal}
+    theme="light"
+    playText={playText}
+  />
+)}
+{activeModal?.type === 'polaroid' && (
+  <PolaroidDisplay
+    onClose={closeModal}
+    theme="light"
+    playText={playText}
+  />
+)}
+      
       <style jsx>{`
         @keyframes af-skills-scroll {
           0% { transform: translateX(0); }

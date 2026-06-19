@@ -10,6 +10,7 @@ import VetorizarImagemDisplay from '@/components/arte/VetorizarImagemDisplay';
 import FolhaRecorteDisplay from '@/components/arte/FolhaRecorteDisplay';
 import QRCodeDisplay from '@/components/arte/QRCodeDisplay';
 import CodigoBarrasDisplay from '@/components/arte/CodigoBarrasDisplay';
+import OrcamentoPdfDisplay from '@/components/arte/OrcamentoPdfDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -88,6 +89,19 @@ const SKILLS: Skill[] = [
     'code 128', 'code128', 'code 39', 'code39', 'gerar codigo', 'gerar código',
   ],
   modal: 'codigo_barras',
+},
+{
+  key:      'orcamento_pdf',
+  label:    'Orçamento em PDF',
+  color:     CMYK.cyan,  
+  desc:     'Cria orçamento profissional em PDF com logo, itens e totais',
+  credits:  2,
+  triggers: [
+    'orcamento', 'orçamento', 'gerar orcamento', 'gerar orçamento',
+    'proposta', 'proposta comercial', 'pdf orcamento', 'cotacao', 'cotação',
+    'nota de servico', 'nota de serviço', 'precificacao', 'precificação',
+  ],
+  modal: 'orcamento_pdf',
 },
 ];
 
@@ -399,6 +413,15 @@ export default function ArtePage() {
 )}
 {activeModal?.type === 'codigo_barras' && (
   <CodigoBarrasDisplay
+    data={activeModal.data}
+    onClose={closeModal}
+    theme="light"
+    playText={playText}
+    onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+  />
+)}
+{activeModal?.type === 'orcamento_pdf' && (
+  <OrcamentoPdfDisplay
     data={activeModal.data}
     onClose={closeModal}
     theme="light"

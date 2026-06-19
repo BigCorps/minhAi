@@ -193,6 +193,7 @@ export default function FotoDocumentoDisplay({
   const fileInputRef  = useRef<HTMLInputElement>(null);
   const cropImgRef    = useRef<HTMLImageElement>(null);
   const cropperRef    = useRef<any>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const cropperInstanceRef = useRef<any>(null);
   const bgUrlRef      = useRef<string | null>(null); // URL.createObjectURL para cleanup

@@ -495,7 +495,7 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>🌐 Converter Arquivos</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Converter Arquivos</h2>
           </div>
           <button onClick={onClose} style={{
             padding: '6px', borderRadius: '8px', border: 'none',

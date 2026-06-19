@@ -198,6 +198,7 @@ export default function QRCodeDisplay({
   const [opts,         setOpts]         = useState<QROpts>(DEFAULT_OPTS);
   const [customQr,     setCustomQr]     = useState('#000080');
   const [customBg,     setCustomBg]     = useState('#ffffff');
+  const [logoUrl,      setLogoUrl]      = useState('');
 
   // ── Mount: sinaliza modal aberto + TTS de boas-vindas (§5: só no useEffect) ──
 
@@ -260,8 +261,9 @@ export default function QRCodeDisplay({
       company_id: cid,
     });
     if (!o.showLogo) p.set('no_logo', '1');
+    if (o.showLogo && logoUrl.trim()) p.set('logo_url', logoUrl.trim());
     return `/api/qrcode?${p.toString()}`;
-  }, []);
+  }, [logoUrl]);
 
   // ── Gerar (requer login + crédito) ───────────────────────────────────────────
 
@@ -627,6 +629,41 @@ export default function QRCodeDisplay({
         </button>
       </div>
     </div>
+
+     {/* URL de logo personalizado — só quando showLogo ativo */}
+     {opts.showLogo && (
+       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+         <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>
+           URL do logo (opcional)
+         </span>
+         <input
+           type="url"
+           value={logoUrl}
+           onChange={e => { setLogoUrl(e.target.value); }}
+           onBlur={() => {
+             // regenera preview quando sai do campo
+             if (stage === 'result' && inputText.trim()) {
+               setQrUrl(buildUrl(inputText.trim(), opts, companyId));
+             }
+           }}
+           placeholder="https://exemplo.com/logo.png"
+           style={{
+             width:        '100%',
+             padding:      '7px 10px',
+             borderRadius: 8,
+             border:       `1px solid ${C.inputBorder}`,
+             background:   C.input,
+             color:        C.text,
+             fontSize:     12,
+             outline:      'none',
+             boxSizing:    'border-box' as const,
+           }}
+         />
+         <span style={{ fontSize: 10, color: C.muted }}>
+           Deixe vazio para usar o logo ArteFinal
+         </span>
+       </div>
+     )}
   );
 
   // ─── Botão "Opções" (toggle colapsável) ───────────────────────────────────────

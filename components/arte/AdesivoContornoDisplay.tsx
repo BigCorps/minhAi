@@ -62,10 +62,11 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
   const [cutW, setCutW] = useState<number>(50);
   const [cutH, setCutH] = useState<number>(50);
   const [radius, setRadius] = useState<number>(6);
-  const [offset, setOffset] = useState<number>(3);
-  
+const [offset, setOffset] = useState<number>(3);
 const minSangria = (cutW < 30 || cutH < 30) ? 2 : 3;
 const [sangria, setSangria] = useState<number>(minSangria);
+const [alignX, setAlignX] = useState<number>(0); // -50 a 50, em % do box
+const [alignY, setAlignY] = useState<number>(0); // -50 a 50, em % do box
 
 // e quando cutW/cutH mudar, corrigir se a sangria ficou abaixo do mínimo:
 useEffect(() => {
@@ -147,9 +148,9 @@ const handleRelease = useCallback(async () => {
 
     const uploadPath = await uploadArteSource(art, cid);
 
-    const spec: any = isAuto
-      ? { shape: 'auto', cut_w_mm: cutW, offset_mm: offset, cut_color: cutColor, nome }
-      : { shape, cut_w_mm: cutW, cut_h_mm: cutH, doc_w_mm: docW, doc_h_mm: docH, radius_mm: radius, sangria_mm: sangria, bleed_mode: bleedMode, cut_color: cutColor, nome }; // ← NOVO: doc_w_mm e doc_h_mm
+const spec: any = isAuto
+  ? { shape: 'auto', cut_w_mm: cutW, offset_mm: offset, cut_color: cutColor, nome }
+  : { shape, cut_w_mm: cutW, cut_h_mm: cutH, doc_w_mm: docW, doc_h_mm: docH, radius_mm: radius, sangria_mm: sangria, bleed_mode: bleedMode, cut_color: cutColor, nome, align_x_pct: alignX, align_y_pct: alignY };
 
     setProgress('Gerando arte e corte...');
     const res = await fetch('/api/arte/adesivo', {
@@ -203,7 +204,7 @@ const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
   const insetXpct = clamp((sangria / Math.max(1, coverWmm)) * 100, 0, 49);
   const insetYpct = clamp((sangria / Math.max(1, coverHmm)) * 100, 0, 49);
   const radiusPct = shape === 'rounded' ? clamp((radius / Math.max(1, coverWmm)) * 100, 0, 50) : 0;
-  const boxW = 220, boxH = isAuto ? 220 : Math.round(220 * (coverHmm / Math.max(1, coverWmm)));
+  const boxW = 220, boxH = isAuto ? 220 : Math.round(220 * (cutH / Math.max(1, cutW)));
 
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', padding: 16 }}>
@@ -253,25 +254,23 @@ const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
         {stage === 'configuring' && art && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {/* preview com overlay do corte */}
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <div style={{ position: 'relative', width: boxW, height: boxH, background: c.bgSecondary, border: `1px solid ${c.border}`, borderRadius: 4, overflow: 'hidden' }}>
+<div style={{ display: 'flex', justifyContent: 'center' }}>
+  <div style={{
+    position: 'relative',
+    padding: bleedMode === 'externa' && !isAuto ? Math.round((sangria / cutW) * boxW) : 0,
+    background: bleedMode === 'externa' && !isAuto ? swatch + '22' : 'transparent',
+    border: bleedMode === 'externa' && !isAuto ? `1px dashed ${swatch}` : 'none',
+    borderRadius: 4,
+  }}>
+    <div style={{ position: 'relative', width: boxW, height: boxH, background: c.bgSecondary, border: `1px solid ${c.border}`, borderRadius: 4, overflow: 'hidden' }}>
   {/* no modo externa: a arte ocupa só a área do corte (sem a sangria), centrada */}
-  <img src={art.previewDataUrl} alt="" style={{
-    position: 'absolute',
-    display: 'block',
-    ...(isAuto ? {
-      inset: 0, width: '100%', height: '100%', objectFit: 'contain',
-    } : bleedMode === 'externa' ? {
-      // arte ocupa apenas a proporção do corte, centrada dentro do canvas maior (docW x docH)
-      left: `${insetXpct}%`,
-      top: `${insetYpct}%`,
-      width: `${100 - 2 * insetXpct}%`,
-      height: `${100 - 2 * insetYpct}%`,
-      objectFit: 'contain',
-    } : {
-      inset: 0, width: '100%', height: '100%', objectFit: 'cover',
-    })
-  }} />
+<img src={art.previewDataUrl} alt="" style={{
+  position: 'absolute',
+  display: 'block',
+  inset: 0, width: '100%', height: '100%',
+  objectFit: isAuto ? 'contain' : 'cover',
+  objectPosition: `${50 + alignX}% ${50 + alignY}%`,
+}} />
                 {!isAuto && (
                   <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
                     {shape === 'circle'
@@ -358,7 +357,7 @@ const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
               <div><label style={label}>Recuo do corte: {offset}mm</label><input type="range" min={0} max={8} step={0.5} value={offset} onChange={(e) => setOffset(parseFloat(e.target.value))} style={{ width: '100%', accentColor: c.accent }} /></div>
             )}
 
-            {/* cor do corte */}
+{/* cor do corte */}
             <div>
               <label style={label}>Cor da linha de corte</label>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -372,8 +371,39 @@ const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
               </div>
             </div>
 
-            <div><label style={label}>Nome do arquivo</label><input type="text" value={nome} onChange={(e) => setNome(cleanName(e.target.value))} style={inputStyle} /></div>
+            {/* alinhamento manual da arte dentro do corte */}
+            {!isAuto && (
+              <div>
+                <label style={label}>Ajuste fino da posição da arte</label>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: 11, color: c.textMuted }}>Horizontal: {alignX > 0 ? `+${alignX}` : alignX}</span>
+                    <input
+                      type="range" min={-50} max={50} step={1}
+                      value={alignX}
+                      onChange={(e) => setAlignX(parseInt(e.target.value))}
+                      style={{ width: '100%', accentColor: c.accent }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: 11, color: c.textMuted }}>Vertical: {alignY > 0 ? `+${alignY}` : alignY}</span>
+                    <input
+                      type="range" min={-50} max={50} step={1}
+                      value={alignY}
+                      onChange={(e) => setAlignY(parseInt(e.target.value))}
+                      style={{ width: '100%', accentColor: c.accent }}
+                    />
+                  </div>
+                </div>
+                {(alignX !== 0 || alignY !== 0) && (
+                  <button onClick={() => { setAlignX(0); setAlignY(0); }} style={{ marginTop: 6, fontSize: 11, color: c.accent, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    Centralizar de novo
+                  </button>
+                )}
+              </div>
+            )}
 
+            <div><label style={label}>Nome do arquivo</label><input type="text" value={nome} onChange={(e) => setNome(cleanName(e.target.value))} style={inputStyle} /></div>
             {logado && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 12px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}`, fontSize: 13 }}>
                 <span style={{ color: c.textMuted }}>Custo: <strong style={{ color: c.text }}>{CREDITS} créditos</strong></span>

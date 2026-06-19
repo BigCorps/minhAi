@@ -628,7 +628,6 @@ export default function QRCodeDisplay({
           }} />
         </button>
       </div>
-    </div>
 
      {opts.showLogo && (
        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -663,6 +662,7 @@ export default function QRCodeDisplay({
          </span>
        </div>
      )}
+    </div>
   );
 
   // ─── Botão "Opções" (toggle colapsável) ───────────────────────────────────────

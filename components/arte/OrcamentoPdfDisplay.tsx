@@ -33,6 +33,23 @@ const sessionLogoCache = {
   clear: () => { _sessionLogo = null; },
 };
 
+// Mesma lógica para a cor de destaque (títulos do PDF) — cache só em memória
+let _sessionAccentColor: string | null = null;
+const sessionColorCache = {
+  get:   () => _sessionAccentColor,
+  set:   (v: string) => { _sessionAccentColor = v; },
+  clear: () => { _sessionAccentColor = null; },
+};
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const m = hex.replace('#', '');
+  return {
+    r: parseInt(m.slice(0, 2), 16) || 0,
+    g: parseInt(m.slice(2, 4), 16) || 0,
+    b: parseInt(m.slice(4, 6), 16) || 0,
+  };
+}
+
 // ─── Ícones SVG inline ────────────────────────────────────────────────────────
 
 type P = { c: string; sz: number };
@@ -203,6 +220,7 @@ export default function OrcamentoPdfDisplay({
   const [resultName,  setResultName]  = useState('');
 
   const [logoBase64,  setLogoBase64]  = useState<string | null>(() => sessionLogoCache.get() ?? null);
+  const [pdfAccentColor, setPdfAccentColor] = useState<string>(() => sessionColorCache.get() ?? '#e94560');
   const [empresa,     setEmpresa]     = useState<EmpresaData>({ nome: '', doc: '', tel: '', email: '', cidade: '', estado: '', end: '' });
   const [cliente,     setCliente]     = useState<ClienteData>({ nome: '', email: '', tel: '', end: '' });
   const [itens,       setItens]       = useState<OrcamentoItem[]>([{ id: nextId(), descricao: '', quantidade: 1, valorUnit: 0 }]);

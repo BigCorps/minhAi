@@ -9,7 +9,7 @@ import AdesivoContornoDisplay from '@/components/arte/AdesivoContornoDisplay';
 import VetorizarImagemDisplay from '@/components/arte/VetorizarImagemDisplay';
 import FolhaRecorteDisplay from '@/components/arte/FolhaRecorteDisplay';
 import QRCodeDisplay from '@/components/arte/QRCodeDisplay';
-
+import CodigoBarrasDisplay from '@/components/arte/CodigoBarrasDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -76,6 +76,18 @@ const SKILLS: Skill[] = [
     'link qr', 'código qr', 'código de barras 2d',
   ],
   modal: 'gerar_qr_code',
+},
+{
+  key:      'codigo_barras',
+  label:    'Código de Barras',
+  color:    '#e94560',
+  desc:     'Gera código de barras Code 128, EAN-13 ou Code 39',
+  credits:  1,
+  triggers: [
+    'codigo de barras', 'código de barras', 'barcode', 'ean', 'ean13', 'ean-13',
+    'code 128', 'code128', 'code 39', 'code39', 'gerar codigo', 'gerar código',
+  ],
+  modal: 'codigo_barras',
 },
 ];
 
@@ -385,7 +397,15 @@ export default function ArtePage() {
     onRequireLogin={() => { window.location.href = LOGIN_URL; }}
   />
 )}
-
+{activeModal?.type === 'codigo_barras' && (
+  <CodigoBarrasDisplay
+    data={activeModal.data}
+    onClose={closeModal}
+    theme="light"
+    playText={playText}
+    onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+  />
+)}
       <style jsx>{`
         @keyframes af-skills-scroll {
           0% { transform: translateX(0); }

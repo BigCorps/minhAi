@@ -445,11 +445,11 @@ export default function ArteLoginPage() {
           {/* Footer */}
           <div className="mt-6 pt-5 border-t border-gray-100">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
-              <Link href="/termos" className="text-gray-400 hover:text-gray-600 transition-colors">
+              <Link href="/arte/termos" className="text-gray-400 hover:text-gray-600 transition-colors">
                 Termos de Uso
               </Link>
               <span className="hidden sm:inline text-gray-200">•</span>
-              <Link href="/aviso" className="text-gray-400 hover:text-gray-600 transition-colors">
+              <Link href="/arte/aviso" className="text-gray-400 hover:text-gray-600 transition-colors">
                 Aviso de Privacidade
               </Link>
             </div>

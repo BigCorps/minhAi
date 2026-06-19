@@ -196,7 +196,9 @@ export default function QRCodeDisplay({
   const [opts,         setOpts]         = useState<QROpts>(DEFAULT_OPTS);
   const [customQr,     setCustomQr]     = useState('#000080');
   const [customBg,     setCustomBg]     = useState('#ffffff');
-  const [logoUrl,      setLogoUrl]      = useState('');
+  const [logoUrl,      setLogoUrl]      = useState('');       // URL externa (opcional)
+  const [logoFile,     setLogoFile]     = useState<string | null>(null); // base64 do upload — cache só nesta sessão (sem Supabase)
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Mount: sinaliza modal aberto + TTS de boas-vindas (§5: só no useEffect) ──
 
@@ -250,6 +252,10 @@ export default function QRCodeDisplay({
 
   // ── Montar URL do QR ─────────────────────────────────────────────────────────
 
+  // Monta a URL do QR "puro". Se o logo for um upload local (base64), ele NÃO
+  // vai para a API via query string (imagens em base64 estouram o limite de
+  // tamanho de URL) — em vez disso compomos o logo por cima no client via
+  // <canvas> em renderFinalImage(). Se for uma URL externa, a API resolve.
   const buildUrl = useCallback((text: string, o: QROpts, cid: string) => {
     const p = new URLSearchParams({
       data:       text,
@@ -258,10 +264,62 @@ export default function QRCodeDisplay({
       bg:         o.bgColor,
       company_id: cid,
     });
-    if (!o.showLogo) p.set('no_logo', '1');
-    if (o.showLogo && logoUrl.trim()) p.set('logo_url', logoUrl.trim());
+    if (!o.showLogo) {
+      p.set('no_logo', '1');
+    } else if (logoFile) {
+      // Logo local: pedimos o QR SEM logo da API e compomos no client
+      p.set('no_logo', '1');
+    } else if (logoUrl.trim()) {
+      p.set('logo_url', logoUrl.trim());
+    }
     return `/api/qrcode?${p.toString()}`;
-  }, [logoUrl]);
+  }, [logoUrl, logoFile]);
+
+  // Compõe o logo local (upload) por cima do QR puro, via canvas.
+  // Replica o mesmo recorte circular + fundo branco que a API faz para logo_url.
+  const composeLocalLogo = useCallback((baseUrl: string, logoDataUrl: string, size: number): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const qrImg = new Image();
+      qrImg.crossOrigin = 'anonymous';
+      qrImg.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(qrImg, 0, 0, size, size);
+
+        const logoImg = new Image();
+        logoImg.onload = () => {
+          const logoSize = Math.floor(size * 0.25);
+          const padding = 6;
+          const total = logoSize + padding * 2;
+          const offset = Math.floor((size - total) / 2);
+
+          // Fundo branco circular
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(offset + total / 2, offset + total / 2, total / 2, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+          ctx.clip();
+
+          // Logo centralizado dentro do círculo, mantendo proporção (contain)
+          const ratio = Math.min(logoSize / logoImg.naturalWidth, logoSize / logoImg.naturalHeight);
+          const lw = logoImg.naturalWidth * ratio;
+          const lh = logoImg.naturalHeight * ratio;
+          const lx = offset + padding + (logoSize - lw) / 2;
+          const ly = offset + padding + (logoSize - lh) / 2;
+          ctx.drawImage(logoImg, lx, ly, lw, lh);
+          ctx.restore();
+
+          resolve(canvas.toDataURL('image/png'));
+        };
+        logoImg.onerror = reject;
+        logoImg.src = logoDataUrl;
+      };
+      qrImg.onerror = reject;
+      qrImg.src = baseUrl;
+    });
+  }, []);
 
   // ── Gerar (requer login + crédito) ───────────────────────────────────────────
 
@@ -293,7 +351,17 @@ export default function QRCodeDisplay({
       }
 
       // Monta a URL (a rota /api/qrcode não cobra — cobramos aqui, fail-closed)
-      const url = buildUrl(trimmed, o, resolvedCid);
+      let url = buildUrl(trimmed, o, resolvedCid);
+
+      // Se houver logo local (upload), compõe no client via canvas
+      // (não dá pra mandar base64 grande pela query string da API)
+      if (o.showLogo && logoFile) {
+        try {
+          url = await composeLocalLogo(url, logoFile, o.size);
+        } catch {
+          // Se a composição falhar (ex: CORS na imagem do QR), segue sem logo
+        }
+      }
 
       // Cobrança após montar, antes de mostrar o resultado (§5 fail-closed)
       const { data: raw, error: errCobranca } = await supabase.rpc(
@@ -323,16 +391,20 @@ export default function QRCodeDisplay({
       setStage('error');
       playText?.('Erro ao gerar o QR Code.').catch(() => {});
     }
-  }, [opts, companyId, supabase, ensureCompany, buildUrl, playText]);
+  }, [opts, companyId, supabase, ensureCompany, buildUrl, composeLocalLogo, logoFile, playText]);
 
   // ── Atualizar opção + regenerar preview se já há resultado ───────────────────
 
-  const applyOpt = useCallback((next: QROpts) => {
+  const applyOpt = useCallback(async (next: QROpts) => {
     setOpts(next);
     if (stage === 'result' && inputText.trim()) {
-      setQrUrl(buildUrl(inputText.trim(), next, companyId));
+      let url = buildUrl(inputText.trim(), next, companyId);
+      if (next.showLogo && logoFile) {
+        try { url = await composeLocalLogo(url, logoFile, next.size); } catch { /* segue sem logo */ }
+      }
+      setQrUrl(url);
     }
-  }, [stage, inputText, companyId, buildUrl]);
+  }, [stage, inputText, companyId, buildUrl, composeLocalLogo, logoFile]);
 
   // ── Download ──────────────────────────────────────────────────────────────────
 
@@ -582,72 +654,125 @@ export default function QRCodeDisplay({
       </div>
 
       {opts.showLogo && (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          
-          {/* 1. Caixa de Preview da Imagem */}
-          <div style={{
-            width: 50,
-            height: 50,
-            borderRadius: 8,
-            border: `1px solid ${C.border}`,
-            background: C.dim || 'transparent',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            flexShrink: 0
-          }}>
-            {opts.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img 
-                src={opts.logoUrl} 
-                alt="Preview do Logo" 
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+          {/* Preview + upload local (cache só nesta sessão, sem Supabase) */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <div
+              onClick={() => logoFileInputRef.current?.click()}
+              title="Clique para enviar uma imagem"
+              style={{
+                width: 50, height: 50, borderRadius: 8, cursor: 'pointer',
+                border: `1px solid ${C.border}`, background: theme === 'dark' ? C.surface : '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden', flexShrink: 0,
+              }}
+            >
+              {logoFile ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoFile} alt="Preview do logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : logoUrl.trim() ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl.trim()} alt="Preview do logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>Logo personalizado</span>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={() => logoFileInputRef.current?.click()}
+                  style={{
+                    flex: 1, padding: '7px 10px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                    border: `1px solid ${C.inputBorder}`,
+                    background: logoFile ? C.blue : (theme === 'dark' ? C.surface : '#fff'),
+                    color: logoFile ? '#fff' : C.sub,
+                  }}
+                >
+                  {logoFile ? 'Trocar imagem' : 'Enviar imagem'}
+                </button>
+                {logoFile && (
+                  <button
+                    onClick={async () => {
+                      setLogoFile(null);
+                      if (stage === 'result' && inputText.trim()) {
+                        setQrUrl(buildUrl(inputText.trim(), opts, companyId));
+                      }
+                    }}
+                    title="Remover"
+                    style={{
+                      padding: '7px 10px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
+                      border: `1px solid ${C.redBorder}`, background: 'transparent', color: C.red,
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <input
+                ref={logoFileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={async e => {
+                  const file = e.target.files?.[0];
+                  e.currentTarget.value = '';
+                  if (!file || !file.type.startsWith('image/')) return;
+                  const reader = new FileReader();
+                  reader.onload = async () => {
+                    const dataUrl = reader.result as string;
+                    setLogoFile(dataUrl);
+                    setLogoUrl(''); // upload local tem prioridade sobre URL
+                    if (stage === 'result' && inputText.trim()) {
+                      try {
+                        const base = buildUrl(inputText.trim(), opts, companyId);
+                        const composed = await composeLocalLogo(base, dataUrl, opts.size);
+                        setQrUrl(composed);
+                      } catch { /* mantém o preview anterior */ }
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }}
               />
-            ) : (
-              // Ícone de placeholder de imagem quando vazio
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <polyline points="21 15 16 10 5 21" />
-              </svg>
-            )}
+            </div>
           </div>
 
-          {/* 2. Campo de Input (URL) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>
-              URL do logo (opcional)
-            </span>
+          {/* URL externa — alternativa, desabilitada se já houver upload local */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 11, color: C.muted }}>ou cole a URL de uma imagem pública</span>
             <input
-           type="url"
-           value={logoUrl}
-           onChange={e => { setLogoUrl(e.target.value); }}
-           onBlur={() => {
-             // regenera preview quando sai do campo
-             if (stage === 'result' && inputText.trim()) {
-               setQrUrl(buildUrl(inputText.trim(), opts, companyId));
-             }
-           }}
-           placeholder="https://exemplo.com/logo.png"
-           style={{
-             width:        '100%',
-             padding:      '7px 10px',
-             borderRadius: 8,
-             border:       `1px solid ${C.inputBorder}`,
-             background:   C.input,
-             color:        C.text,
-             fontSize:     12,
-             outline:      'none',
-             boxSizing:    'border-box' as const,
-           }}
-         />
-         <span style={{ fontSize: 10, color: C.muted }}>
-           Deixe vazio para usar o logo ArteFinal
-         </span>
-       </div>
-      </div>
-     )}
+              type="url"
+              value={logoUrl}
+              disabled={!!logoFile}
+              onChange={e => setLogoUrl(e.target.value)}
+              onBlur={() => {
+                if (!logoFile && stage === 'result' && inputText.trim()) {
+                  setQrUrl(buildUrl(inputText.trim(), opts, companyId));
+                }
+              }}
+              placeholder="https://exemplo.com/logo.png"
+              style={{
+                width: '100%', padding: '7px 10px', borderRadius: 8,
+                border: `1px solid ${C.inputBorder}`,
+                background: logoFile ? (theme === 'dark' ? 'rgba(255,255,255,0.03)' : '#f3f4f6') : C.input,
+                color: logoFile ? C.muted : C.text,
+                fontSize: 12, outline: 'none', boxSizing: 'border-box' as const,
+                cursor: logoFile ? 'not-allowed' : 'text',
+              }}
+            />
+            <span style={{ fontSize: 10, color: C.muted }}>
+              Deixe vazio para usar o logo ArteFinal
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 

@@ -351,51 +351,6 @@ export default function QRCodeDisplay({
     }
   }, [qrUrl, playText]);
 
-  // ── Enviar email ──────────────────────────────────────────────────────────────
-
-  const handleSendEmail = useCallback(async () => {
-    if (!qrUrl || sendingEmail) return;
-
-    // Requer login para enviar email
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { onRequireLogin?.(); return; }
-
-    const cid = await ensureCompany();
-    if (!cid) return;
-
-    setSendingEmail(true);
-    setEmailSent(false);
-    try {
-      const email = session.user.email;
-      if (!email) throw new Error('Usuário sem email.');
-
-      const blob   = await (await fetch(qrUrl)).blob();
-      const base64 = await new Promise<string>(res => {
-        const r = new FileReader();
-        r.onload = () => res((r.result as string).split(',')[1]);
-        r.readAsDataURL(blob);
-      });
-
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: {
-          company_id:  cid,
-          to:          email,
-          subject:     'Seu QR Code — ArteFinal',
-          body:        `<p>QR Code gerado pelo ArteFinal.</p><p><strong>Conteúdo:</strong> ${inputText}</p><br><img src="${qrUrl}" width="250" />`,
-          attachments: [{ filename: 'qrcode.png', content: base64, encoding: 'base64', contentType: 'image/png' }],
-        },
-      });
-      if (error) throw new Error(error.message);
-
-      setEmailSent(true);
-      playText?.('QR Code enviado para o seu email.').catch(() => {});
-    } catch {
-      playText?.('Não foi possível enviar o email.').catch(() => {});
-    } finally {
-      setSendingEmail(false);
-    }
-  }, [qrUrl, sendingEmail, supabase, ensureCompany, inputText, onRequireLogin, playText]);
-
   // ── Reset ─────────────────────────────────────────────────────────────────────
 
   const handleReset = useCallback(() => {
@@ -404,7 +359,6 @@ export default function QRCodeDisplay({
     setQrUrl(null);
     setErrorMsg(null);
     setSaldo(null);
-    setEmailSent(false);
     setShowOpts(false);
   }, []);
 

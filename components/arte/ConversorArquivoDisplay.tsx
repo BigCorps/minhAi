@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createClient } from '@/lib/supabase-browser';
-import CameraCapture from '@/components/assistant/CameraCapture';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -19,10 +18,10 @@ import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 //  - NÃO chama nenhuma RPC de crédito (nem decrementar_creditos, nem
 //    cobrar_credito_se_suficiente — função 100% client-side, sem custo real).
 //  - NÃO bloqueia nada por anonimato (sem "custo escondido" do §6).
-//  - `ensure_my_arte_company` só é chamado SE o usuário usar a aba "celular"
-//    (companion/QR), porque essa aba sobe o arquivo pelo bucket `arte-uploads`,
-//    cuja RLS exige company. Webcam/câmera/upload são puramente client-side
-//    (FileReader/canvas) e não precisam de company nem de login.
+//  - Não depende de company/login: tela inicial simplificada (padrão
+//    QRCodeDisplay) com apenas upload de arquivo (clique ou drag-and-drop) +
+//    texto explicando a função — sem abas de celular/webcam/câmera
+//    (CameraCapture removido, junto com o bucket arte-uploads/RLS de company).
 //
 // No registry da página (`app/arte/page.tsx`), registrar com `credits: 0` e
 // renderizar "Grátis" no lugar de "0" abaixo do nome — ver snippet ao final
@@ -38,10 +37,9 @@ declare global {
 }
 
 type Stage = 'input' | 'selecting_format' | 'processing' | 'result' | 'error';
-type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 
 interface Props {
-  data: { companyId?: string };
+  data?: { companyId?: string };
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText: (text: string) => Promise<void>;
@@ -69,7 +67,7 @@ const LIGHT = {
   primary: '#2563eb',
 };
 
-const OPENING_TEXT = 'Selecione o arquivo para converter. Esta função é gratuita. Você pode dizer: celular, webcam, câmera, arquivo ou fechar.';
+const OPENING_TEXT = 'Carregue o arquivo que deseja converter. Esta função é gratuita.';
 const AUTO_CLOSE = 60;
 
 const normalize = (text: string) =>
@@ -139,6 +137,13 @@ const IconGift = () => (
   </svg>
 );
 
+const IconUpload = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+  </svg>
+);
+
 function VoiceHint({ commands, isDark }: { commands: string[]; isDark: boolean }) {
   const colors = isDark ? DARK : LIGHT;
   return (
@@ -203,11 +208,11 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
 
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
   const [stage, setStage] = useState<Stage>('input');
-  const [cameraTab, setCameraTab] = useState<Tab>('companion');
+  const [isDragging, setIsDragging] = useState(false);
 
-  // companyId só é resolvido de fato se a aba "celular" (companion/QR) for usada
+  // companyId é resolvido de forma lazy só quando precisamos exibir o
+  // ResultDownloadQR (não há mais upload via celular/QR nesta tela).
   const [companyId, setCompanyId] = useState<string>(data?.companyId ?? '');
-  const [resolvingCompany, setResolvingCompany] = useState(false);
 
   const [originalFile, setOriginalFile] = useState<File | null>(null);
   const [originalExtension, setOriginalExtension] = useState<string>('');
@@ -224,8 +229,7 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
 
   const scriptsLoaded = useRef(false);
   const hasSpoken = useRef(false);
-  const lastTabCommandRef = useRef<string | null>(null);
-  const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const supabase = createClient();
 
@@ -254,10 +258,6 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
       };
       document.body.appendChild(script);
     });
-
-    return () => {
-      if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
-    };
   }, []);
 
   // Auto-close no resultado
@@ -281,60 +281,51 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
     playText(OPENING_TEXT).catch(() => {});
   }, []);
 
-  // company lazy (§7) — só quando a aba "celular" (QR/companion) for selecionada,
-  // pois é a única que sobe arquivo pelo bucket arte-uploads (RLS exige company).
+  // company lazy (§7) — só quando chegamos no resultado, pois é nesse ponto
+  // que o ResultDownloadQR pode precisar de um company_id para gerar o QR de
+  // download pelo celular. Falha aqui não bloqueia o fluxo (o QR fica oculto).
   useEffect(() => {
-    if (cameraTab !== 'companion' || companyId || resolvingCompany) return;
+    if (stage !== 'result' || companyId) return;
 
     let cancelled = false;
-    setResolvingCompany(true);
-
     (async () => {
       try {
         const { data: ensured } = await supabase.rpc('ensure_my_arte_company');
         if (!cancelled && ensured) setCompanyId(ensured as string);
       } catch {
-        // Sem login/sessão: aba "celular" fica indisponível, mas as demais
-        // (webcam, câmera, upload) continuam funcionando sem company.
-      } finally {
-        if (!cancelled) setResolvingCompany(false);
+        // Sem login/sessão: ResultDownloadQR simplesmente fica desabilitado.
       }
     })();
 
     return () => { cancelled = true; };
-  }, [cameraTab, companyId, resolvingCompany, supabase]);
+  }, [stage, companyId, supabase]);
+
+  const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf'];
 
   // Detecta tipo de arquivo e formatos de destino disponíveis
-  const handleCapture = useCallback(async (base64: string) => {
-    try {
-      const isPdf = base64.startsWith('JVBERi');
-      const isImage = base64.startsWith('/9j/') || base64.startsWith('iVBORw') || base64.startsWith('UklGR');
+  const handleFileSelected = useCallback((file: File | null | undefined) => {
+    if (!file) return;
 
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      setErrorMsg('Formato não suportado. Envie um arquivo JPG, PNG, WebP ou PDF.');
+      setStage('error');
+      return;
+    }
+
+    try {
+      const isPdf = file.type === 'application/pdf';
       let extension = '';
       let formats: string[] = [];
 
       if (isPdf) {
         extension = 'pdf';
         formats = ['jpg', 'png', 'webp'];
-      } else if (isImage) {
-        if (base64.startsWith('/9j/')) extension = 'jpg';
-        else if (base64.startsWith('iVBORw')) extension = 'png';
-        else if (base64.startsWith('UklGR')) extension = 'webp';
-        else extension = 'jpg';
-
-        formats = ['jpg', 'png', 'webp', 'pdf'].filter(f => f !== extension);
       } else {
-        throw new Error('Formato de arquivo não suportado.');
+        if (file.type === 'image/jpeg' || file.type === 'image/jpg') extension = 'jpg';
+        else if (file.type === 'image/png') extension = 'png';
+        else if (file.type === 'image/webp') extension = 'webp';
+        formats = ['jpg', 'png', 'webp', 'pdf'].filter(f => f !== extension);
       }
-
-      const byteString = atob(base64);
-      const ab = new ArrayBuffer(byteString.length);
-      const ia = new Uint8Array(ab);
-      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-
-      const mimeType = isPdf ? 'application/pdf' : `image/${extension}`;
-      const blob = new Blob([ab], { type: mimeType });
-      const file = new File([blob], `arquivo.${extension}`, { type: mimeType });
 
       setOriginalFile(file);
       setOriginalExtension(extension);
@@ -345,6 +336,17 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
       setStage('error');
     }
   }, []);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFileSelected(e.target.files?.[0]);
+    e.target.value = '';
+  }, [handleFileSelected]);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileSelected(e.dataTransfer.files?.[0]);
+  }, [handleFileSelected]);
 
   const convertImageToImage = async (file: File, targetFormat: string): Promise<Blob> => {
     return new Promise((resolve, reject) => {
@@ -554,26 +556,6 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
         onClose(); return;
       }
 
-      if (stage === 'input') {
-        const TAB_MAP: Record<string, Tab> = {
-          celular: 'companion', qrcode: 'companion', 'qr code': 'companion',
-          webcam: 'webcam', computador: 'webcam',
-          camera: 'mobile', camara: 'mobile',
-          arquivo: 'upload', upload: 'upload', galeria: 'upload',
-        };
-
-        for (const [trigger, tab] of Object.entries(TAB_MAP)) {
-          if (t.includes(trigger)) {
-            if (lastTabCommandRef.current === tab) return;
-            lastTabCommandRef.current = tab;
-            setCameraTab(tab as Tab);
-            if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
-            tabCommandTimeoutRef.current = setTimeout(() => { lastTabCommandRef.current = null; }, 4000);
-            return;
-          }
-        }
-      }
-
       if (stage === 'selecting_format') {
         const formatMap: Record<string, string> = {
           jpg: 'jpg', jpeg: 'jpg', 'jota pe ge': 'jpg',
@@ -642,21 +624,48 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
         </div>
 
         {stage === 'input' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <CameraCapture
-              onCapture={handleCapture}
-              onCancel={onClose}
-              theme={theme}
-              companyId={companyId}
-              instructions="Selecione o arquivo para converter"
-              acceptPdf={true}
-              activeTab={cameraTab}
-              onTabChange={setCameraTab}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <p style={{ margin: 0, fontSize: '13px', color: colors.textMuted, lineHeight: 1.5 }}>
+              Carregue uma imagem ou PDF para converter o formato do arquivo (JPG, PNG, WebP ou PDF).
+              Essa função é totalmente gratuita.
+            </p>
+
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                padding: '40px 20px',
+                borderRadius: '12px',
+                border: `2px dashed ${isDragging ? colors.primary : colors.border}`,
+                backgroundColor: isDragging ? 'rgba(59, 130, 246, 0.06)' : colors.bgSecondary,
+                color: colors.textMuted,
+                cursor: 'pointer',
+                transition: 'border-color 0.15s, background-color 0.15s',
+              }}
+            >
+              <IconUpload />
+              <span style={{ fontSize: '14px', fontWeight: 600, color: colors.text }}>
+                Clique para selecionar ou arraste o arquivo aqui
+              </span>
+              <span style={{ fontSize: '12px' }}>JPG, PNG, WebP ou PDF</span>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              onChange={handleInputChange}
+              style={{ display: 'none' }}
             />
-            {cameraTab === 'companion' && resolvingCompany && (
-              <p style={{ margin: 0, fontSize: '12px', color: colors.textMuted }}>Preparando envio pelo celular...</p>
-            )}
-            <VoiceHint commands={['"celular"', '"webcam"', '"câmera"', '"arquivo"', '"fechar"']} isDark={isDark} />
+
+            <VoiceHint commands={['"fechar"']} isDark={isDark} />
           </div>
         )}
 
@@ -853,27 +862,3 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
     document.body
   );
 }
-
-/*
- * ── Registro em app/arte/page.tsx (SKILLS) ────────────────────────────────
- *
- * {
- *   key: 'converter_arquivo',
- *   label: 'Converter Arquivos',
- *   color: '#3b82f6',
- *   credits: 0,
- *   triggers: ['converter arquivo', 'converter imagem', 'mudar formato', 'converter pdf'],
- *   modal: ConversorArquivoDisplay,
- * }
- *
- * No card do carrossel, troque a exibição do número de créditos por:
- *
- *   {skill.credits === 0 ? (
- *     <span className="text-emerald-500 text-xs font-semibold">Grátis</span>
- *   ) : (
- *     <span className="text-xs text-muted-foreground">{skill.credits} créditos</span>
- *   )}
- *
- * Não é necessário registrar em `assistant_functions` (§2): a função não usa
- * a RPC de cobrança, então não há nada para a tabela validar.
- */

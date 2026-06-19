@@ -547,7 +547,6 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
               style={{ display: 'none' }}
             />
 
-            <VoiceHint commands={['"fechar"']} isDark={isDark} />
           </div>
         )}
 
@@ -615,7 +614,6 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
               Converter (grátis)
             </button>
 
-            <VoiceHint commands={['"jpg"', '"png"', '"pdf"', '"converter"', '"fechar"']} isDark={isDark} />
           </div>
         )}
 
@@ -701,7 +699,6 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
               </div>
             </div>
 
-            <VoiceHint commands={['"baixar"', '"novo arquivo"', '"fechar"']} isDark={isDark} />
           </div>
         )}
 

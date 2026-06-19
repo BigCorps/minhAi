@@ -193,12 +193,12 @@ const spec: any = isAuto
   const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14, background: c.bgSecondary, border: `1px solid ${c.border}`, color: c.text, outline: 'none' };
   const semAlfa = isAuto && !!art && !art.hasAlpha;
 
-  // ── Modelo unificado do preview — MESMA fórmula usada no backend (route.ts) ──
-  // Calculamos manualmente left/top/width/height da <img> em vez de usar CSS
-  // object-position + transform combinados: essa combinação não compõe de forma
-  // previsível entre navegadores e não tinha como garantir que preview e PDF
-  // batessem exatamente. Calculando os pixels nós mesmos, preview e servidor
-  // ficam matematicamente idênticos.
+  // ── Modelo final do preview — MESMA fórmula usada no backend (route.ts) ──
+  // O BOX (canvas visível) é SEMPRE fixo na proporção da cobertura (coverWmm×coverHmm) —
+  // nunca cresce com zoom. Zoom controla só o tamanho da <img> DENTRO do box (>100% corta
+  // as bordas que excedem via overflow:hidden do container; <100% deixa o fundo do box
+  // visível ao redor). O alinhamento desloca a <img> livremente, SEM TRAVA — pode levar a
+  // imagem parcialmente fora do box se o usuário levar ao extremo, exatamente como no PDF.
   const coverWmm = bleedMode === 'interna' ? cutW : cutW + 2 * sangria;
   const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
   const docW = coverWmm, docH = coverHmm; // valor exibido ao usuário (cobertura mínima garantida)
@@ -210,24 +210,18 @@ const spec: any = isAuto
   previewDrawWmm *= zoom / 100;
   previewDrawHmm *= zoom / 100;
 
-  // finalW/finalH = nunca menor que a cobertura mínima (sangria sempre garantida)
-  const finalWmm = Math.max(previewDrawWmm, coverWmm);
-  const finalHmm = Math.max(previewDrawHmm, coverHmm);
-  const slackWmm = finalWmm - coverWmm;
-  const slackHmm = finalHmm - coverHmm;
-  const alignXfrac = alignX / 50; // -1..+1
+  const alignXfrac = alignX / 50; // -1..+1, sem clamp adicional de slack — desloca livremente
   const alignYfrac = alignY / 50;
-  const offsetXmm = (slackWmm / 2) * alignXfrac;
-  const offsetYmm = (slackHmm / 2) * alignYfrac; // "+": imagem desce na tela (mesma convenção do backend)
+  const offsetXmm = (coverWmm / 2) * alignXfrac;
+  const offsetYmm = (coverHmm / 2) * alignYfrac; // "+": imagem desce na tela (mesma convenção do backend)
 
-  // boxW/boxH = tamanho do CONTAINER visível = a maior dimensão entre cobertura e arte final,
-  // assim a arte nunca é cortada pelo container quando zoom>100% gera folga (slack) real.
+  // boxW/boxH = SEMPRE a proporção da cobertura fixa (nunca muda com zoom/alinhamento)
   const boxW = 220;
-  const boxH = isAuto ? 220 : Math.round(220 * (finalHmm / Math.max(1, finalWmm)));
-  const pxPerMm = boxW / Math.max(1, finalWmm);
+  const boxH = isAuto ? 220 : Math.round(220 * (coverHmm / Math.max(1, coverWmm)));
+  const pxPerMm = boxW / Math.max(1, coverWmm);
 
-  // posição/tamanho da <img> dentro do box, em px do preview — espelha exatamente x/y/width/height
-  // que o backend usa (mesma fórmula, só convertida pra pixels de tela em vez de pontos PDF)
+  // posição/tamanho da <img> dentro do box, em px — pode exceder ou não cobrir o box
+  // inteiro; o overflow:hidden do container corta o excesso, igual ao composite() no backend.
   const imgWpx = previewDrawWmm * pxPerMm;
   const imgHpx = previewDrawHmm * pxPerMm;
   const imgLeftPx = (boxW - imgWpx) / 2 + offsetXmm * pxPerMm; // X: tela e PDF crescem na mesma direção

@@ -114,13 +114,12 @@ export async function POST(req: NextRequest) {
       }
       const radius = clamp(Number(spec.radius_mm ?? 0), 0, Math.min(cutWmm, cutHmm) / 2);
 
-      // ── Modelo unificado (mesma fórmula usada no preview do frontend) ──
-      // 1) drawW/drawH = tamanho "natural" da arte: cover(aspect) sobre coverW×coverH, com zoom.
-      // 2) finalW/finalH = NUNCA menor que coverW/coverH — a sangria mínima é uma garantia
-      //    rígida, não uma sugestão. Zoom baixo ou alinhamento no extremo nunca a violam.
-      // 3) slackW/slackH = folga real disponível para o alinhamento mover a arte, calculada
-      //    contra a COBERTURA (coverW/coverH), nunca contra o corte — mover em direção ao
-      //    corte sem nunca comer a margem de sangria garantida.
+      // ── Modelo final (mesma fórmula usada no preview do frontend) ──
+      // O CANVAS final (o que vai pro PDF) é SEMPRE coverW×coverH — fixo, nunca varia com
+      // zoom ou alinhamento. Zoom controla o tamanho da imagem DENTRO desse canvas (>100%
+      // corta as bordas que excedem; <100% deixa espaço vazio). O alinhamento desloca a
+      // imagem livremente dentro do canvas, SEM TRAVA — pode até deixar uma faixa maior
+      // exposta de um lado (preenchida pela cor de fundo) se o usuário levar ao extremo.
       let drawW: number, drawH: number;
       if (artAspect > coverW / coverH) { drawH = coverH; drawW = coverH * artAspect; }
       else { drawW = coverW; drawH = coverW / artAspect; }
@@ -128,57 +127,62 @@ export async function POST(req: NextRequest) {
       const zoomPct = clamp(Number(spec.zoom_pct ?? 100), 50, 300) / 100;
       drawW *= zoomPct; drawH *= zoomPct;
 
-      const finalW = Math.max(drawW, coverW);
-      const finalH = Math.max(drawH, coverH);
-      const needsBleedExpansion = finalW > drawW + 0.01 || finalH > drawH + 0.01;
+      const alignXfrac = clamp(Number(spec.align_x_pct ?? 0), -50, 50) / 50; // -1..+1
+      const alignYfrac = clamp(Number(spec.align_y_pct ?? 0), -50, 50) / 50; // -1..+1
+      const offsetX = (coverW / 2) * alignXfrac;
+      const offsetY = (coverH / 2) * alignYfrac;
 
-      const slackW = finalW - coverW;
-      const slackH = finalH - coverH;
-      const alignXpct = clamp(Number(spec.align_x_pct ?? 0), -50, 50) / 50; // -1..+1
-      const alignYpct = clamp(Number(spec.align_y_pct ?? 0), -50, 50) / 50; // -1..+1
-      const offsetX = (slackW / 2) * alignXpct;
-      const offsetY = (slackH / 2) * alignYpct;
-
-      pageWmm = Math.max(coverW, finalW, cutWmm) + 2 * HANDLE_MM;
-      pageHmm = Math.max(coverH, finalH, cutHmm) + 2 * HANDLE_MM;
+      pageWmm = Math.max(coverW, cutWmm) + 2 * HANDLE_MM;
+      pageHmm = Math.max(coverH, cutHmm) + 2 * HANDLE_MM;
       const cx = pageWmm / 2, cy = pageHmm / 2;
       cutPts = shape === 'circle' ? ellipsePoints(cutWmm, cutHmm, cx, cy) : rectPoints(cutWmm, cutHmm, cx, cy, shape === 'rounded' ? radius : 0);
       reportW = cutWmm; reportH = cutHmm;
 
       const p1 = doc.addPage([mm(pageWmm), mm(pageHmm)]);
-      let artBuf = srcBuf;
-      let artDrawW = drawW, artDrawH = drawH;
-      if (needsBleedExpansion) {
-        // a arte (no tamanho drawW×drawH, pós-zoom) é menor que a cobertura mínima em algum
-        // lado — expande com a cor extraída da borda até finalW×finalH, preservando a sangria.
-        const artPxW = Math.round((drawW / 25.4) * DPI) || 1;
-        const artPxH = Math.round((drawH / 25.4) * DPI) || 1;
-        const padXmm = (finalW - drawW) / 2;
-        const padYmm = (finalH - drawH) / 2;
-        const padXpx = Math.round((padXmm / 25.4) * DPI);
-        const padYpx = Math.round((padYmm / 25.4) * DPI);
 
-        const resized = await sharp(srcBuf).resize(artPxW, artPxH, { fit: 'cover' }).toBuffer();
-        const edgeColor = await sharp(resized)
-          .extract({ left: 0, top: 0, width: artPxW, height: 1 })   // faixa do topo
-          .resize(1, 1)                                               // média de cor
-          .raw()
-          .toBuffer();
-        const bg = { r: edgeColor[0], g: edgeColor[1], b: edgeColor[2], alpha: 1 };
+      // canvas final em px, no DPI alvo
+      const canvasPxW = Math.round((coverW / 25.4) * DPI) || 1;
+      const canvasPxH = Math.round((coverH / 25.4) * DPI) || 1;
+      const imgPxW = Math.round((drawW / 25.4) * DPI) || 1;
+      const imgPxH = Math.round((drawH / 25.4) * DPI) || 1;
+      // posição (canto superior-esquerdo) da imagem dentro do canvas, em px — pode ser
+      // negativa ou exceder o canvas; sharp().composite() corta automaticamente o que sobra.
+      const imgLeftPx = Math.round((canvasPxW - imgPxW) / 2 + (offsetX / 25.4) * DPI);
+      const imgTopPx = Math.round((canvasPxH - imgPxH) / 2 - (offsetY / 25.4) * DPI); // Y do PDF cresce p/ cima
 
-        artBuf = await sharp(resized)
-          .extend({ top: padYpx, bottom: padYpx, left: padXpx, right: padXpx, background: bg })
-          .toBuffer();
-        artDrawW = finalW; artDrawH = finalH;
+      // cor de fundo: média dos 4 CANTOS da imagem ORIGINAL (mais robusto que 1 faixa —
+      // evita capturar elementos do desenho central, como um anel colorido perto da borda)
+      const cornerSize = Math.max(1, Math.min(Math.round(Math.min(imgW, imgH) * 0.03), imgW, imgH));
+      async function cornerAvg(left: number, top: number) {
+        const px = await sharp(srcBuf).extract({ left, top, width: cornerSize, height: cornerSize }).resize(1, 1).raw().toBuffer();
+        return [px[0], px[1], px[2]];
       }
-      const targetPx = Math.round((artDrawW / 25.4) * DPI);
-      // offsetY soma direto (não inverte sinal) porque o eixo Y do PDF cresce pra cima e
-      // alignYpct positivo (slider "Vertical: +") já significa "mover a arte para baixo
-      // dentro do corte" — equivalente a subir a JANELA do corte em relação à arte, ou seja,
-      // descer o centro de desenho da arte no espaço do PDF.
+      const corners = await Promise.all([
+        cornerAvg(0, 0),
+        cornerAvg(Math.max(0, imgW - cornerSize), 0),
+        cornerAvg(0, Math.max(0, imgH - cornerSize)),
+        cornerAvg(Math.max(0, imgW - cornerSize), Math.max(0, imgH - cornerSize)),
+      ]);
+      const bg = {
+        r: Math.round(corners.reduce((s, c) => s + c[0], 0) / 4),
+        g: Math.round(corners.reduce((s, c) => s + c[1], 0) / 4),
+        b: Math.round(corners.reduce((s, c) => s + c[2], 0) / 4),
+      };
+
+      // monta o canvas final: fundo sólido (cor dos cantos) + imagem composta na posição.
+      // channels:3 (sem alpha) é compatível com o flatten() que drawImageCmyk já faz internamente.
+      // .flatten() aqui também remove alfa da imagem de origem antes de compor, evitando
+      // mismatch de canais entre o canvas (3 canais) e a imagem (que pode ter RGBA nativo).
+      const resizedImg = await sharp(srcBuf).resize(imgPxW, imgPxH, { fit: 'cover' }).flatten({ background: bg }).toBuffer();
+      const artBuf = await sharp({
+        create: { width: canvasPxW, height: canvasPxH, channels: 3, background: bg },
+      })
+        .composite([{ input: resizedImg, left: imgLeftPx, top: imgTopPx }])
+        .toBuffer();
+
       await drawImageCmyk(doc, p1, artBuf, {
-        x: mm(cx - artDrawW / 2 + offsetX), y: mm(cy - artDrawH / 2 - offsetY),
-        width: mm(artDrawW), height: mm(artDrawH), resizeWidth: targetPx,
+        x: mm(cx - coverW / 2), y: mm(cy - coverH / 2),
+        width: mm(coverW), height: mm(coverH), resizeWidth: canvasPxW,
       });
     }
 

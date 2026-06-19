@@ -22,6 +22,17 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
 
+// ─── Cache de logo em memória (módulo) ─────────────────────────────────────────
+// Sem Supabase Storage/tabela. Vive enquanto a aba/SPA estiver aberta — reabrir
+// o modal na mesma sessão de navegação reaproveita o logo; recarregar a página
+// limpa o cache (comportamento esperado para um cache "leve", não persistente).
+let _sessionLogo: string | null = null;
+const sessionLogoCache = {
+  get:   () => _sessionLogo,
+  set:   (v: string) => { _sessionLogo = v; },
+  clear: () => { _sessionLogo = null; },
+};
+
 // ─── Ícones SVG inline ────────────────────────────────────────────────────────
 
 type P = { c: string; sz: number };
@@ -191,9 +202,7 @@ export default function OrcamentoPdfDisplay({
   const [saldo,       setSaldo]       = useState<number | null>(null);
   const [resultName,  setResultName]  = useState('');
 
-  const [logoBase64,  setLogoBase64]  = useState<string | null>(null);
-  const [logoLoading, setLogoLoading] = useState(false);
-  const [logoSaved,   setLogoSaved]   = useState(false); // true = veio do cache da empresa
+  const [logoBase64,  setLogoBase64]  = useState<string | null>(() => sessionLogoCache.get() ?? null);
   const [empresa,     setEmpresa]     = useState<EmpresaData>({ nome: '', doc: '', tel: '', email: '', cidade: '', estado: '', end: '' });
   const [cliente,     setCliente]     = useState<ClienteData>({ nome: '', email: '', tel: '', end: '' });
   const [itens,       setItens]       = useState<OrcamentoItem[]>([{ id: nextId(), descricao: '', quantidade: 1, valorUnit: 0 }]);
@@ -205,54 +214,14 @@ export default function OrcamentoPdfDisplay({
 
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Carregar logo em cache (companies_qr_info.webapp_logo_url) ───────────────
-  // Mesma tabela usada pela API de QR Code — logo é compartilhado entre ferramentas.
-  const loadCachedLogo = useCallback(async () => {
-    setLogoLoading(true);
-    try {
-      let cid = companyId;
-      if (!cid) {
-        const { data: ensured } = await supabase.rpc('ensure_my_arte_company');
-        cid = (ensured as string) ?? '';
-        if (cid) setCompanyId(cid);
-      }
-      if (!cid) return;
-
-      const { data: company } = await supabase
-        .from('companies_qr_info')
-        .select('webapp_logo_url')
-        .eq('id', cid)
-        .maybeSingle();
-
-      if (company?.webapp_logo_url) {
-        // Converte para base64 (jsPDF precisa de base64/dataURL, não de URL remota)
-        const res = await fetch(company.webapp_logo_url);
-        const blob = await res.blob();
-        const b64  = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-        setLogoBase64(b64);
-        setLogoSaved(true);
-      }
-    } catch {
-      // Sem logo em cache — segue normalmente, usuário pode fazer upload manual
-    } finally {
-      setLogoLoading(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyId, supabase]);
-
   // ── Mount ────────────────────────────────────────────────────────────────────
+  // Logo: cache só em memória (módulo) para esta sessão de navegação — sem
+  // Supabase Storage nem tabela. Some ao recarregar a página (comportamento
+  // esperado para um cache "leve"; ver sessionLogoCache no topo do arquivo).
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('eai:modalOpen'));
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setLogado(!!session);
-      // Tenta carregar logo salvo em cache (companies_qr_info.webapp_logo_url)
-      if (session) loadCachedLogo();
-    });
+    supabase.auth.getSession().then(({ data: { session } }) => setLogado(!!session));
     playText?.('Gerador de orçamento. Preencha os dados da empresa e do cliente para gerar o PDF.').catch(() => {});
     return () => {
       window.dispatchEvent(new CustomEvent('eai:modalClose'));
@@ -286,42 +255,21 @@ export default function OrcamentoPdfDisplay({
   const subtotal = itens.reduce((acc, i) => acc + i.quantidade * i.valorUnit, 0);
   const total    = Math.max(0, subtotal - desconto);
 
-  // ── Logo upload (com cache em companies_qr_info.webapp_logo_url) ─────────────
+  // ── Logo upload — cache só em memória, nesta sessão (sem Supabase) ───────────
 
   const handleLogo = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) return;
     try {
       const b64 = await resizeImage(file, 400);
       setLogoBase64(b64);
-      setLogoSaved(false);
+      sessionLogoCache.set(b64); // persiste em memória enquanto a aba estiver aberta
+    } catch { /* ignore */ }
+  }, []);
 
-      // Salva em cache só se logado — anônimo só usa localmente nesta sessão
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const cid = await ensureCompany();
-      if (!cid) return;
-
-      // Converte dataURL em Blob para upload
-      const blob = await (await fetch(b64)).blob();
-      const path = `${cid}/logo_${Date.now()}.jpg`;
-
-      const { error: upErr } = await supabase.storage
-        .from('company-assets')
-        .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
-      if (upErr) return; // falha silenciosa — logo continua funcionando localmente
-
-      const { data: pub } = supabase.storage.from('company-assets').getPublicUrl(path);
-      if (!pub?.publicUrl) return;
-
-      await supabase
-        .from('companies_qr_info')
-        .update({ webapp_logo_url: pub.publicUrl })
-        .eq('id', cid);
-
-      setLogoSaved(true);
-    } catch { /* falha de cache não deve travar o uso do logo */ }
-  }, [supabase, ensureCompany]);
+  const handleRemoveLogo = useCallback(() => {
+    setLogoBase64(null);
+    sessionLogoCache.clear();
+  }, []);
 
   // ── Gerar PDF (requer login + crédito) ────────────────────────────────────────
 
@@ -613,7 +561,7 @@ export default function OrcamentoPdfDisplay({
             {secao === 'empresa' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-                {/* Logo upload — com cache (companies_qr_info.webapp_logo_url) */}
+                {/* Logo upload — cache só em memória nesta sessão (sem Supabase) */}
                 <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
                     <div
@@ -626,9 +574,7 @@ export default function OrcamentoPdfDisplay({
                         overflow: 'hidden', transition: 'border-color 0.15s',
                       }}
                     >
-                      {logoLoading ? (
-                        <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${C.accent}`, borderTopColor: 'transparent', animation: 'orc-spin 0.8s linear infinite' }} />
-                      ) : logoBase64 ? (
+                      {logoBase64 ? (
                         <img src={logoBase64} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                       ) : (
                         <div style={{ textAlign: 'center', color: C.muted }}>
@@ -638,9 +584,15 @@ export default function OrcamentoPdfDisplay({
                       )}
                     </div>
                     {logoBase64 && (
-                      <span style={{ fontSize: 9, textAlign: 'center', color: logoSaved ? C.greenMuted : C.muted }}>
-                        {logoSaved ? '✓ salvo' : 'só nesta sessão'}
-                      </span>
+                      <button
+                        onClick={handleRemoveLogo}
+                        style={{
+                          fontSize: 9, textAlign: 'center', color: C.red, background: 'none',
+                          border: 'none', cursor: 'pointer', padding: 2,
+                        }}
+                      >
+                        Remover
+                      </button>
                     )}
                   </div>
                   <input ref={logoInputRef} type="file" accept="image/*" style={{ display: 'none' }}

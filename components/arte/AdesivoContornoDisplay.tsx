@@ -65,10 +65,9 @@ export default function AdesivoContornoDisplay({ data, onClose, theme = 'dark', 
 const [offset, setOffset] = useState<number>(3);
 const minSangria = (cutW < 30 || cutH < 30) ? 2 : 3;
 const [sangria, setSangria] = useState<number>(minSangria);
-const [alignX, setAlignX] = useState<number>(0); // -50 a 50, em % do box
-const [alignY, setAlignY] = useState<number>(0); // -50 a 50, em % do box
+const [alignX, setAlignX] = useState<number>(0);
+const [alignY, setAlignY] = useState<number>(0);
 
-// e quando cutW/cutH mudar, corrigir se a sangria ficou abaixo do mínimo:
 useEffect(() => {
   if (sangria < minSangria) setSangria(minSangria);
 }, [minSangria]);
@@ -100,7 +99,7 @@ useEffect(() => {
   }, [stage, onClose]);
 
   const isAuto = shape === 'auto';
-  const autoH = art ? cutW * (art.height / art.width) : 0; // altura derivada no modo automático
+  const autoH = art ? cutW * (art.height / art.width) : 0;
   const swatch = CUT_OPTS.find((o) => o.key === cutColor)?.swatch ?? CMYK.magenta;
 
   const handleFile = useCallback(async (file: File) => {

@@ -80,7 +80,7 @@ const SKILLS: Skill[] = [
 {
   key:      'codigo_barras',
   label:    'Código de Barras',
-  color:    '#e94560',
+  color:     CMYK.cyan,  
   desc:     'Gera código de barras Code 128, EAN-13 ou Code 39',
   credits:  1,
   triggers: [

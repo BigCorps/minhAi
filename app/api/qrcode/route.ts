@@ -19,11 +19,11 @@ function getDefaultLogoBuffer(): Buffer {
   return fs.readFileSync(fallbackPath)
 }
 
-async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
+async function getLogoBuffer(companyId: string | null, overrideUrl?: string | null): Promise<Buffer | null> {
   try {
-    let logoUrl: string | null = null
+    let logoUrl: string | null = overrideUrl ?? null
 
-    if (companyId) {
+    if (!logoUrl && companyId) {
       const { data: company } = await supabaseAnon
         .from('companies_qr_info')
         .select('webapp_logo_url, user_id')
@@ -94,7 +94,8 @@ export async function GET(req: NextRequest) {
   const size      = Math.min(parseInt(searchParams.get('size') || '300'), 500)
   const companyId = searchParams.get('company_id') || null
   const noLogo    = searchParams.get('no_logo') === '1'
-
+  const logoUrl   = searchParams.get('logo_url') || null
+  
   if (!data) {
     return NextResponse.json({ error: 'Parâmetro data é obrigatório' }, { status: 400 })
   }
@@ -134,7 +135,7 @@ export async function GET(req: NextRequest) {
       .png()
       .toBuffer()
 
-    const logoBuffer = noLogo ? null : await getLogoBuffer(companyId)
+    const logoBuffer = noLogo ? null : await getLogoBuffer(companyId, logoUrl)
 
     let finalBuffer: Buffer
 

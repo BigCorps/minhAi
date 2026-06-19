@@ -901,6 +901,7 @@ export default function QRCodeDisplay({
               <IconDownload s={icon('#fff', 16)} />
               Baixar PNG
             </button>
+          </div>
         )}
 
         {/* ── Stage: login (anônimo tentou gerar) ── */}

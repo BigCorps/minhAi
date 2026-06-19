@@ -89,9 +89,15 @@ export async function POST(req: NextRequest) {
       cutPts = cut.outPx.map(([x, y]) => [margem + x * cut.mmPerPxX, margem + (cut.th - y) * cut.mmPerPxY] as [number, number]);
       reportW = artWmm; reportH = artHmm;
 
-      const p1 = doc.addPage([mm(pageWmm), mm(pageHmm)]);
-      const targetPx = Math.round((artWmm / 25.4) * DPI);
-      await drawImageCmyk(doc, p1, srcBuf, { x: mm(margem), y: mm(margem), width: mm(artWmm), height: mm(artHmm), resizeWidth: targetPx });
+const alignXpct = clamp(Number(spec.align_x_pct ?? 0), -50, 50) / 100;
+const alignYpct = clamp(Number(spec.align_y_pct ?? 0), -50, 50) / 100;
+// desloca o excesso de área da arte (drawW - coverW) na direção do alinhamento escolhido
+const slackX = (drawW - coverW) * alignXpct;
+const slackY = (drawH - coverH) * alignYpct; // nota: eixo Y do PDF é invertido (cresce pra cima)
+const p1 = doc.addPage([mm(pageWmm), mm(pageHmm)]);
+const targetPx = Math.round((drawW / 25.4) * DPI);
+await drawImageCmyk(doc, p1, artBuf, { x: mm(cx - drawW / 2 - slackX), y: mm(cy - drawH / 2 + slackY), width: mm(drawW), height: mm(drawH), resizeWidth: targetPx });
+A lógica: drawW - coverW é a "sobra" de imagem que existe além da área visível (por causa
     } else {
       // ── forma geométrica: tamanho exato + sangria controlável ──
       const typedW = Number(spec.cut_w_mm), typedH = Number(spec.cut_h_mm);

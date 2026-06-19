@@ -114,14 +114,20 @@ export async function POST(req: NextRequest) {
       }
       const radius = clamp(Number(spec.radius_mm ?? 0), 0, Math.min(cutWmm, cutHmm) / 2);
 
-      // arte cobre coverW×coverH (cover, centrada)
-let drawW: number, drawH: number;
-if (artAspect > coverW / coverH) { drawH = coverH; drawW = coverH * artAspect; }
-else { drawW = coverW; drawH = coverW / artAspect; }
+      // arte cobre coverW×coverH (cover, centrada) — antes de aplicar o zoom
+      let drawW: number, drawH: number;
+      if (artAspect > coverW / coverH) { drawH = coverH; drawW = coverH * artAspect; }
+      else { drawW = coverW; drawH = coverW / artAspect; }
 
-// se a arte não transborda além do coverW/coverH (sem sangria nativa),
-// gera a sangria expandindo com fundo branco via Sharp
-const needsBleedExpansion = mode === 'externa' && Math.abs(drawW - coverW) < 0.5 && Math.abs(drawH - coverH) < 0.5;
+      // Zoom (50–300%): o corte fica parado, o zoom redimensiona a arte a partir do centro.
+      // zoom>100% = recorta mais pra dentro; zoom<100% = a arte pode ficar menor que o corte,
+      // e nesse caso o espaço restante é preenchido com a cor da borda (igual à expansão de
+      // sangria abaixo) — nunca deixamos área branca não-intencional no arquivo de produção.
+      const zoomPct = clamp(Number(spec.zoom_pct ?? 100), 50, 300) / 100;
+      drawW *= zoomPct; drawH *= zoomPct;
+
+      // se a arte (já com zoom) não cobre o corte de cada lado, expande com a cor da borda
+      const needsBleedExpansion = drawW < cutWmm - 0.5 || drawH < cutHmm - 0.5;
 
       pageWmm = Math.max(coverW, drawW, cutWmm) + 2 * HANDLE_MM;
       pageHmm = Math.max(coverH, drawH, cutHmm) + 2 * HANDLE_MM;
@@ -130,34 +136,41 @@ const needsBleedExpansion = mode === 'externa' && Math.abs(drawW - coverW) < 0.5
       reportW = cutWmm; reportH = cutHmm;
 
       const p1 = doc.addPage([mm(pageWmm), mm(pageHmm)]);
-let artBuf = srcBuf;
-if (needsBleedExpansion) {
-  const sangriaPx = Math.round((sangria / 25.4) * DPI);
-  const artPxW = Math.round((cutWmm / 25.4) * DPI);
-  const artPxH = Math.round((cutHmm / 25.4) * DPI);
-  // redimensiona a arte para o tamanho do corte e coloca num canvas maior (sangria = cor da borda)
-const resized = await sharp(srcBuf).resize(artPxW, artPxH, { fit: 'cover' }).toBuffer();
-const edgeColor = await sharp(resized)
-  .extract({ left: 0, top: 0, width: artPxW, height: 1 })   // faixa do topo
-  .resize(1, 1)                                               // média de cor
-  .raw()
-  .toBuffer();
-const bg = { r: edgeColor[0], g: edgeColor[1], b: edgeColor[2], alpha: 1 };
+      let artBuf = srcBuf;
+      if (needsBleedExpansion) {
+        // tamanho final desejado = o maior entre (corte) e (arte com zoom já aplicado) —
+        // garante que a arte cubra pelo menos o corte inteiro, nunca deixando vão sem cor.
+        const finalWmm = Math.max(drawW, cutWmm);
+        const finalHmm = Math.max(drawH, cutHmm);
+        const artPxW = Math.round((drawW / 25.4) * DPI) || 1;
+        const artPxH = Math.round((drawH / 25.4) * DPI) || 1;
+        const padXmm = Math.max(0, finalWmm - drawW) / 2;
+        const padYmm = Math.max(0, finalHmm - drawH) / 2;
+        const padXpx = Math.round((padXmm / 25.4) * DPI);
+        const padYpx = Math.round((padYmm / 25.4) * DPI);
 
-artBuf = await sharp(resized)
-  .extend({ top: sangriaPx, bottom: sangriaPx, left: sangriaPx, right: sangriaPx, background: bg })
-  .toBuffer();
-  drawW = coverW; drawH = coverH;
-}
-const targetPx = Math.round((drawW / 25.4) * DPI);
-// Ajuste fino: desloca a arte dentro da folga (drawW/drawH vs cutWmm/cutHmm) na direção
-// escolhida pelo usuário. Só tem efeito quando a arte é maior que o corte (slack > 0) —
-// é o espaço de manobra para decidir qual parte da arte fica dentro da linha de corte.
-const alignXpct = clamp(Number(spec.align_x_pct ?? 0), -50, 50) / 100;
-const alignYpct = clamp(Number(spec.align_y_pct ?? 0), -50, 50) / 100;
-const slackX = Math.max(0, drawW - cutWmm) * alignXpct;
-const slackY = Math.max(0, drawH - cutHmm) * alignYpct; // eixo Y do PDF cresce pra cima
-await drawImageCmyk(doc, p1, artBuf, { x: mm(cx - drawW / 2 + slackX), y: mm(cy - drawH / 2 - slackY), width: mm(drawW), height: mm(drawH), resizeWidth: targetPx });
+        const resized = await sharp(srcBuf).resize(artPxW, artPxH, { fit: 'cover' }).toBuffer();
+        const edgeColor = await sharp(resized)
+          .extract({ left: 0, top: 0, width: artPxW, height: 1 })   // faixa do topo
+          .resize(1, 1)                                               // média de cor
+          .raw()
+          .toBuffer();
+        const bg = { r: edgeColor[0], g: edgeColor[1], b: edgeColor[2], alpha: 1 };
+
+        artBuf = await sharp(resized)
+          .extend({ top: padYpx, bottom: padYpx, left: padXpx, right: padXpx, background: bg })
+          .toBuffer();
+        drawW = finalWmm; drawH = finalHmm;
+      }
+      const targetPx = Math.round((drawW / 25.4) * DPI);
+      // Ajuste fino: desloca a arte dentro da folga (drawW/drawH vs cutWmm/cutHmm) na direção
+      // escolhida pelo usuário. Só tem efeito quando a arte é maior que o corte (slack > 0) —
+      // é o espaço de manobra para decidir qual parte da arte fica dentro da linha de corte.
+      const alignXpct = clamp(Number(spec.align_x_pct ?? 0), -50, 50) / 100;
+      const alignYpct = clamp(Number(spec.align_y_pct ?? 0), -50, 50) / 100;
+      const slackX = Math.max(0, drawW - cutWmm) * alignXpct;
+      const slackY = Math.max(0, drawH - cutHmm) * alignYpct; // eixo Y do PDF cresce pra cima
+      await drawImageCmyk(doc, p1, artBuf, { x: mm(cx - drawW / 2 + slackX), y: mm(cy - drawH / 2 - slackY), width: mm(drawW), height: mm(drawH), resizeWidth: targetPx });
     }
 
     // boxes + página de corte

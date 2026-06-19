@@ -630,7 +630,6 @@ export default function QRCodeDisplay({
       </div>
     </div>
 
-     {/* URL de logo personalizado — só quando showLogo ativo */}
      {opts.showLogo && (
        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
          <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>

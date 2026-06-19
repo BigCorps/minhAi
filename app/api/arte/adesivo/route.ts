@@ -112,9 +112,16 @@ export async function POST(req: NextRequest) {
       const radius = clamp(Number(spec.radius_mm ?? 0), 0, Math.min(cutWmm, cutHmm) / 2);
 
       // arte cobre coverW×coverH (cover, centrada)
-      let drawW: number, drawH: number;
-      if (artAspect > coverW / coverH) { drawH = coverH; drawW = coverH * artAspect; }
-      else { drawW = coverW; drawH = coverW / artAspect; }
+const docWmm = Number(spec.doc_w_mm ?? coverW);
+const docHmm = Number(spec.doc_h_mm ?? coverH);
+
+let drawW: number, drawH: number;
+if (artAspect > coverW / coverH) { drawH = coverH; drawW = coverH * artAspect; }
+else { drawW = coverW; drawH = coverW / artAspect; }
+
+// se a arte não transborda além do coverW/coverH (sem sangria nativa),
+// gera a sangria expandindo com fundo branco via Sharp
+const needsBleedExpansion = mode === 'externa' && Math.abs(drawW - coverW) < 0.5 && Math.abs(drawH - coverH) < 0.5;
 
       pageWmm = Math.max(coverW, drawW, cutWmm) + 2 * HANDLE_MM;
       pageHmm = Math.max(coverH, drawH, cutHmm) + 2 * HANDLE_MM;
@@ -123,8 +130,29 @@ export async function POST(req: NextRequest) {
       reportW = cutWmm; reportH = cutHmm;
 
       const p1 = doc.addPage([mm(pageWmm), mm(pageHmm)]);
-      const targetPx = Math.round((drawW / 25.4) * DPI);
-      await drawImageCmyk(doc, p1, srcBuf, { x: mm(cx - drawW / 2), y: mm(cy - drawH / 2), width: mm(drawW), height: mm(drawH), resizeWidth: targetPx });
+let artBuf = srcBuf;
+if (needsBleedExpansion) {
+  const sangriaPx = Math.round((sangria / 25.4) * DPI);
+  const artPxW = Math.round((cutWmm / 25.4) * DPI);
+  const artPxH = Math.round((cutHmm / 25.4) * DPI);
+  const totalPxW = artPxW + 2 * sangriaPx;
+  const totalPxH = artPxH + 2 * sangriaPx;
+  // redimensiona a arte para o tamanho do corte e coloca num canvas maior (sangria = branco)
+const resized = await sharp(srcBuf).resize(artPxW, artPxH, { fit: 'cover' }).toBuffer();
+const edgeColor = await sharp(resized)
+  .extract({ left: 0, top: 0, width: artPxW, height: 1 })   // faixa do topo
+  .resize(1, 1)                                               // média de cor
+  .raw()
+  .toBuffer();
+const bg = { r: edgeColor[0], g: edgeColor[1], b: edgeColor[2], alpha: 1 };
+
+artBuf = await sharp(resized)
+  .extend({ top: sangriaPx, bottom: sangriaPx, left: sangriaPx, right: sangriaPx, background: bg })
+  .toBuffer();
+  drawW = coverW; drawH = coverH;
+}
+const targetPx = Math.round((drawW / 25.4) * DPI);
+await drawImageCmyk(doc, p1, artBuf, { x: mm(cx - drawW / 2), y: mm(cy - drawH / 2), width: mm(drawW), height: mm(drawH), resizeWidth: targetPx });
     }
 
     // boxes + página de corte

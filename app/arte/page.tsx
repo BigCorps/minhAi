@@ -351,7 +351,9 @@ export default function ArtePage() {
                 >
                   {sk.label}
                   {hasUser && (
-                    <span className="block text-[10px] font-normal mt-0.5 text-white/70">{sk.credits} créditos</span>
+                    <span className="block text-[10px] font-normal mt-0.5 text-white/70">
+                      {sk.credits === 0 ? 'Grátis' : `${sk.credits} ${sk.credits === 1 ? 'crédito' : 'créditos'}`}
+                    </span>
                   )}
                 </button>
               ))}

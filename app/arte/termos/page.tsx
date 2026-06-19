@@ -1,98 +1,56 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function TermsPage() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const router = useRouter();
 
-  useEffect(() => {
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setTheme(isDark ? 'dark' : 'light');
-  }, []);
-
   return (
-    <div className={`min-h-screen transition-colors duration-500 ${
-      theme === 'dark' 
-        ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
-        : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
-    }`}>
-      <button
-        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        className={`fixed top-6 right-6 z-50 p-3 rounded-full backdrop-blur-xl border transition-all hover:scale-110 ${
-          theme === 'dark'
-            ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-            : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
-        }`}
-      >
-        {theme === 'dark' ? (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-          </svg>
-        )}
-      </button>
-
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
       <div className="container mx-auto py-6 md:py-12 w-full max-w-4xl px-4">
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => router.back()}
-            className={`p-2 rounded-lg transition-all ${
-              theme === 'dark' ? 'hover:bg-white/10 text-white' : 'hover:bg-black/5 text-black'
-            }`}
+            className="p-2 rounded-lg transition-all hover:bg-black/5 text-black"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </button>
-          <h1 className={`text-2xl md:text-3xl font-bold transition-colors ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
             Termos de Uso
           </h1>
           <div className="w-10" />
         </div>
 
-        <div className={`mb-6 p-4 rounded-lg border transition-colors ${
-          theme === 'dark' ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-200'
-        }`}>
+        <div className="mb-6 p-4 rounded-lg border bg-blue-50 border-blue-200">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-start gap-3">
-              <svg className={`h-6 w-6 shrink-0 mt-1 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-6 w-6 shrink-0 mt-1 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
               <div>
-                <p className={`font-semibold ${theme === 'dark' ? 'text-blue-100' : 'text-blue-900'}`}>
+                <p className="font-semibold text-blue-900">
                   Sua privacidade é importante
                 </p>
-                <p className={`text-sm ${theme === 'dark' ? 'text-blue-200' : 'text-blue-700'}`}>
+                <p className="text-sm text-blue-700">
                   Leia nossa política de privacidade para entender como protegemos seus dados
                 </p>
               </div>
             </div>
-            <Link href="/aviso">
-              <button className={`shrink-0 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
-                theme === 'dark' ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}>
+            <Link href="/arte/aviso">
+              <button className="shrink-0 px-4 py-2 rounded-lg border transition-all text-sm font-medium bg-white border-gray-300 text-gray-700 hover:bg-gray-50">
                 Ver Aviso de Privacidade
               </button>
             </Link>
           </div>
         </div>
 
-        <div className={`rounded-2xl shadow-xl p-6 md:p-8 transition-colors ${
-          theme === 'dark' ? 'bg-slate-800/50 backdrop-blur-xl border border-white/10' : 'bg-white'
-        }`}>
+        <div className="rounded-2xl shadow-xl p-6 md:p-8 bg-white">
           <div className="h-[70vh] overflow-y-auto pr-4">
-            <div className={`prose max-w-none transition-colors ${
-              theme === 'dark' ? 'text-white/80 prose-headings:text-white prose-strong:text-white prose-li:text-white/80 prose-p:text-white/80' : 'text-gray-800'
-            }`}>
-              <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-white/60' : 'text-gray-600'}`}>
+            <div className="prose max-w-none text-gray-800">
+              <p className="text-sm mb-4 text-gray-600">
                 <strong>Última atualização:</strong> 19 de junho de 2026
               </p>
 
@@ -164,7 +122,7 @@ export default function TermsPage() {
                 <li>Utilizamos criptografia para proteger informações sensíveis</li>
                 <li>Você tem direito de acessar, corrigir ou excluir seus dados</li>
                 <li>Estamos em conformidade com a LGPD (Lei Geral de Proteção de Dados)</li>
-                <li><strong>Para mais detalhes, consulte nosso <Link href="/aviso" className="text-blue-500 underline">Aviso de Privacidade</Link></strong></li>
+                <li><strong>Para mais detalhes, consulte nosso <Link href="/arte/aviso" className="text-blue-500 underline">Aviso de Privacidade</Link></strong></li>
               </ul>
 
               <h2>11. Rescisão</h2>
@@ -183,7 +141,7 @@ export default function TermsPage() {
               <p>Reservamo-nos o direito de modificar estes Termos de Uso a qualquer momento. Notificaremos você sobre alterações significativas através de email ou aviso na plataforma. O uso continuado do ArteFinal.app após as alterações constitui aceitação dos novos termos.</p>
 
               <h2>14. Contato</h2>
-              <div className={`p-4 rounded-lg space-y-2 ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
+              <div className="p-4 rounded-lg space-y-2 bg-gray-50">
                 <p>Para dúvidas sobre estes Termos de Uso, entre em contato:</p>
                 <p><strong>Email Geral:</strong> contato@bigcorps.com.br</p>
                 <p><strong>Email de Privacidade:</strong> contato@bigcorps.com.br</p>
@@ -197,7 +155,7 @@ export default function TermsPage() {
               </div>
 
               <hr className="my-6" />
-              <div className={`text-center text-sm ${theme === 'dark' ? 'text-white/60' : 'text-gray-600'}`}>
+              <div className="text-center text-sm text-gray-600">
                 <p><strong>Ao usar o ArteFinal.app, você confirma que leu e concorda com estes Termos de Uso.</strong></p>
                 <p className="mt-2">Este documento está em conformidade com a LGPD.</p>
               </div>
@@ -206,19 +164,13 @@ export default function TermsPage() {
         </div>
 
         <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/aviso">
-            <button className={`w-full sm:w-auto px-6 py-3 rounded-lg border transition-all font-medium ${
-              theme === 'dark' ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}>
+          <Link href="/arte/aviso">
+            <button className="w-full sm:w-auto px-6 py-3 rounded-lg border transition-all font-medium bg-white border-gray-300 text-gray-700 hover:bg-gray-50">
               Ver Aviso de Privacidade
             </button>
           </Link>
-          <Link href="/exclusao">
-            <button className={`w-full sm:w-auto px-6 py-3 rounded-lg transition-all font-medium ${
-              theme === 'dark'
-                ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30'
-                : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
-            }`}>
+          <Link href="/arte/exclusao">
+            <button className="w-full sm:w-auto px-6 py-3 rounded-lg transition-all font-medium bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">
               Excluir Meus Dados
             </button>
           </Link>

@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createClient } from '@/lib/supabase-browser';
-import CameraCapture from '@/components/assistant/CameraCapture';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -19,10 +18,13 @@ import 'react-image-crop/dist/ReactCrop.css';
 // Fluxo: preview/edição é livre e sem login (crop, filtros, rotação não
 // custam nada até aqui). Login e cobrança só acontecem no clique de
 // "Salvar Edições" — mesmo padrão de custo escondido do §6 do guia.
+//
+// Tela inicial simplificada (padrão QRCodeDisplay): apenas upload de arquivo
+// (clique ou drag-and-drop) + texto explicando a função — sem abas de
+// celular/webcam/câmera (CameraCapture removido).
 // ───────────────────────────────────────────────────────────────────────────
 
 type Stage = 'input' | 'editing' | 'processing' | 'result' | 'error';
-type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 
 interface Props {
   data: { companyId: string };
@@ -54,7 +56,7 @@ const LIGHT = {
   primary: '#2563eb',
 };
 
-const OPENING_TEXT = 'Selecione a imagem para editar. Você pode dizer: celular, webcam, câmera, arquivo ou fechar.';
+const OPENING_TEXT = 'Carregue a imagem que deseja editar para começar.';
 const AUTO_CLOSE = 60;
 
 const normalize = (text: string) =>
@@ -148,6 +150,13 @@ const IconGift = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="12" cy="12" r="10"></circle>
     <path d="M12 6v6l4 2"></path>
+  </svg>
+);
+
+const IconUpload = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
   </svg>
 );
 
@@ -257,7 +266,7 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
 
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
   const [stage, setStage] = useState<Stage>('input');
-  const [cameraTab, setCameraTab] = useState<Tab>('companion');
+  const [isDragging, setIsDragging] = useState(false);
 
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -280,15 +289,12 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
   const [isProcessing, setIsProcessing] = useState(false);
 
   const hasSpoken = useRef(false);
-  const lastTabCommandRef = useRef<string | null>(null);
-  const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const supabase = createClient();
 
   useEffect(() => {
-    return () => {
-      if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
-    };
+    return () => {};
   }, []);
 
   // Auto-close timer no resultado
@@ -325,16 +331,19 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
     setCompletedCrop(undefined);
   }, []);
 
-  const handleCapture = useCallback(async (base64: string) => {
+  const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+
+  const handleFileSelected = useCallback((file: File | null | undefined) => {
+    if (!file) return;
+
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      setErrorMsg('Formato não suportado. Envie uma imagem JPG, PNG ou WebP.');
+      setStage('error');
+      return;
+    }
+
     try {
-      const byteString = atob(base64);
-      const ab = new ArrayBuffer(byteString.length);
-      const ia = new Uint8Array(ab);
-      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-
-      const blob = new Blob([ab], { type: 'image/jpeg' });
-      const url = URL.createObjectURL(blob);
-
+      const url = URL.createObjectURL(file);
       setImageSrc(url);
       setStage('editing');
     } catch (err: any) {
@@ -342,6 +351,17 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
       setStage('error');
     }
   }, []);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFileSelected(e.target.files?.[0]);
+    e.target.value = '';
+  }, [handleFileSelected]);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileSelected(e.dataTransfer.files?.[0]);
+  }, [handleFileSelected]);
 
   const handleRotate = useCallback((degrees: number) => {
     setRotation(prev => (prev + degrees) % 360);
@@ -494,25 +514,6 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
         onClose(); return;
       }
 
-      if (stage === 'input') {
-        const TAB_MAP: Record<string, Tab> = {
-          celular: 'companion', qrcode: 'companion',
-          webcam: 'webcam', computador: 'webcam',
-          camera: 'mobile', arquivo: 'upload',
-        };
-
-        for (const [trigger, tab] of Object.entries(TAB_MAP)) {
-          if (t.includes(trigger)) {
-            if (lastTabCommandRef.current === tab) return;
-            lastTabCommandRef.current = tab;
-            setCameraTab(tab as Tab);
-            if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
-            tabCommandTimeoutRef.current = setTimeout(() => { lastTabCommandRef.current = null; }, 4000);
-            return;
-          }
-        }
-      }
-
       if (stage === 'editing') {
         if (['resetar', 'reset', 'limpar filtros'].some(c => t.includes(c))) {
           handleResetFilters(); return;
@@ -571,18 +572,48 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
         </div>
 
         {stage === 'input' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <CameraCapture
-              onCapture={handleCapture}
-              onCancel={onClose}
-              theme={theme}
-              companyId={data.companyId}
-              instructions="Selecione a imagem para editar"
-              acceptPdf={false}
-              activeTab={cameraTab}
-              onTabChange={setCameraTab}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <p style={{ margin: 0, fontSize: '13px', color: colors.textMuted, lineHeight: 1.5 }}>
+              Carregue uma imagem para cortar, girar, espelhar e ajustar brilho, contraste e saturação.
+              O arquivo editado só é disponibilizado após salvar.
+            </p>
+
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                padding: '40px 20px',
+                borderRadius: '12px',
+                border: `2px dashed ${isDragging ? colors.primary : colors.border}`,
+                backgroundColor: isDragging ? 'rgba(59, 130, 246, 0.06)' : colors.bgSecondary,
+                color: colors.textMuted,
+                cursor: 'pointer',
+                transition: 'border-color 0.15s, background-color 0.15s',
+              }}
+            >
+              <IconUpload />
+              <span style={{ fontSize: '14px', fontWeight: 600, color: colors.text }}>
+                Clique para selecionar ou arraste a imagem aqui
+              </span>
+              <span style={{ fontSize: '12px' }}>JPG, PNG ou WebP</span>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleInputChange}
+              style={{ display: 'none' }}
             />
-            <VoiceHint commands={['"celular"', '"webcam"', '"câmera"', '"arquivo"', '"fechar"']} isDark={isDark} />
+
+            <VoiceHint commands={['"fechar"']} isDark={isDark} />
           </div>
         )}
 

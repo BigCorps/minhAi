@@ -8,7 +8,7 @@
 
 * Identificar bug de Processando no Assistente 
 
-* colocar logo via link no qrcode e fazer do código de barras (BigCorps1) / Ajustes corte (miriamithiel)
+* colocar logo via link no qrcode e fazer do código de barras (BigCorps1) / Ajustes corte (miriamithiel) / Novas funções (qpreco)
 
 * min.ia.br - app mini da minhAi - registrar dominio e criar assistente rapido, para funções rápidas no app. Com uma lógica parecida com o ArteFinal, o usuário vê todas as funções e se cadastra para utilizar as funções diretamente no mini - escolhe seu assistente e executa funções diretamente dali. e utilizar já essa logica no lugar do widget e aproveitando para divulgar a minhAi para o usuário utilizar na empresa dele.
 

@@ -67,6 +67,7 @@ const minSangria = (cutW < 30 || cutH < 30) ? 2 : 3;
 const [sangria, setSangria] = useState<number>(minSangria);
 const [alignX, setAlignX] = useState<number>(0);
 const [alignY, setAlignY] = useState<number>(0);
+const [zoom, setZoom] = useState<number>(100); // 50–300%, mantém o corte fixo e a imagem ajusta
 
 useEffect(() => {
   if (sangria < minSangria) setSangria(minSangria);
@@ -149,7 +150,7 @@ const handleRelease = useCallback(async () => {
 
 const spec: any = isAuto
   ? { shape: 'auto', cut_w_mm: cutW, offset_mm: offset, cut_color: cutColor, nome }
-  : { shape, cut_w_mm: cutW, cut_h_mm: cutH, doc_w_mm: docW, doc_h_mm: docH, radius_mm: radius, sangria_mm: sangria, bleed_mode: bleedMode, cut_color: cutColor, nome, align_x_pct: alignX, align_y_pct: alignY };
+  : { shape, cut_w_mm: cutW, cut_h_mm: cutH, radius_mm: radius, sangria_mm: sangria, bleed_mode: bleedMode, cut_color: cutColor, nome, align_x_pct: alignX, align_y_pct: alignY, zoom_pct: zoom };
 
     setProgress('Gerando arte e corte...');
     const res = await fetch('/api/arte/adesivo', {
@@ -174,7 +175,7 @@ const spec: any = isAuto
     setStage('result');
     playText('Adesivo pronto! Página 1 com a arte, página 2 com o corte.').catch(() => {});
   } catch (e) { setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error'); }
-}, [art, isAuto, shape, cutW, cutH, radius, offset, sangria, bleedMode, cutColor, nome, supabase, companyId, playText]);
+}, [art, isAuto, shape, cutW, cutH, radius, offset, sangria, bleedMode, cutColor, nome, alignX, alignY, zoom, supabase, companyId, playText]);
 
   const irParaLogin = useCallback(() => { if (onRequireLogin) onRequireLogin(); else window.location.href = '/login'; }, [onRequireLogin]);
   const handleDownload = useCallback(() => {
@@ -261,6 +262,8 @@ const spec: any = isAuto
                   inset: 0, width: '100%', height: '100%',
                   objectFit: isAuto ? 'contain' : 'cover',
                   objectPosition: `${50 + alignX}% ${50 + alignY}%`,
+                  transform: `scale(${zoom / 100})`,
+                  transformOrigin: 'center',
                 }} />
                 {!isAuto && (
                   <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
@@ -330,7 +333,21 @@ const spec: any = isAuto
   />
 </div>
 
-                {/* ajuste fino da posição da arte — junto da sangria, pois ajusta a mesma área */}
+                {/* zoom + ajuste fino da posição da arte — junto da sangria, pois ajusta a mesma área */}
+                <div>
+                  <label style={label}>Zoom da imagem: {zoom}%</label>
+                  <input
+                    type="range" min={50} max={300} step={5}
+                    value={zoom}
+                    onChange={(e) => setZoom(parseInt(e.target.value))}
+                    style={{ width: '100%', accentColor: c.accent }}
+                  />
+                  <p style={{ margin: '4px 0 0', fontSize: 11, color: c.textMuted, lineHeight: 1.4 }}>
+                    O corte fica parado; o zoom move a imagem por dentro dele. Abaixo de 100% pode sobrar
+                    espaço nas bordas — esse espaço sai preenchido com a cor da borda da própria imagem.
+                  </p>
+                </div>
+
                 <div>
                   <label style={label}>Ajuste fino da posição da arte</label>
                   <div style={{ display: 'flex', gap: 12 }}>
@@ -353,9 +370,9 @@ const spec: any = isAuto
                       />
                     </div>
                   </div>
-                  {(alignX !== 0 || alignY !== 0) && (
-                    <button onClick={() => { setAlignX(0); setAlignY(0); }} style={{ marginTop: 6, fontSize: 11, color: c.accent, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
-                      Centralizar de novo
+                  {(alignX !== 0 || alignY !== 0 || zoom !== 100) && (
+                    <button onClick={() => { setAlignX(0); setAlignY(0); setZoom(100); }} style={{ marginTop: 6, fontSize: 11, color: c.accent, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
+                      Centralizar e resetar zoom
                     </button>
                   )}
                 </div>

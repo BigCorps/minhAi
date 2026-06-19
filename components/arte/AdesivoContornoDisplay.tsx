@@ -213,16 +213,23 @@ const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
           <button onClick={onClose} style={{ padding: '4px 10px', border: `1px solid ${c.border}`, borderRadius: 8, background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Fechar</button>
         </div>
 
-        {/* INPUT */}
-        {stage === 'input' && (
-          <div onClick={() => fileRef.current?.click()} onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
-            style={{ border: `2px dashed ${c.border}`, borderRadius: 12, padding: '46px 20px', textAlign: 'center', background: c.bgSecondary, cursor: 'pointer', color: c.textMuted }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste a arte do adesivo</div>
-            <div style={{ fontSize: 12 }}>PNG, JPEG ou PDF. O modo "Automático" recorta na forma do PNG transparente.</div>
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.currentTarget.value = ''; }} />
-          </div>
-        )}
+{stage === 'input' && (
+  <>
+    <div style={{ marginBottom: 12, padding: '12px 14px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+      <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: c.text }}>Como funciona</p>
+      <p style={{ margin: 0, fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
+        Envie a arte e escolha a forma e o tamanho do corte. O sistema gera um PDF com 2 páginas:
+        a primeira com a arte em CMYK, a segunda com a linha de corte — pronto para enviar à gráfica.
+        A sangria é adicionada automaticamente conforme o padrão exigido.
+      </p>
+    </div>
+    <div onClick={() => fileRef.current?.click()} ...>
+      <div>Clique ou arraste...</div>
+      <div>PNG, JPEG ou PDF...</div>
+      <input ... />
+    </div>
+  </>
+)}
 
         {/* PAGE-SELECT */}
         {stage === 'page-select' && pdfPending && (
@@ -246,7 +253,23 @@ const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
             {/* preview com overlay do corte */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <div style={{ position: 'relative', width: boxW, height: boxH, background: c.bgSecondary, border: `1px solid ${c.border}`, borderRadius: 4, overflow: 'hidden' }}>
-                <img src={art.previewDataUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: isAuto ? 'contain' : 'cover', display: 'block' }} />
+  {/* no modo externa: a arte ocupa só a área do corte (sem a sangria), centrada */}
+  <img src={art.previewDataUrl} alt="" style={{
+    position: 'absolute',
+    display: 'block',
+    ...(isAuto ? {
+      inset: 0, width: '100%', height: '100%', objectFit: 'contain',
+    } : bleedMode === 'externa' ? {
+      // arte ocupa apenas a proporção do corte, centrada dentro do canvas maior (docW x docH)
+      left: `${insetXpct}%`,
+      top: `${insetYpct}%`,
+      width: `${100 - 2 * insetXpct}%`,
+      height: `${100 - 2 * insetYpct}%`,
+      objectFit: 'contain',
+    } : {
+      inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+    })
+  }} />
                 {!isAuto && (
                   <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
                     {shape === 'circle'

@@ -13,6 +13,8 @@ import CodigoBarrasDisplay from '@/components/arte/CodigoBarrasDisplay';
 import OrcamentoPdfDisplay from '@/components/arte/OrcamentoPdfDisplay';
 import FotoDocumentoDisplay from '@/components/arte/FotoDocumentoDisplay';
 import PolaroidDisplay from '@/components/arte/PolaroidDisplay';
+import EditarImagemDisplay from '@/components/arte/EditarImagemDisplay';
+import ConversorArquivoDisplay from '@/components/arte/ConversorArquivoDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -130,6 +132,32 @@ const SKILLS: Skill[] = [
   ],
   modal: 'orcamento_pdf',
 },
+  {
+    key: 'converter_arquivo',
+    label: 'Converter Arquivos',
+    color: CMYK.cyan,
+    desc: 'Converte imagem/PDF entre JPG, PNG, WebP e PDF',
+    credits: 0,
+    triggers: [
+      'converter arquivo', 'converter imagem', 'mudar formato',
+      'converter pdf', 'transformar em pdf', 'transformar em imagem',
+      'jpg para pdf', 'pdf para jpg', 'png para jpg',
+    ],
+    modal: 'ConversorArquivoDisplay',
+  },
+  {
+    key: 'editar_imagem',
+    label: 'Editar Imagem',
+    color: CMYK.cyan,
+    desc: 'Cortar, rotacionar e ajustar brilho/contraste/saturação',
+    credits: 1,
+    triggers: [
+      'editar imagem', 'editar foto', 'cortar imagem', 'cortar foto',
+      'recortar imagem', 'recortar foto', 'rotacionar imagem',
+      'ajustar imagem', 'brilho e contraste', 'girar imagem', 'crop',
+    ],
+    modal: 'EditarImagemDisplay',
+  },
 ];
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -470,6 +498,23 @@ export default function ArtePage() {
     onClose={closeModal}
     theme="light"
     playText={playText}
+  />
+)}
+{activeModal?.type === 'ConversorArquivoDisplay' && (
+  <ConversorArquivoDisplay
+    data={activeModal.data}
+    onClose={closeModal}
+    theme="light"
+    playText={playText}
+  />
+)}
+{activeModal?.type === 'EditarImagemDisplay' && (
+  <EditarImagemDisplay
+    data={activeModal.data}
+    onClose={closeModal}
+    theme="light"
+    playText={playText}
+    onRequireLogin={() => { window.location.href = LOGIN_URL; }}
   />
 )}
       

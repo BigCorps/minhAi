@@ -192,8 +192,6 @@ export default function QRCodeDisplay({
   const [qrUrl,        setQrUrl]        = useState<string | null>(null);
   const [errorMsg,     setErrorMsg]     = useState<string | null>(null);
   const [saldo,        setSaldo]        = useState<number | null>(null);
-  const [emailSent,    setEmailSent]    = useState(false);
-  const [sendingEmail, setSendingEmail] = useState(false);
   const [showOpts,     setShowOpts]     = useState(false);
   const [opts,         setOpts]         = useState<QROpts>(DEFAULT_OPTS);
   const [customQr,     setCustomQr]     = useState('#000080');
@@ -864,36 +862,11 @@ export default function QRCodeDisplay({
               </div>
             )}
 
-            {/* Ações */}
-            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
-              <button onClick={handleDownload} style={{ ...btnSecondary, flex: 1, background: C.blue, color: '#fff' }}>
-                <IconDownload s={icon('#fff', 15)} />
-                Baixar PNG
-              </button>
-              <button
-                onClick={handleSendEmail}
-                disabled={sendingEmail || emailSent}
-                style={{
-                  ...btnSecondary,
-                  background: emailSent ? C.greenDim : C.blueDim,
-                  color:      emailSent ? C.greenMuted : C.blueMuted,
-                  cursor:     sendingEmail || emailSent ? 'default' : 'pointer',
-                  opacity:    sendingEmail ? 0.7 : 1,
-                }}
-              >
-                {sendingEmail
-                  ? <div style={{ width: 14, height: 14, border: `2px solid ${C.blueMuted}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                  : <IconMail s={icon(emailSent ? C.greenMuted : C.blueMuted, 15)} />
-                }
-                {emailSent ? 'Enviado!' : 'E-mail'}
-              </button>
-            </div>
-
-            <button onClick={handleReset} style={btnGhost}>
-              <IconRefresh s={icon(C.sub, 14)} />
-              Gerar novo QR Code
+           {/* Ações */}
+            <button onClick={handleDownload} style={btnPrimary}>
+              <IconDownload s={icon('#fff', 16)} />
+              Baixar PNG
             </button>
-          </div>
         )}
 
         {/* ── Stage: login (anônimo tentou gerar) ── */}

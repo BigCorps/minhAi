@@ -97,7 +97,6 @@ const slackY = (drawH - coverH) * alignYpct; // nota: eixo Y do PDF é invertido
 const p1 = doc.addPage([mm(pageWmm), mm(pageHmm)]);
 const targetPx = Math.round((drawW / 25.4) * DPI);
 await drawImageCmyk(doc, p1, artBuf, { x: mm(cx - drawW / 2 - slackX), y: mm(cy - drawH / 2 + slackY), width: mm(drawW), height: mm(drawH), resizeWidth: targetPx });
-A lógica: drawW - coverW é a "sobra" de imagem que existe além da área visível (por causa
     } else {
       // ── forma geométrica: tamanho exato + sangria controlável ──
       const typedW = Number(spec.cut_w_mm), typedH = Number(spec.cut_h_mm);

@@ -284,12 +284,14 @@ const spec: any = isAuto
                 {isAuto ? (
                   <img src={art.previewDataUrl} alt="" style={{
                     position: 'absolute', display: 'block', inset: 0, width: '100%', height: '100%',
+                    maxWidth: 'none', maxHeight: 'none',
                     objectFit: 'contain',
                   }} />
                 ) : (
                   <img src={art.previewDataUrl} alt="" style={{
                     position: 'absolute', display: 'block',
                     left: imgLeftPx, top: imgTopPx, width: imgWpx, height: imgHpx,
+                    maxWidth: 'none', maxHeight: 'none',
                   }} />
                 )}
                 {!isAuto && (

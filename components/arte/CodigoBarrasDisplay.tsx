@@ -43,12 +43,6 @@ const IconDownload = ({ s }: { s: P }) => (
     <polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
   </svg>
 );
-const IconMail = ({ s }: { s: P }) => (
-  <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-    <polyline points="22,6 12,13 2,6" />
-  </svg>
-);
 const IconRefresh = ({ s }: { s: P }) => (
   <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-4.5" />
@@ -153,7 +147,7 @@ export default function CodigoBarrasDisplay({
   const [barcodeUrl,   setBarcodeUrl]   = useState<string | null>(null);
   const [errorMsg,     setErrorMsg]     = useState<string | null>(null);
   const [saldo,        setSaldo]        = useState<number | null>(null);
-  
+
   const transcriptRef = useRef('');
 
   // ── Mount ────────────────────────────────────────────────────────────────────
@@ -312,6 +306,7 @@ export default function CodigoBarrasDisplay({
     setBarcodeUrl(null);
     setErrorMsg(null);
     setSaldo(null);
+    setEmailSent(false);
     transcriptRef.current = '';
   }, []);
 
@@ -488,8 +483,11 @@ export default function CodigoBarrasDisplay({
             )}
 
             {/* Ações */}
-            <button onClick={handleDownload} style={btnPrimary}>
-              <IconDownload s={icon('#fff', 16)} />
+            <button
+              onClick={handleDownload}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 0', borderRadius: 12, border: 'none', background: C.blue, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              <IconDownload s={icon('#fff', 15)} />
               Baixar PNG
             </button>
 

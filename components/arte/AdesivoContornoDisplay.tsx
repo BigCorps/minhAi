@@ -193,18 +193,48 @@ const spec: any = isAuto
   const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14, background: c.bgSecondary, border: `1px solid ${c.border}`, color: c.text, outline: 'none' };
   const semAlfa = isAuto && !!art && !art.hasAlpha;
 
-  // preview: o BOX representa a COBERTURA real da arte (igual ao que o servidor desenha).
-  // A linha de corte (SVG) é recuada DENTRO desse box pela proporção da sangria — nunca o
-  // contrário. Assim, aumentar a sangria realmente aumenta a área de arte visível ao redor
-  // do corte, em vez de só engordar uma faixa decorativa por fora (bug anterior).
+  // ── Modelo unificado do preview — MESMA fórmula usada no backend (route.ts) ──
+  // Calculamos manualmente left/top/width/height da <img> em vez de usar CSS
+  // object-position + transform combinados: essa combinação não compõe de forma
+  // previsível entre navegadores e não tinha como garantir que preview e PDF
+  // batessem exatamente. Calculando os pixels nós mesmos, preview e servidor
+  // ficam matematicamente idênticos.
   const coverWmm = bleedMode === 'interna' ? cutW : cutW + 2 * sangria;
   const coverHmm = bleedMode === 'interna' ? cutH : cutH + 2 * sangria;
-  const docW = coverWmm, docH = coverHmm; // valor exibido ao usuário (arte final)
-  const insetXpct = clamp((sangria / Math.max(1, coverWmm)) * 100, 0, 49);
-  const insetYpct = clamp((sangria / Math.max(1, coverHmm)) * 100, 0, 49);
-  const radiusPct = shape === 'rounded' ? clamp((radius / Math.max(1, coverWmm)) * 100, 0, 50) : 0;
-  // boxW fixo; boxH segue a proporção real da COBERTURA (não do corte) — é o que a <img> ocupa.
-  const boxW = 220, boxH = isAuto ? 220 : Math.round(220 * (coverHmm / Math.max(1, coverWmm)));
+  const docW = coverWmm, docH = coverHmm; // valor exibido ao usuário (cobertura mínima garantida)
+
+  const artAspectPreview = art ? art.width / art.height : 1;
+  let previewDrawWmm: number, previewDrawHmm: number;
+  if (artAspectPreview > coverWmm / coverHmm) { previewDrawHmm = coverHmm; previewDrawWmm = coverHmm * artAspectPreview; }
+  else { previewDrawWmm = coverWmm; previewDrawHmm = coverWmm / artAspectPreview; }
+  previewDrawWmm *= zoom / 100;
+  previewDrawHmm *= zoom / 100;
+
+  // finalW/finalH = nunca menor que a cobertura mínima (sangria sempre garantida)
+  const finalWmm = Math.max(previewDrawWmm, coverWmm);
+  const finalHmm = Math.max(previewDrawHmm, coverHmm);
+  const slackWmm = finalWmm - coverWmm;
+  const slackHmm = finalHmm - coverHmm;
+  const alignXfrac = alignX / 50; // -1..+1
+  const alignYfrac = alignY / 50;
+  const offsetXmm = (slackWmm / 2) * alignXfrac;
+  const offsetYmm = (slackHmm / 2) * alignYfrac; // "+": imagem desce na tela (mesma convenção do backend)
+
+  // boxW/boxH = tamanho do CONTAINER visível = a maior dimensão entre cobertura e arte final,
+  // assim a arte nunca é cortada pelo container quando zoom>100% gera folga (slack) real.
+  const boxW = 220;
+  const boxH = isAuto ? 220 : Math.round(220 * (finalHmm / Math.max(1, finalWmm)));
+  const pxPerMm = boxW / Math.max(1, finalWmm);
+
+  // posição/tamanho da <img> dentro do box, em px do preview — espelha exatamente x/y/width/height
+  // que o backend usa (mesma fórmula, só convertida pra pixels de tela em vez de pontos PDF)
+  const imgWpx = previewDrawWmm * pxPerMm;
+  const imgHpx = previewDrawHmm * pxPerMm;
+  const imgLeftPx = (boxW - imgWpx) / 2 + offsetXmm * pxPerMm; // X: tela e PDF crescem na mesma direção
+  const imgTopPx = (boxH - imgHpx) / 2 + offsetYmm * pxPerMm;  // Y: tela cresce p/ baixo, PDF cresce p/ cima (convenção do slider preservada nos dois)
+
+  const cutWpx = cutW * pxPerMm, cutHpx = cutH * pxPerMm;
+  const cutLeftPx = (boxW - cutWpx) / 2, cutTopPx = (boxH - cutHpx) / 2;
 
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', padding: 16 }}>
@@ -253,23 +283,32 @@ const spec: any = isAuto
         {/* CONFIGURING */}
         {stage === 'configuring' && art && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {/* preview com overlay do corte — o box JÁ é o tamanho real da cobertura (arte) */}
+            {/* preview com overlay do corte — posição/tamanho calculados manualmente (mesma
+                fórmula do backend), garantindo que o preview bata exatamente com o PDF gerado */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <div style={{ position: 'relative', width: boxW, height: boxH, background: c.bgSecondary, border: `1px solid ${c.border}`, borderRadius: 4, overflow: 'hidden' }}>
-                <img src={art.previewDataUrl} alt="" style={{
-                  position: 'absolute',
-                  display: 'block',
-                  inset: 0, width: '100%', height: '100%',
-                  objectFit: isAuto ? 'contain' : 'cover',
-                  objectPosition: `${50 + alignX}% ${50 + alignY}%`,
-                  transform: `scale(${zoom / 100})`,
-                  transformOrigin: 'center',
-                }} />
+                {isAuto ? (
+                  <img src={art.previewDataUrl} alt="" style={{
+                    position: 'absolute', display: 'block', inset: 0, width: '100%', height: '100%',
+                    objectFit: 'contain',
+                  }} />
+                ) : (
+                  <img src={art.previewDataUrl} alt="" style={{
+                    position: 'absolute', display: 'block',
+                    left: imgLeftPx, top: imgTopPx, width: imgWpx, height: imgHpx,
+                  }} />
+                )}
                 {!isAuto && (
-                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                  <svg width={boxW} height={boxH} viewBox={`0 0 ${boxW} ${boxH}`} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                    {/* linha de corte (real, vai pro PDF) */}
                     {shape === 'circle'
-                      ? <ellipse cx="50" cy="50" rx={50 - insetXpct} ry={50 - insetYpct} fill="none" stroke={swatch} strokeWidth="1" vectorEffect="non-scaling-stroke" />
-                      : <rect x={insetXpct} y={insetYpct} width={100 - 2 * insetXpct} height={100 - 2 * insetYpct} rx={radiusPct} ry={radiusPct} fill="none" stroke={swatch} strokeWidth="1" vectorEffect="non-scaling-stroke" />}
+                      ? <ellipse cx={boxW / 2} cy={boxH / 2} rx={cutWpx / 2} ry={cutHpx / 2} fill="none" stroke={swatch} strokeWidth="1.5" />
+                      : <rect x={cutLeftPx} y={cutTopPx} width={cutWpx} height={cutHpx} rx={radius * pxPerMm} ry={radius * pxPerMm} fill="none" stroke={swatch} strokeWidth="1.5" />}
+                    {/* área de segurança (só visual — recuo de `sangria` pra dentro do corte; texto/elementos
+                        importantes não devem passar dela, evitando risco de corte por oscilação da faca) */}
+                    {shape === 'circle'
+                      ? <ellipse cx={boxW / 2} cy={boxH / 2} rx={Math.max(0, cutWpx / 2 - sangria * pxPerMm)} ry={Math.max(0, cutHpx / 2 - sangria * pxPerMm)} fill="none" stroke={c.textMuted} strokeWidth="1" strokeDasharray="3 3" />
+                      : <rect x={cutLeftPx + sangria * pxPerMm} y={cutTopPx + sangria * pxPerMm} width={Math.max(0, cutWpx - 2 * sangria * pxPerMm)} height={Math.max(0, cutHpx - 2 * sangria * pxPerMm)} rx={Math.max(0, radius - sangria) * pxPerMm} ry={Math.max(0, radius - sangria) * pxPerMm} fill="none" stroke={c.textMuted} strokeWidth="1" strokeDasharray="3 3" />}
                   </svg>
                 )}
               </div>
@@ -278,8 +317,8 @@ const spec: any = isAuto
               {isAuto
                 ? `O corte segue a silhueta da arte (recuo ${offset}mm).`
                 : bleedMode === 'externa'
-                  ? `Corte ${cutW}×${cutH}mm · arquivo ${docW}×${docH}mm (sangria ${sangria}mm por lado).`
-                  : `Arte ${cutW}×${cutH}mm · corte entra ${sangria}mm (adesivo fica ${Math.max(5, cutW - 2 * sangria)}×${Math.max(5, cutH - 2 * sangria)}mm).`}
+                  ? `Corte ${cutW}×${cutH}mm · arquivo ${docW}×${docH}mm (sangria ${sangria}mm por lado). Linha pontilhada = área de segurança para texto.`
+                  : `Arte ${cutW}×${cutH}mm · corte entra ${sangria}mm (adesivo fica ${Math.max(5, cutW - 2 * sangria)}×${Math.max(5, cutH - 2 * sangria)}mm). Linha pontilhada = área de segurança para texto.`}
             </p>
 
             {semAlfa && (

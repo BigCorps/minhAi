@@ -272,7 +272,9 @@ export default function FotoDocumentoDisplay({
 }, [imageUrl]);
 
 const handleZoom = (val: number) => {
-  imageRef.current?.zoomTo(val);
+  if (cropperInstanceRef.current) {
+    cropperInstanceRef.current.zoomTo(val);
+  }
 };
 
   // ── Upload + remoção de fundo ─────────────────────────────────────────────────

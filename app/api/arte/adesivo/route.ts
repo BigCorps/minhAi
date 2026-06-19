@@ -170,15 +170,26 @@ export async function POST(req: NextRequest) {
       };
 
       // monta o canvas final: fundo sólido (cor dos cantos) + imagem composta na posição.
-      // channels:3 (sem alpha) é compatível com o flatten() que drawImageCmyk já faz internamente.
-      // .flatten() aqui também remove alfa da imagem de origem antes de compor, evitando
-      // mismatch de canais entre o canvas (3 canais) e a imagem (que pode ter RGBA nativo).
-      const resizedImg = await sharp(srcBuf).resize(imgPxW, imgPxH, { fit: 'cover' }).flatten({ background: bg }).toBuffer();
-      const artBuf = await sharp({
-        create: { width: canvasPxW, height: canvasPxH, channels: 3, background: bg },
-      })
-        .composite([{ input: resizedImg, left: imgLeftPx, top: imgTopPx }])
-        .toBuffer();
+      // IMPORTANTE: sharp().composite() rejeita compor uma imagem MAIOR que o canvas
+      // ("Image to composite must have same dimensions or smaller") — isso quebrava sempre
+      // que zoom > 100% (imgPxW/imgPxH > canvasPxW/canvasPxH). Por isso, antes de compor,
+      // a imagem redimensionada é CROPADA para a região que efetivamente cai dentro do
+      // canvas, considerando o deslocamento (imgLeftPx/imgTopPx, que pode ser negativo).
+      const resizedBig = await sharp(srcBuf).resize(imgPxW, imgPxH, { fit: 'cover' }).flatten({ background: bg }).png().toBuffer();
+
+      const extractLeft = Math.max(0, -imgLeftPx);
+      const extractTop = Math.max(0, -imgTopPx);
+      const extractW = Math.max(0, Math.min(canvasPxW - Math.max(0, imgLeftPx), imgPxW - extractLeft));
+      const extractH = Math.max(0, Math.min(canvasPxH - Math.max(0, imgTopPx), imgPxH - extractTop));
+
+      let pipeline = sharp({ create: { width: canvasPxW, height: canvasPxH, channels: 3, background: bg } });
+      if (extractW > 0 && extractH > 0) {
+        const cropped = await sharp(resizedBig).extract({ left: extractLeft, top: extractTop, width: extractW, height: extractH }).toBuffer();
+        pipeline = pipeline.composite([{ input: cropped, left: Math.max(0, imgLeftPx), top: Math.max(0, imgTopPx) }]);
+      }
+      // se extractW/H <= 0, a imagem ficou deslocada totalmente fora do canvas — nesse caso
+      // (alinhamento no extremo absoluto) o canvas fica só com a cor de fundo, sem travar.
+      const artBuf = await pipeline.png().toBuffer();
 
       await drawImageCmyk(doc, p1, artBuf, {
         x: mm(cx - coverW / 2), y: mm(cy - coverH / 2),
@@ -196,9 +207,15 @@ export async function POST(req: NextRequest) {
     p2.setTrimBox(mm(bb.x), mm(bb.y), mm(bb.w), mm(bb.h));
     const { cmyk } = await import('pdf-lib');
     const col = cmyk(cutCmyk.c, cutCmyk.m, cutCmyk.y, cutCmyk.k);
-    for (let i = 0; i < cutPts.length - 1; i++) {
-      p2.drawLine({ start: { x: mm(cutPts[i][0]), y: mm(cutPts[i][1]) }, end: { x: mm(cutPts[i + 1][0]), y: mm(cutPts[i + 1][1]) }, thickness: 0.75, color: col });
-    }
+    // Linha de corte como UM ÚNICO caminho contínuo (drawSvgPath), não um drawLine() por
+    // segmento — drawLine() por segmento gera um m/l/S separado para cada ponto do polígono
+    // (confirmado: um círculo de 120 pontos virava 120 strokes isolados), o que pode fazer
+    // a faca subir/descer entre cada ponto na hora do corte. drawSvgPath espera Y no sistema
+    // SVG nativo (inverso do PDF) — por isso o sinal de Y é invertido ao montar a string
+    // (validado empiricamente: testei a fórmula com pdf-lib real antes de aplicar aqui).
+    const svgPts = cutPts.map(([x, y]) => `${mm(x)} ${-mm(y)}`);
+    const svgPath = `M ${svgPts[0]} L ${svgPts.slice(1).join(' L ')}`;
+    p2.drawSvgPath(svgPath, { x: 0, y: 0, borderColor: col, borderWidth: 0.75 });
 
     const rgbPdf = await doc.save();
 

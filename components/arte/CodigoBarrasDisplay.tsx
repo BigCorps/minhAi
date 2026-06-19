@@ -303,45 +303,6 @@ export default function CodigoBarrasDisplay({
     playText?.('Código de barras baixado.').catch(() => {});
   }, [barcodeUrl, format, playText]);
 
-  // ── Email ─────────────────────────────────────────────────────────────────────
-
-  const handleSendEmail = useCallback(async () => {
-    if (!barcodeUrl || sendingEmail) return;
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { onRequireLogin?.(); return; }
-
-    const cid = await ensureCompany();
-    if (!cid) return;
-
-    setSendingEmail(true);
-    setEmailSent(false);
-    try {
-      const email = session.user.email;
-      if (!email) throw new Error('Usuário sem email.');
-
-      const base64 = barcodeUrl.split(',')[1];
-
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: {
-          company_id:  cid,
-          to:          email,
-          subject:     'Seu Código de Barras — ArteFinal',
-          body:        `<p>Código de barras gerado pelo ArteFinal.</p><p><strong>Formato:</strong> ${format}</p><p><strong>Conteúdo:</strong> ${inputText}</p><br><img src="${barcodeUrl}" alt="Código de barras" />`,
-          attachments: [{ filename: `barcode_${format}.png`, content: base64, encoding: 'base64', contentType: 'image/png' }],
-        },
-      });
-      if (error) throw new Error(error.message);
-
-      setEmailSent(true);
-      playText?.('Código de barras enviado para o seu email.').catch(() => {});
-    } catch {
-      playText?.('Não foi possível enviar o email.').catch(() => {});
-    } finally {
-      setSendingEmail(false);
-    }
-  }, [barcodeUrl, sendingEmail, supabase, ensureCompany, format, inputText, onRequireLogin, playText]);
-
   // ── Reset ─────────────────────────────────────────────────────────────────────
 
   const handleReset = useCallback(() => {
@@ -351,7 +312,6 @@ export default function CodigoBarrasDisplay({
     setBarcodeUrl(null);
     setErrorMsg(null);
     setSaldo(null);
-    setEmailSent(false);
     transcriptRef.current = '';
   }, []);
 

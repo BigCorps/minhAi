@@ -28,7 +28,7 @@ const ASSETLINKS_BY_HOST: Record<string, any[]> = {
         namespace: 'android_app',
         package_name: 'com.artefinal.app', // confirmar o package real do TWA do ArteFinal
         sha256_cert_fingerprints: [
-          'FINGERPRINT_DO_KEYSTORE_ARTEFINAL_AQUI',
+          'DA:46:AE:F5:3E:53:A7:58:F1:8D:DE:3C:92:8A:BF:7B:D1:30:35:6F:DC:BD:5A:7A:2D:A7:D9:6B:58:37:62:72',
         ],
       },
     },

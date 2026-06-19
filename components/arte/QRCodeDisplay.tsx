@@ -859,7 +859,7 @@ export default function QRCodeDisplay({
             <textarea
               value={inputText}
               onChange={e => setInputText(e.target.value)}
-              placeholder="Ex: https://artefinal.com.br"
+              placeholder="Ex: https://artefinal.app"
               style={{
                 width:       '100%',
                 minHeight:   88,

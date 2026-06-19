@@ -37,6 +37,7 @@
     "class-variance-authority": "^0.7.1",
     "clipper-lib": "^6.4.2",
     "clsx": "^2.1.1",
+    "cropperjs": "^2.1.1",
     "date-fns": "^4.1.0",
     "esc-pos-encoder": "^3.0.0",
     "groq-sdk": "^1.1.2",
@@ -70,6 +71,7 @@
   },
   "devDependencies": {
     "@bubblewrap/cli": "latest",
+    "@types/cropperjs": "^1.1.5",
     "@types/jsbarcode": "^3.11.4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",

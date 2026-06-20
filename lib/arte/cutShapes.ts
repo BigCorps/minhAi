@@ -26,3 +26,49 @@ export function ellipsePoints(wmm: number, hmm: number, cx: number, cy: number):
   for (let i = 0; i <= k; i++) { const a = (2 * Math.PI) * (i / k); pts.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]); }
   return pts;
 }
+
+// ── Versões em curva Bézier real (para a LINHA DE CORTE, não para bounding box) ──
+// rectPoints/ellipsePoints acima continuam intactas (usadas no cálculo de bounding box e
+// em qualquer outro consumidor existente). As funções abaixo geram strings de path SVG com
+// curvas Bézier matemáticas reais — sem aproximação por polígono — para uso exclusivo com
+// page.drawSvgPath() ao desenhar a linha de corte. Isso evita que softwares de vetor (Corel)
+// ou plotters de corte exibam/processem os ~120 vértices de um polígono como pontos de
+// inflexão visíveis na curva, mesmo quando já é um único stroke contínuo.
+//
+// IMPORTANTE: como page.drawSvgPath() do pdf-lib espera coordenadas no sistema SVG nativo
+// (Y cresce para BAIXO — o oposto do PDF, que cresce para cima), os valores de cy/y0/y1
+// devem ser passados já invertidos pelo chamador (ex: ellipseSvgPath(w, h, cx, -cyPdf)),
+// exatamente como já era feito ao montar manualmente a string a partir de ellipsePoints.
+const BEZIER_KAPPA = 0.5522847498307936; // 4/3 * (√2 - 1) — aproximação padrão de 1/4 de círculo
+
+export function ellipseSvgPath(wmm: number, hmm: number, cx: number, cy: number): string {
+  const rx = wmm / 2, ry = hmm / 2;
+  const ox = rx * BEZIER_KAPPA, oy = ry * BEZIER_KAPPA;
+  return [
+    `M ${cx + rx} ${cy}`,
+    `C ${cx + rx} ${cy + oy} ${cx + ox} ${cy + ry} ${cx} ${cy + ry}`,
+    `C ${cx - ox} ${cy + ry} ${cx - rx} ${cy + oy} ${cx - rx} ${cy}`,
+    `C ${cx - rx} ${cy - oy} ${cx - ox} ${cy - ry} ${cx} ${cy - ry}`,
+    `C ${cx + ox} ${cy - ry} ${cx + rx} ${cy - oy} ${cx + rx} ${cy}`,
+    'Z',
+  ].join(' ');
+}
+
+export function rectSvgPath(wmm: number, hmm: number, cx: number, cy: number, radiusMm = 0): string {
+  const x0 = cx - wmm / 2, y0 = cy - hmm / 2, x1 = cx + wmm / 2, y1 = cy + hmm / 2;
+  const r = Math.min(Math.max(0, radiusMm), wmm / 2, hmm / 2);
+  if (r <= 0.001) return `M ${x0} ${y0} L ${x1} ${y0} L ${x1} ${y1} L ${x0} ${y1} Z`;
+  const o = r * BEZIER_KAPPA;
+  return [
+    `M ${x0 + r} ${y0}`,
+    `L ${x1 - r} ${y0}`,
+    `C ${x1 - r + o} ${y0} ${x1} ${y0 + r - o} ${x1} ${y0 + r}`,
+    `L ${x1} ${y1 - r}`,
+    `C ${x1} ${y1 - r + o} ${x1 - r + o} ${y1} ${x1 - r} ${y1}`,
+    `L ${x0 + r} ${y1}`,
+    `C ${x0 + r - o} ${y1} ${x0} ${y1 - r + o} ${x0} ${y1 - r}`,
+    `L ${x0} ${y0 + r}`,
+    `C ${x0} ${y0 + r - o} ${x0 + r - o} ${y0} ${x0 + r} ${y0}`,
+    'Z',
+  ].join(' ');
+}

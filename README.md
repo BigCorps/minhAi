@@ -16,8 +16,6 @@
 ** PRONTAS: Vixus - Loja de Serviços - ArteFinal
 ** BREVES: Pix.Wiki - Ficha.Pro - Postos.Pro - Consulta.tec.br - Post-ai.app - Agenda.tec.br - Nota.net.br - Remed.ia.br)
 
-* ArteFinal.app - Manus qpreco (Deixar o domínio principal no repositório e ia.artefinal.app no assistente - executar bubblewrap e testar na Playstore se aprova.
-
 * Pix.Wiki - App com confirmação automática de pix direcionando para /pix para os usuários usarem /slug diretamente (reservar apenas o /meu) e usar o principal para ser a página principal identificando logado e não logado.
 
 * FichaTec ou Ficha.pro ou Linha.pro ou PreparAi.me ou FichaPronta - após o ArteFinal e Pix.Wiki estarem prontos, oferecer ao mau o Auxiliar de Produção no mesmo molde, apenas com mensalidade,usando grow, para ele vender (com tela de admin para ambos controlarem os usuários e envio de e-mail quando chega um novo cliente para ele, e mensalmente com o relatório dos pagamentos). Fazer ele sugerir o nome

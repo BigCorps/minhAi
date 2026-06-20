@@ -3,8 +3,19 @@
 /**
  * CodigoBarrasDisplay.tsx — ArteFinal
  *
- * Adaptado de GerarCodigoBarrasDisplay (minhAi).
- * Convenções do guia v2:
+ * Migrado para o padrão visual dos demais modais (Adesivo, Folha de Recorte,
+ * Margem e Sangria, Duplicar Imagem, Vetorizar Imagem, QR Code):
+ *  - Paleta CMYK padrão (DARK/LIGHT com bg/bgSecondary/border/text/textMuted/
+ *    success/error/accent/warn), accent = CMYK.cyan (mesma do QR Code/Duplicar).
+ *  - Card com a mesma largura dos outros (640 normal / 760 no resultado).
+ *  - Botão "Fechar" em texto no header, igual aos demais.
+ *  - Bloco "Como funciona" na tela inicial.
+ *
+ * Corrigido: handleReset chamava setEmailSent(false), mas o estado 'emailSent'
+ * nunca era declarado em lugar nenhum do arquivo — resíduo de cópia de outro
+ * componente que quebraria o build. Removido (não há funcionalidade de email aqui).
+ *
+ * Convenções do guia v2 ainda aplicadas:
  *  - createPortal → document.body, position:fixed, inset:0
  *  - Estilos 100% inline via paleta DARK/LIGHT
  *  - SVG inline (sem lucide-react)
@@ -12,7 +23,7 @@
  *  - ensure_my_arte_company lazy antes de ações autenticadas
  *  - Custo escondido para anônimos
  *  - Anônimo → stage 'login' ao tentar gerar
- *  - cobrar_credito_se_suficiente fail-closed, Array.isArray(raw)[0] (§10)
+ *  - cobrar_credito_se_suficiente fail-closed, Array.isArray(raw)[0]
  *  - Geração client-side via jsbarcode (sem API extra)
  */
 
@@ -25,11 +36,6 @@ import { createClient } from '@/lib/supabase-browser';
 type P = { c: string; sz: number };
 const icon = (color: string, size = 20): P => ({ c: color, sz: size });
 
-const IconX = ({ s }: { s: P }) => (
-  <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
 const IconBarcode = ({ s }: { s: P }) => (
   <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 5v3M7 5v3M11 5v3M15 5v3M19 5v3M21 5v3" />
@@ -48,58 +54,17 @@ const IconRefresh = ({ s }: { s: P }) => (
     <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-4.5" />
   </svg>
 );
-const IconSparkles = ({ s }: { s: P }) => (
-  <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z" /><path d="M19 3l.5 1.5L21 5l-1.5.5L19 7l-.5-1.5L17 5l1.5-.5z" /><path d="M5 17l.5 1.5L7 19l-1.5.5L5 21l-.5-1.5L3 19l1.5-.5z" />
-  </svg>
-);
 
-// ─── Paletas ──────────────────────────────────────────────────────────────────
+// ─── Paleta CMYK padrão (mesma dos demais modais) ────────────────────────────
 
+const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
 const DARK = {
-  bg:          '#1a1a2e',
-  surface:     '#16213e',
-  border:      'rgba(255,255,255,0.08)',
-  text:        '#e2e8f0',
-  sub:         '#94a3b8',
-  muted:       '#475569',
-  accent:      '#e94560',
-  blue:        '#3b82f6',
-  blueDim:     '#1e3a5f',
-  blueMuted:   '#60a5fa',
-  green:       '#22c55e',
-  greenDim:    '#166534',
-  greenMuted:  '#86efac',
-  red:         '#fca5a5',
-  redDim:      'rgba(127,29,29,0.3)',
-  redBorder:   '#b91c1c',
-  input:       '#0f172a',
-  inputBorder: '#334155',
-  warn:        '#fbbf24',
-  overlay:     'rgba(0,0,0,0.75)',
+  bg: '#1e293b', bgSecondary: '#0f172a', border: 'rgba(255,255,255,0.08)',
+  text: '#e2e8f0', textMuted: '#94a3b8', success: '#10b981', error: '#ef4444', accent: CMYK.cyan, warn: CMYK.yellow,
 };
-
 const LIGHT = {
-  bg:          '#ffffff',
-  surface:     '#f8fafc',
-  border:      '#e5e7eb',
-  text:        '#111827',
-  sub:         '#6b7280',
-  muted:       '#9ca3af',
-  accent:      '#e94560',
-  blue:        '#2563eb',
-  blueDim:     '#eff6ff',
-  blueMuted:   '#1d4ed8',
-  green:       '#16a34a',
-  greenDim:    '#dcfce7',
-  greenMuted:  '#166534',
-  red:         '#dc2626',
-  redDim:      '#fef2f2',
-  redBorder:   '#fecaca',
-  input:       '#f9fafb',
-  inputBorder: '#d1d5db',
-  warn:        '#d97706',
-  overlay:     'rgba(0,0,0,0.6)',
+  bg: '#ffffff', bgSecondary: '#f8fafc', border: '#e2e8f0',
+  text: '#0f172a', textMuted: '#64748b', success: '#059669', error: '#dc2626', accent: CMYK.cyan, warn: '#d97706',
 };
 
 // ─── Tipos e constantes ───────────────────────────────────────────────────────
@@ -108,6 +73,7 @@ type Stage  = 'input' | 'generating' | 'result' | 'login' | 'error';
 type Format = 'CODE128' | 'EAN13' | 'CODE39';
 
 const CREDITS = 1;
+const OPENING_TEXT = 'Gerar código de barras. Digite o conteúdo e escolha o formato.';
 
 const FORMAT_OPTIONS: { value: Format; label: string; hint: string }[] = [
   { value: 'CODE128', label: 'Code 128', hint: 'Texto e números — uso geral' },
@@ -134,7 +100,8 @@ export default function CodigoBarrasDisplay({
   theme = 'dark',
   playText,
 }: CodigoBarrasDisplayProps) {
-  const C      = theme === 'dark' ? DARK : LIGHT;
+  const isDark = theme === 'dark';
+  const c = isDark ? DARK : LIGHT;
   const supabase = createClient();
 
   // ── Estado ───────────────────────────────────────────────────────────────────
@@ -149,6 +116,7 @@ export default function CodigoBarrasDisplay({
   const [saldo,        setSaldo]        = useState<number | null>(null);
 
   const transcriptRef = useRef('');
+  const spoke = useRef(false);
 
   // ── Mount ────────────────────────────────────────────────────────────────────
 
@@ -159,7 +127,10 @@ export default function CodigoBarrasDisplay({
       setLogado(!!session);
     });
 
-    playText?.('Gerar código de barras. Digite o conteúdo e escolha o formato.').catch(() => {});
+    if (!spoke.current) {
+      spoke.current = true;
+      playText?.(OPENING_TEXT).catch(() => {});
+    }
 
     return () => {
       window.dispatchEvent(new CustomEvent('eai:modalClose'));
@@ -168,7 +139,7 @@ export default function CodigoBarrasDisplay({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── ensure_my_arte_company lazy (§7) ─────────────────────────────────────────
+  // ── ensure_my_arte_company lazy ─────────────────────────────────────────
 
   const ensureCompany = useCallback(async (): Promise<string | null> => {
     if (companyId) return companyId;
@@ -252,7 +223,7 @@ export default function CodigoBarrasDisplay({
 
       const dataUrl = canvas.toDataURL('image/png');
 
-      // Cobrança fail-closed: depois de gerar, antes de mostrar (§5)
+      // Cobrança fail-closed: depois de gerar, antes de mostrar
       const { data: raw, error: errCobranca } = await supabase.rpc(
         'cobrar_credito_se_suficiente',
         {
@@ -262,7 +233,7 @@ export default function CodigoBarrasDisplay({
           p_metadata:     { conteudo: text, formato: fmt },
         }
       );
-      // RPC retorna TABLE → sempre array (§10)
+      // RPC retorna TABLE → sempre array
       const resultado = Array.isArray(raw) ? raw[0] : raw;
       if (errCobranca || !resultado?.sucesso) {
         const saldoAtual = resultado?.saldo_atual ?? 0;
@@ -306,7 +277,6 @@ export default function CodigoBarrasDisplay({
     setBarcodeUrl(null);
     setErrorMsg(null);
     setSaldo(null);
-    setEmailSent(false);
     transcriptRef.current = '';
   }, []);
 
@@ -315,83 +285,71 @@ export default function CodigoBarrasDisplay({
     else window.location.href = '/login';
   }, [onRequireLogin]);
 
-  // ─── Estilos base ─────────────────────────────────────────────────────────────
+  // ─── Estilos derivados da paleta (mesma convenção dos demais modais) ──────────
+
+  const label: React.CSSProperties = { display: 'block', fontSize: 12, color: c.textMuted, marginBottom: 4 };
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14, background: c.bgSecondary, border: `1px solid ${c.border}`, color: c.text, outline: 'none' };
 
   const btnPrimary: React.CSSProperties = {
-    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    gap: 8, padding: '10px 0', borderRadius: 12, border: 'none',
-    background: C.blue, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-  };
-
-  const btnGhost: React.CSSProperties = {
-    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    gap: 6, padding: '8px 0', borderRadius: 12, border: 'none',
-    background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
-    color: C.sub, fontSize: 12, fontWeight: 500, cursor: 'pointer',
+    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    padding: 14, borderRadius: 10, border: 'none', background: c.accent, color: '#fff',
+    fontSize: 15, fontWeight: 700, cursor: 'pointer',
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   return createPortal(
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9999,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: C.overlay, padding: 16,
-    }}>
-      <div style={{
-        width: '100%', maxWidth: 380, maxHeight: '92dvh', overflowY: 'auto',
-        borderRadius: 20, padding: 24,
-        background: C.bg, border: `1px solid ${C.border}`,
-        boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
-        display: 'flex', flexDirection: 'column', gap: 0,
-      }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', padding: 16 }}>
+      <div style={{ width: '100%', maxWidth: stage === 'result' ? 760 : 640, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 16, padding: 24, color: c.text, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <IconBarcode s={icon(C.accent, 20)} />
-            <span style={{ fontSize: 17, fontWeight: 700, color: C.text }}>Código de Barras</span>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 8 }}>
-            <IconX s={icon(C.sub, 18)} />
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Código de Barras</h2>
+          <button onClick={onClose} style={{ padding: '4px 10px', border: `1px solid ${c.border}`, borderRadius: 8, background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Fechar</button>
         </div>
 
-        {/* ── Stage: input ── */}
+        {/* Stage: input */}
         {stage === 'input' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ padding: '12px 14px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: c.text }}>Como funciona</p>
+              <p style={{ margin: 0, fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
+                Escolha o formato, digite o conteúdo e gere o código de barras na hora. O resultado já
+                sai pronto para baixar em PNG, com o valor impresso abaixo das barras.
+              </p>
+            </div>
 
             {/* Seletor de formato */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>Formato</span>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+              <label style={label}>Formato</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 {FORMAT_OPTIONS.map(opt => (
                   <button
                     key={opt.value}
                     onClick={() => setFormat(opt.value)}
                     style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'center',
-                      padding: '8px 4px', borderRadius: 10, cursor: 'pointer',
-                      border: `1px solid ${format === opt.value ? C.blue : C.border}`,
-                      background: format === opt.value ? C.blue : C.surface,
-                      color: format === opt.value ? '#fff' : C.sub,
-                      fontSize: 11, fontWeight: 600, transition: 'all 0.15s',
+                      padding: '8px 4px', borderRadius: 8, cursor: 'pointer',
+                      border: format === opt.value ? `2px solid ${c.accent}` : `1px solid ${c.border}`,
+                      background: format === opt.value ? c.accent : c.bgSecondary,
+                      color: format === opt.value ? '#fff' : c.textMuted,
+                      fontSize: 11, fontWeight: 600,
                     }}
                   >
                     <span style={{ fontWeight: 700 }}>{opt.label}</span>
-                    <span style={{ fontSize: 9, opacity: 0.75, marginTop: 2, textAlign: 'center', lineHeight: 1.3 }}>{opt.hint}</span>
+                    <span style={{ fontSize: 9, opacity: 0.85, marginTop: 2, textAlign: 'center', lineHeight: 1.3 }}>{opt.hint}</span>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Input de conteúdo */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>
+            <div>
+              <label style={label}>
                 Conteúdo
-                {format === 'EAN13'  && <span style={{ color: C.warn, marginLeft: 6 }}>— 12 dígitos numéricos</span>}
-                {format === 'CODE39' && <span style={{ color: C.warn, marginLeft: 6 }}>— maiúsculas e números</span>}
-              </span>
+                {format === 'EAN13'  && <span style={{ color: c.warn, marginLeft: 6 }}>— 12 dígitos numéricos</span>}
+                {format === 'CODE39' && <span style={{ color: c.warn, marginLeft: 6 }}>— maiúsculas e números</span>}
+              </label>
               <input
                 value={inputText}
                 onChange={e => { setInputText(e.target.value); transcriptRef.current = e.target.value; }}
@@ -401,11 +359,7 @@ export default function CodigoBarrasDisplay({
                   format === 'CODE39' ? 'Ex: PRODUTO-001' :
                   'Ex: 7890123456789 ou PRODUTO-ABC'
                 }
-                style={{
-                  width: '100%', padding: '10px 12px', borderRadius: 10, outline: 'none',
-                  background: C.input, border: `1px solid ${C.inputBorder}`,
-                  color: C.text, fontSize: 13, boxSizing: 'border-box',
-                }}
+                style={inputStyle}
               />
             </div>
 
@@ -414,120 +368,87 @@ export default function CodigoBarrasDisplay({
               disabled={!inputText.trim()}
               style={{
                 ...btnPrimary,
-                background: inputText.trim() ? C.blue : C.blueDim,
-                color:      inputText.trim() ? '#fff' : C.blueMuted,
-                cursor:     inputText.trim() ? 'pointer' : 'not-allowed',
+                background: inputText.trim() ? c.accent : c.border,
+                cursor: inputText.trim() ? 'pointer' : 'not-allowed',
               }}
             >
-              <IconBarcode s={icon(inputText.trim() ? '#fff' : C.blueMuted, 16)} />
+              <IconBarcode s={icon('#fff', 16)} />
               Gerar Código de Barras
             </button>
 
-            {/* Custo — oculto para anônimos (§6) */}
+            {/* Custo — oculto para anônimos */}
             {logado && (
-              <p style={{ fontSize: 11, color: C.muted, textAlign: 'center', margin: 0 }}>
-                Custo: <strong style={{ color: C.text }}>{CREDITS}</strong> crédito
+              <p style={{ fontSize: 11, color: c.textMuted, textAlign: 'center', margin: 0 }}>
+                Custo: <strong style={{ color: c.text }}>{CREDITS}</strong> crédito
               </p>
             )}
           </div>
         )}
 
-        {/* ── Stage: generating ── */}
+        {/* Stage: generating */}
         {stage === 'generating' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '32px 0' }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: '50%',
-              border: `3px solid ${C.blue}`, borderTopColor: 'transparent',
-              animation: 'cb-spin 0.8s linear infinite',
-            }} />
-            <p style={{ fontSize: 13, color: C.sub, margin: 0 }}>Gerando código de barras…</p>
-            <style>{`@keyframes cb-spin { to { transform: rotate(360deg); } }`}</style>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '34px 0' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', border: `3px solid ${c.border}`, borderTopColor: c.accent, animation: 'cb-spin 0.8s linear infinite' }} />
+            <p style={{ margin: 0, fontSize: 14, color: c.textMuted }}>Gerando código de barras...</p>
           </div>
         )}
 
-        {/* ── Stage: result ── */}
+        {/* Stage: result */}
         {stage === 'result' && barcodeUrl && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-
-            {/* Preview */}
-            <div style={{
-              width: '100%', borderRadius: 14, overflow: 'hidden',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: 12, background: '#ffffff', border: `1px solid ${C.border}`,
-              boxSizing: 'border-box',
-            }}>
+            <div style={{ width: '100%', borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12, background: '#ffffff', border: `1px solid ${c.border}`, boxSizing: 'border-box' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={barcodeUrl} alt="Código de barras gerado" style={{ maxWidth: '100%', maxHeight: 120, display: 'block' }} />
             </div>
 
-            {/* Badges de info */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-              <span style={{
-                padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, fontFamily: 'monospace',
-                background: C.blueDim, color: C.blueMuted,
-              }}>
+              <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, fontFamily: 'monospace', background: c.bgSecondary, color: c.accent, border: `1px solid ${c.border}` }}>
                 {FORMAT_OPTIONS.find(f => f.value === format)?.label}
               </span>
               {inputText && (
-                <span style={{ fontSize: 11, color: C.sub, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 11, color: c.textMuted, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {inputText}
                 </span>
               )}
             </div>
 
-            {/* Saldo restante */}
             {saldo !== null && (
-              <p style={{ fontSize: 11, color: C.muted, textAlign: 'center', margin: 0 }}>
-                Saldo restante: <strong style={{ color: C.text }}>{saldo}</strong> créditos
+              <p style={{ fontSize: 11, color: c.textMuted, textAlign: 'center', margin: 0 }}>
+                Saldo restante: <strong style={{ color: c.text }}>{saldo}</strong> créditos
               </p>
             )}
 
-            {/* Ações */}
-            <button
-              onClick={handleDownload}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 0', borderRadius: 12, border: 'none', background: C.blue, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-            >
-              <IconDownload s={icon('#fff', 15)} />
+            <button onClick={handleDownload} style={btnPrimary}>
+              <IconDownload s={icon('#fff', 16)} />
               Baixar PNG
             </button>
-
-            <button onClick={handleReset} style={btnGhost}>
-              <IconRefresh s={icon(C.sub, 14)} />
+            <button onClick={handleReset} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 13, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <IconRefresh s={icon(c.textMuted, 14)} />
               Gerar novo código
             </button>
           </div>
         )}
 
-        {/* ── Stage: login (anônimo tentou gerar) ── */}
+        {/* Stage: login (anônimo tentou gerar) */}
         {stage === 'login' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center', padding: '8px 4px' }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Entre para gerar o código</div>
-            <p style={{ margin: 0, fontSize: 14, color: C.sub, lineHeight: 1.5 }}>
-              Ao se <strong style={{ color: C.accent }}>cadastrar você ganha 20 créditos iniciais</strong> para usar as ferramentas do ArteFinal.
+            <div style={{ fontSize: 16, fontWeight: 700, color: c.text }}>Entre para gerar o código</div>
+            <p style={{ margin: 0, fontSize: 14, color: c.textMuted, lineHeight: 1.5 }}>
+              Ao se <strong style={{ color: c.accent }}>cadastrar você ganha 20 créditos iniciais</strong> para usar as ferramentas do ArteFinal.
             </p>
-            <button
-              onClick={irParaLogin}
-              style={{ padding: 14, borderRadius: 12, border: 'none', background: C.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
-            >
-              <IconSparkles s={icon('#fff', 14)} />
-              {' '}Entrar / Cadastrar e ganhar 20 créditos
+            <button onClick={irParaLogin} style={btnPrimary}>
+              Entrar / Cadastrar e ganhar 20 créditos
             </button>
-            <button
-              onClick={() => setStage('input')}
-              style={{ padding: 10, borderRadius: 10, border: `1px solid ${C.border}`, background: 'transparent', color: C.sub, cursor: 'pointer', fontSize: 13 }}
-            >
+            <button onClick={() => setStage('input')} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13 }}>
               Voltar
             </button>
           </div>
         )}
 
-        {/* ── Stage: error ── */}
+        {/* Stage: error */}
         {stage === 'error' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{
-              padding: '10px 12px', borderRadius: 10, fontSize: 13, lineHeight: 1.4,
-              background: C.redDim, border: `1px solid ${C.redBorder}`, color: C.red,
-            }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: `1px solid ${c.error}`, color: c.error, fontSize: 14, lineHeight: 1.4 }}>
               {errorMsg ?? 'Ocorreu um erro inesperado.'}
             </div>
             <button onClick={handleReset} style={btnPrimary}>
@@ -536,8 +457,11 @@ export default function CodigoBarrasDisplay({
             </button>
           </div>
         )}
-
       </div>
+
+      <style>{`
+        @keyframes cb-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>,
     document.body
   );

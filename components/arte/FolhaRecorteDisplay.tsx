@@ -161,6 +161,16 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
   const imgTopPx = (boxH - imgHpx) / 2 + offsetYmm * pxPerMm;  // Y: tela cresce p/ baixo, PDF cresce p/ cima
 
   const cutWpx = cutW * pxPerMm, cutHpx = cutH * pxPerMm;
+
+  // ── Mesmas grandezas, em % RELATIVA À CÉLULA — usadas no preview do GRID (etapa 2) ──
+  // O grid não tem um box fixo de 220px por célula (cada célula é uma fração da página),
+  // então aqui a posição/tamanho da imagem é expressa em % do tamanho da própria célula
+  // (coverWmm/coverHmm), não em pixels. Reaproveita previewDrawWmm/offsetXmm já calculados
+  // acima — é a mesma fórmula, só a unidade de saída muda (% em vez de px).
+  const imgWpctCell = (previewDrawWmm / Math.max(1, coverWmm)) * 100;
+  const imgHpctCell = (previewDrawHmm / Math.max(1, coverHmm)) * 100;
+  const imgLeftPctCell = ((coverWmm - previewDrawWmm) / 2 + offsetXmm) / Math.max(1, coverWmm) * 100;
+  const imgTopPctCell = ((coverHmm - previewDrawHmm) / 2 + offsetYmm) / Math.max(1, coverHmm) * 100;
   const cutLeftPx = (boxW - cutWpx) / 2, cutTopPx = (boxH - cutHpx) / 2;
   const semAlfa = isAuto && !!art && !art.hasAlpha;
 
@@ -556,10 +566,23 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
                       return (
                         <div key={`${row}-${col}`} style={{
                           position: 'absolute', left: `${leftPct}%`, top: `${topPct}%`, width: `${wPct}%`, height: `${hPct}%`,
-                          background: art?.previewDataUrl ? `url(${art.previewDataUrl}) center/cover no-repeat` : c.accent,
                           borderRadius: isRound ? '50%' : shape === 'rounded' ? 6 : 1,
                           border: `1px solid ${swatch}`,
-                        }} />
+                          overflow: 'hidden',
+                          background: art?.previewDataUrl ? undefined : c.accent,
+                        }}>
+                          {/* imagem posicionada com o MESMO zoom/alinhamento da etapa 1 (em % da
+                              própria célula), não mais um background:cover genérico que ignorava
+                              a configuração — reflete exatamente o que vai para o PDF. */}
+                          {art?.previewDataUrl && (
+                            <img src={art.previewDataUrl} alt="" style={{
+                              position: 'absolute',
+                              left: `${imgLeftPctCell}%`, top: `${imgTopPctCell}%`,
+                              width: `${imgWpctCell}%`, height: `${imgHpctCell}%`,
+                              maxWidth: 'none', maxHeight: 'none',
+                            }} />
+                          )}
+                        </div>
                       );
                     })
                   )}

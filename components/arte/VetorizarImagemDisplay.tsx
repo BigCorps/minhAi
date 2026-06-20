@@ -325,13 +325,23 @@ setCompanyId(cid);
 
         {/* INPUT */}
         {stage === 'input' && (
-          <div onClick={() => fileRef.current?.click()} onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
-            style={{ border: `2px dashed ${c.border}`, borderRadius: 12, padding: '46px 20px', textAlign: 'center', background: c.bgSecondary, cursor: 'pointer', color: c.textMuted }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste sua imagem</div>
-            <div style={{ fontSize: 12 }}>PNG, JPEG, WebP ou PDF. Ideal: PNG com fundo transparente.</div>
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.currentTarget.value = ''; }} />
-          </div>
+          <>
+            <div style={{ marginBottom: 12, padding: '12px 14px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: c.text }}>Como funciona</p>
+              <p style={{ margin: 0, fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
+                Envie a imagem e ajuste o limiar, a suavização e o modo de traçado em tempo real, vendo
+                o resultado lado a lado com o original. Quando estiver satisfeito, libere o arquivo —
+                o sistema entrega o SVG editável e o PDF vetorial correspondente.
+              </p>
+            </div>
+            <div onClick={() => fileRef.current?.click()} onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
+              style={{ border: `2px dashed ${c.border}`, borderRadius: 12, padding: '46px 20px', textAlign: 'center', background: c.bgSecondary, cursor: 'pointer', color: c.textMuted }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste sua imagem</div>
+              <div style={{ fontSize: 12 }}>PNG, JPEG, WebP ou PDF. Ideal: PNG com fundo transparente.</div>
+              <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.currentTarget.value = ''; }} />
+            </div>
+          </>
         )}
 
         {/* PAGE-SELECT (PDF com 2+ páginas) */}

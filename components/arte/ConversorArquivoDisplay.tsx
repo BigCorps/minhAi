@@ -518,19 +518,20 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                padding: '40px 20px',
-                borderRadius: '12px',
-                border: `2px dashed ${isDragging ? colors.primary : colors.border}`,
-                backgroundColor: isDragging ? 'rgba(59, 130, 246, 0.06)' : colors.bgSecondary,
-                color: colors.textMuted,
-                cursor: 'pointer',
-                transition: 'border-color 0.15s, background-color 0.15s',
-              }}
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '10px',
+  padding: '40px 20px',
+  borderRadius: '12px',
+  border: `2px dashed ${isDragging ? colors.primary : colors.border}`,
+  backgroundColor: isDragging ? 'rgba(59, 130, 246, 0.06)' : colors.bgSecondary,
+  color: colors.textMuted,
+  cursor: 'pointer',
+  transition: 'border-color 0.15s, background-color 0.15s',
+  textAlign: 'center',
+}}
             >
               <IconUpload />
               <span style={{ fontSize: '14px', fontWeight: 600, color: colors.text }}>

@@ -10,51 +10,57 @@
  * Migrado para o padrão visual dos demais modais (paleta CMYK, header com
  * "Fechar" em texto, bloco "Como funciona") — accent = CMYK.cyan.
  *
- * CORRIGIDOS — bugs reais que quebravam o fluxo inteiro:
+ * REESCRITO — cropperjs trocado por react-image-crop:
  *
- * 1) "Cropper is not defined" ao avançar de etapa. Havia um SEGUNDO sistema de
- *    cropper inteiro, órfão e duplicado (cropperInstanceRef/imageRef/imageUrl),
- *    num useEffect que chamava `new Cropper(...)` sem NUNCA importar Cropper
- *    no escopo do módulo — só existia um `Cropper` local dentro do import
- *    dinâmico do OUTRO sistema (cropperRef/cropImgRef, que é o que o JSX real
- *    usa). Esse segundo sistema nunca tinha efeito (imageRef não é usado em
- *    nenhum <img> do JSX, imageUrl nunca é setado em lugar nenhum) — era
- *    código morto que só existia para quebrar o build. Removido por completo.
+ * cropperjs (importado via bundler React, diferente do CDN global usado num
+ * HTML de referência) se comportava de forma instável aqui: aspect ratio
+ * inicial saindo na orientação errada ao trocar formato, e o erro real
+ * "getCroppedCanvas is not a function" — a instância criada não expunha os
+ * métodos esperados nesse ambiente de import. Em vez de continuar depurando
+ * uma dependência externa com comportamento imprevisível dentro do bundler,
+ * a etapa de recorte foi reescrita usando react-image-crop — a mesma
+ * biblioteca já validada e funcionando no EditarImagemDisplay, reaproveitando
+ * a mesma função de recorte (createFilteredCanvas) e a mesma correção de
+ * escala (crop.x/y/width/height vêm em pixels RENDERIZADOS da <img>, não em
+ * pixels da imagem NATURAL — é preciso multiplicar por
+ * naturalWidth/width e naturalHeight/height antes de usar no canvas).
  *
- * 2) Fundo não aparecia removido / ícone de imagem quebrada no cropper. Causa:
- *    handleFile fazia `cropImgRef.current.src = bgUrlRef.current` ANTES de
- *    chamar `setStage('crop')` — nesse momento o estágio ainda era
- *    'processing', então o <img ref={cropImgRef}> do estágio 'crop' nem
- *    existia no DOM ainda (cropImgRef.current era null, e o `if` que checava
- *    isso silenciosamente não fazia nada). Quando o estágio finalmente virava
- *    'crop' e o <img> era montado, ele não tinha nenhum src — Cropper.js
- *    inicializava sobre uma imagem vazia (o ícone quebrado do print). Corrigido
- *    trocando a ref por um state (processedUrl): o <img src={processedUrl}>
- *    no JSX garante que o React só monta a imagem com a URL já certa, na
- *    ordem correta — sem depender de mutação direta de DOM via ref antes do
- *    elemento existir.
+ * Diferença chave deste modal vs EditarImagemDisplay: aqui o aspect ratio do
+ * crop é FIXO pelo formato escolhido (3×4, 5×7, 2×2) — o ReactCrop recebe
+ * aspect={photoSize.w/photoSize.h} e trava a proporção; ao trocar de formato,
+ * o crop é regerado do zero com o novo aspect (centerCrop), porque manter a
+ * seleção anterior não faz sentido geometricamente.
  *
- * NOVO — escolha de fundo na etapa 1 (2 botões, conforme decidido): "Já tem
- * fundo branco" pula a remoção automática (mais rápido) e "Remover fundo
- * automaticamente" continua o fluxo original via @imgly/background-removal.
+ * Bugs anteriores também corrigidos (mantidos desta versão):
+ * - Fundo não aparecia removido / imagem quebrada: causa era mutar
+ *   cropImgRef.current.src via ref ANTES do elemento existir no DOM
+ *   (stage ainda era 'processing'). Corrigido com processedUrl como state —
+ *   o <img src={processedUrl}> só monta quando a URL já existe.
+ * - Painel de controles com largura fixa (180px/160px) quebrava o layout
+ *   mobile quando a media query virava a coluna — corrigido com
+ *   width: 100% !important nessas classes em telas pequenas.
+ *
+ * NOVO — escolha de fundo na etapa 1 (2 botões): "Já tem fundo branco" pula
+ * a remoção automática (mais rápido) e "Remover fundo automaticamente"
+ * continua o fluxo original via @imgly/background-removal.
  *
  * Dependências (npm):
  *   @imgly/background-removal   (remoção de fundo via WASM no browser)
- *   cropperjs                   (recorte interativo)
+ *   react-image-crop            (recorte interativo)
  *   jspdf                       (geração de PDF)
- *   @types/cropperjs            (dev)
  *
  * Convenções do guia v2 ainda aplicadas:
  *  - createPortal → document.body, position:fixed, inset:0
  *  - Estilos 100% inline via paleta DARK/LIGHT
  *  - SVG inline (sem lucide-react)
  *  - playText() só no useEffect de mount
- *  - CSS do Cropper.js injetado via <style> no portal
  *  - eai:modalOpen/Close
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 // ─── Ícones SVG inline ────────────────────────────────────────────────────────
 
@@ -143,43 +149,35 @@ export interface FotoDocumentoDisplayProps {
   playText?:       (text: string) => Promise<void>;
 }
 
-// ─── CSS mínimo do Cropper.js (inline, sem import de CSS externo) ─────────────
-const CROPPER_CSS = `
-.cropper-container{direction:ltr;font-size:0;line-height:0;position:relative;touch-action:none;user-select:none}
-.cropper-container img{display:block;height:100%;image-orientation:0deg;max-height:none!important;max-width:none!important;min-height:0!important;min-width:0!important;width:100%}
-.cropper-wrap-box,.cropper-canvas,.cropper-drag-box,.cropper-crop-box,.cropper-modal{bottom:0;left:0;position:absolute;right:0;top:0}
-.cropper-wrap-box,.cropper-canvas{overflow:hidden}
-.cropper-drag-box{background-color:#fff;opacity:0;cursor:move}
-.cropper-modal{background-color:#000;opacity:.5}
-.cropper-view-box{display:block;height:100%;outline:1px solid #39f;outline-color:rgba(51,153,255,.75);overflow:hidden;width:100%}
-.cropper-dashed{border:0 dashed #eee;display:block;opacity:.5;position:absolute}
-.cropper-dashed.dashed-h{border-bottom-width:1px;border-top-width:1px;height:calc(100% / 3);left:0;top:calc(100% / 3);width:100%}
-.cropper-dashed.dashed-v{border-left-width:1px;border-right-width:1px;height:100%;left:calc(100% / 3);top:0;width:calc(100% / 3)}
-.cropper-center{display:block;height:0;left:50%;opacity:.75;position:absolute;top:50%;width:0}
-.cropper-center::before,.cropper-center::after{background-color:#eee;content:" ";display:block;position:absolute}
-.cropper-center::before{height:1px;left:-3px;top:0;width:7px}
-.cropper-center::after{height:7px;left:0;top:-3px;width:1px}
-.cropper-face,.cropper-line,.cropper-point{display:block;height:100%;opacity:.1;position:absolute;width:100%}
-.cropper-face{background-color:#fff;left:0;top:0}
-.cropper-line{background-color:#39f}
-.cropper-line.line-e{cursor:ew-resize;right:-3px;top:0;width:5px}
-.cropper-line.line-n{cursor:ns-resize;height:5px;left:0;top:-3px}
-.cropper-line.line-w{cursor:ew-resize;left:-3px;top:0;width:5px}
-.cropper-line.line-s{bottom:-3px;cursor:ns-resize;height:5px;left:0}
-.cropper-point{background-color:#39f;height:5px;opacity:.75;width:5px}
-.cropper-point.point-e{cursor:ew-resize;margin-top:-3px;right:-3px;top:50%}
-.cropper-point.point-n{cursor:ns-resize;left:50%;margin-left:-3px;top:-3px}
-.cropper-point.point-w{cursor:ew-resize;left:-3px;margin-top:-3px;top:50%}
-.cropper-point.point-s{bottom:-3px;cursor:ns-resize;left:50%;margin-left:-3px}
-.cropper-point.point-ne{cursor:nesw-resize;right:-3px;top:-3px}
-.cropper-point.point-nw{cursor:nwse-resize;left:-3px;top:-3px}
-.cropper-point.point-sw{bottom:-3px;cursor:nesw-resize;left:-3px}
-.cropper-point.point-se{bottom:-3px;cursor:nwse-resize;height:20px;opacity:1;right:-3px;width:20px}
-.cropper-invisible{opacity:0}
-.cropper-bg{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAAA3NCSVQICAjb4U/gAAAABlBMVEXMzMz////TjRV2AAAADklEQVQI12P4z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==")}
-.cropper-hide{display:block;height:1px;position:absolute;width:1px}
-.cropper-move{cursor:move}
-`;
+// Converte coordenadas do crop (relativas ao tamanho RENDERIZADO da <img>)
+// para pixels da imagem NATURAL antes de desenhar no canvas — mesma fórmula
+// validada e em produção no EditarImagemDisplay.
+function createFilteredCanvas(
+  image: HTMLImageElement,
+  crop: PixelCrop,
+  brightness: number,
+): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Could not get canvas context');
+
+  const scaleX = image.naturalWidth / image.width;
+  const scaleY = image.naturalHeight / image.height;
+
+  const hasCrop = crop.width > 0 && crop.height > 0;
+  const srcX = hasCrop ? crop.x * scaleX : 0;
+  const srcY = hasCrop ? crop.y * scaleY : 0;
+  const srcW = hasCrop ? crop.width * scaleX : image.naturalWidth;
+  const srcH = hasCrop ? crop.height * scaleY : image.naturalHeight;
+
+  canvas.width = srcW;
+  canvas.height = srcH;
+
+  ctx.filter = `brightness(${brightness})`;
+  ctx.drawImage(image, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+
+  return canvas;
+}
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
@@ -197,20 +195,20 @@ export default function FotoDocumentoDisplay({
   const [photoSize,   setPhotoSize]   = useState<PhotoSize>(PHOTO_SIZES[0]);
   const [layout,      setLayout]      = useState<LayoutConfig>(DEFAULT_LAYOUT);
   const [brightness,  setBrightness]  = useState(1);
-  const [zoom,        setZoom]        = useState(0.5);
-  // Imagem já processada (com ou sem fundo removido), pronta para o cropper.
-  // É um STATE (não uma ref) para garantir que o <img src={processedUrl}> só
-  // monta no DOM com a URL já correta — eliminando o bug de ordem onde a ref
-  // era setada antes do elemento existir (ver nota no topo do arquivo).
+  // Imagem já processada (com ou sem fundo removido), pronta para o recorte.
+  // State (não ref) — garante que o <img src={processedUrl}> só monta no DOM
+  // com a URL já correta.
   const [processedUrl, setProcessedUrl] = useState<string | null>(null);
   const [croppedUrl,  setCroppedUrl]  = useState<string | null>(null);
   const [resultName,  setResultName]  = useState('');
 
+  const cropImgRef = useRef<HTMLImageElement>(null);
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+
   // Refs
-  const fileInputRef  = useRef<HTMLInputElement>(null);
-  const cropImgRef    = useRef<HTMLImageElement>(null);
-  const cropperRef    = useRef<any>(null);
-  const objectUrlRef  = useRef<string | null>(null); // para revogar no cleanup
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlRef = useRef<string | null>(null); // para revogar no cleanup
 
   // ── Mount ────────────────────────────────────────────────────────────────────
 
@@ -221,49 +219,38 @@ export default function FotoDocumentoDisplay({
       window.dispatchEvent(new CustomEvent('eai:modalClose'));
       window.speechSynthesis?.cancel();
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-      cropperRef.current?.destroy();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Inicializar Cropper quando entra na etapa crop, com a imagem já pronta ──
-  // Depende de processedUrl (state) em vez de uma ref mutável fora de ordem —
-  // só roda quando a <img src={processedUrl}> já foi montada pelo React com a
-  // URL certa, então cropImgRef.current já tem o src correto neste ponto.
+  // ── Crop inicial centralizado, com o aspect do formato escolhido ─────────────
 
+  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    const newCrop = centerCrop(
+      makeAspectCrop({ unit: '%', width: 90, height: 90 }, photoSize.w / photoSize.h, width, height),
+      width,
+      height
+    );
+    setCrop(newCrop);
+    setCompletedCrop(undefined);
+  }, [photoSize]);
+
+  // Trocar o formato (3×4, 5×7, 2×2) regenera o crop do zero com o novo
+  // aspect — manter a seleção anterior não faz sentido geometricamente, já
+  // que a proporção muda.
   useEffect(() => {
-    if (stage !== 'crop' || !cropImgRef.current || !processedUrl) return;
-
-    let cancelled = false;
-    (async () => {
-      const Cropper = (await import('cropperjs')).default;
-      if (cancelled || !cropImgRef.current) return;
-
-      cropperRef.current?.destroy();
-      cropperRef.current = new Cropper(cropImgRef.current, {
-        aspectRatio: photoSize.w / photoSize.h,
-        viewMode: 2,
-        dragMode: 'move',
-        autoCropArea: 0.9,
-        responsive: true,
-        background: true,
-        ready() {
-          const cd = cropperRef.current.getContainerData();
-          const cv = cropperRef.current.getCanvasData();
-          const z  = Math.min(cd.width / cv.naturalWidth, cd.height / cv.naturalHeight);
-          cropperRef.current.zoomTo(z);
-          setZoom(z);
-        },
-      });
-    })();
-
-    return () => { cancelled = true; };
+    if (!cropImgRef.current || stage !== 'crop') return;
+    const { width, height } = cropImgRef.current;
+    if (!width || !height) return;
+    const newCrop = centerCrop(
+      makeAspectCrop({ unit: '%', width: 90, height: 90 }, photoSize.w / photoSize.h, width, height),
+      width,
+      height
+    );
+    setCrop(newCrop);
+    setCompletedCrop(undefined);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage, processedUrl]);
-
-  // Atualiza aspect ratio quando muda o tamanho
-  useEffect(() => {
-    cropperRef.current?.setAspectRatio(photoSize.w / photoSize.h);
   }, [photoSize]);
 
   // ── Upload (+ remoção de fundo, se escolhido) ─────────────────────────────────
@@ -310,7 +297,6 @@ export default function FotoDocumentoDisplay({
       const url = URL.createObjectURL(finalBlob);
       objectUrlRef.current = url;
 
-      // state, não ref — garante que o <img> só monta com a URL já certa
       setProcessedUrl(url);
       setStage('crop');
     } catch (err: any) {
@@ -322,17 +308,25 @@ export default function FotoDocumentoDisplay({
   // ── Confirmar recorte → ir para layout ───────────────────────────────────────
 
   const handleConfirmCrop = useCallback(() => {
-    if (!cropperRef.current) return;
+    if (!cropImgRef.current || !completedCrop) return;
 
-    const canvas = cropperRef.current.getCroppedCanvas({ width: 1000, imageSmoothingQuality: 'high' });
-    const temp   = document.createElement('canvas');
-    temp.width = canvas.width; temp.height = canvas.height;
-    const ctx = temp.getContext('2d')!;
-    ctx.filter = `brightness(${brightness})`;
-    ctx.drawImage(canvas, 0, 0);
-    setCroppedUrl(temp.toDataURL('image/png'));
-    setStage('layout');
-  }, [brightness]);
+    try {
+      const finalCrop = completedCrop.width > 0 && completedCrop.height > 0
+        ? completedCrop
+        : {
+            x: 0, y: 0,
+            width: cropImgRef.current.width,
+            height: cropImgRef.current.height,
+            unit: 'px' as const,
+          };
+      const canvas = createFilteredCanvas(cropImgRef.current, finalCrop, brightness);
+      setCroppedUrl(canvas.toDataURL('image/png'));
+      setStage('layout');
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Erro ao confirmar o recorte. Ajuste a área e tente novamente.');
+      setStage('error');
+    }
+  }, [completedCrop, brightness]);
 
   // ── Calcular layout de impressão ──────────────────────────────────────────────
 
@@ -397,28 +391,24 @@ export default function FotoDocumentoDisplay({
   // ── Reset ─────────────────────────────────────────────────────────────────────
 
   const handleReset = useCallback(() => {
-    cropperRef.current?.destroy();
-    cropperRef.current = null;
     if (objectUrlRef.current) { URL.revokeObjectURL(objectUrlRef.current); objectUrlRef.current = null; }
     setProcessedUrl(null);
     setCroppedUrl(null);
     setErrorMsg(null);
     setBrightness(1);
-    setZoom(0.5);
+    setCrop(undefined);
+    setCompletedCrop(undefined);
     setPhotoSize(PHOTO_SIZES[0]);
     setLayout(DEFAULT_LAYOUT);
     setBgMode('remove');
     setStage('upload');
   }, []);
 
-  // Voltar da etapa crop para upload — também limpa o processedUrl, já que
-  // uma nova foto vai ser enviada (evita o cropper inicializar de novo sobre
-  // uma URL antiga quando o usuário reenvia).
   const handleBackToUpload = useCallback(() => {
-    cropperRef.current?.destroy();
-    cropperRef.current = null;
     if (objectUrlRef.current) { URL.revokeObjectURL(objectUrlRef.current); objectUrlRef.current = null; }
     setProcessedUrl(null);
+    setCrop(undefined);
+    setCompletedCrop(undefined);
     setStage('upload');
   }, []);
 
@@ -461,8 +451,6 @@ export default function FotoDocumentoDisplay({
 
   return createPortal(
     <>
-      <style>{CROPPER_CSS}</style>
-
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', padding: 16 }}>
         <div style={{
           width: '100%', maxWidth: stage === 'crop' || stage === 'layout' ? 760 : 640,
@@ -562,24 +550,29 @@ export default function FotoDocumentoDisplay({
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '34px 0' }}>
               <div style={{ width: 28, height: 28, borderRadius: '50%', border: `3px solid ${c.border}`, borderTopColor: c.accent, animation: 'fd-spin 0.8s linear infinite' }} />
               <p style={{ margin: 0, fontSize: 14, color: c.textMuted, textAlign: 'center' }}>
-                {bgMode === 'remove' ? 'Removendo o fundo... pode levar alguns segundos na primeira vez.' : 'Preparando a imagem...'}
+                {bgMode === 'remove' && !croppedUrl ? 'Removendo o fundo... pode levar alguns segundos na primeira vez.' : 'Preparando...'}
               </p>
             </div>
           )}
 
           {/* Stage: crop */}
-          {stage === 'crop' && (
+          {stage === 'crop' && processedUrl && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div className="fd-crop-layout" style={{ display: 'flex', gap: 14 }}>
 
-                <div style={{ flex: 1, minWidth: 0, borderRadius: 8, overflow: 'hidden', background: c.bgSecondary, minHeight: 320 }}>
-                  {processedUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img ref={cropImgRef} src={processedUrl} alt="Foto para recorte" style={{ display: 'block', maxWidth: '100%' }} />
-                  )}
+                <div style={{ flex: 1, minWidth: 0, borderRadius: 8, overflow: 'hidden', background: c.bgSecondary, minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ReactCrop crop={crop} onChange={cr => setCrop(cr)} onComplete={cr => setCompletedCrop(cr)} aspect={photoSize.w / photoSize.h}>
+                    <img
+                      ref={cropImgRef}
+                      src={processedUrl}
+                      alt="Foto para recorte"
+                      onLoad={onImageLoad}
+                      style={{ filter: `brightness(${brightness})`, maxWidth: '100%', maxHeight: '60vh', display: 'block' }}
+                    />
+                  </ReactCrop>
                 </div>
 
-                <div style={{ width: 180, display: 'flex', flexDirection: 'column', gap: 14, flexShrink: 0 }}>
+                <div className="fd-crop-controls" style={{ width: 180, display: 'flex', flexDirection: 'column', gap: 14, flexShrink: 0 }}>
                   <div>
                     <label style={label}>Formato</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -597,21 +590,18 @@ export default function FotoDocumentoDisplay({
                   </div>
 
                   <div>
-                    <label style={label}>Zoom</label>
-                    <input type="range" min={0} max={3} step={0.01} value={zoom}
-                      onChange={e => { const v = parseFloat(e.target.value); setZoom(v); cropperRef.current?.zoomTo(v); }}
-                      style={{ width: '100%', accentColor: c.accent }} />
-                  </div>
-
-                  <div>
-                    <label style={label}>Brilho</label>
+                    <label style={label}>Brilho: {Math.round(brightness * 100)}%</label>
                     <input type="range" min={0.5} max={1.5} step={0.01} value={brightness}
                       onChange={e => setBrightness(parseFloat(e.target.value))}
                       style={{ width: '100%', accentColor: c.accent }} />
                   </div>
 
                   <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <button onClick={handleConfirmCrop} style={btnPrimary}>
+                    <button onClick={handleConfirmCrop} disabled={!completedCrop} style={{
+                      ...btnPrimary,
+                      background: completedCrop ? c.accent : c.border,
+                      cursor: completedCrop ? 'pointer' : 'not-allowed',
+                    }}>
                       <IconChevronRight s={icon('#fff', 15)} />
                       Avançar
                     </button>
@@ -622,6 +612,11 @@ export default function FotoDocumentoDisplay({
                   </div>
                 </div>
               </div>
+              {!completedCrop && (
+                <p style={{ margin: 0, fontSize: 11, color: c.textMuted, textAlign: 'center' }}>
+                  Arraste as bordas da área marcada para ajustar o recorte.
+                </p>
+              )}
             </div>
           )}
 
@@ -700,7 +695,7 @@ export default function FotoDocumentoDisplay({
                 </p>
               </div>
 
-              <div style={{ width: 160, flexShrink: 0 }}>
+              <div className="fd-layout-preview" style={{ width: 160, flexShrink: 0 }}>
                 <label style={label}>Pré-visualização</label>
                 <div style={{
                   background: '#ffffff', border: `1px solid ${c.border}`, borderRadius: 8,
@@ -757,6 +752,8 @@ export default function FotoDocumentoDisplay({
         @media (max-width: 640px) {
           .fd-crop-layout { flex-direction: column !important; }
           .fd-layout-stage { flex-direction: column !important; }
+          .fd-crop-controls { width: 100% !important; }
+          .fd-layout-preview { width: 100% !important; }
         }
       `}</style>
     </>,

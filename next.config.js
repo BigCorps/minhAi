@@ -4,10 +4,6 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-experimental: {
-    optimizePackageImports: ['lucide-react'],
-  },
-
   outputFileTracingIncludes: {
     '/api/arte/gstest': ['./node_modules/@jspawn/ghostscript-wasm/**'],
   },

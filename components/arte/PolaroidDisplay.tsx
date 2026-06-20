@@ -8,7 +8,20 @@
  * recorte cover em alta resolução para o PDF final.
  * 100% client-side. Gratuito (sem cobrança de crédito).
  *
- * Convenções do guia v2:
+ * Migrado para o padrão visual dos demais modais (Adesivo, Folha de Recorte,
+ * Margem e Sangria, Duplicar Imagem, Vetorizar Imagem, QR Code, Código de
+ * Barras, Orçamento em PDF):
+ *  - Paleta CMYK padrão (DARK/LIGHT com bg/bgSecondary/border/text/textMuted/
+ *    success/error/accent/warn), accent = CMYK.cyan.
+ *  - Card com a mesma largura dos outros (640 normal / 460 na escolha de tipo,
+ *    mantendo a transição de largura que já existia entre as etapas).
+ *  - Botão "Fechar" em texto no header.
+ *  - Bloco "Como funciona" na tela de escolha de tipo.
+ *  - Mock visual da polaroid mantido (moldura branca + retângulo representando
+ *    a foto), mas o gradiente trocou de laranja para azul (derivado do próprio
+ *    accent = CMYK.cyan, para ficar coerente com o resto da paleta).
+ *
+ * Convenções do guia v2 ainda aplicadas:
  *  - createPortal → document.body, position:fixed, inset:0
  *  - Estilos 100% inline via paleta DARK/LIGHT
  *  - SVG inline (sem lucide-react)
@@ -25,11 +38,6 @@ import { createPortal } from 'react-dom';
 type P = { c: string; sz: number };
 const icon = (color: string, size = 20): P => ({ c: color, sz: size });
 
-const IconX = ({ s }: { s: P }) => (
-  <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
 const IconPlus = ({ s }: { s: P }) => (
   <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -64,36 +72,23 @@ const IconTrash = ({ s }: { s: P }) => (
     <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
   </svg>
 );
-const IconImage = ({ s }: { s: P }) => (
-  <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <circle cx="8.5" cy="8.5" r="1.5" />
-    <polyline points="21 15 16 10 5 21" />
-  </svg>
-);
 
-// ─── Paletas ──────────────────────────────────────────────────────────────────
+// ─── Paleta CMYK padrão (mesma dos demais modais) ────────────────────────────
 
+const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
 const DARK = {
-  bg: '#1a1a2e', surface: '#16213e', surfaceAlt: '#0f172a',
-  border: 'rgba(255,255,255,0.08)', borderStrong: 'rgba(255,255,255,0.18)',
-  text: '#e2e8f0', sub: '#94a3b8', muted: '#475569',
-  accent: '#e94560', blue: '#3b82f6', blueDim: '#1e3a5f', blueMuted: '#60a5fa',
-  green: '#22c55e', greenDim: '#166534', greenMuted: '#86efac',
-  red: '#fca5a5', redDim: 'rgba(127,29,29,0.3)', redBorder: '#b91c1c',
-  inputBorder: '#334155',
-  overlay: 'rgba(0,0,0,0.8)',
+  bg: '#1e293b', bgSecondary: '#0f172a', border: 'rgba(255,255,255,0.08)',
+  text: '#e2e8f0', textMuted: '#94a3b8', success: '#10b981', error: '#ef4444', accent: CMYK.cyan, warn: CMYK.yellow,
 };
 const LIGHT = {
-  bg: '#ffffff', surface: '#f8fafc', surfaceAlt: '#f1f5f9',
-  border: '#e5e7eb', borderStrong: '#d1d5db',
-  text: '#111827', sub: '#6b7280', muted: '#9ca3af',
-  accent: '#e94560', blue: '#2563eb', blueDim: '#eff6ff', blueMuted: '#1d4ed8',
-  green: '#16a34a', greenDim: '#dcfce7', greenMuted: '#166534',
-  red: '#dc2626', redDim: '#fef2f2', redBorder: '#fecaca',
-  inputBorder: '#d1d5db',
-  overlay: 'rgba(0,0,0,0.65)',
+  bg: '#ffffff', bgSecondary: '#f8fafc', border: '#e2e8f0',
+  text: '#0f172a', textMuted: '#64748b', success: '#059669', error: '#dc2626', accent: CMYK.cyan, warn: '#d97706',
 };
+
+// Gradiente do mock visual da polaroid — antes laranja (#ffd9a0 → #ff8c00),
+// agora azul, derivado do próprio accent (CMYK.cyan) para ficar coerente com
+// o resto da paleta.
+const MOCK_GRADIENT = `linear-gradient(135deg, #bfe9fb, ${CMYK.cyan})`;
 
 // ─── Tipos e constantes ───────────────────────────────────────────────────────
 
@@ -124,6 +119,7 @@ interface Slot {
 
 const emptySlot = (): Slot => ({ filled: false, img: null, pX: 0.5, pY: 0.5 });
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+const OPENING_TEXT = 'Gerador de polaroids. Escolha o formato e adicione suas fotos.';
 
 function readAsDataURL(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -175,7 +171,8 @@ export interface PolaroidDisplayProps {
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: PolaroidDisplayProps) {
-  const C = theme === 'dark' ? DARK : LIGHT;
+  const isDark = theme === 'dark';
+  const c = isDark ? DARK : LIGHT;
 
   // ── Estado ───────────────────────────────────────────────────────────────────
 
@@ -190,6 +187,7 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
   const batchInputRef  = useRef<HTMLInputElement>(null);
   const singleInputRef = useRef<HTMLInputElement>(null);
   const activeSingleIdx = useRef<number | null>(null);
+  const spoke = useRef(false);
 
   // Drag state (não precisa re-render, fica em ref)
   const dragRef = useRef<{ idx: number; startX: number; startY: number; startPX: number; startPY: number; ovX: number; ovY: number } | null>(null);
@@ -201,7 +199,10 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('eai:modalOpen'));
-    playText?.('Gerador de polaroids. Escolha o formato e adicione suas fotos.').catch(() => {});
+    if (!spoke.current) {
+      spoke.current = true;
+      playText?.(OPENING_TEXT).catch(() => {});
+    }
     return () => {
       window.dispatchEvent(new CustomEvent('eai:modalClose'));
       window.speechSynthesis?.cancel();
@@ -326,9 +327,9 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
       slots.forEach((slot, i) => {
         if (!slot.filled) return;
         filled++;
-        const c = i % cols, r = Math.floor(i / cols);
-        const fx = marginX + c * (frameW + gap);
-        const fy = marginY + r * (frameH + gap);
+        const col = i % cols, row = Math.floor(i / cols);
+        const fx = marginX + col * (frameW + gap);
+        const fy = marginY + row * (frameH + gap);
 
         if (showBorder) {
           doc.setDrawColor(rgb.r, rgb.g, rgb.b);
@@ -381,23 +382,17 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
     setStage('type');
   }, []);
 
-  // ─── Estilos base ─────────────────────────────────────────────────────────────
+  // ─── Estilos derivados da paleta (mesma convenção dos demais modais) ──────────
 
   const btnPrimary: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-    padding: '10px 18px', borderRadius: 10, border: 'none',
-    background: C.accent, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    padding: 14, borderRadius: 10, border: 'none', background: c.accent, color: '#fff',
+    fontSize: 15, fontWeight: 700, cursor: 'pointer',
   };
   const btnSecondary: React.CSSProperties = {
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-    padding: '10px 16px', borderRadius: 10, border: `1px solid ${C.border}`,
-    background: 'transparent', color: C.sub, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-  };
-  const btnGhost: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-    padding: '8px 0', borderRadius: 10, border: 'none', width: '100%',
-    background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
-    color: C.sub, fontSize: 12, cursor: 'pointer',
+    padding: '8px 14px', borderRadius: 8, border: `1px solid ${c.border}`,
+    background: 'transparent', color: c.textMuted, fontSize: 13, fontWeight: 600, cursor: 'pointer',
   };
 
   const filledCount = slots.filter(s => s.filled).length;
@@ -405,38 +400,25 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   return createPortal(
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9999,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: C.overlay, padding: 12,
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: stage === 'editor' ? 640 : 460,
-        maxHeight: '95dvh', overflowY: 'auto',
-        borderRadius: 20, padding: 22,
-        background: C.bg, border: `1px solid ${C.border}`,
-        boxShadow: '0 25px 60px rgba(0,0,0,0.45)',
-        transition: 'max-width 0.3s ease',
-      }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', padding: 16 }}>
+      <div style={{ width: '100%', maxWidth: stage === 'editor' ? 640 : 460, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 16, padding: 24, color: c.text, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', transition: 'max-width 0.2s ease' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <IconImage s={icon(C.accent, 20)} />
-            <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Polaroids para A4</span>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-            <IconX s={icon(C.sub, 18)} />
-          </button>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Polaroids para A4</h2>
+          <button onClick={onClose} style={{ padding: '4px 10px', border: `1px solid ${c.border}`, borderRadius: 8, background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Fechar</button>
         </div>
 
-        {/* ── Stage: type ── */}
+        {/* Stage: type */}
         {stage === 'type' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <p style={{ fontSize: 13, color: C.sub, margin: 0 }}>
-              Escolha o formato. Você monta o grid e ajusta cada foto na próxima etapa.
-            </p>
+            <div style={{ padding: '12px 14px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: c.text }}>Como funciona</p>
+              <p style={{ margin: 0, fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
+                Escolha o formato da folha e carregue suas fotos — em lote ou uma por uma. Arraste cada
+                foto dentro do quadro para ajustar o que aparece, e gere o PDF pronto para imprimir em A4.
+              </p>
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               {(Object.values(TYPES)).map(t => (
@@ -445,13 +427,12 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
                   onClick={() => selectType(t.key)}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-                    padding: '18px 12px', borderRadius: 14, cursor: 'pointer',
-                    border: `2px solid ${C.border}`, background: C.surface, textAlign: 'center',
-                    transition: 'border-color 0.15s, background 0.15s',
+                    padding: '18px 12px', borderRadius: 10, cursor: 'pointer',
+                    border: `2px solid ${c.border}`, background: c.bgSecondary, textAlign: 'center',
                   }}
                 >
-                  <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{t.label}</span>
-                  <span style={{ fontSize: 10, color: C.muted }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: c.text }}>{t.label}</span>
+                  <span style={{ fontSize: 10, color: c.textMuted }}>
                     Moldura {t.frameW / 10}×{t.frameH / 10} cm · foto {t.photo / 10}×{t.photo / 10} cm
                   </span>
 
@@ -459,19 +440,19 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
                   <div style={{
                     width: t.key === 'padrao' ? 64 : 54,
                     aspectRatio: `${t.frameW} / ${t.frameH}`,
-                    background: '#fff', border: `1px solid ${C.borderStrong}`,
+                    background: '#fff', border: `1px solid ${c.border}`,
                     borderRadius: 2, boxShadow: '0 3px 10px rgba(0,0,0,0.15)',
                     display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '6%',
                   }}>
                     <div style={{
                       width: '100%', height: `${(t.photo / t.frameH) * 100}%`,
-                      background: 'linear-gradient(135deg, #ffd9a0, #ff8c00)', borderRadius: 1,
+                      background: MOCK_GRADIENT, borderRadius: 1,
                     }} />
                   </div>
 
                   <span style={{
-                    fontSize: 10, fontWeight: 600, color: C.accent,
-                    background: C.blueDim, padding: '2px 8px', borderRadius: 6,
+                    fontSize: 10, fontWeight: 600, color: c.accent,
+                    background: c.bg, padding: '2px 8px', borderRadius: 6, border: `1px solid ${c.border}`,
                   }}>
                     {t.cols * t.rows} fotos por folha
                   </span>
@@ -481,20 +462,20 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
           </div>
         )}
 
-        {/* ── Stage: editor ── */}
+        {/* Stage: editor */}
         {stage === 'editor' && current && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             {/* Top bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <span style={{ fontSize: 12, color: C.sub }}>
-                <strong style={{ color: C.text }}>{current.label}</strong> — {filledCount}/{slots.length} quadros preenchidos
+              <span style={{ fontSize: 12, color: c.textMuted }}>
+                <strong style={{ color: c.text }}>{current.label}</strong> — {filledCount}/{slots.length} quadros preenchidos
               </span>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button onClick={backToType} style={btnSecondary}>
-                  <IconChevronLeft s={icon(C.sub, 14)} /> Trocar tipo
+                  <IconChevronLeft s={icon(c.textMuted, 14)} /> Trocar tipo
                 </button>
-                <button onClick={() => batchInputRef.current?.click()} style={btnPrimary}>
+                <button onClick={() => batchInputRef.current?.click()} style={{ ...btnPrimary, padding: '8px 14px', fontSize: 13 }}>
                   <IconUpload s={icon('#fff', 14)} /> Carregar fotos
                 </button>
               </div>
@@ -519,7 +500,7 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
                   <div key={i} style={{
                     position: 'relative', width: '100%',
                     aspectRatio: `${current.frameW} / ${current.frameH}`,
-                    background: '#fff', border: `1px solid ${C.borderStrong}`,
+                    background: '#fff', border: `1px solid ${c.border}`,
                     borderRadius: 2, boxShadow: '0 4px 14px rgba(0,0,0,0.15)', overflow: 'hidden',
                   }}>
                     {/* Janela da foto */}
@@ -543,7 +524,7 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
                         backgroundImage: slot.filled && slot.img ? `url(${slot.img.src})` : undefined,
                         backgroundSize: 'cover',
                         backgroundPosition: `${slot.pX * 100}% ${slot.pY * 100}%`,
-                        border: `1px ${slot.filled ? 'solid' : 'dashed'} ${slot.filled ? '#e6e6e6' : C.borderStrong}`,
+                        border: `1px ${slot.filled ? 'solid' : 'dashed'} ${slot.filled ? '#e6e6e6' : c.border}`,
                         cursor: slot.filled ? 'grab' : 'pointer',
                         touchAction: 'none',
                         display: slot.filled ? undefined : 'flex',
@@ -552,8 +533,8 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
                     >
                       {!slot.filled && (
                         <>
-                          <IconPlus s={icon(C.accent, 22)} />
-                          <span style={{ fontSize: 9, color: C.muted, textAlign: 'center', padding: '0 6px' }}>Adicionar foto</span>
+                          <IconPlus s={icon(c.accent, 22)} />
+                          <span style={{ fontSize: 9, color: c.textMuted, textAlign: 'center', padding: '0 6px' }}>Adicionar foto</span>
                         </>
                       )}
                     </div>
@@ -589,16 +570,15 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
             {/* Opções */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: 14, marginTop: 4 }}>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: C.sub, marginBottom: 4, display: 'block' }}>
+                <label style={{ fontSize: 12, color: c.textMuted, marginBottom: 4, display: 'block' }}>
                   Borda de corte
                 </label>
                 <select
                   value={borderColor}
                   onChange={e => setBorderColor(e.target.value as any)}
                   style={{
-                    padding: '8px 10px', borderRadius: 8, fontSize: 13, minWidth: 160,
-                    background: theme === 'dark' ? C.surfaceAlt : '#fff',
-                    border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none',
+                    padding: '10px 12px', borderRadius: 8, fontSize: 13, minWidth: 160,
+                    background: c.bgSecondary, border: `1px solid ${c.border}`, color: c.text, outline: 'none',
                   }}
                 >
                   <option value="#9aa0a6">Cinza (recomendado)</option>
@@ -609,11 +589,8 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
             </div>
 
             {/* Dica */}
-            <div style={{
-              background: C.blueDim, borderLeft: `4px solid ${C.accent}`, borderRadius: 8,
-              padding: '12px 14px', fontSize: 12, color: C.sub, lineHeight: 1.5,
-            }}>
-              <strong style={{ color: C.text }}>Dica:</strong> a foto preenche todo o quadro sem distorcer.
+            <div style={{ fontSize: 12, color: c.textMuted, lineHeight: 1.5, padding: '10px 12px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+              <strong style={{ color: c.text }}>Dica:</strong> a foto preenche todo o quadro sem distorcer.
               Se ela for retangular, arraste para escolher o que aparece. A borda marca onde cortar.
             </div>
 
@@ -621,8 +598,8 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
               onClick={handleGenerate}
               disabled={filledCount === 0}
               style={{
-                ...btnPrimary, width: '100%',
-                background: filledCount > 0 ? C.accent : C.border,
+                ...btnPrimary,
+                background: filledCount > 0 ? c.accent : c.border,
                 cursor:     filledCount > 0 ? 'pointer' : 'not-allowed',
               }}
             >
@@ -630,44 +607,40 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
               Gerar PDF
             </button>
 
-            <p style={{ fontSize: 11, color: C.muted, textAlign: 'center', margin: 0 }}>
+            <p style={{ fontSize: 11, color: c.textMuted, textAlign: 'center', margin: 0 }}>
               Gratuito · sem cobrança de créditos
             </p>
           </div>
         )}
 
-        {/* ── Stage: generating ── */}
+        {/* Stage: generating */}
         {stage === 'generating' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '32px 0' }}>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', animation: 'pl-spin 0.8s linear infinite' }} />
-            <p style={{ fontSize: 13, color: C.sub, margin: 0 }}>Gerando PDF…</p>
-            <style>{`@keyframes pl-spin { to { transform: rotate(360deg); } }`}</style>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '34px 0' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', border: `3px solid ${c.border}`, borderTopColor: c.accent, animation: 'pl-spin 0.8s linear infinite' }} />
+            <p style={{ margin: 0, fontSize: 14, color: c.textMuted }}>Gerando PDF...</p>
           </div>
         )}
 
-        {/* ── Stage: result ── */}
+        {/* Stage: result */}
         {stage === 'result' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center', padding: '8px 0' }}>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', background: C.greenDim, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <IconDownload s={icon(C.greenMuted, 24)} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderRadius: 8, background: 'rgba(16,185,129,0.1)', border: `1px solid ${c.success}`, color: c.success, fontSize: 14, fontWeight: 600 }}>
+              <span>PDF gerado e baixado!</span>
             </div>
-            <div>
-              <p style={{ fontSize: 15, fontWeight: 700, color: C.text, margin: '0 0 4px' }}>PDF gerado e baixado!</p>
-              {resultName && <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>{resultName}</p>}
-            </div>
-            <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>
+            {resultName && <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>{resultName}</p>}
+            <p style={{ fontSize: 11, color: c.textMuted, margin: 0 }}>
               {resultCount} foto(s) · {current?.label}
             </p>
-            <button onClick={handleReset} style={btnGhost}>
-              <IconRefresh s={icon(C.sub, 14)} /> Gerar outro
+            <button onClick={handleReset} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 13, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <IconRefresh s={icon(c.textMuted, 14)} /> Gerar outro
             </button>
           </div>
         )}
 
-        {/* ── Stage: error ── */}
+        {/* Stage: error */}
         {stage === 'error' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ padding: '10px 12px', borderRadius: 10, fontSize: 13, lineHeight: 1.4, background: C.redDim, border: `1px solid ${C.redBorder}`, color: C.red }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: `1px solid ${c.error}`, color: c.error, fontSize: 14, lineHeight: 1.4 }}>
               {errorMsg ?? 'Ocorreu um erro inesperado.'}
             </div>
             <button onClick={() => setStage('editor')} style={btnPrimary}>
@@ -681,8 +654,11 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
           onChange={e => { if (e.target.files?.length) handleBatchUpload(e.target.files); e.currentTarget.value = ''; }} />
         <input ref={singleInputRef} type="file" accept="image/*" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) handleSingleUpload(f); e.currentTarget.value = ''; }} />
-
       </div>
+
+      <style>{`
+        @keyframes pl-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>,
     document.body
   );

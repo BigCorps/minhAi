@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "tts:pregenerate": "NEXT_PUBLIC_BASE_URL=https://minhai.app ts-node --esm --project tsconfig.json scripts/pregenerate-tour-audio.ts"

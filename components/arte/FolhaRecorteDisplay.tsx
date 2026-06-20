@@ -79,9 +79,17 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
   const [cutH, setCutH] = useState<number>(50);
   const [radius, setRadius] = useState<number>(6);
   const [offset, setOffset] = useState<number>(3);
-  const [sangria, setSangria] = useState<number>(3);
+  const minSangria = (cutW < 30 || cutH < 30) ? 2 : 3;
+  const [sangria, setSangria] = useState<number>(minSangria);
+  const [alignX, setAlignX] = useState<number>(0);
+  const [alignY, setAlignY] = useState<number>(0);
+  const [zoom, setZoom] = useState<number>(100); // 50–300%, mantém o corte fixo e a imagem ajusta
   const [bleedMode, setBleedMode] = useState<'externa' | 'interna'>('externa');
   const [cutColor, setCutColor] = useState<string>('magenta');
+
+  useEffect(() => {
+    if (sangria < minSangria) setSangria(minSangria);
+  }, [minSangria]);
 
   // ── Configurações da folha (estágio 2 = grid-preview) ──────────────────
   const [pageMode, setPageMode] = useState<PageMode>('a4');
@@ -118,18 +126,42 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
   const autoH = art ? cutW * (art.height / art.width) : 0;
   const swatch = CUT_OPTS.find((o) => o.key === cutColor)?.swatch ?? CMYK.magenta;
 
-  // cobertura (arte) e corte de UMA peça
+  // cobertura (arte) e corte de UMA peça — usados também no cálculo de grid (etapa 2)
   const coverWmm = isAuto ? cutW : (bleedMode === 'interna' ? cutW : cutW + 2 * sangria);
   const coverHmm = isAuto ? autoH : (bleedMode === 'interna' ? cutH : cutH + 2 * sangria);
   const cutWmmCell = isAuto ? cutW : (bleedMode === 'interna' ? Math.max(5, cutW - 2 * sangria) : cutW);
   const cutHmmCell = isAuto ? autoH : (bleedMode === 'interna' ? Math.max(5, cutH - 2 * sangria) : cutH);
+  const docW = coverWmm, docH = coverHmm; // valor exibido ao usuário (cobertura mínima garantida)
 
-  // preview da peça (igual ao Adesivo)
-  const insetXpct = clamp((sangria / Math.max(1, coverWmm)) * 100, 0, 49);
-  const insetYpct = clamp((sangria / Math.max(1, coverHmm)) * 100, 0, 49);
-  const radiusPct = shape === 'rounded' ? clamp((radius / Math.max(1, coverWmm)) * 100, 0, 50) : 0;
+  // ── Modelo final do preview da peça — MESMA fórmula do backend (route.ts) ──
+  // O BOX é sempre fixo na proporção da cobertura; zoom controla o tamanho da <img> dentro
+  // dele; o alinhamento desloca livremente, sem trava — idêntico ao Adesivo individual.
+  const artAspectPreview = art ? art.width / art.height : 1;
+  let previewDrawWmm: number, previewDrawHmm: number;
+  if (artAspectPreview > coverWmm / coverHmm) { previewDrawHmm = coverHmm; previewDrawWmm = coverHmm * artAspectPreview; }
+  else { previewDrawWmm = coverWmm; previewDrawHmm = coverWmm / artAspectPreview; }
+  previewDrawWmm *= zoom / 100;
+  previewDrawHmm *= zoom / 100;
+
+  const alignXfrac = alignX / 50; // -1..+1, sem clamp adicional de slack — desloca livremente
+  const alignYfrac = alignY / 50;
+  const offsetXmm = (coverWmm / 2) * alignXfrac;
+  const offsetYmm = (coverHmm / 2) * alignYfrac; // "+": imagem desce na tela (mesma convenção do backend)
+
+  // boxW/boxH = SEMPRE a proporção da cobertura fixa (nunca muda com zoom/alinhamento)
   const boxW = 220;
   const boxH = isAuto ? 220 : Math.round(220 * (coverHmm / Math.max(1, coverWmm)));
+  const pxPerMm = boxW / Math.max(1, coverWmm);
+
+  // posição/tamanho da <img> dentro do box, em px — pode exceder ou não cobrir o box
+  // inteiro; o overflow:hidden do container corta o excesso, igual ao composite() no backend.
+  const imgWpx = previewDrawWmm * pxPerMm;
+  const imgHpx = previewDrawHmm * pxPerMm;
+  const imgLeftPx = (boxW - imgWpx) / 2 + offsetXmm * pxPerMm; // X: tela e PDF crescem na mesma direção
+  const imgTopPx = (boxH - imgHpx) / 2 + offsetYmm * pxPerMm;  // Y: tela cresce p/ baixo, PDF cresce p/ cima
+
+  const cutWpx = cutW * pxPerMm, cutHpx = cutH * pxPerMm;
+  const cutLeftPx = (boxW - cutWpx) / 2, cutTopPx = (boxH - cutHpx) / 2;
   const semAlfa = isAuto && !!art && !art.hasAlpha;
 
   // ── Derivações da página (estágio 2) ─────────────────────────────────
@@ -215,7 +247,7 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
         pageHeightCm: pageMode === 'custom_page' ? pageHValid : undefined,
         ...(isAuto
           ? { cut_w_mm: cutW, offset_mm: offset }
-          : { cut_w_mm: cutW, cut_h_mm: cutH, radius_mm: radius, sangria_mm: sangria, bleed_mode: bleedMode }),
+          : { cut_w_mm: cutW, cut_h_mm: cutH, radius_mm: radius, sangria_mm: sangria, bleed_mode: bleedMode, zoom_pct: zoom, align_x_pct: alignX, align_y_pct: alignY }),
       };
 
       setProgress(`Gerando ${layoutInfo.totalCells} peças na folha — isso pode levar um pouco, aguarde...`);
@@ -241,7 +273,7 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
       setStage('result');
       playText('Folha pronta! Página 1 com a arte, página 2 com os cortes.').catch(() => {});
     } catch (e) { setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error'); }
-  }, [art, layoutInfo, pageDimsInvalid, isAuto, shape, cutW, cutH, radius, offset, sangria, bleedMode, spacingMm, cutColor, nome, pageMode, pageWValid, pageHValid, supabase, companyId, playText]);
+  }, [art, layoutInfo, pageDimsInvalid, isAuto, shape, cutW, cutH, radius, offset, sangria, bleedMode, zoom, alignX, alignY, spacingMm, cutColor, nome, pageMode, pageWValid, pageHValid, supabase, companyId, playText]);
 
   const irParaLogin = useCallback(() => { if (onRequireLogin) onRequireLogin(); else window.location.href = '/login'; }, [onRequireLogin]);
   const handleDownload = useCallback(() => {
@@ -310,12 +342,29 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
             {/* preview da peça com overlay do corte — igual ao AdesivoContornoDisplay */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <div style={{ position: 'relative', width: boxW, height: boxH, background: c.bgSecondary, border: `1px solid ${c.border}`, borderRadius: 4, overflow: 'hidden' }}>
-                <img src={art.previewDataUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: isAuto ? 'contain' : 'cover', display: 'block' }} />
+                {isAuto ? (
+                  <img src={art.previewDataUrl} alt="" style={{
+                    position: 'absolute', display: 'block', inset: 0, width: '100%', height: '100%',
+                    maxWidth: 'none', maxHeight: 'none',
+                    objectFit: 'contain',
+                  }} />
+                ) : (
+                  <img src={art.previewDataUrl} alt="" style={{
+                    position: 'absolute', display: 'block',
+                    left: imgLeftPx, top: imgTopPx, width: imgWpx, height: imgHpx,
+                    maxWidth: 'none', maxHeight: 'none',
+                  }} />
+                )}
                 {!isAuto && (
-                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                  <svg width={boxW} height={boxH} viewBox={`0 0 ${boxW} ${boxH}`} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                    {/* linha de corte (real, vai pro PDF) */}
                     {shape === 'circle'
-                      ? <ellipse cx="50" cy="50" rx={50 - insetXpct} ry={50 - insetYpct} fill="none" stroke={swatch} strokeWidth="1" vectorEffect="non-scaling-stroke" />
-                      : <rect x={insetXpct} y={insetYpct} width={100 - 2 * insetXpct} height={100 - 2 * insetYpct} rx={radiusPct} ry={radiusPct} fill="none" stroke={swatch} strokeWidth="1" vectorEffect="non-scaling-stroke" />}
+                      ? <ellipse cx={boxW / 2} cy={boxH / 2} rx={cutWpx / 2} ry={cutHpx / 2} fill="none" stroke={swatch} strokeWidth="1.5" />
+                      : <rect x={cutLeftPx} y={cutTopPx} width={cutWpx} height={cutHpx} rx={radius * pxPerMm} ry={radius * pxPerMm} fill="none" stroke={swatch} strokeWidth="1.5" />}
+                    {/* área de segurança (só visual — recuo de `sangria` pra dentro do corte) */}
+                    {shape === 'circle'
+                      ? <ellipse cx={boxW / 2} cy={boxH / 2} rx={Math.max(0, cutWpx / 2 - sangria * pxPerMm)} ry={Math.max(0, cutHpx / 2 - sangria * pxPerMm)} fill="none" stroke={c.textMuted} strokeWidth="1" strokeDasharray="3 3" />
+                      : <rect x={cutLeftPx + sangria * pxPerMm} y={cutTopPx + sangria * pxPerMm} width={Math.max(0, cutWpx - 2 * sangria * pxPerMm)} height={Math.max(0, cutHpx - 2 * sangria * pxPerMm)} rx={Math.max(0, radius - sangria) * pxPerMm} ry={Math.max(0, radius - sangria) * pxPerMm} fill="none" stroke={c.textMuted} strokeWidth="1" strokeDasharray="3 3" />}
                   </svg>
                 )}
               </div>
@@ -324,8 +373,8 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
               {isAuto
                 ? `O corte segue a silhueta da arte (recuo ${offset}mm).`
                 : bleedMode === 'externa'
-                  ? `Corte ${cutW}×${cutH}mm · arte transborda ${sangria}mm para fora da linha.`
-                  : `Arte ${cutW}×${cutH}mm · corte entra ${sangria}mm (peça fica ${Math.max(5, cutW - 2 * sangria)}×${Math.max(5, cutH - 2 * sangria)}mm).`}
+                  ? `Corte ${cutW}×${cutH}mm · arquivo ${docW}×${docH}mm (sangria ${sangria}mm por lado). Linha pontilhada = área de segurança para texto.`
+                  : `Arte ${cutW}×${cutH}mm · corte entra ${sangria}mm (peça fica ${Math.max(5, cutW - 2 * sangria)}×${Math.max(5, cutH - 2 * sangria)}mm). Linha pontilhada = área de segurança para texto.`}
             </p>
 
             {semAlfa && (
@@ -365,12 +414,48 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
               </div>
             )}
 
+            {/* sangria + zoom + ajuste fino + modo (só formas geométricas) */}
             {!isAuto && (
               <>
                 <div>
-                  <label style={label}>Sangria: {sangria}mm (máx. {SANGRIA_MAX_MM}mm)</label>
-                  <input type="range" min={0} max={SANGRIA_MAX_MM} step={0.5} value={sangria} onChange={(e) => setSangria(parseFloat(e.target.value))} style={{ width: '100%', accentColor: c.accent }} />
+                  <label style={label}>
+                    Sangria: {sangria}mm
+                    {sangria < minSangria && (
+                      <span style={{ color: c.error, marginLeft: 6 }}>mínimo {minSangria}mm exigido pela gráfica</span>
+                    )}
+                    {' '}(máx. {SANGRIA_MAX_MM}mm nesta função)
+                  </label>
+                  <input type="range" min={minSangria} max={SANGRIA_MAX_MM} step={0.5} value={sangria} onChange={(e) => setSangria(parseFloat(e.target.value))} style={{ width: '100%', accentColor: c.accent }} />
                 </div>
+
+                {/* zoom + ajuste fino — aplicados igualmente a TODAS as peças da folha */}
+                <div>
+                  <label style={label}>Zoom da imagem: {zoom}%</label>
+                  <input type="range" min={50} max={300} step={5} value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} style={{ width: '100%', accentColor: c.accent }} />
+                  <p style={{ margin: '4px 0 0', fontSize: 11, color: c.textMuted, lineHeight: 1.4 }}>
+                    O corte fica parado; o zoom move a imagem por dentro dele. Vale para todas as peças da folha.
+                  </p>
+                </div>
+
+                <div>
+                  <label style={label}>Ajuste fino da posição da arte</label>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 11, color: c.textMuted }}>Horizontal: {alignX > 0 ? `+${alignX}` : alignX}</span>
+                      <input type="range" min={-50} max={50} step={1} value={alignX} onChange={(e) => setAlignX(parseInt(e.target.value))} style={{ width: '100%', accentColor: c.accent }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 11, color: c.textMuted }}>Vertical: {alignY > 0 ? `+${alignY}` : alignY}</span>
+                      <input type="range" min={-50} max={50} step={1} value={alignY} onChange={(e) => setAlignY(parseInt(e.target.value))} style={{ width: '100%', accentColor: c.accent }} />
+                    </div>
+                  </div>
+                  {(alignX !== 0 || alignY !== 0 || zoom !== 100) && (
+                    <button onClick={() => { setAlignX(0); setAlignY(0); setZoom(100); }} style={{ marginTop: 6, fontSize: 11, color: c.accent, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
+                      Centralizar e resetar zoom
+                    </button>
+                  )}
+                </div>
+
                 <div>
                   <label style={label}>Como aplicar a sangria</label>
                   <div style={{ display: 'flex', gap: 6 }}>

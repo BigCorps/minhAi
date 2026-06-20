@@ -60,7 +60,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
-// import 'react-image-crop/dist/ReactCrop.css';
+import 'react-image-crop/dist/ReactCrop.css';
 
 // ─── Ícones SVG inline ────────────────────────────────────────────────────────
 

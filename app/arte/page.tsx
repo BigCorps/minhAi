@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Bot, Send, LogOut, Sparkles, X, ChevronRight,
   Layers, Image as ImageIcon, Images, Copy, Scissors,
-  Wand2, Grid3x3, QrCode, Barcode, Receipt, RefreshCw, Pencil,
+  Wand2, Grid3x3, QrCode, Barcode, Receipt, Eraser,  RefreshCw, Pencil,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
@@ -19,6 +19,7 @@ import FotoDocumentoDisplay from '@/components/arte/FotoDocumentoDisplay';
 import PolaroidDisplay from '@/components/arte/PolaroidDisplay';
 import EditarImagemDisplay from '@/components/arte/EditarImagemDisplay';
 import ConversorArquivoDisplay from '@/components/arte/ConversorArquivoDisplay';
+import RemoverFundoDisplay from '@/components/arte/RemoverFundoDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -162,6 +163,18 @@ const SKILLS: Skill[] = [
     ],
     modal: 'EditarImagemDisplay',
   },
+{
+    key: 'remover_fundo',
+    label: 'Remover Fundo',
+    color: CMYK.cyan,
+    desc: 'Remove o fundo de uma imagem e libera o PNG transparente em alta resolução',
+    credits: 2,
+    triggers: [
+      'remover fundo', 'tirar fundo', 'apagar fundo', 'fundo transparente',
+      'remover background', 'sem fundo', 'isolar imagem', 'recortar fundo',
+    ],
+    modal: 'RemoverFundoDisplay',
+  },
 ];
 
 // ── Ícones por skill, usados na sidebar ───────────────────────────────────
@@ -178,6 +191,7 @@ const SKILL_ICONS: Record<string, React.ComponentType<{ size?: number; className
   orcamento_pdf: Receipt,
   converter_arquivo: RefreshCw,
   editar_imagem: Pencil,
+  remover_fundo: Eraser,
 };
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -620,7 +634,16 @@ export default function ArtePage() {
     onRequireLogin={() => { window.location.href = LOGIN_URL; }}
   />
 )}
-      
+
+      {activeModal?.type === 'RemoverFundoDisplay' && (
+  <RemoverFundoDisplay
+    data={activeModal.data}
+    onClose={closeModal}
+    theme="light"
+    playText={playText}
+    onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+  />
+)}
       <style jsx>{`
         @keyframes af-skills-scroll {
           0% { transform: translateX(0); }

@@ -17,11 +17,32 @@ import 'react-image-crop/dist/ReactCrop.css';
 //
 // Fluxo: preview/edição é livre e sem login (crop, filtros, rotação não
 // custam nada até aqui). Login e cobrança só acontecem no clique de
-// "Salvar Edições" — mesmo padrão de custo escondido do §6 do guia.
+// "Salvar Edições" — mesmo padrão de custo escondido do guia.
 //
-// Tela inicial simplificada (padrão QRCodeDisplay): apenas upload de arquivo
-// (clique ou drag-and-drop) + texto explicando a função — sem abas de
-// celular/webcam/câmera (CameraCapture removido).
+// Migrado para o padrão visual dos demais modais (paleta CMYK, header com
+// "Fechar" em texto, bloco "Como funciona") — accent = CMYK.cyan.
+//
+// CORRIGIDO — 2 bugs reais:
+//
+// 1) Crop não correspondia à área selecionada visualmente. A lib
+//    react-image-crop reporta crop.x/y/width/height em pixels RENDERIZADOS
+//    da <img> na tela (afetados por maxWidth/maxHeight), não em pixels da
+//    imagem NATURAL. createFilteredCanvas usava esses valores direto no
+//    ctx.drawImage, sem nenhuma conversão de escala — recortava uma área na
+//    proporção errada toda vez que a imagem era exibida menor que o tamanho
+//    real (praticamente sempre, por causa do maxHeight: 70vh). Corrigido
+//    aplicando scaleX = image.naturalWidth/image.width e scaleY equivalente
+//    antes de usar os valores do crop — mesma fórmula da documentação oficial
+//    da lib (confirmada via múltiplos exemplos independentes).
+//
+// 2) "Reset" não voltava para a imagem original — só zerava brilho/contraste/
+//    saturação/rotação/flip, nunca tocava em imageSrc. E pior: handleApplyCrop
+//    SUBSTITUÍA imageSrc pelo resultado do crop, destruindo a imagem original
+//    para sempre — depois de aplicar 1 corte, não havia como desfazer.
+//    Corrigido guardando a imagem original em um estado separado
+//    (originalImageSrc), nunca sobrescrito. "Aplicar" agora só atualiza uma
+//    PRÉVIA (imageSrc) a partir da original; "Resetar tudo" volta imageSrc
+//    para a original e zera os filtros — reset completo de verdade.
 // ───────────────────────────────────────────────────────────────────────────
 
 type Stage = 'input' | 'editing' | 'processing' | 'result' | 'error';
@@ -34,50 +55,31 @@ interface Props {
   onRequireLogin: () => void;
 }
 
+const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
 const DARK = {
-  bg: '#1e293b',
-  bgSecondary: '#0f172a',
-  border: 'rgba(255,255,255,0.08)',
-  text: '#e2e8f0',
-  textMuted: '#94a3b8',
-  success: '#10b981',
-  error: '#ef4444',
-  primary: '#3b82f6',
+  bg: '#1e293b', bgSecondary: '#0f172a', border: 'rgba(255,255,255,0.08)',
+  text: '#e2e8f0', textMuted: '#94a3b8', success: '#10b981', error: '#ef4444', accent: CMYK.cyan, warn: CMYK.yellow,
 };
-
 const LIGHT = {
-  bg: '#ffffff',
-  bgSecondary: '#f8fafc',
-  border: '#e2e8f0',
-  text: '#0f172a',
-  textMuted: '#64748b',
-  success: '#059669',
-  error: '#dc2626',
-  primary: '#2563eb',
+  bg: '#ffffff', bgSecondary: '#f8fafc', border: '#e2e8f0',
+  text: '#0f172a', textMuted: '#64748b', success: '#059669', error: '#dc2626', accent: CMYK.cyan, warn: '#d97706',
 };
 
 const OPENING_TEXT = 'Carregue a imagem que deseja editar para começar.';
 const AUTO_CLOSE = 60;
+const CREDITS_COST = 1;
 
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[.,!?;:\-]+/g, '');
 
-// SVG Icons (sem lucide-react dentro do modal — §5)
+// SVG Icons (sem lucide-react dentro do modal)
 const IconCheck = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <polyline points="20 6 9 17 4 12"></polyline>
   </svg>
 );
-
-const IconX = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <line x1="18" y1="6" x2="6" y2="18"></line>
-    <line x1="6" y1="6" x2="18" y2="18"></line>
-  </svg>
-);
-
 const IconDownload = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -85,7 +87,6 @@ const IconDownload = () => (
     <line x1="12" y1="15" x2="12" y2="3"></line>
   </svg>
 );
-
 const IconRefresh = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <polyline points="23 4 23 10 17 10"></polyline>
@@ -93,9 +94,8 @@ const IconRefresh = () => (
     <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
   </svg>
 );
-
 const IconLoader = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'ei-spin 1s linear infinite' }}>
     <line x1="12" y1="2" x2="12" y2="6"></line>
     <line x1="12" y1="18" x2="12" y2="22"></line>
     <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
@@ -106,23 +106,12 @@ const IconLoader = () => (
     <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
   </svg>
 );
-
-const IconMic = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-    <line x1="12" y1="19" x2="12" y2="23"></line>
-    <line x1="8" y1="23" x2="16" y2="23"></line>
-  </svg>
-);
-
 const IconRotate = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <polyline points="23 4 23 10 17 10"></polyline>
     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
   </svg>
 );
-
 const IconFlipH = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <line x1="12" y1="3" x2="12" y2="21"></line>
@@ -130,7 +119,6 @@ const IconFlipH = () => (
     <polyline points="19 9 23 12 19 15"></polyline>
   </svg>
 );
-
 const IconFlipV = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -138,21 +126,12 @@ const IconFlipV = () => (
     <polyline points="9 19 12 23 15 19"></polyline>
   </svg>
 );
-
 const IconCrop = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"></path>
     <path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"></path>
   </svg>
 );
-
-const IconGift = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="10"></circle>
-    <path d="M12 6v6l4 2"></path>
-  </svg>
-);
-
 const IconUpload = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -160,7 +139,10 @@ const IconUpload = () => (
   </svg>
 );
 
-// Aplica filtros e transformações no canvas
+// Converte coordenadas do crop (relativas ao tamanho RENDERIZADO da <img>)
+// para pixels da imagem NATURAL antes de desenhar no canvas — sem essa
+// conversão, o recorte sai errado sempre que a imagem é exibida em tamanho
+// diferente do natural (maxWidth/maxHeight), que é o caso normal aqui.
 function createFilteredCanvas(
   image: HTMLImageElement,
   crop: PixelCrop,
@@ -174,49 +156,51 @@ function createFilteredCanvas(
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not get canvas context');
 
-  const scaleX = flip.horizontal ? -1 : 1;
-  const scaleY = flip.vertical ? -1 : 1;
+  // Fator de escala entre o tamanho renderizado (image.width/height, em CSS
+  // px) e o tamanho real da imagem (naturalWidth/naturalHeight) — fórmula
+  // padrão da documentação oficial do react-image-crop.
+  const scaleX = image.naturalWidth / image.width;
+  const scaleY = image.naturalHeight / image.height;
 
-  const finalWidth = crop.width > 0 ? crop.width : image.naturalWidth;
-  const finalHeight = crop.height > 0 ? crop.height : image.naturalHeight;
+  const hasCrop = crop.width > 0 && crop.height > 0;
+  const srcX = hasCrop ? crop.x * scaleX : 0;
+  const srcY = hasCrop ? crop.y * scaleY : 0;
+  const srcW = hasCrop ? crop.width * scaleX : image.naturalWidth;
+  const srcH = hasCrop ? crop.height * scaleY : image.naturalHeight;
 
-  canvas.width = finalWidth;
-  canvas.height = finalHeight;
+  const scaleXFlip = flip.horizontal ? -1 : 1;
+  const scaleYFlip = flip.vertical ? -1 : 1;
 
-  ctx.translate(finalWidth / 2, finalHeight / 2);
+  canvas.width = srcW;
+  canvas.height = srcH;
+
+  ctx.translate(srcW / 2, srcH / 2);
   ctx.rotate(rotation * Math.PI / 180);
-  ctx.scale(scaleX, scaleY);
+  ctx.scale(scaleXFlip, scaleYFlip);
 
   ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`;
 
-  const drawX = crop.width > 0 ? -crop.width / 2 : -image.naturalWidth / 2;
-  const drawY = crop.height > 0 ? -crop.height / 2 : -image.naturalHeight / 2;
-
   ctx.drawImage(
     image,
-    crop.x,
-    crop.y,
-    crop.width || image.naturalWidth,
-    crop.height || image.naturalHeight,
-    drawX,
-    drawY,
-    crop.width || image.naturalWidth,
-    crop.height || image.naturalHeight
+    srcX, srcY, srcW, srcH,
+    -srcW / 2, -srcH / 2, srcW, srcH
   );
 
   return canvas;
 }
 
-const CREDITS_COST = 1;
-
 export default function EditarImagemDisplay({ data, onClose, theme = 'dark', playText, onRequireLogin }: Props) {
   const isDark = theme === 'dark';
-  const colors = isDark ? DARK : LIGHT;
+  const c = isDark ? DARK : LIGHT;
 
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
   const [stage, setStage] = useState<Stage>('input');
   const [isDragging, setIsDragging] = useState(false);
 
+  // originalImageSrc nunca é sobrescrita após o upload — é a fonte de
+  // verdade para qualquer reset. imageSrc é o que está sendo exibido no
+  // editor agora (pode já ter um crop/filtro "aplicado" como prévia).
+  const [originalImageSrc, setOriginalImageSrc] = useState<string | null>(null);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const [crop, setCrop] = useState<Crop>();
@@ -242,10 +226,6 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
 
   const supabase = createClient();
 
-  useEffect(() => {
-    return () => {};
-  }, []);
-
   // Auto-close timer no resultado
   useEffect(() => {
     if (stage !== 'result') return;
@@ -259,7 +239,7 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
     return () => clearInterval(interval);
   }, [stage, onClose]);
 
-  // Áudio só no mount (§5) — nunca em handler de registry
+  // Áudio só no mount — nunca em handler de registry
   useEffect(() => {
     if (hasSpoken.current) return;
     hasSpoken.current = true;
@@ -268,9 +248,13 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
   }, []);
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    const { width, height } = e.currentTarget;
-    setImageInfo({ width, height });
+    // naturalWidth/naturalHeight (dimensões reais), não width/height
+    // (dimensões renderizadas) — o painel "Dimensões" deve mostrar o
+    // tamanho real do arquivo, não o tamanho na tela.
+    const { naturalWidth, naturalHeight } = e.currentTarget;
+    setImageInfo({ width: naturalWidth, height: naturalHeight });
 
+    const { width, height } = e.currentTarget;
     const newCrop = centerCrop(
       makeAspectCrop({ unit: '%', width: 90, height: 90 }, width / height, width, height),
       width,
@@ -293,6 +277,7 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
 
     try {
       const url = URL.createObjectURL(file);
+      setOriginalImageSrc(url);
       setImageSrc(url);
       setStage('editing');
     } catch (err: any) {
@@ -320,41 +305,54 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
     setFlip(prev => ({ ...prev, [direction]: !prev[direction] }));
   }, []);
 
+  // Reset completo: volta a IMAGEM para a original (desfaz crops já
+  // "aplicados" como prévia) e zera todos os filtros/transformações.
   const handleResetFilters = useCallback(() => {
     setBrightness(100);
     setContrast(100);
     setSaturation(100);
     setRotation(0);
     setFlip({ horizontal: false, vertical: false });
-  }, []);
+    setCrop(undefined);
+    setCompletedCrop(undefined);
+    if (originalImageSrc) setImageSrc(originalImageSrc);
+  }, [originalImageSrc]);
 
+  // "Aplicar" agora só atualiza a PRÉVIA — sempre recortando a partir da
+  // imagem ORIGINAL (nunca da já-editada), para não perder qualidade nem
+  // tornar o reset impossível em aplicações sucessivas.
   const handleApplyCrop = useCallback(async () => {
-    if (!imgRef.current || !completedCrop) return;
+    if (!imgRef.current || !completedCrop || !originalImageSrc) return;
     setIsProcessing(true);
 
     try {
       const canvas = createFilteredCanvas(imgRef.current, completedCrop, brightness, contrast, saturation, rotation, flip);
+      const dataUrl = canvas.toDataURL('image/png');
 
-      setImageSrc(canvas.toDataURL('image/png'));
+      setImageSrc(dataUrl);
       setImageInfo({ width: canvas.width, height: canvas.height });
 
       setCrop(undefined);
       setCompletedCrop(undefined);
-      handleResetFilters();
+      setBrightness(100);
+      setContrast(100);
+      setSaturation(100);
+      setRotation(0);
+      setFlip({ horizontal: false, vertical: false });
     } catch {
       setErrorMsg('Erro ao aplicar edições.');
       setStage('error');
     } finally {
       setIsProcessing(false);
     }
-  }, [brightness, contrast, saturation, rotation, flip, completedCrop, handleResetFilters]);
+  }, [brightness, contrast, saturation, rotation, flip, completedCrop, originalImageSrc]);
 
   // Salvar = ponto de cobrança. Preview/edição continuam livres até aqui.
   const handleSave = useCallback(async () => {
     if (!imgRef.current || !imageSrc) return;
 
     try {
-      // Login só é exigido aqui — mesmo padrão de custo escondido do §6.
+      // Login só é exigido aqui — mesmo padrão de custo escondido.
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
         onRequireLogin();
@@ -363,7 +361,7 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
 
       setStage('processing');
 
-      // company lazy (§7) — cobrar crédito exige company existente
+      // company lazy — cobrar crédito exige company existente
       let cid = data.companyId;
       if (!cid) {
         const { data: ensured } = await supabase.rpc('ensure_my_arte_company');
@@ -378,8 +376,8 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
       const finalCrop = completedCrop || {
         x: 0,
         y: 0,
-        width: imgRef.current.naturalWidth,
-        height: imgRef.current.naturalHeight,
+        width: imgRef.current.width,
+        height: imgRef.current.height,
         unit: 'px' as const,
       };
 
@@ -402,7 +400,7 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
         reader.readAsDataURL(blob);
       });
 
-      // Cobrar por último, via RPC correta — nunca decrementar_creditos (§10)
+      // Cobrar por último, via RPC correta — nunca decrementar_creditos
       const { data: raw, error: rpcError } = await supabase.rpc('cobrar_credito_se_suficiente', {
         p_company_id: cid,
         p_function_key: 'editar_imagem',
@@ -411,7 +409,7 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
       });
       if (rpcError) throw new Error(rpcError.message);
 
-      // RPC retorna TABLE → vem como array (bug do 402-com-saldo — §5/§10)
+      // RPC retorna TABLE → vem como array (bug do 402-com-saldo)
       const cobranca = Array.isArray(raw) ? raw[0] : raw;
       if (!cobranca?.sucesso) {
         setErrorMsg('Créditos insuficientes para salvar a edição.');
@@ -441,13 +439,18 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
 
   const handleReset = useCallback(() => {
     setStage('input');
+    setOriginalImageSrc(null);
     setImageSrc(null);
     setCrop(undefined);
     setCompletedCrop(undefined);
-    handleResetFilters();
+    setBrightness(100);
+    setContrast(100);
+    setSaturation(100);
+    setRotation(0);
+    setFlip({ horizontal: false, vertical: false });
     setResultBlob(null);
     setErrorMsg(null);
-  }, [handleResetFilters]);
+  }, []);
 
   const filterStyle = {
     filter: `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`,
@@ -459,72 +462,58 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
     onTranscript: (transcript) => {
       const t = normalize(transcript);
 
-      if (['fechar', 'cancelar', 'sair', 'voltar'].some(c => t.includes(c))) {
+      if (['fechar', 'cancelar', 'sair', 'voltar'].some(k => t.includes(k))) {
         onClose(); return;
       }
 
       if (stage === 'editing') {
-        if (['resetar', 'reset', 'limpar filtros'].some(c => t.includes(c))) {
+        if (['resetar', 'reset', 'limpar filtros'].some(k => t.includes(k))) {
           handleResetFilters(); return;
         }
-        if (['salvar', 'finalizar', 'concluir'].some(c => t.includes(c))) {
+        if (['salvar', 'finalizar', 'concluir'].some(k => t.includes(k))) {
           handleSave(); return;
         }
       }
 
       if (stage === 'result') {
-        if (['baixar', 'download', 'salvar'].some(c => t.includes(c))) { handleDownload(); return; }
-        if (['novo', 'nova', 'editar outra'].some(c => t.includes(c))) { handleReset(); return; }
+        if (['baixar', 'download', 'salvar'].some(k => t.includes(k))) { handleDownload(); return; }
+        if (['novo', 'nova', 'editar outra'].some(k => t.includes(k))) { handleReset(); return; }
       }
 
       if (stage === 'error') {
-        if (['tentar', 'novamente'].some(c => t.includes(c))) { handleReset(); return; }
+        if (['tentar', 'novamente'].some(k => t.includes(k))) { handleReset(); return; }
       }
     },
   });
 
+  const label: React.CSSProperties = { fontSize: 11, color: c.textMuted, display: 'block', marginBottom: 4 };
+
   return createPortal(
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 9999,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
-      padding: '16px',
-    }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', padding: 16 }}>
       <div style={{
         width: '100%',
-        maxWidth: stage === 'editing' ? '900px' : (stage === 'result' ? '900px' : '600px'),
-        backgroundColor: colors.bg,
-        border: `1px solid ${colors.border}`,
-        borderRadius: '16px',
-        padding: '24px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        color: colors.text,
-        maxHeight: '90vh',
-        overflowY: 'auto',
+        maxWidth: stage === 'editing' || stage === 'result' ? 900 : 640,
+        background: c.bg, border: `1px solid ${c.border}`, borderRadius: 16, padding: 24, color: c.text,
+        maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
       }}>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Editar Imagem</h2>
-          </div>
-          <button onClick={onClose} style={{
-            padding: '6px', borderRadius: '8px', border: 'none',
-            backgroundColor: 'transparent', color: colors.textMuted, cursor: 'pointer',
-          }}>
-            <IconX />
-          </button>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Editar Imagem</h2>
+          <button onClick={onClose} style={{ padding: '4px 10px', border: `1px solid ${c.border}`, borderRadius: 8, background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Fechar</button>
         </div>
 
+        {/* Stage: input */}
         {stage === 'input' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <p style={{ margin: 0, fontSize: '13px', color: colors.textMuted, lineHeight: 1.5 }}>
-              Carregue uma imagem para cortar, girar, espelhar e ajustar brilho, contraste e saturação.
-              O arquivo editado só é disponibilizado após salvar.
-            </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ padding: '12px 14px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: c.text }}>Como funciona</p>
+              <p style={{ margin: 0, fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
+                Carregue uma imagem para cortar, girar, espelhar e ajustar brilho, contraste e saturação.
+                Você pode testar livremente e resetar quantas vezes quiser — o arquivo editado só é
+                disponibilizado e cobrado depois que você clicar em salvar.
+              </p>
+            </div>
 
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -532,63 +521,41 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                padding: '40px 20px',
-                borderRadius: '12px',
-                border: `2px dashed ${isDragging ? colors.primary : colors.border}`,
-                backgroundColor: isDragging ? 'rgba(59, 130, 246, 0.06)' : colors.bgSecondary,
-                color: colors.textMuted,
-                cursor: 'pointer',
-                transition: 'border-color 0.15s, background-color 0.15s',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+                padding: '40px 20px', borderRadius: 12, border: `2px dashed ${isDragging ? c.accent : c.border}`,
+                background: isDragging ? 'rgba(0,174,239,0.06)' : c.bgSecondary, color: c.textMuted, cursor: 'pointer',
               }}
             >
               <IconUpload />
-              <span style={{ fontSize: '14px', fontWeight: 600, color: colors.text }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: c.text }}>
                 Clique para selecionar ou arraste a imagem aqui
               </span>
-              <span style={{ fontSize: '12px' }}>JPG, PNG ou WebP</span>
+              <span style={{ fontSize: 12 }}>JPG, PNG ou WebP</span>
             </div>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleInputChange}
-              style={{ display: 'none' }}
-            />
-
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleInputChange} style={{ display: 'none' }} />
           </div>
         )}
 
+        {/* Stage: editing */}
         {stage === 'editing' && imageSrc && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
-            <div className="editing-container" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
+            <div className="ei-editing-container" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
 
               <div style={{
-                backgroundColor: colors.bgSecondary,
-                borderRadius: '8px',
-                padding: '16px',
-                minHeight: '400px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
+                background: c.bgSecondary, borderRadius: 8, padding: 16, minHeight: 400,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
               }}>
                 {isProcessing && (
                   <div style={{
-                    position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    borderRadius: '8px', zIndex: 10,
+                    position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(0,0,0,0.5)', borderRadius: 8, zIndex: 10,
                   }}>
                     <IconLoader />
                   </div>
                 )}
 
-                <ReactCrop crop={crop} onChange={c => setCrop(c)} onComplete={c => setCompletedCrop(c)} aspect={undefined}>
+                <ReactCrop crop={crop} onChange={cr => setCrop(cr)} onComplete={cr => setCompletedCrop(cr)} aspect={undefined}>
                   <img
                     ref={imgRef}
                     alt="Edição"
@@ -599,231 +566,183 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
                 </ReactCrop>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-                <div style={{
-                  padding: '12px', borderRadius: '8px', backgroundColor: colors.bgSecondary,
-                  border: `1px solid ${colors.border}`, fontSize: '12px',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ color: colors.textMuted }}>Dimensões:</span>
-                    <span style={{ fontWeight: '500' }}>{imageInfo.width} × {imageInfo.height}px</span>
+                <div style={{ padding: 12, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}`, fontSize: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: c.textMuted }}>Dimensões:</span>
+                    <span style={{ fontWeight: 500 }}>{imageInfo.width} × {imageInfo.height}px</span>
                   </div>
                 </div>
 
-                <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: colors.bgSecondary, border: `1px solid ${colors.border}` }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px', margin: 0 }}>Transformações</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div style={{ padding: 12, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+                  <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, margin: 0 }}>Transformações</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
                     <button onClick={() => handleRotate(-90)} style={{
-                      padding: '8px', borderRadius: '6px', border: `1px solid ${colors.border}`,
-                      backgroundColor: colors.bg, color: colors.text, cursor: 'pointer', fontSize: '12px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                      padding: 8, borderRadius: 6, border: `1px solid ${c.border}`, background: c.bg, color: c.text,
+                      cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                     }}>
                       <IconRotate /> -90°
                     </button>
                     <button onClick={() => handleRotate(90)} style={{
-                      padding: '8px', borderRadius: '6px', border: `1px solid ${colors.border}`,
-                      backgroundColor: colors.bg, color: colors.text, cursor: 'pointer', fontSize: '12px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                      padding: 8, borderRadius: 6, border: `1px solid ${c.border}`, background: c.bg, color: c.text,
+                      cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                     }}>
                       <IconRotate /> +90°
                     </button>
                     <button onClick={() => handleFlip('horizontal')} style={{
-                      padding: '8px', borderRadius: '6px', border: `1px solid ${colors.border}`,
-                      backgroundColor: flip.horizontal ? colors.primary : colors.bg,
-                      color: flip.horizontal ? 'white' : colors.text, cursor: 'pointer', fontSize: '12px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                      padding: 8, borderRadius: 6, border: `1px solid ${c.border}`,
+                      background: flip.horizontal ? c.accent : c.bg, color: flip.horizontal ? '#fff' : c.text,
+                      cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                     }}>
                       <IconFlipH /> Flip H
                     </button>
                     <button onClick={() => handleFlip('vertical')} style={{
-                      padding: '8px', borderRadius: '6px', border: `1px solid ${colors.border}`,
-                      backgroundColor: flip.vertical ? colors.primary : colors.bg,
-                      color: flip.vertical ? 'white' : colors.text, cursor: 'pointer', fontSize: '12px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                      padding: 8, borderRadius: 6, border: `1px solid ${c.border}`,
+                      background: flip.vertical ? c.accent : c.bg, color: flip.vertical ? '#fff' : c.text,
+                      cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                     }}>
                       <IconFlipV /> Flip V
                     </button>
                   </div>
                 </div>
 
-                <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: colors.bgSecondary, border: `1px solid ${colors.border}` }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px', margin: 0 }}>Ajustes</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ padding: 12, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+                  <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, margin: 0 }}>Ajustes</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
                     <div>
-                      <label style={{ fontSize: '11px', color: colors.textMuted, display: 'block', marginBottom: '4px' }}>
-                        Brilho: {brightness}%
-                      </label>
-                      <input type="range" min="50" max="150" value={brightness} onChange={(e) => setBrightness(Number(e.target.value))} style={{ width: '100%' }} />
+                      <label style={label}>Brilho: {brightness}%</label>
+                      <input type="range" min="50" max="150" value={brightness} onChange={(e) => setBrightness(Number(e.target.value))} style={{ width: '100%', accentColor: c.accent }} />
                     </div>
                     <div>
-                      <label style={{ fontSize: '11px', color: colors.textMuted, display: 'block', marginBottom: '4px' }}>
-                        Contraste: {contrast}%
-                      </label>
-                      <input type="range" min="50" max="200" value={contrast} onChange={(e) => setContrast(Number(e.target.value))} style={{ width: '100%' }} />
+                      <label style={label}>Contraste: {contrast}%</label>
+                      <input type="range" min="50" max="200" value={contrast} onChange={(e) => setContrast(Number(e.target.value))} style={{ width: '100%', accentColor: c.accent }} />
                     </div>
                     <div>
-                      <label style={{ fontSize: '11px', color: colors.textMuted, display: 'block', marginBottom: '4px' }}>
-                        Saturação: {saturation}%
-                      </label>
-                      <input type="range" min="0" max="200" value={saturation} onChange={(e) => setSaturation(Number(e.target.value))} style={{ width: '100%' }} />
+                      <label style={label}>Saturação: {saturation}%</label>
+                      <input type="range" min="0" max="200" value={saturation} onChange={(e) => setSaturation(Number(e.target.value))} style={{ width: '100%', accentColor: c.accent }} />
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingTop: '8px', borderTop: `1px solid ${colors.border}` }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, paddingTop: 8, borderTop: `1px solid ${c.border}` }}>
                   <button onClick={handleApplyCrop} disabled={!completedCrop || isProcessing} style={{
-                    padding: '10px', borderRadius: '8px', border: 'none',
-                    backgroundColor: completedCrop && !isProcessing ? colors.primary : colors.border,
-                    color: 'white', cursor: completedCrop && !isProcessing ? 'pointer' : 'not-allowed',
-                    fontSize: '13px', fontWeight: '500', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    padding: 10, borderRadius: 8, border: 'none',
+                    background: completedCrop && !isProcessing ? c.accent : c.border,
+                    color: '#fff', cursor: completedCrop && !isProcessing ? 'pointer' : 'not-allowed',
+                    fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}>
                     <IconCrop /> Aplicar
                   </button>
                   <button onClick={handleResetFilters} style={{
-                    padding: '10px', borderRadius: '8px', border: `1px solid ${colors.border}`,
-                    backgroundColor: colors.bg, color: colors.text, cursor: 'pointer',
-                    fontSize: '13px', fontWeight: '500',
+                    padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bg, color: c.text,
+                    cursor: 'pointer', fontSize: 13, fontWeight: 500,
                   }}>
-                    Reset
+                    Resetar tudo
                   </button>
                 </div>
 
                 <button onClick={handleSave} disabled={isProcessing} title={`${CREDITS_COST} crédito`} style={{
-                  padding: '12px', borderRadius: '8px', border: 'none',
-                  backgroundColor: isProcessing ? colors.border : colors.success,
-                  color: 'white', cursor: isProcessing ? 'not-allowed' : 'pointer',
-                  fontSize: '14px', fontWeight: '500', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  padding: 12, borderRadius: 8, border: 'none',
+                  background: isProcessing ? c.border : c.accent,
+                  color: '#fff', cursor: isProcessing ? 'not-allowed' : 'pointer',
+                  fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}>
                   <IconDownload /> Salvar Edições · {CREDITS_COST} crédito
                 </button>
               </div>
             </div>
-
           </div>
         )}
 
+        {/* Stage: processing */}
         {stage === 'processing' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '32px 0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '34px 0' }}>
             <IconLoader />
-            <p style={{ margin: 0, fontSize: '14px', color: colors.textMuted }}>Salvando edições...</p>
+            <p style={{ margin: 0, fontSize: 14, color: c.textMuted }}>Salvando edições...</p>
           </div>
         )}
 
+        {/* Stage: result */}
         {stage === 'result' && resultBlob && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', borderRadius: '8px',
-              backgroundColor: 'rgba(16, 185, 129, 0.1)', border: `1px solid ${colors.success}`,
-              color: colors.success, fontSize: '14px', fontWeight: '500',
+              display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderRadius: 8,
+              background: 'rgba(16,185,129,0.1)', border: `1px solid ${c.success}`, color: c.success, fontSize: 14, fontWeight: 600,
             }}>
               <IconCheck />
               <span>Imagem editada com sucesso!</span>
-              <span style={{ marginLeft: 'auto', fontSize: '12px', opacity: 0.7 }}>
+              <span style={{ marginLeft: 'auto', fontSize: 12, opacity: 0.8 }}>
                 {(resultBlob.size / 1024).toFixed(1)} KB
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'row', gap: '16px' }} className="result-container">
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, minWidth: 0 }}>
-                <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: colors.bgSecondary, border: `1px solid ${colors.border}` }}>
-                  <p style={{ margin: 0, fontSize: '13px', color: colors.textMuted }}>
-                    Arquivo: <strong style={{ color: colors.text }}>{resultFileName}</strong>
+            <div style={{ display: 'flex', gap: 16 }} className="ei-result-container">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 0 }}>
+                <div style={{ padding: 12, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+                  <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>
+                    Arquivo: <strong style={{ color: c.text }}>{resultFileName}</strong>
                   </p>
-                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: colors.textMuted }}>Formato: PNG</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: c.textMuted }}>Formato: PNG</p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={handleDownload} style={{
-                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
-                    backgroundColor: colors.primary, color: 'white', cursor: 'pointer',
-                    fontSize: '14px', fontWeight: '500', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    flex: 1, padding: 10, borderRadius: 8, border: 'none', background: c.accent, color: '#fff',
+                    cursor: 'pointer', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}>
                     <IconDownload /> Baixar
                   </button>
-
                   <button onClick={handleReset} style={{
-                    flex: 1, padding: '10px', borderRadius: '8px', border: `1px solid ${colors.border}`,
-                    backgroundColor: colors.bgSecondary, color: colors.text, cursor: 'pointer',
-                    fontSize: '14px', fontWeight: '500', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text,
+                    cursor: 'pointer', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}>
                     <IconRefresh /> Nova
                   </button>
                 </div>
               </div>
 
-              <div className="qr-desktop" style={{ display: 'none', flexShrink: 0, width: '224px' }}>
-                <ResultDownloadQR
-                  companyId={data.companyId}
-                  fileName={resultFileName}
-                  fileType={resultBlob.type}
-                  fileBase64={resultBase64}
-                  isDark={isDark}
-                  enabled={stage === 'result' && !!resultBase64}
-                />
+              <div className="ei-qr-desktop" style={{ display: 'none', flexShrink: 0, width: 224 }}>
+                <ResultDownloadQR companyId={data.companyId} fileName={resultFileName} fileType={resultBlob.type} fileBase64={resultBase64} isDark={isDark} enabled={stage === 'result' && !!resultBase64} />
               </div>
             </div>
 
-            <div className="qr-mobile" style={{ display: 'block' }}>
-              <ResultDownloadQR
-                companyId={data.companyId}
-                fileName={resultFileName}
-                fileType={resultBlob.type}
-                fileBase64={resultBase64}
-                isDark={isDark}
-                enabled={stage === 'result' && !!resultBase64}
-              />
+            <div className="ei-qr-mobile" style={{ display: 'block' }}>
+              <ResultDownloadQR companyId={data.companyId} fileName={resultFileName} fileType={resultBlob.type} fileBase64={resultBase64} isDark={isDark} enabled={stage === 'result' && !!resultBase64} />
             </div>
-
           </div>
         )}
 
+        {/* Stage: error */}
         {stage === 'error' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{
-              padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: `1px solid ${colors.error}`, color: colors.error, fontSize: '14px',
-            }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: `1px solid ${c.error}`, color: c.error, fontSize: 14, lineHeight: 1.4 }}>
               {errorMsg}
             </div>
-
             <button onClick={handleReset} style={{
-              padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: colors.error,
-              color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              padding: 12, borderRadius: 8, border: 'none', background: c.error, color: '#fff', cursor: 'pointer',
+              fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}>
               <IconRefresh /> Tentar Novamente
             </button>
           </div>
         )}
-
       </div>
 
       <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        .editing-container { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
-        .result-container { display: flex; flex-direction: row; gap: 16px; }
-
+        @keyframes ei-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .ei-result-container { display: flex; flex-direction: row; gap: 16px; }
         @media (max-width: 768px) {
-          .editing-container { grid-template-columns: 1fr !important; }
+          .ei-editing-container { grid-template-columns: 1fr !important; }
         }
-
         @media (max-width: 640px) {
-          .result-container { flex-direction: column !important; }
-          .qr-desktop { display: none !important; }
-          .qr-mobile { display: block !important; }
+          .ei-result-container { flex-direction: column !important; }
+          .ei-qr-desktop { display: none !important; }
+          .ei-qr-mobile { display: block !important; }
         }
-
         @media (min-width: 641px) {
-          .qr-desktop { display: flex !important; flex-direction: column; }
-          .qr-mobile { display: none !important; }
+          .ei-qr-desktop { display: flex !important; flex-direction: column; }
+          .ei-qr-mobile { display: none !important; }
         }
       `}</style>
     </div>,

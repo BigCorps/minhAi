@@ -124,7 +124,7 @@ const nextConfig = {
     ]
   },
 
-  transpilePackages: ['@ricky0123/vad-web', 'onnxruntime-web'],
+  // transpilePackages: ['@ricky0123/vad-web', 'onnxruntime-web'],
 }
 
 module.exports = nextConfig

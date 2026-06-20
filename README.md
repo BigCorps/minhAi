@@ -8,7 +8,7 @@
 
 * Identificar bug de Processando no Assistente 
 
-* ArteFinal.app - ao clicar no logo da ia, abre lista com todas as funções em lista. - tirar microfone de funções novas e corrige alguns bugs - colocar descrição inicial em todos as funções.
+* ArteFinal.app - ao clicar no logo da ia, abre lista com todas as funções em lista. - tirar microfone de funções novas e corrige alguns bugs - Corrigir Editar Imagem e Foto para Documento (tirar microfone). / Manus criando modal na página inicial
 
 * min.ia.br - app mini da minhAi - registrar dominio e criar assistente rapido, para funções rápidas no app. Com uma lógica parecida com o ArteFinal, o usuário vê todas as funções e se cadastra para utilizar as funções diretamente no mini - escolhe seu assistente e executa funções diretamente dali. e utilizar já essa logica no lugar do widget e aproveitando para divulgar a minhAi para o usuário utilizar na empresa dele.
 

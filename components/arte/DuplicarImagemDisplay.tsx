@@ -378,20 +378,30 @@ export default function DuplicarImagemDisplay({
 
         {/* INPUT */}
         {stage === 'input' && (
-          <div
-            onClick={() => fileRef.current?.click()}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
-            style={{
-              border: `2px dashed ${c.border}`, borderRadius: 12, padding: '46px 20px',
-              textAlign: 'center', background: c.bgSecondary, cursor: 'pointer', color: c.textMuted,
-            }}
-          >
-            <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste a imagem</div>
-            <div style={{ fontSize: 12 }}>PNG, JPEG ou PDF — será duplicada em grid.</div>
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }}
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.currentTarget.value = ''; }} />
-          </div>
+          <>
+            <div style={{ marginBottom: 12, padding: '12px 14px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: c.text }}>Como funciona</p>
+              <p style={{ margin: 0, fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
+                Envie a imagem e escolha o layout: um grid pronto ou um tamanho personalizado. O sistema
+                calcula quantas cópias cabem na página mantendo a proporção e o tamanho exatos, e gera
+                um PDF de página única pronto para imprimir.
+              </p>
+            </div>
+            <div
+              onClick={() => fileRef.current?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
+              style={{
+                border: `2px dashed ${c.border}`, borderRadius: 12, padding: '46px 20px',
+                textAlign: 'center', background: c.bgSecondary, cursor: 'pointer', color: c.textMuted,
+              }}
+            >
+              <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste a imagem</div>
+              <div style={{ fontSize: 12 }}>PNG, JPEG ou PDF — será duplicada em grid.</div>
+              <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.currentTarget.value = ''; }} />
+            </div>
+          </>
         )}
 
         {/* PAGE-SELECT (PDF com 2+ páginas) */}

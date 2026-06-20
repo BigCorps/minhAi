@@ -328,19 +328,29 @@ setCompanyId(cid);
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', padding: 16 }}>
       <div style={{ width: '100%', maxWidth: stage === 'result' ? 880 : 640, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 16, padding: 24, color: c.text, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Arte Final</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Margem e Sangria</h2>
           <button onClick={onClose} style={{ padding: '4px 10px', border: `1px solid ${c.border}`, borderRadius: 8, background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Fechar</button>
         </div>
 
         {/* INPUT */}
         {stage === 'input' && (
-          <div onClick={() => fileRef.current?.click()} onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f, 'frente'); }}
-            style={{ border: `2px dashed ${c.border}`, borderRadius: 12, padding: '46px 20px', textAlign: 'center', background: c.bgSecondary, cursor: 'pointer', color: c.textMuted }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste sua arte</div>
-            <div style={{ fontSize: 12 }}>PNG, JPEG ou PDF.</div>
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f, 'frente'); e.currentTarget.value = ''; }} />
-          </div>
+          <>
+            <div style={{ marginBottom: 12, padding: '12px 14px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: c.text }}>Como funciona</p>
+              <p style={{ margin: 0, fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
+                Envie a arte (e o verso, se precisar) e informe a medida final e a sangria. Posicione a
+                imagem dentro da área de corte arrastando, com zoom e rotação se precisar. O sistema gera
+                um PDF de produção já no tamanho exato, com a sangria aplicada por dentro — pronto para a gráfica.
+              </p>
+            </div>
+            <div onClick={() => fileRef.current?.click()} onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f, 'frente'); }}
+              style={{ border: `2px dashed ${c.border}`, borderRadius: 12, padding: '46px 20px', textAlign: 'center', background: c.bgSecondary, cursor: 'pointer', color: c.textMuted }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: c.text, marginBottom: 6 }}>Clique ou arraste sua arte</div>
+              <div style={{ fontSize: 12 }}>PNG, JPEG ou PDF.</div>
+              <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f, 'frente'); e.currentTarget.value = ''; }} />
+            </div>
+          </>
         )}
 
         {/* PAGE-SELECT (PDF com 2+ páginas) */}

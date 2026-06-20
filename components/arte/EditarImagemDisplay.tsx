@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createClient } from '@/lib/supabase-browser';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, PixelCrop } from 'react-image-crop';
@@ -68,11 +67,6 @@ const LIGHT = {
 const OPENING_TEXT = 'Carregue a imagem que deseja editar para começar.';
 const AUTO_CLOSE = 60;
 const CREDITS_COST = 1;
-
-const normalize = (text: string) =>
-  text.toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[.,!?;:\-]+/g, '');
 
 // SVG Icons (sem lucide-react dentro do modal)
 const IconCheck = () => (
@@ -457,35 +451,6 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
     transform: `rotate(${rotation}deg) scaleX(${flip.horizontal ? -1 : 1}) scaleY(${flip.vertical ? -1 : 1})`,
   };
 
-  useModalVoiceCommand({
-    active: true,
-    onTranscript: (transcript) => {
-      const t = normalize(transcript);
-
-      if (['fechar', 'cancelar', 'sair', 'voltar'].some(k => t.includes(k))) {
-        onClose(); return;
-      }
-
-      if (stage === 'editing') {
-        if (['resetar', 'reset', 'limpar filtros'].some(k => t.includes(k))) {
-          handleResetFilters(); return;
-        }
-        if (['salvar', 'finalizar', 'concluir'].some(k => t.includes(k))) {
-          handleSave(); return;
-        }
-      }
-
-      if (stage === 'result') {
-        if (['baixar', 'download', 'salvar'].some(k => t.includes(k))) { handleDownload(); return; }
-        if (['novo', 'nova', 'editar outra'].some(k => t.includes(k))) { handleReset(); return; }
-      }
-
-      if (stage === 'error') {
-        if (['tentar', 'novamente'].some(k => t.includes(k))) { handleReset(); return; }
-      }
-    },
-  });
-
   const label: React.CSSProperties = { fontSize: 11, color: c.textMuted, display: 'block', marginBottom: 4 };
 
   return createPortal(
@@ -524,6 +489,7 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
                 padding: '40px 20px', borderRadius: 12, border: `2px dashed ${isDragging ? c.accent : c.border}`,
                 background: isDragging ? 'rgba(0,174,239,0.06)' : c.bgSecondary, color: c.textMuted, cursor: 'pointer',
+                textAlign: 'center',
               }}
             >
               <IconUpload />

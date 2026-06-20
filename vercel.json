@@ -1,8 +1,4 @@
 {
-  "regions": ["iad1"],
-  "functions": {
-    "app/api/route-COM-GEMINI.ts": {
-      "maxDuration": 60
-    }
-  }
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["iad1"]
 }

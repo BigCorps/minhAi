@@ -14,7 +14,7 @@ import sharp from 'sharp';
 import fs from 'node:fs';
 import path from 'node:path';
 import { traceContour } from '@/lib/arte/contour';
-import { rectPoints, ellipsePoints, type CutShape } from '@/lib/arte/cutShapes';
+import { rectPoints, ellipsePoints, rectSvgPath, ellipseSvgPath, type CutShape } from '@/lib/arte/cutShapes';
 import { drawImageCmyk } from '@/lib/arte/cmykImage';
 
 const FUNCTION_KEY = 'gerar_adesivo_contorno';
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       .toColourspace('cmyk').raw().toBuffer();
     const cutCmyk = { c: cutCmykRaw[0] / 255, m: cutCmykRaw[1] / 255, y: cutCmykRaw[2] / 255, k: cutCmykRaw[3] / 255 };
 
-    let pageWmm: number, pageHmm: number, cutPts: [number, number][], reportW: number, reportH: number, hasAlpha = true;
+    let pageWmm: number, pageHmm: number, cutPts: [number, number][], cutSvgPathPt: string, reportW: number, reportH: number, hasAlpha = true;
 
     if (shape === 'auto') {
       // ── silhueta + recuo (borda branca) ──
@@ -88,6 +88,10 @@ export async function POST(req: NextRequest) {
       pageWmm = artWmm + 2 * margem; pageHmm = artHmm + 2 * margem;
       cutPts = cut.outPx.map(([x, y]: [number, number]) => [margem + x * cut.mmPerPxX, margem + (cut.th - y) * cut.mmPerPxY] as [number, number]);
       reportW = artWmm; reportH = artHmm;
+      // Modo automático: a silhueta é um traçado arbitrário (não é círculo/retângulo
+      // matemático), então não há curva Bézier "certa" a derivar — mantém poligonal,
+      // já um único path contínuo (drawSvgPath), apenas sem a suavização Bézier.
+      cutSvgPathPt = `M ${cutPts.map(([x, y]) => `${mm(x)} ${mm(-y)}`).join(' L ')}`;
 
       // Modo automático: a arte é desenhada no tamanho exato artWmm×artHmm — não há
       // "cobertura maior que a arte" aqui (isso só existe nas formas geométricas, onde a
@@ -137,6 +141,13 @@ export async function POST(req: NextRequest) {
       const cx = pageWmm / 2, cy = pageHmm / 2;
       cutPts = shape === 'circle' ? ellipsePoints(cutWmm, cutHmm, cx, cy) : rectPoints(cutWmm, cutHmm, cx, cy, shape === 'rounded' ? radius : 0);
       reportW = cutWmm; reportH = cutHmm;
+      // Linha de corte com curva Bézier REAL (não poligonal) — já em PONTOS PDF (mm()
+      // aplicado antes de montar a string) para não precisar reconverter a string depois.
+      // cy é invertido pois ellipseSvgPath/rectSvgPath esperam o sistema SVG nativo (Y
+      // cresce p/ baixo, oposto do PDF).
+      cutSvgPathPt = shape === 'circle'
+        ? ellipseSvgPath(mm(cutWmm), mm(cutHmm), mm(cx), mm(-cy))
+        : rectSvgPath(mm(cutWmm), mm(cutHmm), mm(cx), mm(-cy), shape === 'rounded' ? mm(radius) : 0);
 
       const p1 = doc.addPage([mm(pageWmm), mm(pageHmm)]);
 
@@ -207,15 +218,12 @@ export async function POST(req: NextRequest) {
     p2.setTrimBox(mm(bb.x), mm(bb.y), mm(bb.w), mm(bb.h));
     const { cmyk } = await import('pdf-lib');
     const col = cmyk(cutCmyk.c, cutCmyk.m, cutCmyk.y, cutCmyk.k);
-    // Linha de corte como UM ÚNICO caminho contínuo (drawSvgPath), não um drawLine() por
-    // segmento — drawLine() por segmento gera um m/l/S separado para cada ponto do polígono
-    // (confirmado: um círculo de 120 pontos virava 120 strokes isolados), o que pode fazer
-    // a faca subir/descer entre cada ponto na hora do corte. drawSvgPath espera Y no sistema
-    // SVG nativo (inverso do PDF) — por isso o sinal de Y é invertido ao montar a string
-    // (validado empiricamente: testei a fórmula com pdf-lib real antes de aplicar aqui).
-    const svgPts = cutPts.map(([x, y]) => `${mm(x)} ${-mm(y)}`);
-    const svgPath = `M ${svgPts[0]} L ${svgPts.slice(1).join(' L ')}`;
-    p2.drawSvgPath(svgPath, { x: 0, y: 0, borderColor: col, borderWidth: 0.75 });
+    // Linha de corte como UM ÚNICO caminho contínuo (drawSvgPath) — círculo e retângulo
+    // arredondado usam curvas Bézier REAIS (não polígono de ~120 pontos retos): confirmado
+    // em teste real que o polígono, mesmo sendo 1 único stroke, ainda expõe os vértices
+    // como pontos de inflexão visíveis no Corel/plotter. Curvas Bézier eliminam isso —
+    // validado visualmente e na estrutura do PDF (1 m, N l/c, 1 stroke, sem aproximação).
+    p2.drawSvgPath(cutSvgPathPt, { x: 0, y: 0, borderColor: col, borderWidth: 0.75 });
 
     const rgbPdf = await doc.save();
 

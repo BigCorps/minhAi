@@ -3,16 +3,27 @@
 /**
  * QRCodeDisplay.tsx — ArteFinal
  *
- * Convenções do guia v2 aplicadas:
+ * Migrado para o padrão visual dos demais modais (Adesivo, Folha de Recorte,
+ * Margem e Sangria, Duplicar Imagem, Vetorizar Imagem):
+ *  - Paleta CMYK padrão (DARK/LIGHT com bg/bgSecondary/border/text/textMuted/
+ *    success/error/accent/warn), accent = CMYK.cyan (mesma do Duplicar/Vetorizar).
+ *  - Card com a mesma largura dos outros (640 normal / 760 no resultado).
+ *  - Botão "Fechar" em texto no header, igual aos demais.
+ *  - Bloco "Como funciona" na tela inicial.
+ *  - Logo: SÓ upload local (a opção de URL externa foi removida — você confirmou
+ *    que o upload já cobre o caso de uso).
+ *
+ * Arquitetura de cobrança MANTIDA como estava (RPC cobrar_credito_se_suficiente
+ * chamada direto do client) — você pediu para não mudar isso, só o visual.
+ *
+ * Convenções do guia v2 ainda aplicadas:
  *  - createPortal → document.body, position:fixed, inset:0
  *  - Estilos 100% inline via paleta DARK/LIGHT (sem Tailwind dinâmico)
  *  - SVG inline (sem lucide-react)
  *  - playText() só no useEffect de mount
  *  - ensure_my_arte_company lazy antes de qualquer ação autenticada
  *  - Custo escondido para anônimo
- *  - Sem cobrança de crédito (QR = ferramenta utilitária); adicione
- *    cobrar_credito_se_suficiente se quiser monetizar (§2 do guia).
- *  - Sem useModalVoiceCommand (ArteFinal usa registry próprio, não VoiceAssistant)
+ *  - RPC retorna TABLE → sempre array (bug 402-com-saldo)
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -21,11 +32,6 @@ import { createClient } from '@/lib/supabase-browser';
 
 // ─── Ícones SVG inline ────────────────────────────────────────────────────────
 
-const IconX = ({ s }: { s: P }) => (
-  <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
 const IconQr = ({ s }: { s: P }) => (
   <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
@@ -38,12 +44,6 @@ const IconDownload = ({ s }: { s: P }) => (
   <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
     <polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
-);
-const IconMail = ({ s }: { s: P }) => (
-  <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-    <polyline points="22,6 12,13 2,6" />
   </svg>
 );
 const IconRefresh = ({ s }: { s: P }) => (
@@ -72,60 +72,16 @@ const IconChevronUp = ({ s }: { s: P }) => (
 type P = { c: string; sz: number };
 const icon = (color: string, size = 20): P => ({ c: color, sz: size });
 
-// ─── Paletas DARK / LIGHT (CMYK-friendly naming) ──────────────────────────────
+// ─── Paleta CMYK padrão (mesma dos demais modais) ────────────────────────────
 
+const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
 const DARK = {
-  bg:           '#1a1a2e',
-  surface:      '#16213e',
-  surfaceHover: '#0f3460',
-  border:       'rgba(255,255,255,0.08)',
-  borderHover:  'rgba(255,255,255,0.18)',
-  text:         '#e2e8f0',
-  sub:          '#94a3b8',
-  muted:        '#475569',
-  accent:       '#e94560',
-  accentHover:  '#c73652',
-  blue:         '#3b82f6',
-  blueHover:    '#2563eb',
-  blueDim:      '#1e3a5f',
-  blueMuted:    '#60a5fa',
-  green:        '#22c55e',
-  greenDim:     '#166534',
-  greenMuted:   '#86efac',
-  red:          '#fca5a5',
-  redDim:       'rgba(127,29,29,0.3)',
-  redBorder:    '#b91c1c',
-  input:        '#0f172a',
-  inputBorder:  '#334155',
-  optBg:        'rgba(15,23,42,0.7)',
-  overlay:      'rgba(0,0,0,0.75)',
+  bg: '#1e293b', bgSecondary: '#0f172a', border: 'rgba(255,255,255,0.08)',
+  text: '#e2e8f0', textMuted: '#94a3b8', success: '#10b981', error: '#ef4444', accent: CMYK.cyan, warn: CMYK.yellow,
 };
-
 const LIGHT = {
-  bg:           '#ffffff',
-  surface:      '#f8fafc',
-  surfaceHover: '#f1f5f9',
-  border:       '#e5e7eb',
-  borderHover:  '#d1d5db',
-  text:         '#111827',
-  sub:          '#6b7280',
-  muted:        '#9ca3af',
-  accent:       '#e94560',
-  accentHover:  '#c73652',
-  blue:         '#2563eb',
-  blueHover:    '#1d4ed8',
-  blueDim:      '#dbeafe',
-  blueMuted:    '#1d4ed8',
-  green:        '#16a34a',
-  greenDim:     '#dcfce7',
-  greenMuted:   '#166534',
-  red:          '#dc2626',
-  redDim:       '#fef2f2',
-  redBorder:    '#fecaca',
-  input:        '#f9fafb',
-  inputBorder:  '#d1d5db',
-  optBg:        '#f8fafc',
-  overlay:      'rgba(0,0,0,0.6)',
+  bg: '#ffffff', bgSecondary: '#f8fafc', border: '#e2e8f0',
+  text: '#0f172a', textMuted: '#64748b', success: '#059669', error: '#dc2626', accent: CMYK.cyan, warn: '#d97706',
 };
 
 // ─── Constantes de opções ─────────────────────────────────────────────────────
@@ -159,6 +115,7 @@ interface QROpts {
 const DEFAULT_OPTS: QROpts = { size: 300, color: '#000080', bgColor: '#ffffff', showLogo: true };
 
 const CREDITS = 1;
+const OPENING_TEXT = 'Gerar QR Code. Digite o texto ou link que deseja converter.';
 
 export interface QRCodeDisplayProps {
   data: {
@@ -180,7 +137,8 @@ export default function QRCodeDisplay({
   theme = 'dark',
   playText,
 }: QRCodeDisplayProps) {
-  const C      = theme === 'dark' ? DARK : LIGHT;
+  const isDark = theme === 'dark';
+  const c = isDark ? DARK : LIGHT;
   const supabase = createClient();
 
   // ── Estado ───────────────────────────────────────────────────────────────────
@@ -196,22 +154,25 @@ export default function QRCodeDisplay({
   const [opts,         setOpts]         = useState<QROpts>(DEFAULT_OPTS);
   const [customQr,     setCustomQr]     = useState('#000080');
   const [customBg,     setCustomBg]     = useState('#ffffff');
-  const [logoUrl,      setLogoUrl]      = useState('');       // URL externa (opcional)
   const [logoFile,     setLogoFile]     = useState<string | null>(null); // base64 do upload — cache só nesta sessão (sem Supabase)
   const logoFileInputRef = useRef<HTMLInputElement>(null);
+  const spoke = useRef(false);
 
-  // ── Mount: sinaliza modal aberto + TTS de boas-vindas (§5: só no useEffect) ──
+  // ── Mount: sinaliza modal aberto + TTS de boas-vindas (só no useEffect) ──
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('eai:modalOpen'));
 
-    // Verifica sessão para mostrar/ocultar custo (§6 "custo escondido para anônimo")
+    // Verifica sessão para mostrar/ocultar custo (custo escondido para anônimo)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setLogado(!!session);
     });
 
-    // TTS de abertura — só aqui, nunca em handler de registry (§5)
-    playText?.('Gerar QR Code. Digite o texto ou link que deseja converter.').catch(() => {});
+    // TTS de abertura — só aqui, nunca em handler de registry
+    if (!spoke.current) {
+      spoke.current = true;
+      playText?.(OPENING_TEXT).catch(() => {});
+    }
 
     return () => {
       window.dispatchEvent(new CustomEvent('eai:modalClose'));
@@ -227,7 +188,7 @@ export default function QRCodeDisplay({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── ensure_my_arte_company lazy (§7) ─────────────────────────────────────────
+  // ── ensure_my_arte_company lazy ─────────────────────────────────────────
 
   const ensureCompany = useCallback(async (): Promise<string | null> => {
     if (companyId) return companyId;
@@ -252,10 +213,10 @@ export default function QRCodeDisplay({
 
   // ── Montar URL do QR ─────────────────────────────────────────────────────────
 
-  // Monta a URL do QR "puro". Se o logo for um upload local (base64), ele NÃO
-  // vai para a API via query string (imagens em base64 estouram o limite de
+  // Monta a URL do QR "puro". O logo, quando enviado (upload local em base64),
+  // NÃO vai para a API via query string (imagens em base64 estouram o limite de
   // tamanho de URL) — em vez disso compomos o logo por cima no client via
-  // <canvas> em renderFinalImage(). Se for uma URL externa, a API resolve.
+  // <canvas> em composeLocalLogo().
   const buildUrl = useCallback((text: string, o: QROpts, cid: string) => {
     const p = new URLSearchParams({
       data:       text,
@@ -264,19 +225,15 @@ export default function QRCodeDisplay({
       bg:         o.bgColor,
       company_id: cid,
     });
-    if (!o.showLogo) {
+    if (!o.showLogo || logoFile) {
+      // Logo desligado OU logo local: pedimos o QR SEM logo da API e (se houver
+      // logo local) compomos no client.
       p.set('no_logo', '1');
-    } else if (logoFile) {
-      // Logo local: pedimos o QR SEM logo da API e compomos no client
-      p.set('no_logo', '1');
-    } else if (logoUrl.trim()) {
-      p.set('logo_url', logoUrl.trim());
     }
     return `/api/qrcode?${p.toString()}`;
-  }, [logoUrl, logoFile]);
+  }, [logoFile]);
 
   // Compõe o logo local (upload) por cima do QR puro, via canvas.
-  // Replica o mesmo recorte circular + fundo branco que a API faz para logo_url.
   const composeLocalLogo = useCallback((baseUrl: string, logoDataUrl: string, size: number): Promise<string> => {
     return new Promise((resolve, reject) => {
       const qrImg = new Image();
@@ -334,7 +291,7 @@ export default function QRCodeDisplay({
       return;
     }
 
-    // Checa sessão — anônimo vai para tela de login (igual ao ArteFinalDisplay)
+    // Checa sessão — anônimo vai para tela de login
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setStage('login'); return; }
 
@@ -342,7 +299,7 @@ export default function QRCodeDisplay({
     setErrorMsg(null);
 
     try {
-      // ensure_my_arte_company lazy (§7)
+      // ensure_my_arte_company lazy
       let resolvedCid = cid;
       if (!resolvedCid) {
         const found = await ensureCompany();
@@ -363,7 +320,7 @@ export default function QRCodeDisplay({
         }
       }
 
-      // Cobrança após montar, antes de mostrar o resultado (§5 fail-closed)
+      // Cobrança após montar, antes de mostrar o resultado (fail-closed)
       const { data: raw, error: errCobranca } = await supabase.rpc(
         'cobrar_credito_se_suficiente',
         {
@@ -373,7 +330,7 @@ export default function QRCodeDisplay({
           p_metadata:     { conteudo: trimmed },
         }
       );
-      // RPC retorna TABLE → sempre array (§10: bug 402-com-saldo)
+      // RPC retorna TABLE → sempre array (bug 402-com-saldo)
       const resultado = Array.isArray(raw) ? raw[0] : raw;
       if (errCobranca || !resultado?.sucesso) {
         const saldoAtual = resultado?.saldo_atual ?? 0;
@@ -439,75 +396,20 @@ export default function QRCodeDisplay({
     else window.location.href = '/login';
   }, [onRequireLogin]);
 
-  // ─── Estilos derivados da paleta (inline, §5) ─────────────────────────────────
+  // ─── Estilos derivados da paleta (mesma convenção dos demais modais) ──────────
 
-  const card: React.CSSProperties = {
-    position:        'relative',
-    width:           '100%',
-    maxWidth:        360,
-    maxHeight:       '92dvh',
-    overflowY:       'auto',
-    borderRadius:    20,
-    padding:         24,
-    background:      C.bg,
-    border:          `1px solid ${C.border}`,
-    boxShadow:       '0 25px 60px rgba(0,0,0,0.4)',
-    display:         'flex',
-    flexDirection:   'column',
-    gap:             0,
-  };
+  const label: React.CSSProperties = { display: 'block', fontSize: 12, color: c.textMuted, marginBottom: 4 };
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14, background: c.bgSecondary, border: `1px solid ${c.border}`, color: c.text, outline: 'none' };
 
   const btnPrimary: React.CSSProperties = {
-    width:          '100%',
-    display:        'flex',
-    alignItems:     'center',
-    justifyContent: 'center',
-    gap:            8,
-    padding:        '10px 0',
-    borderRadius:   12,
-    border:         'none',
-    background:     C.blue,
-    color:          '#fff',
-    fontSize:       14,
-    fontWeight:     600,
-    cursor:         'pointer',
-  };
-
-  const btnSecondary: React.CSSProperties = {
-    flex:           1,
-    display:        'flex',
-    alignItems:     'center',
-    justifyContent: 'center',
-    gap:            6,
-    padding:        '10px 0',
-    borderRadius:   12,
-    border:         'none',
-    background:     C.blueDim,
-    color:          C.blueMuted,
-    fontSize:       13,
-    fontWeight:     500,
-    cursor:         'pointer',
-  };
-
-  const btnGhost: React.CSSProperties = {
-    width:          '100%',
-    display:        'flex',
-    alignItems:     'center',
-    justifyContent: 'center',
-    gap:            6,
-    padding:        '8px 0',
-    borderRadius:   12,
-    border:         'none',
-    background:     theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
-    color:          C.sub,
-    fontSize:       12,
-    fontWeight:     500,
-    cursor:         'pointer',
+    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    padding: 14, borderRadius: 10, border: 'none', background: c.accent, color: '#fff',
+    fontSize: 15, fontWeight: 700, cursor: 'pointer',
   };
 
   const divider: React.CSSProperties = {
-    borderTop:  `1px solid ${C.border}`,
-    marginTop:  12,
+    borderTop: `1px solid ${c.border}`,
+    marginTop: 12,
     paddingTop: 14,
   };
 
@@ -518,7 +420,7 @@ export default function QRCodeDisplay({
 
       {/* Tamanho */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>Tamanho</span>
+        <span style={label}>Tamanho</span>
         <div style={{ display: 'flex', gap: 8 }}>
           {([
             { label: 'P', sub: '200px', val: 200 },
@@ -529,19 +431,12 @@ export default function QRCodeDisplay({
               key={s.val}
               onClick={() => applyOpt({ ...opts, size: s.val })}
               style={{
-                flex:           1,
-                display:        'flex',
-                flexDirection:  'column',
-                alignItems:     'center',
-                gap:            2,
-                padding:        '8px 0',
-                borderRadius:   10,
-                border:         opts.size === s.val ? 'none' : `1px solid ${C.border}`,
-                background:     opts.size === s.val ? C.blue : C.surface,
-                color:          opts.size === s.val ? '#fff' : C.sub,
-                fontSize:       12,
-                fontWeight:     600,
-                cursor:         'pointer',
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                padding: '8px 0', borderRadius: 8, cursor: 'pointer',
+                border: opts.size === s.val ? `2px solid ${c.accent}` : `1px solid ${c.border}`,
+                background: opts.size === s.val ? c.accent : c.bgSecondary,
+                color: opts.size === s.val ? '#fff' : c.textMuted,
+                fontSize: 12, fontWeight: 600,
               }}
             >
               <span>{s.label}</span>
@@ -553,21 +448,17 @@ export default function QRCodeDisplay({
 
       {/* Cor do QR */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>Cor do QR</span>
+        <span style={label}>Cor do QR</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {QR_COLORS.map(c => (
+          {QR_COLORS.map(opt => (
             <button
-              key={c.value}
-              title={c.label}
-              onClick={() => applyOpt({ ...opts, color: c.value })}
+              key={opt.value}
+              title={opt.label}
+              onClick={() => applyOpt({ ...opts, color: opt.value })}
               style={{
-                width:       28,
-                height:      28,
-                borderRadius: 8,
-                background:  c.value,
-                border:      `2px solid ${opts.color === c.value ? C.blue : C.border}`,
-                boxShadow:   opts.color === c.value ? `0 0 0 2px ${C.blue}40` : 'none',
-                cursor:      'pointer',
+                width: 28, height: 28, borderRadius: 8, background: opt.value, cursor: 'pointer',
+                border: `2px solid ${opts.color === opt.value ? c.accent : c.border}`,
+                boxShadow: opts.color === opt.value ? `0 0 0 2px ${c.accent}40` : 'none',
               }}
             />
           ))}
@@ -579,8 +470,8 @@ export default function QRCodeDisplay({
             onChange={e => { setCustomQr(e.target.value); applyOpt({ ...opts, color: e.target.value }); }}
             style={{
               width: 28, height: 28, borderRadius: 8, padding: 2, cursor: 'pointer',
-              border: `2px solid ${!QR_COLORS.some(c => c.value === opts.color) ? C.blue : C.border}`,
-              background: theme === 'dark' ? C.surface : '#fff',
+              border: `2px solid ${!QR_COLORS.some(opt => opt.value === opts.color) ? c.accent : c.border}`,
+              background: c.bgSecondary,
             }}
           />
         </div>
@@ -588,21 +479,17 @@ export default function QRCodeDisplay({
 
       {/* Cor do fundo */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>Cor do fundo</span>
+        <span style={label}>Cor do fundo</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {BG_COLORS.map(c => (
+          {BG_COLORS.map(opt => (
             <button
-              key={c.value}
-              title={c.label}
-              onClick={() => applyOpt({ ...opts, bgColor: c.value })}
+              key={opt.value}
+              title={opt.label}
+              onClick={() => applyOpt({ ...opts, bgColor: opt.value })}
               style={{
-                width:       28,
-                height:      28,
-                borderRadius: 8,
-                background:  c.value,
-                border:      `2px solid ${opts.bgColor === c.value ? C.blue : C.border}`,
-                boxShadow:   opts.bgColor === c.value ? `0 0 0 2px ${C.blue}40` : 'none',
-                cursor:      'pointer',
+                width: 28, height: 28, borderRadius: 8, background: opt.value, cursor: 'pointer',
+                border: `2px solid ${opts.bgColor === opt.value ? c.accent : c.border}`,
+                boxShadow: opts.bgColor === opt.value ? `0 0 0 2px ${c.accent}40` : 'none',
               }}
             />
           ))}
@@ -613,8 +500,8 @@ export default function QRCodeDisplay({
             onChange={e => { setCustomBg(e.target.value); applyOpt({ ...opts, bgColor: e.target.value }); }}
             style={{
               width: 28, height: 28, borderRadius: 8, padding: 2, cursor: 'pointer',
-              border: `2px solid ${!BG_COLORS.some(c => c.value === opts.bgColor) ? C.blue : C.border}`,
-              background: theme === 'dark' ? C.surface : '#fff',
+              border: `2px solid ${!BG_COLORS.some(opt => opt.value === opts.bgColor) ? c.accent : c.border}`,
+              background: c.bgSecondary,
             }}
           />
         </div>
@@ -623,153 +510,104 @@ export default function QRCodeDisplay({
       {/* Logo toggle */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>Incluir logo</span>
-          <span style={{ fontSize: 11, color: C.muted }}>Logo da empresa no centro</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: c.text }}>Incluir logo</span>
+          <span style={{ fontSize: 11, color: c.textMuted }}>Logo da empresa no centro</span>
         </div>
         <button
           onClick={() => applyOpt({ ...opts, showLogo: !opts.showLogo })}
           style={{
-            position:    'relative',
-            width:       40,
-            height:      22,
-            borderRadius: 11,
-            border:      'none',
-            background:  opts.showLogo ? C.blue : C.muted,
-            cursor:      'pointer',
-            transition:  'background 0.2s',
+            position: 'relative', width: 40, height: 22, borderRadius: 11, border: 'none',
+            background: opts.showLogo ? c.accent : c.border, cursor: 'pointer', transition: 'background 0.2s',
           }}
         >
           <span style={{
-            position:   'absolute',
-            top:        3,
-            left:       opts.showLogo ? 21 : 3,
-            width:      16,
-            height:     16,
-            borderRadius: '50%',
-            background: '#fff',
-            transition: 'left 0.2s',
-            boxShadow:  '0 1px 3px rgba(0,0,0,0.3)',
+            position: 'absolute', top: 3, left: opts.showLogo ? 21 : 3, width: 16, height: 16,
+            borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
           }} />
         </button>
       </div>
 
       {opts.showLogo && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           {/* Preview + upload local (cache só nesta sessão, sem Supabase) */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-            <div
-              onClick={() => logoFileInputRef.current?.click()}
-              title="Clique para enviar uma imagem"
-              style={{
-                width: 50, height: 50, borderRadius: 8, cursor: 'pointer',
-                border: `1px solid ${C.border}`, background: theme === 'dark' ? C.surface : '#fff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                overflow: 'hidden', flexShrink: 0,
-              }}
-            >
-              {logoFile ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoFile} alt="Preview do logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : logoUrl.trim() ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl.trim()} alt="Preview do logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-              ) : (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-              <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>Logo personalizado</span>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button
-                  onClick={() => logoFileInputRef.current?.click()}
-                  style={{
-                    flex: 1, padding: '7px 10px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                    border: `1px solid ${C.inputBorder}`,
-                    background: logoFile ? C.blue : (theme === 'dark' ? C.surface : '#fff'),
-                    color: logoFile ? '#fff' : C.sub,
-                  }}
-                >
-                  {logoFile ? 'Trocar imagem' : 'Enviar imagem'}
-                </button>
-                {logoFile && (
-                  <button
-                    onClick={async () => {
-                      setLogoFile(null);
-                      if (stage === 'result' && inputText.trim()) {
-                        setQrUrl(buildUrl(inputText.trim(), opts, companyId));
-                      }
-                    }}
-                    title="Remover"
-                    style={{
-                      padding: '7px 10px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-                      border: `1px solid ${C.redBorder}`, background: 'transparent', color: C.red,
-                    }}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-              <input
-                ref={logoFileInputRef}
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={async e => {
-                  const file = e.target.files?.[0];
-                  e.currentTarget.value = '';
-                  if (!file || !file.type.startsWith('image/')) return;
-                  const reader = new FileReader();
-                  reader.onload = async () => {
-                    const dataUrl = reader.result as string;
-                    setLogoFile(dataUrl);
-                    setLogoUrl(''); // upload local tem prioridade sobre URL
-                    if (stage === 'result' && inputText.trim()) {
-                      try {
-                        const base = buildUrl(inputText.trim(), opts, companyId);
-                        const composed = await composeLocalLogo(base, dataUrl, opts.size);
-                        setQrUrl(composed);
-                      } catch { /* mantém o preview anterior */ }
-                    }
-                  };
-                  reader.readAsDataURL(file);
-                }}
-              />
-            </div>
+          <div
+            onClick={() => logoFileInputRef.current?.click()}
+            title="Clique para enviar uma imagem"
+            style={{
+              width: 50, height: 50, borderRadius: 8, cursor: 'pointer',
+              border: `1px solid ${c.border}`, background: c.bgSecondary,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden', flexShrink: 0,
+            }}
+          >
+            {logoFile ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoFile} alt="Preview do logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c.textMuted} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+            )}
           </div>
 
-          {/* URL externa — alternativa, desabilitada se já houver upload local */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 11, color: C.muted }}>ou cole a URL de uma imagem pública</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+            <span style={label}>Logo personalizado</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                onClick={() => logoFileInputRef.current?.click()}
+                style={{
+                  flex: 1, padding: '7px 10px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  border: `1px solid ${c.border}`,
+                  background: logoFile ? c.accent : c.bgSecondary,
+                  color: logoFile ? '#fff' : c.textMuted,
+                }}
+              >
+                {logoFile ? 'Trocar imagem' : 'Enviar imagem'}
+              </button>
+              {logoFile && (
+                <button
+                  onClick={async () => {
+                    setLogoFile(null);
+                    if (stage === 'result' && inputText.trim()) {
+                      setQrUrl(buildUrl(inputText.trim(), opts, companyId));
+                    }
+                  }}
+                  title="Remover"
+                  style={{
+                    padding: '7px 10px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
+                    border: `1px solid ${c.error}`, background: 'transparent', color: c.error,
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
             <input
-              type="url"
-              value={logoUrl}
-              disabled={!!logoFile}
-              onChange={e => setLogoUrl(e.target.value)}
-              onBlur={() => {
-                if (!logoFile && stage === 'result' && inputText.trim()) {
-                  setQrUrl(buildUrl(inputText.trim(), opts, companyId));
-                }
-              }}
-              placeholder="https://exemplo.com/logo.png"
-              style={{
-                width: '100%', padding: '7px 10px', borderRadius: 8,
-                border: `1px solid ${C.inputBorder}`,
-                background: logoFile ? (theme === 'dark' ? 'rgba(255,255,255,0.03)' : '#f3f4f6') : C.input,
-                color: logoFile ? C.muted : C.text,
-                fontSize: 12, outline: 'none', boxSizing: 'border-box' as const,
-                cursor: logoFile ? 'not-allowed' : 'text',
+              ref={logoFileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={async e => {
+                const file = e.target.files?.[0];
+                e.currentTarget.value = '';
+                if (!file || !file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = async () => {
+                  const dataUrl = reader.result as string;
+                  setLogoFile(dataUrl);
+                  if (stage === 'result' && inputText.trim()) {
+                    try {
+                      const base = buildUrl(inputText.trim(), opts, companyId);
+                      const composed = await composeLocalLogo(base, dataUrl, opts.size);
+                      setQrUrl(composed);
+                    } catch { /* mantém o preview anterior */ }
+                  }
+                };
+                reader.readAsDataURL(file);
               }}
             />
-            <span style={{ fontSize: 10, color: C.muted }}>
-              Deixe vazio para usar o logo ArteFinal
-            </span>
           </div>
         </div>
       )}
@@ -782,97 +620,57 @@ export default function QRCodeDisplay({
     <button
       onClick={() => setShowOpts(v => !v)}
       style={{
-        display:        'flex',
-        alignItems:     'center',
-        justifyContent: 'space-between',
-        width:          compact ? 'auto' : '100%',
-        alignSelf:      compact ? 'center' : undefined,
-        padding:        compact ? '6px 12px' : '8px 12px',
-        borderRadius:   10,
-        border:         `1px solid ${C.border}`,
-        background:     C.optBg,
-        color:          C.sub,
-        fontSize:       compact ? 12 : 13,
-        cursor:         'pointer',
-        gap:            6,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        width: compact ? 'auto' : '100%', alignSelf: compact ? 'center' : undefined,
+        padding: compact ? '6px 12px' : '8px 12px', borderRadius: 8,
+        border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.textMuted,
+        fontSize: compact ? 12 : 13, cursor: 'pointer', gap: 6,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <IconSettings s={icon(C.sub, 14)} />
+        <IconSettings s={icon(c.textMuted, 14)} />
         <span>{compact ? 'Ajustar' : 'Opções avançadas'}</span>
         {!compact && (
           <span style={{
-            padding:    '1px 6px',
-            borderRadius: 6,
-            background: C.blueDim,
-            color:      C.blueMuted,
-            fontSize:   10,
-            fontWeight: 600,
+            padding: '1px 6px', borderRadius: 6, background: c.bg,
+            color: c.accent, fontSize: 10, fontWeight: 600,
           }}>
             {opts.size}px
           </span>
         )}
       </div>
-      {showOpts
-        ? <IconChevronUp s={icon(C.sub, 14)} />
-        : <IconChevronDown s={icon(C.sub, 14)} />
-      }
+      {showOpts ? <IconChevronUp s={icon(c.textMuted, 14)} /> : <IconChevronDown s={icon(c.textMuted, 14)} />}
     </button>
   );
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   return createPortal(
-    <div style={{
-      position:       'fixed',
-      inset:          0,
-      zIndex:         9999,
-      display:        'flex',
-      alignItems:     'center',
-      justifyContent: 'center',
-      background:     C.overlay,
-      padding:        16,
-    }}>
-      <div style={card}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', padding: 16 }}>
+      <div style={{ width: '100%', maxWidth: stage === 'result' ? 760 : 640, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 16, padding: 24, color: c.text, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
 
-        {/* ── Header ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <IconQr s={icon(C.accent, 20)} />
-            <span style={{ fontSize: 17, fontWeight: 700, color: C.text }}>Gerar QR Code</span>
-          </div>
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 8 }}
-          >
-            <IconX s={icon(C.sub, 18)} />
-          </button>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Gerar QR Code</h2>
+          <button onClick={onClose} style={{ padding: '4px 10px', border: `1px solid ${c.border}`, borderRadius: 8, background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Fechar</button>
         </div>
 
-        {/* ── Stage: input ── */}
+        {/* Stage: input */}
         {stage === 'input' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <p style={{ fontSize: 13, color: C.sub, margin: 0 }}>
-              Digite o texto, URL ou qualquer conteúdo para gerar o QR Code.
-            </p>
+            <div style={{ marginBottom: 0, padding: '12px 14px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: c.text }}>Como funciona</p>
+              <p style={{ margin: 0, fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
+                Digite um texto, link ou qualquer conteúdo. Ajuste tamanho, cores e, se quiser, adicione
+                um logo no centro. O QR Code é gerado na hora e fica pronto para baixar em PNG.
+              </p>
+            </div>
 
             <textarea
               value={inputText}
               onChange={e => setInputText(e.target.value)}
               placeholder="Ex: https://artefinal.app"
-              style={{
-                width:       '100%',
-                minHeight:   88,
-                borderRadius: 12,
-                padding:     '10px 12px',
-                fontSize:    13,
-                resize:      'none',
-                outline:     'none',
-                background:  C.input,
-                border:      `1px solid ${C.inputBorder}`,
-                color:       C.text,
-                boxSizing:   'border-box',
-              }}
+              style={{ ...inputStyle, minHeight: 88, resize: 'none', boxSizing: 'border-box' }}
             />
 
             {/* Opções avançadas */}
@@ -884,138 +682,89 @@ export default function QRCodeDisplay({
               disabled={!inputText.trim()}
               style={{
                 ...btnPrimary,
-                background: inputText.trim() ? C.blue : C.blueDim,
-                color:      inputText.trim() ? '#fff' : C.blueMuted,
-                cursor:     inputText.trim() ? 'pointer' : 'not-allowed',
+                background: inputText.trim() ? c.accent : c.border,
+                cursor: inputText.trim() ? 'pointer' : 'not-allowed',
               }}
             >
               <IconQr s={icon('#fff', 16)} />
               Gerar QR Code
             </button>
 
-            {/* Custo — oculto para anônimos (§6) */}
+            {/* Custo — oculto para anônimos */}
             {logado && (
-              <p style={{ fontSize: 11, color: C.muted, textAlign: 'center', margin: 0 }}>
-                Custo: <strong style={{ color: C.text }}>{CREDITS}</strong> crédito
+              <p style={{ fontSize: 11, color: c.textMuted, textAlign: 'center', margin: 0 }}>
+                Custo: <strong style={{ color: c.text }}>{CREDITS}</strong> crédito
               </p>
             )}
           </div>
         )}
 
-        {/* ── Stage: generating ── */}
+        {/* Stage: generating */}
         {stage === 'generating' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '32px 0' }}>
-            <div style={{
-              width:  44, height: 44,
-              border: `3px solid ${C.blue}`,
-              borderTopColor: 'transparent',
-              borderRadius:   '50%',
-              animation:      'spin 0.8s linear infinite',
-            }} />
-            <p style={{ fontSize: 13, color: C.sub, margin: 0 }}>Gerando QR Code…</p>
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '34px 0' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', border: `3px solid ${c.border}`, borderTopColor: c.accent, animation: 'qr-spin 0.8s linear infinite' }} />
+            <p style={{ margin: 0, fontSize: 14, color: c.textMuted }}>Gerando QR Code...</p>
           </div>
         )}
 
-        {/* ── Stage: result ── */}
+        {/* Stage: result */}
         {stage === 'result' && qrUrl && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-
-            {/* Preview */}
-            <div style={{
-              padding:      12,
-              borderRadius: 16,
-              background:   '#ffffff',
-              border:       `1px solid ${C.border}`,
-            }}>
+            <div style={{ padding: 12, borderRadius: 8, background: '#ffffff', border: `1px solid ${c.border}` }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                key={qrUrl}
-                src={qrUrl}
-                alt="QR Code gerado"
-                width={220}
-                height={220}
-                style={{ display: 'block', borderRadius: 8 }}
-              />
+              <img key={qrUrl} src={qrUrl} alt="QR Code gerado" width={220} height={220} style={{ display: 'block', borderRadius: 4 }} />
             </div>
 
             {inputText && (
-              <p style={{
-                fontSize:  11,
-                color:     C.sub,
-                textAlign: 'center',
-                maxWidth:  '100%',
-                overflow:  'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                margin:    0,
-              }}>
+              <p style={{ fontSize: 11, color: c.textMuted, textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
                 {inputText.length > 55 ? inputText.slice(0, 55) + '…' : inputText}
               </p>
             )}
 
-            {/* Saldo restante após cobrança */}
             {saldo !== null && (
-              <p style={{ fontSize: 11, color: C.muted, textAlign: 'center', margin: 0 }}>
-                Saldo restante: <strong style={{ color: C.text }}>{saldo}</strong> créditos
+              <p style={{ fontSize: 11, color: c.textMuted, textAlign: 'center', margin: 0 }}>
+                Saldo restante: <strong style={{ color: c.text }}>{saldo}</strong> créditos
               </p>
             )}
 
             {/* Ajuste rápido de opções */}
             {renderOptsToggle(true)}
             {showOpts && (
-              <div style={{
-                width:        '100%',
-                borderRadius: 12,
-                padding:      12,
-                background:   C.optBg,
-                border:       `1px solid ${C.border}`,
-              }}>
+              <div style={{ width: '100%', borderRadius: 8, padding: 12, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
                 {renderOptions()}
               </div>
             )}
 
-           {/* Ações */}
             <button onClick={handleDownload} style={btnPrimary}>
               <IconDownload s={icon('#fff', 16)} />
               Baixar PNG
             </button>
+            <button onClick={handleReset} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 13, width: '100%' }}>
+              Novo QR Code
+            </button>
           </div>
         )}
 
-        {/* ── Stage: login (anônimo tentou gerar) ── */}
+        {/* Stage: login (anônimo tentou gerar) */}
         {stage === 'login' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center', padding: '8px 4px' }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Entre para gerar o QR Code</div>
-            <p style={{ margin: 0, fontSize: 14, color: C.sub, lineHeight: 1.5 }}>
-              Ao se <strong style={{ color: C.accent }}>cadastrar você ganha 20 créditos iniciais</strong> para usar as ferramentas do ArteFinal.
+            <div style={{ fontSize: 16, fontWeight: 700, color: c.text }}>Entre para gerar o QR Code</div>
+            <p style={{ margin: 0, fontSize: 14, color: c.textMuted, lineHeight: 1.5 }}>
+              Ao se <strong style={{ color: c.accent }}>cadastrar você ganha 20 créditos iniciais</strong> para usar as ferramentas do ArteFinal.
             </p>
-            <button
-              onClick={irParaLogin}
-              style={{ padding: 14, borderRadius: 12, border: 'none', background: C.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
-            >
+            <button onClick={irParaLogin} style={btnPrimary}>
               Entrar / Cadastrar e ganhar 20 créditos
             </button>
-            <button
-              onClick={() => setStage('input')}
-              style={{ padding: 10, borderRadius: 10, border: `1px solid ${C.border}`, background: 'transparent', color: C.sub, cursor: 'pointer', fontSize: 13 }}
-            >
+            <button onClick={() => setStage('input')} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13 }}>
               Voltar
             </button>
           </div>
         )}
 
-        {/* ── Stage: error ── */}
+        {/* Stage: error */}
         {stage === 'error' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{
-              padding:      '10px 12px',
-              borderRadius: 10,
-              background:   C.redDim,
-              border:       `1px solid ${C.redBorder}`,
-              color:        C.red,
-              fontSize:     13,
-            }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: `1px solid ${c.error}`, color: c.error, fontSize: 14, lineHeight: 1.4 }}>
               {errorMsg ?? 'Ocorreu um erro inesperado.'}
             </div>
             <button onClick={handleReset} style={btnPrimary}>
@@ -1024,8 +773,11 @@ export default function QRCodeDisplay({
             </button>
           </div>
         )}
-
       </div>
+
+      <style>{`
+        @keyframes qr-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>,
     document.body
   );

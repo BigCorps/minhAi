@@ -338,9 +338,9 @@ setCompanyId(cid);
             <div style={{ marginBottom: 12, padding: '12px 14px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
               <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: c.text }}>Como funciona</p>
               <p style={{ margin: 0, fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
-                Envie a arte (e o verso, se precisar) e informe a medida final e a sangria. Posicione a
+                Ideal para Cartões, Folhetos e outras artes com corte padrão. Envie a arte (e o verso, se precisar) e informe a medida final e a sangria. Posicione a
                 imagem dentro da área de corte arrastando, com zoom e rotação se precisar. O sistema gera
-                um PDF de produção já no tamanho exato, com a sangria aplicada por dentro — pronto para a gráfica.
+                um PDF de produção já no tamanho exato, em CMYK e com a sangria aplicada por dentro, já pronto para a gráfica.
               </p>
             </div>
             <div onClick={() => fileRef.current?.click()} onDragOver={(e) => e.preventDefault()}

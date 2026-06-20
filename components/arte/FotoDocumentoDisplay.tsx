@@ -226,10 +226,17 @@ export default function FotoDocumentoDisplay({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Inicializar Cropper quando entra na etapa crop, com a imagem já pronta ──
+  // ── Inicializar o Cropper ─────────────────────────────────────────────────────
+  // Configuração IDÊNTICA à de uma versão HTML de referência já validada e
+  // funcionando no navegador real (viewMode: 2, background: false, zoomTo
+  // manual no ready()) — meu palpite anterior de trocar viewMode/background/
+  // remover o zoomTo estava errado, sem evidência real, e foi revertido.
+  //
   // Depende de processedUrl (state) em vez de uma ref mutável fora de ordem —
   // só roda quando a <img src={processedUrl}> já foi montada pelo React com a
-  // URL certa, então cropImgRef.current já tem o src correto neste ponto.
+  // URL certa, então cropImgRef.current já tem o src correto neste ponto. Essa
+  // é a única adaptação realmente necessária para o React (no HTML a imagem
+  // nunca é desmontada entre etapas, então não tinha esse problema).
 
   useEffect(() => {
     if (stage !== 'crop' || !cropImgRef.current || !processedUrl) return;
@@ -246,8 +253,9 @@ export default function FotoDocumentoDisplay({
         dragMode: 'move',
         autoCropArea: 0.9,
         responsive: true,
-        background: true,
+        background: false,
         ready() {
+          if (cancelled || !cropperRef.current) return;
           const cd = cropperRef.current.getContainerData();
           const cv = cropperRef.current.getCanvasData();
           const z  = Math.min(cd.width / cv.naturalWidth, cd.height / cv.naturalHeight);
@@ -261,7 +269,9 @@ export default function FotoDocumentoDisplay({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, processedUrl]);
 
-  // Atualiza aspect ratio quando muda o tamanho
+  // Troca de formato (3×4, 5×7, 2×2): chama setAspectRatio() DIRETO na
+  // instância existente, sem destruir/recriar — exatamente como no HTML de
+  // referência, que comprovadamente funciona bem dessa forma.
   useEffect(() => {
     cropperRef.current?.setAspectRatio(photoSize.w / photoSize.h);
   }, [photoSize]);
@@ -324,14 +334,20 @@ export default function FotoDocumentoDisplay({
   const handleConfirmCrop = useCallback(() => {
     if (!cropperRef.current) return;
 
-    const canvas = cropperRef.current.getCroppedCanvas({ width: 1000, imageSmoothingQuality: 'high' });
-    const temp   = document.createElement('canvas');
-    temp.width = canvas.width; temp.height = canvas.height;
-    const ctx = temp.getContext('2d')!;
-    ctx.filter = `brightness(${brightness})`;
-    ctx.drawImage(canvas, 0, 0);
-    setCroppedUrl(temp.toDataURL('image/png'));
-    setStage('layout');
+    try {
+      const canvas = cropperRef.current.getCroppedCanvas({ width: 1000, imageSmoothingQuality: 'high' });
+      if (!canvas) throw new Error('Não foi possível recortar a imagem.');
+      const temp = document.createElement('canvas');
+      temp.width = canvas.width; temp.height = canvas.height;
+      const ctx = temp.getContext('2d')!;
+      ctx.filter = `brightness(${brightness})`;
+      ctx.drawImage(canvas, 0, 0);
+      setCroppedUrl(temp.toDataURL('image/png'));
+      setStage('layout');
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Erro ao confirmar o recorte. Ajuste a área e tente novamente.');
+      setStage('error');
+    }
   }, [brightness]);
 
   // ── Calcular layout de impressão ──────────────────────────────────────────────
@@ -579,7 +595,7 @@ export default function FotoDocumentoDisplay({
                   )}
                 </div>
 
-                <div style={{ width: 180, display: 'flex', flexDirection: 'column', gap: 14, flexShrink: 0 }}>
+                <div className="fd-crop-controls" style={{ width: 180, display: 'flex', flexDirection: 'column', gap: 14, flexShrink: 0 }}>
                   <div>
                     <label style={label}>Formato</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -606,7 +622,13 @@ export default function FotoDocumentoDisplay({
                   <div>
                     <label style={label}>Brilho</label>
                     <input type="range" min={0.5} max={1.5} step={0.01} value={brightness}
-                      onChange={e => setBrightness(parseFloat(e.target.value))}
+                      onChange={e => {
+                        const v = parseFloat(e.target.value);
+                        setBrightness(v);
+                        // Preview em tempo real no canvas do cropper — igual ao HTML de referência
+                        const canvasEl = cropperRef.current?.getCanvasElement?.();
+                        if (canvasEl) canvasEl.style.filter = `brightness(${v})`;
+                      }}
                       style={{ width: '100%', accentColor: c.accent }} />
                   </div>
 
@@ -700,7 +722,7 @@ export default function FotoDocumentoDisplay({
                 </p>
               </div>
 
-              <div style={{ width: 160, flexShrink: 0 }}>
+              <div className="fd-layout-preview" style={{ width: 160, flexShrink: 0 }}>
                 <label style={label}>Pré-visualização</label>
                 <div style={{
                   background: '#ffffff', border: `1px solid ${c.border}`, borderRadius: 8,
@@ -757,6 +779,8 @@ export default function FotoDocumentoDisplay({
         @media (max-width: 640px) {
           .fd-crop-layout { flex-direction: column !important; }
           .fd-layout-stage { flex-direction: column !important; }
+          .fd-crop-controls { width: 100% !important; }
+          .fd-layout-preview { width: 100% !important; }
         }
       `}</style>
     </>,

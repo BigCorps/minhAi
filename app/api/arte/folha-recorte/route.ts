@@ -26,7 +26,7 @@ import sharp from 'sharp';
 import fs from 'node:fs';
 import path from 'node:path';
 import { traceContour } from '@/lib/arte/contour';
-import { rectPoints, ellipsePoints, type CutShape } from '@/lib/arte/cutShapes';
+import { rectPoints, ellipsePoints, rectSvgPath, ellipseSvgPath, type CutShape } from '@/lib/arte/cutShapes';
 import { drawImageCmyk } from '@/lib/arte/cmykImage';
 
 const FUNCTION_KEY = 'gerar_folha_recorte';
@@ -101,9 +101,14 @@ export async function POST(req: NextRequest) {
     const cutCmyk = { c: cutCmykRaw[0] / 255, m: cutCmykRaw[1] / 255, y: cutCmykRaw[2] / 255, k: cutCmykRaw[3] / 255 };
 
     // ── 1) Resolve as medidas de UMA célula (corte + cobertura), igual ao Adesivo ──
-    // anelLocal: pontos do corte de UMA célula, já centrados em (0,0) — somamos o
-    // centro de cada posição da grade na hora de desenhar.
-    let cutWmm: number, cutHmm: number, drawW: number, drawH: number, ringLocal: [number, number][], hasAlpha = true;
+    // ringLocal: pontos do corte de UMA célula em mm, já centrados em (0,0) — usado só
+    // para o cálculo de grid/posicionamento (perRow/perColumn).
+    // makeCutSvgPath(cxCell, cyCell): função que gera a string do path JÁ centrada na
+    // célula informada (em PONTOS PDF) — chamada uma vez por célula no loop de desenho,
+    // sem nenhuma manipulação de string/regex sobre um path "genérico".
+    let cutWmm: number, cutHmm: number, coverWmm: number, coverHmm: number;
+    let ringLocal: [number, number][], hasAlpha = true;
+    let makeCutSvgPath: (cxCell: number, cyCell: number) => string;
 
     if (shape === 'auto') {
       const artWmm = Number(spec.cut_w_mm ?? spec.art_w_mm);
@@ -112,19 +117,18 @@ export async function POST(req: NextRequest) {
       const cut = await traceContour(srcBuf, { offsetMm, simplifyMm: SIMPLIFY_MM, artWmm });
       hasAlpha = cut.hasAlpha;
       const artHmm = cut.artHmm;
-      drawW = artWmm; drawH = artHmm;
-      // IMPORTANTE: a arte e o corte precisam manter a MESMA relação espacial relativa que
-      // tinham no Adesivo original (ambos ancorados na mesma origem absoluta — a silhueta
-      // pode ser assimétrica dentro do retângulo da imagem, ex: logo encostado à esquerda).
-      // Por isso NÃO centralizamos o anel pelo seu próprio bounding box — em vez disso,
-      // ancoramos ambos (arte e corte) na origem (0,0) = canto superior-esquerdo da arte,
-      // exatamente como margem+x/margem+y faziam no Adesivo. O centro de célula (cx,cy)
-      // vira o centro do RETÂNGULO DA ARTE (drawW×drawH), não do contorno.
+      coverWmm = artWmm; coverHmm = artHmm;
+      // Mesma lógica do Adesivo: arte e corte ancorados na mesma origem relativa (centro do
+      // retângulo da arte), preservando a posição correta mesmo com silhueta assimétrica.
       const ringMm = cut.outPx.map(([x, y]: [number, number]) => [x * cut.mmPerPxX - artWmm / 2, (cut.th - y) * cut.mmPerPxY - artHmm / 2] as [number, number]);
       const xs = ringMm.map((p: [number, number]) => p[0]), ys = ringMm.map((p: [number, number]) => p[1]);
       cutWmm = Math.max(...xs) - Math.min(...xs);
       cutHmm = Math.max(...ys) - Math.min(...ys);
-      ringLocal = ringMm; // já relativo ao centro do retângulo da arte (0,0) = centro de drawW×drawH
+      ringLocal = ringMm;
+      // Modo automático: silhueta arbitrária, sem forma matemática — mantém poligonal
+      // (mesmo critério do Adesivo), mas como um único path contínuo por célula.
+      makeCutSvgPath = (cxCell, cyCell) =>
+        `M ${ringMm.map(([x, y]: [number, number]) => `${mm(x + cxCell)} ${mm(-(y + cyCell))}`).join(' L ')}`;
     } else {
       const typedW = Number(spec.cut_w_mm), typedH = Number(spec.cut_h_mm);
       if (!(typedW > 0) || !(typedH > 0)) return json({ error: 'Medida inválida' }, 400);
@@ -135,28 +139,30 @@ export async function POST(req: NextRequest) {
       const sangria = clamp(Number(spec.sangria_mm ?? 3), 0, SANGRIA_MAX_MM);
       const mode: 'externa' | 'interna' = spec.bleed_mode === 'interna' ? 'interna' : 'externa';
 
-      let coverW: number, coverH: number;
+      let coverWmmLocal: number, coverHmmLocal: number;
       if (mode === 'interna') {
-        coverW = typedW; coverH = typedH;
+        coverWmmLocal = typedW; coverHmmLocal = typedH;
         cutWmm = Math.max(5, typedW - 2 * sangria); cutHmm = Math.max(5, typedH - 2 * sangria);
       } else {
         cutWmm = typedW; cutHmm = typedH;
-        coverW = typedW + 2 * sangria; coverH = typedH + 2 * sangria;
+        coverWmmLocal = typedW + 2 * sangria; coverHmmLocal = typedH + 2 * sangria;
       }
       const radius = clamp(Number(spec.radius_mm ?? 0), 0, Math.min(cutWmm, cutHmm) / 2);
 
-      if (artAspect > coverW / coverH) { drawH = coverH; drawW = coverH * artAspect; }
-      else { drawW = coverW; drawH = coverW / artAspect; }
-
+      coverWmm = coverWmmLocal; coverHmm = coverHmmLocal; // canvas da CÉLULA é sempre fixo (sangria garantida)
       ringLocal = shape === 'circle' ? ellipsePoints(cutWmm, cutHmm, 0, 0) : rectPoints(cutWmm, cutHmm, 0, 0, shape === 'rounded' ? radius : 0);
+      // Curva Bézier real, gerada já com o centro da célula somado — sem regex.
+      makeCutSvgPath = (cxCell, cyCell) =>
+        shape === 'circle'
+          ? ellipseSvgPath(mm(cutWmm), mm(cutHmm), mm(cxCell), mm(-cyCell))
+          : rectSvgPath(mm(cutWmm), mm(cutHmm), mm(cxCell), mm(-cyCell), shape === 'rounded' ? mm(radius) : 0);
     }
 
-    // drawW/drawH = tamanho da arte (cobertura) de UMA célula; cutWmm/cutHmm = tamanho do corte
-    // a célula "ocupada" no grid é o MAIOR entre arte e corte (a arte pode ser maior que o
-    // corte por causa da sangria externa) — usamos isso só para a metragem de papel necessária,
-    // já que artes vizinhas podem se tocar/sobrepor (você confirmou que é aceitável).
-    const cellWmm = Math.max(drawW, cutWmm);
-    const cellHmm = Math.max(drawH, cutHmm);
+    // coverWmm/coverHmm = tamanho FIXO do canvas de UMA célula (corte+sangria, nunca varia com
+    // zoom/alinhamento); cutWmm/cutHmm = tamanho do corte. A célula "ocupada" no grid usa
+    // coverWmm/coverHmm (cobertura) — artes vizinhas podem se tocar/sobrepor, você já confirmou.
+    const cellWmm = Math.max(coverWmm, cutWmm);
+    const cellHmm = Math.max(coverHmm, cutHmm);
 
     // ── 2) Calcula o grid: espaçamento ENTRE CORTES = max(digitado, 2mm) ──
     const spacingDigitadoMm = Number(spec.spacing_mm ?? 2);
@@ -186,16 +192,78 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── 4) Monta o PDF: pág 1 = arte repetida; pág 2 = corte repetido ──
+    // ── 4) Zoom + Ajuste fino (aplicados igualmente a todas as células — mesma arte) ──
+    // Mesmo modelo do Adesivo individual: o CANVAS de cada célula é sempre fixo em
+    // coverWmm×coverHmm (sangria garantida); zoom controla o tamanho da imagem DENTRO do
+    // canvas (>100% corta as bordas que excedem; <100% deixa espaço vazio); o alinhamento
+    // desloca a imagem livremente dentro do canvas, sem trava.
+    let drawW: number, drawH: number;
+    if (artAspect > coverWmm / coverHmm) { drawH = coverHmm; drawW = coverHmm * artAspect; }
+    else { drawW = coverWmm; drawH = coverWmm / artAspect; }
+
+    const zoomPct = clamp(Number(spec.zoom_pct ?? 100), 50, 300) / 100;
+    drawW *= zoomPct; drawH *= zoomPct;
+
+    const alignXfrac = clamp(Number(spec.align_x_pct ?? 0), -50, 50) / 50; // -1..+1
+    const alignYfrac = clamp(Number(spec.align_y_pct ?? 0), -50, 50) / 50; // -1..+1
+    const offsetX = (coverWmm / 2) * alignXfrac;
+    const offsetY = (coverHmm / 2) * alignYfrac;
+
+    // canvas final em px, no DPI alvo (igual para todas as células — mesma arte/config)
+    const canvasPxW = Math.round((coverWmm / 25.4) * DPI) || 1;
+    const canvasPxH = Math.round((coverHmm / 25.4) * DPI) || 1;
+    const imgPxW = Math.round((drawW / 25.4) * DPI) || 1;
+    const imgPxH = Math.round((drawH / 25.4) * DPI) || 1;
+    const imgLeftPx = Math.round((canvasPxW - imgPxW) / 2 + (offsetX / 25.4) * DPI);
+    const imgTopPx = Math.round((canvasPxH - imgPxH) / 2 - (offsetY / 25.4) * DPI); // Y do PDF cresce p/ cima
+
+    // cor de fundo: média dos 4 CANTOS da imagem ORIGINAL — roda 1 ÚNICA VEZ (mesma
+    // imagem em todas as células, não precisa repetir por célula).
+    const cornerSize = Math.max(1, Math.min(Math.round(Math.min(imgW, imgH) * 0.03), imgW, imgH));
+    async function cornerAvg(left: number, top: number) {
+      const px = await sharp(srcBuf).extract({ left, top, width: cornerSize, height: cornerSize }).resize(1, 1).raw().toBuffer();
+      return [px[0], px[1], px[2]];
+    }
+    const corners = await Promise.all([
+      cornerAvg(0, 0),
+      cornerAvg(Math.max(0, imgW - cornerSize), 0),
+      cornerAvg(0, Math.max(0, imgH - cornerSize)),
+      cornerAvg(Math.max(0, imgW - cornerSize), Math.max(0, imgH - cornerSize)),
+    ]);
+    const bg = {
+      r: Math.round(corners.reduce((s, c) => s + c[0], 0) / 4),
+      g: Math.round(corners.reduce((s, c) => s + c[1], 0) / 4),
+      b: Math.round(corners.reduce((s, c) => s + c[2], 0) / 4),
+    };
+
+    // Monta o canvas de UMA célula (fundo + imagem composta) — igual em todas as células,
+    // então processamos 1 ÚNICA VEZ e reaproveitamos o mesmo buffer em todas as posições.
+    // IMPORTANTE: sharp().composite() rejeita compor imagem MAIOR que o canvas — por isso
+    // a imagem é CROPADA para a região visível antes de compor (mesma correção do Adesivo).
+    const resizedBig = await sharp(srcBuf).resize(imgPxW, imgPxH, { fit: 'cover' }).flatten({ background: bg }).png().toBuffer();
+    const extractLeft = Math.max(0, -imgLeftPx);
+    const extractTop = Math.max(0, -imgTopPx);
+    const extractW = Math.max(0, Math.min(canvasPxW - Math.max(0, imgLeftPx), imgPxW - extractLeft));
+    const extractH = Math.max(0, Math.min(canvasPxH - Math.max(0, imgTopPx), imgPxH - extractTop));
+
+    let cellPipeline = sharp({ create: { width: canvasPxW, height: canvasPxH, channels: 3, background: bg } });
+    if (extractW > 0 && extractH > 0) {
+      const cropped = await sharp(resizedBig).extract({ left: extractLeft, top: extractTop, width: extractW, height: extractH }).toBuffer();
+      cellPipeline = cellPipeline.composite([{ input: cropped, left: Math.max(0, imgLeftPx), top: Math.max(0, imgTopPx) }]);
+    }
+    const cellArtBuf = await cellPipeline.png().toBuffer();
+
+    // ── 5) Monta o PDF: pág 1 = arte repetida; pág 2 = corte repetido ──
     const doc = await PDFDocument.create();
     const p1 = doc.addPage([mm(pageWmmFolha), mm(pageHmmFolha)]);
-    const targetPx = Math.round((drawW / 25.4) * DPI);
 
     // sequencial — sem paralelismo, conforme decidido (overhead por célula é pequeno;
-    // chamadas concorrentes no mesmo doc/página trariam risco de ordem não-determinística)
+    // chamadas concorrentes no mesmo doc/página trariam risco de ordem não-determinística).
+    // Reaproveita o MESMO cellArtBuf (já pronto, com zoom/alinhamento/cor de fundo
+    // aplicados) em todas as posições — só a posição no PDF muda por célula.
     for (const { cx, cy } of centers) {
-      await drawImageCmyk(doc, p1, srcBuf, {
-        x: mm(cx - drawW / 2), y: mm(cy - drawH / 2), width: mm(drawW), height: mm(drawH), resizeWidth: targetPx,
+      await drawImageCmyk(doc, p1, cellArtBuf, {
+        x: mm(cx - coverWmm / 2), y: mm(cy - coverHmm / 2), width: mm(coverWmm), height: mm(coverHmm), resizeWidth: canvasPxW,
       });
     }
     p1.setTrimBox(0, 0, mm(pageWmmFolha), mm(pageHmmFolha));
@@ -203,18 +271,14 @@ export async function POST(req: NextRequest) {
     const p2 = doc.addPage([mm(pageWmmFolha), mm(pageHmmFolha)]);
     p2.setTrimBox(0, 0, mm(pageWmmFolha), mm(pageHmmFolha));
     const col = makeCmyk(cutCmyk.c, cutCmyk.m, cutCmyk.y, cutCmyk.k);
-    // cada célula desenha o SEU PRÓPRIO anel fechado — nunca conecta um anel ao próximo,
-    // pois isso criaria uma linha fantasma entre adesivos vizinhos que danifica o material
-    // no corte (a faca passaria por onde não deveria).
+    // Linha de corte com curva Bézier REAL (drawSvgPath), uma chamada POR CÉLULA — cada
+    // célula é seu próprio path fechado e independente (nunca conectado ao da vizinha,
+    // o que criaria uma linha fantasma que danificaria o material no corte). Cada chamada
+    // de drawSvgPath gera 1 m + N c/l + 1 stroke isolado — confirmado em teste real que N
+    // chamadas não interferem entre si nem geram strokes extras.
     for (const { cx, cy } of centers) {
-      const ring = ringLocal.map(([dx, dy]) => [cx + dx, cy + dy] as [number, number]);
-      for (let i = 0; i < ring.length - 1; i++) {
-        p2.drawLine({
-          start: { x: mm(ring[i][0]), y: mm(ring[i][1]) },
-          end: { x: mm(ring[i + 1][0]), y: mm(ring[i + 1][1]) },
-          thickness: 0.75, color: col,
-        });
-      }
+      const path = makeCutSvgPath(cx, cy);
+      p2.drawSvgPath(path, { x: 0, y: 0, borderColor: col, borderWidth: 0.75 });
     }
 
     const rgbPdf = await doc.save();

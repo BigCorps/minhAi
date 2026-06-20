@@ -558,30 +558,43 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
                     Array.from({ length: layoutInfo.perRow }).map((__, col) => {
                       const cx = layoutInfo.startXmm + col * layoutInfo.stepWmm;
                       const cy = layoutInfo.startYmm + row * layoutInfo.stepHmm;
+                      // Cobertura (imagem/arte) — pode se tocar/sobrepor com a vizinha, igual ao PDF real
                       const leftPct = ((cx - layoutInfo.cellWmm / 2) / layoutInfo.pageWmm) * 100;
                       const topPct = ((cy - layoutInfo.cellHmm / 2) / layoutInfo.pageHmm) * 100;
                       const wPct = (layoutInfo.cellWmm / layoutInfo.pageWmm) * 100;
                       const hPct = (layoutInfo.cellHmm / layoutInfo.pageHmm) * 100;
+                      // Linha de CORTE real — tamanho do corte (cutWmmCell/cutHmmCell), centrada na
+                      // mesma célula, SEM sobrepor a vizinha (o espaçamento de cutGapMm é garantido
+                      // entre cortes, não entre coberturas — ver §espaçamento no backend).
+                      const cutLeftPct = ((cx - layoutInfo.cutWmm / 2) / layoutInfo.pageWmm) * 100;
+                      const cutTopPct = ((cy - layoutInfo.cutHmm / 2) / layoutInfo.pageHmm) * 100;
+                      const cutWpctCell = (layoutInfo.cutWmm / layoutInfo.pageWmm) * 100;
+                      const cutHpctCell = (layoutInfo.cutHmm / layoutInfo.pageHmm) * 100;
                       const isRound = shape === 'circle' || shape === 'auto';
                       return (
-                        <div key={`${row}-${col}`} style={{
-                          position: 'absolute', left: `${leftPct}%`, top: `${topPct}%`, width: `${wPct}%`, height: `${hPct}%`,
-                          borderRadius: isRound ? '50%' : shape === 'rounded' ? 6 : 1,
-                          border: `1px solid ${swatch}`,
-                          overflow: 'hidden',
-                          background: art?.previewDataUrl ? undefined : c.accent,
-                        }}>
-                          {/* imagem posicionada com o MESMO zoom/alinhamento da etapa 1 (em % da
-                              própria célula), não mais um background:cover genérico que ignorava
-                              a configuração — reflete exatamente o que vai para o PDF. */}
-                          {art?.previewDataUrl && (
-                            <img src={art.previewDataUrl} alt="" style={{
-                              position: 'absolute',
-                              left: `${imgLeftPctCell}%`, top: `${imgTopPctCell}%`,
-                              width: `${imgWpctCell}%`, height: `${imgHpctCell}%`,
-                              maxWidth: 'none', maxHeight: 'none',
-                            }} />
-                          )}
+                        <div key={`${row}-${col}`}>
+                          {/* cobertura (imagem) — sem borda visível, pode se sobrepor à vizinha */}
+                          <div style={{
+                            position: 'absolute', left: `${leftPct}%`, top: `${topPct}%`, width: `${wPct}%`, height: `${hPct}%`,
+                            overflow: 'hidden',
+                            background: art?.previewDataUrl ? undefined : c.accent,
+                          }}>
+                            {art?.previewDataUrl && (
+                              <img src={art.previewDataUrl} alt="" style={{
+                                position: 'absolute',
+                                left: `${imgLeftPctCell}%`, top: `${imgTopPctCell}%`,
+                                width: `${imgWpctCell}%`, height: `${imgHpctCell}%`,
+                                maxWidth: 'none', maxHeight: 'none',
+                              }} />
+                            )}
+                          </div>
+                          {/* linha de corte REAL — tamanho do corte, nunca sobrepõe a vizinha */}
+                          <div style={{
+                            position: 'absolute', left: `${cutLeftPct}%`, top: `${cutTopPct}%`, width: `${cutWpctCell}%`, height: `${cutHpctCell}%`,
+                            borderRadius: isRound ? '50%' : shape === 'rounded' ? 6 : 1,
+                            border: `1px solid ${swatch}`,
+                            pointerEvents: 'none',
+                          }} />
                         </div>
                       );
                     })

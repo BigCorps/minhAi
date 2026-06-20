@@ -6,15 +6,32 @@
  * Gerador de orçamento em PDF, baseado no HTML da minhAi.
  * Geração 100% client-side via jsPDF (sem rota de API).
  *
- * Convenções do guia v2:
+ * Migrado para o padrão visual dos demais modais (Adesivo, Folha de Recorte,
+ * Margem e Sangria, Duplicar Imagem, Vetorizar Imagem, QR Code, Código de Barras):
+ *  - Paleta CMYK padrão (DARK/LIGHT com bg/bgSecondary/border/text/textMuted/
+ *    success/error/accent/warn), accent = CMYK.cyan (cor da UI do modal).
+ *  - Card com a mesma largura dos outros (640 normal).
+ *  - Botão "Fechar" em texto no header.
+ *  - Bloco "Como funciona" na tela inicial (etapa Empresa).
+ *
+ * NOVO: cor dos títulos do PDF agora é escolhível pelo usuário (seção Empresa).
+ * O estado pdfAccentColor/sessionColorCache já existia no arquivo original mas
+ * nunca era exposto na UI nem usado de fato no jsPDF — o PDF sempre saía com a
+ * cor fixa #e94560 (rosa), hardcoded em doc.setTextColor(233, 69, 96). Agora os
+ * 3 pontos do PDF que usavam essa cor fixa (título "ORÇAMENTO", "TOTAL", e o
+ * acento do header) usam hexToRgb(pdfAccentColor) — a cor escolhida pelo usuário.
+ * Importante: a cor dos TÍTULOS DO PDF é independente da cor de destaque da UI
+ * do modal (accent = cyan) — são conceitos diferentes, não devem ser confundidos.
+ *
+ * Convenções do guia v2 ainda aplicadas:
  *  - createPortal → document.body, position:fixed, inset:0
  *  - Estilos 100% inline via paleta DARK/LIGHT
  *  - SVG inline (sem lucide-react)
  *  - playText() só no useEffect de mount
- *  - ensure_my_arte_company lazy (§7)
- *  - Custo escondido para anônimos (§6)
+ *  - ensure_my_arte_company lazy
+ *  - Custo escondido para anônimos
  *  - Anônimo → stage 'login' ao tentar gerar
- *  - cobrar_credito_se_suficiente fail-closed, Array.isArray(raw)[0] (§10)
+ *  - cobrar_credito_se_suficiente fail-closed, Array.isArray(raw)[0]
  *  - Sem rota de API extra (jsPDF puro, sem PDFRest)
  */
 
@@ -55,20 +72,6 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 type P = { c: string; sz: number };
 const icon = (color: string, size = 20): P => ({ c: color, sz: size });
 
-const IconX = ({ s }: { s: P }) => (
-  <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
-const IconDoc = ({ s }: { s: P }) => (
-  <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <polyline points="14 2 14 8 20 8" />
-    <line x1="16" y1="13" x2="8" y2="13" />
-    <line x1="16" y1="17" x2="8" y2="17" />
-    <polyline points="10 9 9 9 8 9" />
-  </svg>
-);
 const IconPlus = ({ s }: { s: P }) => (
   <svg width={s.sz} height={s.sz} viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -100,28 +103,28 @@ const IconUpload = ({ s }: { s: P }) => (
   </svg>
 );
 
-// ─── Paletas ──────────────────────────────────────────────────────────────────
+// ─── Paleta CMYK padrão (mesma dos demais modais) ────────────────────────────
 
+const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
 const DARK = {
-  bg:          '#1a1a2e', surface:     '#16213e', surfaceAlt:  '#0f172a',
-  border:      'rgba(255,255,255,0.08)', borderStrong: 'rgba(255,255,255,0.15)',
-  text:        '#e2e8f0', sub:         '#94a3b8', muted:       '#475569',
-  accent:      '#e94560', blue:        '#3b82f6', blueDim:     '#1e3a5f', blueMuted: '#60a5fa',
-  green:       '#22c55e', greenDim:    '#166534', greenMuted:  '#86efac',
-  red:         '#fca5a5', redDim:      'rgba(127,29,29,0.3)', redBorder: '#b91c1c',
-  input:       '#0f172a', inputBorder: '#334155',
-  overlay:     'rgba(0,0,0,0.75)',
+  bg: '#1e293b', bgSecondary: '#0f172a', border: 'rgba(255,255,255,0.08)',
+  text: '#e2e8f0', textMuted: '#94a3b8', success: '#10b981', error: '#ef4444', accent: CMYK.cyan, warn: CMYK.yellow,
 };
 const LIGHT = {
-  bg:          '#ffffff', surface:     '#f8fafc', surfaceAlt:  '#f1f5f9',
-  border:      '#e5e7eb', borderStrong: '#d1d5db',
-  text:        '#111827', sub:         '#6b7280', muted:       '#9ca3af',
-  accent:      '#e94560', blue:        '#2563eb', blueDim:     '#eff6ff', blueMuted: '#1d4ed8',
-  green:       '#16a34a', greenDim:    '#dcfce7', greenMuted:  '#166534',
-  red:         '#dc2626', redDim:      '#fef2f2', redBorder:   '#fecaca',
-  input:       '#f9fafb', inputBorder: '#d1d5db',
-  overlay:     'rgba(0,0,0,0.6)',
+  bg: '#ffffff', bgSecondary: '#f8fafc', border: '#e2e8f0',
+  text: '#0f172a', textMuted: '#64748b', success: '#059669', error: '#dc2626', accent: CMYK.cyan, warn: '#d97706',
 };
+
+// ─── Cores disponíveis para os títulos do PDF (mesmo padrão do QR Code) ──────
+
+const PDF_TITLE_COLORS = [
+  { label: 'Rosa',     value: '#e94560' }, // cor original/padrão
+  { label: 'Navy',     value: '#000080' },
+  { label: 'Preto',    value: '#000000' },
+  { label: 'Roxo',     value: '#6d28d9' },
+  { label: 'Verde',    value: '#065f46' },
+  { label: 'Vermelho', value: '#991b1b' },
+];
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -152,6 +155,7 @@ interface ClienteData {
 }
 
 const CREDITS = 2;
+const OPENING_TEXT = 'Gerador de orçamento. Preencha os dados da empresa e do cliente para gerar o PDF.';
 
 export interface OrcamentoPdfDisplayProps {
   data:            { companyId?: string };
@@ -207,7 +211,8 @@ function maskDoc(raw: string): string {
 export default function OrcamentoPdfDisplay({
   data, onClose, onRequireLogin, theme = 'dark', playText,
 }: OrcamentoPdfDisplayProps) {
-  const C      = theme === 'dark' ? DARK : LIGHT;
+  const isDark = theme === 'dark';
+  const c = isDark ? DARK : LIGHT;
   const supabase = createClient();
 
   // ── Estado ───────────────────────────────────────────────────────────────────
@@ -221,6 +226,7 @@ export default function OrcamentoPdfDisplay({
 
   const [logoBase64,  setLogoBase64]  = useState<string | null>(() => sessionLogoCache.get() ?? null);
   const [pdfAccentColor, setPdfAccentColor] = useState<string>(() => sessionColorCache.get() ?? '#e94560');
+  const [customPdfColor, setCustomPdfColor] = useState('#e94560');
   const [empresa,     setEmpresa]     = useState<EmpresaData>({ nome: '', doc: '', tel: '', email: '', cidade: '', estado: '', end: '' });
   const [cliente,     setCliente]     = useState<ClienteData>({ nome: '', email: '', tel: '', end: '' });
   const [itens,       setItens]       = useState<OrcamentoItem[]>([{ id: nextId(), descricao: '', quantidade: 1, valorUnit: 0 }]);
@@ -231,6 +237,7 @@ export default function OrcamentoPdfDisplay({
   const [secao, setSecao] = useState<'empresa' | 'cliente' | 'itens' | 'resumo'>('empresa');
 
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const spoke = useRef(false);
 
   // ── Mount ────────────────────────────────────────────────────────────────────
   // Logo: cache só em memória (módulo) para esta sessão de navegação — sem
@@ -240,7 +247,10 @@ export default function OrcamentoPdfDisplay({
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('eai:modalOpen'));
     supabase.auth.getSession().then(({ data: { session } }) => setLogado(!!session));
-    playText?.('Gerador de orçamento. Preencha os dados da empresa e do cliente para gerar o PDF.').catch(() => {});
+    if (!spoke.current) {
+      spoke.current = true;
+      playText?.(OPENING_TEXT).catch(() => {});
+    }
     return () => {
       window.dispatchEvent(new CustomEvent('eai:modalClose'));
       window.speechSynthesis?.cancel();
@@ -289,6 +299,13 @@ export default function OrcamentoPdfDisplay({
     sessionLogoCache.clear();
   }, []);
 
+  // ── Cor dos títulos do PDF — persiste em memória, nesta sessão ───────────────
+
+  const handleSetPdfColor = useCallback((hex: string) => {
+    setPdfAccentColor(hex);
+    sessionColorCache.set(hex);
+  }, []);
+
   // ── Gerar PDF (requer login + crédito) ────────────────────────────────────────
 
   const handleGerar = useCallback(async () => {
@@ -320,6 +337,9 @@ export default function OrcamentoPdfDisplay({
       const PW  = doc.internal.pageSize.width;   // 210
       const PH  = doc.internal.pageSize.height;  // 297
       let y     = 20;
+
+      // Cor dos títulos escolhida pelo usuário (era fixa #e94560 antes)
+      const titleColor = hexToRgb(pdfAccentColor);
 
       // ── Logo (canto superior direito) ──────────────────────────────────────
       if (logoBase64) {
@@ -363,7 +383,7 @@ export default function OrcamentoPdfDisplay({
 
       // ── Título e data ─────────────────────────────────────────────────────
       doc.setFontSize(18); doc.setFont(undefined, 'bold');
-      doc.setTextColor(233, 69, 96); // accent
+      doc.setTextColor(titleColor.r, titleColor.g, titleColor.b);
       doc.text('ORÇAMENTO', 15, y);
       doc.setTextColor(0, 0, 0);
 
@@ -438,7 +458,7 @@ export default function OrcamentoPdfDisplay({
       }
 
       doc.setFontSize(11); doc.setFont(undefined, 'bold');
-      doc.setTextColor(233, 69, 96);
+      doc.setTextColor(titleColor.r, titleColor.g, titleColor.b);
       doc.text('TOTAL:', 140, y);
       doc.text(fmt(total), PW - 15, y, { align: 'right' });
       doc.setTextColor(0, 0, 0);
@@ -468,7 +488,7 @@ export default function OrcamentoPdfDisplay({
       doc.save(fileName);
       setResultName(fileName);
 
-      // ── Cobrança fail-closed: após gerar (§5) ────────────────────────────
+      // ── Cobrança fail-closed: após gerar ────────────────────────────
       const { data: raw, error: errCobranca } = await supabase.rpc(
         'cobrar_credito_se_suficiente',
         {
@@ -478,7 +498,7 @@ export default function OrcamentoPdfDisplay({
           p_metadata:     { cliente: cliente.nome, total },
         }
       );
-      // RPC retorna TABLE → sempre array (§10)
+      // RPC retorna TABLE → sempre array
       const resultado = Array.isArray(raw) ? raw[0] : raw;
       if (errCobranca || !resultado?.sucesso) {
         const saldoAtual = resultado?.saldo_atual ?? 0;
@@ -494,7 +514,7 @@ export default function OrcamentoPdfDisplay({
       setErrorMsg(err?.message ?? 'Erro ao gerar o orçamento.');
       setStage('error');
     }
-  }, [empresa, cliente, itens, desconto, observacoes, logoBase64, total, companyId, supabase, ensureCompany, playText]);
+  }, [empresa, cliente, itens, desconto, observacoes, logoBase64, pdfAccentColor, total, companyId, supabase, ensureCompany, playText]);
 
   const handleReset = useCallback(() => {
     setStage('form');
@@ -508,66 +528,52 @@ export default function OrcamentoPdfDisplay({
     else window.location.href = '/login';
   }, [onRequireLogin]);
 
-  // ─── Estilos base ─────────────────────────────────────────────────────────────
+  // ─── Estilos derivados da paleta (mesma convenção dos demais modais) ──────────
 
-  const inp: React.CSSProperties = {
-    width: '100%', padding: '9px 11px', borderRadius: 8, outline: 'none', fontSize: 13,
-    background: C.input, border: `1px solid ${C.inputBorder}`, color: C.text, boxSizing: 'border-box',
-  };
-  const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: C.sub, marginBottom: 4, display: 'block' };
-  const row: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4 };
+  const label: React.CSSProperties = { display: 'block', fontSize: 12, color: c.textMuted, marginBottom: 4 };
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14, background: c.bgSecondary, border: `1px solid ${c.border}`, color: c.text, outline: 'none', boxSizing: 'border-box' };
 
   const secaoBtn = (key: typeof secao): React.CSSProperties => ({
     flex: 1, padding: '8px 4px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-    background: secao === key ? C.accent : C.surface,
-    color:      secao === key ? '#fff'   : C.sub,
-    transition: 'all 0.15s',
+    background: secao === key ? c.accent : c.bgSecondary,
+    color:      secao === key ? '#fff'   : c.textMuted,
   });
 
   const btnPrimary: React.CSSProperties = {
-    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    gap: 8, padding: '11px 0', borderRadius: 12, border: 'none',
-    background: C.accent, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-  };
-
-  const btnGhost: React.CSSProperties = {
-    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    gap: 6, padding: '8px 0', borderRadius: 10, border: 'none',
-    background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
-    color: C.sub, fontSize: 12, cursor: 'pointer',
+    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    padding: 14, borderRadius: 10, border: 'none', background: c.accent, color: '#fff',
+    fontSize: 15, fontWeight: 700, cursor: 'pointer',
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   return createPortal(
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9999,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: C.overlay, padding: 16,
-    }}>
-      <div style={{
-        width: '100%', maxWidth: 500, maxHeight: '94dvh', overflowY: 'auto',
-        borderRadius: 20, padding: 24, background: C.bg, border: `1px solid ${C.border}`,
-        boxShadow: '0 25px 60px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: 0,
-      }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', padding: 16 }}>
+      <div style={{ width: '100%', maxWidth: 640, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 16, padding: 24, color: c.text, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <IconDoc s={icon(C.accent, 20)} />
-            <span style={{ fontSize: 17, fontWeight: 700, color: C.text }}>Orçamento em PDF</span>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 8 }}>
-            <IconX s={icon(C.sub, 18)} />
-          </button>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Orçamento em PDF</h2>
+          <button onClick={onClose} style={{ padding: '4px 10px', border: `1px solid ${c.border}`, borderRadius: 8, background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Fechar</button>
         </div>
 
-        {/* ── Stage: form ── */}
+        {/* Stage: form */}
         {stage === 'form' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
+            {secao === 'empresa' && (
+              <div style={{ padding: '12px 14px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+                <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: c.text }}>Como funciona</p>
+                <p style={{ margin: 0, fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
+                  Preencha os dados da sua empresa, do cliente e os itens do orçamento. Você pode
+                  adicionar seu logo e escolher a cor dos títulos do PDF. O arquivo é gerado e baixado
+                  na hora, já formatado e pronto para enviar.
+                </p>
+              </div>
+            )}
+
             {/* Navegação entre seções */}
-            <div style={{ display: 'flex', gap: 4, background: C.surface, padding: 4, borderRadius: 10 }}>
+            <div style={{ display: 'flex', gap: 4, background: c.bgSecondary, padding: 4, borderRadius: 8 }}>
               {(['empresa', 'cliente', 'itens', 'resumo'] as const).map(s => (
                 <button key={s} onClick={() => setSecao(s)} style={secaoBtn(s)}>
                   {{ empresa: 'Empresa', cliente: 'Cliente', itens: 'Itens', resumo: 'Resumo' }[s]}
@@ -586,17 +592,17 @@ export default function OrcamentoPdfDisplay({
                       onClick={() => logoInputRef.current?.click()}
                       style={{
                         position: 'relative',
-                        width: 80, height: 80, borderRadius: 12, cursor: 'pointer',
-                        border: `2px dashed ${C.borderStrong}`, background: C.surface,
+                        width: 80, height: 80, borderRadius: 8, cursor: 'pointer',
+                        border: `2px dashed ${c.border}`, background: c.bgSecondary,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        overflow: 'hidden', transition: 'border-color 0.15s',
+                        overflow: 'hidden',
                       }}
                     >
                       {logoBase64 ? (
                         <img src={logoBase64} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                       ) : (
-                        <div style={{ textAlign: 'center', color: C.muted }}>
-                          <IconUpload s={icon(C.muted, 20)} />
+                        <div style={{ textAlign: 'center', color: c.textMuted }}>
+                          <IconUpload s={icon(c.textMuted, 20)} />
                           <div style={{ fontSize: 9, marginTop: 4 }}>Logo</div>
                         </div>
                       )}
@@ -604,10 +610,7 @@ export default function OrcamentoPdfDisplay({
                     {logoBase64 && (
                       <button
                         onClick={handleRemoveLogo}
-                        style={{
-                          fontSize: 9, textAlign: 'center', color: C.red, background: 'none',
-                          border: 'none', cursor: 'pointer', padding: 2,
-                        }}
+                        style={{ fontSize: 9, textAlign: 'center', color: c.error, background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}
                       >
                         Remover
                       </button>
@@ -617,50 +620,83 @@ export default function OrcamentoPdfDisplay({
                     onChange={e => { const f = e.target.files?.[0]; if (f) handleLogo(f); e.currentTarget.value = ''; }} />
 
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={row}>
-                      <label style={lbl}>Nome da empresa *</label>
-                      <input style={inp} placeholder="Sua Empresa LTDA" value={empresa.nome}
+                    <div>
+                      <label style={label}>Nome da empresa *</label>
+                      <input style={inputStyle} placeholder="Sua Empresa LTDA" value={empresa.nome}
                         onChange={e => setEmpresa(p => ({ ...p, nome: e.target.value }))} />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                      <div style={row}>
-                        <label style={lbl}>CNPJ / CPF</label>
-                        <input style={inp} placeholder="00.000.000/0001-00" value={empresa.doc}
+                      <div>
+                        <label style={label}>CNPJ / CPF</label>
+                        <input style={inputStyle} placeholder="00.000.000/0001-00" value={empresa.doc}
                           onChange={e => setEmpresa(p => ({ ...p, doc: maskDoc(e.target.value) }))} />
                       </div>
-                      <div style={row}>
-                        <label style={lbl}>Telefone</label>
-                        <input style={inp} placeholder="(11) 99999-9999" value={empresa.tel}
+                      <div>
+                        <label style={label}>Telefone</label>
+                        <input style={inputStyle} placeholder="(11) 99999-9999" value={empresa.tel}
                           onChange={e => setEmpresa(p => ({ ...p, tel: maskTel(e.target.value) }))} />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div style={row}>
-                  <label style={lbl}>E-mail</label>
-                  <input style={inp} type="email" placeholder="contato@suaempresa.com" value={empresa.email}
+                <div>
+                  <label style={label}>E-mail</label>
+                  <input style={inputStyle} type="email" placeholder="contato@suaempresa.com" value={empresa.email}
                     onChange={e => setEmpresa(p => ({ ...p, email: e.target.value }))} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}>
-                  <div style={row}>
-                    <label style={lbl}>Cidade *</label>
-                    <input style={inp} placeholder="São Paulo" value={empresa.cidade}
+                  <div>
+                    <label style={label}>Cidade *</label>
+                    <input style={inputStyle} placeholder="São Paulo" value={empresa.cidade}
                       onChange={e => setEmpresa(p => ({ ...p, cidade: e.target.value }))} />
                   </div>
-                  <div style={row}>
-                    <label style={lbl}>UF *</label>
-                    <input style={inp} placeholder="SP" maxLength={2} value={empresa.estado}
+                  <div>
+                    <label style={label}>UF *</label>
+                    <input style={inputStyle} placeholder="SP" maxLength={2} value={empresa.estado}
                       onChange={e => setEmpresa(p => ({ ...p, estado: e.target.value.toUpperCase() }))} />
                   </div>
                 </div>
-                <div style={row}>
-                  <label style={lbl}>Endereço completo</label>
-                  <input style={inp} placeholder="Rua Exemplo, 123, Bairro" value={empresa.end}
+                <div>
+                  <label style={label}>Endereço completo</label>
+                  <input style={inputStyle} placeholder="Rua Exemplo, 123, Bairro" value={empresa.end}
                     onChange={e => setEmpresa(p => ({ ...p, end: e.target.value }))} />
                 </div>
 
-                <button onClick={() => setSecao('cliente')} style={{ ...btnPrimary, background: C.blue }}>
+                {/* Cor dos títulos do PDF — antes fixa em #e94560, agora escolhível */}
+                <div>
+                  <label style={label}>Cor dos títulos no PDF</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {PDF_TITLE_COLORS.map(opt => (
+                      <button
+                        key={opt.value}
+                        title={opt.label}
+                        onClick={() => handleSetPdfColor(opt.value)}
+                        style={{
+                          width: 28, height: 28, borderRadius: 8, background: opt.value, cursor: 'pointer',
+                          border: `2px solid ${pdfAccentColor === opt.value ? c.accent : c.border}`,
+                          boxShadow: pdfAccentColor === opt.value ? `0 0 0 2px ${c.accent}40` : 'none',
+                        }}
+                      />
+                    ))}
+                    <input
+                      type="color"
+                      value={customPdfColor}
+                      title="Cor personalizada"
+                      onChange={e => { setCustomPdfColor(e.target.value); handleSetPdfColor(e.target.value); }}
+                      style={{
+                        width: 28, height: 28, borderRadius: 8, padding: 2, cursor: 'pointer',
+                        border: `2px solid ${!PDF_TITLE_COLORS.some(opt => opt.value === pdfAccentColor) ? c.accent : c.border}`,
+                        background: c.bgSecondary,
+                      }}
+                    />
+                  </div>
+                  <p style={{ margin: '6px 0 0', fontSize: 11, color: c.textMuted }}>
+                    Aplica-se ao título "ORÇAMENTO" e ao valor "TOTAL" no PDF gerado.
+                  </p>
+                </div>
+
+                <button onClick={() => setSecao('cliente')} style={btnPrimary}>
                   Próximo: Cliente →
                 </button>
               </div>
@@ -669,30 +705,30 @@ export default function OrcamentoPdfDisplay({
             {/* ── Seção: Cliente ── */}
             {secao === 'cliente' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={row}>
-                  <label style={lbl}>Nome completo *</label>
-                  <input style={inp} placeholder="Nome do Cliente" value={cliente.nome}
+                <div>
+                  <label style={label}>Nome completo *</label>
+                  <input style={inputStyle} placeholder="Nome do Cliente" value={cliente.nome}
                     onChange={e => setCliente(p => ({ ...p, nome: e.target.value }))} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <div style={row}>
-                    <label style={lbl}>E-mail</label>
-                    <input style={inp} type="email" placeholder="email@cliente.com" value={cliente.email}
+                  <div>
+                    <label style={label}>E-mail</label>
+                    <input style={inputStyle} type="email" placeholder="email@cliente.com" value={cliente.email}
                       onChange={e => setCliente(p => ({ ...p, email: e.target.value }))} />
                   </div>
-                  <div style={row}>
-                    <label style={lbl}>Telefone</label>
-                    <input style={inp} placeholder="(21) 98888-8888" value={cliente.tel}
+                  <div>
+                    <label style={label}>Telefone</label>
+                    <input style={inputStyle} placeholder="(21) 98888-8888" value={cliente.tel}
                       onChange={e => setCliente(p => ({ ...p, tel: maskTel(e.target.value) }))} />
                   </div>
                 </div>
-                <div style={row}>
-                  <label style={lbl}>Endereço</label>
-                  <input style={inp} placeholder="Endereço do cliente (opcional)" value={cliente.end}
+                <div>
+                  <label style={label}>Endereço</label>
+                  <input style={inputStyle} placeholder="Endereço do cliente (opcional)" value={cliente.end}
                     onChange={e => setCliente(p => ({ ...p, end: e.target.value }))} />
                 </div>
 
-                <button onClick={() => setSecao('itens')} style={{ ...btnPrimary, background: C.blue }}>
+                <button onClick={() => setSecao('itens')} style={btnPrimary}>
                   Próximo: Itens →
                 </button>
               </div>
@@ -702,40 +738,37 @@ export default function OrcamentoPdfDisplay({
             {secao === 'itens' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {itens.map((item, idx) => (
-                  <div key={item.id} style={{
-                    padding: 12, borderRadius: 10, background: C.surface,
-                    border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 8,
-                  }}>
+                  <div key={item.id} style={{ padding: 12, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: C.muted }}>Item {idx + 1}</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: c.textMuted }}>Item {idx + 1}</span>
                       <button onClick={() => removeItem(item.id)} style={{
                         background: 'none', border: 'none', cursor: 'pointer', padding: 2, borderRadius: 6,
-                        color: C.red, opacity: itens.length === 1 ? 0.3 : 1,
+                        color: c.error, opacity: itens.length === 1 ? 0.3 : 1,
                       }} disabled={itens.length === 1}>
-                        <IconTrash s={icon(C.red, 14)} />
+                        <IconTrash s={icon(c.error, 14)} />
                       </button>
                     </div>
-                    <div style={row}>
-                      <label style={lbl}>Descrição</label>
-                      <input style={inp} placeholder="Descrição do produto/serviço" value={item.descricao}
+                    <div>
+                      <label style={label}>Descrição</label>
+                      <input style={inputStyle} placeholder="Descrição do produto/serviço" value={item.descricao}
                         onChange={e => updateItem(item.id, 'descricao', e.target.value)} />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr', gap: 8 }}>
-                      <div style={row}>
-                        <label style={lbl}>Qtd</label>
-                        <input style={{ ...inp, textAlign: 'center' }} type="number" min="0" step="0.01"
+                      <div>
+                        <label style={label}>Qtd</label>
+                        <input style={{ ...inputStyle, textAlign: 'center' }} type="number" min="0" step="0.01"
                           value={item.quantidade}
                           onChange={e => updateItem(item.id, 'quantidade', parseFloat(e.target.value) || 0)} />
                       </div>
-                      <div style={row}>
-                        <label style={lbl}>Valor unit.</label>
-                        <input style={inp} type="number" min="0" step="0.01" placeholder="0,00"
+                      <div>
+                        <label style={label}>Valor unit.</label>
+                        <input style={inputStyle} type="number" min="0" step="0.01" placeholder="0,00"
                           value={item.valorUnit || ''}
                           onChange={e => updateItem(item.id, 'valorUnit', parseFloat(e.target.value) || 0)} />
                       </div>
-                      <div style={row}>
-                        <label style={lbl}>Subtotal</label>
-                        <input style={{ ...inp, background: C.surfaceAlt, color: C.sub, cursor: 'default' }}
+                      <div>
+                        <label style={label}>Subtotal</label>
+                        <input style={{ ...inputStyle, background: c.bg, color: c.textMuted, cursor: 'default' }}
                           readOnly value={fmt(item.quantidade * item.valorUnit)} />
                       </div>
                     </div>
@@ -744,13 +777,13 @@ export default function OrcamentoPdfDisplay({
 
                 <button onClick={addItem} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '9px 0', borderRadius: 10, border: `1px dashed ${C.borderStrong}`,
-                  background: 'transparent', color: C.sub, fontSize: 13, cursor: 'pointer',
+                  padding: '9px 0', borderRadius: 8, border: `1px dashed ${c.border}`,
+                  background: 'transparent', color: c.textMuted, fontSize: 13, cursor: 'pointer',
                 }}>
-                  <IconPlus s={icon(C.sub, 14)} /> Adicionar item
+                  <IconPlus s={icon(c.textMuted, 14)} /> Adicionar item
                 </button>
 
-                <button onClick={() => setSecao('resumo')} style={{ ...btnPrimary, background: C.blue }}>
+                <button onClick={() => setSecao('resumo')} style={btnPrimary}>
                   Próximo: Resumo →
                 </button>
               </div>
@@ -761,31 +794,31 @@ export default function OrcamentoPdfDisplay({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
                 {/* Totais */}
-                <div style={{ padding: 16, borderRadius: 12, background: C.surface, border: `1px solid ${C.border}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: C.sub, marginBottom: 8 }}>
-                    <span>Subtotal</span><span style={{ color: C.text }}>{fmt(subtotal)}</span>
+                <div style={{ padding: 16, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: c.textMuted, marginBottom: 8 }}>
+                    <span>Subtotal</span><span style={{ color: c.text }}>{fmt(subtotal)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: C.sub, marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: c.textMuted, marginBottom: 12 }}>
                     <span>Desconto (R$)</span>
                     <input type="number" min="0" step="0.01" value={desconto || ''}
                       onChange={e => setDesconto(parseFloat(e.target.value) || 0)}
-                      style={{ ...inp, width: 110, textAlign: 'right', fontSize: 13 }} placeholder="0,00" />
+                      style={{ ...inputStyle, width: 110, textAlign: 'right', fontSize: 13 }} placeholder="0,00" />
                   </div>
-                  <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>TOTAL</span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: C.accent }}>{fmt(total)}</span>
+                  <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: c.text }}>TOTAL</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: pdfAccentColor }}>{fmt(total)}</span>
                   </div>
                 </div>
 
                 {/* Observações */}
-                <div style={row}>
-                  <label style={lbl}>Observações</label>
+                <div>
+                  <label style={label}>Observações</label>
                   <textarea
                     value={observacoes}
                     onChange={e => setObservacoes(e.target.value)}
                     placeholder="Ex: Validade 30 dias, condições de pagamento..."
                     rows={4}
-                    style={{ ...inp, resize: 'vertical', minHeight: 80 }}
+                    style={{ ...inputStyle, resize: 'vertical', minHeight: 80 }}
                   />
                 </div>
 
@@ -794,7 +827,7 @@ export default function OrcamentoPdfDisplay({
                   disabled={!empresa.nome.trim() || !cliente.nome.trim()}
                   style={{
                     ...btnPrimary,
-                    background: empresa.nome.trim() && cliente.nome.trim() ? C.accent : C.border,
+                    background: empresa.nome.trim() && cliente.nome.trim() ? c.accent : c.border,
                     cursor:     empresa.nome.trim() && cliente.nome.trim() ? 'pointer' : 'not-allowed',
                   }}
                 >
@@ -802,10 +835,10 @@ export default function OrcamentoPdfDisplay({
                   Gerar PDF do Orçamento
                 </button>
 
-                {/* Custo — oculto para anônimos (§6) */}
+                {/* Custo — oculto para anônimos */}
                 {logado && (
-                  <p style={{ fontSize: 11, color: C.muted, textAlign: 'center', margin: 0 }}>
-                    Custo: <strong style={{ color: C.text }}>{CREDITS}</strong> créditos
+                  <p style={{ fontSize: 11, color: c.textMuted, textAlign: 'center', margin: 0 }}>
+                    Custo: <strong style={{ color: c.text }}>{CREDITS}</strong> créditos
                   </p>
                 )}
               </div>
@@ -813,56 +846,52 @@ export default function OrcamentoPdfDisplay({
           </div>
         )}
 
-        {/* ── Stage: generating ── */}
+        {/* Stage: generating */}
         {stage === 'generating' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '32px 0' }}>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', animation: 'orc-spin 0.8s linear infinite' }} />
-            <p style={{ fontSize: 13, color: C.sub, margin: 0 }}>Gerando PDF…</p>
-            <style>{`@keyframes orc-spin { to { transform: rotate(360deg); } }`}</style>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '34px 0' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', border: `3px solid ${c.border}`, borderTopColor: c.accent, animation: 'orc-spin 0.8s linear infinite' }} />
+            <p style={{ margin: 0, fontSize: 14, color: c.textMuted }}>Gerando PDF...</p>
           </div>
         )}
 
-        {/* ── Stage: result ── */}
+        {/* Stage: result */}
         {stage === 'result' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', background: C.greenDim, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <IconDownload s={icon(C.greenMuted, 24)} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderRadius: 8, background: 'rgba(16,185,129,0.1)', border: `1px solid ${c.success}`, color: c.success, fontSize: 14, fontWeight: 600 }}>
+              <span>PDF gerado e baixado!</span>
             </div>
-            <div>
-              <p style={{ fontSize: 15, fontWeight: 700, color: C.text, margin: '0 0 4px' }}>PDF gerado e baixado!</p>
-              {resultName && <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>{resultName}</p>}
-            </div>
+            {resultName && <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>{resultName}</p>}
             {saldo !== null && (
-              <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>
-                Saldo restante: <strong style={{ color: C.text }}>{saldo}</strong> créditos
+              <p style={{ fontSize: 11, color: c.textMuted, margin: 0 }}>
+                Saldo restante: <strong style={{ color: c.text }}>{saldo}</strong> créditos
               </p>
             )}
-            <button onClick={handleReset} style={btnGhost}>
-              <IconRefresh s={icon(C.sub, 14)} /> Gerar novo orçamento
+            <button onClick={handleReset} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 13, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <IconRefresh s={icon(c.textMuted, 14)} /> Gerar novo orçamento
             </button>
           </div>
         )}
 
-        {/* ── Stage: login ── */}
+        {/* Stage: login */}
         {stage === 'login' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center', padding: '8px 4px' }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Entre para gerar o orçamento</div>
-            <p style={{ margin: 0, fontSize: 14, color: C.sub, lineHeight: 1.5 }}>
-              Ao se <strong style={{ color: C.accent }}>cadastrar você ganha 20 créditos iniciais</strong> para usar as ferramentas do ArteFinal.
+            <div style={{ fontSize: 16, fontWeight: 700, color: c.text }}>Entre para gerar o orçamento</div>
+            <p style={{ margin: 0, fontSize: 14, color: c.textMuted, lineHeight: 1.5 }}>
+              Ao se <strong style={{ color: c.accent }}>cadastrar você ganha 20 créditos iniciais</strong> para usar as ferramentas do ArteFinal.
             </p>
             <button onClick={irParaLogin} style={btnPrimary}>
               Entrar / Cadastrar e ganhar 20 créditos
             </button>
-            <button onClick={() => setStage('form')} style={{ padding: 10, borderRadius: 10, border: `1px solid ${C.border}`, background: 'transparent', color: C.sub, cursor: 'pointer', fontSize: 13 }}>
+            <button onClick={() => setStage('form')} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13 }}>
               Voltar ao formulário
             </button>
           </div>
         )}
 
-        {/* ── Stage: error ── */}
+        {/* Stage: error */}
         {stage === 'error' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ padding: '10px 12px', borderRadius: 10, fontSize: 13, lineHeight: 1.4, background: C.redDim, border: `1px solid ${C.redBorder}`, color: C.red }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: `1px solid ${c.error}`, color: c.error, fontSize: 14, lineHeight: 1.4 }}>
               {errorMsg ?? 'Ocorreu um erro inesperado.'}
             </div>
             <button onClick={handleReset} style={btnPrimary}>
@@ -870,8 +899,11 @@ export default function OrcamentoPdfDisplay({
             </button>
           </div>
         )}
-
       </div>
+
+      <style>{`
+        @keyframes orc-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>,
     document.body
   );

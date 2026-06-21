@@ -1,0 +1,57 @@
+# Dependências e builds locais
+node_modules
+.next
+.vercel
+dist
+build
+out
+.cache
+.turbo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Ambiente local / segredos
+.env
+.env.local
+.env.*.local
+
+# Sistema/editor
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+
+# Testes e coverage
+coverage
+.nyc_output
+__tests__
+tests
+test-results
+playwright-report
+
+# Arquivos de documentação que não precisam ir para o build
+*.md
+!README.md
+
+# Backups / temporários
+*.bak
+*.backup
+*.tmp
+*.old
+
+# Mídias grandes que não sejam usadas pelo app
+*.mp3
+*.mov
+*.avi
+*.mkv
+*.psd
+*.ai
+
+# Pastas de scripts auxiliares, se não forem usadas pelo build
+# Cuidado: deixe comentado se algum script for necessário no build
+# scripts

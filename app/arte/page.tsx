@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Bot, Send, LogOut, Sparkles, X, ChevronRight,
   Layers, Image as ImageIcon, Images, Copy, Scissors,
-  Wand2, Grid3x3, QrCode, Barcode, Receipt, Eraser,  RefreshCw, Pencil,
+  Wand2, Grid3x3, QrCode, Barcode, Receipt, Eraser,  RefreshCw, Pencil, FileStack,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
@@ -20,6 +20,7 @@ import PolaroidDisplay from '@/components/arte/PolaroidDisplay';
 import EditarImagemDisplay from '@/components/arte/EditarImagemDisplay';
 import ConversorArquivoDisplay from '@/components/arte/ConversorArquivoDisplay';
 import RemoverFundoDisplay from '@/components/arte/RemoverFundoDisplay';
+import JuntarDividirPdfsDisplay from '@/components/arte/JuntarDividirPdfsDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -99,6 +100,18 @@ const SKILLS: Skill[] = [
   credits: 10,
   triggers: ['folha de recorte', 'folha recorte', 'grade de adesivo', 'grade de corte', 'varios adesivos', 'varias pecas', 'multiplos adesivos', 'repetir adesivo', 'repetir corte', 'folha completa de adesivo'],
   modal: 'FolhaRecorteDisplay',
+},
+{
+  key: 'juntar_dividir_pdfs',
+  label: 'Juntar/Dividir PDFs',
+  color: CMYK.cyan,
+  desc: 'Junta vários PDFs em um só, ou divide um PDF em páginas separadas',
+  credits: 0,
+  triggers: [
+    'juntar pdf', 'juntar pdfs', 'unir pdf', 'mesclar pdf', 'dividir pdf',
+    'separar pdf', 'separar paginas', 'extrair paginas', 'dividir paginas',
+  ],
+  modal: 'JuntarDividirPdfsDisplay',
 },
 {
   key:      'gerar_qr_code',
@@ -192,6 +205,7 @@ const SKILL_ICONS: Record<string, React.ComponentType<{ size?: number; className
   converter_arquivo: RefreshCw,
   editar_imagem: Pencil,
   remover_fundo: Eraser,
+  juntar_dividir_pdfs: FileStack,
 };
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -642,6 +656,14 @@ export default function ArtePage() {
     theme="light"
     playText={playText}
     onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+  />
+)}
+{activeModal?.type === 'JuntarDividirPdfsDisplay' && (
+  <JuntarDividirPdfsDisplay
+    data={activeModal.data}
+    onClose={closeModal}
+    theme="light"
+    playText={playText}
   />
 )}
       <style jsx>{`

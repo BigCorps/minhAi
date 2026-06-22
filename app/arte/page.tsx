@@ -15,6 +15,9 @@ import FotoDocumentoDisplay from '@/components/arte/FotoDocumentoDisplay';
 import PolaroidDisplay from '@/components/arte/PolaroidDisplay';
 import EditarImagemDisplay from '@/components/arte/EditarImagemDisplay';
 import ConversorArquivoDisplay from '@/components/arte/ConversorArquivoDisplay';
+import JuntarDividirPdfsDisplay from '@/components/arte/JuntarDividirPdfsDisplay';
+import RemoverFundoDisplay from '@/components/arte/RemoverFundoDisplay';
+import Imagem3DDisplay from '@/components/arte/Imagem3DDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -34,31 +37,31 @@ const SKILLS: Skill[] = [
     triggers: ['arte final', 'arquivo pra grafica', 'arquivo para grafica', 'sangria', 'corte', 'cartões', 'folhetos', 'fechar arquivo', 'gerar pdf', 'pdf de producao'],
     modal: 'ArteFinalDisplay',
   },
-{
-  key:      'foto_documento',
-  label:    'Foto para Documento',
-  color: CMYK.cyan,
-  desc:     'Gera fotos 2x2, 3x4 ou 5x7 em PDF com remoção de fundo automática',
-  credits:  0,   // gratuito
-  triggers: [
-    'foto documento', 'foto para documento', 'foto 3x4', '3x4', 'foto 2x2', '2x2',
-    'foto 5x7', '5x7', 'foto passaporte', 'remover fundo foto', 'foto identidade',
-    'foto cnh', 'foto rg', 'foto carteira', 'fotos documento',
-  ],
-  modal: 'foto_documento',
-},
-{
-  key:      'polaroid',
-  label:    'Polaroids para A4',
-  color: CMYK.cyan,
-  desc:     'Monta grid de polaroids (Padrão ou Mini) em PDF pronto para imprimir e cortar',
-  credits:  0,   // gratuito
-  triggers: [
-    'polaroid', 'polaroids', 'foto polaroid', 'montagem de fotos',
-    'grid de fotos', 'colagem de fotos', 'mural de fotos', 'fotos a4',
-  ],
-  modal: 'polaroid',
-},
+  {
+    key: 'foto_documento',
+    label: 'Foto para Documento',
+    color: CMYK.cyan,
+    desc: 'Gera fotos 2x2, 3x4 ou 5x7 em PDF com remoção de fundo automática',
+    credits: 0,
+    triggers: [
+      'foto documento', 'foto para documento', 'foto 3x4', '3x4', 'foto 2x2', '2x2',
+      'foto 5x7', '5x7', 'foto passaporte', 'remover fundo foto', 'foto identidade',
+      'foto cnh', 'foto rg', 'foto carteira', 'fotos documento',
+    ],
+    modal: 'foto_documento',
+  },
+  {
+    key: 'polaroid',
+    label: 'Polaroids para A4',
+    color: CMYK.cyan,
+    desc: 'Monta grid de polaroids (Padrão ou Mini) em PDF pronto para imprimir e cortar',
+    credits: 0,
+    triggers: [
+      'polaroid', 'polaroids', 'foto polaroid', 'montagem de fotos',
+      'grid de fotos', 'colagem de fotos', 'mural de fotos', 'fotos a4',
+    ],
+    modal: 'polaroid',
+  },
   {
     key: 'duplicar_imagem',
     label: 'Duplicar Imagem',
@@ -80,58 +83,70 @@ const SKILLS: Skill[] = [
   {
     key: 'vetorizar_imagem',
     label: 'Vetorizar em SVG/PDF',
-    color: CMYK.cyan, // mesma cor de todas as skills, conforme o próprio comentário do componente
+    color: CMYK.cyan,
     desc: 'Transforma imagem em SVG (silhueta ou contorno)',
     credits: 1,
     triggers: ['vetorizar', 'vetorizar imagem', 'vetor', 'svg', 'transformar em vetor', 'contorno vetorial', 'silhueta'],
     modal: 'VetorizarImagemDisplay',
   },
-{
-  key: 'folha_recorte',
-  label: 'Folha de Recorte',
-  color: CMYK.cyan,
-  desc: 'Várias cópias com arte + corte em uma folha (A4 ou personalizada)',
-  credits: 10,
-  triggers: ['folha de recorte', 'folha recorte', 'grade de adesivo', 'grade de corte', 'varios adesivos', 'varias pecas', 'multiplos adesivos', 'repetir adesivo', 'repetir corte', 'folha completa de adesivo'],
-  modal: 'FolhaRecorteDisplay',
-},
-{
-  key:      'gerar_qr_code',
-  label:    'Gerar QR Code',
-  color:     CMYK.cyan,  
-  desc:     'Gera QR Code com cor, tamanho e logo personalizados',
-  credits:  1,                  // utilitário gratuito; ajuste se quiser cobrar
-  triggers: [
-    'qr', 'qr code', 'qrcode', 'gerar qr', 'criar qr',
-    'link qr', 'código qr', 'código de barras 2d',
-  ],
-  modal: 'gerar_qr_code',
-},
-{
-  key:      'codigo_barras',
-  label:    'Código de Barras',
-  color:     CMYK.cyan,  
-  desc:     'Gera código de barras Code 128, EAN-13 ou Code 39',
-  credits:  1,
-  triggers: [
-    'codigo de barras', 'código de barras', 'barcode', 'ean', 'ean13', 'ean-13',
-    'code 128', 'code128', 'code 39', 'code39', 'gerar codigo', 'gerar código',
-  ],
-  modal: 'codigo_barras',
-},
-{
-  key:      'orcamento_pdf',
-  label:    'Orçamento em PDF',
-  color:     CMYK.cyan,  
-  desc:     'Cria orçamento profissional em PDF com logo, itens e totais',
-  credits:  2,
-  triggers: [
-    'orcamento', 'orçamento', 'gerar orcamento', 'gerar orçamento',
-    'proposta', 'proposta comercial', 'pdf orcamento', 'cotacao', 'cotação',
-    'nota de servico', 'nota de serviço', 'precificacao', 'precificação',
-  ],
-  modal: 'orcamento_pdf',
-},
+  {
+    key: 'folha_recorte',
+    label: 'Folha de Recorte',
+    color: CMYK.cyan,
+    desc: 'Várias cópias com arte + corte em uma folha (A4 ou personalizada)',
+    credits: 10,
+    triggers: ['folha de recorte', 'folha recorte', 'grade de adesivo', 'grade de corte', 'varios adesivos', 'varias pecas', 'multiplos adesivos', 'repetir adesivo', 'repetir corte', 'folha completa de adesivo'],
+    modal: 'FolhaRecorteDisplay',
+  },
+  {
+    key: 'juntar_dividir_pdfs',
+    label: 'Juntar/Dividir PDFs',
+    color: CMYK.cyan,
+    desc: 'Junta vários PDFs em um só, ou divide um PDF em páginas separadas',
+    credits: 0,
+    triggers: [
+      'juntar pdf', 'juntar pdfs', 'unir pdf', 'mesclar pdf', 'dividir pdf',
+      'separar pdf', 'separar paginas', 'extrair paginas', 'dividir paginas',
+    ],
+    modal: 'JuntarDividirPdfsDisplay',
+  },
+  {
+    key: 'gerar_qr_code',
+    label: 'Gerar QR Code',
+    color: CMYK.cyan,
+    desc: 'Gera QR Code com cor, tamanho e logo personalizados',
+    credits: 1,
+    triggers: [
+      'qr', 'qr code', 'qrcode', 'gerar qr', 'criar qr',
+      'link qr', 'código qr', 'código de barras 2d',
+    ],
+    modal: 'gerar_qr_code',
+  },
+  {
+    key: 'codigo_barras',
+    label: 'Código de Barras',
+    color: CMYK.cyan,
+    desc: 'Gera código de barras Code 128, EAN-13 ou Code 39',
+    credits: 1,
+    triggers: [
+      'codigo de barras', 'código de barras', 'barcode', 'ean', 'ean13', 'ean-13',
+      'code 128', 'code128', 'code 39', 'code39', 'gerar codigo', 'gerar código',
+    ],
+    modal: 'codigo_barras',
+  },
+  {
+    key: 'orcamento_pdf',
+    label: 'Orçamento em PDF',
+    color: CMYK.cyan,
+    desc: 'Cria orçamento profissional em PDF com logo, itens e totais',
+    credits: 2,
+    triggers: [
+      'orcamento', 'orçamento', 'gerar orcamento', 'gerar orçamento',
+      'proposta', 'proposta comercial', 'pdf orcamento', 'cotacao', 'cotação',
+      'nota de servico', 'nota de serviço', 'precificacao', 'precificação',
+    ],
+    modal: 'orcamento_pdf',
+  },
   {
     key: 'converter_arquivo',
     label: 'Converter Arquivos',
@@ -158,6 +173,30 @@ const SKILLS: Skill[] = [
     ],
     modal: 'EditarImagemDisplay',
   },
+{
+    key: 'remover_fundo',
+    label: 'Remover Fundo',
+    color: CMYK.cyan,
+    desc: 'Remove o fundo de uma imagem e libera o PNG transparente em alta resolução',
+    credits: 2,
+    triggers: [
+      'remover fundo', 'tirar fundo', 'apagar fundo', 'fundo transparente',
+      'remover background', 'sem fundo', 'isolar imagem', 'recortar fundo',
+    ],
+    modal: 'RemoverFundoDisplay',
+  },
+{
+  key: 'imagem_3d',
+  label: 'Imagem para 3D',
+  color: CMYK.cyan,
+  desc: 'Transforma uma imagem em modelo 3D (.STL/.3MF) para impressão 3D',
+  credits: 2,
+  triggers: [
+    'imagem 3d', 'imagem para 3d', 'modelo 3d', 'gerar stl', 'arquivo stl',
+    'converter para 3d', 'lithophane', '3mf', 'imprimir em 3d', 'impressao 3d',
+  ],
+  modal: 'Imagem3DDisplay',
+},
 ];
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -169,10 +208,6 @@ function detectSkill(text: string): Skill | null {
 }
 
 // ── Carrossel infinito de habilidades ─────────────────────────────────────
-// Mesma técnica do CategoryCarousel do assistente: duplica a lista N vezes e
-// anima um translateX contínuo até -(1/N)*100%, criando um loop sem costura
-// (a Nª cópia termina exatamente onde a 1ª cópia começou). Pausa em
-// hover/touch — sem isso o usuário não consegue ler nem clicar com calma.
 const CAROUSEL_MIN_COPIES = 8;
 function calcScrollDuration(count: number, isMobile: boolean): number {
   const perItem = isMobile ? 3.5 : 2.5;
@@ -193,6 +228,7 @@ export default function ArtePage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [isMobile, setIsMobile] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -220,7 +256,6 @@ export default function ArtePage() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  // detecta mobile pra ajustar a velocidade do carrossel (igual ao CategoryCarousel)
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -228,8 +263,19 @@ export default function ArtePage() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Abre o modal mesmo sem login — o preview é livre; o gate de login fica no "Liberar".
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidebarOpen(false); };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [sidebarOpen]);
+
   const openSkill = useCallback((sk: Skill) => {
+    setSidebarOpen(false);
     setActiveModal({ type: sk.modal, data: { companyId: companyId ?? '' } });
   }, [companyId]);
 
@@ -258,11 +304,10 @@ export default function ArtePage() {
     window.location.reload();
   };
 
-  // ── Mecânica do scroll infinito (igual ao CategoryCarousel) ─────────────
   const scrollDuration = calcScrollDuration(SKILLS.length, isMobile);
   const copies = CAROUSEL_MIN_COPIES;
   const duplicatedSkills = Array.from({ length: copies }, () => SKILLS).flat();
-  const resetPercent = (1 / copies) * 100; // ex.: 1/8 = 12.5% — onde a animação reinicia sem costura
+  const resetPercent = (1 / copies) * 100;
 
   const pauseCarousel = useCallback(() => {
     if (carouselRef.current) carouselRef.current.style.animationPlayState = 'paused';
@@ -270,7 +315,6 @@ export default function ArtePage() {
   const resumeCarousel = useCallback(() => {
     if (carouselRef.current) carouselRef.current.style.animationPlayState = 'running';
   }, []);
-  // stopPropagation evita que um swipe global da página capture o gesto do carrossel
   const onTouchStartCarousel = useCallback((e: React.TouchEvent) => { e.stopPropagation(); pauseCarousel(); }, [pauseCarousel]);
   const onTouchEndCarousel = useCallback((e: React.TouchEvent) => { e.stopPropagation(); resumeCarousel(); }, [resumeCarousel]);
   const onTouchCancelCarousel = useCallback((e: React.TouchEvent) => { e.stopPropagation(); resumeCarousel(); }, [resumeCarousel]);
@@ -281,9 +325,13 @@ export default function ArtePage() {
       <header className="flex justify-center px-4 sm:px-6 py-3 border-b flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
         <div className="flex items-center justify-between w-full max-w-2xl">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
+              aria-label="Abrir menu de funções"
+            >
               <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
-            </div>
+            </button>
             <div>
               <p className="text-sm font-bold" style={{ color: '#0f172a' }}>ArteFinal</p>
               <p className="text-[11px]" style={{ color: '#64748b' }}>Seu arte-finalista com IA.</p>
@@ -413,6 +461,65 @@ export default function ArtePage() {
         </div>
       )}
 
+      {/* Sidebar de funções — só texto, sem ícones por item */}
+      <div
+        className={`fixed inset-0 z-[60] transition-opacity duration-300 ${sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        aria-hidden={!sidebarOpen}
+      >
+        <div onClick={() => setSidebarOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+
+        <aside
+          className={`absolute top-0 left-0 h-full w-[85vw] max-w-sm sm:w-80 bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        >
+          <div className="flex items-center justify-between px-4 py-4 border-b flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center">
+                <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <p className="text-sm font-bold" style={{ color: '#0f172a' }}>Funções</p>
+                <p className="text-[11px]" style={{ color: '#64748b' }}>Toque para abrir</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-2 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors active:scale-95 text-lg leading-none font-bold"
+              aria-label="Fechar menu"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-2 py-2">
+            {SKILLS.map((sk) => (
+              <button
+                key={sk.key}
+                onClick={() => openSkill(sk)}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-colors hover:bg-slate-50 active:scale-[0.98]"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: '#0f172a' }}>{sk.label}</p>
+                  <p className="text-xs truncate" style={{ color: '#64748b' }}>{sk.desc}</p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <span className="text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap" style={{ background: `${sk.color}1A`, color: sk.color }}>
+                    {sk.credits === 0 ? 'Grátis' : `${sk.credits} cr.`}
+                  </span>
+                  <span className="text-slate-300 text-lg leading-none">›</span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="px-4 py-3 border-t flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+            <p className="text-center text-[10px]" style={{ color: '#94a3b8' }}>
+              Powered by{' '}
+              <a href="https://minhai.app" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: CMYK.cyan, fontWeight: 600 }}>minhAi.app</a>
+            </p>
+          </div>
+        </aside>
+      </div>
+
       {/* Modais */}
       {activeModal?.type === 'ArteFinalDisplay' && (
         <ArteFinalDisplay
@@ -450,8 +557,83 @@ export default function ArtePage() {
           onRequireLogin={() => { window.location.href = LOGIN_URL; }}
         />
       )}
-{activeModal?.type === 'FolhaRecorteDisplay' && (
-  <FolhaRecorteDisplay
+      {activeModal?.type === 'FolhaRecorteDisplay' && (
+        <FolhaRecorteDisplay
+          data={activeModal.data}
+          onClose={closeModal}
+          theme="light"
+          playText={playText}
+          onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+        />
+      )}
+      {activeModal?.type === 'gerar_qr_code' && (
+        <QRCodeDisplay
+          data={activeModal.data}
+          onClose={closeModal}
+          theme="light"
+          playText={playText}
+          onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+        />
+      )}
+      {activeModal?.type === 'codigo_barras' && (
+        <CodigoBarrasDisplay
+          data={activeModal.data}
+          onClose={closeModal}
+          theme="light"
+          playText={playText}
+          onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+        />
+      )}
+      {activeModal?.type === 'orcamento_pdf' && (
+        <OrcamentoPdfDisplay
+          data={activeModal.data}
+          onClose={closeModal}
+          theme="light"
+          playText={playText}
+          onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+        />
+      )}
+      {activeModal?.type === 'foto_documento' && (
+        <FotoDocumentoDisplay
+          onClose={closeModal}
+          theme="light"
+          playText={playText}
+        />
+      )}
+      {activeModal?.type === 'polaroid' && (
+        <PolaroidDisplay
+          onClose={closeModal}
+          theme="light"
+          playText={playText}
+        />
+      )}
+      {activeModal?.type === 'ConversorArquivoDisplay' && (
+        <ConversorArquivoDisplay
+          data={activeModal.data}
+          onClose={closeModal}
+          theme="light"
+          playText={playText}
+        />
+      )}
+      {activeModal?.type === 'EditarImagemDisplay' && (
+        <EditarImagemDisplay
+          data={activeModal.data}
+          onClose={closeModal}
+          theme="light"
+          playText={playText}
+          onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+        />
+      )}
+      {activeModal?.type === 'JuntarDividirPdfsDisplay' && (
+        <JuntarDividirPdfsDisplay
+          data={activeModal.data}
+          onClose={closeModal}
+          theme="light"
+          playText={playText}
+        />
+      )}
+{activeModal?.type === 'RemoverFundoDisplay' && (
+  <RemoverFundoDisplay
     data={activeModal.data}
     onClose={closeModal}
     theme="light"
@@ -459,8 +641,8 @@ export default function ArtePage() {
     onRequireLogin={() => { window.location.href = LOGIN_URL; }}
   />
 )}
-{activeModal?.type === 'gerar_qr_code' && (
-  <QRCodeDisplay
+{activeModal?.type === 'Imagem3DDisplay' && (
+  <Imagem3DDisplay
     data={activeModal.data}
     onClose={closeModal}
     theme="light"
@@ -468,56 +650,7 @@ export default function ArtePage() {
     onRequireLogin={() => { window.location.href = LOGIN_URL; }}
   />
 )}
-{activeModal?.type === 'codigo_barras' && (
-  <CodigoBarrasDisplay
-    data={activeModal.data}
-    onClose={closeModal}
-    theme="light"
-    playText={playText}
-    onRequireLogin={() => { window.location.href = LOGIN_URL; }}
-  />
-)}
-{activeModal?.type === 'orcamento_pdf' && (
-  <OrcamentoPdfDisplay
-    data={activeModal.data}
-    onClose={closeModal}
-    theme="light"
-    playText={playText}
-    onRequireLogin={() => { window.location.href = LOGIN_URL; }}
-  />
-)}
-{activeModal?.type === 'foto_documento' && (
-  <FotoDocumentoDisplay
-    onClose={closeModal}
-    theme="light"
-    playText={playText}
-  />
-)}
-{activeModal?.type === 'polaroid' && (
-  <PolaroidDisplay
-    onClose={closeModal}
-    theme="light"
-    playText={playText}
-  />
-)}
-{activeModal?.type === 'ConversorArquivoDisplay' && (
-  <ConversorArquivoDisplay
-    data={activeModal.data}
-    onClose={closeModal}
-    theme="light"
-    playText={playText}
-  />
-)}
-{activeModal?.type === 'EditarImagemDisplay' && (
-  <EditarImagemDisplay
-    data={activeModal.data}
-    onClose={closeModal}
-    theme="light"
-    playText={playText}
-    onRequireLogin={() => { window.location.href = LOGIN_URL; }}
-  />
-)}
-      
+
       <style jsx>{`
         @keyframes af-skills-scroll {
           0% { transform: translateX(0); }

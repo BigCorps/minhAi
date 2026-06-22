@@ -1,0 +1,602 @@
+
+{
+  "header": {
+    "reportVersion": 5,
+    "event": "SIGUSR2",
+    "trigger": "Signal",
+    "filename": "report.20260622.175826.143962.0.001.json",
+    "dumpEventTime": "2026-06-22T17:58:26Z",
+    "dumpEventTimeStamp": "1782151106027",
+    "processId": 143962,
+    "threadId": 0,
+    "cwd": "/workspaces/minhAi",
+    "commandLine": [
+      "node",
+      "--report-on-signal",
+      "--report-signal=SIGUSR2",
+      "node_modules/next/dist/bin/next",
+      "build",
+      "--webpack"
+    ],
+    "nodejsVersion": "v24.14.0",
+    "glibcVersionRuntime": "2.39",
+    "glibcVersionCompiler": "2.28",
+    "wordSize": 64,
+    "arch": "x64",
+    "platform": "linux",
+    "componentVersions": {
+      "acorn": "8.15.0",
+      "ada": "3.4.2",
+      "amaro": "1.1.7",
+      "ares": "1.34.6",
+      "brotli": "1.2.0",
+      "cldr": "48.0",
+      "icu": "78.2",
+      "llhttp": "9.3.0",
+      "merve": "1.0.0",
+      "modules": "137",
+      "napi": "10",
+      "nbytes": "0.1.1",
+      "ncrypto": "0.0.1",
+      "nghttp2": "1.68.0",
+      "node": "24.14.0",
+      "openssl": "3.5.5",
+      "simdjson": "4.2.4",
+      "simdutf": "6.4.0",
+      "sqlite": "3.51.2",
+      "tz": "2025c",
+      "undici": "7.21.0",
+      "unicode": "17.0",
+      "uv": "1.51.0",
+      "uvwasi": "0.0.23",
+      "v8": "13.6.233.17-node.41",
+      "zlib": "1.3.1-e00f703",
+      "zstd": "1.5.7"
+    },
+    "release": {
+      "name": "node",
+      "lts": "Krypton",
+      "headersUrl": "https://nodejs.org/download/release/v24.14.0/node-v24.14.0-headers.tar.gz",
+      "sourceUrl": "https://nodejs.org/download/release/v24.14.0/node-v24.14.0.tar.gz"
+    },
+    "osName": "Linux",
+    "osRelease": "6.8.0-1052-azure",
+    "osVersion": "#58~22.04.1-Ubuntu SMP Thu Mar 26 05:02:21 UTC 2026",
+    "osMachine": "x86_64",
+    "cpus": [
+      {
+        "model": "AMD EPYC 9V74 80-Core Processor",
+        "speed": 0,
+        "user": 6902480,
+        "nice": 1103360,
+        "sys": 1103990,
+        "idle": 6301230,
+        "irq": 0
+      },
+      {
+        "model": "AMD EPYC 9V74 80-Core Processor",
+        "speed": 0,
+        "user": 7058470,
+        "nice": 1105450,
+        "sys": 1093260,
+        "idle": 6162680,
+        "irq": 0
+      }
+    ],
+    "networkInterfaces": [
+      {
+        "name": "lo",
+        "internal": true,
+        "mac": "00:00:00:00:00:00",
+        "address": "127.0.0.1",
+        "netmask": "255.0.0.0",
+        "family": "IPv4"
+      },
+      {
+        "name": "eth0",
+        "internal": false,
+        "mac": "00:0d:3a:e3:c3:9b",
+        "address": "10.0.11.156",
+        "netmask": "255.255.0.0",
+        "family": "IPv4"
+      },
+      {
+        "name": "lo",
+        "internal": true,
+        "mac": "00:00:00:00:00:00",
+        "address": "::1",
+        "netmask": "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+        "family": "IPv6",
+        "scopeid": 0
+      },
+      {
+        "name": "eth0",
+        "internal": false,
+        "mac": "00:0d:3a:e3:c3:9b",
+        "address": "fe80::20d:3aff:fee3:c39b",
+        "netmask": "ffff:ffff:ffff:ffff::",
+        "family": "IPv6",
+        "scopeid": 2
+      }
+    ],
+    "host": "codespaces-17c896"
+  },
+  "javascriptStack": {
+    "message": "",
+    "errorProperties": {
+    }
+  },
+  "javascriptHeap": {
+    "totalMemory": 541691904,
+    "executableMemory": 8073216,
+    "totalCommittedMemory": 508702720,
+    "availableMemory": 1810639792,
+    "totalGlobalHandlesMemory": 61656,
+    "usedGlobalHandlesMemory": 6688,
+    "usedMemory": 451804376,
+    "memoryLimit": 2348810240,
+    "mallocedMemory": 2138200,
+    "externalMemory": 109574484,
+    "peakMallocedMemory": 19956600,
+    "nativeContextCount": 4,
+    "detachedContextCount": 0,
+    "doesZapGarbage": 0,
+    "heapSpaces": {
+      "read_only_space": {
+        "memorySize": 0,
+        "committedMemory": 0,
+        "capacity": 0,
+        "used": 0,
+        "available": 0
+      },
+      "new_space": {
+        "memorySize": 1048576,
+        "committedMemory": 274432,
+        "capacity": 1048512,
+        "used": 792,
+        "available": 1047720
+      },
+      "old_space": {
+        "memorySize": 462725120,
+        "committedMemory": 431525888,
+        "capacity": 379799888,
+        "used": 378719248,
+        "available": 1080640
+      },
+      "code_space": {
+        "memorySize": 7077888,
+        "committedMemory": 6508544,
+        "capacity": 6068448,
+        "used": 5803328,
+        "available": 265120
+      },
+      "shared_space": {
+        "memorySize": 0,
+        "committedMemory": 0,
+        "capacity": 0,
+        "used": 0,
+        "available": 0
+      },
+      "trusted_space": {
+        "memorySize": 10522624,
+        "committedMemory": 10076160,
+        "capacity": 7360944,
+        "used": 7281544,
+        "available": 79400
+      },
+      "shared_trusted_space": {
+        "memorySize": 0,
+        "committedMemory": 0,
+        "capacity": 0,
+        "used": 0,
+        "available": 0
+      },
+      "new_large_object_space": {
+        "memorySize": 0,
+        "committedMemory": 0,
+        "capacity": 1048576,
+        "used": 0,
+        "available": 1048576
+      },
+      "large_object_space": {
+        "memorySize": 58867712,
+        "committedMemory": 58867712,
+        "capacity": 58561480,
+        "used": 58561480,
+        "available": 0
+      },
+      "code_large_object_space": {
+        "memorySize": 995328,
+        "committedMemory": 995328,
+        "capacity": 989504,
+        "used": 989504,
+        "available": 0
+      },
+      "shared_large_object_space": {
+        "memorySize": 0,
+        "committedMemory": 0,
+        "capacity": 0,
+        "used": 0,
+        "available": 0
+      },
+      "shared_trusted_large_object_space": {
+        "memorySize": 0,
+        "committedMemory": 0,
+        "capacity": 0,
+        "used": 0,
+        "available": 0
+      },
+      "trusted_large_object_space": {
+        "memorySize": 454656,
+        "committedMemory": 454656,
+        "capacity": 448480,
+        "used": 448480,
+        "available": 0
+      }
+    }
+  },
+  "nativeStack": [
+    {
+      "pc": "0x000000000097babd",
+      "symbol": "node::TriggerNodeReport(v8::Isolate*, node::Environment*, char const*, char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, v8::Local<v8::Value>) [node]"
+    },
+    {
+      "pc": "0x000000000097c497",
+      "symbol": "node::TriggerNodeReport(node::Environment*, char const*, char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, v8::Local<v8::Value>) [node]"
+    },
+    {
+      "pc": "0x00000000009810cb",
+      "symbol": "node::report::WriteReport(v8::FunctionCallbackInfo<v8::Value> const&) [node]"
+    },
+    {
+      "pc": "0x00007956efdcf08d",
+      "symbol": ""
+    }
+  ],
+  "resourceUsage": {
+    "free_memory": 2769264640,
+    "total_memory": 8330444800,
+    "rss": 811003904,
+    "constrained_memory": 18446744073709551615,
+    "available_memory": 2769264640,
+    "userCpuSeconds": 223.694,
+    "kernelCpuSeconds": 3.58024,
+    "cpuConsumptionPercent": 93.5285,
+    "userCpuConsumptionPercent": 92.0551,
+    "kernelCpuConsumptionPercent": 1.47335,
+    "maxRss": 1231536128,
+    "pageFaults": {
+      "IORequired": 11,
+      "IONotRequired": 303313
+    },
+    "fsActivity": {
+      "reads": 148664,
+      "writes": 2440
+    }
+  },
+  "uvthreadResourceUsage": {
+    "userCpuSeconds": 21.9185,
+    "kernelCpuSeconds": 1.6375,
+    "cpuConsumptionPercent": 9.69385,
+    "userCpuConsumptionPercent": 9.01998,
+    "kernelCpuConsumptionPercent": 0.67387,
+    "fsActivity": {
+      "reads": 55736,
+      "writes": 0
+    }
+  },
+  "libuv": [
+    {
+      "type": "async",
+      "is_active": true,
+      "is_referenced": false,
+      "address": "0x000000000b7224c0"
+    },
+    {
+      "type": "async",
+      "is_active": true,
+      "is_referenced": false,
+      "address": "0x00000000067d2980"
+    },
+    {
+      "type": "timer",
+      "is_active": false,
+      "is_referenced": false,
+      "address": "0x000000000b7d1f68",
+      "repeat": 0,
+      "firesInMsFromNow": -180238,
+      "expired": true
+    },
+    {
+      "type": "check",
+      "is_active": true,
+      "is_referenced": false,
+      "address": "0x000000000b7d2000"
+    },
+    {
+      "type": "idle",
+      "is_active": false,
+      "is_referenced": true,
+      "address": "0x000000000b7d2078"
+    },
+    {
+      "type": "prepare",
+      "is_active": true,
+      "is_referenced": false,
+      "address": "0x000000000b7d20f0"
+    },
+    {
+      "type": "check",
+      "is_active": true,
+      "is_referenced": false,
+      "address": "0x000000000b7d2168"
+    },
+    {
+      "type": "async",
+      "is_active": true,
+      "is_referenced": false,
+      "address": "0x000000000b7d21e0"
+    },
+    {
+      "type": "signal",
+      "is_active": true,
+      "is_referenced": false,
+      "address": "0x000000000b7eb970",
+      "signum": 12,
+      "signal": "SIGUSR2"
+    },
+    {
+      "type": "tty",
+      "is_active": false,
+      "is_referenced": true,
+      "address": "0x000000000b8086a8",
+      "width": 58,
+      "height": 14,
+      "fd": 20,
+      "writeQueueSize": 0,
+      "readable": true,
+      "writable": true
+    },
+    {
+      "type": "signal",
+      "is_active": true,
+      "is_referenced": false,
+      "address": "0x000000000b8039e0",
+      "signum": 28,
+      "signal": "SIGWINCH"
+    },
+    {
+      "type": "tty",
+      "is_active": false,
+      "is_referenced": true,
+      "address": "0x000000000b893d28",
+      "width": 58,
+      "height": 14,
+      "fd": 22,
+      "writeQueueSize": 0,
+      "readable": true,
+      "writable": true
+    },
+    {
+      "type": "signal",
+      "is_active": true,
+      "is_referenced": false,
+      "address": "0x000000000b7ebd60",
+      "signum": 15,
+      "signal": "SIGTERM"
+    },
+    {
+      "type": "signal",
+      "is_active": true,
+      "is_referenced": false,
+      "address": "0x000000000b892540",
+      "signum": 2,
+      "signal": "SIGINT"
+    },
+    {
+      "type": "async",
+      "is_active": true,
+      "is_referenced": false,
+      "address": "0x000000000b7ea868"
+    },
+    {
+      "type": "loop",
+      "is_active": true,
+      "address": "0x00000000067e4a60",
+      "loopIdleTimeSeconds": 17.8746
+    }
+  ],
+  "workers": [
+  ],
+  "environmentVariables": {
+    "GIT_COMMITTER_NAME": "GitHub",
+    "GITHUB_TOKEN": "ghu_VqenpGH8VrkEH0yScczDBYa6wpq2Bs0l8g5b",
+    "DOCKER_BUILDKIT": "1",
+    "LESSOPEN": "| /usr/bin/lesspipe %s",
+    "ENABLE_DYNAMIC_INSTALL": "true",
+    "GITHUB_CODESPACE_TOKEN": "BSA73Z3EPVOLV6LK3Z64UOLKHHSFZANCNFSM4AWJXKHQ",
+    "PYTHONIOENCODING": "UTF-8",
+    "USER": "codespace",
+    "npm_config_user_agent": "npm/11.9.0 node/v24.14.0 linux x64 workspaces/false",
+    "NVS_ROOT": "/usr/local/nvs",
+    "GIT_EDITOR": "code --wait",
+    "RVM_PATH": "/usr/local/rvm",
+    "FEATURE_SPARK_POST_COMMIT_CREATE_ITERATION": "true",
+    "HOSTNAME": "codespaces-17c896",
+    "GIT_ASKPASS": "/vscode/bin/linux-x64/fcf604774b9f2674b473065736ee75077e256353/extensions/git/dist/askpass.sh",
+    "PIPX_HOME": "/usr/local/py-utils",
+    "CONDA_SCRIPT": "/opt/conda/etc/profile.d/conda.sh",
+    "DOTNET_USE_POLLING_FILE_WATCHER": "true",
+    "npm_node_execpath": "/usr/local/share/nvm/versions/node/v24.14.0/bin/node",
+    "GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN": "app.github.dev",
+    "SHLVL": "2",
+    "BROWSER": "/vscode/bin/linux-x64/fcf604774b9f2674b473065736ee75077e256353/bin/helpers/browser.sh",
+    "HUGO_ROOT": "/home/codespace/.hugo",
+    "HOME": "/home/codespace",
+    "OLDPWD": "/vscode/bin/linux-x64/fcf604774b9f2674b473065736ee75077e256353",
+    "TERM_PROGRAM_VERSION": "1.125.1",
+    "ORYX_ENV_TYPE": "vsonline-present",
+    "NVM_BIN": "/usr/local/share/nvm/versions/node/v24.14.0/bin",
+    "VSCODE_IPC_HOOK_CLI": "/tmp/vscode-ipc-1016bf8c-8865-4a96-b2ec-9994945a34c8.sock",
+    "npm_package_json": "/workspaces/minhAi/package.json",
+    "NVM_INC": "/usr/local/share/nvm/versions/node/v24.14.0/include/node",
+    "CODESPACES": "true",
+    "PIPX_BIN_DIR": "/usr/local/py-utils/bin",
+    "DYNAMIC_INSTALL_ROOT_DIR": "/opt",
+    "NVM_SYMLINK_CURRENT": "true",
+    "DOTNET_RUNNING_IN_CONTAINER": "true",
+    "GRADLE_HOME": "/usr/local/sdkman/candidates/gradle/current",
+    "ORYX_DIR": "/usr/local/oryx",
+    "VSCODE_GIT_ASKPASS_MAIN": "/vscode/bin/linux-x64/fcf604774b9f2674b473065736ee75077e256353/extensions/git/dist/askpass-main.js",
+    "VSCODE_GIT_ASKPASS_NODE": "/vscode/bin/linux-x64/fcf604774b9f2674b473065736ee75077e256353/node",
+    "MAVEN_HOME": "/usr/local/sdkman/candidates/maven/current",
+    "JUPYTERLAB_PATH": "/home/codespace/.local/bin",
+    "npm_config_userconfig": "/home/codespace/.npmrc",
+    "npm_config_local_prefix": "/workspaces/minhAi",
+    "GOROOT": "/usr/local/go",
+    "VSCODE_PYTHON_AUTOACTIVATE_GUARD": "1",
+    "NODE_ROOT": "/home/codespace/nvm",
+    "COLORTERM": "truecolor",
+    "GITHUB_USER": "BigCorps",
+    "GITHUB_GRAPHQL_URL": "https://api.github.com/graphql",
+    "COLOR": "1",
+    "PYTHON_PATH": "/usr/local/python/current",
+    "NVM_DIR": "/usr/local/share/nvm",
+    "DEBUGINFOD_URLS": "https://debuginfod.ubuntu.com ",
+    "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "1",
+    "ContainerVersion": "13",
+    "GITHUB_API_URL": "https://api.github.com",
+    "NVS_HOME": "/usr/local/nvs",
+    "rvm_bin_path": "/usr/local/rvm/bin",
+    "SDKMAN_CANDIDATES_API": "https://api.sdkman.io/2",
+    "_": "/home/codespace/nvm/current/bin/npm",
+    "npm_config_prefix": "/usr/local/share/nvm/versions/node/v24.14.0",
+    "npm_config_npm_version": "11.9.0",
+    "CLOUDENV_ENVIRONMENT_ID": "62412608-9433-4586-bb1d-7258bdac5180",
+    "RUBY_VERSION": "ruby-3.4.7",
+    "PROMPT_DIRTRIM": "4",
+    "IRBRC": "/usr/local/rvm/rubies/ruby-3.4.7/.irbrc",
+    "TERM": "xterm-256color",
+    "npm_config_cache": "/home/codespace/.npm",
+    "DOTNET_ROOT": "/usr/share/dotnet",
+    "NVS_DIR": "/usr/local/nvs",
+    "PHP_ROOT": "/home/codespace/.php",
+    "npm_config_node_gyp": "/usr/local/share/nvm/versions/node/v24.14.0/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js",
+    "PATH": "/workspaces/minhAi/node_modules/.bin:/workspaces/node_modules/.bin:/node_modules/.bin:/usr/local/share/nvm/versions/node/v24.14.0/lib/node_modules/npm/node_modules/@npmcli/run-script/lib/node-gyp-bin:/usr/local/rvm/gems/ruby-3.4.7/bin:/usr/local/rvm/gems/ruby-3.4.7@global/bin:/usr/local/rvm/rubies/ruby-3.4.7/bin:/vscode/bin/linux-x64/fcf604774b9f2674b473065736ee75077e256353/bin/remote-cli:/home/codespace/.local/bin:/home/codespace/.dotnet:/home/codespace/nvm/current/bin:/home/codespace/.php/current/bin:/home/codespace/.python/current/bin:/home/codespace/java/current/bin:/home/codespace/.ruby/current/bin:/home/codespace/.local/bin:/usr/local/python/current/bin:/usr/local/py-utils/bin:/usr/local/jupyter:/usr/local/oryx:/usr/local/go/bin:/go/bin:/usr/local/sdkman/bin:/usr/local/sdkman/candidates/java/current/bin:/usr/local/sdkman/candidates/gradle/current/bin:/usr/local/sdkman/candidates/maven/current/bin:/usr/local/sdkman/candidates/ant/current/bin:/usr/local/rvm/gems/default/bin:/usr/local/rvm/gems/default@global/bin:/usr/local/rvm/rubies/default/bin:/usr/local/share/rbenv/bin:/usr/local/php/current/bin:/opt/conda/bin:/usr/local/nvs:/usr/local/share/nvm/versions/node/v24.14.0/bin:/usr/local/hugo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/share/dotnet:/home/codespace/.dotnet/tools:/usr/local/rvm/bin",
+    "JAVA_ROOT": "/home/codespace/java",
+    "SDKMAN_CANDIDATES_DIR": "/usr/local/sdkman/candidates",
+    "NODE": "/usr/local/share/nvm/versions/node/v24.14.0/bin/node",
+    "npm_package_name": "voice-assistant-multitenant",
+    "SDKMAN_BROKER_API": "https://broker.sdkman.io",
+    "NPM_GLOBAL": "/home/codespace/.npm-global",
+    "HUGO_DIR": "/usr/local/hugo/bin",
+    "SHELL_LOGGED_IN": "true",
+    "MY_RUBY_HOME": "/usr/local/rvm/rubies/ruby-3.4.7",
+    "LANG": "C.UTF-8",
+    "LS_COLORS": "rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:",
+    "VSCODE_GIT_IPC_HANDLE": "/tmp/vscode-git-5a50a1d4d9.sock",
+    "SDKMAN_DIR": "/usr/local/sdkman",
+    "GITHUB_REPOSITORY": "BigCorps/minhAi",
+    "RUBY_ROOT": "/home/codespace/.ruby",
+    "SDKMAN_PLATFORM": "linuxx64",
+    "TERM_PROGRAM": "vscode",
+    "npm_lifecycle_script": "node --report-on-signal --report-signal=SIGUSR2 node_modules/next/dist/bin/next build --webpack",
+    "SHELL": "/bin/bash",
+    "GOPATH": "/go",
+    "npm_package_version": "0.1.0",
+    "npm_lifecycle_event": "build",
+    "rvm_prefix": "/usr/local",
+    "GEM_HOME": "/usr/local/rvm/gems/ruby-3.4.7",
+    "LESSCLOSE": "/usr/bin/lesspipe %s %s",
+    "ORYX_PREFER_USER_INSTALLED_SDKS": "true",
+    "ORYX_SDK_STORAGE_BASE_URL": "https://oryx-cdn.microsoft.io",
+    "rvm_version": "1.29.12 (latest)",
+    "CONDA_DIR": "/opt/conda",
+    "DEBIAN_FLAVOR": "focal-scm",
+    "GIT_COMMITTER_EMAIL": "noreply@github.com",
+    "npm_config_globalconfig": "/usr/local/share/nvm/versions/node/v24.14.0/etc/npmrc",
+    "npm_config_init_module": "/home/codespace/.npm-init.js",
+    "JAVA_HOME": "/usr/local/sdkman/candidates/java/current",
+    "NVS_USE_XZ": "1",
+    "PWD": "/workspaces/minhAi",
+    "INTERNAL_VSCS_TARGET_URL": "https://eastus2.online.visualstudio.com",
+    "GEM_PATH": "/usr/local/rvm/gems/ruby-3.4.7:/usr/local/rvm/gems/ruby-3.4.7@global",
+    "npm_execpath": "/usr/local/share/nvm/versions/node/v24.14.0/lib/node_modules/npm/bin/npm-cli.js",
+    "GITHUB_SERVER_URL": "https://github.com",
+    "npm_config_global_prefix": "/usr/local/share/nvm/versions/node/v24.14.0",
+    "npm_command": "run",
+    "CODESPACE_NAME": "orange-halibut-g46j55qp6w5v2vr69",
+    "PYTHON_ROOT": "/home/codespace/.python",
+    "NVS_OS": "linux",
+    "PHP_PATH": "/usr/local/php/current",
+    "RAILS_DEVELOPMENT_HOSTS": ".githubpreview.dev,.preview.app.github.dev,.app.github.dev",
+    "CODESPACE_VSCODE_FOLDER": "/workspaces/minhAi",
+    "MAVEN_ROOT": "/home/codespace/.maven",
+    "RUBY_HOME": "/usr/local/rvm/rubies/default",
+    "rvm_path": "/usr/local/rvm",
+    "NUGET_XMLDOC_MODE": "skip",
+    "INIT_CWD": "/workspaces/minhAi",
+    "EDITOR": "vi",
+    "NODE_ENV": "production",
+    "NEXT_RUNTIME": "nodejs",
+    "npm_config_noproxy": "",
+    "VSCODE_GIT_ASKPASS_EXTRA_ARGS": "",
+    "NVM_CD_FLAGS": "",
+    "RUST_MIN_STACK": "8388608",
+    "NEXT_DEPLOYMENT_ID": "",
+    "NEXT_COMPILER_NAME": "server"
+  },
+  "userLimits": {
+    "core_file_size_blocks": {
+      "soft": "unlimited",
+      "hard": "unlimited"
+    },
+    "data_seg_size_bytes": {
+      "soft": "unlimited",
+      "hard": "unlimited"
+    },
+    "file_size_blocks": {
+      "soft": "unlimited",
+      "hard": "unlimited"
+    },
+    "max_locked_memory_bytes": {
+      "soft": 8388608,
+      "hard": 8388608
+    },
+    "max_memory_size_bytes": {
+      "soft": "unlimited",
+      "hard": "unlimited"
+    },
+    "open_files": {
+      "soft": 524288,
+      "hard": 524288
+    },
+    "stack_size_bytes": {
+      "soft": 8388608,
+      "hard": "unlimited"
+    },
+    "cpu_time_seconds": {
+      "soft": "unlimited",
+      "hard": "unlimited"
+    },
+    "max_user_processes": {
+      "soft": "unlimited",
+      "hard": "unlimited"
+    },
+    "virtual_memory_bytes": {
+      "soft": "unlimited",
+      "hard": "unlimited"
+    }
+  },
+  "sharedObjects": [
+    "linux-vdso.so.1",
+    "/lib/x86_64-linux-gnu/libdl.so.2",
+    "/lib/x86_64-linux-gnu/libstdc++.so.6",
+    "/lib/x86_64-linux-gnu/libm.so.6",
+    "/lib/x86_64-linux-gnu/libgcc_s.so.1",
+    "/lib/x86_64-linux-gnu/libpthread.so.0",
+    "/lib/x86_64-linux-gnu/libc.so.6",
+    "/lib64/ld-linux-x86-64.so.2",
+    "/workspaces/minhAi/node_modules/@next/swc-linux-x64-gnu/next-swc.linux-x64-gnu.node"
+  ]
+}

@@ -6,6 +6,10 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
+  experimental: {
+    webpackBuildWorker: false,
+  },
+
   outputFileTracingIncludes: {
     '/api/arte/gstest': ['./node_modules/@jspawn/ghostscript-wasm/**'],
   },
@@ -21,7 +25,23 @@ const nextConfig = {
     ],
   },
   
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
+    config.optimization.minimize = false;
+    config.optimization.concatenateModules = false;
+    config.optimization.providedExports = false;
+    config.optimization.usedExports = false;
+    config.plugins.push({
+      apply(compiler) {
+        compiler.hooks.compilation.tap('LogBuildingModules', (compilation) => {
+          compilation.hooks.buildModule.tap('LogBuildingModules', (module) => {
+            console.log('[build-start]', module.resource || module.identifier());
+          });
+          compilation.hooks.succeedModule.tap('LogBuildingModules', (module) => {
+            console.log('[build-done]', module.resource || module.identifier());
+          });
+        });
+      },
+    });
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,

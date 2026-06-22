@@ -30,41 +30,7 @@ const DESCRIPTION =
 
 const OG_IMAGE = `${APP_URL}/icons/og-image.png`;
 
-// ─── Keywords — cauda longa brasileira + intenção de compra ──────────────────
-const KEYWORDS = [
-  // Intenção de compra — alta conversão
-  'funcionário de ia para empresa',
-  'assistente de ia para whatsapp',
-  'chatbot para whatsapp sem programar',
-  'ia para atendimento automatico',
-  'criar assistente de ia gratis',
-  // Versões Smart e Vendas
-  'minhai smart',
-  'minhai vendas',
-  'ia para lojista gratis',
-  'ia para vendas sem mensalidade',
-  'ia com comissao por venda',
-  'assistente ia vendas balcao',
-  // Funcionalidades específicas — cauda longa
-  'ia que cobra pix automaticamente',
-  'totem de autoatendimento com ia',
-  'fila de atendimento digital ia',
-  'agendamento automatico com ia',
-  'ia para restaurante whatsapp',
-  'ia para clinica agendamento',
-  // Marca + diferenciais
-  'minhAi',
-  'minhai app',
-  'funcionario ia brasil',
-  'assistente virtual brasileiro',
-  // Genéricos de alto volume
-  'assistente de ia',
-  'chatbot brasil',
-  'automação de atendimento',
-  'ia para empresas',
-  'atendente virtual ia',
-  'SaaS ia brasil',
-];
+
 
 // ─── Metadata Next.js ────────────────────────────────────────────────────────
 export const metadata: Metadata = {
@@ -76,7 +42,6 @@ export const metadata: Metadata = {
   description: DESCRIPTION,
   manifest: '/manifest.json',
   applicationName: APP_NAME,
-  keywords: KEYWORDS,
   authors: [{ name: 'BigCorps', url: 'https://bigcorps.com.br' }],
   creator: 'BigCorps',
   publisher: 'BigCorps',

@@ -254,9 +254,10 @@ export default function Imagem3DDisplay({ data, onClose, theme = 'dark', playTex
     const box = new THREE.Box3().setFromObject(group);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
-    const radius = Math.max(size.x, size.y, size.z) * 0.75 + 1;
-    const dist = radius / Math.sin((camera.fov / 2) * Math.PI / 180);
-    camera.position.set(center.x + dist * 0.4, center.y - dist * 0.5, center.z + dist * 0.9);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fovRad = (camera.fov * Math.PI) / 180;
+    const dist = (maxDim / 2) / Math.tan(fovRad / 2) * 1.6;
+    camera.position.set(center.x, center.y, center.z + dist);
     camera.near = dist / 100; camera.far = dist * 10;
     camera.updateProjectionMatrix();
     controls.target.copy(center);
@@ -272,7 +273,7 @@ export default function Imagem3DDisplay({ data, onClose, theme = 'dark', playTex
     const h = Math.max(1, Math.round(img.naturalHeight * s / m));
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
     ctx.drawImage(img, 0, 0, w, h);
     const d = ctx.getImageData(0, 0, w, h).data;
     let transp = 0;
@@ -290,7 +291,7 @@ export default function Imagem3DDisplay({ data, onClose, theme = 'dark', playTex
     w = Math.max(1, Math.round(w * s)); h = Math.max(1, Math.round(h * s));
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
     ctx.clearRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
     const id = ctx.getImageData(0, 0, w, h), d = id.data, t = threshold;
     for (let i = 0; i < d.length; i += 4) {
@@ -310,7 +311,7 @@ export default function Imagem3DDisplay({ data, onClose, theme = 'dark', playTex
     const { PotracePlus } = await import('potrace-plus');
 
     const bmp = buildAlphaBitmap();
-    const traced = await PotracePlus(bmp, { turdsize: noise, opttolerance: smooth, optcurve: true, alphamax: 1, crop: true, optimize: true, addDimensions: false });
+    const traced = await PotracePlus(bmp, { turdsize: noise, opttolerance: smooth, optcurve: true, alphamax: 1, crop: true, optimize: true, addDimensions: false, workerUrl: '/potrace-plus.workers.js' });
     const d = traced.getD ? traced.getD() : traced.d;
     const tw = traced.width, th = traced.height;
     if (!d) throw new Error('Contorno vazio — ajuste o limiar.');
@@ -357,7 +358,7 @@ export default function Imagem3DDisplay({ data, onClose, theme = 'dark', playTex
     const img = sourceImgRef.current!;
     const canvas = document.createElement('canvas');
     canvas.width = nx; canvas.height = ny;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, nx, ny);
     ctx.drawImage(img, 0, 0, nx, ny);
     const d = ctx.getImageData(0, 0, nx, ny).data;

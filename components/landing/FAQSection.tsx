@@ -6,24 +6,24 @@ interface FAQSectionProps {
 
 const FAQS = [
   {
-    pergunta: 'Preciso saber programar para usar o minhAi?',
+    pergunta: 'Preciso saber programar para usar a minhAi?',
     resposta:
-      'Não. O minhAi foi feito para ser configurado por qualquer pessoa, sem nenhum código. Você acessa o dashboard, escolhe as funções que quer ativar, escreve a personalidade do assistente e publica. Todo o processo leva menos de 5 minutos.',
+      'Não. A minhAi foi feito para ser configurado por qualquer pessoa, sem nenhum código. Você acessa o dashboard, escolhe as funções que quer ativar, escreve a personalidade do assistente e publica. Todo o processo leva menos de 5 minutos.',
   },
   {
-    pergunta: 'O minhAi vai substituir minha equipe?',
+    pergunta: 'A minhAi vai substituir minha equipe?',
     resposta:
       'Não — ele potencializa. O assistente resolve o que é repetitivo (responder dúvidas, agendar, cobrar, enviar links) para que sua equipe foque no que exige atenção humana. Pense nele como um novo colaborador que nunca falta e nunca pede aumento.',
   },
   {
-    pergunta: 'O minhAi funciona com WhatsApp?',
+    pergunta: 'A minhAi funciona com WhatsApp?',
     resposta:
-      'Sim. O minhAi integra com a API oficial do WhatsApp Business. Seu número continua o mesmo e o assistente passa a responder automaticamente às mensagens — com a personalidade e o conhecimento que você configurou.',
+      'Sim. A minhAi integra com a API oficial do WhatsApp Business. Seu número continua o mesmo e o assistente passa a responder automaticamente às mensagens — com a personalidade e o conhecimento que você configurou.',
   },
   {
     pergunta: 'É seguro? Meus dados estão protegidos?',
     resposta:
-      'Sim. O minhAi é 100% compatível com a LGPD. Os dados ficam em servidores seguros com criptografia de ponta a ponta, isolados por empresa. Nenhum dado do seu negócio é compartilhado com outros clientes.',
+      'Sim. A minhAi é 100% compatível com a LGPD. Os dados ficam em servidores seguros com criptografia de ponta a ponta, isolados por empresa. Nenhum dado do seu negócio é compartilhado com outros clientes.',
   },
   {
     pergunta: 'Quanto tempo leva para configurar?',
@@ -35,15 +35,15 @@ const FAQS = [
     resposta:
       'Sim. Você pode escolher entre a Versão Vendas, que apenas cobra comissão por vendas confirmadas, ou começar na Versão Smart, que inclui 20 créditos para testar à vontade, sem nenhum compromisso. Não é necessário cartão de crédito para começar.',
   },
+{
+  pergunta: 'Como a minhAi nasceu?',
+  resposta:
+    'Ithiel Almeida tem uma empresa de design e serviços gráficos há mais de 20 anos e precisava de uma IA para ajudar no atendimento do balcão e no WhatsApp. Não encontrou nada no mercado que chegasse perto do que precisava — então decidiu desenvolver a própria solução, há cerca de 2 anos. A minhAi nasceu dessa necessidade real, com a crença de que a mesma tecnologia pode ajudar outros empresários autônomos, MEIs e pequenas e médias empresas a atender melhor, vender mais e entrar no mundo da Inteligência Artificial sem precisar de conhecimento técnico ou saber programar.',
+},
   {
-    pergunta: 'Como o minhAi nasceu?',
+    pergunta: 'a minhAi funciona para qualquer tipo de negócio?',
     resposta:
-      'Ithiel Almeida tem uma empresa de design e servicos graficos ha mais de 20 anos e precisava de uma IA para ajudar no atendimento do balcao e no WhatsApp. Não encontrou nada no mercado que chegasse perto do que precisava — entao decidiu desenvolver a propria solucao, ha cerca de 2 anos. O minhAi nasceu dessa necessidade real, com a crenca de que a mesma tecnologia pode ajudar outros empresarios autonomos, MEIs e pequenas e medias empresas a atender melhor, vender mais e entrar no mundo da Inteligencia Artificial sem precisar de conhecimento tecnico ou saber programar.',
-  },
-  {
-    pergunta: 'O minhAi funciona para qualquer tipo de negócio?',
-    resposta:
-      'Sim. Temos clientes em mais de 15 segmentos — clínicas, restaurantes, academias, advocacia, e-commerce, lojas físicas, imobiliárias, franquias e muito mais. Se o seu negócio atende clientes, o minhAi tem funções para automatizar.',
+      'Sim. Temos clientes em mais de 15 segmentos — clínicas, restaurantes, academias, advocacia, e-commerce, lojas físicas, imobiliárias, franquias e muito mais. Se o seu negócio atende clientes, a minhAi tem funções para automatizar.',
   },
 ];
 

@@ -10,28 +10,30 @@ const DEPOIMENTOS = [
     cargo: 'Clínica VidaSaúde',
     resultado: '70% menos tempo em atendimento repetitivo',
     foto: '/perfil1.jpg',
-    texto: 'Antes, minha recepcionista passava metade do dia confirmando consultas. Hoje o minhAi faz tudo automaticamente — agenda, confirma, manda lembrete e cobra via PIX.',
+    texto: 'Antes, minha recepcionista passava metade do dia confirmando consultas. Hoje a minhAi faz tudo automaticamente — agenda, confirma, manda lembrete e cobra via PIX.',
     textoCurto: 'Agenda, confirma e cobra PIX automaticamente. Libertou minha equipe.',
     color: 'blue' as const,
   },
-  {
-    nome: 'Carlos Mendes',
-    cargo: 'Hamburgueria do Carlos',
-    resultado: 'Atende 3x mais pedidos no horário de pico',
-    foto: '/perfil2.jpg',
-    texto: 'Colocamos o minhAi no totem e no WhatsApp do delivery. O assistente recebe o pedido, manda para a cozinha e já cobra o PIX. Nas sextas à noite, que eram um caos, agora flui tranquilo.',
-    textoCurto: 'Totem + WhatsApp: pedido, cozinha e PIX automático. Zero caos nas sextas.',
-    color: 'green' as const,
-  },
-  {
-    nome: 'Dr. Roberto Faria',
-    cargo: 'Faria & Associados',
-    resultado: 'Atendimento profissional sem contratar ninguém',
-    foto: '/perfil3.jpg',
-    texto: 'Sou advogado autônomo e não tinha como contratar recepcionista. O minhAi agenda reuniões, responde dúvidas e digitaliza contratos com a câmera.',
-    textoCurto: 'Agenda reuniões e digitaliza contratos. Como ter uma secretária por centavos.',
-    color: 'blue' as const,
-  },
+{
+  nome: 'Carlos Mendes',
+  cargo: 'Hamburgueria do Carlos',
+  resultado: 'Atende 3x mais pedidos no horário de pico',
+  foto: '/perfil2.jpg',
+  // ✅ texto agora é sobre delivery/cozinha, condizente com o cargo
+  texto: 'Colocamos a minhAi no totem e no WhatsApp do delivery. O assistente recebe o pedido, manda para a cozinha e já cobra o PIX. Nas sextas à noite, que eram um caos, agora flui tranquilo.',
+  textoCurto: 'Totem + WhatsApp: pedido, cozinha e PIX automático. Zero caos nas sextas.',
+  color: 'green',
+},
+{
+  nome: 'Dr. Roberto Faria',
+  cargo: 'Faria & Associados',
+  resultado: 'Atendimento profissional sem contratar ninguém',
+  foto: '/perfil3.jpg',
+  // ✅ texto de advogado agora está no card correto
+  texto: 'Sou advogado autônomo e não tinha como contratar recepcionista. A minhAi agenda reuniões, responde dúvidas e digitaliza contratos com a câmera.',
+  textoCurto: 'Agenda reuniões e digitaliza contratos. Como ter uma secretária por centavos.',
+  color: 'blue',
+},
 ];
 
 const STARS = Array.from({ length: 5 });
@@ -97,7 +99,7 @@ export default function DepoimentosSection({ theme = 'dark' }: DepoimentosSectio
             <span className={isDark ? 'text-green-400' : 'text-green-600'}>resultados reais</span>
           </h2>
           <p className={`text-xs sm:text-sm max-w-xl mx-auto mt-1 hidden sm:block ${isDark ? 'text-white/45' : 'text-gray-500'}`}>
-            Veja como empresas de diferentes segmentos usam o minhAi para vender mais e economizar.
+            Veja como empresas de diferentes segmentos usam a minhAi para vender mais e economizar.
           </p>
         </div>
 

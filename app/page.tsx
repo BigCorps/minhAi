@@ -103,7 +103,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Integrações nativas',
     title: 'Conectado ao que você já usa',
     description:
-      'Google Agenda, Drive, Gmail, Maps, Meet, WhatsApp Business, Instagram, Facebook, InfinetePay, Mercado Livre e Mercado Pago — tudo nativo, sem Zapier. E agora com servidor MCP próprio: conecte seu assistente ao Claude, ChatGPT, Manus ou Cursor e use-o como ferramenta nativa dentro dos prórpios aplicativos de IA.',
+      'Google Agenda, Drive, Gmail, Maps, Meet, WhatsApp Business, Instagram, Facebook, InfinitePay, Mercado Livre e Mercado Pago — tudo nativo, sem Zapier. E agora com servidor MCP próprio: conecte seu assistente ao Claude, ChatGPT, Manus ou Cursor e use-o como ferramenta nativa dentro dos próprios aplicativos de IA.',
     imageSrc: '/api.png',
     imageAlt: 'Integrações nativas do minhAi — Google, Meta, Mercado Pago e mais',
     color: 'green' as const,

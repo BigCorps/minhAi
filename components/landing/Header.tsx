@@ -107,7 +107,7 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
             <button onClick={() => handleNavigate('inicio')} className="focus:outline-none">
               <Image
                 src="/logo.png"
-                alt="eAi"
+                alt="minhAi"
                 width={150}
                 height={68}
                 className="h-11 w-auto"
@@ -196,7 +196,7 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
             <button onClick={() => handleNavigate('inicio')} className="focus:outline-none">
               <Image
                 src="/logo.png"
-                alt="eAi"
+                alt="minhAi"
                 width={150}
                 height={68}
                 className="h-9 w-auto"

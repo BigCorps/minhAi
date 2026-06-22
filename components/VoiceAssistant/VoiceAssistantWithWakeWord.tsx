@@ -1724,6 +1724,8 @@ case 'link_na_bio': {
   async function processQuestion(questionText: string) {
     console.log('⚡ Processando:', questionText);
     shouldProcessAudio.current = false;
+
+    try {
     await stopGoogleSpeech();
 
     // ── FAQ FIRST ─────────────────────────────────────────────
@@ -1945,6 +1947,21 @@ audio.onended = () => {
         try { feedbackAudioRef.current.pause(); feedbackAudioRef.current = null; } catch {}
       }
       setTimeout(async () => { shouldProcessAudio.current = true; await startGoogleSpeech(); }, 1000);
+    }
+    } catch (outerError) {
+      // Rede de segurança: captura qualquer exceção não tratada antes do
+      // bloco de fetch (ex.: detectVoiceCommand, stopGoogleSpeech), evitando
+      // que processingQuestion.current / shouldProcessAudio.current travem
+      // permanentemente o assistente.
+      console.error('⚠️ Erro não tratado em processQuestion:', outerError);
+      setIsProcessing(false);
+      processingQuestion.current = false;
+      setTimeout(async () => {
+        if (isActiveRef.current) {
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
+        }
+      }, 1000);
     }
   }
 

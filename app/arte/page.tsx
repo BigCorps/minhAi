@@ -17,6 +17,7 @@ import EditarImagemDisplay from '@/components/arte/EditarImagemDisplay';
 import ConversorArquivoDisplay from '@/components/arte/ConversorArquivoDisplay';
 import JuntarDividirPdfsDisplay from '@/components/arte/JuntarDividirPdfsDisplay';
 import RemoverFundoDisplay from '@/components/arte/RemoverFundoDisplay';
+import Imagem3DDisplay from '@/components/arte/Imagem3DDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -184,6 +185,18 @@ const SKILLS: Skill[] = [
     ],
     modal: 'RemoverFundoDisplay',
   },
+{
+  key: 'imagem_3d',
+  label: 'Imagem para 3D',
+  color: CMYK.cyan,
+  desc: 'Transforma uma imagem em modelo 3D (.STL/.3MF) para impressão 3D',
+  credits: 2,
+  triggers: [
+    'imagem 3d', 'imagem para 3d', 'modelo 3d', 'gerar stl', 'arquivo stl',
+    'converter para 3d', 'lithophane', '3mf', 'imprimir em 3d', 'impressao 3d',
+  ],
+  modal: 'Imagem3DDisplay',
+},
 ];
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -621,6 +634,15 @@ export default function ArtePage() {
       )}
 {activeModal?.type === 'RemoverFundoDisplay' && (
   <RemoverFundoDisplay
+    data={activeModal.data}
+    onClose={closeModal}
+    theme="light"
+    playText={playText}
+    onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+  />
+)}
+{activeModal?.type === 'Imagem3DDisplay' && (
+  <Imagem3DDisplay
     data={activeModal.data}
     onClose={closeModal}
     theme="light"

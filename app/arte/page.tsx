@@ -1,11 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  Bot, Send, LogOut, Sparkles, X, ChevronRight,
-  Layers, Image as ImageIcon, Images, Copy, Scissors,
-  Wand2, Grid3x3, QrCode, Barcode, Receipt, Eraser,  RefreshCw, Pencil, FileStack,
-} from 'lucide-react';
+import { Bot, Send, LogOut, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
 import DuplicarImagemDisplay from '@/components/arte/DuplicarImagemDisplay';
@@ -19,8 +15,6 @@ import FotoDocumentoDisplay from '@/components/arte/FotoDocumentoDisplay';
 import PolaroidDisplay from '@/components/arte/PolaroidDisplay';
 import EditarImagemDisplay from '@/components/arte/EditarImagemDisplay';
 import ConversorArquivoDisplay from '@/components/arte/ConversorArquivoDisplay';
-import RemoverFundoDisplay from '@/components/arte/RemoverFundoDisplay';
-import JuntarDividirPdfsDisplay from '@/components/arte/JuntarDividirPdfsDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -102,18 +96,6 @@ const SKILLS: Skill[] = [
   modal: 'FolhaRecorteDisplay',
 },
 {
-  key: 'juntar_dividir_pdfs',
-  label: 'Juntar/Dividir PDFs',
-  color: CMYK.cyan,
-  desc: 'Junta vários PDFs em um só, ou divide um PDF em páginas separadas',
-  credits: 0,
-  triggers: [
-    'juntar pdf', 'juntar pdfs', 'unir pdf', 'mesclar pdf', 'dividir pdf',
-    'separar pdf', 'separar paginas', 'extrair paginas', 'dividir paginas',
-  ],
-  modal: 'JuntarDividirPdfsDisplay',
-},
-{
   key:      'gerar_qr_code',
   label:    'Gerar QR Code',
   color:     CMYK.cyan,  
@@ -176,37 +158,7 @@ const SKILLS: Skill[] = [
     ],
     modal: 'EditarImagemDisplay',
   },
-{
-    key: 'remover_fundo',
-    label: 'Remover Fundo',
-    color: CMYK.cyan,
-    desc: 'Remove o fundo de uma imagem e libera o PNG transparente em alta resolução',
-    credits: 2,
-    triggers: [
-      'remover fundo', 'tirar fundo', 'apagar fundo', 'fundo transparente',
-      'remover background', 'sem fundo', 'isolar imagem', 'recortar fundo',
-    ],
-    modal: 'RemoverFundoDisplay',
-  },
 ];
-
-// ── Ícones por skill, usados na sidebar ───────────────────────────────────
-const SKILL_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-  arte_final: Layers,
-  foto_documento: ImageIcon,
-  polaroid: Images,
-  duplicar_imagem: Copy,
-  adesivo_contorno: Scissors,
-  vetorizar_imagem: Wand2,
-  folha_recorte: Grid3x3,
-  gerar_qr_code: QrCode,
-  codigo_barras: Barcode,
-  orcamento_pdf: Receipt,
-  converter_arquivo: RefreshCw,
-  editar_imagem: Pencil,
-  remover_fundo: Eraser,
-  juntar_dividir_pdfs: FileStack,
-};
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 function detectSkill(text: string): Skill | null {
@@ -241,7 +193,6 @@ export default function ArtePage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [isMobile, setIsMobile] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -277,21 +228,8 @@ export default function ArtePage() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Esc fecha a sidebar + trava o scroll do body enquanto ela está aberta
-  useEffect(() => {
-    if (!sidebarOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidebarOpen(false); };
-    window.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
-    };
-  }, [sidebarOpen]);
-
   // Abre o modal mesmo sem login — o preview é livre; o gate de login fica no "Liberar".
   const openSkill = useCallback((sk: Skill) => {
-    setSidebarOpen(false);
     setActiveModal({ type: sk.modal, data: { companyId: companyId ?? '' } });
   }, [companyId]);
 
@@ -343,13 +281,9 @@ export default function ArtePage() {
       <header className="flex justify-center px-4 sm:px-6 py-3 border-b flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
         <div className="flex items-center justify-between w-full max-w-2xl">
           <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
-              aria-label="Abrir menu de funções"
-            >
+            <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center">
               <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
-            </button>
+            </div>
             <div>
               <p className="text-sm font-bold" style={{ color: '#0f172a' }}>ArteFinal</p>
               <p className="text-[11px]" style={{ color: '#64748b' }}>Seu arte-finalista com IA.</p>
@@ -479,71 +413,6 @@ export default function ArtePage() {
         </div>
       )}
 
-      {/* Sidebar de funções */}
-      <div
-        className={`fixed inset-0 z-[60] transition-opacity duration-300 ${sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-        aria-hidden={!sidebarOpen}
-      >
-        <div onClick={() => setSidebarOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-
-        <aside
-          className={`absolute top-0 left-0 h-full w-[85vw] max-w-sm sm:w-80 bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
-        >
-          <div className="flex items-center justify-between px-4 py-4 border-b flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center">
-                <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
-              </div>
-              <div>
-                <p className="text-sm font-bold" style={{ color: '#0f172a' }}>Funções</p>
-                <p className="text-[11px]" style={{ color: '#64748b' }}>Toque para abrir</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="p-2 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors active:scale-95"
-              aria-label="Fechar menu"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-2 py-2">
-            {SKILLS.map((sk) => {
-              const Icon = SKILL_ICONS[sk.key] ?? Sparkles;
-              return (
-                <button
-                  key={sk.key}
-                  onClick={() => openSkill(sk)}
-                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-colors hover:bg-slate-50 active:scale-[0.98]"
-                >
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${sk.color}1A` }}>
-                    <Icon className="w-5 h-5" style={{ color: sk.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate" style={{ color: '#0f172a' }}>{sk.label}</p>
-                    <p className="text-xs truncate" style={{ color: '#64748b' }}>{sk.desc}</p>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <span className="text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap" style={{ background: `${sk.color}1A`, color: sk.color }}>
-                      {sk.credits === 0 ? 'Grátis' : `${sk.credits} cr.`}
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-slate-300" />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="px-4 py-3 border-t flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
-            <p className="text-center text-[10px]" style={{ color: '#94a3b8' }}>
-              Powered by{' '}
-              <a href="https://minhai.app" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: CMYK.cyan, fontWeight: 600 }}>minhAi.app</a>
-            </p>
-          </div>
-        </aside>
-      </div>
-
       {/* Modais */}
       {activeModal?.type === 'ArteFinalDisplay' && (
         <ArteFinalDisplay
@@ -648,24 +517,7 @@ export default function ArtePage() {
     onRequireLogin={() => { window.location.href = LOGIN_URL; }}
   />
 )}
-
-      {activeModal?.type === 'RemoverFundoDisplay' && (
-  <RemoverFundoDisplay
-    data={activeModal.data}
-    onClose={closeModal}
-    theme="light"
-    playText={playText}
-    onRequireLogin={() => { window.location.href = LOGIN_URL; }}
-  />
-)}
-{activeModal?.type === 'JuntarDividirPdfsDisplay' && (
-  <JuntarDividirPdfsDisplay
-    data={activeModal.data}
-    onClose={closeModal}
-    theme="light"
-    playText={playText}
-  />
-)}
+      
       <style jsx>{`
         @keyframes af-skills-scroll {
           0% { transform: translateX(0); }

@@ -24,7 +24,7 @@ import { getFunctionByKey } from '@/lib/functions-registry';
 import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './utilitiesHandlers';
 import { handleWifiQRCode, handleCardapio, handleCanalYoutube, handleCadastro, handleNossoQRCode } from './companyHandlers';
 import { getContextualRoute } from '@/lib/routing-utils';
-import { cobrar_debito, cobrar_credito } from './paymentGatewayEntries';
+import { cobrar_debito, cobrar_credito } from '@/lib/paymentGatewayEntries';
 
 // ── Interface de dependências ─────────────────────────────────
 interface DetectorDeps {

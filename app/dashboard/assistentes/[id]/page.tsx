@@ -463,7 +463,7 @@ export default function EditarAssistentePage({ params }: PageProps) {
                         Ativação por palavra-chave
                       </label>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Quando desativado, o assistente entra em escuta contínua (modo Alexa). Não recomendado para ambientes barulhentos.
+                        Quando desativado, o assistente funciona sem o modo Alexa, apenas clicando no microfone ou digitando. Recomendado para ambientes extremamente barulhentos.
                       </p>
                     </div>
                     <input

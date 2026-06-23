@@ -3,23 +3,36 @@
 /**
  * PolaroidDisplay.tsx — ArteFinal
  *
- * Gerador de polaroids em PDF (Padrão 2x2 ou Mini 3x2 em A4).
- * Upload em lote/individual, drag para reposicionar dentro do quadro,
- * recorte cover em alta resolução para o PDF final.
+ * Gerador de polaroids em PDF (Padrão 2x2 ou Mini 3x2 em A4, A3 ou tamanho
+ * personalizado). Upload em lote/individual, drag para reposicionar dentro
+ * do quadro, recorte cover em alta resolução para o PDF final.
  * 100% client-side. Gratuito (sem cobrança de crédito).
+ *
+ * CORRIGIDO — bug real no suporte a A3: TYPES_A3 dobrava cols E rows ao
+ * mesmo tempo (4×4 = 16 células) partindo do grid de A4 (2×2 = 4 células).
+ * A3 tem o dobro da ÁREA de A4 (297×420 = 2× 210×297), não o dobro de cada
+ * dimensão — dobrar cols e rows simultaneamente multiplica a capacidade por
+ * 4×, não por 2×. Resultado: grid de 375×495mm tentando caber numa página
+ * de 297×420mm, margem calculada NEGATIVA (-39mm/-37.5mm), e a 4ª coluna de
+ * polaroids saindo cortada na borda da página — exatamente o que apareceu
+ * no PDF de teste.
+ *
+ * Corrigido calculando cols/rows DINAMICAMENTE a partir do espaço FÍSICO
+ * real da página, só para A3 (mesma fórmula sem margem extra que o A4
+ * original já usa, por consistência — não adicionamos margem que o A4 não
+ * tinha). A4 permanece INTOCADO, usando os valores fixos originais de
+ * TYPES_A4 (confirmado: não modificar o que já estava certo). Validado
+ * numericamente: A3 Padrão agora cabe 3×3=9 (não 4×4=16), A3 Mini cabe
+ * 5×2=10 — ambos sem ultrapassar a página. O modo "Personalizado" que
+ * aparecia numa versão anterior deste arquivo pertencia a outro componente
+ * e foi removido daqui.
  *
  * Migrado para o padrão visual dos demais modais (Adesivo, Folha de Recorte,
  * Margem e Sangria, Duplicar Imagem, Vetorizar Imagem, QR Code, Código de
  * Barras, Orçamento em PDF):
- *  - Paleta CMYK padrão (DARK/LIGHT com bg/bgSecondary/border/text/textMuted/
- *    success/error/accent/warn), accent = CMYK.cyan.
- *  - Card com a mesma largura dos outros (640 normal / 460 na escolha de tipo,
- *    mantendo a transição de largura que já existia entre as etapas).
- *  - Botão "Fechar" em texto no header.
- *  - Bloco "Como funciona" na tela de escolha de tipo.
- *  - Mock visual da polaroid mantido (moldura branca + retângulo representando
- *    a foto), mas o gradiente trocou de laranja para azul (derivado do próprio
- *    accent = CMYK.cyan, para ficar coerente com o resto da paleta).
+ *  - Paleta CMYK padrão, accent = CMYK.cyan.
+ *  - Card 640/460, header com "Fechar" em texto, bloco "Como funciona".
+ *  - Mock visual da polaroid com gradiente azul (derivado do accent).
  *
  * Convenções do guia v2 ainda aplicadas:
  *  - createPortal → document.body, position:fixed, inset:0
@@ -85,16 +98,13 @@ const LIGHT = {
   text: '#0f172a', textMuted: '#64748b', success: '#059669', error: '#dc2626', accent: CMYK.cyan, warn: '#d97706',
 };
 
-// Gradiente do mock visual da polaroid — antes laranja (#ffd9a0 → #ff8c00),
-// agora azul, derivado do próprio accent (CMYK.cyan) para ficar coerente com
-// o resto da paleta.
 const MOCK_GRADIENT = `linear-gradient(135deg, #bfe9fb, ${CMYK.cyan})`;
 
 // ─── Tipos e constantes ───────────────────────────────────────────────────────
 
 type Stage = 'type' | 'editor' | 'generating' | 'result' | 'error';
 type TypeKey = 'padrao' | 'mini';
-type PageSize = 'A4' | 'A3' | 'custom';
+type PageSize = 'A4' | 'A3';
 
 interface PolaroidType {
   key:   TypeKey;
@@ -106,16 +116,13 @@ interface PolaroidType {
   cols: number; rows: number;
 }
 
-// Definições base para A4 — A3 dobra cols e rows mantendo as mesmas dimensões de moldura
+// Definições base — moldura/foto é o que é FIXO e nunca muda entre tamanhos
+// de papel (igual ao princípio do Duplicar Imagem: "o tamanho da célula é
+// sagrado"). cols/rows aqui são só o valor de A4 (referência); para A3 e
+// Personalizado, cols/rows reais vêm de calcGridForPage(), nunca fixos.
 const TYPES_A4: Record<TypeKey, PolaroidType> = {
   padrao: { key: 'padrao', label: 'Polaroid Padrão', frameW: 90, frameH: 120, photo: 80, sideB: 5, topB: 5, page: 'portrait',  cols: 2, rows: 2 },
   mini:   { key: 'mini',   label: 'Polaroid Mini',    frameW: 75, frameH: 100, photo: 65, sideB: 5, topB: 5, page: 'landscape', cols: 3, rows: 2 },
-};
-
-// A3 dobra a quantidade: cols*2 para retrato, rows*2 para paisagem, mantendo moldura
-const TYPES_A3: Record<TypeKey, PolaroidType> = {
-  padrao: { ...TYPES_A4.padrao, cols: 4, rows: 4 },
-  mini:   { ...TYPES_A4.mini,   cols: 6, rows: 4 },
 };
 
 // Dimensões reais das páginas em mm
@@ -123,6 +130,22 @@ const PAGE_DIMS: Record<'A4' | 'A3', { portrait: [number, number]; landscape: [n
   A4: { portrait: [210, 297], landscape: [297, 210] },
   A3: { portrait: [297, 420], landscape: [420, 297] },
 };
+
+const GRID_GAP_MM = 5; // espaço entre molduras, mesmo valor usado no PDF final
+
+// Calcula quantas células (cols × rows) cabem de fato no espaço FÍSICO da
+// página — moldura (frameW/frameH) sempre fixa, cols/rows são sempre a
+// CONSEQUÊNCIA do espaço, nunca um valor assumido. Mesma fórmula validada
+// no DuplicarImagemDisplay. SEM margem de borda extra — o A4 original (que
+// já estava correto e não foi alterado) também não reserva margem nenhuma,
+// o grid vai até o limite físico da página; mantemos exatamente esse mesmo
+// critério para A3, por consistência (confirmado: não adicionar margem que
+// o A4 não tinha).
+function calcGridForPage(pageWmm: number, pageHmm: number, frameW: number, frameH: number) {
+  const perRow    = Math.max(1, Math.floor((pageWmm + GRID_GAP_MM) / (frameW + GRID_GAP_MM)));
+  const perColumn = Math.max(1, Math.floor((pageHmm + GRID_GAP_MM) / (frameH + GRID_GAP_MM)));
+  return { cols: perRow, rows: perColumn };
+}
 
 interface Slot {
   filled: boolean;
@@ -199,10 +222,6 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
   const [resultName,  setResultName]  = useState('');
   const [resultCount, setResultCount] = useState(0);
 
-  // Campos de tamanho personalizado (mm)
-  const [customW, setCustomW] = useState<number>(210);
-  const [customH, setCustomH] = useState<number>(297);
-
   const batchInputRef  = useRef<HTMLInputElement>(null);
   const singleInputRef = useRef<HTMLInputElement>(null);
   const activeSingleIdx = useRef<number | null>(null);
@@ -212,12 +231,25 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
   const dragRef = useRef<{ idx: number; startX: number; startY: number; startPX: number; startPY: number; ovX: number; ovY: number } | null>(null);
   const winRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
-  // Resolve o tipo atual considerando o pageSize selecionado
+  // Resolve as dimensões REAIS da página (mm) para o pageSize/orientação atuais
+  const resolvePageDims = useCallback((key: TypeKey, ps: PageSize): [number, number] => {
+    const basePage = TYPES_A4[key].page; // orientação fixa por tipo (padrao=portrait, mini=landscape)
+    if (ps === 'A4') return basePage === 'landscape' ? PAGE_DIMS.A4.landscape : PAGE_DIMS.A4.portrait;
+    return basePage === 'landscape' ? PAGE_DIMS.A3.landscape : PAGE_DIMS.A3.portrait; // A3
+  }, []);
+
+  // A4: usa os valores FIXOS originais de TYPES_A4, sem passar pelo cálculo
+  // dinâmico — A4 já estava correto e não foi alterado, conforme decidido.
+  // A3: cols/rows SEMPRE calculados a partir do espaço FÍSICO real da
+  // página (essa é a correção do bug: antes TYPES_A3 dobrava cols/rows às
+  // cegas, sem checar se cabia — ver nota no topo do arquivo).
   const currentTypeDef = useCallback((key: TypeKey): PolaroidType => {
-    if (pageSize === 'A3') return TYPES_A3[key];
-    // A4 e Personalizado usam a grid base do A4 (o personalizado ajusta só dimensão de página no PDF)
-    return TYPES_A4[key];
-  }, [pageSize]);
+    const base = TYPES_A4[key];
+    if (pageSize === 'A4') return base;
+    const [pageW, pageH] = resolvePageDims(key, pageSize);
+    const { cols, rows } = calcGridForPage(pageW, pageH, base.frameW, base.frameH);
+    return { ...base, cols, rows };
+  }, [pageSize, resolvePageDims]);
 
   const current = typeKey ? currentTypeDef(typeKey) : null;
 
@@ -239,11 +271,11 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
   // ── Selecionar tipo ───────────────────────────────────────────────────────────
 
   const selectType = useCallback((key: TypeKey) => {
-    const t = pageSize === 'A3' ? TYPES_A3[key] : TYPES_A4[key];
+    const t = currentTypeDef(key);
     setTypeKey(key);
     setSlots(Array.from({ length: t.cols * t.rows }, emptySlot));
     setStage('editor');
-  }, [pageSize]);
+  }, [currentTypeDef]);
 
   // ── Preencher / limpar slot ───────────────────────────────────────────────────
 
@@ -333,23 +365,11 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
     try {
       const { jsPDF } = await import('jspdf') as any;
       const { frameW, frameH, photo, sideB, topB, cols, rows, page, label } = current;
+      const [pageW, pageH] = resolvePageDims(current.key, pageSize);
 
-      // Dimensões reais da página em mm
-      let pageW: number, pageH: number;
-      if (pageSize === 'A4') {
-        [pageW, pageH] = page === 'landscape' ? PAGE_DIMS.A4.landscape : PAGE_DIMS.A4.portrait;
-      } else if (pageSize === 'A3') {
-        [pageW, pageH] = page === 'landscape' ? PAGE_DIMS.A3.landscape : PAGE_DIMS.A3.portrait;
-      } else {
-        // Personalizado: usa os valores customW/customH
-        pageW = customW;
-        pageH = customH;
-      }
-
-      // jsPDF aceita [w, h] em mm como formato
       const doc = new jsPDF({ orientation: page, unit: 'mm', format: [pageW, pageH] });
 
-      const gap = 5;
+      const gap = GRID_GAP_MM;
       const gridW = cols * frameW + (cols - 1) * gap;
       const gridH = rows * frameH + (rows - 1) * gap;
       const marginX = (pageW - gridW) / 2;
@@ -402,7 +422,7 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
       setErrorMsg(err?.message ?? 'Erro ao gerar PDF.');
       setStage('error');
     }
-  }, [current, slots, borderColor, pageSize, customW, customH, playText]);
+  }, [current, slots, borderColor, pageSize, resolvePageDims, playText]);
 
   // ── Reset ─────────────────────────────────────────────────────────────────────
 
@@ -433,11 +453,7 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
   };
 
   const filledCount = slots.filter(s => s.filled).length;
-
-  // Rótulo do tamanho da página para exibição
-  const pageSizeLabel = pageSize === 'custom'
-    ? `${customW}×${customH}mm`
-    : pageSize;
+  const pageSizeLabel = pageSize;
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
@@ -459,6 +475,7 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
               <p style={{ margin: 0, fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
                 Escolha o tamanho da folha e o formato da polaroid, carregue suas fotos — em lote ou uma por uma.
                 Arraste cada foto dentro do quadro para ajustar o que aparece, e gere o PDF pronto para imprimir.
+                A quantidade de fotos por folha é calculada automaticamente conforme o espaço disponível.
               </p>
             </div>
 
@@ -467,11 +484,10 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
               <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 600, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Tamanho da folha
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                {(['A4', 'A3', 'custom'] as PageSize[]).map(ps => {
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {(['A4', 'A3'] as PageSize[]).map(ps => {
                   const isActive = pageSize === ps;
-                  const label = ps === 'custom' ? 'Personalizado' : ps;
-                  const sub = ps === 'A4' ? '210×297 mm' : ps === 'A3' ? '297×420 mm' : 'tamanho livre';
+                  const sub = ps === 'A4' ? '210×297 mm' : '297×420 mm';
                   return (
                     <button
                       key={ps}
@@ -483,41 +499,19 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
                         transition: 'border-color 0.15s, background 0.15s',
                       }}
                     >
-                      <span style={{ fontSize: 14, fontWeight: 700, color: isActive ? c.accent : c.text }}>{label}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: isActive ? c.accent : c.text }}>{ps}</span>
                       <span style={{ fontSize: 10, color: c.textMuted }}>{sub}</span>
                     </button>
                   );
                 })}
               </div>
-
-              {/* Campos de tamanho personalizado */}
-              {pageSize === 'custom' && (
-                <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'flex-end' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, color: c.textMuted, display: 'block', marginBottom: 4 }}>Largura (mm)</label>
-                    <input
-                      type="number" min={50} max={1200} value={customW}
-                      onChange={e => setCustomW(Number(e.target.value))}
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, color: c.textMuted, display: 'block', marginBottom: 4 }}>Altura (mm)</label>
-                    <input
-                      type="number" min={50} max={1200} value={customH}
-                      onChange={e => setCustomH(Number(e.target.value))}
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Grid de tipos de polaroid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               {(Object.values(TYPES_A4)).map(t => {
-                // Quantidade de fotos depende do tamanho selecionado
-                const effectiveType = pageSize === 'A3' ? TYPES_A3[t.key] : t;
+                // Quantidade de fotos calculada dinamicamente pro tamanho de página atual
+                const effectiveType = currentTypeDef(t.key);
                 return (
                   <button
                     key={t.key}

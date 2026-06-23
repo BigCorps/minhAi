@@ -768,10 +768,10 @@ useEffect(() => {
   };
 
   const handleMicButtonDown = async (e?: React.MouseEvent | React.TouchEvent) => {
-    if (e && isPlayingAudio) { e.preventDefault(); e.stopPropagation(); }
-    if (isPlayingAudio) { stopEverything(); return; }
-    if (!permissionGranted || isProcessing || isTranscribing) return;
-    resetInactivityTimer(); // Microfone pressionado = atividade real
+    if (e && (isPlayingAudio || isProcessing)) { e.preventDefault(); e.stopPropagation(); }
+    if (isPlayingAudio || isProcessing) { stopEverything(); return; }
+    if (!permissionGranted || isTranscribing) return;
+    resetInactivityTimer();
     shouldProcessAudio.current = false;
     await stopGoogleSpeech();
     setIsListening(true);
@@ -822,12 +822,13 @@ useEffect(() => {
 
   // ── Fechar modal ──────────────────────────────────────────
   const handleCloseModal = async () => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
-      currentAudioRef.current = null;
-    }
+    stopAudioImmediately();
     setIsPlayingAudio(false);
+    // Reset defensivo: se algum await playText(...) ficou pendente por causa
+    // do fechamento do modal em pleno áudio, esses estados travariam
+    // permanentemente sem isso — igual ao que stopEverything() já faz.
+    setIsProcessing(false);
+    processingQuestion.current = false;
     setActiveModal(null);
     if (googleSpeechRef.current) await googleSpeechRef.current.stopRecording();
     setTimeout(async () => {
@@ -936,7 +937,10 @@ useEffect(() => {
             }
           })
           .finally(() => { processingQuestion.current = false; });
-      } else if (commandWords.length < 2) {
+      } else if (commandWords.length < 1) {
+        // Antes exigia 2+ palavras "reais" (>2 chars). Isso bloqueava respostas
+        // curtas legítimas como "débito", "crédito" ou "no débito" (onde "no"
+        // é descartado pelo filtro), causando reprompt infinito.
         triggerRepromptWarning();
         playText('Pode completar sua pergunta?').finally(() => {
           processingQuestion.current = false;
@@ -2418,7 +2422,7 @@ const getStatusMessage = (maximized = false) => {
     if (!permissionGranted) return 'Permissão de voz necessária';
     if (voiceRecorder.isRecording) return isMobile ? 'solte para enviar...' : 'clique novamente para enviar...';
     if (isTranscribing) return 'transcrevendo...';
-    if (isPlayingAudio) return 'clique para parar';
+    if (isPlayingAudio || isProcessing) return 'clique para parar';
     return isMobile ? 'segure para falar ou' : 'clique para falar ou';
   };
 
@@ -2586,7 +2590,7 @@ const getStatusMessage = (maximized = false) => {
           className={`w-[102px] h-[102px] rounded-full ${getMicButtonColor()} flex items-center justify-center transition-all shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300/50 disabled:opacity-50 select-none`}
           aria-label="Segurar para falar"
         >
-          {isPlayingAudio ? (
+          {(isPlayingAudio || isProcessing) ? (
             <Square className="w-[51px] h-[51px] text-white fill-current" />
           ) : hasMicrophone && permissionGranted ? (
             <Mic className="w-[51px] h-[51px] text-white" />

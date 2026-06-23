@@ -68,6 +68,80 @@ export async function processWithGPT(
   return response.choices[0].message.content || '';
 }
 
+// ============================================================
+// ── Function-calling (usado pela demo /lead) ────────────────
+// Validado contra openai@4.28.0 (versão exata do projeto):
+// - ChatCompletionTool: { type: 'function', function: FunctionDefinition }
+// - ChatCompletionMessageToolCall: { id, type: 'function', function: { name, arguments (string JSON) } }
+// processWithGPT (acima) continua intacta e em uso pela rota de
+// produção /api/voice/process. Esta função é só uma adição.
+// ============================================================
+
+export interface GPTToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, any>;
+}
+
+export interface GPTToolsResult {
+  /** Texto de resposta do modelo. Pode ser '' se o modelo só chamou tools. */
+  text: string;
+  /** Lista de tool calls que o modelo decidiu fazer neste turno (pode ser mais de uma). */
+  toolCalls: GPTToolCall[];
+}
+
+/**
+ * Variante de processWithGPT com suporte a function-calling.
+ * Usada exclusivamente pela demo /lead (rota /api/voice/process-demo).
+ *
+ * Importante: a API da OpenAI pode devolver MAIS DE UMA tool call no
+ * mesmo turno (ex: lead diz "sou o Carlos e quero fechar o pedido").
+ * O caller deve iterar sobre toolCalls, nunca assumir só uma.
+ */
+export async function processWithGPTTools(
+  userMessage: string,
+  systemPrompt: string,
+  tools: OpenAI.Chat.ChatCompletionTool[],
+  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
+): Promise<GPTToolsResult> {
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
+    ...conversationHistory.map(msg => ({
+      role: msg.role,
+      content: msg.content,
+    })),
+    { role: 'user', content: userMessage },
+  ];
+
+  const response = await openai.chat.completions.create({
+    model: OPENAI_CONFIG.gpt.model,
+    messages,
+    temperature: OPENAI_CONFIG.gpt.temperature,
+    max_tokens: OPENAI_CONFIG.gpt.max_tokens,
+    tools,
+    tool_choice: 'auto',
+  });
+
+  const choice = response.choices[0];
+  const text = choice.message.content || '';
+
+  const toolCalls: GPTToolCall[] = (choice.message.tool_calls || []).map(tc => {
+    let parsedArgs: Record<string, any> = {};
+    try {
+      parsedArgs = JSON.parse(tc.function.arguments);
+    } catch (err) {
+      console.warn(`⚠️ Falha ao parsear arguments de tool_call ${tc.function.name}:`, tc.function.arguments);
+    }
+    return {
+      id: tc.id,
+      name: tc.function.name,
+      arguments: parsedArgs,
+    };
+  });
+
+  return { text, toolCalls };
+}
+
 // Função para gerar áudio (TTS)
 export async function generateSpeech(text: string): Promise<ArrayBuffer> {
   const response = await openai.audio.speech.create({

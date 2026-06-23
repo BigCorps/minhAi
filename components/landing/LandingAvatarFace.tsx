@@ -298,14 +298,13 @@ export function LandingAvatarFace({ theme = 'dark' }: LandingAvatarFaceProps) {
           <div
             key={`wave-${ring}`}
             className="absolute rounded-full border-2"
-            style={{
-              width: `${60 + ring * 15}%`,
-              aspectRatio: '1 / 1',
-              borderColor: colors.ring,
-              opacity: isSpeaking ? 0.4 : 0.2,
-              animation: `pulse ${isSpeaking ? 1 : 2 + ring * 0.5}s ease-in-out infinite`,
-              animationDelay: `${ring * 0.3}s`
-            }}
+style={{
+  width: `${60 + ring * 15}%`,
+  aspectRatio: '1 / 1',
+  borderColor: colors.ring,
+  opacity: isSpeaking ? 0.4 : 0.2,
+  animation: `pulse ${isSpeaking ? 1 : 2 + ring * 0.5}s ease-in-out ${ring * 0.3}s infinite`,
+}}
           />
         ))}
       </div>
@@ -382,20 +381,23 @@ export function LandingAvatarFace({ theme = 'dark' }: LandingAvatarFaceProps) {
       {/* Partículas Flutuantes (DOM) */}
       <div className="absolute w-full h-full overflow-visible pointer-events-none">
         {particles.map((particle, i) => (
-          <div
-            key={`particle-${i}`}
-            className="absolute rounded-full animate-float"
-            style={{
-              left: particle.x,
-              top: particle.y,
-              width: particle.size,
-              height: particle.size,
-              backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary,
-              opacity: 0.3,
-              animationDuration: `${5 / particle.speed}s`,
-              animationDelay: `${i * 0.2}s`
-            }}
-          />
+<div
+  key={`particle-${i}`}
+  className="absolute rounded-full"  // ← remove animate-float
+  style={{
+    left: particle.x,
+    top: particle.y,
+    width: particle.size,
+    height: particle.size,
+    backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary,
+    opacity: 0.3,
+    animationName: 'float',
+    animationTimingFunction: 'ease-in-out',
+    animationIterationCount: 'infinite',
+    animationDuration: `${5 / particle.speed}s`,
+    animationDelay: `${i * 0.2}s`
+  }}
+/>
         ))}
       </div>
 
@@ -682,16 +684,19 @@ export function LandingAvatarFace({ theme = 'dark' }: LandingAvatarFaceProps) {
       {/* Anéis de Ping Externos */}
       <div className="absolute inset-0 rounded-full pointer-events-none" style={{ aspectRatio: '1/1' }}>
         {[1, 2, 3].map(ring => (
-          <div
-            key={ring}
-            className="absolute inset-0 rounded-full border-2 animate-ping"
-            style={{
-              borderColor: colors.ring,
-              animationDuration: `${1.5 * ring}s`,
-              animationDelay: `${ring * 0.2}s`,
-              opacity: 0.3 / ring
-            }}
-          />
+<div
+  key={ring}
+  className="absolute inset-0 rounded-full border-2"  // ← remove animate-ping
+  style={{
+    borderColor: colors.ring,
+    animationName: 'ping',
+    animationTimingFunction: 'cubic-bezier(0, 0, 0.2, 1)',
+    animationIterationCount: 'infinite',
+    animationDuration: `${1.5 * ring}s`,
+    animationDelay: `${ring * 0.2}s`,
+    opacity: 0.3 / ring
+  }}
+/>
         ))}
       </div>
 

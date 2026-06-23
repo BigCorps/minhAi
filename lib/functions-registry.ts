@@ -229,37 +229,31 @@ handler: async ({ transcript, playText, setActiveModal, companyId, sessionId }) 
     }
 
 // 2. Se tem valor, continua o fluxo normal
-    try {
-      const { data: company } = await supabase
-        .from('companies')
-        .select('mp_access_token, mp_terminal_id')
-        .eq('id', companyId)
-        .single()
+    const { data: company } = await supabase
+      .from('companies')
+      .select('mp_access_token, mp_terminal_id')
+      .eq('id', companyId)
+      .single()
 
-      if (!company?.mp_access_token || !company?.mp_terminal_id) {
-        await playText('A maquininha Mercado Pago não está configurada. Configure o Access Token e o Terminal ID no painel.')
-        return false
-      }
-
-      await playText(
-        `Preparando cobrança de ${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} no débito na maquininha.`
-      )
-
-      setActiveModal?.({
-        type: 'MercadoPagoPointDisplay',
-        data: {
-          companyId,
-          paymentType: 'debit_card',
-          initialAmount: Math.round(amount * 100),
-        },
-      })
-
-      return true
-    } catch (err) {
-      console.error('Erro ao processar tef_debito:', err);
-      await playText('Não consegui preparar a cobrança no débito. Tente novamente.').catch(() => {});
-      return false;
+    if (!company?.mp_access_token || !company?.mp_terminal_id) {
+      await playText('A maquininha Mercado Pago não está configurada. Configure o Access Token e o Terminal ID no painel.')
+      return false
     }
+
+    await playText(
+      `Preparando cobrança de ${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} no débito na maquininha.`
+    )
+
+    setActiveModal?.({
+      type: 'MercadoPagoPointDisplay',
+      data: {
+        companyId,
+        paymentType: 'debit_card',
+        initialAmount: Math.round(amount * 100),
+      },
+    })
+
+    return true
   },
 },
 
@@ -323,60 +317,55 @@ handler: async ({ transcript, playText, setActiveModal, companyId, sessionId }) 
     }
 
 // 2. Se tem valor, continua o fluxo normal extraindo as parcelas
+// 2. Se tem valor, continua o fluxo normal extraindo as parcelas
     const installmentsMatch = (transcript ?? '').match(/(\d{1,2})\s*(?:vezes|x\b|parcelas?)/)
     const installments = installmentsMatch ? Math.min(parseInt(installmentsMatch[1]), 12) : 1
 
-    try {
-      const { data: company } = await supabase
-        .from('companies')
-        .select('mp_access_token, mp_terminal_id')
-        .eq('id', companyId)
-        .single()
+    const { data: company } = await supabase
+      .from('companies')
+      .select('mp_access_token, mp_terminal_id')
+      .eq('id', companyId)
+      .single()
 
-      if (!company?.mp_access_token || !company?.mp_terminal_id) {
-        await playText('A maquininha Mercado Pago não está configurada. Configure o Access Token e o Terminal ID no painel.')
-        return false
-      }
-
-      // Buscar config de parcelas
-      const { data: settings } = await supabase
-        .from('company_function_settings')
-        .select('config')
-        .eq('company_id', companyId)
-        .eq('function_key', 'tef_credito')
-        .single()
-
-      const maxInstallments = settings?.config?.max_installments || 12
-      const minInstallmentValueCents = settings?.config?.min_installment_value_cents || 0
-      const parsedInstallments = Math.min(installments, maxInstallments)
-      const installmentsCost = settings?.config?.installments_cost || 'seller'
-
-      const amountStr = amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      await playText(
-        parsedInstallments > 1
-          ? `Preparando cobrança de ${amountStr} no crédito em ${parsedInstallments} vezes na maquininha.`
-          : `Preparando cobrança de ${amountStr} no crédito à vista na maquininha.`
-      )
-
-      setActiveModal?.({
-        type: 'MercadoPagoPointDisplay',
-        data: {
-          companyId,
-          paymentType: 'credit_card',
-          initialAmount: Math.round(amount * 100),
-          initialInstallments: parsedInstallments,
-          maxInstallments,
-          minInstallmentValueCents,
-          installmentsCost,
-        },
-      })
-
-      return true
-    } catch (err) {
-      console.error('Erro ao processar tef_credito:', err);
-      await playText('Não consegui preparar a cobrança no crédito. Tente novamente.').catch(() => {});
-      return false;
+    if (!company?.mp_access_token || !company?.mp_terminal_id) {
+      await playText('A maquininha Mercado Pago não está configurada. Configure o Access Token e o Terminal ID no painel.')
+      return false
     }
+
+    // Buscar config de parcelas
+    const { data: settings } = await supabase
+      .from('company_function_settings')
+      .select('config')
+      .eq('company_id', companyId)
+      .eq('function_key', 'tef_credito')
+      .single()
+
+    const maxInstallments = settings?.config?.max_installments || 12
+    const minInstallmentValueCents = settings?.config?.min_installment_value_cents || 0
+    const parsedInstallments = Math.min(installments, maxInstallments)
+    const installmentsCost = settings?.config?.installments_cost || 'seller'
+
+    const amountStr = amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    await playText(
+      parsedInstallments > 1
+        ? `Preparando cobrança de ${amountStr} no crédito em ${parsedInstallments} vezes na maquininha.`
+        : `Preparando cobrança de ${amountStr} no crédito à vista na maquininha.`
+    )
+
+    setActiveModal?.({
+      type: 'MercadoPagoPointDisplay',
+      data: {
+        companyId,
+        paymentType: 'credit_card',
+        initialAmount: Math.round(amount * 100),
+        initialInstallments: parsedInstallments,
+        maxInstallments,
+        minInstallmentValueCents,
+        installmentsCost,
+      },
+    })
+
+    return true
   },
 },
 

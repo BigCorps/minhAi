@@ -777,17 +777,35 @@ if (transcreverVideoTriggers.some(t => lowerTranscript.includes(t))) {
 
 // Se mencionou PIX mas não passou um valor válido
 if (lowerTranscript.includes('pix')) {
-    ...
+    // Se tem produto mencionado junto (sem valor numérico), deixa o GPT/GROQ processar
+    // para confirmar o produto antes de pedir o pagamento
+    const hasProductContext = lowerTranscript.replace(/pix/gi, '').trim().split(' ').length > 3;
+    const hasNumber = /\d/.test(transcriptWithNumbers);
+
+    if (hasProductContext && !hasNumber) {
+      // Transcript tem contexto além do PIX mas sem valor — deixa passar pro GROQ/GPT
+      console.log('⏸️ PIX com contexto de produto sem valor — passando para GROQ/GPT');
+      // não retorna true — deixa cair pro classify
+    } else {
+      if (deps.sessionId) {
+        try {
+          const { createClient } = await import('@/lib/supabase-browser');
+          const supabase = createClient();
+          await supabase
+            .from('assistant_sessions')
+            .update({ last_function_keys: ['__pending__pix_generate'] })
+            .eq('id', deps.sessionId)
+            .eq('company_id', companyId);
+          console.log('⏳ Contexto pendente salvo: __pending__pix_generate');
+        } catch (err) {
+          console.error('❌ Erro ao salvar contexto pendente para PIX:', err);
+        }
+      }
       await playText('Qual o valor do PIX que você deseja gerar?');
       return true;
     }
   }
 
-  // ── Débito/Crédito genérico (resposta curta, sem "tef"/"nfc"/"maquininha") ──
-  // Os triggers de cobrar_debito/cobrar_credito no registry exigem frases de
-  // 2+ palavras como substring exata (ex: "no débito"). Respostas naturais
-  // curtas como apenas "débito" ou "crédito" não batem em nenhum trigger.
-  // Este bloco intercepta esses casos diretamente, ANTES do commandProcessor,
   // delegando para a lógica de roteamento TEF/NFC já existente.
   const excludeContextRegex = /tef|nfc|maquinin|tap\b|empresa|score|restri|serasa|spc|negativad|pend[êe]nc|an[áa]lise/;
   const mentionsDebito = /\bd[ée]bito\b/.test(lowerTranscript);

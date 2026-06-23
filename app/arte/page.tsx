@@ -323,7 +323,7 @@ export default function ArtePage() {
     <div className="flex flex-col h-[100dvh]" style={{ background: 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))' }}>
       {/* Header */}
       <header className="flex justify-center px-4 sm:px-6 py-3 border-b flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
-        <div className="flex items-center justify-between w-full max-w-2xl">
+        <div className="flex items-center justify-between w-full max-w-5xl">
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -378,7 +378,7 @@ export default function ArtePage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-3 max-w-2xl mx-auto">
+          <div className="space-y-3 max-w-5xl mx-auto">
             {messages.map((m) => (
               <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow"
@@ -399,7 +399,7 @@ export default function ArtePage() {
 
       {/* Carrossel de habilidades — scroll infinito, pausa em hover/touch */}
       {ready && (
-        <div className="flex-shrink-0 px-3 sm:px-6 pt-2 border-t overflow-hidden" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+        <div className="flex-shrink-0 pt-2 border-t overflow-hidden" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
           <div
             className="w-full overflow-x-auto md:overflow-hidden"
             style={{ scrollbarWidth: 'none' }}
@@ -441,7 +441,7 @@ export default function ArtePage() {
       {/* Input (livre, inclusive anônimo) */}
       {ready && (
         <div className="flex-shrink-0 px-3 sm:px-6 py-3 border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
-          <div className="flex items-end gap-2 rounded-xl px-3 py-2 max-w-2xl mx-auto" style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
+          <div className="flex items-end gap-2 rounded-xl px-3 py-2 max-w-5xl mx-auto" style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}

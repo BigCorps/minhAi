@@ -94,6 +94,7 @@ const MOCK_GRADIENT = `linear-gradient(135deg, #bfe9fb, ${CMYK.cyan})`;
 
 type Stage = 'type' | 'editor' | 'generating' | 'result' | 'error';
 type TypeKey = 'padrao' | 'mini';
+type PageSize = 'A4' | 'A3' | 'custom';
 
 interface PolaroidType {
   key:   TypeKey;
@@ -105,9 +106,22 @@ interface PolaroidType {
   cols: number; rows: number;
 }
 
-const TYPES: Record<TypeKey, PolaroidType> = {
+// Definições base para A4 — A3 dobra cols e rows mantendo as mesmas dimensões de moldura
+const TYPES_A4: Record<TypeKey, PolaroidType> = {
   padrao: { key: 'padrao', label: 'Polaroid Padrão', frameW: 90, frameH: 120, photo: 80, sideB: 5, topB: 5, page: 'portrait',  cols: 2, rows: 2 },
   mini:   { key: 'mini',   label: 'Polaroid Mini',    frameW: 75, frameH: 100, photo: 65, sideB: 5, topB: 5, page: 'landscape', cols: 3, rows: 2 },
+};
+
+// A3 dobra a quantidade: cols*2 para retrato, rows*2 para paisagem, mantendo moldura
+const TYPES_A3: Record<TypeKey, PolaroidType> = {
+  padrao: { ...TYPES_A4.padrao, cols: 4, rows: 4 },
+  mini:   { ...TYPES_A4.mini,   cols: 6, rows: 4 },
+};
+
+// Dimensões reais das páginas em mm
+const PAGE_DIMS: Record<'A4' | 'A3', { portrait: [number, number]; landscape: [number, number] }> = {
+  A4: { portrait: [210, 297], landscape: [297, 210] },
+  A3: { portrait: [297, 420], landscape: [420, 297] },
 };
 
 interface Slot {
@@ -177,12 +191,17 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
   // ── Estado ───────────────────────────────────────────────────────────────────
 
   const [stage,       setStage]       = useState<Stage>('type');
-  const [typeKey,      setTypeKey]    = useState<TypeKey | null>(null);
-  const [slots,        setSlots]      = useState<Slot[]>([]);
-  const [borderColor,  setBorderColor] = useState<'#9aa0a6' | '#000000' | 'none'>('#9aa0a6');
-  const [errorMsg,     setErrorMsg]   = useState<string | null>(null);
-  const [resultName,   setResultName] = useState('');
-  const [resultCount,  setResultCount] = useState(0);
+  const [typeKey,     setTypeKey]     = useState<TypeKey | null>(null);
+  const [pageSize,    setPageSize]    = useState<PageSize>('A4');
+  const [slots,       setSlots]       = useState<Slot[]>([]);
+  const [borderColor, setBorderColor] = useState<'#9aa0a6' | '#000000' | 'none'>('#9aa0a6');
+  const [errorMsg,    setErrorMsg]    = useState<string | null>(null);
+  const [resultName,  setResultName]  = useState('');
+  const [resultCount, setResultCount] = useState(0);
+
+  // Campos de tamanho personalizado (mm)
+  const [customW, setCustomW] = useState<number>(210);
+  const [customH, setCustomH] = useState<number>(297);
 
   const batchInputRef  = useRef<HTMLInputElement>(null);
   const singleInputRef = useRef<HTMLInputElement>(null);
@@ -193,7 +212,14 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
   const dragRef = useRef<{ idx: number; startX: number; startY: number; startPX: number; startPY: number; ovX: number; ovY: number } | null>(null);
   const winRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
-  const current = typeKey ? TYPES[typeKey] : null;
+  // Resolve o tipo atual considerando o pageSize selecionado
+  const currentTypeDef = useCallback((key: TypeKey): PolaroidType => {
+    if (pageSize === 'A3') return TYPES_A3[key];
+    // A4 e Personalizado usam a grid base do A4 (o personalizado ajusta só dimensão de página no PDF)
+    return TYPES_A4[key];
+  }, [pageSize]);
+
+  const current = typeKey ? currentTypeDef(typeKey) : null;
 
   // ── Mount ────────────────────────────────────────────────────────────────────
 
@@ -213,11 +239,11 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
   // ── Selecionar tipo ───────────────────────────────────────────────────────────
 
   const selectType = useCallback((key: TypeKey) => {
-    const t = TYPES[key];
+    const t = pageSize === 'A3' ? TYPES_A3[key] : TYPES_A4[key];
     setTypeKey(key);
     setSlots(Array.from({ length: t.cols * t.rows }, emptySlot));
     setStage('editor');
-  }, []);
+  }, [pageSize]);
 
   // ── Preencher / limpar slot ───────────────────────────────────────────────────
 
@@ -244,7 +270,6 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
 
   const handleBatchUpload = useCallback(async (files: FileList) => {
     const imgFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
-    // Captura os índices vazios no momento da chamada
     setSlots(prevSlots => {
       const emptyIdxs = prevSlots.map((s, i) => s.filled ? -1 : i).filter(i => i >= 0);
       (async () => {
@@ -308,12 +333,23 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
     try {
       const { jsPDF } = await import('jspdf') as any;
       const { frameW, frameH, photo, sideB, topB, cols, rows, page, label } = current;
-      const doc = new jsPDF(page, 'mm', 'a4');
 
-      const pageW = page === 'landscape' ? 297 : 210;
-      const pageH = page === 'landscape' ? 210 : 297;
+      // Dimensões reais da página em mm
+      let pageW: number, pageH: number;
+      if (pageSize === 'A4') {
+        [pageW, pageH] = page === 'landscape' ? PAGE_DIMS.A4.landscape : PAGE_DIMS.A4.portrait;
+      } else if (pageSize === 'A3') {
+        [pageW, pageH] = page === 'landscape' ? PAGE_DIMS.A3.landscape : PAGE_DIMS.A3.portrait;
+      } else {
+        // Personalizado: usa os valores customW/customH
+        pageW = customW;
+        pageH = customH;
+      }
+
+      // jsPDF aceita [w, h] em mm como formato
+      const doc = new jsPDF({ orientation: page, unit: 'mm', format: [pageW, pageH] });
+
       const gap = 5;
-
       const gridW = cols * frameW + (cols - 1) * gap;
       const gridH = rows * frameH + (rows - 1) * gap;
       const marginX = (pageW - gridW) / 2;
@@ -350,12 +386,12 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
       doc.setTextColor(150);
       if (pageH - (marginY + gridH) >= 6) {
         doc.text(
-          `${label} — ${filled} foto(s) — moldura ${frameW / 10}x${frameH / 10}cm, foto ${photo / 10}x${photo / 10}cm — ${new Date().toLocaleString('pt-BR')}`,
+          `${label} ${pageSize} — ${filled} foto(s) — moldura ${frameW / 10}x${frameH / 10}cm, foto ${photo / 10}x${photo / 10}cm — ${new Date().toLocaleString('pt-BR')}`,
           Math.max(marginX, 5), pageH - 4
         );
       }
 
-      const fileName = `polaroid_${label.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      const fileName = `polaroid_${label.toLowerCase().replace(/\s+/g, '_')}_${pageSize.toLowerCase()}_${new Date().toISOString().slice(0, 10)}.pdf`;
       doc.save(fileName);
 
       setResultName(fileName);
@@ -366,7 +402,7 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
       setErrorMsg(err?.message ?? 'Erro ao gerar PDF.');
       setStage('error');
     }
-  }, [current, slots, borderColor, playText]);
+  }, [current, slots, borderColor, pageSize, customW, customH, playText]);
 
   // ── Reset ─────────────────────────────────────────────────────────────────────
 
@@ -376,6 +412,7 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
     setSlots([]);
     setErrorMsg(null);
     setBorderColor('#9aa0a6');
+    setPageSize('A4');
   }, []);
 
   const backToType = useCallback(() => {
@@ -397,6 +434,11 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
 
   const filledCount = slots.filter(s => s.filled).length;
 
+  // Rótulo do tamanho da página para exibição
+  const pageSizeLabel = pageSize === 'custom'
+    ? `${customW}×${customH}mm`
+    : pageSize;
+
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   return createPortal(
@@ -405,7 +447,7 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Polaroids para A4</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Polaroids para impressão</h2>
           <button onClick={onClose} style={{ padding: '4px 10px', border: `1px solid ${c.border}`, borderRadius: 8, background: 'transparent', color: c.textMuted, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Fechar</button>
         </div>
 
@@ -415,49 +457,105 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
             <div style={{ padding: '12px 14px', borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
               <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: c.text }}>Como funciona</p>
               <p style={{ margin: 0, fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
-                Escolha o formato da folha e carregue suas fotos — em lote ou uma por uma. Arraste cada
-                foto dentro do quadro para ajustar o que aparece, e gere o PDF pronto para imprimir em A4.
+                Escolha o tamanho da folha e o formato da polaroid, carregue suas fotos — em lote ou uma por uma.
+                Arraste cada foto dentro do quadro para ajustar o que aparece, e gere o PDF pronto para imprimir.
               </p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {(Object.values(TYPES)).map(t => (
-                <button
-                  key={t.key}
-                  onClick={() => selectType(t.key)}
-                  style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-                    padding: '18px 12px', borderRadius: 10, cursor: 'pointer',
-                    border: `2px solid ${c.border}`, background: c.bgSecondary, textAlign: 'center',
-                  }}
-                >
-                  <span style={{ fontSize: 14, fontWeight: 700, color: c.text }}>{t.label}</span>
-                  <span style={{ fontSize: 10, color: c.textMuted }}>
-                    Moldura {t.frameW / 10}×{t.frameH / 10} cm · foto {t.photo / 10}×{t.photo / 10} cm
-                  </span>
+            {/* Seletor de tamanho de página — 3 botões na mesma linha */}
+            <div>
+              <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 600, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Tamanho da folha
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                {(['A4', 'A3', 'custom'] as PageSize[]).map(ps => {
+                  const isActive = pageSize === ps;
+                  const label = ps === 'custom' ? 'Personalizado' : ps;
+                  const sub = ps === 'A4' ? '210×297 mm' : ps === 'A3' ? '297×420 mm' : 'tamanho livre';
+                  return (
+                    <button
+                      key={ps}
+                      onClick={() => setPageSize(ps)}
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                        padding: '10px 8px', borderRadius: 8, cursor: 'pointer', border: `2px solid ${isActive ? c.accent : c.border}`,
+                        background: isActive ? (isDark ? 'rgba(0,174,239,0.12)' : 'rgba(0,174,239,0.08)') : c.bgSecondary,
+                        transition: 'border-color 0.15s, background 0.15s',
+                      }}
+                    >
+                      <span style={{ fontSize: 14, fontWeight: 700, color: isActive ? c.accent : c.text }}>{label}</span>
+                      <span style={{ fontSize: 10, color: c.textMuted }}>{sub}</span>
+                    </button>
+                  );
+                })}
+              </div>
 
-                  {/* Mock visual da polaroid */}
-                  <div style={{
-                    width: t.key === 'padrao' ? 64 : 54,
-                    aspectRatio: `${t.frameW} / ${t.frameH}`,
-                    background: '#fff', border: `1px solid ${c.border}`,
-                    borderRadius: 2, boxShadow: '0 3px 10px rgba(0,0,0,0.15)',
-                    display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '6%',
-                  }}>
-                    <div style={{
-                      width: '100%', height: `${(t.photo / t.frameH) * 100}%`,
-                      background: MOCK_GRADIENT, borderRadius: 1,
-                    }} />
+              {/* Campos de tamanho personalizado */}
+              {pageSize === 'custom' && (
+                <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, color: c.textMuted, display: 'block', marginBottom: 4 }}>Largura (mm)</label>
+                    <input
+                      type="number" min={50} max={1200} value={customW}
+                      onChange={e => setCustomW(Number(e.target.value))}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                    />
                   </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, color: c.textMuted, display: 'block', marginBottom: 4 }}>Altura (mm)</label>
+                    <input
+                      type="number" min={50} max={1200} value={customH}
+                      onChange={e => setCustomH(Number(e.target.value))}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
 
-                  <span style={{
-                    fontSize: 10, fontWeight: 600, color: c.accent,
-                    background: c.bg, padding: '2px 8px', borderRadius: 6, border: `1px solid ${c.border}`,
-                  }}>
-                    {t.cols * t.rows} fotos por folha
-                  </span>
-                </button>
-              ))}
+            {/* Grid de tipos de polaroid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {(Object.values(TYPES_A4)).map(t => {
+                // Quantidade de fotos depende do tamanho selecionado
+                const effectiveType = pageSize === 'A3' ? TYPES_A3[t.key] : t;
+                return (
+                  <button
+                    key={t.key}
+                    onClick={() => selectType(t.key)}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+                      padding: '18px 12px', borderRadius: 10, cursor: 'pointer',
+                      border: `2px solid ${c.border}`, background: c.bgSecondary, textAlign: 'center',
+                    }}
+                  >
+                    <span style={{ fontSize: 14, fontWeight: 700, color: c.text }}>{t.label}</span>
+                    <span style={{ fontSize: 10, color: c.textMuted }}>
+                      Moldura {t.frameW / 10}×{t.frameH / 10} cm · foto {t.photo / 10}×{t.photo / 10} cm
+                    </span>
+
+                    {/* Mock visual da polaroid */}
+                    <div style={{
+                      width: t.key === 'padrao' ? 64 : 54,
+                      aspectRatio: `${t.frameW} / ${t.frameH}`,
+                      background: '#fff', border: `1px solid ${c.border}`,
+                      borderRadius: 2, boxShadow: '0 3px 10px rgba(0,0,0,0.15)',
+                      display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '6%',
+                    }}>
+                      <div style={{
+                        width: '100%', height: `${(t.photo / t.frameH) * 100}%`,
+                        background: MOCK_GRADIENT, borderRadius: 1,
+                      }} />
+                    </div>
+
+                    <span style={{
+                      fontSize: 10, fontWeight: 600, color: c.accent,
+                      background: c.bg, padding: '2px 8px', borderRadius: 6, border: `1px solid ${c.border}`,
+                    }}>
+                      {effectiveType.cols * effectiveType.rows} fotos · {pageSizeLabel}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -469,7 +567,7 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
             {/* Top bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <span style={{ fontSize: 12, color: c.textMuted }}>
-                <strong style={{ color: c.text }}>{current.label}</strong> — {filledCount}/{slots.length} quadros preenchidos
+                <strong style={{ color: c.text }}>{current.label}</strong> {pageSizeLabel} — {filledCount}/{slots.length} quadros preenchidos
               </span>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button onClick={backToType} style={btnSecondary}>
@@ -485,8 +583,8 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
             <div style={{
               display: 'grid',
               gridTemplateColumns: `repeat(${current.cols}, 1fr)`,
-              gap: 14,
-              maxWidth: current.cols === 2 ? 320 : 420,
+              gap: current.cols > 3 ? 6 : 14,
+              maxWidth: current.cols >= 4 ? 560 : current.cols === 2 ? 320 : 420,
               margin: '0 auto',
               width: '100%',
             }}>
@@ -533,8 +631,10 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
                     >
                       {!slot.filled && (
                         <>
-                          <IconPlus s={icon(c.accent, 22)} />
-                          <span style={{ fontSize: 9, color: c.textMuted, textAlign: 'center', padding: '0 6px' }}>Adicionar foto</span>
+                          <IconPlus s={icon(c.accent, current.cols >= 4 ? 14 : 22)} />
+                          {current.cols < 4 && (
+                            <span style={{ fontSize: 9, color: c.textMuted, textAlign: 'center', padding: '0 6px' }}>Adicionar foto</span>
+                          )}
                         </>
                       )}
                     </div>
@@ -544,17 +644,18 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
                       <button
                         onClick={(e) => { e.stopPropagation(); clearSlot(i); }}
                         style={{
-                          position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: '50%',
+                          position: 'absolute', top: 2, right: 2, width: current.cols >= 4 ? 16 : 22, height: current.cols >= 4 ? 16 : 22, borderRadius: '50%',
                           background: 'rgba(220,53,69,0.92)', color: '#fff', border: 'none', cursor: 'pointer',
-                          fontSize: 13, lineHeight: '22px', padding: 0, zIndex: 3,
+                          fontSize: 10, lineHeight: current.cols >= 4 ? '16px' : '22px', padding: 0, zIndex: 3,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
                       >
-                        <IconTrash s={icon('#fff', 11)} />
+                        <IconTrash s={icon('#fff', current.cols >= 4 ? 8 : 11)} />
                       </button>
                     )}
 
-                    {/* Hint de arraste */}
-                    {slot.filled && (
+                    {/* Hint de arraste — oculto em grids muito pequenos */}
+                    {slot.filled && current.cols < 4 && (
                       <div style={{
                         position: 'absolute', left: 0, right: 0, bottom: 4, textAlign: 'center',
                         fontSize: 8, color: 'rgba(0,0,0,0.4)', pointerEvents: 'none',
@@ -604,7 +705,7 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
               }}
             >
               <IconDownload s={icon('#fff', 16)} />
-              Gerar PDF
+              Gerar PDF {pageSizeLabel}
             </button>
 
             <p style={{ fontSize: 11, color: c.textMuted, textAlign: 'center', margin: 0 }}>
@@ -629,7 +730,7 @@ export default function PolaroidDisplay({ onClose, theme = 'dark', playText }: P
             </div>
             {resultName && <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>{resultName}</p>}
             <p style={{ fontSize: 11, color: c.textMuted, margin: 0 }}>
-              {resultCount} foto(s) · {current?.label}
+              {resultCount} foto(s) · {current?.label} · {pageSizeLabel}
             </p>
             <button onClick={handleReset} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 13, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               <IconRefresh s={icon(c.textMuted, 14)} /> Gerar outro

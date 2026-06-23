@@ -24,6 +24,7 @@ yarn-error.log*
 # Local env files
 .env*.local
 .env
+.env.local
 
 # Vercel
 .vercel
@@ -51,6 +52,7 @@ google-credentials.json
 .env.development
 .env.staging
 .env.test
+.env.example
 
 # ========================================
 # Arquivos de configuração sensíveis

@@ -832,17 +832,22 @@ if (lowerTranscript.includes('pix')) {
       } else {
         const registryFunc = getFunctionByKey(funcKey);
         if (registryFunc?.handler) {
-          await registryFunc.handler({
-            transcript: lowerTranscript,
-            companyId,
-            functionSettings,
-            playText,
-            setIsProcessing,
-            sessionId,
-            setActiveModal,
-            widgetMode,
-            slug,
-          });
+          try {
+            await registryFunc.handler({
+              transcript: lowerTranscript,
+              companyId,
+              functionSettings,
+              playText,
+              setIsProcessing,
+              sessionId,
+              setActiveModal,
+              widgetMode,
+              slug,
+            });
+          } catch (handlerError) {
+            console.error(`❌ Erro no handler de ${funcKey}:`, handlerError);
+            await playText('Desculpe, ocorreu um erro ao processar essa solicitação.').catch(() => {});
+          }
         } else {
           if (result.speechText) await playText(result.speechText);
           if (result.modalData && result.modalType) {

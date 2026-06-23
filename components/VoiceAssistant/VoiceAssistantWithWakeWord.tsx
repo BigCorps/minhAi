@@ -1840,7 +1840,18 @@ case 'link_na_bio': {
         }
       }, 1000);
 
-const response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/process', { method: 'POST', body: formData });
+const voiceController = new AbortController();
+const voiceTimeoutId = setTimeout(() => voiceController.abort(), 45000); // abaixo do maxDuration=60s da rota
+let response: Response;
+try {
+  response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/process', {
+    method: 'POST',
+    body: formData,
+    signal: voiceController.signal,
+  });
+} finally {
+  clearTimeout(voiceTimeoutId);
+}
 
       const newSessionId = response.headers.get('X-Session-Id');
       if (newSessionId) {

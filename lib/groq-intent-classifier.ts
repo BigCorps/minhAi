@@ -306,17 +306,25 @@ let pedidoId: string | null = null;
     }
 
     // ── Chama o GROQ para classificar a intenção ──────────────────────────────
-    const response = await fetch('/api/groq/classify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        transcript,
-        functionsContext,
-        sessionContext,
-        forceResponse: deps.forceResponse,
-        conversationHistory,
-      }),
-    });
+const groqController = new AbortController();
+    const groqTimeoutId = setTimeout(() => groqController.abort(), 8000);
+    let response: Response;
+    try {
+      response = await fetch('/api/groq/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript,
+          functionsContext,
+          sessionContext,
+          forceResponse: deps.forceResponse,
+          conversationHistory,
+        }),
+        signal: groqController.signal,
+      });
+    } finally {
+      clearTimeout(groqTimeoutId);
+    }
 
     if (!response.ok) return false;
 

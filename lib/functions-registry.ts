@@ -376,9 +376,9 @@ pix_generate: {
   responseType: 'voice+modal',
 
   voiceTriggers: [
-    'pix', 'gerar pix', 'cobrar pix',
-    'pagamento pix', 'chave pix',
-    'pagar com pix', 'receber pix',
+    'pix', 'gerar pix', 'cobrar pix', 'cobrar pics', 'gerar picos',
+    'pagamento pix', 'chave pix', 'gerar pics', 'pagar com pics',
+    'pagar com pix', 'receber pix', 'chave pics', 'pics', 'picos',
   ],
 
   examplePhrases: [

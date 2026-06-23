@@ -15,7 +15,7 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { LeadDemoAssistant, type LeadDemoMessage } from '@/components/LeadDemoAssistant';
+import { LeadDemoAssistant, type LeadDemoMessage } from '@/components/LeadDemo/LeadDemoAssistant';
 
 interface LeadDemoPageClientProps {
   token: string;

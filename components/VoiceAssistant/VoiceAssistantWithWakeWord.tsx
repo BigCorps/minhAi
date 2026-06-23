@@ -937,10 +937,7 @@ useEffect(() => {
             }
           })
           .finally(() => { processingQuestion.current = false; });
-      } else if (commandWords.length < 1) {
-        // Antes exigia 2+ palavras "reais" (>2 chars). Isso bloqueava respostas
-        // curtas legítimas como "débito", "crédito" ou "no débito" (onde "no"
-        // é descartado pelo filtro), causando reprompt infinito.
+      } else if (commandWords.length < 2) {
         triggerRepromptWarning();
         playText('Pode completar sua pergunta?').finally(() => {
           processingQuestion.current = false;

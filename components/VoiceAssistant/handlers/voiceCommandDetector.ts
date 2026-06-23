@@ -24,7 +24,6 @@ import { getFunctionByKey } from '@/lib/functions-registry';
 import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './utilitiesHandlers';
 import { handleWifiQRCode, handleCardapio, handleCanalYoutube, handleCadastro, handleNossoQRCode } from './companyHandlers';
 import { getContextualRoute } from '@/lib/routing-utils';
-import { cobrar_debito, cobrar_credito } from '@/lib/paymentGatewayEntries';
 
 // ── Interface de dependências ─────────────────────────────────
 interface DetectorDeps {
@@ -804,32 +803,6 @@ if (lowerTranscript.includes('pix')) {
       await playText('Qual o valor do PIX que você deseja gerar?');
       return true;
     }
-  }
-
-  // delegando para a lógica de roteamento TEF/NFC já existente.
-  const excludeContextRegex = /tef|nfc|maquinin|tap\b|empresa|score|restri|serasa|spc|negativad|pend[êe]nc|an[áa]lise/;
-  const mentionsDebito = /\bd[ée]bito\b/.test(lowerTranscript);
-  const mentionsCredito = /\bcr[ée]dito\b/.test(lowerTranscript);
-
-  if ((mentionsDebito || mentionsCredito) && !excludeContextRegex.test(lowerTranscript)) {
-    const gatewayFn = mentionsDebito ? cobrar_debito : cobrar_credito;
-    const isEnabled = await checkIfFunctionIsEnabled(companyId, gatewayFn.functionKey);
-    if (!isEnabled) {
-      await playText('Esta função de pagamento está desativada no momento.');
-      return true;
-    }
-    if (gatewayFn.handler) {
-      await gatewayFn.handler({
-        transcript: correctedTranscript,
-        companyId,
-        functionSettings,
-        playText,
-        setIsProcessing,
-        sessionId,
-        setActiveModal: deps.setActiveModal,
-      });
-    }
-    return true;
   }
 
   // ── VoiceCommandProcessor ─────────────────────────────────

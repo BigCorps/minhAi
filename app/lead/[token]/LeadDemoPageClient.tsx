@@ -90,7 +90,7 @@ export default function LeadDemoPageClient({
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
       <LeadDemoHeader nomeNegocio={nomeNegocio} />
 
-      <main className="flex-1 flex flex-col items-center px-4 pt-6 pb-6 gap-0 overflow-hidden">
+      <main className="flex-1 flex flex-col items-center px-4 pt-6 pb-0 gap-0 overflow-hidden relative">
 
         {/* ── AVATAR + FRASE ────────────────────────────────────────────
             Ocupa espaço fixo e faz fade-out quando há mensagens,

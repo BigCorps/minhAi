@@ -250,27 +250,10 @@ export function LeadDemoAssistant({
   );
 
   return (
-    <div className="flex flex-col w-full h-full max-w-2xl mx-auto overflow-hidden">
-      {/* Header simples com controle de mute */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-        <span className="text-sm font-medium text-white/70">
-          {nomeLead ? `Conversando com ${nomeLead}` : 'Assistente de demonstração'}
-        </span>
-        <button
-          onClick={handleToggleMute}
-          aria-label={isMuted ? 'Ativar áudio' : 'Mutar áudio'}
-          className="p-2 rounded-full hover:bg-white/10 transition-colors"
-        >
-          {isMuted ? (
-            <VolumeX className="w-5 h-5 text-white/50" />
-          ) : (
-            <Volume2 className="w-5 h-5 text-white/70" />
-          )}
-        </button>
-      </div>
+    <div className="flex flex-col w-full h-full max-w-2xl mx-auto overflow-hidden pb-[72px]">
 
       {/* Histórico de mensagens */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[280px] max-h-[420px]">
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {messages.map((msg, i) => (
           <div
             key={i}
@@ -304,7 +287,7 @@ export function LeadDemoAssistant({
       )}
 
       {/* Input: texto + microfone */}
-      <form onSubmit={handleTextSubmit} className="flex items-center gap-2 p-3 border-t border-white/10">
+      <form onSubmit={handleTextSubmit} className="fixed bottom-6 left-4 right-4 max-w-2xl mx-auto flex items-center gap-2 p-3 inset-x-0">
         <input
           type="text"
           value={textInput}
@@ -331,6 +314,19 @@ export function LeadDemoAssistant({
           } disabled:opacity-50`}
         >
           <Mic className="w-5 h-5 text-white" />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleToggleMute}
+          aria-label={isMuted ? 'Ativar áudio' : 'Mutar áudio'}
+          className="flex-shrink-0 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+        >
+          {isMuted ? (
+            <VolumeX className="w-5 h-5 text-white/50" />
+          ) : (
+            <Volume2 className="w-5 h-5 text-white/70" />
+          )}
         </button>
 
         <button

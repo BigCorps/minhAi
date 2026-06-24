@@ -48,6 +48,7 @@ export interface LeadDemoAssistantProps {
    * para /lead (reiniciar o fluxo do zero).
    */
   onSessaoExpirada?: () => void;
+  onFirstMessage?: () => void;
 }
 
 export function LeadDemoAssistant({
@@ -58,6 +59,7 @@ export function LeadDemoAssistant({
   onObjetivoCumprido,
   onNomeLeadCapturado,
   onSessaoExpirada,
+  onFirstMessage,
 }: LeadDemoAssistantProps) {
   const [messages, setMessages] = useState<LeadDemoMessage[]>(initialMessages);
   const [textInput, setTextInput] = useState('');
@@ -85,10 +87,12 @@ export function LeadDemoAssistant({
       const trimmed = text.trim();
       if (!trimmed || isProcessing) return;
 
-      setMessages(prev => [...prev, { role: 'user', content: trimmed }]);
+      setMessages(prev => {
+        if (prev.length === 0) onFirstMessage?.();
+        return [...prev, { role: 'user', content: trimmed }];
+      });
       setTextInput('');
       setIsProcessing(true);
-      setError(null);
 
       try {
         const formData = new FormData();

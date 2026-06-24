@@ -2,26 +2,15 @@
 
 // app/lead/[token]/LeadDemoPageClient.tsx
 //
-// Componente client da página /lead/[token]. Responsabilidades:
-// - Renderizar LeadDemoHeader (logo placeholder + minhAi + wake lock + tema)
-// - Hospedar LeadDemoAssistant
-// - Reagir aos callbacks (onObjetivoCumprido, onNomeLeadCapturado,
-//   onSessaoExpirada) renderizando modais mock e os botões de avanço
-//   de etapa, exatamente conforme o roteiro confirmado:
-//   - Fim do Passo 1 (objetivo cumprido): 2 botões lado a lado
-//     ("continuar testando" → Passo 2 e-mail | banner de cadastro)
-//   - Sem interromper a conversa — os botões aparecem ao lado,
-//     a conversa continua disponível.
-//
-// Pressupõe que next-themes já tem um ThemeProvider no layout raiz
-// do app (necessário para useTheme() funcionar em LeadDemoHeader) —
-// inferido do fato de o sistema real (AssistenteClient.tsx) já usar
-// useTheme() sem nenhum provider visível no próprio arquivo.
+// Visual redesenhado: avatar LandingAvatarFace (face ↔ orbe a cada 5s)
+// centralizado no topo, some quando há interação. Input fixo na base.
+// Toda a lógica de negócio original preservada.
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { LeadDemoAssistant, type LeadDemoMessage } from '@/components/LeadDemo/LeadDemoAssistant';
 import { LeadDemoHeader } from '@/components/LeadDemo/LeadDemoHeader';
+import { LandingAvatarFace } from '@/components/landing/LandingAvatarFace';
 
 interface LeadDemoPageClientProps {
   token: string;
@@ -55,6 +44,11 @@ export default function LeadDemoPageClient({
   const [nomeLead, setNomeLead] = useState<string | null>(nomeLeadInicial);
   const [showMockModal, setShowMockModal] = useState(false);
 
+  // Controla visibilidade do avatar — some quando há mensagens
+  const [hasMessages, setHasMessages] = useState(
+    context.length > 0
+  );
+
   const initialMessages: LeadDemoMessage[] = context.map(m => ({
     role: m.role,
     content: m.content,
@@ -71,28 +65,61 @@ export default function LeadDemoPageClient({
   }, []);
 
   const handleSessaoExpirada = useCallback(() => {
-    // Decisão confirmada: zero recuperação parcial — reinicia do zero.
     router.push('/lead');
   }, [router]);
 
   const handleContinuarTestando = useCallback(() => {
-    // Avança para o Passo 2 (e-mail). Rota a definir quando
-    // construirmos esse passo — placeholder por ora.
     router.push(`/lead/${token}/email`);
   }, [router, token]);
 
   const handleCriarAssistente = useCallback(() => {
-    // Passo 4 (cadastro), pode ser chamado a qualquer momento a
-    // partir do banner, conforme roteiro confirmado.
     router.push(`/cadastro?demo=${token}`);
   }, [router, token]);
+
+  // Callback chamado pelo LeadDemoAssistant quando o user envia 1ª msg
+  const handleFirstMessage = useCallback(() => {
+    setHasMessages(true);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
       <LeadDemoHeader nomeNegocio={nomeNegocio} />
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-6 gap-4">
-        <div className="w-full max-w-2xl" style={{ height: '70vh' }}>
+      <main className="flex-1 flex flex-col items-center px-4 pt-6 pb-6 gap-0 overflow-hidden">
+
+        {/* ── AVATAR + FRASE ────────────────────────────────────────────
+            Ocupa espaço fixo e faz fade-out quando há mensagens,
+            para o chat tomar conta da tela sem remover o elemento
+            (evita layout shift brusco).
+        ── */}
+        <div
+          className={`w-full flex flex-col items-center flex-shrink-0 transition-all duration-700 ease-in-out ${
+            hasMessages
+              ? 'opacity-0 max-h-0 pointer-events-none overflow-hidden'
+              : 'opacity-100 max-h-[420px]'
+          }`}
+        >
+          {/* Avatar — limitado a 260px de altura */}
+          <div className="w-full max-w-[260px] h-[260px] relative">
+            <LandingAvatarFace theme="dark" />
+          </div>
+
+          {/* Frase descritiva */}
+          <p className="mt-4 text-center text-sm text-white/50 max-w-xs leading-relaxed px-2">
+            Esse é o exemplo do seu Assistente, pergunte o que quiser para simularmos uma venda.
+          </p>
+        </div>
+
+        {/* ── ÁREA DE CHAT ─────────────────────────────────────────────
+            Quando não há msgs: encolhe para dar espaço ao avatar.
+            Quando há msgs: expande para preencher.
+        ── */}
+        <div
+          className={`w-full max-w-2xl transition-all duration-700 ease-in-out flex-1 min-h-0 ${
+            hasMessages ? 'flex flex-col' : 'flex flex-col'
+          }`}
+          style={{ height: hasMessages ? '100%' : undefined }}
+        >
           <LeadDemoAssistant
             token={token}
             initialMessages={initialMessages}
@@ -101,12 +128,15 @@ export default function LeadDemoPageClient({
             onObjetivoCumprido={handleObjetivoCumprido}
             onNomeLeadCapturado={handleNomeLeadCapturado}
             onSessaoExpirada={handleSessaoExpirada}
+            onFirstMessage={handleFirstMessage}
           />
         </div>
 
-        {/* Botões de avanço — aparecem ao lado, não bloqueiam a conversa */}
+        {/* ── BOTÕES DE AVANÇO ─────────────────────────────────────────
+            Aparecem abaixo do chat, não bloqueiam a conversa.
+        ── */}
         {objetivoCumprido && (
-          <div className="w-full max-w-2xl flex flex-col sm:flex-row gap-3">
+          <div className="w-full max-w-2xl flex flex-col sm:flex-row gap-3 flex-shrink-0 pt-3">
             <button
               onClick={handleContinuarTestando}
               className="flex-1 px-6 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold transition-colors"
@@ -123,8 +153,7 @@ export default function LeadDemoPageClient({
         )}
       </main>
 
-      {/* Modal mock de PIX ou agendamento — placeholder simples, a
-          refinar quando desenharmos visualmente esses modais. */}
+      {/* ── MODAL MOCK PIX / AGENDAMENTO ─────────────────────────────── */}
       {showMockModal && objetivoInfo && (
         <MockObjetivoModal
           info={objetivoInfo}
@@ -137,6 +166,8 @@ export default function LeadDemoPageClient({
     </div>
   );
 }
+
+// ─── Modal mock (sem alterações) ────────────────────────────────────────────
 
 function MockObjetivoModal({
   info,

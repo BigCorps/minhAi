@@ -277,20 +277,25 @@ function StepRamo({
         Isso ajuda a personalizar a demonstração para você.
       </p>
       <div className="grid grid-cols-2 gap-3">
-        {SEGMENTOS.map(({ key, label, Icon }) => (
-          <button
-            key={key}
-            onClick={() => onChange(key)}
-            className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all text-center ${
-              value === key
-                ? 'border-blue-400 bg-blue-500/10 text-white'
-                : 'border-white/10 hover:border-white/30 text-white/70 hover:text-white'
-            }`}
-          >
-            <Icon className="w-6 h-6" />
-            <span className="text-xs font-medium leading-tight">{label}</span>
-          </button>
-        ))}
+        {SEGMENTOS.map(({ key, label, Icon }, index) => {
+          const isLastOdd = index === SEGMENTOS.length - 1 && SEGMENTOS.length % 2 !== 0;
+          return (
+            <button
+              key={key}
+              onClick={() => onChange(key)}
+              className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-left
+                ${isLastOdd ? 'col-span-2 justify-center' : 'flex-col justify-center text-center'}
+                ${
+                  value === key
+                    ? 'border-blue-400 bg-blue-500/10 text-white'
+                    : 'border-white/10 hover:border-white/30 text-white/70 hover:text-white'
+                }`}
+            >
+              <Icon className="w-5 h-5 shrink-0" />
+              <span className="text-xs font-medium leading-tight">{label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

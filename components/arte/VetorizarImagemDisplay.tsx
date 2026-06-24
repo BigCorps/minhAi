@@ -76,15 +76,13 @@ export default function VetorizarImagemDisplay({ data, onClose, theme = 'dark', 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 useEffect(() => {
-  if (hasSpoken.current) return;
-  hasSpoken.current = true;
+  if (spoke.current) return;
+  spoke.current = true;
   window.speechSynthesis?.cancel();
 
-  // Se o arquivo já vem anexado (input principal), pula a etapa de upload
-  // e processa direto — mesma validação de tipo do handleFileSelected.
   if (data.prefillFile) {
-    handleFileSelected(data.prefillFile);
-    playText('Imagem recebida! Ajuste o corte, o brilho ou a rotação como preferir.').catch(() => {});
+    handleFile(data.prefillFile); // confirme o nome real da função de upload desse modal
+    playText('Arquivo recebido! ...').catch(() => {});
   } else {
     playText(OPENING_TEXT).catch(() => {});
   }

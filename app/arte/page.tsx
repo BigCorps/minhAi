@@ -199,11 +199,37 @@ const SKILLS: Skill[] = [
 },
 ];
 
-const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+const norm = (s: string) =>
+  s.toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[.,!?;:\-—()_📎]+/g, ' ') // pontuação e o emoji de clipe não devem "colar" palavras
+    .replace(/\s+/g, ' ');
+
+// Match por palavras, com janela de distância — todas as palavras do trigger
+// precisam aparecer na frase, em qualquer ordem, mas sem ficar espalhadas
+// pela sentença inteira (evita falso positivo em frases longas e ambíguas).
+// Os triggers continuam exatamente os mesmos já cadastrados em cada skill —
+// essa mudança é só na forma de comparar, não exige adicionar frase nova.
+function triggerMatches(trigger: string, normalizedText: string, maxGapWords = 3): boolean {
+  const triggerWords = trigger.split(' ').filter(Boolean);
+  const textWords = normalizedText.split(' ').filter(Boolean);
+  const positions = triggerWords.map((tw) => textWords.indexOf(tw));
+  if (positions.some((p) => p === -1)) return false;
+  const minPos = Math.min(...positions), maxPos = Math.max(...positions);
+  return (maxPos - minPos) <= (triggerWords.length - 1 + maxGapWords);
+}
+
 function detectSkill(text: string): Skill | null {
   const t = norm(text);
   let best: Skill | null = null, bestLen = 0;
-  for (const sk of SKILLS) for (const trig of sk.triggers) if (t.includes(trig) && trig.length > bestLen) { best = sk; bestLen = trig.length; }
+  for (const sk of SKILLS) {
+    for (const trig of sk.triggers) {
+      if (triggerMatches(trig, t) && trig.length > bestLen) {
+        best = sk;
+        bestLen = trig.length;
+      }
+    }
+  }
   return best;
 }
 
@@ -429,7 +455,7 @@ const handleSubmit = useCallback(() => {
             </p>
           </div>
         ) : (
-          <div className="space-y-3 max-w-5xl mx-auto">
+          <div className="space-y-3 max-w-4xl mx-auto">
             {messages.map((m) => (
               <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow"
@@ -504,7 +530,7 @@ const handleSubmit = useCallback(() => {
       </div>
     )}
 
-    <div className="flex items-end gap-2 rounded-xl px-3 py-2 max-w-2xl mx-auto" style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
+    <div className="flex items-end gap-2 rounded-xl px-3 py-2 max-w-5xl mx-auto" style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
       <button
         onClick={() => fileInputRef.current?.click()}
         className="p-1.5 rounded-lg transition-all hover:bg-slate-100 active:scale-95 flex-shrink-0"

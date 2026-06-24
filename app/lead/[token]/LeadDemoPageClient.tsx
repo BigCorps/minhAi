@@ -3,7 +3,7 @@
 // app/lead/[token]/LeadDemoPageClient.tsx
 //
 // Componente client da página /lead/[token]. Responsabilidades:
-// - Renderizar header com nome do negócio (tema dark fixo)
+// - Renderizar LeadDemoHeader (logo placeholder + minhAi + wake lock + tema)
 // - Hospedar LeadDemoAssistant
 // - Reagir aos callbacks (onObjetivoCumprido, onNomeLeadCapturado,
 //   onSessaoExpirada) renderizando modais mock e os botões de avanço
@@ -12,10 +12,16 @@
 //     ("continuar testando" → Passo 2 e-mail | banner de cadastro)
 //   - Sem interromper a conversa — os botões aparecem ao lado,
 //     a conversa continua disponível.
+//
+// Pressupõe que next-themes já tem um ThemeProvider no layout raiz
+// do app (necessário para useTheme() funcionar em LeadDemoHeader) —
+// inferido do fato de o sistema real (AssistenteClient.tsx) já usar
+// useTheme() sem nenhum provider visível no próprio arquivo.
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { LeadDemoAssistant, type LeadDemoMessage } from '@/components/LeadDemo/LeadDemoAssistant';
+import { LeadDemoHeader } from '@/components/LeadDemo/LeadDemoHeader';
 
 interface LeadDemoPageClientProps {
   token: string;
@@ -83,16 +89,7 @@ export default function LeadDemoPageClient({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
-      {/* Header simples — sem SlugHeaderWrapper (acoplado a company real) */}
-      <header className="border-b border-white/10 px-4 py-4">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div>
-            <p className="text-xs text-white/40 uppercase tracking-wide">Demonstração</p>
-            <h1 className="text-lg font-bold text-white">{nomeNegocio}</h1>
-          </div>
-          <span className="text-xs text-white/30">minhAi</span>
-        </div>
-      </header>
+      <LeadDemoHeader nomeNegocio={nomeNegocio} />
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-6 gap-4">
         <div className="w-full max-w-2xl" style={{ height: '70vh' }}>

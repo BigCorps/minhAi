@@ -283,10 +283,11 @@ export async function POST(request: NextRequest) {
         novoObjetivoCumprido = true;
         updates.objetivo_cumprido = true;
         horarioMarcado = String(call.arguments.horario);
-        // Não vai para a coluna 'updates' do banco (demo_sessions não
-        // tem coluna própria para isso) — vai dentro do próprio
-        // 'context' (linha abaixo) e na resposta da API, para o
-        // frontend usar no modal de confirmação mock.
+        // Migration 002 adicionou a coluna própria horario_marcado —
+        // persistido aqui (não só dentro do 'context' jsonb), para
+        // que o Passo 2 (e-mail) e qualquer relatório futuro possam
+        // consultar direto, sem parsear o histórico de conversa.
+        updates.horario_marcado = horarioMarcado;
       }
     }
 

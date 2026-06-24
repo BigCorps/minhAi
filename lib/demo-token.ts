@@ -52,6 +52,7 @@ export interface DemoSessionRecord {
   nome_lead: string | null;
   email: string | null;
   phone: string | null;
+  horario_marcado: string | null;
   status: string;
   canal_atual: string;
   objetivo_cumprido: boolean;

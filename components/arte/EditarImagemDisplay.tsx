@@ -47,7 +47,7 @@ import 'react-image-crop/dist/ReactCrop.css';
 type Stage = 'input' | 'editing' | 'processing' | 'result' | 'error';
 
 interface Props {
-  data: { companyId: string };
+  data: { companyId: string; prefillFile?: File };
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText: (text: string) => Promise<void>;
@@ -234,12 +234,21 @@ export default function EditarImagemDisplay({ data, onClose, theme = 'dark', pla
   }, [stage, onClose]);
 
   // Áudio só no mount — nunca em handler de registry
-  useEffect(() => {
-    if (hasSpoken.current) return;
-    hasSpoken.current = true;
-    window.speechSynthesis?.cancel();
+useEffect(() => {
+  if (hasSpoken.current) return;
+  hasSpoken.current = true;
+  window.speechSynthesis?.cancel();
+
+  // Se o arquivo já vem anexado (input principal), pula a etapa de upload
+  // e processa direto — mesma validação de tipo do handleFileSelected.
+  if (data.prefillFile) {
+    handleFileSelected(data.prefillFile);
+    playText('Imagem recebida! Ajuste o corte, o brilho ou a rotação como preferir.').catch(() => {});
+  } else {
     playText(OPENING_TEXT).catch(() => {});
-  }, []);
+  }
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     // naturalWidth/naturalHeight (dimensões reais), não width/height

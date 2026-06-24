@@ -13,11 +13,11 @@ type Stage = 'input' | 'page-select' | 'configuring' | 'processing' | 'login' | 
 type Mode = 'fill' | 'stroke';
 
 interface Props {
-  data: { companyId: string; slug?: string };
+  data: { companyId: string; prefillFile?: File };
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText: (text: string) => Promise<void>;
-  onRequireLogin?: () => void;
+  onRequireLogin: () => void;
 }
 
 interface PathData { d: string; width: number; height: number }
@@ -75,11 +75,21 @@ export default function VetorizarImagemDisplay({ data, onClose, theme = 'dark', 
   const fileRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (spoke.current) return;
-    spoke.current = true;
+useEffect(() => {
+  if (hasSpoken.current) return;
+  hasSpoken.current = true;
+  window.speechSynthesis?.cancel();
+
+  // Se o arquivo já vem anexado (input principal), pula a etapa de upload
+  // e processa direto — mesma validação de tipo do handleFileSelected.
+  if (data.prefillFile) {
+    handleFileSelected(data.prefillFile);
+    playText('Imagem recebida! Ajuste o corte, o brilho ou a rotação como preferir.').catch(() => {});
+  } else {
     playText(OPENING_TEXT).catch(() => {});
-  }, [playText]);
+  }
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setLogado(!!session?.user));

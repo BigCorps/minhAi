@@ -38,10 +38,11 @@ declare global {
 type Stage = 'input' | 'selecting_format' | 'processing' | 'result' | 'error';
 
 interface Props {
-  data?: { companyId?: string };
+  data: { companyId: string; prefillFile?: File };
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText: (text: string) => Promise<void>;
+  onRequireLogin: () => void;
 }
 
 const DARK = {
@@ -198,12 +199,21 @@ export default function ConversorArquivoDisplay({ data, onClose, theme = 'dark',
   }, [stage, onClose]);
 
   // Áudio só no mount (§5) — nunca em handler de registry
-  useEffect(() => {
-    if (hasSpoken.current) return;
-    hasSpoken.current = true;
-    window.speechSynthesis?.cancel();
+useEffect(() => {
+  if (hasSpoken.current) return;
+  hasSpoken.current = true;
+  window.speechSynthesis?.cancel();
+
+  // Se o arquivo já vem anexado (input principal), pula a etapa de upload
+  // e processa direto — mesma validação de tipo do handleFileSelected.
+  if (data.prefillFile) {
+    handleFileSelected(data.prefillFile);
+    playText('Imagem recebida! Ajuste o corte, o brilho ou a rotação como preferir.').catch(() => {});
+  } else {
     playText(OPENING_TEXT).catch(() => {});
-  }, []);
+  }
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   // company lazy (§7) — só quando chegamos no resultado, pois é nesse ponto
   // que o ResultDownloadQR pode precisar de um company_id para gerar o QR de

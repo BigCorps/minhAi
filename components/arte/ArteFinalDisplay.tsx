@@ -17,11 +17,11 @@ interface Side {
 }
 
 interface Props {
-  data: { companyId: string; slug?: string };
+  data: { companyId: string; prefillFile?: File };
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText: (text: string) => Promise<void>;
-  onRequireLogin?: () => void;
+  onRequireLogin: () => void;
 }
 
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -108,11 +108,21 @@ export default function ArteFinalDisplay({ data, onClose, theme = 'dark', playTe
     else setFrente((s) => ({ ...s, ...patch }));
   }, [active, verso]);
 
-  useEffect(() => {
-    if (spoke.current) return;
-    spoke.current = true;
+useEffect(() => {
+  if (hasSpoken.current) return;
+  hasSpoken.current = true;
+  window.speechSynthesis?.cancel();
+
+  // Se o arquivo já vem anexado (input principal), pula a etapa de upload
+  // e processa direto — mesma validação de tipo do handleFileSelected.
+  if (data.prefillFile) {
+    handleFileSelected(data.prefillFile);
+    playText('Imagem recebida! Ajuste o corte, o brilho ou a rotação como preferir.').catch(() => {});
+  } else {
     playText(OPENING_TEXT).catch(() => {});
-  }, [playText]);
+  }
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   useEffect(() => {
     if (stage !== 'result') return;

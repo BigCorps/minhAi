@@ -250,7 +250,7 @@ export function LeadDemoAssistant({
   );
 
   return (
-    <div className="flex flex-col w-full h-full max-w-2xl mx-auto rounded-3xl border border-white/10 bg-slate-900/50 backdrop-blur-xl shadow-2xl overflow-hidden">
+    <div className="flex flex-col w-full h-full max-w-2xl mx-auto overflow-hidden">
       {/* Header simples com controle de mute */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
         <span className="text-sm font-medium text-white/70">

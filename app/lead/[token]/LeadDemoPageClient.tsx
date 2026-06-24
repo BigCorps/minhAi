@@ -81,6 +81,11 @@ export default function LeadDemoPageClient({
     setHasMessages(true);
   }, []);
 
+  const RAMOS_AGENDAMENTO = ['clinica', 'academia', 'educacao'];
+  const fraseAvatar = RAMOS_AGENDAMENTO.includes(ramo)
+    ? 'Esse é o exemplo do seu Assistente. Pergunte sobre disponibilidade e horários para simularmos um agendamento.'
+    : 'Esse é o exemplo do seu Assistente. Pergunte sobre o seu produto para simularmos uma venda.';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
       <LeadDemoHeader nomeNegocio={nomeNegocio} />
@@ -101,13 +106,13 @@ export default function LeadDemoPageClient({
         >
           {/* Avatar — limitado a 260px de altura */}
           <div className="w-full max-w-[260px] h-[260px] relative">
-            <LandingAvatarFace theme="dark" />
+            <LandingAvatarFace theme="dark" avatarOnly />
           </div>
 
           {/* Frase descritiva */}
-          <p className="mt-4 text-center text-sm text-white/50 max-w-xs leading-relaxed px-2">
-            Esse é o exemplo do seu Assistente, pergunte o que quiser para simularmos uma venda.
-          </p>
+<p className="mt-4 text-center text-sm text-white/50 max-w-xs leading-relaxed px-2">
+  {fraseAvatar}
+</p>
         </div>
 
         {/* ── ÁREA DE CHAT ─────────────────────────────────────────────
@@ -182,6 +187,8 @@ function MockObjetivoModal({
   nomeLead: string | null;
   onClose: () => void;
 }) {
+
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"

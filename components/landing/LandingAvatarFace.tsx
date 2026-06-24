@@ -10,6 +10,7 @@ import SceneVendas from '@/components/tour/scenes/SceneVendas';
 
 interface LandingAvatarFaceProps {
   theme?: 'dark' | 'light';
+  avatarOnly?: boolean;
 }
 
 type EyeExpression = 'idle' | 'sleeping' | 'surprised' | 'attentive' | 'flirt' | 'sad' | 'angry' | 'lookLeft' | 'lookRight' | 'lookDown' | 'happy';
@@ -29,7 +30,7 @@ const SHOWCASE_SEQUENCE: { phase: ShowcasePhase; duration: number }[] = [
 
 const AVATAR_PHASES: ShowcasePhase[] = ['face', 'orb'];
 
-export function LandingAvatarFace({ theme = 'dark' }: LandingAvatarFaceProps) {
+export function LandingAvatarFace({ theme = 'dark', avatarOnly = false }: LandingAvatarFaceProps) {
   const isDark = theme === 'dark';
 
   // ── 1. Detectar mobile ──────────────────────────────────────────────────────
@@ -44,10 +45,10 @@ export function LandingAvatarFace({ theme = 'dark' }: LandingAvatarFaceProps) {
 
   // ── 2. Sequência ativa ──────────────────────────────────────────────────────
   const activeSequence = useMemo(
-    () => isMobile
+    () => (isMobile || avatarOnly)
       ? SHOWCASE_SEQUENCE.filter(s => AVATAR_PHASES.includes(s.phase))
       : SHOWCASE_SEQUENCE,
-    [isMobile]
+    [isMobile, avatarOnly]
   );
 
   // ── 3. Estado da fase atual ─────────────────────────────────────────────────

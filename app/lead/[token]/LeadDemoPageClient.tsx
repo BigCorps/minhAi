@@ -5,12 +5,20 @@
 // Visual redesenhado: avatar LandingAvatarFace (face ↔ orbe a cada 5s)
 // centralizado no topo, some quando há interação. Input fixo na base.
 // Toda a lógica de negócio original preservada.
+//
+// ATUALIZAÇÃO: MockObjetivoModal simples substituído por
+// LeadMockCheckoutModal (components/LeadDemo/LeadMockCheckoutModal.tsx),
+// que tem etapas espelhando CheckoutFlow/GestorAgendaDisplay reais
+// (pagamento → aguardando/QR mock → confirmado, com a etapa extra de
+// "cobrar agora ou depois" para o ramo Agenda).
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { LeadDemoAssistant, type LeadDemoMessage } from '@/components/LeadDemo/LeadDemoAssistant';
 import { LeadDemoHeader } from '@/components/LeadDemo/LeadDemoHeader';
 import { LandingAvatarFace } from '@/components/landing/LandingAvatarFace';
+import { LeadMockCheckoutModal, type ObjetivoInfo } from '@/components/LeadDemo/LeadMockCheckoutModal';
 
 interface LeadDemoPageClientProps {
   token: string;
@@ -25,8 +33,6 @@ interface LeadDemoPageClientProps {
   temPhone: boolean;
 }
 
-type ObjetivoInfo = { tipo: 'pedido' | 'horario'; horario?: string };
-
 export default function LeadDemoPageClient({
   token,
   ramo,
@@ -38,6 +44,8 @@ export default function LeadDemoPageClient({
   context,
 }: LeadDemoPageClientProps) {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme !== 'light';
 
   const [objetivoCumprido, setObjetivoCumprido] = useState(objetivoCumpridoInicial);
   const [objetivoInfo, setObjetivoInfo] = useState<ObjetivoInfo | null>(null);
@@ -87,7 +95,11 @@ export default function LeadDemoPageClient({
     : 'Esse é o exemplo do seu Assistente. Pergunte sobre o seu produto para simularmos uma venda.';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
+    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
+      isDark
+        ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
+        : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'
+    }`}>
       <LeadDemoHeader nomeNegocio={nomeNegocio} />
 
       <main className="flex-1 flex flex-col items-center px-4 pt-6 pb-0 gap-0 overflow-hidden relative">
@@ -106,11 +118,13 @@ export default function LeadDemoPageClient({
         >
           {/* Avatar — limitado a 260px de altura */}
           <div className="w-full max-w-[260px] h-[260px] relative">
-            <LandingAvatarFace theme="dark" avatarOnly />
+            <LandingAvatarFace theme={isDark ? 'dark' : 'light'} avatarOnly />
           </div>
 
           {/* Frase descritiva */}
-<p className="mt-4 text-center text-sm text-white/50 max-w-xs leading-relaxed px-2">
+<p className={`mt-4 text-center text-sm max-w-xs leading-relaxed px-2 ${
+  isDark ? 'text-white/50' : 'text-gray-500'
+}`}>
   {fraseAvatar}
 </p>
         </div>
@@ -150,7 +164,11 @@ export default function LeadDemoPageClient({
             </button>
             <button
               onClick={handleCriarAssistente}
-              className="flex-1 px-6 py-3 rounded-xl border border-white/20 hover:bg-white/10 text-white font-semibold transition-colors"
+              className={`flex-1 px-6 py-3 rounded-xl border font-semibold transition-colors ${
+              isDark
+                ? 'border-white/20 hover:bg-white/10 text-white'
+                : 'border-black/20 hover:bg-black/5 text-gray-900'
+            }`}
             >
               Gostei! Criar meu assistente agora
             </button>
@@ -160,7 +178,7 @@ export default function LeadDemoPageClient({
 
       {/* ── MODAL MOCK PIX / AGENDAMENTO ─────────────────────────────── */}
       {showMockModal && objetivoInfo && (
-        <MockObjetivoModal
+        <LeadMockCheckoutModal
           info={objetivoInfo}
           produto={produto}
           preco={preco}
@@ -168,69 +186,6 @@ export default function LeadDemoPageClient({
           onClose={() => setShowMockModal(false)}
         />
       )}
-    </div>
-  );
-}
-
-// ─── Modal mock (sem alterações) ────────────────────────────────────────────
-
-function MockObjetivoModal({
-  info,
-  produto,
-  preco,
-  nomeLead,
-  onClose,
-}: {
-  info: ObjetivoInfo;
-  produto: string;
-  preco: number;
-  nomeLead: string | null;
-  onClose: () => void;
-}) {
-
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="max-w-sm w-full rounded-2xl bg-slate-900 border border-white/10 p-6 text-center"
-        onClick={e => e.stopPropagation()}
-      >
-        {info.tipo === 'pedido' ? (
-          <>
-            <p className="text-xs uppercase tracking-wide text-emerald-400 mb-2">
-              Demonstração — PIX
-            </p>
-            <h2 className="text-xl font-bold text-white mb-1">{produto}</h2>
-            <p className="text-3xl font-bold text-white mb-4">
-              R$ {preco.toFixed(2).replace('.', ',')}
-            </p>
-            <p className="text-sm text-white/50">
-              Em um assistente real, aqui apareceria o QR Code do PIX. Isto é uma simulação.
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="text-xs uppercase tracking-wide text-emerald-400 mb-2">
-              Demonstração — Agendamento confirmado
-            </p>
-            <h2 className="text-xl font-bold text-white mb-1">{produto}</h2>
-            <p className="text-lg text-white/80 mb-1">{info.horario}</p>
-            {nomeLead && <p className="text-sm text-white/50 mb-4">Para: {nomeLead}</p>}
-            <p className="text-sm text-white/50">
-              Em um assistente real, isto seria registrado na agenda automaticamente.
-            </p>
-          </>
-        )}
-        <button
-          onClick={onClose}
-          className="mt-5 w-full px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors"
-        >
-          Fechar
-        </button>
-      </div>
     </div>
   );
 }

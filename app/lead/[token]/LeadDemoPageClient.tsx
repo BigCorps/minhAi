@@ -141,6 +141,7 @@ export default function LeadDemoPageClient({
         >
           <LeadDemoAssistant
             token={token}
+            theme={isDark ? 'dark' : 'light'}
             initialMessages={initialMessages}
             initialObjetivoCumprido={objetivoCumpridoInicial}
             initialNomeLead={nomeLeadInicial}
@@ -152,22 +153,29 @@ export default function LeadDemoPageClient({
         </div>
 
         {/* ── BOTÕES DE AVANÇO ─────────────────────────────────────────
-            Aparecem abaixo do chat, não bloqueiam a conversa.
+            Corrigido: o input de LeadDemoAssistant é 'fixed bottom-6'
+            (ancorado na viewport, não no fluxo normal do documento —
+            decisão já validada visualmente). Por isso estes botões
+            também precisam ser 'fixed', posicionados ACIMA da faixa
+            do input, em vez de seguir o fluxo normal (senão o input
+            fixo sobrepõe os botões, como visto no teste). A conversa
+            continua disponível — os botões só ficam por cima, não
+            substituem o input.
         ── */}
         {objetivoCumprido && (
-          <div className="w-full max-w-2xl flex flex-col sm:flex-row gap-3 flex-shrink-0 pt-3">
+          <div className="fixed bottom-24 left-4 right-4 max-w-2xl mx-auto flex flex-col sm:flex-row gap-3 z-10">
             <button
               onClick={handleContinuarTestando}
-              className="flex-1 px-6 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold transition-colors"
+              className="flex-1 px-6 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold transition-colors shadow-lg"
             >
               Continuar testando → ver confirmação por e-mail
             </button>
             <button
               onClick={handleCriarAssistente}
-              className={`flex-1 px-6 py-3 rounded-xl border font-semibold transition-colors ${
+              className={`flex-1 px-6 py-3 rounded-xl border font-semibold transition-colors shadow-lg backdrop-blur-sm ${
               isDark
-                ? 'border-white/20 hover:bg-white/10 text-white'
-                : 'border-black/20 hover:bg-black/5 text-gray-900'
+                ? 'border-white/20 hover:bg-white/10 text-white bg-slate-900/80'
+                : 'border-black/20 hover:bg-black/5 text-gray-900 bg-white/80'
             }`}
             >
               Gostei! Criar meu assistente agora
@@ -183,6 +191,7 @@ export default function LeadDemoPageClient({
           produto={produto}
           preco={preco}
           nomeLead={nomeLead}
+          isDark={isDark}
           onClose={() => setShowMockModal(false)}
         />
       )}

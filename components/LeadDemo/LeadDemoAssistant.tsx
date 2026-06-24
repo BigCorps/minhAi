@@ -2,7 +2,7 @@
 
 // ============================================================
 // LeadDemoAssistant.tsx
-// Caminho sugerido: components/LeadDemo/LeadDemoAssistant.tsx
+// Caminho: components/LeadDemo/LeadDemoAssistant.tsx
 // ============================================================
 //
 // Componente NOVO e isolado para o funil de demonstração /lead.
@@ -29,6 +29,8 @@ export interface LeadDemoMessage {
 
 export interface LeadDemoAssistantProps {
   token: string;
+  /** Tema visual: adapta cores de bolhas, input e textos. Default 'dark' — preserva o comportamento anterior se omitida. */
+  theme?: 'dark' | 'light';
   /** Estado inicial vindo de GET /api/demo/[token] (lib/demo-token.ts → DemoSessionRecord) */
   initialMessages?: LeadDemoMessage[];
   initialObjetivoCumprido?: boolean;
@@ -53,6 +55,7 @@ export interface LeadDemoAssistantProps {
 
 export function LeadDemoAssistant({
   token,
+  theme = 'dark',
   initialMessages = [],
   initialObjetivoCumprido = false,
   initialNomeLead = null,
@@ -61,6 +64,7 @@ export function LeadDemoAssistant({
   onSessaoExpirada,
   onFirstMessage,
 }: LeadDemoAssistantProps) {
+  const isDark = theme !== 'light';
   const [messages, setMessages] = useState<LeadDemoMessage[]>(initialMessages);
   const [textInput, setTextInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -87,10 +91,13 @@ export function LeadDemoAssistant({
       const trimmed = text.trim();
       if (!trimmed || isProcessing) return;
 
-      setMessages(prev => {
-        if (prev.length === 0) onFirstMessage?.();
-        return [...prev, { role: 'user', content: trimmed }];
-      });
+      // Corrigido: onFirstMessage não pode ser chamado dentro do
+      // updater function de setMessages (React não permite setState
+      // de outro componente durante o cálculo de outro setState).
+      // Verificamos messages.length ANTES de atualizar o estado.
+      if (messages.length === 0) onFirstMessage?.();
+
+      setMessages(prev => [...prev, { role: 'user', content: trimmed }]);
       setTextInput('');
       setIsProcessing(true);
 
@@ -153,7 +160,7 @@ export function LeadDemoAssistant({
         setIsProcessing(false);
       }
     },
-    [token, isMuted, isProcessing, onSessaoExpirada]
+    [token, isMuted, isProcessing, onSessaoExpirada, messages, onFirstMessage]
   );
 
   // Aplica efeitos de objetivo cumprido / nome capturado, vindos tanto
@@ -263,7 +270,9 @@ export function LeadDemoAssistant({
               className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
                 msg.role === 'user'
                   ? 'bg-blue-500 text-white'
-                  : 'bg-white/10 text-white/90'
+                  : isDark
+                  ? 'bg-white/10 text-white/90'
+                  : 'bg-black/5 text-gray-900'
               }`}
             >
               {msg.content}
@@ -272,7 +281,9 @@ export function LeadDemoAssistant({
         ))}
         {isProcessing && (
           <div className="flex justify-start">
-            <div className="rounded-2xl px-4 py-2 text-sm bg-white/10 text-white/50 animate-pulse">
+            <div className={`rounded-2xl px-4 py-2 text-sm animate-pulse ${
+              isDark ? 'bg-white/10 text-white/50' : 'bg-black/5 text-gray-500'
+            }`}>
               Digitando...
             </div>
           </div>
@@ -281,7 +292,9 @@ export function LeadDemoAssistant({
       </div>
 
       {error && (
-        <div className="px-4 py-2 text-xs text-red-300 bg-red-500/10 border-t border-red-500/20">
+        <div className={`px-4 py-2 text-xs border-t ${
+          isDark ? 'text-red-300 bg-red-500/10 border-red-500/20' : 'text-red-700 bg-red-50 border-red-200'
+        }`}>
           {error}
         </div>
       )}
@@ -294,7 +307,11 @@ export function LeadDemoAssistant({
           onChange={e => setTextInput(e.target.value)}
           placeholder={isPlayingAudio ? 'Falando...' : 'Digite sua mensagem...'}
           disabled={isProcessing || voiceRecorder.isRecording}
-          className="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400/50 disabled:opacity-50"
+          className={`flex-1 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/50 disabled:opacity-50 border ${
+            isDark
+              ? 'bg-white/5 border-white/10 text-white placeholder:text-white/30'
+              : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 shadow-sm'
+          }`}
         />
 
         <button
@@ -320,12 +337,14 @@ export function LeadDemoAssistant({
           type="button"
           onClick={handleToggleMute}
           aria-label={isMuted ? 'Ativar áudio' : 'Mutar áudio'}
-          className="flex-shrink-0 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+          className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+            isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-black/5 hover:bg-black/10 border border-gray-300'
+          }`}
         >
           {isMuted ? (
-            <VolumeX className="w-5 h-5 text-white/50" />
+            <VolumeX className={`w-5 h-5 ${isDark ? 'text-white/50' : 'text-gray-400'}`} />
           ) : (
-            <Volume2 className="w-5 h-5 text-white/70" />
+            <Volume2 className={`w-5 h-5 ${isDark ? 'text-white/70' : 'text-gray-600'}`} />
           )}
         </button>
 
@@ -333,14 +352,16 @@ export function LeadDemoAssistant({
           type="submit"
           disabled={!textInput.trim() || isProcessing}
           aria-label="Enviar mensagem"
-          className="flex-shrink-0 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors disabled:opacity-30"
+          className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors disabled:opacity-30 ${
+            isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-black/5 hover:bg-black/10 border border-gray-300'
+          }`}
         >
-          <Send className="w-4 h-4 text-white" />
+          <Send className={`w-4 h-4 ${isDark ? 'text-white' : 'text-gray-700'}`} />
         </button>
       </form>
 
       {voiceRecorder.error && (
-        <div className="px-4 py-2 text-xs text-red-300 bg-red-500/10">
+        <div className={`px-4 py-2 text-xs ${isDark ? 'text-red-300 bg-red-500/10' : 'text-red-700 bg-red-50'}`}>
           {voiceRecorder.error}
         </div>
       )}

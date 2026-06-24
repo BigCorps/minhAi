@@ -157,14 +157,14 @@ function buildSystemPrompt(session: DemoSessionRecord): string {
 
   const nomeLeadBlock = session.nome_lead
     ? `\n- Nome do visitante: ${session.nome_lead} (já chame-o pelo nome nas respostas)`
-    : `\n- Nome do visitante: ainda não informado. Se ainda não perguntou, pergunte como pode chamá-lo(a) de forma natural, no início da conversa.`;
+    : `\n- Nome do visitante: ainda não informado. Pergunte como pode chamá-lo(a) de forma natural, MAS sempre responda também à pergunta/comentário atual do visitante na mesma resposta — nunca troque a resposta dele por só a pergunta do nome.`;
 
   const fluxoBlock =
     auxiliar === 'vendas'
       ? `\n\n## Fluxo de venda (demonstração):\nO visitante está testando como seria comprar "${session.produto}" por R$ ${session.preco.toFixed(2)}. Se ele demonstrar intenção de comprar/fechar o pedido, confirme o valor e chame a função fechar_pedido.`
       : `\n\n## Fluxo de agendamento (demonstração):\nO visitante está testando como seria agendar "${session.produto}". Se ele mencionar um horário e confirmar, chame a função marcar_horario com o horário exatamente como ele disse.`;
 
-  const regras = `\n\n## Regras de resposta:\n- Máximo 2-3 frases por resposta (será falado em voz alta)\n- Português brasileiro, linguagem natural e amigável\n- Use SOMENTE os dados desta demonstração (produto e preço acima) — não invente outros produtos\n- NUNCA faça duas perguntas na mesma resposta — uma pergunta por vez\n- Deixe claro, se perguntado, que isto é uma demonstração`;
+  const regras = `\n\n## Regras de resposta:\n- Máximo 2-3 frases por resposta (será falado em voz alta)\n- Português brasileiro, linguagem natural e amigável\n- Use SOMENTE os dados desta demonstração (produto e preço acima) — não invente outros produtos\n- NUNCA faça duas perguntas na mesma resposta — uma pergunta por vez\n- Deixe claro, se perguntado, que isto é uma demonstração\n- IMPORTANTE: chamar uma função (identificar_lead, fechar_pedido, marcar_horario) NUNCA substitui sua resposta em texto. Você DEVE SEMPRE responder com texto à mensagem do visitante, mesmo quando também chamar uma função no mesmo turno. Nunca devolva uma chamada de função sem nenhum texto de resposta.`;
 
   return `${apresentacao}${dadosNegocio}${nomeLeadBlock}${fluxoBlock}${regras}`;
 }
@@ -254,8 +254,19 @@ export async function POST(request: NextRequest) {
       toolCalls = result.toolCalls;
 
       if (!responseText && toolCalls.length > 0) {
-        // Modelo só chamou tool(s), sem texto — gera uma confirmação curta
-        responseText = 'Perfeito! Só um momento...';
+        // Camada de segurança (decisão confirmada: máxima robustez,
+        // além da correção do prompt): o modelo só chamou tool(s) sem
+        // texto. Em vez de um fallback genérico fixo ("Só um
+        // momento..."), fazemos uma 2ª chamada — sem tools desta vez,
+        // para forçar texto — informando que a(s) função(ões) já
+        // foram registradas e pedindo a resposta de fato à mensagem
+        // do visitante. Custa 1 chamada extra de API só quando este
+        // caso acontece (deve ser raro após a correção do prompt).
+        console.warn(`⚠️ [demo:${token}] Modelo retornou tool call(s) sem texto — acionando camada de segurança`);
+        const nomesChamados = toolCalls.map(t => t.name).join(', ');
+        const promptRetry = `${systemPrompt}\n\n## Nota interna (não mencione isto ao visitante):\nVocê já decidiu chamar a(s) função(ões): ${nomesChamados}. Elas serão executadas. Agora responda em texto, normalmente, à mensagem do visitante a seguir — não repita nem confirme a função, apenas continue a conversa.`;
+        const retryResult = await processWithGPTTools(userMessage, promptRetry, [], conversationHistory);
+        responseText = retryResult.text || 'Perfeito! Vamos continuar.';
       }
     } else {
       // ── Pós-objetivo: GROQ conversa livre, sem tools ─────────

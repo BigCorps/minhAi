@@ -113,13 +113,19 @@ export async function processWithGPTTools(
     { role: 'user', content: userMessage },
   ];
 
+  // A API da OpenAI exige que, se 'tools' for enviado, não esteja
+  // vazio (erro 400 com tools: [] + tool_choice: 'auto'). Quando o
+  // caller passa array vazio (ex: chamada de retry que só quer texto,
+  // sem oferecer functions de novo), omitimos tools/tool_choice da
+  // requisição inteiramente, em vez de mandar um array vazio.
+  const hasTools = tools.length > 0;
+
   const response = await openai.chat.completions.create({
     model: OPENAI_CONFIG.gpt.model,
     messages,
     temperature: OPENAI_CONFIG.gpt.temperature,
     max_tokens: OPENAI_CONFIG.gpt.max_tokens,
-    tools,
-    tool_choice: 'auto',
+    ...(hasTools ? { tools, tool_choice: 'auto' as const } : {}),
   });
 
   const choice = response.choices[0];

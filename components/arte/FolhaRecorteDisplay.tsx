@@ -10,14 +10,25 @@ import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 //         grid-preview (página + espaçamento + grade) → processing → result
 type Stage = 'input' | 'page-select' | 'configuring' | 'grid-preview' | 'processing' | 'login' | 'result' | 'error';
 type Shape = 'square' | 'rounded' | 'circle' | 'auto';
-type PageMode = 'a4' | 'custom_page';
+
+// ─── Modos de página ──────────────────────────────────────────────────────────
+// 'a4'         → 210×297mm   (fixo, sem inputs)
+// 'a3'         → 297×420mm   (fixo, sem inputs) — NOVO
+// 'custom_page'→ dimensões livres definidas pelo usuário
+type PageMode = 'a4' | 'a3' | 'custom_page';
+
+// Dimensões ISO em mm — fonte única de verdade para cálculo de layout e spec da API.
+const PAGE_DIMS_MM: Record<'a4' | 'a3', [number, number]> = {
+  a4: [210, 297],
+  a3: [297, 420],
+};
 
 interface Props {
-  data: { companyId: string; slug?: string };
+  data: { companyId: string; prefillFile?: File };
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText: (text: string) => Promise<void>;
-  onRequireLogin?: () => void;
+  onRequireLogin: () => void;
 }
 
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -35,25 +46,25 @@ const CREDITS = 10;
 const AUTO_CLOSE = 90;
 const PAGE_MAX_CM = 200;
 const PAGE_MAX_H_CM = 120;
-const HANDLE_MM = 5;       // margem de papel ao redor (server: HANDLE_MM=5)
-const MIN_CUT_GAP_MM = 2;  // distância mínima entre cortes (regra da faca)
-const SANGRIA_MAX_MM = 8;  // menor que no Adesivo individual (15mm) — aqui há vizinhos na grade
+const HANDLE_MM = 5;
+const MIN_CUT_GAP_MM = 2;
+const SANGRIA_MAX_MM = 8;
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const cleanName = (s: string) => s.replace(/[^\w\-]+/g, '-').slice(0, 40);
 const fileOk = (f: File) => f.type.startsWith('image/') || isPdfFile(f);
 
 const SHAPES: { key: Shape; label: string }[] = [
-  { key: 'square', label: 'Quadrado' },
+  { key: 'square',  label: 'Quadrado'    },
   { key: 'rounded', label: 'Arredondado' },
-  { key: 'circle', label: 'Redondo' },
-  { key: 'auto', label: 'Automático' },
+  { key: 'circle',  label: 'Redondo'     },
+  { key: 'auto',    label: 'Automático'  },
 ];
 const CUT_OPTS = [
   { key: 'magenta', label: 'Magenta', swatch: CMYK.magenta },
-  { key: 'cyan', label: 'Ciano', swatch: CMYK.cyan },
-  { key: 'yellow', label: 'Amarelo', swatch: CMYK.yellow },
-  { key: 'black', label: 'Preto', swatch: CMYK.key },
+  { key: 'cyan',    label: 'Ciano',   swatch: CMYK.cyan    },
+  { key: 'yellow',  label: 'Amarelo', swatch: CMYK.yellow  },
+  { key: 'black',   label: 'Preto',   swatch: CMYK.key     },
 ];
 
 interface LayoutInfo {
@@ -68,51 +79,66 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
   const c = isDark ? DARK : LIGHT;
   const supabase = createClient();
 
-  const [stage, setStage] = useState<Stage>('input');
-  const [art, setArt] = useState<ArtePreview | null>(null);
+  const [stage,      setStage]      = useState<Stage>('input');
+  const [art,        setArt]        = useState<ArtePreview | null>(null);
   const [pdfPending, setPdfPending] = useState<{ file: File; pages: number } | null>(null);
   const [pageChoice, setPageChoice] = useState<number>(1);
 
-  // ── Configurações da peça (estágio 1 = configuring, igual ao Adesivo) ──
-  const [shape, setShape] = useState<Shape>('circle');
-  const [cutW, setCutW] = useState<number>(50);
-  const [cutH, setCutH] = useState<number>(50);
-  const [radius, setRadius] = useState<number>(6);
-  const [offset, setOffset] = useState<number>(3);
+  // ── Configurações da peça (etapa 1 = configuring) ──────────────────────────
+  const [shape,      setShape]      = useState<Shape>('circle');
+  const [cutW,       setCutW]       = useState<number>(50);
+  const [cutH,       setCutH]       = useState<number>(50);
+  const [radius,     setRadius]     = useState<number>(6);
+  const [offset,     setOffset]     = useState<number>(3);
   const minSangria = (cutW < 30 || cutH < 30) ? 2 : 3;
-  const [sangria, setSangria] = useState<number>(minSangria);
-  const [alignX, setAlignX] = useState<number>(0);
-  const [alignY, setAlignY] = useState<number>(0);
-  const [zoom, setZoom] = useState<number>(100); // 50–300%, mantém o corte fixo e a imagem ajusta
-  const [bleedMode, setBleedMode] = useState<'externa' | 'interna'>('externa');
-  const [cutColor, setCutColor] = useState<string>('magenta');
+  const [sangria,    setSangria]    = useState<number>(minSangria);
+  const [alignX,     setAlignX]     = useState<number>(0);
+  const [alignY,     setAlignY]     = useState<number>(0);
+  const [zoom,       setZoom]       = useState<number>(100);
+  const [bleedMode,  setBleedMode]  = useState<'externa' | 'interna'>('externa');
+  const [cutColor,   setCutColor]   = useState<string>('magenta');
 
   useEffect(() => {
     if (sangria < minSangria) setSangria(minSangria);
   }, [minSangria]);
 
-  // ── Configurações da folha (estágio 2 = grid-preview) ──────────────────
-  const [pageMode, setPageMode] = useState<PageMode>('a4');
+  // ── Configurações da folha (etapa 2 = grid-preview) ────────────────────────
+  const [pageMode,    setPageMode]    = useState<PageMode>('a4');
   const [customPageW, setCustomPageW] = useState<number>(96);
   const [customPageH, setCustomPageH] = useState<number>(52);
-  const [spacingMm, setSpacingMm] = useState<number>(2);
-  const [nome, setNome] = useState<string>('folha-recorte');
+  const [spacingMm,   setSpacingMm]   = useState<number>(2);
+  const [nome,        setNome]        = useState<string>('folha-recorte');
 
-  const [logado, setLogado] = useState<boolean>(false);
-  const [companyId, setCompanyId] = useState<string>(data.companyId || '');
-  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [logado,       setLogado]       = useState<boolean>(false);
+  const [companyId,    setCompanyId]    = useState<string>(data.companyId || '');
+  const [resultBlob,   setResultBlob]   = useState<Blob | null>(null);
   const [resultBase64, setResultBase64] = useState<string>('');
-  const [resultName, setResultName] = useState<string>('');
-  const [layoutInfo, setLayoutInfo] = useState<LayoutInfo | null>(null);
-  const [saldo, setSaldo] = useState<number | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string>('');
-  const [progress, setProgress] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
+  const [resultName,   setResultName]   = useState<string>('');
+  const [layoutInfo,   setLayoutInfo]   = useState<LayoutInfo | null>(null);
+  const [saldo,        setSaldo]        = useState<number | null>(null);
+  const [errorMsg,     setErrorMsg]     = useState<string>('');
+  const [progress,     setProgress]     = useState<string>('');
+  const [timeLeft,     setTimeLeft]     = useState(AUTO_CLOSE);
 
-  const spoke = useRef(false);
+  const spoke   = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { if (spoke.current) return; spoke.current = true; playText(OPENING_TEXT).catch(() => {}); }, [playText]);
+useEffect(() => {
+  if (hasSpoken.current) return;
+  hasSpoken.current = true;
+  window.speechSynthesis?.cancel();
+
+  // Se o arquivo já vem anexado (input principal), pula a etapa de upload
+  // e processa direto — mesma validação de tipo do handleFileSelected.
+  if (data.prefillFile) {
+    handleFileSelected(data.prefillFile);
+    playText('Imagem recebida! Ajuste o corte, o brilho ou a rotação como preferir.').catch(() => {});
+  } else {
+    playText(OPENING_TEXT).catch(() => {});
+  }
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
   useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => setLogado(!!session?.user)); }, [supabase]);
   useEffect(() => {
     if (stage !== 'result') return;
@@ -121,21 +147,18 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
     return () => clearInterval(id);
   }, [stage, onClose]);
 
-  // ── Derivações da peça (mesmas do Adesivo) ────────────────────────────
-  const isAuto = shape === 'auto';
-  const autoH = art ? cutW * (art.height / art.width) : 0;
-  const swatch = CUT_OPTS.find((o) => o.key === cutColor)?.swatch ?? CMYK.magenta;
+  // ── Derivações da peça ────────────────────────────────────────────────────
+  const isAuto   = shape === 'auto';
+  const autoH    = art ? cutW * (art.height / art.width) : 0;
+  const swatch   = CUT_OPTS.find((o) => o.key === cutColor)?.swatch ?? CMYK.magenta;
 
-  // cobertura (arte) e corte de UMA peça — usados também no cálculo de grid (etapa 2)
-  const coverWmm = isAuto ? cutW : (bleedMode === 'interna' ? cutW : cutW + 2 * sangria);
-  const coverHmm = isAuto ? autoH : (bleedMode === 'interna' ? cutH : cutH + 2 * sangria);
-  const cutWmmCell = isAuto ? cutW : (bleedMode === 'interna' ? Math.max(5, cutW - 2 * sangria) : cutW);
-  const cutHmmCell = isAuto ? autoH : (bleedMode === 'interna' ? Math.max(5, cutH - 2 * sangria) : cutH);
-  const docW = coverWmm, docH = coverHmm; // valor exibido ao usuário (cobertura mínima garantida)
+  const coverWmm    = isAuto ? cutW    : (bleedMode === 'interna' ? cutW    : cutW    + 2 * sangria);
+  const coverHmm    = isAuto ? autoH   : (bleedMode === 'interna' ? cutH    : cutH    + 2 * sangria);
+  const cutWmmCell  = isAuto ? cutW    : (bleedMode === 'interna' ? Math.max(5, cutW - 2 * sangria) : cutW);
+  const cutHmmCell  = isAuto ? autoH   : (bleedMode === 'interna' ? Math.max(5, cutH - 2 * sangria) : cutH);
+  const docW = coverWmm, docH = coverHmm;
 
-  // ── Modelo final do preview da peça — MESMA fórmula do backend (route.ts) ──
-  // O BOX é sempre fixo na proporção da cobertura; zoom controla o tamanho da <img> dentro
-  // dele; o alinhamento desloca livremente, sem trava — idêntico ao Adesivo individual.
+  // ── Preview de UMA peça — mesma fórmula do backend ───────────────────────
   const artAspectPreview = art ? art.width / art.height : 1;
   let previewDrawWmm: number, previewDrawHmm: number;
   if (artAspectPreview > coverWmm / coverHmm) { previewDrawHmm = coverHmm; previewDrawWmm = coverHmm * artAspectPreview; }
@@ -143,70 +166,75 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
   previewDrawWmm *= zoom / 100;
   previewDrawHmm *= zoom / 100;
 
-  const alignXfrac = alignX / 50; // -1..+1, sem clamp adicional de slack — desloca livremente
-  const alignYfrac = alignY / 50;
-  const offsetXmm = (coverWmm / 2) * alignXfrac;
-  const offsetYmm = (coverHmm / 2) * alignYfrac; // "+": imagem desce na tela (mesma convenção do backend)
+  const alignXfrac  = alignX / 50;
+  const alignYfrac  = alignY / 50;
+  const offsetXmm   = (coverWmm / 2) * alignXfrac;
+  const offsetYmm   = (coverHmm / 2) * alignYfrac;
 
-  // boxW/boxH = SEMPRE a proporção da cobertura fixa (nunca muda com zoom/alinhamento)
-  const boxW = 220;
-  const boxH = isAuto ? 220 : Math.round(220 * (coverHmm / Math.max(1, coverWmm)));
-  const pxPerMm = boxW / Math.max(1, coverWmm);
+  const boxW     = 220;
+  const boxH     = isAuto ? 220 : Math.round(220 * (coverHmm / Math.max(1, coverWmm)));
+  const pxPerMm  = boxW / Math.max(1, coverWmm);
 
-  // posição/tamanho da <img> dentro do box, em px — pode exceder ou não cobrir o box
-  // inteiro; o overflow:hidden do container corta o excesso, igual ao composite() no backend.
-  const imgWpx = previewDrawWmm * pxPerMm;
-  const imgHpx = previewDrawHmm * pxPerMm;
-  const imgLeftPx = (boxW - imgWpx) / 2 + offsetXmm * pxPerMm; // X: tela e PDF crescem na mesma direção
-  const imgTopPx = (boxH - imgHpx) / 2 + offsetYmm * pxPerMm;  // Y: tela cresce p/ baixo, PDF cresce p/ cima
+  const imgWpx    = previewDrawWmm * pxPerMm;
+  const imgHpx    = previewDrawHmm * pxPerMm;
+  const imgLeftPx = (boxW - imgWpx) / 2 + offsetXmm * pxPerMm;
+  const imgTopPx  = (boxH - imgHpx) / 2 + offsetYmm * pxPerMm;
 
-  const cutWpx = cutW * pxPerMm, cutHpx = cutH * pxPerMm;
+  const cutWpx    = cutW * pxPerMm, cutHpx = cutH * pxPerMm;
 
-  // ── Mesmas grandezas, em % RELATIVA À CÉLULA — usadas no preview do GRID (etapa 2) ──
-  // O grid não tem um box fixo de 220px por célula (cada célula é uma fração da página),
-  // então aqui a posição/tamanho da imagem é expressa em % do tamanho da própria célula
-  // (coverWmm/coverHmm), não em pixels. Reaproveita previewDrawWmm/offsetXmm já calculados
-  // acima — é a mesma fórmula, só a unidade de saída muda (% em vez de px).
-  const imgWpctCell = (previewDrawWmm / Math.max(1, coverWmm)) * 100;
-  const imgHpctCell = (previewDrawHmm / Math.max(1, coverHmm)) * 100;
+  // posição/tamanho da imagem em % da célula — usados no preview do grid
+  const imgWpctCell    = (previewDrawWmm / Math.max(1, coverWmm)) * 100;
+  const imgHpctCell    = (previewDrawHmm / Math.max(1, coverHmm)) * 100;
   const imgLeftPctCell = ((coverWmm - previewDrawWmm) / 2 + offsetXmm) / Math.max(1, coverWmm) * 100;
-  const imgTopPctCell = ((coverHmm - previewDrawHmm) / 2 + offsetYmm) / Math.max(1, coverHmm) * 100;
-  const cutLeftPx = (boxW - cutWpx) / 2, cutTopPx = (boxH - cutHpx) / 2;
-  const semAlfa = isAuto && !!art && !art.hasAlpha;
+  const imgTopPctCell  = ((coverHmm - previewDrawHmm) / 2 + offsetYmm) / Math.max(1, coverHmm) * 100;
+  const cutLeftPx      = (boxW - cutWpx) / 2, cutTopPx = (boxH - cutHpx) / 2;
+  const semAlfa        = isAuto && !!art && !art.hasAlpha;
 
-  // ── Derivações da página (estágio 2) ─────────────────────────────────
-  const pageWValid = clamp(customPageW || 0, 1, PAGE_MAX_CM);
-  const pageHValid = clamp(customPageH || 0, 1, PAGE_MAX_H_CM);
+  // ── Derivações da página (etapa 2) ───────────────────────────────────────
+  const pageWValid     = clamp(customPageW || 0, 1, PAGE_MAX_CM);
+  const pageHValid     = clamp(customPageH || 0, 1, PAGE_MAX_H_CM);
   const pageDimsInvalid = pageMode === 'custom_page' && (
     !(customPageW > 0) || !(customPageH > 0) || customPageW > PAGE_MAX_CM || customPageH > PAGE_MAX_H_CM
   );
 
-  // Cálculo do grid — espelha o servidor exatamente
+  // Resolve dimensões em mm — fonte única usada no cálculo de layout e no spec da API.
+  // Para A4/A3 usa PAGE_DIMS_MM; para custom_page converte cm→mm.
+  const resolvePageMm = useCallback((): [number, number] => {
+    if (pageMode === 'custom_page') return [pageWValid * 10, pageHValid * 10];
+    return PAGE_DIMS_MM[pageMode];
+  }, [pageMode, pageWValid, pageHValid]);
+
+  // Label exibido no preview e no botão de geração
+  const pageModeLabel =
+    pageMode === 'a4'          ? 'A4'
+    : pageMode === 'a3'        ? 'A3'
+    : `${pageWValid}×${pageHValid}cm`;
+
+  // ── Cálculo do grid — espelha o servidor exatamente ──────────────────────
   useEffect(() => {
     if (!art || stage !== 'grid-preview') { setLayoutInfo(null); return; }
-    const pageWmm = pageMode === 'a4' ? 210 : pageWValid * 10;
-    const pageHmm = pageMode === 'a4' ? 297 : pageHValid * 10;
-    const availW = pageWmm - 2 * HANDLE_MM;
-    const availH = pageHmm - 2 * HANDLE_MM;
-    const cellWmm = Math.max(coverWmm, cutWmmCell);
-    const cellHmm = Math.max(coverHmm, cutHmmCell);
-    const cutGapMm = Math.max(spacingMm, MIN_CUT_GAP_MM);
-    const stepWmm = cutWmmCell + cutGapMm;
-    const stepHmm = cutHmmCell + cutGapMm;
-    const perRow = Math.max(0, Math.floor((availW - cellWmm) / stepWmm) + 1);
+    const [pageWmm, pageHmm] = resolvePageMm();
+    const availW    = pageWmm - 2 * HANDLE_MM;
+    const availH    = pageHmm - 2 * HANDLE_MM;
+    const cellWmm   = Math.max(coverWmm, cutWmmCell);
+    const cellHmm   = Math.max(coverHmm, cutHmmCell);
+    const cutGapMm  = Math.max(spacingMm, MIN_CUT_GAP_MM);
+    const stepWmm   = cutWmmCell + cutGapMm;
+    const stepHmm   = cutHmmCell + cutGapMm;
+    const perRow    = Math.max(0, Math.floor((availW - cellWmm) / stepWmm) + 1);
     const perColumn = Math.max(0, Math.floor((availH - cellHmm) / stepHmm) + 1);
-    const gridWmm = (perRow - 1) * stepWmm + cellWmm;
-    const gridHmm = (perColumn - 1) * stepHmm + cellHmm;
-    const startXmm = (pageWmm - gridWmm) / 2 + cellWmm / 2;
-    const startYmm = (pageHmm - gridHmm) / 2 + cellHmm / 2;
+    const gridWmm   = (perRow    - 1) * stepWmm + cellWmm;
+    const gridHmm   = (perColumn - 1) * stepHmm + cellHmm;
+    const startXmm  = (pageWmm - gridWmm) / 2 + cellWmm / 2;
+    const startYmm  = (pageHmm - gridHmm) / 2 + cellHmm / 2;
     setLayoutInfo({
       perRow, perColumn, totalCells: perRow * perColumn,
       cutWmm: cutWmmCell, cutHmm: cutHmmCell, cellWmm, cellHmm,
       cutGapMm, stepWmm, stepHmm, startXmm, startYmm, pageWmm, pageHmm,
     });
-  }, [art, stage, pageMode, pageWValid, pageHValid, coverWmm, coverHmm, cutWmmCell, cutHmmCell, spacingMm]);
+  }, [art, stage, resolvePageMm, coverWmm, coverHmm, cutWmmCell, cutHmmCell, spacingMm]);
 
-  // ── Handlers ──────────────────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleFile = useCallback(async (file: File) => {
     if (!fileOk(file)) { setErrorMsg('Envie uma imagem (PNG/JPEG) ou um PDF.'); setStage('error'); return; }
     setStage('processing'); setProgress('Preparando preview...');
@@ -250,11 +278,15 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
       setCompanyId(cid);
 
       const uploadPath = await uploadArteSource(art, cid);
+
+      // Sempre resolve para valores numéricos em cm antes de enviar —
+      // o backend nunca recebe o token 'a4'/'a3'/'custom_page'.
+      const [resolvedWmm, resolvedHmm] = resolvePageMm();
       const spec: any = {
         shape, cut_color: cutColor, nome, spacing_mm: spacingMm,
         pageMode,
-        pageWidthCm: pageMode === 'custom_page' ? pageWValid : undefined,
-        pageHeightCm: pageMode === 'custom_page' ? pageHValid : undefined,
+        pageWidthCm:  resolvedWmm / 10,
+        pageHeightCm: resolvedHmm / 10,
         ...(isAuto
           ? { cut_w_mm: cutW, offset_mm: offset }
           : { cut_w_mm: cutW, cut_h_mm: cutH, radius_mm: radius, sangria_mm: sangria, bleed_mode: bleedMode, zoom_pct: zoom, align_x_pct: alignX, align_y_pct: alignY }),
@@ -283,9 +315,9 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
       setStage('result');
       playText('Folha pronta! Página 1 com a arte, página 2 com os cortes.').catch(() => {});
     } catch (e) { setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error'); }
-  }, [art, layoutInfo, pageDimsInvalid, isAuto, shape, cutW, cutH, radius, offset, sangria, bleedMode, zoom, alignX, alignY, spacingMm, cutColor, nome, pageMode, pageWValid, pageHValid, supabase, companyId, playText]);
+  }, [art, layoutInfo, pageDimsInvalid, isAuto, shape, cutW, cutH, radius, offset, sangria, bleedMode, zoom, alignX, alignY, spacingMm, cutColor, nome, resolvePageMm, supabase, companyId, playText]);
 
-  const irParaLogin = useCallback(() => { if (onRequireLogin) onRequireLogin(); else window.location.href = '/login'; }, [onRequireLogin]);
+  const irParaLogin    = useCallback(() => { if (onRequireLogin) onRequireLogin(); else window.location.href = '/login'; }, [onRequireLogin]);
   const handleDownload = useCallback(() => {
     if (!resultBlob || !resultName) return;
     const url = URL.createObjectURL(resultBlob);
@@ -360,29 +392,18 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
         {/* CONFIGURING — etapa 1: preview de 1 peça, idêntico ao Adesivo */}
         {stage === 'configuring' && art && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {/* preview da peça com overlay do corte — igual ao AdesivoContornoDisplay */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <div style={{ position: 'relative', width: boxW, height: boxH, background: c.bgSecondary, border: `1px solid ${c.border}`, borderRadius: 4, overflow: 'hidden' }}>
                 {isAuto ? (
-                  <img src={art.previewDataUrl} alt="" style={{
-                    position: 'absolute', display: 'block', inset: 0, width: '100%', height: '100%',
-                    maxWidth: 'none', maxHeight: 'none',
-                    objectFit: 'contain',
-                  }} />
+                  <img src={art.previewDataUrl} alt="" style={{ position: 'absolute', display: 'block', inset: 0, width: '100%', height: '100%', maxWidth: 'none', maxHeight: 'none', objectFit: 'contain' }} />
                 ) : (
-                  <img src={art.previewDataUrl} alt="" style={{
-                    position: 'absolute', display: 'block',
-                    left: imgLeftPx, top: imgTopPx, width: imgWpx, height: imgHpx,
-                    maxWidth: 'none', maxHeight: 'none',
-                  }} />
+                  <img src={art.previewDataUrl} alt="" style={{ position: 'absolute', display: 'block', left: imgLeftPx, top: imgTopPx, width: imgWpx, height: imgHpx, maxWidth: 'none', maxHeight: 'none' }} />
                 )}
                 {!isAuto && (
                   <svg width={boxW} height={boxH} viewBox={`0 0 ${boxW} ${boxH}`} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-                    {/* linha de corte (real, vai pro PDF) */}
                     {shape === 'circle'
                       ? <ellipse cx={boxW / 2} cy={boxH / 2} rx={cutWpx / 2} ry={cutHpx / 2} fill="none" stroke={swatch} strokeWidth="1.5" />
                       : <rect x={cutLeftPx} y={cutTopPx} width={cutWpx} height={cutHpx} rx={radius * pxPerMm} ry={radius * pxPerMm} fill="none" stroke={swatch} strokeWidth="1.5" />}
-                    {/* área de segurança (só visual — recuo de `sangria` pra dentro do corte) */}
                     {shape === 'circle'
                       ? <ellipse cx={boxW / 2} cy={boxH / 2} rx={Math.max(0, cutWpx / 2 - sangria * pxPerMm)} ry={Math.max(0, cutHpx / 2 - sangria * pxPerMm)} fill="none" stroke={c.textMuted} strokeWidth="1" strokeDasharray="3 3" />
                       : <rect x={cutLeftPx + sangria * pxPerMm} y={cutTopPx + sangria * pxPerMm} width={Math.max(0, cutWpx - 2 * sangria * pxPerMm)} height={Math.max(0, cutHpx - 2 * sangria * pxPerMm)} rx={Math.max(0, radius - sangria) * pxPerMm} ry={Math.max(0, radius - sangria) * pxPerMm} fill="none" stroke={c.textMuted} strokeWidth="1" strokeDasharray="3 3" />}
@@ -404,7 +425,6 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
               </div>
             )}
 
-            {/* forma */}
             <div>
               <label style={label}>Forma do corte</label>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -414,7 +434,6 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
               </div>
             </div>
 
-            {/* tamanho */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label style={label}>{isAuto ? 'Largura (mm)' : bleedMode === 'externa' ? 'Largura do corte (mm)' : 'Largura da arte (mm)'}</label>
@@ -435,21 +454,17 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
               </div>
             )}
 
-            {/* sangria + zoom + ajuste fino + modo (só formas geométricas) */}
             {!isAuto && (
               <>
                 <div>
                   <label style={label}>
                     Sangria: {sangria}mm
-                    {sangria < minSangria && (
-                      <span style={{ color: c.error, marginLeft: 6 }}>mínimo {minSangria}mm exigido pela gráfica</span>
-                    )}
+                    {sangria < minSangria && <span style={{ color: c.error, marginLeft: 6 }}>mínimo {minSangria}mm exigido pela gráfica</span>}
                     {' '}(máx. {SANGRIA_MAX_MM}mm nesta função)
                   </label>
                   <input type="range" min={minSangria} max={SANGRIA_MAX_MM} step={0.5} value={sangria} onChange={(e) => setSangria(parseFloat(e.target.value))} style={{ width: '100%', accentColor: c.accent }} />
                 </div>
 
-                {/* zoom + ajuste fino — aplicados igualmente a TODAS as peças da folha */}
                 <div>
                   <label style={label}>Zoom da imagem: {zoom}%</label>
                   <input type="range" min={50} max={300} step={5} value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} style={{ width: '100%', accentColor: c.accent }} />
@@ -499,7 +514,6 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
               </div>
             )}
 
-            {/* cor do corte */}
             <div>
               <label style={label}>Cor da linha de corte</label>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -519,25 +533,52 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
           </div>
         )}
 
-        {/* GRID-PREVIEW — etapa 2: página, espaçamento, preview da grade, gerar */}
+        {/* GRID-PREVIEW — etapa 2 */}
         {stage === 'grid-preview' && art && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {/* Tamanho da página */}
+
+            {/* ── SELETOR DE TAMANHO DE PÁGINA ──────────────────────────────────
+                3 botões compactos em grid 1fr 1fr 1fr.
+                A4 e A3 são fixos (sem inputs extras). Personalizado exibe
+                os campos de largura/altura abaixo do seletor.
+                Texto curto para não quebrar linha em telas pequenas. */}
             <div>
               <label style={{ ...label, marginBottom: 8 }}>Tamanho da página</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <button onClick={() => setPageMode('a4')} style={{ padding: '10px 8px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 13, fontWeight: 600, border: pageMode === 'a4' ? `2px solid ${c.accent}` : `1px solid ${c.border}`, background: pageMode === 'a4' ? 'rgba(236,0,140,0.08)' : c.bgSecondary, color: c.text }}>
-                  Tamanho A4
-                </button>
-                <button onClick={() => setPageMode('custom_page')} style={{ padding: '10px 8px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 13, fontWeight: 600, border: pageMode === 'custom_page' ? `2px solid ${c.accent}` : `1px solid ${c.border}`, background: pageMode === 'custom_page' ? 'rgba(236,0,140,0.08)' : c.bgSecondary, color: c.text }}>
-                  Tamanho Personalizado
-                </button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                {([
+                  { mode: 'a4'          as PageMode, title: 'A4',           sub: '21×29,7cm' },
+                  { mode: 'a3'          as PageMode, title: 'A3',           sub: '29,7×42cm' },
+                  { mode: 'custom_page' as PageMode, title: 'Personalizado', sub: 'livre'     },
+                ] as const).map(({ mode, title, sub }) => {
+                  const active = pageMode === mode;
+                  return (
+                    <button
+                      key={mode}
+                      onClick={() => setPageMode(mode)}
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                        padding: '9px 6px', borderRadius: 8, cursor: 'pointer',
+                        border: `2px solid ${active ? c.accent : c.border}`,
+                        background: active ? 'rgba(236,0,140,0.08)' : c.bgSecondary,
+                        color: c.text, transition: 'border-color 0.15s, background 0.15s',
+                      }}
+                    >
+                      <span style={{ fontSize: 13, fontWeight: 700, color: active ? c.accent : c.text, lineHeight: 1.2 }}>{title}</span>
+                      <span style={{ fontSize: 10, color: c.textMuted, lineHeight: 1.2 }}>{sub}</span>
+                    </button>
+                  );
+                })}
               </div>
               <p style={{ margin: '6px 0 0', fontSize: 11, color: c.textMuted }}>
-                {pageMode === 'a4' ? 'Folha A4 (21×29,7cm).' : `Até ${PAGE_MAX_CM}×${PAGE_MAX_H_CM}cm — ideal para rolos de adesivo.`}
+                {pageMode === 'a4'
+                  ? 'Folha A4 (21×29,7cm).'
+                  : pageMode === 'a3'
+                  ? 'Folha A3 (29,7×42cm) — o dobro da área do A4, cabe mais peças.'
+                  : `Até ${PAGE_MAX_CM}×${PAGE_MAX_H_CM}cm — ideal para rolos de adesivo.`}
               </p>
             </div>
 
+            {/* Campos livres — só quando Personalizado está ativo */}
             {pageMode === 'custom_page' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div><label style={label}>Largura da página (cm)</label><input type="number" min={1} max={PAGE_MAX_CM} step={0.5} value={customPageW} onFocus={selectAllOnFocus} onChange={(e) => setCustomPageW(parseFloat(e.target.value) || 0)} style={inputStyle} /></div>
@@ -562,50 +603,30 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
             {layoutInfo && layoutInfo.totalCells > 0 && !pageDimsInvalid && (
               <div style={{ padding: 14, borderRadius: 8, background: c.bgSecondary, border: `1px solid ${c.border}` }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: c.textMuted, marginBottom: 10 }}>
-                  Preview da folha {pageMode === 'a4' ? '(A4)' : `(${pageWValid}×${pageHValid}cm)`}
+                  Preview da folha ({pageModeLabel})
                 </div>
                 <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto', aspectRatio: `${layoutInfo.pageWmm} / ${layoutInfo.pageHmm}`, background: '#fff', border: '1px solid #d0d0d0', borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.12)', overflow: 'hidden' }}>
                   {Array.from({ length: layoutInfo.perColumn }).flatMap((_, row) =>
                     Array.from({ length: layoutInfo.perRow }).map((__, col) => {
                       const cx = layoutInfo.startXmm + col * layoutInfo.stepWmm;
                       const cy = layoutInfo.startYmm + row * layoutInfo.stepHmm;
-                      // Cobertura (imagem/arte) — pode se tocar/sobrepor com a vizinha, igual ao PDF real
-                      const leftPct = ((cx - layoutInfo.cellWmm / 2) / layoutInfo.pageWmm) * 100;
-                      const topPct = ((cy - layoutInfo.cellHmm / 2) / layoutInfo.pageHmm) * 100;
-                      const wPct = (layoutInfo.cellWmm / layoutInfo.pageWmm) * 100;
-                      const hPct = (layoutInfo.cellHmm / layoutInfo.pageHmm) * 100;
-                      // Linha de CORTE real — tamanho do corte (cutWmmCell/cutHmmCell), centrada na
-                      // mesma célula, SEM sobrepor a vizinha (o espaçamento de cutGapMm é garantido
-                      // entre cortes, não entre coberturas — ver §espaçamento no backend).
+                      const leftPct    = ((cx - layoutInfo.cellWmm / 2) / layoutInfo.pageWmm) * 100;
+                      const topPct     = ((cy - layoutInfo.cellHmm / 2) / layoutInfo.pageHmm) * 100;
+                      const wPct       = (layoutInfo.cellWmm / layoutInfo.pageWmm) * 100;
+                      const hPct       = (layoutInfo.cellHmm / layoutInfo.pageHmm) * 100;
                       const cutLeftPct = ((cx - layoutInfo.cutWmm / 2) / layoutInfo.pageWmm) * 100;
-                      const cutTopPct = ((cy - layoutInfo.cutHmm / 2) / layoutInfo.pageHmm) * 100;
+                      const cutTopPct  = ((cy - layoutInfo.cutHmm / 2) / layoutInfo.pageHmm) * 100;
                       const cutWpctCell = (layoutInfo.cutWmm / layoutInfo.pageWmm) * 100;
                       const cutHpctCell = (layoutInfo.cutHmm / layoutInfo.pageHmm) * 100;
-                      const isRound = shape === 'circle' || shape === 'auto';
+                      const isRound    = shape === 'circle' || shape === 'auto';
                       return (
                         <div key={`${row}-${col}`}>
-                          {/* cobertura (imagem) — sem borda visível, pode se sobrepor à vizinha */}
-                          <div style={{
-                            position: 'absolute', left: `${leftPct}%`, top: `${topPct}%`, width: `${wPct}%`, height: `${hPct}%`,
-                            overflow: 'hidden',
-                            background: art?.previewDataUrl ? undefined : c.accent,
-                          }}>
+                          <div style={{ position: 'absolute', left: `${leftPct}%`, top: `${topPct}%`, width: `${wPct}%`, height: `${hPct}%`, overflow: 'hidden', background: art?.previewDataUrl ? undefined : c.accent }}>
                             {art?.previewDataUrl && (
-                              <img src={art.previewDataUrl} alt="" style={{
-                                position: 'absolute',
-                                left: `${imgLeftPctCell}%`, top: `${imgTopPctCell}%`,
-                                width: `${imgWpctCell}%`, height: `${imgHpctCell}%`,
-                                maxWidth: 'none', maxHeight: 'none',
-                              }} />
+                              <img src={art.previewDataUrl} alt="" style={{ position: 'absolute', left: `${imgLeftPctCell}%`, top: `${imgTopPctCell}%`, width: `${imgWpctCell}%`, height: `${imgHpctCell}%`, maxWidth: 'none', maxHeight: 'none' }} />
                             )}
                           </div>
-                          {/* linha de corte REAL — tamanho do corte, nunca sobrepõe a vizinha */}
-                          <div style={{
-                            position: 'absolute', left: `${cutLeftPct}%`, top: `${cutTopPct}%`, width: `${cutWpctCell}%`, height: `${cutHpctCell}%`,
-                            borderRadius: isRound ? '50%' : shape === 'rounded' ? 6 : 1,
-                            border: `1px solid ${swatch}`,
-                            pointerEvents: 'none',
-                          }} />
+                          <div style={{ position: 'absolute', left: `${cutLeftPct}%`, top: `${cutTopPct}%`, width: `${cutWpctCell}%`, height: `${cutHpctCell}%`, borderRadius: isRound ? '50%' : shape === 'rounded' ? 6 : 1, border: `1px solid ${swatch}`, pointerEvents: 'none' }} />
                         </div>
                       );
                     })
@@ -642,7 +663,7 @@ export default function FolhaRecorteDisplay({ data, onClose, theme = 'dark', pla
               cursor: (!layoutInfo || layoutInfo.totalCells === 0 || pageDimsInvalid) ? 'not-allowed' : 'pointer',
               background: (!layoutInfo || layoutInfo.totalCells === 0 || pageDimsInvalid) ? c.border : c.accent,
             }}>
-              Gerar folha{layoutInfo && layoutInfo.totalCells > 0 ? ` com ${layoutInfo.totalCells} peças` : ''}{logado ? ` (${CREDITS} créditos)` : ''}
+              Gerar folha {pageModeLabel}{layoutInfo && layoutInfo.totalCells > 0 ? ` com ${layoutInfo.totalCells} peças` : ''}{logado ? ` (${CREDITS} créditos)` : ''}
             </button>
             <button onClick={() => setStage('configuring')} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 13 }}>← Voltar para a peça</button>
           </div>

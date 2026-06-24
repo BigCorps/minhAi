@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bot, Send, LogOut, Sparkles } from 'lucide-react';
+import { Bot, Send, LogOut, Sparkles, Paperclip } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
 import DuplicarImagemDisplay from '@/components/arte/DuplicarImagemDisplay';
@@ -215,7 +215,7 @@ function calcScrollDuration(count: number, isMobile: boolean): number {
 }
 
 interface Msg { id: string; role: 'user' | 'assistant'; content: string }
-type ActiveModal = { type: string; data: { companyId: string } } | null;
+type ActiveModal = { type: string; data: { companyId: string; prefillFile?: File } } | null;
 
 export default function ArtePage() {
   const supabase = createClient();
@@ -231,6 +231,12 @@ export default function ArtePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [isMobile, setIsMobile] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+
+  const [isDraggingOverPage, setIsDraggingOverPage] = useState(false);
+  const dragCounterRef = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const endRef = useRef<HTMLDivElement>(null);
@@ -254,6 +260,47 @@ export default function ArtePage() {
     })();
   }, [supabase, refreshSaldo]);
 
+useEffect(() => {
+  const hasFiles = (e: DragEvent) =>
+    Array.from(e.dataTransfer?.items ?? []).some((item) => item.kind === 'file');
+
+  const onDragEnter = (e: DragEvent) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragCounterRef.current += 1;
+    setIsDraggingOverPage(true);
+  };
+
+  const onDragOver = (e: DragEvent) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault(); // necessário pra permitir o drop
+  };
+
+  const onDragLeave = (e: DragEvent) => {
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) setIsDraggingOverPage(false);
+  };
+
+  const onDrop = (e: DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setIsDraggingOverPage(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) setPendingFile(file);
+  };
+
+  window.addEventListener('dragenter', onDragEnter);
+  window.addEventListener('dragover', onDragOver);
+  window.addEventListener('dragleave', onDragLeave);
+  window.addEventListener('drop', onDrop);
+  return () => {
+    window.removeEventListener('dragenter', onDragEnter);
+    window.removeEventListener('dragover', onDragOver);
+    window.removeEventListener('dragleave', onDragLeave);
+    window.removeEventListener('drop', onDrop);
+  };
+}, []);
+
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   useEffect(() => {
@@ -274,24 +321,28 @@ export default function ArtePage() {
     };
   }, [sidebarOpen]);
 
-  const openSkill = useCallback((sk: Skill) => {
-    setSidebarOpen(false);
-    setActiveModal({ type: sk.modal, data: { companyId: companyId ?? '' } });
-  }, [companyId]);
+const openSkill = useCallback((sk: Skill, file?: File) => {
+  setSidebarOpen(false);
+  setActiveModal({ type: sk.modal, data: { companyId: companyId ?? '', prefillFile: file } });
+}, [companyId]);
 
-  const handleSubmit = useCallback(() => {
-    const text = input.trim();
-    if (!text) return;
-    setInput('');
-    setMessages((p) => [...p, { id: `u-${Date.now()}`, role: 'user', content: text }]);
-    const sk = detectSkill(text);
-    if (sk) {
-      openSkill(sk);
-    } else {
-      const disponiveis = SKILLS.map((s) => s.label).join(', ');
-      setMessages((p) => [...p, { id: `a-${Date.now()}`, role: 'assistant', content: `Essa ferramenta ainda não está disponível. Por enquanto eu faço: ${disponiveis}. Toque na habilidade abaixo para começar.` }]);
-    }
-  }, [input, openSkill]);
+const handleSubmit = useCallback(() => {
+  const text = input.trim();
+  if (!text) return;
+  setInput('');
+  setMessages((p) => [...p, { id: `u-${Date.now()}`, role: 'user', content: pendingFile ? `📎 ${pendingFile.name} — ${text}` : text }]);
+
+  const sk = detectSkill(text);
+  if (sk) {
+    openSkill(sk, pendingFile ?? undefined);
+    setPendingFile(null);
+  } else {
+    const disponiveis = SKILLS.map((s) => s.label).join(', ');
+    setMessages((p) => [...p, { id: `a-${Date.now()}`, role: 'assistant', content: pendingFile
+      ? `Recebi o arquivo, mas não identifiquei o que você quer fazer com ele. Por enquanto eu faço: ${disponiveis}. Diga uma dessas opções ou toque na habilidade abaixo.`
+      : `Essa ferramenta ainda não está disponível. Por enquanto eu faço: ${disponiveis}. Toque na habilidade abaixo para começar.` }]);
+  }
+}, [input, pendingFile, openSkill]);
 
   const closeModal = useCallback(async () => {
     setActiveModal(null);
@@ -438,22 +489,49 @@ export default function ArtePage() {
         </div>
       )}
 
-      {/* Input (livre, inclusive anônimo) */}
-      {ready && (
-        <div className="flex-shrink-0 px-3 sm:px-6 py-3 border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
-          <div className="flex items-end gap-2 rounded-xl px-3 py-2 max-w-5xl mx-auto" style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); } }}
-              placeholder="Ex: cartões e folhetos, converter, corte…"
-              className="flex-1 bg-transparent outline-none text-sm"
-              style={{ color: '#1e293b' }}
-            />
-            <button onClick={handleSubmit} disabled={!input.trim()} className="p-1.5 rounded-lg transition-all disabled:opacity-30 hover:scale-110 active:scale-95" style={{ background: BRAND_GRADIENT }}>
-              <Send className="w-4 h-4 text-white" />
-            </button>
-          </div>
+{/* Input (livre, inclusive anônimo) */}
+{ready && (
+  <div className="flex-shrink-0 px-3 sm:px-6 py-3 border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+
+    {/* Preview do arquivo anexado, antes de enviar */}
+    {pendingFile && (
+      <div className="max-w-2xl mx-auto mb-2 flex items-center gap-2 px-3 py-2 rounded-xl text-xs" style={{ background: 'rgba(0,174,239,0.08)', border: '1px solid rgba(0,174,239,0.25)' }}>
+        <Paperclip className="w-3.5 h-3.5 flex-shrink-0" style={{ color: CMYK.cyan }} />
+        <span className="flex-1 truncate font-medium" style={{ color: '#0f172a' }}>{pendingFile.name}</span>
+        <button onClick={() => setPendingFile(null)} className="p-0.5 rounded-full hover:bg-black/5" aria-label="Remover arquivo">
+          <X className="w-3.5 h-3.5" style={{ color: '#64748b' }} />
+        </button>
+      </div>
+    )}
+
+    <div className="flex items-end gap-2 rounded-xl px-3 py-2 max-w-2xl mx-auto" style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        className="p-1.5 rounded-lg transition-all hover:bg-slate-100 active:scale-95 flex-shrink-0"
+        aria-label="Anexar arquivo"
+      >
+        <Paperclip className="w-4 h-4" style={{ color: '#64748b' }} />
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,application/pdf"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingFile(f); e.currentTarget.value = ''; }}
+      />
+
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); } }}
+        placeholder={pendingFile ? 'O que você quer fazer com esse arquivo?' : 'Ex: cartões e folhetos, converter, corte…'}
+        className="flex-1 bg-transparent outline-none text-sm"
+        style={{ color: '#1e293b' }}
+      />
+      <button onClick={handleSubmit} disabled={!input.trim()} className="p-1.5 rounded-lg transition-all disabled:opacity-30 hover:scale-110 active:scale-95" style={{ background: BRAND_GRADIENT }}>
+        <Send className="w-4 h-4 text-white" />
+      </button>
+    </div>
           <p className="text-center text-[10px] mt-2" style={{ color: '#94a3b8' }}>
             Powered by{' '}
             <a href="https://minhai.app" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: CMYK.cyan, fontWeight: 600 }}>minhAi.app</a>
@@ -649,6 +727,22 @@ export default function ArtePage() {
     playText={playText}
     onRequireLogin={() => { window.location.href = LOGIN_URL; }}
   />
+)}
+
+{/* Overlay de drag-and-drop — cobre a tela inteira enquanto arrasta um arquivo */}
+{isDraggingOverPage && (
+  <div
+    className="fixed inset-0 z-[80] flex items-center justify-center pointer-events-none"
+    style={{ background: 'rgba(0,174,239,0.08)', backdropFilter: 'blur(2px)' }}
+  >
+    <div
+      className="flex flex-col items-center gap-3 px-8 py-6 rounded-2xl border-2 border-dashed"
+      style={{ background: '#ffffff', borderColor: CMYK.cyan }}
+    >
+      <Paperclip className="w-8 h-8" style={{ color: CMYK.cyan }} />
+      <p className="text-sm font-semibold" style={{ color: '#0f172a' }}>Solte o arquivo aqui</p>
+    </div>
+  </div>
 )}
 
       <style jsx>{`

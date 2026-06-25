@@ -14,8 +14,9 @@ import sharp from 'sharp';
 import fs from 'node:fs';
 import path from 'node:path';
 import { traceContour } from '@/lib/arte/contour';
-import { rectPoints, ellipsePoints, rectSvgPath, ellipseSvgPath, type CutShape } from '@/lib/arte/cutShapes';
+import { rectPoints, ellipsePoints, rectSvgPath, ellipseSvgPath, ellipseSvgPathCommands, rectSvgPathCommands, type CutShape, type CutPathCommand } from '@/lib/arte/cutShapes';
 import { drawImageCmyk } from '@/lib/arte/cmykImage';
+import { buildEpsBase64, type EpsDocumentSpec } from '@/lib/arte/epsExport';
 
 const FUNCTION_KEY = 'gerar_adesivo_contorno';
 const CREDITS = 5;
@@ -74,7 +75,11 @@ export async function POST(req: NextRequest) {
       .toColourspace('cmyk').raw().toBuffer();
     const cutCmyk = { c: cutCmykRaw[0] / 255, m: cutCmykRaw[1] / 255, y: cutCmykRaw[2] / 255, k: cutCmykRaw[3] / 255 };
 
-    let pageWmm: number, pageHmm: number, cutPts: [number, number][], cutSvgPathPt: string, reportW: number, reportH: number, hasAlpha = true;
+let pageWmm: number, pageHmm: number, cutPts: [number, number][], cutSvgPathPt: string, reportW: number, reportH: number, hasAlpha = true;
+// Dados paralelos para o EPS — mesma origem de cálculo do PDF, sem duplicar lógica.
+let cutPathCommands: CutPathCommand[];
+let epsImageBuf: Buffer;
+let epsImageXmm: number, epsImageYmm: number, epsImageWmm: number, epsImageHmm: number;
 
     if (shape === 'auto') {
       // ── silhueta + recuo (borda branca) ──
@@ -86,12 +91,19 @@ export async function POST(req: NextRequest) {
       const artHmm = cut.artHmm;
       const margem = offsetMm + HANDLE_MM;
       pageWmm = artWmm + 2 * margem; pageHmm = artHmm + 2 * margem;
-      cutPts = cut.outPx.map(([x, y]: [number, number]) => [margem + x * cut.mmPerPxX, margem + (cut.th - y) * cut.mmPerPxY] as [number, number]);
+cutPts = cut.outPx.map(([x, y]: [number, number]) => [margem + x * cut.mmPerPxX, margem + (cut.th - y) * cut.mmPerPxY] as [number, number]);
       reportW = artWmm; reportH = artHmm;
       // Modo automático: a silhueta é um traçado arbitrário (não é círculo/retângulo
       // matemático), então não há curva Bézier "certa" a derivar — mantém poligonal,
       // já um único path contínuo (drawSvgPath), apenas sem a suavização Bézier.
       cutSvgPathPt = `M ${cutPts.map(([x, y]) => `${mm(x)} ${mm(-y)}`).join(' L ')}`;
+      // Versão estruturada (para o EPS) da MESMA poligonal acima — sem mm() do
+      // pdf-lib, já que o eixo/escala é tratado dentro do epsExport.ts.
+      cutPathCommands = [
+        { type: 'M', x: cutPts[0][0], y: cutPts[0][1] },
+        ...cutPts.slice(1).map(([x, y]) => ({ type: 'L' as const, x, y })),
+        { type: 'Z' },
+      ];
 
       // Modo automático: a arte é desenhada no tamanho exato artWmm×artHmm — não há
       // "cobertura maior que a arte" aqui (isso só existe nas formas geométricas, onde a
@@ -99,6 +111,12 @@ export async function POST(req: NextRequest) {
       const p1 = doc.addPage([mm(pageWmm), mm(pageHmm)]);
       const targetPx = Math.round((artWmm / 25.4) * DPI);
       await drawImageCmyk(doc, p1, srcBuf, { x: mm(margem), y: mm(margem), width: mm(artWmm), height: mm(artHmm), resizeWidth: targetPx });
+
+      // Para o EPS: resolve transparência (se houver) compondo sobre fundo branco —
+      // SÓ para o EPS, o PDF continua usando srcBuf direto via drawImageCmyk, sem
+      // nenhuma mudança no fluxo existente.
+      epsImageBuf = await sharp(srcBuf).flatten({ background: { r: 255, g: 255, b: 255 } }).png().toBuffer();
+      epsImageXmm = margem; epsImageYmm = margem; epsImageWmm = artWmm; epsImageHmm = artHmm;
     } else {
       // ── forma geométrica: tamanho exato + sangria controlável ──
       const typedW = Number(spec.cut_w_mm), typedH = Number(spec.cut_h_mm);
@@ -139,7 +157,7 @@ export async function POST(req: NextRequest) {
       pageWmm = Math.max(coverW, cutWmm) + 2 * HANDLE_MM;
       pageHmm = Math.max(coverH, cutHmm) + 2 * HANDLE_MM;
       const cx = pageWmm / 2, cy = pageHmm / 2;
-      cutPts = shape === 'circle' ? ellipsePoints(cutWmm, cutHmm, cx, cy) : rectPoints(cutWmm, cutHmm, cx, cy, shape === 'rounded' ? radius : 0);
+cutPts = shape === 'circle' ? ellipsePoints(cutWmm, cutHmm, cx, cy) : rectPoints(cutWmm, cutHmm, cx, cy, shape === 'rounded' ? radius : 0);
       reportW = cutWmm; reportH = cutHmm;
       // Linha de corte com curva Bézier REAL (não poligonal) — já em PONTOS PDF (mm()
       // aplicado antes de montar a string) para não precisar reconverter a string depois.
@@ -148,6 +166,11 @@ export async function POST(req: NextRequest) {
       cutSvgPathPt = shape === 'circle'
         ? ellipseSvgPath(mm(cutWmm), mm(cutHmm), mm(cx), mm(-cy))
         : rectSvgPath(mm(cutWmm), mm(cutHmm), mm(cx), mm(-cy), shape === 'rounded' ? mm(radius) : 0);
+      // Versão estruturada (para o EPS) com OS MESMOS argumentos — em mm direto
+      // (não mm() do pdf-lib), já que a conversão pra pontos é interna ao epsExport.ts.
+      cutPathCommands = shape === 'circle'
+        ? ellipseSvgPathCommands(cutWmm, cutHmm, cx, -cy)
+        : rectSvgPathCommands(cutWmm, cutHmm, cx, -cy, shape === 'rounded' ? radius : 0);
 
       const p1 = doc.addPage([mm(pageWmm), mm(pageHmm)]);
 
@@ -200,12 +223,17 @@ export async function POST(req: NextRequest) {
       }
       // se extractW/H <= 0, a imagem ficou deslocada totalmente fora do canvas — nesse caso
       // (alinhamento no extremo absoluto) o canvas fica só com a cor de fundo, sem travar.
-      const artBuf = await pipeline.png().toBuffer();
+const artBuf = await pipeline.png().toBuffer();
 
       await drawImageCmyk(doc, p1, artBuf, {
         x: mm(cx - coverW / 2), y: mm(cy - coverH / 2),
         width: mm(coverW), height: mm(coverH), resizeWidth: canvasPxW,
       });
+
+      // Para o EPS: artBuf já está em RGB puro, sem alpha (flatten já resolvido
+      // acima) — usa direto, sem nenhum processamento extra.
+      epsImageBuf = artBuf;
+      epsImageXmm = cx - coverW / 2; epsImageYmm = cy - coverH / 2; epsImageWmm = coverW; epsImageHmm = coverH;
     }
 
     // boxes + página de corte
@@ -225,7 +253,31 @@ export async function POST(req: NextRequest) {
     // validado visualmente e na estrutura do PDF (1 m, N l/c, 1 stroke, sem aproximação).
     p2.drawSvgPath(cutSvgPathPt, { x: 0, y: 0, borderColor: col, borderWidth: 0.75 });
 
-    const rgbPdf = await doc.save();
+const rgbPdf = await doc.save();
+
+    // ── Gera o .eps em paralelo, reaproveitando os mesmos dados já calculados ──
+    // Isolado em try/catch: se o EPS falhar por qualquer motivo, o PDF (formato
+    // principal, já em produção) continua sendo entregue normalmente — eps_base64
+    // simplesmente vem null nesse caso.
+    const PT_TO_MM = 25.4 / 72;
+    let epsBase64: string | null = null;
+    let epsFileName: string | null = null;
+    try {
+      const epsSpec: EpsDocumentSpec = {
+        pageWidthMm: pageWmm,
+        pageHeightMm: pageHmm,
+        images: [{ imageBuffer: epsImageBuf, xMm: epsImageXmm, yMm: epsImageYmm, widthMm: epsImageWmm, heightMm: epsImageHmm }],
+        cutPaths: [{
+          commands: cutPathCommands,
+          strokeColorCmyk: cutCmyk,
+          strokeWidthMm: 0.75 * PT_TO_MM, // mesma largura de linha do PDF (0.75pt), convertida pra mm
+        }],
+      };
+      epsBase64 = await buildEpsBase64(epsSpec);
+      epsFileName = `${nome}_${Math.round(reportW)}x${Math.round(reportH)}mm_recorte.eps`;
+    } catch (epsErr) {
+      console.error('[api/arte/adesivo] Falha ao gerar EPS (PDF segue normalmente):', epsErr);
+    }
 
     // sela X-1a
     const form = new FormData();
@@ -249,7 +301,7 @@ export async function POST(req: NextRequest) {
     const charge = Array.isArray(chargeRaw) ? chargeRaw[0] : chargeRaw;
     if (!charge?.sucesso) return json({ error: 'Créditos insuficientes', saldo: charge?.saldo_anterior ?? 0, custo: CREDITS }, 402);
 
-    return json({ success: true, pdf_base64: b64, file_name: fileName, saldo: charge.saldo_novo, has_alpha: hasAlpha });
+    return json({ success: true, pdf_base64: b64, file_name: fileName, eps_base64: epsBase64, eps_file_name: epsFileName, saldo: charge.saldo_novo, has_alpha: hasAlpha });
 
   } catch (e) {
     console.error('[api/arte/adesivo]', e);

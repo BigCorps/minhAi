@@ -110,6 +110,14 @@ function WebAppSection({
 export default function NovaEmpresaPage() {
   const router = useRouter();
 
+  // ── Demo (Passo 4 do funil /lead) ─────────────────────────
+  // Token lido do sessionStorage (gravado por app/cadastro/page.tsx).
+  // Decisão confirmada: não propaga segment_key para o onboarding de
+  // 7 passos — só pré-popula o nome aqui, neste formulário.
+  const [demoToken, setDemoToken] = useState<string | null>(null);
+  const [demoNomeNegocio, setDemoNomeNegocio] = useState<string | null>(null);
+  const [demoPreenchido, setDemoPreenchido] = useState(false);
+
   // ── Form state ───────────────────────────────────────────
   const [nome, setNome] = useState('');
   const [slugValue, setSlugValue] = useState('');
@@ -135,6 +143,34 @@ export default function NovaEmpresaPage() {
   const [loading, setLoading] = useState(false);
   const [submitMode, setSubmitMode] = useState<'manual' | 'ia' | 'ia_webapp' | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Ler token de demo (sessionStorage) e pré-popular nome ─
+  useEffect(() => {
+    let token: string | null = null;
+    try {
+      token = sessionStorage.getItem('minhai:demo_token');
+    } catch {
+      // sessionStorage indisponível — segue sem pré-preenchimento.
+    }
+    if (!token) return;
+
+    setDemoToken(token);
+
+    fetch(`/api/demo/${token}`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (data?.nomeNegocio) {
+          setDemoNomeNegocio(data.nomeNegocio);
+          setNome(data.nomeNegocio);
+          setSlugValue(generateSlug(data.nomeNegocio));
+          setDemoPreenchido(true);
+        }
+      })
+      .catch(() => {
+        // Demo expirada ou erro — segue sem pré-preenchimento, sem
+        // bloquear o cadastro normal.
+      });
+  }, []);
 
   // ── Verificar plano Consulting e WebApp Existente ───────────
   useEffect(() => {
@@ -305,6 +341,22 @@ export default function NovaEmpresaPage() {
         throw new Error('ID do assistente não retornado pela API');
       }
 
+      // ── Vincula a demo_session (Passo 4 do funil /lead), se houver.
+      // Fire-and-forget: não bloqueia o fluxo de criação se falhar, e
+      // não é crítico para o usuário ver sucesso na criação real.
+      if (demoToken) {
+        fetch('/api/demo/link-company', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: demoToken, companyId: newCompanyId }),
+        }).catch(() => {});
+        try {
+          sessionStorage.removeItem('minhai:demo_token');
+        } catch {
+          // não crítico
+        }
+      }
+
       return newCompanyId;
     } catch (err: any) {
       setError(err.message);
@@ -374,6 +426,18 @@ export default function NovaEmpresaPage() {
             )}
 
             <div className="space-y-6">
+              {/* Aviso: dados pré-preenchidos da demonstração */}
+              {demoPreenchido && (
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                      Pré-preenchemos o nome com os dados da sua demonstração ({demoNomeNegocio}). Pode editar livremente antes de continuar.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Nome e Slug */}
               <div className={`grid ${isPublic ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
                 <div>

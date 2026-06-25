@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
 import { makeImagePreview, openPdf, rasterizePdfPage, uploadArteSource, isPdfFile, type ArtePreview } from '@/lib/arte/prepareUpload';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
+import { buildEpsDocument, downloadEpsDocument } from '@/lib/arte/epsExport';
 
 type Stage = 'input' | 'page-select' | 'configuring' | 'processing' | 'login' | 'result' | 'error';
 type Shape = 'square' | 'rounded' | 'circle' | 'auto';
@@ -79,13 +80,16 @@ useEffect(() => {
 
   const [logado, setLogado] = useState<boolean>(false);
   const [companyId, setCompanyId] = useState<string>(data.companyId || '');
-  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
-  const [resultBase64, setResultBase64] = useState<string>('');
-  const [resultName, setResultName] = useState<string>('');
-  const [saldo, setSaldo] = useState<number | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string>('');
-  const [progress, setProgress] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
+const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+const [resultBase64, setResultBase64] = useState<string>('');
+const [resultName, setResultName] = useState<string>('');
+const [epsBlob, setEpsBlob] = useState<Blob | null>(null);
+const [epsName, setEpsName] = useState<string>('');
+const [epsGenerating, setEpsGenerating] = useState(false);
+const [saldo, setSaldo] = useState<number | null>(null);
+const [errorMsg, setErrorMsg] = useState<string>('');
+const [progress, setProgress] = useState<string>('');
+const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
 
   const spoke = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -166,41 +170,59 @@ const spec: any = isAuto
   : { shape, cut_w_mm: cutW, cut_h_mm: cutH, radius_mm: radius, sangria_mm: sangria, bleed_mode: bleedMode, cut_color: cutColor, nome, align_x_pct: alignX, align_y_pct: alignY, zoom_pct: zoom };
 
     setProgress('Gerando arte e corte...');
-    const res = await fetch('/api/arte/adesivo', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ companyId: cid, uploadPath, spec }),
-    });
-    const out = await res.json();
-    if (!res.ok || !out.success) {
-      setErrorMsg(res.status === 402
-        ? `Créditos insuficientes. Este adesivo custa ${CREDITS} créditos e seu saldo é ${out.saldo ?? 0}.`
-        : (out.error ?? 'Não foi possível gerar o arquivo.'));
-      setStage('error'); return;
-    }
-    const bin = atob(out.pdf_base64);
-    const arr = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    setResultBlob(new Blob([arr], { type: 'application/pdf' }));
-    setResultBase64(out.pdf_base64);
-    setResultName(out.file_name ?? `${nome}.pdf`);
-    setSaldo(typeof out.saldo === 'number' ? out.saldo : null);
-    setStage('result');
-    playText('Adesivo pronto! Página 1 com a arte, página 2 com o corte.').catch(() => {});
-  } catch (e) { setErrorMsg((e as Error).message ?? 'Erro de conexão ao gerar.'); setStage('error'); }
+const res = await fetch('/api/arte/adesivo', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+  body: JSON.stringify({ companyId: cid, uploadPath, spec }),
+});
+const out = await res.json();
+if (!res.ok || !out.success) {
+  setErrorMsg(res.status === 402
+    ? `Créditos insuficientes. Este adesivo custa ${CREDITS} créditos e seu saldo é ${out.saldo ?? 0}.`
+    : (out.error ?? 'Não foi possível gerar o arquivo.'));
+  setStage('error'); return;
+}
+const bin = atob(out.pdf_base64);
+const arr = new Uint8Array(bin.length);
+for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+setResultBlob(new Blob([arr], { type: 'application/pdf' }));
+setResultBase64(out.pdf_base64);
+setResultName(out.file_name ?? `${nome}.pdf`);
+
+// EPS: opcional na resposta da API — se a rota ainda não gerar, os botões
+// de EPS simplesmente não aparecem (ver JSX do RESULT abaixo).
+if (out.eps_base64) {
+  const epsBin = atob(out.eps_base64);
+  const epsArr = new Uint8Array(epsBin.length);
+  for (let i = 0; i < epsBin.length; i++) epsArr[i] = epsBin.charCodeAt(i);
+  setEpsBlob(new Blob([epsArr], { type: 'application/postscript' }));
+  setEpsName(out.eps_file_name ?? `${nome}.eps`);
+}
+
+setSaldo(typeof out.saldo === 'number' ? out.saldo : null);
+setStage('result');
+playText('Adesivo pronto! Página 1 com a arte, página 2 com o corte.').catch(() => {});
 }, [art, isAuto, shape, cutW, cutH, radius, offset, sangria, bleedMode, cutColor, nome, alignX, alignY, zoom, supabase, companyId, playText]);
 
   const irParaLogin = useCallback(() => { if (onRequireLogin) onRequireLogin(); else window.location.href = '/login'; }, [onRequireLogin]);
-  const handleDownload = useCallback(() => {
-    if (!resultBlob || !resultName) return;
-    const url = URL.createObjectURL(resultBlob);
-    const a = document.createElement('a'); a.href = url; a.download = resultName; a.click();
-    URL.revokeObjectURL(url);
-  }, [resultBlob, resultName]);
-  const handleReset = useCallback(() => {
-    setStage('input'); setArt(null); setPdfPending(null);
-    setResultBlob(null); setResultBase64(''); setErrorMsg(''); setNome('adesivo');
-  }, []);
+const handleDownload = useCallback(() => {
+  if (!resultBlob || !resultName) return;
+  const url = URL.createObjectURL(resultBlob);
+  const a = document.createElement('a'); a.href = url; a.download = resultName; a.click();
+  URL.revokeObjectURL(url);
+}, [resultBlob, resultName]);
+
+const handleDownloadEps = useCallback(() => {
+  if (!epsBlob || !epsName) return;
+  const url = URL.createObjectURL(epsBlob);
+  const a = document.createElement('a'); a.href = url; a.download = epsName; a.click();
+  URL.revokeObjectURL(url);
+}, [epsBlob, epsName]);
+const handleReset = useCallback(() => {
+  setStage('input'); setArt(null); setPdfPending(null);
+  setResultBlob(null); setResultBase64(''); setErrorMsg(''); setNome('adesivo');
+  setEpsBlob(null); setEpsName('');
+}, []);
 
   const label: React.CSSProperties = { display: 'block', fontSize: 12, color: c.textMuted, marginBottom: 4 };
   const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 14, background: c.bgSecondary, border: `1px solid ${c.border}`, color: c.text, outline: 'none' };
@@ -505,10 +527,13 @@ const spec: any = isAuto
                   <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>Arquivo: <strong style={{ color: c.text }}>{resultName}</strong></p>
                   <p style={{ margin: '4px 0 0', fontSize: 12, color: c.textMuted }}>Pág 1: arte · Pág 2: corte{saldo != null ? ` · saldo: ${saldo}` : ''}</p>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={handleDownload} style={{ flex: 1, padding: 10, borderRadius: 8, border: 'none', background: c.accent, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Baixar PDF</button>
-                  <button onClick={handleReset} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Novo adesivo</button>
-                </div>
+<div style={{ display: 'flex', gap: 8 }}>
+  <button onClick={handleDownload} style={{ flex: 1, padding: 10, borderRadius: 8, border: 'none', background: c.accent, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Baixar PDF</button>
+  {epsBlob && (
+    <button onClick={handleDownloadEps} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${c.accent}`, background: 'transparent', color: c.accent, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Baixar EPS</button>
+  )}
+</div>
+<button onClick={handleReset} style={{ padding: 10, borderRadius: 8, border: `1px solid ${c.border}`, background: c.bgSecondary, color: c.text, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Novo adesivo</button>
               </div>
               <div className="ad-qr-desktop" style={{ display: 'none', flexShrink: 0, width: 224 }}>
                 <ResultDownloadQR companyId={companyId} fileName={resultName} fileType="application/pdf" fileBase64={resultBase64} isDark={isDark} enabled={stage === 'result' && !!resultBase64} />

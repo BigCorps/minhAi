@@ -81,7 +81,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
               Criar Minha IA Grátis
             </a>
             <a
-              href="/ia/suporte"
+              href="/lead"
               className={`
                 w-full sm:w-auto px-6 py-2 sm:py-2.5
                 border-2 rounded-full transition-all duration-300 font-bold text-xs sm:text-sm text-center hover:scale-105

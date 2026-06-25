@@ -178,7 +178,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               Criar Minha IA Grátis
             </Link>
             <Link
-              href="/ia/suporte"
+              href="/lead"
               className={`
                 flex-1 sm:flex-none px-4 sm:px-8 py-2 sm:py-3.5
                 border-2 rounded-full transition-all duration-300 font-bold text-xs sm:text-base text-center hover:scale-105

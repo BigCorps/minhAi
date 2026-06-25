@@ -202,6 +202,10 @@ if (out.eps_base64) {
 setSaldo(typeof out.saldo === 'number' ? out.saldo : null);
 setStage('result');
 playText('Adesivo pronto! Página 1 com a arte, página 2 com o corte.').catch(() => {});
+  } catch (e) {
+    setErrorMsg((e as Error).message ?? 'Não foi possível gerar o arquivo.');
+    setStage('error');
+  }
 }, [art, isAuto, shape, cutW, cutH, radius, offset, sangria, bleedMode, cutColor, nome, alignX, alignY, zoom, supabase, companyId, playText]);
 
   const irParaLogin = useCallback(() => { if (onRequireLogin) onRequireLogin(); else window.location.href = '/login'; }, [onRequireLogin]);

@@ -16,7 +16,7 @@ import path from 'node:path';
 import { traceContour } from '@/lib/arte/contour';
 import { rectPoints, ellipsePoints, rectSvgPath, ellipseSvgPath, ellipseSvgPathCommands, rectSvgPathCommands, type CutShape, type CutPathCommand } from '@/lib/arte/cutShapes';
 import { drawImageCmyk } from '@/lib/arte/cmykImage';
-import { buildEpsBase64, type EpsDocumentSpec } from '@/lib/arte/epsExport';
+import { buildEpsBase64, type EpsDocumentSpec } from '@/lib/arte/epsExport.ts';
 
 const FUNCTION_KEY = 'gerar_adesivo_contorno';
 const CREDITS = 5;

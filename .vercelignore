@@ -51,6 +51,9 @@ playwright-report
 *.mkv
 *.psd
 *.ai
+*.apk
+*.aab
+*.idsig
 
 # Pastas de scripts auxiliares, se não forem usadas pelo build
 # Cuidado: deixe comentado se algum script for necessário no build

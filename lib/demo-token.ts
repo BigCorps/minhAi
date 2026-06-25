@@ -53,6 +53,8 @@ export interface DemoSessionRecord {
   email: string | null;
   phone: string | null;
   horario_marcado: string | null;
+  objetivo_cumprido_whatsapp: boolean;
+  horario_marcado_whatsapp: string | null;
   status: string;
   canal_atual: string;
   objetivo_cumprido: boolean;

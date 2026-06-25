@@ -14,7 +14,7 @@ import sharp from 'sharp';
 import fs from 'node:fs';
 import path from 'node:path';
 import { traceContour } from '@/lib/arte/contour';
-import { rectPoints, ellipsePoints, rectSvgPath, ellipseSvgPath, ellipseSvgPathCommands, rectSvgPathCommands, type CutShape, type CutPathCommand } from '@/lib/arte/cutShapes';
+import { rectPoints, ellipsePoints, rectSvgPath, ellipseSvgPath, ellipseEpsCommands, rectEpsCommands, type CutShape, type CutPathCommand } from '@/lib/arte/cutShapes';
 import { drawImageCmyk } from '@/lib/arte/cmykImage';
 import { buildEpsBase64, type EpsDocumentSpec } from '@/lib/arte/epsExport';
 
@@ -169,8 +169,8 @@ cutPts = shape === 'circle' ? ellipsePoints(cutWmm, cutHmm, cx, cy) : rectPoints
       // Versão estruturada (para o EPS) com OS MESMOS argumentos — em mm direto
       // (não mm() do pdf-lib), já que a conversão pra pontos é interna ao epsExport.ts.
       cutPathCommands = shape === 'circle'
-        ? ellipseSvgPathCommands(cutWmm, cutHmm, cx, -cy)
-        : rectSvgPathCommands(cutWmm, cutHmm, cx, -cy, shape === 'rounded' ? radius : 0);
+        ? ellipseEpsCommands(cutWmm, cutHmm, cx, cy)
+        : rectEpsCommands(cutWmm, cutHmm, cx, cy, shape === 'rounded' ? radius : 0);
 
       const p1 = doc.addPage([mm(pageWmm), mm(pageHmm)]);
 

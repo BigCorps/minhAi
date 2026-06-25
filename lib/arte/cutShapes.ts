@@ -78,20 +78,20 @@ export type CutPathCommand =
   | { type: 'C'; x1: number; y1: number; x2: number; y2: number; x: number; y: number }
   | { type: 'Z' };
 
-export function ellipseSvgPathCommands(wmm: number, hmm: number, cx: number, cy: number): CutPathCommand[] {
+export function ellipseEpsCommands(wmm: number, hmm: number, cx: number, cy: number): CutPathCommand[] {
   const rx = wmm / 2, ry = hmm / 2;
   const ox = rx * BEZIER_KAPPA, oy = ry * BEZIER_KAPPA;
   return [
     { type: 'M', x: cx + rx, y: cy },
-    { type: 'C', x1: cx + rx, y1: cy + oy, x2: cx + ox, y2: cy + ry, x: cx, y: cy + ry },
-    { type: 'C', x1: cx - ox, y1: cy + ry, x2: cx - rx, y2: cy + oy, x: cx - rx, y: cy },
-    { type: 'C', x1: cx - rx, y1: cy - oy, x2: cx - ox, y2: cy - ry, x: cx, y: cy - ry },
-    { type: 'C', x1: cx + ox, y1: cy - ry, x2: cx + rx, y2: cy - oy, x: cx + rx, y: cy },
+    { type: 'C', x1: cx + rx, y1: cy - oy, x2: cx + ox, y2: cy - ry, x: cx, y: cy - ry },
+    { type: 'C', x1: cx - ox, y1: cy - ry, x2: cx - rx, y2: cy - oy, x: cx - rx, y: cy },
+    { type: 'C', x1: cx - rx, y1: cy + oy, x2: cx - ox, y2: cy + ry, x: cx, y: cy + ry },
+    { type: 'C', x1: cx + ox, y1: cy + ry, x2: cx + rx, y2: cy + oy, x: cx + rx, y: cy },
     { type: 'Z' },
   ];
 }
 
-export function rectSvgPathCommands(wmm: number, hmm: number, cx: number, cy: number, radiusMm = 0): CutPathCommand[] {
+export function rectEpsCommands(wmm: number, hmm: number, cx: number, cy: number, radiusMm = 0): CutPathCommand[] {
   const x0 = cx - wmm / 2, y0 = cy - hmm / 2, x1 = cx + wmm / 2, y1 = cy + hmm / 2;
   const r = Math.min(Math.max(0, radiusMm), wmm / 2, hmm / 2);
   if (r <= 0.001) {

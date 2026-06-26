@@ -179,8 +179,8 @@ function FunctionCarousel({
 
   return (
     <div className={`relative w-full transition-all duration-500 ${isModalOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
-      {activeCategory && (
-        <div ref={panelRef} className="z-[100]" style={getPanelPosition()}>
+      {activeCategory && createPortal(
+        <div ref={panelRef} className="z-[10000]" style={getPanelPosition()}>
           <div
             className="rounded-2xl border-2 backdrop-blur-xl overflow-hidden"
             style={{

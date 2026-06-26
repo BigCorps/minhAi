@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { Zap, CreditCard } from 'lucide-react';
+import { Zap, CreditCard, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
 
@@ -13,6 +13,9 @@ interface CreditsCardProps {
 interface UserCredits {
   available_credits: number;
   total_used: number;
+  has_active_plan: boolean;
+  plan_expires_at: string | null;
+  active_plan_name: string | null;
 }
 
 export function CreditsCard({ userId }: CreditsCardProps) {
@@ -29,7 +32,7 @@ export function CreditsCard({ userId }: CreditsCardProps) {
       try {
         const { data, error } = await supabase
           .from('user_credits')
-          .select('available_credits, total_used')
+          .select('available_credits, total_used, has_active_plan, plan_expires_at, active_plan_name')
           .eq('user_id', userId)
           .single();
 
@@ -42,11 +45,20 @@ export function CreditsCard({ userId }: CreditsCardProps) {
               user_id: userId,
               available_credits: 20,
               total_purchased: 20,
-              total_used: 0
+              total_used: 0,
+              has_active_plan: false,
+              plan_expires_at: null,
+              active_plan_name: null
             });
 
           if (!insertError) {
-            setCredits({ available_credits: 20, total_used: 0 });
+            setCredits({ 
+              available_credits: 20, 
+              total_used: 0,
+              has_active_plan: false,
+              plan_expires_at: null,
+              active_plan_name: null
+            });
           }
         } else {
           setCredits(data);
@@ -80,7 +92,10 @@ export function CreditsCard({ userId }: CreditsCardProps) {
             const newData = payload.new as UserCredits;
             setCredits({
               available_credits: newData.available_credits,
-              total_used: newData.total_used
+              total_used: newData.total_used,
+              has_active_plan: newData.has_active_plan,
+              plan_expires_at: newData.plan_expires_at,
+              active_plan_name: newData.active_plan_name
             });
           }
         }
@@ -107,6 +122,17 @@ export function CreditsCard({ userId }: CreditsCardProps) {
   const usagePercentage = totalCredits > 0 
     ? Math.min(100, Math.max(0, ((credits?.available_credits || 0) / totalCredits) * 100))
     : 0;
+
+  const hasActivePlan =
+    credits?.has_active_plan === true &&
+    credits?.plan_expires_at != null &&
+    new Date(credits.plan_expires_at) > new Date();
+
+  const isTrial = hasActivePlan && credits?.active_plan_name === 'Trial';
+
+  const planExpiresFormatted = credits?.plan_expires_at
+    ? new Date(credits.plan_expires_at).toLocaleDateString('pt-BR')
+    : null;
 
   return (
     <Link
@@ -137,6 +163,24 @@ export function CreditsCard({ userId }: CreditsCardProps) {
             }`}>
               Status do seu saldo para interações de IA
             </p>
+            
+            {hasActivePlan && (
+              <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                isTrial
+                  ? isDark
+                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
+                    : 'bg-amber-50 text-amber-700 border border-amber-200'
+                  : isDark
+                    ? 'bg-green-500/15 text-green-400 border border-green-500/20'
+                    : 'bg-green-50 text-green-700 border border-green-200'
+              }`}>
+                {isTrial ? <Star className="w-3 h-3" /> : <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
+                {isTrial
+                  ? `Teste até ${planExpiresFormatted}`
+                  : `${credits?.active_plan_name} até ${planExpiresFormatted}`
+                }
+              </div>
+            )}
           </div>
         </div>
 

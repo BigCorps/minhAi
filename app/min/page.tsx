@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bot, Send, LogOut, Loader2, X, Sparkles } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import Image from 'next/image';
+import { Send, LogOut, Loader2, Sparkles, CreditCard } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase-browser';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -267,54 +269,51 @@ function FunctionCarousel({
     <div className={`relative w-full transition-all duration-500 ${isModalOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
 
       {/* ── FIX #1 + #2: portal com mounted guard e posição ancorada ao chip ── */}
-      {mounted && activeCategory && (() => {
-        const { createPortal } = require('react-dom');
-        return createPortal(
-          <div ref={panelRef} style={getPanelStyle()}>
+      {mounted && activeCategory && createPortal(
+        <div ref={panelRef} style={getPanelStyle()}>
+          <div
+            className="rounded-2xl border-2 backdrop-blur-xl overflow-hidden"
+            style={{
+              maxHeight: 350,
+              background: isDark
+                ? 'linear-gradient(135deg, rgba(30,41,59,0.98), rgba(51,65,85,0.98))'
+                : 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98))',
+              borderColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+            }}
+          >
             <div
-              className="rounded-2xl border-2 backdrop-blur-xl overflow-hidden"
+              className="px-3 py-1.5 font-semibold border-b text-xs"
               style={{
-                maxHeight: 350,
-                background: isDark
-                  ? 'linear-gradient(135deg, rgba(30,41,59,0.98), rgba(51,65,85,0.98))'
-                  : 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98))',
                 borderColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                color: isDark ? 'rgb(226,232,240)' : 'rgb(30,41,59)',
               }}
             >
-              <div
-                className="px-3 py-1.5 font-semibold border-b text-xs"
-                style={{
-                  borderColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)',
-                  color: isDark ? 'rgb(226,232,240)' : 'rgb(30,41,59)',
-                }}
-              >
-                {CAROUSEL_CATEGORIES.find(c => c.key === activeCategory)?.name}
-              </div>
-              <div className="overflow-y-auto" style={{ maxHeight: 310 }}>
-                {categories.find(c => c.key === activeCategory)?.functions.map(fn => (
-                  <div
-                    key={fn.function_key}
-                    className="px-3 py-1.5 cursor-pointer transition-all border-b border-white/5 hover:bg-blue-500/10"
-                    style={{
-                      background: isDark ? 'rgba(51,65,85,0.5)' : 'rgba(241,245,249,0.8)',
-                      color: isDark ? 'rgb(226,232,240)' : 'rgb(30,41,59)',
-                    }}
-                    onClick={() => {
-                      onSelect(fn);
-                      setActiveCategory(null);
-                      activeBtnRef.current = null;
-                    }}
-                  >
-                    <span className="font-medium text-[11px] leading-tight block">{fn.function_name}</span>
-                  </div>
-                ))}
-              </div>
+              {CAROUSEL_CATEGORIES.find(c => c.key === activeCategory)?.name}
             </div>
-          </div>,
-          document.body
-        );
-      })()}
+            <div className="overflow-y-auto" style={{ maxHeight: 310 }}>
+              {categories.find(c => c.key === activeCategory)?.functions.map(fn => (
+                <div
+                  key={fn.function_key}
+                  className="px-3 py-1.5 cursor-pointer transition-all border-b border-white/5 hover:bg-blue-500/10"
+                  style={{
+                    background: isDark ? 'rgba(51,65,85,0.5)' : 'rgba(241,245,249,0.8)',
+                    color: isDark ? 'rgb(226,232,240)' : 'rgb(30,41,59)',
+                  }}
+                  onClick={() => {
+                    onSelect(fn);
+                    setActiveCategory(null);
+                    activeBtnRef.current = null;
+                  }}
+                >
+                  <span className="font-medium text-[11px] leading-tight block">{fn.function_name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* ── FIX #3: wrapper com drag touch ── */}
       <div
@@ -421,6 +420,9 @@ function MinPageContent() {
   const [ready,    setReady]    = useState(false);
   const [hasUser,  setHasUser]  = useState(false);
   const [saldo,    setSaldo]    = useState<number | null>(null);
+  const [userObj,      setUserObj]      = useState<any>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [imageError,   setImageError]   = useState(false);
 
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input,    setInput]    = useState('');
@@ -452,8 +454,9 @@ function MinPageContent() {
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
+      const user = session?.user ?? null;
       setHasUser(!!user);
+      setUserObj(user);
       if (user) await refreshSaldo(user.id);
       setReady(true);
     })();
@@ -561,16 +564,71 @@ function MinPageContent() {
           <ThemeToggle />
           {ready && (
             hasUser ? (
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="px-3 py-1.5 rounded-full text-xs font-semibold"
-                  style={{ background: isDark ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)', color: isDark ? '#93c5fd' : '#185fa5' }}
+              /* ── Avatar com dropdown igual ao DashboardHeader ── */
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(o => !o)}
+                  className="flex items-center p-1 rounded-lg transition hover:bg-gray-100 dark:hover:bg-white/5"
                 >
-                  {saldo ?? '—'} créditos
-                </span>
-                <button onClick={handleLogout} className="p-2 rounded-full transition-colors" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#64748b' }} title="Sair da conta">
-                  <LogOut className="w-4 h-4" />
+                  {userObj?.user_metadata?.avatar_url && !imageError ? (
+                    <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-lime-500">
+                      <Image
+                        src={userObj.user_metadata.avatar_url}
+                        alt="avatar"
+                        width={32}
+                        height={32}
+                        className="w-full h-full object-cover"
+                        onError={() => setImageError(true)}
+                        unoptimized
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-xs">
+                      {(userObj?.user_metadata?.name || userObj?.user_metadata?.full_name || userObj?.email || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </button>
+
+                {userMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                    <div
+                      className="absolute right-0 mt-2 w-52 rounded-xl shadow-lg border py-2 z-50"
+                      style={{
+                        background: isDark ? 'rgb(15,23,42)' : '#ffffff',
+                        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+                      }}
+                    >
+                      {/* Saldo */}
+                      <div className="px-4 py-2 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
+                        <p className="text-[11px] mb-0.5" style={{ color: isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8' }}>Créditos disponíveis</p>
+                        <p className="text-sm font-bold" style={{ color: isDark ? '#93c5fd' : '#185fa5' }}>
+                          {saldo ?? '—'} créditos
+                        </p>
+                      </div>
+                      {/* Comprar créditos */}
+                      <a
+                        href="/min/credits"
+                        className="flex items-center gap-3 px-4 py-2 text-sm transition hover:bg-blue-500/10"
+                        style={{ color: isDark ? '#e2e8f0' : '#1e293b' }}
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <CreditCard className="w-4 h-4 flex-shrink-0" />
+                        <span>Comprar créditos</span>
+                      </a>
+                      <hr style={{ borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', margin: '4px 0' }} />
+                      {/* Sair */}
+                      <button
+                        onClick={() => { setUserMenuOpen(false); handleLogout(); }}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm transition hover:bg-red-500/10"
+                        style={{ color: isDark ? '#fca5a5' : '#dc2626' }}
+                      >
+                        <LogOut className="w-4 h-4 flex-shrink-0" />
+                        <span>Sair da conta</span>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <a
@@ -654,7 +712,7 @@ function MinPageContent() {
               placeholder={hasUser ? 'Digite... Ex: ver agenda, traduzir texto, cep 01310100' : 'Faça login pra usar o Min.IA'}
               rows={1}
               className="flex-1 bg-transparent resize-none outline-none text-sm"
-              style={{ color: isDark ? '#e2e8f0' : '#1e293b', maxHeight: '80px', overflowY: 'auto' }}
+              style={{ color: isDark ? '#e2e8f0' : '#1e293b', maxHeight: '80px', overflowY: 'auto', appearance: 'none', WebkitAppearance: 'none' }}
               onInput={e => {
                 const t = e.currentTarget;
                 t.style.height = 'auto';

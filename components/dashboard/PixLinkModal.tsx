@@ -445,6 +445,33 @@ const fullUrl = activeTab === 'pix' ? fullUrlPix : (hasInfinitePayHandle ? fullU
             </div>
           )}
 
+          {/* Botões */}
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={copy}
+              disabled={!fullUrl}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                copied
+                  ? 'bg-green-500 text-white'
+                  : activeTab === 'pix'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/20'
+                    : 'bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-500/20'
+              }`}
+            >
+              {copied
+                ? <><Check className="w-4 h-4" />Copiado!</>
+                : <><Copy className="w-4 h-4" />Copiar Link</>}
+            </button>
+            <button
+              onClick={() => fullUrl && window.open(fullUrl, '_blank')}
+              disabled={!fullUrl}
+              title="Abrir em nova aba"
+              className="px-4 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-white/10"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </button>
+          </div>
+
           {/* ── Aviso WhatsApp — APENAS aba PIX ──────────────────────────── */}
           {activeTab === 'pix' && selectedCompany && (
             <div className={`rounded-xl p-4 border ${
@@ -509,33 +536,6 @@ const fullUrl = activeTab === 'pix' ? fullUrlPix : (hasInfinitePayHandle ? fullU
               </div>
             </div>
           )}
-
-          {/* Botões */}
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={copy}
-              disabled={!fullUrl}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-                copied
-                  ? 'bg-green-500 text-white'
-                  : activeTab === 'pix'
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/20'
-                    : 'bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-500/20'
-              }`}
-            >
-              {copied
-                ? <><Check className="w-4 h-4" />Copiado!</>
-                : <><Copy className="w-4 h-4" />Copiar Link</>}
-            </button>
-            <button
-              onClick={() => fullUrl && window.open(fullUrl, '_blank')}
-              disabled={!fullUrl}
-              title="Abrir em nova aba"
-              className="px-4 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-white/10"
-            >
-              <ExternalLink className="w-4 h-4" />
-            </button>
-          </div>
 
         </div>
       </div>

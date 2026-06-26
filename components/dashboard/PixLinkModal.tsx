@@ -24,7 +24,7 @@ interface Props {
 type Tab = 'pix' | 'pay';
 type PixLinkType = 'short' | 'minhai';
 
-const MINHAI_WHATSAPP = '5511987311425';
+const MINHAI_WHATSAPP = '551139519468';
 
 export default function PixLinkModal({ onClose }: Props) {
   const [companies, setCompanies] = useState<Company[]>([]);

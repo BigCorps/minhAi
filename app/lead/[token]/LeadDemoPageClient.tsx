@@ -2,76 +2,36 @@
 
 // app/lead/[token]/LeadDemoPageClient.tsx
 //
-// MODIFICADO v2:
-// - Tour educativo com 3 pontos de interação
-// - startTourAudio() chamado DENTRO do handler de clique (contexto de gesto)
-//   → iOS e Android liberam speechSynthesis sem prompt
+// Visual redesenhado: avatar LandingAvatarFace (face ↔ orbe a cada 5s)
+// centralizado no topo, some quando há interação. Input fixo na base.
+// Toda a lógica de negócio original preservada.
+//
+// ATUALIZAÇÃO: MockObjetivoModal simples substituído por
+// LeadMockCheckoutModal (components/LeadDemo/LeadMockCheckoutModal.tsx),
+// que tem etapas espelhando CheckoutFlow/GestorAgendaDisplay reais
+// (pagamento → aguardando/QR mock → confirmado, com a etapa extra de
+// "cobrar agora ou depois" para o ramo Agenda).
 
 import { useState, useCallback } from 'react';
-import { useRouter }   from 'next/navigation';
-import { useTheme }    from 'next-themes';
-
+import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { LeadDemoAssistant, type LeadDemoMessage } from '@/components/LeadDemo/LeadDemoAssistant';
-import { LeadDemoHeader }        from '@/components/LeadDemo/LeadDemoHeader';
-import { LeadDemoCarrosselMock } from '@/components/LeadDemo/LeadDemoCarrosselMock';
-import {
-  LeadDemoTourOverlay,
-  getTourScript,
-  type TourType,
-} from '@/components/LeadDemo/LeadDemoTourOverlay';
-import { LandingAvatarFace }     from '@/components/landing/LandingAvatarFace';
-import {
-  LeadMockCheckoutModal,
-  type ObjetivoInfo,
-} from '@/components/LeadDemo/LeadMockCheckoutModal';
-
-// ── Tipos ────────────────────────────────────────────────────────
-
-interface TourState {
-  active: boolean;
-  type:   TourType | null;
-}
+import { LeadDemoHeader } from '@/components/LeadDemo/LeadDemoHeader';
+import { LandingAvatarFace } from '@/components/landing/LandingAvatarFace';
+import { LeadMockCheckoutModal, type ObjetivoInfo } from '@/components/LeadDemo/LeadMockCheckoutModal';
 
 interface LeadDemoPageClientProps {
-  token:            string;
-  ramo:             string;
-  nomeNegocio:      string;
-  produto:          string;
-  preco:            number;
-  nomeLead:         string | null;
+  token: string;
+  ramo: string;
+  nomeNegocio: string;
+  produto: string;
+  preco: number;
+  nomeLead: string | null;
   objetivoCumprido: boolean;
-  context:          Array<{ role: 'user' | 'assistant'; content: string }>;
-  temEmail:         boolean;
-  temPhone:         boolean;
+  context: Array<{ role: 'user' | 'assistant'; content: string }>;
+  temEmail: boolean;
+  temPhone: boolean;
 }
-
-// ── Áudio — chamado DENTRO do evento de clique ───────────────────
-// Chamar speak() dentro do handler garante que o contexto de gesto
-// do browser (iOS Safari, Android Chrome) autorize o áudio sem
-// nenhum prompt extra. useEffect não tem esse contexto.
-
-function startTourAudio(type: TourType): void {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-
-  // Cancela fala anterior se houver
-  window.speechSynthesis.cancel()
-
-  const script = getTourScript(type)
-  const utter  = new SpeechSynthesisUtterance(script.audioText)
-  utter.lang   = 'pt-BR'
-  utter.rate   = 1.05
-  utter.pitch  = 1.0
-
-  // Seleciona voz PT-BR se já carregada (best-effort no momento do clique)
-  const voices  = window.speechSynthesis.getVoices()
-  const ptVoice = voices.find(v => v.lang === 'pt-BR')
-                ?? voices.find(v => v.lang.startsWith('pt'))
-  if (ptVoice) utter.voice = ptVoice
-
-  window.speechSynthesis.speak(utter)
-}
-
-// ── Componente ───────────────────────────────────────────────────
 
 export default function LeadDemoPageClient({
   token,
@@ -79,34 +39,28 @@ export default function LeadDemoPageClient({
   nomeNegocio,
   produto,
   preco,
-  nomeLead:         nomeLeadInicial,
+  nomeLead: nomeLeadInicial,
   objetivoCumprido: objetivoCumpridoInicial,
   context,
 }: LeadDemoPageClientProps) {
-  const router            = useRouter();
+  const router = useRouter();
   const { resolvedTheme } = useTheme();
-  const isDark            = resolvedTheme !== 'light';
-
-  // ── Estado original ──────────────────────────────────────────
+  const isDark = resolvedTheme !== 'light';
 
   const [objetivoCumprido, setObjetivoCumprido] = useState(objetivoCumpridoInicial);
-  const [objetivoInfo, setObjetivoInfo]         = useState<ObjetivoInfo | null>(null);
-  const [nomeLead, setNomeLead]                 = useState<string | null>(nomeLeadInicial);
-  const [showMockModal, setShowMockModal]       = useState(false);
-  const [hasMessages, setHasMessages]           = useState(context.length > 0);
+  const [objetivoInfo, setObjetivoInfo] = useState<ObjetivoInfo | null>(null);
+  const [nomeLead, setNomeLead] = useState<string | null>(nomeLeadInicial);
+  const [showMockModal, setShowMockModal] = useState(false);
 
-  // ── Estado do tour ───────────────────────────────────────────
-
-  const [tourState, setTourState] = useState<TourState>({ active: false, type: null });
-
-  // ── Mensagens iniciais ───────────────────────────────────────
+  // Controla visibilidade do avatar — some quando há mensagens
+  const [hasMessages, setHasMessages] = useState(
+    context.length > 0
+  );
 
   const initialMessages: LeadDemoMessage[] = context.map(m => ({
-    role:    m.role,
+    role: m.role,
     content: m.content,
   }));
-
-  // ── Handlers originais ───────────────────────────────────────
 
   const handleObjetivoCumprido = useCallback((info: ObjetivoInfo) => {
     setObjetivoInfo(info);
@@ -130,43 +84,15 @@ export default function LeadDemoPageClient({
     router.push(`/cadastro?demo=${token}`);
   }, [router, token]);
 
+  // Callback chamado pelo LeadDemoAssistant quando o user envia 1ª msg
   const handleFirstMessage = useCallback(() => {
     setHasMessages(true);
   }, []);
-
-  // ── Handlers do tour — speak() chamado aqui, dentro do gesto ─
-
-  /** Clique no carrossel mock */
-  const handleCarrosselClick = useCallback(() => {
-    startTourAudio('carrossel')               // ← dentro do gesto ✓
-    setTourState({ active: true, type: 'carrossel' });
-  }, []);
-
-  /** Qualquer botão de modo (Shop / Full / Link / User / Kiosk) */
-  const handleModoBtnClick = useCallback(() => {
-    startTourAudio('modos')                   // ← dentro do gesto ✓
-    setTourState({ active: true, type: 'modos' });
-  }, []);
-
-  /** Setas ← → */
-  const handleArrowClick = useCallback((_dir: 'prev' | 'next') => {
-    startTourAudio('assistente')              // ← dentro do gesto ✓
-    setTourState({ active: true, type: 'assistente' });
-  }, []);
-
-  /** Fecha o overlay (overlay já cancela o áudio internamente) */
-  const handleTourClose = useCallback(() => {
-    setTourState({ active: false, type: null });
-  }, []);
-
-  // ── Frase do avatar ──────────────────────────────────────────
 
   const RAMOS_AGENDAMENTO = ['clinica', 'academia', 'educacao'];
   const fraseAvatar = RAMOS_AGENDAMENTO.includes(ramo)
     ? 'Esse é o exemplo do seu Assistente. Pergunte sobre disponibilidade e horários para simularmos um agendamento.'
     : 'Esse é o exemplo do seu Assistente. Pergunte sobre o seu produto para simularmos uma venda.';
-
-  // ── Render ───────────────────────────────────────────────────
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
@@ -174,49 +100,43 @@ export default function LeadDemoPageClient({
         ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
         : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'
     }`}>
-
-      {/* Header — recebe os callbacks do tour */}
-      <LeadDemoHeader
-        nomeNegocio={nomeNegocio}
-        onModoBtnClick={handleModoBtnClick}
-        onArrowClick={handleArrowClick}
-      />
+      <LeadDemoHeader nomeNegocio={nomeNegocio} />
 
       <main className="flex-1 flex flex-col items-center px-4 pt-6 pb-0 gap-0 overflow-hidden relative">
 
-        {/* ── Avatar + frase + carrossel mock ─────────────────────
-            Bloco inteiro faz fade-out quando chegam mensagens.
+        {/* ── AVATAR + FRASE ────────────────────────────────────────────
+            Ocupa espaço fixo e faz fade-out quando há mensagens,
+            para o chat tomar conta da tela sem remover o elemento
+            (evita layout shift brusco).
         ── */}
-        <div className={`w-full flex flex-col items-center flex-shrink-0
-          transition-all duration-700 ease-in-out ${
-          hasMessages
-            ? 'opacity-0 max-h-0 pointer-events-none overflow-hidden'
-            : 'opacity-100 max-h-[500px]'
-        }`}>
-
-          {/* Avatar */}
+        <div
+          className={`w-full flex flex-col items-center flex-shrink-0 transition-all duration-700 ease-in-out ${
+            hasMessages
+              ? 'opacity-0 max-h-0 pointer-events-none overflow-hidden'
+              : 'opacity-100 max-h-[420px]'
+          }`}
+        >
+          {/* Avatar — limitado a 260px de altura */}
           <div className="w-full max-w-[260px] h-[260px] relative">
             <LandingAvatarFace theme={isDark ? 'dark' : 'light'} avatarOnly />
           </div>
 
-          {/* Frase */}
-          <p className={`mt-4 text-center text-sm max-w-xs leading-relaxed px-2 ${
-            isDark ? 'text-white/50' : 'text-gray-500'
-          }`}>
-            {fraseAvatar}
-          </p>
-
-          {/* Carrossel mock — clique abre tour de categorias */}
-          <div className="w-full mt-4">
-            <LeadDemoCarrosselMock
-              theme={isDark ? 'dark' : 'light'}
-              onCarrosselClick={handleCarrosselClick}
-            />
-          </div>
+          {/* Frase descritiva */}
+<p className={`mt-4 text-center text-sm max-w-xs leading-relaxed px-2 ${
+  isDark ? 'text-white/50' : 'text-gray-500'
+}`}>
+  {fraseAvatar}
+</p>
         </div>
 
-        {/* ── Área de chat ── */}
-        <div className="w-full max-w-2xl transition-all duration-700 ease-in-out flex-1 min-h-0 flex flex-col"
+        {/* ── ÁREA DE CHAT ─────────────────────────────────────────────
+            Quando não há msgs: encolhe para dar espaço ao avatar.
+            Quando há msgs: expande para preencher.
+        ── */}
+        <div
+          className={`w-full max-w-2xl transition-all duration-700 ease-in-out flex-1 min-h-0 ${
+            hasMessages ? 'flex flex-col' : 'flex flex-col'
+          }`}
           style={{ height: hasMessages ? '100%' : undefined }}
         >
           <LeadDemoAssistant
@@ -232,25 +152,31 @@ export default function LeadDemoPageClient({
           />
         </div>
 
-        {/* ── Botões de avanço pós-objetivo ── */}
+        {/* ── BOTÕES DE AVANÇO ─────────────────────────────────────────
+            Corrigido: o input de LeadDemoAssistant é 'fixed bottom-6'
+            (ancorado na viewport, não no fluxo normal do documento —
+            decisão já validada visualmente). Por isso estes botões
+            também precisam ser 'fixed', posicionados ACIMA da faixa
+            do input, em vez de seguir o fluxo normal (senão o input
+            fixo sobrepõe os botões, como visto no teste). A conversa
+            continua disponível — os botões só ficam por cima, não
+            substituem o input.
+        ── */}
         {objetivoCumprido && (
-          <div className="fixed bottom-24 left-4 right-4 max-w-2xl mx-auto
-            flex flex-col sm:flex-row gap-3 z-10">
+          <div className="fixed bottom-24 left-4 right-4 max-w-2xl mx-auto flex flex-col sm:flex-row gap-3 z-10">
             <button
               onClick={handleContinuarTestando}
-              className="flex-1 px-6 py-3 rounded-xl bg-blue-500 hover:bg-blue-600
-                text-white font-semibold transition-colors shadow-lg"
+              className="flex-1 px-6 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold transition-colors shadow-lg"
             >
               Continuar testando → ver confirmação por e-mail
             </button>
             <button
               onClick={handleCriarAssistente}
-              className={`flex-1 px-6 py-3 rounded-xl border font-semibold
-                transition-colors shadow-lg backdrop-blur-sm ${
-                isDark
-                  ? 'border-white/20 hover:bg-white/10 text-white bg-slate-900/80'
-                  : 'border-black/20 hover:bg-black/5 text-gray-900 bg-white/80'
-              }`}
+              className={`flex-1 px-6 py-3 rounded-xl border font-semibold transition-colors shadow-lg backdrop-blur-sm ${
+              isDark
+                ? 'border-white/20 hover:bg-white/10 text-white bg-slate-900/80'
+                : 'border-black/20 hover:bg-black/5 text-gray-900 bg-white/80'
+            }`}
             >
               Gostei! Criar meu assistente agora
             </button>
@@ -258,7 +184,7 @@ export default function LeadDemoPageClient({
         )}
       </main>
 
-      {/* ── Modal de checkout mock (PIX / Agendamento) ── */}
+      {/* ── MODAL MOCK PIX / AGENDAMENTO ─────────────────────────────── */}
       {showMockModal && objetivoInfo && (
         <LeadMockCheckoutModal
           info={objetivoInfo}
@@ -267,17 +193,6 @@ export default function LeadDemoPageClient({
           nomeLead={nomeLead}
           isDark={isDark}
           onClose={() => setShowMockModal(false)}
-        />
-      )}
-
-      {/* ── Tour overlay — z-50, fora do main ─────────────────────
-          Renderizado como irmão do main para garantir z-index pleno.
-          O áudio já foi iniciado no handler de clique acima.
-      ── */}
-      {tourState.active && tourState.type && (
-        <LeadDemoTourOverlay
-          type={tourState.type}
-          onClose={handleTourClose}
         />
       )}
     </div>

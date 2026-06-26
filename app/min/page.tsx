@@ -10,16 +10,10 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { AssistantProvider, useAssistant } from '@/contexts/AssistantContext';
 import { AssistantSelectorHeader } from '@/components/layout/AssistantSelectorHeader';
 import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
+import { FUNCTIONS_REGISTRY } from '@/lib/functions-registry';
 
 const LOGIN_URL = '/min/login';
 
-// ============================================================================
-// ⚠️ DUPLICAÇÃO — segunda cópia destes mapas (a primeira está no
-// DashboardMcpWidget.tsx). Antes de criar uma terceira, extrair pra um
-// arquivo único (ex: lib/assistant/widgetFunctionCatalog.ts) e importar
-// dos dois lugares. Não fiz isso agora pra não tocar de novo no widget já
-// validado — mas com duas cópias o risco de divergência já é real.
-// ============================================================================
 interface AssistantFunction {
   function_key: string;
   function_name: string;
@@ -30,67 +24,15 @@ interface AssistantFunction {
   example_phrases: string[] | null;
 }
 
-const WIDGET_NAVIGATION_BLOCKED = new Set(['modo_venda', 'modo_fila', 'link_na_bio']);
+// Só estas 3 continuam pelo fluxo de texto/MCP — todo o resto abre modal real
+// via FUNCTIONS_REGISTRY.
+const LEGACY_MCP_KEYS = new Set(['pix_generate', 'faq', 'chatgpt']);
 
-// Igual ao WIDGET_SAFE_MODALS do widget do dashboard, MAS sem widgetMode aqui
-// (página cheia, não embutida) — então adiciono de volta as 10 funções de
-// câmera/mic/localização que só foram excluídas lá por causa do bloqueio do
-// widget, não por falta de confirmação. Todas vêm do mesmo `modalOnlyFunctions`
-// do VoiceAssistantWithWakeWord.tsx.
-const MIN_SAFE_MODALS: Record<string, { type: string; extraData?: Record<string, any> }> = {
-  meu_sistema:                    { type: 'MeuSistemaDisplay' },
-  consultar_cambio:               { type: 'CotacaoMoedasDisplay' },
-  consultar_cep:                  { type: 'ConsultarCEPDisplay' },
-  dados_cnpj:                     { type: 'ConsultarCnpjModal' },
-  dados_cpf:                      { type: 'ConsultarCpfModal' },
-  restricoes_cpf:                 { type: 'RestricoesCPFDisplay' },
-  restricoes_cnpj:                { type: 'RestricoesCNPJDisplay' },
-  consultar_feriados:             { type: 'FeriadosNacionaisDisplay' },
-  consultar_ddd:                  { type: 'ConsultarDDDDisplay' },
-  consultar_placa:                { type: 'ConsultarPlacaModal' },
-  consultar_protestos:            { type: 'ConsultarProtestosModal' },
-  enviar_arquivo:                 { type: 'EnviarArquivoDisplay' },
-  gerar_qrcode:                   { type: 'GerarQRCodeDisplay' },
-  gerar_codigo_barras:            { type: 'GerarCodigoBarrasDisplay' },
-  confirmar_presenca:             { type: 'ConfirmPresenceModal' },
-  reagendar_compromisso:          { type: 'RescheduleModal' },
-  cancelar_agendamento:           { type: 'CancelAppointmentModal' },
-  meu_cupom:                      { type: 'MeuCupomDisplay', extraData: { prefillName: '' } },
-  traduzir_texto:                 { type: 'TranslateTextModal' },
-  ver_noticias:                   { type: 'VerNoticiasDisplay' },
-  procurar_produto:               { type: 'ProcurarProdutoDisplay' },
-  segunda_via_boleto:             { type: 'SegundaViaBoletoDisplay' },
-  cadastrar_produto:              { type: 'CadastrarProdutoDisplay' },
-  enviar_email:                   { type: 'SendEmailModal' },
-  agendar_compromisso:            { type: 'CreateEventModal', extraData: { prefilledData: {} } },
-  ver_agenda:                     { type: 'ViewAgendaModal', extraData: { initialView: 'month' } },
-  relogio_mundial:                { type: 'RelogioMundialDisplay' },
-  rastreio_correios:              { type: 'RastreioCorreiosDisplay' },
-  fichas_producao_conversacional: { type: 'FichaProducaoConversacionalDisplay', extraData: { fichaType: 'produto' } },
-  criar_nota:                     { type: 'CriarNotaDisplay' },
-  lembrete_remedios:              { type: 'LembreteRemediosDisplay' },
-  converter_arquivo:              { type: 'ConverterArquivoDisplay' },
-  editar_imagem:                  { type: 'EditarImagemDisplay' },
-  remover_fundo:                  { type: 'RemoverFundoDisplay' },
-  duplicar_imagem:                { type: 'DuplicarImagemDisplay' },
-  lista_compras:                  { type: 'ListaComprasDisplay' },
-  orcamento:                      { type: 'OrcamentoDisplay', extraData: { transcriptInicial: '' } },
-  analisar_planilha:              { type: 'AnalisarPlanilhaDisplay' },
-  texto_em_audio:                 { type: 'TextoEmAudioDisplay' },
-  transcrever_video:              { type: 'TranscreverVideoDisplay' },
-  criar_midia:                    { type: 'CriarMidiaDisplay' },
-  // ── só liberadas aqui (página cheia, não embutida) ──────────────────────
-  tocar_video:                    { type: 'TocarVideoDisplay', extraData: { query: '' } },
-  tocar_musica:                   { type: 'TocarMusicaDisplay', extraData: { query: '' } },
-  playlist:                       { type: 'PlaylistDisplay' },
-  porta_retrato:                  { type: 'PortaRetratoDisplay' },
-  painel_ofertas:                 { type: 'PainelOfertasDisplay' },
-  transcrever_audio:              { type: 'TranscribeAudioModal' },
-  identificar_fraude:             { type: 'IdentificarFraudeDisplay' },
-  clima_tempo:                    { type: 'ClimaTempoDisplay', extraData: { city: null } },
-  tracar_rota:                    { type: 'TracarRotaDisplay', extraData: { destinoInicial: '' } },
-  buscar_endereco:                { type: 'BuscarEnderecoDisplay', extraData: { termoInicial: '' } },
-};
+// Modo Venda, Modo Fila e Link na Bio navegam pra páginas do assistente do
+// cliente final (catálogo, painel de fila, link na bio) — o Min.IA não tem
+// acesso a essas páginas aqui, então força o bloqueio do próprio handler em
+// vez de deixar o `window.location.href` levar pra um lugar sem sentido.
+const ALWAYS_BLOCKED_NAV = new Set(['modo_venda', 'modo_fila', 'link_na_bio']);
 
 interface Msg {
   id: string;
@@ -407,7 +349,6 @@ function LoginRequiredModal({ onClose, isDark }: { onClose: () => void; isDark: 
 
 // ── Conteúdo — fica dentro do AssistantProvider local desta página ────────
 function MinPageContent() {
-  // ── FIX: guard de hidratação — evita mismatch SSR/cliente com next-themes ──
   const [themeMounted, setThemeMounted] = useState(false);
 
   const [ready,    setReady]    = useState(false);
@@ -431,24 +372,22 @@ function MinPageContent() {
   const supabase = useRef(createClient()).current;
 
   const { resolvedTheme } = useTheme();
-
-  // ── FIX: só usa o tema resolvido após montar no cliente ──────────────────
-  // Antes de montar, isDark = false para que SSR e primeiro render do cliente
-  // sejam idênticos, evitando hydration mismatch e o flash de tema quebrado.
   const isDark = themeMounted ? resolvedTheme === 'dark' : false;
 
   const { selectedAssistantId, availableAssistants } = useAssistant();
   const currentAssistant = availableAssistants.find(a => a.id === selectedAssistantId);
 
-  const playText = useCallback(async (_text: string) => {}, []);
-
-  // ── FIX: setThemeMounted separado para não interferir no fluxo de sessão ──
   useEffect(() => { setThemeMounted(true); }, []);
 
   const refreshSaldo = useCallback(async (userId: string) => {
     const { data } = await supabase.from('user_credits').select('available_credits').eq('user_id', userId).maybeSingle();
     setSaldo(data?.available_credits ?? 0);
   }, [supabase]);
+
+  // Substitui o playText de voz — empurra uma bolha de chat
+  const pushAssistantMessage = useCallback(async (text: string) => {
+    setMessages(prev => [...prev, { id: `a-${Date.now()}-${Math.random()}`, role: 'assistant', content: text, timestamp: new Date() }]);
+  }, []);
 
   // ── Sessão ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -510,29 +449,67 @@ function MinPageContent() {
     }
   }, [loading, selectedAssistantId, currentAssistant]);
 
-  // ── Clique num card — login bloqueia tudo antes de avaliar a função ─────
-  const handleFunctionSelect = useCallback((fn: AssistantFunction) => {
-    if (!hasUser) { setShowLoginPrompt(true); return; }
-    if (!selectedAssistantId) return;
-
-    if (WIDGET_NAVIGATION_BLOCKED.has(fn.function_key)) {
-      setActiveModal({ type: '__widget_blocked_navigation__', data: {} });
-      return;
-    }
-
-    const safe = MIN_SAFE_MODALS[fn.function_key];
-    if (safe) {
-      setActiveModal({
-        type: safe.type,
-        data: { companyId: selectedAssistantId, slug: currentAssistant?.slug, ...(safe.extraData ?? {}) },
-      });
-      return;
-    }
-
+  const fallbackToText = useCallback((fn: AssistantFunction) => {
     const starter = fn.example_phrases?.[0] ?? fn.function_name;
     setInput(starter + (starter.endsWith(' ') ? '' : ' '));
     setTimeout(() => inputRef.current?.focus(), 50);
-  }, [hasUser, selectedAssistantId, currentAssistant]);
+  }, []);
+
+  // ── Clique num card — login bloqueia tudo antes de avaliar a função ─────
+  const handleFunctionSelect = useCallback(async (fn: AssistantFunction) => {
+    if (!hasUser) { setShowLoginPrompt(true); return; }
+    if (!selectedAssistantId) return;
+
+    if (LEGACY_MCP_KEYS.has(fn.function_key)) { fallbackToText(fn); return; }
+
+    const def = FUNCTIONS_REGISTRY[fn.function_key];
+    if (!def) { fallbackToText(fn); return; }
+
+    try {
+      if (!def.handler) {
+        if (!def.edgeFunction || !def.uiComponent) { fallbackToText(fn); return; }
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/${def.edgeFunction}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
+            body: JSON.stringify({ company_id: selectedAssistantId, function_key: fn.function_key }),
+          }
+        );
+        const result = await res.json();
+        if (!res.ok) { pushAssistantMessage(`Não consegui abrir "${fn.function_name}".`); return; }
+        setActiveModal({ type: def.uiComponent, data: { companyId: selectedAssistantId, ...result } });
+        return;
+      }
+
+      // Modo Venda/Fila/Link na Bio: força widgetMode=true pra esses 3 — o
+      // próprio handler bloqueia e mostra o aviso, em vez de navegar pra uma
+      // página do assistente do cliente final que o Min.IA não tem acesso aqui.
+      const success = await def.handler({
+        transcript: '',
+        companyId: selectedAssistantId,
+        functionSettings: {},
+        playText: pushAssistantMessage,
+        setIsProcessing: setLoading,
+        setActiveModal,
+        sessionId: null,
+        widgetMode: ALWAYS_BLOCKED_NAV.has(fn.function_key) ? true : false,
+        slug: currentAssistant?.slug,
+      });
+
+      if (success && def.creditsPerUse) {
+        supabase.rpc('register_function_usage', {
+          p_company_id: selectedAssistantId,
+          p_function_key: fn.function_key,
+          p_credits_consumed: def.creditsPerUse,
+        }).then(({ error }) => { if (error) console.error('register_function_usage:', error); });
+      }
+    } catch (err) {
+      console.error(`Erro ao executar ${fn.function_key}:`, err);
+      pushAssistantMessage(`Não consegui abrir "${fn.function_name}". Tente novamente.`);
+    }
+  }, [hasUser, selectedAssistantId, currentAssistant, supabase, pushAssistantMessage, fallbackToText]);
 
   const handleSubmit = useCallback(() => {
     if (!hasUser) { setShowLoginPrompt(true); return; }
@@ -545,9 +522,6 @@ function MinPageContent() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
   };
 
-  // ── FIX: enquanto o tema não montou, renderiza um placeholder neutro ─────
-  // Isso garante que SSR e o primeiro render do cliente sejam idênticos,
-  // eliminando o hydration mismatch que causava o flash de tema quebrado.
   if (!themeMounted) {
     return (
       <div className="flex h-[100dvh] items-center justify-center" style={{ background: 'rgb(248,250,252)' }}>
@@ -575,7 +549,6 @@ function MinPageContent() {
           <ThemeToggle />
           {ready && (
             hasUser ? (
-              /* ── Avatar com dropdown igual ao DashboardHeader ── */
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(o => !o)}
@@ -610,14 +583,12 @@ function MinPageContent() {
                         borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
                       }}
                     >
-                      {/* Saldo */}
                       <div className="px-4 py-2 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
                         <p className="text-[11px] mb-0.5" style={{ color: isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8' }}>Créditos disponíveis</p>
                         <p className="text-sm font-bold" style={{ color: isDark ? '#93c5fd' : '#185fa5' }}>
                           {saldo ?? '—'} créditos
                         </p>
                       </div>
-                      {/* Comprar créditos */}
                       <a
                         href="/min/credits"
                         className="flex items-center gap-3 px-4 py-2 text-sm transition hover:bg-blue-500/10"
@@ -628,7 +599,6 @@ function MinPageContent() {
                         <span>Comprar créditos</span>
                       </a>
                       <hr style={{ borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', margin: '4px 0' }} />
-                      {/* Sair */}
                       <button
                         onClick={() => { setUserMenuOpen(false); handleLogout(); }}
                         className="w-full flex items-center gap-3 px-4 py-2 text-sm transition hover:bg-red-500/10"
@@ -758,7 +728,7 @@ function MinPageContent() {
       {/* ── FOOTER ────────────────────────────────────────────────────────── */}
       {ready && (
         <p className="flex-shrink-0 text-center text-[10px] pb-2" style={{ color: isDark ? 'rgba(255,255,255,0.2)' : '#cbd5e1' }}>
-          <a href="https://minhai.app" target="_blank" rel="noopener noreferrer" className="hover:underline font-semibold" style={{ color: '#3B82F6' }}>
+          <a href="https://min.ia.br" target="_blank" rel="noopener noreferrer" className="hover:underline font-semibold" style={{ color: '#3B82F6' }}>
             min.IA.br
           </a>
         </p>
@@ -770,7 +740,7 @@ function MinPageContent() {
         activeModal={activeModal}
         onClose={() => setActiveModal(null)}
         theme={isDark ? 'dark' : 'light'}
-        playText={playText}
+        playText={pushAssistantMessage}
         slug={currentAssistant?.slug}
       />
     </div>

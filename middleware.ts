@@ -118,28 +118,51 @@ if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
 
 // ── 0.1. DOMÍNIO PIX.WIKI ────────────────────────────────────────────────
 if (PIX_DOMAINS.includes(hostname)) {
-  // Se acessar pix.wiki, abre internamente a página /pix
-  if (pathname === '/') {
+  // Se usar www.pix.wiki, redireciona para pix.wiki
+  if (hostname === 'www.pix.wiki') {
     const url = request.nextUrl.clone();
-    url.pathname = '/pix';
-    return NextResponse.rewrite(url);
+    url.hostname = 'pix.wiki';
+    return NextResponse.redirect(url);
   }
 
-  // Opcional: se quiser favicon específico do Pix
+  // Importante para TWA / Bubblewrap / Play Store
+  if (pathname.startsWith('/.well-known/')) {
+    return NextResponse.next();
+  }
+
+  // Favicon específico do Pix
   if (pathname === '/favicon.ico') {
     const url = request.nextUrl.clone();
     url.pathname = '/brands/pix/favicon.png';
     return NextResponse.rewrite(url);
   }
 
-  // Opcional: se quiser manifest específico do Pix
+  // Manifest específico do Pix
   if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
     const url = request.nextUrl.clone();
     url.pathname = '/brands/pix/manifest.webmanifest';
     return NextResponse.rewrite(url);
   }
 
-  return NextResponse.next();
+  // Robots e sitemap continuam normais
+  if (CRAWLER_PASSTHROUGH.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
+
+  // Se alguém acessar pix.wiki/pix ou pix.wiki/pix/minha-loja,
+  // limpa a URL para pix.wiki ou pix.wiki/minha-loja
+  if (pathname === '/pix' || pathname.startsWith('/pix/')) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.replace(/^\/pix/, '') || '/';
+    return NextResponse.redirect(url);
+  }
+
+  // pix.wiki           → /pix
+  // pix.wiki/loja      → /pix/loja
+  // pix.wiki/loja/10   → /pix/loja/10
+  const url = request.nextUrl.clone();
+  url.pathname = pathname === '/' ? '/pix' : `/pix${pathname}`;
+  return NextResponse.rewrite(url);
 }
   
   // ── 0. PASSTHROUGH PARA CRAWLERS ──────────────────────────────────────────

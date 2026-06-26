@@ -119,7 +119,7 @@ const CAROUSEL_CATEGORIES = [
 ];
 const getChipColor = (index: number) => (index % 2 === 0 ? '#3B82F6' : '#10B981');
 
-// ── Carrossel contínuo por categoria — mesmo padrão visual do assistente ──
+// ── Carrossel contínuo por categoria ─────────────────────────────────────
 function FunctionCarousel({
   items,
   onSelect,
@@ -130,10 +130,16 @@ function FunctionCarousel({
   isDark: boolean;
 }) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [chipRect, setChipRect] = useState<DOMRect | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
+  // ── FIX #1: guard SSR — document.body só existe no cliente ───────────────
+  const [mounted, setMounted] = useState(false);
+  const panelRef  = useRef<HTMLDivElement>(null);
+  const trackRef  = useRef<HTMLDivElement>(null);
+  const wrapRef   = useRef<HTMLDivElement>(null);
+  // ref do chip clicado para ancorar o card logo acima dele
+  const activeBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const onOpen = () => setIsModalOpen(true);
@@ -152,7 +158,7 @@ function FunctionCarousel({
       const t = e.target as Node;
       const outsidePanel = panelRef.current && !panelRef.current.contains(t);
       const outsideTrack  = trackRef.current && !trackRef.current.contains(t);
-      if (outsidePanel && outsideTrack) { setActiveCategory(null); setChipRect(null); }
+      if (outsidePanel && outsideTrack) { setActiveCategory(null); activeBtnRef.current = null; }
     }
     document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
@@ -165,63 +171,185 @@ function FunctionCarousel({
   const COPIES = 8;
   const duplicated = Array.from({ length: COPIES }, () => categories).flat();
 
-  const pause  = useCallback(() => { if (trackRef.current) trackRef.current.style.animationPlayState = 'paused'; }, []);
-  const resume = useCallback(() => { if (trackRef.current && !activeCategory) trackRef.current.style.animationPlayState = 'running'; }, [activeCategory]);
+  // ── helpers de animação CSS ───────────────────────────────────────────────
+  const pauseAnim  = useCallback(() => {
+    if (trackRef.current) trackRef.current.style.animationPlayState = 'paused';
+  }, []);
+  const resumeAnim = useCallback(() => {
+    if (trackRef.current && !activeCategory) trackRef.current.style.animationPlayState = 'running';
+  }, [activeCategory]);
 
-  function getPanelPosition(): React.CSSProperties {
-    if (!chipRect) return {};
+  // ── FIX #2: posição do card ancorada ao chip clicado (não ao chipRect) ───
+  // Recalculada a cada render para reagir ao scroll/resize.
+  function getPanelStyle(): React.CSSProperties {
+    const btn = activeBtnRef.current;
+    if (!btn) return { display: 'none' };
+    const rect = btn.getBoundingClientRect();
     const panelWidth = 280;
-    let left = chipRect.left + chipRect.width / 2 - panelWidth / 2;
+    let left = rect.left + rect.width / 2 - panelWidth / 2;
     if (left < 10) left = 10;
     if (left + panelWidth > window.innerWidth - 10) left = window.innerWidth - panelWidth - 10;
-    return { position: 'fixed', left: `${left}px`, bottom: `${window.innerHeight - chipRect.top + 8}px` };
+    // abre ACIMA do chip, encostado nele
+    return {
+      position: 'fixed',
+      left: `${left}px`,
+      bottom: `${window.innerHeight - rect.top + 6}px`,
+      width: panelWidth,
+      zIndex: 10000,
+    };
   }
+
+  // ── FIX #3: drag touch para rolar o carrossel manualmente ────────────────
+  const dragState = useRef<{
+    dragging: boolean;
+    startX: number;
+    baseOffset: number;
+    loopWidth: number;
+    currentOffset: number;
+  }>({ dragging: false, startX: 0, baseOffset: 0, loopWidth: 0, currentOffset: 0 });
+
+  function getCurrentTranslateX(): number {
+    if (!trackRef.current) return 0;
+    const style = window.getComputedStyle(trackRef.current);
+    const matrix = new DOMMatrixReadOnly(style.transform);
+    return matrix.m41;
+  }
+
+  function normalizeOffset(offset: number, loopWidth: number): number {
+    if (loopWidth <= 0) return offset;
+    let o = offset % loopWidth;
+    if (o > 0) o -= loopWidth;
+    return o;
+  }
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!trackRef.current) return;
+    pauseAnim();
+    const loopWidth = trackRef.current.scrollWidth / COPIES;
+    const baseOffset = getCurrentTranslateX();
+    trackRef.current.style.animation = 'none';
+    trackRef.current.style.transform = `translateX(${baseOffset}px)`;
+    dragState.current = {
+      dragging: true,
+      startX: e.touches[0].clientX,
+      baseOffset: normalizeOffset(baseOffset, loopWidth),
+      loopWidth,
+      currentOffset: baseOffset,
+    };
+  }, [pauseAnim]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const ds = dragState.current;
+    if (!ds.dragging || !trackRef.current) return;
+    const delta = e.touches[0].clientX - ds.startX;
+    const newOffset = normalizeOffset(ds.baseOffset + delta, ds.loopWidth);
+    ds.currentOffset = newOffset;
+    trackRef.current.style.transform = `translateX(${newOffset}px)`;
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    const ds = dragState.current;
+    if (!ds.dragging || !trackRef.current) return;
+    ds.dragging = false;
+    const totalDuration = categories.length * 2.2;
+    const loopPct = ds.loopWidth > 0 ? Math.abs(ds.currentOffset) / ds.loopWidth : 0;
+    const delay = -(loopPct * totalDuration);
+    trackRef.current.style.transform = '';
+    trackRef.current.style.animation =
+      `mcp-scroll ${totalDuration}s linear ${delay}s infinite`;
+    trackRef.current.style.animationPlayState =
+      activeCategory ? 'paused' : 'running';
+  }, [activeCategory, categories.length]);
 
   if (categories.length === 0) return null;
 
   return (
     <div className={`relative w-full transition-all duration-500 ${isModalOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
-      {activeCategory && (
-        <div ref={panelRef} className="z-[100]" style={getPanelPosition()}>
-          <div
-            className="rounded-2xl border-2 backdrop-blur-xl overflow-hidden"
-            style={{
-              width: 280, maxHeight: 350,
-              background: isDark ? 'linear-gradient(135deg, rgba(30,41,59,0.98), rgba(51,65,85,0.98))' : 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98))',
-              borderColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)',
-            }}
-          >
-            <div className="px-3 py-1.5 font-semibold border-b text-xs" style={{ borderColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)', color: isDark ? 'rgb(226,232,240)' : 'rgb(30,41,59)' }}>
-              {CAROUSEL_CATEGORIES.find(c => c.key === activeCategory)?.name}
-            </div>
-            <div className="overflow-y-auto" style={{ maxHeight: 310 }}>
-              {categories.find(c => c.key === activeCategory)?.functions.map(fn => (
-                <div
-                  key={fn.function_key}
-                  className="px-3 py-1.5 cursor-pointer transition-all border-b border-white/5 hover:bg-blue-500/10"
-                  style={{ background: isDark ? 'rgba(51,65,85,0.5)' : 'rgba(241,245,249,0.8)', color: isDark ? 'rgb(226,232,240)' : 'rgb(30,41,59)' }}
-                  onClick={() => { onSelect(fn); setActiveCategory(null); setChipRect(null); }}
-                >
-                  <span className="font-medium text-[11px] leading-tight block">{fn.function_name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
-      <div className="w-full overflow-hidden py-2" onMouseEnter={pause} onMouseLeave={resume} onTouchStart={pause} onTouchEnd={resume} onTouchCancel={resume}>
+      {/* ── FIX #1 + #2: portal com mounted guard e posição ancorada ao chip ── */}
+      {mounted && activeCategory && (() => {
+        const { createPortal } = require('react-dom');
+        return createPortal(
+          <div ref={panelRef} style={getPanelStyle()}>
+            <div
+              className="rounded-2xl border-2 backdrop-blur-xl overflow-hidden"
+              style={{
+                maxHeight: 350,
+                background: isDark
+                  ? 'linear-gradient(135deg, rgba(30,41,59,0.98), rgba(51,65,85,0.98))'
+                  : 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98))',
+                borderColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+              }}
+            >
+              <div
+                className="px-3 py-1.5 font-semibold border-b text-xs"
+                style={{
+                  borderColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)',
+                  color: isDark ? 'rgb(226,232,240)' : 'rgb(30,41,59)',
+                }}
+              >
+                {CAROUSEL_CATEGORIES.find(c => c.key === activeCategory)?.name}
+              </div>
+              <div className="overflow-y-auto" style={{ maxHeight: 310 }}>
+                {categories.find(c => c.key === activeCategory)?.functions.map(fn => (
+                  <div
+                    key={fn.function_key}
+                    className="px-3 py-1.5 cursor-pointer transition-all border-b border-white/5 hover:bg-blue-500/10"
+                    style={{
+                      background: isDark ? 'rgba(51,65,85,0.5)' : 'rgba(241,245,249,0.8)',
+                      color: isDark ? 'rgb(226,232,240)' : 'rgb(30,41,59)',
+                    }}
+                    onClick={() => {
+                      onSelect(fn);
+                      setActiveCategory(null);
+                      activeBtnRef.current = null;
+                    }}
+                  >
+                    <span className="font-medium text-[11px] leading-tight block">{fn.function_name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>,
+          document.body
+        );
+      })()}
+
+      {/* ── FIX #3: wrapper com drag touch ── */}
+      <div
+        ref={wrapRef}
+        className="w-full overflow-hidden py-2"
+        onMouseEnter={pauseAnim}
+        onMouseLeave={resumeAnim}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        style={{ touchAction: 'pan-y' }}
+      >
         <div
           ref={trackRef}
           className="flex gap-2 w-max"
-          style={{ animation: `mcp-scroll ${categories.length * 2.2}s linear infinite`, animationPlayState: activeCategory ? 'paused' : 'running', willChange: 'transform' }}
+          style={{
+            animation: `mcp-scroll ${categories.length * 2.2}s linear infinite`,
+            animationPlayState: activeCategory ? 'paused' : 'running',
+            willChange: 'transform',
+          }}
         >
           {duplicated.map((cat, idx) => (
             <button
               key={`${cat.key}-${idx}`}
               onClick={(e) => {
-                if (activeCategory === cat.key) { setActiveCategory(null); setChipRect(null); }
-                else { setActiveCategory(cat.key); setChipRect(e.currentTarget.getBoundingClientRect()); }
+                // ignora cliques que vieram de swipe (deslocamento > 6px)
+                if (Math.abs(dragState.current.currentOffset - dragState.current.baseOffset) > 6) return;
+                if (activeCategory === cat.key) {
+                  setActiveCategory(null);
+                  activeBtnRef.current = null;
+                } else {
+                  setActiveCategory(cat.key);
+                  activeBtnRef.current = e.currentTarget;
+                }
               }}
               className={`flex-shrink-0 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-white hover:bg-gray-50 text-gray-900 shadow-sm'}`}
               style={{ borderLeft: `3px solid ${getChipColor(idx)}` }}
@@ -231,6 +359,7 @@ function FunctionCarousel({
           ))}
         </div>
       </div>
+
       <style>{`
         @keyframes mcp-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-${(100 / COPIES).toFixed(4)}%); } }
         .mcp-messages::-webkit-scrollbar { width: 4px; }
@@ -510,22 +639,9 @@ function MinPageContent() {
         )}
       </main>
 
-      {/* Carrossel — sempre visível, logado ou não */}
+      {/* ── INPUT — acima do carrossel ─────────────────────────────────────── */}
       {ready && (
-        <div className="flex-shrink-0 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
-          {loadingFunctions ? (
-            <div className="py-3 flex justify-center">
-              <Loader2 className={`w-4 h-4 animate-spin ${isDark ? 'text-white/30' : 'text-gray-300'}`} />
-            </div>
-          ) : (
-            <FunctionCarousel items={allFunctions} onSelect={handleFunctionSelect} isDark={isDark} />
-          )}
-        </div>
-      )}
-
-      {/* Input */}
-      {ready && (
-        <div className="flex-shrink-0 px-3 sm:px-6 py-3 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
+        <div className="flex-shrink-0 px-3 sm:px-6 pt-3 pb-1 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
           <div
             className="flex items-end gap-2 rounded-xl px-3 py-2 max-w-3xl mx-auto"
             style={{ background: isDark ? 'rgba(30,41,59,0.95)' : '#ffffff', border: `1px solid ${isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)'}` }}
@@ -554,11 +670,29 @@ function MinPageContent() {
               {loading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Send className="w-4 h-4 text-white" />}
             </button>
           </div>
-          <p className="text-center text-[10px] mt-2" style={{ color: isDark ? 'rgba(255,255,255,0.2)' : '#cbd5e1' }}>
-            Powered by{' '}
-            <a href="https://minhai.app" target="_blank" rel="noopener noreferrer" className="hover:underline font-semibold" style={{ color: '#3B82F6' }}>minhAi.app</a>
-          </p>
         </div>
+      )}
+
+      {/* ── CARROSSEL — abaixo do input ────────────────────────────────────── */}
+      {ready && (
+        <div className="flex-shrink-0 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
+          {loadingFunctions ? (
+            <div className="py-3 flex justify-center">
+              <Loader2 className={`w-4 h-4 animate-spin ${isDark ? 'text-white/30' : 'text-gray-300'}`} />
+            </div>
+          ) : (
+            <FunctionCarousel items={allFunctions} onSelect={handleFunctionSelect} isDark={isDark} />
+          )}
+        </div>
+      )}
+
+      {/* ── FOOTER ────────────────────────────────────────────────────────── */}
+      {ready && (
+        <p className="flex-shrink-0 text-center text-[10px] pb-2" style={{ color: isDark ? 'rgba(255,255,255,0.2)' : '#cbd5e1' }}>
+          <a href="https://minhai.app" target="_blank" rel="noopener noreferrer" className="hover:underline font-semibold" style={{ color: '#3B82F6' }}>
+            min.IA.br
+          </a>
+        </p>
       )}
 
       {showLoginPrompt && <LoginRequiredModal onClose={() => setShowLoginPrompt(false)} isDark={isDark} />}

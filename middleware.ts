@@ -17,6 +17,8 @@ const CRAWLER_PASSTHROUGH = ['/robots.txt', '/sitemap.xml', '/sitemap.ts'];
 
 const ARTEFINAL_DOMAINS = ['ia.artefinal.app'];
 
+const PIX_DOMAINS = ['pix.wiki', 'www.pix.wiki'];
+
 // ── Todos os domínios de subdomínio de cliente ─────────────────────────────
 const SUBDOMAIN_DOMAINS = [
   { suffix: '.minhai.com.br',  pattern: /^(.+)\.minhai\.com\.br$/ },
@@ -113,6 +115,33 @@ if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
     return NextResponse.next();
   }
 }
+
+// ── 0.1. DOMÍNIO PIX.WIKI ────────────────────────────────────────────────
+if (PIX_DOMAINS.includes(hostname)) {
+  // Se acessar pix.wiki, abre internamente a página /pix
+  if (pathname === '/') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/pix';
+    return NextResponse.rewrite(url);
+  }
+
+  // Opcional: se quiser favicon específico do Pix
+  if (pathname === '/favicon.ico') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/brands/pix/favicon.png';
+    return NextResponse.rewrite(url);
+  }
+
+  // Opcional: se quiser manifest específico do Pix
+  if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/brands/pix/manifest.webmanifest';
+    return NextResponse.rewrite(url);
+  }
+
+  return NextResponse.next();
+}
+  
   // ── 0. PASSTHROUGH PARA CRAWLERS ──────────────────────────────────────────
   if (CRAWLER_PASSTHROUGH.some(p => pathname.startsWith(p))) {
     return NextResponse.next();

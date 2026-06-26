@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bot, Send, LogOut, Loader2, X } from 'lucide-react';
+import { Bot, Send, LogOut, Loader2, X, Sparkles } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase-browser';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -260,7 +260,7 @@ function LoginRequiredModal({ onClose, isDark }: { onClose: () => void; isDark: 
         }}
       >
         <div style={{ width: 48, height: 48, borderRadius: '50%', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #3B82F6, #10B981)' }}>
-          <Bot className="w-6 h-6 text-white" />
+          <Sparkles className="w-6 h-6 text-white" />
         </div>
         <p style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, color: isDark ? 'rgb(226,232,240)' : 'rgb(15,23,42)' }}>
           Entre para usar essa função
@@ -419,7 +419,7 @@ function MinPageContent() {
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b flex-shrink-0" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #3B82F6, #10B981)' }}>
-            <Bot className="w-5 h-5 text-white" />
+            <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold truncate" style={{ color: isDark ? '#fff' : '#0f172a' }}>Min.IA</p>
@@ -465,7 +465,7 @@ function MinPageContent() {
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 max-w-md mx-auto">
             <div className="w-20 h-20 rounded-full flex items-center justify-center mb-1" style={{ background: 'linear-gradient(135deg, #3B82F6, #10B981)' }}>
-              <Bot className="w-10 h-10 text-white" />
+              <Sparkles className="w-10 h-10 text-white" />
             </div>
             <p className="text-base font-semibold" style={{ color: isDark ? '#fff' : '#0f172a' }}>Como posso te ajudar hoje?</p>
             <p className="text-sm" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#64748b' }}>

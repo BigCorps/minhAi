@@ -100,7 +100,26 @@ interface Msg {
 
 type ActiveModalState = { type: string; data: any } | null;
 
-// ── Carrossel — idêntico ao do widget do dashboard ─────────────────────────
+// ── Categorias do carrossel — mesmo mapa do CategoryCarousel.tsx ──────────
+const CAROUSEL_CATEGORIES = [
+  { key: 'ai_assistant', name: 'Conhecimento' },
+  { key: 'products', name: 'Comercial' },
+  { key: 'payment', name: 'Financeiro' },
+  { key: 'information', name: 'Informação' },
+  { key: 'video', name: 'Multimídia' },
+  { key: 'schedule', name: 'Agendamento' },
+  { key: 'contact', name: 'Contato' },
+  { key: 'configuration', name: 'Localização' },
+  { key: 'knowledge', name: 'Consultas' },
+  { key: 'biometry', name: 'Identificação' },
+  { key: 'images', name: 'Arquivos' },
+  { key: 'utylities', name: 'Utilitários' },
+  { key: 'codes', name: 'Câmera' },
+  { key: 'services', name: 'Serviços' },
+];
+const getChipColor = (index: number) => (index % 2 === 0 ? '#3B82F6' : '#10B981');
+
+// ── Carrossel contínuo por categoria — mesmo padrão visual do assistente ──
 function FunctionCarousel({
   items,
   onSelect,
@@ -110,33 +129,116 @@ function FunctionCarousel({
   onSelect: (fn: AssistantFunction) => void;
   isDark: boolean;
 }) {
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [chipRect, setChipRect] = useState<DOMRect | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
-  const duplicated = [...items, ...items];
-  const count = items.length;
 
-  const pause = useCallback(() => { if (trackRef.current) trackRef.current.style.animationPlayState = 'paused'; }, []);
-  const resume = useCallback(() => { if (trackRef.current) trackRef.current.style.animationPlayState = 'running'; }, []);
+  useEffect(() => {
+    const onOpen = () => setIsModalOpen(true);
+    const onClose = () => setIsModalOpen(false);
+    window.addEventListener('eai:modalOpen', onOpen);
+    window.addEventListener('eai:modalClose', onClose);
+    return () => {
+      window.removeEventListener('eai:modalOpen', onOpen);
+      window.removeEventListener('eai:modalClose', onClose);
+    };
+  }, []);
 
-  if (count === 0) return null;
+  useEffect(() => {
+    if (!activeCategory) return;
+    function onClickOutside(e: MouseEvent) {
+      const t = e.target as Node;
+      const outsidePanel = panelRef.current && !panelRef.current.contains(t);
+      const outsideTrack  = trackRef.current && !trackRef.current.contains(t);
+      if (outsidePanel && outsideTrack) { setActiveCategory(null); setChipRect(null); }
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [activeCategory]);
+
+  const categories = CAROUSEL_CATEGORIES
+    .map(cat => ({ ...cat, functions: items.filter(fn => fn.function_category === cat.key) }))
+    .filter(cat => cat.functions.length > 0);
+
+  const COPIES = 8;
+  const duplicated = Array.from({ length: COPIES }, () => categories).flat();
+
+  const pause  = useCallback(() => { if (trackRef.current) trackRef.current.style.animationPlayState = 'paused'; }, []);
+  const resume = useCallback(() => { if (trackRef.current && !activeCategory) trackRef.current.style.animationPlayState = 'running'; }, [activeCategory]);
+
+  function getPanelPosition(): React.CSSProperties {
+    if (!chipRect) return {};
+    const panelWidth = 280;
+    let left = chipRect.left + chipRect.width / 2 - panelWidth / 2;
+    if (left < 10) left = 10;
+    if (left + panelWidth > window.innerWidth - 10) left = window.innerWidth - panelWidth - 10;
+    return { position: 'fixed', left: `${left}px`, bottom: `${window.innerHeight - chipRect.top + 8}px` };
+  }
+
+  if (categories.length === 0) return null;
 
   return (
-    <>
+    <div className={`relative w-full transition-all duration-500 ${isModalOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
+      {activeCategory && (
+        <div ref={panelRef} className="z-[100]" style={getPanelPosition()}>
+          <div
+            className="rounded-2xl border-2 backdrop-blur-xl overflow-hidden"
+            style={{
+              width: 280, maxHeight: 350,
+              background: isDark ? 'linear-gradient(135deg, rgba(30,41,59,0.98), rgba(51,65,85,0.98))' : 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98))',
+              borderColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)',
+            }}
+          >
+            <div className="px-3 py-1.5 font-semibold border-b text-xs" style={{ borderColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)', color: isDark ? 'rgb(226,232,240)' : 'rgb(30,41,59)' }}>
+              {CAROUSEL_CATEGORIES.find(c => c.key === activeCategory)?.name}
+            </div>
+            <div className="overflow-y-auto" style={{ maxHeight: 310 }}>
+              {categories.find(c => c.key === activeCategory)?.functions.map(fn => (
+                <div
+                  key={fn.function_key}
+                  className="px-3 py-1.5 cursor-pointer transition-all border-b border-white/5 hover:bg-blue-500/10"
+                  style={{ background: isDark ? 'rgba(51,65,85,0.5)' : 'rgba(241,245,249,0.8)', color: isDark ? 'rgb(226,232,240)' : 'rgb(30,41,59)' }}
+                  onClick={() => { onSelect(fn); setActiveCategory(null); setChipRect(null); }}
+                >
+                  <span className="font-medium text-[11px] leading-tight block">{fn.function_name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="w-full overflow-hidden py-2" onMouseEnter={pause} onMouseLeave={resume} onTouchStart={pause} onTouchEnd={resume} onTouchCancel={resume}>
-        <div ref={trackRef} className="flex gap-2 w-max" style={{ animation: `min-scroll ${count * 2.2}s linear infinite`, willChange: 'transform' }}>
-          {duplicated.map((fn, idx) => (
+        <div
+          ref={trackRef}
+          className="flex gap-2 w-max"
+          style={{ animation: `mcp-scroll ${categories.length * 2.2}s linear infinite`, animationPlayState: activeCategory ? 'paused' : 'running', willChange: 'transform' }}
+        >
+          {duplicated.map((cat, idx) => (
             <button
-              key={`${fn.function_key}-${idx}`}
-              onClick={() => onSelect(fn)}
-              className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-white hover:bg-gray-50 text-gray-900 shadow-sm'}`}
-              style={{ borderLeft: `3px solid ${fn.color || '#3B82F6'}` }}
+              key={`${cat.key}-${idx}`}
+              onClick={(e) => {
+                if (activeCategory === cat.key) { setActiveCategory(null); setChipRect(null); }
+                else { setActiveCategory(cat.key); setChipRect(e.currentTarget.getBoundingClientRect()); }
+              }}
+              className={`flex-shrink-0 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-white hover:bg-gray-50 text-gray-900 shadow-sm'}`}
+              style={{ borderLeft: `3px solid ${getChipColor(idx)}` }}
             >
-              {fn.icon ? `${fn.icon} ` : ''}{fn.function_name}
+              {cat.name}
             </button>
           ))}
         </div>
       </div>
-      <style>{`@keyframes min-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }`}</style>
-    </>
+      <style>{`
+        @keyframes mcp-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-${(100 / COPIES).toFixed(4)}%); } }
+        .mcp-messages::-webkit-scrollbar { width: 4px; }
+        .mcp-messages::-webkit-scrollbar-track { background: transparent; }
+        .mcp-messages::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+        .mcp-messages:hover::-webkit-scrollbar-thumb { background: rgba(150,150,150,0.3); }
+      `}</style>
+    </div>
   );
 }
 

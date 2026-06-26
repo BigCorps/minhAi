@@ -130,8 +130,13 @@ function FunctionCarousel({
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [chipRect, setChipRect] = useState<DOMRect | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // ── FIX: guard para garantir que document.body existe antes do createPortal ──
+  const [mounted, setMounted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+
+  // ── FIX: setar mounted=true apenas após hydration no cliente ──────────────
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const onOpen = () => setIsModalOpen(true);
@@ -179,7 +184,8 @@ function FunctionCarousel({
 
   return (
     <div className={`relative w-full transition-all duration-500 ${isModalOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
-      {activeCategory && createPortal(
+      {/* ── FIX: `mounted &&` garante que document.body existe antes do portal ── */}
+      {mounted && activeCategory && createPortal(
         <div ref={panelRef} className="z-[10000]" style={getPanelPosition()}>
           <div
             className="rounded-2xl border-2 backdrop-blur-xl overflow-hidden"
@@ -205,7 +211,8 @@ function FunctionCarousel({
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="w-full overflow-hidden py-2" onMouseEnter={pause} onMouseLeave={resume} onTouchStart={pause} onTouchEnd={resume} onTouchCancel={resume}>

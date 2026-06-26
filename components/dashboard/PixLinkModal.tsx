@@ -22,6 +22,7 @@ interface Props {
 }
 
 type Tab = 'pix' | 'pay';
+type PixLinkType = 'short' | 'minhai';
 
 const MINHAI_WHATSAPP = '5511987311425';
 
@@ -39,6 +40,7 @@ export default function PixLinkModal({ onClose }: Props) {
   const [editingHandle, setEditingHandle] = useState(false);
   const [isSavingHandle, setIsSavingHandle] = useState(false);
   const [handleSaved, setHandleSaved] = useState(false);
+  const [pixLinkType, setPixLinkType] = useState<PixLinkType>('short');
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
@@ -109,15 +111,28 @@ export default function PixLinkModal({ onClose }: Props) {
     }
   }
 
-  // ── URLs ──────────────────────────────────────────────────────────────────
-  const baseUrlPix = selectedCompany ? `https://minhai.app/pix/${selectedCompany.slug}` : '';
-  const fullUrlPix = valor && parseFloat(valor) > 0 ? `${baseUrlPix}/${valor}` : baseUrlPix;
+// ── URLs ──────────────────────────────────────────────────────────────────
+const cleanValor = valor.trim().replace(',', '.');
+const hasValidValor = cleanValor && parseFloat(cleanValor) > 0;
 
-  const baseUrlPay = selectedCompany ? `https://minhai.app/pay/${selectedCompany.slug}` : '';
-  const fullUrlPay = valor && parseFloat(valor) > 0 ? `${baseUrlPay}/${valor}` : '';
+const baseUrlPix = selectedCompany
+  ? pixLinkType === 'short'
+    ? `https://pix.wiki/${selectedCompany.slug}`
+    : `https://minhai.app/pix/${selectedCompany.slug}`
+  : '';
 
-  const hasInfinitePayHandle = !!selectedCompany?.infinitepay_handle;
-  const fullUrl = activeTab === 'pix' ? fullUrlPix : (hasInfinitePayHandle ? fullUrlPay : '');
+const fullUrlPix = hasValidValor
+  ? `${baseUrlPix}/${cleanValor}`
+  : baseUrlPix;
+
+const baseUrlPay = selectedCompany ? `https://minhai.app/pay/${selectedCompany.slug}` : '';
+
+const fullUrlPay = hasValidValor
+  ? `${baseUrlPay}/${cleanValor}`
+  : '';
+
+const hasInfinitePayHandle = !!selectedCompany?.infinitepay_handle;
+const fullUrl = activeTab === 'pix' ? fullUrlPix : (hasInfinitePayHandle ? fullUrlPay : '');
 
   // ── WhatsApp — apenas aba PIX ─────────────────────────────────────────────
   const rawWhatsapp = selectedCompany?.whatsapp_number?.replace(/\D/g, '') ?? '';
@@ -239,6 +254,53 @@ export default function PixLinkModal({ onClose }: Props) {
               )}
             </div>
           </div>
+
+{/* Tipo de link PIX */}
+{activeTab === 'pix' && selectedCompany && (
+  <div>
+    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400 mb-2">
+      Formato do link
+    </label>
+
+    <div className="grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        onClick={() => {
+          setPixLinkType('short');
+          setCopied(false);
+        }}
+        className={`rounded-xl border px-3 py-3 text-left transition ${
+          pixLinkType === 'short'
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+            : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-white/10'
+        }`}
+      >
+        <p className="text-sm font-bold">Link curto</p>
+        <p className="mt-1 text-[11px] font-mono break-all opacity-80">
+          pix.wiki/{selectedCompany.slug}
+        </p>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          setPixLinkType('minhai');
+          setCopied(false);
+        }}
+        className={`rounded-xl border px-3 py-3 text-left transition ${
+          pixLinkType === 'minhai'
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+            : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-white/10'
+        }`}
+      >
+        <p className="text-sm font-bold">Link minhAi</p>
+        <p className="mt-1 text-[11px] font-mono break-all opacity-80">
+          minhai.app/pix/{selectedCompany.slug}
+        </p>
+      </button>
+    </div>
+  </div>
+)}
 
           {/* ── Handle InfinitePay inline (apenas aba pay) ────────────────── */}
           {activeTab === 'pay' && selectedCompany && (

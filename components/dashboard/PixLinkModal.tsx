@@ -255,53 +255,6 @@ const fullUrl = activeTab === 'pix' ? fullUrlPix : (hasInfinitePayHandle ? fullU
             </div>
           </div>
 
-{/* Tipo de link PIX */}
-{activeTab === 'pix' && selectedCompany && (
-  <div>
-    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400 mb-2">
-      Formato do link
-    </label>
-
-    <div className="grid grid-cols-2 gap-2">
-      <button
-        type="button"
-        onClick={() => {
-          setPixLinkType('short');
-          setCopied(false);
-        }}
-        className={`rounded-xl border px-3 py-3 text-left transition ${
-          pixLinkType === 'short'
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
-            : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-white/10'
-        }`}
-      >
-        <p className="text-sm font-bold">Link curto</p>
-        <p className="mt-1 text-[11px] font-mono break-all opacity-80">
-          pix.wiki/{selectedCompany.slug}
-        </p>
-      </button>
-
-      <button
-        type="button"
-        onClick={() => {
-          setPixLinkType('minhai');
-          setCopied(false);
-        }}
-        className={`rounded-xl border px-3 py-3 text-left transition ${
-          pixLinkType === 'minhai'
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
-            : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-white/10'
-        }`}
-      >
-        <p className="text-sm font-bold">Link minhAi</p>
-        <p className="mt-1 text-[11px] font-mono break-all opacity-80">
-          minhai.app/pix/{selectedCompany.slug}
-        </p>
-      </button>
-    </div>
-  </div>
-)}
-
           {/* ── Handle InfinitePay inline (apenas aba pay) ────────────────── */}
           {activeTab === 'pay' && selectedCompany && (
             <div>
@@ -426,6 +379,47 @@ const fullUrl = activeTab === 'pix' ? fullUrlPix : (hasInfinitePayHandle ? fullU
               )}
             </div>
           )}
+
+{/* Tipo de link PIX */}
+{activeTab === 'pix' && selectedCompany && (
+  <div>
+    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400 mb-2">
+      Formato do link
+    </label>
+
+    <div className="grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        onClick={() => {
+          setPixLinkType('short');
+          setCopied(false);
+        }}
+        className={`rounded-xl border px-3 py-3 text-left transition ${
+          pixLinkType === 'short'
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+            : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-white/10'
+        }`}
+      >
+        <p className="text-sm font-bold">Link curto</p>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          setPixLinkType('minhai');
+          setCopied(false);
+        }}
+        className={`rounded-xl border px-3 py-3 text-left transition ${
+          pixLinkType === 'minhai'
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+            : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-white/10'
+        }`}
+      >
+        <p className="text-sm font-bold">Link minhAi</p>
+      </button>
+    </div>
+  </div>
+)}
 
           {/* URL gerada */}
           {fullUrl && (

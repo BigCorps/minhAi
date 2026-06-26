@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+
+const PIX_LOGO_SRC = '/brands/pix/pixwiki.png';
+const MINHAI_LOGO_SRC = '/icon.png';
 
 export default function PixRootPage() {
   const [slug, setSlug] = useState('');
@@ -28,6 +32,7 @@ export default function PixRootPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
     if (slug.trim()) {
       router.push(`/pix/${slug.trim().toLowerCase()}`);
     }
@@ -40,55 +45,195 @@ export default function PixRootPage() {
   const inputBorder = isDark ? '#475569' : '#cbd5e1';
   const textPrimary = isDark ? '#ffffff' : '#0f172a';
   const textSecondary = isDark ? '#94a3b8' : '#64748b';
+  const dividerColor = isDark ? '#334155' : '#d1d5db';
 
   return (
-    <div style={{ minHeight: '100vh', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', transition: 'background 0.3s', fontFamily: 'sans-serif' }}>
-      
+    <div
+      style={{
+        minHeight: '100vh',
+        background: bg,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        transition: 'background 0.3s',
+        fontFamily: 'sans-serif',
+      }}
+    >
       {/* Botão de Tema */}
       <button
         onClick={toggleTheme}
         style={{
-          position: 'fixed', top: '20px', right: '20px', zIndex: 50,
-          width: '44px', height: '44px', borderRadius: '50%',
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 50,
+          width: '44px',
+          height: '44px',
+          borderRadius: '50%',
           background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
           border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.12)',
           color: isDark ? '#ffffff' : '#000000',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          backdropFilter: 'blur(10px)', transition: 'all 0.2s',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(10px)',
+          transition: 'all 0.2s',
         }}
+        aria-label={isDark ? 'Ativar tema claro' : 'Ativar tema escuro'}
       >
         {isDark ? (
           <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+            />
           </svg>
         ) : (
           <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+            />
           </svg>
         )}
       </button>
 
       <div style={{ width: '100%', maxWidth: '384px' }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ width: '80px', height: '80px', borderRadius: '16px', background: '#00bfa5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L4 10L12 18L20 10L12 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M12 14L8 10L12 6L16 10L12 14Z" fill="white"/>
-            </svg>
+          {/* Logo duplo: pix.wiki maior + minhAi menor */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '14px',
+              marginBottom: '18px',
+            }}
+          >
+            {/* Logo pix.wiki maior */}
+            <div
+              style={{
+                width: '92px',
+                height: '92px',
+                borderRadius: '22px',
+                overflow: 'hidden',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: isDark ? 'rgba(255,255,255,0.04)' : '#ffffff',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)'}`,
+                boxShadow: isDark ? 'none' : '0 8px 30px rgba(0,0,0,0.08)',
+              }}
+            >
+              <Image
+                src={PIX_LOGO_SRC}
+                alt="pix.wiki"
+                width={92}
+                height={92}
+                priority
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  padding: '8px',
+                }}
+              />
+            </div>
+
+            {/* Divisor */}
+            <span
+              style={{
+                color: dividerColor,
+                fontSize: '30px',
+                fontWeight: 100,
+                userSelect: 'none',
+                lineHeight: 1,
+              }}
+            >
+              |
+            </span>
+
+            {/* Logo minhAi menor */}
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: isDark ? 'rgba(255,255,255,0.04)' : '#ffffff',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)'}`,
+              }}
+            >
+              <Image
+                src={MINHAI_LOGO_SRC}
+                alt="minhAi"
+                width={48}
+                height={48}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+            </div>
           </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: textPrimary, margin: '0 0 8px' }}>Pagamento PIX</h1>
-          <p style={{ color: textSecondary, fontSize: '14px', margin: 0 }}>Digite o identificador para pagar</p>
+
+          <h1
+            style={{
+              fontSize: '24px',
+              fontWeight: 700,
+              color: textPrimary,
+              margin: '0 0 8px',
+            }}
+          >
+            Pagamento PIX
+          </h1>
+
+          <p
+            style={{
+              color: textSecondary,
+              fontSize: '14px',
+              margin: 0,
+            }}
+          >
+            Digite o identificador para pagar
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{
-          background: cardBg,
-          border: `1px solid ${cardBorder}`,
-          borderRadius: '16px',
-          padding: '24px',
-          boxShadow: isDark ? 'none' : '0 4px 24px rgba(0,0,0,0.08)',
-        }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            background: cardBg,
+            border: `1px solid ${cardBorder}`,
+            borderRadius: '16px',
+            padding: '24px',
+            boxShadow: isDark ? 'none' : '0 4px 24px rgba(0,0,0,0.08)',
+          }}
+        >
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: textSecondary, marginBottom: '8px' }}>Identificador (slug)</label>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: 500,
+                color: textSecondary,
+                marginBottom: '8px',
+              }}
+            >
+              Identificador (slug)
+            </label>
+
             <input
               type="text"
               value={slug}

@@ -8,6 +8,7 @@ import { useAssistant } from '@/contexts/AssistantContext';
 import { createClient } from '@/lib/supabase-browser';
 import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
 import { AssistantSelectorHeader } from '@/components/layout/AssistantSelectorHeader';
+import { FUNCTIONS_REGISTRY } from '@/lib/functions-registry';
 
 // ============================================================================
 // Função do catálogo (assistant_functions) — só os campos que usamos aqui
@@ -22,71 +23,11 @@ interface AssistantFunction {
   example_phrases: string[] | null;
 }
 
-// ============================================================================
-// Funções que navegam pra fora do widget (catálogo completo, fila, link na bio)
-// — espelha WIDGET_NAVIGATION_BLOCKED do VoiceAssistantWithWakeWord.tsx
-// ============================================================================
-const WIDGET_NAVIGATION_BLOCKED = new Set(['modo_venda', 'modo_fila', 'link_na_bio']);
-
-// ============================================================================
-// Mapa de funções confirmadas como seguras pra abrir modal só com { companyId }.
-// Copiado literalmente do `modalOnlyFunctions` em handleFunctionClickSilent
-// (VoiceAssistantWithWakeWord.tsx) — removendo as que já estão em
-// WIDGET_BLOCKED_FUNCTIONS do ActionModals (câmera/mic/localização/mídia),
-// já que essas são bloqueadas automaticamente pelo widgetMode de qualquer forma.
-//
-// IMPORTANTE: se o mapa `modalOnlyFunctions` mudar no VoiceAssistant, este
-// aqui não atualiza sozinho — é uma cópia, não uma referência compartilhada.
-// Vale extrair pra um arquivo único (ex: lib/assistant/modalOnlyFunctions.ts)
-// numa próxima passada, mas não tocamos no VoiceAssistant agora.
-//
-// Tudo que NÃO está aqui (PIX/NFC/TEF, QR de contato, vendas/caixa, e o que
-// mais estiver só no functions-registry.ts que não vimos) cai no fallback de
-// texto — mais seguro que abrir um modal que pode esperar dados que não temos.
-// ============================================================================
-const WIDGET_SAFE_MODALS: Record<string, { type: string; extraData?: Record<string, any> }> = {
-  meu_sistema:                    { type: 'MeuSistemaDisplay' },
-  consultar_cambio:               { type: 'CotacaoMoedasDisplay' },
-  consultar_cep:                  { type: 'ConsultarCEPDisplay' },
-  dados_cnpj:                     { type: 'ConsultarCnpjModal' },
-  dados_cpf:                      { type: 'ConsultarCpfModal' },
-  restricoes_cpf:                 { type: 'RestricoesCPFDisplay' },
-  restricoes_cnpj:                { type: 'RestricoesCNPJDisplay' },
-  consultar_feriados:             { type: 'FeriadosNacionaisDisplay' },
-  consultar_ddd:                  { type: 'ConsultarDDDDisplay' },
-  consultar_placa:                { type: 'ConsultarPlacaModal' },
-  consultar_protestos:            { type: 'ConsultarProtestosModal' },
-  enviar_arquivo:                 { type: 'EnviarArquivoDisplay' },
-  gerar_qrcode:                   { type: 'GerarQRCodeDisplay' },
-  gerar_codigo_barras:            { type: 'GerarCodigoBarrasDisplay' },
-  confirmar_presenca:             { type: 'ConfirmPresenceModal' },
-  reagendar_compromisso:          { type: 'RescheduleModal' },
-  cancelar_agendamento:           { type: 'CancelAppointmentModal' },
-  meu_cupom:                      { type: 'MeuCupomDisplay', extraData: { prefillName: '' } },
-  traduzir_texto:                 { type: 'TranslateTextModal' },
-  ver_noticias:                   { type: 'VerNoticiasDisplay' },
-  procurar_produto:               { type: 'ProcurarProdutoDisplay' },
-  segunda_via_boleto:             { type: 'SegundaViaBoletoDisplay' },
-  cadastrar_produto:              { type: 'CadastrarProdutoDisplay' },
-  enviar_email:                   { type: 'SendEmailModal' },
-  agendar_compromisso:            { type: 'CreateEventModal', extraData: { prefilledData: {} } },
-  ver_agenda:                     { type: 'ViewAgendaModal', extraData: { initialView: 'month' } },
-  relogio_mundial:                { type: 'RelogioMundialDisplay' },
-  rastreio_correios:              { type: 'RastreioCorreiosDisplay' },
-  fichas_producao_conversacional: { type: 'FichaProducaoConversacionalDisplay', extraData: { fichaType: 'produto' } },
-  criar_nota:                     { type: 'CriarNotaDisplay' },
-  lembrete_remedios:              { type: 'LembreteRemediosDisplay' },
-  converter_arquivo:              { type: 'ConverterArquivoDisplay' },
-  editar_imagem:                  { type: 'EditarImagemDisplay' },
-  remover_fundo:                  { type: 'RemoverFundoDisplay' },
-  duplicar_imagem:                { type: 'DuplicarImagemDisplay' },
-  lista_compras:                  { type: 'ListaComprasDisplay' },
-  orcamento:                      { type: 'OrcamentoDisplay', extraData: { transcriptInicial: '' } },
-  analisar_planilha:              { type: 'AnalisarPlanilhaDisplay' },
-  texto_em_audio:                 { type: 'TextoEmAudioDisplay' },
-  transcrever_video:              { type: 'TranscreverVideoDisplay' },
-  criar_midia:                    { type: 'CriarMidiaDisplay' },
-};
+// Só estas 3 continuam pelo fluxo de texto/MCP — todo o resto abre modal real
+// via FUNCTIONS_REGISTRY (lib/functions-registry.ts). Modo Venda/Fila/Link na
+// Bio NÃO precisam de tratamento especial aqui — os próprios handlers deles
+// checam `widgetMode` e bloqueiam a navegação sozinhos.
+const LEGACY_MCP_KEYS = new Set(['pix_generate', 'faq', 'chatgpt']);
 
 interface Message {
   id: string;
@@ -243,11 +184,9 @@ function FunctionCarousel({
     if (!ds.dragging || !trackRef.current) return;
     ds.dragging = false;
 
-    // Retoma a animação CSS a partir da posição atual usando animation-delay negativo.
-    // O keyframe vai de 0 → -100%/COPIES. Calculamos em que % do ciclo estamos.
-    const totalDuration = categories.length * 2.2; // segundos — igual ao inline style
-    const loopPct = ds.loopWidth > 0 ? Math.abs(ds.currentOffset) / ds.loopWidth : 0; // 0..1
-    const delay = -(loopPct * totalDuration); // negativo = começa no meio
+    const totalDuration = categories.length * 2.2;
+    const loopPct = ds.loopWidth > 0 ? Math.abs(ds.currentOffset) / ds.loopWidth : 0;
+    const delay = -(loopPct * totalDuration);
 
     trackRef.current.style.transform = '';
     trackRef.current.style.animation =
@@ -269,7 +208,6 @@ function FunctionCarousel({
 
   return (
     <div className={`relative w-full transition-all duration-500 ${isModalOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
-      {/* ── FIX #1: `mounted &&` garante que document.body existe antes do portal ── */}
       {mounted && activeCategory && createPortal(
         <div ref={panelRef} className="z-[10000]" style={getPanelPosition()}>
           <div
@@ -300,7 +238,6 @@ function FunctionCarousel({
         document.body
       )}
 
-      {/* ── FIX #2: wrapper com handlers de touch para drag manual ── */}
       <div
         ref={wrapRef}
         className="w-full overflow-hidden py-2"
@@ -310,7 +247,7 @@ function FunctionCarousel({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
-        style={{ touchAction: 'pan-y' }} // permite scroll vertical da página, bloqueia horizontal para o drag
+        style={{ touchAction: 'pan-y' }}
       >
         <div
           ref={trackRef}
@@ -325,7 +262,6 @@ function FunctionCarousel({
             <button
               key={`${cat.key}-${idx}`}
               onClick={(e) => {
-                // ignora cliques que vieram de um swipe (deslocamento > 6px)
                 if (Math.abs(dragState.current.currentOffset - dragState.current.baseOffset) > 6) return;
                 if (activeCategory === cat.key) { setActiveCategory(null); setChipRect(null); }
                 else { setActiveCategory(cat.key); setChipRect(e.currentTarget.getBoundingClientRect()); }
@@ -371,9 +307,6 @@ export default function DashboardMcpWidget() {
   const { selectedAssistantId, availableAssistants } = useAssistant();
   const currentAssistant = availableAssistants.find(a => a.id === selectedAssistantId);
 
-  // playText no-op — o widget do dashboard não tem TTS, mas os modais esperam a prop
-  const playText = useCallback(async (_text: string) => {}, []);
-
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
 
@@ -391,6 +324,12 @@ export default function DashboardMcpWidget() {
         setLoadingFunctions(false);
       });
   }, [supabase]);
+
+  // Substitui o playText de voz — em vez de falar, empurra uma bolha de chat.
+  // Usado tanto pelo contexto do handler quanto pelo prop do <ActionModals>.
+  const pushAssistantMessage = useCallback(async (text: string) => {
+    setMessages(prev => [...prev, { id: `a-${Date.now()}-${Math.random()}`, role: 'assistant', content: text, timestamp: new Date() }]);
+  }, []);
 
   // ── Envio de texto livre para o fluxo conversacional existente ──────────
   const send = useCallback(async (text: string, label?: string) => {
@@ -419,32 +358,73 @@ export default function DashboardMcpWidget() {
     }
   }, [loading, selectedAssistantId, currentAssistant]);
 
-  // ── Clique num card de função ────────────────────────────────────────────
-  const handleFunctionSelect = useCallback((fn: AssistantFunction) => {
-    if (!selectedAssistantId) return;
-
-    // 1) Navega pra fora do widget — mostra o aviso padrão do ActionModals
-    if (WIDGET_NAVIGATION_BLOCKED.has(fn.function_key)) {
-      setActiveModal({ type: '__widget_blocked_navigation__', data: {} });
-      return;
-    }
-
-    // 2) Confirmado como seguro — abre o modal de verdade, igual a página de funções
-    const safe = WIDGET_SAFE_MODALS[fn.function_key];
-    if (safe) {
-      setActiveModal({
-        type: safe.type,
-        data: { companyId: selectedAssistantId, slug: currentAssistant?.slug, ...(safe.extraData ?? {}) },
-      });
-      return;
-    }
-
-    // 3) Não confirmado (PIX/NFC/TEF, QR de contato, vendas/caixa, etc.) —
-    // preenche o texto com o exemplo do catálogo e deixa o usuário completar/enviar
+  // Preenche o campo de texto com o exemplo do catálogo — usado quando a
+  // função não tem handler confirmado (ainda não está no registry).
+  const fallbackToText = useCallback((fn: AssistantFunction) => {
     const starter = fn.example_phrases?.[0] ?? fn.function_name;
     setInput(starter + (starter.endsWith(' ') ? '' : ' '));
     setTimeout(() => inputRef.current?.focus(), 50);
-  }, [selectedAssistantId, currentAssistant]);
+  }, []);
+
+  // ── Clique num card de função ────────────────────────────────────────────
+  const handleFunctionSelect = useCallback(async (fn: AssistantFunction) => {
+    if (!selectedAssistantId) return;
+
+    // Legado — só estes três continuam pelo fluxo de texto/MCP
+    if (LEGACY_MCP_KEYS.has(fn.function_key)) { fallbackToText(fn); return; }
+
+    const def = FUNCTIONS_REGISTRY[fn.function_key];
+    if (!def) {
+      // Ainda não está no registry (ex: pre_atendimento, qrcode_whatsapp,
+      // qrcode_instagram, gerar_descricao_midia, publicar_midia)
+      fallbackToText(fn);
+      return;
+    }
+
+    try {
+      // Sem handler próprio (ex: os QR Code de contato) — chama a edge
+      // function direto. Contrato não confirmado — ajustar se não funcionar.
+      if (!def.handler) {
+        if (!def.edgeFunction || !def.uiComponent) { fallbackToText(fn); return; }
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/${def.edgeFunction}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
+            body: JSON.stringify({ company_id: selectedAssistantId, function_key: fn.function_key }),
+          }
+        );
+        const result = await res.json();
+        if (!res.ok) { pushAssistantMessage(`Não consegui abrir "${fn.function_name}".`); return; }
+        setActiveModal({ type: def.uiComponent, data: { companyId: selectedAssistantId, ...result } });
+        return;
+      }
+
+      const success = await def.handler({
+        transcript: '',
+        companyId: selectedAssistantId,
+        functionSettings: {},
+        playText: pushAssistantMessage,
+        setIsProcessing: setLoading,
+        setActiveModal,
+        sessionId: null,
+        widgetMode: true, // widget pequeno — handlers de navegação (Modo Venda/Fila/Link na Bio) se bloqueiam sozinhos
+        slug: currentAssistant?.slug,
+      });
+
+      if (success && def.creditsPerUse) {
+        supabase.rpc('register_function_usage', {
+          p_company_id: selectedAssistantId,
+          p_function_key: fn.function_key,
+          p_credits_consumed: def.creditsPerUse,
+        }).then(({ error }) => { if (error) console.error('register_function_usage:', error); });
+      }
+    } catch (err) {
+      console.error(`Erro ao executar ${fn.function_key}:`, err);
+      pushAssistantMessage(`Não consegui abrir "${fn.function_name}". Tente novamente.`);
+    }
+  }, [selectedAssistantId, currentAssistant, supabase, pushAssistantMessage, fallbackToText]);
 
   // ── Submit do campo de texto livre ───────────────────────────────────────
   const handleSubmit = useCallback(() => {
@@ -494,7 +474,6 @@ export default function DashboardMcpWidget() {
           <p className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>Assistente minhAi</p>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
-          {/* Mesma lógica do seletor do header do dashboard — ícone no mobile, seletor completo no desktop */}
           <AssistantSelectorHeader />
           <button onClick={() => setIsOpen(false)} className={`p-1.5 rounded-lg transition-colors ${isDark ? 'hover:bg-white/10 text-white/60' : 'hover:bg-gray-100 text-gray-500'}`}>
             <X className="w-4 h-4" />
@@ -609,8 +588,7 @@ export default function DashboardMcpWidget() {
         activeModal={activeModal}
         onClose={() => setActiveModal(null)}
         theme={isDark ? 'dark' : 'light'}
-        playText={playText}
-        widgetMode
+        playText={pushAssistantMessage}
         slug={currentAssistant?.slug}
       />
     </>,

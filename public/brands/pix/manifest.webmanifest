@@ -1,0 +1,17 @@
+// public/brands/pix/manifest.webmanifest
+{
+  "name": "Pix Wiki",
+  "short_name": "pix.wiki",
+  "description": "O link curto Pix da minhAi",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/brands/pix/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

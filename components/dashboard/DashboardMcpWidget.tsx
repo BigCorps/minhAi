@@ -130,12 +130,25 @@ function FunctionCarousel({
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [chipRect, setChipRect] = useState<DOMRect | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // ── FIX: guard para garantir que document.body existe antes do createPortal ──
+  // ── FIX #1: guard para garantir que document.body existe antes do createPortal ──
   const [mounted, setMounted] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
+  const panelRef  = useRef<HTMLDivElement>(null);
+  const trackRef  = useRef<HTMLDivElement>(null);
+  const wrapRef   = useRef<HTMLDivElement>(null);
 
-  // ── FIX: setar mounted=true apenas após hydration no cliente ──────────────
+  // ── FIX #2: estado de drag para swipe manual no mobile ───────────────────
+  // Guardamos tudo em refs para não re-renderizar durante o gesto.
+  const dragState = useRef<{
+    dragging: boolean;
+    startX: number;
+    // offset CSS acumulado antes deste gesto (extraído da matrix do transform)
+    baseOffset: number;
+    // total de largura de uma cópia (para o loop infinito)
+    loopWidth: number;
+    // offset atual durante o drag (para detectar tap vs swipe)
+    currentOffset: number;
+  }>({ dragging: false, startX: 0, baseOffset: 0, loopWidth: 0, currentOffset: 0 });
+
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
@@ -168,8 +181,80 @@ function FunctionCarousel({
   const COPIES = 8;
   const duplicated = Array.from({ length: COPIES }, () => categories).flat();
 
-  const pause  = useCallback(() => { if (trackRef.current) trackRef.current.style.animationPlayState = 'paused'; }, []);
-  const resume = useCallback(() => { if (trackRef.current && !activeCategory) trackRef.current.style.animationPlayState = 'running'; }, [activeCategory]);
+  // ── helpers de animação CSS ───────────────────────────────────────────────
+  const pauseAnim  = useCallback(() => {
+    if (trackRef.current) trackRef.current.style.animationPlayState = 'paused';
+  }, []);
+  const resumeAnim = useCallback(() => {
+    if (trackRef.current && !activeCategory) trackRef.current.style.animationPlayState = 'running';
+  }, [activeCategory]);
+
+  // ── lê o translateX atual da matrix (funciona mesmo com animação CSS) ─────
+  function getCurrentTranslateX(): number {
+    if (!trackRef.current) return 0;
+    const style = window.getComputedStyle(trackRef.current);
+    const matrix = new DOMMatrixReadOnly(style.transform);
+    return matrix.m41; // translateX em px
+  }
+
+  // ── converte o translateX para dentro do intervalo de uma cópia (loop) ────
+  function normalizeOffset(offset: number, loopWidth: number): number {
+    if (loopWidth <= 0) return offset;
+    let o = offset % loopWidth;
+    if (o > 0) o -= loopWidth; // mantém sempre negativo (rola pra esquerda)
+    return o;
+  }
+
+  // ── TOUCH START ───────────────────────────────────────────────────────────
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!trackRef.current) return;
+    pauseAnim();
+
+    const loopWidth = trackRef.current.scrollWidth / COPIES;
+    const baseOffset = getCurrentTranslateX();
+
+    // congela o elemento na posição atual, removendo a animação CSS temporariamente
+    trackRef.current.style.animation = 'none';
+    trackRef.current.style.transform = `translateX(${baseOffset}px)`;
+
+    dragState.current = {
+      dragging: true,
+      startX: e.touches[0].clientX,
+      baseOffset: normalizeOffset(baseOffset, loopWidth),
+      loopWidth,
+      currentOffset: baseOffset,
+    };
+  }, [pauseAnim]);
+
+  // ── TOUCH MOVE ────────────────────────────────────────────────────────────
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const ds = dragState.current;
+    if (!ds.dragging || !trackRef.current) return;
+
+    const delta = e.touches[0].clientX - ds.startX;
+    let newOffset = normalizeOffset(ds.baseOffset + delta, ds.loopWidth);
+    ds.currentOffset = newOffset;
+    trackRef.current.style.transform = `translateX(${newOffset}px)`;
+  }, []);
+
+  // ── TOUCH END ─────────────────────────────────────────────────────────────
+  const handleTouchEnd = useCallback(() => {
+    const ds = dragState.current;
+    if (!ds.dragging || !trackRef.current) return;
+    ds.dragging = false;
+
+    // Retoma a animação CSS a partir da posição atual usando animation-delay negativo.
+    // O keyframe vai de 0 → -100%/COPIES. Calculamos em que % do ciclo estamos.
+    const totalDuration = categories.length * 2.2; // segundos — igual ao inline style
+    const loopPct = ds.loopWidth > 0 ? Math.abs(ds.currentOffset) / ds.loopWidth : 0; // 0..1
+    const delay = -(loopPct * totalDuration); // negativo = começa no meio
+
+    trackRef.current.style.transform = '';
+    trackRef.current.style.animation =
+      `mcp-scroll ${totalDuration}s linear ${delay}s infinite`;
+    trackRef.current.style.animationPlayState =
+      activeCategory ? 'paused' : 'running';
+  }, [activeCategory, categories.length]);
 
   function getPanelPosition(): React.CSSProperties {
     if (!chipRect) return {};
@@ -184,7 +269,7 @@ function FunctionCarousel({
 
   return (
     <div className={`relative w-full transition-all duration-500 ${isModalOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
-      {/* ── FIX: `mounted &&` garante que document.body existe antes do portal ── */}
+      {/* ── FIX #1: `mounted &&` garante que document.body existe antes do portal ── */}
       {mounted && activeCategory && createPortal(
         <div ref={panelRef} className="z-[10000]" style={getPanelPosition()}>
           <div
@@ -215,16 +300,33 @@ function FunctionCarousel({
         document.body
       )}
 
-      <div className="w-full overflow-hidden py-2" onMouseEnter={pause} onMouseLeave={resume} onTouchStart={pause} onTouchEnd={resume} onTouchCancel={resume}>
+      {/* ── FIX #2: wrapper com handlers de touch para drag manual ── */}
+      <div
+        ref={wrapRef}
+        className="w-full overflow-hidden py-2"
+        onMouseEnter={pauseAnim}
+        onMouseLeave={resumeAnim}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        style={{ touchAction: 'pan-y' }} // permite scroll vertical da página, bloqueia horizontal para o drag
+      >
         <div
           ref={trackRef}
           className="flex gap-2 w-max"
-          style={{ animation: `mcp-scroll ${categories.length * 2.2}s linear infinite`, animationPlayState: activeCategory ? 'paused' : 'running', willChange: 'transform' }}
+          style={{
+            animation: `mcp-scroll ${categories.length * 2.2}s linear infinite`,
+            animationPlayState: activeCategory ? 'paused' : 'running',
+            willChange: 'transform',
+          }}
         >
           {duplicated.map((cat, idx) => (
             <button
               key={`${cat.key}-${idx}`}
               onClick={(e) => {
+                // ignora cliques que vieram de um swipe (deslocamento > 6px)
+                if (Math.abs(dragState.current.currentOffset - dragState.current.baseOffset) > 6) return;
                 if (activeCategory === cat.key) { setActiveCategory(null); setChipRect(null); }
                 else { setActiveCategory(cat.key); setChipRect(e.currentTarget.getBoundingClientRect()); }
               }}

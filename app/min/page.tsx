@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { AssistantProvider, useAssistant } from '@/contexts/AssistantContext';
 import { AssistantSelectorHeader } from '@/components/layout/AssistantSelectorHeader';
-import { ActionModals } from '@/components/assistant/VoiceAssistant/ActionModals';
+import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
 
 const LOGIN_URL = '/min/login';
 

@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Send, Loader2, Bot, ChevronDown } from 'lucide-react';
+import { X, Send, Loader2, Bot, ChevronDown, Sparkles } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { createClient } from '@/lib/supabase-browser';
-import { ActionModals } from '@/components/assistant/VoiceAssistant/ActionModals';
+import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
 import { AssistantSelectorHeader } from '@/components/layout/AssistantSelectorHeader';
 
 // ============================================================================
@@ -261,7 +261,7 @@ export default function DashboardMcpWidget() {
       className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-[9998] flex items-center gap-2 px-4 sm:px-5 py-3 rounded-full font-bold text-sm text-white shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl active:scale-95"
       style={{ background: 'linear-gradient(135deg, #3B82F6, #10B981)' }}
     >
-      <Bot className="w-4 h-4" />
+      <Sparkles className="w-4 h-4" />
       <span>min.IA</span>
       <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
     </button>
@@ -284,7 +284,7 @@ export default function DashboardMcpWidget() {
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b flex-shrink-0" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #3B82F6, #10B981)' }}>
-            <Bot className="w-4 h-4 text-white" />
+            <Sparkles className="w-4 h-4 text-white" />
           </div>
           <p className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>Assistente minhAi</p>
         </div>

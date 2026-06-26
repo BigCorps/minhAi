@@ -30,13 +30,21 @@ export default function PixRootPage() {
     localStorage.setItem('publicTheme', next);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
 
-    if (slug.trim()) {
-      router.push(`/pix/${slug.trim().toLowerCase()}`);
-    }
-  };
+  const cleanSlug = slug
+    .trim()
+    .toLowerCase()
+    .replace(/^\/+|\/+$/g, '');
+
+  if (!cleanSlug) return;
+
+  const host = window.location.hostname.toLowerCase();
+  const isPixHost = host === 'pix.wiki' || host === 'www.pix.wiki';
+
+  router.push(isPixHost ? `/${cleanSlug}` : `/pix/${cleanSlug}`);
+};
 
   const bg = isDark ? '#020617' : '#f1f5f9';
   const cardBg = isDark ? '#0f172a' : '#ffffff';

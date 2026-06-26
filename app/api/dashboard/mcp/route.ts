@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       : ''
 
     const classification = await groq.chat.completions.create({
-      model:       'llama-3.1-8b-instant',
+      model: 'openai/gpt-oss-20b',
       max_tokens:  128,
       temperature: 0.1,
       messages: [
@@ -210,7 +210,7 @@ Retorne SOMENTE: null
 
     // ── Passo 2B: pergunta geral → Groq responde como minhAi ───────────────
     const answer = await groq.chat.completions.create({
-      model:       'llama-3.1-8b-instant',
+      model: 'openai/gpt-oss-20b',
       max_tokens:  512,
       temperature: 0.4,
       messages: [

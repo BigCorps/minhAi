@@ -473,12 +473,12 @@ const fullUrl = activeTab === 'pix' ? fullUrlPix : (hasInfinitePayHandle ? fullU
                   {whatsappWithDDI ? (
                     <>
                       <p className="text-xs text-green-700 dark:text-green-400 mb-2">
-                        Ao confirmar um PIX, você receberá uma notificação no{' '}
+                        A cada pix confirmado, você receberá uma notificação no e-mail e também no número{' '}
                         <span className="font-semibold">{whatsappFormatted}</span>.
                       </p>
                       <div className="rounded-lg bg-green-100 dark:bg-green-900/20 px-3 py-2">
                         <p className="text-xs text-green-800 dark:text-green-300">
-                          ⚠️ <strong>Importante:</strong> Caso não receba a notificação, basta enviar qualquer mensagem para o WhatsApp minhAi para reativar a janela de conversas.{' '}
+                          ⚠️ <strong>Importante:</strong> Caso não receba a notificação, {' '}
                           {waLink && (
                             <a
                               href={waLink}
@@ -486,7 +486,7 @@ const fullUrl = activeTab === 'pix' ? fullUrlPix : (hasInfinitePayHandle ? fullU
                               rel="noopener noreferrer"
                               className="underline underline-offset-2 font-semibold hover:text-green-900 dark:hover:text-green-200"
                             >
-                              Clique aqui para abrir a conversa →
+                              clique aqui para abrir a conversa →
                             </a>
                           )}
                         </p>

@@ -25,8 +25,9 @@ export default async function PixSlugValorPage({ params }: PageProps) {
     );
   }
 
-  const amount = parseFloat(valor);
-  const initialAmount = isNaN(amount) || amount <= 0 ? null : amount;
+const normalizedValor = decodeURIComponent(valor).replace(',', '.');
+const amount = parseFloat(normalizedValor);
+const initialAmount = isNaN(amount) || amount <= 0 ? null : amount;
 
-  return <PixLinkPage company={company} initialAmount={initialAmount} />;
+return <PixLinkPage company={company} initialAmount={initialAmount} />;
 }

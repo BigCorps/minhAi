@@ -133,12 +133,10 @@ function FunctionCarousel({
 }) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // ── FIX #1: guard SSR — document.body só existe no cliente ───────────────
   const [mounted, setMounted] = useState(false);
   const panelRef  = useRef<HTMLDivElement>(null);
   const trackRef  = useRef<HTMLDivElement>(null);
   const wrapRef   = useRef<HTMLDivElement>(null);
-  // ref do chip clicado para ancorar o card logo acima dele
   const activeBtnRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
@@ -173,7 +171,6 @@ function FunctionCarousel({
   const COPIES = 8;
   const duplicated = Array.from({ length: COPIES }, () => categories).flat();
 
-  // ── helpers de animação CSS ───────────────────────────────────────────────
   const pauseAnim  = useCallback(() => {
     if (trackRef.current) trackRef.current.style.animationPlayState = 'paused';
   }, []);
@@ -181,8 +178,6 @@ function FunctionCarousel({
     if (trackRef.current && !activeCategory) trackRef.current.style.animationPlayState = 'running';
   }, [activeCategory]);
 
-  // ── FIX #2: posição do card ancorada ao chip clicado (não ao chipRect) ───
-  // Recalculada a cada render para reagir ao scroll/resize.
   function getPanelStyle(): React.CSSProperties {
     const btn = activeBtnRef.current;
     if (!btn) return { display: 'none' };
@@ -191,7 +186,6 @@ function FunctionCarousel({
     let left = rect.left + rect.width / 2 - panelWidth / 2;
     if (left < 10) left = 10;
     if (left + panelWidth > window.innerWidth - 10) left = window.innerWidth - panelWidth - 10;
-    // abre ACIMA do chip, encostado nele
     return {
       position: 'fixed',
       left: `${left}px`,
@@ -201,7 +195,6 @@ function FunctionCarousel({
     };
   }
 
-  // ── FIX #3: drag touch para rolar o carrossel manualmente ────────────────
   const dragState = useRef<{
     dragging: boolean;
     startX: number;
@@ -268,7 +261,6 @@ function FunctionCarousel({
   return (
     <div className={`relative w-full transition-all duration-500 ${isModalOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
 
-      {/* ── FIX #1 + #2: portal com mounted guard e posição ancorada ao chip ── */}
       {mounted && activeCategory && createPortal(
         <div ref={panelRef} style={getPanelStyle()}>
           <div
@@ -315,7 +307,6 @@ function FunctionCarousel({
         document.body
       )}
 
-      {/* ── FIX #3: wrapper com drag touch ── */}
       <div
         ref={wrapRef}
         className="w-full overflow-hidden py-2"
@@ -340,7 +331,6 @@ function FunctionCarousel({
             <button
               key={`${cat.key}-${idx}`}
               onClick={(e) => {
-                // ignora cliques que vieram de swipe (deslocamento > 6px)
                 if (Math.abs(dragState.current.currentOffset - dragState.current.baseOffset) > 6) return;
                 if (activeCategory === cat.key) {
                   setActiveCategory(null);
@@ -417,6 +407,9 @@ function LoginRequiredModal({ onClose, isDark }: { onClose: () => void; isDark: 
 
 // ── Conteúdo — fica dentro do AssistantProvider local desta página ────────
 function MinPageContent() {
+  // ── FIX: guard de hidratação — evita mismatch SSR/cliente com next-themes ──
+  const [themeMounted, setThemeMounted] = useState(false);
+
   const [ready,    setReady]    = useState(false);
   const [hasUser,  setHasUser]  = useState(false);
   const [saldo,    setSaldo]    = useState<number | null>(null);
@@ -438,12 +431,19 @@ function MinPageContent() {
   const supabase = useRef(createClient()).current;
 
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+
+  // ── FIX: só usa o tema resolvido após montar no cliente ──────────────────
+  // Antes de montar, isDark = false para que SSR e primeiro render do cliente
+  // sejam idênticos, evitando hydration mismatch e o flash de tema quebrado.
+  const isDark = themeMounted ? resolvedTheme === 'dark' : false;
 
   const { selectedAssistantId, availableAssistants } = useAssistant();
   const currentAssistant = availableAssistants.find(a => a.id === selectedAssistantId);
 
   const playText = useCallback(async (_text: string) => {}, []);
+
+  // ── FIX: setThemeMounted separado para não interferir no fluxo de sessão ──
+  useEffect(() => { setThemeMounted(true); }, []);
 
   const refreshSaldo = useCallback(async (userId: string) => {
     const { data } = await supabase.from('user_credits').select('available_credits').eq('user_id', userId).maybeSingle();
@@ -544,6 +544,17 @@ function MinPageContent() {
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
   };
+
+  // ── FIX: enquanto o tema não montou, renderiza um placeholder neutro ─────
+  // Isso garante que SSR e o primeiro render do cliente sejam idênticos,
+  // eliminando o hydration mismatch que causava o flash de tema quebrado.
+  if (!themeMounted) {
+    return (
+      <div className="flex h-[100dvh] items-center justify-center" style={{ background: 'rgb(248,250,252)' }}>
+        <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-[100dvh]" style={{ background: isDark ? 'linear-gradient(to bottom, rgb(2,6,23), rgb(15,23,42))' : 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))' }}>

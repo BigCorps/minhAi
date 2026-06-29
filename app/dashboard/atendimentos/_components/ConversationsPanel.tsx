@@ -15,6 +15,7 @@ import {
   Pencil, Check, Search, Filter, MessageCircle,
   CheckCircle2, XCircle, Pause, Play, Smartphone,
   Camera, Users, ChevronRight, Circle,
+  Tag, StickyNote, Target,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { ConversationChatModal } from './ConversationChatModal';
@@ -41,6 +42,10 @@ type Conversation = {
   custom_name:     string | null;
   last_message_text: string | null;
   updated_at:      string;
+  tags:            string[] | null;
+  notes:           string | null;
+  pipeline_stage:  string | null;
+  estimated_value_cents: number | null;
   // join para sabermos de qual conexão é
   connection?:     Connection;
 };
@@ -53,6 +58,14 @@ const FORCE_FUNCTIONS = [
   { key: 'pix',         label: 'Gerar PIX',   icon: CreditCard, credits: 0,  hasInput: true,  placeholder: 'Valor em reais (ex: 150)' },
   { key: 'nossa_marca', label: 'Nossa Marca',  icon: Building2,  credits: 1,  hasInput: false },
   { key: 'endereco',    label: 'Endereço',     icon: MapPin,     credits: 1,  hasInput: false },
+];
+
+const PIPELINE_STAGES = [
+  { key: 'novo',           label: 'Novo',           color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  { key: 'em_atendimento', label: 'Em atendimento', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' },
+  { key: 'negociacao',     label: 'Negociação',     color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  { key: 'fechado',        label: 'Fechado',        color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  { key: 'perdido',        label: 'Perdido',        color: 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -146,6 +159,17 @@ function PlatformBadge({ platform }: { platform: string }) {
   );
 }
 
+// ─── Badge de etapa do funil ──────────────────────────────────────────────
+
+function PipelineBadge({ stage }: { stage: string }) {
+  const def = PIPELINE_STAGES.find((s) => s.key === stage) ?? PIPELINE_STAGES[0];
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${def.color}`}>
+      {def.label}
+    </span>
+  );
+}
+
 // ─── Card de conversa ─────────────────────────────────────────────────────
 
 function ConversationCard({
@@ -185,6 +209,23 @@ function ConversationCard({
             <span className="text-xs text-gray-400">{relativeTime(conv.updated_at)}</span>
           </div>
         </div>
+
+        {/* Linha 1.5: etapa do funil + tags */}
+        {((conv.pipeline_stage && conv.pipeline_stage !== 'novo') || (conv.tags && conv.tags.length > 0)) && (
+          <div className="flex items-center gap-1.5 flex-wrap mb-2 pl-3.5">
+            {conv.pipeline_stage && conv.pipeline_stage !== 'novo' && (
+              <PipelineBadge stage={conv.pipeline_stage} />
+            )}
+            {(conv.tags || []).slice(0, 3).map((tag) => (
+              <span key={tag} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400">
+                <Tag className="h-2.5 w-2.5" />{tag}
+              </span>
+            ))}
+            {(conv.tags || []).length > 3 && (
+              <span className="text-[10px] text-gray-400">+{conv.tags!.length - 3}</span>
+            )}
+          </div>
+        )}
 
         {/* Linha 2: última mensagem */}
         {conv.last_message_text && (
@@ -325,12 +366,18 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
   onDone:     (msg: string) => void;
 }) {
   const supabase  = createClient();
-  const [tab, setTab]               = useState<'function' | 'name'>('function');
+  const [tab, setTab]               = useState<'function' | 'funnel' | 'notes' | 'name'>('function');
   const [loading, setLoading]       = useState(false);
   const [selectedFn, setSelectedFn] = useState(FORCE_FUNCTIONS[0].key);
   const [fnInput, setFnInput]       = useState('');
   const [customName, setCustomName] = useState(conv.custom_name ?? '');
   const [nameSaved, setNameSaved]   = useState(false);
+  const [stage, setStage]           = useState(conv.pipeline_stage || 'novo');
+  const [tagsInput, setTagsInput]   = useState((conv.tags || []).join(', '));
+  const [valueInput, setValueInput] = useState(
+    conv.estimated_value_cents ? (conv.estimated_value_cents / 100).toFixed(2) : ''
+  );
+  const [notesText, setNotesText]   = useState(conv.notes || '');
 
   const fnDef       = FORCE_FUNCTIONS.find((f) => f.key === selectedFn)!;
   const displayName = getDisplayName(conv);
@@ -381,6 +428,40 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
     finally { setLoading(false); }
   }
 
+  async function handleSaveFunnel() {
+    setLoading(true);
+    try {
+      const tagsArray = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
+      const valueCents = valueInput ? Math.round(parseFloat(valueInput.replace(',', '.')) * 100) : null;
+
+      const { error } = await supabase.from('conversation_ai_control')
+        .update({
+          pipeline_stage: stage,
+          tags: tagsArray,
+          estimated_value_cents: valueCents,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('conversation_id', conv.conversation_id)
+        .eq('page_id', conv.page_id);
+      if (error) throw error;
+      onDone('Funil atualizado');
+    } catch (e: any) { onDone('Erro: ' + e.message); }
+    finally { setLoading(false); }
+  }
+
+  async function handleSaveNotes() {
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('conversation_ai_control')
+        .update({ notes: notesText.trim() || null, updated_at: new Date().toISOString() })
+        .eq('conversation_id', conv.conversation_id)
+        .eq('page_id', conv.page_id);
+      if (error) throw error;
+      onDone('Nota salva');
+    } catch (e: any) { onDone('Erro: ' + e.message); }
+    finally { setLoading(false); }
+  }
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
@@ -406,8 +487,10 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
         {/* Tabs */}
         <div className="flex border-b border-gray-200 dark:border-white/10">
           {[
-            { key: 'function', label: 'Funções', icon: Zap   },
-            { key: 'name',     label: 'Nome',    icon: Pencil },
+            { key: 'function', label: 'Funções', icon: Zap        },
+            { key: 'funnel',   label: 'Funil',    icon: Target     },
+            { key: 'notes',    label: 'Notas',    icon: StickyNote },
+            { key: 'name',     label: 'Nome',     icon: Pencil     },
           ].map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setTab(key as any)}
               className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition border-b-2
@@ -475,6 +558,76 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
             </div>
           )}
 
+          {/* Funil */}
+          {tab === 'funnel' && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                {PIPELINE_STAGES.map((s) => (
+                  <button
+                    key={s.key}
+                    onClick={() => setStage(s.key)}
+                    className={`p-2.5 rounded-lg border text-xs font-medium transition
+                      ${stage === s.key
+                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400'
+                        : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:border-purple-300'
+                      }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                  Tags (separadas por vírgula)
+                </label>
+                <input
+                  type="text" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)}
+                  placeholder="Ex: VIP, recorrente, reclamação"
+                  className="w-full text-sm rounded-lg border p-2.5 outline-none
+                    bg-white dark:bg-slate-800 text-gray-900 dark:text-white
+                    border-gray-300 dark:border-white/10 placeholder:text-gray-400
+                    focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                  Valor estimado (R$)
+                </label>
+                <input
+                  type="text" value={valueInput} onChange={(e) => setValueInput(e.target.value)}
+                  placeholder="Ex: 150,00"
+                  className="w-full text-sm rounded-lg border p-2.5 outline-none
+                    bg-white dark:bg-slate-800 text-gray-900 dark:text-white
+                    border-gray-300 dark:border-white/10 placeholder:text-gray-400
+                    focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500"
+                />
+              </div>
+
+              <Button onClick={handleSaveFunnel} disabled={loading} className="w-full bg-purple-600 hover:bg-purple-700">
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><Target className="mr-2 h-4 w-4" />Salvar funil</>}
+              </Button>
+            </div>
+          )}
+
+          {/* Notas */}
+          {tab === 'notes' && (
+            <div className="space-y-3">
+              <textarea
+                value={notesText} onChange={(e) => setNotesText(e.target.value)} rows={6}
+                placeholder="Anotações internas sobre este contato (não visível para o cliente)..."
+                className="w-full text-sm rounded-lg border p-3 resize-none outline-none
+                  bg-white dark:bg-slate-800 text-gray-900 dark:text-white
+                  border-gray-300 dark:border-white/10 placeholder:text-gray-400
+                  focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+              />
+              <Button onClick={handleSaveNotes} disabled={loading} className="w-full">
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><StickyNote className="mr-2 h-4 w-4" />Salvar nota</>}
+              </Button>
+            </div>
+          )}
+
           {/* Nome personalizado */}
           {tab === 'name' && (
             <div className="space-y-3">
@@ -527,6 +680,8 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
   const [filter, setFilter]               = useState<Filter>('all');
   const [search, setSearch]               = useState('');
   const [showSearch, setShowSearch]       = useState(false);
+  const [selectedTag, setSelectedTag]     = useState<string | null>(null);
+  const allTags = Array.from(new Set(conversations.flatMap((c) => c.tags || []))).sort();
 
   function notify(message: string, type: 'success' | 'error' = 'success') {
     const id = ++notifId;
@@ -561,7 +716,7 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
 
       const { data } = await supabase
         .from('conversation_ai_control')
-        .select('conversation_id, page_id, platform, is_paused, sender_name, custom_name, last_message_text, updated_at')
+        .select('conversation_id, page_id, platform, is_paused, sender_name, custom_name, last_message_text, updated_at, tags, notes, pipeline_stage, estimated_value_cents')
         .in('page_id', pageIds)
         .order('updated_at', { ascending: false })
         .limit(50);
@@ -672,7 +827,8 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
       conv.conversation_id,
     ].some((s) => s.toLowerCase().includes(search.toLowerCase()));
 
-    return matchesFilter && matchesSearch;
+    const matchesTag = !selectedTag || (conv.tags || []).includes(selectedTag);
+    return matchesFilter && matchesSearch && matchesTag;
   });
 
   const pausedCount = conversations.filter((c) => c.is_paused).length;
@@ -805,6 +961,25 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
             </button>
           ))}
         </div>
+
+        {allTags.length > 0 && (
+          <div className="flex gap-1.5 px-4 pb-3 overflow-x-auto">
+            <span className="text-xs text-gray-400 self-center shrink-0">Tags:</span>
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition whitespace-nowrap
+                  ${selectedTag === tag
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/20'
+                  }`}
+              >
+                <Tag className="h-3 w-3" />{tag}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Lista */}
         <div className="px-4 pb-4 space-y-2">

@@ -516,6 +516,7 @@ async function handleToggle(functionKey: string) {
       cancelar_agendamento:      'cancelar_agendamento_enabled',
       horarios_disponiveis:      'horarios_disponiveis_enabled',
       link_pagamento:            'link_pagamento_enabled',
+      cardapio:                  'cardapio_enabled',
     };
 
     const metaColumn = META_COLUMN_MAP[functionKey];

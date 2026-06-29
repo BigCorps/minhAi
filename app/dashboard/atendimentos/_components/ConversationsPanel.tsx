@@ -16,6 +16,7 @@ import {
   CheckCircle2, XCircle, Pause, Play, Smartphone,
   Camera, Users, ChevronRight, Circle,
   Tag, StickyNote, Target,
+  LayoutGrid, List as ListIcon,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { ConversationChatModal } from './ConversationChatModal';
@@ -285,6 +286,150 @@ function ConversationCard({
   </button>
 </div>
             </div>
+    </div>
+  );
+}
+
+// ─── Kanban: Card compacto ────────────────────────────────────────────────
+
+function KanbanCard({
+  conv, onOpenChat, onOpenModal, onDragStart,
+}: {
+  conv:        Conversation;
+  onOpenChat:  (conv: Conversation) => void;
+  onOpenModal: (conv: Conversation) => void;
+  onDragStart: (e: React.DragEvent, conv: Conversation) => void;
+}) {
+  const displayName = getDisplayName(conv);
+  const value = conv.estimated_value_cents
+    ? (conv.estimated_value_cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    : null;
+
+  return (
+    <div
+      draggable
+      onDragStart={(e) => onDragStart(e, conv)}
+      onClick={() => onOpenChat(conv)}
+      className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-white/10
+        p-3 cursor-grab active:cursor-grabbing hover:border-blue-300 dark:hover:border-blue-700/50
+        transition shadow-sm"
+    >
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <User className="h-3 w-3 text-gray-400 shrink-0" />
+          <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayName}</span>
+        </div>
+        <PlatformBadge platform={conv.platform} />
+      </div>
+
+      {conv.last_message_text && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate mb-1.5">
+          {conv.last_message_text}
+        </p>
+      )}
+
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1 flex-wrap">
+          {(conv.tags || []).slice(0, 2).map((tag) => (
+            <span key={tag} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400">
+              <Tag className="h-2.5 w-2.5" />{tag}
+            </span>
+          ))}
+        </div>
+        {value && (
+          <span className="text-[11px] font-semibold text-green-600 dark:text-green-400 shrink-0">{value}</span>
+        )}
+      </div>
+
+      <button
+        onClick={(e) => { e.stopPropagation(); onOpenModal(conv); }}
+        className="mt-2 w-full inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium
+          bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/20 transition"
+      >
+        <Zap className="h-3 w-3" />Ações
+      </button>
+    </div>
+  );
+}
+
+// ─── Kanban: Board completo ───────────────────────────────────────────────
+
+function KanbanBoard({
+  conversations, onMoveStage, onOpenChat, onOpenModal,
+}: {
+  conversations: Conversation[];
+  onMoveStage:   (conv: Conversation, newStage: string) => void;
+  onOpenChat:    (conv: Conversation) => void;
+  onOpenModal:   (conv: Conversation) => void;
+}) {
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const draggedConvRef = useRef<Conversation | null>(null);
+
+  function handleDragStart(e: React.DragEvent, conv: Conversation) {
+    draggedConvRef.current = conv;
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function handleDrop(stageKey: string) {
+    setDragOverStage(null);
+    const conv = draggedConvRef.current;
+    if (!conv) return;
+    if ((conv.pipeline_stage || 'novo') !== stageKey) {
+      onMoveStage(conv, stageKey);
+    }
+    draggedConvRef.current = null;
+  }
+
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-2">
+      {PIPELINE_STAGES.map((stage) => {
+        const cards = conversations.filter((c) => (c.pipeline_stage || 'novo') === stage.key);
+        const totalValue = cards.reduce((sum, c) => sum + (c.estimated_value_cents || 0), 0);
+
+        return (
+          <div
+            key={stage.key}
+            onDragOver={(e) => { e.preventDefault(); setDragOverStage(stage.key); }}
+            onDragLeave={() => setDragOverStage(null)}
+            onDrop={() => handleDrop(stage.key)}
+            className={`shrink-0 w-72 rounded-xl border transition-colors
+              ${dragOverStage === stage.key
+                ? 'border-blue-400 bg-blue-50/50 dark:bg-blue-900/10'
+                : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02]'
+              }`}
+          >
+            <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200 dark:border-white/10">
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${stage.color}`}>
+                  {stage.label}
+                </span>
+                <span className="text-xs text-gray-400">{cards.length}</span>
+              </div>
+              {totalValue > 0 && (
+                <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                  {(totalValue / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </span>
+              )}
+            </div>
+
+            <div className="p-2 space-y-2 min-h-[80px] max-h-[calc(100vh-320px)] overflow-y-auto">
+              {cards.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-6">Nenhuma conversa aqui</p>
+              ) : (
+                cards.map((conv) => (
+                  <KanbanCard
+                    key={conv.conversation_id + conv.page_id}
+                    conv={conv}
+                    onOpenChat={onOpenChat}
+                    onOpenModal={onOpenModal}
+                    onDragStart={handleDragStart}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -680,6 +825,7 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
   const [filter, setFilter]               = useState<Filter>('all');
   const [search, setSearch]               = useState('');
   const [showSearch, setShowSearch]       = useState(false);
+  const [viewMode, setViewMode]           = useState<'list' | 'kanban'>('list');
   const [selectedTag, setSelectedTag]     = useState<string | null>(null);
   const allTags = Array.from(new Set(conversations.flatMap((c) => c.tags || []))).sort();
 
@@ -810,6 +956,36 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
     }
   }
 
+  // ── Mover etapa do funil ───────────────────────────────────────────────
+  async function handleMoveStage(conv: Conversation, newStage: string) {
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.conversation_id === conv.conversation_id && c.page_id === conv.page_id
+          ? { ...c, pipeline_stage: newStage }
+          : c
+      )
+    );
+    try {
+      const { error } = await supabase
+        .from('conversation_ai_control')
+        .update({ pipeline_stage: newStage, updated_at: new Date().toISOString() })
+        .eq('conversation_id', conv.conversation_id)
+        .eq('page_id', conv.page_id);
+      if (error) throw error;
+      const stageLabel = PIPELINE_STAGES.find((s) => s.key === newStage)?.label ?? newStage;
+      notify(`Movido para "${stageLabel}"`);
+    } catch (e: any) {
+      notify('Erro: ' + e.message, 'error');
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.conversation_id === conv.conversation_id && c.page_id === conv.page_id
+            ? { ...c, pipeline_stage: conv.pipeline_stage }
+            : c
+        )
+      );
+    }
+  }
+
   // ── Filtrar conversas ──────────────────────────────────────────────────
   const filtered = conversations.filter((conv) => {
     const matchesFilter =
@@ -890,6 +1066,14 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode(viewMode === 'list' ? 'kanban' : 'list')}
+              title={viewMode === 'list' ? 'Ver como funil (Kanban)' : 'Ver como lista'}
+              className="p-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800
+                text-gray-500 hover:text-gray-900 dark:hover:text-white transition"
+            >
+              {viewMode === 'list' ? <LayoutGrid className="h-4 w-4" /> : <ListIcon className="h-4 w-4" />}
+            </button>
             <button
               onClick={() => setShowSearch(!showSearch)}
               className={`p-2 rounded-lg border transition text-sm
@@ -981,7 +1165,7 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
           </div>
         )}
 
-        {/* Lista */}
+        {/* Lista / Kanban */}
         <div className="px-4 pb-4 space-y-2">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -1008,6 +1192,13 @@ export function ConversationsPanel({ selectedCompanyId }: { selectedCompanyId: s
                 </>
               )}
             </div>
+          ) : viewMode === 'kanban' ? (
+            <KanbanBoard
+              conversations={filtered}
+              onMoveStage={handleMoveStage}
+              onOpenChat={(c) => setChatConv(c)}
+              onOpenModal={setActiveModal}
+            />
           ) : (
             filtered.map((conv) => {
               const convKey    = conv.conversation_id + conv.page_id;

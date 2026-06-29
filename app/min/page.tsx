@@ -29,7 +29,7 @@ interface AssistantFunction {
 const LEGACY_MCP_KEYS = new Set(['pix_generate', 'faq', 'chatgpt']);
 
 // Modo Venda, Modo Fila e Link na Bio navegam pra páginas do assistente do
-// cliente final (catálogo, painel de fila, link na bio) — o Min.IA não tem
+// cliente final (catálogo, painel de fila, link na bio) — a min.IA não tem
 // acesso a essas páginas aqui, então força o bloqueio do próprio handler em
 // vez de deixar o `window.location.href` levar pra um lugar sem sentido.
 const ALWAYS_BLOCKED_NAV = new Set(['modo_venda', 'modo_fila', 'link_na_bio']);
@@ -326,7 +326,7 @@ function LoginRequiredModal({ onClose, isDark }: { onClose: () => void; isDark: 
           Entre para usar essa função
         </p>
         <p style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 20, color: isDark ? 'rgb(148,163,184)' : 'rgb(100,116,139)' }}>
-          Faça login (ou crie sua conta em segundos) e já ganhe <strong>20 créditos grátis</strong> para testar todas as funções do Min.IA.
+          Faça login (ou crie sua conta em segundos) e já ganhe <strong>20 créditos grátis</strong> para testar todas as funções da min.IA.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <a
@@ -485,7 +485,7 @@ function MinPageContent() {
 
       // Modo Venda/Fila/Link na Bio: força widgetMode=true pra esses 3 — o
       // próprio handler bloqueia e mostra o aviso, em vez de navegar pra uma
-      // página do assistente do cliente final que o Min.IA não tem acesso aqui.
+      // página do assistente do cliente final que a min.IA não tem acesso aqui.
       const success = await def.handler({
         transcript: '',
         companyId: selectedAssistantId,
@@ -540,7 +540,7 @@ function MinPageContent() {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold truncate" style={{ color: isDark ? '#fff' : '#0f172a' }}>Min.IA</p>
-            <p className="text-[11px] truncate" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#64748b' }}>A versão mini, nossa e sua IA!</p>
+            <p className="text-[11px] truncate" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#64748b' }}>A versão mini e pessoal da minhAi!</p>
           </div>
         </div>
 
@@ -690,7 +690,7 @@ function MinPageContent() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={hasUser ? 'Digite... Ex: ver agenda, traduzir texto, cep 01310100' : 'Faça login pra usar o Min.IA'}
+              placeholder={hasUser ? 'Digite... Ex: ver agenda, traduzir texto, cep 01310100' : 'Faça login pra usar a min.IA'}
               rows={1}
               className="flex-1 bg-transparent resize-none outline-none text-sm"
               style={{ color: isDark ? '#e2e8f0' : '#1e293b', maxHeight: '80px', overflowY: 'auto', appearance: 'none', WebkitAppearance: 'none' }}

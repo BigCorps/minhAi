@@ -22,15 +22,14 @@ export function getBrandByHost(hostname: string): BrandKey {
   return 'minhai';
 }
 
-export const BRANDS: Record
-  BrandKey,
-  {
-    name: string;
-    logo: string;
-    title: string;
-    description: string;
-  }
-> = {
+interface BrandInfo {
+  name: string;
+  logo: string;
+  title: string;
+  description: string;
+}
+
+export const BRANDS: Record<BrandKey, BrandInfo> = {
   minhai: {
     name: 'minhAi',
     logo: '/logo.png',

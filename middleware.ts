@@ -19,6 +19,14 @@ const ARTEFINAL_DOMAINS = ['ia.artefinal.app'];
 
 const PIX_DOMAINS = ['pix.wiki', 'www.pix.wiki'];
 
+// ── Min.IA ───────────────────────────────────────────────────────────────
+const MINIA_APP_DOMAINS = ['app.min.ia.br'];
+
+// Enquanto o repo da landing (min.ia.br) não existir, redireciona quem
+// acessar o apex direto pra ferramenta. REMOVER este array e o bloco que o
+// usa quando a landing entrar no lugar (projeto Vercel separado pro apex).
+const MINIA_APEX_TEMP_REDIRECT_DOMAINS = ['min.ia.br', 'www.min.ia.br'];
+
 // ── Todos os domínios de subdomínio de cliente ─────────────────────────────
 const SUBDOMAIN_DOMAINS = [
   { suffix: '.minhai.com.br',  pattern: /^(.+)\.minhai\.com\.br$/ },
@@ -116,7 +124,65 @@ if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
   }
 }
 
-// ── 0.1. DOMÍNIO PIX.WIKI ────────────────────────────────────────────────
+// ── 0.05. MIN.IA — redirect temporário do apex pra ferramenta ────────────
+// min.ia.br/min.ia.br ainda não tem landing própria (repo separado não
+// existe ainda) — manda direto pra ferramenta em app.min.ia.br/min.
+// REMOVER quando o repo da landing existir e for configurado como projeto
+// Vercel próprio pro apex.
+if (MINIA_APEX_TEMP_REDIRECT_DOMAINS.includes(hostname)) {
+  const url = request.nextUrl.clone();
+  url.hostname = 'app.min.ia.br';
+  url.pathname = '/min';
+  url.search = '';
+  return NextResponse.redirect(url);
+}
+
+// ── 0.1. DOMÍNIO APP.MIN.IA.BR (Min.IA) ───────────────────────────────────
+if (MINIA_APP_DOMAINS.includes(hostname)) {
+
+  if (pathname === '/favicon.ico') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/brands/minia/favicon.png';
+    return NextResponse.rewrite(url);
+  }
+
+  if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/brands/minia/manifest.webmanifest';
+    return NextResponse.rewrite(url);
+  }
+
+  // Rewrite raiz → /min (igual o padrão do ArteFinal pra /arte)
+  if (pathname === '/') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/min';
+    return NextResponse.rewrite(url);
+  }
+
+  // /min NÃO é protegido aqui — a página mostra o carrossel sem login e só
+  // pede pra entrar quando o usuário interage com uma função. O gate fica
+  // dentro do próprio componente (handleFunctionSelect), não no middleware.
+
+  // Redireciona /min/login para /min se já estiver logado
+  if (pathname === '/min/login') {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name) { return request.cookies.get(name)?.value; },
+          set() {},
+          remove() {},
+        },
+      }
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) return NextResponse.redirect(new URL('/min', request.url));
+    return NextResponse.next();
+  }
+}
+
+// ── 0.2. DOMÍNIO PIX.WIKI ────────────────────────────────────────────────
 if (PIX_DOMAINS.includes(hostname)) {
   // Se usar www.pix.wiki, redireciona para pix.wiki
   if (hostname === 'www.pix.wiki') {

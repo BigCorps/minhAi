@@ -1,6 +1,4 @@
-// lib/brand.ts
-
-export type BrandKey = 'minhai' | 'artefinal' | 'pix';
+export type BrandKey = 'minhai' | 'artefinal' | 'pix' | 'minia';
 
 export function getBrandByHost(hostname: string): BrandKey {
   const cleanHost = hostname.split(':')[0].toLowerCase();
@@ -13,10 +11,18 @@ export function getBrandByHost(hostname: string): BrandKey {
     return 'pix';
   }
 
+  if (
+    cleanHost === 'app.min.ia.br' ||
+    cleanHost === 'min.ia.br' ||
+    cleanHost === 'www.min.ia.br'
+  ) {
+    return 'minia';
+  }
+
   return 'minhai';
 }
 
-export const BRANDS: Record<
+export const BRANDS: Record
   BrandKey,
   {
     name: string;
@@ -36,7 +42,7 @@ export const BRANDS: Record<
     name: 'ArteFinal.app',
     logo: '/brands/artefinal/logo.png',
     title: 'ArteFinal.app',
-    description: 'Sua arte pronta para impressão com IA.',
+    description: 'Seu arte-finalista com IA.',
   },
 
   pix: {
@@ -44,5 +50,12 @@ export const BRANDS: Record<
     logo: '/brands/pix/pixwiki.png',
     title: 'Pix.Wiki',
     description: 'Link e QR Code Pix com confirmação automática.',
+  },
+
+  minia: {
+    name: 'min.IA',
+    logo: '/brands/minia/logo.png',
+    title: 'min.ia.br',
+    description: 'A versão mini e pessoal da minhAi!',
   },
 };

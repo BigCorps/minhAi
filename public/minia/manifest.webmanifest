@@ -1,0 +1,17 @@
+// public/brands/minia/manifest.webmanifest
+{
+  "name": "min IA",
+  "short_name": "min.ia.br",
+  "description": "A versão mini e pessoal da minhAi.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/brands/minia/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

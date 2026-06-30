@@ -54,10 +54,10 @@ export default function SceneVendas({ theme = 'dark' }: Props) {
   }
 
   return (
-    <div
-      className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
-      style={{ background: BG_DARK }}
-    >
+<div
+  className="w-full h-full rounded-2xl overflow-hidden flex flex-col select-none"
+  style={{ background: BG_MAIN }}
+>
       {/* ── Header ── */}
       <div
         className="flex items-center justify-between px-3 py-1.5 flex-shrink-0 border-b"

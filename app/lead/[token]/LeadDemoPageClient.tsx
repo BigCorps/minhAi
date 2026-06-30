@@ -79,6 +79,7 @@ export default function LeadDemoPageClient({
   const tourAudiosRef   = useRef<Map<TourType, string>>(new Map());
   /** Áudio em reprodução no momento */
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const handleTourCloseRef = useRef<() => void>(() => {});
 
   // ── Pré-busca dos áudios no background ───────────────────────
   // Disparado uma vez ao montar a página, sem bloquear a UI.
@@ -143,30 +144,31 @@ export default function LeadDemoPageClient({
 
     const blobUrl = tourAudiosRef.current.get(type);
 
-    if (blobUrl) {
-      // ✅ Google TTS pré-buscado — play dentro do gesto = iOS OK
-      const audio = new Audio(blobUrl);
-      audio.play().catch(err => {
-        console.warn('[TourAudio] play() bloqueado:', err);
-      });
-      currentAudioRef.current = audio;
-
-    } else {
-      // ⚠️ Fallback: speechSynthesis (pré-busca ainda em andamento ou falhou)
-      if (!('speechSynthesis' in window)) return;
-      const script = getTourScript(type);
-      const utter  = new SpeechSynthesisUtterance(script.audioText);
-      utter.lang   = 'pt-BR';
-      utter.rate   = 1.05;
-      // Tenta voz Google se disponível no browser
-      const voices  = window.speechSynthesis.getVoices();
-      const ptVoice =
-        voices.find(v => v.lang === 'pt-BR' && v.name.includes('Google')) ??
-        voices.find(v => v.lang === 'pt-BR') ??
-        voices.find(v => v.lang.startsWith('pt'));
-      if (ptVoice) utter.voice = ptVoice;
-      window.speechSynthesis.speak(utter);
-    }
+if (blobUrl) {
+  const audio = new Audio(blobUrl);
+  // Fecha o tour exatamente quando o áudio real termina — não num timer fixo
+  audio.onended = () => handleTourCloseRef.current();
+  audio.onerror = () => handleTourCloseRef.current();
+  audio.play().catch(err => {
+    console.warn('[TourAudio] play() bloqueado:', err);
+  });
+  currentAudioRef.current = audio;
+} else {
+  if (!('speechSynthesis' in window)) return;
+  const script = getTourScript(type);
+  const utter  = new SpeechSynthesisUtterance(script.audioText);
+  utter.lang   = 'pt-BR';
+  utter.rate   = 1.10;
+  const voices  = window.speechSynthesis.getVoices();
+  const ptVoice =
+    voices.find(v => v.lang === 'pt-BR' && v.name.includes('Google')) ??
+    voices.find(v => v.lang === 'pt-BR') ??
+    voices.find(v => v.lang.startsWith('pt'));
+  if (ptVoice) utter.voice = ptVoice;
+  utter.onend   = () => handleTourCloseRef.current();
+  utter.onerror = () => handleTourCloseRef.current();
+  window.speechSynthesis.speak(utter);
+}
   }, []); // refs são estáveis
 
   const stopTourAudio = useCallback(() => {
@@ -203,10 +205,14 @@ export default function LeadDemoPageClient({
     setTourState({ active: true, type: 'assistente' });
   }, [startTourAudio]);
 
-  const handleTourClose = useCallback(() => {
-    stopTourAudio();
-    setTourState({ active: false, type: null });
-  }, [stopTourAudio]);
+const handleTourClose = useCallback(() => {
+  stopTourAudio();
+  setTourState({ active: false, type: null });
+}, [stopTourAudio]);
+
+useEffect(() => {
+  handleTourCloseRef.current = handleTourClose;
+}, [handleTourClose]);
 
   // ── Frase do avatar ──────────────────────────────────────────
 

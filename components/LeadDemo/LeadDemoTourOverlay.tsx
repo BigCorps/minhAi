@@ -46,11 +46,14 @@ export function LeadDemoTourOverlay({ type, onClose, theme = 'dark' }: Props) {
     return () => cancelAnimationFrame(raf)
   }, [])
 
-  useEffect(() => {
-    const t = setTimeout(handleClose, script.fallbackDuration)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [script.fallbackDuration])
+useEffect(() => {
+  // Rede de segurança: só dispara se o áudio nunca emitir onended/onerror
+  // (ex.: play() bloqueado, erro silencioso). Margem generosa de propósito.
+  const safetyMs = script.fallbackDuration + 15000
+  const t = setTimeout(handleClose, safetyMs)
+  return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [script.fallbackDuration])
 
   const handleClose = () => {
     if (closedRef.current) return
@@ -118,7 +121,7 @@ export function LeadDemoTourOverlay({ type, onClose, theme = 'dark' }: Props) {
         <div className="w-full h-full">
           {type === 'carrossel'  && <TourCarrossel  theme={theme} />}
           {type === 'assistente' && <TourAssistente theme={theme} />}
-          {type === 'modos'      && <TourModos />}
+          {type === 'modos'      && <TourModos      theme={theme} />}
         </div>
       </div>
 

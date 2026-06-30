@@ -18,11 +18,15 @@ const SCENE_DURATION = 9500
 
 const LABELS: Record<SceneId, string> = {
   vendas: 'Modo Vendas',
-  fila:   'Modo Fila & Link',
-  totem:  'Modo Totem & Login',
+  fila:   'Modo Fila e Modo Link',
+  totem:  'Modo Totem e Modo Cliente',
 }
 
-export default function TourModos() {
+interface Props {
+  theme?: 'dark' | 'light'
+}
+
+export default function TourModos({ theme = 'dark' }: Props) {
   const [idx, setIdx]         = useState(0)
   const [visible, setVisible] = useState(true)
 
@@ -69,9 +73,9 @@ export default function TourModos() {
           transition: 'opacity 0.4s ease, transform 0.4s ease',
         }}
       >
-        {scene === 'vendas' && <SceneVendas />}
-        {scene === 'fila'   && <SceneFila />}
-        {scene === 'totem'  && <SceneTotem />}
+        {scene === 'vendas' && <SceneVendas theme={theme} />}
+        {scene === 'fila'   && <SceneFila theme={theme} />}
+        {scene === 'totem'  && <SceneTotem theme={theme} />}
       </div>
     </div>
   )

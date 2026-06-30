@@ -75,13 +75,13 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
 
           <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 justify-center">
             <a
-              href="/login"
+              href="/lead"
               className="w-full sm:w-auto px-6 py-2 sm:py-2.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-xs sm:text-sm text-center shadow-lg hover:shadow-xl hover:scale-105"
             >
-              Criar Minha IA Grátis
+              Demonstração Ao Vivo
             </a>
             <a
-              href="/lead"
+              href="/login"
               className={`
                 w-full sm:w-auto px-6 py-2 sm:py-2.5
                 border-2 rounded-full transition-all duration-300 font-bold text-xs sm:text-sm text-center hover:scale-105
@@ -91,7 +91,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
                 }
               `}
             >
-              Demonstração Ao Vivo
+              Criar minha IA Grátis
             </a>
           </div>
 

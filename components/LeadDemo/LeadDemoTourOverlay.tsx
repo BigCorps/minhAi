@@ -49,7 +49,7 @@ export function LeadDemoTourOverlay({ type, onClose, theme = 'dark' }: Props) {
 useEffect(() => {
   // Rede de segurança: só dispara se o áudio nunca emitir onended/onerror
   // (ex.: play() bloqueado, erro silencioso). Margem generosa de propósito.
-  const safetyMs = script.fallbackDuration + 15000
+  const safetyMs = script.fallbackDuration + 25000
   const t = setTimeout(handleClose, safetyMs)
   return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps

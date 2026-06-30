@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { createClient }          from '@/lib/supabase-browser';
 import EmbeddedSignupButton      from '@/components/meta/EmbeddedSignupButton';
+import { MetaStatsCard }         from './MetaStatsCard';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────
 
@@ -794,6 +795,7 @@ const handleDisconnect = async (connectionId: string) => {
 
           ) : (
             <div className="space-y-4">
+              <MetaStatsCard companyId={selectedCompanyId} />
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
                   {connections.length}{' '}

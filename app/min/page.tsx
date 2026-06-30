@@ -535,9 +535,9 @@ function MinPageContent() {
       {/* Header */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b flex-shrink-0" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #3B82F6, #10B981)' }}>
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
+            <div className="w-24 h-24 overflow-hidden mb-1">
+              <img src="/minia/logo.png" alt="min.IA" className="w-full h-full object-cover" />
+            </div>
           <div className="min-w-0">
             <p className="text-sm font-bold truncate" style={{ color: isDark ? '#fff' : '#0f172a' }}>Min.IA</p>
             <p className="text-[11px] truncate" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#64748b' }}>A versão mini e pessoal da minhAi!</p>
@@ -632,8 +632,8 @@ function MinPageContent() {
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 max-w-md mx-auto">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-1" style={{ background: 'linear-gradient(135deg, #3B82F6, #10B981)' }}>
-              <Sparkles className="w-10 h-10 text-white" />
+            <div className="w-24 h-24 overflow-hidden mb-1">
+              <img src="/minia/logo.png" alt="min.IA" className="w-full h-full object-cover" />
             </div>
             <p className="text-base font-semibold" style={{ color: isDark ? '#fff' : '#0f172a' }}>Como posso te ajudar hoje?</p>
             <p className="text-sm" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#64748b' }}>

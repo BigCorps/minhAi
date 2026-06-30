@@ -300,7 +300,7 @@ export function LeadDemoAssistant({
       )}
 
       {/* Input: texto + microfone */}
-      <form onSubmit={handleTextSubmit} className="fixed bottom-6 left-4 right-4 max-w-2xl mx-auto flex items-center gap-2 p-3 inset-x-0">
+      <form onSubmit={handleTextSubmit} className="fixed bottom-6 left-0 right-0 max-w-7xl mx-auto flex items-center gap-2 px-4 sm:px-6 lg:px-8">
         <input
           type="text"
           value={textInput}

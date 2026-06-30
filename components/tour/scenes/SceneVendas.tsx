@@ -17,11 +17,16 @@ const CATEGORIES = ['Todos', 'Cafés', 'Lanches', 'Bebidas']
 
 type DeliveryMode = 'grid' | 'entrega' | 'checkout'
 
-const BG_DARK = '#0f172a'
-const BG_CARD = 'rgba(255,255,255,0.04)'
-const BORDER  = 'rgba(255,255,255,0.08)'
+interface Props {
+  theme?: 'dark' | 'light'
+}
 
-export default function SceneVendas() {
+export default function SceneVendas({ theme = 'dark' }: Props) {
+  const isDark = theme !== 'light'
+  const BG_MAIN = isDark ? '#0f172a' : '#f8fafc'
+  const BG_CARD = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'
+  const BORDER  = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
+  const TEXT    = isDark ? 'rgba(255,255,255,0.7)'  : 'rgba(0,0,0,0.65)'
   const [activeCat, setActiveCat]     = useState('Todos')
   const [cart, setCart]               = useState<Record<string, number>>({ '1': 1, '2': 1 })
   const [mode, setMode]               = useState<DeliveryMode>('grid')

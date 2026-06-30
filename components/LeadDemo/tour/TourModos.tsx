@@ -22,11 +22,10 @@ const LABELS: Record<SceneId, string> = {
   totem:  'Modo Totem e Modo Cliente',
 }
 
-interface Props {
-  theme?: 'dark' | 'light'
-}
+interface Props { theme?: 'dark' | 'light' }
 
 export default function TourModos({ theme = 'dark' }: Props) {
+  const isDark = theme !== 'light'
   const [idx, setIdx]         = useState(0)
   const [visible, setVisible] = useState(true)
 
@@ -52,12 +51,12 @@ export default function TourModos({ theme = 'dark' }: Props) {
           <div
             key={s}
             className="px-3 py-1 rounded-full text-xs font-semibold transition-all duration-300"
-            style={{
-              background: i === idx ? 'rgba(59,130,246,0.3)'   : 'rgba(255,255,255,0.05)',
-              border:     `1px solid ${i === idx ? 'rgba(59,130,246,0.6)' : 'rgba(255,255,255,0.1)'}`,
-              color:      i === idx ? '#93c5fd' : 'rgba(255,255,255,0.3)',
-              transform:  i === idx ? 'scale(1.06)' : 'scale(1)',
-            }}
+tsxstyle={{
+  background: i === idx ? 'rgba(59,130,246,0.3)' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
+  border:     `1px solid ${i === idx ? 'rgba(59,130,246,0.6)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
+  color:      i === idx ? '#93c5fd' : (isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.45)'),
+  transform:  i === idx ? 'scale(1.06)' : 'scale(1)',
+}}
           >
             {LABELS[s]}
           </div>
@@ -66,11 +65,13 @@ export default function TourModos({ theme = 'dark' }: Props) {
 
       {/* Cena com fade + slide */}
       <div
-        className="flex-1 min-h-0 rounded-2xl overflow-hidden"
+        className="flex-1 min-h-0 rounded-2xl overflow-hidden mx-auto w-full"
         style={{
           opacity:   visible ? 1 : 0,
           transform: visible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.97)',
           transition: 'opacity 0.4s ease, transform 0.4s ease',
+          maxWidth:  '700px',
+          maxHeight: 'clamp(220px, 52dvh, 520px)',
         }}
       >
         {scene === 'vendas' && <SceneVendas theme={theme} />}

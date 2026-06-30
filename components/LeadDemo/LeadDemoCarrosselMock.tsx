@@ -67,18 +67,17 @@ export function LeadDemoCarrosselMock({ theme = 'dark', onCarrosselClick }: Prop
             <div
               key={i}
               className="flex-shrink-0 flex items-center rounded-xl"
-              style={{
-                fontSize: 'clamp(0.48rem, 1.1vw, 0.62rem)',
-                fontWeight: 600,
-                color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.70)',
-                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-                border: isDark
-                  ? '1px solid rgba(255,255,255,0.08)'
-                  : '1px solid rgba(0,0,0,0.08)',
-                borderLeft: `3px solid ${cat.color}`,
-                padding: '5px 10px',
-                whiteSpace: 'nowrap',
-              }}
+style={{
+  fontSize: '0.875rem',
+  fontWeight: 600,
+  color: isDark ? '#fff' : 'rgba(0,0,0,0.85)',
+  background: isDark ? 'rgba(255,255,255,0.10)' : '#fff',
+  borderLeft: `4px solid ${cat.color}`,
+  borderRadius: '0.75rem',
+  padding: '12px 20px',
+  whiteSpace: 'nowrap',
+  boxShadow: isDark ? '0 2px 4px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.05)',
+}}
             >
               {cat.name}
             </div>

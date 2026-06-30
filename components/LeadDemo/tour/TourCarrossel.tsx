@@ -142,17 +142,17 @@ export default function TourCarrossel({ theme = 'dark' }: Props) {
           <div className="flex gap-2 items-center justify-center px-2">
             {STATIC_VISIBLE.map((cat, i) => (
               <div key={i} className="flex-shrink-0 flex items-center rounded-xl"
-                style={{
-                  fontSize: 'clamp(0.48rem,1.1vw,0.62rem)',
-                  fontWeight: cat.name === ACTIVE_CATEGORY ? 700 : 600,
-                  color:      catColor(cat.name === ACTIVE_CATEGORY),
-                  background: catBg(cat.name === ACTIVE_CATEGORY),
-                  border:    `1px solid ${catBorder(cat.name === ACTIVE_CATEGORY)}`,
-                  borderLeft: `3px solid ${cat.color}`,
-                  padding: '5px 10px', whiteSpace: 'nowrap',
-                  transform: cat.name === ACTIVE_CATEGORY ? 'scale(1.05)' : 'scale(1)',
-                  transition: 'transform 200ms ease',
-                }}>
+style={{
+  fontSize: '0.875rem',
+  fontWeight: 600,
+  color: isDark ? '#fff' : 'rgba(0,0,0,0.85)',
+  background: isDark ? 'rgba(255,255,255,0.10)' : '#fff',
+  borderLeft: `4px solid ${cat.color}`,
+  borderRadius: '0.75rem',
+  padding: '12px 20px',
+  whiteSpace: 'nowrap',
+  boxShadow: isDark ? '0 2px 4px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.05)',
+}}>
                 {cat.name}
               </div>
             ))}

@@ -91,7 +91,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
                 }
               `}
             >
-              Ver demonstração ao vivo
+              Demonstração Ao Vivo
             </a>
           </div>
 

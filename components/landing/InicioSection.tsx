@@ -175,7 +175,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               href="/lead"
               className="flex-1 sm:flex-none px-4 sm:px-8 py-2 sm:py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-xs sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
             >
-              Teste em Tempo Real
+              Teste nosso Suporte
             </Link>
             <Link
               href="/ia/suporte"
@@ -188,7 +188,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
                 }
               `}
             >
-              Ver Demonstração
+              Demonstração Ao Vivo
             </Link>
           </div>
 

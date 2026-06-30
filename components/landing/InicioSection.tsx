@@ -172,13 +172,13 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           {/* CTAs */}
           <div className="flex flex-row items-center justify-center gap-2 sm:gap-4">
             <Link
-              href="/login"
+              href="/lead"
               className="flex-1 sm:flex-none px-4 sm:px-8 py-2 sm:py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-xs sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
             >
-              Criar Minha IA Grátis
+              Teste em Tempo Real
             </Link>
             <Link
-              href="/lead"
+              href="/ia/suporte"
               className={`
                 flex-1 sm:flex-none px-4 sm:px-8 py-2 sm:py-3.5
                 border-2 rounded-full transition-all duration-300 font-bold text-xs sm:text-base text-center hover:scale-105
@@ -188,7 +188,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
                 }
               `}
             >
-              Ver demonstração ao vivo
+              Ver Demonstração
             </Link>
           </div>
 

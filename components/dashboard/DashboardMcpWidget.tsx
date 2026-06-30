@@ -543,7 +543,7 @@ export default function DashboardMcpWidget() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
-            placeholder="Digite... Ex: ver agenda, traduzir texto, cep 01310100"
+            placeholder="Digite sua pergunta ou função"
             rows={1}
             className="flex-1 bg-transparent resize-none outline-none text-sm"
             style={{ color: isDark ? '#e2e8f0' : '#1e293b', maxHeight: '80px', overflowY: 'auto' }}

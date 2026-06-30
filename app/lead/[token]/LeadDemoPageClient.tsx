@@ -7,6 +7,13 @@
 // Quando o usuário clica, o blob já está pronto → audio.play() dentro
 // do gesto → funciona no iOS Safari sem bloqueio de autoplay.
 // Fallback: speechSynthesis se a pré-busca ainda não terminou ou falhou.
+//
+// CORREÇÃO: trocado AvatarFace (componente do assistente real,
+// controlado externamente por isSpeaking/isListening/isProcessing,
+// sem ciclo de animação próprio — ficava travado em avatarType="orb"
+// fixo) por LandingAvatarFace com avatarOnly, que já tem o ciclo
+// autônomo rosto↔orbe (5s/4s) embutido, sem precisar de nenhum
+// estado externo alimentando a animação.
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter }   from 'next/navigation';
@@ -20,7 +27,7 @@ import {
   getTourScript,
   type TourType,
 } from '@/components/LeadDemo/LeadDemoTourOverlay';
-import { AvatarFace }  from '@/components/AvatarFace';
+import { LandingAvatarFace } from '@/components/landing/LandingAvatarFace';
 import {
   LeadMockCheckoutModal,
   type ObjetivoInfo,
@@ -269,14 +276,7 @@ export default function LeadDemoPageClient({
             : 'opacity-100 max-h-[400px]'
         }`}>
           <div className="w-full max-w-[280px] h-[280px] relative">
-            <AvatarFace
-              isSpeaking={false}
-              isListening={false}
-              isProcessing={false}
-              theme={isDark ? 'dark' : 'light'}
-              avatarType="orb"
-              hasActivePlan
-            />
+            <LandingAvatarFace theme={isDark ? 'dark' : 'light'} avatarOnly />
           </div>
           <p className={`mt-3 text-center text-sm max-w-xs leading-relaxed px-2 ${
             isDark ? 'text-white/50' : 'text-gray-500'

@@ -17,9 +17,9 @@ const SEQUENCE: SceneId[] = ['vendas', 'fila', 'totem']
 const SCENE_DURATION = 9500
 
 const LABELS: Record<SceneId, string> = {
-  vendas: '🛍️ Modo Vendas',
-  fila:   '🎫 Modo Fila & Link',
-  totem:  '📱 Modo Totem & Login',
+  vendas: 'Modo Vendas',
+  fila:   'Modo Fila & Link',
+  totem:  'Modo Totem & Login',
 }
 
 export default function TourModos() {

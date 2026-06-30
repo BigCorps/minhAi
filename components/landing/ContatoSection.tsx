@@ -70,7 +70,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
               ${isDark ? 'text-white/45' : 'text-gray-500'}
             `}
           >
-            Crie seu Funcionário de IA grátis hoje. Sem cartão, sem contrato, sem complicação.
+            Clique abaixo para uma demonstração personalizada em tempo real.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 justify-center">
@@ -102,7 +102,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
               ${isDark ? 'text-white/25' : 'text-gray-400'}
             `}
           >
-            Ou fale com nossa equipe se preferir uma demonstração personalizada.
+             ou crie seu Funcionário de IA grátis agora! Sem cartão, sem contrato, sem complicação.
           </p>
         </div>
 

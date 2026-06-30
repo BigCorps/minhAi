@@ -50,7 +50,7 @@ export function LeadDemoCarrosselMock({ theme = 'dark', onCarrosselClick }: Prop
           className="text-xs font-semibold px-3 py-1.5 rounded-full text-white"
           style={{ background: 'rgba(59,130,246,0.88)' }}
         >
-          Toque para saber mais ✨
+          Toque para saber mais
         </span>
       </div>
 

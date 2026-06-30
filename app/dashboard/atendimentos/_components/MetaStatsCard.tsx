@@ -5,10 +5,15 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
+import { format, parseISO } from 'date-fns';
 import {
   Loader2, MessageCircle, PauseCircle, Clock, TrendingUp,
-  Users, MessageSquare, BarChart3,
+  Users, MessageSquare, BarChart3, AreaChart as AreaChartIcon,
 } from 'lucide-react';
+import {
+  LineChart, Line, BarChart, Bar, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
 
 type Stats = {
   period_days: number;
@@ -24,6 +29,11 @@ type Stats = {
   comments_answered: number;
 };
 
+type DayPoint = { date: string; dateLabel: string; count: number };
+type MsgChartType = 'line' | 'bar' | 'area';
+
+const CHART_COLOR = '#3B82F6'; // blue-500, mesmo padrão do CreditsProgressChart
+
 const FUNCTION_LABELS: Record<string, string> = {
   pix_generate: 'Gerar PIX', pix_confirm: 'Confirmar PIX', pix_check: 'Consultar PIX',
   faq: 'FAQ', nossa_marca: 'Nossa Marca', endereco: 'Endereço',
@@ -37,6 +47,20 @@ function formatSeconds(s: number): string {
   const min = Math.floor(s / 60);
   const sec = s % 60;
   return sec > 0 ? `${min}min ${sec}s` : `${min}min`;
+}
+
+function MsgTooltip({ active, payload, label }: any) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="p-2.5 border rounded-md shadow-sm bg-white border-gray-200 dark:bg-slate-800 dark:border-slate-700">
+        <p className="text-xs font-medium mb-0.5 text-gray-900 dark:text-white">{label}</p>
+        <p className="text-xs" style={{ color: CHART_COLOR }}>
+          {payload[0].value} mensagen{payload[0].value !== 1 ? 's' : ''}
+        </p>
+      </div>
+    );
+  }
+  return null;
 }
 
 function StatBlock({ icon: Icon, label, value, color }: {
@@ -57,9 +81,10 @@ function StatBlock({ icon: Icon, label, value, color }: {
 
 export function MetaStatsCard({ companyId }: { companyId: string }) {
   const supabase = createClient();
-  const [stats, setStats]     = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [period, setPeriod]   = useState(7);
+  const [stats, setStats]         = useState<Stats | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [period, setPeriod]       = useState(7);
+  const [msgChartType, setMsgChartType] = useState<MsgChartType>('bar');
 
   useEffect(() => {
     if (!companyId) return;
@@ -97,8 +122,13 @@ export function MetaStatsCard({ companyId }: { companyId: string }) {
 
   if (!stats) return null;
 
-  const maxDayCount = Math.max(1, ...Object.values(stats.messages_by_day));
-  const days = Object.keys(stats.messages_by_day).sort();
+  const dayPoints: DayPoint[] = Object.keys(stats.messages_by_day)
+    .sort()
+    .map((date) => ({
+      date,
+      dateLabel: format(parseISO(date), 'dd/MM'),
+      count: stats.messages_by_day[date],
+    }));
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-white/10 overflow-hidden">
@@ -140,27 +170,58 @@ export function MetaStatsCard({ companyId }: { companyId: string }) {
         </div>
 
         {/* Gráfico de volume por dia */}
-        {days.length > 0 && (
+        {dayPoints.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Mensagens por dia</p>
-            <div className="flex items-end gap-1 h-20">
-              {days.map((day) => {
-                const count = stats.messages_by_day[day];
-                const heightPct = (count / maxDayCount) * 100;
-                return (
-                  <div key={day} className="flex-1 flex flex-col items-center justify-end gap-1 group relative">
-                    <span className="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition absolute -top-4">
-                      {count}
-                    </span>
-                    <div
-                      className="w-full bg-blue-500 dark:bg-blue-600 rounded-t-sm transition-all hover:bg-blue-600 dark:hover:bg-blue-500"
-                      style={{ height: `${Math.max(heightPct, 4)}%` }}
-                    />
-                    <span className="text-[9px] text-gray-400">{day.substring(8, 10)}</span>
-                  </div>
-                );
-              })}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Mensagens por dia</p>
+              <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-slate-700 rounded-lg p-0.5">
+                {[
+                  { type: 'line' as const, icon: TrendingUp },
+                  { type: 'bar'  as const, icon: BarChart3 },
+                  { type: 'area' as const, icon: AreaChartIcon },
+                ].map(({ type, icon: Icon }) => (
+                  <button
+                    key={type}
+                    onClick={() => setMsgChartType(type)}
+                    className={`h-6 w-6 flex items-center justify-center rounded-md transition
+                      ${msgChartType === type
+                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                      }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                  </button>
+                ))}
+              </div>
             </div>
+
+            <ResponsiveContainer width="100%" height={140}>
+              {msgChartType === 'bar' ? (
+                <BarChart data={dayPoints}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="dateLabel" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} allowDecimals={false} width={24} />
+                  <Tooltip content={<MsgTooltip />} />
+                  <Bar dataKey="count" name="Mensagens" fill={CHART_COLOR} radius={[3, 3, 0, 0]} />
+                </BarChart>
+              ) : msgChartType === 'area' ? (
+                <AreaChart data={dayPoints}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="dateLabel" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} allowDecimals={false} width={24} />
+                  <Tooltip content={<MsgTooltip />} />
+                  <Area type="monotone" dataKey="count" name="Mensagens" stroke={CHART_COLOR} fill={CHART_COLOR} fillOpacity={0.25} />
+                </AreaChart>
+              ) : (
+                <LineChart data={dayPoints}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="dateLabel" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} allowDecimals={false} width={24} />
+                  <Tooltip content={<MsgTooltip />} />
+                  <Line type="monotone" dataKey="count" name="Mensagens" stroke={CHART_COLOR} strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              )}
+            </ResponsiveContainer>
           </div>
         )}
 

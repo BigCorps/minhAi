@@ -128,7 +128,7 @@ const VANTAGENS_INFO_CARDS = [
 // ============================================================
 const FUNCAO_ID = 'funcao-cards';
 
-const FUNCAO_TITULO = 'O que o seu funcionário IA pode fazer?';
+const FUNCAO_TITULO = 'O que a minhAi pode fazer?';
 const FUNCAO_DESCRICAO =
   'Automatizando atendimentos e processos com mais de 100 funções, que podem ser configuradas de acordo com a sua necessidade e preparada para atuar tanto no atendimento virtual quanto no presencial, ajudando clientes, apoiando funcionários, agilizando processos e evitando que oportunidades de venda fiquem sem resposta.';
 

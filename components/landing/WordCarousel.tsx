@@ -13,13 +13,20 @@ const OPCOES = [
 
 interface WordCarouselProps {
   isDark: boolean;
+  /** Quando definido, ignora a animação/rotação e renderiza só essa palavra,
+   * como texto simples (sem posicionamento absoluto/overflow-hidden). Usado
+   * na exportação em PDF, onde a técnica de reserva de largura via spans
+   * "aria-hidden" + posicionamento absoluto não é capturada de forma
+   * confiável pelo html2canvas. */
+  staticWord?: string;
 }
 
-export function WordCarousel({ isDark }: WordCarouselProps) {
+export function WordCarousel({ isDark, staticWord }: WordCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
+    if (staticWord) return; // sem animação no modo estático
     const interval = setInterval(() => {
       setIsAnimating(true);
       setTimeout(() => {
@@ -29,7 +36,15 @@ export function WordCarousel({ isDark }: WordCarouselProps) {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [staticWord]);
+
+  if (staticWord) {
+    return (
+      <span className={isDark ? 'text-green-400' : 'text-green-600'}>
+        {staticWord}
+      </span>
+    );
+  }
 
   return (
     <span

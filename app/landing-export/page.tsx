@@ -10,6 +10,7 @@
 import { useState, useEffect, useRef } from 'react'
 
 import InicioSection from '@/components/landing/InicioSection'
+import { StaticAvatarFace } from '@/components/landing/StaticAvatarFace'
 import RecursoImageSlide from '@/components/landing/RecursoImageSlide'
 import VantagensInfoSlide from '@/components/landing/VantagensInfoSlide'
 import FuncaoCardsCarousel from '@/components/landing/FuncaoCardsCarousel'
@@ -43,7 +44,16 @@ interface PdfPage {
 }
 
 const PDF_PAGES: PdfPage[] = [
-  { id: 'inicio', node: <InicioSection theme="light" /> },
+  {
+    id: 'inicio',
+    node: (
+      <InicioSection
+        theme="light"
+        staticCarouselWord="Aplicativo"
+        avatarOverride={<StaticAvatarFace />}
+      />
+    ),
+  },
   {
     id: 'recurso-vantagens',
     node: (
@@ -106,7 +116,7 @@ const PDF_PAGES: PdfPage[] = [
     ),
   },
   { id: 'provas-sociais', node: <ProvasSociaisSection theme="light" /> },
-  { id: 'depoimentos-faq', node: <DepoimentosFaqSection theme="light" /> },
+  { id: 'depoimentos-faq', node: <DepoimentosFaqSection theme="light" faqTitlesOnly /> },
   // Preços — 4 folhas: o estado inicial (título+imagem+frase+abas), e
   // cada uma das 3 versões com o overlay já aberto (initialPlan força o
   // estado sem precisar de clique).

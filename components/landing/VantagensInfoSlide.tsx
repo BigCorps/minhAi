@@ -129,7 +129,7 @@ export default function VantagensInfoSlide({
         >
           <div
             className="relative w-full max-w-[320px] md:max-w-full"
-            style={{ height: 'clamp(220px, 42vh, 420px)' }}
+            style={{ height: 'clamp(240px, 48vh, 520px)' }}
           >
             {/* Frame 0 — imagem */}
             <div

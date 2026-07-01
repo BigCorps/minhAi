@@ -6,6 +6,10 @@ import TourTrigger from '@/components/tour/TourTrigger';
 
 interface InicioSectionProps {
   theme?: 'dark' | 'light';
+  /** Usado só na exportação em PDF — trava o carrossel de palavras numa única palavra estática. */
+  staticCarouselWord?: string;
+  /** Usado só na exportação em PDF — substitui o avatar animado (SVG com filtros complexos, não captura bem no html2canvas) por uma versão estática. */
+  avatarOverride?: React.ReactNode;
 }
 
 const MINI_DESTAQUES = [
@@ -14,7 +18,7 @@ const MINI_DESTAQUES = [
   '100% em português',
 ];
 
-export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
+export default function InicioSection({ theme = 'dark', staticCarouselWord, avatarOverride }: InicioSectionProps) {
   const isDark = theme === 'dark';
 
   return (
@@ -72,7 +76,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               xl:w-[26rem] xl:h-[26rem]
             `}
           >
-            <LandingAvatarFace theme={theme} />
+            {avatarOverride ?? <LandingAvatarFace theme={theme} />}
           </div>
 
           {/*
@@ -131,7 +135,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               </span>
             </span>
             <span className="block whitespace-nowrap">
-              O{' '}<WordCarousel isDark={isDark} />{' '}IA que
+              O{' '}<WordCarousel isDark={isDark} staticWord={staticCarouselWord} />{' '}IA que
             </span>
             <span className="block whitespace-nowrap">
               vende e atende{' '}

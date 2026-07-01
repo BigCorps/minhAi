@@ -12,6 +12,11 @@
 
 interface DepoimentosFaqSectionProps {
   theme?: 'dark' | 'light';
+  /** Usado só na exportação em PDF — mostra apenas os títulos das perguntas,
+   * sem o mecanismo de abrir/fechar (details/summary) nem o texto das
+   * respostas. O html2canvas não captura de forma confiável o estado
+   * recolhido nativo do <details>, causando texto sobreposto/ilegível. */
+  faqTitlesOnly?: boolean;
 }
 
 const DEPOIMENTOS = [
@@ -112,7 +117,7 @@ const faqJsonLd = {
   })),
 };
 
-export default function DepoimentosFaqSection({ theme = 'dark' }: DepoimentosFaqSectionProps) {
+export default function DepoimentosFaqSection({ theme = 'dark', faqTitlesOnly = false }: DepoimentosFaqSectionProps) {
   const isDark = theme === 'dark';
 
   return (
@@ -234,47 +239,72 @@ export default function DepoimentosFaqSection({ theme = 'dark' }: DepoimentosFaq
           </div>
 
           <div className="flex flex-col gap-1.5 md:gap-2">
-            {FAQS.map(({ pergunta, resposta }, i) => (
-              <details
-                key={i}
-                name="depoimentos-faq-accordion"
-                itemScope
-                itemType="https://schema.org/Question"
-                className={`
-                  group rounded-xl border cursor-pointer transition-all duration-200
-                  ${i >= 6 ? '[@media(max-height:900px)_and_(max-width:767px)]:hidden' : ''}
-                  ${i >= 4 && i < 6 ? '[@media(max-height:760px)_and_(max-width:767px)]:hidden' : ''}
-                  ${i === 3 ? '[@media(max-height:660px)_and_(max-width:767px)]:hidden' : ''}
-                  ${isDark
-                    ? 'bg-white/[0.02] border-white/8 hover:bg-white/[0.04]'
-                    : 'bg-white border-gray-100 hover:border-blue-200 shadow-sm'
-                  }
-                `}
-              >
-                <summary className="flex items-center justify-between gap-2 list-none px-3 py-2 sm:py-2.5">
+            {faqTitlesOnly ? (
+              // Modo exportação — lista simples, sem details/summary (o
+              // html2canvas não captura de forma confiável o estado
+              // recolhido nativo do <details>).
+              FAQS.map(({ pergunta }, i) => (
+                <div
+                  key={i}
+                  itemScope
+                  itemType="https://schema.org/Question"
+                  className={`rounded-xl border px-3 py-2.5 ${
+                    isDark
+                      ? 'bg-white/[0.02] border-white/8'
+                      : 'bg-white border-gray-100 shadow-sm'
+                  }`}
+                >
                   <h3
                     itemProp="name"
-                    className={`font-semibold text-xs sm:text-sm pr-1 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    className={`font-semibold text-xs sm:text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}
                   >
                     {pergunta}
                   </h3>
-                  <svg
-                    className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 group-open:rotate-180 ${isDark ? 'text-white/30' : 'text-gray-400'}`}
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </summary>
-                <div itemProp="acceptedAnswer" itemScope itemType="https://schema.org/Answer">
-                  <p
-                    itemProp="text"
-                    className={`px-3 pb-2 sm:pb-2.5 text-[11px] sm:text-xs leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}
-                  >
-                    {resposta}
-                  </p>
                 </div>
-              </details>
-            ))}
+              ))
+            ) : (
+              FAQS.map(({ pergunta, resposta }, i) => (
+                <details
+                  key={i}
+                  name="depoimentos-faq-accordion"
+                  itemScope
+                  itemType="https://schema.org/Question"
+                  className={`
+                    group rounded-xl border cursor-pointer transition-all duration-200
+                    ${i >= 6 ? '[@media(max-height:900px)_and_(max-width:767px)]:hidden' : ''}
+                    ${i >= 4 && i < 6 ? '[@media(max-height:760px)_and_(max-width:767px)]:hidden' : ''}
+                    ${i === 3 ? '[@media(max-height:660px)_and_(max-width:767px)]:hidden' : ''}
+                    ${isDark
+                      ? 'bg-white/[0.02] border-white/8 hover:bg-white/[0.04]'
+                      : 'bg-white border-gray-100 hover:border-blue-200 shadow-sm'
+                    }
+                  `}
+                >
+                  <summary className="flex items-center justify-between gap-2 list-none px-3 py-2 sm:py-2.5">
+                    <h3
+                      itemProp="name"
+                      className={`font-semibold text-xs sm:text-sm pr-1 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    >
+                      {pergunta}
+                    </h3>
+                    <svg
+                      className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 group-open:rotate-180 ${isDark ? 'text-white/30' : 'text-gray-400'}`}
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div itemProp="acceptedAnswer" itemScope itemType="https://schema.org/Answer">
+                    <p
+                      itemProp="text"
+                      className={`px-3 pb-2 sm:pb-2.5 text-[11px] sm:text-xs leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}
+                    >
+                      {resposta}
+                    </p>
+                  </div>
+                </details>
+              ))
+            )}
           </div>
         </div>
 

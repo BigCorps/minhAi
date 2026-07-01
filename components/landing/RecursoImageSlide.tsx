@@ -110,8 +110,8 @@ export default function RecursoImageSlide({
           `}
         >
           <div
-            className="relative w-full max-w-[280px] md:max-w-full md:max-h-[55vh] transition-transform duration-300 hover:scale-105"
-            style={{ height: 'clamp(120px, 30vh, 280px)' }}
+            className="relative w-full max-w-[320px] md:max-w-full transition-transform duration-300 hover:scale-105"
+            style={{ height: 'clamp(160px, 42vh, 480px)' }}
           >
             {images.map((src, i) => (
               <img

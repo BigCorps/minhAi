@@ -217,7 +217,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                 src="/precos.png"
                 alt="Planos e preços do minhAi — Smart, Vendas e Full"
                 className="max-w-[300px] md:max-w-full drop-shadow-2xl"
-                style={{ maxHeight: 'clamp(160px, 34vh, 340px)', width: 'auto', height: 'auto' }}
+                style={{ maxHeight: 'clamp(200px, 44vh, 440px)', width: 'auto', height: 'auto' }}
               />
             </div>
 
@@ -288,8 +288,10 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                                 : isDark ? 'bg-slate-800/40 border border-white/5' : 'bg-white/80 border border-gray-100 shadow-sm'
                             }`}>
                               {pkg.is_highlighted && (
-                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
-                                  Recomendado
+                                <div className="absolute -top-2 left-0 right-0 flex justify-center">
+                                  <span className="bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                                    Recomendado
+                                  </span>
                                 </div>
                               )}
                               <div className="px-4 py-3 flex items-center justify-between gap-4">
@@ -339,8 +341,10 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                               }`}
                             >
                               {pkg.is_highlighted && (
-                                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
-                                  Recomendado
+                                <div className="absolute -top-2.5 left-0 right-0 flex justify-center">
+                                  <span className="bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                                    Recomendado
+                                  </span>
                                 </div>
                               )}
 
@@ -402,8 +406,10 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                               : isDark ? 'bg-slate-800/40 border border-white/5' : 'bg-white/80 border border-gray-100 shadow-sm'
                           }`}>
                             {pkg.is_highlighted && (
-                              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
-                                Mais Popular
+                              <div className="absolute -top-2 left-0 right-0 flex justify-center">
+                                <span className="bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                                  Mais Popular
+                                </span>
                               </div>
                             )}
                             <div className="px-4 py-2.5 flex items-center justify-between gap-4">

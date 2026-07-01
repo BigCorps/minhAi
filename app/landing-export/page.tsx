@@ -41,11 +41,17 @@ import {
 interface PdfPage {
   id: string
   node: React.ReactNode
+  /** Altura de captura específica dessa página (px). Páginas com mais
+   * conteúdo (ex: Vendas, Smart) recebem mais altura; páginas mais
+   * enxutas recebem menos, evitando tanto corte quanto espaço vazio
+   * excessivo. Largura de captura é sempre a mesma (CAPTURE_W). */
+  heightPx?: number
 }
 
 const PDF_PAGES: PdfPage[] = [
   {
     id: 'inicio',
+    heightPx: 900,
     node: (
       <InicioSection
         theme="light"
@@ -56,6 +62,7 @@ const PDF_PAGES: PdfPage[] = [
   },
   {
     id: 'recurso-vantagens',
+    heightPx: 900,
     node: (
       <RecursoImageSlide
         theme="light"
@@ -74,6 +81,7 @@ const PDF_PAGES: PdfPage[] = [
   },
   {
     id: 'funcao-cards',
+    heightPx: 900,
     node: (
       <FuncaoCardsCarousel
         theme="light"
@@ -83,9 +91,10 @@ const PDF_PAGES: PdfPage[] = [
       />
     ),
   },
-  { id: 'assistentes', node: <AssistentesSection theme="light" /> },
+  { id: 'assistentes', heightPx: 1050, node: <AssistentesSection theme="light" /> },
   {
     id: 'info-compatibilidade',
+    heightPx: 850,
     node: (
       <RecursoImageSlide
         theme="light"
@@ -103,6 +112,7 @@ const PDF_PAGES: PdfPage[] = [
   },
   {
     id: 'info-vantagens',
+    heightPx: 850,
     node: (
       <VantagensInfoSlide
         theme="light"
@@ -115,16 +125,17 @@ const PDF_PAGES: PdfPage[] = [
       />
     ),
   },
-  { id: 'provas-sociais', node: <ProvasSociaisSection theme="light" /> },
-  { id: 'depoimentos-faq', node: <DepoimentosFaqSection theme="light" faqTitlesOnly /> },
+  { id: 'provas-sociais', heightPx: 900, node: <ProvasSociaisSection theme="light" /> },
+  { id: 'depoimentos-faq', heightPx: 850, node: <DepoimentosFaqSection theme="light" faqTitlesOnly /> },
   // Preços — 4 folhas: o estado inicial (título+imagem+frase+abas), e
   // cada uma das 3 versões com o overlay já aberto (initialPlan força o
-  // estado sem precisar de clique).
-  { id: 'precos', node: <PrecosSection theme="light" /> },
-  { id: 'precos-smart', node: <PrecosSection theme="light" initialPlan="smart" /> },
-  { id: 'precos-vendas', node: <PrecosSection theme="light" initialPlan="vendas" /> },
-  { id: 'precos-full', node: <PrecosSection theme="light" initialPlan="full" /> },
-  { id: 'contato', node: <ContatoSection theme="light" /> },
+  // estado sem precisar de clique). Smart e Vendas são bem mais densas
+  // (várias seções empilhadas) — recebem mais altura que Full/hero.
+  { id: 'precos', heightPx: 900, node: <PrecosSection theme="light" /> },
+  { id: 'precos-smart', heightPx: 1150, node: <PrecosSection theme="light" initialPlan="smart" /> },
+  { id: 'precos-vendas', heightPx: 1100, node: <PrecosSection theme="light" initialPlan="vendas" /> },
+  { id: 'precos-full', heightPx: 800, node: <PrecosSection theme="light" initialPlan="full" /> },
+  { id: 'contato', heightPx: 950, node: <ContatoSection theme="light" /> },
 ]
 
 // ─────────────────────────────────────────────────────────────
@@ -133,11 +144,11 @@ const PDF_PAGES: PdfPage[] = [
 const PDF_W_MM = 297
 const PDF_H_MM = 210
 
-// Tamanho de captura em pixels, na mesma proporção do A4 paisagem
-// (297:210 ≈ 1.4142:1) — largo o suficiente para garantir que os
-// estilos `md:`/`lg:` (versão desktop) do site sejam aplicados.
+// Largura de captura fixa (garante breakpoint desktop `lg:` sempre ativo).
+// A altura agora é definida por página (heightPx), já que o conteúdo de
+// cada seção tem densidade bem diferente — ver PDF_PAGES acima.
 const CAPTURE_W = 1700
-const CAPTURE_H = Math.round(CAPTURE_W * (PDF_H_MM / PDF_W_MM)) // 1202
+const DEFAULT_HEIGHT_PX = 900
 
 export default function LandingExportPage() {
   const [status, setStatus] = useState<'waiting' | 'ready' | 'capturing' | 'done'>('waiting')
@@ -192,9 +203,28 @@ export default function LandingExportPage() {
       pdf.setFillColor(255, 255, 255)
       pdf.rect(0, 0, PDF_W_MM, PDF_H_MM, 'F')
 
-      // Imagem full-bleed — cobre a folha inteira, sem margem,
-      // sem cabeçalho, sem legenda. Só a seção da landing.
-      pdf.addImage(imgData, 'JPEG', 0, 0, PDF_W_MM, PDF_H_MM)
+      // Encaixe preservando proporção (equivalente a object-fit: contain).
+      // Como cada página tem sua própria altura de captura (heightPx),
+      // a proporção capturada varia — nunca esticamos pra forçar o
+      // preenchimento exato da folha, o que distorceria ou cortaria o
+      // conteúdo. Em vez disso, a imagem é centralizada na folha, do
+      // maior tamanho possível sem ultrapassar as bordas.
+      const imgAspect = canvas.width / canvas.height
+      const pageAspect = PDF_W_MM / PDF_H_MM
+      let drawW: number, drawH: number, offsetX: number, offsetY: number
+      if (imgAspect > pageAspect) {
+        drawW = PDF_W_MM
+        drawH = PDF_W_MM / imgAspect
+        offsetX = 0
+        offsetY = (PDF_H_MM - drawH) / 2
+      } else {
+        drawH = PDF_H_MM
+        drawW = PDF_H_MM * imgAspect
+        offsetX = (PDF_W_MM - drawW) / 2
+        offsetY = 0
+      }
+
+      pdf.addImage(imgData, 'JPEG', offsetX, offsetY, drawW, drawH)
 
       setProgress(Math.round(((i + 1) / total) * 100))
     }
@@ -230,7 +260,7 @@ export default function LandingExportPage() {
           <div
             key={page.id}
             ref={el => { if (el) sectionRefsMap.current.set(page.id, el) }}
-            style={{ width: `${CAPTURE_W}px`, height: `${CAPTURE_H}px`, overflow: 'hidden', background: '#ffffff' }}
+            style={{ width: `${CAPTURE_W}px`, height: `${page.heightPx ?? DEFAULT_HEIGHT_PX}px`, overflow: 'hidden', background: '#ffffff' }}
           >
             {page.node}
           </div>

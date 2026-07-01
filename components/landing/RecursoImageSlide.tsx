@@ -184,16 +184,7 @@ export default function RecursoImageSlide({
             </div>
           )}
 
-          {/* Hint — some em telas baixas */}
-          <p
-            className={`
-              mt-2 sm:mt-4 text-xs transition-colors
-              [@media(max-height:660px)_and_(max-width:767px)]:hidden
-              ${isDark ? 'text-white/20' : 'text-gray-300'}
-            `}
-          >
-            {nextHint ?? (currentIndex < totalCount - 1 ? 'Role para ver mais →' : 'Próximo: Funções →')}
-          </p>
+       
         </div>
       </div>
     </div>

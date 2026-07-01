@@ -38,7 +38,7 @@ import ContatoSection from '@/components/landing/ContatoSection';
 const RECURSO_VANTAGENS_SLIDE = {
   id: 'recurso-vantagens',
   label: 'Escale sem contratar',
-  title: 'Atenda 10x sem aumentar sua equipe',
+  title: 'Atenda 10x mais sem aumentar sua equipe',
   description:
     'Sua empresa ganha um funcionário digital completo, trabalhando 24 horas por dia, com o nome, a palavra de ativação, a marca, as funções e o jeito que a sua empresa precisa. Semelhante a uma Alexa personalizada, mas com recursos voltados para cuidar dos trabalhos repetitivos.',
   imageSrc: '/vantagens.png',

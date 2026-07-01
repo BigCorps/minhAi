@@ -135,18 +135,19 @@ export default function RecursoImageSlide({
           </span>
 
           {/* Título */}
-          <h2
-            className={`
-              font-bold leading-tight transition-colors
-              mb-2 sm:mb-5
-              text-xl
-              [@media(min-height:680px)_and_(max-width:767px)]:text-2xl
-              sm:text-3xl md:text-4xl lg:text-5xl
-              ${isDark ? 'text-white' : 'text-gray-900'}
-            `}
-          >
-            {title}
-          </h2>
+<h2
+  className={`
+    whitespace-pre-line font-bold leading-tight transition-colors
+    mb-2 sm:mb-5
+    text-xl
+    [@media(min-height:680px)_and_(max-width:767px)]:text-2xl
+    sm:text-3xl md:text-4xl lg:text-5xl
+    ${isDark ? 'text-white' : 'text-gray-900'}
+  `}
+>
+  {title}
+</h2>
+
 
           {/* Descrição — some em telas baixas */}
           <p

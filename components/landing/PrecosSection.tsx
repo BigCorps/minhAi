@@ -9,6 +9,8 @@ interface PrecosProps {
   theme?: 'dark' | 'light';
   /** Quando vira false (usuário saiu da seção), o seletor reseta pro estado inicial. */
   isActive?: boolean;
+  /** Força o overlay de um plano específico já aberto no primeiro render — usado na exportação em PDF (cada plano vira sua própria folha, sem precisar de clique). */
+  initialPlan?: 'smart' | 'vendas' | 'full' | null;
 }
 
 interface Package {
@@ -60,9 +62,9 @@ const PLANO_FULL_ITENS = [
   'Suporte 24 horas',
 ];
 
-export default function PrecosSection({ theme = 'dark', isActive = true }: PrecosProps) {
+export default function PrecosSection({ theme = 'dark', isActive = true, initialPlan = null }: PrecosProps) {
   const isDark = theme === 'dark';
-  const [selectedPlan, setSelectedPlan] = useState<PlanKey | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey | null>(initialPlan);
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
 

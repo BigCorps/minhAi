@@ -107,9 +107,13 @@ const PDF_PAGES: PdfPage[] = [
   },
   { id: 'provas-sociais', node: <ProvasSociaisSection theme="light" /> },
   { id: 'depoimentos-faq', node: <DepoimentosFaqSection theme="light" /> },
-  // Preços — captura o estado inicial (título + imagem + frase + as 3
-  // abas), igual à primeira visão que o visitante tem ao chegar na seção.
+  // Preços — 4 folhas: o estado inicial (título+imagem+frase+abas), e
+  // cada uma das 3 versões com o overlay já aberto (initialPlan força o
+  // estado sem precisar de clique).
   { id: 'precos', node: <PrecosSection theme="light" /> },
+  { id: 'precos-smart', node: <PrecosSection theme="light" initialPlan="smart" /> },
+  { id: 'precos-vendas', node: <PrecosSection theme="light" initialPlan="vendas" /> },
+  { id: 'precos-full', node: <PrecosSection theme="light" initialPlan="full" /> },
   { id: 'contato', node: <ContatoSection theme="light" /> },
 ]
 

@@ -205,16 +205,20 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
             </button>
           </div>
 
-          {/* NAVEGAÇÃO HORIZONTAL NO CENTRO */}
-          <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center overflow-hidden">
-            <div className="flex items-center gap-3">
-              {/* Seção Anterior (translúcida) */}
+          {/* NAVEGAÇÃO HORIZONTAL NO CENTRO — dentro do fluxo flex, nunca sobrepõe logo/botões */}
+          <div className="flex-1 min-w-0 flex items-center justify-center overflow-hidden px-1">
+            <div className="flex items-center gap-1 min-w-0 max-w-full">
+              {/* Seção Anterior — mostra só o final, funde em transparência à esquerda */}
               {prevItem && (
                 <button
                   onClick={() => handleNavigate(prevItem.id)}
-                  className={`text-xs font-medium transition-all duration-300 ${
+                  className={`flex-shrink min-w-0 max-w-[15vw] sm:max-w-[80px] text-right text-[9px] sm:text-[10px] font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ${
                     isDark ? 'text-white/30' : 'text-gray-400'
                   }`}
+                  style={{
+                    maskImage: 'linear-gradient(to right, transparent, black 65%)',
+                    WebkitMaskImage: 'linear-gradient(to right, transparent, black 65%)',
+                  }}
                 >
                   {prevItem.label}
                 </button>
@@ -224,7 +228,7 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
               {currentItem && (
                 <button
                   onClick={() => handleNavigate(currentItem.id)}
-                  className={`relative px-2 py-1 text-sm font-bold transition-all duration-300 ${
+                  className={`relative flex-shrink-0 px-1.5 py-1 text-[11px] sm:text-sm font-bold whitespace-nowrap transition-all duration-300 ${
                     isDark ? 'text-blue-400' : 'text-blue-600'
                   }`}
                 >
@@ -237,13 +241,17 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
                 </button>
               )}
 
-              {/* Próxima Seção (translúcida) */}
+              {/* Próxima Seção — mostra só o começo, funde em transparência à direita */}
               {nextItem && (
                 <button
                   onClick={() => handleNavigate(nextItem.id)}
-                  className={`text-xs font-medium transition-all duration-300 ${
+                  className={`flex-shrink min-w-0 max-w-[15vw] sm:max-w-[80px] text-left text-[9px] sm:text-[10px] font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ${
                     isDark ? 'text-white/30' : 'text-gray-400'
                   }`}
+                  style={{
+                    maskImage: 'linear-gradient(to left, transparent, black 65%)',
+                    WebkitMaskImage: 'linear-gradient(to left, transparent, black 65%)',
+                  }}
                 >
                   {nextItem.label}
                 </button>

@@ -38,13 +38,14 @@ import ContatoSection from '@/components/landing/ContatoSection';
 const RECURSO_VANTAGENS_SLIDE = {
   id: 'recurso-vantagens',
   label: 'Escale sem contratar',
-  title: 'Atenda 10x mais\nsem aumentar sua equipe', // ANTES: 'Atenda 10x mais sem aumentar sua equipe'
+  title: 'Atenda 10x mais, sem\naumentar sua equipe', // \n logo após o "sem"
   description:
     'Sua empresa ganha um funcionário digital completo, trabalhando 24 horas por dia, com o nome, a palavra de ativação, a marca, as funções e o jeito que a sua empresa precisa. Semelhante a uma Alexa personalizada, mas com recursos voltados para cuidar dos trabalhos repetitivos.',
   imageSrc: '/vantagens.png',
   imageAlt: 'Eficiência operacional com minhAi — automatize atendimento e escale seu negócio',
   color: 'blue' as const,
 };
+
 
 // ============================================================
 // PÁGINA 5 — primeira de "Informações": fusão de

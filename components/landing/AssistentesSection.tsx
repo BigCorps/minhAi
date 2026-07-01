@@ -217,11 +217,6 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
           ))}
         </div>
 
-        {/* Rodapé */}
-        <p className={`text-[10px] sm:text-xs text-center [@media(max-height:640px)_and_(max-width:767px)]:hidden ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
-          Todos os especialistas abrem como modal dentro do assistente — sem trocar de tela →
-        </p>
-
       </div>
     </div>
   );

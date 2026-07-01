@@ -38,7 +38,7 @@ import ContatoSection from '@/components/landing/ContatoSection';
 const RECURSO_VANTAGENS_SLIDE = {
   id: 'recurso-vantagens',
   label: 'Escale sem contratar',
-  title: 'Atenda 10x mais sem aumentar sua equipe',
+  title: 'Atenda 10x mais\nsem aumentar sua equipe', // ANTES: 'Atenda 10x mais sem aumentar sua equipe'
   description:
     'Sua empresa ganha um funcionário digital completo, trabalhando 24 horas por dia, com o nome, a palavra de ativação, a marca, as funções e o jeito que a sua empresa precisa. Semelhante a uma Alexa personalizada, mas com recursos voltados para cuidar dos trabalhos repetitivos.',
   imageSrc: '/vantagens.png',
@@ -117,12 +117,6 @@ const VANTAGENS_INFO_CARDS = [
 ];
 
 // ============================================================
-// RECURSOS — grupo agora tem apenas a página "Escale sem
-// contratar" (recurso-vantagens). Como Funciona e o slide de
-// cards de diferenciais foram removidos do site.
-// ============================================================
-
-// ============================================================
 // FUNÇÕES — 14 cards em 4 grupos (3, 4, 3, 4), consolidados
 // em uma única página com carrossel automático (página 3)
 // ============================================================
@@ -141,7 +135,7 @@ const FUNCAO_GRUPOS = [
         icon: <QrCode />,
         color: 'blue' as const,
         description:
-          'WhatsApp, Instagram, ligação direta — QR Codes que conectam seu cliente ao canal certo na hora. Aumente conversão e engajamento sem esforço.',
+          'WhatsApp, Instagram, ligação direta — QR Codes que conectam seu cliente ao canal certo na hora. Aumente conversão e engajamento sem effort.',
       },
       {
         title: 'Cobra e recebe sozinho',
@@ -258,13 +252,13 @@ const FUNCAO_GRUPOS = [
 // ============================================================
 const ALL_SECTION_IDS = [
   'inicio',
-  RECURSO_VANTAGENS_SLIDE.id, // página 2
-  FUNCAO_ID,                  // página 3
-  'assistentes',               // página 4
-  INFO_COMPATIBILIDADE_SLIDE.id, // Informações — página 1
-  VANTAGENS_INFO_SLIDE.id,        // Informações — página 2
-  'provas-sociais',               // Informações — página 3
-  'depoimentos-faq',              // Informações — página 4 (Depoimentos + FAQ lado a lado)
+  RECURSO_VANTAGENS_SLIDE.id,
+  FUNCAO_ID,
+  'assistentes',
+  INFO_COMPATIBILIDADE_SLIDE.id,
+  VANTAGENS_INFO_SLIDE.id,
+  'provas-sociais',
+  'depoimentos-faq',
   'precos',
   'contato',
 ];
@@ -284,19 +278,15 @@ function getSectionNavGroup(sectionId: string): string {
 
 // ============================================================
 // HOOK — altura real da viewport
-// Resolve o problema central: dvh/svh não exclui UI do browser
-// no Android. Calculamos window.innerHeight que já desconta tudo.
 // ============================================================
 function useRealVh() {
   useEffect(() => {
     function update() {
-      // 1px = 1% da altura real disponível
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--real-vh', `${vh}px`);
     }
     update();
     window.addEventListener('resize', update);
-    // orientationchange necessário para iOS
     window.addEventListener('orientationchange', () => setTimeout(update, 200));
     return () => {
       window.removeEventListener('resize', update);
@@ -314,7 +304,6 @@ export default function LandingPage() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const isScrollingRef = useRef(false);
 
-  // Aplica --real-vh globalmente
   useRealVh();
 
   const activeNavItem = getSectionNavGroup(activeSectionId);
@@ -402,25 +391,15 @@ export default function LandingPage() {
   const currentAllIndex = ALL_SECTION_IDS.indexOf(activeSectionId);
   const canGoLeft = currentAllIndex > 0;
   const canGoRight = currentAllIndex < ALL_SECTION_IDS.length - 1;
-  // Passado para PrecosSection: quando deixa de ser true (usuário navega pra
-  // outra seção), a seção reseta seu estado interno (seletor Smart/Vendas/Full).
   const isPrecosActive = activeSectionId === 'precos';
 
   return (
-    /*
-      ALTURA DO WRAPPER:
-      Usa calc(var(--real-vh, 1vh) * 100) como fallback progressivo:
-      1. --real-vh é setado pelo useRealVh() via JS no primeiro render
-      2. Enquanto JS não rodou: 100dvh (melhor fallback moderno)
-      3. Fallback final para browsers antigos: 100vh
-    */
     <div
       className={`relative w-screen overflow-hidden transition-colors duration-500 ${
         isDark ? 'bg-slate-950 text-white' : 'bg-white text-gray-900'
       }`}
       style={{ height: 'calc(var(--real-vh, 1svh) * 100)' }}
     >
-
       <Header
         activeSection={activeNavItem}
         onNavigate={scrollToSection}
@@ -431,13 +410,6 @@ export default function LandingPage() {
       <main
         ref={scrollContainerRef}
         className="flex w-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth"
-        /*
-          Altura do main = altura real disponível.
-          Não usamos h-full aqui pois o wrapper pai
-          pode ter height via style (não via classe),
-          e h-full em alguns browsers não propaga style height.
-          Usamos o mesmo calc diretamente.
-        */
         style={{
           height: 'calc(var(--real-vh, 1svh) * 100)',
           scrollbarWidth: 'none',
@@ -446,9 +418,6 @@ export default function LandingPage() {
         aria-label="Seções da landing page minhAi"
       >
         <style>{`main::-webkit-scrollbar { display: none; }`}</style>
-
-        {/* SEÇÕES — cada uma ocupa exatamente a viewport real */}
-        {/* A classe section-full é definida no globals.css abaixo */}
 
         {/* PÁGINA 1 — INÍCIO */}
         <section
@@ -460,9 +429,7 @@ export default function LandingPage() {
           <InicioSection theme={theme} />
         </section>
 
-        {/* PÁGINA 2 — ESCALE SEM CONTRATAR + DOMAIN PICKER
-            Fora da sequência de "Recursos": sem dots internos (hideDots),
-            nextHint cai no default do componente ("Próximo: Funções →"). */}
+        {/* PÁGINA 2 — ESCALE SEM CONTRATAR + DOMAIN PICKER */}
         <section
           id={RECURSO_VANTAGENS_SLIDE.id}
           className="flex-shrink-0 snap-start snap-always"
@@ -484,9 +451,7 @@ export default function LandingPage() {
           />
         </section>
 
-        {/* PÁGINA 3 — O QUE O SEU FUNCIONÁRIO IA PODE FAZER
-            14 cards em 4 grupos (3,4,3,4), carrossel automático a cada 5s,
-            com setas manuais e dots locais. */}
+        {/* PÁGINA 3 — O QUE O SEU FUNCIONÁRIO IA PODE FAZER */}
         <section
           id={FUNCAO_ID}
           className="flex-shrink-0 snap-start snap-always"
@@ -502,7 +467,7 @@ export default function LandingPage() {
           />
         </section>
 
-        {/* PÁGINA 4 — ASSISTENTES ESPECIALIZADOS (Auxiliares) */}
+        {/* PÁGINA 4 — ASSISTENTES ESPECIALIZADOS */}
         <section
           id="assistentes"
           className="flex-shrink-0 snap-start snap-always"
@@ -512,8 +477,7 @@ export default function LandingPage() {
           <AssistentesSection theme={theme} />
         </section>
 
-        {/* PÁGINA 5 — primeira de "Informações": Compatibilidade total,
-            imagem alternando automaticamente entre dispositivos.png e api.png. */}
+        {/* PÁGINA 5 — COMPATIBILIDADE TOTAL */}
         <section
           id={INFO_COMPATIBILIDADE_SLIDE.id}
           className="flex-shrink-0 snap-start snap-always"
@@ -534,7 +498,7 @@ export default function LandingPage() {
           />
         </section>
 
-        {/* INFORMAÇÕES — página 2: Vantagens (imagem alternando com os 3 cards) */}
+        {/* INFORMAÇÕES — página 2: Vantagens */}
         <section
           id={VANTAGENS_INFO_SLIDE.id}
           className="flex-shrink-0 snap-start snap-always"
@@ -553,7 +517,7 @@ export default function LandingPage() {
           />
         </section>
 
-        {/* INFORMAÇÕES — página 3 (Quem usa a minhAi) */}
+        {/* INFORMAÇÕES — página 3 */}
         <section
           id="provas-sociais"
           className="flex-shrink-0 snap-start snap-always"
@@ -563,7 +527,7 @@ export default function LandingPage() {
           <ProvasSociaisSection theme={theme} />
         </section>
 
-        {/* INFORMAÇÕES — página 4: Depoimentos + FAQ lado a lado */}
+        {/* INFORMAÇÕES — página 4 */}
         <section
           id="depoimentos-faq"
           className="flex-shrink-0 snap-start snap-always"

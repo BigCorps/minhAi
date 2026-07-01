@@ -174,10 +174,15 @@ export default function DepoimentosFaqSection({ theme = 'dark' }: DepoimentosFaq
                     ${c.border} ${c.cardBg}
                   `}
                 >
-                  <img
-                    src={d.foto}
-                    alt={d.nome}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover flex-shrink-0"
+                  <div
+                    role="img"
+                    aria-label={d.nome}
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex-shrink-0"
+                    style={{
+                      backgroundImage: `url(${d.foto})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-0.5">

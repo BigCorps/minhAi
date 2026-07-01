@@ -231,10 +231,10 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             `}
           >
             <div className="w-[90px] sm:w-[120px] h-10 sm:h-12 flex items-center justify-center">
-              <img src="/cards/meta.png" alt="Integração oficial Meta" className="w-full h-full object-contain" />
+              <img src="/cards/meta.png" alt="Integração oficial Meta" style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }} />
             </div>
             <div className="w-[90px] sm:w-[120px] h-10 sm:h-12 flex items-center justify-center">
-              <img src="/cards/google.png" alt="Integração verificada pelo Google" className="w-full h-full object-contain" />
+              <img src="/cards/google.png" alt="Integração verificada pelo Google" style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }} />
             </div>
             <a
               href="https://play.google.com/store/apps/details?id=app.minhai.www.twa"
@@ -242,7 +242,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               rel="noopener noreferrer"
               className="w-[90px] sm:w-[120px] h-10 sm:h-12 flex items-center justify-center hover:opacity-80 transition-opacity"
             >
-              <img src="/cards/play.png" alt="Disponível no Google Play" className="w-full h-full object-contain" />
+              <img src="/cards/play.png" alt="Disponível no Google Play" style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }} />
             </a>
           </div>
 

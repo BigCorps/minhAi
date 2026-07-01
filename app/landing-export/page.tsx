@@ -199,6 +199,19 @@ export default function LandingExportPage() {
         *, *::before, *::after { box-sizing: border-box; }
         body { margin: 0; padding: 0; background: #0f172a; font-family: system-ui, sans-serif; color: white; }
         .capture-zone { position: fixed; top: -9999px; left: -9999px; pointer-events: none; }
+
+        /* Fundo 100% branco na captura — sem gradientes nem manchas decorativas.
+           Cada seção da landing tem, como primeiro filho, um <div> com essa
+           combinação exata de classes só pros círculos/gradientes de fundo
+           (padrão consistente em todos os componentes). O seletor é
+           propositalmente específico — NÃO usar [aria-hidden="true"] sozinho,
+           que também pega spans de medida (ex: WordCarousel) e ícones SVG
+           decorativos usados em várias seções, quebrando o layout deles. */
+        .capture-zone div.pointer-events-none.overflow-hidden[aria-hidden="true"] { display: none !important; }
+        .capture-zone > div > div {
+          background: #ffffff !important;
+          background-image: none !important;
+        }
       `}</style>
 
       {/* ── Zona de captura — seções renderizadas fora da tela, sempre em tema claro ── */}

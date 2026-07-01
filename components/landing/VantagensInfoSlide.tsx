@@ -140,7 +140,8 @@ export default function VantagensInfoSlide({
               <img
                 src={imageSrc}
                 alt={imageAlt}
-                className="max-w-full max-h-full object-contain drop-shadow-2xl"
+                className="drop-shadow-2xl"
+                style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
               />
             </div>
 

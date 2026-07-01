@@ -118,9 +118,10 @@ export default function RecursoImageSlide({
                 key={src}
                 src={src}
                 alt={imageAlt}
-                className={`absolute inset-0 w-full h-full object-contain drop-shadow-2xl transition-opacity duration-700 ${
+                className={`absolute inset-0 m-auto drop-shadow-2xl transition-opacity duration-700 ${
                   i === imgIndex ? 'opacity-100' : 'opacity-0'
                 }`}
+                style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
               />
             ))}
           </div>
@@ -135,19 +136,18 @@ export default function RecursoImageSlide({
           </span>
 
           {/* Título */}
-<h2
-  className={`
-    whitespace-pre-line font-bold leading-tight transition-colors
-    mb-2 sm:mb-5
-    text-xl
-    [@media(min-height:680px)_and_(max-width:767px)]:text-2xl
-    sm:text-3xl md:text-4xl lg:text-5xl
-    ${isDark ? 'text-white' : 'text-gray-900'}
-  `}
->
-  {title}
-</h2>
-
+          <h2
+            className={`
+              font-bold leading-tight transition-colors
+              mb-2 sm:mb-5
+              text-xl
+              [@media(min-height:680px)_and_(max-width:767px)]:text-2xl
+              sm:text-3xl md:text-4xl lg:text-5xl
+              ${isDark ? 'text-white' : 'text-gray-900'}
+            `}
+          >
+            {title}
+          </h2>
 
           {/* Descrição — some em telas baixas */}
           <p
@@ -185,7 +185,6 @@ export default function RecursoImageSlide({
             </div>
           )}
 
-       
         </div>
       </div>
     </div>

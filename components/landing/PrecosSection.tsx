@@ -216,8 +216,8 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
               <img
                 src="/precos.png"
                 alt="Planos e preços do minhAi — Smart, Vendas e Full"
-                className="w-full max-w-[300px] md:max-w-full object-contain drop-shadow-2xl md:max-h-[52vh]"
-                style={{ maxHeight: 'clamp(160px, 34vh, 340px)' }}
+                className="max-w-[300px] md:max-w-full drop-shadow-2xl"
+                style={{ maxHeight: 'clamp(160px, 34vh, 340px)', width: 'auto', height: 'auto' }}
               />
             </div>
 

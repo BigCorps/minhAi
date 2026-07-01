@@ -187,17 +187,6 @@ export default function ProvasSociaisSection({ theme = 'dark' }: ProvasSociaisSe
           </div>
         </div>
 
-        {/* Mini CTA inline — some em telas baixas */}
-        <p
-          className={`
-            text-xs text-center
-            [@media(max-height:650px)_and_(max-width:767px)]:hidden
-            ${isDark ? 'text-white/20' : 'text-gray-300'}
-          `}
-        >
-          Role para conhecer todos os recursos →
-        </p>
-
       </div>
     </div>
   );

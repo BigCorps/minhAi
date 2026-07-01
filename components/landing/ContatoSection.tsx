@@ -47,7 +47,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
           `}
         >
           <p className={`text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-1.5 ${isDark ? 'text-green-400/70' : 'text-green-600/70'}`}>
-            Comece agora
+            Comece agora mesmo!
           </p>
           <h2
             className={`
@@ -58,7 +58,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
               ${isDark ? 'text-white' : 'text-gray-900'}
             `}
           >
-            Seu concorrente já pode estar usando IA.{' '}
+            Realmente uma IA pra chamar de sua!{' '}
             <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>E você?</span>
           </h2>
 

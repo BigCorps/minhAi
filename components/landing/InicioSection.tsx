@@ -2,7 +2,6 @@
 import Link from 'next/link';
 import { LandingAvatarFace } from './LandingAvatarFace';
 import { WordCarousel } from '@/components/landing/WordCarousel';
-import { DomainPreviewPicker } from '@/components/landing/DomainPreviewPicker';
 import TourTrigger from '@/components/tour/TourTrigger';
 
 interface InicioSectionProps {
@@ -149,25 +148,9 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               ${isDark ? 'text-white/55' : 'text-gray-600'}
             `}
           >
-            <span className="sm:hidden">
-              A única IA que vende, atende, agenda e cobra automaticamente.
-            </span>
-            <span className="hidden sm:inline">
-              A única IA que atende seus clientes no virtual e no presencial, cobra, agenda, confirma pagamentos via Pix e nunca deixa uma venda sem resposta.
-              Configure tudo em minutos, sem programar e automatize atendimentos, cobranças, agendamentos e operações enquanto sua empresa lucra mais.
-            </span>
+            A única IA que atende seus clientes no virtual e no presencial, cobra, agenda, confirma pagamentos e nunca deixa um atendimento sem resposta.
+            Configure tudo em minutos, sem programar e automatize atendimentos, vendas, cobranças, agendamentos, orçamentos e operações enquanto você e sua empresa focam em setores que precisam de sua total atenção.
           </p>
-
-          {/* DomainPreviewPicker — sempre visível em todos os tamanhos */}
-          {/* No mobile, o TourTrigger flutua sobre ele até o usuário dispensar */}
-          <div className="relative">
-            <DomainPreviewPicker isDark={isDark} />
-
-            {/* TourTrigger overlay — só mobile, some quando dispensado */}
-            <div className="sm:hidden absolute inset-0 flex items-center justify-center">
-              <TourTrigger theme={theme} delay={5000} dismissible />
-            </div>
-          </div>
 
           {/* CTAs */}
           <div className="flex flex-row items-center justify-center gap-2 sm:gap-4">
@@ -261,6 +244,16 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             >
               <img src="/cards/play.png" alt="Disponível no Google Play" className="w-full h-full object-contain" />
             </a>
+          </div>
+
+          {/* TourTrigger — só mobile, no final da coluna de texto. Mesma regra de altura do bloco acima: some junto em telas mobile baixas. */}
+          <div
+            className={`
+              sm:hidden flex justify-center mt-3
+              [@media(max-height:700px)_and_(max-width:767px)]:hidden
+            `}
+          >
+            <TourTrigger theme={theme} delay={5000} dismissible />
           </div>
 
         </div>

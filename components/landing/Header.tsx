@@ -15,7 +15,8 @@ const navItems = [
   { id: 'inicio', label: 'Início' },
   { id: 'recursos', label: 'Recursos' },
   { id: 'funcoes', label: 'Funções' },
-  { id: 'precos', label: 'Informações' },
+  { id: 'informacoes', label: 'Informações' },
+  { id: 'precos', label: 'Preços' },
   { id: 'contato', label: 'Contato' },
 ];
 

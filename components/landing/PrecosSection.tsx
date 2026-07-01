@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase-browser';
 
 interface PrecosProps {
   theme?: 'dark' | 'light';
+  /** Quando vira false (usuário saiu da seção), o seletor reseta pro estado inicial. */
+  isActive?: boolean;
 }
 
 interface Package {
@@ -22,6 +24,8 @@ interface Package {
   unlocks_features: boolean;
   has_consultoria: boolean;
 }
+
+type PlanKey = 'smart' | 'vendas' | 'full';
 
 // Funções disponíveis na versão Vendas
 const FUNCOES_VENDAS = [
@@ -45,9 +49,20 @@ const FUNCOES_VENDAS = [
   { label: 'Sobre o Sistema',     desc: 'Informações sobre a minhAi' },
 ];
 
-export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
+const PLANO_FULL_ITENS = [
+  'Créditos Ilimitados',
+  'Landing Page Personalizada',
+  'Implementação incluída',
+  'App na PlayStore',
+  'Whitelabel',
+  'Domínio e Subdomínios próprios',
+  'Configuração completa',
+  'Suporte 24 horas',
+];
+
+export default function PrecosSection({ theme = 'dark', isActive = true }: PrecosProps) {
   const isDark = theme === 'dark';
-  const [activeTab, setActiveTab] = useState<'smart' | 'vendas'>('smart');
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey | null>(null);
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,8 +86,17 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
     loadPackages();
   }, []);
 
+  // Reseta o seletor sempre que o usuário sai da seção — ao voltar,
+  // encontra de novo o título, a frase e só os 3 seletores.
+  useEffect(() => {
+    if (!isActive) setSelectedPlan(null);
+  }, [isActive]);
+
   const monthlyPlans = packages.filter(p => p.package_type === 'monthly');
   const creditPlans  = packages.filter(p => p.package_type === 'credits');
+
+  const accentColor =
+    selectedPlan === 'vendas' || selectedPlan === 'full' ? 'lime' : 'blue';
 
   return (
     <div
@@ -88,7 +112,7 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
     >
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div className={`absolute top-1/4 left-1/3 w-[35%] h-[35%] rounded-full blur-[100px] ${
-          activeTab === 'smart'
+          accentColor === 'blue'
             ? isDark ? 'bg-blue-500/5' : 'bg-blue-200/20'
             : isDark ? 'bg-lime-500/5' : 'bg-lime-200/20'
         } transition-colors duration-500`} />
@@ -97,384 +121,439 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
       <div
         className={`
           relative z-10 flex flex-col items-center
-          w-full max-w-5xl mx-auto
+          w-full ${selectedPlan ? 'h-full' : ''} max-w-5xl mx-auto
           px-4 sm:px-6 lg:px-10
-          pt-[68px] pb-[52px]
-          [@media(max-height:700px)_and_(max-width:767px)]:pt-[64px]
-          [@media(max-height:700px)_and_(max-width:767px)]:pb-[44px]
-          md:pt-4 md:pb-4
+          pt-[76px] pb-[60px]
+          [@media(max-height:700px)_and_(max-width:767px)]:pt-[68px]
+          [@media(max-height:700px)_and_(max-width:767px)]:pb-[48px]
+          md:pt-[92px] md:pb-[64px]
           gap-2 sm:gap-3
         `}
       >
 
-        {/* ── Título ─────────────────────────────────────────── */}
-        <div className="text-center">
-          <p className={`text-[10px] font-semibold uppercase tracking-widest mb-1 ${
-            isDark ? 'text-blue-400/70' : 'text-blue-600/70'
-          }`}>
-            Planos e Preços
-          </p>
-          {/* CORREÇÃO 1: título igual ao código 2 */}
-          <h2 className={`text-lg sm:text-2xl md:text-3xl font-semibold transition-colors ${
-            isDark ? 'text-white' : 'text-gray-900'
-          }`}>
-            Escolha o pacote ideal
-          </h2>
-        </div>
-
-        {/* ── Seletor Smart / Vendas ─────────────────────────── */}
-        <div className={`flex items-center gap-1 p-1 rounded-2xl ${
+        {/* ── Seletor Smart / Vendas / Full — agora primeiro, sempre visível ── */}
+        <div className={`relative z-30 flex items-center gap-0.5 sm:gap-1 p-1 rounded-2xl justify-center w-full max-w-full ${
           isDark ? 'bg-white/5' : 'bg-gray-100'
         }`}>
-          {/* Smart */}
           <button
-            onClick={() => setActiveTab('smart')}
+            onClick={() => setSelectedPlan('smart')}
             className={`
-              relative flex items-center gap-2 px-4 sm:px-6 py-2 rounded-xl
-              text-xs sm:text-sm font-bold transition-all duration-300
-              ${activeTab === 'smart'
-                ? isDark
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                  : 'bg-blue-600 text-white shadow-lg shadow-blue-300/30'
-                : isDark
-                  ? 'text-white/40 hover:text-white/70'
-                  : 'text-gray-400 hover:text-gray-600'
+              relative flex items-center justify-center gap-1 sm:gap-2 flex-1 sm:flex-initial min-w-0
+              px-2 sm:px-6 py-1.5 sm:py-2 rounded-xl
+              text-[10px] sm:text-sm font-bold whitespace-nowrap transition-all duration-300
+              ${selectedPlan === 'smart'
+                ? isDark ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-blue-600 text-white shadow-lg shadow-blue-300/30'
+                : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-600'
               }
             `}
           >
-            <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
-            minhAi Smart
-            <span className={`text-[9px] font-normal hidden sm:inline ${
-              activeTab === 'smart' ? 'opacity-70' : 'opacity-50'
-            }`}>
-              créditos por uso
-            </span>
+            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-400 flex-shrink-0" />
+            <span className="hidden sm:inline">Versão </span>Smart
           </button>
 
-          {/* Vendas */}
           <button
-            onClick={() => setActiveTab('vendas')}
+            onClick={() => setSelectedPlan('vendas')}
             className={`
-              relative flex items-center gap-2 px-4 sm:px-6 py-2 rounded-xl
-              text-xs sm:text-sm font-bold transition-all duration-300
-              ${activeTab === 'vendas'
-                ? isDark
-                  ? 'bg-lime-600 text-white shadow-lg shadow-lime-500/20'
-                  : 'bg-lime-600 text-white shadow-lg shadow-lime-300/30'
-                : isDark
-                  ? 'text-white/40 hover:text-white/70'
-                  : 'text-gray-400 hover:text-gray-600'
+              relative flex items-center justify-center gap-1 sm:gap-2 flex-1 sm:flex-initial min-w-0
+              px-2 sm:px-6 py-1.5 sm:py-2 rounded-xl
+              text-[10px] sm:text-sm font-bold whitespace-nowrap transition-all duration-300
+              ${selectedPlan === 'vendas'
+                ? isDark ? 'bg-lime-600 text-white shadow-lg shadow-lime-500/20' : 'bg-lime-600 text-white shadow-lg shadow-lime-300/30'
+                : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-600'
               }
             `}
           >
-            <span className="w-2 h-2 rounded-full bg-lime-400 flex-shrink-0" />
-            minhAi Vendas
-            <span className={`
-              text-[9px] font-bold px-1.5 py-0.5 rounded-full hidden sm:inline
-              ${activeTab === 'vendas'
-                ? 'bg-white/20 text-white'
-                : isDark ? 'bg-lime-500/20 text-lime-400' : 'bg-lime-100 text-lime-700'
-              }
-            `}>
-              GRÁTIS
-            </span>
+            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-lime-400 flex-shrink-0" />
+            <span className="hidden sm:inline">Versão </span>Vendas
           </button>
+
+          <button
+            onClick={() => setSelectedPlan('full')}
+            className={`
+              relative flex items-center justify-center gap-1 sm:gap-2 flex-1 sm:flex-initial min-w-0
+              px-2 sm:px-6 py-1.5 sm:py-2 rounded-xl
+              text-[10px] sm:text-sm font-bold whitespace-nowrap transition-all duration-300
+              ${selectedPlan === 'full'
+                ? isDark ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'bg-purple-600 text-white shadow-lg shadow-purple-300/30'
+                : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-600'
+              }
+            `}
+          >
+            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-purple-400 flex-shrink-0" />
+            <span className="hidden sm:inline">Versão </span>Full
+          </button>
+
+          {/* Fechar — volta pro estado inicial sem precisar sair da seção */}
+          {selectedPlan && (
+            <button
+              onClick={() => setSelectedPlan(null)}
+              aria-label="Fechar detalhes do plano"
+              className={`flex-shrink-0 p-2 rounded-xl transition-colors ${
+                isDark ? 'text-white/30 hover:text-white/60 hover:bg-white/5' : 'text-gray-300 hover:text-gray-600 hover:bg-black/5'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
 
-        {/* ══════════════════════════════════════════════════════
-            ABA SMART
-        ══════════════════════════════════════════════════════ */}
-        {activeTab === 'smart' && (
-          <div className="w-full flex flex-col gap-2 sm:gap-3 animate-in fade-in duration-200">
+        {/* ── Imagem + texto — nessa ordem em mobile E desktop. Somem quando um plano está selecionado ── */}
+        {!selectedPlan && (
+          <div className="flex flex-col md:flex-row items-center justify-center md:justify-between w-full gap-3 md:gap-10">
 
-            {/* CORREÇÃO 2: Card grátis com cor verde (igual ao código 2) */}
-            <div className={`rounded-xl border px-4 py-2 flex items-center justify-center gap-3 ${
-              isDark ? 'bg-green-500/5 border-green-500/15' : 'bg-green-50 border-green-100'
-            }`}>
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                isDark ? 'bg-green-500/15' : 'bg-green-100'
-              }`}>
-                <svg className={`w-3.5 h-3.5 ${isDark ? 'text-green-400' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                </svg>
-              </div>
-              <span className={`text-xs font-semibold ${isDark ? 'text-green-400' : 'text-green-700'}`}>Comece grátis!</span>
-              <span className={`text-[10px] ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-                20 créditos grátis para testar à vontade.
-              </span>
+            {/* Imagem — maior, primeiro. Some em telas muito baixas, mesmo padrão do resto do site */}
+            <div
+              className={`
+                flex items-center justify-center flex-shrink-0
+                w-full md:w-auto
+                [@media(max-height:560px)_and_(max-width:767px)]:hidden
+              `}
+            >
+              <img
+                src="/precos.png"
+                alt="Planos e preços do minhAi — Smart, Vendas e Full"
+                className="w-full max-w-[300px] md:max-w-full object-contain drop-shadow-2xl md:max-h-[52vh]"
+                style={{ maxHeight: 'clamp(160px, 34vh, 340px)' }}
+              />
             </div>
 
-            {loading ? (
-              <div className="flex items-center justify-center py-6">
-                <div className={`w-6 h-6 border-2 border-t-transparent rounded-full animate-spin ${
-                  isDark ? 'border-blue-400' : 'border-blue-600'
-                }`} />
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2 sm:gap-3">
+            {/* Texto */}
+            <div className="text-center md:text-left flex-1 md:max-w-md">
+              <p className={`text-[10px] font-semibold uppercase tracking-widest mb-1 ${
+                isDark ? 'text-blue-400/70' : 'text-blue-600/70'
+              }`}>
+                Planos e Preços
+              </p>
+              <h2 className={`text-lg sm:text-2xl md:text-3xl font-bold leading-tight transition-colors ${
+                isDark ? 'text-white' : 'text-gray-900'
+              }`}>
+                <span className="block">Comece do jeito que fizer</span>
+                <span className="block">sentido pro seu negócio:</span>
+              </h2>
+              <p className={`text-xs sm:text-sm max-w-lg mx-auto md:mx-0 mt-1.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                Comece agora mesmo gratuitamente, com comissão por vendas, ou planos e pacotes com valores por interação. Você escolhe como quer começar, e se ainda não quiser ter trabalho nenhum, nossa equipe cuida de tudo para você: configuração, personalização com cores, domínio, funções, site e até aplicativo próprio para sua empresa atender melhor, vender mais, automatizar tarefas e oferecer uma experiência mais rápida, inteligente e personalizada.
+              </p>
+            </div>
 
-                {/* Planos Mensais */}
-                {monthlyPlans.length > 0 && (
-                  <div>
-                    <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 text-center ${
-                      isDark ? 'text-blue-400/60' : 'text-blue-600/60'
-                    }`}>Planos Mensais</p>
+          </div>
+        )}
 
-                    {/* Mobile — igual ao código 1 original */}
-                    <div className="flex flex-col gap-1.5 sm:hidden">
-                      {monthlyPlans.map((pkg) => (
-                        <div key={pkg.id} className={`relative rounded-xl ${
-                          pkg.is_highlighted
-                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
-                            : isDark ? 'bg-slate-800/40 border border-white/5' : 'bg-white/80 border border-gray-100 shadow-sm'
-                        }`}>
-                          {pkg.is_highlighted && (
-                            <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
-                              Recomendado
-                            </div>
-                          )}
-                          <div className="px-4 py-3 flex items-center justify-between gap-4">
-                            <div className="flex-shrink-0">
-                              <p className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${
-                                pkg.is_highlighted ? 'text-blue-200' : isDark ? 'text-white/40' : 'text-gray-400'
-                              }`}>Mensal</p>
-                              <p className={`text-xs font-semibold mb-0.5 ${!pkg.is_highlighted && (isDark ? 'text-white/70' : 'text-gray-500')}`}>{pkg.name}</p>
-                              <div className="flex items-baseline gap-0.5">
-                                <p className="text-lg font-bold leading-tight">R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}</p>
-                                <span className={`text-[10px] ${pkg.is_highlighted ? 'text-white/60' : isDark ? 'text-white/30' : 'text-gray-400'}`}>/mês</span>
-                              </div>
-                            </div>
-                            <div className="flex flex-col items-end gap-1 text-right">
-                              <div className="flex items-center gap-1.5">
-                                <svg className={`w-3 h-3 ${pkg.is_highlighted ? 'text-white/70' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                                <span className="font-semibold text-xs">{pkg.interactions} créditos/mês</span>
-                              </div>
-                              <span className={`text-[10px] ${pkg.is_highlighted ? 'text-white/60' : isDark ? 'text-white/40' : 'text-gray-400'}`}>
-                                Google · Meta · Produção
-                              </span>
-                              {pkg.has_consultoria && (
-                                <span className={`text-[10px] ${pkg.is_highlighted ? 'text-white/60' : isDark ? 'text-white/40' : 'text-gray-400'}`}>
-                                  + Webapp · Consultoria
-                                </span>
+        {/* ── Overlay — cobre o restante da seção com os detalhes do plano escolhido ── */}
+        {selectedPlan && (
+          <div className="relative z-20 w-full flex-1 min-h-0 overflow-y-auto animate-in fade-in duration-200">
+
+            {selectedPlan === 'smart' && (
+              <div className="w-full flex flex-col gap-2 sm:gap-3 pt-2">
+
+                <div className={`rounded-xl border px-4 py-2 flex items-center justify-center gap-3 ${
+                  isDark ? 'bg-green-500/5 border-green-500/15' : 'bg-green-50 border-green-100'
+                }`}>
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    isDark ? 'bg-green-500/15' : 'bg-green-100'
+                  }`}>
+                    <svg className={`w-3.5 h-3.5 ${isDark ? 'text-green-400' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                    </svg>
+                  </div>
+                  <span className={`text-xs font-semibold ${isDark ? 'text-green-400' : 'text-green-700'}`}>Comece grátis!</span>
+                  <span className={`text-[10px] ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
+                    20 créditos grátis para testar à vontade.
+                  </span>
+                </div>
+
+                {loading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <div className={`w-6 h-6 border-2 border-t-transparent rounded-full animate-spin ${
+                      isDark ? 'border-blue-400' : 'border-blue-600'
+                    }`} />
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2 sm:gap-3">
+
+                    {monthlyPlans.length > 0 && (
+                      <div>
+                        <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 text-center ${
+                          isDark ? 'text-blue-400/60' : 'text-blue-600/60'
+                        }`}>Planos Mensais</p>
+
+                        <div className="flex flex-col gap-1.5 sm:hidden">
+                          {monthlyPlans.map((pkg) => (
+                            <div key={pkg.id} className={`relative rounded-xl ${
+                              pkg.is_highlighted
+                                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
+                                : isDark ? 'bg-slate-800/40 border border-white/5' : 'bg-white/80 border border-gray-100 shadow-sm'
+                            }`}>
+                              {pkg.is_highlighted && (
+                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                                  Recomendado
+                                </div>
                               )}
+                              <div className="px-4 py-3 flex items-center justify-between gap-4">
+                                <div className="flex-shrink-0">
+                                  <p className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${
+                                    pkg.is_highlighted ? 'text-blue-200' : isDark ? 'text-white/40' : 'text-gray-400'
+                                  }`}>Mensal</p>
+                                  <p className={`text-xs font-semibold mb-0.5 ${!pkg.is_highlighted && (isDark ? 'text-white/70' : 'text-gray-500')}`}>{pkg.name}</p>
+                                  <div className="flex items-baseline gap-0.5">
+                                    <p className="text-lg font-bold leading-tight">R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}</p>
+                                    <span className={`text-[10px] ${pkg.is_highlighted ? 'text-white/60' : isDark ? 'text-white/30' : 'text-gray-400'}`}>/mês</span>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1 text-right">
+                                  <div className="flex items-center gap-1.5">
+                                    <svg className={`w-3 h-3 ${pkg.is_highlighted ? 'text-white/70' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                    <span className="font-semibold text-xs">{pkg.interactions} créditos/mês</span>
+                                  </div>
+                                  <span className={`text-[10px] ${pkg.is_highlighted ? 'text-white/60' : isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                                    Google · Meta · Produção
+                                  </span>
+                                  {pkg.has_consultoria && (
+                                    <span className={`text-[10px] ${pkg.is_highlighted ? 'text-white/60' : isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                                      + Webapp · Consultoria
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="hidden sm:grid sm:grid-cols-2 gap-3">
+                          {monthlyPlans.map((pkg) => (
+                            <div
+                              key={pkg.id}
+                              className={`relative rounded-2xl transition-all duration-300 ${
+                                pkg.is_highlighted
+                                  ? isDark
+                                    ? 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-xl shadow-blue-500/10'
+                                    : 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-xl shadow-blue-300/20'
+                                  : isDark
+                                    ? 'bg-slate-800/40 border border-white/5 backdrop-blur-sm'
+                                    : 'bg-white/80 border border-gray-100 backdrop-blur-sm shadow-sm'
+                              }`}
+                            >
+                              {pkg.is_highlighted && (
+                                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                                  Recomendado
+                                </div>
+                              )}
+
+                              <div className="p-4 md:p-5 flex gap-4">
+                                <div className="flex flex-col justify-center min-w-[120px]">
+                                  <p className={`text-[10px] font-bold uppercase tracking-widest mb-0.5 ${
+                                    pkg.is_highlighted ? 'text-blue-200' : isDark ? 'text-white/40' : 'text-gray-400'
+                                  }`}>Mensal</p>
+                                  <h3 className={`text-base font-bold mb-1 ${!pkg.is_highlighted && (isDark ? 'text-white' : 'text-gray-900')}`}>
+                                    {pkg.name}
+                                  </h3>
+                                  <div className="flex items-baseline gap-1">
+                                    <span className="text-xl font-bold">
+                                      R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}
+                                    </span>
+                                    <span className={`text-xs ${pkg.is_highlighted ? 'text-white/60' : isDark ? 'text-white/30' : 'text-gray-400'}`}>/mês</span>
+                                  </div>
+                                </div>
+
+                                <div className={`w-px self-stretch ${pkg.is_highlighted ? 'bg-white/15' : isDark ? 'bg-white/5' : 'bg-gray-100'}`} />
+
+                                <div className="flex-1 flex flex-col justify-center gap-1.5">
+                                  {[
+                                    `${pkg.interactions} créditos por mês`,
+                                    'Serviços Google',
+                                    'Serviços Meta',
+                                    'Linha de Produção',
+                                    'QR Codes com seu logo',
+                                    'Impressão Remota, Bluetooth ou Local',
+                                    ...(pkg.has_consultoria ? ['Webapp com subdomínio', 'Consultoria incluída'] : []),
+                                  ].map((feature, idx) => (
+                                    <div key={idx} className="flex items-center gap-1.5">
+                                      <svg className={`w-3 h-3 flex-shrink-0 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                      <span className={`text-xs ${pkg.is_highlighted ? 'text-white/90' : isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                                        {feature}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 text-center ${
+                        isDark ? 'text-blue-400/60' : 'text-blue-600/60'
+                      }`}>Pacotes de Créditos</p>
+
+                      <div className="flex flex-col gap-1.5 sm:hidden">
+                        {creditPlans.map((pkg) => (
+                          <div key={pkg.id} className={`relative rounded-xl ${
+                            pkg.is_highlighted
+                              ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
+                              : isDark ? 'bg-slate-800/40 border border-white/5' : 'bg-white/80 border border-gray-100 shadow-sm'
+                          }`}>
+                            {pkg.is_highlighted && (
+                              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                                Mais Popular
+                              </div>
+                            )}
+                            <div className="px-4 py-2.5 flex items-center justify-between gap-4">
+                              <div>
+                                <p className={`text-xs font-semibold mb-0.5 ${!pkg.is_highlighted && (isDark ? 'text-white/70' : 'text-gray-500')}`}>{pkg.name}</p>
+                                <p className="text-base font-bold">R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold text-xs">{pkg.interactions.toLocaleString('pt-BR')} interações</p>
+                                <p className="text-[10px] opacity-70">R$ {(pkg.price_per_interaction / 100).toFixed(2).replace('.', ',')} cada</p>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
 
-                    {/* CORREÇÃO 3: Desktop — 2 colunas com features (igual ao código 2) */}
-                    <div className="hidden sm:grid sm:grid-cols-2 gap-3">
-                      {monthlyPlans.map((pkg) => (
-                        <div
-                          key={pkg.id}
-                          className={`relative rounded-2xl transition-all duration-300 ${
+                      <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {creditPlans.map((pkg) => (
+                          <div key={pkg.id} className={`relative rounded-2xl flex flex-col transition-all duration-300 ${
                             pkg.is_highlighted
-                              ? isDark
-                                ? 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-xl shadow-blue-500/10'
-                                : 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-xl shadow-blue-300/20'
-                              : isDark
-                                ? 'bg-slate-800/40 border border-white/5 backdrop-blur-sm'
-                                : 'bg-white/80 border border-gray-100 backdrop-blur-sm shadow-sm'
-                          }`}
-                        >
-                          {pkg.is_highlighted && (
-                            <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
-                              Recomendado
-                            </div>
-                          )}
-
-                          <div className="p-4 md:p-5 flex gap-4">
-                            {/* Esquerda: nome + preço */}
-                            <div className="flex flex-col justify-center min-w-[120px]">
-                              <p className={`text-[10px] font-bold uppercase tracking-widest mb-0.5 ${
-                                pkg.is_highlighted ? 'text-blue-200' : isDark ? 'text-white/40' : 'text-gray-400'
-                              }`}>Mensal</p>
-                              <h3 className={`text-base font-bold mb-1 ${!pkg.is_highlighted && (isDark ? 'text-white' : 'text-gray-900')}`}>
-                                {pkg.name}
-                              </h3>
-                              <div className="flex items-baseline gap-1">
-                                <span className="text-xl font-bold">
-                                  R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}
-                                </span>
-                                <span className={`text-xs ${pkg.is_highlighted ? 'text-white/60' : isDark ? 'text-white/30' : 'text-gray-400'}`}>/mês</span>
+                              ? isDark ? 'bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-xl scale-[1.02] z-10' : 'bg-gradient-to-b from-blue-600 to-blue-700 text-white shadow-xl scale-[1.02] z-10'
+                              : isDark ? 'bg-slate-800/40 border border-white/5' : 'bg-white/80 border border-gray-100 shadow-sm'
+                          }`}>
+                            {pkg.is_highlighted && (
+                              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                                Mais Popular
                               </div>
-                            </div>
-
-                            {/* Divisor vertical */}
-                            <div className={`w-px self-stretch ${pkg.is_highlighted ? 'bg-white/15' : isDark ? 'bg-white/5' : 'bg-gray-100'}`} />
-
-                            {/* Direita: features */}
-                            <div className="flex-1 flex flex-col justify-center gap-1.5">
-                              {[
-                                `${pkg.interactions} créditos por mês`,
-                                'Serviços Google',
-                                'Serviços Meta',
-                                'Linha de Produção',
-                                'QR Codes com seu logo',
-                                'Impressão Remota, Bluetooth ou Local',
-                                ...(pkg.has_consultoria ? ['Webapp com subdomínio', 'Consultoria incluída'] : []),
-                              ].map((feature, idx) => (
-                                <div key={idx} className="flex items-center gap-1.5">
-                                  <svg className={`w-3 h-3 flex-shrink-0 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                  <span className={`text-xs ${pkg.is_highlighted ? 'text-white/90' : isDark ? 'text-white/60' : 'text-gray-600'}`}>
-                                    {feature}
+                            )}
+                            <div className="p-4 flex flex-col items-center text-center gap-2">
+                              <h3 className={`text-sm font-semibold ${!pkg.is_highlighted && (isDark ? 'text-white' : 'text-gray-900')}`}>{pkg.name}</h3>
+                              <span className="text-2xl font-bold">R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}</span>
+                              <div className="space-y-1.5">
+                                <div className="flex items-center justify-center gap-2">
+                                  <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${pkg.is_highlighted ? 'bg-white/20' : isDark ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
+                                    <svg className={`w-2.5 h-2.5 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                  </div>
+                                  <span className={`text-xs font-semibold ${pkg.is_highlighted ? '' : isDark ? 'text-white/80' : 'text-gray-700'}`}>
+                                    {pkg.interactions.toLocaleString('pt-BR')} interações
                                   </span>
                                 </div>
-                              ))}
+                                <div className="flex items-center justify-center gap-2">
+                                  <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${pkg.is_highlighted ? 'bg-white/20' : isDark ? 'bg-green-500/10' : 'bg-green-50'}`}>
+                                    <svg className={`w-2.5 h-2.5 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-green-400' : 'text-green-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  </div>
+                                  <span className={`text-xs ${pkg.is_highlighted ? 'opacity-90' : isDark ? 'text-white/55' : 'text-gray-500'}`}>
+                                    R$ {(pkg.price_per_interaction / 100).toFixed(2).replace('.', ',')} por interação
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-center gap-2">
+                                  <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${pkg.is_highlighted ? 'bg-white/20' : isDark ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
+                                    <svg className={`w-2.5 h-2.5 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  </div>
+                                  <span className={`text-xs ${pkg.is_highlighted ? 'opacity-90' : isDark ? 'text-white/55' : 'text-gray-500'}`}>
+                                    Pagamento via PIX
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
+
                   </div>
                 )}
+              </div>
+            )}
 
-                {/* CORREÇÃO 4: Card Plano Full — versão código 2 (gradient lime/purple com ícone e lista horizontal) */}
-                <div className={`[@media(max-height:650px)_and_(max-width:767px)]:hidden`}>
-                  <div className={`rounded-xl border px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors ${
-                    isDark
-                      ? 'bg-gradient-to-r from-lime-900/25 to-purple-900/15 border-lime-500/20'
-                      : 'bg-gradient-to-r from-lime-50 to-purple-50 border-lime-200'
-                  }`}>
-                    <div className="flex items-center gap-2.5 flex-shrink-0">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        isDark ? 'bg-lime-500/20' : 'bg-lime-100'
-                      }`}>
-                        <svg className={`w-4 h-4 ${isDark ? 'text-lime-400' : 'text-lime-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
-                        </svg>
+            {selectedPlan === 'vendas' && (
+              <div className="w-full flex flex-col gap-2 sm:gap-3 pt-2">
+
+                <div className={`rounded-2xl border p-3 sm:p-4 ${
+                  isDark ? 'bg-lime-500/5 border-lime-500/20' : 'bg-lime-50 border-lime-200'
+                }`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className={`text-xl sm:text-2xl font-black ${isDark ? 'text-lime-400' : 'text-lime-600'}`}>
+                          Gratuito
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                          isDark ? 'bg-lime-500/20 text-lime-400' : 'bg-lime-100 text-lime-700'
+                        }`}>
+                          para o lojista
+                        </span>
                       </div>
-                      <div>
-                        <p className={`text-[9px] font-bold uppercase tracking-widest leading-none mb-0.5 ${isDark ? 'text-lime-400' : 'text-lime-600'}`}>
-                          Plano Full
-                        </p>
-                        <p className={`text-[11px] font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
-                          Solução completa personalizada
-                        </p>
-                      </div>
+                      <p className={`text-xs sm:text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                        Sem mensalidade, sem créditos, sem surpresa.
+                        Você só paga quando vender.
+                        Tenha uma IA focada em atender, vender e cobrar 24 horas!
+                      </p>
                     </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 flex-1">
-                      {[
-                        'Créditos Ilimitados',
-                        'Landing Page Personalizada',
-                        'Implementação incluída',
-                        'App na PlayStore',
-                        'Whitelabel',
-                        'Domínio e Subdomínios próprios',
-                        'Configuração completa',
-                        'Suporte 24 horas',
-                      ].map((item) => (
-                        <div key={item} className="flex items-center gap-1">
-                          <svg className={`w-3 h-3 flex-shrink-0 ${isDark ? 'text-lime-400' : 'text-lime-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                          </svg>
-                          <span className={`text-[10px] ${isDark ? 'text-white/60' : 'text-gray-500'}`}>{item}</span>
-                        </div>
-                      ))}
+                    <div className={`flex-shrink-0 text-center px-4 py-2 rounded-xl border ${
+                      isDark ? 'bg-white/[0.03] border-lime-500/20' : 'bg-white border-lime-200'
+                    }`}>
+                      <p className={`text-lg font-black ${isDark ? 'text-lime-400' : 'text-lime-600'}`}>10%</p>
+                      <p className={`text-[10px] font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>por venda confirmada</p>
                     </div>
-                    <button
-                      onClick={() => window.open('https://wa.me/5511926828418?text=Olá!%20Tenho%20interesse%20no%20Plano%20Full%20e%20gostaria%20de%20saber%20mais%20detalhes.', '_blank')}
-                      className={`flex-shrink-0 py-2 px-5 rounded-xl text-sm font-bold transition-all active:scale-95 whitespace-nowrap ${
-                        isDark
-                          ? 'bg-lime-600 text-white hover:bg-lime-500'
-                          : 'bg-lime-600 text-white hover:bg-lime-700'
-                      }`}
-                    >
-                      Falar com consultor
-                    </button>
                   </div>
                 </div>
 
-                {/* Pacotes de Créditos */}
                 <div>
                   <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 text-center ${
-                    isDark ? 'text-blue-400/60' : 'text-blue-600/60'
-                  }`}>Pacotes de Créditos</p>
-
-                  {/* Mobile */}
-                  <div className="flex flex-col gap-1.5 sm:hidden">
-                    {creditPlans.map((pkg) => (
-                      <div key={pkg.id} className={`relative rounded-xl ${
-                        pkg.is_highlighted
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
-                          : isDark ? 'bg-slate-800/40 border border-white/5' : 'bg-white/80 border border-gray-100 shadow-sm'
+                    isDark ? 'text-lime-400/60' : 'text-lime-600/60'
+                  }`}>
+                    Formas de recebimento
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { nome: 'PIX', sub: 'Banco Inter', detalhe: '10% no saque' },
+                      { nome: 'NFC + Link', sub: 'InfinitePay', detalhe: 'Taxa da operadora' },
+                      { nome: 'TEF', sub: 'Mercado Pago', detalhe: 'Taxa da operadora' },
+                    ].map(({ nome, sub, detalhe }) => (
+                      <div key={nome} className={`flex flex-col items-center text-center p-2.5 sm:p-3 rounded-xl border ${
+                        isDark ? 'bg-white/[0.02] border-white/6' : 'bg-white/80 border-gray-100 shadow-sm'
                       }`}>
-                        {pkg.is_highlighted && (
-                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
-                            Mais Popular
-                          </div>
-                        )}
-                        <div className="px-4 py-2.5 flex items-center justify-between gap-4">
-                          <div>
-                            <p className={`text-xs font-semibold mb-0.5 ${!pkg.is_highlighted && (isDark ? 'text-white/70' : 'text-gray-500')}`}>{pkg.name}</p>
-                            <p className="text-base font-bold">R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-xs">{pkg.interactions.toLocaleString('pt-BR')} interações</p>
-                            <p className={`text-[10px] opacity-70`}>R$ {(pkg.price_per_interaction / 100).toFixed(2).replace('.', ',')} cada</p>
-                          </div>
-                        </div>
+                        <span className={`text-xs sm:text-sm font-bold mb-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{nome}</span>
+                        <span className={`text-[10px] font-medium ${isDark ? 'text-lime-400/80' : 'text-lime-600'}`}>{sub}</span>
+                        <span className={`text-[9px] mt-0.5 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>{detalhe}</span>
                       </div>
                     ))}
                   </div>
+                  <p className={`text-[9px] text-center mt-1.5 ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
+                    * Taxas de InfinitePay e Mercado Pago são cobradas diretamente por cada operadora, separadas da comissão da minhAi.
+                  </p>
+                </div>
 
-                  {/* Desktop */}
-                  <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {creditPlans.map((pkg) => (
-                      <div key={pkg.id} className={`relative rounded-2xl flex flex-col transition-all duration-300 ${
-                        pkg.is_highlighted
-                          ? isDark ? 'bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-xl scale-[1.02] z-10' : 'bg-gradient-to-b from-blue-600 to-blue-700 text-white shadow-xl scale-[1.02] z-10'
-                          : isDark ? 'bg-slate-800/40 border border-white/5' : 'bg-white/80 border border-gray-100 shadow-sm'
-                      }`}>
-                        {pkg.is_highlighted && (
-                          <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
-                            Mais Popular
-                          </div>
-                        )}
-                        <div className="p-4 flex flex-col items-center text-center gap-2">
-                          <h3 className={`text-sm font-semibold ${!pkg.is_highlighted && (isDark ? 'text-white' : 'text-gray-900')}`}>{pkg.name}</h3>
-                          <span className="text-2xl font-bold">R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}</span>
-                          <div className="space-y-1.5">
-                            {/* Item 1: interações */}
-                            <div className="flex items-center justify-center gap-2">
-                              <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${pkg.is_highlighted ? 'bg-white/20' : isDark ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
-                                <svg className={`w-2.5 h-2.5 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                              </div>
-                              <span className={`text-xs font-semibold ${pkg.is_highlighted ? '' : isDark ? 'text-white/80' : 'text-gray-700'}`}>
-                                {pkg.interactions.toLocaleString('pt-BR')} interações
-                              </span>
-                            </div>
-                            {/* CORREÇÃO 5: Item 2 — ícone verde (igual ao código 2) */}
-                            <div className="flex items-center justify-center gap-2">
-                              <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${pkg.is_highlighted ? 'bg-white/20' : isDark ? 'bg-green-500/10' : 'bg-green-50'}`}>
-                                <svg className={`w-2.5 h-2.5 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-green-400' : 'text-green-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                </svg>
-                              </div>
-                              <span className={`text-xs ${pkg.is_highlighted ? 'opacity-90' : isDark ? 'text-white/55' : 'text-gray-500'}`}>
-                                R$ {(pkg.price_per_interaction / 100).toFixed(2).replace('.', ',')} por interação
-                              </span>
-                            </div>
-                            {/* Item 3: PIX */}
-                            <div className="flex items-center justify-center gap-2">
-                              <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${pkg.is_highlighted ? 'bg-white/20' : isDark ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
-                                <svg className={`w-2.5 h-2.5 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                </svg>
-                              </div>
-                              <span className={`text-xs ${pkg.is_highlighted ? 'opacity-90' : isDark ? 'text-white/55' : 'text-gray-500'}`}>
-                                Pagamento via PIX
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                <div>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 text-center ${
+                    isDark ? 'text-lime-400/60' : 'text-lime-600/60'
+                  }`}>
+                    18 funções incluídas — ative ou desative no painel
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
+                    {FUNCOES_VENDAS.map(({ label, desc }) => (
+                      <div
+                        key={label}
+                        title={desc}
+                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-[10px] font-medium ${
+                          isDark ? 'bg-white/[0.03] border-white/6 text-white/60' : 'bg-white/80 border-gray-100 text-gray-600'
+                        }`}
+                      >
+                        <svg className={`w-2.5 h-2.5 flex-shrink-0 ${isDark ? 'text-lime-400/60' : 'text-lime-600/60'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="truncate">{label}</span>
                       </div>
                     ))}
                   </div>
@@ -482,98 +561,51 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
 
               </div>
             )}
-          </div>
-        )}
 
-        {/* ══════════════════════════════════════════════════════
-            ABA VENDAS
-        ══════════════════════════════════════════════════════ */}
-        {activeTab === 'vendas' && (
-          <div className="w-full flex flex-col gap-2 sm:gap-3 animate-in fade-in duration-200">
-
-            {/* Destaque principal: GRATUITO */}
-            <div className={`rounded-2xl border p-4 sm:p-5 ${
-              isDark ? 'bg-lime-500/5 border-lime-500/20' : 'bg-lime-50 border-lime-200'
-            }`}>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-2xl sm:text-3xl font-black ${isDark ? 'text-lime-400' : 'text-lime-600'}`}>
-                      Gratuito
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                      isDark ? 'bg-lime-500/20 text-lime-400' : 'bg-lime-100 text-lime-700'
-                    }`}>
-                      para o lojista
-                    </span>
-                  </div>
-                  <p className={`text-xs sm:text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                    Sem mensalidade, sem créditos, sem surpresa.
-                    Você só paga quando vender.
-                    Tenha uma IA focada em atender, vender e cobrar 24 horas!
-                  </p>
-                </div>
-                <div className={`flex-shrink-0 text-center px-5 py-3 rounded-xl border ${
-                  isDark ? 'bg-white/[0.03] border-lime-500/20' : 'bg-white border-lime-200'
+            {selectedPlan === 'full' && (
+              <div className="w-full flex flex-col items-center gap-3 sm:gap-4 pt-2 pb-2">
+                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                  isDark ? 'bg-purple-500/15' : 'bg-purple-100'
                 }`}>
-                  <p className={`text-xl font-black ${isDark ? 'text-lime-400' : 'text-lime-600'}`}>10%</p>
-                  <p className={`text-[10px] font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>por venda confirmada</p>
-                  <p className={`text-[9px] mt-0.5 ${isDark ? 'text-white/25' : 'text-gray-300'}`}>descontado no saque</p>
+                  <svg className={`w-7 h-7 sm:w-8 sm:h-8 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
+                  </svg>
                 </div>
-              </div>
-            </div>
+                <div className="text-center">
+                  <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDark ? 'text-purple-400' : 'text-purple-600'}`}>
+                    Plano Full
+                  </p>
+                  <h3 className={`text-lg sm:text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    Solução completa e personalizada
+                  </h3>
+                </div>
 
-            {/* Integrações de pagamento */}
-            <div>
-              <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 text-center ${
-                isDark ? 'text-lime-400/60' : 'text-lime-600/60'
-              }`}>
-                Formas de recebimento
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { nome: 'PIX', sub: 'Banco Inter', detalhe: '10% no saque' },
-                  { nome: 'NFC + Link', sub: 'InfinitePay', detalhe: 'Taxa da operadora' },
-                  { nome: 'TEF', sub: 'Mercado Pago', detalhe: 'Taxa da operadora' },
-                ].map(({ nome, sub, detalhe }) => (
-                  <div key={nome} className={`flex flex-col items-center text-center p-2.5 sm:p-3 rounded-xl border ${
-                    isDark ? 'bg-white/[0.02] border-white/6' : 'bg-white/80 border-gray-100 shadow-sm'
-                  }`}>
-                    <span className={`text-xs sm:text-sm font-bold mb-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{nome}</span>
-                    <span className={`text-[10px] font-medium ${isDark ? 'text-lime-400/80' : 'text-lime-600'}`}>{sub}</span>
-                    <span className={`text-[9px] mt-0.5 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>{detalhe}</span>
-                  </div>
-                ))}
-              </div>
-              <p className={`text-[9px] text-center mt-1.5 ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
-                * Taxas de InfinitePay e Mercado Pago são cobradas diretamente por cada operadora, separadas da comissão da minhAi.
-              </p>
-            </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full max-w-xl">
+                  {PLANO_FULL_ITENS.map((item) => (
+                    <div
+                      key={item}
+                      className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-[11px] sm:text-xs font-medium ${
+                        isDark ? 'bg-white/[0.03] border-white/6 text-white/70' : 'bg-white/80 border-gray-100 text-gray-600'
+                      }`}
+                    >
+                      <svg className={`w-3 h-3 flex-shrink-0 ${isDark ? 'text-lime-400' : 'text-lime-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                      {item}
+                    </div>
+                  ))}
+                </div>
 
-            {/* Funções disponíveis */}
-            <div className={`[@media(max-height:650px)_and_(max-width:767px)]:hidden`}>
-              <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 text-center ${
-                isDark ? 'text-lime-400/60' : 'text-lime-600/60'
-              }`}>
-                18 funções incluídas — ative ou desative no painel
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
-                {FUNCOES_VENDAS.map(({ label, desc }) => (
-                  <div
-                    key={label}
-                    title={desc}
-                    className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-[10px] font-medium ${
-                      isDark ? 'bg-white/[0.03] border-white/6 text-white/60' : 'bg-white/80 border-gray-100 text-gray-600'
-                    }`}
-                  >
-                    <svg className={`w-2.5 h-2.5 flex-shrink-0 ${isDark ? 'text-lime-400/60' : 'text-lime-600/60'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="truncate">{label}</span>
-                  </div>
-                ))}
+                <button
+                  onClick={() => window.open('https://wa.me/5511926828418?text=Olá!%20Tenho%20interesse%20no%20Plano%20Full%20e%20gostaria%20de%20saber%20mais%20detalhes.', '_blank')}
+                  className={`py-2.5 px-6 rounded-xl text-sm font-bold transition-all active:scale-95 whitespace-nowrap ${
+                    isDark ? 'bg-lime-600 text-white hover:bg-lime-500' : 'bg-lime-600 text-white hover:bg-lime-700'
+                  }`}
+                >
+                  Falar com consultor
+                </button>
               </div>
-            </div>
+            )}
 
           </div>
         )}

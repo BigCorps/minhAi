@@ -67,7 +67,7 @@ export default function ProvasSociaisSection({ theme = 'dark' }: ProvasSociaisSe
         {/* ── Label + H2 ─────────────────────────────────────── */}
         <div className="text-center">
           <p className={`text-xs font-semibold uppercase tracking-widest mb-1.5 ${isDark ? 'text-blue-400/70' : 'text-blue-600/70'}`}>
-            Quem usa o minhAi
+            Quem usa a minhAi
           </p>
           <h2
             className={`

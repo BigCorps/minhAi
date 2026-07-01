@@ -2,17 +2,24 @@
 
 // components/landing/RecursoImageSlide.tsx
 
+import { ReactNode, useEffect, useState } from 'react';
+
 interface RecursoImageSlideProps {
   theme?: 'dark' | 'light';
   label: string;
   title: string;
   description: string;
-  imageSrc: string;
+  /** String única (imagem fixa) ou array (alterna automaticamente entre elas). */
+  imageSrc: string | string[];
   imageAlt: string;
   color: 'green' | 'blue';
   currentIndex: number;
   totalCount: number;
   nextHint?: string;
+  extraContent?: ReactNode;
+  hideDots?: boolean;
+  /** Intervalo da troca automática quando imageSrc é array. Padrão: 5000ms. */
+  imageRotateMs?: number;
 }
 
 const colorStyles = {
@@ -37,9 +44,26 @@ export default function RecursoImageSlide({
   currentIndex,
   totalCount,
   nextHint,
+  extraContent,
+  hideDots = false,
+  imageRotateMs = 5000,
 }: RecursoImageSlideProps) {
   const isDark = theme === 'dark';
   const s = colorStyles[color][theme];
+
+  // Normaliza imageSrc em array — string única vira array de 1 item,
+  // tratado de forma idêntica ao caso de múltiplas imagens (sem rotação).
+  const images = Array.isArray(imageSrc) ? imageSrc : [imageSrc];
+  const [imgIndex, setImgIndex] = useState(0);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const t = setInterval(() => {
+      setImgIndex((i) => (i + 1) % images.length);
+    }, imageRotateMs);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [images.length, imageRotateMs]);
 
   return (
     <div
@@ -85,16 +109,25 @@ export default function RecursoImageSlide({
             [@media(max-height:560px)_and_(max-width:767px)]:hidden
           `}
         >
-          <img
-            src={imageSrc}
-            alt={imageAlt}
-            className="w-full max-w-[280px] md:max-w-full object-contain drop-shadow-2xl transition-transform duration-300 hover:scale-105 md:max-h-[55vh]"
-            style={{ maxHeight: 'clamp(120px, 30vh, 280px)' }}
-          />
+          <div
+            className="relative w-full max-w-[280px] md:max-w-full md:max-h-[55vh] transition-transform duration-300 hover:scale-105"
+            style={{ height: 'clamp(120px, 30vh, 280px)' }}
+          >
+            {images.map((src, i) => (
+              <img
+                key={src}
+                src={src}
+                alt={imageAlt}
+                className={`absolute inset-0 w-full h-full object-contain drop-shadow-2xl transition-opacity duration-700 ${
+                  i === imgIndex ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+            ))}
+          </div>
         </div>
 
         {/* ── Texto ──────────────────────────────────────────── */}
-        <div className="flex flex-col items-start justify-center order-2 md:order-1 w-full md:w-1/2 max-w-xl md:max-w-none">
+        <div className="flex flex-col items-center md:items-start justify-center text-center md:text-left order-2 md:order-1 w-full md:w-1/2 max-w-xl md:max-w-none">
 
           {/* Label */}
           <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-3 sm:mb-5 ${s.labelBg} ${s.labelText}`}>
@@ -126,19 +159,30 @@ export default function RecursoImageSlide({
             {description}
           </p>
 
-          {/* Progress dots */}
-          <div className="flex items-center gap-2 mt-4 sm:mt-8">
-            {Array.from({ length: totalCount }).map((_, i) => (
-              <div
-                key={i}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i === currentIndex
-                    ? `w-8 ${s.dotActive}`
-                    : `w-2 ${isDark ? 'bg-white/15' : 'bg-gray-200'}`
-                }`}
-              />
-            ))}
-          </div>
+          {/* Conteúdo extra opcional — ex: DomainPreviewPicker. Sempre visível
+              (não usa a mesma media query de altura da descrição) para garantir
+              que fique funcional em qualquer tamanho de tela. */}
+          {extraContent && (
+            <div className="w-full mt-3 sm:mt-5">
+              {extraContent}
+            </div>
+          )}
+
+          {/* Progress dots — ocultos quando a página não pertence a uma sequência (ex: página 2, fora do bloco de Recursos) */}
+          {!hideDots && (
+            <div className="flex items-center gap-2 mt-4 sm:mt-8">
+              {Array.from({ length: totalCount }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    i === currentIndex
+                      ? `w-8 ${s.dotActive}`
+                      : `w-2 ${isDark ? 'bg-white/15' : 'bg-gray-200'}`
+                  }`}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Hint — some em telas baixas */}
           <p

@@ -1,7 +1,9 @@
 'use client'
 // app/tour/export/page.tsx
-// 1 slide por página · card à esquerda · texto à direita
-// Chrome desktop → aguarda verde → Ctrl+P → A4 Paisagem → Gráficos de fundo
+// 1 slide por página A4 landscape
+// card à esquerda com transform:scale + container calculado (sem corte)
+// texto à direita
+// animações congeladas via classe CSS antes do print
 
 import { useState, useEffect } from 'react'
 
@@ -70,6 +72,16 @@ import ScenePlanosVendas from '@/components/tour/scenes/ScenePlanosVendas'
 import ScenePlanosConclusao from '@/components/tour/scenes/ScenePlanosConclusao'
 
 // ─────────────────────────────────────────────────────────────
+// ESCALA
+// Cenas nativas: 800 × 450px
+// Scale: 0.58 → card resultante: 464 × 261px (~12.3cm × 6.9cm)
+// Container pai tem exatamente esses px → nunca corta
+// ─────────────────────────────────────────────────────────────
+const SCALE = 0.58
+const CARD_W = Math.round(800 * SCALE)  // 464px
+const CARD_H = Math.round(450 * SCALE)  // 261px
+
+// ─────────────────────────────────────────────────────────────
 // TIPO
 // ─────────────────────────────────────────────────────────────
 interface SlideData {
@@ -83,7 +95,7 @@ interface SlideData {
 }
 
 // ─────────────────────────────────────────────────────────────
-// TODOS OS SLIDES (lista plana — 1 por página)
+// SLIDES
 // ─────────────────────────────────────────────────────────────
 const ALL_SLIDES: SlideData[] = [
   // ── Stage 1 ──
@@ -98,7 +110,7 @@ const ALL_SLIDES: SlideData[] = [
     caption:'No seu próprio WhatsApp, com a naturalidade que seus clientes já conhecem. Respondo mensagens, entendo o que o cliente precisa, envio e confirmo cobranças Pix, Débito e Crédito, marco eventos na sua Agenda Google, calculo frete de entrega, gero orçamentos e muito mais.' },
   { stageNumber:1, stageTitle:'Apresentação', stageColor:'#3b82f6',
     id:'instagram', label:'Instagram', node:<SceneInstagram />,
-    caption:'No Instagram e Facebook, respondendo mensagens diretas, comentários e enviando DMs automaticamente, com as mesmas funcionalidades do Whatsapp, convertendo seguidores em clientes.' },
+    caption:'No Instagram e Facebook, respondendo mensagens diretas, comentários e enviando DMs automaticamente, com as mesmas funcionalidades do WhatsApp, convertendo seguidores em clientes.' },
   { stageNumber:1, stageTitle:'Apresentação', stageColor:'#3b82f6',
     id:'widget', label:'Widget Web', node:<SceneWidget />,
     caption:'Como widget flutuante no seu site, pronto para responder visitantes a qualquer hora do dia, sem precisar de um atendente humano.' },
@@ -124,13 +136,13 @@ const ALL_SLIDES: SlideData[] = [
     caption:'O carrossel de categorias organiza mais de 100 funções em grupos como Comercial, Financeiro, Agendamento, Serviços e muito mais. O cliente toca numa categoria, vê as funções disponíveis e escolhe o que precisa, ou simplesmente usa a palavra de ativação e fala diretamente o que quer.' },
   { stageNumber:2, stageTitle:'Página do Assistente', stageColor:'#8b5cf6',
     id:'assistente-qrcode', label:'QR Code', node:<SceneQRCode />,
-    caption:'Com um único toque ou comando, o assistente gera um card na tela, para o WhatsApp da empresa, para uma cobrança PIX, ou qualquer outra das mais de 100 funções. O cliente interage por voz, digitando ou lendo o QR Code. Ele escolhe. Sem papel, sem digitação, sem atrito.' },
+    caption:'Com um único toque ou comando, o assistente gera um card na tela, para o WhatsApp da empresa, para uma cobrança PIX, ou qualquer outra das mais de 100 funções. O cliente interage por voz, digitando ou lendo o QR Code. Sem papel, sem digitação, sem atrito.' },
   { stageNumber:2, stageTitle:'Página do Assistente', stageColor:'#8b5cf6',
     id:'assistente-vendas', label:'Modo Vendas', node:<SceneVendas />,
     caption:'O Modo Vendas é uma loja virtual completa, com todos os seus produtos. Além de interagir com o assistente, também exibe os produtos com nome, foto, descrição e preço, organizados por categoria. O cliente monta o carrinho, escolhe entre retirar no balcão, sentar na mesa ou receber em casa com entrega, o sistema já calcula o frete automaticamente.' },
   { stageNumber:2, stageTitle:'Página do Assistente', stageColor:'#8b5cf6',
     id:'assistente-fila', label:'Modo Fila', node:<SceneFila />,
-    caption:'O Modo Fila organiza o atendimento presencial com senhas digitais. O cliente retira a senha pelo totem, acompanha em tempo real pela tela e o sistema anuncia cada chamada em voz alta, sem papel, sem confusão. O Modo Link: uma página rápida com WhatsApp, Instagram, site e todos os contatos — um único endereço para o cliente encontrar tudo.' },
+    caption:'O Modo Fila organiza o atendimento presencial com senhas digitais. O cliente retira a senha pelo totem, acompanha em tempo real pela tela e o sistema anuncia cada chamada em voz alta, sem papel, sem confusão. O Modo Link: uma página rápida com todos os contatos da empresa — um único endereço para o cliente encontrar tudo.' },
   { stageNumber:2, stageTitle:'Página do Assistente', stageColor:'#8b5cf6',
     id:'assistente-totem', label:'Modo Totem', node:<SceneTotem isSpeaking={false} />,
     caption:'No Modo Totem, a tela entra em modo quiosque com teclado virtual embutido: sem botões de saída, sem acesso ao sistema, com saída protegida por senha do proprietário. No Modo Cliente, clientes e colaboradores criam uma conta em segundos, cada um com seu nível de acesso. Você tem o controle de tudo no dashboard.' },
@@ -199,7 +211,7 @@ const ALL_SLIDES: SlideData[] = [
     caption:'Em Serviços Google você conecta o Google Agenda, Gmail, Drive, Maps e outros. Em Serviços Meta você integra WhatsApp Business, Instagram e Facebook para o assistente responder mensagens e comentários diretamente. E em Integrações, você conecta o assistente ao ChatGPT, ao Claude e outros.' },
   { stageNumber:5, stageTitle:'Meu Dashboard', stageColor:'#06b6d4',
     id:'dashboard-gestao', label:'Gestão', node:<SceneDashboardGestao />,
-    caption:'Em Vendas e Produtos você cadastra seu catálogo completo com fotos, preços e categorias. Na Linha de Produção você tem a lista, fichas técnicas e custos. O Controle de Usuários gerencia seus clientes e colaboradores cadastrados. Em Notas Fiscais e Arquivos você acessa o histórico fiscal e os documentos enviados no assistente.' },
+    caption:'Em Vendas e Produtos você cadastra seu catálogo completo com fotos, preços e categorias. Na Linha de Produção você tem a lista, fichas técnicas e custos. O Controle de Usuários gerencia seus clientes e colaboradores. Em Notas Fiscais e Arquivos você acessa o histórico fiscal e os documentos enviados no assistente.' },
   { stageNumber:5, stageTitle:'Meu Dashboard', stageColor:'#06b6d4',
     id:'dashboard-perfil', label:'Meu Perfil', node:<SceneDashboardPerfil />,
     caption:'No menu do usuário você tem acesso ao seu perfil, ao painel de créditos com o saldo disponível e o histórico de consumo, aos seus recebimentos, ao programa de indicações, ao histórico completo de interações do assistente e à seção de ajuda com suporte direto.' },
@@ -260,34 +272,29 @@ const ALL_SLIDES: SlideData[] = [
     caption:'Mais de 100 funções, ativadas só quando fazem sentido pro seu negócio. Você pode escolher 1 ou todas as funções. Realmente uma IA pra chamar de sua!' },
 
   // ── Stage 8 ──
-  { stageNumber:8, stageTitle:'Planos e Valores', stageColor:'#b0cb1f',
+  { stageNumber:8, stageTitle:'Planos e Valores', stageColor:'#84cc16',
     id:'planos-intro', label:'Intro', node:<ScenePlanosIntro />,
     caption:'A minhAi tem dois modelos de uso: você escolhe o que faz mais sentido pro seu negócio. A minhAi Smart funciona por créditos: você compra, usa quando quiser, sem mensalidade obrigatória. A minhAi Vendas é gratuito para o lojista, sem mensalidade, sem créditos. Você só paga comissão quando vender.' },
-  { stageNumber:8, stageTitle:'Planos e Valores', stageColor:'#b0cb1f',
+  { stageNumber:8, stageTitle:'Planos e Valores', stageColor:'#84cc16',
     id:'planos-smart-mensal', label:'Smart — Planos', node:<ScenePlanosSmartMensal />,
     caption:'No Smart, os planos mensais desbloqueiam recursos avançados: O plano Top, com Serviços Google, Serviços Meta, Linha de Produção, QR Codes com seu logo e funções de impressão. O plano Consulting, com tudo isso e mais: Webapp com subdomínio próprio e consultoria.' },
-  { stageNumber:8, stageTitle:'Planos e Valores', stageColor:'#b0cb1f',
+  { stageNumber:8, stageTitle:'Planos e Valores', stageColor:'#84cc16',
     id:'planos-smart-creditos', label:'Smart — Créditos', node:<ScenePlanosSmartCreditos />,
     caption:'Além dos planos mensais, você pode comprar créditos avulsos a qualquer momento. Starter: 200 créditos. Professional (mais popular): 1.000 créditos. Business: 3.600 créditos. Enterprise: 10.000 créditos. Todos pagos via PIX. E para começar, você já recebe 20 créditos grátis.' },
-  { stageNumber:8, stageTitle:'Planos e Valores', stageColor:'#b0cb1f',
+  { stageNumber:8, stageTitle:'Planos e Valores', stageColor:'#84cc16',
     id:'planos-full', label:'Plano Full', node:<ScenePlanosFullPlan />,
     caption:'Para quem quer uma solução completa e personalizada, existe o Plano Full. Créditos ilimitados, domínio próprio, site personalizado, implementação e configuração completa pela equipe minhAi, e suporte 24 horas. É a solução ideal para agências, franquias e grandes operações.' },
-  { stageNumber:8, stageTitle:'Planos e Valores', stageColor:'#b0cb1f',
+  { stageNumber:8, stageTitle:'Planos e Valores', stageColor:'#84cc16',
     id:'planos-vendas', label:'minhAi Vendas', node:<ScenePlanosVendas />,
     caption:'A minhAi Vendas é gratuito para o lojista. Sem mensalidade, sem créditos, sem surpresa. Você só paga 10% por venda confirmada, descontado automaticamente no saque. Vem com funções específicas com foco total em vendas.' },
-  { stageNumber:8, stageTitle:'Planos e Valores', stageColor:'#b0cb1f',
+  { stageNumber:8, stageTitle:'Planos e Valores', stageColor:'#84cc16',
     id:'planos-conclusao', label:'Conclusão', node:<ScenePlanosConclusao />,
     caption:'Comece grátis, escale no seu ritmo. Smart para quem quer controle total. Vendas para quem quer vender sem custo fixo. Full para quem quer tudo pronto e com a sua marca. O plano certo pro negócio certo, sem amarras. Teste agora mesmo!' },
 ]
 
 // ─────────────────────────────────────────────────────────────
-// COMPONENTE DE SLIDE — 1 por página
-// Card à esquerda (56%) · Texto à direita (40%)
-// zoom = 0.66 → cena 800px → 528px exibidos (~14cm) · altura 450*0.66=297px (~7.9cm)
+// SLIDE — 1 por página
 // ─────────────────────────────────────────────────────────────
-const ZOOM = 0.66
-const CARD_H = Math.round(450 * ZOOM) // 297px
-
 function Slide({ slide, index }: { slide: SlideData; index: number }) {
   const [ready, setReady] = useState(false)
 
@@ -301,38 +308,36 @@ function Slide({ slide, index }: { slide: SlideData; index: number }) {
       className="slide-page"
       style={{
         width: '100%',
-        minHeight: '148mm', // metade de A4 landscape (210mm / 2 = ~140mm + margens)
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center',
-        padding: '6mm 8mm',
+        padding: '8mm 10mm',
         boxSizing: 'border-box',
-        pageBreakAfter: 'always',
-        breakAfter: 'page',
       }}
     >
-      {/* Cabeçalho minimalista */}
+      {/* Cabeçalho */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        marginBottom: '4mm',
-        paddingBottom: '2.5mm',
-        borderBottom: `2px solid ${slide.stageColor}25`,
+        marginBottom: '5mm',
+        paddingBottom: '3mm',
+        borderBottom: `2px solid ${slide.stageColor}30`,
+        flexShrink: 0,
       }}>
         <span style={{
           background: slide.stageColor,
           color: 'white',
           borderRadius: '5px',
-          padding: '2px 8px',
-          fontSize: '7pt',
+          padding: '2px 9px',
+          fontSize: '7.5pt',
           fontWeight: 800,
           fontFamily: 'system-ui, sans-serif',
+          letterSpacing: '0.01em',
         }}>
           {slide.stageNumber} · {slide.stageTitle}
         </span>
         <span style={{
-          fontSize: '7.5pt',
+          fontSize: '8pt',
           fontWeight: 700,
           color: '#1e293b',
           fontFamily: 'system-ui, sans-serif',
@@ -345,76 +350,93 @@ function Slide({ slide, index }: { slide: SlideData; index: number }) {
           color: '#94a3b8',
           fontFamily: 'system-ui, sans-serif',
         }}>
-          minhAi · minhai.app
+          {index + 1}/{ALL_SLIDES.length} · minhAi · minhai.app
         </span>
       </div>
 
-      {/* Conteúdo: card + texto */}
+      {/* Corpo: card à esquerda + texto à direita */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '8mm',
+        gap: '10mm',
         flex: 1,
       }}>
-        {/* Card da cena — 56% */}
+
+        {/* ── Card da cena ──────────────────────────────────────
+         *  Container com tamanho EXATO = 800*SCALE × 450*SCALE
+         *  A cena interna (800×450px) é escalada com transform:scale
+         *  transformOrigin: top left → não corta nada
+         *  overflow:hidden → garante que nada vaze
+         * ───────────────────────────────────────────────────── */}
         <div style={{
-          flex: '0 0 56%',
+          width: `${CARD_W}px`,
           height: `${CARD_H}px`,
-          borderRadius: '12px',
-          overflow: 'hidden',
-          border: `1.5px solid ${ready ? '#e2e8f0' : '#f1f5f9'}`,
-          background: '#f8fafc',
           position: 'relative',
-          boxShadow: ready ? '0 4px 24px rgba(0,0,0,0.08)' : 'none',
-          transition: 'box-shadow 0.5s ease',
+          overflow: 'hidden',
+          borderRadius: '12px',
+          border: `1.5px solid ${ready ? '#dde1e7' : '#f1f5f9'}`,
+          background: '#f8fafc',
+          boxShadow: ready ? '0 4px 20px rgba(0,0,0,0.10)' : 'none',
+          flexShrink: 0,
         }}>
-          {/* Overlay de loading — removido no print via CSS */}
+          {/* Overlay de loading — CSS o remove no print */}
           {!ready && (
-            <div className="loading-overlay" style={{
-              position: 'absolute', inset: 0,
-              background: 'rgba(248,250,252,0.96)',
-              zIndex: 20,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexDirection: 'column', gap: '8px',
-            }}>
+            <div
+              className="loading-overlay"
+              style={{
+                position: 'absolute', inset: 0, zIndex: 10,
+                background: 'rgba(248,250,252,0.97)',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: '8px',
+              }}
+            >
               <div style={{
-                width: '32px', height: '32px', borderRadius: '50%',
+                width: '30px', height: '30px', borderRadius: '50%',
                 border: '3px solid #e2e8f0',
                 borderTopColor: slide.stageColor,
                 animation: 'tourSpin 0.9s linear infinite',
               }} />
-              <span style={{ fontSize: '7pt', color: '#94a3b8', fontFamily: 'system-ui, sans-serif' }}>
-                carregando cena...
-              </span>
+              <span style={{
+                fontSize: '7pt', color: '#94a3b8',
+                fontFamily: 'system-ui, sans-serif',
+              }}>carregando...</span>
             </div>
           )}
 
-          {/* Cena com CSS zoom */}
-          <div style={{
-            width: '800px',
-            height: '450px',
-            // @ts-ignore
-            zoom: ZOOM,
-            pointerEvents: 'none',
-            userSelect: 'none',
-          }}>
+          {/*
+           * Cena em tamanho nativo (800×450), escalada para caber.
+           * transform:scale com transformOrigin:top left →
+           * o browser comprime a cena sem cortar nenhum pixel.
+           * Classe scene-inner → CSS de print desativa will-change e backface
+           */}
+          <div
+            className="scene-inner"
+            style={{
+              width: '800px',
+              height: '450px',
+              transform: `scale(${SCALE})`,
+              transformOrigin: 'top left',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          >
             {slide.node}
           </div>
         </div>
 
-        {/* Texto — 40% */}
+        {/* ── Texto ─────────────────────────────────────────── */}
         <div style={{
-          flex: '0 0 40%',
+          flex: 1,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          gap: '4mm',
+          gap: '5mm',
+          minWidth: 0,
         }}>
-          {/* Logo minhAi em destaque */}
           <div style={{
             fontFamily: 'system-ui, sans-serif',
             fontWeight: 900,
-            fontSize: '18pt',
+            fontSize: '22pt',
             color: slide.stageColor,
             letterSpacing: '-0.04em',
             lineHeight: 1,
@@ -422,27 +444,16 @@ function Slide({ slide, index }: { slide: SlideData; index: number }) {
             minhAi
           </div>
 
-          {/* Texto da narração */}
           <p style={{
             fontFamily: 'system-ui, sans-serif',
-            fontSize: '9.5pt',
+            fontSize: '10pt',
             color: '#334155',
-            lineHeight: 1.65,
+            lineHeight: 1.7,
             margin: 0,
             padding: 0,
           }}>
             {slide.caption}
           </p>
-
-          {/* Numeração */}
-          <div style={{
-            fontFamily: 'system-ui, sans-serif',
-            fontSize: '6.5pt',
-            color: '#cbd5e1',
-            marginTop: '2mm',
-          }}>
-            {index + 1} / {ALL_SLIDES.length}
-          </div>
         </div>
       </div>
     </div>
@@ -450,21 +461,19 @@ function Slide({ slide, index }: { slide: SlideData; index: number }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// PÁGINA PRINCIPAL
+// PÁGINA
 // ─────────────────────────────────────────────────────────────
 export default function TourExportPage() {
   const [allReady, setAllReady] = useState(false)
   const [countdown, setCountdown] = useState(6)
 
-  // Countdown e flag de pronto
   useEffect(() => {
-    const interval = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000)
-    const done = setTimeout(() => { setAllReady(true); clearInterval(interval) }, 5500)
-    return () => { clearInterval(interval); clearTimeout(done) }
+    const iv = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000)
+    const t = setTimeout(() => { setAllReady(true); clearInterval(iv) }, 5500)
+    return () => { clearInterval(iv); clearTimeout(t) }
   }, [])
 
-  // Para TODAS as animações antes do print e restaura depois
-  // Isso resolve o bug do Chrome que captura frames intermediários
+  // Congela animações antes do print, restaura depois
   useEffect(() => {
     const freeze = () => document.documentElement.classList.add('printing')
     const unfreeze = () => document.documentElement.classList.remove('printing')
@@ -477,14 +486,15 @@ export default function TourExportPage() {
   }, [])
 
   const handlePrint = () => {
-    // Para animações manualmente antes de chamar print()
+    // Congela primeiro, espera 2 frames para o CSS ser aplicado, depois abre print
     document.documentElement.classList.add('printing')
-    // Pequeno delay para garantir que o CSS foi aplicado antes do print dialog
-    setTimeout(() => {
-      window.print()
-      // afterprint restaura, mas como fallback:
-      setTimeout(() => document.documentElement.classList.remove('printing'), 2000)
-    }, 150)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.print()
+        // Fallback: restaura após 3s caso afterprint não dispare (mobile)
+        setTimeout(() => document.documentElement.classList.remove('printing'), 3000)
+      })
+    })
   }
 
   return (
@@ -495,55 +505,68 @@ export default function TourExportPage() {
         body {
           margin: 0; padding: 0;
           background: #f1f5f9;
-          font-family: system-ui, -apple-system, sans-serif;
+          font-family: system-ui, sans-serif;
         }
 
-        /* Spinner de loading */
         @keyframes tourSpin {
           to { transform: rotate(360deg); }
         }
 
         /*
-         * CONGELAR ANIMAÇÕES antes do print.
-         * A classe .printing é adicionada via JS no beforeprint/handlePrint.
-         * Isso para qualquer @keyframes ativo, evitando o bug do Chrome
-         * que captura frames intermediários e gera páginas em branco.
+         * Congela TODAS as animações e transições quando a classe .printing
+         * é adicionada ao <html>. Isso inclui requestAnimationFrame-based animations
+         * que não são CSS puras — ao parar as transições CSS, o compositor para
+         * de promover layers para GPU, e o rasterizador do print consegue capturar.
          */
         html.printing *,
         html.printing *::before,
         html.printing *::after {
+          animation: none !important;
           animation-play-state: paused !important;
-          animation-duration: 0s !important;
+          transition: none !important;
           transition-duration: 0s !important;
-          transition-delay: 0s !important;
         }
 
         @page {
           size: A4 landscape;
-          margin: 10mm 12mm;
+          margin: 0;
         }
 
         @media print {
-          /* Esconde UI de controle */
           .no-print { display: none !important; }
-
-          /* Remove padding de tela */
-          body { background: white !important; padding-top: 0 !important; }
           .screen-pad { padding-top: 0 !important; }
 
-          /* Cada slide em sua própria página */
+          body { background: white !important; }
+
+          /* Cada slide = 1 página A4 landscape (297 × 210mm) */
           .slide-page {
+            width: 297mm !important;
+            height: 210mm !important;
             page-break-after: always !important;
             break-after: page !important;
-            min-height: auto !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            overflow: hidden !important;
           }
+
           .slide-page:last-child {
             page-break-after: avoid !important;
             break-after: avoid !important;
           }
 
-          /* Remove overlays de loading */
+          /* Remove overlays de loading no print */
           .loading-overlay { display: none !important; }
+
+          /*
+           * scene-inner: desativa aceleração GPU no print.
+           * will-change:auto libera o layer compositor,
+           * permitindo que o rasterizador de print capture o conteúdo.
+           */
+          .scene-inner {
+            will-change: auto !important;
+            backface-visibility: visible !important;
+            -webkit-backface-visibility: visible !important;
+          }
 
           /* Força cores de fundo */
           * {
@@ -551,27 +574,24 @@ export default function TourExportPage() {
             print-color-adjust: exact !important;
             color-adjust: exact !important;
           }
-
-          /* Garante que zoom seja mantido — funciona no Chrome/Edge/Safari */
         }
 
         @media screen {
-          .page-wrap {
-            max-width: 1100px;
-            margin: 0 auto;
-            background: white;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
-          }
           .slide-page {
+            background: white;
+            max-width: 1100px;
+            margin: 10px auto;
             border-bottom: 1px solid #f1f5f9;
+            min-height: 500px;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.08);
           }
-          .slide-page:last-child {
+          .slide-page:last-of-type {
             border-bottom: none;
           }
         }
       `}</style>
 
-      {/* Barra de status — só na tela */}
+      {/* Barra de status */}
       <div className="no-print" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
         height: '52px',
@@ -579,19 +599,14 @@ export default function TourExportPage() {
         color: 'white',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 20px', fontSize: '13px', fontWeight: 600,
-        transition: 'background 0.6s ease',
+        transition: 'background 0.6s',
         boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '18px' }}>{allReady ? '✅' : '⏳'}</span>
           {allReady
-            ? <span>
-                {ALL_SLIDES.length} slides prontos —{' '}
-                clique em <strong>Imprimir PDF</strong> →{' '}
-                <strong>A4 Paisagem</strong> → ativar{' '}
-                <strong>Gráficos de fundo</strong>
-              </span>
-            : <span>Aguardando animações renderizarem... {countdown > 0 ? `(${countdown}s)` : 'quase pronto...'}</span>
+            ? <span>{ALL_SLIDES.length} slides prontos — clique em <strong>Imprimir PDF</strong> → <strong>A4 Paisagem</strong> → ativar <strong>Gráficos de fundo</strong></span>
+            : <span>Aguardando animações... {countdown > 0 ? `(${countdown}s)` : 'quase pronto...'}</span>
           }
         </div>
         <button
@@ -601,25 +616,20 @@ export default function TourExportPage() {
             background: allReady ? 'white' : 'rgba(255,255,255,0.3)',
             color: allReady ? '#10b981' : 'rgba(255,255,255,0.6)',
             border: 'none', borderRadius: '8px',
-            padding: '9px 24px',
-            fontWeight: 800, fontSize: '13px',
+            padding: '9px 24px', fontWeight: 800, fontSize: '13px',
             cursor: allReady ? 'pointer' : 'not-allowed',
-            transition: 'all 0.3s',
-            whiteSpace: 'nowrap',
+            transition: 'all 0.3s', whiteSpace: 'nowrap',
           }}
         >
           {allReady ? '🖨️  Imprimir PDF' : `Aguarde ${countdown}s...`}
         </button>
       </div>
 
-      {/* Conteúdo */}
+      {/* Slides */}
       <div className="screen-pad" style={{ paddingTop: '64px' }}>
-        <div className="page-wrap">
-          {ALL_SLIDES.map((slide, i) => (
-            <Slide key={slide.id} slide={slide} index={i} />
-          ))}
-        </div>
-
+        {ALL_SLIDES.map((slide, i) => (
+          <Slide key={slide.id} slide={slide} index={i} />
+        ))}
         <div className="no-print" style={{
           textAlign: 'center', padding: '24px',
           color: '#94a3b8', fontSize: '12px',

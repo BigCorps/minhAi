@@ -535,7 +535,7 @@ function MinPageContent() {
     <div className="flex flex-col h-[100dvh]" style={{ background: isDark ? 'linear-gradient(to bottom, rgb(2,6,23), rgb(15,23,42))' : 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))' }}>
       {/* Header */}
       <header className="flex items-center justify-center px-4 sm:px-6 py-3 border-b flex-shrink-0" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
-        <div className="flex items-center justify-between w-full max-w-3xl">
+        <div className="flex items-center justify-between w-full max-w-5xl">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
             <Image src="/minia/logo.png" alt="Min.IA" width={28} height={28} className="w-full h-full object-cover" />
@@ -685,7 +685,7 @@ function MinPageContent() {
       {ready && (
         <div className="flex-shrink-0 px-3 sm:px-6 pt-3 pb-1 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
           <div
-            className="flex items-end gap-2 rounded-xl px-3 py-2 max-w-3xl mx-auto"
+            className="flex items-end gap-2 rounded-xl px-3 py-2 max-w-5xl mx-auto"
             style={{ background: isDark ? 'rgba(30,41,59,0.95)' : '#ffffff', border: `1px solid ${isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)'}` }}
           >
             <textarea

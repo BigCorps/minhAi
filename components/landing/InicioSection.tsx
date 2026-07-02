@@ -98,7 +98,7 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
           {/* Badge */}
           <div
             className={`
-              inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold
+              inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold leading-none
               mb-1.5
               [@media(max-height:640px)_and_(max-width:767px)]:hidden
               ${isDark
@@ -160,7 +160,7 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
           <div className="flex flex-row items-center justify-center gap-2 sm:gap-4">
             <Link
               href="/lead"
-              className="flex-1 sm:flex-none px-4 sm:px-8 py-2 sm:py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-xs sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
+              className="flex-1 sm:flex-none px-4 sm:px-8 py-2 sm:py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-xs sm:text-base text-center leading-none shadow-lg hover:shadow-xl hover:scale-105"
             >
               Demonstração Ao Vivo
             </Link>
@@ -168,7 +168,7 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
               href="/ia/suporte"
               className={`
                 flex-1 sm:flex-none px-4 sm:px-8 py-2 sm:py-3.5
-                border-2 rounded-full transition-all duration-300 font-bold text-xs sm:text-base text-center hover:scale-105
+                border-2 rounded-full transition-all duration-300 font-bold text-xs sm:text-base text-center leading-none hover:scale-105
                 ${isDark
                   ? 'border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400'
                   : 'border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:border-blue-600'

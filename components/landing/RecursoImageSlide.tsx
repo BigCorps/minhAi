@@ -131,7 +131,7 @@ export default function RecursoImageSlide({
         <div className="flex flex-col items-center md:items-start justify-center text-center md:text-left order-2 md:order-1 w-full md:w-1/2 max-w-xl md:max-w-none">
 
           {/* Label */}
-          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-3 sm:mb-5 ${s.labelBg} ${s.labelText}`}>
+          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest leading-none mb-3 sm:mb-5 ${s.labelBg} ${s.labelText}`}>
             {label}
           </span>
 

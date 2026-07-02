@@ -47,7 +47,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
           `}
         >
           <p className={`text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-1.5 ${isDark ? 'text-green-400/70' : 'text-green-600/70'}`}>
-            Comece agora mesmo!
+            Comece agora
           </p>
           <h2
             className={`
@@ -58,8 +58,8 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
               ${isDark ? 'text-white' : 'text-gray-900'}
             `}
           >
-            Realmente uma IA pra chamar de sua!{' '}
-            <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>E você?</span>
+            Realmente' '}
+            <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>uma IA pra chamar de sua!</span>
           </h2>
 
           {/* Subtítulo — some em telas baixas */}
@@ -76,7 +76,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
           <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 justify-center">
             <a
               href="/lead"
-              className="w-full sm:w-auto px-6 py-2 sm:py-2.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-xs sm:text-sm text-center shadow-lg hover:shadow-xl hover:scale-105"
+              className="w-full sm:w-auto px-6 py-2 sm:py-2.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-xs sm:text-sm text-center leading-none shadow-lg hover:shadow-xl hover:scale-105"
             >
               Demonstração Ao Vivo
             </a>
@@ -84,7 +84,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
               href="/login"
               className={`
                 w-full sm:w-auto px-6 py-2 sm:py-2.5
-                border-2 rounded-full transition-all duration-300 font-bold text-xs sm:text-sm text-center hover:scale-105
+                border-2 rounded-full transition-all duration-300 font-bold text-xs sm:text-sm text-center leading-none hover:scale-105
                 ${isDark
                   ? 'border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400'
                   : 'border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:border-blue-600'

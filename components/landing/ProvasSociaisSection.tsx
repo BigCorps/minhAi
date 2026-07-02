@@ -160,7 +160,7 @@ export default function ProvasSociaisSection({ theme = 'dark' }: ProvasSociaisSe
                 className={`
                   inline-flex items-center gap-1 sm:gap-1.5
                   px-2.5 py-1 sm:px-3 sm:py-1.5
-                  rounded-full text-[10px] sm:text-xs font-medium border transition-colors
+                  rounded-full text-[10px] sm:text-xs font-medium border leading-none transition-colors
                   ${isDark
                     ? 'bg-white/5 border-white/8 text-white/55'
                     : 'bg-gray-50 border-gray-200 text-gray-600'
@@ -175,7 +175,7 @@ export default function ProvasSociaisSection({ theme = 'dark' }: ProvasSociaisSe
               className={`
                 inline-flex items-center gap-1
                 px-2.5 py-1 sm:px-3 sm:py-1.5
-                rounded-full text-[10px] sm:text-xs font-medium border
+                rounded-full text-[10px] sm:text-xs font-medium border leading-none
                 ${isDark
                   ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
                   : 'bg-blue-50 border-blue-200 text-blue-600'
@@ -186,6 +186,7 @@ export default function ProvasSociaisSection({ theme = 'dark' }: ProvasSociaisSe
             </span>
           </div>
         </div>
+
 
       </div>
     </div>

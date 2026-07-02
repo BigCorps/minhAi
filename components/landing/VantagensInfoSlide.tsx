@@ -89,7 +89,7 @@ export default function VantagensInfoSlide({
 
         {/* ── Texto — label, título, frase abaixo do título ────── */}
         <div className="flex flex-col items-center md:items-start justify-center text-center md:text-left order-1 w-full md:w-1/2 max-w-xl md:max-w-none">
-          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-3 sm:mb-5 ${
+          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest leading-none mb-3 sm:mb-5 ${
             isDark ? 'bg-green-500/10 text-green-400' : 'bg-green-100 text-green-600'
           }`}>
             {label}

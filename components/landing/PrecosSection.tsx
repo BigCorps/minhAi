@@ -142,7 +142,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
             className={`
               relative flex items-center justify-center gap-1 sm:gap-2 flex-1 sm:flex-initial min-w-0
               px-2 sm:px-6 py-1.5 sm:py-2 rounded-xl
-              text-[10px] sm:text-sm font-bold whitespace-nowrap transition-all duration-300
+              text-[10px] sm:text-sm font-bold whitespace-nowrap leading-none transition-all duration-300
               ${selectedPlan === 'smart'
                 ? isDark ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-blue-600 text-white shadow-lg shadow-blue-300/30'
                 : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-600'
@@ -158,7 +158,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
             className={`
               relative flex items-center justify-center gap-1 sm:gap-2 flex-1 sm:flex-initial min-w-0
               px-2 sm:px-6 py-1.5 sm:py-2 rounded-xl
-              text-[10px] sm:text-sm font-bold whitespace-nowrap transition-all duration-300
+              text-[10px] sm:text-sm font-bold whitespace-nowrap leading-none transition-all duration-300
               ${selectedPlan === 'vendas'
                 ? isDark ? 'bg-lime-600 text-white shadow-lg shadow-lime-500/20' : 'bg-lime-600 text-white shadow-lg shadow-lime-300/30'
                 : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-600'
@@ -174,7 +174,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
             className={`
               relative flex items-center justify-center gap-1 sm:gap-2 flex-1 sm:flex-initial min-w-0
               px-2 sm:px-6 py-1.5 sm:py-2 rounded-xl
-              text-[10px] sm:text-sm font-bold whitespace-nowrap transition-all duration-300
+              text-[10px] sm:text-sm font-bold whitespace-nowrap leading-none transition-all duration-300
               ${selectedPlan === 'full'
                 ? isDark ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'bg-purple-600 text-white shadow-lg shadow-purple-300/30'
                 : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-600'
@@ -289,7 +289,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                             }`}>
                               {pkg.is_highlighted && (
                                 <div className="absolute -top-2 left-0 right-0 flex justify-center">
-                                  <span className="bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                                  <span className="bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest leading-none shadow-lg whitespace-nowrap">
                                     Recomendado
                                   </span>
                                 </div>
@@ -342,7 +342,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                             >
                               {pkg.is_highlighted && (
                                 <div className="absolute -top-2.5 left-0 right-0 flex justify-center">
-                                  <span className="bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                                  <span className="bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-widest leading-none shadow-lg whitespace-nowrap">
                                     Recomendado
                                   </span>
                                 </div>
@@ -407,7 +407,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                           }`}>
                             {pkg.is_highlighted && (
                               <div className="absolute -top-2 left-0 right-0 flex justify-center">
-                                <span className="bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                                <span className="bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest leading-none shadow-lg whitespace-nowrap">
                                   Mais Popular
                                 </span>
                               </div>
@@ -434,8 +434,10 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                               : isDark ? 'bg-slate-800/40 border border-white/5' : 'bg-white/80 border border-gray-100 shadow-sm'
                           }`}>
                             {pkg.is_highlighted && (
-                              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
-                                Mais Popular
+                              <div className="absolute -top-2.5 left-0 right-0 flex justify-center">
+                                <span className="bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-widest leading-none shadow-lg whitespace-nowrap">
+                                  Mais Popular
+                                </span>
                               </div>
                             )}
                             <div className="p-4 flex flex-col items-center text-center gap-2">
@@ -496,7 +498,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                         <span className={`text-xl sm:text-2xl font-black ${isDark ? 'text-lime-400' : 'text-lime-600'}`}>
                           Gratuito
                         </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold leading-none ${
                           isDark ? 'bg-lime-500/20 text-lime-400' : 'bg-lime-100 text-lime-700'
                         }`}>
                           para o lojista
@@ -554,7 +556,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                       <div
                         key={label}
                         title={desc}
-                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-[10px] font-medium ${
+                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-[10px] font-medium leading-none ${
                           isDark ? 'bg-white/[0.03] border-white/6 text-white/60' : 'bg-white/80 border-gray-100 text-gray-600'
                         }`}
                       >
@@ -592,7 +594,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                   {PLANO_FULL_ITENS.map((item) => (
                     <div
                       key={item}
-                      className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-[11px] sm:text-xs font-medium ${
+                      className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-[11px] sm:text-xs font-medium leading-none ${
                         isDark ? 'bg-white/[0.03] border-white/6 text-white/70' : 'bg-white/80 border-gray-100 text-gray-600'
                       }`}
                     >
@@ -606,7 +608,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
 
                 <button
                   onClick={() => window.open('https://wa.me/5511926828418?text=Olá!%20Tenho%20interesse%20no%20Plano%20Full%20e%20gostaria%20de%20saber%20mais%20detalhes.', '_blank')}
-                  className={`py-2.5 px-6 rounded-xl text-sm font-bold transition-all active:scale-95 whitespace-nowrap ${
+                  className={`py-2.5 px-6 rounded-xl text-sm font-bold leading-none transition-all active:scale-95 whitespace-nowrap ${
                     isDark ? 'bg-lime-600 text-white hover:bg-lime-500' : 'bg-lime-600 text-white hover:bg-lime-700'
                   }`}
                 >

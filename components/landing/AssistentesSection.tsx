@@ -202,7 +202,7 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
                     </div>
 
                     {/* Tagline */}
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border self-start ${c.tag}`}>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border self-start leading-none ${c.tag}`}>
                       {tagline}
                     </span>
 

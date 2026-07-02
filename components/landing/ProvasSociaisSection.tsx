@@ -5,7 +5,7 @@ interface ProvasSociaisSectionProps {
 }
 
 const NUMEROS = [
-  { valor: '30+',     label: 'empresas ativas',          color: 'blue'  as const },
+  { valor: '10+',     label: 'auxiliares especialistas',          color: 'blue'  as const },
   { valor: '100+',    label: 'funções nativas',           color: 'green' as const },
   { valor: 'R$ 0,05', label: 'por interação (a partir)', color: 'blue'  as const },
   { valor: '24/7',    label: 'sempre disponível',         color: 'green' as const },

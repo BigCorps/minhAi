@@ -167,7 +167,7 @@ export default function MinLoginPage() {
             </div>
 
             <h1 className="text-xl font-bold mb-1" style={{ color: T.text }}>
-              {mode === 'login' ? 'Entrar no Min.IA' : 'Criar sua conta'}
+              {mode === 'login' ? 'Entrar na min.IA' : 'Criar sua conta'}
             </h1>
             <p className="text-sm" style={{ color: T.subtext }}>
               {mode === 'login'

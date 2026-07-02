@@ -11,6 +11,7 @@ import { AssistantProvider, useAssistant } from '@/contexts/AssistantContext';
 import { AssistantSelectorHeader } from '@/components/layout/AssistantSelectorHeader';
 import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
 import { FUNCTIONS_REGISTRY } from '@/lib/functions-registry';
+import { LandingAvatarFace } from '@/components/landing/LandingAvatarFace';
 
 const LOGIN_URL = '/min/login';
 
@@ -533,11 +534,12 @@ function MinPageContent() {
   return (
     <div className="flex flex-col h-[100dvh]" style={{ background: isDark ? 'linear-gradient(to bottom, rgb(2,6,23), rgb(15,23,42))' : 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))' }}>
       {/* Header */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b flex-shrink-0" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
+      <header className="flex items-center justify-center px-4 sm:px-6 py-3 border-b flex-shrink-0" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
+        <div className="flex items-center justify-between w-full max-w-3xl">
         <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-24 h-24 overflow-hidden mb-1">
-              <img src="/minia/logo.png" alt="min.IA" className="w-full h-full object-cover" />
-            </div>
+          <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
+            <Image src="/minia/logo.png" alt="Min.IA" width={28} height={28} className="w-full h-full object-cover" />
+          </div>
           <div className="min-w-0">
             <p className="text-sm font-bold truncate" style={{ color: isDark ? '#fff' : '#0f172a' }}>Min.IA</p>
             <p className="text-[11px] truncate" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#64748b' }}>A versão mini e pessoal da minhAi!</p>
@@ -590,13 +592,13 @@ function MinPageContent() {
                         </p>
                       </div>
                       <a
-                        href="/min/credits"
+                        href="/min/perfil"
                         className="flex items-center gap-3 px-4 py-2 text-sm transition hover:bg-blue-500/10"
                         style={{ color: isDark ? '#e2e8f0' : '#1e293b' }}
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <CreditCard className="w-4 h-4 flex-shrink-0" />
-                        <span>Comprar créditos</span>
+                        <span>Perfil min.IA</span>
                       </a>
                       <hr style={{ borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', margin: '4px 0' }} />
                       <button
@@ -622,6 +624,7 @@ function MinPageContent() {
             )
           )}
         </div>
+        </div>
       </header>
 
       {/* Conteúdo / mensagens */}
@@ -632,8 +635,8 @@ function MinPageContent() {
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 max-w-md mx-auto">
-            <div className="w-24 h-24 overflow-hidden mb-1">
-              <img src="/minia/logo.png" alt="min.IA" className="w-full h-full object-cover" />
+            <div className="w-[240px] h-[240px] relative mb-1">
+              <LandingAvatarFace theme={isDark ? 'dark' : 'light'} avatarOnly />
             </div>
             <p className="text-base font-semibold" style={{ color: isDark ? '#fff' : '#0f172a' }}>Como posso te ajudar hoje?</p>
             <p className="text-sm" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#64748b' }}>

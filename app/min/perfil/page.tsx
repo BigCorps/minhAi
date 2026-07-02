@@ -55,7 +55,7 @@ const HELP_CARDS = [
   {
     id: 'minhai',
     titulo: 'Conheça a minhAi',
-    descricao: 'Mais de 100 funções de IA para o seu negócio. Os seus créditos do Min.IA também funcionam lá.',
+    descricao: 'Mais de 100 funções de IA para o seu negócio.',
     icon: <BotIA className="w-5 h-5" />,
     href: 'https://minhai.app',
     color: BRAND.blue,
@@ -63,17 +63,17 @@ const HELP_CARDS = [
   {
     id: 'bigcorps',
     titulo: 'BigCorps',
-    descricao: 'Conheça a empresa por trás do Min.IA e da minhAi. Tecnologia para impulsionar o seu negócio.',
+    descricao: 'Conheça a empresa por trás da min.IA e da minhAi. Tecnologia para impulsionar o seu negócio.',
     icon: <BigCorpsIcon className="w-5 h-5" />,
     href: 'https://bigcorps.com.br',
     color: '#F97316',
   },
   {
     id: 'suporte',
-    titulo: 'Suporte Min.IA',
-    descricao: 'Precisa de ajuda com o Min.IA? Nossa equipe de suporte técnico está pronta para te auxiliar.',
+    titulo: 'Suporte min.IA',
+    descricao: 'Precisa de ajuda com a min.IA? Nossa equipe de suporte técnico está pronta para te auxiliar.',
     icon: <WhatsAppIcon className="w-5 h-5" />,
-    href: 'https://api.whatsapp.com/send/?phone=5511926828418&text=Preciso%20de%20suporte%20no%20Min.IA&type=phone_number&app_absent=0',
+    href: 'https://api.whatsapp.com/send/?phone=5511926828418&text=Preciso%20de%20suporte%20no%20min.IA&type=phone_number&app_absent=0',
     color: '#25D366',
   },
 ];

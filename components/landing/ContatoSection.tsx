@@ -58,7 +58,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
               ${isDark ? 'text-white' : 'text-gray-900'}
             `}
           >
-            Realmente' '}
+            Realmente{' '}
             <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>uma IA pra chamar de sua!</span>
           </h2>
 

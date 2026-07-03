@@ -2,7 +2,7 @@
 {
   "name": "min IA",
   "short_name": "min.ia.br",
-  "description": "  "description": "Painel pessoal da minhAi com mais de 100 funções de IA acessíveis diretamente pelo chat.",
+  "description": "Painel pessoal da minhAi com mais de 100 funções de IA acessíveis diretamente pelo chat.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

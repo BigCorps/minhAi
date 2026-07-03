@@ -636,14 +636,14 @@ useEffect(() => { setThemeMounted(true); }, []);
       </header>
 
       {/* Conteúdo / mensagens */}
-      <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 min-h-0">
+      <main className={`flex-1 px-4 sm:px-6 py-4 min-h-0 ${messages.length === 0 ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         {!ready ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className={`w-5 h-5 animate-spin ${isDark ? 'text-white/30' : 'text-gray-300'}`} />
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 max-w-md mx-auto">
-            <div className="w-[240px] h-[240px] relative mb-1 overflow-hidden">
+            <div className="w-[240px] h-[240px] relative mb-1">
               <LandingAvatarFace theme={isDark ? 'dark' : 'light'} avatarOnly />
             </div>
             <p className="text-base font-semibold" style={{ color: isDark ? '#fff' : '#0f172a' }}>Como posso te ajudar hoje?</p>

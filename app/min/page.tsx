@@ -378,7 +378,15 @@ function MinPageContent() {
   const { selectedAssistantId, availableAssistants } = useAssistant();
   const currentAssistant = availableAssistants.find(a => a.id === selectedAssistantId);
 
-  useEffect(() => { setThemeMounted(true); }, []);
+useEffect(() => { setThemeMounted(true); }, []);
+
+  // Impede scroll no body enquanto a página /min está montada.
+  // O scroll interno (mensagens) continua funcionando via overflow-y-auto no <main>.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
 
   const refreshSaldo = useCallback(async (userId: string) => {
     const { data } = await supabase.from('user_credits').select('available_credits').eq('user_id', userId).maybeSingle();

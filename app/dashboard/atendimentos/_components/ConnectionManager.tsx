@@ -33,6 +33,7 @@ type MetaConnection = {
   prompt_enabled: boolean;
   greeting_message: string | null;
   startup_function_key_meta: string | null;
+  activation_keyword: string | null;
   created_at: string;
 };
 
@@ -127,6 +128,8 @@ function GreetingStartupSection({
   const [showSugg, setShowSugg]         = useState(false);
   const [saving, setSaving]             = useState(false);
   const [saved, setSaved]               = useState(false);
+  const [activationKeyword, setActivationKeyword] = useState(connection.activation_keyword || '');
+  const [activationEnabled, setActivationEnabled] = useState(!!connection.activation_keyword);
   const inputWrapperRef = useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
@@ -162,9 +165,17 @@ function GreetingStartupSection({
     setSaving(true);
     try {
       if (mode === 'text') {
-        await onSave({ greeting_message: greetingText.trim() || null, startup_function_key_meta: null });
+        await onSave({
+          greeting_message: greetingText.trim() || null,
+          startup_function_key_meta: null,
+          activation_keyword: activationEnabled ? (activationKeyword.trim() || null) : null,
+        });
       } else {
-        await onSave({ greeting_message: null, startup_function_key_meta: fnKey || null });
+        await onSave({
+          greeting_message: null,
+          startup_function_key_meta: fnKey || null,
+          activation_keyword: activationEnabled ? (activationKeyword.trim() || null) : null,
+        });
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -286,6 +297,43 @@ function GreetingStartupSection({
             )}
           </div>
         )}
+
+{/* Palavra de ativação */}
+        <div className="pt-2 border-t border-border space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-foreground">Exigir ativação por palavra-chave</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                O assistente fica mudo até o cliente digitar a palavra abaixo
+              </p>
+            </div>
+            <Switch
+              checked={activationEnabled}
+              onCheckedChange={(v) => {
+                setActivationEnabled(v);
+                if (!v) setActivationKeyword('');
+              }}
+            />
+          </div>
+
+          {activationEnabled && (
+            <div className="space-y-1.5">
+              <input
+                type="text"
+                value={activationKeyword}
+                onChange={(e) => setActivationKeyword(e.target.value)}
+                placeholder="Ex: IA, ATENDIMENTO, OLÁ"
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm
+                  text-foreground placeholder:text-muted-foreground outline-none
+                  focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+              />
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                ⚠️ Configure a saudação acima para explicar ao cliente o que digitar.
+                Ex: <em>"Digite IA para atendimento automático ou aguarde um atendente."</em>
+              </p>
+            </div>
+          )}
+        </div>
 
         <Button
           size="sm"

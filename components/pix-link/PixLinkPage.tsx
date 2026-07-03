@@ -17,6 +17,23 @@ interface Props {
   initialAmount: number | null;
 }
 
+const SUPABASE_FUNCTIONS_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1`;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+async function invokeFunction(name: string, body: any) {
+  const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/${name}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      apikey: SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => null);
+  return { status: res.status, ok: res.ok, data };
+}
+
 export default function PixLinkPage({ company, initialAmount }: Props) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [mounted, setMounted] = useState(false);
@@ -52,15 +69,15 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
     const interval = setInterval(async () => {
       if (!pixData?.transaction_id) return;
       try {
-        const { data, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
-          body: { transaction_id: pixData.transaction_id },
+        const { ok, data } = await invokeFunction('confirmar-pix-assistente', {
+          transaction_id: pixData.transaction_id,
         });
-        if (!error && data?.success) {
+        if (ok && data?.success) {
           setConfirmed(true);
           clearInterval(interval);
         }
       } catch {
-        // silencioso
+        // silencioso — checagem automática não deve incomodar o usuário
       }
     }, 5000);
     return () => clearInterval(interval);
@@ -75,13 +92,11 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
   async function generatePix(value: number) {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('gerar-pix-assistente', {
-        body: {
-          company_id: company.id,
-          amount_cents: Math.round(value * 100),
-        },
+      const { ok, status, data } = await invokeFunction('gerar-pix-assistente', {
+        company_id: company.id,
+        amount_cents: Math.round(value * 100),
       });
-      if (error) throw error;
+      if (!ok) throw new Error(data?.error || `Erro de rede ou resposta inválida (HTTP ${status})`);
       setAmount(value);
       setPixData(data);
     } catch (err) {
@@ -96,10 +111,17 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
     if (!pixData?.transaction_id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
-        body: { transaction_id: pixData.transaction_id },
+      const { status, ok, data } = await invokeFunction('confirmar-pix-assistente', {
+        transaction_id: pixData.transaction_id,
       });
-      if (error) throw error;
+
+      if (!ok && status === 400 && data?.status) {
+        // Resposta esperada da function: banco ainda não confirmou o PIX
+        alert('Pagamento ainda não identificado pelo banco. Aguarde alguns segundos e tente novamente.');
+        return;
+      }
+      if (!ok) throw new Error(data?.error || `Erro HTTP ${status}`);
+
       if (data?.success) {
         setConfirmed(true);
       } else {

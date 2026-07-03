@@ -1,0 +1,17 @@
+// public/brands/artefinal/manifest.webmanifest
+{
+  "name": "min IA",
+  "short_name": "min.ia.br",
+  "description": "  "description": "Painel pessoal da minhAi com mais de 100 funções de IA acessíveis diretamente pelo chat.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/brands/minia/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

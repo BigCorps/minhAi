@@ -532,7 +532,7 @@ function MinPageContent() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh]" style={{ background: isDark ? 'linear-gradient(to bottom, rgb(2,6,23), rgb(15,23,42))' : 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))' }}>
+<div className="flex flex-col h-[100dvh] overflow-hidden" style={{ background: isDark ? 'linear-gradient(to bottom, rgb(2,6,23), rgb(15,23,42))' : 'linear-gradient(to bottom, rgb(248,250,252), rgb(241,245,249))' }}>
       {/* Header */}
       <header className="flex items-center justify-center px-4 sm:px-6 py-3 border-b flex-shrink-0" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
         <div className="flex items-center justify-between w-full max-w-5xl">

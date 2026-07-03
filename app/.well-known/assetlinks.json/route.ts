@@ -33,7 +33,18 @@ const ASSETLINKS_BY_HOST: Record<string, any[]> = {
       },
     },
   ],
-  // próximo produto whitelabel entra aqui, com sua própria chave de host
+  'app.min.ia.br': [
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'com.minia.app',
+        sha256_cert_fingerprints: [
+          '48:65:D5:46:E5:C4:C9:E7:1F:2D:C1:BF:6E:AB:38:D9:94:46:16:07:E5:65:E2:3D:DA:60:17:F7:3E:7A:B6:6D',
+        ],
+      },
+    },
+  ],
 };
 
 export async function GET(request: NextRequest) {

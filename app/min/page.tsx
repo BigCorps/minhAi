@@ -252,7 +252,7 @@ function FunctionCarousel({
 
       <div
         ref={wrapRef}
-        className="w-full overflow-hidden py-2"
+        className="w-full max-w-full overflow-x-hidden overflow-y-hidden py-2"
         onMouseEnter={pauseAnim}
         onMouseLeave={resumeAnim}
         onTouchStart={handleTouchStart}
@@ -643,7 +643,7 @@ useEffect(() => { setThemeMounted(true); }, []);
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 max-w-md mx-auto">
-            <div className="w-[240px] h-[240px] relative mb-1">
+            <div className="w-[240px] h-[240px] relative mb-1 overflow-hidden">
               <LandingAvatarFace theme={isDark ? 'dark' : 'light'} avatarOnly />
             </div>
             <p className="text-base font-semibold" style={{ color: isDark ? '#fff' : '#0f172a' }}>Como posso te ajudar hoje?</p>

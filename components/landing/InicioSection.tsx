@@ -88,7 +88,7 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
             className="hidden md:flex justify-center w-full absolute"
             style={{ top: 'calc(100% + 12px)' }}
           >
-            <TourTrigger theme={theme} delay={5000} />
+            <TourTrigger theme={theme} delay={0} />
           </div>
         </div>
 
@@ -259,7 +259,7 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
 
           {/* TourTrigger — só mobile (sm:hidden), sempre visível independente da altura da tela */}
           <div className="sm:hidden flex justify-center mt-3">
-            <TourTrigger theme={theme} delay={5000} dismissible />
+            <TourTrigger theme={theme} delay={0} dismissible />
           </div>
 
         </div>

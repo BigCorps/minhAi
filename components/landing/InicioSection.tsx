@@ -250,13 +250,8 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
             </a>
           </div>
 
-          {/* TourTrigger — só mobile, no final da coluna de texto. Mesma regra de altura do bloco acima: some junto em telas mobile baixas. */}
-          <div
-            className={`
-              sm:hidden flex justify-center mt-3
-              [@media(max-height:700px)_and_(max-width:767px)]:hidden
-            `}
-          >
+          {/* TourTrigger — só mobile (sm:hidden), sempre visível independente da altura da tela */}
+          <div className="sm:hidden flex justify-center mt-3">
             <TourTrigger theme={theme} delay={5000} dismissible />
           </div>
 

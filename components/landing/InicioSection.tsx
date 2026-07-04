@@ -210,8 +210,10 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
             <span className={`sm:hidden text-[10px] font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
               Escolha entre a versão{' '}
               <span className={`font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>Smart</span>
-              {' '}ou{' '}
+              {', '}
               <span className={`font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>Vendas</span>
+              {' '}ou{' '}
+              <span className={`font-semibold ${isDark ? 'text-purple-400/70' : 'text-purple-600'}`}>Full</span>
             </span>
             <span className={`hidden sm:flex items-center gap-2 text-xs ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
               Como pagar:
@@ -224,6 +226,11 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
             <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>
               <span className="w-1.5 h-1.5 rounded-full bg-lime-400 flex-shrink-0" />
               Vendas — grátis, só pague quando vender
+            </span>
+            <span className={`hidden sm:inline ${isDark ? 'text-white/15' : 'text-gray-200'} text-xs`}>·</span>
+            <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-purple-400/70' : 'text-purple-600'}`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+              Full — solução sob consulta
             </span>
           </div>
 

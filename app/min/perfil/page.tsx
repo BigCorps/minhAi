@@ -65,7 +65,7 @@ const HELP_CARDS = [
     titulo: 'Suporte min.IA',
     descricao: 'Precisa de ajuda com a min.IA? Nossa equipe de suporte técnico está pronta para te auxiliar.',
     icon: <WhatsAppIcon className="w-5 h-5" />,
-    href: 'https://api.whatsapp.com/send/?phone=5511926828418&text=Preciso%20de%20suporte%20no%20min.IA&type=phone_number&app_absent=0',
+    href: 'https://api.whatsapp.com/send/?phone=5511926828418&text=Preciso%20de%20suporte%20na%20min.IA&type=phone_number&app_absent=0',
     color: '#25D366',
   },
 ];

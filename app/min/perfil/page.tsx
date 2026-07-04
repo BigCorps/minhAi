@@ -53,14 +53,6 @@ function WhatsAppIcon({ className }: { className?: string }) {
 // ── Cards de ajuda ────────────────────────────────────────────────────────
 const HELP_CARDS = [
   {
-    id: 'minhai',
-    titulo: 'Conheça a minhAi',
-    descricao: 'Mais de 100 funções de IA para o seu negócio.',
-    icon: <BotIA className="w-5 h-5" />,
-    href: 'https://minhai.app',
-    color: BRAND.blue,
-  },
-  {
     id: 'bigcorps',
     titulo: 'BigCorps',
     descricao: 'Conheça a empresa por trás da min.IA e da minhAi. Tecnologia para impulsionar o seu negócio.',

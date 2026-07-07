@@ -826,12 +826,12 @@ export default function SaldoPage() {
                 <div className="p-2 bg-lime-100 dark:bg-lime-500/20 rounded-lg">
                   <AlertCircle className="w-5 h-5 text-lime-600 dark:text-lime-400" />
                 </div>
-                <p className="text-sm font-medium text-lime-800 dark:text-lime-500">Comissões (Vendas)</p>
+                <p className="text-sm font-medium text-lime-800 dark:text-lime-500">Comissões Pendentes</p>
               </div>
               <p className="text-3xl font-bold text-lime-900 dark:text-lime-400">
                 {formatCurrency(totalCommissionCents)}
               </p>
-              <p className="text-xs text-lime-700 dark:text-lime-500/70 mt-2">Comissões pendentes</p>
+              <p className="text-xs text-lime-700 dark:text-lime-500/70 mt-2">Apenas Comissões da versão Vendas</p>
             </div>
           )}
         </div>

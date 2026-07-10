@@ -52,11 +52,11 @@ const FUNCOES_VENDAS = [
 ];
 
 const PLANO_FULL_ITENS = [
-  'Créditos Ilimitados',
+  'Plano Consultind e créditos',
   'Landing Page Personalizada',
   'Implementação incluída',
   'App na PlayStore',
-  'Whitelabel',
+  'Whitelabel e cores próprias',
   'Domínio e Subdomínios próprios',
   'Configuração completa',
   'Suporte 24 horas',
@@ -251,7 +251,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                 <span className="block">sentido pro seu negócio:</span>
               </h2>
               <p className={`text-xs sm:text-sm max-w-lg mx-auto md:mx-0 mt-1.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                Comece agora mesmo gratuitamente, com comissão por vendas, ou planos e pacotes com valores por interação. Você escolhe como quer começar, e se ainda não quiser ter trabalho nenhum, nossa equipe cuida de tudo para você: configuração, personalização com cores, domínio, funções, site e até aplicativo próprio para sua empresa atender melhor, vender mais, automatizar tarefas e oferecer uma experiência mais rápida, inteligente e personalizada.
+                Comece agora mesmo com planos e pacotes com valores por interação. Você escolhe como quer começar, e se ainda não quiser ter trabalho nenhum, nossa equipe cuida de tudo para você e ainda com Aplicativo na PlayStore: configuração total, personalização com cores, domínio, funções, site e até aplicativo próprio para sua empresa atender melhor, vender mais, automatizar tarefas e oferecer uma experiência mais rápida, inteligente e personalizada.
               </p>
             </div>
 

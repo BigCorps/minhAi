@@ -82,7 +82,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
                 }
               `}
             >
-              Criar minha IA Grátis
+              Criar minha IA Agora
             </a>
           </div>
 

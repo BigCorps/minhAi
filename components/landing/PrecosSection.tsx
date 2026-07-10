@@ -9,7 +9,7 @@ interface PrecosProps {
   theme?: 'dark' | 'light';
   /** Quando vira false (usuário saiu da seção), o seletor reseta pro estado inicial. */
   isActive?: boolean;
-  /** Força o overlay de um plano específico já aberto no primeiro render — usado na exportação em PDF (cada plano vira sua própria folha, sem precisar de clique). */
+  /** Força o overlay de um plano específico já aberto no primeiro render — usado na exportação em PDF. */
   initialPlan?: 'smart' | 'vendas' | 'full' | null;
 }
 
@@ -62,9 +62,33 @@ const PLANO_FULL_ITENS = [
   'Suporte 24 horas',
 ];
 
+// ════════════════════════════════════════════════════════════════
+// CONFIGURAÇÃO DE PLANOS VISÍVEIS NA LANDING
+// Foco comercial atual: só o plano Full. Smart e Vendas ficam fora
+// do site público — tanto o botão da aba quanto o conteúdo do painel
+// (mais abaixo) são controlados pela MESMA flag, então reativar é
+// uma mudança única aqui, sem precisar procurar em mais nenhum lugar.
+//
+// Pra reativar Smart e/ou Vendas: só mudar a flag correspondente
+// pra `true`. Botão da aba, conteúdo do painel e estado inicial se
+// ajustam sozinhos.
+//
+// IMPORTANTE — exportação em PDF: as folhas "precos-smart" e
+// "precos-vendas" em landing-export-page.tsx dependem desse conteúdo
+// pra renderizar (usam initialPlan="smart"/"vendas"). Com as flags
+// em false, essas duas folhas do PDF saem em branco. Se for gerar
+// o PDF enquanto só o Full estiver ativo, remova essas 2 folhas de
+// lá também (ou reative as flags temporariamente antes de exportar).
+// ════════════════════════════════════════════════════════════════
+const SHOW_SMART_TAB = true;
+const SHOW_VENDAS_TAB = false;
+const ONLY_FULL_VISIBLE = !SHOW_SMART_TAB && !SHOW_VENDAS_TAB;
+
 export default function PrecosSection({ theme = 'dark', isActive = true, initialPlan = null }: PrecosProps) {
   const isDark = theme === 'dark';
-  const [selectedPlan, setSelectedPlan] = useState<PlanKey | null>(initialPlan);
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey | null>(
+    initialPlan ?? (ONLY_FULL_VISIBLE ? 'full' : null)
+  );
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -89,9 +113,10 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
   }, []);
 
   // Reseta o seletor sempre que o usuário sai da seção — ao voltar,
-  // encontra de novo o título, a frase e só os 3 seletores.
+  // encontra de novo o estado padrão (hero com 3 abas, ou direto no
+  // Full se Smart/Vendas estiverem desligados acima).
   useEffect(() => {
-    if (!isActive) setSelectedPlan(null);
+    if (!isActive) setSelectedPlan(ONLY_FULL_VISIBLE ? 'full' : null);
   }, [isActive]);
 
   const monthlyPlans = packages.filter(p => p.package_type === 'monthly');
@@ -104,12 +129,8 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
     <div
       className={`
         relative flex flex-col items-center justify-center
-        h-full w-full overflow-hidden
+        w-full overflow-hidden bg-transparent
         transition-colors duration-500
-        ${isDark
-          ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
-          : 'bg-gradient-to-br from-white via-blue-50/50 to-white'
-        }
       `}
     >
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
@@ -123,51 +144,52 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
       <div
         className={`
           relative z-10 flex flex-col items-center
-          w-full ${selectedPlan ? 'h-full' : ''} max-w-5xl mx-auto
+          w-full max-w-5xl mx-auto
           px-4 sm:px-6 lg:px-10
-          pt-[76px] pb-[60px]
-          [@media(max-height:700px)_and_(max-width:767px)]:pt-[68px]
-          [@media(max-height:700px)_and_(max-width:767px)]:pb-[48px]
-          md:pt-[92px] md:pb-[64px]
-          gap-2 sm:gap-3
+          pt-24 pb-16 sm:pt-28 sm:pb-20 md:py-16
+          gap-4 sm:gap-6
         `}
       >
 
-        {/* ── Seletor Smart / Vendas / Full — agora primeiro, sempre visível ── */}
+        {/* ── Seletor Smart / Vendas / Full — sempre primeiro, sempre visível ── */}
         <div className={`relative z-30 flex items-center gap-0.5 sm:gap-1 p-1 rounded-2xl justify-center w-full max-w-full ${
           isDark ? 'bg-white/5' : 'bg-gray-100'
         }`}>
-          <button
-            onClick={() => setSelectedPlan('smart')}
-            className={`
-              relative flex items-center justify-center gap-1 sm:gap-2 flex-1 sm:flex-initial min-w-0
-              px-2 sm:px-6 py-1.5 sm:py-2 rounded-xl
-              text-[10px] sm:text-sm font-bold whitespace-nowrap leading-none transition-all duration-300
-              ${selectedPlan === 'smart'
-                ? isDark ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-blue-600 text-white shadow-lg shadow-blue-300/30'
-                : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-600'
-              }
-            `}
-          >
-            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-400 flex-shrink-0" />
-            <span className="hidden sm:inline">Versão </span>Smart
-          </button>
+          {SHOW_SMART_TAB && (
+            <button
+              onClick={() => setSelectedPlan('smart')}
+              className={`
+                relative flex items-center justify-center gap-1 sm:gap-2 flex-1 sm:flex-initial min-w-0
+                px-2 sm:px-6 py-1.5 sm:py-2 rounded-xl
+                text-[10px] sm:text-sm font-bold whitespace-nowrap leading-none transition-all duration-300
+                ${selectedPlan === 'smart'
+                  ? isDark ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-blue-600 text-white shadow-lg shadow-blue-300/30'
+                  : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-600'
+                }
+              `}
+            >
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-400 flex-shrink-0" />
+              <span className="hidden sm:inline">Versão </span>Smart
+            </button>
+          )}
 
-          <button
-            onClick={() => setSelectedPlan('vendas')}
-            className={`
-              relative flex items-center justify-center gap-1 sm:gap-2 flex-1 sm:flex-initial min-w-0
-              px-2 sm:px-6 py-1.5 sm:py-2 rounded-xl
-              text-[10px] sm:text-sm font-bold whitespace-nowrap leading-none transition-all duration-300
-              ${selectedPlan === 'vendas'
-                ? isDark ? 'bg-lime-600 text-white shadow-lg shadow-lime-500/20' : 'bg-lime-600 text-white shadow-lg shadow-lime-300/30'
-                : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-600'
-              }
-            `}
-          >
-            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-lime-400 flex-shrink-0" />
-            <span className="hidden sm:inline">Versão </span>Vendas
-          </button>
+          {SHOW_VENDAS_TAB && (
+            <button
+              onClick={() => setSelectedPlan('vendas')}
+              className={`
+                relative flex items-center justify-center gap-1 sm:gap-2 flex-1 sm:flex-initial min-w-0
+                px-2 sm:px-6 py-1.5 sm:py-2 rounded-xl
+                text-[10px] sm:text-sm font-bold whitespace-nowrap leading-none transition-all duration-300
+                ${selectedPlan === 'vendas'
+                  ? isDark ? 'bg-lime-600 text-white shadow-lg shadow-lime-500/20' : 'bg-lime-600 text-white shadow-lg shadow-lime-300/30'
+                  : isDark ? 'text-white/40 hover:text-white/70' : 'text-gray-400 hover:text-gray-600'
+                }
+              `}
+            >
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-lime-400 flex-shrink-0" />
+              <span className="hidden sm:inline">Versão </span>Vendas
+            </button>
+          )}
 
           <button
             onClick={() => setSelectedPlan('full')}
@@ -185,8 +207,8 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
             <span className="hidden sm:inline">Versão </span>Full
           </button>
 
-          {/* Fechar — volta pro estado inicial sem precisar sair da seção */}
-          {selectedPlan && (
+          {/* Fechar — só faz sentido se existir mais de uma versão pra escolher. */}
+          {selectedPlan && !ONLY_FULL_VISIBLE && (
             <button
               onClick={() => setSelectedPlan(null)}
               aria-label="Fechar detalhes do plano"
@@ -203,16 +225,10 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
 
         {/* ── Imagem + texto — nessa ordem em mobile E desktop. Somem quando um plano está selecionado ── */}
         {!selectedPlan && (
-          <div className="flex flex-col md:flex-row items-center justify-center md:justify-between w-full gap-3 md:gap-10">
+          <div className="flex flex-col md:flex-row items-center justify-center md:justify-between w-full gap-6 md:gap-10">
 
-            {/* Imagem — maior, primeiro. Some em telas muito baixas, mesmo padrão do resto do site */}
-            <div
-              className={`
-                flex items-center justify-center flex-shrink-0
-                w-full md:w-auto
-                [@media(max-height:560px)_and_(max-width:767px)]:hidden
-              `}
-            >
+            {/* Imagem — maior, primeiro */}
+            <div className="flex items-center justify-center flex-shrink-0 w-full md:w-auto">
               <img
                 src="/precos.png"
                 alt="Planos e preços do minhAi — Smart, Vendas e Full"
@@ -242,11 +258,16 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
           </div>
         )}
 
-        {/* ── Overlay — cobre o restante da seção com os detalhes do plano escolhido ── */}
+        {/* ── Painel de detalhes do plano — flui normalmente com a página,
+            sem scroll interno próprio (rolamento vertical padrão). ── */}
         {selectedPlan && (
-          <div className="relative z-20 w-full flex-1 min-h-0 overflow-y-auto animate-in fade-in duration-200">
+          <div className="relative z-20 w-full">
 
-            {selectedPlan === 'smart' && (
+            {/* Smart — conteúdo só renderiza se SHOW_SMART_TAB estiver true.
+                Guarda dupla (seleção + flag) garante que nem a exportação em
+                PDF consiga forçar esse painel a aparecer enquanto a flag
+                estiver desligada. */}
+            {selectedPlan === 'smart' && SHOW_SMART_TAB && (
               <div className="w-full flex flex-col gap-2 sm:gap-3 pt-2">
 
                 <div className={`rounded-xl border px-4 py-2 flex items-center justify-center gap-3 ${
@@ -486,7 +507,8 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
               </div>
             )}
 
-            {selectedPlan === 'vendas' && (
+            {/* Vendas — mesma guarda dupla (seleção + flag) do Smart. */}
+            {selectedPlan === 'vendas' && SHOW_VENDAS_TAB && (
               <div className="w-full flex flex-col gap-2 sm:gap-3 pt-2">
 
                 <div className={`rounded-2xl border p-3 sm:p-4 ${

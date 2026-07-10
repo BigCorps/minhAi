@@ -32,13 +32,11 @@ import ContatoSection from '@/components/landing/ContatoSection';
 
 // ============================================================
 // PÁGINA 2 — "Escale sem contratar" + DomainPicker
-// Extraída do bloco de Recursos: agora fica logo após o Início,
-// antes dos Auxiliares. Fora da sequência de dots de "Recursos".
 // ============================================================
 export const RECURSO_VANTAGENS_SLIDE = {
   id: 'recurso-vantagens',
   label: 'Escale sem contratar',
-  title: 'Atenda 10x mais, sem\naumentar sua equipe', // \n logo após o "sem"
+  title: 'Atenda 10x sem aumentar sua equipe',
   description:
     'Sua empresa ganha um funcionário digital completo, trabalhando 24 horas por dia, com o nome, a palavra de ativação, a marca, as funções e o jeito que a sua empresa precisa. Semelhante a uma Alexa personalizada, mas com recursos voltados para cuidar dos trabalhos repetitivos.',
   imageSrc: '/vantagens.png',
@@ -48,8 +46,7 @@ export const RECURSO_VANTAGENS_SLIDE = {
 
 // ============================================================
 // PÁGINA 5 — primeira de "Informações": fusão de
-// Compatibilidade total + Integrações nativas, imagem alternando
-// automaticamente (sem setas) entre dispositivos.png e api.png
+// Compatibilidade total + Integrações nativas
 // ============================================================
 export const INFO_COMPATIBILIDADE_SLIDE = {
   id: 'info-compatibilidade',
@@ -64,8 +61,6 @@ export const INFO_COMPATIBILIDADE_SLIDE = {
 
 // ============================================================
 // INFORMAÇÕES — página 2: "Mais vantagens" reformulada.
-// Texto (frase) abaixo do título; à direita, alterna automaticamente
-// entre a imagem /webapp.png e os 3 cards de vantagens (sem setas).
 // ============================================================
 export const VANTAGENS_INFO_SLIDE = {
   id: 'info-vantagens',
@@ -117,14 +112,7 @@ export const VANTAGENS_INFO_CARDS = [
 ];
 
 // ============================================================
-// RECURSOS — grupo agora tem apenas a página "Escale sem
-// contratar" (recurso-vantagens). Como Funciona e o slide de
-// cards de diferenciais foram removidos do site.
-// ============================================================
-
-// ============================================================
-// FUNÇÕES — 14 cards em 4 grupos (3, 4, 3, 4), consolidados
-// em uma única página com carrossel automático (página 3)
+// FUNÇÕES — 14 cards em 4 grupos (3, 4, 3, 4)
 // ============================================================
 export const FUNCAO_ID = 'funcao-cards';
 
@@ -254,22 +242,20 @@ export const FUNCAO_GRUPOS = [
 ];
 
 // ============================================================
-// IDs — ordem física real do scroll horizontal
+// IDs — ordem física real das seções na página (de cima pra baixo)
 // ============================================================
 const ALL_SECTION_IDS = [
   'inicio',
-  RECURSO_VANTAGENS_SLIDE.id, // página 2
-  FUNCAO_ID,                  // página 3
-  'assistentes',               // página 4
-  INFO_COMPATIBILIDADE_SLIDE.id, // Informações — página 1
-  VANTAGENS_INFO_SLIDE.id,        // Informações — página 2
-  'provas-sociais',               // Informações — página 3
-  'depoimentos-faq',              // Informações — página 4 (Depoimentos + FAQ lado a lado)
+  RECURSO_VANTAGENS_SLIDE.id,
+  FUNCAO_ID,
+  'assistentes',
+  INFO_COMPATIBILIDADE_SLIDE.id,
+  VANTAGENS_INFO_SLIDE.id,
+  'provas-sociais',
+  'depoimentos-faq',
   'precos',
   'contato',
 ];
-
-const NAV_SECTIONS = ['inicio', 'recursos', 'funcoes', 'informacoes', 'precos', 'contato'];
 
 function getSectionNavGroup(sectionId: string): string {
   if (sectionId.startsWith('funcao-')) return 'funcoes';
@@ -283,39 +269,12 @@ function getSectionNavGroup(sectionId: string): string {
 }
 
 // ============================================================
-// HOOK — altura real da viewport
-// Resolve o problema central: dvh/svh não exclui UI do browser
-// no Android. Calculamos window.innerHeight que já desconta tudo.
-// ============================================================
-function useRealVh() {
-  useEffect(() => {
-    function update() {
-      // 1px = 1% da altura real disponível
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--real-vh', `${vh}px`);
-    }
-    update();
-    window.addEventListener('resize', update);
-    // orientationchange necessário para iOS
-    window.addEventListener('orientationchange', () => setTimeout(update, 200));
-    return () => {
-      window.removeEventListener('resize', update);
-      window.removeEventListener('orientationchange', update);
-    };
-  }, []);
-}
-
-// ============================================================
 // COMPONENTE PRINCIPAL
 // ============================================================
 export default function LandingPage() {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const [activeSectionId, setActiveSectionId] = useState('inicio');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  const isScrollingRef = useRef(false);
-
-  // Aplica --real-vh globalmente
-  useRealVh();
 
   const activeNavItem = getSectionNavGroup(activeSectionId);
 
@@ -324,24 +283,29 @@ export default function LandingPage() {
     if (mq.matches) setTheme('light');
   }, []);
 
+  // Scrollspy — marca como "ativa" a seção que está cruzando uma faixa
+  // fina no centro vertical da tela. Funciona bem independente da altura
+  // de cada seção (diferente de um threshold fixo de "50% visível", que
+  // não dispararia direito em seções mais altas que a tela).
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    const main = mainRef.current;
+    if (!main) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-            setActiveSectionId(entry.target.id);
-          }
+          if (entry.isIntersecting) setActiveSectionId(entry.target.id);
         });
       },
-      { root: container, threshold: 0.5 }
+      { root: null, rootMargin: '-45% 0px -45% 0px', threshold: 0 }
     );
-    const sections = container.querySelectorAll('section[id]');
+    const sections = main.querySelectorAll('section[id]');
     sections.forEach((s) => observer.observe(s));
     return () => sections.forEach((s) => observer.unobserve(s));
   }, []);
 
+  // Navegação por clique (menu do Header e dots de progresso) — rolagem
+  // vertical nativa, respeitando o scroll-margin-top de cada seção
+  // (definido no elemento) para não ficar escondida atrás do Header fixo.
   const scrollToSection = useCallback((id: string) => {
     const targetId =
       id === 'funcoes'
@@ -352,75 +316,23 @@ export default function LandingPage() {
         ? INFO_COMPATIBILIDADE_SLIDE.id
         : id;
     const section = document.getElementById(targetId);
-    if (section && scrollContainerRef.current) {
-      isScrollingRef.current = true;
-      section.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-      setTimeout(() => { isScrollingRef.current = false; }, 800);
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, []);
 
-  const navigateNext = useCallback(() => {
-    const i = ALL_SECTION_IDS.indexOf(activeSectionId);
-    if (i < ALL_SECTION_IDS.length - 1) scrollToSection(ALL_SECTION_IDS[i + 1]);
-  }, [activeSectionId, scrollToSection]);
-
-  const navigatePrev = useCallback(() => {
-    const i = ALL_SECTION_IDS.indexOf(activeSectionId);
-    if (i > 0) scrollToSection(ALL_SECTION_IDS[i - 1]);
-  }, [activeSectionId, scrollToSection]);
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    let wheelTimeout: NodeJS.Timeout;
-    let canScroll = true;
-    const handleWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-      e.preventDefault();
-      if (!canScroll || isScrollingRef.current) return;
-      if (Math.abs(e.deltaY) < 30) return;
-      canScroll = false;
-      if (e.deltaY > 0) navigateNext();
-      else navigatePrev();
-      wheelTimeout = setTimeout(() => { canScroll = true; }, 1000);
-    };
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => { container.removeEventListener('wheel', handleWheel); clearTimeout(wheelTimeout); };
-  }, [navigateNext, navigatePrev]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') { e.preventDefault(); navigateNext(); }
-      else if (e.key === 'ArrowLeft') { e.preventDefault(); navigatePrev(); }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigateNext, navigatePrev]);
-
   const toggleTheme = () => setTheme((p) => (p === 'dark' ? 'light' : 'dark'));
   const isDark = theme === 'dark';
-  const currentAllIndex = ALL_SECTION_IDS.indexOf(activeSectionId);
-  const canGoLeft = currentAllIndex > 0;
-  const canGoRight = currentAllIndex < ALL_SECTION_IDS.length - 1;
   // Passado para PrecosSection: quando deixa de ser true (usuário navega pra
   // outra seção), a seção reseta seu estado interno (seletor Smart/Vendas/Full).
   const isPrecosActive = activeSectionId === 'precos';
 
   return (
-    /*
-      ALTURA DO WRAPPER:
-      Usa calc(var(--real-vh, 1vh) * 100) como fallback progressivo:
-      1. --real-vh é setado pelo useRealVh() via JS no primeiro render
-      2. Enquanto JS não rodou: 100dvh (melhor fallback moderno)
-      3. Fallback final para browsers antigos: 100vh
-    */
     <div
-      className={`relative w-screen overflow-hidden transition-colors duration-500 ${
+      className={`relative w-full min-h-screen transition-colors duration-500 ${
         isDark ? 'bg-slate-950 text-white' : 'bg-white text-gray-900'
       }`}
-      style={{ height: 'calc(var(--real-vh, 1svh) * 100)' }}
     >
-
       <Header
         activeSection={activeNavItem}
         onNavigate={scrollToSection}
@@ -428,47 +340,23 @@ export default function LandingPage() {
         onToggleTheme={toggleTheme}
       />
 
-      <main
-        ref={scrollContainerRef}
-        className="flex w-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth"
-        /*
-          Altura do main = altura real disponível.
-          Não usamos h-full aqui pois o wrapper pai
-          pode ter height via style (não via classe),
-          e h-full em alguns browsers não propaga style height.
-          Usamos o mesmo calc diretamente.
-        */
-        style={{
-          height: 'calc(var(--real-vh, 1svh) * 100)',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-        }}
-        aria-label="Seções da landing page minhAi"
-      >
-        <style>{`main::-webkit-scrollbar { display: none; }`}</style>
-
-        {/* SEÇÕES — cada uma ocupa exatamente a viewport real */}
-        {/* A classe section-full é definida no globals.css abaixo */}
+      {/*
+        Rolamento vertical padrão — a página inteira rola nativamente pelo
+        navegador. Cada seção tem min-height: 100dvh (altura real da tela,
+        já descontando a UI do navegador no mobile — resolve nativamente o
+        que antes precisava do hook --real-vh) e cresce além disso se o
+        conteúdo precisar. scroll-margin-top evita que a seção fique
+        escondida atrás do Header fixo ao navegar por clique.
+      */}
+      <main ref={mainRef} className="w-full" aria-label="Seções da landing page minhAi">
 
         {/* PÁGINA 1 — INÍCIO */}
-        <section
-          id="inicio"
-          className="flex-shrink-0 snap-start snap-always"
-          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
-          aria-label="Início"
-        >
+        <section id="inicio" className="w-full" style={{ scrollMarginTop: '80px' }} aria-label="Início">
           <InicioSection theme={theme} />
         </section>
 
-        {/* PÁGINA 2 — ESCALE SEM CONTRATAR + DOMAIN PICKER
-            Fora da sequência de "Recursos": sem dots internos (hideDots),
-            nextHint cai no default do componente ("Próximo: Funções →"). */}
-        <section
-          id={RECURSO_VANTAGENS_SLIDE.id}
-          className="flex-shrink-0 snap-start snap-always"
-          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
-          aria-label={RECURSO_VANTAGENS_SLIDE.title}
-        >
+        {/* PÁGINA 2 — ESCALE SEM CONTRATAR + DOMAIN PICKER */}
+        <section id={RECURSO_VANTAGENS_SLIDE.id} className="w-full" style={{ scrollMarginTop: '80px' }} aria-label={RECURSO_VANTAGENS_SLIDE.title}>
           <RecursoImageSlide
             theme={theme}
             label={RECURSO_VANTAGENS_SLIDE.label}
@@ -484,15 +372,8 @@ export default function LandingPage() {
           />
         </section>
 
-        {/* PÁGINA 3 — O QUE O SEU FUNCIONÁRIO IA PODE FAZER
-            14 cards em 4 grupos (3,4,3,4), carrossel automático a cada 5s,
-            com setas manuais e dots locais. */}
-        <section
-          id={FUNCAO_ID}
-          className="flex-shrink-0 snap-start snap-always"
-          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
-          aria-label={FUNCAO_TITULO}
-        >
+        {/* PÁGINA 3 — O QUE A MINHAI PODE FAZER */}
+        <section id={FUNCAO_ID} className="w-full" style={{ scrollMarginTop: '80px' }} aria-label={FUNCAO_TITULO}>
           <FuncaoCardsCarousel
             theme={theme}
             title={FUNCAO_TITULO}
@@ -503,23 +384,12 @@ export default function LandingPage() {
         </section>
 
         {/* PÁGINA 4 — ASSISTENTES ESPECIALIZADOS (Auxiliares) */}
-        <section
-          id="assistentes"
-          className="flex-shrink-0 snap-start snap-always"
-          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
-          aria-label="Especialistas de IA — Vendas, Orçamentos, Produção e Fiscal"
-        >
+        <section id="assistentes" className="w-full" style={{ scrollMarginTop: '80px' }} aria-label="Especialistas de IA — Vendas, Orçamentos, Produção e Fiscal">
           <AssistentesSection theme={theme} />
         </section>
 
-        {/* PÁGINA 5 — primeira de "Informações": Compatibilidade total,
-            imagem alternando automaticamente entre dispositivos.png e api.png. */}
-        <section
-          id={INFO_COMPATIBILIDADE_SLIDE.id}
-          className="flex-shrink-0 snap-start snap-always"
-          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
-          aria-label={INFO_COMPATIBILIDADE_SLIDE.title}
-        >
+        {/* PÁGINA 5 — primeira de "Informações": Compatibilidade total */}
+        <section id={INFO_COMPATIBILIDADE_SLIDE.id} className="w-full" style={{ scrollMarginTop: '80px' }} aria-label={INFO_COMPATIBILIDADE_SLIDE.title}>
           <RecursoImageSlide
             theme={theme}
             label={INFO_COMPATIBILIDADE_SLIDE.label}
@@ -534,13 +404,8 @@ export default function LandingPage() {
           />
         </section>
 
-        {/* INFORMAÇÕES — página 2: Vantagens (imagem alternando com os 3 cards) */}
-        <section
-          id={VANTAGENS_INFO_SLIDE.id}
-          className="flex-shrink-0 snap-start snap-always"
-          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
-          aria-label={VANTAGENS_INFO_SLIDE.title}
-        >
+        {/* INFORMAÇÕES — página 2: Vantagens */}
+        <section id={VANTAGENS_INFO_SLIDE.id} className="w-full" style={{ scrollMarginTop: '80px' }} aria-label={VANTAGENS_INFO_SLIDE.title}>
           <VantagensInfoSlide
             theme={theme}
             label={VANTAGENS_INFO_SLIDE.label}
@@ -554,92 +419,28 @@ export default function LandingPage() {
         </section>
 
         {/* INFORMAÇÕES — página 3 (Quem usa a minhAi) */}
-        <section
-          id="provas-sociais"
-          className="flex-shrink-0 snap-start snap-always"
-          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
-          aria-label="Quem usa a minhAi"
-        >
+        <section id="provas-sociais" className="w-full" style={{ scrollMarginTop: '80px' }} aria-label="Quem usa a minhAi">
           <ProvasSociaisSection theme={theme} />
         </section>
 
         {/* INFORMAÇÕES — página 4: Depoimentos + FAQ lado a lado */}
-        <section
-          id="depoimentos-faq"
-          className="flex-shrink-0 snap-start snap-always"
-          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
-          aria-label="Depoimentos de clientes e perguntas frequentes"
-        >
+        <section id="depoimentos-faq" className="w-full" style={{ scrollMarginTop: '80px' }} aria-label="Depoimentos de clientes e perguntas frequentes">
           <DepoimentosFaqSection theme={theme} />
         </section>
 
         {/* PREÇOS */}
-        <section
-          id="precos"
-          className="flex-shrink-0 snap-start snap-always"
-          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
-          aria-label="Planos e preços"
-        >
+        <section id="precos" className="w-full" style={{ scrollMarginTop: '80px' }} aria-label="Planos e preços">
           <PrecosSection theme={theme} isActive={isPrecosActive} />
         </section>
 
         {/* CONTATO */}
-        <section
-          id="contato"
-          className="flex-shrink-0 snap-start snap-always"
-          style={{ width: '100vw', height: 'calc(var(--real-vh, 1svh) * 100)' }}
-          aria-label="Contato e CTA final"
-        >
+        <section id="contato" className="w-full" style={{ scrollMarginTop: '80px' }} aria-label="Contato e CTA final">
           <ContatoSection theme={theme} />
         </section>
       </main>
 
-      {/* SETA ESQUERDA */}
-      <button
-        onClick={navigatePrev}
-        className={`fixed left-4 md:left-6 top-1/2 -translate-y-1/2 z-40 p-2 md:p-3 rounded-full backdrop-blur-sm border transition-all duration-500 group ${
-          canGoLeft ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none'
-        } ${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-black/5 border-black/5 hover:bg-black/10'}`}
-        aria-label="Seção anterior"
-      >
-        <svg className={`w-4 h-4 md:w-5 md:h-5 transition-transform duration-300 group-hover:-translate-x-0.5 ${isDark ? 'text-white/30 group-hover:text-white/60' : 'text-gray-300 group-hover:text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
-
       <LandingDemoFooter theme={theme} />
 
-      {/* SETA DIREITA */}
-      <button
-        onClick={navigateNext}
-        className={`fixed right-4 md:right-6 top-1/2 -translate-y-1/2 z-40 p-2 md:p-3 rounded-full backdrop-blur-sm border transition-all duration-500 group ${
-          canGoRight ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'
-        } ${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-black/5 border-black/5 hover:bg-black/10'}`}
-        aria-label="Próxima seção"
-      >
-        <svg className={`w-4 h-4 md:w-5 md:h-5 transition-transform duration-300 group-hover:translate-x-0.5 ${isDark ? 'text-white/30 group-hover:text-white/60' : 'text-gray-300 group-hover:text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
-
-      {/* INDICADOR DE PROGRESSO */}
-      <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
-        {NAV_SECTIONS.map((navId) => {
-          const isActive = activeNavItem === navId;
-          return (
-            <button
-              key={navId}
-              onClick={() => scrollToSection(navId)}
-              className={`rounded-full transition-all duration-300 ${
-                isActive
-                  ? `w-8 h-2 ${isDark ? 'bg-blue-400' : 'bg-blue-600'}`
-                  : `w-2 h-2 ${isDark ? 'bg-white/30 hover:bg-white/50' : 'bg-gray-300 hover:bg-gray-400'}`
-              }`}
-              aria-label={`Ir para ${navId}`}
-            />
-          );
-        })}
-      </div>
     </div>
   );
 }

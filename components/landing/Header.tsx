@@ -24,6 +24,7 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
   const [isScrolled, setIsScrolled] = useState(false);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isDark = theme === 'dark';
 
   // Detecta se o usuário rolou (para intensificar o blur do header)
@@ -35,16 +36,22 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Fecha o menu mobile automaticamente se a seção ativa mudar
+  // (usuário rolou a página manualmente enquanto o menu estava aberto)
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [activeSection]);
+
   // Lógica de Instalação PWA
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      
+
       // Verifica se já está instalado ou se o usuário já fechou/instalou antes
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
       const alreadyInstalled = localStorage.getItem('minhai_pwa_installed') === 'true';
-      
+
       if (!isStandalone && !alreadyInstalled) {
         setShowInstallButton(true);
       }
@@ -72,10 +79,10 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
-    
+
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
+
     if (outcome === 'accepted') {
       setShowInstallButton(false);
       setDeferredPrompt(null);
@@ -84,13 +91,8 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
 
   const handleNavigate = (id: string) => {
     onNavigate(id);
+    setMobileMenuOpen(false);
   };
-
-  // Encontrar índice da seção ativa e adjacentes para mobile
-  const currentIndex = navItems.findIndex(item => item.id === activeSection);
-  const prevItem = currentIndex > 0 ? navItems[currentIndex - 1] : null;
-  const nextItem = currentIndex < navItems.length - 1 ? navItems[currentIndex + 1] : null;
-  const currentItem = navItems[currentIndex];
 
   return (
     <header
@@ -205,60 +207,6 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
             </button>
           </div>
 
-          {/* NAVEGAÇÃO HORIZONTAL NO CENTRO — dentro do fluxo flex, nunca sobrepõe logo/botões */}
-          <div className="flex-1 min-w-0 flex items-center justify-center overflow-hidden px-1">
-            <div className="flex items-center gap-1 min-w-0 max-w-full">
-              {/* Seção Anterior — mostra só o final, funde em transparência à esquerda */}
-              {prevItem && (
-                <button
-                  onClick={() => handleNavigate(prevItem.id)}
-                  className={`flex-shrink min-w-0 max-w-[15vw] sm:max-w-[80px] text-right text-[9px] sm:text-[10px] font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ${
-                    isDark ? 'text-white/30' : 'text-gray-400'
-                  }`}
-                  style={{
-                    maskImage: 'linear-gradient(to right, transparent, black 65%)',
-                    WebkitMaskImage: 'linear-gradient(to right, transparent, black 65%)',
-                  }}
-                >
-                  {prevItem.label}
-                </button>
-              )}
-
-              {/* Seção Atual (destaque) */}
-              {currentItem && (
-                <button
-                  onClick={() => handleNavigate(currentItem.id)}
-                  className={`relative flex-shrink-0 px-1.5 py-1 text-[11px] sm:text-sm font-bold whitespace-nowrap transition-all duration-300 ${
-                    isDark ? 'text-blue-400' : 'text-blue-600'
-                  }`}
-                >
-                  {currentItem.label}
-                  <span
-                    className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full ${
-                      isDark ? 'bg-blue-400' : 'bg-blue-600'
-                    }`}
-                  />
-                </button>
-              )}
-
-              {/* Próxima Seção — mostra só o começo, funde em transparência à direita */}
-              {nextItem && (
-                <button
-                  onClick={() => handleNavigate(nextItem.id)}
-                  className={`flex-shrink min-w-0 max-w-[15vw] sm:max-w-[80px] text-left text-[9px] sm:text-[10px] font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ${
-                    isDark ? 'text-white/30' : 'text-gray-400'
-                  }`}
-                  style={{
-                    maskImage: 'linear-gradient(to left, transparent, black 65%)',
-                    WebkitMaskImage: 'linear-gradient(to left, transparent, black 65%)',
-                  }}
-                >
-                  {nextItem.label}
-                </button>
-              )}
-            </div>
-          </div>
-
           {/* BOTÕES À DIREITA */}
           <div className="flex items-center gap-2">
             {showInstallButton && (
@@ -299,8 +247,57 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
             >
               Entrar
             </Link>
+
+            {/* Hambúrguer — abre/fecha o menu de navegação */}
+            <button
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+              aria-expanded={mobileMenuOpen}
+              className={`p-1.5 rounded-lg border transition-all duration-300 ${
+                isDark
+                  ? 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10'
+                  : 'bg-black/5 border-black/5 text-gray-500 hover:text-gray-900 hover:bg-black/10'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
           </div>
         </div>
+
+        {/* MENU MOBILE — dropdown com todas as seções, a atual destacada */}
+        {mobileMenuOpen && (
+          <nav
+            className={`md:hidden pb-3 border-t ${isDark ? 'border-white/5' : 'border-gray-200/50'}`}
+            aria-label="Menu de navegação mobile"
+          >
+            <ul className="flex flex-col gap-1 pt-2">
+              {navItems.map((item) => (
+                <li key={item.id}>
+                  <button
+                    onClick={() => handleNavigate(item.id)}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      activeSection === item.id
+                        ? isDark
+                          ? 'bg-blue-500/10 text-blue-400'
+                          : 'bg-blue-50 text-blue-600'
+                        : isDark
+                          ? 'text-white/60 hover:text-white hover:bg-white/5'
+                          : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/50'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
       </div>
     </header>
   );

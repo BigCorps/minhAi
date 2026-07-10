@@ -5,7 +5,7 @@ interface ProvasSociaisSectionProps {
 }
 
 const NUMEROS = [
-  { valor: '10+',     label: 'auxiliares especialistas',          color: 'blue'  as const },
+  { valor: '30+',     label: 'empresas ativas',          color: 'blue'  as const },
   { valor: '100+',    label: 'funções nativas',           color: 'green' as const },
   { valor: 'R$ 0,05', label: 'por interação (a partir)', color: 'blue'  as const },
   { valor: '24/7',    label: 'sempre disponível',         color: 'green' as const },
@@ -33,13 +33,9 @@ export default function ProvasSociaisSection({ theme = 'dark' }: ProvasSociaisSe
     <div
       className={`
         relative flex flex-col items-center justify-center
-        h-full w-full overflow-hidden
+        w-full overflow-hidden bg-transparent
         px-5 sm:px-8 lg:px-12
         transition-colors duration-500
-        ${isDark
-          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
-          : 'bg-gradient-to-br from-white via-blue-50/30 to-white'
-        }
       `}
     >
       {/* Glow decorativo */}
@@ -47,20 +43,12 @@ export default function ProvasSociaisSection({ theme = 'dark' }: ProvasSociaisSe
         <div className={`absolute top-1/3 left-1/2 -translate-x-1/2 w-[60%] h-[50%] rounded-full blur-[120px] ${isDark ? 'bg-blue-500/5' : 'bg-blue-200/20'}`} />
       </div>
 
-      {/*
-        Inner container:
-        - pt/pb compensam header (64px) e dots (48px)
-        - gap adaptativo por altura via media queries
-        - ZERO overflow — conteúdo encolhe/some por breakpoint de altura
-      */}
       <div
         className={`
           relative z-10 w-full max-w-5xl mx-auto
           flex flex-col items-center
-          pt-[68px] pb-[52px] md:pt-4 md:pb-4
-          gap-4
-          [@media(min-height:750px)_and_(max-width:767px)]:gap-6
-          sm:gap-6 md:gap-8
+          pt-24 pb-16 sm:pt-28 sm:pb-20 md:py-16
+          gap-6 md:gap-8
         `}
       >
 
@@ -69,27 +57,12 @@ export default function ProvasSociaisSection({ theme = 'dark' }: ProvasSociaisSe
           <p className={`text-xs font-semibold uppercase tracking-widest mb-1.5 ${isDark ? 'text-blue-400/70' : 'text-blue-600/70'}`}>
             Quem usa a minhAi
           </p>
-          <h2
-            className={`
-              font-bold leading-tight mb-1.5
-              text-xl
-              [@media(min-height:700px)_and_(max-width:767px)]:text-2xl
-              sm:text-3xl md:text-4xl
-              ${isDark ? 'text-white' : 'text-gray-900'}
-            `}
-          >
+          <h2 className={`font-bold leading-tight mb-1.5 text-2xl sm:text-3xl md:text-4xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
             Empresas de todos os tamanhos já{' '}
             <span className={isDark ? 'text-green-400' : 'text-green-600'}>automatizaram</span>
             {' '}seu atendimento
           </h2>
-          {/* Subtítulo — some em telas baixas */}
-          <p
-            className={`
-              text-xs sm:text-base max-w-xl mx-auto
-              [@media(max-height:650px)_and_(max-width:767px)]:hidden
-              ${isDark ? 'text-white/45' : 'text-gray-500'}
-            `}
-          >
+          <p className={`text-sm sm:text-base max-w-xl mx-auto ${isDark ? 'text-white/45' : 'text-gray-500'}`}>
             De MEIs a grandes empresas — qualquer negócio com clientes e funcionários pode ter um Assistente IA.
           </p>
         </div>
@@ -134,22 +107,11 @@ export default function ProvasSociaisSection({ theme = 'dark' }: ProvasSociaisSe
           })}
         </div>
 
-        {/* Separador — some em telas baixas */}
-        <div
-          className={`
-            w-full h-px
-            [@media(max-height:620px)_and_(max-width:767px)]:hidden
-            ${isDark ? 'bg-white/5' : 'bg-gray-100'}
-          `}
-        />
+        {/* Separador */}
+        <div className={`w-full h-px ${isDark ? 'bg-white/5' : 'bg-gray-100'}`} />
 
         {/* ── Segmentos ──────────────────────────────────────── */}
-        <div
-          className={`
-            w-full
-            [@media(max-height:620px)_and_(max-width:767px)]:hidden
-          `}
-        >
+        <div className="w-full">
           <p className={`text-center text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-2 sm:mb-4 ${isDark ? 'text-white/25' : 'text-gray-400'}`}>
             Segmentos atendidos
           </p>
@@ -186,7 +148,6 @@ export default function ProvasSociaisSection({ theme = 'dark' }: ProvasSociaisSe
             </span>
           </div>
         </div>
-
 
       </div>
     </div>

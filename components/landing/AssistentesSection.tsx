@@ -117,12 +117,8 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
     <div
       className={`
         relative flex flex-col items-center justify-center
-        h-full w-full overflow-hidden
+        w-full overflow-hidden bg-transparent
         transition-colors duration-500
-        ${isDark
-          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
-          : 'bg-gradient-to-br from-white via-blue-50/20 to-white'
-        }
       `}
     >
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
@@ -134,11 +130,8 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
           relative z-10 w-full max-w-6xl mx-auto
           flex flex-col items-center
           px-5 sm:px-8 lg:px-12
-          pt-[68px] pb-[52px]
-          [@media(max-height:700px)_and_(max-width:767px)]:pt-[64px]
-          [@media(max-height:700px)_and_(max-width:767px)]:pb-[44px]
-          md:pt-4 md:pb-4
-          gap-2 sm:gap-3 md:gap-4
+          pt-24 pb-16 sm:pt-28 sm:pb-20 md:py-16
+          gap-4 md:gap-6
         `}
       >
 
@@ -147,27 +140,27 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
           <p className={`text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-1 ${isDark ? 'text-lime-400/70' : 'text-lime-600/70'}`}>
             Especialistas de IA
           </p>
-          <h2 className={`font-bold leading-tight text-lg sm:text-2xl md:text-3xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          <h2 className={`font-bold leading-tight text-2xl sm:text-3xl md:text-4xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
             Sua equipe digital{' '}
             <span className={isDark ? 'text-lime-400' : 'text-lime-600'}>completa</span>
           </h2>
-          <p className={`text-xs sm:text-sm max-w-xl mx-auto mt-1 [@media(max-height:640px)_and_(max-width:767px)]:hidden ${isDark ? 'text-white/45' : 'text-gray-500'}`}>
+          <p className={`text-sm sm:text-base max-w-xl mx-auto mt-2 ${isDark ? 'text-white/45' : 'text-gray-500'}`}>
             Além das mais de 100 funções, você conta com 10 especialistas de IA integrados ao seu negócio — cada um com foco em uma área específica.
           </p>
         </div>
 
         {/* ── MOBILE: lista compacta — todos os 10 ── */}
-        <div className="flex flex-col gap-1.5 w-full sm:hidden">
+        <div className="flex flex-col gap-2 w-full sm:hidden">
           {ASSISTENTES.map(({ id, Icon, nome, tagline, color }) => {
             const c = colorMap[color][isDark ? 'dark' : 'light'];
             return (
-              <div key={id} className={`flex items-center gap-3 p-2.5 rounded-xl border ${c.border} ${c.cardBg}`}>
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${c.iconBg}`}>
+              <div key={id} className={`flex items-center gap-3 p-3 rounded-xl border ${c.border} ${c.cardBg}`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${c.iconBg}`}>
                   <Icon className={`w-4 h-4 ${c.iconText}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className={`text-xs font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{nome}</h3>
-                  <p className={`text-[10px] ${isDark ? 'text-white/50' : 'text-gray-500'}`}>{tagline}</p>
+                  <h3 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{nome}</h3>
+                  <p className={`text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>{tagline}</p>
                 </div>
                 <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${c.dot}`} />
               </div>
@@ -176,16 +169,16 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
         </div>
 
         {/* ── DESKTOP: 3 linhas — 3 + 4 + 3 ── */}
-        <div className="hidden sm:flex sm:flex-col gap-2.5 md:gap-3 w-full">
+        <div className="hidden sm:flex sm:flex-col gap-3 md:gap-4 w-full">
           {linhas.map((linha, li) => (
-            <div key={li} className="flex justify-center gap-2.5 md:gap-3">
+            <div key={li} className="flex justify-center gap-3 md:gap-4">
               {linha.map(({ id, Icon, nome, tagline, descricao, color }) => {
                 const c = colorMap[color][isDark ? 'dark' : 'light'];
                 return (
                   <article
                     key={id}
                     className={`
-                      flex flex-col gap-2.5 p-3.5 md:p-4 rounded-2xl border
+                      flex flex-col gap-2.5 p-4 md:p-5 rounded-2xl border
                       transition-all duration-300 hover:scale-[1.02]
                       ${c.cardBg} ${c.border}
                     `}
@@ -193,10 +186,10 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
                   >
                     {/* Ícone + nome */}
                     <div className="flex items-center gap-2.5">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${c.iconBg}`}>
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${c.iconBg}`}>
                         <Icon className={`w-4 h-4 ${c.iconText}`} />
                       </div>
-                      <h3 className={`text-xs font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      <h3 className={`text-sm font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
                         {nome}
                       </h3>
                     </div>
@@ -207,7 +200,7 @@ export default function AssistentesSection({ theme = 'dark' }: AssistentesSectio
                     </span>
 
                     {/* Descrição */}
-                    <p className={`text-[11px] leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                    <p className={`text-xs leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
                       {descricao}
                     </p>
                   </article>

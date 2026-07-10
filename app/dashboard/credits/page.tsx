@@ -61,6 +61,10 @@ const FUNCOES_VENDAS = [
   { label: 'Sobre o Sistema',     desc: 'Informações sobre a minhAi' },
 ];
 
+// Vendas fora do dashboard por enquanto — mesma flag usada em PrecosSection.tsx (landing).
+// Pra reativar, só mudar pra `true`.
+const SHOW_VENDAS_TAB = false;
+
 export default function CreditsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [packages, setPackages] = useState<Package[]>([]);
@@ -326,6 +330,7 @@ export default function CreditsPage() {
           </button>
 
           {/* Vendas */}
+          {SHOW_VENDAS_TAB && (
           <button
             onClick={() => setActiveTab('vendas')}
             className={`
@@ -353,6 +358,7 @@ export default function CreditsPage() {
               GRÁTIS
             </span>
           </button>
+          )}
         </div>
       </div>
 
@@ -564,7 +570,7 @@ export default function CreditsPage() {
       {/* ══════════════════════════════════════════════════════
           ABA VENDAS
       ══════════════════════════════════════════════════════ */}
-      {activeTab === 'vendas' && (
+      {activeTab === 'vendas' && SHOW_VENDAS_TAB && (
         <div className="space-y-8 animate-in fade-in duration-200">
 
           {/* Destaque principal: GRATUITO */}

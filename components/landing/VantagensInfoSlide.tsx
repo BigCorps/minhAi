@@ -61,12 +61,8 @@ export default function VantagensInfoSlide({
     <div
       className={`
         relative flex flex-col items-center justify-center
-        h-full w-full overflow-hidden
+        w-full overflow-hidden bg-transparent
         transition-colors duration-500
-        ${isDark
-          ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
-          : 'bg-gradient-to-br from-white via-blue-50/50 to-white'
-        }
       `}
     >
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
@@ -78,12 +74,10 @@ export default function VantagensInfoSlide({
           relative z-10
           flex flex-col md:flex-row
           items-center justify-center md:justify-between
-          h-full w-full max-w-7xl mx-auto
+          w-full max-w-7xl mx-auto
           px-5 sm:px-10 lg:px-16
-          pt-[68px] pb-[52px] md:pt-0 md:pb-0
-          gap-3
-          [@media(min-height:720px)_and_(max-width:767px)]:gap-5
-          md:gap-12
+          pt-24 pb-16 sm:pt-28 sm:pb-20 md:py-16
+          gap-8 md:gap-12
         `}
       >
 
@@ -98,10 +92,8 @@ export default function VantagensInfoSlide({
           <h2
             className={`
               font-bold leading-tight transition-colors
-              mb-2 sm:mb-5
-              text-xl
-              [@media(min-height:680px)_and_(max-width:767px)]:text-2xl
-              sm:text-3xl md:text-4xl lg:text-5xl
+              mb-3 sm:mb-5
+              text-2xl sm:text-3xl md:text-4xl lg:text-5xl
               ${isDark ? 'text-white' : 'text-gray-900'}
             `}
           >
@@ -110,8 +102,7 @@ export default function VantagensInfoSlide({
 
           <p
             className={`
-              text-xs sm:text-base md:text-lg leading-relaxed transition-colors
-              [@media(max-height:640px)_and_(max-width:767px)]:hidden
+              text-sm sm:text-base md:text-lg leading-relaxed transition-colors
               ${isDark ? 'text-white/60' : 'text-gray-500'}
             `}
           >
@@ -120,13 +111,7 @@ export default function VantagensInfoSlide({
         </div>
 
         {/* ── Visual — alterna entre a imagem e os 3 cards de vantagens ── */}
-        <div
-          className={`
-            relative flex items-center justify-center
-            order-2 w-full md:w-1/2
-            [@media(max-height:560px)_and_(max-width:767px)]:hidden
-          `}
-        >
+        <div className="relative flex items-center justify-center order-2 w-full md:w-1/2">
           <div
             className="relative w-full max-w-[320px] md:max-w-full"
             style={{ height: 'clamp(240px, 48vh, 520px)' }}

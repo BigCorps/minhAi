@@ -70,6 +70,10 @@ const PAGE_SIZE = 50;
 
 const THRESHOLD_OPTIONS = [1, 5, 10, 15];
 
+// Vendas fora do dashboard por enquanto — mesma flag usada em CreditsPage.tsx e PrecosSection.tsx.
+// Pra reativar, só mudar pra `true`.
+const SHOW_VENDAS_TAB = false;
+
 const COMPANY_COLORS = [
   'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400',
   'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400',
@@ -780,7 +784,7 @@ export default function SaldoPage() {
         </div>
 
         {/* ── Cards de resumo ──────────────────────────────────────────────── */}
-        <div className={`grid grid-cols-1 ${hasVendasCompany ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6`}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-green-100 dark:bg-green-500/10 rounded-lg">
@@ -821,6 +825,7 @@ export default function SaldoPage() {
           </div>
 
           {hasVendasCompany && (
+            {hasVendasCompany && SHOW_VENDAS_TAB && (
             <div className="bg-lime-50 dark:bg-lime-500/5 rounded-2xl p-6 shadow-xl border border-lime-200 dark:border-lime-500/20">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-lime-100 dark:bg-lime-500/20 rounded-lg">

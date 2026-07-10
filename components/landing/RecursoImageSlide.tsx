@@ -69,49 +69,32 @@ export default function RecursoImageSlide({
     <div
       className={`
         relative flex flex-col items-center justify-center
-        h-full w-full overflow-hidden
+        w-full overflow-hidden bg-transparent
         transition-colors duration-500
-        ${isDark
-          ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
-          : 'bg-gradient-to-br from-white via-blue-50/50 to-white'
-        }
       `}
     >
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div className={`absolute top-1/4 right-1/4 w-[50%] h-[50%] rounded-full blur-[140px] ${s.glow}`} />
       </div>
 
-      {/*
-        Mobile: coluna — imagem em cima (compacta), texto abaixo
-        Desktop: linha lado a lado
-        pt/pb compensam header e dots — zero overflow
-      */}
+      {/* Mobile: coluna — imagem em cima, texto abaixo. Desktop: linha lado a lado. */}
       <div
         className={`
           relative z-10
           flex flex-col md:flex-row
           items-center justify-center md:justify-between
-          h-full w-full max-w-7xl mx-auto
+          w-full max-w-7xl mx-auto
           px-5 sm:px-10 lg:px-16
-          pt-[68px] pb-[52px] md:pt-0 md:pb-0
-          gap-3
-          [@media(min-height:720px)_and_(max-width:767px)]:gap-5
-          md:gap-12
+          pt-24 pb-16 sm:pt-28 sm:pb-20 md:py-16
+          gap-8 md:gap-12
         `}
       >
 
         {/* ── Imagem ─────────────────────────────────────────── */}
-        <div
-          className={`
-            flex items-center justify-center
-            order-1 md:order-2
-            w-full md:w-1/2
-            [@media(max-height:560px)_and_(max-width:767px)]:hidden
-          `}
-        >
+        <div className="flex items-center justify-center order-1 md:order-2 w-full md:w-1/2">
           <div
             className="relative w-full max-w-[320px] md:max-w-full transition-transform duration-300 hover:scale-105"
-            style={{ height: 'clamp(160px, 42vh, 480px)' }}
+            style={{ height: 'clamp(200px, 42vh, 480px)' }}
           >
             {images.map((src, i) => (
               <img
@@ -139,37 +122,32 @@ export default function RecursoImageSlide({
           <h2
             className={`
               font-bold leading-tight transition-colors
-              mb-2 sm:mb-5
-              text-xl
-              [@media(min-height:680px)_and_(max-width:767px)]:text-2xl
-              sm:text-3xl md:text-4xl lg:text-5xl
+              mb-3 sm:mb-5
+              text-2xl sm:text-3xl md:text-4xl lg:text-5xl
               ${isDark ? 'text-white' : 'text-gray-900'}
             `}
           >
             {title}
           </h2>
 
-          {/* Descrição — some em telas baixas */}
+          {/* Descrição */}
           <p
             className={`
-              text-xs sm:text-base md:text-lg leading-relaxed transition-colors
-              [@media(max-height:640px)_and_(max-width:767px)]:hidden
+              text-sm sm:text-base md:text-lg leading-relaxed transition-colors
               ${isDark ? 'text-white/60' : 'text-gray-500'}
             `}
           >
             {description}
           </p>
 
-          {/* Conteúdo extra opcional — ex: DomainPreviewPicker. Sempre visível
-              (não usa a mesma media query de altura da descrição) para garantir
-              que fique funcional em qualquer tamanho de tela. */}
+          {/* Conteúdo extra opcional — ex: DomainPreviewPicker */}
           {extraContent && (
-            <div className="w-full mt-3 sm:mt-5">
+            <div className="w-full mt-4 sm:mt-5">
               {extraContent}
             </div>
           )}
 
-          {/* Progress dots — ocultos quando a página não pertence a uma sequência (ex: página 2, fora do bloco de Recursos) */}
+          {/* Progress dots — ocultos quando a página não pertence a uma sequência */}
           {!hideDots && (
             <div className="flex items-center gap-2 mt-4 sm:mt-8">
               {Array.from({ length: totalCount }).map((_, i) => (

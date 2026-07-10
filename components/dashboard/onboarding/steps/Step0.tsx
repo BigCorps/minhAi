@@ -7,6 +7,10 @@ import type { StepProps } from './types';
 export function Step0({ state, update, onNext }: StepProps) {
   const selected = state.assistantType;
 
+  // Vendas fora da criação por enquanto — mesma flag usada em CreditsPage.tsx,
+  // PrecosSection.tsx e SaldoPage.tsx. Pra reativar, só mudar pra `true`.
+  const SHOW_VENDAS_TYPE = false;
+
   return (
     <div>
       <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
@@ -25,7 +29,7 @@ export function Step0({ state, update, onNext }: StepProps) {
           onSelect={() => update({ assistantType: 'smart' })}
           icon={<Sparkles size={22} />}
           title="minhAi Smart"
-          badge="Mais completo"
+          badge="Completo"
           badgeColor="blue"
           description="Mais de 100 funções disponíveis: agendamentos, PIX, QR Codes, câmera, impressão, cardápio, notas e muito mais. Funciona por créditos de uso ou plano mensal."
           bullets={[
@@ -38,6 +42,7 @@ export function Step0({ state, update, onNext }: StepProps) {
         />
 
         {/* Card: Vendas */}
+        {SHOW_VENDAS_TYPE && (
         <TypeCard
           selected={selected === 'vendas'}
           onSelect={() => update({ assistantType: 'vendas' })}
@@ -55,6 +60,7 @@ export function Step0({ state, update, onNext }: StepProps) {
           accent="purple"
           notice="As taxas de InfinitePay e Mercado Pago são cobradas diretamente por eles."
         />
+        )}
       </div>
 
       {/* Nota */}

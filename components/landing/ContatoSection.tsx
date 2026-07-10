@@ -13,12 +13,8 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
     <div
       className={`
         relative flex flex-col items-center justify-center
-        h-full w-full overflow-hidden
+        w-full overflow-hidden bg-transparent
         transition-colors duration-500
-        ${isDark
-          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
-          : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
-        }
       `}
     >
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
@@ -32,10 +28,8 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
           relative z-10 flex flex-col items-center text-center
           w-full max-w-2xl
           px-4 sm:px-6
-          pt-[68px] pb-[52px] md:pt-4 md:pb-4
-          gap-2.5
-          [@media(min-height:750px)_and_(max-width:767px)]:gap-4
-          sm:gap-4
+          pt-24 pb-16 sm:pt-28 sm:pb-20 md:py-16
+          gap-4 sm:gap-5
         `}
       >
 
@@ -49,27 +43,12 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
           <p className={`text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-1.5 ${isDark ? 'text-green-400/70' : 'text-green-600/70'}`}>
             Comece agora
           </p>
-          <h2
-            className={`
-              font-bold mb-1.5 leading-snug
-              text-base
-              [@media(min-height:700px)_and_(max-width:767px)]:text-lg
-              sm:text-xl md:text-2xl lg:text-3xl
-              ${isDark ? 'text-white' : 'text-gray-900'}
-            `}
-          >
-            Realmente{' '}
-            <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>uma IA pra chamar de sua!</span>
+          <h2 className={`font-bold mb-1.5 leading-snug text-lg sm:text-xl md:text-2xl lg:text-3xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Seu concorrente já pode estar usando IA.{' '}
+            <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>E você?</span>
           </h2>
 
-          {/* Subtítulo — some em telas baixas */}
-          <p
-            className={`
-              text-xs sm:text-sm mb-3
-              [@media(max-height:640px)_and_(max-width:767px)]:hidden
-              ${isDark ? 'text-white/45' : 'text-gray-500'}
-            `}
-          >
+          <p className={`text-xs sm:text-sm mb-3 ${isDark ? 'text-white/45' : 'text-gray-500'}`}>
             Clique abaixo para uma demonstração personalizada em tempo real.
           </p>
 
@@ -95,13 +74,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
             </a>
           </div>
 
-          <p
-            className={`
-              mt-2 text-[10px] sm:text-xs
-              [@media(max-height:660px)_and_(max-width:767px)]:hidden
-              ${isDark ? 'text-white/25' : 'text-gray-400'}
-            `}
-          >
+          <p className={`mt-2 text-[10px] sm:text-xs ${isDark ? 'text-white/25' : 'text-gray-400'}`}>
              ou crie seu Funcionário de IA grátis agora! Sem cartão, sem contrato, sem complicação.
           </p>
         </div>
@@ -191,26 +164,14 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
           </a>
         </div>
 
-        {/* ── Rodapé legal — some em telas muito baixas ──────── */}
-        <div
-          className={`
-            pt-2 border-t w-full
-            [@media(max-height:640px)_and_(max-width:767px)]:hidden
-            ${isDark ? 'border-white/5' : 'border-gray-100'}
-          `}
-        >
+        {/* ── Rodapé legal ─────────────────────────────────────── */}
+        <div className={`pt-2 border-t w-full ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
           <p className={`text-[9px] sm:text-[10px] mb-0.5 ${isDark ? 'text-white/25' : 'text-gray-500'}`}>BIGCORPS TECNOLOGIA LTDA</p>
           <p className={`text-[9px] sm:text-[10px] ${isDark ? 'text-white/20' : 'text-gray-400'}`}>CNPJ: 14.282.244/0001-19</p>
         </div>
 
         {/* ── Termos ─────────────────────────────────────────── */}
-        <div
-          className={`
-            pt-1.5 border-t w-full
-            [@media(max-height:640px)_and_(max-width:767px)]:hidden
-            ${isDark ? 'border-white/5' : 'border-gray-100'}
-          `}
-        >
+        <div className={`pt-1.5 border-t w-full ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
           <div className="flex items-center justify-center gap-4">
             <a href="/termos" className={`text-[9px] sm:text-[10px] transition-colors ${isDark ? 'text-white/40 hover:text-white/60' : 'text-gray-500 hover:text-gray-700'}`}>
               Termos de Uso

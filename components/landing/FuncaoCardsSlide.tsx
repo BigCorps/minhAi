@@ -143,17 +143,6 @@ export default function FuncaoCardsSlide({
             />
           ))}
         </div>
-
-        {/* Hint — some em telas baixas */}
-        <p
-          className={`
-            text-[10px] sm:text-xs
-            [@media(max-height:660px)_and_(max-width:767px)]:hidden
-            ${isDark ? 'text-white/20' : 'text-gray-300'}
-          `}
-        >
-          {currentIndex < totalCount - 1 ? 'Role para ver mais funções →' : 'Próximo: Informações →'}
-        </p>
       </div>
     </div>
   );

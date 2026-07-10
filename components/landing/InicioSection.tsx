@@ -25,12 +25,8 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
     <div
       className={`
         relative flex flex-col items-center justify-center
-        h-full w-full overflow-hidden
+        w-full min-h-[100dvh] overflow-hidden bg-transparent
         transition-colors duration-500
-        ${isDark
-          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
-          : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
-        }
       `}
     >
       {/* Fundo decorativo */}
@@ -46,36 +42,14 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
           items-center justify-center md:justify-between
           w-full max-w-7xl mx-auto
           px-5 sm:px-8 lg:px-12
-          pt-[68px] pb-[52px] md:pt-0 md:pb-0
-          gap-1
-          [@media(min-height:700px)_and_(max-width:767px)]:gap-3
-          md:gap-16
+          pt-24 pb-16 sm:pt-28 sm:pb-20 md:py-16
+          gap-8 md:gap-16
         `}
       >
 
         {/* ── AVATAR + TourTrigger desktop ───────────────────── */}
-        <div
-          className={`
-            flex-shrink-0 order-1 md:order-2
-            flex flex-col items-center justify-center
-            relative
-            [@media(max-height:580px)_and_(max-width:767px)]:hidden
-          `}
-        >
-          <div
-            className={`
-              relative transition-all duration-500
-              w-[30vw] h-[30vw]
-              [@media(min-height:680px)_and_(max-width:767px)]:w-[36vw]
-              [@media(min-height:680px)_and_(max-width:767px)]:h-[36vw]
-              [@media(max-height:620px)_and_(max-width:767px)]:w-[22vw]
-              [@media(max-height:620px)_and_(max-width:767px)]:h-[22vw]
-              sm:w-[32vw] sm:h-[32vw]
-              md:w-80 md:h-80
-              lg:w-[22rem] lg:h-[22rem]
-              xl:w-[26rem] xl:h-[26rem]
-            `}
-          >
+        <div className="flex-shrink-0 order-1 md:order-2 flex flex-col items-center justify-center relative">
+          <div className="relative w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 lg:w-[22rem] lg:h-[22rem] xl:w-[26rem] xl:h-[26rem]">
             {avatarOverride ?? <LandingAvatarFace theme={theme} />}
           </div>
 
@@ -99,8 +73,7 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
           <div
             className={`
               inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold leading-none
-              mb-1.5
-              [@media(max-height:640px)_and_(max-width:767px)]:hidden
+              mb-3
               ${isDark
                 ? 'bg-green-500/10 text-green-400 border border-green-500/20'
                 : 'bg-green-100 text-green-700 border border-green-200'
@@ -114,10 +87,8 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
           {/* Título */}
           <h1
             className={`
-              font-bold leading-[1.15] transition-colors mb-1.5
-              text-[1.35rem]
-              [@media(min-height:680px)_and_(max-width:767px)]:text-[1.6rem]
-              sm:text-4xl md:text-4xl lg:text-[2.75rem]
+              font-bold leading-[1.15] transition-colors mb-3
+              text-2xl sm:text-4xl md:text-4xl lg:text-[2.75rem]
               ${isDark ? 'text-white' : 'text-gray-900'}
             `}
           >
@@ -125,9 +96,7 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
               <span
                 className={`
                   font-bold
-                  text-[1.35rem]
-                  [@media(min-height:680px)_and_(max-width:767px)]:text-[1.6rem]
-                  sm:text-4xl md:text-5xl lg:text-5xl
+                  text-2xl sm:text-4xl md:text-5xl lg:text-5xl
                   ${isDark ? 'text-blue-400' : 'text-blue-600'}
                 `}
               >
@@ -146,9 +115,8 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
           {/* Parágrafo */}
           <p
             className={`
-              text-xs sm:text-base md:text-lg max-w-lg leading-relaxed transition-colors mx-auto
-              mb-1.5
-              [@media(max-height:660px)_and_(max-width:767px)]:hidden
+              text-sm sm:text-base md:text-lg max-w-lg leading-relaxed transition-colors mx-auto
+              mb-4
               ${isDark ? 'text-white/55' : 'text-gray-600'}
             `}
           >
@@ -180,13 +148,7 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
           </div>
 
           {/* Mini destaques */}
-          <div
-            className={`
-              flex flex-wrap items-center justify-center gap-x-4 gap-y-1
-              mt-2 sm:mt-5
-              [@media(max-height:700px)_and_(max-width:767px)]:hidden
-            `}
-          >
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-5">
             {MINI_DESTAQUES.map((text, i) => (
               <span
                 key={text}
@@ -201,46 +163,8 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
             ))}
           </div>
 
-          <div
-            className={`
-              flex items-center justify-center gap-2 mt-2 sm:mt-3
-              [@media(max-height:700px)_and_(max-width:767px)]:hidden
-            `}
-          >
-            <span className={`sm:hidden text-[10px] font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-              Escolha entre a versão{' '}
-              <span className={`font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>Smart</span>
-              {', '}
-              <span className={`font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>Vendas</span>
-              {' '}ou{' '}
-              <span className={`font-semibold ${isDark ? 'text-purple-400/70' : 'text-purple-600'}`}>Full</span>
-            </span>
-            <span className={`hidden sm:flex items-center gap-2 text-xs ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
-              Como pagar:
-            </span>
-            <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
-              Smart — créditos por uso
-            </span>
-            <span className={`hidden sm:inline ${isDark ? 'text-white/15' : 'text-gray-200'} text-xs`}>·</span>
-            <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-lime-400 flex-shrink-0" />
-              Vendas — grátis, só pague quando vender
-            </span>
-            <span className={`hidden sm:inline ${isDark ? 'text-white/15' : 'text-gray-200'} text-xs`}>·</span>
-            <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-purple-400/70' : 'text-purple-600'}`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
-              Full — solução sob consulta
-            </span>
-          </div>
-
-          {/* Cards de integração — visíveis em todos os tamanhos com media query de altura */}
-          <div
-            className={`
-              flex items-center justify-center gap-2 sm:gap-3 mt-2 sm:mt-3
-              [@media(max-height:700px)_and_(max-width:767px)]:hidden
-            `}
-          >
+          {/* Cards de integração */}
+          <div className="flex items-center justify-center gap-2 sm:gap-3 mt-3">
             <div className="w-[90px] sm:w-[120px] h-10 sm:h-12 flex items-center justify-center">
               <img src="/cards/meta.png" alt="Integração oficial Meta" style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }} />
             </div>
@@ -257,8 +181,8 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
             </a>
           </div>
 
-          {/* TourTrigger — só mobile (sm:hidden), sempre visível independente da altura da tela */}
-          <div className="sm:hidden flex justify-center mt-3">
+          {/* TourTrigger — só mobile */}
+          <div className="sm:hidden flex justify-center mt-4">
             <TourTrigger theme={theme} delay={0} dismissible />
           </div>
 

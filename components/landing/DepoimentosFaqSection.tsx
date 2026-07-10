@@ -4,18 +4,11 @@
 // Mescla o que antes eram duas páginas (Depoimentos e FAQ) em uma só —
 // última página do grupo "Informações". Lado a lado no desktop,
 // empilhado (um acima do outro) no mobile.
-//
-// Altura natural + centralização (SEM h-full, SEM overflow-y-auto) —
-// mesmo padrão do resto do site. Ver nota histórica: um scroll interno
-// aqui entraria em conflito com o listener global de wheel que troca
-// de seção.
 
 interface DepoimentosFaqSectionProps {
   theme?: 'dark' | 'light';
-  /** Usado só na exportação em PDF — mostra apenas os títulos das perguntas,
-   * sem o mecanismo de abrir/fechar (details/summary) nem o texto das
-   * respostas. O html2canvas não captura de forma confiável o estado
-   * recolhido nativo do <details>, causando texto sobreposto/ilegível. */
+  /** Mostra apenas os títulos das perguntas, sem abrir/fechar nem texto
+   * de resposta. Padrão: true — vale pra landing ao vivo e pro PDF. */
   faqTitlesOnly?: boolean;
 }
 
@@ -117,19 +110,15 @@ const faqJsonLd = {
   })),
 };
 
-export default function DepoimentosFaqSection({ theme = 'dark', faqTitlesOnly = false }: DepoimentosFaqSectionProps) {
+export default function DepoimentosFaqSection({ theme = 'dark', faqTitlesOnly = true }: DepoimentosFaqSectionProps) {
   const isDark = theme === 'dark';
 
   return (
     <div
       className={`
         relative flex flex-col items-center justify-center
-        h-full w-full overflow-hidden
+        w-full overflow-hidden bg-transparent
         transition-colors duration-500
-        ${isDark
-          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
-          : 'bg-gradient-to-br from-blue-50/30 via-white to-blue-50/30'
-        }
       `}
     >
       <script
@@ -147,37 +136,30 @@ export default function DepoimentosFaqSection({ theme = 'dark', faqTitlesOnly = 
           relative z-10 w-full max-w-6xl mx-auto
           flex flex-col md:flex-row
           px-4 sm:px-6 lg:px-8
-          pt-[68px] pb-[52px]
-          [@media(max-height:700px)_and_(max-width:767px)]:pt-[64px]
-          [@media(max-height:700px)_and_(max-width:767px)]:pb-[44px]
-          md:pt-4 md:pb-4
-          gap-3 md:gap-6
+          pt-24 pb-16 sm:pt-28 sm:pb-20 md:py-16
+          gap-6 md:gap-8
         `}
       >
 
         {/* ── Depoimentos ──────────────────────────────────────── */}
         <div className="flex-1 min-w-0 flex flex-col">
-          <div className="text-center mb-1.5 md:mb-2">
+          <div className="text-center mb-2 md:mb-3">
             <p className={`text-[10px] font-semibold uppercase tracking-widest mb-0.5 ${isDark ? 'text-green-400/70' : 'text-green-600/70'}`}>
               O que dizem os clientes
             </p>
-            <h2 className={`font-bold leading-tight text-base sm:text-lg md:text-xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`font-bold leading-tight text-lg sm:text-xl md:text-2xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
               Negócios reais,{' '}
               <span className={isDark ? 'text-green-400' : 'text-green-600'}>resultados reais</span>
             </h2>
           </div>
 
-          <div className="flex flex-col gap-1.5 md:gap-2">
-            {DEPOIMENTOS.map((d, i) => {
+          <div className="flex flex-col gap-2 md:gap-3">
+            {DEPOIMENTOS.map((d) => {
               const c = depoColorMap[d.color][isDark ? 'dark' : 'light'];
               return (
                 <div
                   key={d.nome}
-                  className={`
-                    flex items-start gap-2.5 p-2.5 rounded-xl border
-                    ${i === 2 ? '[@media(max-height:820px)_and_(max-width:767px)]:hidden' : ''}
-                    ${c.border} ${c.cardBg}
-                  `}
+                  className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${c.border} ${c.cardBg}`}
                 >
                   <div
                     role="img"
@@ -222,27 +204,24 @@ export default function DepoimentosFaqSection({ theme = 'dark', faqTitlesOnly = 
         {/* ── FAQ ───────────────────────────────────────────────
             details com o mesmo atributo `name` — o navegador garante
             nativamente que só um fica aberto por vez, sem precisar de
-            estado em React. */}
+            estado em React. Usado só quando faqTitlesOnly=false. */}
         <div
           className="flex-1 min-w-0 flex flex-col"
           itemScope
           itemType="https://schema.org/FAQPage"
         >
-          <div className="text-center mb-1.5 md:mb-2">
+          <div className="text-center mb-2 md:mb-3">
             <p className={`text-[10px] font-semibold uppercase tracking-widest mb-0.5 ${isDark ? 'text-blue-400/70' : 'text-blue-600/70'}`}>
               Dúvidas frequentes
             </p>
-            <h2 className={`font-bold leading-tight text-base sm:text-lg md:text-xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`font-bold leading-tight text-lg sm:text-xl md:text-2xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
               Respostas rápidas para{' '}
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>começar agora</span>
             </h2>
           </div>
 
-          <div className="flex flex-col gap-1.5 md:gap-2">
+          <div className="flex flex-col gap-2 md:gap-3">
             {faqTitlesOnly ? (
-              // Modo exportação — lista simples, sem details/summary (o
-              // html2canvas não captura de forma confiável o estado
-              // recolhido nativo do <details>).
               FAQS.map(({ pergunta }, i) => (
                 <div
                   key={i}
@@ -271,9 +250,6 @@ export default function DepoimentosFaqSection({ theme = 'dark', faqTitlesOnly = 
                   itemType="https://schema.org/Question"
                   className={`
                     group rounded-xl border cursor-pointer transition-all duration-200
-                    ${i >= 6 ? '[@media(max-height:900px)_and_(max-width:767px)]:hidden' : ''}
-                    ${i >= 4 && i < 6 ? '[@media(max-height:760px)_and_(max-width:767px)]:hidden' : ''}
-                    ${i === 3 ? '[@media(max-height:660px)_and_(max-width:767px)]:hidden' : ''}
                     ${isDark
                       ? 'bg-white/[0.02] border-white/8 hover:bg-white/[0.04]'
                       : 'bg-white border-gray-100 hover:border-blue-200 shadow-sm'

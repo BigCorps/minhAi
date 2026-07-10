@@ -24,6 +24,7 @@
     "@heroicons/react": "^2.1.1",
     "@imgly/background-removal": "^1.7.0",
     "@jspawn/ghostscript-wasm": "^0.0.2",
+    "@microsoft/clarity": "^1.0.2",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
     "@ricky0123/vad-web": "^0.0.30",

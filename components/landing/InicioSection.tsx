@@ -1,5 +1,5 @@
 // app/InicioSection.tsx — Server Component puro (sem 'use client')
-import Link from 'next/link';
+import TrackedLink from '@/components/analytics/TrackedLink';
 import { LandingAvatarFace } from './LandingAvatarFace';
 import { WordCarousel } from '@/components/landing/WordCarousel';
 import TourTrigger from '@/components/tour/TourTrigger';
@@ -126,14 +126,16 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
 
           {/* CTAs */}
           <div className="flex flex-row items-center justify-center gap-2 sm:gap-4">
-            <Link
+            <TrackedLink
               href="/lead"
+              event="clique_demonstracao_ao_vivo_inicio"
               className="flex-1 sm:flex-none px-4 sm:px-8 py-2 sm:py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-xs sm:text-base text-center leading-none shadow-lg hover:shadow-xl hover:scale-105"
             >
               Demonstração Ao Vivo
-            </Link>
-            <Link
+            </TrackedLink>
+            <TrackedLink
               href="/ia/suporte"
+              event="clique_teste_suporte_inicio"
               className={`
                 flex-1 sm:flex-none px-4 sm:px-8 py-2 sm:py-3.5
                 border-2 rounded-full transition-all duration-300 font-bold text-xs sm:text-base text-center leading-none hover:scale-105
@@ -144,7 +146,7 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
               `}
             >
               Teste nosso Suporte
-            </Link>
+            </TrackedLink>
           </div>
 
           {/* Mini destaques */}
@@ -161,6 +163,53 @@ export default function InicioSection({ theme = 'dark', staticCarouselWord, avat
                 {text}
               </span>
             ))}
+          </div>
+
+          <div className="flex items-center justify-center gap-2 mt-3">
+            {/* ════════════════════════════════════════════════════════
+                VERSÃO COM VENDAS — comentada, foco comercial atual é
+                Smart + Full. Pra reativar Vendas: descomentar este bloco
+                e apagar o bloco "SMART + FULL" logo abaixo.
+            <span className={`sm:hidden text-[10px] font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+              Escolha entre a versão{' '}
+              <span className={`font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>Smart</span>
+              {', '}
+              <span className={`font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>Vendas</span>
+              {' '}ou{' '}
+              <span className={`font-semibold ${isDark ? 'text-purple-400/70' : 'text-purple-600'}`}>Full</span>
+            </span>
+            <span className={`hidden sm:flex items-center gap-2 text-xs ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
+              Como pagar:
+            </span>
+            <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+              Smart — créditos por uso
+            </span>
+            <span className={`hidden sm:inline ${isDark ? 'text-white/15' : 'text-gray-200'} text-xs`}>·</span>
+            <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-lime-400/70' : 'text-lime-600'}`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-lime-400 flex-shrink-0" />
+              Vendas — grátis, só pague quando vender
+            </span>
+            <span className={`hidden sm:inline ${isDark ? 'text-white/15' : 'text-gray-200'} text-xs`}>·</span>
+            ════════════════════════════════════════════════════════ */}
+            <span className={`sm:hidden text-[10px] font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+              Escolha entre a versão{' '}
+              <span className={`font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>Smart</span>
+              {' '}ou{' '}
+              <span className={`font-semibold ${isDark ? 'text-purple-400/70' : 'text-purple-600'}`}>Full</span>
+            </span>
+            <span className={`hidden sm:flex items-center gap-2 text-xs ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
+              Como pagar:
+            </span>
+            <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-blue-400/70' : 'text-blue-500'}`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+              Smart — créditos por uso
+            </span>
+            <span className={`hidden sm:inline ${isDark ? 'text-white/15' : 'text-gray-200'} text-xs`}>·</span>
+            <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-purple-400/70' : 'text-purple-600'}`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+              Full — solução sob consulta
+            </span>
           </div>
 
           {/* Cards de integração */}

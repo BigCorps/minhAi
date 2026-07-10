@@ -3,6 +3,7 @@
 // components/landing/PrecosSection.tsx
 
 import { useState, useEffect } from 'react';
+import Clarity from '@microsoft/clarity';
 import { createClient } from '@/lib/supabase-browser';
 
 interface PrecosProps {
@@ -52,11 +53,11 @@ const FUNCOES_VENDAS = [
 ];
 
 const PLANO_FULL_ITENS = [
-  'App na PlayStore e Webapp',
+  'Créditos Ilimitados',
   'Landing Page Personalizada',
   'Implementação incluída',
+  'App na PlayStore',
   'Whitelabel',
-  'Assistente com suas Cores',
   'Domínio e Subdomínios próprios',
   'Configuração completa',
   'Suporte 24 horas',
@@ -83,6 +84,14 @@ const PLANO_FULL_ITENS = [
 const SHOW_SMART_TAB = true;
 const SHOW_VENDAS_TAB = false;
 const ONLY_FULL_VISIBLE = !SHOW_SMART_TAB && !SHOW_VENDAS_TAB;
+
+function trackEvent(name: string) {
+  try {
+    Clarity.event(name);
+  } catch {
+    // Clarity pode não estar inicializado ainda — falha silenciosa
+  }
+}
 
 export default function PrecosSection({ theme = 'dark', isActive = true, initialPlan = null }: PrecosProps) {
   const isDark = theme === 'dark';
@@ -157,7 +166,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
         }`}>
           {SHOW_SMART_TAB && (
             <button
-              onClick={() => setSelectedPlan('smart')}
+              onClick={() => { setSelectedPlan('smart'); trackEvent('selecionou_plano_smart'); }}
               className={`
                 relative flex items-center justify-center gap-1 sm:gap-2 flex-1 sm:flex-initial min-w-0
                 px-2 sm:px-6 py-1.5 sm:py-2 rounded-xl
@@ -175,7 +184,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
 
           {SHOW_VENDAS_TAB && (
             <button
-              onClick={() => setSelectedPlan('vendas')}
+              onClick={() => { setSelectedPlan('vendas'); trackEvent('selecionou_plano_vendas'); }}
               className={`
                 relative flex items-center justify-center gap-1 sm:gap-2 flex-1 sm:flex-initial min-w-0
                 px-2 sm:px-6 py-1.5 sm:py-2 rounded-xl
@@ -192,7 +201,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
           )}
 
           <button
-            onClick={() => setSelectedPlan('full')}
+            onClick={() => { setSelectedPlan('full'); trackEvent('selecionou_plano_full'); }}
             className={`
               relative flex items-center justify-center gap-1 sm:gap-2 flex-1 sm:flex-initial min-w-0
               px-2 sm:px-6 py-1.5 sm:py-2 rounded-xl
@@ -251,7 +260,7 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                 <span className="block">sentido pro seu negócio:</span>
               </h2>
               <p className={`text-xs sm:text-sm max-w-lg mx-auto md:mx-0 mt-1.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                Comece agora mesmo com planos e pacotes com valores por interação. Você escolhe como quer começar, e se ainda não quiser ter trabalho nenhum, nossa equipe cuida de tudo para você e ainda com Aplicativo na PlayStore: configuração total, personalização com cores, domínio, funções, site e até aplicativo próprio para sua empresa atender melhor, vender mais, automatizar tarefas e oferecer uma experiência mais rápida, inteligente e personalizada.
+                Comece agora mesmo gratuitamente, com comissão por vendas, ou planos e pacotes com valores por interação. Você escolhe como quer começar, e se ainda não quiser ter trabalho nenhum, nossa equipe cuida de tudo para você: configuração, personalização com cores, domínio, funções, site e até aplicativo próprio para sua empresa atender melhor, vender mais, automatizar tarefas e oferecer uma experiência mais rápida, inteligente e personalizada.
               </p>
             </div>
 
@@ -629,7 +638,10 @@ export default function PrecosSection({ theme = 'dark', isActive = true, initial
                 </div>
 
                 <button
-                  onClick={() => window.open('https://wa.me/5511926828418?text=Olá!%20Tenho%20interesse%20no%20Plano%20Full%20e%20gostaria%20de%20saber%20mais%20detalhes.', '_blank')}
+                  onClick={() => {
+                    trackEvent('clique_whatsapp_plano_full');
+                    window.open('https://wa.me/5511926828418?text=Olá!%20Tenho%20interesse%20no%20Plano%20Full%20e%20gostaria%20de%20saber%20mais%20detalhes.', '_blank');
+                  }}
                   className={`py-2.5 px-6 rounded-xl text-sm font-bold leading-none transition-all active:scale-95 whitespace-nowrap ${
                     isDark ? 'bg-lime-600 text-white hover:bg-lime-500' : 'bg-lime-600 text-white hover:bg-lime-700'
                   }`}

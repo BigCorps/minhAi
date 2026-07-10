@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Clarity from '@microsoft/clarity';
 import Header from '@/components/landing/Header';
 import InicioSection from '@/components/landing/InicioSection';
 import ProvasSociaisSection from '@/components/landing/ProvasSociaisSection';
@@ -293,7 +294,14 @@ export default function LandingPage() {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) setActiveSectionId(entry.target.id);
+          if (entry.isIntersecting) {
+            setActiveSectionId(entry.target.id);
+            try {
+              Clarity.setTag('secao_ativa', entry.target.id);
+            } catch {
+              // Clarity pode não estar inicializado ainda — falha silenciosa
+            }
+          }
         });
       },
       { root: null, rootMargin: '-45% 0px -45% 0px', threshold: 0 }

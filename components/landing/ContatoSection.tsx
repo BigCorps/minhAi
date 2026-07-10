@@ -2,6 +2,16 @@
 
 // components/landing/ContatoSection.tsx
 
+import Clarity from '@microsoft/clarity';
+
+function trackEvent(name: string) {
+  try {
+    Clarity.event(name);
+  } catch {
+    // Clarity pode não estar inicializado ainda — falha silenciosa
+  }
+}
+
 interface ContatoProps {
   theme?: 'dark' | 'light';
 }
@@ -55,12 +65,14 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
           <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 justify-center">
             <a
               href="/lead"
+              onClick={() => trackEvent('clique_demonstracao_ao_vivo_contato')}
               className="w-full sm:w-auto px-6 py-2 sm:py-2.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-xs sm:text-sm text-center leading-none shadow-lg hover:shadow-xl hover:scale-105"
             >
               Demonstração Ao Vivo
             </a>
             <a
               href="/login"
+              onClick={() => trackEvent('clique_criar_ia_gratis_contato')}
               className={`
                 w-full sm:w-auto px-6 py-2 sm:py-2.5
                 border-2 rounded-full transition-all duration-300 font-bold text-xs sm:text-sm text-center leading-none hover:scale-105

@@ -52,11 +52,11 @@ const FUNCOES_VENDAS = [
 ];
 
 const PLANO_FULL_ITENS = [
-  'Plano Consultind e créditos',
+  'App na PlayStore e Webapp',
   'Landing Page Personalizada',
   'Implementação incluída',
-  'App na PlayStore',
-  'Whitelabel e cores próprias',
+  'Whitelabel',
+  'Assistente com suas Cores',
   'Domínio e Subdomínios próprios',
   'Configuração completa',
   'Suporte 24 horas',

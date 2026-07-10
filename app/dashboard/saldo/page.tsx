@@ -824,8 +824,7 @@ export default function SaldoPage() {
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Total sacado em todo o período</p>
           </div>
 
-          {hasVendasCompany && (
-            {hasVendasCompany && SHOW_VENDAS_TAB && (
+           {hasVendasCompany && SHOW_VENDAS_TAB && (
             <div className="bg-lime-50 dark:bg-lime-500/5 rounded-2xl p-6 shadow-xl border border-lime-200 dark:border-lime-500/20">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-lime-100 dark:bg-lime-500/20 rounded-lg">

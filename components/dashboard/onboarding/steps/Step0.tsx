@@ -67,7 +67,7 @@ export function Step0({ state, update, onNext }: StepProps) {
       <div className="flex items-start gap-3 px-4 py-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-500/30 rounded-xl text-sm text-green-800 dark:text-green-300 mb-7">
         <Sparkles size={15} className="flex-shrink-0 mt-0.5 text-green-600 dark:text-green-400" />
         <p>
-          <strong>Lembre-se:</strong> você pode criar quantos assistentes quiser, cada um com seu próprio tipo e propósito — um Smart para recepção, um Vendas para o catálogo, outro Smart só para uso interno da equipe.
+          <strong>Lembre-se:</strong> você pode criar quantos assistentes quiser, cada um com seu próprio tipo e propósito — um para recepção, outro para uso interno da equipe, etc.
         </p>
       </div>
 

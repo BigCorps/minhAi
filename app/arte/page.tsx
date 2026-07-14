@@ -33,7 +33,7 @@ const SKILLS: Skill[] = [
     key: 'editor_avancado',
     label: 'Editor Avançado',
     color: CMYK.cyan,
-    desc: 'Edite PSDs profissionalmente',
+    desc: 'Edite imagem (PSD) ou vetor (AI/SVG) online',
     credits: 0,
     triggers: ['editar', 'editor', 'photoshop', 'psd', 'camadas', 'retocar', 'avançado', 'photopea'],
     modal: 'PhotopeaEditorDisplay',

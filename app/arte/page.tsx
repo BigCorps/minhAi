@@ -18,6 +18,7 @@ import ConversorArquivoDisplay from '@/components/arte/ConversorArquivoDisplay';
 import JuntarDividirPdfsDisplay from '@/components/arte/JuntarDividirPdfsDisplay';
 import RemoverFundoDisplay from '@/components/arte/RemoverFundoDisplay';
 import Imagem3DDisplay from '@/components/arte/Imagem3DDisplay';
+import PhotopeaEditorDisplay from '@/components/arte/PhotopeaEditorDisplay';
 
 // ── Paleta CMYK (baseada no logo ArteFinal) ──────────────────────────────
 const CMYK = { cyan: '#00AEEF', magenta: '#EC008C', yellow: '#FFD500', key: '#1A1A1A' };
@@ -28,6 +29,14 @@ const LOGIN_URL = '/arte/login';
 interface Skill { key: string; label: string; color: string; desc: string; credits: number; triggers: string[]; modal: string }
 
 const SKILLS: Skill[] = [
+  {
+    key: 'editor_avancado',
+    label: 'Editor Avançado',
+    color: CMYK.magenta,
+    credits: 0,
+    triggers: ['editar', 'editor', 'photoshop', 'psd', 'camadas', 'retocar', 'avançado', 'photopea'],
+    modal: 'PhotopeaEditorDisplay',
+  },
   {
     key: 'arte_final',
     label: 'Margem e Sangria',
@@ -632,6 +641,14 @@ const handleSubmit = useCallback(() => {
           theme="light"
           playText={playText}
           onRequireLogin={() => { window.location.href = LOGIN_URL; }}
+        />
+      )}
+      {activeModal?.type === 'editor_avancado' && (
+        <PhotopeaEditorDisplay
+          data={activeModal.data}
+          theme="light"
+          playText={playText}
+          onClose={closeModal}
         />
       )}
       {activeModal?.type === 'DuplicarImagemDisplay' && (

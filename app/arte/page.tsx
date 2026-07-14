@@ -35,8 +35,21 @@ const SKILLS: Skill[] = [
     color: CMYK.cyan,
     desc: 'Edite imagem (PSD) ou vetor (AI/SVG) online',
     credits: 0,
-    triggers: ['editar', 'editor', 'photoshop', 'psd', 'camadas', 'retocar', 'avançado', 'photopea'],
+    triggers: ['editar', 'editor', 'photoshop', 'editar psd', 'editar vetor', 'vetor', 'camadas', 'retocar', 'avançado', 'photopea'],
     modal: 'PhotopeaEditorDisplay',
+  },
+  {
+    key: 'editar_imagem',
+    label: 'Editor Rápido',
+    color: CMYK.cyan,
+    desc: 'Cortar, rotacionar e ajustar.',
+    credits: 1,
+    triggers: [
+      'editar imagem', 'editar foto', 'cortar imagem', 'cortar foto',
+      'recortar imagem', 'recortar foto', 'rotacionar imagem',
+      'ajustar imagem', 'brilho e contraste', 'girar imagem', 'crop',
+    ],
+    modal: 'EditarImagemDisplay',
   },
   {
     key: 'arte_final',
@@ -96,7 +109,7 @@ const SKILLS: Skill[] = [
     color: CMYK.cyan,
     desc: 'Transforma imagem em SVG (silhueta ou contorno)',
     credits: 1,
-    triggers: ['vetorizar', 'vetorizar imagem', 'vetor', 'svg', 'transformar em vetor', 'contorno vetorial', 'silhueta'],
+    triggers: ['vetorizar', 'vetorizar imagem', 'svg', 'transformar em vetor', 'contorno vetorial', 'silhueta'],
     modal: 'VetorizarImagemDisplay',
   },
   {
@@ -169,19 +182,6 @@ const SKILLS: Skill[] = [
       'jpg para pdf', 'pdf para jpg', 'png para jpg',
     ],
     modal: 'ConversorArquivoDisplay',
-  },
-  {
-    key: 'editar_imagem',
-    label: 'Editar Imagem',
-    color: CMYK.cyan,
-    desc: 'Cortar, rotacionar e ajustar brilho/contraste/saturação',
-    credits: 1,
-    triggers: [
-      'editar imagem', 'editar foto', 'cortar imagem', 'cortar foto',
-      'recortar imagem', 'recortar foto', 'rotacionar imagem',
-      'ajustar imagem', 'brilho e contraste', 'girar imagem', 'crop',
-    ],
-    modal: 'EditarImagemDisplay',
   },
 {
     key: 'remover_fundo',

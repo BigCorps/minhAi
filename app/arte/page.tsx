@@ -32,7 +32,8 @@ const SKILLS: Skill[] = [
   {
     key: 'editor_avancado',
     label: 'Editor Avançado',
-    color: CMYK.magenta,
+    color: CMYK.cyan,
+    desc: 'Edite PSDs profissionalmente',
     credits: 0,
     triggers: ['editar', 'editor', 'photoshop', 'psd', 'camadas', 'retocar', 'avançado', 'photopea'],
     modal: 'PhotopeaEditorDisplay',
@@ -643,7 +644,7 @@ const handleSubmit = useCallback(() => {
           onRequireLogin={() => { window.location.href = LOGIN_URL; }}
         />
       )}
-      {activeModal?.type === 'editor_avancado' && (
+      {activeModal?.type === 'PhotopeaEditorDisplay' && (
         <PhotopeaEditorDisplay
           data={activeModal.data}
           theme="light"

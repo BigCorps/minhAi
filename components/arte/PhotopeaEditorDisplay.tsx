@@ -22,7 +22,8 @@ import { createPortal } from 'react-dom';
  */
 
 interface Props {
-  data: { companyId?: string };
+  /** prefillFile: arquivo já anexado na página (clipe ou drag-and-drop). */
+  data: { companyId?: string; prefillFile?: File };
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText: (text: string) => Promise<void>;
@@ -101,6 +102,14 @@ export default function PhotopeaEditorDisplay({ data, onClose, theme = 'dark', p
     pendingBuf.current = buf; // enviado assim que o editor disser "done"
     setStage('editing');
   }, []);
+
+  // Já veio arquivo do page (clipe / drag-and-drop) → abre direto no editor
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !data.prefillFile) return;
+    prefilled.current = true;
+    handleFile(data.prefillFile);
+  }, [data.prefillFile, handleFile]);
 
   const trazerDeVolta = useCallback(() => {
     const win = iframeRef.current?.contentWindow;

@@ -191,7 +191,7 @@ export default function FormularioFullPage() {
         {/* Cabeçalho */}
         <div className="text-center mb-2">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Vamos montar o seu assistente <span className="text-purple-600">Full</span>
+            Vamos montar o seu assistente <span className="text-green-600">Full</span>
           </h1>
           <p className="text-sm sm:text-base text-gray-500 max-w-xl mx-auto">
             Quanto mais detalhes você nos der aqui, mais personalizado e completo seu assistente de IA vai sair já na primeira versão.
@@ -380,7 +380,7 @@ export default function FormularioFullPage() {
           <button
             type="submit"
             disabled={status === 'enviando'}
-            className="w-full sm:w-auto px-10 py-3 bg-purple-600 text-white rounded-full font-bold text-sm hover:bg-purple-700 transition-all duration-300 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg"
+            className="w-full sm:w-auto px-10 py-3 bg-green-600 text-white rounded-full font-bold text-sm hover:bg-green-700 transition-all duration-300 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg"
           >
             {status === 'enviando' ? 'Enviando...' : 'Enviar informações'}
           </button>

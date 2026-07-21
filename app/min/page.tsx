@@ -756,7 +756,7 @@ const handleSubmitReport = useCallback(async (reason: string) => {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={hasUser ? 'Digite... Ex: ver agenda, traduzir texto, cep 01310100' : 'Faça login pra usar a min.IA'}
+              placeholder={hasUser ? 'Digite... Ex: ver agenda, traduzir texto, etc.' : 'Faça login pra usar a min.IA'}
               rows={1}
               className="flex-1 bg-transparent resize-none outline-none text-sm"
               style={{ color: isDark ? '#e2e8f0' : '#1e293b', maxHeight: '80px', overflowY: 'auto', appearance: 'none', WebkitAppearance: 'none' }}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
-import { Send, LogOut, Loader2, Sparkles, CreditCard } from 'lucide-react';
+import { Send, LogOut, Loader2, Sparkles, CreditCard, Flag, X, CheckCircle2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase-browser';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -42,6 +42,19 @@ interface Msg {
   label?: string;
   timestamp: Date;
 }
+
+interface ReportState {
+  msgId: string;
+  msgText: string;
+}
+
+const REPORT_REASONS: { key: string; label: string }[] = [
+  { key: 'ofensivo',     label: 'Conteúdo ofensivo ou prejudicial' },
+  { key: 'incorreto',    label: 'Informação incorreta ou enganosa' },
+  { key: 'inapropriado', label: 'Conteúdo inapropriado' },
+  { key: 'spam',         label: 'Spam ou conteúdo repetitivo' },
+  { key: 'outro',        label: 'Outro motivo' },
+];
 
 type ActiveModalState = { type: string; data: any } | null;
 
@@ -363,6 +376,10 @@ function MinPageContent() {
   const [input,    setInput]    = useState('');
   const [loading,  setLoading]  = useState(false);
 
+  const [reporting,        setReporting]        = useState<ReportState | null>(null);
+  const [reportSubmitted,  setReportSubmitted]  = useState(false);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+
   const [allFunctions,     setAllFunctions]     = useState<AssistantFunction[]>([]);
   const [loadingFunctions, setLoadingFunctions] = useState(true);
   const [activeModal,      setActiveModal]      = useState<ActiveModalState>(null);
@@ -463,6 +480,32 @@ useEffect(() => { setThemeMounted(true); }, []);
     setInput(starter + (starter.endsWith(' ') ? '' : ' '));
     setTimeout(() => inputRef.current?.focus(), 50);
   }, []);
+
+const handleSubmitReport = useCallback(async (reason: string) => {
+    if (!reporting) return;
+    setReportSubmitting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await supabase.from('ai_content_reports').insert({
+        user_id:      session?.user?.id ?? null,
+        company_id:   selectedAssistantId ?? null,
+        message_id:   reporting.msgId,
+        message_text: reporting.msgText,
+        reason,
+        source:       'minia',
+      });
+      setReportSubmitted(true);
+      setTimeout(() => {
+        setReporting(null);
+        setReportSubmitted(false);
+      }, 2000);
+    } catch {
+      // falha silenciosa — report não crítico para o usuário
+      setReporting(null);
+    } finally {
+      setReportSubmitting(false);
+    }
+  }, [reporting, supabase, selectedAssistantId]);
 
   // ── Clique num card — login bloqueia tudo antes de avaliar a função ─────
   const handleFunctionSelect = useCallback(async (fn: AssistantFunction) => {
@@ -655,8 +698,8 @@ useEffect(() => { setThemeMounted(true); }, []);
           </div>
         ) : (
           <div className="space-y-3 max-w-3xl mx-auto">
-            {messages.map(m => (
-              <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+{messages.map(m => (
+              <div key={m.id} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
                 <div
                   className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow"
                   style={{
@@ -673,6 +716,18 @@ useEffect(() => { setThemeMounted(true); }, []);
                     </>
                   ) : m.content}
                 </div>
+                {/* Botão de denúncia — só em mensagens do assistente (conteúdo gerado por IA) */}
+                {m.role === 'assistant' && (
+                  <button
+                    onClick={() => setReporting({ msgId: m.id, msgText: m.content })}
+                    className="mt-1 flex items-center gap-1 text-[10px] opacity-30 hover:opacity-70 transition-opacity"
+                    style={{ color: isDark ? '#94a3b8' : '#64748b' }}
+                    title="Denunciar conteúdo"
+                  >
+                    <Flag size={10} />
+                    Denunciar
+                  </button>
+                )}
               </div>
             ))}
             {loading && (
@@ -747,6 +802,77 @@ useEffect(() => { setThemeMounted(true); }, []);
 
       {showLoginPrompt && <LoginRequiredModal onClose={() => setShowLoginPrompt(false)} isDark={isDark} />}
 
+{/* Modal de denúncia de conteúdo gerado por IA */}
+      {reporting && createPortal(
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 10001,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24,
+            background: isDark ? 'rgba(2,6,23,0.85)' : 'rgba(241,245,249,0.85)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <div
+            style={{
+              background: isDark ? 'rgb(15,23,42)' : '#ffffff',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+              borderRadius: 16, padding: '24px', maxWidth: 340, width: '100%',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
+            }}
+          >
+            {reportSubmitted ? (
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                <CheckCircle2 size={40} style={{ color: '#10B981', margin: '0 auto 12px' }} />
+                <p style={{ fontWeight: 700, color: isDark ? '#e2e8f0' : '#0f172a', marginBottom: 4 }}>
+                  Denúncia enviada
+                </p>
+                <p style={{ fontSize: 13, color: isDark ? '#94a3b8' : '#64748b' }}>
+                  Obrigado pelo feedback. Usaremos isso para melhorar os filtros de conteúdo.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <p style={{ fontWeight: 700, fontSize: 15, color: isDark ? '#e2e8f0' : '#0f172a' }}>
+                    Denunciar conteúdo
+                  </p>
+                  <button
+                    onClick={() => setReporting(null)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#64748b' : '#94a3b8', padding: 4 }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <p style={{ fontSize: 13, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 16 }}>
+                  Por que este conteúdo gerado por IA é problemático?
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {REPORT_REASONS.map(r => (
+                    <button
+                      key={r.key}
+                      onClick={() => handleSubmitReport(r.key)}
+                      disabled={reportSubmitting}
+                      style={{
+                        textAlign: 'left', padding: '10px 14px', borderRadius: 10, fontSize: 13,
+                        fontWeight: 500, cursor: 'pointer', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}`,
+                        background: isDark ? 'rgba(51,65,85,0.5)' : '#f8fafc',
+                        color: isDark ? '#e2e8f0' : '#1e293b',
+                        opacity: reportSubmitting ? 0.5 : 1,
+                        transition: 'background 0.15s',
+                      }}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+  
       <ActionModals
         activeModal={activeModal}
         onClose={() => setActiveModal(null)}

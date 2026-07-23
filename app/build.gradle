@@ -59,9 +59,9 @@ android {
     defaultConfig {
         applicationId "app.minhai.www.twa"
         minSdkVersion 23
-        targetSdkVersion 35
-        versionCode 3
-        versionName "1.2"
+        targetSdkVersion 36
+        versionCode 4
+        versionName "1.4"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name

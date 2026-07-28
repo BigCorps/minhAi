@@ -144,22 +144,102 @@ export default function PixValueForm({ company, initialAmount, onSubmit, loading
           </button>
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: '20px' }}>
-  <p style={{ fontSize: '12px', color: textMuted, margin: '0 0 6px' }}>
+        <footer
+  style={{
+    textAlign: 'center',
+    marginTop: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    fontSize: '12px',
+    color: textMuted,
+  }}
+>
+  <p style={{ margin: 0 }}>
     Pagamento processado com segurança via Banco Inter e BigCorps
   </p>
-  <a
-    href="https://minhai.app"
-    target="_blank"
-    rel="noopener noreferrer"
-    style={{ fontSize: '12px', color: textMuted, textDecoration: 'none', opacity: 0.6, transition: 'opacity 0.2s' }}
-    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-  >
-    minhAi — Uma IA pra chamar de sua!
-  </a>
-</div>
-      </div>
+
+  <p style={{ margin: 0 }}>
+    Quer receber Pix com confirmação automática?{' '}
+    <a
+      href="https://pix.wiki"
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        color: textMuted,
+        fontWeight: 600,
+        textDecoration: 'none',
+        opacity: 0.8,
+        transition: 'opacity 0.2s',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.opacity = '1';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.opacity = '0.8';
+      }}
+    >
+      Crie o seu no Pix.Wiki
+    </a>
+  </p>
+
+  <p style={{ margin: 0, opacity: 0.65 }}>
+    <a
+      href="https://pix.wiki"
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        color: 'inherit',
+        textDecoration: 'none',
+        transition: 'opacity 0.2s',
+      }}
+    >
+      Pix.Wiki
+    </a>
+
+    {' | '}Desenvolvido por{' '}
+
+    <a
+      href="https://bigcorps.com.br"
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        color: 'inherit',
+        textDecoration: 'none',
+        transition: 'opacity 0.2s',
+      }}
+    >
+      BigCorps
+    </a>
+
+    {' | '}Tecnologia{' '}
+
+    <a
+      href="https://minhai.app"
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        color: 'inherit',
+        textDecoration: 'none',
+        transition: 'opacity 0.2s',
+      }}
+    >
+      minhAi
+    </a>
+  </p>
+</footer>
+
+<style>{`
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`}</style>
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>

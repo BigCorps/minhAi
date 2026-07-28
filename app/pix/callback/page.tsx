@@ -36,6 +36,8 @@ export default function PixCallbackPage() {
         const doc        = params.get('doc') || '';
         const docTipo    = params.get('docTipo') || '';
         const pixTipo    = params.get('pixTipo') || '';
+        const wa         = params.get('wa') || '';
+        const emailParam = params.get('email') || '';
 
         // ── Erro vindo do OAuth ──────────────────────────────────────────────
         if (error) {
@@ -97,9 +99,8 @@ export default function PixCallbackPage() {
             is_public: true,
             assistant_type: 'smart',
             user_id: user.id,
-            // receiving_pix_key não é definida aqui —
-            // o PIX vai para BIGCORPS_PIX_KEY via gerar-pix-assistente.
-            // A chave do lojista fica em user_profiles.withdrawal_pix_key.
+            whatsapp_number: wa ? decodeURIComponent(wa) : null,
+            email_contato: emailParam ? decodeURIComponent(emailParam) : null,
           })
           .select('id')
           .single();
@@ -135,6 +136,8 @@ export default function PixCallbackPage() {
           .from('demo_sessions')
           .insert({
             nome_negocio: decodeURIComponent(nome),
+            email:  emailParam ? decodeURIComponent(emailParam) : null,
+            phone:  wa ? decodeURIComponent(wa) : null,
             origem_simples: 'pixwiki',
             linked_user_id: user.id,
             linked_company_id: company.id,

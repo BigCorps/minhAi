@@ -419,10 +419,7 @@ export default function PixWikiPage() {
         <Logos />
 
         <div className="text-center mb-7">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-600 text-xs font-semibold mb-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            Grátis — 1% apenas na retirada
-          </div>
+          
           <h1 className={`text-2xl sm:text-3xl font-bold leading-tight mb-2 ${p.text}`}>
             Nunca mais perca uma venda<br />
             <span className="text-green-500">por comprovante falso</span>

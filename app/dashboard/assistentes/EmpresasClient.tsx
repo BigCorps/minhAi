@@ -342,29 +342,29 @@ export default function AssistentesClient({
 //                          : 'Trocar para Vendas'}
 //                      </button0>
 
-                      {SHOW_VENDAS_SWITCH && (
-                      <button
-                        onClick={() => handleSwitchVersion(assistant)}
-                        disabled={!!switching}
-                        title={assistant.assistant_type === 'vendas' ? 'Trocar para versão Smart (créditos)' : 'Trocar para versão Vendas (10% comissão)'}
-                        className={`flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50 border ${
-                          confirmSwitch === assistant.id
-                            ? 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30 animate-pulse'
-                            : assistant.assistant_type === 'vendas'
-                            ? 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
-                            : 'bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20'
-                        }`}
-                      >
-                        {switching === assistant.id
-                          ? <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-                          : <Zap className="w-4 h-4 mr-2" />}
-                        {confirmSwitch === assistant.id
-                          ? 'Confirmar troca?'
-                          : assistant.assistant_type === 'vendas'
-                          ? 'Trocar para Smart'
-                          : 'Trocar para Vendas'}
-                      </button>
-                      )}
+//                      {SHOW_VENDAS_SWITCH && (
+//                      <button
+//                        onClick={() => handleSwitchVersion(assistant)}
+//                        disabled={!!switching}
+//                        title={assistant.assistant_type === 'vendas' ? 'Trocar para versão Smart (créditos)' : 'Trocar para versão Vendas (10% comissão)'}
+//                        className={`flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50 border ${
+//                          confirmSwitch === assistant.id
+//                            ? 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30 animate-pulse'
+//                            : assistant.assistant_type === 'vendas'
+//                            ? 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+//                            : 'bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20'
+//                        }`}
+//                      >
+//                        {switching === assistant.id
+//                          ? <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+//                          : <Zap className="w-4 h-4 mr-2" />}
+//                        {confirmSwitch === assistant.id
+//                          ? 'Confirmar troca?'
+//                          : assistant.assistant_type === 'vendas'
+//                          ? 'Trocar para Smart'
+//                          : 'Trocar para Vendas'}
+//                      </button>
+//                      )}
 
                       <Link
                         href={`/dashboard/assistentes/${assistant.id}`}

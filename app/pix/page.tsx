@@ -440,7 +440,7 @@ const toggleDark = () => {
             <Input value={authEmail} onChange={setAuthEmail} placeholder="Seu e-mail" type="email" dark={dark} />
             <Input value={authSenha} onChange={setAuthSenha} placeholder="Senha (mín. 6 caracteres)" type="password" dark={dark} />
             {authError && <p className="text-red-500 text-xs">{authError}</p>}
-            <button type="submit" className="w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all active:scale-95">
+            <button type="submit" disabled={step === 'creating'} className="w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all active:scale-95 disabled:opacity-50">
               Criar conta e ativar link
             </button>
           </form>

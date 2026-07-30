@@ -28,21 +28,15 @@ async function createFromPendingSignup(
   userId: string,
   pending: PendingSignup
 ): Promise<CompanyRow | null> {
-  const { data: existing } = await supabase
-    .from('companies').select('id').eq('slug', pending.slug).maybeSingle();
-  if (existing) return null; // slug foi tomado durante o login
-
   const { data: company, error } = await supabase
-    .from('companies')
-    .insert({
-      name: pending.nome, slug: pending.slug,
-      logo_url: pending.logo,
-      is_active: true, is_public: true, assistant_type: 'smart', user_id: userId,
-      whatsapp_number: pending.wa,
-      email_contato: pending.email,
-      segment_key: 'pix_wiki',
+    .rpc('ensure_my_pix_wiki_company', {
+      p_slug: pending.slug,
+      p_name: pending.nome,
+      p_logo_url: pending.logo,
+      p_whatsapp: pending.wa,
+      p_email: pending.email,
     })
-    .select('id, name, slug').single();
+    .single();
 
   if (error || !company) return null;
 
@@ -55,9 +49,9 @@ async function createFromPendingSignup(
   }, { onConflict: 'user_id' });
 
   await supabase.from('short_links').insert({
-    slug: pending.slug, type: 'pix_wiki',
+    slug: company.slug, type: 'pix_wiki',
     company_id: company.id, user_id: userId,
-    original_url: `https://minhai.app/pix/${pending.slug}`,
+    original_url: `https://minhai.app/pix/${company.slug}`,
   });
 
   await supabase.from('demo_sessions').insert({
@@ -68,7 +62,7 @@ async function createFromPendingSignup(
     linked_at: new Date().toISOString(), status: 'converted',
   });
 
-  return company;
+  return { id: company.id, name: pending.nome, slug: company.slug };
 }
 
 function PixContaContent() {

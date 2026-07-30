@@ -3,7 +3,7 @@
 // app/pix/conta/page.tsx — perfil simples do Pix Wiki: saldo + extrato PIX.
 // Sem cartão/NFC/TEF — só o que existe no fluxo Pix Wiki.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -17,7 +17,7 @@ interface CompanyRow { id: string; name: string; slug: string; }
 interface BalanceRow { available_balance_cents: number; total_received_cents: number; }
 interface TxnRow { id: string; amount_cents: number; transaction_type: string; description: string | null; created_at: string; }
 
-export default function PixContaPage() {
+function PixContaContent() {
   const supabase = createClient();
   const router = useRouter();
   const search = useSearchParams();
@@ -111,5 +111,17 @@ export default function PixContaPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PixContaPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#020617]">
+        <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <PixContaContent />
+    </Suspense>
   );
 }

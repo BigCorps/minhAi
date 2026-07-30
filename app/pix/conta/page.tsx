@@ -134,7 +134,7 @@ function PixContaContent() {
   const supabase = createClient();
   const router = useRouter();
   const search = useSearchParams();
-  const bemVindo = search.get('bemvindo') === '1';
+  const justLinked = search.get('linked') === 'google';
 
   const [dark, setDark] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -149,7 +149,11 @@ function PixContaContent() {
   });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
-
+  const [identities, setIdentities] = useState<string[]>([]);
+  const [linkingGoogle, setLinkingGoogle] = useState(false);
+  const [unlinkingGoogle, setUnlinkingGoogle] = useState(false);
+  const [linkMsg, setLinkMsg] = useState('');
+  
   useEffect(() => {
     const saved = localStorage.getItem('publicTheme') as 'dark' | 'light' | null;
     if (saved) { setDark(saved === 'dark'); return; }
@@ -167,8 +171,10 @@ function PixContaContent() {
   useEffect(() => {
     let cancelled = false;
 
-    const loadForUser = async (uid: string) => {
-      setUserId(uid);
+     const loadForUser = async (authUser: { id: string; identities?: { provider: string }[] | null }) => {
+       const uid = authUser.id;
+       setUserId(uid);
+       setIdentities((authUser.identities || []).map(i => i.provider));
 
       const { data: comp } = await supabase
         .from('companies')
@@ -224,12 +230,12 @@ function PixContaContent() {
     };
 
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user && !cancelled) loadForUser(data.user.id);
+      if (data.user && !cancelled) loadForUser(data.user);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user && !cancelled) {
-        loadForUser(session.user.id);
+        loadForUser(session.user);
       }
     });
 
@@ -278,6 +284,46 @@ function PixContaContent() {
     setSaveMsg('Salvo com sucesso.');
   };
 
+  const handleLinkGoogle = async () => {
+  setLinkingGoogle(true);
+  setLinkMsg('');
+  const { error } = await supabase.auth.linkIdentity({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback?link=true&next=${encodeURIComponent('/pix/conta?linked=google')}`,
+    },
+  });
+  if (error) {
+    setLinkMsg(error.message || 'Erro ao vincular conta Google.');
+    setLinkingGoogle(false);
+  }
+  // sem erro: o redirect OAuth já está acontecendo, não precisa fazer nada aqui
+};
+
+const handleUnlinkGoogle = async () => {
+  if (!confirm('Desvincular sua conta Google? Você continuará acessando por e-mail e senha.')) return;
+
+  if (!identities.includes('email')) {
+    setLinkMsg('Não é possível desvincular: essa conta não tem senha cadastrada ainda.');
+    return;
+  }
+
+  setUnlinkingGoogle(true);
+  setLinkMsg('');
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  const googleIdentity = authUser?.identities?.find(i => i.provider === 'google');
+  if (!googleIdentity) {
+    setLinkMsg('Identidade Google não encontrada.');
+    setUnlinkingGoogle(false);
+    return;
+  }
+  const { error } = await supabase.auth.unlinkIdentity(googleIdentity);
+  setUnlinkingGoogle(false);
+  if (error) { setLinkMsg(error.message || 'Erro ao desvincular Google.'); return; }
+  setIdentities(prev => prev.filter(id => id !== 'google'));
+  setLinkMsg('Conta Google desvinculada com sucesso.');
+};
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.replace('/pix/login');
@@ -316,11 +362,11 @@ function PixContaContent() {
           </div>
         </div>
 
-        {bemVindo && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm text-center">
-            Sua conta foi criada! Seu link já está ativo: pix.wiki/{company?.slug}
-          </div>
-        )}
+       {justLinked && (
+         <div className="mb-4 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm text-center">
+           Conta Google vinculada com sucesso!
+         </div>
+       )}
 
         <h1 className={`text-lg font-bold mb-1 ${p.text}`}>{company?.name}</h1>
         <a href={`/pix/${company?.slug}`} className="text-xs text-green-500 hover:underline mb-6 inline-block">
@@ -360,6 +406,51 @@ function PixContaContent() {
             Precisa trocar o link ou a chave PIX? Fale com o suporte pelo WhatsApp (11) 98731-1425.
           </p>
         </div>
+
+{/* Login e segurança */}
+<div className={`rounded-2xl border p-5 mb-4 ${p.cardBg} ${p.border}`}>
+  <p className={`text-[10px] uppercase tracking-widest mb-3 ${p.textFaint}`}>Login e segurança</p>
+  <div className="flex items-center justify-between gap-3 flex-wrap">
+    <div>
+      <p className={`text-sm ${p.text}`}>
+        {identities.includes('google') ? 'Conta Google conectada' : 'Conecte sua conta Google'}
+      </p>
+      <p className={`text-xs ${p.textFaint}`}>
+        {identities.includes('google')
+          ? 'Você pode entrar com Google ou com e-mail e senha.'
+          : 'Entre mais rápido da próxima vez, sem digitar senha.'}
+      </p>
+    </div>
+    {identities.includes('google') ? (
+      identities.includes('email') && (
+        <button
+          onClick={handleUnlinkGoogle}
+          disabled={unlinkingGoogle}
+          className={`text-xs px-3 py-2 rounded-xl border transition-colors ${p.border} text-red-500 hover:bg-red-500/10 disabled:opacity-50`}
+        >
+          {unlinkingGoogle ? 'Desvinculando…' : 'Desvincular Google'}
+        </button>
+      )
+    ) : (
+      <button
+        onClick={handleLinkGoogle}
+        disabled={linkingGoogle}
+        className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl border transition-colors ${p.border} ${p.text} hover:bg-white/5 disabled:opacity-50`}
+      >
+        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        {linkingGoogle ? 'Redirecionando…' : 'Vincular Google'}
+      </button>
+    )}
+  </div>
+  {linkMsg && (
+    <p className={`text-xs mt-3 ${linkMsg.includes('sucesso') ? 'text-green-500' : 'text-red-500'}`}>{linkMsg}</p>
+  )}
+</div>
 
         {/* Dados editáveis */}
         <div className={`rounded-2xl border p-5 mb-4 ${p.cardBg} ${p.border}`}>

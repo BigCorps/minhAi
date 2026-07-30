@@ -302,23 +302,28 @@ const toggleDark = () => {
 
   const handleGoogleSignup = async () => {
     setStep('creating');
-    const params = new URLSearchParams({
-      slug: form.slug, nome: encodeURIComponent(form.nomeEmpresa),
-      pix: encodeURIComponent(form.chavePix),
-      ...(form.logoUrl      ? { logo:    encodeURIComponent(form.logoUrl) }      : {}),
-      ...(form.documento    ? { doc:     encodeURIComponent(form.documento) }    : {}),
-      ...(form.documentoTipo? { docTipo: form.documentoTipo }                    : {}),
-      ...(form.chavePixTipo ? { pixTipo: form.chavePixTipo }                     : {}),
-      ...(form.whatsapp     ? { wa:      encodeURIComponent(form.whatsapp) }     : {}),
-      ...(form.emailContato ? { email:   encodeURIComponent(form.emailContato) } : {}),
-    });
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/pix/callback?${params.toString()}`,
-        queryParams: { access_type: 'offline', prompt: 'consent' },
-      },
-    });
+   // Guarda os dados do formulário pra retomar depois do login. A criação da
+   // empresa acontece de forma lazy em /pix/conta (mesmo padrão do
+   // ensure_my_arte_company() do ArteFinal) — o /auth/callback compartilhado
+   // não precisa saber nada sobre Pix Wiki.
+   localStorage.setItem('pixWikiPendingSignup', JSON.stringify({
+     slug: form.slug,
+     nome: form.nomeEmpresa,
+     pix: form.chavePix,
+     pixTipo: form.chavePixTipo || null,
+     logo: form.logoUrl || null,
+     doc: form.documento || null,
+     docTipo: form.documentoTipo || null,
+     wa: form.whatsapp || null,
+     email: form.emailContato || null,
+   }));
+   await supabase.auth.signInWithOAuth({
+     provider: 'google',
+     options: {
+       redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/pix/conta')}`,
+       queryParams: { access_type: 'offline', prompt: 'consent' },
+     },
+   });
   };
 
   const handleEmailSignup = async (e: React.FormEvent) => {
@@ -331,6 +336,19 @@ const toggleDark = () => {
     setStep('creating');
     const { data: su, error: suErr } = await supabase.auth.signUp({ email: authEmail, password: authSenha });
     if (!suErr && su.user) { await createAfterAuth(su.user.id); return; }
+
+   // Se o signUp falhou por um motivo que NÃO é "conta já existe", mostra o erro real
+   // em vez de tentar o fallback de login (que sempre falharia com mensagem confusa).
+   if (suErr && !suErr.message.toLowerCase().includes('already registered')) {
+     setAuthError(
+       suErr.message.includes('weak')
+         ? 'Essa senha é considerada fraca ou já vazou em bancos de dados públicos. Escolha outra senha.'
+         : suErr.message
+     );
+     setStep('auth');
+    return;
+   }
+
     const { data: si, error: siErr } = await supabase.auth.signInWithPassword({ email: authEmail, password: authSenha });
     if (siErr || !si.user) {
       setAuthError(siErr?.message || 'E-mail ou senha incorretos.');
@@ -447,7 +465,7 @@ const toggleDark = () => {
             <span className={`font-medium ${p.text}`}>dashboard</span>, por{' '}
             <span className={`font-medium ${p.text}`}>e-mail</span> e no{' '}
             <span className={`font-medium ${p.text}`}>WhatsApp</span>
-            {' '}— sem conferir nada.
+            {' '}- sem se preocupar.
           </p>
         </div>
 
@@ -522,7 +540,7 @@ const toggleDark = () => {
               <Field label="URL do logo" optional dark={dark}>
                 <Input value={form.logoUrl} onChange={v => up('logoUrl', v)} placeholder="https://suaempresa.com/logo.png" type="url" dark={dark} />
               </Field>
-              <Field label="CNPJ ou CPF" optional hint="Necessário para emissão de notas fiscais no futuro" dark={dark}>
+              <Field label="CNPJ ou CPF" optional hint="Necessário para emissão de notas fiscais dark={dark}>
                 <Input
                   value={form.documento}
                   onChange={v => { up('documento', v); up('documentoTipo', detectDocumentoTipo(v)); }}

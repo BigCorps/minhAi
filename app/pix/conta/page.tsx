@@ -17,6 +17,60 @@ interface CompanyRow { id: string; name: string; slug: string; }
 interface BalanceRow { available_balance_cents: number; total_received_cents: number; }
 interface TxnRow { id: string; amount_cents: number; transaction_type: string; description: string | null; created_at: string; }
 
+interface PendingSignup {
+  slug: string; nome: string; pix: string; pixTipo: string | null;
+  logo: string | null; doc: string | null; docTipo: string | null;
+  wa: string | null; email: string | null;
+}
+
+async function createFromPendingSignup(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  pending: PendingSignup
+): Promise<CompanyRow | null> {
+  const { data: existing } = await supabase
+    .from('companies').select('id').eq('slug', pending.slug).maybeSingle();
+  if (existing) return null; // slug foi tomado durante o login
+
+  const { data: company, error } = await supabase
+    .from('companies')
+    .insert({
+      name: pending.nome, slug: pending.slug,
+      logo_url: pending.logo,
+      is_active: true, is_public: true, assistant_type: 'smart', user_id: userId,
+      whatsapp_number: pending.wa,
+      email_contato: pending.email,
+      segment_key: 'pix_wiki',
+    })
+    .select('id, name, slug').single();
+
+  if (error || !company) return null;
+
+  await supabase.from('user_profiles').upsert({
+    user_id: userId,
+    withdrawal_pix_key: pending.pix,
+    withdrawal_pix_key_type: pending.pixTipo,
+    documento: pending.doc,
+    documento_tipo: pending.docTipo,
+  }, { onConflict: 'user_id' });
+
+  await supabase.from('short_links').insert({
+    slug: pending.slug, type: 'pix_wiki',
+    company_id: company.id, user_id: userId,
+    original_url: `https://minhai.app/pix/${pending.slug}`,
+  });
+
+  await supabase.from('demo_sessions').insert({
+    nome_negocio: pending.nome,
+    email: pending.email, phone: pending.wa,
+    origem_simples: 'pixwiki',
+    linked_user_id: userId, linked_company_id: company.id,
+    linked_at: new Date().toISOString(), status: 'converted',
+  });
+
+  return company;
+}
+
 function PixContaContent() {
   const supabase = createClient();
   const router = useRouter();
@@ -29,35 +83,75 @@ function PixContaContent() {
   const [txns, setTxns] = useState<TxnRow[]>([]);
 
   useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace('/pix/login'); return; }
+    let cancelled = false;
 
+    const loadForUser = async (userId: string) => {
       const { data: comp } = await supabase
         .from('companies')
         .select('id, name, slug')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('segment_key', 'pix_wiki')
         .maybeSingle();
 
-      if (!comp) { router.replace('/pix'); return; }
-      setCompany(comp);
+      if (cancelled) return;
+     let activeCompany = comp;
+     if (!activeCompany) {
+       const pendingRaw = localStorage.getItem('pixWikiPendingSignup');
+       if (!pendingRaw) { router.replace('/pix'); return; }
+       activeCompany = await createFromPendingSignup(supabase, userId, JSON.parse(pendingRaw));
+       if (cancelled) return;
+       if (!activeCompany) { router.replace('/pix?error=slug_taken'); return; }
+       localStorage.removeItem('pixWikiPendingSignup');
+     }
+     setCompany(activeCompany);
 
       const [{ data: bal }, { data: tx }] = await Promise.all([
         supabase.from('company_balance')
           .select('available_balance_cents, total_received_cents')
-          .eq('company_id', comp.id).maybeSingle(),
+          .eq('company_id', activeCompany.id).maybeSingle(),
         supabase.from('balance_transactions')
           .select('id, amount_cents, transaction_type, description, created_at')
-          .eq('company_id', comp.id)
+          .eq('company_id', activeCompany.id)
           .order('created_at', { ascending: false })
           .limit(50),
       ]);
 
+      if (cancelled) return;
       setBalance(bal || { available_balance_cents: 0, total_received_cents: 0 });
       setTxns(tx || []);
       setLoading(false);
-    })();
+    };
+
+    // Sessão já pronta (login recorrente por e-mail/senha, ou revisita).
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user && !cancelled) loadForUser(data.user.id);
+    });
+
+    // Cobre o caso de retorno do redirect OAuth do Google, onde a troca do
+    // código por sessão é assíncrona e pode não ter terminado no getUser() acima.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user && !cancelled) {
+        loadForUser(session.user.id);
+      }
+    });
+
+    // Só manda pro login se, depois de um tempo razoável, ainda não há sessão
+    // nem um "code" de OAuth pendente na URL (ou seja, é visita direta sem login).
+    const timeout = setTimeout(() => {
+      if (cancelled) return;
+      const hasPendingOAuth = window.location.search.includes('code=');
+      supabase.auth.getUser().then(({ data }) => {
+        if (!data.user && !hasPendingOAuth && !cancelled) {
+          router.replace('/pix/login');
+        }
+      });
+    }, 2500);
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, [supabase, router]);
 
   const fmt = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;

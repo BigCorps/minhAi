@@ -11,6 +11,7 @@ export async function GET(request: Request) {
   const code   = requestUrl.searchParams.get('code')
   const next   = requestUrl.searchParams.get('next') ?? '/dashboard'
   const isLink = requestUrl.searchParams.get('link') === 'true'
+  const linkNext = requestUrl.searchParams.get('next') ?? '/dashboard/perfil?linked=google'
 
   if (code) {
     try {
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
         // ── Fluxo de vinculação de conta Google ──────────────────────────────
         if (isLink) {
           const response = NextResponse.redirect(
-            new URL('/dashboard/perfil?linked=google', requestUrl.origin)
+            new URL(linkNext, requestUrl.origin)
           )
           response.cookies.set('lastLoggedInUser', data.session.user.email!, {
             path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax', secure: true,

@@ -540,7 +540,7 @@ const toggleDark = () => {
               <Field label="URL do logo" optional dark={dark}>
                 <Input value={form.logoUrl} onChange={v => up('logoUrl', v)} placeholder="https://suaempresa.com/logo.png" type="url" dark={dark} />
               </Field>
-              <Field label="CNPJ ou CPF" optional hint="Necessário para emissão de notas fiscais dark={dark}>
+              <Field label="CNPJ ou CPF" optional hint="Necessário para emissão de notas fiscais." dark={dark}>
                 <Input
                   value={form.documento}
                   onChange={v => { up('documento', v); up('documentoTipo', detectDocumentoTipo(v)); }}

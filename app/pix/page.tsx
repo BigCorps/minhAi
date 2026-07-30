@@ -371,8 +371,7 @@ const toggleDark = () => {
   // ─── STEP: preview ────────────────────────────────────────────────────────
   if (step === 'preview') return (
     <div className={`min-h-screen flex flex-col ${p.pageBg}`}>
-      <ThemeToggle dark={dark} onToggle={toggleDark} />
-      <div className={`${p.cardBg} border-b ${p.border} px-4 py-3 flex items-center justify-between gap-3 pr-16`}>
+      <div className={`${p.cardBg} border-b ${p.border} px-4 py-4 flex items-center justify-between gap-3 pr-16`}>
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => setStep('form')}
@@ -460,6 +459,12 @@ const toggleDark = () => {
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center px-4 py-12 ${p.pageBg}`}>
       <ThemeToggle dark={dark} onToggle={toggleDark} />
+      <a
+        href="/pix/login"
+        className={`fixed top-4 right-16 z-50 h-9 flex items-center px-3 rounded-full border text-xs font-medium transition-colors ${p.toggleBg}`}
+      >
+        Minha conta
+      </a>
       <div className="w-full max-w-md">
         <Logos />
 

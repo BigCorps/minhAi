@@ -618,6 +618,7 @@ const toggleDark = () => {
 
         <Footer dark={dark} />
       </div>
+      </div>
     </div>
   );
 }

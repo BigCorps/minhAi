@@ -10,7 +10,7 @@ const MINHAI_DOMAINS = [
   const slug = hostname.replace(domain, '');
 
   const swContent = `
-const CACHE_NAME = 'minhai-${slug}-v1';
+const CACHE_NAME = 'minhai-${slug}-v2';
 const CACHE_URLS = ['/'];
 
 self.addEventListener('install', (event) => {
@@ -30,6 +30,14 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Nunca intercepta navegações (carregamento de página inteira).
+  // O fetch() da própria SW não repassa corretamente respostas de
+  // redirect (302/303) do servidor para o navegador nesse modo — isso
+  // quebra qualquer rota que redirecione durante navegação, como
+  // /auth/callback (login OAuth e vínculo de identidade).
+  if (event.request.mode === 'navigate') {
+    return;
+  }
   event.respondWith(
     fetch(event.request).catch(() =>
       caches.match(event.request)

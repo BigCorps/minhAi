@@ -15,6 +15,9 @@ interface Company {
 interface Props {
   company: Company;
   initialAmount: number | null;
+  hideThemeToggle?: boolean;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
 }
 
 const SUPABASE_FUNCTIONS_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1`;
@@ -34,8 +37,9 @@ async function invokeFunction(name: string, body: any) {
   return { status: res.status, ok: res.ok, data };
 }
 
-export default function PixLinkPage({ company, initialAmount }: Props) {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+export default function PixLinkPage({ company, initialAmount, hideThemeToggle, theme: controlledTheme, onToggleTheme }: Props) {
+  const [internalTheme, setInternalTheme] = useState<'dark' | 'light'>('dark');
+  const theme = controlledTheme ?? internalTheme;
   const [mounted, setMounted] = useState(false);
   const [amount, setAmount] = useState<number | null>(null);
   const [pixData, setPixData] = useState<any>(null);
@@ -47,9 +51,10 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
 
   useEffect(() => {
     setMounted(true);
+    if (controlledTheme) return; // tema vem de fora, não precisa detectar sozinho
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const saved = localStorage.getItem('publicTheme') as 'dark' | 'light' | null;
-    setTheme(saved || (prefersDark ? 'dark' : 'light'));
+    setInternalTheme(saved || (prefersDark ? 'dark' : 'light'));
   }, []);
 
   useEffect(() => {
@@ -83,9 +88,10 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
     return () => clearInterval(interval);
   }, [autoChecking, pixData]);
 
-  function toggleTheme() {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
+   function toggleTheme() {
+    if (onToggleTheme) { onToggleTheme(); return; }
+    const next = internalTheme === 'dark' ? 'light' : 'dark';
+    setInternalTheme(next);
     localStorage.setItem('publicTheme', next);
   }
 
@@ -166,7 +172,6 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
   if (confirmed) {
     return (
       <div style={{ minHeight: '100vh', background: isDark ? '#020617' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-        <ThemeButton />
         <div style={{
           background: isDark ? '#0f172a' : '#ffffff',
           border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
@@ -204,7 +209,6 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
   if (!pixData) {
     return (
       <>
-        <ThemeButton />
         <PixValueForm
           company={company}
           initialAmount={initialAmount}
@@ -218,7 +222,6 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
 
   return (
     <>
-      <ThemeButton />
       <PixQRCodeDisplay
         company={company}
         pixData={pixData}

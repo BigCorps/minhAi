@@ -371,7 +371,7 @@ const toggleDark = () => {
   // ─── STEP: preview ────────────────────────────────────────────────────────
   if (step === 'preview') return (
     <div className={`min-h-screen flex flex-col ${p.pageBg}`}>
-      <div className={`${p.cardBg} border-b ${p.border} px-4 py-4 flex items-center justify-between gap-3 pr-16`}>
+      <div className={`${p.cardBg} border-b ${p.border} px-4 py-5 flex items-center justify-between gap-3 pr-16`}>
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => setStep('form')}

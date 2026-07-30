@@ -13,8 +13,8 @@ import PixLinkPage from '@/components/pix-link/PixLinkPage';
 
 // ─── Paletas de cor ───────────────────────────────────────────────────────────
 const D = {
-  pageBg:       'bg-[#0e1117]',
-  cardBg:       'bg-[#1a1d27]',
+  pageBg:       'bg-[#020617]',
+  cardBg:       'bg-[#0f172a]',
   border:       'border-white/10',
   borderLight:  'border-white/6',
   text:         'text-white',
@@ -193,6 +193,11 @@ export default function PixWikiPage() {
   const slugRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+   const saved = localStorage.getItem('publicTheme') as 'dark' | 'light' | null;
+   if (saved) {
+     setDark(saved === 'dark');
+     return;
+   }
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     setDark(mq.matches);
     const h = (e: MediaQueryListEvent) => setDark(e.matches);
@@ -205,13 +210,24 @@ export default function PixWikiPage() {
   const up = (field: keyof FormData, value: string) =>
     setForm(f => ({ ...f, [field]: value }));
 
+  const RESERVED_PIX_SLUGS = ['login', 'conta', 'suporte', 'termos', 'aviso', 'exclusao', 'api'];
+  
   const checkSlug = useCallback(async (value: string) => {
     if (!value || value.length < 3) { setSlugStatus('idle'); return; }
     if (!/^[a-z0-9-]+$/.test(value)) { setSlugStatus('invalid'); return; }
+    if (RESERVED_PIX_SLUGS.includes(value)) { setSlugStatus('taken'); return; }
     setSlugStatus('checking');
     const { data } = await supabase.from('companies').select('id').eq('slug', value).maybeSingle();
     setSlugStatus(data ? 'taken' : 'available');
   }, [supabase]);
+
+const toggleDark = () => {
+  setDark(v => {
+    const next = !v;
+    localStorage.setItem('publicTheme', next ? 'dark' : 'light');
+    return next;
+  });
+};
 
   const handleSlugChange = (value: string) => {
     const clean = slugify(value);
@@ -240,6 +256,7 @@ export default function PixWikiPage() {
         is_active: true, is_public: true, assistant_type: 'smart', user_id: userId,
         whatsapp_number: form.whatsapp || null,
         email_contato: form.emailContato || null,
+        segment_key: 'pix_wiki',
       })
       .select('id').single();
 
@@ -268,7 +285,7 @@ export default function PixWikiPage() {
       linked_at: new Date().toISOString(), status: 'converted',
     });
 
-    router.replace('/dashboard?pixwiki=1');
+    router.replace('/pix/conta?bemvindo=1');
   }, [form, supabase, router]);
 
   useEffect(() => {
@@ -325,7 +342,7 @@ export default function PixWikiPage() {
   // ─── STEP: criando ────────────────────────────────────────────────────────
   if (step === 'creating') return (
     <div className={`min-h-screen flex flex-col items-center justify-center gap-4 ${p.pageBg}`}>
-      <ThemeToggle dark={dark} onToggle={() => setDark(v => !v)} />
+      <ThemeToggle dark={dark} onToggle={toggleDark} />
       <div className="w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
       <p className={`text-sm ${p.textMuted}`}>Configurando seu link PIX…</p>
     </div>
@@ -334,7 +351,7 @@ export default function PixWikiPage() {
   // ─── STEP: preview ────────────────────────────────────────────────────────
   if (step === 'preview') return (
     <div className={`min-h-screen flex flex-col ${p.pageBg}`}>
-      <ThemeToggle dark={dark} onToggle={() => setDark(v => !v)} />
+      <ThemeToggle dark={dark} onToggle={toggleDark} />
       <div className={`${p.cardBg} border-b ${p.border} px-4 py-3 flex items-center justify-between gap-3 pr-16`}>
         <div className="flex items-center gap-3 min-w-0">
           <button
@@ -364,7 +381,7 @@ export default function PixWikiPage() {
   // ─── STEP: auth ───────────────────────────────────────────────────────────
   if (step === 'auth') return (
     <div className={`min-h-screen flex flex-col items-center justify-center px-4 py-10 ${p.pageBg}`}>
-      <ThemeToggle dark={dark} onToggle={() => setDark(v => !v)} />
+      <ThemeToggle dark={dark} onToggle={toggleDark} />
       <Logos />
       <div className="w-full max-w-sm">
         <div className="text-center mb-5">
@@ -414,7 +431,7 @@ export default function PixWikiPage() {
   // ─── STEP: formulário (default) ───────────────────────────────────────────
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center px-4 py-12 ${p.pageBg}`}>
-      <ThemeToggle dark={dark} onToggle={() => setDark(v => !v)} />
+      <ThemeToggle dark={dark} onToggle={toggleDark} />
       <div className="w-full max-w-md">
         <Logos />
 

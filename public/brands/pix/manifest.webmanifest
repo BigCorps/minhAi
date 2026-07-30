@@ -5,8 +5,8 @@
   "description": "O link curto Pix da minhAi",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#020617",
+  "theme_color": "#020617",
   "icons": [
     {
       "src": "/brands/pix/android-chrome-512x512.png",

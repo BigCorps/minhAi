@@ -149,6 +149,8 @@ function PixContaContent() {
   });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+  const [needsSignup, setNeedsSignup] = useState(false);
+  const [slugTakenError, setSlugTakenError] = useState(false);
   const [identities, setIdentities] = useState<string[]>([]);
   const [linkingGoogle, setLinkingGoogle] = useState(false);
   const [unlinkingGoogle, setUnlinkingGoogle] = useState(false);
@@ -188,10 +190,10 @@ function PixContaContent() {
       let activeCompany = comp;
       if (!activeCompany) {
         const pendingRaw = localStorage.getItem('pixWikiPendingSignup');
-        if (!pendingRaw) { router.replace('/pix'); return; }
+        if (!pendingRaw) { setNeedsSignup(true); setLoading(false); return; }
         activeCompany = await createFromPendingSignup(supabase, uid, JSON.parse(pendingRaw));
         if (cancelled) return;
-        if (!activeCompany) { router.replace('/pix?error=slug_taken'); return; }
+        if (!activeCompany) { setSlugTakenError(true); setLoading(false); return; }
         localStorage.removeItem('pixWikiPendingSignup');
       }
       setCompany(activeCompany);
@@ -339,6 +341,44 @@ const handleUnlinkGoogle = async () => {
       </div>
     );
   }
+
+  if (needsSignup) {
+  return (
+    <div className={`min-h-screen flex items-center justify-center px-4 ${p.pageBg}`}>
+      <div className={`max-w-sm w-full rounded-2xl border p-6 text-center ${p.cardBg} ${p.border}`}>
+        <p className={`text-lg font-bold mb-2 ${p.text}`}>Essa conta ainda não tem um link Pix Wiki</p>
+        <p className={`text-sm mb-5 ${p.textMuted}`}>
+          Você entrou com uma conta Google que ainda não criou um link de cobrança. Vamos criar agora?
+        </p>
+        
+          href="/pix"
+          className="inline-block w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all"
+        >
+          Criar meu link Pix agora
+        </a>
+      </div>
+    </div>
+  );
+}
+
+if (slugTakenError) {
+  return (
+    <div className={`min-h-screen flex items-center justify-center px-4 ${p.pageBg}`}>
+      <div className={`max-w-sm w-full rounded-2xl border p-6 text-center ${p.cardBg} ${p.border}`}>
+        <p className={`text-lg font-bold mb-2 ${p.text}`}>O link escolhido acabou de ser ocupado</p>
+        <p className={`text-sm mb-5 ${p.textMuted}`}>
+          Alguém pegou esse link enquanto você fazia login. Escolhe outro pra continuar.
+        </p>
+        
+          href="/pix"
+          className="inline-block w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all"
+        >
+          Tentar outro link
+        </a>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className={`min-h-screen px-4 py-8 ${p.pageBg}`}>

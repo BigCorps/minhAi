@@ -407,6 +407,7 @@ const toggleDark = () => {
            )}
          </button>
        </div>
+     </div>
 
      <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 text-center">
        <p className="text-amber-500 text-xs font-medium">
@@ -617,7 +618,6 @@ const toggleDark = () => {
         </p>
 
         <Footer dark={dark} />
-      </div>
       </div>
     </div>
   );

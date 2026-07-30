@@ -350,7 +350,7 @@ const handleUnlinkGoogle = async () => {
         <p className={`text-sm mb-5 ${p.textMuted}`}>
           Você entrou com uma conta Google que ainda não criou um link de cobrança. Vamos criar agora?
         </p>
-        
+        <a
           href="/pix"
           className="inline-block w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all"
         >
@@ -369,7 +369,7 @@ if (slugTakenError) {
         <p className={`text-sm mb-5 ${p.textMuted}`}>
           Alguém pegou esse link enquanto você fazia login. Escolhe outro pra continuar.
         </p>
-        
+        <a
           href="/pix"
           className="inline-block w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all"
         >

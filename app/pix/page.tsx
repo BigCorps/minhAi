@@ -14,12 +14,12 @@ import PixLinkPage from '@/components/pix-link/PixLinkPage';
 // ─── Paletas de cor ───────────────────────────────────────────────────────────
 const D = {
   pageBg:       'bg-[#020617]',
-  cardBg:       'bg-[#0f172a]',
+  cardBg:       'bg-[#020617]',
   border:       'border-white/10',
   borderLight:  'border-white/6',
   text:         'text-white',
-  textMuted:    'text-white/50',
-  textFaint:    'text-white/25',
+  textMuted:    'text-white/60',
+  textFaint:    'text-white/40',
   inputBg:      'bg-white/5',
   inputBorder:  'border-white/10',
   inputText:    'text-white',
@@ -35,12 +35,12 @@ const D = {
 
 const L = {
   pageBg:       'bg-white',
-  cardBg:       'bg-black/[0.03]',
+  cardBg:       'bg-white',
   border:       'border-black/8',
   borderLight:  'border-black/6',
   text:         'text-gray-900',
-  textMuted:    'text-gray-500',
-  textFaint:    'text-black/25',
+  textMuted:    'text-gray-600',
+  textFaint:    'text-black/45',
   inputBg:      'bg-black/5',
   inputBorder:  'border-black/10',
   inputText:    'text-gray-900',
@@ -191,6 +191,7 @@ export default function PixWikiPage() {
   const [authSenha, setAuthSenha]   = useState('');
   const [authError, setAuthError]   = useState('');
   const slugRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const slugManuallyEdited = useRef(false);
 
   useEffect(() => {
    const saved = localStorage.getItem('publicTheme') as 'dark' | 'light' | null;
@@ -230,6 +231,7 @@ const toggleDark = () => {
 };
 
   const handleSlugChange = (value: string) => {
+    slugManuallyEdited.current = true;
     const clean = slugify(value);
     up('slug', clean);
     setSlugStatus('idle');
@@ -476,7 +478,7 @@ const toggleDark = () => {
               value={form.nomeEmpresa}
               onChange={v => {
                 up('nomeEmpresa', v);
-                if (!form.slug) {
+                if (!slugManuallyEdited.current) {
                   const s = slugify(v);
                   up('slug', s);
                   if (slugRef.current) clearTimeout(slugRef.current);

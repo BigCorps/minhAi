@@ -475,7 +475,7 @@ const toggleDark = () => {
             <span className={`font-medium ${p.text}`}>dashboard</span>, por{' '}
             <span className={`font-medium ${p.text}`}>e-mail</span> e no{' '}
             <span className={`font-medium ${p.text}`}>WhatsApp</span>
-            {' '}- sem se preocupar.
+            {' '}- sem mensalidade e sem preocupação.
           </p>
         </div>
 

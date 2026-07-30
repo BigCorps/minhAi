@@ -252,19 +252,17 @@ const toggleDark = () => {
   };
 
   const createAfterAuth = useCallback(async (userId: string) => {
-    const { data: company, error } = await supabase
-      .from('companies')
-      .insert({
-        name: form.nomeEmpresa, slug: form.slug,
-        logo_url: form.logoUrl || null,
-        is_active: true, is_public: true, assistant_type: 'smart', user_id: userId,
-        whatsapp_number: form.whatsapp || null,
-        email_contato: form.emailContato || null,
-        segment_key: 'pix_wiki',
-      })
-      .select('id').single();
+   const { data: company, error } = await supabase
+     .rpc('ensure_my_pix_wiki_company', {
+       p_slug: form.slug,
+       p_name: form.nomeEmpresa,
+       p_logo_url: form.logoUrl || null,
+       p_whatsapp: form.whatsapp || null,
+       p_email: form.emailContato || null,
+     })
+     .single();
 
-    if (error || !company) throw new Error('Erro ao criar empresa.');
+   if (error || !company) throw new Error('Erro ao criar empresa.');
 
     await supabase.from('user_profiles').upsert({
       user_id: userId,
@@ -275,9 +273,9 @@ const toggleDark = () => {
     }, { onConflict: 'user_id' });
 
     await supabase.from('short_links').insert({
-      slug: form.slug, type: 'pix_wiki',
+      slug: company.slug, type: 'pix_wiki',
       company_id: company.id, user_id: userId,
-      original_url: `https://minhai.app/pix/${form.slug}`,
+      original_url: `https://minhai.app/pix/${company.slug}`,
     });
 
     await supabase.from('demo_sessions').insert({

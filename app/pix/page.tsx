@@ -245,8 +245,10 @@ const toggleDark = () => {
     form.slug.length >= 3 &&
     slugStatus === 'available';
 
+  const PREVIEW_TARGET_COMPANY_ID = '3bf1e6ec-e139-4a43-9294-cf88a074355b';
+  
   const previewCompany = {
-    id: 'preview', name: form.nomeEmpresa, slug: form.slug, logo_url: form.logoUrl || null,
+   id: PREVIEW_TARGET_COMPANY_ID, name: form.nomeEmpresa, slug: form.slug, logo_url: form.logoUrl || null,
   };
 
   const createAfterAuth = useCallback(async (userId: string) => {
@@ -392,6 +394,14 @@ const toggleDark = () => {
           Ativar meu link →
         </button>
       </div>
+
+     <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 text-center">
+       <p className="text-amber-500 text-xs font-medium">
+         ⚠️ Isso é uma demonstração — não conclua o pagamento. Depois de ativar
+         sua conta, você gera PIX de verdade no seu próprio link.
+       </p>
+     </div>
+      
       <div className="flex-1 overflow-auto">
         <PixLinkPage company={previewCompany} initialAmount={null} />
       </div>

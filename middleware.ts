@@ -196,6 +196,13 @@ if (PIX_DOMAINS.includes(hostname)) {
     return NextResponse.next();
   }
 
+   // Rotas de infra compartilhada (callback de OAuth, Google/Facebook) —
+   // nunca prefixar com /pix, senão o retorno do login nunca chega na
+   // rota real e a sessão nunca é criada.
+   if (pathname.startsWith('/auth/')) {
+     return NextResponse.next();
+   }
+
   // Favicon específico do Pix
   if (pathname === '/favicon.ico') {
     const url = request.nextUrl.clone();

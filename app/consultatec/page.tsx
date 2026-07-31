@@ -200,7 +200,8 @@ export default function ConsultaTecPage() {
           Consulte CPF ou CNPJ
         </h1>
         <p className="text-center mb-10" style={{ color: cor.tintaMuted }}>
-          Digite o documento e escolha na próxima etapa as opções de consulta.
+          Digite o documento e escolha a seguir as opções disponíveis.
+          - Dados, Restrições, Protestos, etc.
         </p>
 
         <div className="w-full max-w-md">

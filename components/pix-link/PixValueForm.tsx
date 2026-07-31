@@ -18,7 +18,7 @@ export default function PixValueForm({ company, initialAmount, onSubmit, loading
 
   const isDark = theme === 'dark';
 
-  const bg = isDark ? '#020617' : '#f1f5f9';
+  const bg = isDark ? '#020617' : '#ffffff';
   const cardBg = isDark ? '#0f172a' : '#ffffff';
   const cardBorder = isDark ? '#334155' : '#e2e8f0';
   const inputBg = isDark ? '#1e293b' : '#f8fafc';

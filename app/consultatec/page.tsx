@@ -33,8 +33,8 @@ const cor = {
   borda: '#C9BFA0',
   tinta: '#1C1A14',
   tintaMuted: '#6B6350',
-  destaque: '#7A6142',
-  destaqueHover: '#5F4B30',
+  destaque: '#2F4F3A',
+  destaqueHover: '#25402E',
   erroBg: '#F4E4E0',
   erroTexto: '#7A2E2E',
 };
@@ -200,8 +200,7 @@ export default function ConsultaTecPage() {
           Consulte CPF ou CNPJ
         </h1>
         <p className="text-center mb-10" style={{ color: cor.tintaMuted }}>
-          Digite o documento e escolha a seguir as opções disponíveis
-          - Dados, Restrições, Protestos, etc.
+          Digite o documento — identificamos o tipo automaticamente
         </p>
 
         <div className="w-full max-w-md">
@@ -211,7 +210,7 @@ export default function ConsultaTecPage() {
             onChange={(e) => handleDocumentoChange(e.target.value)}
             placeholder="000.000.000-00 ou 00.000.000/0000-00"
             maxLength={18}
-            className="w-full px-5 py-4 rounded-xl border text-lg text-center tracking-wide font-mono bg-transparent focus:outline-none focus:ring-2"
+            className="w-full px-2 sm:px-5 py-4 rounded-xl border text-xs sm:text-lg text-center sm:tracking-wide font-mono bg-transparent focus:outline-none focus:ring-2"
             style={{ borderColor: cor.borda, color: cor.tinta }}
             autoFocus
           />
@@ -264,9 +263,9 @@ export default function ConsultaTecPage() {
             Já tem saldo? <button onClick={() => router.push('/consultatec/dashboard')} className="underline font-medium" style={{ color: cor.destaque }}>Veja seu histórico e saldo</button>
           </p>
         )}
-
-        <Footer />
       </main>
+
+      <Footer />
 
       {/* ── Modais ── */}
       {modalAtivo && modalCompanyId && tipo === 'cpf' && (

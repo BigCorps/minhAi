@@ -153,7 +153,7 @@ function VoiceAssistantCard({ dark, slug }: { dark: boolean; slug: string }) {
       <div className="flex items-center gap-2 mb-3">
         <Image src="/logo-circle.png" alt="minhAi" width={28} height={28} className="rounded-lg" />
         <span className={`text-[10px] uppercase tracking-widest font-bold ${p.textFaint}`}>
-          Seu brinde
+          Seu Assistente
         </span>
       </div>
       <p className={`text-sm font-bold mb-1.5 ${p.text}`}>
@@ -436,9 +436,17 @@ function PixContaContent() {
       <div className="w-full max-w-2xl lg:max-w-5xl mx-auto">
 
         {/* Header — só logo Pix Wiki (minhAi fica exclusiva do card do brinde) */}
-        <div className="flex items-center justify-between mb-6">
-          <Image src="/brands/pix/pixwiki.png" alt="Pix Wiki" width={100} height={40} className="object-contain h-8 w-auto" />
-          <div className="flex items-center gap-2">
+       <div className="flex items-center justify-between mb-6 gap-3">
+         <div className="flex items-center gap-3 min-w-0">
+           <Image src="/brands/pix/pixwiki.png" alt="Pix Wiki" width={40} height={40} className="object-contain h-9 w-9 flex-shrink-0" />
+           <div className="min-w-0">
+             <h1 className={`text-base font-bold truncate ${p.text}`}>{company?.name}</h1>
+             <a href={`/pix/${company?.slug}`} className="text-xs text-green-500 hover:underline truncate block">
+               pix.wiki/{company?.slug} ↗
+             </a>
+           </div>
+         </div>
+         <div className="flex items-center gap-2 flex-shrink-0">
             <ThemeToggle dark={dark} onToggle={toggleDark} />
             <button
               onClick={handleSignOut}
@@ -459,11 +467,6 @@ function PixContaContent() {
             Conta Google vinculada com sucesso!
           </div>
         )}
-
-        <h1 className={`text-lg font-bold mb-1 ${p.text}`}>{company?.name}</h1>
-        <a href={`/pix/${company?.slug}`} className="text-xs text-green-500 hover:underline mb-6 inline-block">
-          pix.wiki/{company?.slug} ↗
-        </a>
 
         {/* Layout: 1 coluna no mobile, 2 colunas no desktop (recebimentos + lateral) */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 items-start">

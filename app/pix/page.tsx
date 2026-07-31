@@ -211,7 +211,7 @@ export default function PixWikiPage() {
   const up = (field: keyof FormData, value: string) =>
     setForm(f => ({ ...f, [field]: value }));
 
-  const RESERVED_PIX_SLUGS = ['login', 'conta', 'suporte', 'termos', 'aviso', 'exclusao', 'api'];
+  const RESERVED_PIX_SLUGS = ['login', 'conta', 'dashboard', 'suporte', 'termos', 'aviso', 'exclusao', 'api'];
   
   const checkSlug = useCallback(async (value: string) => {
     if (!value || value.length < 3) { setSlugStatus('idle'); return; }
@@ -287,7 +287,7 @@ const toggleDark = () => {
       linked_at: new Date().toISOString(), status: 'converted',
     });
 
-    router.replace('/pix/conta?bemvindo=1');
+    router.replace('/pix/dashboard?bemvindo=1');
   }, [form, supabase, router]);
 
   useEffect(() => {
@@ -322,7 +322,7 @@ const toggleDark = () => {
    await supabase.auth.signInWithOAuth({
      provider: 'google',
      options: {
-       redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/conta')}`,
+       redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/dashboard')}`,
        queryParams: { access_type: 'offline', prompt: 'consent' },
      },
    });

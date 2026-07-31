@@ -278,7 +278,7 @@ export default function PixQRCodeDisplay({
         e.currentTarget.style.opacity = '0.8';
       }}
     >
-      Crie o seu no Pix.Wiki
+      Crie o seu Pix.Wiki | minhAi
     </a>
   </p>
 

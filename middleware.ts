@@ -17,6 +17,8 @@ const CRAWLER_PASSTHROUGH = ['/robots.txt', '/sitemap.xml', '/sitemap.ts'];
 
 const ARTEFINAL_DOMAINS = ['ia.artefinal.app'];
 
+const CONSULTATEC_DOMAINS = ['consulta.tec.br', 'www.consulta.tec.br'];
+
 const PIX_DOMAINS = ['pix.wiki', 'www.pix.wiki'];
 
 // ── Min.IA ───────────────────────────────────────────────────────────────
@@ -179,6 +181,34 @@ if (MINIA_APP_DOMAINS.includes(hostname)) {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) return NextResponse.redirect(new URL('/min', request.url));
     return NextResponse.next();
+  }
+}
+
+// ── 0.05. DOMÍNIO CONSULTA.TEC.BR (cenário A — host único) ────────────────
+if (CONSULTATEC_DOMAINS.includes(hostname)) {
+
+  if (hostname === 'www.consulta.tec.br') {
+    const url = request.nextUrl.clone();
+    url.hostname = 'consulta.tec.br';
+    return NextResponse.redirect(url);
+  }
+
+  if (pathname === '/favicon.ico') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/brands/consultatec/favicon.png';
+    return NextResponse.rewrite(url);
+  }
+
+  if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/brands/consultatec/manifest.webmanifest';
+    return NextResponse.rewrite(url);
+  }
+
+  if (pathname === '/') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/consultatec';
+    return NextResponse.rewrite(url);
   }
 }
 

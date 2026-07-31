@@ -9,19 +9,37 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 const D = {
-  pageBg: 'bg-[#020617]', cardBg: 'bg-[#0f172a]', border: 'border-white/10',
-  text: 'text-white', textMuted: 'text-white/50', textFaint: 'text-white/25',
+  pageBg: 'bg-[#020617]', cardBg: 'bg-[#020617]', border: 'border-white/10',
+  text: 'text-white', textMuted: 'text-white/60', textFaint: 'text-white/40',
   inputBg: 'bg-white/5', inputBorder: 'border-white/10', inputText: 'text-white', inputPh: 'placeholder-white/25',
   divider: 'bg-white/8',
+  footerText: 'text-white/25', footerLink: 'text-white/40 hover:text-white/70',
 };
 const L = {
-  pageBg: 'bg-white', cardBg: 'bg-black/[0.03]', border: 'border-black/8',
-  text: 'text-gray-900', textMuted: 'text-gray-500', textFaint: 'text-black/25',
+  pageBg: 'bg-white', cardBg: 'bg-white', border: 'border-black/8',
+  text: 'text-gray-900', textMuted: 'text-gray-900', textFaint: 'text-black/70',
   inputBg: 'bg-black/5', inputBorder: 'border-black/10', inputText: 'text-gray-900', inputPh: 'placeholder-black/25',
   divider: 'bg-black/8',
+  footerText: 'text-black/30', footerLink: 'text-black/40 hover:text-black/70',
 };
 
-export default function PixLoginPage() {
+function Footer({ dark }: { dark: boolean }) {
+  const p = dark ? D : L;
+  return (
+    <footer className={`mt-6 text-center flex flex-col gap-1 ${p.footerText} text-xs`}>
+      <p>
+        <a href="https://pix.wiki" className={`transition-colors ${p.footerLink}`}>Pix.Wiki</a>
+        {' '}|{' '}
+        Desenvolvido por{' '}
+        <a href="https://bigcorps.com.br" className={`transition-colors ${p.footerLink}`}>BigCorps</a>
+        {' '}| Tecnologia{' '}
+        <a href="https://minhai.app" className={`transition-colors ${p.footerLink}`}>minhAi</a>
+      </p>
+    </footer>
+  );
+}
+
+ export default function PixLoginPage() {
   const supabase = createClient();
   const router = useRouter();
 
@@ -60,16 +78,18 @@ export default function PixLoginPage() {
     const { error: err } = await supabase.auth.signInWithPassword({ email, password: senha });
     setLoading(false);
     if (err) { setError('E-mail ou senha incorretos.'); return; }
-    router.replace('/pix/conta');
+    router.replace('/pix/dashboard');
   };
 
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center px-4 py-12 ${p.pageBg}`}>
       <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-3 mb-6">
-          <Image src="/brands/pix/pixwiki.png" alt="Pix Wiki" width={90} height={36} className="object-contain h-9 w-auto" />
-        </div>
-        <h1 className={`text-xl font-bold text-center mb-6 ${p.text}`}>Entrar na sua conta</h1>
+         <div className="flex items-center justify-center gap-3 mb-6">
+           <Image src="/brands/pix/pixwiki.png" alt="Pix Wiki" width={90} height={36} className="object-contain h-9 w-auto" />
+           <span className="text-gray-300 text-lg font-light select-none">|</span>
+           <Image src="/logo-circle.png" alt="minhAi" width={36} height={36} className="rounded-xl" />
+         </div>
+         <h1 className={`text-xl font-bold text-center mb-6 ${p.text}`}>Entrar na sua conta</h1>
 
         <div className={`rounded-2xl border p-5 flex flex-col gap-3 ${p.cardBg} ${p.border}`}>
           <button
@@ -114,6 +134,7 @@ export default function PixLoginPage() {
           Ainda não tem conta?{' '}
           <a href="/pix" className="text-green-500 hover:underline">Criar link Pix grátis</a>
         </p>
+        <Footer dark={dark} />
       </div>
     </div>
   );

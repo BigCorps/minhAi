@@ -202,6 +202,20 @@ function PixContaContent() {
   const [linkMsg, setLinkMsg] = useState('');
 
   const [configOpen, setConfigOpen] = useState(false);
+  const [receiptsTab, setReceiptsTab] = useState<'historico' | 'saque'>('historico');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [withdrawMsg, setWithdrawMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  
+  const [receiptsTab, setReceiptsTab] = useState<'historico' | 'saque'>('historico');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [withdrawMsg, setWithdrawMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const [shareValue, setShareValue] = useState('');
+  const [copiedSimple, setCopiedSimple] = useState(false);
+  const [copiedWithValue, setCopiedWithValue] = useState(false);
+  
   const [editForm, setEditForm] = useState({
     nome: '', logo: '', whatsapp: '', email: '', documento: '', documentoTipo: '',
   });
@@ -309,6 +323,89 @@ function PixContaContent() {
       clearTimeout(timeout);
     };
   }, [supabase, router]);
+
+  async function handleWithdraw() {
+  setWithdrawMsg(null);
+  const pixKey = profile?.withdrawal_pix_key;
+
+  if (!pixKey) { setWithdrawMsg({ type: 'error', text: 'Sua chave PIX ainda não está configurada. Fale com o suporte.' }); return; }
+  if (!withdrawAmount) { setWithdrawMsg({ type: 'error', text: 'Informe o valor do saque.' }); return; }
+
+  const amount = parseFloat(withdrawAmount);
+  const amountCents = Math.floor(amount * 100);
+
+  if (amountCents < 100) { setWithdrawMsg({ type: 'error', text: 'O valor mínimo para saque é R$ 1,00.' }); return; }
+  if (amountCents > (balance?.available_balance_cents ?? 0)) { setWithdrawMsg({ type: 'error', text: 'Saldo insuficiente.' }); return; }
+
+  setIsWithdrawing(true);
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const { error } = await supabase.functions.invoke('request-withdrawal', {
+      body: { amount, userId },
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    if (error) throw error;
+    setWithdrawMsg({ type: 'success', text: 'Solicitação de saque enviada! O valor será creditado em breve.' });
+    setWithdrawAmount('');
+  } catch (err: any) {
+    setWithdrawMsg({ type: 'error', text: 'Erro ao processar saque: ' + (err.message || 'Tente novamente.') });
+  } finally {
+    setIsWithdrawing(false);
+  }
+}
+
+const withdrawFee = withdrawAmount ? parseFloat(withdrawAmount) * 0.01 : 0;
+const withdrawNet = withdrawAmount ? parseFloat(withdrawAmount) - withdrawFee : 0;
+
+const simpleLink = `pix.wiki/${company?.slug}`;
+const cleanShareValue = shareValue.trim().replace(',', '.');
+const hasValidShareValue = cleanShareValue && parseFloat(cleanShareValue) > 0;
+const linkWithValue = hasValidShareValue ? `pix.wiki/${company?.slug}/${cleanShareValue}` : '';
+
+function copySimpleLink() {
+  navigator.clipboard.writeText(`https://${simpleLink}`);
+  setCopiedSimple(true);
+  setTimeout(() => setCopiedSimple(false), 2000);
+}
+function copyLinkWithValue() {
+  if (!linkWithValue) return;
+  navigator.clipboard.writeText(`https://${linkWithValue}`);
+  setCopiedWithValue(true);
+  setTimeout(() => setCopiedWithValue(false), 2000);
+}
+
+async function handleWithdraw() {
+  setWithdrawMsg(null);
+  const pixKey = profile?.withdrawal_pix_key;
+
+  if (!pixKey) { setWithdrawMsg({ type: 'error', text: 'Sua chave PIX ainda não está configurada. Fale com o suporte.' }); return; }
+  if (!withdrawAmount) { setWithdrawMsg({ type: 'error', text: 'Informe o valor do saque.' }); return; }
+
+  const amount = parseFloat(withdrawAmount);
+  const amountCents = Math.floor(amount * 100);
+
+  if (amountCents < 100) { setWithdrawMsg({ type: 'error', text: 'O valor mínimo para saque é R$ 1,00.' }); return; }
+  if (amountCents > (balance?.available_balance_cents ?? 0)) { setWithdrawMsg({ type: 'error', text: 'Saldo insuficiente.' }); return; }
+
+  setIsWithdrawing(true);
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const { error } = await supabase.functions.invoke('request-withdrawal', {
+      body: { amount, userId },
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    if (error) throw error;
+    setWithdrawMsg({ type: 'success', text: 'Solicitação de saque enviada! O valor será creditado em breve.' });
+    setWithdrawAmount('');
+  } catch (err: any) {
+    setWithdrawMsg({ type: 'error', text: 'Erro ao processar saque: ' + (err.message || 'Tente novamente.') });
+  } finally {
+    setIsWithdrawing(false);
+  }
+}
+
+const withdrawFee = withdrawAmount ? parseFloat(withdrawAmount) * 0.01 : 0;
+const withdrawNet = withdrawAmount ? parseFloat(withdrawAmount) - withdrawFee : 0;
 
   const handleSave = async () => {
     if (!company || !userId) return;
@@ -482,9 +579,78 @@ function PixContaContent() {
               </p>
             </div>
 
-            <div className={`rounded-2xl border p-5 ${p.cardBg} ${p.border}`}>
-              <p className={`text-[10px] uppercase tracking-widest mb-3 ${p.textFaint}`}>Últimos recebimentos</p>
-              {txns.length === 0 ? (
+{/* Compartilhar link */}
+<div className={`rounded-2xl border p-5 ${p.cardBg} ${p.border}`}>
+  <p className={`text-[10px] uppercase tracking-widest mb-3 ${p.textFaint}`}>Seu link de cobrança</p>
+
+  <div className="flex flex-col gap-4">
+    <div>
+      <p className={`text-xs mb-1.5 ${p.textMuted}`}>Link simples — cliente digita o valor na hora</p>
+      <div className="flex gap-2">
+        <div className={`flex-1 px-3 py-2 rounded-xl border text-sm font-mono truncate ${p.inputBg} ${p.inputBorder} ${p.text}`}>
+          {simpleLink}
+        </div>
+        <button
+          onClick={copySimpleLink}
+          className={`px-4 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+            copiedSimple ? 'bg-green-500 text-white' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+          }`}
+        >
+          {copiedSimple ? 'Copiado!' : 'Copiar'}
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <p className={`text-xs mb-1.5 ${p.textMuted}`}>Link com valor fixo — cliente só confirma o pagamento</p>
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold ${p.textFaint}`}>R$</span>
+          <input
+            type="number" step="0.01" value={shareValue}
+            onChange={e => setShareValue(e.target.value)}
+            placeholder="0,00"
+            className={`w-full pl-8 pr-3 py-2 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText}`}
+          />
+        </div>
+        <button
+          onClick={copyLinkWithValue}
+          disabled={!hasValidShareValue}
+          className={`px-4 rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-40 ${
+            copiedWithValue ? 'bg-green-500 text-white' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+          }`}
+        >
+          {copiedWithValue ? 'Copiado!' : 'Copiar'}
+        </button>
+      </div>
+      {hasValidShareValue && (
+        <p className={`text-[11px] mt-1.5 font-mono ${p.textFaint}`}>{linkWithValue}</p>
+      )}
+    </div>
+  </div>
+</div>
+
+           <div className={`rounded-2xl border p-5 ${p.cardBg} ${p.border}`}>
+             <div className={`flex items-center gap-1 mb-4 p-1 rounded-xl ${p.inputBg}`}>
+               <button
+                 onClick={() => setReceiptsTab('historico')}
+                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${
+                   receiptsTab === 'historico' ? 'bg-green-500 text-white' : `${p.textFaint} hover:${p.text}`
+                 }`}
+               >
+                 Recebimentos
+               </button>
+               <button
+                 onClick={() => setReceiptsTab('saque')}
+                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${
+                   receiptsTab === 'saque' ? 'bg-green-500 text-white' : `${p.textFaint} hover:${p.text}`
+                 }`}
+               >
+                 Sacar
+               </button>
+             </div>
+
+             {receiptsTab === 'historico' && (txns.length === 0 ? (
                 <p className={`text-sm ${p.textMuted}`}>Nenhum recebimento ainda.</p>
               ) : (
                 <table className="w-full text-sm">
@@ -507,8 +673,53 @@ function PixContaContent() {
                     ))}
                   </tbody>
                 </table>
-              )}
-            </div>
+             ))}
+
+             {receiptsTab === 'saque' && (
+               <div className="flex flex-col gap-3">
+                 <div>
+                   <label className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>Valor do saque (R$)</label>
+                   <div className="relative mt-1">
+                     <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold ${p.textFaint}`}>R$</span>
+                     <input
+                       type="number" step="0.01" value={withdrawAmount}
+                       onChange={e => setWithdrawAmount(e.target.value)}
+                       placeholder="0,00"
+                       className={`w-full pl-10 pr-3 py-2.5 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText}`}
+                     />
+                   </div>
+                 </div>
+
+                 {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+                   <div className={`p-3 rounded-xl border text-xs ${p.inputBg} ${p.border} flex flex-col gap-1.5`}>
+                     <div className="flex justify-between">
+                       <span className={p.textFaint}>Taxa de serviço (1%)</span>
+                       <span className="text-red-500 font-medium">-{withdrawFee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                     </div>
+                     <div className={`flex justify-between font-bold border-t pt-1.5 ${p.border}`}>
+                       <span className={p.text}>Valor líquido</span>
+                       <span className="text-green-500">{withdrawNet.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                     </div>
+                   </div>
+                 )}
+
+                 {withdrawMsg && (
+                   <p className={`text-xs ${withdrawMsg.type === 'error' ? 'text-red-500' : 'text-green-500'}`}>{withdrawMsg.text}</p>
+                 )}
+
+                 <button
+                   onClick={handleWithdraw}
+                   disabled={isWithdrawing || !profile?.withdrawal_pix_key || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
+                   className="w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all active:scale-95 disabled:opacity-50"
+                 >
+                   {isWithdrawing ? 'Processando…' : 'Solicitar saque'}
+                 </button>
+                 {!profile?.withdrawal_pix_key && (
+                   <p className="text-center text-xs text-red-500">⚠️ Chave PIX não configurada.</p>
+                 )}
+               </div>
+             )}            
+           </div>
           </div>
 
           {/* ── Coluna lateral: brinde + configurações ── */}

@@ -171,7 +171,7 @@ export default function PixLinkPage({ company, initialAmount, hideThemeToggle, t
 
   if (confirmed) {
     return (
-      <div style={{ minHeight: '100vh', background: isDark ? '#020617' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ minHeight: '100vh', background: isDark ? '#020617' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
         <div style={{
           background: isDark ? '#0f172a' : '#ffffff',
           border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
@@ -202,6 +202,7 @@ export default function PixLinkPage({ company, initialAmount, hideThemeToggle, t
             Obrigado pelo seu pagamento.
           </p>
         </div>
+        {!hideThemeToggle && <ThemeButton />}
       </div>
     );
   }
@@ -215,6 +216,7 @@ export default function PixLinkPage({ company, initialAmount, hideThemeToggle, t
           onSubmit={generatePix}
           loading={loading}
           theme={theme}
+          onToggleTheme={onToggleTheme ?? toggleTheme}
         />
       </>
     );
@@ -230,6 +232,7 @@ export default function PixLinkPage({ company, initialAmount, hideThemeToggle, t
         onNewPix={() => { setPixData(null); setAmount(null); setAutoChecking(false); }}
         loading={loading}
         theme={theme}
+        onToggleTheme={onToggleTheme ?? toggleTheme}
       />
     </>
   );

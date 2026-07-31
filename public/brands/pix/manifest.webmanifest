@@ -2,14 +2,14 @@
 {
   "name": "Pix Wiki",
   "short_name": "pix.wiki",
-  "description": "O link curto Pix da minhAi",
+  "description": "Seu link Pix simplificado",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#020617",
   "theme_color": "#020617",
   "icons": [
     {
-      "src": "/brands/pix/web-app-512x512.png",
+      "src": "/brands/pix/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }

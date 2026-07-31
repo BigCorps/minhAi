@@ -4,6 +4,10 @@
 // Tema: controlado via state (mesmo padrão da PixLinkPage),
 // aplicado inline em cada elemento — sem dark: do Tailwind,
 // sem dependência do ThemeProvider do layout.
+//
+// Se o visitante já está logado e já tem uma empresa Pix Wiki, pula o
+// formulário de lead e mostra 2 atalhos: cobrar agora (com valor) ou
+// acessar o dashboard.
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase-browser';
@@ -55,7 +59,7 @@ const L = {
 };
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
-type Step = 'form' | 'preview' | 'auth' | 'creating';
+type Step = 'form' | 'preview' | 'auth' | 'creating' | 'logged-in';
 
 interface FormData {
   nomeEmpresa: string;
@@ -67,6 +71,11 @@ interface FormData {
   logoUrl: string;
   whatsapp: string;
   emailContato: string;
+}
+
+interface LoggedInCompany {
+  slug: string;
+  name: string;
 }
 
 type SlugStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
@@ -117,7 +126,7 @@ function ThemeToggle({ dark, onToggle }: { dark: boolean; onToggle: () => void }
 function Logos() {
   return (
     <div className="flex items-center justify-center gap-3 mb-6">
-      
+
       <Image src="/brands/pix/pixwiki.png" alt="Pix Wiki" width={90} height={36} className="object-contain h-9 w-auto" />
 
       <span className="text-gray-300 text-lg font-light select-none">|</span>
@@ -181,6 +190,10 @@ export default function PixWikiPage() {
 
   const [dark, setDark]   = useState(true);
   const [step, setStep]   = useState<Step>('form');
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [loggedInCompany, setLoggedInCompany] = useState<LoggedInCompany | null>(null);
+  const [chargeValue, setChargeValue] = useState('');
+
   const [form, setForm]   = useState<FormData>({
     nomeEmpresa: '', documento: '', documentoTipo: '',
     chavePix: '', chavePixTipo: '', slug: '',
@@ -206,13 +219,40 @@ export default function PixWikiPage() {
     return () => mq.removeEventListener('change', h);
   }, []);
 
+  // Checa se o visitante já está logado e já tem uma empresa Pix Wiki —
+  // se sim, pula o formulário de lead e mostra os atalhos de cobrar/acessar.
+  useEffect(() => {
+    let cancelled = false;
+
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (cancelled) return;
+      if (!data.user) { setCheckingAuth(false); return; }
+
+      const { data: comp } = await supabase
+        .from('companies')
+        .select('slug, name')
+        .eq('user_id', data.user.id)
+        .eq('segment_key', 'pix_wiki')
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (comp) {
+        setLoggedInCompany(comp);
+        setStep('logged-in');
+      }
+      setCheckingAuth(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [supabase]);
+
   const p = dark ? D : L;
 
   const up = (field: keyof FormData, value: string) =>
     setForm(f => ({ ...f, [field]: value }));
 
   const RESERVED_PIX_SLUGS = ['login', 'conta', 'dashboard', 'suporte', 'termos', 'aviso', 'exclusao', 'api'];
-  
+
   const checkSlug = useCallback(async (value: string) => {
     if (!value || value.length < 3) { setSlugStatus('idle'); return; }
     if (!/^[a-z0-9-]+$/.test(value)) { setSlugStatus('invalid'); return; }
@@ -246,7 +286,7 @@ const toggleDark = () => {
     slugStatus === 'available';
 
   const PREVIEW_TARGET_COMPANY_ID = '3bf1e6ec-e139-4a43-9294-cf88a074355b';
-  
+
   const previewCompany = {
    id: PREVIEW_TARGET_COMPANY_ID, name: form.nomeEmpresa, slug: form.slug, logo_url: form.logoUrl || null,
   };
@@ -359,6 +399,99 @@ const toggleDark = () => {
     await createAfterAuth(si.user.id);
   };
 
+  const handleSignOutFromLanding = async () => {
+    await supabase.auth.signOut();
+    setLoggedInCompany(null);
+    setStep('form');
+  };
+
+  // ─── Checando sessão (evita flash do formulário de lead) ──────────────────
+  if (checkingAuth) return (
+    <div className={`min-h-screen flex items-center justify-center ${p.pageBg}`}>
+      <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  // ─── STEP: já logado — atalhos de cobrar / acessar conta ──────────────────
+  if (step === 'logged-in' && loggedInCompany) {
+    const cleanCharge = chargeValue.trim().replace(',', '.');
+    const hasValidCharge = !!cleanCharge && parseFloat(cleanCharge) > 0;
+    const chargeHref = hasValidCharge
+      ? `/pix/${loggedInCompany.slug}/${cleanCharge}`
+      : `/pix/${loggedInCompany.slug}`;
+
+    return (
+      <div className={`min-h-screen flex flex-col items-center justify-center px-4 py-12 ${p.pageBg}`}>
+        <ThemeToggle dark={dark} onToggle={toggleDark} />
+        <div className="w-full max-w-md">
+          <Logos />
+
+          <div className="text-center mb-7">
+            <h1 className={`text-2xl font-bold leading-tight mb-2 ${p.text}`}>
+              Bem-vindo de volta,<br />
+              <span className="text-green-500">{loggedInCompany.name}</span>
+            </h1>
+            <p className={`text-sm ${p.textMuted}`}>
+              pix.wiki/{loggedInCompany.slug}
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {/* Card 1 — cobrar agora */}
+            <div className={`rounded-2xl border p-5 sm:p-6 flex flex-col gap-3 ${p.cardBg} ${p.border}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>Cobrar um cliente agora</p>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold ${p.textFaint}`}>R$</span>
+                  <input
+                    type="number" step="0.01" value={chargeValue}
+                    onChange={e => setChargeValue(e.target.value)}
+                    placeholder="0,00"
+                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 transition-colors ${p.inputBg} ${p.inputBorder} ${p.inputText}`}
+                  />
+                </div>
+              </div>
+              <a
+                href={chargeHref}
+                className="w-full py-3 rounded-xl font-bold text-sm text-center transition-all active:scale-95 bg-green-500 hover:bg-green-400 text-white"
+              >
+                {hasValidCharge ? 'Gerar cobrança →' : 'Gerar link de cobrança →'}
+              </a>
+              {!hasValidCharge && (
+                <p className={`text-[11px] text-center -mt-1 ${p.textFaint}`}>
+                  Deixe em branco pra o cliente digitar o valor na hora
+                </p>
+              )}
+            </div>
+
+            {/* Card 2 — acessar conta */}
+            <a
+              href="/pix/dashboard"
+              className={`rounded-2xl border p-5 sm:p-6 flex items-center justify-between gap-3 transition-colors ${p.cardBg} ${p.border} hover:border-green-500/40`}
+            >
+              <div>
+                <p className={`text-sm font-bold ${p.text}`}>Acessar minha conta</p>
+                <p className={`text-xs ${p.textFaint}`}>Saldo, recebimentos e saque</p>
+              </div>
+              <svg className={`w-5 h-5 flex-shrink-0 ${p.textFaint}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+
+          <p className={`text-center mt-5 text-xs ${p.textFaint}`}>
+            Não é você?{' '}
+            <button onClick={handleSignOutFromLanding} className={`transition-colors underline ${p.footerLink}`}>
+              Sair
+            </button>
+          </p>
+
+          <Footer dark={dark} />
+        </div>
+      </div>
+    );
+  }
+
   // ─── STEP: criando ────────────────────────────────────────────────────────
   if (step === 'creating') return (
     <div className={`min-h-screen flex flex-col items-center justify-center gap-4 ${p.pageBg}`}>
@@ -415,7 +548,7 @@ const toggleDark = () => {
          sua conta, você gera PIX de verdade no seu próprio link.
        </p>
      </div>
-      
+
       <div className="flex-1 overflow-auto">
        <PixLinkPage
          company={previewCompany}
@@ -492,7 +625,7 @@ const toggleDark = () => {
         <Logos />
 
         <div className="text-center mb-7">
-          
+
           <h1 className={`text-2xl sm:text-3xl font-bold leading-tight mb-2 ${p.text}`}>
             Nunca mais perca uma venda<br />
             <span className="text-green-500">por comprovante falso</span>

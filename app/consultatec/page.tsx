@@ -14,7 +14,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Wallet, LogIn, X } from 'lucide-react';
+import { Wallet, LogIn } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { formatarDocumento, detectarTipoDocumento, documentoValido, TipoDocumento } from '@/lib/validateDocumento';
 
@@ -24,7 +24,7 @@ import RestricoesCpfModal from '@/components/consultatec/RestricoesCpfModal';
 import RestricoesCnpjModal from '@/components/consultatec/RestricoesCnpjModal';
 import ConsultarProtestosModal from '@/components/consultatec/ConsultarProtestosModal';
 import CompletaCpfModal from '@/components/consultatec/CompletaCpfModal';
-import AdicionarSaldoModal from '@/components/consultatec/AdicionarSaldoModal';
+import Footer from '@/components/consultatec/Footer';
 
 // ── paleta "papel moeda" ──────────────────────────────────────────────────
 const cor = {
@@ -79,12 +79,9 @@ export default function ConsultaTecPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [saldoCents, setSaldoCents] = useState<number | null>(null);
-  const [consultasFeitas, setConsultasFeitas] = useState<number>(0);
 
   const [modalAtivo, setModalAtivo] = useState<ModalAtivo>(null);
   const [modalCompanyId, setModalCompanyId] = useState<string | null>(null);
-  const [perfilAberto, setPerfilAberto] = useState(false);
-  const [saldoModalAberto, setSaldoModalAberto] = useState(false);
   const [erroAcesso, setErroAcesso] = useState<string | null>(null);
 
   // ── auth ──────────────────────────────────────────────────────────────
@@ -95,7 +92,6 @@ export default function ConsultaTecPage() {
       if (!session?.user) {
         setCompanyId(null);
         setSaldoCents(null);
-        setConsultasFeitas(0);
       }
     });
     return () => sub.subscription.unsubscribe();
@@ -112,14 +108,10 @@ export default function ConsultaTecPage() {
     setDocumentoOk(documentoValido(limpo));
   };
 
-  // ── saldo / contagem ──────────────────────────────────────────────────
-  const refreshSaldoEContagem = useCallback(async (cid: string) => {
-    const [{ data: balance }, { count }] = await Promise.all([
-      supabase.from('company_balance').select('available_balance_cents').eq('company_id', cid).maybeSingle(),
-      supabase.from('historico_consultas').select('id', { count: 'exact', head: true }).eq('company_id', cid),
-    ]);
+  // ── saldo ─────────────────────────────────────────────────────────────
+  const refreshSaldo = useCallback(async (cid: string) => {
+    const { data: balance } = await supabase.from('company_balance').select('available_balance_cents').eq('company_id', cid).maybeSingle();
     setSaldoCents(balance?.available_balance_cents ?? 0);
-    setConsultasFeitas(count ?? 0);
   }, [supabase]);
 
   const garantirCompanyId = useCallback(async (): Promise<string | null> => {
@@ -130,9 +122,9 @@ export default function ConsultaTecPage() {
       return null;
     }
     setCompanyId(data);
-    refreshSaldoEContagem(data);
+    refreshSaldo(data);
     return data;
-  }, [companyId, supabase, refreshSaldoEContagem]);
+  }, [companyId, supabase, refreshSaldo]);
 
   useEffect(() => {
     if (userId) garantirCompanyId();
@@ -157,17 +149,12 @@ export default function ConsultaTecPage() {
 
   const handleFecharModal = () => {
     setModalAtivo(null);
-    // Só atualiza saldo/contagem se o modal fechado era da company pessoal —
+    // Só atualiza saldo se o modal fechado era da company pessoal —
     // consulta avulsa (guest) não tem saldo pra atualizar.
     if (companyId && modalCompanyId === companyId) {
-      refreshSaldoEContagem(companyId);
+      refreshSaldo(companyId);
     }
     setModalCompanyId(null);
-  };
-
-  const handleSair = async () => {
-    await supabase.auth.signOut();
-    setPerfilAberto(false);
   };
 
   const opcoes = tipo === 'cpf' ? OPCOES_CPF : tipo === 'cnpj' ? OPCOES_CNPJ : [];
@@ -195,45 +182,13 @@ export default function ConsultaTecPage() {
               </button>
             ) : (
               <button
-                onClick={() => setPerfilAberto((v) => !v)}
+                onClick={() => router.push('/consultatec/dashboard')}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border"
                 style={{ borderColor: cor.borda, color: cor.tinta }}
               >
                 <Wallet className="w-4 h-4" />
                 {saldoCents === null ? '...' : formatBRL(saldoCents)}
               </button>
-            )}
-
-            {perfilAberto && userId && (
-              <div
-                className="absolute right-0 top-full mt-2 w-64 rounded-xl border shadow-lg p-4 z-50"
-                style={{ backgroundColor: cor.fundoCard, borderColor: cor.borda }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold">Seu saldo</span>
-                  <button onClick={() => setPerfilAberto(false)}>
-                    <X className="w-4 h-4" style={{ color: cor.tintaMuted }} />
-                  </button>
-                </div>
-                <p className="text-2xl font-bold mb-1">{saldoCents === null ? '...' : formatBRL(saldoCents)}</p>
-                <p className="text-xs mb-4" style={{ color: cor.tintaMuted }}>
-                  {consultasFeitas} {consultasFeitas === 1 ? 'consulta feita' : 'consultas feitas'}
-                </p>
-                <button
-                  onClick={() => { setPerfilAberto(false); setSaldoModalAberto(true); }}
-                  className="w-full py-2 rounded-lg text-sm font-semibold mb-2"
-                  style={{ backgroundColor: cor.destaque, color: cor.fundo }}
-                >
-                  Adicionar saldo
-                </button>
-                <button
-                  onClick={handleSair}
-                  className="w-full py-2 rounded-lg text-sm font-medium border"
-                  style={{ borderColor: cor.borda, color: cor.tinta }}
-                >
-                  Sair
-                </button>
-              </div>
             )}
           </div>
         </div>
@@ -303,6 +258,13 @@ export default function ConsultaTecPage() {
             )}
           </>
         )}
+        {saldoCents !== null && (
+          <p className="text-center text-xs mt-16" style={{ color: cor.tintaMuted }}>
+            Já tem saldo? <button onClick={() => router.push('/consultatec/dashboard')} className="underline font-medium" style={{ color: cor.destaque }}>Veja seu histórico e saldo</button>
+          </p>
+        )}
+
+        <Footer />
       </main>
 
       {/* ── Modais ── */}
@@ -332,14 +294,6 @@ export default function ConsultaTecPage() {
             <RestricoesCnpjModal data={{ companyId: modalCompanyId, cnpjPrefill: documentoLimpo }} onClose={handleFecharModal} />
           )}
         </>
-      )}
-
-      {saldoModalAberto && companyId && (
-        <AdicionarSaldoModal
-          companyId={companyId}
-          onClose={() => setSaldoModalAberto(false)}
-          onSuccess={(novoSaldo) => setSaldoCents(novoSaldo)}
-        />
       )}
     </div>
   );

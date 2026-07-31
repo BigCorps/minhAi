@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser';
 import { useTurnstile } from '@/hooks/useTurnstile';
+import Footer from '@/components/consultatec/Footer';
 
 const cor = {
   fundo: '#F2EAD3',
@@ -455,7 +456,7 @@ export default function ConsultaTecLoginPage() {
             </button>
           </div>
 
-          {/* Footer */}
+          {/* Footer com links legais */}
           <div className="mt-6 pt-5 border-t" style={{ borderColor: cor.borda }}>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
               <Link href="/consultatec/termos" className="hover:opacity-70 transition-colors" style={{ color: cor.tintaMuted }}>
@@ -466,19 +467,11 @@ export default function ConsultaTecLoginPage() {
                 Aviso de Privacidade
               </Link>
             </div>
-            <p className="mt-3 text-center text-xs" style={{ color: cor.tintaMuted }}>
-              Powered by{' '}
-              <a
-                href="https://minhai.app" target="_blank" rel="noopener noreferrer"
-                className="font-semibold hover:underline"
-                style={{ color: cor.destaque }}
-              >
-                minhAi.app
-              </a>
-            </p>
           </div>
 
         </div>
+
+        <Footer />
       </div>
     </div>
   );

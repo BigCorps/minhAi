@@ -824,7 +824,7 @@ const dayGroups: DayGroup[] = (() => {
                       </div>
                     </div>
                     <p className={`text-[11px] mt-2 ${p.textFaint}`}>
-                      Precisa trocar? Fale com o suporte no WhatsApp (11) 98731-1425.
+                      Precisa trocar? Suporte: (11) 98731-1425.
                     </p>
                   </div>
 

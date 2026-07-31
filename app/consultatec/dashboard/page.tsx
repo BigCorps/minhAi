@@ -21,7 +21,7 @@ const cor = {
   tinta: '#1C1A14',
   tintaMuted: '#6B6350',
   tintaFaint: '#8A8168',
-  destaque: '#2F4F3A',
+  destaque: '#7A6142',
   inputBg: '#EFE6CE',
 };
 

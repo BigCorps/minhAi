@@ -10,7 +10,7 @@ import { useState, useEffect, Suspense, useCallback } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { Wallet, LogOut } from 'lucide-react';
+import { Wallet, LogOut, Search } from 'lucide-react';
 import AdicionarSaldoModal from '@/components/consultatec/AdicionarSaldoModal';
 import Footer from '@/components/consultatec/Footer';
 
@@ -209,14 +209,24 @@ function ConsultaTecDashboardContent() {
               {userEmail && <p className="text-xs truncate" style={{ color: cor.tintaFaint }}>{userEmail}</p>}
             </div>
           </div>
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl border transition-opacity hover:opacity-70 flex-shrink-0"
-            style={{ borderColor: cor.borda, color: cor.tintaFaint }}
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Sair
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => router.push('/consultatec')}
+              className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-semibold transition-opacity hover:opacity-90"
+              style={{ backgroundColor: cor.destaque, color: cor.fundo }}
+            >
+              <Search className="w-3.5 h-3.5" />
+              Nova consulta
+            </button>
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl border transition-opacity hover:opacity-70"
+              style={{ borderColor: cor.borda, color: cor.tintaFaint }}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Sair
+            </button>
+          </div>
         </div>
 
         {bemVindo && (

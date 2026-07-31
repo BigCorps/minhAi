@@ -6,11 +6,10 @@
 // sem hooks de voz/Google) em components/consultatec/ — não são os modais
 // compartilhados da minhAi. Lógica de chamada ao backend é idêntica.
 //
-// Login: usuário PRECISA estar autenticado pra consultar — ferramentas-consultas
-// exige company_id, e company_id só existe pra quem tem conta (ensure_my_consultatec_company
-// levanta exceção se não autenticado). A tela em si é pública (qualquer um vê os
-// preços e digita o documento); o gate de login só dispara ao clicar numa opção,
-// igual ao padrão do Min.IA.
+// Login: OPCIONAL. Sem login, cada consulta gera um PIX avulso na "empresa"
+// compartilhada consultatec-avulso (consultas_payment_method='pix', então
+// NUNCA tenta descontar saldo — sempre pede PIX). Logado, usa a company
+// pessoal (ensure_my_consultatec_company) e pode pagar com saldo salvo.
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -64,6 +63,10 @@ const OPCOES_CNPJ: Opcao[] = [
 
 const formatBRL = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 
+// Empresa fixa e sem dono, criada via migration, com consultas_payment_method='pix'.
+// Usada só por quem não está logado — nunca tenta descontar saldo, sempre pede PIX.
+const GUEST_COMPANY_ID = process.env.NEXT_PUBLIC_CONSULTATEC_GUEST_COMPANY_ID!;
+
 export default function ConsultaTecPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -79,6 +82,7 @@ export default function ConsultaTecPage() {
   const [consultasFeitas, setConsultasFeitas] = useState<number>(0);
 
   const [modalAtivo, setModalAtivo] = useState<ModalAtivo>(null);
+  const [modalCompanyId, setModalCompanyId] = useState<string | null>(null);
   const [perfilAberto, setPerfilAberto] = useState(false);
   const [saldoModalAberto, setSaldoModalAberto] = useState(false);
   const [erroAcesso, setErroAcesso] = useState<string | null>(null);
@@ -140,20 +144,25 @@ export default function ConsultaTecPage() {
     setErroAcesso(null);
     if (!documentoOk) return;
 
-    if (!userId) {
-      router.push('/consultatec/login');
-      return;
+    if (userId) {
+      const cid = await garantirCompanyId();
+      if (!cid) return;
+      setModalCompanyId(cid);
+    } else {
+      setModalCompanyId(GUEST_COMPANY_ID);
     }
-
-    const cid = await garantirCompanyId();
-    if (!cid) return;
 
     setModalAtivo(opcao.modal);
   };
 
   const handleFecharModal = () => {
     setModalAtivo(null);
-    if (companyId) refreshSaldoEContagem(companyId);
+    // Só atualiza saldo/contagem se o modal fechado era da company pessoal —
+    // consulta avulsa (guest) não tem saldo pra atualizar.
+    if (companyId && modalCompanyId === companyId) {
+      refreshSaldoEContagem(companyId);
+    }
+    setModalCompanyId(null);
   };
 
   const handleSair = async () => {
@@ -264,52 +273,63 @@ export default function ConsultaTecPage() {
 
         {/* ── Cards de opção ── */}
         {documentoOk && (
-          <div className="w-full max-w-2xl mt-10 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {opcoes.map((opcao) => (
-              <button
-                key={opcao.acao}
-                onClick={() => handleAbrirOpcao(opcao)}
-                className="text-left p-5 rounded-xl border transition hover:shadow-md"
-                style={{ backgroundColor: cor.fundoCard, borderColor: cor.borda }}
-              >
-                <div className="flex items-baseline justify-between mb-1">
-                  <span className="font-serif font-bold text-lg">{opcao.titulo}</span>
-                  <span className="font-mono font-semibold" style={{ color: cor.destaque }}>
-                    {formatBRL(opcao.precoCents)}
-                  </span>
-                </div>
-                <p className="text-sm" style={{ color: cor.tintaMuted }}>{opcao.descricao}</p>
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="w-full max-w-2xl mt-10 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {opcoes.map((opcao) => (
+                <button
+                  key={opcao.acao}
+                  onClick={() => handleAbrirOpcao(opcao)}
+                  className="text-left p-5 rounded-xl border transition hover:shadow-md"
+                  style={{ backgroundColor: cor.fundoCard, borderColor: cor.borda }}
+                >
+                  <div className="flex items-baseline justify-between mb-1">
+                    <span className="font-serif font-bold text-lg">{opcao.titulo}</span>
+                    <span className="font-mono font-semibold" style={{ color: cor.destaque }}>
+                      {formatBRL(opcao.precoCents)}
+                    </span>
+                  </div>
+                  <p className="text-sm" style={{ color: cor.tintaMuted }}>{opcao.descricao}</p>
+                </button>
+              ))}
+            </div>
+
+            {!userId && (
+              <p className="text-center text-sm mt-6" style={{ color: cor.tintaMuted }}>
+                Pague na hora com PIX, sem cadastro. Quer guardar saldo pra próxima?{' '}
+                <button onClick={() => router.push('/consultatec/login')} className="underline font-medium" style={{ color: cor.destaque }}>
+                  Entrar
+                </button>
+              </p>
+            )}
+          </>
         )}
       </main>
 
       {/* ── Modais ── */}
-      {modalAtivo && companyId && tipo === 'cpf' && (
+      {modalAtivo && modalCompanyId && tipo === 'cpf' && (
         <>
           {modalAtivo === 'dados' && (
-            <ConsultarCpfModal data={{ companyId, cpfPrefill: documentoLimpo }} onClose={handleFecharModal} />
+            <ConsultarCpfModal data={{ companyId: modalCompanyId, cpfPrefill: documentoLimpo }} onClose={handleFecharModal} />
           )}
           {modalAtivo === 'restricoes' && (
-            <RestricoesCpfModal data={{ companyId, cpfPrefill: documentoLimpo }} onClose={handleFecharModal} />
+            <RestricoesCpfModal data={{ companyId: modalCompanyId, cpfPrefill: documentoLimpo }} onClose={handleFecharModal} />
           )}
           {modalAtivo === 'protestos' && (
-            <ConsultarProtestosModal data={{ companyId, cpfPrefill: documentoLimpo }} onClose={handleFecharModal} />
+            <ConsultarProtestosModal data={{ companyId: modalCompanyId, cpfPrefill: documentoLimpo }} onClose={handleFecharModal} />
           )}
           {modalAtivo === 'completa' && (
-            <CompletaCpfModal data={{ companyId, cpfPrefill: documentoLimpo }} onClose={handleFecharModal} />
+            <CompletaCpfModal data={{ companyId: modalCompanyId, cpfPrefill: documentoLimpo }} onClose={handleFecharModal} />
           )}
         </>
       )}
 
-      {modalAtivo && companyId && tipo === 'cnpj' && (
+      {modalAtivo && modalCompanyId && tipo === 'cnpj' && (
         <>
           {modalAtivo === 'dados' && (
-            <ConsultarCnpjModal data={{ companyId, cnpjPrefill: documentoLimpo }} onClose={handleFecharModal} />
+            <ConsultarCnpjModal data={{ companyId: modalCompanyId, cnpjPrefill: documentoLimpo }} onClose={handleFecharModal} />
           )}
           {modalAtivo === 'restricoes' && (
-            <RestricoesCnpjModal data={{ companyId, cnpjPrefill: documentoLimpo }} onClose={handleFecharModal} />
+            <RestricoesCnpjModal data={{ companyId: modalCompanyId, cnpjPrefill: documentoLimpo }} onClose={handleFecharModal} />
           )}
         </>
       )}

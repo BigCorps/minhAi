@@ -180,7 +180,7 @@ export default function PixValueForm({ company, initialAmount, onSubmit, loading
                 e.currentTarget.style.opacity = '0.8';
               }}
             >
-              Crie o seu no Pix.Wiki
+              Crie o seu Pix.Wiki | minhAi
             </a>
           </p>
 

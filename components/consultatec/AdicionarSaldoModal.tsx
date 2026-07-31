@@ -32,8 +32,8 @@ const cor = {
   borda: '#C9BFA0',
   tinta: '#1C1A14',
   tintaMuted: '#6B6350',
-  destaque: '#7A6142',
-  destaqueHover: '#5F4B30',
+  destaque: '#2F4F3A',
+  destaqueHover: '#25402E',
   erroBg: '#F4E4E0',
   erroTexto: '#7A2E2E',
 };
@@ -66,6 +66,7 @@ export default function AdicionarSaldoModal({ companyId, onClose, onSuccess }: A
           company_id: companyId,
           amount_cents: valorAtual,
           description: 'Adicionar saldo — ConsultaTec',
+          brand: 'consultatec',
           // purpose OMITIDO de propósito: default 'payment' → credita company_balance
         },
       });

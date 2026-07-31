@@ -9,7 +9,7 @@ const cor = {
 
 export default function Footer() {
   return (
-    <footer className="mt-8 text-center flex flex-col gap-1 text-xs" style={{ color: cor.tintaMuted }}>
+    <footer className="mt-8 pb-6 text-center flex flex-col gap-1 text-xs" style={{ color: cor.tintaMuted }}>
       <p>
         <a href="https://consulta.tec.br" className="transition-opacity hover:opacity-70" style={{ color: cor.tintaMuted }}>
           ConsultaTec

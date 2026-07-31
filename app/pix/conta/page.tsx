@@ -1,14 +1,14 @@
 'use client';
 
-// app/pix/conta/page.tsx — área da conta do Pix Wiki: saldo, extrato e
-// edição de dados (exceto chave PIX e slug, por segurança).
+// app/pix/dashboard/page.tsx — dashboard do Pix Wiki: foco em recebimentos,
+// configurações da conta em card expansível, card de brinde (assistente por voz).
 
 import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
-// ─── Paletas (mesmas do app/pix/page.tsx) ──────────────────────────────────
+// ─── Paletas ────────────────────────────────────────────────────────────────
 const D = {
   pageBg: 'bg-[#020617]', cardBg: 'bg-[#020617]', border: 'border-white/10',
   text: 'text-white', textMuted: 'text-white/60', textFaint: 'text-white/40',
@@ -16,6 +16,7 @@ const D = {
   divider: 'bg-white/8', toggleBg: 'bg-white/8 border-white/10 text-white/50 hover:bg-white/12',
   footerText: 'text-white/25', footerLink: 'text-white/40 hover:text-white/70',
   badgeBg: 'bg-white/5 border-white/6 text-white/40',
+  hoverBg: 'hover:bg-white/5',
 };
 const L = {
   pageBg: 'bg-white', cardBg: 'bg-white', border: 'border-black/8',
@@ -24,6 +25,7 @@ const L = {
   divider: 'bg-black/8', toggleBg: 'bg-black/8 border-black/10 text-black/50 hover:bg-black/12',
   footerText: 'text-black/30', footerLink: 'text-black/40 hover:text-black/70',
   badgeBg: 'bg-black/5 border-black/6 text-black/40',
+  hoverBg: 'hover:bg-black/5',
 };
 
 interface CompanyRow {
@@ -114,6 +116,17 @@ function ThemeToggle({ dark, onToggle }: { dark: boolean; onToggle: () => void }
   );
 }
 
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={`w-4 h-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+}
+
 function Footer({ dark }: { dark: boolean }) {
   const p = dark ? D : L;
   return (
@@ -130,10 +143,47 @@ function Footer({ dark }: { dark: boolean }) {
   );
 }
 
+// ─── Card do brinde: assistente por voz da minhAi ──────────────────────────
+function VoiceAssistantCard({ dark, slug }: { dark: boolean; slug: string }) {
+  const p = dark ? D : L;
+  const utmUrl = `https://minhai.app?utm_source=pixwiki&utm_medium=dashboard&utm_campaign=brinde-voz&ref=${slug}`;
+
+  return (
+    <div className={`rounded-2xl border p-5 ${p.cardBg} ${p.border}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <Image src="/logo-circle.png" alt="minhAi" width={28} height={28} className="rounded-lg" />
+        <span className={`text-[10px] uppercase tracking-widest font-bold ${p.textFaint}`}>
+          Seu brinde
+        </span>
+      </div>
+      <p className={`text-sm font-bold mb-1.5 ${p.text}`}>
+        Seu link já vem com um assistente que ouve
+      </p>
+      <p className={`text-xs mb-4 ${p.textMuted}`}>
+        A minhAi tem ativação por voz, tipo Alexa — e já sabe gerar o seu PIX
+        só de você pedir falando. Nenhuma configuração extra, já está ativo
+        na sua conta.
+      </p>
+      <a
+        href={utmUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-xs font-bold text-green-500 hover:text-green-400 transition-colors"
+      >
+        Conhecer todos os recursos da minhAi
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+        </svg>
+      </a>
+    </div>
+  );
+}
+
 function PixContaContent() {
   const supabase = createClient();
   const router = useRouter();
   const search = useSearchParams();
+  const bemVindo = search.get('bemvindo') === '1';
   const justLinked = search.get('linked') === 'google';
 
   const [dark, setDark] = useState(true);
@@ -143,19 +193,21 @@ function PixContaContent() {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [balance, setBalance] = useState<BalanceRow | null>(null);
   const [txns, setTxns] = useState<TxnRow[]>([]);
+  const [needsSignup, setNeedsSignup] = useState(false);
+  const [slugTakenError, setSlugTakenError] = useState(false);
 
+  const [identities, setIdentities] = useState<string[]>([]);
+  const [linkingGoogle, setLinkingGoogle] = useState(false);
+  const [unlinkingGoogle, setUnlinkingGoogle] = useState(false);
+  const [linkMsg, setLinkMsg] = useState('');
+
+  const [configOpen, setConfigOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     nome: '', logo: '', whatsapp: '', email: '', documento: '', documentoTipo: '',
   });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
-  const [needsSignup, setNeedsSignup] = useState(false);
-  const [slugTakenError, setSlugTakenError] = useState(false);
-  const [identities, setIdentities] = useState<string[]>([]);
-  const [linkingGoogle, setLinkingGoogle] = useState(false);
-  const [unlinkingGoogle, setUnlinkingGoogle] = useState(false);
-  const [linkMsg, setLinkMsg] = useState('');
-  
+
   useEffect(() => {
     const saved = localStorage.getItem('publicTheme') as 'dark' | 'light' | null;
     if (saved) { setDark(saved === 'dark'); return; }
@@ -173,10 +225,10 @@ function PixContaContent() {
   useEffect(() => {
     let cancelled = false;
 
-     const loadForUser = async (authUser: { id: string; identities?: { provider: string }[] | null }) => {
-       const uid = authUser.id;
-       setUserId(uid);
-       setIdentities((authUser.identities || []).map(i => i.provider));
+    const loadForUser = async (authUser: { id: string; identities?: { provider: string }[] | null }) => {
+      const uid = authUser.id;
+      setUserId(uid);
+      setIdentities((authUser.identities || []).map(i => i.provider));
 
       const { data: comp } = await supabase
         .from('companies')
@@ -286,49 +338,48 @@ function PixContaContent() {
     setSaveMsg('Salvo com sucesso.');
   };
 
-  const handleLinkGoogle = async () => {
-  setLinkingGoogle(true);
-  setLinkMsg('');
-  const { error } = await supabase.auth.linkIdentity({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/auth/callback?link=true&next=${encodeURIComponent('/pix/conta?linked=google')}`,
-    },
-  });
-  if (error) {
-    setLinkMsg(error.message || 'Erro ao vincular conta Google.');
-    setLinkingGoogle(false);
-  }
-  // sem erro: o redirect OAuth já está acontecendo, não precisa fazer nada aqui
-};
-
-const handleUnlinkGoogle = async () => {
-  if (!confirm('Desvincular sua conta Google? Você continuará acessando por e-mail e senha.')) return;
-
-  if (!identities.includes('email')) {
-    setLinkMsg('Não é possível desvincular: essa conta não tem senha cadastrada ainda.');
-    return;
-  }
-
-  setUnlinkingGoogle(true);
-  setLinkMsg('');
-  const { data: { user: authUser } } = await supabase.auth.getUser();
-  const googleIdentity = authUser?.identities?.find(i => i.provider === 'google');
-  if (!googleIdentity) {
-    setLinkMsg('Identidade Google não encontrada.');
-    setUnlinkingGoogle(false);
-    return;
-  }
-  const { error } = await supabase.auth.unlinkIdentity(googleIdentity);
-  setUnlinkingGoogle(false);
-  if (error) { setLinkMsg(error.message || 'Erro ao desvincular Google.'); return; }
-  setIdentities(prev => prev.filter(id => id !== 'google'));
-  setLinkMsg('Conta Google desvinculada com sucesso.');
-};
-
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.replace('/pix/login');
+  };
+
+  const handleLinkGoogle = async () => {
+    setLinkingGoogle(true);
+    setLinkMsg('');
+    const { error } = await supabase.auth.linkIdentity({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?link=true&next=${encodeURIComponent('/dashboard?linked=google')}`,
+      },
+    });
+    if (error) {
+      setLinkMsg(error.message || 'Erro ao vincular conta Google.');
+      setLinkingGoogle(false);
+    }
+  };
+
+  const handleUnlinkGoogle = async () => {
+    if (!confirm('Desvincular sua conta Google? Você continuará acessando por e-mail e senha.')) return;
+
+    if (!identities.includes('email')) {
+      setLinkMsg('Não é possível desvincular: essa conta não tem senha cadastrada ainda.');
+      return;
+    }
+
+    setUnlinkingGoogle(true);
+    setLinkMsg('');
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const googleIdentity = authUser?.identities?.find(i => i.provider === 'google');
+    if (!googleIdentity) {
+      setLinkMsg('Identidade Google não encontrada.');
+      setUnlinkingGoogle(false);
+      return;
+    }
+    const { error } = await supabase.auth.unlinkIdentity(googleIdentity);
+    setUnlinkingGoogle(false);
+    if (error) { setLinkMsg(error.message || 'Erro ao desvincular Google.'); return; }
+    setIdentities(prev => prev.filter(id => id !== 'google'));
+    setLinkMsg('Conta Google desvinculada com sucesso.');
   };
 
   const fmt = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
@@ -343,54 +394,50 @@ const handleUnlinkGoogle = async () => {
   }
 
   if (needsSignup) {
-  return (
-    <div className={`min-h-screen flex items-center justify-center px-4 ${p.pageBg}`}>
-      <div className={`max-w-sm w-full rounded-2xl border p-6 text-center ${p.cardBg} ${p.border}`}>
-        <p className={`text-lg font-bold mb-2 ${p.text}`}>Essa conta ainda não tem um link Pix Wiki</p>
-        <p className={`text-sm mb-5 ${p.textMuted}`}>
-          Você entrou com uma conta Google que ainda não criou um link de cobrança. Vamos criar agora?
-        </p>
-        <a
-          href="/pix"
-          className="inline-block w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all"
-        >
-          Criar meu link Pix agora
-        </a>
+    return (
+      <div className={`min-h-screen flex items-center justify-center px-4 ${p.pageBg}`}>
+        <div className={`max-w-sm w-full rounded-2xl border p-6 text-center ${p.cardBg} ${p.border}`}>
+          <p className={`text-lg font-bold mb-2 ${p.text}`}>Essa conta ainda não tem um link Pix Wiki</p>
+          <p className={`text-sm mb-5 ${p.textMuted}`}>
+            Você entrou com uma conta Google que ainda não criou um link de cobrança. Vamos criar agora?
+          </p>
+          <a
+            href="/pix"
+            className="inline-block w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all"
+          >
+            Criar meu link Pix agora
+          </a>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-if (slugTakenError) {
-  return (
-    <div className={`min-h-screen flex items-center justify-center px-4 ${p.pageBg}`}>
-      <div className={`max-w-sm w-full rounded-2xl border p-6 text-center ${p.cardBg} ${p.border}`}>
-        <p className={`text-lg font-bold mb-2 ${p.text}`}>O link escolhido acabou de ser ocupado</p>
-        <p className={`text-sm mb-5 ${p.textMuted}`}>
-          Alguém pegou esse link enquanto você fazia login. Escolhe outro pra continuar.
-        </p>
-        <a
-          href="/pix"
-          className="inline-block w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all"
-        >
-          Tentar outro link
-        </a>
+  if (slugTakenError) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center px-4 ${p.pageBg}`}>
+        <div className={`max-w-sm w-full rounded-2xl border p-6 text-center ${p.cardBg} ${p.border}`}>
+          <p className={`text-lg font-bold mb-2 ${p.text}`}>O link escolhido acabou de ser ocupado</p>
+          <p className={`text-sm mb-5 ${p.textMuted}`}>
+            Alguém pegou esse link enquanto você fazia login. Escolhe outro pra continuar.
+          </p>
+          <a
+            href="/pix"
+            className="inline-block w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all"
+          >
+            Tentar outro link
+          </a>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   return (
     <div className={`min-h-screen px-4 py-8 ${p.pageBg}`}>
-      <div className="w-full max-w-2xl mx-auto">
+      <div className="w-full max-w-2xl lg:max-w-5xl mx-auto">
 
-        {/* Header */}
+        {/* Header — só logo Pix Wiki (minhAi fica exclusiva do card do brinde) */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Image src="/brands/pix/pixwiki.png" alt="Pix Wiki" width={90} height={36} className="object-contain h-8 w-auto" />
-            <span className="text-gray-300 text-lg font-light select-none">|</span>
-            <Image src="/logo-circle.png" alt="minhAi" width={30} height={30} className="rounded-lg" />
-          </div>
+          <Image src="/brands/pix/pixwiki.png" alt="Pix Wiki" width={100} height={40} className="object-contain h-8 w-auto" />
           <div className="flex items-center gap-2">
             <ThemeToggle dark={dark} onToggle={toggleDark} />
             <button
@@ -402,190 +449,218 @@ if (slugTakenError) {
           </div>
         </div>
 
-       {justLinked && (
-         <div className="mb-4 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm text-center">
-           Conta Google vinculada com sucesso!
-         </div>
-       )}
+        {bemVindo && (
+          <div className="mb-4 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm text-center">
+            Sua conta foi criada! Seu link já está ativo: pix.wiki/{company?.slug}
+          </div>
+        )}
+        {justLinked && (
+          <div className="mb-4 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm text-center">
+            Conta Google vinculada com sucesso!
+          </div>
+        )}
 
         <h1 className={`text-lg font-bold mb-1 ${p.text}`}>{company?.name}</h1>
         <a href={`/pix/${company?.slug}`} className="text-xs text-green-500 hover:underline mb-6 inline-block">
           pix.wiki/{company?.slug} ↗
         </a>
 
-        {/* Saldo */}
-        <div className={`rounded-2xl border p-5 mb-4 ${p.cardBg} ${p.border}`}>
-          <p className={`text-[10px] uppercase tracking-widest mb-1 ${p.textFaint}`}>Saldo disponível</p>
-          <p className={`text-3xl font-bold ${p.text}`}>{fmt(balance?.available_balance_cents ?? 0)}</p>
-          <p className={`text-xs mt-1 ${p.textMuted}`}>
-            Total recebido: {fmt(balance?.total_received_cents ?? 0)}
-          </p>
-        </div>
+        {/* Layout: 1 coluna no mobile, 2 colunas no desktop (recebimentos + lateral) */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 items-start">
 
-        {/* Dados fixos (não editáveis) */}
-        <div className={`rounded-2xl border p-5 mb-4 ${p.cardBg} ${p.border}`}>
-          <p className={`text-[10px] uppercase tracking-widest mb-3 ${p.textFaint}`}>Dados de recebimento</p>
-          <div className="flex flex-col gap-3">
-            <div>
-              <p className={`text-xs ${p.textFaint}`}>Seu link (não pode ser alterado)</p>
-              <p className={`text-sm ${p.text}`}>pix.wiki/{company?.slug}</p>
-            </div>
-            <div>
-              <p className={`text-xs ${p.textFaint}`}>Chave PIX de recebimento (não pode ser alterada por segurança)</p>
-              <p className={`text-sm ${p.text}`}>
-                {profile?.withdrawal_pix_key || '—'}
-                {profile?.withdrawal_pix_key_type && (
-                  <span className={`ml-2 text-[10px] px-2 py-0.5 rounded-full border capitalize ${p.badgeBg}`}>
-                    {profile.withdrawal_pix_key_type}
-                  </span>
-                )}
+          {/* ── Coluna principal: recebimentos (o foco) ── */}
+          <div className="flex flex-col gap-4 min-w-0">
+
+            <div className={`rounded-2xl border p-5 ${p.cardBg} ${p.border}`}>
+              <p className={`text-[10px] uppercase tracking-widest mb-1 ${p.textFaint}`}>Saldo disponível</p>
+              <p className={`text-3xl font-bold ${p.text}`}>{fmt(balance?.available_balance_cents ?? 0)}</p>
+              <p className={`text-xs mt-1 ${p.textMuted}`}>
+                Total recebido: {fmt(balance?.total_received_cents ?? 0)}
               </p>
             </div>
+
+            <div className={`rounded-2xl border p-5 ${p.cardBg} ${p.border}`}>
+              <p className={`text-[10px] uppercase tracking-widest mb-3 ${p.textFaint}`}>Últimos recebimentos</p>
+              {txns.length === 0 ? (
+                <p className={`text-sm ${p.textMuted}`}>Nenhum recebimento ainda.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className={`text-left border-b ${p.border}`}>
+                      <th className={`pb-2 font-normal text-[10px] uppercase tracking-widest ${p.textFaint}`}>Data</th>
+                      <th className={`pb-2 font-normal text-[10px] uppercase tracking-widest ${p.textFaint}`}>Descrição</th>
+                      <th className={`pb-2 font-normal text-[10px] uppercase tracking-widest text-right ${p.textFaint}`}>Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {txns.map(t => (
+                      <tr key={t.id} className={`border-b last:border-0 ${p.border}`}>
+                        <td className={`py-2.5 text-xs whitespace-nowrap ${p.textFaint}`}>
+                          {new Date(t.created_at).toLocaleDateString('pt-BR')}
+                        </td>
+                        <td className={`py-2.5 ${p.text}`}>{t.description || 'Recebimento PIX'}</td>
+                        <td className="py-2.5 text-right font-semibold text-green-500 whitespace-nowrap">{fmt(t.amount_cents)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
-          <p className={`text-[11px] mt-3 ${p.textFaint}`}>
-            Precisa trocar o link ou a chave PIX? Fale com o suporte pelo WhatsApp (11) 98731-1425.
-          </p>
-        </div>
 
-{/* Login e segurança */}
-<div className={`rounded-2xl border p-5 mb-4 ${p.cardBg} ${p.border}`}>
-  <p className={`text-[10px] uppercase tracking-widest mb-3 ${p.textFaint}`}>Login e segurança</p>
-  <div className="flex items-center justify-between gap-3 flex-wrap">
-    <div>
-      <p className={`text-sm ${p.text}`}>
-        {identities.includes('google') ? 'Conta Google conectada' : 'Conecte sua conta Google'}
-      </p>
-      <p className={`text-xs ${p.textFaint}`}>
-        {identities.includes('google')
-          ? 'Você pode entrar com Google ou com e-mail e senha.'
-          : 'Entre mais rápido da próxima vez, sem digitar senha.'}
-      </p>
-    </div>
-    {identities.includes('google') ? (
-      identities.includes('email') && (
-        <button
-          onClick={handleUnlinkGoogle}
-          disabled={unlinkingGoogle}
-          className={`text-xs px-3 py-2 rounded-xl border transition-colors ${p.border} text-red-500 hover:bg-red-500/10 disabled:opacity-50`}
-        >
-          {unlinkingGoogle ? 'Desvinculando…' : 'Desvincular Google'}
-        </button>
-      )
-    ) : (
-      <button
-        onClick={handleLinkGoogle}
-        disabled={linkingGoogle}
-        className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl border transition-colors ${p.border} ${p.text} hover:bg-white/5 disabled:opacity-50`}
-      >
-        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-        </svg>
-        {linkingGoogle ? 'Redirecionando…' : 'Vincular Google'}
-      </button>
-    )}
-  </div>
-  {linkMsg && (
-    <p className={`text-xs mt-3 ${linkMsg.includes('sucesso') ? 'text-green-500' : 'text-red-500'}`}>{linkMsg}</p>
-  )}
-</div>
+          {/* ── Coluna lateral: brinde + configurações ── */}
+          <div className="flex flex-col gap-4 min-w-0">
 
-        {/* Dados editáveis */}
-        <div className={`rounded-2xl border p-5 mb-4 ${p.cardBg} ${p.border}`}>
-          <p className={`text-[10px] uppercase tracking-widest mb-3 ${p.textFaint}`}>Editar informações</p>
-          <div className="flex flex-col gap-3">
-            <div>
-              <label className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>Nome da empresa</label>
-              <input
-                value={editForm.nome}
-                onChange={e => setEditForm(f => ({ ...f, nome: e.target.value }))}
-                className={`w-full mt-1 px-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText}`}
-              />
-            </div>
-            <div>
-              <label className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>WhatsApp</label>
-              <input
-                value={editForm.whatsapp}
-                onChange={e => setEditForm(f => ({ ...f, whatsapp: e.target.value }))}
-                placeholder="(11) 99999-9999"
-                className={`w-full mt-1 px-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText} ${p.inputPh}`}
-              />
-            </div>
-            <div>
-              <label className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>E-mail de contato</label>
-              <input
-                value={editForm.email}
-                onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="contato@suaempresa.com"
-                type="email"
-                className={`w-full mt-1 px-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText} ${p.inputPh}`}
-              />
-            </div>
-            <div>
-              <label className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>URL do logo</label>
-              <input
-                value={editForm.logo}
-                onChange={e => setEditForm(f => ({ ...f, logo: e.target.value }))}
-                placeholder="https://suaempresa.com/logo.png"
-                type="url"
-                className={`w-full mt-1 px-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText} ${p.inputPh}`}
-              />
-            </div>
-            <div>
-              <label className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>CNPJ ou CPF</label>
-              <input
-                value={editForm.documento}
-                onChange={e => {
-                  const v = e.target.value;
-                  setEditForm(f => ({ ...f, documento: v, documentoTipo: detectDocumentoTipo(v) }));
-                }}
-                placeholder="00.000.000/0000-00 ou 000.000.000-00"
-                className={`w-full mt-1 px-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText} ${p.inputPh}`}
-              />
-            </div>
+            <VoiceAssistantCard dark={dark} slug={company?.slug || ''} />
 
-            {saveMsg && (
-              <p className={`text-xs ${saveMsg.startsWith('Erro') ? 'text-red-500' : 'text-green-500'}`}>{saveMsg}</p>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all active:scale-95 disabled:opacity-50"
-            >
-              {saving ? 'Salvando…' : 'Salvar alterações'}
-            </button>
+            {/* Configurações — card único, colapsado por padrão */}
+            <div className={`rounded-2xl border overflow-hidden ${p.cardBg} ${p.border}`}>
+              <button
+                onClick={() => setConfigOpen(v => !v)}
+                className={`w-full flex items-center justify-between p-5 transition-colors ${p.hoverBg}`}
+              >
+                <span className={`text-sm font-bold ${p.text}`}>Configurações da conta</span>
+                <ChevronIcon open={configOpen} />
+              </button>
+
+              {configOpen && (
+                <div className={`px-5 pb-5 border-t ${p.border} flex flex-col gap-5 pt-4`}>
+
+                  {/* Dados fixos */}
+                  <div>
+                    <p className={`text-[10px] uppercase tracking-widest mb-2 ${p.textFaint}`}>Dados de recebimento</p>
+                    <div className="flex flex-col gap-2.5">
+                      <div>
+                        <p className={`text-[11px] ${p.textFaint}`}>Seu link (fixo)</p>
+                        <p className={`text-sm ${p.text}`}>pix.wiki/{company?.slug}</p>
+                      </div>
+                      <div>
+                        <p className={`text-[11px] ${p.textFaint}`}>Chave PIX (fixa por segurança)</p>
+                        <p className={`text-sm ${p.text}`}>
+                          {profile?.withdrawal_pix_key || '—'}
+                          {profile?.withdrawal_pix_key_type && (
+                            <span className={`ml-2 text-[10px] px-2 py-0.5 rounded-full border capitalize ${p.badgeBg}`}>
+                              {profile.withdrawal_pix_key_type}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <p className={`text-[11px] mt-2 ${p.textFaint}`}>
+                      Precisa trocar? Fale com o suporte no WhatsApp (11) 98731-1425.
+                    </p>
+                  </div>
+
+                  {/* Login e segurança */}
+                  <div>
+                    <p className={`text-[10px] uppercase tracking-widest mb-2 ${p.textFaint}`}>Login e segurança</p>
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <p className={`text-sm ${p.text}`}>
+                          {identities.includes('google') ? 'Conta Google conectada' : 'Conecte sua conta Google'}
+                        </p>
+                        <p className={`text-[11px] ${p.textFaint}`}>
+                          {identities.includes('google')
+                            ? 'Você pode entrar com Google ou e-mail e senha.'
+                            : 'Entre mais rápido, sem digitar senha.'}
+                        </p>
+                      </div>
+                      {identities.includes('google') ? (
+                        identities.includes('email') && (
+                          <button
+                            onClick={handleUnlinkGoogle}
+                            disabled={unlinkingGoogle}
+                            className={`text-xs px-3 py-2 rounded-xl border transition-colors ${p.border} text-red-500 hover:bg-red-500/10 disabled:opacity-50`}
+                          >
+                            {unlinkingGoogle ? 'Desvinculando…' : 'Desvincular'}
+                          </button>
+                        )
+                      ) : (
+                        <button
+                          onClick={handleLinkGoogle}
+                          disabled={linkingGoogle}
+                          className={`text-xs px-3 py-2 rounded-xl border transition-colors ${p.border} ${p.text} hover:bg-white/5 disabled:opacity-50`}
+                        >
+                          {linkingGoogle ? 'Redirecionando…' : 'Vincular Google'}
+                        </button>
+                      )}
+                    </div>
+                    {linkMsg && (
+                      <p className={`text-xs mt-2 ${linkMsg.includes('sucesso') ? 'text-green-500' : 'text-red-500'}`}>{linkMsg}</p>
+                    )}
+                  </div>
+
+                  {/* Editar informações */}
+                  <div>
+                    <p className={`text-[10px] uppercase tracking-widest mb-2 ${p.textFaint}`}>Editar informações</p>
+                    <div className="flex flex-col gap-2.5">
+                      <div>
+                        <label className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>Nome da empresa</label>
+                        <input
+                          value={editForm.nome}
+                          onChange={e => setEditForm(f => ({ ...f, nome: e.target.value }))}
+                          className={`w-full mt-1 px-3 py-2 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText}`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>WhatsApp</label>
+                        <input
+                          value={editForm.whatsapp}
+                          onChange={e => setEditForm(f => ({ ...f, whatsapp: e.target.value }))}
+                          placeholder="(11) 99999-9999"
+                          className={`w-full mt-1 px-3 py-2 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText} ${p.inputPh}`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>E-mail de contato</label>
+                        <input
+                          value={editForm.email}
+                          onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                          placeholder="contato@suaempresa.com"
+                          type="email"
+                          className={`w-full mt-1 px-3 py-2 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText} ${p.inputPh}`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>URL do logo</label>
+                        <input
+                          value={editForm.logo}
+                          onChange={e => setEditForm(f => ({ ...f, logo: e.target.value }))}
+                          placeholder="https://suaempresa.com/logo.png"
+                          type="url"
+                          className={`w-full mt-1 px-3 py-2 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText} ${p.inputPh}`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>CNPJ ou CPF</label>
+                        <input
+                          value={editForm.documento}
+                          onChange={e => {
+                            const v = e.target.value;
+                            setEditForm(f => ({ ...f, documento: v, documentoTipo: detectDocumentoTipo(v) }));
+                          }}
+                          placeholder="00.000.000/0000-00 ou 000.000.000-00"
+                          className={`w-full mt-1 px-3 py-2 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText} ${p.inputPh}`}
+                        />
+                      </div>
+
+                      {saveMsg && (
+                        <p className={`text-xs ${saveMsg.startsWith('Erro') ? 'text-red-500' : 'text-green-500'}`}>{saveMsg}</p>
+                      )}
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        {saving ? 'Salvando…' : 'Salvar alterações'}
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-
-        {/* Extrato */}
-        <div className={`rounded-2xl border p-5 ${p.cardBg} ${p.border}`}>
-          <p className={`text-[10px] uppercase tracking-widest mb-3 ${p.textFaint}`}>Últimos recebimentos</p>
-          {txns.length === 0 ? (
-            <p className={`text-sm ${p.textMuted}`}>Nenhum recebimento ainda.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className={`text-left border-b ${p.border}`}>
-                  <th className={`pb-2 font-normal text-[10px] uppercase tracking-widest ${p.textFaint}`}>Data</th>
-                  <th className={`pb-2 font-normal text-[10px] uppercase tracking-widest ${p.textFaint}`}>Descrição</th>
-                  <th className={`pb-2 font-normal text-[10px] uppercase tracking-widest text-right ${p.textFaint}`}>Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {txns.map(t => (
-                  <tr key={t.id} className={`border-b last:border-0 ${p.border}`}>
-                    <td className={`py-2.5 text-xs ${p.textFaint}`}>
-                      {new Date(t.created_at).toLocaleDateString('pt-BR')}
-                    </td>
-                    <td className={`py-2.5 ${p.text}`}>{t.description || 'Recebimento PIX'}</td>
-                    <td className="py-2.5 text-right font-semibold text-green-500">{fmt(t.amount_cents)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
         </div>
 
         <Footer dark={dark} />

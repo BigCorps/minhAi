@@ -39,7 +39,7 @@ export default function PixLoginPage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) router.replace('/pix/conta');
+      if (data.user) router.replace('/pix/dashboard');
     });
   }, [supabase, router]);
 
@@ -47,8 +47,8 @@ export default function PixLoginPage() {
 
   const handleGoogleLogin = async () => {
     await supabase.auth.signInWithOAuth({
-      provider: 'google',
-     options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/conta')}` },
+     provider: 'google',
+     options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/dashboard')}` },
     });
   };
 

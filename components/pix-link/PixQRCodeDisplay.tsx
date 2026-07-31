@@ -59,7 +59,7 @@ export default function PixQRCodeDisplay({
     return `${m}:${(s % 60).toString().padStart(2, '0')}`;
   }
 
-  const bg = isDark ? '#020617' : '#f1f5f9';
+  const bg = isDark ? '#020617' : '#ffffff';
   const cardBg = isDark ? '#0f172a' : '#ffffff';
   const cardBorder = isDark ? '#334155' : '#e2e8f0';
   const innerBg = isDark ? '#1e293b' : '#f8fafc';

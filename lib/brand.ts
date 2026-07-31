@@ -1,4 +1,4 @@
-export type BrandKey = 'minhai' | 'artefinal' | 'pix' | 'minia';
+export type BrandKey = 'minhai' | 'artefinal' | 'pix' | 'minia' | 'consultatec';
 
 export function getBrandByHost(hostname: string): BrandKey {
   const cleanHost = hostname.split(':')[0].toLowerCase();
@@ -9,6 +9,10 @@ export function getBrandByHost(hostname: string): BrandKey {
 
   if (cleanHost === 'pix.wiki' || cleanHost === 'www.pix.wiki') {
     return 'pix';
+  }
+
+  if (cleanHost === 'consulta.tec.br' || cleanHost === 'www.consulta.tec.br') {
+    return 'consultatec';
   }
 
   if (
@@ -49,6 +53,13 @@ export const BRANDS: Record<BrandKey, BrandInfo> = {
     logo: '/brands/pix/pixwiki.png',
     title: 'Pix.Wiki',
     description: 'Link e QR Code Pix com confirmação automática.',
+  },
+
+  consultatec: {
+    name: 'ConsultaTec',
+    logo: '/brands/consultatec/logo.png',
+    title: 'ConsultaTec',
+    description: 'Consulta de CPF e CNPJ, sem burocracia.',
   },
 
   minia: {

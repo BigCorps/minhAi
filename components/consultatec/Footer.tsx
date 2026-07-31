@@ -4,7 +4,7 @@
 
 const cor = {
   tintaMuted: '#6B6350',
-  destaque: '#2F4F3A',
+  destaque: '#7A6142',
 };
 
 export default function Footer() {

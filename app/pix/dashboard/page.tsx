@@ -38,7 +38,10 @@ interface ProfileRow {
   documento: string | null; documento_tipo: string | null;
 }
 interface BalanceRow { available_balance_cents: number; total_received_cents: number; }
-interface TxnRow { id: string; amount_cents: number; transaction_type: string; description: string | null; created_at: string; }
+interface TxnRow {
+  id: string; amount_cents: number; status: string;
+  requested_at: string; confirmed_at: string | null; notes: string | null;
+}
 
 interface PendingSignup {
   slug: string; nome: string; pix: string; pixTipo: string | null;
@@ -206,6 +209,7 @@ function PixContaContent() {
 
   // ── Recebimentos / saque ──────────────────────────────────────────────────
   const [receiptsTab, setReceiptsTab] = useState<'historico' | 'saque'>('historico');
+  const [statusFilter, setStatusFilter] = useState<'confirmed' | 'cancelled' | 'all'>('confirmed');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawMsg, setWithdrawMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -276,11 +280,11 @@ function PixContaContent() {
         supabase.from('company_balance')
           .select('available_balance_cents, total_received_cents')
           .eq('company_id', activeCompany.id).maybeSingle(),
-        supabase.from('balance_transactions')
-          .select('id, amount_cents, transaction_type, description, created_at')
-          .eq('company_id', activeCompany.id)
-          .order('created_at', { ascending: false })
-          .limit(50),
+       supabase.from('pix_transactions')
+         .select('id, amount_cents, status, requested_at, confirmed_at, notes')
+         .eq('company_id', activeCompany.id)
+         .order('requested_at', { ascending: false })
+         .limit(200),
         supabase.from('user_profiles')
           .select('withdrawal_pix_key, withdrawal_pix_key_type, documento, documento_tipo')
           .eq('user_id', uid).maybeSingle(),
@@ -358,6 +362,55 @@ function PixContaContent() {
 
   const withdrawFee = withdrawAmount ? parseFloat(withdrawAmount) * 0.01 : 0;
   const withdrawNet = withdrawAmount ? parseFloat(withdrawAmount) - withdrawFee : 0;
+
+// ── Recebimentos: filtro por status + agrupamento por dia ────────────────
+const CONFIRMED_STATUSES = ['confirmed', 'transferred'];
+const CANCELLED_STATUSES = ['cancelled', 'expired'];
+
+const filteredTxns = txns.filter(t => {
+  if (statusFilter === 'confirmed') return CONFIRMED_STATUSES.includes(t.status);
+  if (statusFilter === 'cancelled') return CANCELLED_STATUSES.includes(t.status);
+  return true;
+});
+
+const statusCounts = {
+  confirmed: txns.filter(t => CONFIRMED_STATUSES.includes(t.status)).length,
+  cancelled: txns.filter(t => CANCELLED_STATUSES.includes(t.status)).length,
+  all: txns.length,
+};
+
+const statusLabel = (s: string) =>
+  CONFIRMED_STATUSES.includes(s) ? 'Confirmado' :
+  CANCELLED_STATUSES.includes(s) ? (s === 'expired' ? 'Expirado' : 'Cancelado') :
+  'Pendente';
+
+const statusColor = (s: string) =>
+  CONFIRMED_STATUSES.includes(s) ? 'text-green-500' :
+  CANCELLED_STATUSES.includes(s) ? 'text-red-500' :
+  'text-amber-500';
+
+interface DayGroup { key: string; label: string; total: number; items: TxnRow[]; }
+
+const dayGroups: DayGroup[] = (() => {
+  const groups: DayGroup[] = [];
+  const byKey = new Map<string, DayGroup>();
+
+  for (const t of filteredTxns) {
+    const d = new Date(t.confirmed_at || t.requested_at);
+    const key = d.toDateString();
+    let group = byKey.get(key);
+    if (!group) {
+      const label = d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+        .toUpperCase().replace(/\.?,/, ',');
+      group = { key, label, total: 0, items: [] };
+      byKey.set(key, group);
+      groups.push(group);
+    }
+    group.items.push(t);
+    if (CONFIRMED_STATUSES.includes(t.status)) group.total += t.amount_cents;
+  }
+  return groups;
+})();
 
   // ── Link de cobrança compartilhável ───────────────────────────────────────
   const simpleLink = `pix.wiki/${company?.slug}`;
@@ -626,27 +679,62 @@ function PixContaContent() {
               {receiptsTab === 'historico' && (txns.length === 0 ? (
                 <p className={`text-sm ${p.textMuted}`}>Nenhum recebimento ainda.</p>
               ) : (
-                <div className="overflow-x-auto -mx-1">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className={`text-left border-b ${p.border}`}>
-                        <th className={`pb-2 px-1 font-normal text-[10px] uppercase tracking-widest ${p.textFaint}`}>Data</th>
-                        <th className={`pb-2 px-1 font-normal text-[10px] uppercase tracking-widest ${p.textFaint}`}>Descrição</th>
-                        <th className={`pb-2 px-1 font-normal text-[10px] uppercase tracking-widest text-right ${p.textFaint}`}>Valor</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {txns.map(t => (
-                        <tr key={t.id} className={`border-b last:border-0 ${p.border}`}>
-                          <td className={`py-2.5 px-1 text-xs whitespace-nowrap ${p.textFaint}`}>
-                            {new Date(t.created_at).toLocaleDateString('pt-BR')}
-                          </td>
-                          <td className={`py-2.5 px-1 ${p.text}`}>{t.description || 'Recebimento PIX'}</td>
-                          <td className="py-2.5 px-1 text-right font-semibold text-green-500 whitespace-nowrap">{fmt(t.amount_cents)}</td>
-                        </tr>
+                <div>
+                  {/* Filtro de status */}
+                  <div className="flex items-center gap-2 mb-4 flex-wrap">
+                    {([
+                      ['confirmed', `Confirmados (${statusCounts.confirmed})`],
+                      ['cancelled', `Cancelados (${statusCounts.cancelled})`],
+                      ['all', `Todos (${statusCounts.all})`],
+                    ] as const).map(([key, label]) => (
+                      <button
+                        key={key}
+                        onClick={() => setStatusFilter(key)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
+                          statusFilter === key
+                            ? 'bg-green-500/15 border-green-500/40 text-green-500'
+                            : `${p.border} ${p.textFaint} hover:${p.text}`
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {filteredTxns.length === 0 ? (
+                    <p className={`text-sm ${p.textMuted}`}>Nenhum recebimento nesse filtro.</p>
+                  ) : (
+                    <div className="flex flex-col gap-5">
+                      {dayGroups.map(group => (
+                        <div key={group.key}>
+                          <div className={`flex items-center justify-between gap-2 pb-1.5 mb-2 border-b ${p.border}`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>{group.label}</span>
+                            <span className={`text-[11px] font-semibold ${p.textMuted}`}>
+                              Recebido: <span className="text-green-500">{fmt(group.total)}</span>
+                            </span>
+                          </div>
+                          <div className="flex flex-col">
+                            {group.items.map(t => (
+                              <div key={t.id} className={`flex items-center justify-between gap-2 py-2 border-b last:border-0 ${p.border}`}>
+                                <div className="min-w-0">
+                                  <p className={`text-xs whitespace-nowrap ${p.textFaint}`}>
+                                    {new Date(t.requested_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                  {t.notes && <p className={`text-xs truncate ${p.text}`}>{t.notes}</p>}
+                                </div>
+                                <div className="flex items-center gap-3 flex-shrink-0">
+                                  <span className={`text-[10px] font-bold uppercase ${statusColor(t.status)}`}>
+                                    {statusLabel(t.status)}
+                                  </span>
+                                  <span className={`text-sm font-semibold whitespace-nowrap ${p.text}`}>{fmt(t.amount_cents)}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
+                    </div>
+                  )}
                 </div>
               ))}
 

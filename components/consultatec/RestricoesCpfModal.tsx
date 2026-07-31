@@ -25,7 +25,7 @@ const cor = {
   borda: '#C9BFA0',
   tinta: '#1C1A14',
   tintaMuted: '#6B6350',
-  destaque: '#7A6142',
+  destaque: '#2F4F3A',
   faixaAlt: '#F2EAD3',
   erroBg: '#F4E4E0',
   erroTexto: '#7A2E2E',
@@ -66,7 +66,7 @@ export default function RestricoesCpfModal({ data, onClose }: Props) {
         setStep('input');
 
         const pixRes = await supabase.functions.invoke('gerar-pix-assistente', {
-          body: { company_id: companyId, amount_cents: res.amount_cents, purpose: 'consulta_fee', description: `Restrições CPF - R$ ${res.amount_brl}` },
+          body: { company_id: companyId, amount_cents: res.amount_cents, purpose: 'consulta_fee', description: `Restrições CPF - R$ ${res.amount_brl}`, brand: 'consultatec' },
         });
         if (pixRes.error) throw new Error(pixRes.error.message);
 

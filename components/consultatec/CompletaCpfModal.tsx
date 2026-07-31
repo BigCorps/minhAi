@@ -35,7 +35,7 @@ const cor = {
   borda: '#C9BFA0',
   tinta: '#1C1A14',
   tintaMuted: '#6B6350',
-  destaque: '#2F4F3A',
+  destaque: '#7A6142',
   faixaAlt: '#F2EAD3',
   erroBg: '#F4E4E0',
   erroTexto: '#7A2E2E',

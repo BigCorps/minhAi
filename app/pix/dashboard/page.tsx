@@ -1,7 +1,8 @@
 'use client';
 
 // app/pix/dashboard/page.tsx — dashboard do Pix Wiki: foco em recebimentos,
-// configurações da conta em card expansível, card de brinde (assistente por voz).
+// link de cobrança compartilhável, saque, e configurações da conta em card
+// expansível. Card de "Seu Assistente" (brinde minhAi) na lateral/desktop.
 
 import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
@@ -143,7 +144,7 @@ function Footer({ dark }: { dark: boolean }) {
   );
 }
 
-// ─── Card do brinde: assistente por voz da minhAi ──────────────────────────
+// ─── Card do assistente por voz (brinde minhAi) ────────────────────────────
 function VoiceAssistantCard({ dark, slug }: { dark: boolean; slug: string }) {
   const p = dark ? D : L;
   const utmUrl = `https://minhai.app?utm_source=pixwiki&utm_medium=dashboard&utm_campaign=brinde-voz&ref=${slug}`;
@@ -186,6 +187,7 @@ function PixContaContent() {
   const bemVindo = search.get('bemvindo') === '1';
   const justLinked = search.get('linked') === 'google';
 
+  // ── Estado geral / conta ──────────────────────────────────────────────────
   const [dark, setDark] = useState(true);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -196,26 +198,25 @@ function PixContaContent() {
   const [needsSignup, setNeedsSignup] = useState(false);
   const [slugTakenError, setSlugTakenError] = useState(false);
 
+  // ── Login e segurança ─────────────────────────────────────────────────────
   const [identities, setIdentities] = useState<string[]>([]);
   const [linkingGoogle, setLinkingGoogle] = useState(false);
   const [unlinkingGoogle, setUnlinkingGoogle] = useState(false);
   const [linkMsg, setLinkMsg] = useState('');
 
-  const [configOpen, setConfigOpen] = useState(false);
-  const [receiptsTab, setReceiptsTab] = useState<'historico' | 'saque'>('historico');
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
-  const [withdrawMsg, setWithdrawMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  
+  // ── Recebimentos / saque ──────────────────────────────────────────────────
   const [receiptsTab, setReceiptsTab] = useState<'historico' | 'saque'>('historico');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawMsg, setWithdrawMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // ── Link de cobrança compartilhável ───────────────────────────────────────
   const [shareValue, setShareValue] = useState('');
   const [copiedSimple, setCopiedSimple] = useState(false);
   const [copiedWithValue, setCopiedWithValue] = useState(false);
-  
+
+  // ── Configurações da conta ────────────────────────────────────────────────
+  const [configOpen, setConfigOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     nome: '', logo: '', whatsapp: '', email: '', documento: '', documentoTipo: '',
   });
@@ -324,89 +325,59 @@ function PixContaContent() {
     };
   }, [supabase, router]);
 
+  // ── Saque ──────────────────────────────────────────────────────────────────
   async function handleWithdraw() {
-  setWithdrawMsg(null);
-  const pixKey = profile?.withdrawal_pix_key;
+    setWithdrawMsg(null);
+    const pixKey = profile?.withdrawal_pix_key;
 
-  if (!pixKey) { setWithdrawMsg({ type: 'error', text: 'Sua chave PIX ainda não está configurada. Fale com o suporte.' }); return; }
-  if (!withdrawAmount) { setWithdrawMsg({ type: 'error', text: 'Informe o valor do saque.' }); return; }
+    if (!pixKey) { setWithdrawMsg({ type: 'error', text: 'Sua chave PIX ainda não está configurada. Fale com o suporte.' }); return; }
+    if (!withdrawAmount) { setWithdrawMsg({ type: 'error', text: 'Informe o valor do saque.' }); return; }
 
-  const amount = parseFloat(withdrawAmount);
-  const amountCents = Math.floor(amount * 100);
+    const amount = parseFloat(withdrawAmount);
+    const amountCents = Math.floor(amount * 100);
 
-  if (amountCents < 100) { setWithdrawMsg({ type: 'error', text: 'O valor mínimo para saque é R$ 1,00.' }); return; }
-  if (amountCents > (balance?.available_balance_cents ?? 0)) { setWithdrawMsg({ type: 'error', text: 'Saldo insuficiente.' }); return; }
+    if (amountCents < 100) { setWithdrawMsg({ type: 'error', text: 'O valor mínimo para saque é R$ 1,00.' }); return; }
+    if (amountCents > (balance?.available_balance_cents ?? 0)) { setWithdrawMsg({ type: 'error', text: 'Saldo insuficiente.' }); return; }
 
-  setIsWithdrawing(true);
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const { error } = await supabase.functions.invoke('request-withdrawal', {
-      body: { amount, userId },
-      headers: { Authorization: `Bearer ${session?.access_token}` },
-    });
-    if (error) throw error;
-    setWithdrawMsg({ type: 'success', text: 'Solicitação de saque enviada! O valor será creditado em breve.' });
-    setWithdrawAmount('');
-  } catch (err: any) {
-    setWithdrawMsg({ type: 'error', text: 'Erro ao processar saque: ' + (err.message || 'Tente novamente.') });
-  } finally {
-    setIsWithdrawing(false);
+    setIsWithdrawing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { error } = await supabase.functions.invoke('request-withdrawal', {
+        body: { amount, userId },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (error) throw error;
+      setWithdrawMsg({ type: 'success', text: 'Solicitação de saque enviada! O valor será creditado em breve.' });
+      setWithdrawAmount('');
+    } catch (err: any) {
+      setWithdrawMsg({ type: 'error', text: 'Erro ao processar saque: ' + (err.message || 'Tente novamente.') });
+    } finally {
+      setIsWithdrawing(false);
+    }
   }
-}
 
-const withdrawFee = withdrawAmount ? parseFloat(withdrawAmount) * 0.01 : 0;
-const withdrawNet = withdrawAmount ? parseFloat(withdrawAmount) - withdrawFee : 0;
+  const withdrawFee = withdrawAmount ? parseFloat(withdrawAmount) * 0.01 : 0;
+  const withdrawNet = withdrawAmount ? parseFloat(withdrawAmount) - withdrawFee : 0;
 
-const simpleLink = `pix.wiki/${company?.slug}`;
-const cleanShareValue = shareValue.trim().replace(',', '.');
-const hasValidShareValue = cleanShareValue && parseFloat(cleanShareValue) > 0;
-const linkWithValue = hasValidShareValue ? `pix.wiki/${company?.slug}/${cleanShareValue}` : '';
+  // ── Link de cobrança compartilhável ───────────────────────────────────────
+  const simpleLink = `pix.wiki/${company?.slug}`;
+  const cleanShareValue = shareValue.trim().replace(',', '.');
+  const hasValidShareValue = !!cleanShareValue && parseFloat(cleanShareValue) > 0;
+  const linkWithValue = hasValidShareValue ? `pix.wiki/${company?.slug}/${cleanShareValue}` : '';
 
-function copySimpleLink() {
-  navigator.clipboard.writeText(`https://${simpleLink}`);
-  setCopiedSimple(true);
-  setTimeout(() => setCopiedSimple(false), 2000);
-}
-function copyLinkWithValue() {
-  if (!linkWithValue) return;
-  navigator.clipboard.writeText(`https://${linkWithValue}`);
-  setCopiedWithValue(true);
-  setTimeout(() => setCopiedWithValue(false), 2000);
-}
-
-async function handleWithdraw() {
-  setWithdrawMsg(null);
-  const pixKey = profile?.withdrawal_pix_key;
-
-  if (!pixKey) { setWithdrawMsg({ type: 'error', text: 'Sua chave PIX ainda não está configurada. Fale com o suporte.' }); return; }
-  if (!withdrawAmount) { setWithdrawMsg({ type: 'error', text: 'Informe o valor do saque.' }); return; }
-
-  const amount = parseFloat(withdrawAmount);
-  const amountCents = Math.floor(amount * 100);
-
-  if (amountCents < 100) { setWithdrawMsg({ type: 'error', text: 'O valor mínimo para saque é R$ 1,00.' }); return; }
-  if (amountCents > (balance?.available_balance_cents ?? 0)) { setWithdrawMsg({ type: 'error', text: 'Saldo insuficiente.' }); return; }
-
-  setIsWithdrawing(true);
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const { error } = await supabase.functions.invoke('request-withdrawal', {
-      body: { amount, userId },
-      headers: { Authorization: `Bearer ${session?.access_token}` },
-    });
-    if (error) throw error;
-    setWithdrawMsg({ type: 'success', text: 'Solicitação de saque enviada! O valor será creditado em breve.' });
-    setWithdrawAmount('');
-  } catch (err: any) {
-    setWithdrawMsg({ type: 'error', text: 'Erro ao processar saque: ' + (err.message || 'Tente novamente.') });
-  } finally {
-    setIsWithdrawing(false);
+  function copySimpleLink() {
+    navigator.clipboard.writeText(`https://${simpleLink}`);
+    setCopiedSimple(true);
+    setTimeout(() => setCopiedSimple(false), 2000);
   }
-}
+  function copyLinkWithValue() {
+    if (!linkWithValue) return;
+    navigator.clipboard.writeText(`https://${linkWithValue}`);
+    setCopiedWithValue(true);
+    setTimeout(() => setCopiedWithValue(false), 2000);
+  }
 
-const withdrawFee = withdrawAmount ? parseFloat(withdrawAmount) * 0.01 : 0;
-const withdrawNet = withdrawAmount ? parseFloat(withdrawAmount) - withdrawFee : 0;
-
+  // ── Editar informações ─────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!company || !userId) return;
     setSaving(true);
@@ -532,18 +503,18 @@ const withdrawNet = withdrawAmount ? parseFloat(withdrawAmount) - withdrawFee : 
     <div className={`min-h-screen px-4 py-8 ${p.pageBg}`}>
       <div className="w-full max-w-2xl lg:max-w-5xl mx-auto">
 
-        {/* Header — só logo Pix Wiki (minhAi fica exclusiva do card do brinde) */}
-       <div className="flex items-center justify-between mb-6 gap-3">
-         <div className="flex items-center gap-3 min-w-0">
-           <Image src="/brands/pix/pixwiki.png" alt="Pix Wiki" width={40} height={40} className="object-contain h-9 w-9 flex-shrink-0" />
-           <div className="min-w-0">
-             <h1 className={`text-base font-bold truncate ${p.text}`}>{company?.name}</h1>
-             <a href={`/pix/${company?.slug}`} className="text-xs text-green-500 hover:underline truncate block">
-               pix.wiki/{company?.slug} ↗
-             </a>
-           </div>
-         </div>
-         <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Header — logo + nome/link do usuário, toggle/sair à direita */}
+        <div className="flex items-center justify-between mb-6 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Image src="/brands/pix/pixwiki.png" alt="Pix Wiki" width={40} height={40} className="object-contain h-9 w-9 flex-shrink-0" />
+            <div className="min-w-0">
+              <h1 className={`text-base font-bold truncate ${p.text}`}>{company?.name}</h1>
+              <a href={`/pix/${company?.slug}`} className="text-xs text-green-500 hover:underline truncate block">
+                pix.wiki/{company?.slug} ↗
+              </a>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
             <ThemeToggle dark={dark} onToggle={toggleDark} />
             <button
               onClick={handleSignOut}
@@ -565,12 +536,13 @@ const withdrawNet = withdrawAmount ? parseFloat(withdrawAmount) - withdrawFee : 
           </div>
         )}
 
-        {/* Layout: 1 coluna no mobile, 2 colunas no desktop (recebimentos + lateral) */}
+        {/* Layout: 1 coluna no mobile, 2 colunas no desktop (principal + lateral) */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 items-start">
 
-          {/* ── Coluna principal: recebimentos (o foco) ── */}
+          {/* ── Coluna principal: saldo, link de cobrança, recebimentos/saque ── */}
           <div className="flex flex-col gap-4 min-w-0">
 
+            {/* Saldo */}
             <div className={`rounded-2xl border p-5 ${p.cardBg} ${p.border}`}>
               <p className={`text-[10px] uppercase tracking-widest mb-1 ${p.textFaint}`}>Saldo disponível</p>
               <p className={`text-3xl font-bold ${p.text}`}>{fmt(balance?.available_balance_cents ?? 0)}</p>
@@ -579,150 +551,153 @@ const withdrawNet = withdrawAmount ? parseFloat(withdrawAmount) - withdrawFee : 
               </p>
             </div>
 
-{/* Compartilhar link */}
-<div className={`rounded-2xl border p-5 ${p.cardBg} ${p.border}`}>
-  <p className={`text-[10px] uppercase tracking-widest mb-3 ${p.textFaint}`}>Seu link de cobrança</p>
+            {/* Link de cobrança — lado a lado no desktop, empilhado no mobile */}
+            <div className={`rounded-2xl border p-5 ${p.cardBg} ${p.border}`}>
+              <p className={`text-[10px] uppercase tracking-widest mb-3 ${p.textFaint}`}>Seu link de cobrança</p>
 
-  <div className="flex flex-col gap-4">
-    <div>
-      <p className={`text-xs mb-1.5 ${p.textMuted}`}>Link simples — cliente digita o valor na hora</p>
-      <div className="flex gap-2">
-        <div className={`flex-1 px-3 py-2 rounded-xl border text-sm font-mono truncate ${p.inputBg} ${p.inputBorder} ${p.text}`}>
-          {simpleLink}
-        </div>
-        <button
-          onClick={copySimpleLink}
-          className={`px-4 rounded-xl text-xs font-bold transition-all active:scale-95 ${
-            copiedSimple ? 'bg-green-500 text-white' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
-          }`}
-        >
-          {copiedSimple ? 'Copiado!' : 'Copiar'}
-        </button>
-      </div>
-    </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className={`text-xs mb-1.5 ${p.textMuted}`}>Link simples — cliente digita o valor na hora</p>
+                  <div className="flex gap-2">
+                    <div className={`flex-1 min-w-0 px-3 py-2 rounded-xl border text-sm font-mono truncate ${p.inputBg} ${p.inputBorder} ${p.text}`}>
+                      {simpleLink}
+                    </div>
+                    <button
+                      onClick={copySimpleLink}
+                      className={`flex-shrink-0 px-4 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                        copiedSimple ? 'bg-green-500 text-white' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+                      }`}
+                    >
+                      {copiedSimple ? 'Copiado!' : 'Copiar'}
+                    </button>
+                  </div>
+                </div>
 
-    <div>
-      <p className={`text-xs mb-1.5 ${p.textMuted}`}>Link com valor fixo — cliente só confirma o pagamento</p>
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold ${p.textFaint}`}>R$</span>
-          <input
-            type="number" step="0.01" value={shareValue}
-            onChange={e => setShareValue(e.target.value)}
-            placeholder="0,00"
-            className={`w-full pl-8 pr-3 py-2 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText}`}
-          />
-        </div>
-        <button
-          onClick={copyLinkWithValue}
-          disabled={!hasValidShareValue}
-          className={`px-4 rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-40 ${
-            copiedWithValue ? 'bg-green-500 text-white' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
-          }`}
-        >
-          {copiedWithValue ? 'Copiado!' : 'Copiar'}
-        </button>
-      </div>
-      {hasValidShareValue && (
-        <p className={`text-[11px] mt-1.5 font-mono ${p.textFaint}`}>{linkWithValue}</p>
-      )}
-    </div>
-  </div>
-</div>
+                <div>
+                  <p className={`text-xs mb-1.5 ${p.textMuted}`}>Link com valor fixo — cliente só confirma</p>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1 min-w-0">
+                      <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold ${p.textFaint}`}>R$</span>
+                      <input
+                        type="number" step="0.01" value={shareValue}
+                        onChange={e => setShareValue(e.target.value)}
+                        placeholder="0,00"
+                        className={`w-full pl-8 pr-3 py-2 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText}`}
+                      />
+                    </div>
+                    <button
+                      onClick={copyLinkWithValue}
+                      disabled={!hasValidShareValue}
+                      className={`flex-shrink-0 px-4 rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-40 ${
+                        copiedWithValue ? 'bg-green-500 text-white' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+                      }`}
+                    >
+                      {copiedWithValue ? 'Copiado!' : 'Copiar'}
+                    </button>
+                  </div>
+                  {hasValidShareValue && (
+                    <p className={`text-[11px] mt-1.5 font-mono truncate ${p.textFaint}`}>{linkWithValue}</p>
+                  )}
+                </div>
+              </div>
+            </div>
 
-           <div className={`rounded-2xl border p-5 ${p.cardBg} ${p.border}`}>
-             <div className={`flex items-center gap-1 mb-4 p-1 rounded-xl ${p.inputBg}`}>
-               <button
-                 onClick={() => setReceiptsTab('historico')}
-                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${
-                   receiptsTab === 'historico' ? 'bg-green-500 text-white' : `${p.textFaint} hover:${p.text}`
-                 }`}
-               >
-                 Recebimentos
-               </button>
-               <button
-                 onClick={() => setReceiptsTab('saque')}
-                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${
-                   receiptsTab === 'saque' ? 'bg-green-500 text-white' : `${p.textFaint} hover:${p.text}`
-                 }`}
-               >
-                 Sacar
-               </button>
-             </div>
+            {/* Recebimentos / Saque */}
+            <div className={`rounded-2xl border p-5 ${p.cardBg} ${p.border}`}>
+              <div className={`flex items-center gap-1 mb-4 p-1 rounded-xl ${p.inputBg}`}>
+                <button
+                  onClick={() => setReceiptsTab('historico')}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${
+                    receiptsTab === 'historico' ? 'bg-green-500 text-white' : `${p.textFaint} hover:${p.text}`
+                  }`}
+                >
+                  Recebimentos
+                </button>
+                <button
+                  onClick={() => setReceiptsTab('saque')}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${
+                    receiptsTab === 'saque' ? 'bg-green-500 text-white' : `${p.textFaint} hover:${p.text}`
+                  }`}
+                >
+                  Sacar
+                </button>
+              </div>
 
-             {receiptsTab === 'historico' && (txns.length === 0 ? (
+              {receiptsTab === 'historico' && (txns.length === 0 ? (
                 <p className={`text-sm ${p.textMuted}`}>Nenhum recebimento ainda.</p>
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className={`text-left border-b ${p.border}`}>
-                      <th className={`pb-2 font-normal text-[10px] uppercase tracking-widest ${p.textFaint}`}>Data</th>
-                      <th className={`pb-2 font-normal text-[10px] uppercase tracking-widest ${p.textFaint}`}>Descrição</th>
-                      <th className={`pb-2 font-normal text-[10px] uppercase tracking-widest text-right ${p.textFaint}`}>Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {txns.map(t => (
-                      <tr key={t.id} className={`border-b last:border-0 ${p.border}`}>
-                        <td className={`py-2.5 text-xs whitespace-nowrap ${p.textFaint}`}>
-                          {new Date(t.created_at).toLocaleDateString('pt-BR')}
-                        </td>
-                        <td className={`py-2.5 ${p.text}`}>{t.description || 'Recebimento PIX'}</td>
-                        <td className="py-2.5 text-right font-semibold text-green-500 whitespace-nowrap">{fmt(t.amount_cents)}</td>
+                <div className="overflow-x-auto -mx-1">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className={`text-left border-b ${p.border}`}>
+                        <th className={`pb-2 px-1 font-normal text-[10px] uppercase tracking-widest ${p.textFaint}`}>Data</th>
+                        <th className={`pb-2 px-1 font-normal text-[10px] uppercase tracking-widest ${p.textFaint}`}>Descrição</th>
+                        <th className={`pb-2 px-1 font-normal text-[10px] uppercase tracking-widest text-right ${p.textFaint}`}>Valor</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-             ))}
+                    </thead>
+                    <tbody>
+                      {txns.map(t => (
+                        <tr key={t.id} className={`border-b last:border-0 ${p.border}`}>
+                          <td className={`py-2.5 px-1 text-xs whitespace-nowrap ${p.textFaint}`}>
+                            {new Date(t.created_at).toLocaleDateString('pt-BR')}
+                          </td>
+                          <td className={`py-2.5 px-1 ${p.text}`}>{t.description || 'Recebimento PIX'}</td>
+                          <td className="py-2.5 px-1 text-right font-semibold text-green-500 whitespace-nowrap">{fmt(t.amount_cents)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
 
-             {receiptsTab === 'saque' && (
-               <div className="flex flex-col gap-3">
-                 <div>
-                   <label className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>Valor do saque (R$)</label>
-                   <div className="relative mt-1">
-                     <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold ${p.textFaint}`}>R$</span>
-                     <input
-                       type="number" step="0.01" value={withdrawAmount}
-                       onChange={e => setWithdrawAmount(e.target.value)}
-                       placeholder="0,00"
-                       className={`w-full pl-10 pr-3 py-2.5 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText}`}
-                     />
-                   </div>
-                 </div>
+              {receiptsTab === 'saque' && (
+                <div className="flex flex-col gap-3 max-w-sm">
+                  <div>
+                    <label className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>Valor do saque (R$)</label>
+                    <div className="relative mt-1">
+                      <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold ${p.textFaint}`}>R$</span>
+                      <input
+                        type="number" step="0.01" value={withdrawAmount}
+                        onChange={e => setWithdrawAmount(e.target.value)}
+                        placeholder="0,00"
+                        className={`w-full pl-10 pr-3 py-2.5 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 ${p.inputBg} ${p.inputBorder} ${p.inputText}`}
+                      />
+                    </div>
+                  </div>
 
-                 {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
-                   <div className={`p-3 rounded-xl border text-xs ${p.inputBg} ${p.border} flex flex-col gap-1.5`}>
-                     <div className="flex justify-between">
-                       <span className={p.textFaint}>Taxa de serviço (1%)</span>
-                       <span className="text-red-500 font-medium">-{withdrawFee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                     </div>
-                     <div className={`flex justify-between font-bold border-t pt-1.5 ${p.border}`}>
-                       <span className={p.text}>Valor líquido</span>
-                       <span className="text-green-500">{withdrawNet.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                     </div>
-                   </div>
-                 )}
+                  {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+                    <div className={`p-3 rounded-xl border text-xs ${p.inputBg} ${p.border} flex flex-col gap-1.5`}>
+                      <div className="flex justify-between">
+                        <span className={p.textFaint}>Taxa de serviço (1%)</span>
+                        <span className="text-red-500 font-medium">-{withdrawFee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                      </div>
+                      <div className={`flex justify-between font-bold border-t pt-1.5 ${p.border}`}>
+                        <span className={p.text}>Valor líquido</span>
+                        <span className="text-green-500">{withdrawNet.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                      </div>
+                    </div>
+                  )}
 
-                 {withdrawMsg && (
-                   <p className={`text-xs ${withdrawMsg.type === 'error' ? 'text-red-500' : 'text-green-500'}`}>{withdrawMsg.text}</p>
-                 )}
+                  {withdrawMsg && (
+                    <p className={`text-xs ${withdrawMsg.type === 'error' ? 'text-red-500' : 'text-green-500'}`}>{withdrawMsg.text}</p>
+                  )}
 
-                 <button
-                   onClick={handleWithdraw}
-                   disabled={isWithdrawing || !profile?.withdrawal_pix_key || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
-                   className="w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all active:scale-95 disabled:opacity-50"
-                 >
-                   {isWithdrawing ? 'Processando…' : 'Solicitar saque'}
-                 </button>
-                 {!profile?.withdrawal_pix_key && (
-                   <p className="text-center text-xs text-red-500">⚠️ Chave PIX não configurada.</p>
-                 )}
-               </div>
-             )}            
-           </div>
+                  <button
+                    onClick={handleWithdraw}
+                    disabled={isWithdrawing || !profile?.withdrawal_pix_key || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
+                    className="w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isWithdrawing ? 'Processando…' : 'Solicitar saque'}
+                  </button>
+                  {!profile?.withdrawal_pix_key && (
+                    <p className="text-center text-xs text-red-500">⚠️ Chave PIX não configurada.</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* ── Coluna lateral: brinde + configurações ── */}
+          {/* ── Coluna lateral: assistente + configurações ── */}
           <div className="flex flex-col gap-4 min-w-0">
 
             <VoiceAssistantCard dark={dark} slug={company?.slug || ''} />

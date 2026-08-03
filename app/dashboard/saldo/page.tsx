@@ -8,6 +8,7 @@ import {
   ToggleLeft, ToggleRight, Settings, ChevronDown,
 } from 'lucide-react';
 import PixLinkModal from '@/components/dashboard/PixLinkModal';
+import { connectMercadoPago } from '@/lib/connectMercadoPago';
 
 interface Company {
   id: string;
@@ -148,6 +149,10 @@ export default function SaldoPage() {
   const [autoRechargeLoaded, setAutoRechargeLoaded] = useState(false);
   const [isSavingAuto, setIsSavingAuto] = useState(false);
   const [userCredits, setUserCredits] = useState<number | null>(null);
+
+  const [mpConnected, setMpConnected] = useState(false);
+  const [needsMpConnection, setNeedsMpConnection] = useState(false);
+  
   const [commissionsPending, setCommissionsPending] = useState<CommissionPending[]>([]);
   const [totalCommissionCents, setTotalCommissionCents] = useState(0);
   const [hasVendasCompany, setHasVendasCompany] = useState(false);
@@ -292,6 +297,21 @@ export default function SaldoPage() {
         });
         setCompanyColorMap(colorMap);
       }
+
+      // ── Mercado Pago: já conectado, tem plano Consulting, ou é legado? ────
+      const [{ data: mpConn }, { data: userCreditsRow }, { data: grandfathered }] = await Promise.all([
+        supabase.from('mp_connections').select('id').eq('user_id', user.id).eq('is_active', true).maybeSingle(),
+        supabase.from('user_credits').select('active_plan_name').eq('user_id', user.id).maybeSingle(),
+        companiesData?.length
+          ? supabase.from('companies').select('id').in('id', companiesData.map((c: any) => c.id)).eq('pix_bigcorps_grandfathered', true).limit(1)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+
+      const isConsulting = userCreditsRow?.active_plan_name === 'Consulting';
+      const hasGrandfathered = (grandfathered?.length ?? 0) > 0;
+
+      setMpConnected(!!mpConn);
+      setNeedsMpConnection(!mpConn && !isConsulting && !hasGrandfathered);
 
       const { data: creditsData } = await supabase
         .from('user_credits')
@@ -782,6 +802,26 @@ export default function SaldoPage() {
             </button>
           </div>
         </div>
+
+        {/* ── Conectar Mercado Pago ───────────────────────────────────────── */}
+        {needsMpConnection && (
+          <div className="rounded-2xl border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 p-5 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+            <div>
+              <p className="text-sm font-bold text-blue-900 dark:text-blue-300">
+                Conecte sua conta Mercado Pago pra receber PIX
+              </p>
+              <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                Seus PIX caem direto na sua conta — a gente nunca vê nem guarda seu dinheiro. Leva menos de 1 minuto.
+              </p>
+            </div>
+            <button
+              onClick={() => connectMercadoPago(companies[0]?.id, '/dashboard/saldo')}
+              className="flex-shrink-0 px-5 py-2.5 bg-blue-600 text-white font-bold rounded-xl text-sm hover:bg-blue-700 transition-all active:scale-95"
+            >
+              Conectar Mercado Pago →
+            </button>
+          </div>
+        )}
 
         {/* ── Cards de resumo ──────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

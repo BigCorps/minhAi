@@ -635,7 +635,7 @@ const toggleDark = () => {
             confirmação automática no{' '}
             <span className={`font-medium ${p.text}`}>dashboard</span>, por{' '}
             <span className={`font-medium ${p.text}`}>e-mail</span> e no{' '}
-            <span className={`font-medium ${p.text}`}>WhatsApp</span>
+            <span className={`font-medium ${p.text}`}>MercadoPago</span>
             {' '}- sem mensalidade e sem preocupação.
           </p>
         </div>
@@ -681,11 +681,11 @@ const toggleDark = () => {
             {slugStatus === 'invalid' && <p className="text-yellow-600 text-xs">Use apenas letras, números e hífens.</p>}
           </Field>
 
-          <Field label="Chave PIX para receber os saques" hint="CPF, CNPJ, e-mail, telefone ou chave aleatória" dark={dark}>
+          <Field label="Chave PIX MercadoPago" hint="CPF, CNPJ, e-mail, telefone ou chave aleatória" dark={dark}>
             <Input
               value={form.chavePix}
               onChange={v => { up('chavePix', v); up('chavePixTipo', detectChavePixTipo(v)); }}
-              placeholder="Sua chave pra sacar o saldo"
+              placeholder="Sua chave MercadoPago"
               dark={dark}
             />
             {form.chavePixTipo && (

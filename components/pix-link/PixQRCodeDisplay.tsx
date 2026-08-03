@@ -8,6 +8,7 @@ interface PixData {
   qr_code_url: string;
   pix_code: string;
   expires_at: string;
+  payment_provider?: 'bigcorps' | 'mercadopago';
   company_name: string;
 }
 
@@ -118,12 +119,12 @@ export default function PixQRCodeDisplay({
   </div>
 
   <p style={{ fontSize: '10.2px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: textLabel, margin: '0 0 8px' }}>
-    INTERMEDIAÇÕES DE PAGAMENTOS BIGCORPS
+    {pixData.payment_provider === 'mercadopago' ? 'PAGAMENTO VIA MERCADO PAGO' : 'INTERMEDIAÇÕES DE PAGAMENTOS BIGCORPS'}
   </p>
 
   {[
     { label: 'Empresa', value: company.name, color: textPrimary },
-    { label: 'Banco', value: 'Banco Inter', color: textPrimary },
+    { label: 'Banco', value: pixData.payment_provider === 'mercadopago' ? 'Mercado Pago' : 'Banco Inter', color: textPrimary },
     { label: 'Validade', value: 'Válido por 30 minutos', color: '#16a34a' },
   ].map(({ label, value, color }) => (
     <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
@@ -255,7 +256,7 @@ export default function PixQRCodeDisplay({
   }}
 >
   <p style={{ margin: 0 }}>
-    Pagamento processado com segurança via Banco Inter e BigCorps
+    Pagamento processado com segurança via {pixData.payment_provider === 'mercadopago' ? 'Mercado Pago' : 'Banco Inter e BigCorps'}
   </p>
 
   <p style={{ margin: 0 }}>

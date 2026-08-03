@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       client_secret: process.env.ML_APP_SECRET,
       grant_type: 'authorization_code',
       code,
-      redirect_uri: process.env.MP_REDIRECT_URI,
+      redirect_uri: `${requestUrl.origin}/api/mp/callback`,
     }),
   });
 

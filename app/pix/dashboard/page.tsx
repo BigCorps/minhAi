@@ -8,6 +8,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { connectMercadoPago } from '@/lib/connectMercadoPago';
 
 // ─── Paletas ────────────────────────────────────────────────────────────────
 const D = {
@@ -221,6 +222,7 @@ function PixContaContent() {
 
   // ── Configurações da conta ────────────────────────────────────────────────
   const [configOpen, setConfigOpen] = useState(false);
+  const [mpConnected, setMpConnected] = useState(false);
   const [editForm, setEditForm] = useState({
     nome: '', logo: '', whatsapp: '', email: '', documento: '', documentoTipo: '',
   });
@@ -294,6 +296,13 @@ function PixContaContent() {
       setBalance(bal || { available_balance_cents: 0, total_received_cents: 0 });
       setTxns(tx || []);
       setProfile(prof || null);
+      const { data: mpConn } = await supabase
+        .from('mp_connections')
+        .select('id')
+        .eq('user_id', uid)
+        .eq('is_active', true)
+        .maybeSingle();
+      setMpConnected(!!mpConn);
       setEditForm(f => ({
         ...f,
         documento: prof?.documento || '',
@@ -588,6 +597,21 @@ const dayGroups: DayGroup[] = (() => {
             Conta Google vinculada com sucesso!
           </div>
         )}
+
+{!mpConnected && (
+  <div className="mb-4 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-5 flex flex-col gap-3">
+    <p className={`text-sm font-bold ${p.text}`}>Conecte sua conta Mercado Pago pra começar a receber</p>
+    <p className={`text-xs ${p.textMuted}`}>
+      Seus PIX caem direto na sua conta — a gente nunca vê nem guarda seu dinheiro.
+    </p>
+    <button
+      onClick={() => connectMercadoPago(company!.id, '/pix/dashboard')}
+      className="w-full py-2.5 bg-blue-500 text-white font-bold rounded-xl text-sm hover:bg-blue-400 transition-all active:scale-95"
+    >
+      Conectar Mercado Pago →
+    </button>
+  </div>
+)}
 
         {/* Layout: 1 coluna no mobile, 2 colunas no desktop (principal + lateral) */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 items-start">

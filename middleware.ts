@@ -233,6 +233,10 @@ if (PIX_DOMAINS.includes(hostname)) {
      return NextResponse.next();
    }
 
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
   // Favicon específico do Pix
   if (pathname === '/favicon.ico') {
     const url = request.nextUrl.clone();

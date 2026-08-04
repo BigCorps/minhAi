@@ -813,6 +813,9 @@ export default function SaldoPage() {
               <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
                 Seus PIX caem direto na sua conta — a gente nunca vê nem guarda seu dinheiro. Leva menos de 1 minuto.
               </p>
+      <p className="text-[11px] text-blue-600/70 dark:text-blue-400/60 mt-1">
+        O Mercado Pago cobra uma taxa de 0,99% por PIX recebido.
+      </p>
             </div>
             <button
               onClick={() => connectMercadoPago(companies[0]?.id, '/dashboard/saldo')}

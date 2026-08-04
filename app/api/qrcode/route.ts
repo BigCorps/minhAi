@@ -11,10 +11,13 @@ const supabaseAnon = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-function getDefaultLogoBuffer(): Buffer {
-  // Tenta o logo da ArteFinal primeiro, cai no minhAi como segurança
-  const artePath = path.join(process.cwd(), 'public', 'arte', 'arte.png')
-  if (fs.existsSync(artePath)) return fs.readFileSync(artePath)
+function getDefaultLogoBuffer(isArteFinal: boolean): Buffer {
+  // Padrão agora é o logo da minhAi — ArteFinal só aparece pra quem é
+  // realmente ArteFinal (identificado pelo slug arte-<uuid>).
+  if (isArteFinal) {
+    const artePath = path.join(process.cwd(), 'public', 'arte', 'arte.png')
+    if (fs.existsSync(artePath)) return fs.readFileSync(artePath)
+  }
   const fallbackPath = path.join(process.cwd(), 'public', 'icon192.png')
   return fs.readFileSync(fallbackPath)
 }
@@ -22,13 +25,16 @@ function getDefaultLogoBuffer(): Buffer {
 async function getLogoBuffer(companyId: string | null, overrideUrl?: string | null): Promise<Buffer | null> {
   try {
     let logoUrl: string | null = overrideUrl ?? null
+    let isArteFinal = false
 
     if (!logoUrl && companyId) {
       const { data: company } = await supabaseAnon
         .from('companies_qr_info')
-        .select('webapp_logo_url, user_id')
+        .select('webapp_logo_url, user_id, slug')
         .eq('id', companyId)
         .single()
+
+      isArteFinal = !!company?.slug?.startsWith('arte-')
 
       if (company?.user_id) {
         const { data: isPaidResult } = await supabaseAnon
@@ -50,7 +56,7 @@ async function getLogoBuffer(companyId: string | null, overrideUrl?: string | nu
       }
     }
 
-    const raw = getDefaultLogoBuffer()
+    const raw = getDefaultLogoBuffer(isArteFinal)
     return await sharp(raw).png().toBuffer()
   } catch {
     return null

@@ -645,8 +645,61 @@ const dayGroups: DayGroup[] = (() => {
                  <p className={`text-sm ${p.textMuted}`}>Nenhum recebimento ainda.</p>
                ) : (
                  <div>
-                   {/* filtro de status e tabela agrupada por dia — sem mudança */}
-                   ...
+                 {/* Filtro de status */}
+                 <div className="flex items-center gap-2 mb-4 flex-wrap">
+                   {([
+                     ['confirmed', `Confirmados (${statusCounts.confirmed})`],
+                     ['cancelled', `Cancelados (${statusCounts.cancelled})`],
+                     ['all', `Todos (${statusCounts.all})`],
+                   ] as const).map(([key, label]) => (
+                     <button
+                       key={key}
+                       onClick={() => setStatusFilter(key)}
+                       className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
+                         statusFilter === key
+                           ? 'bg-green-500/15 border-green-500/40 text-green-500'
+                           : `${p.border} ${p.textFaint} hover:${p.text}`
+                       }`}
+                     >
+                       {label}
+                     </button>
+                   ))}
+                 </div>
+
+                 {filteredTxns.length === 0 ? (
+                   <p className={`text-sm ${p.textMuted}`}>Nenhum recebimento nesse filtro.</p>
+                 ) : (
+                   <div className="flex flex-col gap-5">
+                     {dayGroups.map(group => (
+                       <div key={group.key}>
+                         <div className={`flex items-center justify-between gap-2 pb-1.5 mb-2 border-b ${p.border}`}>
+                           <span className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>{group.label}</span>
+                           <span className={`text-[11px] font-semibold ${p.textMuted}`}>
+                             Recebido: <span className="text-green-500">{fmt(group.total)}</span>
+                           </span>
+                         </div>
+                         <div className="flex flex-col">
+                           {group.items.map(t => (
+                             <div key={t.id} className={`flex items-center justify-between gap-2 py-2 border-b last:border-0 ${p.border}`}>
+                               <div className="min-w-0">
+                                 <p className={`text-xs whitespace-nowrap ${p.textFaint}`}>
+                                   {new Date(t.requested_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                 </p>
+                                 {t.notes && <p className={`text-xs truncate ${p.text}`}>{t.notes}</p>}
+                               </div>
+                               <div className="flex items-center gap-3 flex-shrink-0">
+                                 <span className={`text-[10px] font-bold uppercase ${statusColor(t.status)}`}>
+                                   {statusLabel(t.status)}
+                                 </span>
+                                 <span className={`text-sm font-semibold whitespace-nowrap ${p.text}`}>{fmt(t.amount_cents)}</span>
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 )}
                  </div>
                ))}
             </div>

@@ -80,10 +80,10 @@ function MinhaiPromoCard() {
         </span>
       </div>
       <p className="text-sm font-bold mb-1.5" style={{ color: cor.tinta }}>
-        O ConsultaTec roda em cima da minhAi
+        O ConsultaTec utiliza tecnologia minhAi
       </p>
       <p className="text-xs mb-4" style={{ color: cor.tintaMuted }}>
-        A mesma tecnologia por trás dessa consulta também atende clientes por voz e WhatsApp,
+        A mesma estrutura por trás dessa consulta também atende clientes por voz e WhatsApp,
         gera PIX na hora, agenda horários e tem mais de 100 outras funções — pra qualquer negócio.
       </p>
       <a

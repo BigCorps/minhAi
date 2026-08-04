@@ -32,8 +32,8 @@ const cor = {
   borda: '#C9BFA0',
   tinta: '#1C1A14',
   tintaMuted: '#6B6350',
-  destaque: '#2F4F3A',
-  destaqueHover: '#25402E',
+  destaque: '#7A6142',
+  destaqueHover: '#7A6142',
   erroBg: '#F4E4E0',
   erroTexto: '#7A2E2E',
 };

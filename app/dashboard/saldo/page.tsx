@@ -152,6 +152,7 @@ export default function SaldoPage() {
 
   const [mpConnected, setMpConnected] = useState(false);
   const [needsMpConnection, setNeedsMpConnection] = useState(false);
+  const [canWithdraw, setCanWithdraw] = useState(false);
   
   const [commissionsPending, setCommissionsPending] = useState<CommissionPending[]>([]);
   const [totalCommissionCents, setTotalCommissionCents] = useState(0);
@@ -312,6 +313,7 @@ export default function SaldoPage() {
 
       setMpConnected(!!mpConn);
       setNeedsMpConnection(!mpConn && !isConsulting && !hasGrandfathered);
+      setCanWithdraw(isConsulting || hasGrandfathered)
 
       const { data: creditsData } = await supabase
         .from('user_credits')
@@ -885,10 +887,10 @@ export default function SaldoPage() {
 
         {/* ── Tabs principais ──────────────────────────────────────────────── */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-gray-100 dark:border-white/5 overflow-hidden">
-          <div className="flex border-b border-gray-200 dark:border-white/10">
+          <div className={`flex border-b border-gray-200 dark:border-white/10 ${!canWithdraw ? '' : ''}`}>
             <button
               onClick={() => setActiveTab('historico')}
-              className={`flex-1 px-6 py-3 text-sm font-medium transition ${
+              className={`${canWithdraw ? 'flex-1' : 'w-full'} px-6 py-3 text-sm font-medium transition ${
                 activeTab === 'historico'
                   ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -896,6 +898,7 @@ export default function SaldoPage() {
             >
               Histórico de Transações
             </button>
+            {canWithdraw && (
             <button
               onClick={() => setActiveTab('withdraw')}
               className={`flex-1 px-6 py-3 text-sm font-medium transition ${
@@ -906,6 +909,7 @@ export default function SaldoPage() {
             >
               Saque e Créditos
             </button>
+           )}
           </div>
 
           <div className="p-8">

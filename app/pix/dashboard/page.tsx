@@ -604,6 +604,11 @@ const dayGroups: DayGroup[] = (() => {
     <p className={`text-xs ${p.textMuted}`}>
       Seus PIX caem direto na sua conta — a gente nunca vê nem guarda seu dinheiro.
     </p>
+
+    <p className={`text-[11px] ${p.textFaint}`}>
+      O Mercado Pago cobra uma taxa de 0,99% por PIX recebido.
+    </p>
+    
     <button
       onClick={() => connectMercadoPago(company!.id, '/pix/dashboard')}
       className="w-full py-2.5 bg-blue-500 text-white font-bold rounded-xl text-sm hover:bg-blue-400 transition-all active:scale-95"

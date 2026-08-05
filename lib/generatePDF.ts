@@ -37,10 +37,18 @@ export function generateConsultaPDF(
 
   // Tabela de resultados
   if (resultadoFormatado.length > 0) {
+    // Segunda camada de proteção: nunca deixa um valor sem espaços (ex.: um
+    // base64 que escapou de algum filtro upstream) forçar quebra letra-por-letra
+    const resultadoSeguro = resultadoFormatado.map(
+      ([campo, valor]) =>
+        [campo, valor.length > 500 && !valor.includes(' ')
+          ? valor.slice(0, 200) + '… (valor truncado)'
+          : valor] as [string, string]
+    );
     autoTable(doc, {
       startY: 55,
       head: [['Campo', 'Informação']],
-      body: resultadoFormatado,
+      body: resultadoSeguro,
       theme: 'striped',
       headStyles: {
         fillColor: [176, 203, 31], // #B0CB1F - Verde limão 

@@ -14,6 +14,7 @@ import { X, FileStack, Loader2, AlertCircle, CheckCircle2, Download } from 'luci
 import { createClient } from '@/lib/supabase-browser';
 import { generateConsultaPDF } from '@/lib/generatePDF';
 import { validateCPF } from '@/lib/validateDocumento';
+import { removerCamposBinarios } from '@/lib/filtrarResultado';
 
 interface CompletaCpfModalProps {
   data: {
@@ -108,12 +109,14 @@ export default function CompletaCpfModal({ data, onClose }: CompletaCpfModalProp
 
       if (!res.success) throw new Error(res.error ?? 'Falha na consulta');
 
-      const rows: ResultadoFormatado[] = (res.resultado_formatado ?? []).map(
-        (r: any) => Array.isArray(r) ? { label: r[0], value: r[1] } : r
+      const rows: ResultadoFormatado[] = removerCamposBinarios(
+        (res.resultado_formatado ?? []).map(
+          (r: any) => (Array.isArray(r) ? { label: r[0], value: r[1] } : r)
+        )
       );
       setResultado(rows);
       setPdfFileName(`consulta-completa-cpf-${cpfLimpo}.pdf`);
-      setPdfBase64(generateConsultaPDF('Consulta Completa CPF', res.resultado_formatado || []));
+      setPdfBase64(generateConsultaPDF('Consulta Completa CPF', rows));
       setPendingParams(null);
       setPixInfo(null);
       setStep('result');

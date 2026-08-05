@@ -11,6 +11,7 @@ import { X, ShieldAlert, Loader2, AlertCircle, CheckCircle2, Download } from 'lu
 import { createClient } from '@/lib/supabase-browser';
 import { generateConsultaPDF } from '@/lib/generatePDF';
 import { validateCPF, formatarDocumento } from '@/lib/validateDocumento';
+import { removerCamposBinarios } from '@/lib/filtrarResultado';
 
 interface Props {
   data: { companyId: string; cpfPrefill?: string };
@@ -76,12 +77,14 @@ export default function RestricoesCpfModal({ data, onClose }: Props) {
 
       if (!res.success) throw new Error(res.error ?? 'Falha na consulta');
 
-      const rows: ResultadoFormatado[] = (res.resultado_formatado ?? []).map(
-        (r: any) => (Array.isArray(r) ? { label: r[0], value: r[1] } : r)
+      const rows: ResultadoFormatado[] = removerCamposBinarios(
+        (res.resultado_formatado ?? []).map(
+          (r: any) => (Array.isArray(r) ? { label: r[0], value: r[1] } : r)
+        )
       );
       setResultado(rows);
       setPdfFileName(`restricoes-cpf-${cpfLimpo}.pdf`);
-      setPdfBase64(generateConsultaPDF('Restrições CPF', res.resultado_formatado || []));
+      setPdfBase64(generateConsultaPDF('Restrições CPF', rows));
       setPendingParams(null);
       setPixInfo(null);
       setStep('result');

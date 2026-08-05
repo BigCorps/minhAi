@@ -8,6 +8,7 @@ import { X, ShieldAlert, Loader2, AlertCircle, CheckCircle2, Download } from 'lu
 import { createClient } from '@/lib/supabase-browser';
 import { generateConsultaPDF } from '@/lib/generatePDF';
 import { validateCNPJ, formatarDocumento } from '@/lib/validateDocumento';
+import { removerCamposBinarios } from '@/lib/filtrarResultado';
 
 interface Props {
   data: { companyId: string; cnpjPrefill?: string };
@@ -73,12 +74,14 @@ export default function RestricoesCnpjModal({ data, onClose }: Props) {
 
       if (!res.success) throw new Error(res.error ?? 'Falha na consulta');
 
-      const rows: ResultadoFormatado[] = (res.resultado_formatado ?? []).map(
-        (r: any) => (Array.isArray(r) ? { label: r[0], value: r[1] } : r)
+      const rows: ResultadoFormatado[] = removerCamposBinarios(
+        (res.resultado_formatado ?? []).map(
+          (r: any) => (Array.isArray(r) ? { label: r[0], value: r[1] } : r)
+        )
       );
       setResultado(rows);
       setPdfFileName(`restricoes-cnpj-${cnpjLimpo}.pdf`);
-      setPdfBase64(generateConsultaPDF('Restrições CNPJ', res.resultado_formatado || []));
+      setPdfBase64(generateConsultaPDF('Restrições CNPJ', rows));
       setPendingParams(null);
       setPixInfo(null);
       setStep('result');

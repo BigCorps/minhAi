@@ -67,3 +67,8 @@ app/build/generated/
 app/build/
 public/audio-cache/
 .env*
+build.log
+done.txt
+started.txt
+isolate-*.log
+*.log

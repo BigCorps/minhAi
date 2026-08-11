@@ -161,7 +161,7 @@ export default function ConsultaTecPage() {
   const opcoes = tipo === 'cpf' ? OPCOES_CPF : tipo === 'cnpj' ? OPCOES_CNPJ : [];
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: cor.fundo, color: cor.tinta }}>
+    <div className="min-h-screen flex flex-col" style={{ color: cor.tinta }}>
       <PapelMoedaBackground />
       {/* ── Header ── */}
       <header className="border-b" style={{ borderColor: cor.borda }}>
@@ -202,7 +202,8 @@ export default function ConsultaTecPage() {
           Consulte CPF ou CNPJ
         </h1>
         <p className="text-center mb-10" style={{ color: cor.tintaMuted }}>
-          Digite o documento — identificamos o tipo automaticamente
+          Digite o documento e escolha a seguir as opções disponíveis.
+          - Dados, Restrições, Protestos, etc.
         </p>
 
         <div className="w-full max-w-md">

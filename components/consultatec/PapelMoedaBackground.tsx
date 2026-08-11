@@ -49,6 +49,8 @@ export default function PapelMoedaBackground() {
         <mask id="pm-mask-br"><rect width="100%" height="100%" fill="url(#pm-fade-br)" /></mask>
       </defs>
 
+      <rect width="100%" height="100%" fill="#F2EAD3" />
+
       <rect width="100%" height="100%" fill="url(#pm-ondas)" mask="url(#pm-mask-tl)" opacity="0.5" />
       <rect width="100%" height="100%" fill="url(#pm-ondas)" mask="url(#pm-mask-tr)" opacity="0.5" />
       <rect width="100%" height="100%" fill="url(#pm-ondas)" mask="url(#pm-mask-bl)" opacity="0.5" />

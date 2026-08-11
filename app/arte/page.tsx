@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bot, Send, LogOut, Sparkles, Paperclip, X } from 'lucide-react';
+import { Bot, Send, LogOut, Sparkles, Paperclip, X, Menu, Star } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
 import DuplicarImagemDisplay from '@/components/arte/DuplicarImagemDisplay';
@@ -258,8 +258,10 @@ export default function ArtePage() {
 
   const [ready, setReady] = useState(false);
   const [hasUser, setHasUser] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [saldo, setSaldo] = useState<number | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
@@ -283,12 +285,32 @@ export default function ArtePage() {
     setSaldo(data?.available_credits ?? 0);
   }, [supabase]);
 
+  // ── Favoritas (por usuário, no localStorage) ──
+  const favKey = useCallback((uid: string) => `artefinal:favs:${uid}`, []);
+
+  useEffect(() => {
+    if (!userId) { setFavorites([]); return; }
+    try {
+      const raw = localStorage.getItem(favKey(userId));
+      setFavorites(raw ? JSON.parse(raw) : []);
+    } catch { setFavorites([]); }
+  }, [userId, favKey]);
+
+  const toggleFav = useCallback((key: string) => {
+    setFavorites((prev) => {
+      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+      if (userId) { try { localStorage.setItem(favKey(userId), JSON.stringify(next)); } catch {} }
+      return next;
+    });
+  }, [userId, favKey]);
+
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
-      if (!user) { setHasUser(false); setReady(true); return; }
+      if (!user) { setHasUser(false); setUserId(null); setReady(true); return; }
       setHasUser(true);
+      setUserId(user.id);
       const { data: company } = await supabase.from('companies').select('id').eq('user_id', user.id).order('created_at', { ascending: true }).limit(1).maybeSingle();
       setCompanyId(company?.id ?? null);
       await refreshSaldo(user.id);
@@ -411,18 +433,23 @@ const handleSubmit = useCallback(() => {
       {/* Header */}
       <header className="flex justify-center px-4 sm:px-6 py-3 border-b flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
         <div className="flex items-center justify-between w-full max-w-5xl">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
+              className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors active:scale-95"
               aria-label="Abrir menu de funções"
             >
-              <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
+              <Menu className="w-5 h-5" />
             </button>
-            <div>
-              <p className="text-sm font-bold" style={{ color: '#0f172a' }}>ArteFinal</p>
-              <p className="text-[11px]" style={{ color: '#64748b' }}>Seu arte-finalista com IA.</p>
-            </div>
+            <a href="https://artefinal.app" className="flex items-center gap-2.5 group" aria-label="Página inicial">
+              <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105 active:scale-95">
+                <img src="/arte/arte.png" alt="ArteFinal" className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <p className="text-sm font-bold" style={{ color: '#0f172a' }}>ArteFinal</p>
+                <p className="text-[11px]" style={{ color: '#64748b' }}>Seu arte-finalista com IA.</p>
+              </div>
+            </a>
           </div>
           {hasUser ? (
             <div className="flex items-center gap-2">
@@ -605,24 +632,54 @@ const handleSubmit = useCallback(() => {
           </div>
 
           <div className="flex-1 overflow-y-auto px-2 py-2">
-            {SKILLS.map((sk) => (
-              <button
-                key={sk.key}
-                onClick={() => openSkill(sk)}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-colors hover:bg-slate-50 active:scale-[0.98]"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate" style={{ color: '#0f172a' }}>{sk.label}</p>
-                  <p className="text-xs truncate" style={{ color: '#64748b' }}>{sk.desc}</p>
+            {(() => {
+              const isFav = (k: string) => favorites.includes(k);
+              const favSkills = hasUser ? SKILLS.filter((s) => isFav(s.key)) : [];
+              const restSkills = hasUser ? SKILLS.filter((s) => !isFav(s.key)) : SKILLS;
+
+              const renderRow = (sk: Skill) => (
+                <div key={sk.key} className="w-full flex items-center gap-1 rounded-xl transition-colors hover:bg-slate-50">
+                  {hasUser && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleFav(sk.key); }}
+                      className="p-2 ml-1 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0 active:scale-90"
+                      aria-label={isFav(sk.key) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                    >
+                      <Star className="w-4 h-4" fill={isFav(sk.key) ? CMYK.cyan : 'none'} stroke={isFav(sk.key) ? CMYK.cyan : '#cbd5e1'} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => openSkill(sk)}
+                    className="flex-1 min-w-0 flex items-center gap-3 px-2 py-3 text-left active:scale-[0.98]"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate" style={{ color: '#0f172a' }}>{sk.label}</p>
+                      <p className="text-xs truncate" style={{ color: '#64748b' }}>{sk.desc}</p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <span className="text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap" style={{ background: `${sk.color}1A`, color: sk.color }}>
+                        {sk.credits === 0 ? 'Grátis' : `${sk.credits} cr.`}
+                      </span>
+                      <span className="text-slate-300 text-lg leading-none">›</span>
+                    </div>
+                  </button>
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <span className="text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap" style={{ background: `${sk.color}1A`, color: sk.color }}>
-                    {sk.credits === 0 ? 'Grátis' : `${sk.credits} cr.`}
-                  </span>
-                  <span className="text-slate-300 text-lg leading-none">›</span>
-                </div>
-              </button>
-            ))}
+              );
+
+              return (
+                <>
+                  {favSkills.length > 0 && (
+                    <>
+                      <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94a3b8' }}>Favoritas</p>
+                      {favSkills.map(renderRow)}
+                      <div className="mx-3 my-2 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }} />
+                      <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94a3b8' }}>Todas as funções</p>
+                    </>
+                  )}
+                  {restSkills.map(renderRow)}
+                </>
+              );
+            })()}
           </div>
 
           <div className="px-4 py-3 border-t flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>

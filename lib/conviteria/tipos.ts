@@ -1,0 +1,152 @@
+// ---------------------------------------------------------------------------
+// Contrato do convite. O mesmo objeto alimenta a previa do wizard (estado
+// local) e a pagina publicada (vindo do banco). Um so caminho de render.
+// ---------------------------------------------------------------------------
+
+export type TipoSecao =
+  | 'foto'
+  | 'frase'
+  | 'musica'
+  | 'nomes'
+  | 'data'
+  | 'contagem'
+  | 'calendario'
+  | 'local'
+  | 'rsvp'
+  | 'presentes'
+  | 'recados'
+  | 'padrinhos'
+  | 'dresscode'
+  | 'galeria'
+  | 'fim';
+
+export interface SecaoConfig {
+  tipo: TipoSecao;
+  ordem: number;
+  ativo: boolean;
+  /** Sobrescreve titulo, texto e rotulo do botao por secao. */
+  config?: {
+    titulo?: string;
+    texto?: string;
+    destaque?: string;
+    /** Autoria da frase/versiculo. */
+    autor?: string;
+    rotuloBotao?: string;
+    href?: string;
+    // Campos livres. Declare acima o que for usado em JSX: valor `unknown`
+    // dentro de `{x && <tag/>}` produz `unknown`, que nao e um ReactNode.
+    [chave: string]: unknown;
+  };
+}
+
+export interface Padrinho {
+  nome: string;
+  papel?: string;
+  fotoUrl?: string;
+}
+
+export interface PresenteExibicao {
+  id: string;
+  titulo: string;
+  valorCentavos: number;
+  imagemUrl?: string | null;
+  esgotado?: boolean;
+}
+
+export type OrigemMusica = 'upload' | 'youtube';
+
+export interface ConviteConfig {
+  temaId: string;
+  fonteId: string;
+  tipoEventoId: string;
+
+  anfitrioes: {
+    /** Como aparece em destaque: "Miriam e Ithiel" */
+    exibicao: string;
+    /** Assinatura no rodape. Opcional. */
+    completo?: string;
+    /** Monograma do lacre: "MI" */
+    iniciais: string;
+    /** True quando o usuario editou as iniciais a mao: a partir dai o
+        wizard para de deriva-las do nome exibido. */
+    iniciaisManual?: boolean;
+  };
+
+  evento: {
+    /** ISO com fuso. Ex.: 2026-10-31T13:00:00-03:00 */
+    dataIso: string;
+    dataExtenso: string;
+    diaSemana: string;
+    horario: string;
+    /** Subtitulo sob os nomes. Ex.: "Convidam para a cerimonia de casamento" */
+    convocacao?: string;
+  };
+
+  local?: {
+    nome?: string;
+    logradouro?: string;
+    bairro?: string;
+    cidade?: string;
+    cep?: string;
+    mapsUrl?: string;
+    /** Embed do google-maps-proxy. Quando ausente, so mostra o botao. */
+    mapEmbedUrl?: string;
+  };
+
+  midia?: {
+    fotoPrincipal?: string;
+    fotoCapa?: string;
+    enquadramento?: string;
+    galeria?: string[];
+    musica?: {
+      origem: OrigemMusica;
+      /** upload: caminho no Storage. youtube: id do video. */
+      arquivoUrl?: string;
+      youtubeVideoId?: string;
+      /** Rede de seguranca se o embed do YouTube falhar. */
+      fallbackUrl?: string;
+      titulo?: string;
+    };
+  };
+
+  padrinhos?: Padrinho[];
+  presentes?: PresenteExibicao[];
+
+  /** Textos livres por chave, para o wizard preencher sem migracao. */
+  textos?: Record<string, string>;
+
+  links?: {
+    rsvp?: string;
+    presentes?: string;
+    recados?: string;
+  };
+
+  secoes: SecaoConfig[];
+
+  /** Contorno do monograma, gerado no servidor ao publicar. */
+  lacrePath?: string;
+
+  /** Preenchido na etapa de publicacao. */
+  publicacao?: {
+    slug?: string;
+    planoId?: 'avulso' | 'mensal';
+  };
+}
+
+/** Contexto de render: muda o comportamento, nunca a aparencia. */
+export interface ModoRender {
+  /** Na previa, links nao navegam e a musica nao toca sozinha. */
+  previa?: boolean;
+  /** Secao que o wizard esta editando agora, para rolar ate ela. */
+  secaoFoco?: TipoSecao;
+}
+
+/**
+ * Props de toda secao. Fica aqui, e nao em Convite.tsx, porque o motor importa
+ * as secoes e as secoes importariam o motor de volta — ciclo de import.
+ */
+export interface PropsSecao {
+  cfg: ConviteConfig;
+  secao: SecaoConfig;
+  modo: ModoRender;
+}

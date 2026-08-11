@@ -1,0 +1,454 @@
+/* ==========================================================================
+   Wizard — Convite IA
+
+   Prefixo .wz- e cor propria. O cromo do wizard NAO herda os tokens --cv-:
+   se herdasse, o painel mudaria de cor junto com o convite e o usuario
+   perderia a referencia de qual parte e a ferramenta e qual e o produto.
+   ========================================================================== */
+
+.wz {
+  --wz-rosa: #d86090;
+  --wz-rosa-escuro: #a04a63;
+  --wz-linha: #e4e4e7;
+  --wz-fundo: #f7f7f8;
+  --wz-texto: #1c1a1e;
+  --wz-suave: #6b6b73;
+
+  display: grid;
+  min-height: 100dvh;
+  background: var(--wz-fundo);
+  color: var(--wz-texto);
+  font-family: 'Quicksand', system-ui, sans-serif;
+}
+
+/* --------------------------------------------------------------------------
+   Painel do formulario
+   -------------------------------------------------------------------------- */
+
+.wz-painel {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  overflow-y: auto;
+  /* Espaco para o botao flutuante de previa no mobile. */
+  padding-bottom: 92px;
+}
+
+.wz-cabecalho { padding: 20px 20px 0; }
+
+.wz-trilha {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 18px;
+  padding: 0 0 6px;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.wz-trilha::-webkit-scrollbar { display: none; }
+.wz-trilha button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px 7px 7px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  color: var(--wz-suave);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.wz-trilha-num {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--wz-fundo);
+  font-size: 11px;
+  font-weight: 700;
+}
+.wz-trilha .feita button { border-color: #d9c2cc; color: var(--wz-rosa-escuro); }
+.wz-trilha .feita .wz-trilha-num { background: #fbe6ee; color: var(--wz-rosa-escuro); }
+.wz-trilha .atual button { border-color: var(--wz-rosa); color: var(--wz-rosa-escuro); font-weight: 700; }
+.wz-trilha .atual .wz-trilha-num { background: var(--wz-rosa); color: #fff; }
+
+.wz-titulo { margin: 0 0 4px; font-size: 24px; font-weight: 700; }
+
+.wz-conteudo { flex: 1; padding: 14px 20px 20px; }
+
+.wz-intro, .wz-aviso {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--wz-suave);
+}
+.wz-aviso { margin: 16px 0 0; font-size: 12px; }
+.wz-ok { margin: -8px 0 16px; font-size: 12px; color: #15803d; }
+
+/* --------------------------------------------------------------------------
+   Campos
+   -------------------------------------------------------------------------- */
+
+.wz-campo { display: block; margin-bottom: 16px; }
+.wz-campo-rotulo {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wz-suave);
+}
+.wz-campo-dica {
+  display: block;
+  margin-top: 5px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--wz-suave);
+}
+.wz-input {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 9px;
+  background: #fff;
+  font: inherit;
+  font-size: 15px; /* 16px ou mais evita o zoom automatico do iOS */
+  color: var(--wz-texto);
+}
+.wz-input:focus-visible { outline: 2px solid var(--wz-rosa); outline-offset: 1px; border-color: var(--wz-rosa); }
+.wz-area { resize: vertical; line-height: 1.6; }
+.wz-arquivo { padding: 9px 10px; font-size: 13px; }
+
+.wz-grupo { margin: 22px 0 0; padding: 16px; border: 1px solid var(--wz-linha); border-radius: 12px; }
+.wz-grupo legend { padding: 0 7px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--wz-suave); }
+
+.wz-opcoes { display: flex; gap: 8px; margin-bottom: 16px; }
+.wz-opcao {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 9px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.wz-opcao.sel { border-color: var(--wz-rosa); background: #fdf0f3; font-weight: 700; color: var(--wz-rosa-escuro); }
+
+/* --------------------------------------------------------------------------
+   Cartoes de escolha
+   -------------------------------------------------------------------------- */
+
+.wz-cartoes { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.wz-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 13px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 11px;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.wz-cartao:hover { border-color: #b8b8be; }
+.wz-cartao.sel { border-color: var(--wz-rosa); box-shadow: 0 0 0 2px rgb(216 96 144 / 16%); }
+.wz-cartao-nome { font-size: 12.5px; font-weight: 700; }
+.wz-amostra { display: block; line-height: 1.15; color: var(--wz-texto); overflow: hidden; }
+.wz-faixa { display: flex; height: 30px; border-radius: 7px; overflow: hidden; }
+.wz-faixa i { flex: 1; }
+
+.wz-mais { margin-top: 16px; }
+.wz-mais summary { font-size: 13px; color: var(--wz-rosa-escuro); cursor: pointer; margin-bottom: 12px; }
+
+/* --------------------------------------------------------------------------
+   Lista de secoes
+   -------------------------------------------------------------------------- */
+
+.wz-secoes { margin: 0; padding: 0; list-style: none; border: 1px solid var(--wz-linha); border-radius: 12px; overflow: hidden; }
+.wz-secoes li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--wz-linha);
+  background: #fff;
+}
+.wz-secoes li:last-child { border-bottom: 0; }
+.wz-secoes li.off { background: var(--wz-fundo); color: var(--wz-suave); }
+.wz-switch { display: flex; align-items: center; gap: 10px; flex: 1; font-size: 14px; cursor: pointer; }
+.wz-switch input { width: 18px; height: 18px; accent-color: var(--wz-rosa); cursor: pointer; }
+.wz-switch input:disabled { cursor: default; opacity: 0.5; }
+.wz-mover { display: flex; gap: 4px; }
+.wz-mover button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 13px;
+  color: var(--wz-suave);
+  cursor: pointer;
+}
+.wz-mover button:disabled { opacity: 0.35; cursor: default; }
+
+/* --------------------------------------------------------------------------
+   Revisao
+   -------------------------------------------------------------------------- */
+
+.wz-resumo { margin: 0; border: 1px solid var(--wz-linha); border-radius: 12px; overflow: hidden; }
+.wz-resumo > div { display: flex; justify-content: space-between; gap: 14px; padding: 11px 14px; border-bottom: 1px solid var(--wz-linha); background: #fff; }
+.wz-resumo > div:last-child { border-bottom: 0; }
+.wz-resumo dt { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--wz-suave); }
+.wz-resumo dd { margin: 0; font-size: 14px; font-weight: 600; text-align: right; }
+
+.wz-problemas { margin-bottom: 18px; padding: 14px; border: 1px solid #f5d0a9; border-radius: 11px; background: #fffbf3; }
+.wz-problemas p { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #a16207; }
+.wz-problemas ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.8; color: #7c5a1e; }
+.wz-problemas button { border: 0; background: none; font: inherit; font-size: 12.5px; color: var(--wz-rosa-escuro); text-decoration: underline; cursor: pointer; padding: 0; }
+
+.wz-faltas { margin: 0 20px; padding: 11px 14px 11px 32px; border-radius: 10px; background: #fef2f2; color: #b91c1c; font-size: 13px; line-height: 1.6; }
+
+/* --------------------------------------------------------------------------
+   Rodape
+   -------------------------------------------------------------------------- */
+
+.wz-rodape {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--wz-linha);
+  background: #fff;
+}
+.wz-btn {
+  flex: 1;
+  padding: 13px 18px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.wz-btn-principal { flex: 2; border-color: var(--wz-rosa); background: var(--wz-rosa); color: #fff; }
+.wz-btn-principal:hover:not(:disabled) { filter: brightness(0.93); }
+.wz-btn:disabled { opacity: 0.45; cursor: default; }
+.wz-btn-fantasma { color: var(--wz-suave); }
+
+/* --------------------------------------------------------------------------
+   Previa
+   -------------------------------------------------------------------------- */
+
+.wz-previa { display: flex; flex-direction: column; background: var(--wz-fundo); }
+.wz-previa-topo {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--wz-linha);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--wz-suave);
+}
+.wz-fechar { width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--wz-fundo); font-size: 15px; cursor: pointer; }
+.wz-previa-palco { flex: 1; overflow-y: auto; padding: 24px 0 40px; }
+
+.wz-abrir-previa {
+  position: fixed;
+  right: 16px;
+  bottom: 84px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--wz-rosa);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 6px 22px rgb(216 96 144 / 38%);
+  cursor: pointer;
+}
+.wz-badge {
+  display: grid;
+  place-items: center;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--wz-rosa-escuro);
+  font-size: 11.5px;
+}
+
+/* Mobile: a previa e uma folha em tela cheia. Nunca meia tela — as duas
+   metades ficariam pequenas demais para servir. */
+@media (max-width: 899px) {
+  .wz-previa {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    transform: translateY(100%);
+    visibility: hidden;
+    transition: transform 0.28s ease, visibility 0.28s;
+  }
+  .wz-previa.aberta { transform: translateY(0); visibility: visible; }
+  .wz-previa-topo { display: flex; }
+}
+
+/* Desktop: duas colunas, previa fixa. */
+@media (min-width: 900px) {
+  .wz { grid-template-columns: minmax(380px, 46%) 1fr; }
+  .wz-painel { padding-bottom: 0; border-right: 1px solid var(--wz-linha); max-height: 100dvh; }
+  .wz-previa { position: sticky; top: 0; max-height: 100dvh; }
+  .wz-abrir-previa { display: none; }
+  .wz-cartoes { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wz-previa { transition-duration: 0.01ms; }
+}
+
+/* --------------------------------------------------------------------------
+   Publicacao
+   -------------------------------------------------------------------------- */
+
+.wz-slug { display: flex; align-items: stretch; }
+.wz-slug .wz-input { border-radius: 9px 0 0 9px; border-right: 0; text-align: right; }
+.wz-slug-dominio {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--wz-linha);
+  border-left: 0;
+  border-radius: 0 9px 9px 0;
+  background: var(--wz-fundo);
+  font-size: 14px;
+  color: var(--wz-suave);
+  white-space: nowrap;
+}
+.wz-slug-situacao { margin: -8px 0 18px; font-size: 12.5px; min-height: 18px; }
+.wz-slug-situacao.checando { color: var(--wz-suave); }
+.wz-slug-situacao.livre { color: #15803d; }
+.wz-slug-situacao.ocupado { color: #b91c1c; }
+
+.wz-plano {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 15px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wz-plano.sel { border-color: var(--wz-rosa); box-shadow: 0 0 0 2px rgb(216 96 144 / 16%); }
+.wz-plano-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.wz-plano-nome { font-size: 15px; font-weight: 700; }
+.wz-plano-preco { font-size: 17px; font-weight: 700; color: var(--wz-rosa-escuro); }
+.wz-plano-preco small { font-size: 11px; font-weight: 400; color: var(--wz-suave); }
+.wz-plano-desc { display: block; margin: 5px 0 9px; font-size: 12.5px; color: var(--wz-suave); }
+.wz-plano-lista { margin: 0; padding-left: 17px; font-size: 12.5px; line-height: 1.75; color: var(--wz-suave); }
+
+/* --------------------------------------------------------------------------
+   Sugestao por IA
+   -------------------------------------------------------------------------- */
+
+.wz-ia {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: -6px 0 16px;
+  padding: 8px 14px;
+  border: 1px solid #e8c6d6;
+  border-radius: 999px;
+  background: #fdf0f3;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--wz-rosa-escuro);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.wz-ia:hover:not(:disabled) { background: #fbe3ea; }
+.wz-ia:disabled { opacity: 0.6; cursor: default; }
+.wz-ia svg { width: 15px; height: 15px; }
+
+.wz-ia-erro { margin: -10px 0 14px; font-size: 12px; color: #b91c1c; }
+.wz-ia-porque {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #fdf0f3;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--wz-rosa-escuro);
+}
+
+.wz-ia-caixa {
+  margin-bottom: 22px;
+  padding: 15px;
+  border: 1px solid #e8c6d6;
+  border-radius: 12px;
+  background: #fffafb;
+}
+.wz-ia-caixa .wz-input { margin-bottom: 11px; }
+
+.wz-sugestoes {
+  margin: -6px 0 18px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 11px;
+  overflow: hidden;
+}
+.wz-sugestoes-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--wz-fundo);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wz-suave);
+}
+.wz-sugestoes-topo button {
+  border: 0;
+  background: none;
+  font-size: 13px;
+  color: var(--wz-suave);
+  cursor: pointer;
+}
+.wz-sugestao {
+  display: block;
+  width: 100%;
+  padding: 11px 13px;
+  border: 0;
+  border-top: 1px solid var(--wz-linha);
+  background: #fff;
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.55;
+  text-align: left;
+  white-space: pre-line;
+  cursor: pointer;
+}
+.wz-sugestao:hover { background: #fdf0f3; }

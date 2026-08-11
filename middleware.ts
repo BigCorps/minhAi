@@ -1,6 +1,7 @@
 // middleware.ts
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import type { BrandKey } from './lib/brand'; // troque por '@/lib/brand' se for a convenção do repo
 
 const PLAN_PROTECTED_ROUTES = [
   '/dashboard/producao',
@@ -11,6 +12,16 @@ const RESERVED_SUBDOMAINS = [
   'dashboard', 'login', 'cadastro',
   'precos', 'sobre', 'contato', 'docs', 'blog',
   'para',
+  'suporte', 'ajuda', 'status', 'cdn', 'assets', 'static', 'files',
+  'noticias', 'termos', 'privacidade', 'seguranca', 'abuse', 'postmaster',
+  'webmaster', 'noreply', 'no-reply', 'root', 'test', 'teste', 'demo',
+  'staging', 'dev', 'beta', 'null', 'undefined', 'me', 'eu',
+  'minhai', 'artefinal', 'consultatec', 'pix', 'minia', 'bigcorps',
+  'convite', 'convites', 'conviteia', 'convite-ai', 'ai', 'ia',
+  // 'mcp' precisa estar aqui: o proxy mcp.minhai.app do next.config é um
+  // rewrite beforeFiles, que roda DEPOIS do middleware. Sem reservar,
+  // mcp.minhai.app é tratado como slug de cliente e vai pra /ia/mcp.
+  'mcp',
 ];
 
 const CRAWLER_PASSTHROUGH = ['/robots.txt', '/sitemap.xml', '/sitemap.ts'];
@@ -30,22 +41,34 @@ const MINIA_APP_DOMAINS = ['app.min.ia.br'];
 const MINIA_APEX_TEMP_REDIRECT_DOMAINS = ['min.ia.br', 'www.min.ia.br'];
 
 // ── Todos os domínios de subdomínio de cliente ─────────────────────────────
-const SUBDOMAIN_DOMAINS = [
-  { suffix: '.minhai.com.br',  pattern: /^(.+)\.minhai\.com\.br$/ },
-  { suffix: '.minhaia.app',    pattern: /^(.+)\.minhaia\.app$/ },
-  { suffix: '.nossaia.app',    pattern: /^(.+)\.nossaia\.app$/ },
-  { suffix: '.suaia.app',      pattern: /^(.+)\.suaia\.app$/ },
-  { suffix: '.minhai.app',     pattern: /^(.+)\.minhai\.app$/ },
+// Toda entrada precisa de suffix + pattern + brand:
+//   suffix  → usado por isSubdomainHost
+//   pattern → usado por extractSlug
+//   brand   → decide o destino do rewrite (/ia vs /convite)
+// Se faltar um dos três a entrada silenciosamente para de funcionar.
+type SubdomainDomain = { suffix: string; pattern: RegExp; brand: BrandKey };
+
+const SUBDOMAIN_DOMAINS: SubdomainDomain[] = [
+  { suffix: '.minhai.com.br', pattern: /^(.+)\.minhai\.com\.br$/, brand: 'minhai'    },
+  { suffix: '.minhaia.app',   pattern: /^(.+)\.minhaia\.app$/,    brand: 'minhai'    },
+  { suffix: '.nossaia.app',   pattern: /^(.+)\.nossaia\.app$/,    brand: 'minhai'    },
+  { suffix: '.suaia.app',     pattern: /^(.+)\.suaia\.app$/,      brand: 'minhai'    },
+  { suffix: '.minhai.app',    pattern: /^(.+)\.minhai\.app$/,     brand: 'minhai'    },
+  { suffix: '.conviteia.com', pattern: /^(.+)\.conviteia\.com$/,  brand: 'conviteia' },
 ];
 
-function extractSlug(hostname: string): string | null {
-  // Dev local: loja.localhost
+function extractSlug(hostname: string): { slug: string; brand: BrandKey } | null {
+  // Dev local: noivos.conviteia.localhost → marca conviteia
+  //            loja.localhost            → marca minhai
   if (hostname.includes('.localhost')) {
-    return hostname.split('.')[0] || null;
+    const brand: BrandKey = hostname.includes('.conviteia.localhost')
+      ? 'conviteia'
+      : 'minhai';
+    return { slug: hostname.split('.')[0], brand };
   }
-  for (const { pattern } of SUBDOMAIN_DOMAINS) {
+  for (const { pattern, brand } of SUBDOMAIN_DOMAINS) {
     const match = hostname.match(pattern);
-    if (match) return match[1];
+    if (match) return { slug: match[1], brand };
   }
   return null;
 }
@@ -284,14 +307,21 @@ if (PIX_DOMAINS.includes(hostname)) {
 
   // ── 1. DETECÇÃO DE SUBDOMÍNIO DE CLIENTE ──────────────────────────────────
   if (isSubdomainHost(hostname)) {
-    const slug = extractSlug(hostname);
+    const matched = extractSlug(hostname);
 
-    if (slug && !RESERVED_SUBDOMAINS.includes(slug)) {
+    if (matched && !RESERVED_SUBDOMAINS.includes(matched.slug)) {
+      const { slug, brand } = matched;
+
+      // A marca decide a base do rewrite. conviteia → /convite/[slug],
+      // todo o resto continua em /ia/[slug].
+      const isConviteia = brand === 'conviteia';
+      const base = isConviteia ? '/convite' : '/ia';
 
       if (pathname === '/favicon.ico') {
         const url = request.nextUrl.clone();
         url.pathname = '/api/favicon';
         url.searchParams.set('slug', slug);
+        url.searchParams.set('brand', brand);
         return NextResponse.rewrite(url);
       }
 
@@ -299,6 +329,7 @@ if (PIX_DOMAINS.includes(hostname)) {
         const url = request.nextUrl.clone();
         url.pathname = '/manifest.webmanifest';
         url.searchParams.set('slug', slug);
+        url.searchParams.set('brand', brand);
         return NextResponse.rewrite(url);
       }
 
@@ -306,18 +337,23 @@ if (PIX_DOMAINS.includes(hostname)) {
         const url = request.nextUrl.clone();
         url.pathname = '/sw.js';
         url.searchParams.set('slug', slug);
+        url.searchParams.set('brand', brand);
         return NextResponse.rewrite(url);
       }
 
       const url = request.nextUrl.clone();
+
+      // Rotas especiais são do fluxo minhAi (vendas, fila, etc.).
+      // Em conviteia tudo mora embaixo de /convite/[slug].
       const SPECIAL_ROUTES = ['/vendas', '/fila', '/pay', '/cliente', '/link', '/site'];
-      const isSpecialRoute = SPECIAL_ROUTES.some(route => pathname.startsWith(route));
+      const isSpecialRoute =
+        !isConviteia && SPECIAL_ROUTES.some(route => pathname.startsWith(route));
 
       if (isSpecialRoute) {
         const cleanPath = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname;
         url.pathname = `${cleanPath}/${slug}`;
-      } else if (pathname === '/' || pathname === '/ia') {
-        url.pathname = `/ia/${slug}`;
+      } else if (pathname === '/' || pathname === base) {
+        url.pathname = `${base}/${slug}`;
         // Sinaliza para o page.tsx se veio da raiz (deve redirecionar) ou de /ia (não redireciona)
         const response = NextResponse.rewrite(url);
         if (pathname === '/') {
@@ -325,7 +361,7 @@ if (PIX_DOMAINS.includes(hostname)) {
         }
         return response;
       } else {
-        url.pathname = `/ia/${slug}${pathname}`;
+        url.pathname = `${base}/${slug}${pathname}`;
       }
 
       return NextResponse.rewrite(url);

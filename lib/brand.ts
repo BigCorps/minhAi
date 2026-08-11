@@ -1,7 +1,17 @@
-export type BrandKey = 'minhai' | 'artefinal' | 'pix' | 'minia' | 'consultatec';
+export type BrandKey =
+  | 'minhai'
+  | 'artefinal'
+  | 'pix'
+  | 'minia'
+  | 'consultatec'
+  | 'conviteia';
 
 export function getBrandByHost(hostname: string): BrandKey {
   const cleanHost = hostname.split(':')[0].toLowerCase();
+
+  if (cleanHost === 'conviteia.com' || cleanHost === 'www.conviteia.com') {
+    return 'conviteia';
+  }
 
   if (cleanHost === 'ia.artefinal.app') {
     return 'artefinal';
@@ -39,6 +49,13 @@ export const BRANDS: Record<BrandKey, BrandInfo> = {
     logo: '/logo.png',
     title: 'minhAi',
     description: 'Uma IA pra chamar de sua!',
+  },
+
+  conviteia: {
+    name: 'Convite IA',
+    logo: '/icones/marca-256.png',
+    title: 'Convite IA',
+    description: 'Crie seu convite com IA!',
   },
 
   artefinal: {

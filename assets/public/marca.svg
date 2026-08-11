@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- balao: anel aberto com a cauda embaixo a esquerda -->
+  <path d="M50 8 A 40 40 0 1 1 26 80 L 14 92 L 19 74 A 40 40 0 0 1 50 8 Z"
+        fill="none" stroke="#d86090" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- envelope -->
+  <rect x="27" y="36" width="46" height="32" rx="5" fill="#fdf0f3" stroke="#c06078" stroke-width="3"/>
+  <path d="M27 41 L50 57 L73 41" fill="none" stroke="#c06078" stroke-width="3"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- coracao do lacre -->
+  <path d="M50 71 C 43 65.5 39.5 62.5 39.5 58.6 C 39.5 55.6 41.8 53.4 44.6 53.4
+           C 46.7 53.4 48.9 54.6 50 56.5 C 51.1 54.6 53.3 53.4 55.4 53.4
+           C 58.2 53.4 60.5 55.6 60.5 58.6 C 60.5 62.5 57 65.5 50 71 Z"
+        fill="#e8558f"/>
+</svg>

@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
   turbopack: {},
 
   typescript: {
@@ -13,7 +14,11 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/api/arte/gstest': ['./node_modules/@jspawn/ghostscript-wasm/**'],
   },
-  serverExternalPackages: ['@jspawn/ghostscript-wasm', 'sharp'],
+
+  // ⚠️ opentype.js entrou AQUI, na lista que já existia.
+  // Não é uma segunda chave `serverExternalPackages` — a última venceria e
+  // ghostscript-wasm + sharp voltariam a ser empacotados.
+  serverExternalPackages: ['@jspawn/ghostscript-wasm', 'sharp', 'opentype.js'],
 
   images: {
     remotePatterns: [
@@ -24,7 +29,7 @@ const nextConfig = {
       },
     ],
   },
-  
+
   webpack: (config, { isServer, webpack }) => {
     config.optimization.minimize = false;
     config.optimization.concatenateModules = false;
@@ -89,9 +94,9 @@ const nextConfig = {
             'https://qyonozbroekuqlotqcbm.supabase.co/functions/v1/mcp-server/:path*',
         },
       ],
-      afterFiles:  [],
-      fallback:    [],
-    }
+      afterFiles: [],
+      fallback: [],
+    };
   },
   // ────────────────────────────────────────────────────────────────────────────
 
@@ -104,7 +109,7 @@ const nextConfig = {
       { source: '/:path*', has: [{ type: 'host', value: 'minhaia.app'       }], destination: 'https://www.minhai.app/:path*', permanent: true },
       { source: '/:path*', has: [{ type: 'host', value: 'nossaia.app'       }], destination: 'https://www.minhai.app/:path*', permanent: true },
       { source: '/:path*', has: [{ type: 'host', value: 'suaia.app'         }], destination: 'https://www.minhai.app/:path*', permanent: true },
-    ]
+    ];
   },
 
   async headers() {
@@ -141,10 +146,10 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Origin', value: '*' },
         ],
       },
-    ]
+    ];
   },
 
   // transpilePackages: ['@ricky0123/vad-web', 'onnxruntime-web'],
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

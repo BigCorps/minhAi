@@ -25,6 +25,7 @@ import RestricoesCnpjModal from '@/components/consultatec/RestricoesCnpjModal';
 import ConsultarProtestosModal from '@/components/consultatec/ConsultarProtestosModal';
 import CompletaCpfModal from '@/components/consultatec/CompletaCpfModal';
 import Footer from '@/components/consultatec/Footer';
+import PapelMoedaBackground from '@/components/consultatec/PapelMoedaBackground';
 
 // ── paleta "papel moeda" ──────────────────────────────────────────────────
 const cor = {
@@ -161,6 +162,7 @@ export default function ConsultaTecPage() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: cor.fundo, color: cor.tinta }}>
+      <PapelMoedaBackground />
       {/* ── Header ── */}
       <header className="border-b" style={{ borderColor: cor.borda }}>
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -200,8 +202,7 @@ export default function ConsultaTecPage() {
           Consulte CPF ou CNPJ
         </h1>
         <p className="text-center mb-10" style={{ color: cor.tintaMuted }}>
-          Digite o documento e escolha a seguir as opções disponíveis.
-          - Dados, Restrições, Protestos, etc.
+          Digite o documento — identificamos o tipo automaticamente
         </p>
 
         <div className="w-full max-w-md">

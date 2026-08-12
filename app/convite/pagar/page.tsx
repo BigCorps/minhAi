@@ -1,6 +1,6 @@
 'use client';
 
-// app/conviteia/pagar/page.tsx
+// app/convite/pagar/page.tsx
 //
 // Mesma maquina de estados do AdicionarSaldoModal do ConsultaTec
 // (valor → pix → confirmando → sucesso), com duas diferencas:

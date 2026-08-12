@@ -19,6 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: brand.description,
     applicationName: brand.name,
+    manifest: isConviteia ? '/brands/convite/manifest.webmanifest' : undefined,
 
     icons: {
       icon: isConviteia

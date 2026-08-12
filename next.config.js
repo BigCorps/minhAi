@@ -12,6 +12,7 @@ const nextConfig = {
 
   outputFileTracingIncludes: {
     '/api/arte/gstest': ['./node_modules/@jspawn/ghostscript-wasm/**'],
+    '/api/conviteria/lacre': ['./public/fontes/**'],
   },
 
   serverExternalPackages: ['@jspawn/ghostscript-wasm', 'sharp', 'opentype.js'],

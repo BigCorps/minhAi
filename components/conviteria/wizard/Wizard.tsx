@@ -3,6 +3,9 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { Dispatch } from 'react';
 import Convite from '../Convite';
+import FontesGoogle from '../FontesGoogle';
+import { acharTipo } from '@/lib/conviteria/tiposEvento';
+import { familiasDoGrupo } from '@/lib/conviteria/tokens';
 import {
   criarEstadoInicial, ETAPAS, pendencias, reduzir,
 } from '@/lib/conviteria/wizard';
@@ -61,6 +64,7 @@ export default function Wizard({
   const [previaAberta, setPreviaAberta] = useState(false);
   const primeiraVez = useRef(true);
 
+  const grupo = acharTipo(estado.cfg.tipoEventoId).grupo;
   const etapa = ETAPAS[estado.etapa];
   const Componente = ETAPA_COMPONENTE[etapa.id];
   const faltas = pendencias(estado);
@@ -84,6 +88,7 @@ export default function Wizard({
 
   return (
     <div className="wz">
+      <FontesGoogle familias={familiasDoGrupo(grupo)} />
       <div className="wz-painel" ref={painel}>
         <header className="wz-cabecalho">
           <ol className="wz-trilha">

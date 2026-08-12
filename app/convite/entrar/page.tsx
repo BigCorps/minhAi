@@ -1,6 +1,6 @@
 'use client';
 
-// app/conviteia/entrar/page.tsx
+// app/convite/entrar/page.tsx
 //
 // Mesma base do login do ArteFinal (Supabase auth + Turnstile), na paleta do
 // tema `marca` da ConviteIA. Duas diferencas de comportamento:
@@ -124,7 +124,7 @@ function EntrarConteudo() {
     }
 
     // Avulso: o convite existe mas so vai ao ar depois do PIX.
-    router.push(`/conviteia/pagar?evento=${dados.eventoId}`);
+    router.push(`/convite/pagar?evento=${dados.eventoId}`);
     return true;
   }
 
@@ -179,7 +179,7 @@ function EntrarConteudo() {
 
       if (destino === 'publicar' && (await publicarPendente())) return;
 
-      router.push('/conviteia/painel');
+      router.push('/convite');
     } catch (e: any) {
       setErro(e?.message ?? 'Erro ao autenticar. Tente novamente.');
     } finally {

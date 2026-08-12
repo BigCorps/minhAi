@@ -50,7 +50,7 @@ export default function Criar() {
         // Guarda o estado final e manda para o cadastro. A publicação só
         // acontece depois do login, porque a rota exige token de sessão.
         sessionStorage.setItem('conviteia:publicar', JSON.stringify(estado));
-        window.location.href = '/conviteia/entrar?destino=publicar';
+        window.location.href = '/convite/entrar?destino=publicar';
       }}
     />
   );

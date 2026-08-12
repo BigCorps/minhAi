@@ -53,7 +53,7 @@ export const BRANDS: Record<BrandKey, BrandInfo> = {
 
   conviteia: {
     name: 'Convite IA',
-    logo: '/icones/marca-256.png',
+    logo: '/brands/convite/icone-512.png',
     title: 'Convite IA',
     description: 'Crie seu convite com IA!',
   },

@@ -48,19 +48,6 @@ const MINIA_APEX_TEMP_REDIRECT_DOMAINS = ['min.ia.br', 'www.min.ia.br'];
 // Se faltar um dos três a entrada silenciosamente para de funcionar.
 type SubdomainDomain = { suffix: string; pattern: RegExp; brand: BrandKey };
 
-  // ── Conviteia: raiz do domínio ────────────────────────────────────────────
-  // O middleware só trata subdomínio; sem isto, conviteia.com serviria a
-  // landing da minhAi.
-  if (hostname === 'conviteia.com' || hostname === 'www.conviteia.com') {
-    if (pathname === '/') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/conviteia';
-      return NextResponse.rewrite(url);
-    }
-    // /criar, /entrar, /painel e o resto seguem normalmente
-    return NextResponse.next();
-  }
-
 const SUBDOMAIN_DOMAINS: SubdomainDomain[] = [
   { suffix: '.minhai.com.br', pattern: /^(.+)\.minhai\.com\.br$/, brand: 'minhai'    },
   { suffix: '.minhaia.app',   pattern: /^(.+)\.minhaia\.app$/,    brand: 'minhai'    },
@@ -315,6 +302,27 @@ if (PIX_DOMAINS.includes(hostname)) {
 
   // ── 0.5. PASSTHROUGH PARA /pay ────────────────────────────────────────────
   if (pathname.startsWith('/pay/')) {
+    return NextResponse.next();
+  }
+
+  // ── 0.6. CONVITEIA — RAIZ DO DOMÍNIO ──────────────────────────────────────
+  // Precisa vir ANTES da detecção de subdomínio e DEPOIS dos passthroughs.
+  // O bloco 1 só trata subdomínio; sem isto, conviteia.com cairia no fluxo
+  // normal e serviria a landing da minhAi.
+  if (hostname === 'conviteia.com' || hostname === 'www.conviteia.com') {
+    if (pathname === '/') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/convite';
+      return NextResponse.rewrite(url);
+    }
+
+    // Auth e API do Conviteia usam a infra compartilhada: prefixar quebraria
+    // o retorno do OAuth, igual ao que já acontece no bloco do Pix Wiki.
+    if (pathname.startsWith('/auth/') || pathname.startsWith('/api/')) {
+      return NextResponse.next();
+    }
+
+    // /conviteia/criar, /conviteia/entrar e o resto seguem normalmente.
     return NextResponse.next();
   }
 

@@ -1,14 +1,16 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import RendaBackground from '@/components/conviteria/RendaBackground';
 
 export default function PaginaInicialConvite() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-6 md:p-24 text-center bg-[#f7f7f8] text-[#1c1a1e]">
+    <main className="min-h-screen flex flex-col items-center justify-center p-6 md:p-24 text-center text-[#40232c]">
+      <RendaBackground />
       
       {/* Logo Centralizado */}
       <div className="mb-8 flex justify-center">
         <Image
-          src="/brands/convite/icone-512.png"
+          src="/brands/convite/marca-256.png"
           alt="Logo Convite IA"
           width={128}
           height={128}

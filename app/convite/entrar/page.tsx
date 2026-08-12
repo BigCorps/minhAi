@@ -13,10 +13,12 @@
 //    criando conta agora, no meio de um fluxo, e nao tem credencial
 //    registrada. O botao so apareceria para nunca funcionar.
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase-browser';
 import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
+import RendaBackground from '@/components/conviteria/RendaBackground';
 import { useTurnstile } from '@/hooks/useTurnstile';
 import { MARCA, SLOGAN } from '@/lib/conviteria/marca';
 
@@ -61,10 +63,53 @@ function EntrarConteudo() {
   }, [destino]);
 
   /**
+   * Entrada por Google ou Facebook.
+   *
+   * O `next` traz a propria pagina de volta com `destino=publicar`, e nao o
+   * painel: OAuth e um redirect de pagina inteira, entao o codigo que publica
+   * o convite morre no meio do caminho. Voltando para ca, o efeito abaixo
+   * retoma. O sessionStorage sobrevive porque e a mesma aba e a mesma origem.
+   */
+  async function entrarCom(provedor: 'google' | 'facebook') {
+    setErro(null);
+    const volta =
+      destino === 'publicar' ? '/convite/entrar?destino=publicar' : '/convite';
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: provedor,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(volta)}`,
+      },
+    });
+
+    if (error) setErro(error.message);
+  }
+
+  // Retomada pos-OAuth: se ja existe sessao e ha convite pendente, publica sem
+  // pedir nada. Sem isto a pessoa volta do Google e ve o formulario de novo,
+  // como se o login nao tivesse funcionado.
+  useEffect(() => {
+    if (destino !== 'publicar') return;
+
+    let cancelado = false;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (cancelado || !data.session) return;
+      if (!sessionStorage.getItem(CHAVE_PUBLICAR)) return;
+
+      setCarregando(true);
+      await publicarPendente();
+      if (!cancelado) setCarregando(false);
+    })();
+
+    return () => { cancelado = true; };
+  }, [destino, supabase, publicarPendente]);
+
+  /**
    * Publica o convite guardado pelo wizard. So roda com sessao valida: a rota
    * exige Bearer token e recusa qualquer user_id vindo do corpo.
    */
-  async function publicarPendente(): Promise<boolean> {
+  const publicarPendente = useCallback(async (): Promise<boolean> => {
     const bruto = sessionStorage.getItem(CHAVE_PUBLICAR);
     if (!bruto) return false;
 
@@ -126,10 +171,18 @@ function EntrarConteudo() {
     // Avulso: o convite existe mas so vai ao ar depois do PIX.
     router.push(`/convite/pagar?evento=${dados.eventoId}`);
     return true;
-  }
+  }, [router, supabase]);
 
   async function aoEnviar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    // ⚠️ Ler o formulario ANTES do primeiro await. O React reaproveita o
+    // objeto de evento e zera `currentTarget` assim que o handler cede o
+    // controle, entao fazer isto depois do Turnstile quebrava com
+    // "Failed to construct 'FormData': parameter 1 is not of type
+    // 'HTMLFormElement'".
+    const dadosForm = new FormData(e.currentTarget);
+
     setCarregando(true);
     setErro(null);
 
@@ -146,10 +199,9 @@ function EntrarConteudo() {
         }
       }
 
-      const form = new FormData(e.currentTarget);
-      const email = form.get('email') as string;
-      const senha = form.get('senha') as string;
-      const nome = form.get('nome') as string;
+      const email = dadosForm.get('email') as string;
+      const senha = dadosForm.get('senha') as string;
+      const nome = dadosForm.get('nome') as string;
 
       if (modo === 'cadastro') {
         const { data, error } = await supabase.auth.signUp({
@@ -192,6 +244,8 @@ function EntrarConteudo() {
       className="min-h-screen flex items-center justify-center px-4 py-10"
       style={{ backgroundColor: cor.papel }}
     >
+      <RendaBackground />
+
       <div
         className="w-full max-w-md rounded-2xl border shadow-sm overflow-hidden"
         style={{ backgroundColor: cor.fora, borderColor: cor.acento + '33' }}
@@ -200,6 +254,39 @@ function EntrarConteudo() {
           className="px-6 py-6 text-center border-b"
           style={{ borderColor: cor.acento + '22' }}
         >
+          {/* Logo duplo Convite IA | minhAi — mesma marcacao das outras
+              marcas. Sinaliza que a conta e a mesma da minhAi, o que evita a
+              pessoa criar cadastro duplicado achando que sao produtos
+              separados. */}
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="w-16 h-16 overflow-hidden rounded-full flex-shrink-0">
+              <Image
+                src="/brands/convite/icone-512.png"
+                alt="Convite IA"
+                width={64}
+                height={64}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <span
+              className="text-2xl font-thin select-none flex-shrink-0"
+              style={{ color: cor.acento + '66' }}
+            >
+              |
+            </span>
+
+            <div className="w-10 h-10 overflow-hidden rounded-full flex-shrink-0">
+              <Image
+                src="/icon.png"
+                alt="minhAi"
+                width={40}
+                height={40}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+
           <h1
             className="text-2xl font-semibold tracking-tight"
             style={{ color: cor.tinta }}
@@ -230,6 +317,43 @@ function EntrarConteudo() {
               <p>{erro}</p>
             </div>
           )}
+
+          <div className="space-y-2 mb-5">
+            <button
+              type="button"
+              onClick={() => entrarCom('google')}
+              disabled={carregando}
+              className="w-full py-3 rounded-lg border font-medium flex items-center justify-center gap-3 disabled:opacity-50"
+              style={{ borderColor: cor.acento + '55', color: cor.tinta }}
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.76c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.11a6.6 6.6 0 0 1 0-4.22V7.05H2.18a11 11 0 0 0 0 9.9l3.66-2.84z" />
+                <path fill="#EA4335" d="M12 4.75c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.46 14.97.5 12 .5A11 11 0 0 0 2.18 7.05l3.66 2.84c.87-2.6 3.3-4.14 6.16-4.14z" />
+              </svg>
+              Continuar com Google
+            </button>
+
+            <button
+              type="button"
+              onClick={() => entrarCom('facebook')}
+              disabled={carregando}
+              className="w-full py-3 rounded-lg border font-medium flex items-center justify-center gap-3 disabled:opacity-50"
+              style={{ borderColor: cor.acento + '55', color: cor.tinta }}
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true">
+                <path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z" />
+              </svg>
+              Continuar com Facebook
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3 mb-5">
+            <span className="h-px flex-1" style={{ backgroundColor: cor.acento + '33' }} />
+            <span className="text-xs" style={{ color: cor.tintaSuave }}>ou com e-mail</span>
+            <span className="h-px flex-1" style={{ backgroundColor: cor.acento + '33' }} />
+          </div>
 
           <form onSubmit={aoEnviar} className="space-y-4">
             {modo === 'cadastro' && (

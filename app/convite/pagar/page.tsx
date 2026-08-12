@@ -14,6 +14,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
+import RendaBackground from '@/components/conviteria/RendaBackground';
 import { Loader2, AlertCircle, CheckCircle2, Copy, Check } from 'lucide-react';
 import { MARCA } from '@/lib/conviteria/marca';
 
@@ -155,6 +156,8 @@ function PagarConteudo() {
       className="min-h-screen flex items-center justify-center px-4 py-10"
       style={{ backgroundColor: cor.papel }}
     >
+      <RendaBackground />
+
       <div
         className="w-full max-w-md rounded-2xl border shadow-sm overflow-hidden"
         style={{ backgroundColor: cor.fora, borderColor: cor.acento + '33' }}

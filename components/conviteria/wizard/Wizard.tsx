@@ -90,6 +90,16 @@ export default function Wizard({
     <div className="wz">
       <FontesGoogle familias={familiasDoGrupo(grupo)} />
       <div className="wz-painel" ref={painel}>
+        {/* Barra de marca: mesma funcao das outras marcas minhAi — da saida
+            para quem ja tem conta, sem obrigar a terminar o convite antes. */}
+        <div className="wz-marca">
+          <a className="wz-marca-logo" href="/convite">
+            <img src="/brands/convite/icone-512.png" alt="" width={28} height={28} />
+            <span>Convite IA</span>
+          </a>
+          <a className="wz-marca-entrar" href="/convite/entrar">Entrar</a>
+        </div>
+
         <header className="wz-cabecalho">
           <ol className="wz-trilha">
             {ETAPAS.map((e, i) => (
@@ -108,7 +118,9 @@ export default function Wizard({
           <h1 className="wz-titulo">{etapa.titulo}</h1>
         </header>
 
-        <div className="wz-conteudo">
+        {/* `key` na etapa: sem ela o React reaproveita o no e a animacao de
+            entrada nao reinicia na troca de etapa. */}
+        <div className="wz-conteudo" key={etapa.id}>
           {Componente && (
             <Componente
               estado={estado}
@@ -125,6 +137,16 @@ export default function Wizard({
         )}
 
         <footer className="wz-rodape">
+          {/* No mobile este botao era `position: fixed` e cobria o conteudo
+              da etapa. No rodape ele nunca tapa nada. */}
+          <button
+            type="button"
+            className="wz-btn wz-btn-previa"
+            onClick={() => setPreviaAberta(true)}
+            aria-expanded={previaAberta}
+          >
+            Ver prévia
+          </button>
           <button
             type="button"
             className="wz-btn wz-btn-fantasma"
@@ -164,15 +186,6 @@ export default function Wizard({
         </div>
       </aside>
 
-      <button
-        type="button"
-        className="wz-abrir-previa"
-        onClick={() => setPreviaAberta(true)}
-        aria-expanded={previaAberta}
-      >
-        Ver prévia
-        <span className="wz-badge">{estado.etapa + 1}</span>
-      </button>
     </div>
   );
 }

@@ -85,26 +85,6 @@ function EntrarConteudo() {
     if (error) setErro(error.message);
   }
 
-  // Retomada pos-OAuth: se ja existe sessao e ha convite pendente, publica sem
-  // pedir nada. Sem isto a pessoa volta do Google e ve o formulario de novo,
-  // como se o login nao tivesse funcionado.
-  useEffect(() => {
-    if (destino !== 'publicar') return;
-
-    let cancelado = false;
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (cancelado || !data.session) return;
-      if (!sessionStorage.getItem(CHAVE_PUBLICAR)) return;
-
-      setCarregando(true);
-      await publicarPendente();
-      if (!cancelado) setCarregando(false);
-    })();
-
-    return () => { cancelado = true; };
-  }, [destino, supabase, publicarPendente]);
-
   /**
    * Publica o convite guardado pelo wizard. So roda com sessao valida: a rota
    * exige Bearer token e recusa qualquer user_id vindo do corpo.
@@ -172,6 +152,31 @@ function EntrarConteudo() {
     router.push(`/convite/pagar?evento=${dados.eventoId}`);
     return true;
   }, [router, supabase]);
+
+  // Retomada pos-OAuth. ⚠️ Precisa vir DEPOIS de `publicarPendente`:
+  // `const` nao sofre hoisting, e declarar este efeito acima dela quebrava a
+  // pagina inteira com "Cannot access 'publicarPendente' before
+  // initialization" — o mesmo erro que derrubou o build no MESES.
+  // se ja existe sessao e ha convite pendente, publica sem
+  // pedir nada. Sem isto a pessoa volta do Google e ve o formulario de novo,
+  // como se o login nao tivesse funcionado.
+  useEffect(() => {
+    if (destino !== 'publicar') return;
+
+    let cancelado = false;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (cancelado || !data.session) return;
+      if (!sessionStorage.getItem(CHAVE_PUBLICAR)) return;
+
+      setCarregando(true);
+      await publicarPendente();
+      if (!cancelado) setCarregando(false);
+    })();
+
+    return () => { cancelado = true; };
+  }, [destino, supabase, publicarPendente]);
+
 
   async function aoEnviar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

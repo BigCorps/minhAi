@@ -452,3 +452,131 @@
   cursor: pointer;
 }
 .wz-sugestao:hover { background: #fdf0f3; }
+
+/* --------------------------------------------------------------------------
+   Barra de marca
+   -------------------------------------------------------------------------- */
+.wz-marca {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--wz-linha);
+  background: #fff;
+}
+.wz-marca-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--wz-rosa-escuro);
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+}
+.wz-marca-logo img { border-radius: 50%; }
+.wz-marca-entrar {
+  color: var(--wz-suave);
+  font-size: 14px;
+  text-decoration: none;
+  padding: 6px 14px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 999px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.wz-marca-entrar:hover {
+  color: var(--wz-rosa-escuro);
+  border-color: var(--wz-rosa);
+}
+
+/* --------------------------------------------------------------------------
+   Transicao entre etapas
+
+   Deslocamento pequeno (10px) e de proposito: o suficiente para o olho
+   perceber que a etapa trocou, sem a sensacao de pagina escorregando. Passar
+   de ~250ms comeca a parecer lento em quem preenche varias etapas seguidas.
+   -------------------------------------------------------------------------- */
+@keyframes wz-entra {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.wz-conteudo { animation: wz-entra 0.24s ease-out both; }
+
+.wz-titulo { animation: wz-entra 0.3s ease-out both; }
+
+/* A trilha de etapas ganha um preenchimento suave ao avancar. */
+.wz-trilha li .wz-trilha-num { transition: background 0.25s, color 0.25s, transform 0.25s; }
+.wz-trilha li.atual .wz-trilha-num { transform: scale(1.12); }
+
+/* --------------------------------------------------------------------------
+   Botao "Ver previa" no rodape
+   -------------------------------------------------------------------------- */
+.wz-btn-previa {
+  flex: 0 0 auto;
+  padding-inline: 16px;
+  color: var(--wz-rosa-escuro);
+  border-color: var(--wz-rosa);
+  background: #fff;
+}
+/* No desktop a previa ja esta na tela: o botao seria ruido. */
+@media (min-width: 900px) {
+  .wz-btn-previa { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Barras de rolagem
+
+   O padrao escuro do navegador destoa do papel claro. `scrollbar-color`
+   cobre Firefox; o bloco -webkit- cobre Chrome, Edge e Safari.
+   -------------------------------------------------------------------------- */
+.wz, .wz-painel, .wz-previa, .wz-conteudo {
+  scrollbar-width: thin;
+  scrollbar-color: #e9b8cc #f7f7f8;
+}
+.wz *::-webkit-scrollbar,
+.wz-painel::-webkit-scrollbar,
+.wz-previa::-webkit-scrollbar { width: 10px; height: 10px; }
+
+.wz *::-webkit-scrollbar-track,
+.wz-painel::-webkit-scrollbar-track,
+.wz-previa::-webkit-scrollbar-track { background: #f7f7f8; }
+
+.wz *::-webkit-scrollbar-thumb,
+.wz-painel::-webkit-scrollbar-thumb,
+.wz-previa::-webkit-scrollbar-thumb {
+  background: #e9b8cc;
+  border-radius: 999px;
+  border: 2px solid #f7f7f8;
+}
+.wz *::-webkit-scrollbar-thumb:hover,
+.wz-painel::-webkit-scrollbar-thumb:hover,
+.wz-previa::-webkit-scrollbar-thumb:hover { background: var(--wz-rosa); }
+
+/* --------------------------------------------------------------------------
+   Carregando
+
+   Fora do escopo .wz de proposito: esta tela aparece ANTES do wizard montar,
+   entao nao pode depender das variaveis --wz-. Cores literais.
+   -------------------------------------------------------------------------- */
+.wz-carregando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 100dvh;
+  background: #fdf0f3;
+  color: #7c5560;
+  font-family: 'Quicksand', system-ui, sans-serif;
+  font-size: 15px;
+}
+.wz-carregando img { border-radius: 50%; animation: wz-pulsa 1.4s ease-in-out infinite; }
+
+@keyframes wz-pulsa {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(0.94); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wz-conteudo, .wz-titulo, .wz-carregando img { animation: none; }
+}

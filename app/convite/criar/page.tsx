@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Wizard from '@/components/conviteria/wizard/Wizard';
+import '@/components/conviteria/wizard/wizard.css';
 import type { EstadoWizard } from '@/lib/conviteria/wizard';
 
 // Token do rascunho: fica no navegador para a pessoa poder fechar a aba e
@@ -24,7 +25,16 @@ export default function Criar() {
       .finally(() => setCarregando(false));
   }, []);
 
-  if (carregando) return <div className="wz-carregando">Carregando…</div>;
+  // A folha do wizard e importada pelo proprio Wizard, que ainda nao montou
+  // neste ponto — por isso o import aqui tambem.
+  if (carregando) {
+    return (
+      <div className="wz-carregando">
+        <img src="/brands/convite/icone-512.png" alt="" width={64} height={64} />
+        <p>Preparando seu convite…</p>
+      </div>
+    );
+  }
 
   return (
     <Wizard

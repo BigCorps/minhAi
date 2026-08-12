@@ -270,7 +270,7 @@ function EntrarConteudo() {
 
       if (destino === 'publicar' && (await publicarPendente())) return;
 
-      router.push('/convite');
+      router.push('/convite/painel');
     } catch (e: any) {
       setErro(e?.message ?? 'Erro ao autenticar. Tente novamente.');
     } finally {

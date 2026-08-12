@@ -220,8 +220,15 @@
    -------------------------------------------------------------------------- */
 
 .wz-rodape {
-  position: sticky;
+  /* `sticky` so gruda quando o ancestral rola, e aqui quem rola e o
+     .wz-painel — no celular o rodape descia com o conteudo e a pessoa
+     precisava rolar ate o fim para achar "Ver previa". `fixed` mantem os tres
+     botoes sempre a vista. */
+  position: fixed;
+  left: 0;
+  right: 0;
   bottom: 0;
+  z-index: 30;
   display: flex;
   gap: 10px;
   padding: 14px 20px;
@@ -579,4 +586,25 @@
 
 @media (prefers-reduced-motion: reduce) {
   .wz-conteudo, .wz-titulo, .wz-carregando img { animation: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Folga para o rodape fixo
+
+   Sem isto o rodape cobre o ultimo campo de cada etapa — exatamente o
+   problema que ele veio resolver, invertido. `safe-area-inset-bottom` cobre a
+   barra de gestos do iPhone.
+   -------------------------------------------------------------------------- */
+.wz-conteudo {
+  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+}
+.wz-rodape {
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+}
+
+/* No desktop o rodape fica preso a coluna do formulario, nao a tela inteira:
+   `fixed` de ponta a ponta passaria por baixo da previa. */
+@media (min-width: 900px) {
+  .wz-rodape { position: sticky; left: auto; right: auto; z-index: 1; }
+  .wz-conteudo { padding-bottom: 20px; }
 }

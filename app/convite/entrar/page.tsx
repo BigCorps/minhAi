@@ -63,14 +63,15 @@ function EntrarConteudo() {
   }, [destino]);
 
   /**
-   * Entrada por Google ou Facebook.
+   * Entrada por Google. Facebook ficou de fora: o provedor nao esta
+   * habilitado neste projeto do Supabase, entao o botao so daria erro.
    *
    * O `next` traz a propria pagina de volta com `destino=publicar`, e nao o
    * painel: OAuth e um redirect de pagina inteira, entao o codigo que publica
    * o convite morre no meio do caminho. Voltando para ca, o efeito abaixo
    * retoma. O sessionStorage sobrevive porque e a mesma aba e a mesma origem.
    */
-  async function entrarCom(provedor: 'google' | 'facebook') {
+  async function entrarCom(provedor: 'google') {
     setErro(null);
     const volta =
       destino === 'publicar' ? '/convite/entrar?destino=publicar' : '/convite';
@@ -82,7 +83,16 @@ function EntrarConteudo() {
       },
     });
 
-    if (error) setErro(error.message);
+    if (error) {
+      // Mesma mensagem das outras marcas: sem ela o usuario ve um erro cru do
+      // Supabase e nao entende que basta usar a senha.
+      const m = error.message ?? '';
+      if (m.includes('already registered') || m.includes('already exists') || m.includes('user_already_exists')) {
+        setErro('Este e-mail já tem cadastro com senha. Entre com e-mail e senha.');
+      } else {
+        setErro(m || 'Não foi possível entrar com o Google.');
+      }
+    }
   }
 
   /**
@@ -340,18 +350,6 @@ function EntrarConteudo() {
               Continuar com Google
             </button>
 
-            <button
-              type="button"
-              onClick={() => entrarCom('facebook')}
-              disabled={carregando}
-              className="w-full py-3 rounded-lg border font-medium flex items-center justify-center gap-3 disabled:opacity-50"
-              style={{ borderColor: cor.acento + '55', color: cor.tinta }}
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true">
-                <path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z" />
-              </svg>
-              Continuar com Facebook
-            </button>
           </div>
 
           <div className="flex items-center gap-3 mb-5">
@@ -435,7 +433,14 @@ function EntrarConteudo() {
               </div>
             </div>
 
-            <div ref={containerRef} />
+            {/* Turnstile invisivel — mesma marcacao das outras marcas. Visivel
+                ele empurra o layout e, pior, some quando o desafio nao carrega,
+                deixando um buraco no formulario. */}
+            <div
+              ref={containerRef}
+              style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}
+              aria-hidden="true"
+            />
 
             <button
               type="submit"

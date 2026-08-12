@@ -118,6 +118,11 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (erroEvento || !evento) {
+    // O erro do banco precisa aparecer no log. Sem isto, uma violacao de chave
+    // estrangeira (catalogo de temas/fontes vazio, por exemplo) chega ao
+    // usuario como "Não foi possível criar o convite" e nao ha como descobrir
+    // a causa sem reproduzir o insert na mao.
+    console.error('❌ Falha ao inserir evento:', erroEvento);
     return NextResponse.json({ erro: 'Não foi possível criar o convite.' }, { status: 500 });
   }
 

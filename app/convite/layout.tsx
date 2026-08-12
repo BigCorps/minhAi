@@ -1,26 +1,71 @@
+import { headers } from 'next/headers';
 import type { Metadata } from 'next';
+import { BRANDS, getBrandByHost } from '@/lib/brand'; // Ajuste o caminho conforme seu repo
 
-// Metadados específicos para a marca ConviteIA
-export const metadata: Metadata = {
-  title: 'Convite IA | Crie seu convite com IA!',
-  description: 'Crie convites digitais elegantes, gerencie confirmações de presença e encante seus convidados com IA.',
-  icons: {
-    icon: '/icones/marca-256.png', // Puxando do padrão que você definiu no brand.ts
-  },
-};
+export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = await headers();
+  const host = headersList.get('host') || '';
+
+  const brandKey = getBrandByHost(host);
+  const brand = BRANDS[brandKey];
+
+  const isConviteia = brandKey === 'conviteia';
+
+  return {
+    title: {
+      absolute: isConviteia ? 'Convite IA - Crie seu convite com IA!' : brand.title,
+    },
+    description: brand.description,
+    applicationName: brand.name,
+
+    icons: {
+      icon: isConviteia
+        ? brand.logo
+        : '/favicon.ico',
+      shortcut: isConviteia
+        ? brand.logo
+        : '/favicon.ico',
+      apple: isConviteia
+        ? brand.logo
+        : '/apple-touch-icon.png',
+    },
+
+    openGraph: {
+      title: isConviteia ? 'Convite IA - Crie seu convite com IA!' : brand.title,
+      description: brand.description,
+      siteName: brand.name,
+      type: 'website',
+      images: [
+        {
+          url: isConviteia
+            ? brand.logo
+            : '/logo.png',
+          width: 512,
+          height: 512,
+          alt: brand.name,
+        },
+      ],
+    },
+
+    twitter: {
+      card: 'summary',
+      title: isConviteia ? 'Convite IA - Crie seu convite com IA!' : brand.title,
+      description: brand.description,
+      images: [
+        isConviteia
+          ? brand.logo
+          : '/logo.png',
+      ],
+    },
+  };
+}
 
 export default function ConviteLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    // Um fundo neutro e limpo, isolando a interface da minhAi
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 antialiased">
-      {/* Aqui você pode adicionar um Header fixo no futuro, se quiser */}
-      <div className="flex-1 flex flex-col">
-        {children}
-      </div>
-    </div>
-  );
+  return children;
 }

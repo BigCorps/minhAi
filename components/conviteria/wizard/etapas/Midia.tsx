@@ -22,9 +22,11 @@ export default function Midia({ estado, despachar, aoEnviarArquivo }: PropsEtapa
           type="file"
           accept="image/*"
           className="wz-input wz-arquivo"
-          onChange={(e) => {
+          onChange={async (e) => {
             const f = e.target.files?.[0];
-            if (f && aoEnviarArquivo) void aoEnviarArquivo('foto', f);
+            if (!f || !aoEnviarArquivo) return;
+            const url = await aoEnviarArquivo('foto', f);
+            despachar({ tipo: 'campo', caminho: 'midia.fotoPrincipal', valor: url });
           }}
         />
       </Campo>
@@ -54,9 +56,11 @@ export default function Midia({ estado, despachar, aoEnviarArquivo }: PropsEtapa
               type="file"
               accept="audio/mpeg,audio/mp3"
               className="wz-input wz-arquivo"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const f = e.target.files?.[0];
-                if (f && aoEnviarArquivo) void aoEnviarArquivo('musica', f);
+                if (!f || !aoEnviarArquivo) return;
+                const url = await aoEnviarArquivo('musica', f);
+                despachar({ tipo: 'campo', caminho: 'midia.musica.arquivoUrl', valor: url });
               }}
             />
           </Campo>

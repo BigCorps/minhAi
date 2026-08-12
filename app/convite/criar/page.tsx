@@ -43,6 +43,8 @@ export default function Criar() {
         fd.append('arquivo', arquivo);
         const r = await fetch('/api/conviteria/upload', { method: 'POST', body: fd });
         if (!r.ok) throw new Error('upload falhou');
+        const { url } = await r.json();
+        return url as string;
       }}
       aoConcluir={(estado) => {
         // Guarda o estado final e manda para o cadastro. A publicação só

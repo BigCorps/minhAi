@@ -4,6 +4,51 @@ import { fontesDoGrupo, FONTE_PADRAO } from './fontes';
 import { TEMA_PADRAO } from './temas';
 
 // ---------------------------------------------------------------------------
+// Formatacao de data
+// ---------------------------------------------------------------------------
+//
+// ⚠️ Esta secao precisa ficar ANTES de `configInicial`. `MESES` e `DIAS` sao
+// `const`, que nao sofre hoisting: ate a linha da declaracao executar, o nome
+// existe mas esta na temporal dead zone. Como `configInicial` chama
+// `formatarExtenso` (e essa le `MESES`), deixar as constantes la embaixo faz
+// qualquer chamada durante a avaliacao do modulo estourar
+// `ReferenceError: Cannot access 'MESES' before initialization`.
+//
+// As `function` abaixo sofrem hoisting e poderiam ficar em qualquer lugar — o
+// que importa e a posicao das duas constantes.
+
+const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const DIAS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
+  'Quinta-feira', 'Sexta-feira', 'Sábado'];
+
+export function formatarExtenso(d: Date) {
+  return `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+}
+export function formatarDiaSemana(d: Date) {
+  return DIAS[d.getDay()];
+}
+
+/** Converte o valor de <input type="datetime-local"> para o config. */
+export function daEntradaDeData(valor: string) {
+  const d = new Date(valor);
+  if (Number.isNaN(d.getTime())) return null;
+  return {
+    dataIso: d.toISOString(),
+    dataExtenso: formatarExtenso(d),
+    diaSemana: formatarDiaSemana(d),
+  };
+}
+
+/** Converte o config para o valor de <input type="datetime-local">. */
+export function paraEntradaDeData(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// ---------------------------------------------------------------------------
 // Etapas
 // ---------------------------------------------------------------------------
 
@@ -66,7 +111,23 @@ export function configInicial(tipoEventoId = TIPO_PADRAO.id): ConviteConfig {
   };
 }
 
-export const ESTADO_INICIAL: EstadoWizard = { etapa: 0, cfg: configInicial() };
+/**
+ * Estado inicial do wizard.
+ *
+ * Funcao, e nao `const ESTADO_INICIAL = { ... configInicial() }`, por dois
+ * motivos:
+ *
+ * 1. A constante executava `configInicial()` durante a avaliacao do modulo.
+ *    Basta um import a partir de rota pre-renderizada para o Next rodar isso
+ *    no build — foi o que quebrou o deploy.
+ * 2. `configInicial` usa `Date.now()`. Numa constante de modulo a data padrao
+ *    de "90 dias a frente" congela no instante em que a lambda sobe, e todo
+ *    usuario recebe a mesma data ate o processo reciclar. Como funcao, e
+ *    calculada a cada montagem.
+ */
+export function criarEstadoInicial(tipoEventoId = TIPO_PADRAO.id): EstadoWizard {
+  return { etapa: 0, cfg: configInicial(tipoEventoId) };
+}
 
 // ---------------------------------------------------------------------------
 // Acoes
@@ -208,39 +269,4 @@ export function pendencias(estado: EstadoWizard, etapa = estado.etapa): string[]
       break;
   }
   return faltas;
-}
-
-// ---------------------------------------------------------------------------
-// Formatacao de data
-// ---------------------------------------------------------------------------
-
-const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-const DIAS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
-  'Quinta-feira', 'Sexta-feira', 'Sábado'];
-
-export function formatarExtenso(d: Date) {
-  return `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
-}
-export function formatarDiaSemana(d: Date) {
-  return DIAS[d.getDay()];
-}
-
-/** Converte o valor de <input type="datetime-local"> para o config. */
-export function daEntradaDeData(valor: string) {
-  const d = new Date(valor);
-  if (Number.isNaN(d.getTime())) return null;
-  return {
-    dataIso: d.toISOString(),
-    dataExtenso: formatarExtenso(d),
-    diaSemana: formatarDiaSemana(d),
-  };
-}
-
-/** Converte o config para o valor de <input type="datetime-local">. */
-export function paraEntradaDeData(iso: string) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }

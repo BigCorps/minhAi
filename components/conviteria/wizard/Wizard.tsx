@@ -4,7 +4,7 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import type { Dispatch } from 'react';
 import Convite from '../Convite';
 import {
-  ESTADO_INICIAL, ETAPAS, pendencias, reduzir,
+  criarEstadoInicial, ETAPAS, pendencias, reduzir,
 } from '@/lib/conviteria/wizard';
 import type { AcaoWizard, EstadoWizard } from '@/lib/conviteria/wizard';
 import EscolherTipo from './etapas/EscolherTipo';
@@ -21,7 +21,7 @@ import './wizard.css';
 export interface PropsEtapa {
   estado: EstadoWizard;
   despachar: Dispatch<AcaoWizard>;
-  aoEnviarArquivo?: (tipo: 'foto' | 'musica', arquivo: File) => Promise<void>;
+  aoEnviarArquivo?: (tipo: 'foto' | 'musica', arquivo: File) => Promise<string>;
 }
 
 const ETAPA_COMPONENTE: Record<string, React.ComponentType<PropsEtapa>> = {
@@ -48,7 +48,16 @@ export interface PropsWizard {
 export default function Wizard({
   estadoInicial, aoSalvar, aoEnviarArquivo, aoConcluir,
 }: PropsWizard) {
-  const [estado, despachar] = useReducer(reduzir, estadoInicial ?? ESTADO_INICIAL);
+  // Terceiro argumento do useReducer: o estado padrao so e construido se nao
+  // veio rascunho, e apenas na montagem — nunca durante a avaliacao do modulo.
+  // Era essa chamada, antes feita em `const ESTADO_INICIAL` no lib/wizard.ts,
+  // que estourava no pre-render do build.
+  const [estado, despachar] = useReducer(
+    reduzir,
+    estadoInicial,
+    (inicial: EstadoWizard | undefined) => inicial ?? criarEstadoInicial(),
+  );
+
   const [previaAberta, setPreviaAberta] = useState(false);
   const primeiraVez = useRef(true);
 

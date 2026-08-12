@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Wizard from '@/components/convite/wizard/Wizard';
-import type { EstadoWizard } from '@/lib/convite/wizard';
+import Wizard from '@/components/conviteria/wizard/Wizard';
+import type { EstadoWizard } from '@/lib/conviteria/wizard';
 
 // Token do rascunho: fica no navegador para a pessoa poder fechar a aba e
 // voltar depois. Ainda não existe conta neste ponto do fluxo.

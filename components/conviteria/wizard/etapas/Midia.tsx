@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Campo, Texto } from '../Campos';
 import type { PropsEtapa } from '../Wizard';
 
@@ -14,6 +15,15 @@ function idDoYoutube(entrada: string): string {
 export default function Midia({ estado, despachar, aoEnviarArquivo }: PropsEtapa) {
   const m = estado.cfg.midia?.musica;
   const origem = m?.origem ?? 'upload';
+
+  // O campo mostra o texto cru; o config guarda so o id de 11 caracteres.
+  // Antes o `valor` do input era o proprio id extraido, entao digitar "h"
+  // virava '' e o campo se apagava a cada tecla — so colar funcionava, e o
+  // link colado aparecia mutilado na tela.
+  const [linkVideo, setLinkVideo] = useState(
+    m?.youtubeVideoId ? `https://youtu.be/${m.youtubeVideoId}` : ''
+  );
+  const idAtual = idDoYoutube(linkVideo);
 
   return (
     <>
@@ -70,13 +80,19 @@ export default function Midia({ estado, despachar, aoEnviarArquivo }: PropsEtapa
             dica="O vídeo aparece visível no convite, como uma seção."
           >
             <Texto
-              valor={m?.youtubeVideoId ?? ''}
+              valor={linkVideo}
               placeholder="https://youtu.be/..."
               maxLength={200}
-              onChange={(v) =>
-                despachar({ tipo: 'campo', caminho: 'midia.musica.youtubeVideoId', valor: idDoYoutube(v) })
-              }
+              onChange={(v) => {
+                setLinkVideo(v);
+                despachar({ tipo: 'campo', caminho: 'midia.musica.youtubeVideoId', valor: idDoYoutube(v) });
+              }}
             />
+            {linkVideo.trim() !== '' && (
+              idAtual
+                ? <p className="wz-status ok">Vídeo reconhecido.</p>
+                : <p className="wz-status erro">Não reconheci o link. Cole o endereço completo do vídeo.</p>
+            )}
           </Campo>
         )}
 

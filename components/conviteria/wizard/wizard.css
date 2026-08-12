@@ -608,3 +608,18 @@
   .wz-rodape { position: sticky; left: auto; right: auto; z-index: 1; }
   .wz-conteudo { padding-bottom: 20px; }
 }
+
+/* --------------------------------------------------------------------------
+   Retorno de campo (CEP, link de video)
+
+   Cor sozinha nao comunica: quem nao distingue vermelho de verde ve dois
+   textos iguais. Por isso a mensagem em si ja diz o que aconteceu e o que
+   fazer, e a cor e reforco.
+   -------------------------------------------------------------------------- */
+.wz-status {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--wz-suave);
+}
+.wz-status.ok   { color: #4a7c59; }
+.wz-status.erro { color: #a04a63; }

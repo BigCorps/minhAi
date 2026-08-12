@@ -224,7 +224,19 @@ function EntrarConteudo() {
           password: senha,
           options: { data: { name: nome } },
         });
-        if (error) throw error;
+
+        // A conta e a mesma da minhAi e de todos os apps. Quem ja usa Pix Wiki
+        // ou ConsultaTec cai aqui achando que esta se cadastrando pela
+        // primeira vez, e o 422 cru nao explica nada.
+        if (error) {
+          const m = error.message ?? '';
+          if (m.includes('already registered') || m.includes('already exists') || m.includes('User already')) {
+            setModo('login');
+            setErro('Você já tem conta minhAi com esse e-mail. Entre com sua senha, ou use o Google se foi assim que criou.');
+            return;
+          }
+          throw error;
+        }
 
         if (!data.session) {
           // Confirmacao por e-mail ligada no projeto. O convite fica em
@@ -239,7 +251,19 @@ function EntrarConteudo() {
           email,
           password: senha,
         });
-        if (error) throw error;
+
+        // "Invalid login credentials" cobre dois casos muito diferentes: senha
+        // errada, e conta criada por Google que nunca teve senha. O segundo e
+        // comum aqui, porque a conta e compartilhada com os outros apps
+        // minhAi. Sem esta dica a pessoa fica tentando a senha que nao existe.
+        if (error) {
+          const m = error.message ?? '';
+          if (m.includes('Invalid login credentials')) {
+            setErro('E-mail ou senha incorretos. Se você criou sua conta minhAi pelo Google, entre pelo botão do Google acima.');
+            return;
+          }
+          throw error;
+        }
       }
 
       localStorage.setItem('lastLoggedInUser', email);

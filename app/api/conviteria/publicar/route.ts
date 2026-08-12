@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { adminConviteria } from '@/lib/conviteria/servidor';
 import { MENSAGEM_ERRO, normalizarSlug, validarSlug } from '@/lib/conviteria/slug';
 import { PLANOS } from '@/lib/conviteria/precos';
 import { urlDoConvite } from '@/lib/conviteria/marca';
@@ -7,12 +7,6 @@ import { gerarMonograma } from '@/lib/conviteria/lacre';
 import type { ConviteConfig } from '@/lib/conviteria/tipos';
 
 export const runtime = 'nodejs';
-
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { db: { schema: 'conviteria' }, auth: { persistSession: false } }
-);
 
 interface Corpo {
   rascunhoToken: string;
@@ -22,8 +16,12 @@ interface Corpo {
 }
 
 export async function POST(req: NextRequest) {
-  // Identidade vem do cookie de sessao do Supabase, nunca do corpo: aceitar
-  // user_id do cliente deixaria qualquer um publicar na conta de outro.
+  // Cliente criado DENTRO do handler: no escopo do módulo, o construtor roda
+  // durante "collecting page data" do build, quando as env vars não existem.
+  const admin = adminConviteria();
+
+  // Identidade vem do token de sessão, nunca do corpo: aceitar user_id do
+  // cliente deixaria qualquer um publicar na conta de outro.
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
   if (!token) return NextResponse.json({ erro: 'Faça login para publicar.' }, { status: 401 });
 
@@ -64,8 +62,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ erro: 'Não foi possível criar a conta.' }, { status: 500 });
   }
 
-  // 2. Direito de criar. Plano vencido bloqueia CRIAR; nunca derruba o que
-  //    ja esta publicado — quem tem o link e o convidado, nao o cliente.
+  // 2. Direito de criar. Plano vencido bloqueia CRIAR; nunca derruba o que já
+  //    está publicado — quem tem o link é o convidado, não o cliente.
   const mensalAtivo =
     conta.plano === 'mensal' &&
     conta.plano_expira_em != null &&
@@ -78,27 +76,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 3. Slug ainda livre? Checar de novo: entre a digitacao e o pagamento,
+  // 3. Slug ainda livre? Checar de novo: entre a digitação e o pagamento,
   //    outra pessoa pode ter levado.
   const { data: ocupado } = await admin
     .from('eventos').select('id').eq('slug', slug).maybeSingle();
   if (ocupado) {
-    return NextResponse.json({ erro: 'Esse endereço acabou de ser usado. Escolha outro.' }, { status: 409 });
+    return NextResponse.json(
+      { erro: 'Esse endereço acabou de ser usado. Escolha outro.' },
+      { status: 409 }
+    );
   }
 
-  // 4. Monograma como contorno: o convite publicado nao pode depender da
+  // 4. Monograma como contorno: o convite publicado não pode depender da
   //    fonte carregar no navegador de quem abre.
   const monograma = gerarMonograma(corpo.cfg.anfitrioes?.iniciais ?? '');
 
   const cfgLimpa: ConviteConfig = {
     ...corpo.cfg,
-    // Dado sensivel nunca entra aqui: este jsonb e legivel por anonimo
-    // quando o evento esta publicado.
+    // Dado sensível nunca entra aqui: este jsonb é legível por anônimo
+    // quando o evento está publicado.
     lacrePath: monograma.d,
   } as ConviteConfig;
 
-  // 5. Cria em rascunho. `publicado_em` so e gravado pelo webhook de
-  //    pagamento, para nao existir convite no ar sem cobranca confirmada.
+  // 5. Cria em rascunho. `publicado_em` só é gravado pelo webhook de
+  //    pagamento no plano avulso, para não existir convite no ar sem
+  //    cobrança confirmada.
   const { data: evento, error: erroEvento } = await admin
     .from('eventos')
     .insert({
@@ -119,8 +121,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ erro: 'Não foi possível criar o convite.' }, { status: 500 });
   }
 
-  // 6. Secoes em tabela propria: o wizard reordena, e ordenar dentro de um
-  //    jsonb tornaria a consulta da pagina publica mais cara.
+  // 6. Seções em tabela própria: o wizard reordena, e ordenar dentro de um
+  //    jsonb tornaria a consulta da página pública mais cara.
   await admin.from('evento_secoes').insert(
     (cfgLimpa.secoes ?? []).map((s) => ({
       evento_id: evento.id,
@@ -135,7 +137,7 @@ export async function POST(req: NextRequest) {
     await admin.from('rascunhos').delete().eq('token', corpo.rascunhoToken);
   }
 
-  // Mensal ja sai publicado. Avulso vai para o PIX e o webhook publica.
+  // Mensal já sai publicado. Avulso vai para o PIX e o webhook publica.
   return NextResponse.json({
     eventoId: evento.id,
     slug: evento.slug,

@@ -96,21 +96,6 @@ const nextConfig = {
       { source: '/:path*', has: [{ type: 'host', value: 'minhaia.app'       }], destination: 'https://www.minhai.app/:path*', permanent: true },
       { source: '/:path*', has: [{ type: 'host', value: 'nossaia.app'       }], destination: 'https://www.minhai.app/:path*', permanent: true },
       { source: '/:path*', has: [{ type: 'host', value: 'suaia.app'         }], destination: 'https://www.minhai.app/:path*', permanent: true },
-
-      // ── Conviteia ────────────────────────────────────────────────────────
-      // O canônico é conviteia.com SEM www: é o domínio dos subdomínios de
-      // convite (slug.conviteia.com), e ter www e não-www servindo o mesmo
-      // conteúdo divide SEO e confunde o convidado.
-      //
-      // O .com.br é âncora de confiança e captura de erro de digitação —
-      // redireciona, não hospeda. Assim não vira código para manter.
-      //
-      // ⚠️ NÃO acrescente regra para *.conviteia.com aqui: os subdomínios de
-      // convite são tratados pelo middleware, e um redirect nesta lista os
-      // mataria antes de chegar lá.
-      { source: '/:path*', has: [{ type: 'host', value: 'www.conviteia.com'    }], destination: 'https://conviteia.com/:path*', permanent: true },
-      { source: '/:path*', has: [{ type: 'host', value: 'conviteia.com.br'     }], destination: 'https://conviteia.com/:path*', permanent: true },
-      { source: '/:path*', has: [{ type: 'host', value: 'www.conviteia.com.br' }], destination: 'https://conviteia.com/:path*', permanent: true },
     ];
   },
 

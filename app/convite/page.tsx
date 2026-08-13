@@ -31,7 +31,7 @@ export default function PaginaInicialConvite() {
       {/* Logo Centralizado */}
       <div className="mb-8 flex justify-center">
         <Image
-          src="/brands/convite/marca-256.png"
+          src="/brands/convite/icone-512.png"
           alt="Logo Convite IA"
           width={128}
           height={128}

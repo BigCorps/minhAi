@@ -112,6 +112,13 @@ export interface ConviteConfig {
   lacreId?: string;
   /** Logo do cliente no lugar das iniciais do lacre. */
   logoLacreUrl?: string | null;
+  /** Fonte e ajuste fino do monograma. Ver AjusteLacre em LacreArte.tsx. */
+  lacreAjuste?: {
+    fonte?: string;
+    escala?: number;
+    x?: number;
+    y?: number;
+  };
 
   /** Escolhidos no wizard. Viram linhas em `conviteria.presentes` ao publicar. */
   presentesEscolhidos?: PresenteEscolhido[];

@@ -49,6 +49,7 @@ export default function ConvitePublico({ cfg }: { cfg: ConviteConfig }) {
           lacreId={cfg.lacreId}
           iniciais={cfg.anfitrioes?.iniciais}
           logoLacreUrl={cfg.logoLacreUrl}
+          lacreAjuste={cfg.lacreAjuste}
           aoAbrir={abrir}
         />
       )}

@@ -6,6 +6,7 @@ import Convite from '../Convite';
 import FontesGoogle from '../FontesGoogle';
 import { acharTipo } from '@/lib/conviteria/tiposEvento';
 import { familiasDoGrupo } from '@/lib/conviteria/tokens';
+import { FAMILIAS_LACRE } from '../LacreArte';
 import {
   criarEstadoInicial, ETAPAS, pendencias, reduzir,
 } from '@/lib/conviteria/wizard';
@@ -76,6 +77,8 @@ export default function Wizard({
   const primeiraVez = useRef(true);
 
   const grupo = acharTipo(estado.cfg.tipoEventoId).grupo;
+  // Soma as fontes do lacre: o seletor de monograma existe em qualquer grupo.
+  const familias = Array.from(new Set([...familiasDoGrupo(grupo), ...FAMILIAS_LACRE]));
   const etapa = ETAPAS[estado.etapa];
   const Componente = ETAPA_COMPONENTE[etapa.id];
   const faltas = pendencias(estado);
@@ -99,7 +102,7 @@ export default function Wizard({
 
   return (
     <div className="wz">
-      <FontesGoogle familias={familiasDoGrupo(grupo)} />
+      <FontesGoogle familias={familias} />
       <div className="wz-painel" ref={painel}>
         {/* Barra de marca: mesma funcao das outras marcas minhAi — da saida
             para quem ja tem conta, sem obrigar a terminar o convite antes. */}

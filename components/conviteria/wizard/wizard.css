@@ -744,3 +744,51 @@
   color: var(--wz-rosa-escuro);
   font-weight: 700;
 }
+
+/* --------------------------------------------------------------------------
+   Ajuste fino do monograma
+   -------------------------------------------------------------------------- */
+.wz-lacre-previa {
+  display: grid;
+  place-items: center;
+  padding: 14px 0 4px;
+}
+
+.wz-fontes-lacre {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 6px 0 14px;
+}
+.wz-fonte-lacre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border: 1.5px solid var(--wz-linha);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+/* A amostra mostra as INICIAIS do casal, nao "Aa": o problema de alinhamento
+   depende justamente de quais letras sao. */
+.wz-fonte-lacre span { font-size: 22px; line-height: 1.1; color: var(--wz-texto); }
+.wz-fonte-lacre small { font-size: 10px; color: var(--wz-suave); }
+.wz-fonte-lacre.sel {
+  border-color: var(--wz-rosa);
+  box-shadow: 0 0 0 3px rgba(216, 96, 144, 0.14);
+}
+
+.wz-slider { margin-bottom: 10px; }
+.wz-slider label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--wz-suave);
+  margin-bottom: 3px;
+}
+.wz-slider label span { font-weight: 700; color: var(--wz-rosa-escuro); }
+.wz-slider input { width: 100%; accent-color: var(--wz-rosa); }
+
+.wz-btn-mini { padding: 8px 14px; font-size: 13px; }

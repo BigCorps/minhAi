@@ -667,14 +667,21 @@ body.cv-travado { overflow: hidden; }
 .cv-lacre-iniciais,
 .cv-lacre-logo {
   position: absolute;
-  /* 34% do lado: o miolo livre mais apertado (a arte floral) tem raio ~80 de
-     232. Passar disso encosta no desenho. */
+}
+
+/* O logo tem teto: 34% do lado. O miolo livre mais apertado (a arte floral)
+   tem raio ~80 de 232, e imagem nao tem como "transbordar com gosto" como
+   letra tem. As INICIAIS nao levam teto — o tamanho vem do slider, e travar
+   aqui anularia o ajuste do cliente. */
+.cv-lacre-logo {
   max-width: 34%;
   max-height: 34%;
 }
 
 .cv-lacre-iniciais {
-  font-family: var(--cv-display), 'Pinyon Script', cursive;
+  /* font-family vem do style inline: a fonte do lacre e escolha propria, nao
+     herda a display do convite. Deixar a regra aqui venceria o inline em
+     especificidade igual e travaria a escolha. */
   line-height: 1;
   color: #f6e2d8;
   /* Relevo: sombra escura embaixo e luz clara em cima, para a letra parecer

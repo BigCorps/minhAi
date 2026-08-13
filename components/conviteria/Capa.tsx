@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import LacreArte from './LacreArte';
+import type { AjusteLacre } from './LacreArte';
 import { ArranjoCanto, PadraoGravado } from './Ornamentos';
 
 /**
@@ -11,12 +12,13 @@ import { ArranjoCanto, PadraoGravado } from './Ornamentos';
  * carregamento derrubaria o gesto e a musica exigiria um segundo clique.
  */
 export default function Capa({
-  fotoUrl, lacreId, iniciais, logoLacreUrl, aoAbrir,
+  fotoUrl, lacreId, iniciais, logoLacreUrl, lacreAjuste, aoAbrir,
 }: {
   fotoUrl?: string;
   lacreId?: string;
   iniciais?: string;
   logoLacreUrl?: string | null;
+  lacreAjuste?: AjusteLacre;
   aoAbrir: () => void;
 }) {
   const [abrindo, setAbrindo] = useState(false);
@@ -68,6 +70,7 @@ export default function Capa({
             lacreId={lacreId}
             iniciais={iniciais}
             logoUrl={logoLacreUrl}
+            ajuste={lacreAjuste}
             tamanho={116}
           />
         </div>

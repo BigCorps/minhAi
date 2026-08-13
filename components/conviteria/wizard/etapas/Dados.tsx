@@ -7,7 +7,7 @@ import { AreaTexto, Campo, Texto } from '../Campos';
 import { BotaoIA, ListaSugestoes, useSugestao } from '../AjudaIA';
 import type { PropsEtapa } from '../Wizard';
 import SuporteWhatsapp from '../../SuporteWhatsapp';
-import LacreArte, { LACRES, LACRE_PADRAO } from '../../LacreArte';
+import LacreArte, { LACRES, LACRE_PADRAO, FONTES_LACRE, FONTE_LACRE_PADRAO } from '../../LacreArte';
 
 /** Iniciais do monograma, a partir do nome exibido. */
 function iniciaisDe(nome: string) {
@@ -92,6 +92,7 @@ export default function Dados({ estado, despachar, modo}: PropsEtapa) {
                   <LacreArte
                     lacreId={l.id}
                     iniciais={cfg.anfitrioes.iniciais}
+                    ajuste={cfg.lacreAjuste}
                     tamanho={72}
                   />
                   <span>{l.nome}</span>
@@ -101,6 +102,86 @@ export default function Dados({ estado, despachar, modo}: PropsEtapa) {
           })}
         </ul>
       </Campo>
+
+      {/* Ajuste fino. Aparece so quando ha iniciais: sem letra na tela, mexer
+          em slider de posicao nao mostra nada e vira ruido. */}
+      {cfg.anfitrioes.iniciais && !cfg.logoLacreUrl && (
+        <Campo
+          rotulo="Ajuste do monograma"
+          dica="Fontes cursivas variam muito de letra para letra. Ajuste até ficar centrado."
+        >
+          {/* Previa grande: no cartao de 72px o deslocamento de 1% e
+              imperceptivel, e a pessoa nao conseguiria mirar. */}
+          <div className="wz-lacre-previa">
+            <LacreArte
+              lacreId={cfg.lacreId ?? LACRE_PADRAO}
+              iniciais={cfg.anfitrioes.iniciais}
+              ajuste={cfg.lacreAjuste}
+              tamanho={148}
+            />
+          </div>
+
+          <div className="wz-fontes-lacre">
+            {FONTES_LACRE.map((f) => {
+              const sel = (cfg.lacreAjuste?.fonte ?? FONTE_LACRE_PADRAO) === f.id;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  className={`wz-fonte-lacre${sel ? ' sel' : ''}`}
+                  aria-pressed={sel}
+                  onClick={() => despachar({ tipo: 'campo', caminho: 'lacreAjuste.fonte', valor: f.id })}
+                >
+                  <span style={{ fontFamily: f.familia }}>
+                    {cfg.anfitrioes.iniciais || 'AB'}
+                  </span>
+                  <small>{f.nome}</small>
+                </button>
+              );
+            })}
+          </div>
+
+          {([
+            ['escala', 'Tamanho', 20, 48, 34],
+            ['x', 'Horizontal', -12, 12, 0],
+            ['y', 'Vertical', -12, 12, 0],
+          ] as const).map(([chave, rotulo, min, max, padrao]) => {
+            const atual = (cfg.lacreAjuste?.[chave] ?? padrao) as number;
+            return (
+              <div className="wz-slider" key={chave}>
+                <label htmlFor={`lacre-${chave}`}>
+                  {rotulo} <span>{atual}</span>
+                </label>
+                <input
+                  id={`lacre-${chave}`}
+                  type="range"
+                  min={min}
+                  max={max}
+                  step={1}
+                  value={atual}
+                  onChange={(e) =>
+                    despachar({
+                      tipo: 'campo',
+                      caminho: `lacreAjuste.${chave}`,
+                      valor: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            );
+          })}
+
+          <button
+            type="button"
+            className="wz-btn wz-btn-fantasma wz-btn-mini"
+            onClick={() =>
+              despachar({ tipo: 'campo', caminho: 'lacreAjuste', valor: { fonte: FONTE_LACRE_PADRAO } })
+            }
+          >
+            Voltar ao padrão
+          </button>
+        </Campo>
+      )}
 
       {modo === 'editar' ? (
         <Campo rotulo="Iniciais do lacre" dica="Acompanham o nome, também travadas.">

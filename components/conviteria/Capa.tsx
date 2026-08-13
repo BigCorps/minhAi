@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Lacre from './Lacre';
+import { ArranjoCanto, PadraoGravado } from './Ornamentos';
 
 /**
  * O clique aqui e o gesto do usuario que libera o autoplay do audio.
@@ -46,8 +47,20 @@ export default function Capa({
           <div className="cv-capa-veu" />
         </div>
       )}
-      <div className="cv-capa-aba" />
+      {/* Aba do envelope: gravacao de folhagem por baixo, vinco por cima. O
+          vinco e so um retangulo recuado 5px com o mesmo recorte — e ele que
+          da a leitura de papel dobrado em vez de triangulo chapado. */}
+      <div className="cv-capa-aba">
+        <PadraoGravado />
+        <div className="cv-capa-vinco" />
+      </div>
+
       <div className="cv-capa-centro">
+        {/* Os arranjos ficam FORA do fluxo, ancorados ao centro, para
+            emoldurar o lacre sem empurrar a etiqueta para baixo. */}
+        <ArranjoCanto className="cv-capa-flor esquerda" />
+        <ArranjoCanto className="cv-capa-flor direita" />
+
         <div className="cv-capa-lacre">
           <Lacre path={lacrePath ?? ''} tamanho={116} />
         </div>

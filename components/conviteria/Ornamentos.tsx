@@ -294,3 +294,52 @@ export function Broto({ className = "" }: { className?: string }) {
   );
 }
 
+/**
+ * Padrao gravado da aba do envelope: folhagem repetida, quase imperceptivel.
+ *
+ * Portado do convite de referencia. La as cores eram fixas
+ * (`--gravado-linha: rgba(139,86,77,0.13)`); aqui derivam dos tokens do tema,
+ * senao a gravacao ficaria marrom num convite azul.
+ *
+ * Opacidade baixissima de proposito: e textura de papel timbrado. Se voce
+ * "ve as folhas", esta forte demais e compete com o lacre.
+ */
+export function PadraoGravado() {
+  const linha = 'var(--cv-petala-escura, #b4767c)';
+  const folha = 'var(--cv-folha, #9aa88f)';
+
+  return (
+    <svg className="cv-gravado" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+      <defs>
+        <pattern id="cv-folhagem" width="88" height="88" patternUnits="userSpaceOnUse" patternTransform="rotate(12)">
+          <path
+            d="M12 76 C 30 66 40 48 42 26"
+            fill="none"
+            stroke={linha}
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+          {([
+            [18, 68, -30, 1],
+            [28, 58, -42, 0.9],
+            [36, 44, -56, 0.95],
+            [41, 30, -70, 0.8],
+            [24, 72, 145, 0.8],
+            [34, 60, 136, 0.7],
+          ] as const).map(([lx, ly, lr, ls], i) => (
+            <ellipse
+              key={i}
+              rx="7"
+              ry="13"
+              fill={folha}
+              transform={`translate(${lx} ${ly}) rotate(${lr}) scale(${ls})`}
+            />
+          ))}
+          <circle cx="62" cy="18" r="7" fill={folha} />
+          <circle cx="62" cy="18" r="3" fill={linha} />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#cv-folhagem)" />
+    </svg>
+  );
+}

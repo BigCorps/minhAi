@@ -1,0 +1,29 @@
+
+.cv-orn-divisor { width:72%; max-width:260px; height:42px; }
+.cv-orn-divisor-miolo { width:42px; height:42px; transform:translate(99px,0) scale(.35); transform-origin:center; }
+.cv-secao-marca { padding-top:1rem; padding-bottom:1rem; }
+.cv-marca-evento { display:block; width:auto; max-width:min(72%,260px); margin:0 auto; object-fit:contain; }
+
+.cv-capa.envelope-classico .cv-capa-aba,
+.cv-capa.envelope-classico .cv-capa-vinco { clip-path: polygon(0 0,100% 0,50% 100%); }
+
+.cv-capa.envelope-arco .cv-capa-aba,
+.cv-capa.envelope-arco .cv-capa-vinco { clip-path: ellipse(72% 80% at 50% 0%); }
+
+.cv-capa.envelope-diamante .cv-capa-aba,
+.cv-capa.envelope-diamante .cv-capa-vinco { clip-path: polygon(0 0,100% 0,72% 58%,50% 100%,28% 58%); }
+
+.cv-capa.envelope-reto .cv-capa-aba,
+.cv-capa.envelope-reto .cv-capa-vinco { clip-path: polygon(0 0,100% 0,100% 62%,50% 92%,0 62%); }
+
+.cv-capa.envelope-onda .cv-capa-aba,
+.cv-capa.envelope-onda .cv-capa-vinco { clip-path: polygon(0 0,100% 0,100% 52%,85% 61%,70% 56%,55% 72%,40% 62%,25% 76%,10% 62%,0 70%); }
+
+.cv-capa.envelope-organico .cv-capa-aba,
+.cv-capa.envelope-organico .cv-capa-vinco { clip-path: polygon(0 0,100% 0,94% 50%,78% 68%,61% 63%,50% 92%,39% 63%,22% 68%,6% 50%); }
+
+.wz-visual-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.65rem; }
+.wz-visual-card { border:1px solid rgba(192,96,120,.22); border-radius:12px; padding:.75rem .45rem; background:white; font-size:.78rem; color:#6f4855; }
+.wz-visual-card.sel { border-color:#c06078; box-shadow:0 0 0 2px rgba(192,96,120,.12); }
+.wz-visual-card svg { width:52px; height:52px; display:block; margin:0 auto .35rem; }
+@media (max-width:520px){ .wz-visual-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }

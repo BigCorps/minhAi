@@ -15,6 +15,7 @@ import {
 import type { AcaoWizard, EstadoWizard } from '@/lib/conviteria/wizard';
 import EscolherTipo from './etapas/EscolherTipo';
 import EscolherTema from './etapas/EscolherTema';
+import Visual from './etapas/Visual';
 import EscolherFonte from './etapas/EscolherFonte';
 import Dados from './etapas/Dados';
 import Local from './etapas/Local';
@@ -36,6 +37,7 @@ export interface PropsEtapa {
 const ETAPA_COMPONENTE: Record<string, React.ComponentType<PropsEtapa>> = {
   tipo: EscolherTipo,
   tema: EscolherTema,
+  visual: Visual,
   dados: Dados,
   local: Local,
   fonte: EscolherFonte,
@@ -270,6 +272,8 @@ export default function Wizard({
                 iniciais={estado.cfg.anfitrioes?.iniciais}
                 logoLacreUrl={estado.cfg.logoLacreUrl}
                 lacreAjuste={estado.cfg.lacreAjuste}
+                envelopeId={estado.cfg.envelopeId}
+                ornamentoId={estado.cfg.ornamentoId}
                 aoAbrir={() => undefined}
               />
             </div>

@@ -10,7 +10,7 @@ import type {
 import { tokensDoConvite } from '@/lib/conviteria/tokens';
 import { acharTema } from '@/lib/conviteria/temas';
 import Textura from './Texturas';
-import { ArranjoCanto, RaminhoDivisor } from './Ornamentos';
+import { OrnamentoCanto, OrnamentoDivisor } from './OrnamentoVisual';
 import Foto from './secoes/Foto';
 import Frase from './secoes/Frase';
 import Musica from './secoes/Musica';
@@ -24,7 +24,9 @@ import Presentes from './secoes/Presentes';
 import Padrinhos from './secoes/Padrinhos';
 import Galeria from './secoes/Galeria';
 import Fim from './secoes/Fim';
+import Marca from './secoes/Marca';
 import './convite.css';
+import './visual.css';
 
 // Secao nao mapeada devolve null em vez de quebrar: assim da para cadastrar
 // um tipo novo no banco antes de o componente existir em producao.
@@ -43,6 +45,7 @@ const MAPA: Record<string, ComponentType<PropsSecao>> = {
   padrinhos: Padrinhos,
   dresscode: Frase,
   galeria: Galeria,
+  marca: Marca,
   fim: Fim,
 };
 
@@ -97,10 +100,10 @@ export default function Convite({
             opacidade={0.13}
           />
         )}
-        <ArranjoCanto className="cv-canto cv-canto-se" />
-        <ArranjoCanto className="cv-canto cv-canto-sd" />
-        <ArranjoCanto className="cv-canto cv-canto-ie" />
-        <ArranjoCanto className="cv-canto cv-canto-id" />
+        <OrnamentoCanto id={cfg.ornamentoId} className="cv-canto cv-canto-se" />
+        <OrnamentoCanto id={cfg.ornamentoId} className="cv-canto cv-canto-sd" />
+        <OrnamentoCanto id={cfg.ornamentoId} className="cv-canto cv-canto-ie" />
+        <OrnamentoCanto id={cfg.ornamentoId} className="cv-canto cv-canto-id" />
 
         {secoes.map((secao, i) => {
           const Componente = MAPA[secao.tipo];
@@ -120,7 +123,7 @@ export default function Convite({
             >
               {divisor && (
                 <div className="cv-divisor" aria-hidden="true">
-                  <RaminhoDivisor />
+                  <OrnamentoDivisor id={cfg.ornamentoId} />
                 </div>
               )}
               <Componente cfg={cfg} secao={secao} modo={modo} />

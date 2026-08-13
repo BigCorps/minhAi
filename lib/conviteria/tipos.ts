@@ -18,6 +18,7 @@ export type TipoSecao =
   | 'padrinhos'
   | 'dresscode'
   | 'galeria'
+  | 'marca'
   | 'fim';
 
 export interface SecaoConfig {
@@ -122,6 +123,10 @@ export interface ConviteConfig {
    */
   texturaOnde?: 'externa' | 'papel' | 'ambas';
 
+  /** Família visual dos ornamentos e formato da aba do envelope. */
+  ornamentoId?: string;
+  envelopeId?: string;
+
   /** Arte do lacre. Ver LACRES em components/conviteria/LacreArte.tsx. */
   lacreId?: string;
   /** Logo do cliente no lugar das iniciais do lacre. */
@@ -145,6 +150,8 @@ export interface ConviteConfig {
     acabamento?: string;
     fotoPrincipal?: string;
     fotoCapa?: string;
+    /** Logo independente do lacre, exibido dentro do convite. */
+    logoEventoUrl?: string;
     enquadramento?: string;
     galeria?: string[];
     musica?: {

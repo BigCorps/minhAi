@@ -62,6 +62,7 @@ export interface Etapa {
 export const ETAPAS: Etapa[] = [
   { id: 'tipo',    titulo: 'Tipo de convite' },
   { id: 'tema',    titulo: 'Cores' },
+  { id: 'visual',  titulo: 'Estilo visual' },
   { id: 'dados',   titulo: 'Nomes e data',   foco: 'nomes' },
   { id: 'local',   titulo: 'Local',          foco: 'local' },
   { id: 'fonte',   titulo: 'Fontes',         foco: 'nomes' },

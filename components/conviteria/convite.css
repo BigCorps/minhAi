@@ -785,3 +785,114 @@ body.cv-travado { overflow: hidden; }
      sem descaracterizar a marca do cliente. */
   filter: drop-shadow(0 1px 1px rgba(90, 12, 12, 0.6)) brightness(1.08);
 }
+
+/* --------------------------------------------------------------------------
+   Barra do dono no convite publicado
+
+   `fixed` no topo com z-index acima da capa (que e 50): o dono precisa
+   alcancar "Editar" mesmo antes de abrir o envelope.
+   -------------------------------------------------------------------------- */
+.cv-header-dono {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  background: rgba(64, 35, 44, 0.93);
+  backdrop-filter: blur(6px);
+  color: #fff5f8;
+  font-family: var(--cv-corpo), system-ui, sans-serif;
+  font-size: 0.78rem;
+}
+.cv-header-dono-rotulo { opacity: 0.85; }
+.cv-header-dono-acoes { display: flex; gap: 6px; }
+.cv-header-dono-acoes a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 245, 248, 0.3);
+  border-radius: 999px;
+  color: #fff5f8;
+  text-decoration: none;
+  font-weight: 600;
+}
+.cv-header-dono-acoes a:hover { background: rgba(255, 245, 248, 0.14); }
+
+/* Em tela estreita o rotulo sai: dois botoes e o texto nao cabem, e os botoes
+   sao o que a barra existe para oferecer. */
+@media (max-width: 480px) {
+  .cv-header-dono-rotulo { display: none; }
+  .cv-header-dono { justify-content: flex-end; }
+}
+
+/* --------------------------------------------------------------------------
+   Acabamentos da foto
+
+   Todos partem da .cv-moldura ja existente e SOBRESCREVEM o que precisam. O
+   `cv-acab-moldura` nao existe de proposito: e a aparencia base, e convite
+   publicado antes desta mudanca cai nele sem alteracao.
+   -------------------------------------------------------------------------- */
+
+.cv-acab-arredondado,
+.cv-acab-arredondado img { border-radius: 22px; }
+
+.cv-acab-circulo {
+  border-radius: 50%;
+  overflow: hidden;
+  aspect-ratio: 1;
+}
+.cv-acab-circulo img { border-radius: 50%; object-fit: cover; height: 100%; }
+
+/* Arco: meia-lua no topo, reto embaixo. Referencia direta de convite
+   impresso — e o recorte mais pedido depois do circulo. */
+.cv-acab-arco {
+  border-radius: 50% 50% 8px 8px / 34% 34% 4% 4%;
+  overflow: hidden;
+}
+.cv-acab-arco img { border-radius: inherit; }
+
+/* Bordas suaves: mascara radial em vez de blur na imagem. `filter: blur`
+   desfocaria a foto inteira; a mascara desfaz so a borda. */
+.cv-acab-desfoque { border: 0; padding: 0; box-shadow: none; background: none; }
+.cv-acab-desfoque img {
+  -webkit-mask-image: radial-gradient(ellipse 74% 74% at 50% 50%, #000 58%, transparent 100%);
+  mask-image: radial-gradient(ellipse 74% 74% at 50% 50%, #000 58%, transparent 100%);
+}
+
+/* Vinheta: escurece as bordas por cima, sem tocar no arquivo. */
+.cv-acab-vinheta { position: relative; overflow: hidden; }
+.cv-acab-vinheta::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 76% 76% at 50% 50%,
+    transparent 52%,
+    color-mix(in srgb, var(--cv-tinta) 42%, transparent) 100%
+  );
+}
+
+/* Polaroid: margem grossa embaixo, como a area de escrever da foto instantanea. */
+.cv-acab-polaroid {
+  background: #fff;
+  border: 0;
+  padding: 12px 12px 52px;
+  border-radius: 3px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 16%);
+  transform: rotate(-1.2deg);
+}
+.cv-acab-polaroid img { border-radius: 0; }
+
+.cv-acab-limpo {
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+  background: none;
+}

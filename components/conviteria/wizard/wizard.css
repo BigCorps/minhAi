@@ -796,3 +796,87 @@
 .wz-slider input { width: 100%; accent-color: var(--wz-rosa); }
 
 .wz-btn-mini { padding: 8px 14px; font-size: 13px; }
+
+/* Logo escolhido para o selo. Fundo quadriculado para revelar transparencia:
+   quem sobe PNG com fundo branco descobre aqui, e nao no convite publicado. */
+.wz-logo-atual {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wz-logo-atual img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid var(--wz-linha);
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%),
+    linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 6px 6px;
+}
+
+/* --------------------------------------------------------------------------
+   Escolha de acabamento da foto
+
+   As miniaturas usam um gradiente no lugar da foto real: o recorte e o que
+   diferencia as opcoes, e um bloco de cor mostra a forma melhor que uma foto
+   de 30px, onde qualquer imagem vira mancha.
+   -------------------------------------------------------------------------- */
+.wz-acabamentos {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+.wz-acabamento {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 3px;
+  border: 1.5px solid var(--wz-linha);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 10.5px;
+  line-height: 1.2;
+  color: var(--wz-suave);
+  cursor: pointer;
+  text-align: center;
+}
+.wz-acabamento.sel {
+  border-color: var(--wz-rosa);
+  box-shadow: 0 0 0 3px rgba(216, 96, 144, 0.14);
+  color: var(--wz-rosa-escuro);
+  font-weight: 700;
+}
+.wz-acab-mini {
+  display: block;
+  width: 34px;
+  height: 42px;
+  background: linear-gradient(150deg, #d8a3b4, #8f6070);
+}
+
+/* Cada forma repete o recorte do acabamento correspondente, em miniatura. */
+.wz-acab-mini.wz-acab-moldura     { border: 2px solid #fff; outline: 1px solid var(--wz-linha); }
+.wz-acab-mini.wz-acab-arredondado { border-radius: 8px; }
+.wz-acab-mini.wz-acab-circulo     { border-radius: 50%; height: 34px; }
+.wz-acab-mini.wz-acab-arco        { border-radius: 50% 50% 3px 3px / 34% 34% 4% 4%; }
+.wz-acab-mini.wz-acab-desfoque {
+  -webkit-mask-image: radial-gradient(ellipse 74% 74% at 50% 50%, #000 55%, transparent 100%);
+  mask-image: radial-gradient(ellipse 74% 74% at 50% 50%, #000 55%, transparent 100%);
+}
+.wz-acab-mini.wz-acab-vinheta {
+  background:
+    radial-gradient(ellipse 76% 76% at 50% 50%, transparent 50%, rgba(40, 20, 26, 0.6) 100%),
+    linear-gradient(150deg, #d8a3b4, #8f6070);
+}
+.wz-acab-mini.wz-acab-polaroid {
+  border: 2px solid #fff;
+  border-bottom-width: 10px;
+  outline: 1px solid var(--wz-linha);
+  transform: rotate(-3deg);
+}

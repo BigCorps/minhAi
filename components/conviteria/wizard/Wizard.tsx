@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useReducer, useRef, useState } from 'react';
+import { createClient } from '@/lib/supabase-browser';
 import type { Dispatch } from 'react';
 import Convite from '../Convite';
 import FontesGoogle from '../FontesGoogle';
@@ -26,7 +27,7 @@ import './wizard.css';
 export interface PropsEtapa {
   estado: EstadoWizard;
   despachar: Dispatch<AcaoWizard>;
-  aoEnviarArquivo?: (tipo: 'foto' | 'musica', arquivo: File) => Promise<string>;
+  aoEnviarArquivo?: (tipo: 'foto' | 'musica' | 'logo', arquivo: File) => Promise<string>;
   /** Etapas usam para bloquear campos congelados apos a publicacao. */
   modo?: 'criar' | 'editar';
 }
@@ -49,7 +50,7 @@ export interface PropsWizard {
   estadoInicial?: EstadoWizard;
   /** Debounced pelo proprio wizard. Nao precisa de debounce por fora. */
   aoSalvar?: (estado: EstadoWizard) => Promise<void> | void;
-  aoEnviarArquivo?: (tipo: 'foto' | 'musica', arquivo: File) => Promise<void>;
+  aoEnviarArquivo?: (tipo: 'foto' | 'musica' | 'logo', arquivo: File) => Promise<string>;
   aoConcluir?: (estado: EstadoWizard) => void;
   /**
    * 'editar' esconde a etapa "Publicar" (slug e plano ja estao decididos) e
@@ -72,6 +73,17 @@ export default function Wizard({
     estadoInicial,
     (inicial: EstadoWizard | undefined) => inicial ?? criarEstadoInicial(),
   );
+
+  // Sessao so para o rotulo da barra de marca. Quem ja tem conta nao deve ler
+  // "Entrar" — parece que o login nao pegou, e foi exatamente essa confusao
+  // que apareceu no teste.
+  const [logado, setLogado] = useState<boolean | null>(null);
+  useEffect(() => {
+    const sb = createClient();
+    sb.auth.getUser().then(({ data }) => setLogado(!!data.user));
+    const { data: sub } = sb.auth.onAuthStateChange((_e, sessao) => setLogado(!!sessao?.user));
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   const [previaAberta, setPreviaAberta] = useState(false);
   const primeiraVez = useRef(true);
@@ -111,7 +123,15 @@ export default function Wizard({
             <img src="/brands/convite/icone-512.png" alt="" width={28} height={28} />
             <span>Convite IA</span>
           </a>
-          <a className="wz-marca-entrar" href="/convite/entrar">Entrar</a>
+          {/* `logado === null` = verificando. Renderizar qualquer rotulo agora
+              faria o texto piscar de "Entrar" para "Minha conta". */}
+          <a
+            className="wz-marca-entrar"
+            href={logado ? '/convite/painel' : '/convite/entrar'}
+            style={{ visibility: logado === null ? 'hidden' : 'visible' }}
+          >
+            {logado ? 'Minha conta' : 'Entrar'}
+          </a>
         </div>
 
         <header className="wz-cabecalho">

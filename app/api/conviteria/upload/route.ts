@@ -19,6 +19,18 @@ const REGRAS = {
     mimes: ['audio/mpeg', 'audio/mp3'],
     ext: { 'audio/mpeg': 'mp3', 'audio/mp3': 'mp3' },
   },
+  // Logo do cliente: entra no miolo do lacre ou no corpo do convite. Aceita
+  // SVG, que os outros tipos nao aceitam — logo e a unica midia aqui em que
+  // vetor e o formato natural.
+  //
+  // Limite baixo de proposito: 1 MB e generoso para um logo, e o arquivo e
+  // renderizado a 40px dentro do lacre. Alguem subindo um PNG de 8 MB nao
+  // ganha nitidez, so faz o convite demorar a abrir.
+  logo: {
+    limite: 1024 * 1024,
+    mimes: ['image/png', 'image/webp', 'image/svg+xml'],
+    ext: { 'image/png': 'png', 'image/webp': 'webp', 'image/svg+xml': 'svg' },
+  },
 } as const;
 
 type Tipo = keyof typeof REGRAS;
@@ -44,7 +56,7 @@ export async function POST(req: NextRequest) {
   if (token && token.length > 100) {
     return NextResponse.json({ erro: 'Token inválido.' }, { status: 400 });
   }
-  if (tipo !== 'foto' && tipo !== 'musica') {
+  if (tipo !== 'foto' && tipo !== 'musica' && tipo !== 'logo') {
     return NextResponse.json({ erro: 'Tipo inválido.' }, { status: 400 });
   }
   if (!(arquivo instanceof File)) {

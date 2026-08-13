@@ -124,6 +124,11 @@ export interface ConviteConfig {
   presentesEscolhidos?: PresenteEscolhido[];
 
   midia?: {
+    /**
+     * Acabamento da foto principal. Ver ACABAMENTOS em secoes/Foto.tsx.
+     * Ausente = 'moldura', que e o comportamento que ja existia.
+     */
+    acabamento?: string;
     fotoPrincipal?: string;
     fotoCapa?: string;
     enquadramento?: string;

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import ConvitePublico from '@/components/conviteria/ConvitePublico';
+import HeaderDono from '@/components/conviteria/HeaderDono';
 import { buscarEventoPublicado } from '@/lib/conviteria/servidor';
 import { familiasGoogle, urlGoogleFonts } from '@/lib/conviteria/tokens';
 
@@ -52,6 +53,10 @@ export default async function PaginaConvite({ params }: Props) {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       <link rel="stylesheet" href={hrefFontes} />
+      {/* Renderizado sempre, mas o componente nao desenha nada para quem nao
+          e o dono. O convidado recebe HTML com um <script> que checa sessao e
+          termina em nada — barato, e evita duas versoes da pagina. */}
+      <HeaderDono eventoId={evento.id} />
       <ConvitePublico cfg={evento.cfg} />
     </>
   );

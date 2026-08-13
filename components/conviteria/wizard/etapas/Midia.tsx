@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Campo, Texto } from '../Campos';
+import { ACABAMENTOS, ACABAMENTO_PADRAO } from '../../secoes/Foto';
 import type { PropsEtapa } from '../Wizard';
 
 /** Aceita url completa ou id puro do YouTube. */
@@ -40,6 +41,30 @@ export default function Midia({ estado, despachar, aoEnviarArquivo }: PropsEtapa
           }}
         />
       </Campo>
+
+      {/* So aparece com foto escolhida: escolher acabamento sem imagem na tela
+          e escolher no escuro. */}
+      {estado.cfg.midia?.fotoPrincipal && (
+        <Campo rotulo="Acabamento da foto" dica="Veja o resultado na prévia ao lado.">
+          <div className="wz-acabamentos">
+            {ACABAMENTOS.map((a) => {
+              const sel = (estado.cfg.midia?.acabamento ?? ACABAMENTO_PADRAO) === a.id;
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  className={`wz-acabamento${sel ? ' sel' : ''}`}
+                  aria-pressed={sel}
+                  onClick={() => despachar({ tipo: 'campo', caminho: 'midia.acabamento', valor: a.id })}
+                >
+                  <span className={`wz-acab-mini wz-acab-${a.id}`} aria-hidden="true" />
+                  {a.nome}
+                </button>
+              );
+            })}
+          </div>
+        </Campo>
+      )}
       {estado.cfg.midia?.fotoPrincipal && (
         <p className="wz-ok">Foto carregada.</p>
       )}

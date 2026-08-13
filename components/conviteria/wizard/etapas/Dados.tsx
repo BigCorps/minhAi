@@ -19,7 +19,7 @@ function iniciaisDe(nome: string) {
     .join('');
 }
 
-export default function Dados({ estado, despachar, modo}: PropsEtapa) {
+export default function Dados({ estado, despachar, modo, aoEnviarArquivo }: PropsEtapa) {
   const { cfg } = estado;
   const rotulos = acharTipo(cfg.tipoEventoId).rotulos;
 
@@ -92,6 +92,7 @@ export default function Dados({ estado, despachar, modo}: PropsEtapa) {
                   <LacreArte
                     lacreId={l.id}
                     iniciais={cfg.anfitrioes.iniciais}
+                    logoUrl={cfg.logoLacreUrl}
                     ajuste={cfg.lacreAjuste}
                     tamanho={72}
                   />
@@ -101,6 +102,38 @@ export default function Dados({ estado, despachar, modo}: PropsEtapa) {
             );
           })}
         </ul>
+      </Campo>
+
+      {/* Logo no lugar das iniciais. Serve para empresa, igreja, formatura —
+          evento com identidade propria, onde duas letras nao representam. */}
+      <Campo
+        rotulo="Logo no selo"
+        dica="Opcional. PNG ou SVG com fundo transparente. Substitui as iniciais."
+      >
+        {cfg.logoLacreUrl ? (
+          <div className="wz-logo-atual">
+            <img src={cfg.logoLacreUrl} alt="Logo escolhido" />
+            <button
+              type="button"
+              className="wz-btn wz-btn-fantasma wz-btn-mini"
+              onClick={() => despachar({ tipo: 'campo', caminho: 'logoLacreUrl', valor: null })}
+            >
+              Remover logo
+            </button>
+          </div>
+        ) : (
+          <input
+            type="file"
+            accept="image/png,image/webp,image/svg+xml"
+            className="wz-input wz-arquivo"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (!f || !aoEnviarArquivo) return;
+              const url = await aoEnviarArquivo('logo', f);
+              despachar({ tipo: 'campo', caminho: 'logoLacreUrl', valor: url });
+            }}
+          />
+        )}
       </Campo>
 
       {/* Ajuste fino. Aparece so quando ha iniciais: sem letra na tela, mexer

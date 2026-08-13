@@ -123,6 +123,57 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ erro: 'Não foi possível salvar.' }, { status: 500 });
   }
 
+  // ── Presentes ─────────────────────────────────────────────────────────────
+  //
+  // Aqui NAO se apaga e reinsere como nas secoes. `presentes` tem
+  // `cotas_vendidas` e e referenciada por `presente_pagamentos`: apagar uma
+  // linha ja comprada destruiria historico de dinheiro recebido.
+  //
+  // Regra: item novo entra; item removido pela pessoa e apenas DESATIVADO, e
+  // so quando ninguem comprou. Item com venda permanece visivel, porque quem
+  // pagou tem direito de ver o presente que deu no convite.
+  const escolhidos = cfgNova.presentesEscolhidos ?? [];
+
+  const { data: atuaisPresentes } = await admin
+    .from('presentes')
+    .select('id, titulo, cotas_vendidas, ativo')
+    .eq('evento_id', corpo.id);
+
+  const porTitulo = new Map((atuaisPresentes ?? []).map((p) => [p.titulo as string, p]));
+
+  const novos = escolhidos.filter((p) => !porTitulo.has(p.titulo));
+  if (novos.length > 0) {
+    await admin.from('presentes').insert(
+      novos.map((p, i) => ({
+        evento_id: corpo.id,
+        titulo: p.titulo,
+        valor_centavos: p.valorCentavos,
+        permite_valor_livre: p.permiteValorLivre ?? false,
+        imagem_url: p.imagemUrl ?? null,
+        ordem: (porTitulo.size + i + 1) * 10,
+      }))
+    );
+  }
+
+  const titulosEscolhidos = new Set(escolhidos.map((p) => p.titulo));
+  const paraDesativar = (atuaisPresentes ?? []).filter(
+    (p) => !titulosEscolhidos.has(p.titulo as string)
+      && (p.cotas_vendidas as number) === 0
+      && p.ativo
+  );
+
+  for (const p of paraDesativar) {
+    await admin.from('presentes').update({ ativo: false }).eq('id', p.id);
+  }
+
+  // Reativa item que a pessoa tirou e recolocou depois.
+  const paraReativar = (atuaisPresentes ?? []).filter(
+    (p) => titulosEscolhidos.has(p.titulo as string) && !p.ativo
+  );
+  for (const p of paraReativar) {
+    await admin.from('presentes').update({ ativo: true }).eq('id', p.id);
+  }
+
   // Secoes: apaga e reinsere. Fazer diff por tipo daria o mesmo resultado com
   // muito mais codigo, e a lista tem no maximo 15 linhas.
   await admin.from('evento_secoes').delete().eq('evento_id', corpo.id);

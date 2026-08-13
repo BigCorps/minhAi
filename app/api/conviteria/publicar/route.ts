@@ -126,6 +126,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ erro: 'Não foi possível criar o convite.' }, { status: 500 });
   }
 
+  // 5b. Presentes escolhidos viram linhas proprias. Tabela separada porque
+  //     cada item tem cotas e recebe pagamento — dentro do jsonb nao daria
+  //     para contar venda com integridade.
+  const escolhidos = cfgLimpa.presentesEscolhidos ?? [];
+  if (escolhidos.length > 0) {
+    const { error: erroPresentes } = await admin.from('presentes').insert(
+      escolhidos.map((p, i) => ({
+        evento_id: evento.id,
+        titulo: p.titulo,
+        valor_centavos: p.valorCentavos,
+        permite_valor_livre: p.permiteValorLivre ?? false,
+        imagem_url: p.imagemUrl ?? null,
+        ordem: (i + 1) * 10,
+      }))
+    );
+    // Nao-critico: o convite ja existe. Sem a lista ele publica igual, e o
+    // casal pode reabrir a edicao para tentar de novo.
+    if (erroPresentes) {
+      console.error('⚠️ Falha ao criar presentes (não-crítico):', erroPresentes);
+    }
+  }
+
   // 6. Seções em tabela própria: o wizard reordena, e ordenar dentro de um
   //    jsonb tornaria a consulta da página pública mais cara.
   await admin.from('evento_secoes').insert(

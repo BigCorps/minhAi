@@ -1,4 +1,4 @@
-import type { ConviteConfig, SecaoConfig, TipoSecao } from './tipos';
+import type { ConviteConfig, PresenteEscolhido, SecaoConfig, TipoSecao } from './tipos';
 import { acharTipo, TIPO_PADRAO } from './tiposEvento';
 import { fontesDoGrupo, FONTE_PADRAO } from './fontes';
 import { TEMA_PADRAO } from './temas';
@@ -67,6 +67,7 @@ export const ETAPAS: Etapa[] = [
   { id: 'fonte',   titulo: 'Fontes',         foco: 'nomes' },
   { id: 'midia',   titulo: 'Foto e música',  foco: 'foto' },
   { id: 'secoes',  titulo: 'Seções',         foco: 'rsvp' },
+  { id: 'presentes', titulo: 'Presentes',    foco: 'presentes' },
   { id: 'revisao',  titulo: 'Revisão' },
   { id: 'publicar', titulo: 'Publicar' },
 ];
@@ -144,6 +145,7 @@ export type AcaoWizard =
   | { tipo: 'alternarSecao'; secao: TipoSecao }
   | { tipo: 'moverSecao'; secao: TipoSecao; direcao: -1 | 1 }
   | { tipo: 'configSecao'; secao: TipoSecao; chave: string; valor: string }
+  | { tipo: 'alternarPresente'; presente: PresenteEscolhido }
   | { tipo: 'hidratar'; estado: EstadoWizard };
 
 /** Grava em `a.b.c` sem mutar o original. */
@@ -224,6 +226,20 @@ export function reduzir(estado: EstadoWizard, acao: AcaoWizard): EstadoWizard {
         cfg: {
           ...estado.cfg,
           secoes: lista.map((s, k) => ({ ...s, ordem: (k + 1) * 10 })),
+        },
+      };
+    }
+
+    case 'alternarPresente': {
+      const atuais = estado.cfg.presentesEscolhidos ?? [];
+      const jaTem = atuais.some((p) => p.catalogoId === acao.presente.catalogoId);
+      return {
+        ...estado,
+        cfg: {
+          ...estado.cfg,
+          presentesEscolhidos: jaTem
+            ? atuais.filter((p) => p.catalogoId !== acao.presente.catalogoId)
+            : [...atuais, acao.presente],
         },
       };
     }

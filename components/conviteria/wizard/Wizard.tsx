@@ -17,6 +17,7 @@ import Dados from './etapas/Dados';
 import Local from './etapas/Local';
 import Midia from './etapas/Midia';
 import Secoes from './etapas/Secoes';
+import Presentes from './etapas/Presentes';
 import Revisao from './etapas/Revisao';
 import Publicar from './etapas/Publicar';
 import './wizard.css';
@@ -37,6 +38,7 @@ const ETAPA_COMPONENTE: Record<string, React.ComponentType<PropsEtapa>> = {
   fonte: EscolherFonte,
   midia: Midia,
   secoes: Secoes,
+  presentes: Presentes,
   revisao: Revisao,
   publicar: Publicar,
 };

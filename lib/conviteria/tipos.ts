@@ -45,6 +45,21 @@ export interface Padrinho {
   fotoUrl?: string;
 }
 
+/**
+ * Presente escolhido pelo casal no wizard.
+ *
+ * Guarda um SNAPSHOT de titulo e valor, e nao so o `catalogoId`: a previa
+ * precisa funcionar sem consultar o banco, e um item que sair do catalogo
+ * depois nao pode sumir de um convite ja publicado.
+ */
+export interface PresenteEscolhido {
+  catalogoId: string;
+  titulo: string;
+  valorCentavos: number;
+  permiteValorLivre?: boolean;
+  imagemUrl?: string | null;
+}
+
 export interface PresenteExibicao {
   id: string;
   titulo: string;
@@ -92,6 +107,9 @@ export interface ConviteConfig {
     /** Embed do google-maps-proxy. Quando ausente, so mostra o botao. */
     mapEmbedUrl?: string;
   };
+
+  /** Escolhidos no wizard. Viram linhas em `conviteria.presentes` ao publicar. */
+  presentesEscolhidos?: PresenteEscolhido[];
 
   midia?: {
     fotoPrincipal?: string;

@@ -310,6 +310,31 @@ if (PIX_DOMAINS.includes(hostname)) {
   // O bloco 1 só trata subdomínio; sem isto, conviteia.com cairia no fluxo
   // normal e serviria a landing da minhAi.
   if (hostname === 'conviteia.com' || hostname === 'www.conviteia.com') {
+
+    // Passthrough para TWA / Play Store (Digital Asset Links).
+    // Hoje é no-op (o `return next()` no fim do bloco já resolveria), mas
+    // documenta a intenção e protege contra reordenação futura do bloco.
+    if (pathname.startsWith('/.well-known/')) {
+      return NextResponse.next();
+    }
+
+    // Sem isto, /favicon.ico serve o app/favicon.ico (minhAi). Mesmo padrão
+    // dos blocos 0, 0.05, 0.1 e 0.2.
+    if (pathname === '/favicon.ico') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/brands/convite/favicon.png';
+      return NextResponse.rewrite(url);
+    }
+
+    // Sem isto, /manifest.json serve o public/manifest.json (minhAi) — era o
+    // que fazia o PWA de conviteia.com instalar com nome e ícone da minhAi,
+    // e o que faria o `bubblewrap init` gerar o app errado.
+    if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/brands/convite/manifest.webmanifest';
+      return NextResponse.rewrite(url);
+    }
+    
     if (pathname === '/') {
       const url = request.nextUrl.clone();
       url.pathname = '/convite';

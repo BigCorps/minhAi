@@ -176,6 +176,13 @@ export interface ModoRender {
   previa?: boolean;
   /** Secao que o wizard esta editando agora, para rolar ate ela. */
   secaoFoco?: TipoSecao;
+  /**
+   * Id do evento. Presente so no convite publicado — a previa do wizard nao
+   * tem evento ainda. E o que o modal de presentes usa para gerar o PIX, e
+   * tambem o que faz o botao "Presentear" ficar inerte na previa sem precisar
+   * de outra flag.
+   */
+  eventoId?: string;
 }
 
 /**

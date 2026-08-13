@@ -900,3 +900,140 @@ body.cv-travado { overflow: hidden; }
   box-shadow: none;
   background: none;
 }
+
+/* --------------------------------------------------------------------------
+   Modal de presentes
+   -------------------------------------------------------------------------- */
+.cv-modal-fundo {
+  position: fixed;
+  inset: 0;
+  /* Acima da capa (50) e da barra do dono (60): o modal e a camada de cima. */
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(30 14 18 / 62%);
+  backdrop-filter: blur(3px);
+}
+
+.cv-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 440px;
+  /* dvh e nao vh: no celular a barra do navegador entra e sai, e com vh o
+     rodape do modal ficava embaixo dela. */
+  max-height: 88dvh;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--cv-fora, #fff);
+  font-family: var(--cv-corpo), system-ui, sans-serif;
+  color: var(--cv-tinta);
+}
+
+.cv-modal-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--cv-acento) 20%, transparent);
+  flex-shrink: 0;
+}
+.cv-modal-topo h2 {
+  margin: 0;
+  font-family: var(--cv-display), serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.cv-modal-topo button { border: 0; background: none; color: inherit; cursor: pointer; padding: 4px; }
+
+/* O corpo rola, o topo fica. Sem isso a lista de 24 itens rolava junto com o
+   titulo e a pessoa perdia a referencia de onde esta. */
+.cv-modal-corpo { overflow-y: auto; padding: 16px; }
+
+.cv-modal-erro {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--cv-acento) 12%, transparent);
+  font-size: 0.85rem;
+}
+
+.cv-modal-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cv-modal-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--cv-acento) 22%, transparent);
+  border-radius: 12px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cv-modal-item:hover:not(:disabled) { border-color: var(--cv-acento); }
+.cv-modal-item:disabled { opacity: 0.45; cursor: default; }
+.cv-modal-item img { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+.cv-modal-item-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cv-modal-item-txt strong { font-size: 0.9rem; font-weight: 600; }
+.cv-modal-item-txt small { font-size: 0.8rem; color: var(--cv-tinta-suave); }
+
+.cv-modal-form { display: grid; gap: 12px; }
+.cv-modal-form label { display: grid; gap: 5px; font-size: 0.82rem; color: var(--cv-tinta-suave); }
+.cv-modal-form label span { opacity: 0.7; }
+.cv-modal-form input,
+.cv-modal-form textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--cv-acento) 30%, transparent);
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  color: var(--cv-tinta);
+  resize: vertical;
+}
+
+.cv-modal-acoes { display: flex; gap: 10px; margin-top: 4px; }
+.cv-modal-acoes .cv-botao { flex: 1; }
+
+.cv-modal-centro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  text-align: center;
+}
+.cv-modal-valor {
+  margin: 0;
+  font-family: var(--cv-display), serif;
+  font-size: 1.7rem;
+  font-weight: 600;
+}
+.cv-modal-qr {
+  width: 210px;
+  height: 210px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--cv-acento) 22%, transparent);
+}
+.cv-modal-dica { margin: 0; font-size: 0.84rem; color: var(--cv-tinta-suave); max-width: 30ch; }
+
+.cv-presentes-contagem {
+  margin: 10px 0 0;
+  font-family: var(--cv-corpo), sans-serif;
+  font-size: 0.78rem;
+  color: var(--cv-tinta-suave);
+}
+
+.cv-botao-fantasma {
+  background: none;
+  border: 1px solid var(--cv-acento);
+  color: var(--cv-acento);
+}

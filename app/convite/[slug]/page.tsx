@@ -65,7 +65,7 @@ export default async function PaginaConvite({ params }: Props) {
           e o dono. O convidado recebe HTML com um <script> que checa sessao e
           termina em nada — barato, e evita duas versoes da pagina. */}
       <HeaderDono eventoId={evento.id} />
-      <ConvitePublico cfg={evento.cfg} />
+      <ConvitePublico cfg={evento.cfg} eventoId={evento.id} />
     </>
   );
 }

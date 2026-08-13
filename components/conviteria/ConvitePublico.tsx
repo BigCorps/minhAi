@@ -7,7 +7,7 @@ import { ProvedorAudio } from './ContextoAudio';
 import { tokensDoConvite } from '@/lib/conviteria/tokens';
 import type { ConviteConfig } from '@/lib/conviteria/tipos';
 
-export default function ConvitePublico({ cfg }: { cfg: ConviteConfig }) {
+export default function ConvitePublico({ cfg, eventoId }: { cfg: ConviteConfig; eventoId?: string }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [aberto, setAberto] = useState(false);
   const musica = cfg.midia?.musica;
@@ -53,7 +53,7 @@ export default function ConvitePublico({ cfg }: { cfg: ConviteConfig }) {
           aoAbrir={abrir}
         />
       )}
-      <Convite cfg={cfg} revelando={aberto} />
+      <Convite cfg={cfg} revelando={aberto} modo={{ eventoId }} />
     </div>
     </ProvedorAudio>
   );

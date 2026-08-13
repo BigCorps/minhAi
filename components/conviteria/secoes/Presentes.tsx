@@ -1,15 +1,25 @@
 'use client';
 
-import Image from 'next/image';
+import { useState } from 'react';
 import type { PropsSecao } from '@/lib/conviteria/tipos';
 import { Broto } from '../Ornamentos';
+import ModalPresentes from '../ModalPresentes';
 
-const brl = (centavos: number) =>
-  (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
+/**
+ * A secao agora e um convite para abrir a lista, nao a lista.
+ *
+ * Antes os cartoes vinham inline: com 24 itens de casamento, a lista empurrava
+ * o resto do convite para muito baixo, e o botao "Presentear" nem tinha
+ * onClick — era decoracao. Agora um botao abre o modal, onde o PIX acontece.
+ */
 export default function Presentes({ cfg, secao, modo }: PropsSecao) {
+  const [aberto, setAberto] = useState(false);
   const lista = cfg.presentes ?? [];
   const c = secao.config ?? {};
+
+  if (lista.length === 0) return null;
+
+  const disponiveis = lista.filter((p) => !p.esgotado).length;
 
   return (
     <section className="cv-secao">
@@ -17,41 +27,33 @@ export default function Presentes({ cfg, secao, modo }: PropsSecao) {
       <h2 className="cv-titulo">{c.titulo ?? 'Lista de presentes'}</h2>
       <p className="cv-texto">
         {c.texto ??
-          'O maior presente é dividir esse dia com você. Mas, se quiser nos presentear, escolha uma cota abaixo.'}
+          'O maior presente é dividir esse dia com você. Mas, se quiser nos presentear, escolha uma cota.'}
       </p>
 
-      <div className="cv-presentes">
-        {lista.map((p) => (
-          <article className="cv-presente" key={p.id}>
-            <div className="cv-presente-img">
-              {p.imagemUrl ? (
-                <Image src={p.imagemUrl} alt="" width={300} height={300}
-                       loading="lazy" sizes="150px" />
-              ) : (
-                // Item sem arquivo no catalogo continua funcionando.
-                <svg viewBox="0 0 60 60" aria-hidden="true">
-                  <rect x="9" y="24" width="42" height="28" rx="4"
-                        fill="var(--cv-petala-clara)" stroke="var(--cv-petala-escura)" strokeWidth="2" />
-                  <path d="M9 33h42M30 24v28" stroke="var(--cv-petala-escura)" strokeWidth="2" />
-                  <path d="M30 24c-6-10-16-8-16-2 0 4 8 4 16 2zM30 24c6-10 16-8 16-2 0 4-8 4-16 2z"
-                        fill="var(--cv-petala-media)" />
-                </svg>
-              )}
-            </div>
-            <p className="cv-presente-titulo">{p.titulo}</p>
-            <p className="cv-presente-valor">
-              {p.valorCentavos > 0 ? brl(p.valorCentavos) : 'Valor livre'}
-            </p>
-            <button
-              type="button"
-              className="cv-botao cv-botao-pequeno"
-              disabled={p.esgotado || modo.previa}
-            >
-              {p.esgotado ? 'Já presenteado' : 'Presentear'}
-            </button>
-          </article>
-        ))}
-      </div>
+      <button
+        type="button"
+        className="cv-botao"
+        // Na previa nao ha evento, entao nao ha o que pagar. Desabilitar pelo
+        // eventoId dispensa uma flag separada.
+        disabled={modo.previa || !modo.eventoId}
+        onClick={() => setAberto(true)}
+      >
+        Ver lista de presentes
+      </button>
+
+      <p className="cv-presentes-contagem">
+        {disponiveis === 0
+          ? 'Todas as cotas já foram presenteadas'
+          : `${disponiveis} ${disponiveis === 1 ? 'opção disponível' : 'opções disponíveis'}`}
+      </p>
+
+      {aberto && modo.eventoId && (
+        <ModalPresentes
+          eventoId={modo.eventoId}
+          presentes={lista}
+          aoFechar={() => setAberto(false)}
+        />
+      )}
     </section>
   );
 }

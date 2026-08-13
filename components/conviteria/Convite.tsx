@@ -50,16 +50,22 @@ const SEM_DIVISOR = new Set(['foto', 'data', 'nomes', 'musica', 'fim']);
 export default function Convite({
   cfg,
   modo = {},
+  revelando = false,
 }: {
   cfg: ConviteConfig;
   modo?: ModoRender;
+  /** true depois do clique na capa: dispara a animacao de entrada. */
+  revelando?: boolean;
 }) {
   const secoes = [...cfg.secoes]
     .filter((s) => s.ativo)
     .sort((a, b) => a.ordem - b.ordem);
 
   return (
-    <div className="cv-fora" style={tokensDoConvite(cfg.temaId, cfg.fonteId)}>
+    <div
+      className={`cv-fora${revelando ? ' revelando' : ''}`}
+      style={tokensDoConvite(cfg.temaId, cfg.fonteId)}
+    >
       <article className="cv-papel">
         <ArranjoCanto className="cv-canto cv-canto-se" />
         <ArranjoCanto className="cv-canto cv-canto-sd" />

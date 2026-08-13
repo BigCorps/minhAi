@@ -642,7 +642,11 @@ body.cv-travado { overflow: hidden; }
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.cv-fora { animation: cv-revela 0.7s ease-out 0.5s both; }
+/* Depende da classe `revelando`, aplicada no clique. Sem ela a animacao
+   rodava no CARREGAMENTO — o <Convite> e renderizado junto com a capa, entao
+   os 0.7s terminavam com o envelope ainda fechado e nao havia transicao
+   nenhuma para ver. */
+.cv-fora.revelando { animation: cv-revela 0.7s ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
   .cv-capa, .cv-capa-aba, .cv-capa-lacre, .cv-capa-etiqueta, .cv-capa-flor {
@@ -652,7 +656,7 @@ body.cv-travado { overflow: hidden; }
   .cv-capa.abrindo .cv-capa-aba,
   .cv-capa.abrindo .cv-capa-lacre,
   .cv-capa.abrindo { transform: none; }
-  .cv-fora { animation: none; }
+  .cv-fora.revelando { animation: none; }
 }
 
 /* --------------------------------------------------------------------------

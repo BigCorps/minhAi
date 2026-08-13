@@ -281,8 +281,8 @@ function EntrarConteudo() {
   return (
     <main
       className="min-h-screen flex items-center justify-center px-4 py-10"
-      style={{ backgroundColor: cor.papel }}
     >
+      {/* Sem backgroundColor: o SVG e `-z-10` e o fundo do <main> o cobriria. */}
       <RendaBackground />
 
       <div

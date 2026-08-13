@@ -154,8 +154,8 @@ function PagarConteudo() {
   return (
     <main
       className="min-h-screen flex items-center justify-center px-4 py-10"
-      style={{ backgroundColor: cor.papel }}
     >
+      {/* Sem backgroundColor: o SVG e `-z-10` e o fundo do <main> o cobriria. */}
       <RendaBackground />
 
       <div
@@ -256,6 +256,15 @@ function PagarConteudo() {
                     style={{ backgroundColor: cor.acento, color: cor.blocoTexto }}
                   >
                     Ver meu convite
+                  </a>
+                  {/* Sem esta saida a pessoa termina o pagamento sem caminho
+                      de volta e precisa fechar tudo para achar o painel. */}
+                  <a
+                    href="/convite/painel"
+                    className="w-full py-3 rounded-lg font-semibold border"
+                    style={{ borderColor: cor.acento + '55', color: cor.acentoTexto }}
+                  >
+                    Meus convites
                   </a>
                 </>
               )}

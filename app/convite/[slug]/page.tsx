@@ -24,6 +24,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: titulo,
     description: descricao,
+    // Precisa repetir os icones: no App Router o metadata do filho SUBSTITUI o
+    // do pai, nao mescla. Sem isto o subdominio do convite ficava sem favicon
+    // nenhum, herdando o do app raiz (minhAi) ou nada.
+    icons: {
+      icon: '/brands/convite/favicon.png',
+      shortcut: '/brands/convite/favicon.png',
+      apple: '/brands/convite/favicon.png',
+    },
     openGraph: {
       title: titulo,
       description: descricao,

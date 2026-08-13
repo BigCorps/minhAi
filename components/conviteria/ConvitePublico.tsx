@@ -53,7 +53,7 @@ export default function ConvitePublico({ cfg }: { cfg: ConviteConfig }) {
           aoAbrir={abrir}
         />
       )}
-      <Convite cfg={cfg} />
+      <Convite cfg={cfg} revelando={aberto} />
     </div>
     </ProvedorAudio>
   );

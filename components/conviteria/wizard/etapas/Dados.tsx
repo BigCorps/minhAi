@@ -138,6 +138,21 @@ export default function Dados({ estado, despachar, modo, aoEnviarArquivo }: Prop
 
       {/* Ajuste fino. Aparece so quando ha iniciais: sem letra na tela, mexer
           em slider de posicao nao mostra nada e vira ruido. */}
+      {/* Com logo, mostra so a previa: nao ha monograma para ajustar, mas a
+          pessoa precisa ver como o logo ficou dentro do selo. Antes o bloco
+          inteiro desaparecia e o logo nao aparecia em lugar nenhum. */}
+      {cfg.logoLacreUrl && (
+        <Campo rotulo="Prévia do selo" dica="Seu logo no lugar das iniciais.">
+          <div className="wz-lacre-previa">
+            <LacreArte
+              lacreId={cfg.lacreId ?? LACRE_PADRAO}
+              logoUrl={cfg.logoLacreUrl}
+              tamanho={148}
+            />
+          </div>
+        </Campo>
+      )}
+
       {cfg.anfitrioes.iniciais && !cfg.logoLacreUrl && (
         <Campo
           rotulo="Ajuste do monograma"

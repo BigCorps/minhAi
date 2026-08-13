@@ -83,7 +83,10 @@ export default function PainelPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col px-4 py-8" style={{ backgroundColor: cor.papel }}>
+    <main className="min-h-screen flex flex-col px-4 py-8">
+      {/* Sem backgroundColor no <main>: o RendaBackground e `-z-10` e ficaria
+          ATRAS do fundo do proprio elemento. Era isso que escondia a textura —
+          quem pinta o papel e o SVG. */}
       <RendaBackground />
 
       {/* `flex-1` empurra o rodape para o fim da viewport quando ha poucos

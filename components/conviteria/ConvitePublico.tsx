@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import Convite from './Convite';
 import Capa from './Capa';
+import { tokensDoConvite } from '@/lib/conviteria/tokens';
 import type { ConviteConfig } from '@/lib/conviteria/tipos';
 
 export default function ConvitePublico({ cfg }: { cfg: ConviteConfig }) {
@@ -20,7 +21,12 @@ export default function ConvitePublico({ cfg }: { cfg: ConviteConfig }) {
   }
 
   return (
-    <>
+    // As variaveis do tema precisam envolver a Capa TAMBEM. O <Convite> aplica
+    // as suas na propria raiz, mas a Capa fica fora dele — e o lacre usa
+    // `fill="var(--cv-petala-clara)"`. Variavel indefinida torna a declaracao
+    // invalida em tempo de computacao, e `fill` cai para o valor inicial:
+    // preto. Era por isso que o lacre saia como um borrao escuro.
+    <div style={tokensDoConvite(cfg.temaId, cfg.fonteId)}>
       {/* Sem metadados de Media Session: o titulo apareceria na tela de
           bloqueio do celular de quem abre. */}
       {arquivo && <audio ref={audioRef} src={arquivo} loop preload="auto" />}
@@ -32,6 +38,6 @@ export default function ConvitePublico({ cfg }: { cfg: ConviteConfig }) {
         />
       )}
       <Convite cfg={cfg} />
-    </>
+    </div>
   );
 }

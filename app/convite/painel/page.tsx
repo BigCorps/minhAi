@@ -82,10 +82,13 @@ export default function PainelPage() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-8" style={{ backgroundColor: cor.papel }}>
+    <main className="min-h-screen flex flex-col px-4 py-8" style={{ backgroundColor: cor.papel }}>
       <RendaBackground />
 
-      <div className="mx-auto w-full max-w-2xl">
+      {/* `flex-1` empurra o rodape para o fim da viewport quando ha poucos
+          convites. Sem isso ele encosta no ultimo cartao e parece parte da
+          lista. */}
+      <div className="mx-auto w-full max-w-2xl flex-1">
         <header className="flex items-center justify-between mb-8">
           <Link href="/convite" className="flex items-center gap-2">
             <Image
@@ -222,9 +225,9 @@ export default function PainelPage() {
             </li>
           ))}
         </ul>
-
-        <RodapeMarca />
       </div>
+
+      <RodapeMarca />
     </main>
   );
 }

@@ -4,6 +4,10 @@
  * Lacre de cera. O monograma vem como `<path>` pronto, gerado no servidor por
  * /api/conviteria/lacre e guardado no evento.
  *
+ * Toda `var()` aqui tem fallback. Sem ele, um unico ancestral sem as
+ * variaveis do tema faz `fill` cair para o valor inicial — preto — e o lacre
+ * vira um borrao. Fallback custa nada e transforma "quebrado" em "cor errada".
+ *
  * Nao usa <text>: no convite do casamento o monograma dependia da fonte
  * carregar do Google Fonts, do font-size vir do CSS e do deslocamento vir do
  * componente. Bastava uma das tres falhar para sair torto. Como contorno,
@@ -23,13 +27,13 @@ export default function Lacre({
     >
       <defs>
         <radialGradient id="cv-cera" cx="38%" cy="30%" r="78%">
-          <stop offset="0%" stopColor="var(--cv-petala-clara)" />
-          <stop offset="52%" stopColor="var(--cv-petala-media)" />
-          <stop offset="100%" stopColor="var(--cv-petala-escura)" />
+          <stop offset="0%" stopColor="var(--cv-petala-clara, #f2d5cd)" />
+          <stop offset="52%" stopColor="var(--cv-petala-media, #e3b5ae)" />
+          <stop offset="100%" stopColor="var(--cv-petala-escura, #b4767c)" />
         </radialGradient>
         <radialGradient id="cv-cera-interna" cx="50%" cy="38%" r="62%">
-          <stop offset="0%" stopColor="var(--cv-petala-media)" />
-          <stop offset="100%" stopColor="var(--cv-petala-escura)" />
+          <stop offset="0%" stopColor="var(--cv-petala-media, #e3b5ae)" />
+          <stop offset="100%" stopColor="var(--cv-petala-escura, #b4767c)" />
         </radialGradient>
       </defs>
 
@@ -41,15 +45,15 @@ export default function Lacre({
       />
       <circle cx="50" cy="50" r="34" fill="url(#cv-cera-interna)" opacity="0.85" />
       <circle cx="50" cy="50" r="34" fill="none"
-              stroke="var(--cv-petala-escura)" strokeWidth="1.6" opacity="0.55" />
+              stroke="var(--cv-petala-escura, #b4767c)" strokeWidth="1.6" opacity="0.55" />
       <circle cx="50" cy="49" r="31" fill="none"
-              stroke="var(--cv-petala-clara)" strokeWidth="0.9" opacity="0.5" />
+              stroke="var(--cv-petala-clara, #f2d5cd)" strokeWidth="0.9" opacity="0.5" />
 
       {path && (
         <>
-          <path d={path} fill="var(--cv-petala-escura)" opacity="0.75"
+          <path d={path} fill="var(--cv-petala-escura, #b4767c)" opacity="0.75"
                 transform="translate(0 0.8)" />
-          <path d={path} fill="var(--cv-petala-clara)" opacity="0.92" />
+          <path d={path} fill="var(--cv-petala-clara, #f2d5cd)" opacity="0.92" />
         </>
       )}
     </svg>

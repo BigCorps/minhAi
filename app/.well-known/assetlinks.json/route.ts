@@ -45,7 +45,79 @@ const ASSETLINKS_BY_HOST: Record<string, any[]> = {
       },
     },
   ],
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // NOVOS TWAs (Conviteia / ConsultaTec / Pix Wiki)
+  //
+  // Enquanto `sha256_cert_fingerprints` estiver vazio, a entrada é IGNORADA e o
+  // host continua recebendo MINHAI_DEFAULT_ENTRY — ou seja, o comportamento é
+  // exatamente o de hoje. Nada muda ao subir este arquivo.
+  //
+  // O fingerprint definitivo só existe DEPOIS do primeiro upload do .aab no
+  // Play Console, em: Versão > Configuração > Integridade do app >
+  // Assinatura de apps do Google Play > "Certificado de assinatura do app"
+  // (SHA-256). Cole aqui, faça deploy, e a verificação passa a valer.
+  //
+  // Se você também assina localmente com chave de upload, adicione o SHA-256 do
+  // "Certificado de chave de upload" da mesma tela como SEGUNDO fingerprint —
+  // é o que permite testar o .aab/.apk assinado localmente sem barra de URL.
+  // ───────────────────────────────────────────────────────────────────────────
+  'conviteia.com': [
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'com.conviteia.twa', // TRAVAR antes de publicar — é permanente
+        sha256_cert_fingerprints: [
+          // 'XX:XX:...',  ← Play App Signing
+          // 'YY:YY:...',  ← chave de upload (opcional, para testes locais)
+        ],
+      },
+    },
+  ],
+  'www.conviteia.com': [
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'com.conviteia.twa',
+        sha256_cert_fingerprints: [],
+      },
+    },
+  ],
+  'consulta.tec.br': [
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'br.tec.consulta.twa', // TRAVAR antes de publicar — é permanente
+        sha256_cert_fingerprints: [],
+      },
+    },
+  ],
+  'pix.wiki': [
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'wiki.pix.twa', // TRAVAR antes de publicar — é permanente
+        sha256_cert_fingerprints: [],
+      },
+    },
+  ],
 };
+
+// Uma entrada só "vale" quando tem pelo menos um fingerprint. Sem isso, um host
+// recém-adicionado (fingerprint ainda vazio) passaria a responder um assetlinks
+// sem certificado nenhum, que é pior do que o fallback atual. Esta checagem
+// garante que adicionar hosts aqui nunca altera o comportamento de produção
+// antes do fingerprint estar preenchido.
+function temFingerprint(entries: any[]): boolean {
+  return entries.some(
+    (e) => Array.isArray(e?.target?.sha256_cert_fingerprints)
+      && e.target.sha256_cert_fingerprints.length > 0
+  );
+}
 
 export async function GET(request: NextRequest) {
   const host = (request.headers.get('host') || '').split(':')[0].toLowerCase();
@@ -53,7 +125,8 @@ export async function GET(request: NextRequest) {
   // Host específico mapeado (ex: ia.artefinal.app) → usa a entrada dele.
   // Qualquer outro host (minhai.app, www.minhai.app, subdomínios de cliente, etc.)
   // → mantém o comportamento atual: entrada padrão da minhAi.
-  const entries = ASSETLINKS_BY_HOST[host] ?? MINHAI_DEFAULT_ENTRY;
+  const mapped = ASSETLINKS_BY_HOST[host];
+  const entries = mapped && temFingerprint(mapped) ? mapped : MINHAI_DEFAULT_ENTRY;
 
   return NextResponse.json(entries, {
     headers: {

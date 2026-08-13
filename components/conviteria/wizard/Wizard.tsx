@@ -26,6 +26,7 @@ import Revisao from './etapas/Revisao';
 import Publicar from './etapas/Publicar';
 import './wizard.css';
 import './catalogo.css';
+import '../ornamentos-assets.css';
 
 export interface PropsEtapa {
   estado: EstadoWizard;

@@ -17,6 +17,9 @@
   padding: 0;
   position: relative;
   isolation: isolate;
+  /* Com a textura em `absolute`, ela cobre a CAIXA deste elemento. Sem altura
+     minima, um convite curto deixaria o resto da viewport sem papel. */
+  min-height: 100dvh;
 }
 
 /* Convite sem textura declarada continua com o fundo do tema: `texturaId`
@@ -25,7 +28,9 @@
    Textura nao renderizar (erro de SVG, por exemplo). */
 .cv-fora::before {
   content: '';
-  position: fixed;
+  /* absolute e nao fixed, pelo mesmo motivo da Textura: contido no convite,
+     seja ele a pagina inteira ou o palco da previa. */
+  position: absolute;
   inset: 0;
   z-index: -20;
   background: var(--cv-fora);

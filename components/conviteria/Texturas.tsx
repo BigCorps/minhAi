@@ -12,6 +12,12 @@
 //
 // Todas usam `currentColor`, e a cor vem do container. Assim a mesma textura
 // serve a um convite rose e a um convite azul sem duplicar codigo.
+//
+// `absolute`, NUNCA `fixed`. Com fixed a textura se ancora na viewport e
+// escapa de qualquer container: na previa do wizard ela cobria a tela inteira,
+// inclusive o formulario, e quebrava a tela de edicao. Absolute se ancora no
+// ancestral posicionado — .cv-fora no convite, o cartao na amostra — e funciona
+// nos dois contextos sem truque de transform no ancestral.
 
 export const TEXTURAS = [
   { id: 'nenhuma',   nome: 'Sem textura' },
@@ -126,7 +132,7 @@ export default function Textura({
     // o branco do navegador.
     return (
       <div
-        className="fixed inset-0 -z-10 pointer-events-none"
+        className="absolute inset-0 -z-10 pointer-events-none"
         style={{ backgroundColor: papel }}
         aria-hidden="true"
       />
@@ -139,7 +145,7 @@ export default function Textura({
 
   return (
     <svg
-      className="fixed inset-0 -z-10 h-full w-full pointer-events-none"
+      className="absolute inset-0 -z-10 h-full w-full pointer-events-none"
       preserveAspectRatio="xMidYMid slice"
       style={{ color: cor }}
       aria-hidden="true"

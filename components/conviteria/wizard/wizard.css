@@ -984,3 +984,20 @@
 }
 .wz-envelope-palco .cv-capa-etiqueta { display: none; }
 .wz-envelope-palco .cv-capa { cursor: default; }
+
+/* --------------------------------------------------------------------------
+   Correcao do palco da previa
+
+   `.cv-fora` ganhou `min-height: 100dvh` para a textura cobrir a viewport no
+   convite publicado. Dentro do palco isso esticaria a previa para a altura da
+   tela e deixaria um vazio enorme abaixo do conteudo. Aqui a altura volta a
+   ser a do conteudo, e a textura acompanha porque e `absolute` a esta caixa.
+   -------------------------------------------------------------------------- */
+.wz-previa-palco .cv-fora {
+  min-height: 0;
+}
+
+/* A amostra de textura nao precisa mais do truque de transform: `absolute` ja
+   se ancora no .wz-textura-amostra, que e `position: relative`. Mantido apenas
+   o recorte. */
+.wz-textura-svg { transform: none; }

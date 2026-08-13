@@ -43,6 +43,10 @@
   margin: 0 auto;
   padding: 3.2rem 1.5rem 0;
   background: var(--cv-papel);
+  /* `relative` + `isolation` para a textura interna (absolute) se ancorar aqui
+     e ficar atras do conteudo, sem escapar para a pagina. */
+  position: relative;
+  isolation: isolate;
   color: var(--cv-tinta);
   font-family: var(--cv-corpo), Georgia, serif;
   overflow: hidden;

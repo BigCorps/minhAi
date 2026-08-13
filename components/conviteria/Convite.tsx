@@ -63,6 +63,9 @@ export default function Convite({
     .filter((s) => s.ativo)
     .sort((a, b) => a.ordem - b.ordem);
 
+  const tema = acharTema(cfg.temaId);
+  const onde = cfg.texturaOnde ?? 'papel';
+
   return (
     <div
       className={`cv-fora${revelando ? ' revelando' : ''}`}
@@ -73,12 +76,27 @@ export default function Convite({
           pintado por cima dela — ver a licao do painel. As cores vem do tema,
           nao de variavel CSS, porque SVG em `fill` nao resolve `var()` de
           contexto ancestral de forma confiavel em todos os navegadores. */}
-      <Textura
-        texturaId={cfg.texturaId}
-        cor={acharTema(cfg.temaId).floral.petalaEscura}
-        papel={acharTema(cfg.temaId).papel}
-      />
+      {(onde === 'externa' || onde === 'ambas') && (
+        <Textura
+          texturaId={cfg.texturaId}
+          cor={tema.floral.petalaEscura}
+          papel={tema.fora}
+          cantos
+        />
+      )}
       <article className="cv-papel">
+        {/* No papel a textura NAO usa mascara de canto: o papel tem 440px de
+            largura, e um esmaecimento radial nesse espaco pequeno deixaria
+            visivel so uma pontinha em cada quina — foi exatamente o que
+            aconteceu no primeiro teste. Aqui ela e uniforme e bem fraca. */}
+        {(onde === 'papel' || onde === 'ambas') && (
+          <Textura
+            texturaId={cfg.texturaId}
+            cor={tema.floral.petalaEscura}
+            papel={tema.papel}
+            opacidade={0.13}
+          />
+        )}
         <ArranjoCanto className="cv-canto cv-canto-se" />
         <ArranjoCanto className="cv-canto cv-canto-sd" />
         <ArranjoCanto className="cv-canto cv-canto-ie" />

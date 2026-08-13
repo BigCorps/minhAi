@@ -110,6 +110,17 @@ export interface ConviteConfig {
 
   /** Textura de fundo. Ver TEXTURAS em components/conviteria/Texturas.tsx. */
   texturaId?: string;
+  /**
+   * Onde a textura aparece.
+   *
+   *   'externa'  fundo ao redor do papel. Invisivel no celular, onde o papel
+   *              ocupa a largura toda — e o que estava acontecendo.
+   *   'papel'    dentro do convite, atras do texto.
+   *   'ambas'    nas duas.
+   *
+   * Ausente = 'papel', porque e a unica que funciona em qualquer largura.
+   */
+  texturaOnde?: 'externa' | 'papel' | 'ambas';
 
   /** Arte do lacre. Ver LACRES em components/conviteria/LacreArte.tsx. */
   lacreId?: string;

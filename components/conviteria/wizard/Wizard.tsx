@@ -7,7 +7,7 @@ import Convite from '../Convite';
 import Capa from '../Capa';
 import FontesGoogle from '../FontesGoogle';
 import { acharTipo } from '@/lib/conviteria/tiposEvento';
-import { familiasDoGrupo } from '@/lib/conviteria/tokens';
+import { familiasDoGrupo, tokensDoConvite } from '@/lib/conviteria/tokens';
 import { FAMILIAS_LACRE } from '../LacreArte';
 import {
   criarEstadoInicial, ETAPAS, pendencias, reduzir,
@@ -252,7 +252,15 @@ export default function Wizard({
 
         <div className="wz-previa-palco">
           {abaPrevia === 'envelope' ? (
-            <div className="wz-envelope-palco">
+            <div
+              className="wz-envelope-palco"
+              // Sem os tokens do tema aqui, `var(--cv-papel)` da aba do
+              // envelope nao resolve e ela sai transparente sobre a foto — foi
+              // o que apareceu no teste. Mesma causa do lacre preto: a Capa
+              // fica fora do <Convite>, que e quem normalmente aplica os
+              // tokens.
+              style={tokensDoConvite(estado.cfg.temaId, estado.cfg.fonteId)}
+            >
               {/* `aoAbrir` vazio de proposito: na previa o clique nao deve
                   disparar a animacao e sumir com o envelope — a pessoa esta
                   conferindo aparencia, nao testando o fluxo. */}

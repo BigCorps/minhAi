@@ -91,6 +91,8 @@ export default function EscolherTema({ estado, despachar }: PropsEtapa) {
                     cor={tema.floral.petalaEscura}
                     papel={tema.papel}
                     opacidade={0.55}
+                    /* Sem `cantos`: em 34px a mascara radial nao deixaria
+                       ver o desenho. */
                   />
                 </span>
               </span>
@@ -99,6 +101,35 @@ export default function EscolherTema({ estado, despachar }: PropsEtapa) {
           );
         })}
       </div>
+
+      {/* Onde a textura aparece. So tem sentido com textura escolhida. */}
+      {(estado.cfg.texturaId ?? TEXTURA_PADRAO) !== 'nenhuma' && (
+        <>
+          <p className="wz-intro">Onde a textura aparece.</p>
+          {([
+            ['papel',   'No convite',   'Atrás do texto. Aparece em qualquer tela.'],
+            ['externa', 'Ao redor',     'Só na área em volta do papel. No celular o papel ocupa a largura toda, então ela não aparece.'],
+            ['ambas',   'Nos dois',     'Dentro e fora do papel.'],
+          ] as const).map(([id, nome, dica]) => {
+            const sel = (estado.cfg.texturaOnde ?? 'papel') === id;
+            return (
+              <label className="wz-escolha" key={id}>
+                <input
+                  type="radio"
+                  name="texturaOnde"
+                  checked={sel}
+                  onChange={() => despachar({ tipo: 'campo', caminho: 'texturaOnde', valor: id })}
+                />
+                <span>
+                  <strong>{nome}</strong>
+                  <br />
+                  <small style={{ opacity: 0.75 }}>{dica}</small>
+                </span>
+              </label>
+            );
+          })}
+        </>
+      )}
     </>
   );
 }

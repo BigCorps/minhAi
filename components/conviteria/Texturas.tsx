@@ -121,11 +121,21 @@ export default function Textura({
   cor = '#c06078',
   papel = '#fdf0f3',
   opacidade = 0.22,
+  cantos = false,
 }: {
   texturaId?: string;
   cor?: string;
   papel?: string;
   opacidade?: number;
+  /**
+   * true = esmaece do canto para o centro (bom em area grande, como o fundo da
+   * pagina). false = uniforme.
+   *
+   * Uniforme e o padrao porque em area estreita — o papel de 440px — a mascara
+   * radial deixa visivel so uma pontinha em cada quina, e a textura parece
+   * defeito de carregamento em vez de decoracao.
+   */
+  cantos?: boolean;
 }) {
   if (texturaId === 'nenhuma') {
     // Ainda pinta o papel: quem escolheu "sem textura" quer o fundo liso, nao
@@ -172,10 +182,15 @@ export default function Textura({
       </defs>
 
       <rect width="100%" height="100%" fill={papel} />
-      {(['tl', 'tr', 'bl', 'br'] as const).map((n) => (
-        <rect key={n} width="100%" height="100%" fill={`url(#${pid})`}
-              mask={`url(#${pid}-m-${n})`} opacity={opacidade} />
-      ))}
+
+      {cantos ? (
+        (['tl', 'tr', 'bl', 'br'] as const).map((n) => (
+          <rect key={n} width="100%" height="100%" fill={`url(#${pid})`}
+                mask={`url(#${pid}-m-${n})`} opacity={opacidade} />
+        ))
+      ) : (
+        <rect width="100%" height="100%" fill={`url(#${pid})`} opacity={opacidade} />
+      )}
     </svg>
   );
 }

@@ -604,3 +604,31 @@ body.cv-travado { overflow: hidden; }
   opacity: 0;
   transition: opacity 0.5s ease;
 }
+
+/* --------------------------------------------------------------------------
+   Player do YouTube em modo musica
+
+   1px fora da area visivel, e NAO `display: none`: navegador movel pausa
+   media em elemento sem layout. Presente e renderizado, apenas invisivel.
+   -------------------------------------------------------------------------- */
+.cv-yt-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cv-player-titulo {
+  margin: 10px 0 0;
+  font-family: var(--cv-corpo), sans-serif;
+  font-size: 0.82rem;
+  color: var(--cv-tinta-suave);
+  text-align: center;
+}
+
+/* Controles desabilitados enquanto a IFrame API carrega: sem isso o botao
+   parece quebrado no primeiro segundo. */
+.cv-player-btn:disabled,
+.cv-player input:disabled { opacity: 0.45; cursor: default; }

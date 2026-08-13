@@ -121,6 +121,8 @@ export interface ConviteConfig {
       /** upload: caminho no Storage. youtube: id do video. */
       arquivoUrl?: string;
       youtubeVideoId?: string;
+    /** true = player de video do YouTube. false/ausente = so a musica. */
+    mostrarVideo?: boolean;
       /** Rede de seguranca se o embed do YouTube falhar. */
       fallbackUrl?: string;
       titulo?: string;

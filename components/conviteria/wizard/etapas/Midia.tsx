@@ -76,8 +76,8 @@ export default function Midia({ estado, despachar, aoEnviarArquivo }: PropsEtapa
           </Campo>
         ) : (
           <Campo
-            rotulo="Link do vídeo"
-            dica="O vídeo aparece visível no convite, como uma seção."
+            rotulo="Link da música no YouTube"
+            dica="Toca como música de fundo, com os controles do convite."
           >
             <Texto
               valor={linkVideo}
@@ -93,6 +93,32 @@ export default function Midia({ estado, despachar, aoEnviarArquivo }: PropsEtapa
                 ? <p className="wz-status ok">Vídeo reconhecido.</p>
                 : <p className="wz-status erro">Não reconheci o link. Cole o endereço completo do vídeo.</p>
             )}
+          </Campo>
+        )}
+
+        {origem === 'youtube' && idAtual && (
+          <Campo
+            rotulo="Como aparece no convite"
+            dica="A maioria prefere só a música. O vídeo ocupa espaço e desvia a atenção."
+          >
+            <label className="wz-escolha">
+              <input
+                type="radio"
+                name="mostrarVideo"
+                checked={!m?.mostrarVideo}
+                onChange={() => despachar({ tipo: 'campo', caminho: 'midia.musica.mostrarVideo', valor: false })}
+              />
+              <span>Só a música, com os controles do convite</span>
+            </label>
+            <label className="wz-escolha">
+              <input
+                type="radio"
+                name="mostrarVideo"
+                checked={!!m?.mostrarVideo}
+                onChange={() => despachar({ tipo: 'campo', caminho: 'midia.musica.mostrarVideo', valor: true })}
+              />
+              <span>Mostrar o vídeo do YouTube</span>
+            </label>
           </Campo>
         )}
 

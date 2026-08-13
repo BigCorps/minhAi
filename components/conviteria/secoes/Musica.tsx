@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import PlayerYoutube from '../PlayerYoutube';
+import { useAudio } from '../ContextoAudio';
 import type { PropsSecao } from '@/lib/conviteria/tipos';
 
 function formata(s: number) {
@@ -11,15 +13,23 @@ function formata(s: number) {
 /**
  * Duas origens.
  *
- * upload  -> <audio> com arquivo do Storage. Controle proprio.
- * youtube -> iframe VISIVEL. Os termos do YouTube exigem player aparente;
- *            player oculto para tocar so o audio e violacao de politica, e o
- *            risco aqui e coletivo — uma key limitada derruba a musica de
- *            todos os convites de uma vez. Por isso existe o fallbackUrl.
+ * upload  -> <audio> do ConvitePublico, controlado por aqui via contexto.
+ * youtube -> PlayerYoutube: IFrame API com os controles da propria marca, para
+ *            a musica ser trilha de fundo e nao um video no meio do convite.
+ *            `mostrarVideo` no config exibe o player do YouTube inteiro para
+ *            quem preferir.
+ *
+ * O <audio> NAO e criado aqui. Antes era, e havia dois elementos no convite:
+ * a capa dava play num e o botao pausava o outro — a musica comecava e nao
+ * parava mais. Agora existe um so, dono no ConvitePublico.
  */
 export default function Musica({ cfg, secao, modo }: PropsSecao) {
   const m = cfg.midia?.musica;
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audio = useAudio();
+  // useRef SEMPRE chamado: `audio?.ref ?? useRef(...)` faria curto-circuito e
+  // deixaria o hook de fora em alguns renders, violando as regras dos hooks.
+  const refLocal = useRef<HTMLAudioElement>(null);
+  const audioRef = audio?.ref ?? refLocal;
   const [tocando, setTocando] = useState(false);
   const [pos, setPos] = useState(0);
   const [dur, setDur] = useState(0);
@@ -52,19 +62,19 @@ export default function Musica({ cfg, secao, modo }: PropsSecao) {
     return (
       <section className="cv-secao">
         <p className="cv-rotulo">{rotulo}</p>
-        <div className="cv-video">
-          {modo.previa ? (
-            <div className="cv-video-marca">Vídeo aparece no convite publicado</div>
-          ) : (
-            <iframe
-              src={`https://www.youtube.com/embed/${m.youtubeVideoId}?rel=0&modestbranding=1&playsinline=1`}
-              title={m.titulo ?? 'Música do convite'}
-              allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              loading="lazy"
-            />
-          )}
-        </div>
+        {modo.previa ? (
+          // A previa nao carrega a IFrame API: seria uma requisicao externa a
+          // cada tecla digitada no wizard.
+          <div className="cv-video-marca">
+            {m.mostrarVideo ? 'Vídeo' : 'Player da música'} aparece no convite publicado
+          </div>
+        ) : (
+          <PlayerYoutube
+            videoId={m.youtubeVideoId}
+            titulo={m.titulo}
+            mostrarVideo={m.mostrarVideo ?? false}
+          />
+        )}
       </section>
     );
   }
@@ -73,20 +83,20 @@ export default function Musica({ cfg, secao, modo }: PropsSecao) {
   if (!fonte) return null;
   const progresso = dur > 0 ? (pos / dur) * 100 : 0;
 
-  const alternar = () => {
+  // Delega ao dono do <audio>. Fora do ConvitePublico (previa do wizard) nao
+  // ha audio, e o fallback local evita quebrar.
+  const alternar = audio?.alternar ?? (() => {
     const a = audioRef.current;
     if (!a) return;
     if (a.paused) void a.play().catch(() => undefined);
     else a.pause();
-  };
+  });
 
   return (
     <section className="cv-secao">
       <p className="cv-rotulo">{tocando ? 'Tocando agora' : rotulo}</p>
       {/* Sem metadados de Media Session de proposito: o titulo apareceria
           na tela de bloqueio do celular. */}
-      <audio ref={audioRef} src={fonte} loop preload="metadata" />
-
       <div className="cv-player">
         <input
           type="range" min={0} max={dur || 0} step={0.1} value={pos}

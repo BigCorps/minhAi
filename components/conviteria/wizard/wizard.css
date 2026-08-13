@@ -698,3 +698,15 @@
 }
 .wz-presente-titulo { font-size: 13px; line-height: 1.3; color: var(--wz-texto); }
 .wz-presente-valor  { font-size: 13px; font-weight: 700; color: var(--wz-rosa-escuro); }
+
+/* Escolha em radio dentro de um Campo. */
+.wz-escolha {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 0;
+  font-size: 14px;
+  color: var(--wz-texto);
+  cursor: pointer;
+}
+.wz-escolha input { margin-top: 2px; accent-color: var(--wz-rosa); }

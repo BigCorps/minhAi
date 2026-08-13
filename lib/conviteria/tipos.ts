@@ -108,6 +108,9 @@ export interface ConviteConfig {
     mapEmbedUrl?: string;
   };
 
+  /** Textura de fundo. Ver TEXTURAS em components/conviteria/Texturas.tsx. */
+  texturaId?: string;
+
   /** Arte do lacre. Ver LACRES em components/conviteria/LacreArte.tsx. */
   lacreId?: string;
   /** Logo do cliente no lugar das iniciais do lacre. */

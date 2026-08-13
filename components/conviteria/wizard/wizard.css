@@ -880,3 +880,107 @@
   outline: 1px solid var(--wz-linha);
   transform: rotate(-3deg);
 }
+
+/* --------------------------------------------------------------------------
+   Escolha de textura
+   -------------------------------------------------------------------------- */
+.wz-texturas {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  margin: 8px 0 4px;
+}
+.wz-textura {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 3px;
+  border: 1.5px solid var(--wz-linha);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 10.5px;
+  line-height: 1.2;
+  color: var(--wz-suave);
+  cursor: pointer;
+  text-align: center;
+}
+.wz-textura.sel {
+  border-color: var(--wz-rosa);
+  box-shadow: 0 0 0 3px rgba(216, 96, 144, 0.14);
+  color: var(--wz-rosa-escuro);
+  font-weight: 700;
+}
+
+.wz-textura-amostra {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 7px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* O componente Textura e `position: fixed` — ele cobriria a tela inteira dentro
+   do cartao. `transform` cria um novo contexto de containing block, e a partir
+   dai `fixed` passa a se ancorar NESTE elemento, nao na viewport. E o truque
+   que permite reusar o mesmo componente como amostra, sem uma segunda versao
+   dele so para miniatura. */
+.wz-textura-svg {
+  position: absolute;
+  inset: 0;
+  transform: translateZ(0);
+  overflow: hidden;
+}
+.wz-textura-svg > svg,
+.wz-textura-svg > div { position: absolute !important; inset: 0; }
+
+/* --------------------------------------------------------------------------
+   Abas da previa
+   -------------------------------------------------------------------------- */
+.wz-previa-abas {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 0;
+  flex-shrink: 0;
+}
+.wz-previa-abas button {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  color: var(--wz-suave);
+  cursor: pointer;
+}
+.wz-previa-abas button.sel {
+  border-color: var(--wz-rosa);
+  background: var(--wz-rosa);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* A Capa e `position: fixed` — no palco ela cobriria a tela inteira.
+   `transform` cria containing block novo, e `fixed` passa a se ancorar aqui.
+   Mesmo truque da amostra de textura: um componente, dois contextos, sem uma
+   segunda versao dele so para a previa. */
+.wz-envelope-palco {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  max-height: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  transform: translateZ(0);
+}
+.wz-envelope-palco .cv-capa {
+  position: absolute !important;
+  inset: 0;
+  /* A etiqueta "Clique para abrir" some: na previa o clique nao abre nada, e
+     convidar para uma acao inerte confunde. */
+}
+.wz-envelope-palco .cv-capa-etiqueta { display: none; }
+.wz-envelope-palco .cv-capa { cursor: default; }

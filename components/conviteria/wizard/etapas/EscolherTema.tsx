@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { TEMAS } from '@/lib/conviteria/temas';
+import { acharTema, TEMAS } from '@/lib/conviteria/temas';
+import Textura, { TEXTURAS, TEXTURA_PADRAO } from '../../Texturas';
 import { acharFonte } from '@/lib/conviteria/fontes';
 import { Cartoes } from '../Campos';
 import { BotaoIA, useSugestao } from '../AjudaIA';
@@ -64,6 +65,40 @@ export default function EscolherTema({ estado, despachar }: PropsEtapa) {
           </>
         )}
       />
+
+      {/* Textura fica aqui, e nao em etapa propria: e escolha visual da mesma
+          familia da paleta, e a previa mostra as duas juntas — separar faria a
+          pessoa ir e voltar para ver o efeito combinado. */}
+      <p className="wz-intro">Textura de fundo do convite.</p>
+      <div className="wz-texturas">
+        {TEXTURAS.map((t) => {
+          const sel = (estado.cfg.texturaId ?? TEXTURA_PADRAO) === t.id;
+          const tema = acharTema(estado.cfg.temaId);
+          return (
+            <button
+              key={t.id}
+              type="button"
+              className={`wz-textura${sel ? ' sel' : ''}`}
+              aria-pressed={sel}
+              onClick={() => despachar({ tipo: 'campo', caminho: 'texturaId', valor: t.id })}
+            >
+              {/* Amostra recortada da textura real, nas cores do tema atual:
+                  um icone genarico nao mostraria como ela fica neste convite. */}
+              <span className="wz-textura-amostra" style={{ background: tema.papel }}>
+                <span className="wz-textura-svg">
+                  <Textura
+                    texturaId={t.id}
+                    cor={tema.floral.petalaEscura}
+                    papel={tema.papel}
+                    opacidade={0.55}
+                  />
+                </span>
+              </span>
+              {t.nome}
+            </button>
+          );
+        })}
+      </div>
     </>
   );
 }

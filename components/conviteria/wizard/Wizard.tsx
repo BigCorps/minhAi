@@ -4,6 +4,7 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import type { Dispatch } from 'react';
 import Convite from '../Convite';
+import Capa from '../Capa';
 import FontesGoogle from '../FontesGoogle';
 import { acharTipo } from '@/lib/conviteria/tiposEvento';
 import { familiasDoGrupo } from '@/lib/conviteria/tokens';
@@ -86,6 +87,10 @@ export default function Wizard({
   }, []);
 
   const [previaAberta, setPreviaAberta] = useState(false);
+  // Aba da previa. Comeca no convite: e onde a pessoa esta trabalhando na
+  // maioria das etapas. O envelope existia e so aparecia depois de publicar —
+  // ninguem via o que estava montando.
+  const [abaPrevia, setAbaPrevia] = useState<'convite' | 'envelope'>('convite');
   const primeiraVez = useRef(true);
 
   const grupo = acharTipo(estado.cfg.tipoEventoId).grupo;
@@ -221,8 +226,48 @@ export default function Wizard({
             ✕
           </button>
         </div>
+        {/* Duas abas em vez de mostrar os dois empilhados: o envelope e tela
+            cheia por natureza, e um em cima do outro no palco de 380px nao
+            deixaria ver nenhum dos dois. */}
+        <div className="wz-previa-abas" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={abaPrevia === 'convite'}
+            className={abaPrevia === 'convite' ? 'sel' : ''}
+            onClick={() => setAbaPrevia('convite')}
+          >
+            Convite
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={abaPrevia === 'envelope'}
+            className={abaPrevia === 'envelope' ? 'sel' : ''}
+            onClick={() => setAbaPrevia('envelope')}
+          >
+            Envelope
+          </button>
+        </div>
+
         <div className="wz-previa-palco">
-          <Convite cfg={estado.cfg} modo={{ previa: true, secaoFoco: etapa.foco }} />
+          {abaPrevia === 'envelope' ? (
+            <div className="wz-envelope-palco">
+              {/* `aoAbrir` vazio de proposito: na previa o clique nao deve
+                  disparar a animacao e sumir com o envelope — a pessoa esta
+                  conferindo aparencia, nao testando o fluxo. */}
+              <Capa
+                fotoUrl={estado.cfg.midia?.fotoCapa ?? estado.cfg.midia?.fotoPrincipal}
+                lacreId={estado.cfg.lacreId}
+                iniciais={estado.cfg.anfitrioes?.iniciais}
+                logoLacreUrl={estado.cfg.logoLacreUrl}
+                lacreAjuste={estado.cfg.lacreAjuste}
+                aoAbrir={() => undefined}
+              />
+            </div>
+          ) : (
+            <Convite cfg={estado.cfg} modo={{ previa: true, secaoFoco: etapa.foco }} />
+          )}
         </div>
       </aside>
 

@@ -8,6 +8,8 @@ import type {
   SecaoConfig,
 } from '@/lib/conviteria/tipos';
 import { tokensDoConvite } from '@/lib/conviteria/tokens';
+import { acharTema } from '@/lib/conviteria/temas';
+import Textura from './Texturas';
 import { ArranjoCanto, RaminhoDivisor } from './Ornamentos';
 import Foto from './secoes/Foto';
 import Frase from './secoes/Frase';
@@ -66,6 +68,16 @@ export default function Convite({
       className={`cv-fora${revelando ? ' revelando' : ''}`}
       style={tokensDoConvite(cfg.temaId, cfg.fonteId)}
     >
+      {/* Textura antes de tudo: e `fixed -z-10`, entao precisa estar dentro do
+          escopo dos tokens para pegar as cores do tema, mas nao pode ter fundo
+          pintado por cima dela — ver a licao do painel. As cores vem do tema,
+          nao de variavel CSS, porque SVG em `fill` nao resolve `var()` de
+          contexto ancestral de forma confiavel em todos os navegadores. */}
+      <Textura
+        texturaId={cfg.texturaId}
+        cor={acharTema(cfg.temaId).floral.petalaEscura}
+        papel={acharTema(cfg.temaId).papel}
+      />
       <article className="cv-papel">
         <ArranjoCanto className="cv-canto cv-canto-se" />
         <ArranjoCanto className="cv-canto cv-canto-sd" />

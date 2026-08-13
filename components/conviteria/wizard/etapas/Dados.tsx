@@ -138,25 +138,17 @@ export default function Dados({ estado, despachar, modo, aoEnviarArquivo }: Prop
 
       {/* Ajuste fino. Aparece so quando ha iniciais: sem letra na tela, mexer
           em slider de posicao nao mostra nada e vira ruido. */}
-      {/* Com logo, mostra so a previa: nao ha monograma para ajustar, mas a
-          pessoa precisa ver como o logo ficou dentro do selo. Antes o bloco
-          inteiro desaparecia e o logo nao aparecia em lugar nenhum. */}
-      {cfg.logoLacreUrl && (
-        <Campo rotulo="Prévia do selo" dica="Seu logo no lugar das iniciais.">
-          <div className="wz-lacre-previa">
-            <LacreArte
-              lacreId={cfg.lacreId ?? LACRE_PADRAO}
-              logoUrl={cfg.logoLacreUrl}
-              tamanho={148}
-            />
-          </div>
-        </Campo>
-      )}
-
-      {cfg.anfitrioes.iniciais && !cfg.logoLacreUrl && (
+      {/* Um bloco so para monograma E logo: os dois ocupam o mesmo miolo e
+          precisam do mesmo ajuste de tamanho e posicao. So o seletor de fonte
+          e exclusivo das iniciais. */}
+      {(cfg.logoLacreUrl || cfg.anfitrioes.iniciais) && (
         <Campo
-          rotulo="Ajuste do monograma"
-          dica="Fontes cursivas variam muito de letra para letra. Ajuste até ficar centrado."
+          rotulo={cfg.logoLacreUrl ? 'Ajuste do logo' : 'Ajuste do monograma'}
+          dica={
+            cfg.logoLacreUrl
+              ? 'Logo largo e logo quadrado pedem tamanhos diferentes. Ajuste até centrar.'
+              : 'Fontes cursivas variam muito de letra para letra. Ajuste até ficar centrado.'
+          }
         >
           {/* Previa grande: no cartao de 72px o deslocamento de 1% e
               imperceptivel, e a pessoa nao conseguiria mirar. */}
@@ -164,11 +156,13 @@ export default function Dados({ estado, despachar, modo, aoEnviarArquivo }: Prop
             <LacreArte
               lacreId={cfg.lacreId ?? LACRE_PADRAO}
               iniciais={cfg.anfitrioes.iniciais}
+              logoUrl={cfg.logoLacreUrl}
               ajuste={cfg.lacreAjuste}
               tamanho={148}
             />
           </div>
 
+          {!cfg.logoLacreUrl && (
           <div className="wz-fontes-lacre">
             {FONTES_LACRE.map((f) => {
               const sel = (cfg.lacreAjuste?.fonte ?? FONTE_LACRE_PADRAO) === f.id;
@@ -188,6 +182,7 @@ export default function Dados({ estado, despachar, modo, aoEnviarArquivo }: Prop
               );
             })}
           </div>
+          )}
 
           {([
             ['escala', 'Tamanho', 20, 48, 34],

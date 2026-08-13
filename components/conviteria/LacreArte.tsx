@@ -118,7 +118,19 @@ export default function LacreArte({
       {logoUrl ? (
         // Logo do cliente ocupa o miolo. As iniciais NAO aparecem junto: o
         // logo ja e a marca, e as duas coisas competiriam no mesmo espaco.
-        <img src={logoUrl} alt="" className="cv-lacre-logo" />
+        //
+        // Recebe o mesmo ajuste de escala e posicao: logo largo, logo quadrado
+        // e logo com respiro embutido no arquivo pedem tamanhos diferentes
+        // para parecerem igualmente centrados.
+        <img
+          src={logoUrl}
+          alt=""
+          className="cv-lacre-logo"
+          style={{
+            width: tamanho * escala,
+            transform: `translate(${(dx / 100) * tamanho}px, ${(dy / 100) * tamanho}px)`,
+          }}
+        />
       ) : (
         iniciais && (
           <span

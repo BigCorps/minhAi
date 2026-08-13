@@ -10,8 +10,25 @@
    ========================================================================== */
 
 .cv-fora {
-  background: var(--cv-fora);
+  /* `background` foi trocado por `isolation` + camada propria. Com background
+     aqui, a Textura (que e `fixed -z-10`) ficava ATRAS deste fundo e nunca
+     aparecia — o mesmo erro que escondeu a textura no painel. Quem pinta o
+     papel agora e o <rect> do SVG. */
   padding: 0;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Convite sem textura declarada continua com o fundo do tema: `texturaId`
+   ausente cai em TEXTURA_PADRAO, mas se alguem passar 'nenhuma' o proprio
+   componente pinta o papel. Esta regra e a rede de seguranca para o caso de a
+   Textura nao renderizar (erro de SVG, por exemplo). */
+.cv-fora::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -20;
+  background: var(--cv-fora);
 }
 
 .cv-papel {
@@ -759,13 +776,12 @@ body.cv-travado { overflow: hidden; }
   position: absolute;
 }
 
-/* O logo tem teto: 34% do lado. O miolo livre mais apertado (a arte floral)
-   tem raio ~80 de 232, e imagem nao tem como "transbordar com gosto" como
-   letra tem. As INICIAIS nao levam teto — o tamanho vem do slider, e travar
-   aqui anularia o ajuste do cliente. */
+/* Sem teto fixo: o tamanho do logo vem do slider, igual as iniciais. Travar
+   aqui anularia o ajuste. A altura acompanha a largura para nao distorcer logo
+   retangular. */
 .cv-lacre-logo {
-  max-width: 34%;
-  max-height: 34%;
+  height: auto;
+  max-height: 46%;
 }
 
 .cv-lacre-iniciais {
@@ -1036,4 +1052,28 @@ body.cv-travado { overflow: hidden; }
   background: none;
   border: 1px solid var(--cv-acento);
   color: var(--cv-acento);
+}
+
+/* Espaco reservado do mapa na previa. Ocupa a mesma proporcao do iframe para o
+   enquadramento nao mudar ao publicar. */
+.cv-mapa-previa {
+  display: grid;
+  place-items: center;
+  padding: 0 16px;
+  border: 1px dashed color-mix(in srgb, var(--cv-acento) 40%, transparent);
+  background: color-mix(in srgb, var(--cv-acento) 6%, transparent);
+  text-align: center;
+}
+.cv-mapa-previa span {
+  font-family: var(--cv-corpo), sans-serif;
+  font-size: 0.82rem;
+  color: var(--cv-tinta-suave);
+}
+
+.cv-previa-nota {
+  margin: 8px 0 0;
+  font-family: var(--cv-corpo), sans-serif;
+  font-size: 0.76rem;
+  font-style: italic;
+  color: var(--cv-tinta-suave);
 }

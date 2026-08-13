@@ -35,6 +35,17 @@ export default function Local({ cfg, secao, modo }: PropsSecao) {
         </div>
       )}
 
+      {/* Na previa o iframe nao carrega — seria uma requisicao ao Google a cada
+          tecla digitada no endereco. Mas esconder sem avisar fazia a pessoa
+          concluir que o convite nao tem mapa. O aviso ocupa o mesmo espaco que
+          o mapa vai ocupar, entao o enquadramento da previa nao muda ao
+          publicar. */}
+      {l.mapEmbedUrl && modo.previa && (
+        <div className="cv-mapa cv-mapa-previa">
+          <span>🗺️ O mapa aparece aqui no convite publicado</span>
+        </div>
+      )}
+
       {l.mapsUrl && (
         <a
           className="cv-botao"
@@ -45,6 +56,13 @@ export default function Local({ cfg, secao, modo }: PropsSecao) {
         >
           {c.rotuloBotao ?? 'Ver localização'}
         </a>
+      )}
+
+      {/* Explica por que o botao nao responde ao toque na previa. */}
+      {l.mapsUrl && modo.previa && (
+        <p className="cv-previa-nota">
+          O botão abre o Google Maps no convite publicado.
+        </p>
       )}
     </section>
   );

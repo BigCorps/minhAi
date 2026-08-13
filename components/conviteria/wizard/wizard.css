@@ -623,3 +623,32 @@
 }
 .wz-status.ok   { color: #4a7c59; }
 .wz-status.erro { color: #a04a63; }
+
+/* Numero da etapa dentro do botao de previa no rodape. */
+.wz-btn-previa .wz-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 7px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--wz-rosa);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Campo congelado na edicao. Parece campo — mesma caixa, mesmo espaco — mas
+   sem borda de foco e com fundo morto, para ler como "informacao" e nao como
+   "input quebrado". */
+.wz-bloqueado {
+  margin: 0;
+  padding: 13px 14px;
+  border: 1px dashed var(--wz-linha);
+  border-radius: 10px;
+  background: #fafafa;
+  color: var(--wz-suave);
+  font-size: 15px;
+}

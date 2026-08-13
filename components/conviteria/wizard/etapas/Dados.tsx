@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { AreaTexto, Campo, Texto } from '../Campos';
 import { BotaoIA, ListaSugestoes, useSugestao } from '../AjudaIA';
 import type { PropsEtapa } from '../Wizard';
+import SuporteWhatsapp from '../../SuporteWhatsapp';
 
 /** Iniciais do monograma, a partir do nome exibido. */
 function iniciaisDe(nome: string) {
@@ -17,7 +18,7 @@ function iniciaisDe(nome: string) {
     .join('');
 }
 
-export default function Dados({ estado, despachar }: PropsEtapa) {
+export default function Dados({ estado, despachar, modo}: PropsEtapa) {
   const { cfg } = estado;
   const rotulos = acharTipo(cfg.tipoEventoId).rotulos;
 
@@ -46,6 +47,18 @@ export default function Dados({ estado, despachar }: PropsEtapa) {
 
   return (
     <>
+      {modo === 'editar' ? (
+        // Nome e iniciais ficam so de leitura depois de publicado: liberar a
+        // troca e liberar reaproveitar um convite pago em outro evento. O
+        // campo continua VISIVEL, e nao escondido, para a pessoa conferir o
+        // que escreveu — e o aviso diz o caminho de quem errou de verdade.
+        <Campo rotulo={rotulos.anfitrioes} dica="Não pode ser alterado depois de publicado.">
+          <p className="wz-bloqueado">{cfg.anfitrioes.exibicao || '—'}</p>
+          <p className="wz-status">
+            Digitou errado? Corrigimos para você: <SuporteWhatsapp variante="link" />
+          </p>
+        </Campo>
+      ) : (
       <Campo rotulo={rotulos.anfitrioes} dica="É o texto grande em destaque.">
         <Texto
           valor={cfg.anfitrioes.exibicao}
@@ -59,7 +72,13 @@ export default function Dados({ estado, despachar }: PropsEtapa) {
           }}
         />
       </Campo>
+      )}
 
+      {modo === 'editar' ? (
+        <Campo rotulo="Iniciais do lacre" dica="Acompanham o nome, também travadas.">
+          <p className="wz-bloqueado">{cfg.anfitrioes.iniciais || '—'}</p>
+        </Campo>
+      ) : (
       <Campo rotulo="Iniciais do lacre" dica="Duas letras. Aparece no selo da capa.">
         <Texto
           valor={cfg.anfitrioes.iniciais}
@@ -71,6 +90,7 @@ export default function Dados({ estado, despachar }: PropsEtapa) {
           }}
         />
       </Campo>
+      )}
 
       <Campo rotulo="Frase sob os nomes">
         <Texto

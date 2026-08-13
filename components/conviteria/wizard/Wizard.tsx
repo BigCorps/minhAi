@@ -25,6 +25,8 @@ export interface PropsEtapa {
   estado: EstadoWizard;
   despachar: Dispatch<AcaoWizard>;
   aoEnviarArquivo?: (tipo: 'foto' | 'musica', arquivo: File) => Promise<string>;
+  /** Etapas usam para bloquear campos congelados apos a publicacao. */
+  modo?: 'criar' | 'editar';
 }
 
 const ETAPA_COMPONENTE: Record<string, React.ComponentType<PropsEtapa>> = {
@@ -46,11 +48,18 @@ export interface PropsWizard {
   aoSalvar?: (estado: EstadoWizard) => Promise<void> | void;
   aoEnviarArquivo?: (tipo: 'foto' | 'musica', arquivo: File) => Promise<void>;
   aoConcluir?: (estado: EstadoWizard) => void;
+  /**
+   * 'editar' esconde a etapa "Publicar" (slug e plano ja estao decididos) e
+   * troca o rotulo do botao final. Como 'publicar' e a ULTIMA de ETAPAS, o
+   * slice preserva os indices — o reducer continua valendo sem mudanca.
+   */
+  modo?: 'criar' | 'editar';
 }
 
 export default function Wizard({
-  estadoInicial, aoSalvar, aoEnviarArquivo, aoConcluir,
+  estadoInicial, aoSalvar, aoEnviarArquivo, aoConcluir, modo = 'criar',
 }: PropsWizard) {
+  const etapas = modo === 'editar' ? ETAPAS.slice(0, -1) : ETAPAS;
   // Terceiro argumento do useReducer: o estado padrao so e construido se nao
   // veio rascunho, e apenas na montagem — nunca durante a avaliacao do modulo.
   // Era essa chamada, antes feita em `const ESTADO_INICIAL` no lib/wizard.ts,
@@ -68,7 +77,7 @@ export default function Wizard({
   const etapa = ETAPAS[estado.etapa];
   const Componente = ETAPA_COMPONENTE[etapa.id];
   const faltas = pendencias(estado);
-  const ultima = estado.etapa === ETAPAS.length - 1;
+  const ultima = estado.etapa === etapas.length - 1;
 
   // Autosave com debounce. Nao salva no primeiro render para nao gravar
   // rascunho vazio de quem so abriu a pagina e saiu.
@@ -102,7 +111,7 @@ export default function Wizard({
 
         <header className="wz-cabecalho">
           <ol className="wz-trilha">
-            {ETAPAS.map((e, i) => (
+            {etapas.map((e, i) => (
               <li key={e.id} className={i === estado.etapa ? 'atual' : i < estado.etapa ? 'feita' : ''}>
                 <button
                   type="button"
@@ -126,6 +135,7 @@ export default function Wizard({
               estado={estado}
               despachar={despachar}
               aoEnviarArquivo={aoEnviarArquivo}
+              modo={modo}
             />
           )}
         </div>
@@ -146,6 +156,11 @@ export default function Wizard({
             aria-expanded={previaAberta}
           >
             Ver prévia
+            {/* O numero existia no botao flutuante e sumiu na mudanca para o
+                rodape. Volta porque e ele que mostra que a previa acompanha a
+                etapa — sem isso a pessoa nao percebe que o que ela digita no
+                celular ja esta refletido do outro lado. */}
+            <span className="wz-badge">{estado.etapa + 1}</span>
           </button>
           <button
             type="button"
@@ -161,7 +176,7 @@ export default function Wizard({
             disabled={faltas.length > 0}
             onClick={() => (ultima ? aoConcluir?.(estado) : despachar({ tipo: 'avancar' }))}
           >
-            {ultima ? 'Ir para o pagamento' : 'Continuar'}
+            {ultima ? (modo === 'editar' ? 'Salvar alterações' : 'Ir para o pagamento') : 'Continuar'}
           </button>
         </footer>
       </div>

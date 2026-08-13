@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import RendaBackground from '@/components/conviteria/RendaBackground';
+import RodapeMarca from '@/components/conviteria/RodapeMarca';
+import SuporteWhatsapp from '@/components/conviteria/SuporteWhatsapp';
 import { createClient } from '@/lib/supabase-browser';
 
 export default function PaginaInicialConvite() {
@@ -29,7 +31,7 @@ export default function PaginaInicialConvite() {
       {/* Logo Centralizado */}
       <div className="mb-8 flex justify-center">
         <Image
-          src="/brands/convite/icone-192.png"
+          src="/brands/convite/marca-256.png"
           alt="Logo Convite IA"
           width={128}
           height={128}
@@ -70,6 +72,11 @@ export default function PaginaInicialConvite() {
         </Link>
       </div>
 
+      <div className="mt-12">
+        <SuporteWhatsapp assunto="Tenho uma dúvida sobre a ConviteIA" />
+      </div>
+
+      <div className="mt-6"><RodapeMarca /></div>
     </main>
   );
 }

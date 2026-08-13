@@ -32,10 +32,16 @@ export async function POST(req: NextRequest) {
   }
 
   const token = (form.get('token') as string | null)?.trim();
+  const eventoId = (form.get('eventoId') as string | null)?.trim();
   const tipo = form.get('tipo') as string | null;
   const arquivo = form.get('arquivo');
 
-  if (!token || token.length > 100) {
+  // Dois donos possiveis para o arquivo: um rascunho anonimo (fluxo de
+  // criacao) ou um evento ja publicado (fluxo de edicao). Exatamente um.
+  if (!token && !eventoId) {
+    return NextResponse.json({ erro: 'Destino não informado.' }, { status: 400 });
+  }
+  if (token && token.length > 100) {
     return NextResponse.json({ erro: 'Token inválido.' }, { status: 400 });
   }
   if (tipo !== 'foto' && tipo !== 'musica') {
@@ -63,20 +69,54 @@ export async function POST(req: NextRequest) {
   // O token precisa corresponder a um rascunho vivo. Sem isso a rota vira
   // hospedagem de arquivo aberta: qualquer um inventa um token e sobe o que
   // quiser, de graca, no seu bucket.
-  const { data: rascunho } = await admin
-    .from('rascunhos')
-    .select('token, expires_at')
-    .eq('token', token)
-    .maybeSingle();
+  let pasta: string;
 
-  if (!rascunho || new Date(rascunho.expires_at as string) < new Date()) {
-    return NextResponse.json({ erro: 'Rascunho não encontrado.' }, { status: 404 });
+  if (eventoId) {
+    // Edicao: exige sessao e posse do evento. O token de rascunho nao serve
+    // aqui — ele e anonimo, e o evento ja tem dono.
+    const acesso = req.headers.get('authorization')?.replace('Bearer ', '');
+    if (!acesso) {
+      return NextResponse.json({ erro: 'Faça login para continuar.' }, { status: 401 });
+    }
+
+    const { data: auth, error: erroAuth } = await admin.auth.getUser(acesso);
+    if (erroAuth || !auth.user) {
+      return NextResponse.json({ erro: 'Sessão inválida.' }, { status: 401 });
+    }
+
+    const { data: evento } = await admin
+      .from('eventos')
+      .select('id, contas!inner(user_id)')
+      .eq('id', eventoId)
+      .maybeSingle();
+
+    const dono = (evento as unknown as { contas: { user_id: string } } | null)?.contas?.user_id;
+    if (!evento || dono !== auth.user.id) {
+      return NextResponse.json({ erro: 'Convite não encontrado.' }, { status: 404 });
+    }
+
+    pasta = `eventos/${eventoId}`;
+  } else {
+    // Criacao: o token precisa corresponder a um rascunho vivo. Sem isso a
+    // rota vira hospedagem aberta — qualquer um inventa um token e sobe o que
+    // quiser, de graca, no seu bucket.
+    const { data: rascunho } = await admin
+      .from('rascunhos')
+      .select('token, expires_at')
+      .eq('token', token)
+      .maybeSingle();
+
+    if (!rascunho || new Date(rascunho.expires_at as string) < new Date()) {
+      return NextResponse.json({ erro: 'Rascunho não encontrado.' }, { status: 404 });
+    }
+
+    pasta = `rascunhos/${token}`;
   }
 
   const ext = (regra.ext as Record<string, string>)[arquivo.type] ?? 'bin';
-  // Nome derivado do token, nunca do nome original do arquivo: `arquivo.name`
-  // vem do cliente e pode conter `../`.
-  const caminho = `rascunhos/${token}/${tipo}-${Date.now()}.${ext}`;
+  // Nome derivado do destino, nunca do nome original do arquivo:
+  // `arquivo.name` vem do cliente e pode conter `../`.
+  const caminho = `${pasta}/${tipo}-${Date.now()}.${ext}`;
 
   const { error: erroUpload } = await admin.storage
     .from(BUCKET)

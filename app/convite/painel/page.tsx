@@ -11,8 +11,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase-browser';
-import { Loader2, Plus, ExternalLink, Clock, LogOut } from 'lucide-react';
+import { Loader2, Plus, ExternalLink, Clock, LogOut, Pencil } from 'lucide-react';
 import RendaBackground from '@/components/conviteria/RendaBackground';
+import SuporteWhatsapp from '@/components/conviteria/SuporteWhatsapp';
+import RodapeMarca from '@/components/conviteria/RodapeMarca';
 
 const cor = {
   fora: '#ffffff',
@@ -98,6 +100,8 @@ export default function PainelPage() {
             </span>
           </Link>
 
+          <div className="flex items-center gap-2">
+          <SuporteWhatsapp assunto="Preciso de suporte na ConviteIA" />
           <button
             type="button"
             onClick={sair}
@@ -107,6 +111,7 @@ export default function PainelPage() {
             <LogOut className="w-4 h-4" />
             Sair
           </button>
+          </div>
         </header>
 
         {nome && (
@@ -184,27 +189,41 @@ export default function PainelPage() {
                   </p>
                 </div>
 
-                {c.publicado ? (
-                  <a
-                    href={c.url}
-                    className="flex items-center gap-1.5 text-sm font-medium flex-shrink-0"
-                    style={{ color: cor.acentoTexto }}
-                  >
-                    Ver <ExternalLink className="w-4 h-4" />
-                  </a>
-                ) : (
+                <div className="flex items-center gap-4 flex-shrink-0">
+                  {/* Editar aparece nos dois estados: nao ha motivo para
+                      impedir ajuste antes de pagar. */}
                   <Link
-                    href={`/convite/pagar?evento=${c.id}`}
-                    className="flex items-center gap-1.5 text-sm font-medium flex-shrink-0"
-                    style={{ color: cor.acentoTexto }}
+                    href={`/convite/editar/${c.id}`}
+                    className="flex items-center gap-1.5 text-sm font-medium"
+                    style={{ color: cor.tintaSuave }}
                   >
-                    <Clock className="w-4 h-4" /> Publicar
+                    <Pencil className="w-4 h-4" /> Editar
                   </Link>
-                )}
+
+                  {c.publicado ? (
+                    <a
+                      href={c.url}
+                      className="flex items-center gap-1.5 text-sm font-medium"
+                      style={{ color: cor.acentoTexto }}
+                    >
+                      Ver <ExternalLink className="w-4 h-4" />
+                    </a>
+                  ) : (
+                    <Link
+                      href={`/convite/pagar?evento=${c.id}`}
+                      className="flex items-center gap-1.5 text-sm font-medium"
+                      style={{ color: cor.acentoTexto }}
+                    >
+                      <Clock className="w-4 h-4" /> Publicar
+                    </Link>
+                  )}
+                </div>
               </div>
             </li>
           ))}
         </ul>
+
+        <RodapeMarca />
       </div>
     </main>
   );

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import Lacre from './Lacre';
+import LacreArte from './LacreArte';
 import { ArranjoCanto, PadraoGravado } from './Ornamentos';
 
 /**
@@ -11,10 +11,12 @@ import { ArranjoCanto, PadraoGravado } from './Ornamentos';
  * carregamento derrubaria o gesto e a musica exigiria um segundo clique.
  */
 export default function Capa({
-  fotoUrl, lacrePath, aoAbrir,
+  fotoUrl, lacreId, iniciais, logoLacreUrl, aoAbrir,
 }: {
   fotoUrl?: string;
-  lacrePath?: string;
+  lacreId?: string;
+  iniciais?: string;
+  logoLacreUrl?: string | null;
   aoAbrir: () => void;
 }) {
   const [abrindo, setAbrindo] = useState(false);
@@ -62,7 +64,12 @@ export default function Capa({
         <ArranjoCanto className="cv-capa-flor direita" />
 
         <div className="cv-capa-lacre">
-          <Lacre path={lacrePath ?? ''} tamanho={116} />
+          <LacreArte
+            lacreId={lacreId}
+            iniciais={iniciais}
+            logoUrl={logoLacreUrl}
+            tamanho={116}
+          />
         </div>
         <span className="cv-capa-etiqueta">Clique para abrir</span>
       </div>

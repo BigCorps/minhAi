@@ -108,6 +108,11 @@ export interface ConviteConfig {
     mapEmbedUrl?: string;
   };
 
+  /** Arte do lacre. Ver LACRES em components/conviteria/LacreArte.tsx. */
+  lacreId?: string;
+  /** Logo do cliente no lugar das iniciais do lacre. */
+  logoLacreUrl?: string | null;
+
   /** Escolhidos no wizard. Viram linhas em `conviteria.presentes` ao publicar. */
   presentesEscolhidos?: PresenteEscolhido[];
 

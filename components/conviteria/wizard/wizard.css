@@ -710,3 +710,37 @@
   cursor: pointer;
 }
 .wz-escolha input { margin-top: 2px; accent-color: var(--wz-rosa); }
+
+/* Escolha do selo. Grid de 3 no celular: o lacre precisa de tamanho para a
+   diferenca entre as artes ser perceptivel — com 6 numa linha viram borroes
+   iguais e a escolha perde sentido. */
+.wz-lacres {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.wz-lacre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 10px 4px;
+  border: 1.5px solid var(--wz-linha);
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  color: var(--wz-suave);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.wz-lacre.sel {
+  border-color: var(--wz-rosa);
+  box-shadow: 0 0 0 3px rgba(216, 96, 144, 0.14);
+  color: var(--wz-rosa-escuro);
+  font-weight: 700;
+}

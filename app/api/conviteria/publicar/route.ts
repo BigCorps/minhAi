@@ -3,7 +3,6 @@ import { adminConviteria } from '@/lib/conviteria/servidor';
 import { MENSAGEM_ERRO, normalizarSlug, validarSlug } from '@/lib/conviteria/slug';
 import { PLANOS } from '@/lib/conviteria/precos';
 import { urlDoConvite } from '@/lib/conviteria/marca';
-import { gerarMonograma } from '@/lib/conviteria/lacre';
 import type { ConviteConfig } from '@/lib/conviteria/tipos';
 
 export const runtime = 'nodejs';
@@ -87,15 +86,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 4. Monograma como contorno: o convite publicado não pode depender da
-  //    fonte carregar no navegador de quem abre.
-  const monograma = gerarMonograma(corpo.cfg.anfitrioes?.iniciais ?? '');
-
+  // 4. O lacre agora e arte em WebP com as iniciais sobrepostas em texto
+  //    (LacreArte.tsx). O monograma vetorial gerado aqui ficou desnecessario:
+  //    custava ler a fonte do disco a cada publicacao — e era justamente o
+  //    `fill="var(...)"` dele que virava borrao preto quando as variaveis do
+  //    tema nao chegavam ao contexto da capa.
   const cfgLimpa: ConviteConfig = {
     ...corpo.cfg,
     // Dado sensível nunca entra aqui: este jsonb é legível por anônimo
     // quando o evento está publicado.
-    lacrePath: monograma.d,
   } as ConviteConfig;
 
   // 5. Cria em rascunho. `publicado_em` só é gravado pelo webhook de

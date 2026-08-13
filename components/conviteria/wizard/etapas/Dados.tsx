@@ -7,6 +7,7 @@ import { AreaTexto, Campo, Texto } from '../Campos';
 import { BotaoIA, ListaSugestoes, useSugestao } from '../AjudaIA';
 import type { PropsEtapa } from '../Wizard';
 import SuporteWhatsapp from '../../SuporteWhatsapp';
+import LacreArte, { LACRES, LACRE_PADRAO } from '../../LacreArte';
 
 /** Iniciais do monograma, a partir do nome exibido. */
 function iniciaisDe(nome: string) {
@@ -73,6 +74,33 @@ export default function Dados({ estado, despachar, modo}: PropsEtapa) {
         />
       </Campo>
       )}
+
+      {/* A arte do lacre segue editavel na edicao: nao identifica de quem e o
+          convite, entao trocar nao permite reaproveitar nada. */}
+      <Campo rotulo="Selo do convite" dica="Aparece na capa, com suas iniciais no meio.">
+        <ul className="wz-lacres">
+          {LACRES.map((l) => {
+            const sel = (cfg.lacreId ?? LACRE_PADRAO) === l.id;
+            return (
+              <li key={l.id}>
+                <button
+                  type="button"
+                  className={`wz-lacre${sel ? ' sel' : ''}`}
+                  aria-pressed={sel}
+                  onClick={() => despachar({ tipo: 'campo', caminho: 'lacreId', valor: l.id })}
+                >
+                  <LacreArte
+                    lacreId={l.id}
+                    iniciais={cfg.anfitrioes.iniciais}
+                    tamanho={72}
+                  />
+                  <span>{l.nome}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </Campo>
 
       {modo === 'editar' ? (
         <Campo rotulo="Iniciais do lacre" dica="Acompanham o nome, também travadas.">

@@ -22,14 +22,18 @@ export async function generateMetadata(): Promise<Metadata> {
     manifest: isConviteia ? '/brands/convite/manifest.webmanifest' : undefined,
 
     icons: {
+      // Caminho literal para /brands/convite/favicon.png, e nao `brand.logo`:
+      // e exatamente o que ConsultaTec, Pix Wiki e ArteFinal fazem, e nelas o
+      // icone da aba aparece certo. `brand.logo` serve para OpenGraph, onde a
+      // imagem grande e desejada.
       icon: isConviteia
-        ? brand.logo
+        ? '/brands/convite/favicon.png'
         : '/favicon.ico',
       shortcut: isConviteia
-        ? brand.logo
+        ? '/brands/convite/favicon.png'
         : '/favicon.ico',
       apple: isConviteia
-        ? brand.logo
+        ? '/brands/convite/favicon.png'
         : '/apple-touch-icon.png',
     },
 

@@ -13,6 +13,7 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase-browser';
 import { Loader2, Plus, ExternalLink, Clock, LogOut, Pencil } from 'lucide-react';
 import RendaBackground from '@/components/conviteria/RendaBackground';
+import AcoesConvite from '@/components/conviteria/AcoesConvite';
 import SuporteWhatsapp from '@/components/conviteria/SuporteWhatsapp';
 import RodapeMarca from '@/components/conviteria/RodapeMarca';
 
@@ -222,6 +223,14 @@ export default function PainelPage() {
                   )}
                 </div>
               </div>
+
+              {/* Compartilhar so faz sentido depois de publicado: antes disso o
+                  link responde 404 e o QR levaria o convidado a lugar nenhum. */}
+              {c.publicado && (
+                <div className="mt-3 pt-3 border-t" style={{ borderColor: cor.acento + '22' }}>
+                  <AcoesConvite url={c.url} slug={c.slug} />
+                </div>
+              )}
             </li>
           ))}
         </ul>

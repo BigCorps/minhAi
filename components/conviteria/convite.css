@@ -503,6 +503,10 @@
 body.cv-travado { overflow: hidden; }
 
 .cv-capa {
+  /* Altura da aba. O lacre se ancora nela, entao mudar aqui move os dois
+     juntos. Ver .cv-capa-centro. */
+  --cv-aba-altura: 64%;
+
   position: fixed;
   inset: 0;
   z-index: 50;
@@ -528,25 +532,39 @@ body.cv-travado { overflow: hidden; }
   top: 0;
   left: 0;
   right: 0;
-  height: 64%;
+  height: var(--cv-aba-altura);
   background: color-mix(in srgb, var(--cv-papel) 82%, var(--cv-bloco) 18%);
   clip-path: polygon(0 0, 100% 0, 100% 40%, 50% 100%, 0 40%);
   transform-origin: top center;
   transition: transform 0.95s cubic-bezier(0.6, 0, 0.3, 1), opacity 0.7s ease 0.25s;
 }
 .cv-capa-centro {
-  position: relative;
+  /* Ancorado na PONTA da aba, nao no centro da tela.
+     A ponta fica em `--cv-aba-altura` (o vertice do clip-path esta em 100% da
+     altura da aba). Antes o lacre era centralizado em 50% + 8vh de margem e
+     ainda era puxado para cima pela etiqueta, que dividia o mesmo grid — dois
+     numeros que precisavam concordar e eram independentes. Agora ha uma
+     variavel so. */
+  position: absolute;
+  top: var(--cv-aba-altura);
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 2;
   display: grid;
   place-items: center;
-  margin-top: 8vh;
 }
 .cv-capa-lacre {
   filter: drop-shadow(0 8px 16px rgb(0 0 0 / 28%));
   transition: transform 0.85s cubic-bezier(0.5, -0.3, 0.3, 1.3), opacity 0.6s ease;
 }
 .cv-capa-etiqueta {
-  margin-top: 1.5rem;
+  /* Fora do fluxo: dentro do grid ela somava altura e o centro do bloco
+     deixava de ser o centro do lacre. */
+  position: absolute;
+  top: calc(100% + 1.4rem);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
   padding: 0.5rem 1.1rem;
   background: #fff;
   color: var(--cv-tinta);
@@ -559,14 +577,82 @@ body.cv-travado { overflow: hidden; }
   transition: opacity 0.35s ease;
 }
 
-.cv-capa.abrindo { opacity: 0; visibility: hidden; }
-.cv-capa.abrindo .cv-capa-aba { transform: rotateX(-118deg); opacity: 0.2; }
-.cv-capa.abrindo .cv-capa-lacre { transform: translateY(-24px) scale(1.32); opacity: 0; }
-.cv-capa.abrindo .cv-capa-etiqueta { opacity: 0; }
+/* --------------------------------------------------------------------------
+   Abertura em tres tempos
+
+   Tudo somindo junto le como "a tela trocou". Em sequencia le como "o envelope
+   foi aberto": o lacre se rompe, a aba cai para tras, e so entao o envelope
+   sai de cena revelando o convite. Os atrasos sao o que cria a narrativa.
+
+   Total 1300ms, que e o timeout do setTimeout na Capa.tsx. Mexer em um exige
+   mexer no outro.
+   -------------------------------------------------------------------------- */
+
+/* Perspectiva na capa: sem ela o rotateX da aba e um achatamento, nao uma
+   dobra. E o que faz parecer papel e nao um retangulo encolhendo. */
+.cv-capa { perspective: 1400px; }
+.cv-capa-aba { transform-style: preserve-3d; }
+
+/* Tempo 3: o envelope inteiro sai, depois da aba ter caido. */
+.cv-capa.abrindo {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(1.04);
+  transition:
+    opacity 0.55s ease 0.62s,
+    visibility 0.55s ease 0.62s,
+    transform 0.8s ease 0.55s;
+}
+
+/* Tempo 2: a aba dobra para tras, com um leve atraso para o lacre romper
+   primeiro. */
+.cv-capa.abrindo .cv-capa-aba {
+  transform: rotateX(-125deg);
+  opacity: 0.25;
+  transition:
+    transform 0.85s cubic-bezier(0.55, 0, 0.28, 1) 0.16s,
+    opacity 0.6s ease 0.35s;
+}
+
+/* Tempo 1: o lacre sobe, gira um toque e some. O giro pequeno sugere cera se
+   partindo; sem ele o movimento parece um botao sendo clicado. */
+.cv-capa.abrindo .cv-capa-lacre {
+  transform: translateY(-30px) scale(1.38) rotate(7deg);
+  opacity: 0;
+  transition:
+    transform 0.6s cubic-bezier(0.4, -0.4, 0.3, 1.35),
+    opacity 0.45s ease 0.12s;
+}
+
+.cv-capa.abrindo .cv-capa-etiqueta {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* As flores acompanham a aba, com atraso proprio: saindo junto com o lacre
+   chamariam atencao para o lugar errado. */
+.cv-capa.abrindo .cv-capa-flor {
+  opacity: 0;
+  transition: opacity 0.5s ease 0.2s;
+}
+
+/* O convite entra por baixo, subindo de leve enquanto o envelope sai. */
+@keyframes cv-revela {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.cv-fora { animation: cv-revela 0.7s ease-out 0.5s both; }
 
 @media (prefers-reduced-motion: reduce) {
-  .cv-capa, .cv-capa-aba, .cv-capa-lacre, .cv-capa-etiqueta { transition-duration: 0.01ms; }
-  .cv-capa.abrindo .cv-capa-aba, .cv-capa.abrindo .cv-capa-lacre { transform: none; }
+  .cv-capa, .cv-capa-aba, .cv-capa-lacre, .cv-capa-etiqueta, .cv-capa-flor {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+  .cv-capa.abrindo .cv-capa-aba,
+  .cv-capa.abrindo .cv-capa-lacre,
+  .cv-capa.abrindo { transform: none; }
+  .cv-fora { animation: none; }
 }
 
 /* --------------------------------------------------------------------------

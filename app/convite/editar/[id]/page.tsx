@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import Wizard from '@/components/conviteria/wizard/Wizard';
 import { createClient } from '@/lib/supabase-browser';
 import type { EstadoWizard } from '@/lib/conviteria/wizard';
+import RendaBackground from '@/components/conviteria/RendaBackground';
 import '@/components/conviteria/wizard/wizard.css';
 
 export default function EditarPage({ params }: { params: Promise<{ id: string }> }) {
@@ -92,6 +93,7 @@ export default function EditarPage({ params }: { params: Promise<{ id: string }>
   if (erro) {
     return (
       <div className="wz-carregando">
+        <RendaBackground />
         <p>{erro}</p>
         <a href="/convite/painel" style={{ color: '#a04a63', textDecoration: 'underline' }}>
           Voltar aos meus convites
@@ -103,6 +105,7 @@ export default function EditarPage({ params }: { params: Promise<{ id: string }>
   if (!estado) {
     return (
       <div className="wz-carregando">
+        <RendaBackground />
         <img src="/brands/convite/icone-512.png" alt="" width={64} height={64} />
         <p>Abrindo seu convite…</p>
       </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Wizard from '@/components/conviteria/wizard/Wizard';
+import RendaBackground from '@/components/conviteria/RendaBackground';
 import '@/components/conviteria/wizard/wizard.css';
 import type { EstadoWizard } from '@/lib/conviteria/wizard';
 
@@ -30,6 +31,7 @@ export default function Criar() {
   if (carregando) {
     return (
       <div className="wz-carregando">
+        <RendaBackground />
         <img src="/brands/convite/icone-512.png" alt="" width={64} height={64} />
         <p>Preparando seu convite…</p>
       </div>

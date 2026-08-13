@@ -566,6 +566,10 @@
    entao nao pode depender das variaveis --wz-. Cores literais.
    -------------------------------------------------------------------------- */
 .wz-carregando {
+  /* `relative` para a textura (que e `fixed`) nao escapar do contexto e para o
+     conteudo ficar acima dela. */
+  position: relative;
+  z-index: 0;
   display: flex;
   flex-direction: column;
   align-items: center;

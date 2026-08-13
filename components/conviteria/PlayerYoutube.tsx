@@ -68,6 +68,13 @@ export default function PlayerYoutube({
   const [tocando, setTocando] = useState(false);
   const [pos, setPos] = useState(0);
   const [dur, setDur] = useState(0);
+  const [repetir, setRepetir] = useState(true);
+
+  // Lido dentro do callback da IFrame API, que e criado uma vez. Sem o ref, o
+  // handler ficaria preso ao valor de `repetir` do primeiro render.
+  const repetirRef = useRef(true);
+
+  useEffect(() => { repetirRef.current = repetir; }, [repetir]);
 
   useEffect(() => {
     let vivo = true;
@@ -97,7 +104,7 @@ export default function PlayerYoutube({
             const S = window.YT.PlayerState;
             setTocando(e.data === S.PLAYING);
             // Repete: musica de convite e trilha, nao faixa unica.
-            if (e.data === S.ENDED) e.target.playVideo();
+            if (e.data === S.ENDED && repetirRef.current) e.target.playVideo();
           },
         },
       });
@@ -197,6 +204,20 @@ export default function PlayerYoutube({
                 <path d="M8 5.5l11 6.5-11 6.5z" fill="currentColor" />
               </svg>
             )}
+          </button>
+          <button
+            type="button"
+            className={`cv-player-btn${repetir ? ' ativo' : ''}`}
+            disabled={!pronto}
+            onClick={() => setRepetir((v) => !v)}
+            aria-pressed={repetir}
+            aria-label="Repetir música"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 9a4 4 0 0 1 4-4h9m0 0l-3-3m3 3l-3 3M20 15a4 4 0 0 1-4 4H7m0 0l3 3m-3-3l3-3"
+                    fill="none" stroke="currentColor" strokeWidth="1.7"
+                    strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </div>
         {titulo && <p className="cv-player-titulo">{titulo}</p>}

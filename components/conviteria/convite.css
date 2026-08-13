@@ -346,6 +346,18 @@
 .cv-player-principal:hover { color: var(--cv-papel); transform: scale(1.05); }
 .cv-player-principal svg { width: 24px; height: 24px; }
 
+/* Repetir ligado. Fundo suave em vez de so trocar a cor do traco: o icone de
+   repeticao e fino, e mudanca de cor sozinha nao le como "ligado". */
+.cv-player-btn.ativo {
+  color: var(--cv-acento);
+  background: color-mix(in srgb, var(--cv-acento) 14%, transparent);
+}
+
+/* Os tres botoes tem a mesma largura de caixa, entao o principal cai no centro
+   geometrico exato. Com dois botoes o par era centralizado como grupo e o play
+   ficava deslocado. */
+.cv-player-controles > .cv-player-btn:not(.cv-player-principal) { flex: 0 0 34px; }
+
 .cv-video, .cv-mapa {
   position: relative;
   width: 100%;

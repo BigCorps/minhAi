@@ -33,6 +33,8 @@ export default function Musica({ cfg, secao, modo }: PropsSecao) {
   const [tocando, setTocando] = useState(false);
   const [pos, setPos] = useState(0);
   const [dur, setDur] = useState(0);
+  // Comeca ligado: musica de convite e trilha de fundo, nao faixa unica.
+  const [repetir, setRepetir] = useState(true);
   const arrastando = useRef(false);
 
   useEffect(() => {
@@ -54,6 +56,12 @@ export default function Musica({ cfg, secao, modo }: PropsSecao) {
       a.removeEventListener('loadedmetadata', onMeta);
     };
   }, [m?.arquivoUrl]);
+
+  // O <audio> e do ConvitePublico e nasce com `loop`. Aqui so acompanhamos a
+  // escolha do convidado.
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.loop = repetir;
+  }, [repetir, audioRef]);
 
   if (!m) return null;
   const rotulo = secao.config?.titulo ?? 'Dê o play na nossa música';
@@ -139,6 +147,22 @@ export default function Musica({ cfg, secao, modo }: PropsSecao) {
                 <path d="M8 5.5l11 6.5-11 6.5z" fill="currentColor" />
               </svg>
             )}
+          </button>
+          {/* Terceiro botao tambem resolve o alinhamento: com dois, o par era
+              centralizado como grupo e o botao principal ficava fora do centro
+              real da caixa. */}
+          <button
+            type="button"
+            className={`cv-player-btn${repetir ? ' ativo' : ''}`}
+            onClick={() => setRepetir((v) => !v)}
+            aria-pressed={repetir}
+            aria-label="Repetir música"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 9a4 4 0 0 1 4-4h9m0 0l-3-3m3 3l-3 3M20 15a4 4 0 0 1-4 4H7m0 0l3 3m-3-3l3-3"
+                    fill="none" stroke="currentColor" strokeWidth="1.7"
+                    strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </div>
       </div>

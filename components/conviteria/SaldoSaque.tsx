@@ -7,7 +7,7 @@ import { brlSaque } from '@/lib/conviteria/saque';
 export default function SaldoSaque({eventoId}:{eventoId:string}) {
   const [aberto,setAberto]=useState(false), [dados,setDados]=useState<any>(null), [erro,setErro]=useState('');
   const [mensagem,setMensagem]=useState('');
-  const [enviando,setEnviando]=useState(false), [nomeCompleto,setNomeCompleto]=useState(''), [cpf,setCpf]=useState(''), [chavePix,setChavePix]=useState(''), [valor,setValor]=useState('');
+  const [enviando,setEnviando]=useState(false), [nomeCompleto,setNomeCompleto]=useState(''), [cpf,setCpf]=useState(''), [chavePix,setChavePix]=useState(''), [emailRecebedor,setEmailRecebedor]=useState(''), [valor,setValor]=useState('');
 
   const token=useCallback(async()=> (await createClient().auth.getSession()).data.session?.access_token??'',[]);
 
@@ -31,7 +31,7 @@ export default function SaldoSaque({eventoId}:{eventoId:string}) {
       const r=await fetch('/api/conviteria/saque',{
         method:'POST',
         headers:{'Content-Type':'application/json',Authorization:`Bearer ${await token()}`},
-        body:JSON.stringify({eventoId,nomeCompleto,cpf,chavePix,valorCentavos})
+        body:JSON.stringify({eventoId,nomeCompleto,cpf,chavePix,emailRecebedor,valorCentavos})
       });
       const d=await r.json(); if(!r.ok) throw new Error(d.erro);
       setCpf('');
@@ -58,6 +58,7 @@ export default function SaldoSaque({eventoId}:{eventoId:string}) {
         <div className="grid gap-2">
           <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Nome completo do titular" value={nomeCompleto} onChange={e=>setNomeCompleto(e.target.value)}/>
           <input className="border rounded-lg px-3 py-2 text-sm" placeholder="CPF do titular" inputMode="numeric" value={cpf} onChange={e=>setCpf(e.target.value)}/>
+          <input className="border rounded-lg px-3 py-2 text-sm" placeholder="E-mail do beneficiário/casal" type="email" value={emailRecebedor} onChange={e=>setEmailRecebedor(e.target.value)}/>
           <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Chave PIX" value={chavePix} onChange={e=>setChavePix(e.target.value)}/>
           <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Valor do saque (R$)" inputMode="decimal" value={valor} onChange={e=>setValor(e.target.value)}/>
           <button disabled={enviando||dados.saldo.disponivelCentavos<dados.saqueMinimoCentavos}

@@ -51,10 +51,12 @@ export async function POST(req: NextRequest) {
   const nomeCompleto=String(body.nomeCompleto??'').trim();
   const cpf=somenteDigitos(String(body.cpf??''));
   const chavePix=String(body.chavePix??'').trim();
+  const emailRecebedor=String(body.emailRecebedor??'').trim().toLowerCase();
   const valorCentavos=Math.floor(Number(body.valorCentavos??0));
   const tipo=tipoChavePix(chavePix);
 
   if (!eventoId || nomeCompleto.length<5 || !cpfValido(cpf) || !tipo ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRecebedor) ||
       !Number.isSafeInteger(valorCentavos) || valorCentavos<SAQUE_MINIMO_CENTAVOS)
     return NextResponse.json({erro:'Confira nome, CPF, chave PIX e valor do saque.'},{status:400});
 
@@ -72,13 +74,13 @@ export async function POST(req: NextRequest) {
   if (recebedor) {
     const {error}=await admin.from('recebedores').update({
       nome_completo:nomeCompleto,cpf,chave_pix:chavePix,tipo_chave:tipo,
-      verificado:false,verificado_em:null
+      email:emailRecebedor,verificado:false,verificado_em:null
     }).eq('id',recebedor.id);
     if(error) return NextResponse.json({erro:'Falha ao atualizar recebedor.'},{status:500});
   } else {
     const {data,error}=await admin.from('recebedores').insert({
       evento_id:eventoId,papel:'anfitriao',nome_completo:nomeCompleto,cpf,
-      chave_pix:chavePix,tipo_chave:tipo,verificado:false
+      chave_pix:chavePix,tipo_chave:tipo,email:emailRecebedor,verificado:false
     }).select('id').single();
     if(error||!data) return NextResponse.json({erro:'Falha ao salvar recebedor.'},{status:500});
     recebedor=data;

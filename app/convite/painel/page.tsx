@@ -17,6 +17,7 @@ import AcoesConvite from '@/components/conviteria/AcoesConvite';
 import SuporteWhatsapp from '@/components/conviteria/SuporteWhatsapp';
 import RodapeMarca from '@/components/conviteria/RodapeMarca';
 import SaldoSaque from '@/components/conviteria/SaldoSaque';
+import PlanoMensalCard from '@/components/conviteria/PlanoMensalCard';
 
 const cor = {
   fora: '#ffffff',
@@ -127,6 +128,8 @@ export default function PainelPage() {
             Olá, <strong style={{ color: cor.tinta }}>{nome}</strong>
           </p>
         )}
+
+        <PlanoMensalCard />
 
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-semibold" style={{ color: cor.tinta }}>

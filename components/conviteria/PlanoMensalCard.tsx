@@ -1,0 +1,17 @@
+'use client';
+import { useCallback, useEffect, useState } from 'react';
+import { CalendarClock, Copy, Loader2, RefreshCw } from 'lucide-react';
+import { createClient } from '@/lib/supabase-browser';
+import { brl } from '@/lib/conviteria/precos';
+
+export default function PlanoMensalCard() {
+  const [d,setD]=useState<any>(null); const [pix,setPix]=useState<any>(null); const [erro,setErro]=useState(''); const [carregando,setCarregando]=useState(true); const [gerando,setGerando]=useState(false);
+  const token=useCallback(async()=> (await createClient().auth.getSession()).data.session?.access_token??'',[]);
+  const carregar=useCallback(async()=>{setCarregando(true);setErro('');try{const r=await fetch('/api/conviteria/plano',{headers:{Authorization:`Bearer ${await token()}`}});const j=await r.json();if(!r.ok)throw new Error(j.erro);setD(j);if(j.ativo&&pix)setPix(null)}catch(e:any){setErro(e.message||'Falha ao carregar plano.')}finally{setCarregando(false)}},[token,pix]);
+  useEffect(()=>{void carregar()},[carregar]);
+  useEffect(()=>{if(!pix)return;const id=setInterval(()=>void carregar(),5000);return()=>clearInterval(id)},[pix,carregar]);
+  async function gerar(){setGerando(true);setErro('');try{const r=await fetch('/api/conviteria/plano',{method:'POST',headers:{Authorization:`Bearer ${await token()}`}});const j=await r.json();if(!r.ok)throw new Error(j.erro);setPix(j)}catch(e:any){setErro(e.message||'Falha ao gerar PIX.')}finally{setGerando(false)}}
+  if(carregando&&!d)return <section className="mb-6 rounded-2xl border bg-white p-5"><Loader2 className="w-5 h-5 animate-spin"/></section>;
+  const ativo=!!d?.ativo;
+  return <section className="mb-6 rounded-2xl border border-[#c0607833] bg-white p-5"><div className="flex items-start justify-between gap-3"><div><div className="flex items-center gap-2 font-semibold text-[#40232c]"><CalendarClock className="w-5 h-5 text-[#c06078]"/>Plano mensal</div><p className="mt-1 text-sm text-[#7c5560]">{ativo?`Ativo — ${d.diasRestantes} dia${d.diasRestantes===1?'':'s'} restante${d.diasRestantes===1?'':'s'}.`:'Inativo. Assine para publicar convites ilimitados.'}</p>{d?.expiraEm&&<p className="mt-1 text-xs text-[#7c5560]">Validade: {new Date(d.expiraEm).toLocaleDateString('pt-BR')}</p>}</div><strong className="text-[#a04a63]">{brl(d?.mensalidadeCentavos??14990)}/mês</strong></div>{ativo&&d.diasRestantes<=5&&<p className="mt-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-800">Seu plano vence em breve. Você já pode pagar a próxima mensalidade.</p>}{!pix?<button onClick={gerar} disabled={gerando} className="mt-4 rounded-full bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{gerando?'Gerando PIX…':ativo?'Pagar próxima mensalidade por PIX':'Assinar plano mensal por PIX'}</button>:<div className="mt-4 rounded-xl bg-[#fff7fa] p-4 border"><p className="mb-2 text-sm font-semibold">PIX de {brl(pix.valorCentavos)}</p>{pix.qrcode&&<img src={pix.qrcode} alt="QR Code PIX" className="mx-auto h-44 w-44 rounded-lg bg-white p-2"/>}{pix.copiaECola&&<button onClick={()=>navigator.clipboard.writeText(pix.copiaECola)} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm"><Copy className="w-4 h-4"/>Copiar PIX</button>}<button onClick={carregar} className="mt-2 inline-flex w-full items-center justify-center gap-1 text-xs text-[#a04a63]"><RefreshCw className="w-3.5 h-3.5"/>Já paguei — verificar</button></div>}{erro&&<p className="mt-3 text-xs text-red-700">{erro}</p>}</section>;
+}

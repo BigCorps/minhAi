@@ -1,29 +1,23 @@
 'use client';
 
-// app/convite/painel/page.tsx
-//
-// Destino do login. Existia um buraco aqui: depois de entrar, o usuario caia
-// em /convite — visualmente identica a deslogada — e concluia que o login
-// tinha falhado. Mesmo papel do /consultatec/dashboard.
-
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Clock, ExternalLink, Loader2, LogOut, Pencil, Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
-import { Loader2, Plus, ExternalLink, Clock, LogOut, Pencil } from 'lucide-react';
 import RendaBackground from '@/components/conviteria/RendaBackground';
 import AcoesConvite from '@/components/conviteria/AcoesConvite';
 import SuporteWhatsapp from '@/components/conviteria/SuporteWhatsapp';
 import RodapeMarca from '@/components/conviteria/RodapeMarca';
 import SaldoSaque from '@/components/conviteria/SaldoSaque';
 import PlanoMensalCard from '@/components/conviteria/PlanoMensalCard';
+import PlanoStatusHeader from '@/components/conviteria/PlanoStatusHeader';
 import RecadosPainel from '@/components/conviteria/RecadosPainel';
 import PresencasPainel from '@/components/conviteria/PresencasPainel';
 
 const cor = {
   fora: '#ffffff',
-  papel: '#fdf0f3',
   acento: '#c06078',
   acentoTexto: '#a04a63',
   tinta: '#40232c',
@@ -44,7 +38,7 @@ export default function PainelPage() {
   const [carregando, setCarregando] = useState(true);
   const [convites, setConvites] = useState<Convite[]>([]);
   const [erro, setErro] = useState<string | null>(null);
-  const [nome, setNome] = useState<string>('');
+  const [nome, setNome] = useState('');
 
   const router = useRouter();
   const [supabase] = useState(() => createClient());
@@ -53,7 +47,6 @@ export default function PainelPage() {
     const { data } = await supabase.auth.getSession();
     const acesso = data.session?.access_token;
 
-    // Sem sessao nao adianta mostrar tela vazia: manda entrar.
     if (!acesso) {
       router.replace('/convite/entrar');
       return;
@@ -61,8 +54,8 @@ export default function PainelPage() {
 
     setNome(
       (data.session?.user.user_metadata?.name as string) ||
-        data.session?.user.email ||
-        ''
+      data.session?.user.email ||
+      ''
     );
 
     try {
@@ -70,6 +63,7 @@ export default function PainelPage() {
         headers: { Authorization: `Bearer ${acesso}` },
       });
       const d = await r.json();
+
       if (!r.ok) throw new Error(d?.erro ?? 'Falha ao carregar.');
       setConvites(d.convites ?? []);
     } catch (e: any) {
@@ -79,7 +73,9 @@ export default function PainelPage() {
     }
   }, [router, supabase]);
 
-  useEffect(() => { void carregar(); }, [carregar]);
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
   async function sair() {
     await supabase.auth.signOut();
@@ -88,17 +84,11 @@ export default function PainelPage() {
 
   return (
     <main className="min-h-screen flex flex-col px-4 py-8">
-      {/* Sem backgroundColor no <main>: o RendaBackground e `-z-10` e ficaria
-          ATRAS do fundo do proprio elemento. Era isso que escondia a textura —
-          quem pinta o papel e o SVG. */}
       <RendaBackground />
 
-      {/* `flex-1` empurra o rodape para o fim da viewport quando ha poucos
-          convites. Sem isso ele encosta no ultimo cartao e parece parte da
-          lista. */}
       <div className="mx-auto w-full max-w-2xl flex-1">
-        <header className="flex items-center justify-between mb-8">
-          <Link href="/convite" className="flex items-center gap-2">
+        <header className="flex items-center justify-between gap-3 mb-8">
+          <Link href="/convite" className="flex min-w-0 items-center gap-2">
             <Image
               src="/brands/convite/icone-512.png"
               alt="Convite IA"
@@ -106,22 +96,24 @@ export default function PainelPage() {
               height={36}
               className="rounded-full"
             />
-            <span className="font-bold" style={{ color: cor.acentoTexto }}>
+            <span className="hidden font-bold sm:inline" style={{ color: cor.acentoTexto }}>
               Convite IA
             </span>
           </Link>
 
           <div className="flex items-center gap-2">
-          <SuporteWhatsapp assunto="Preciso de suporte na ConviteIA" />
-          <button
-            type="button"
-            onClick={sair}
-            className="flex items-center gap-2 text-sm px-3 py-2 rounded-full border"
-            style={{ borderColor: cor.acento + '44', color: cor.tintaSuave }}
-          >
-            <LogOut className="w-4 h-4" />
-            Sair
-          </button>
+            <PlanoStatusHeader />
+            <SuporteWhatsapp assunto="Preciso de suporte na ConviteIA" />
+
+            <button
+              type="button"
+              onClick={sair}
+              className="flex items-center gap-2 rounded-full border px-3 py-2 text-sm"
+              style={{ borderColor: cor.acento + '44', color: cor.tintaSuave }}
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Sair</span>
+            </button>
           </div>
         </header>
 
@@ -131,25 +123,24 @@ export default function PainelPage() {
           </p>
         )}
 
-        <PlanoMensalCard />
-
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-semibold" style={{ color: cor.tinta }}>
             Meus convites
           </h1>
+
           <Link
             href="/convite/criar"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold text-sm"
+            className="flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold"
             style={{ backgroundColor: cor.acento, color: cor.blocoTexto }}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             Novo
           </Link>
         </div>
 
         {carregando && (
           <div className="flex justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: cor.acento }} />
+            <Loader2 className="h-8 w-8 animate-spin" style={{ color: cor.acento }} />
           </div>
         )}
 
@@ -167,12 +158,14 @@ export default function PainelPage() {
             <p className="mb-2 font-medium" style={{ color: cor.tinta }}>
               Você ainda não criou nenhum convite.
             </p>
-            <p className="text-sm mb-6" style={{ color: cor.tintaSuave }}>
+
+            <p className="mb-6 text-sm" style={{ color: cor.tintaSuave }}>
               Leva alguns minutos, e você só paga quando publicar.
             </p>
+
             <Link
               href="/convite/criar"
-              className="inline-flex px-6 py-3 rounded-full font-semibold"
+              className="inline-flex rounded-full px-6 py-3 font-semibold"
               style={{ backgroundColor: cor.acento, color: cor.blocoTexto }}
             >
               Criar meu convite
@@ -189,28 +182,29 @@ export default function PainelPage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-semibold truncate" style={{ color: cor.tinta }}>
+                  <p className="truncate font-semibold" style={{ color: cor.tinta }}>
                     {c.titulo}
                   </p>
+
                   {c.dataExtenso && (
                     <p className="text-sm" style={{ color: cor.tintaSuave }}>
                       {c.dataExtenso}
                     </p>
                   )}
-                  <p className="text-xs mt-1 truncate" style={{ color: cor.tintaSuave }}>
+
+                  <p className="mt-1 truncate text-xs" style={{ color: cor.tintaSuave }}>
                     {c.slug}.conviteia.com
                   </p>
                 </div>
 
-                <div className="flex items-center gap-4 flex-shrink-0">
-                  {/* Editar aparece nos dois estados: nao ha motivo para
-                      impedir ajuste antes de pagar. */}
+                <div className="flex flex-shrink-0 items-center gap-4">
                   <Link
                     href={`/convite/editar/${c.id}`}
                     className="flex items-center gap-1.5 text-sm font-medium"
                     style={{ color: cor.tintaSuave }}
                   >
-                    <Pencil className="w-4 h-4" /> Editar
+                    <Pencil className="h-4 w-4" />
+                    Editar
                   </Link>
 
                   {c.publicado ? (
@@ -221,7 +215,8 @@ export default function PainelPage() {
                       className="flex items-center gap-1.5 text-sm font-medium"
                       style={{ color: cor.acentoTexto }}
                     >
-                      Ver <ExternalLink className="w-4 h-4" />
+                      Ver
+                      <ExternalLink className="h-4 w-4" />
                     </a>
                   ) : (
                     <Link
@@ -229,19 +224,19 @@ export default function PainelPage() {
                       className="flex items-center gap-1.5 text-sm font-medium"
                       style={{ color: cor.acentoTexto }}
                     >
-                      <Clock className="w-4 h-4" /> Publicar
+                      <Clock className="h-4 w-4" />
+                      Publicar
                     </Link>
                   )}
                 </div>
               </div>
 
-              {/* Compartilhar so faz sentido depois de publicado: antes disso o
-                  link responde 404 e o QR levaria o convidado a lugar nenhum. */}
               {c.publicado && (
                 <>
-                  <div className="mt-3 pt-3 border-t" style={{ borderColor: cor.acento + '22' }}>
+                  <div className="mt-3 border-t pt-3" style={{ borderColor: cor.acento + '22' }}>
                     <AcoesConvite url={c.url} slug={c.slug} />
                   </div>
+
                   <PresencasPainel eventoId={c.id} />
                   <SaldoSaque eventoId={c.id} />
                   <RecadosPainel eventoId={c.id} />
@@ -250,6 +245,10 @@ export default function PainelPage() {
             </li>
           ))}
         </ul>
+
+        <div id="plano-mensal" className="mt-8 scroll-mt-6">
+          <PlanoMensalCard />
+        </div>
       </div>
 
       <RodapeMarca />

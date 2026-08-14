@@ -18,6 +18,7 @@ import SuporteWhatsapp from '@/components/conviteria/SuporteWhatsapp';
 import RodapeMarca from '@/components/conviteria/RodapeMarca';
 import SaldoSaque from '@/components/conviteria/SaldoSaque';
 import PlanoMensalCard from '@/components/conviteria/PlanoMensalCard';
+import RecadosPainel from '@/components/conviteria/RecadosPainel';
 
 const cor = {
   fora: '#ffffff',
@@ -239,6 +240,7 @@ export default function PainelPage() {
                     <AcoesConvite url={c.url} slug={c.slug} />
                   </div>
                   <SaldoSaque eventoId={c.id} />
+                  <RecadosPainel eventoId={c.id} />
                 </>
               )}
             </li>

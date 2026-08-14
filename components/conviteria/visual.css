@@ -1,8 +1,16 @@
-
 .cv-orn-divisor { width:72%; max-width:260px; height:42px; }
 .cv-orn-divisor-miolo { width:42px; height:42px; transform:translate(99px,0) scale(.35); transform-origin:center; }
 .cv-secao-marca { padding-top:1rem; padding-bottom:1rem; }
 .cv-marca-evento { display:block; width:auto; max-width:min(72%,260px); margin:0 auto; object-fit:contain; }
+
+/* A posição do lacre acompanha o ponto MAIS BAIXO de cada recorte.
+   Antes todos usavam 64%, então arco/onda/reto deixavam um vão entre papel e cera. */
+.cv-capa.envelope-classico { --cv-lacre-top: 64%; }
+.cv-capa.envelope-arco { --cv-lacre-top: 51.2%; }
+.cv-capa.envelope-diamante { --cv-lacre-top: 64%; }
+.cv-capa.envelope-reto { --cv-lacre-top: 58.9%; }
+.cv-capa.envelope-onda { --cv-lacre-top: 48.6%; }
+.cv-capa.envelope-organico { --cv-lacre-top: 58.9%; }
 
 .cv-capa.envelope-classico .cv-capa-aba,
 .cv-capa.envelope-classico .cv-capa-vinco { clip-path: polygon(0 0,100% 0,50% 100%); }

@@ -572,7 +572,7 @@ body.cv-travado { overflow: hidden; }
      numeros que precisavam concordar e eram independentes. Agora ha uma
      variavel so. */
   position: absolute;
-  top: var(--cv-aba-altura);
+  top: var(--cv-lacre-top, var(--cv-aba-altura));
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 2;

@@ -5,20 +5,12 @@ import type { PropsSecao } from '@/lib/conviteria/tipos';
 import { Broto } from '../Ornamentos';
 import ModalPresentes from '../ModalPresentes';
 
-/**
- * A secao agora e um convite para abrir a lista, nao a lista.
- *
- * Antes os cartoes vinham inline: com 24 itens de casamento, a lista empurrava
- * o resto do convite para muito baixo, e o botao "Presentear" nem tinha
- * onClick — era decoracao. Agora um botao abre o modal, onde o PIX acontece.
- */
 export default function Presentes({ cfg, secao, modo }: PropsSecao) {
   const [aberto, setAberto] = useState(false);
   const lista = cfg.presentes ?? [];
   const c = secao.config ?? {};
 
   if (lista.length === 0) return null;
-
   const disponiveis = lista.filter((p) => !p.esgotado).length;
 
   return (
@@ -33,8 +25,6 @@ export default function Presentes({ cfg, secao, modo }: PropsSecao) {
       <button
         type="button"
         className="cv-botao"
-        // Na previa nao ha evento, entao nao ha o que pagar. Desabilitar pelo
-        // eventoId dispensa uma flag separada.
         disabled={modo.previa || !modo.eventoId}
         onClick={() => setAberto(true)}
       >
@@ -51,6 +41,8 @@ export default function Presentes({ cfg, secao, modo }: PropsSecao) {
         <ModalPresentes
           eventoId={modo.eventoId}
           presentes={lista}
+          temaId={cfg.temaId}
+          fonteId={cfg.fonteId}
           aoFechar={() => setAberto(false)}
         />
       )}

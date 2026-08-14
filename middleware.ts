@@ -363,6 +363,12 @@ if (PIX_DOMAINS.includes(hostname)) {
       const isConviteia = brand === 'conviteia';
       const base = isConviteia ? '/convite' : '/ia';
 
+      // APIs/auth são compartilhadas e nunca podem virar /convite/[slug]/api/...
+      // Isso é essencial para presentes, recados e demais ações públicas.
+      if (isConviteia && (pathname.startsWith('/api/') || pathname.startsWith('/auth/'))) {
+        return NextResponse.next();
+      }
+
       if (pathname === '/favicon.ico') {
         const url = request.nextUrl.clone();
         url.pathname = '/api/favicon';

@@ -31,13 +31,13 @@ export async function GET(req: NextRequest) {
 
   const [{data:saldo},{data:recebedor},{data:repasses}] = await Promise.all([
     admin.from('evento_saldo').select('disponivel_centavos,repassado_centavos').eq('evento_id',eventoId).maybeSingle(),
-    admin.from('recebedores').select('id,nome_completo,cpf,chave_pix,tipo_chave,verificado').eq('evento_id',eventoId).order('created_at').limit(1).maybeSingle(),
+    admin.from('recebedores').select('id,nome_completo,cpf,email,chave_pix,tipo_chave,verificado').eq('evento_id',eventoId).order('created_at').limit(1).maybeSingle(),
     admin.from('repasses').select('id,valor_centavos,status,erro,solicitado_em,concluido_em').eq('evento_id',eventoId).order('solicitado_em',{ascending:false}).limit(10)
   ]);
 
   return NextResponse.json({
     saldo:{disponivelCentavos:Number(saldo?.disponivel_centavos??0),repassadoCentavos:Number(saldo?.repassado_centavos??0)},
-    recebedor:recebedor?{id:recebedor.id,nomeCompleto:recebedor.nome_completo,cpfFinal:String(recebedor.cpf).slice(-4),chavePix:recebedor.chave_pix,tipoChave:recebedor.tipo_chave,verificado:!!recebedor.verificado}:null,
+    recebedor:recebedor?{id:recebedor.id,nomeCompleto:recebedor.nome_completo,cpfFinal:String(recebedor.cpf).slice(-4),email:recebedor.email,chavePix:recebedor.chave_pix,tipoChave:recebedor.tipo_chave,verificado:!!recebedor.verificado}:null,
     repasses:(repasses??[]).map((r:any)=>({id:r.id,valorCentavos:Number(r.valor_centavos),status:r.status,erro:r.erro,solicitadoEm:r.solicitado_em,concluidoEm:r.concluido_em})),
     saqueMinimoCentavos:SAQUE_MINIMO_CENTAVOS
   });

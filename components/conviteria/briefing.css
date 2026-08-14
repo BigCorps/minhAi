@@ -1,0 +1,336 @@
+.cv-briefing-box {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 760px);
+  margin: 0 auto 2rem;
+  padding: 1.35rem;
+  text-align: left;
+  background: rgba(255,255,255,.94);
+  border: 1px solid rgba(192,96,120,.22);
+  border-radius: 24px;
+  box-shadow: 0 18px 55px rgba(90,45,58,.10);
+  backdrop-filter: blur(8px);
+}
+
+.cv-briefing-selo {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  margin-bottom: .65rem;
+  padding: .35rem .65rem;
+  border-radius: 999px;
+  background: #fdf0f3;
+  color: #a04a63;
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.cv-briefing-box h2 {
+  margin: 0;
+  color: #40232c;
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+  font-weight: 750;
+  letter-spacing: -.02em;
+}
+
+.cv-briefing-sub {
+  margin: .5rem 0 1rem;
+  color: #7c6a70;
+  font-size: .9rem;
+  line-height: 1.55;
+}
+
+.cv-briefing-box textarea {
+  width: 100%;
+  min-height: 145px;
+  resize: vertical;
+  border: 1px solid #ead7dd;
+  border-radius: 16px;
+  padding: 1rem 1.05rem;
+  outline: none;
+  background: #fffafb;
+  color: #40232c;
+  font: inherit;
+  font-size: .94rem;
+  line-height: 1.55;
+  transition: .18s ease;
+}
+
+.cv-briefing-box textarea::placeholder {
+  color: #aa929a;
+}
+
+.cv-briefing-box textarea:focus {
+  border-color: #c06078;
+  box-shadow: 0 0 0 3px rgba(192,96,120,.10);
+  background: #fff;
+}
+
+.cv-briefing-rodape-campo {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: .4rem;
+  color: #9b878e;
+  font-size: .68rem;
+}
+
+.cv-briefing-exemplos {
+  margin-top: 1rem;
+}
+
+.cv-briefing-exemplos > span {
+  display: block;
+  margin-bottom: .45rem;
+  color: #7c5560;
+  font-size: .72rem;
+  font-weight: 650;
+}
+
+.cv-briefing-exemplos > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.cv-briefing-exemplos button {
+  border: 1px solid #ead7dd;
+  border-radius: 999px;
+  padding: .4rem .65rem;
+  background: #fff;
+  color: #7c5560;
+  font-size: .7rem;
+  transition: .15s ease;
+}
+
+.cv-briefing-exemplos button:hover {
+  border-color: #c06078;
+  color: #a04a63;
+  background: #fff7f9;
+}
+
+.cv-briefing-criar,
+.cv-briefing-continuar {
+  width: 100%;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  margin-top: 1rem;
+  border: 0;
+  border-radius: 999px;
+  padding: .8rem 1.2rem;
+  background: #d86090;
+  color: #fff;
+  font-size: .9rem;
+  font-weight: 750;
+  box-shadow: 0 8px 22px rgba(216,96,144,.22);
+  transition: .18s ease;
+}
+
+.cv-briefing-criar:hover:not(:disabled),
+.cv-briefing-continuar:hover {
+  filter: brightness(.96);
+  transform: translateY(-1px);
+}
+
+.cv-briefing-criar:disabled {
+  opacity: .7;
+  cursor: wait;
+}
+
+.cv-briefing-erro {
+  margin: .75rem 0 0;
+  padding: .65rem .8rem;
+  border-radius: 10px;
+  background: #fff0f1;
+  color: #a53442;
+  font-size: .76rem;
+}
+
+.cv-briefing-pensando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  margin-top: .7rem;
+  color: #7c5560;
+  text-align: center;
+  font-size: .72rem;
+}
+
+.cv-briefing-pensando span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d86090;
+  animation: cv-briefing-pulso 1s ease-in-out infinite alternate;
+}
+
+@keyframes cv-briefing-pulso {
+  from { opacity: .25; transform: scale(.75); }
+  to { opacity: 1; transform: scale(1.2); }
+}
+
+/* Resumo ao entrar no wizard */
+.cv-briefing-resumo-fundo {
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 1rem;
+  background: rgba(50,31,37,.56);
+  backdrop-filter: blur(6px);
+}
+
+.cv-briefing-resumo {
+  position: relative;
+  width: min(100%, 620px);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  border: 1px solid #efd7df;
+  border-radius: 24px;
+  padding: 1.5rem;
+  background: #fff;
+  box-shadow: 0 30px 80px rgba(43,25,31,.25);
+  color: #40232c;
+}
+
+.cv-briefing-resumo-fechar {
+  position: absolute;
+  top: .9rem;
+  right: .9rem;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #f8f4f5;
+  color: #7c5560;
+}
+
+.cv-briefing-resumo-icone {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  margin-bottom: .8rem;
+  border-radius: 16px;
+  background: #fdf0f3;
+  color: #c06078;
+}
+
+.cv-briefing-resumo h2 {
+  margin: 0;
+  font-size: 1.55rem;
+  letter-spacing: -.025em;
+}
+
+.cv-briefing-resumo-mensagem {
+  margin: .55rem 0 1.25rem;
+  color: #7c5560;
+  font-size: .9rem;
+  line-height: 1.55;
+}
+
+.cv-briefing-resumo section {
+  margin-top: 1rem;
+}
+
+.cv-briefing-resumo h3 {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  margin: 0 0 .55rem;
+  color: #5d3c46;
+  font-size: .78rem;
+  font-weight: 750;
+}
+
+.cv-briefing-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.cv-briefing-chips span {
+  padding: .42rem .65rem;
+  border: 1px solid #dcebdc;
+  border-radius: 999px;
+  background: #f2faf3;
+  color: #3b7147;
+  font-size: .7rem;
+  font-weight: 650;
+}
+
+.cv-briefing-chips-sugestao span {
+  border-color: #ead8f1;
+  background: #faf5fc;
+  color: #775382;
+}
+
+.cv-briefing-pendencias {
+  display: grid;
+  gap: .35rem;
+  margin: 0;
+  padding-left: 1.15rem;
+  color: #7c5560;
+  font-size: .76rem;
+  line-height: 1.45;
+}
+
+.cv-briefing-especial {
+  margin-top: 1.1rem;
+  padding: .9rem;
+  border: 1px dashed #e0bdc7;
+  border-radius: 14px;
+  background: #fff9fb;
+  color: #6d4b55;
+  font-size: .75rem;
+  line-height: 1.45;
+}
+
+.cv-briefing-especial strong {
+  display: block;
+  color: #a04a63;
+}
+
+.cv-briefing-especial ul {
+  margin: .45rem 0;
+  padding-left: 1.1rem;
+}
+
+.cv-briefing-especial p {
+  margin: .35rem 0 0;
+}
+
+.cv-briefing-revisar {
+  margin: 1.2rem 0 0;
+  padding-top: .9rem;
+  border-top: 1px solid #f0e4e8;
+  color: #927a82;
+  text-align: center;
+  font-size: .7rem;
+}
+
+@media (max-width: 560px) {
+  .cv-briefing-box {
+    padding: 1rem;
+    border-radius: 20px;
+  }
+
+  .cv-briefing-rodape-campo {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: .15rem;
+  }
+
+  .cv-briefing-resumo {
+    padding: 1.2rem;
+    border-radius: 20px;
+  }
+}

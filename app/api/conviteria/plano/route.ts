@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { adminConviteria } from '@/lib/conviteria/servidor';
+import { adminConviteria, adminPublic } from '@/lib/conviteria/servidor';
 import { PLANOS } from '@/lib/conviteria/precos';
 import { diasRestantes, planoMensalAtivo } from '@/lib/conviteria/plano';
 
@@ -17,9 +17,14 @@ async function sessao(req: NextRequest) {
 
 async function reconciliar(admin:any, conta:any) {
   if(!conta) return conta;
+  const publicAdmin = adminPublic();
   const {data:pendentes}=await admin.from('mensalidades').select('id,pix_transaction_id').eq('conta_id',conta.id).eq('status','pendente').order('created_at',{ascending:false}).limit(5);
   for(const m of pendentes??[]) {
-    const {data:tx}=await admin.from('pix_transactions').select('status,confirmed_at,expires_at').eq('id',m.pix_transaction_id).maybeSingle();
+    const {data:tx,error:txError}=await publicAdmin.from('pix_transactions').select('status,confirmed_at,expires_at').eq('id',m.pix_transaction_id).maybeSingle();
+    if(txError) {
+      console.error('ConviteIA — falha ao consultar pix_transactions da mensalidade', txError);
+      continue;
+    }
     if(tx?.status==='confirmed') {
       await admin.from('mensalidades').update({status:'pago',pago_em:tx.confirmed_at??new Date().toISOString()}).eq('id',m.id).eq('status','pendente');
       await admin.rpc('processar_mensalidade',{p_mensalidade_id:m.id});
@@ -53,7 +58,8 @@ export async function POST(req:NextRequest) {
   await reconciliar(admin,conta);
   const {data:existente}=await admin.from('mensalidades').select('id,pix_transaction_id,valor_centavos').eq('conta_id',conta.id).eq('status','pendente').order('created_at',{ascending:false}).limit(1).maybeSingle();
   if(existente) {
-    const {data:tx}=await admin.from('pix_transactions').select('pix_code,expires_at,txid').eq('id',existente.pix_transaction_id).maybeSingle();
+    const publicAdmin = adminPublic();
+    const {data:tx}=await publicAdmin.from('pix_transactions').select('pix_code,expires_at,txid,status').eq('id',existente.pix_transaction_id).maybeSingle();
     if(tx && (!tx.expires_at || new Date(tx.expires_at).getTime()>Date.now())) return NextResponse.json({mensalidadeId:existente.id,valorCentavos:existente.valor_centavos,transactionId:existente.pix_transaction_id,txid:tx.txid,copiaECola:tx.pix_code,expiresAt:tx.expires_at});
   }
   const mensal=PLANOS.find(p=>p.id==='mensal')!;

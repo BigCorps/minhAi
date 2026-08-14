@@ -11,6 +11,15 @@ export function adminConviteria() {
   );
 }
 
+/** Cliente admin para tabelas do schema public, como pix_transactions. */
+export function adminPublic() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+}
+
 /** IP nunca e gravado em claro: LGPD. Serve so para anti-flood. */
 export function hashIp(ip: string) {
   return createHash('sha256')

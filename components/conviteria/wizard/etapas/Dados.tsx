@@ -7,7 +7,10 @@ import { AreaTexto, Campo, Texto } from '../Campos';
 import { BotaoIA, ListaSugestoes, useSugestao } from '../AjudaIA';
 import type { PropsEtapa } from '../Wizard';
 import SuporteWhatsapp from '../../SuporteWhatsapp';
-import LacreArte, { LACRES, LACRE_PADRAO, FONTES_LACRE, FONTE_LACRE_PADRAO } from '../../LacreArte';
+import LacreArte, {
+  LACRES, LACRE_PADRAO, LACRE_CORES, LACRE_COR_PADRAO,
+  FONTES_LACRE, FONTE_LACRE_PADRAO
+} from '../../LacreArte';
 
 /** Iniciais do monograma, a partir do nome exibido. */
 function iniciaisDe(nome: string) {
@@ -91,6 +94,7 @@ export default function Dados({ estado, despachar, modo, aoEnviarArquivo }: Prop
                 >
                   <LacreArte
                     lacreId={l.id}
+                    lacreCor={cfg.lacreCor}
                     iniciais={cfg.anfitrioes.iniciais}
                     logoUrl={cfg.logoLacreUrl}
                     ajuste={cfg.lacreAjuste}
@@ -102,6 +106,29 @@ export default function Dados({ estado, despachar, modo, aoEnviarArquivo }: Prop
             );
           })}
         </ul>
+
+        {(cfg.lacreId ?? LACRE_PADRAO) !== 'nenhum' && (
+          <>
+            <p className="wz-status" style={{ marginTop: '.8rem' }}>Cor da cera</p>
+            <div className="wz-lacre-cores">
+              {LACRE_CORES.map((cor) => {
+                const sel = (cfg.lacreCor ?? LACRE_COR_PADRAO) === cor.id;
+                return (
+                  <button
+                    key={cor.id}
+                    type="button"
+                    className={`wz-lacre-cor${sel ? ' sel' : ''}`}
+                    aria-pressed={sel}
+                    onClick={() => despachar({ tipo: 'campo', caminho: 'lacreCor', valor: cor.id })}
+                  >
+                    <span className="wz-lacre-cor-amostra" style={{ backgroundColor: cor.amostra }} />
+                    {cor.nome}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
       </Campo>
 
       {/* Logo no lugar das iniciais. Serve para empresa, igreja, formatura —
@@ -155,6 +182,7 @@ export default function Dados({ estado, despachar, modo, aoEnviarArquivo }: Prop
           <div className="wz-lacre-previa">
             <LacreArte
               lacreId={cfg.lacreId ?? LACRE_PADRAO}
+              lacreCor={cfg.lacreCor}
               iniciais={cfg.anfitrioes.iniciais}
               logoUrl={cfg.logoLacreUrl}
               ajuste={cfg.lacreAjuste}

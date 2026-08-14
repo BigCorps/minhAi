@@ -1,20 +1,3 @@
-// ============================================================
-// hooks/useTurnstile.ts
-// Caminho: hooks/useTurnstile.ts
-//
-// Hook que carrega o script do Cloudflare Turnstile e expõe
-// um método para obter o token de verificação.
-//
-// Uso:
-//   const { getToken, containerRef } = useTurnstile();
-//   // No JSX do componente (.tsx):
-//   <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
-//   ...
-//   const token = await getToken();
-//   if (token) { /* valida na edge */ }
-//   // se token for null, Turnstile indisponível — prosseguir normalmente
-// ============================================================
-
 import { useEffect, useRef, useCallback, useState } from 'react';
 
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
@@ -26,98 +9,146 @@ declare global {
       render: (container: string | HTMLElement, options: Record<string, any>) => string;
       reset: (widgetId: string) => void;
       remove: (widgetId: string) => void;
+      execute: (container?: string | HTMLElement) => void;
       getResponse: (widgetId: string) => string | undefined;
     };
   }
 }
 
+function dormir(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
 export function useTurnstile() {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const widgetIdRef  = useRef<string | null>(null);
-  const tokenRef     = useRef<string | null>(null);
+  const widgetIdRef = useRef<string | null>(null);
+  const tokenRef = useRef<string | null>(null);
   const [ready, setReady] = useState(false);
 
-  // Carrega o script uma única vez por página
+  // O script pode já existir porque outro componente o adicionou, mas ainda
+  // estar carregando. "Existe no DOM" não significa "window.turnstile pronto".
   useEffect(() => {
-    if (document.getElementById(SCRIPT_ID)) {
-      setReady(true);
+    if (!SITE_KEY) return;
+
+    let cancelado = false;
+    let timer: ReturnType<typeof setInterval> | null = null;
+
+    const pronto = () => {
+      if (!cancelado && window.turnstile) {
+        setReady(true);
+        if (timer) clearInterval(timer);
+      }
+    };
+
+    if (window.turnstile) {
+      pronto();
       return;
     }
-    const script = document.createElement('script');
-    script.id    = SCRIPT_ID;
-    script.src   = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-    script.async = true;
-    script.onload = () => setReady(true);
-    document.head.appendChild(script);
+
+    let script = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement('script');
+      script.id = SCRIPT_ID;
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    script.addEventListener('load', pronto);
+    // Rede/cache podem fazer o evento load acontecer entre a consulta e o
+    // addEventListener. O polling curto fecha essa janela sem recriar script.
+    timer = setInterval(pronto, 100);
+
+    return () => {
+      cancelado = true;
+      script?.removeEventListener('load', pronto);
+      if (timer) clearInterval(timer);
+    };
   }, []);
 
-  // Renderiza o widget quando o script carrega e o container existe
+  // Para modal/SPAs, o desafio só é executado quando a pessoa clica em enviar.
+  // Se Cloudflare exigir interação, o widget aparece no container real do form.
   useEffect(() => {
-    if (!ready || !containerRef.current || !SITE_KEY) return;
-    if (widgetIdRef.current) return; // já renderizado
+    if (!ready || !containerRef.current || !SITE_KEY || !window.turnstile) return;
+    if (widgetIdRef.current) return;
 
-    widgetIdRef.current = window.turnstile?.render(containerRef.current, {
+    try {
+      widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: SITE_KEY,
+        execution: 'execute',
         appearance: 'interaction-only',
+        theme: 'light',
+        size: 'flexible',
+        retry: 'auto',
+        'refresh-expired': 'manual',
+        action: 'conviteria_publico',
         callback: (token: string) => {
-        tokenRef.current = token;
-      },
-      'error-callback': () => {
-        tokenRef.current = null;
-      },
-      'expired-callback': () => {
-        tokenRef.current = null;
-      },
-    }) ?? null;
+          tokenRef.current = token;
+        },
+        'error-callback': () => {
+          tokenRef.current = null;
+        },
+        'expired-callback': () => {
+          tokenRef.current = null;
+        },
+      });
+    } catch {
+      widgetIdRef.current = null;
+    }
   }, [ready]);
 
-  // Desmonta o widget ao desmontar o componente
   useEffect(() => {
     return () => {
-      if (widgetIdRef.current && window.turnstile) {
-        window.turnstile.remove(widgetIdRef.current);
-        widgetIdRef.current = null;
+      const id = widgetIdRef.current;
+      widgetIdRef.current = null;
+      tokenRef.current = null;
+
+      if (id && window.turnstile) {
+        try {
+          window.turnstile.remove(id);
+        } catch {
+          // O próprio Turnstile pode já ter removido o iframe ao fechar modal.
+        }
       }
     };
   }, []);
 
-  /**
-   * Obtém o token do Turnstile.
-   * - Se o token já existe (widget invisible completou), retorna direto.
-   * - Aguarda até 8s para o widget completar.
-   * - Retorna null se não houver SITE_KEY ou Turnstile indisponível.
-   */
   const getToken = useCallback(async (): Promise<string | null> => {
-    if (!SITE_KEY) return null; // dev bypass — edge também ignora
+    if (!SITE_KEY) return null;
 
-    if (tokenRef.current) {
-      const t = tokenRef.current;
-      tokenRef.current = null; // tokens são single-use
-      return t;
+    // Dá tempo ao script/widget para terminar de montar depois que o modal abre.
+    for (let i = 0; i < 50; i++) {
+      if (widgetIdRef.current && window.turnstile && containerRef.current?.isConnected) break;
+      await dormir(100);
     }
 
-    if (widgetIdRef.current && window.turnstile) {
+    if (!widgetIdRef.current || !window.turnstile || !containerRef.current?.isConnected) {
+      return null;
+    }
+
+    tokenRef.current = null;
+
+    try {
       window.turnstile.reset(widgetIdRef.current);
+      window.turnstile.execute(containerRef.current);
+    } catch {
+      return null;
     }
 
-    return new Promise((resolve) => {
-      const start = Date.now();
-      const interval = setInterval(() => {
-        if (tokenRef.current) {
-          clearInterval(interval);
-          const t = tokenRef.current;
-          tokenRef.current = null;
-          resolve(t);
-          return;
-        }
-        if (Date.now() - start > 8000) {
-          clearInterval(interval);
-          resolve(null);
-        }
-      }, 100);
-    });
+    // Token Turnstile pode exigir interação do visitante. Mantemos o form
+    // aberto enquanto ele aparece e aguardamos a callback.
+    for (let i = 0; i < 150; i++) {
+      if (tokenRef.current) {
+        const token = tokenRef.current;
+        tokenRef.current = null; // token é single-use
+        return token;
+      }
+      await dormir(100);
+    }
+
+    return null;
   }, []);
 
-  // containerRef é passado para o componente — o JSX fica no .tsx
   return { getToken, containerRef, ready };
 }

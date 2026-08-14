@@ -9,11 +9,12 @@ import { OrnamentoCanto } from './OrnamentoVisual';
 import './visual.css';
 
 export default function Capa({
-  fotoUrl, lacreId, iniciais, logoLacreUrl, lacreAjuste, envelopeId = 'classico',
+  fotoUrl, lacreId, lacreCor, iniciais, logoLacreUrl, lacreAjuste, envelopeId = 'classico',
   ornamentoId = 'floral', aoAbrir,
 }: {
   fotoUrl?: string;
   lacreId?: string;
+  lacreCor?: string;
   iniciais?: string;
   logoLacreUrl?: string | null;
   lacreAjuste?: AjusteLacre;
@@ -44,7 +45,7 @@ export default function Capa({
       <div className="cv-capa-centro">
         <OrnamentoCanto id={ornamentoId} className="cv-capa-flor esquerda"/>
         <OrnamentoCanto id={ornamentoId} className="cv-capa-flor direita"/>
-        <div className="cv-capa-lacre"><LacreArte lacreId={lacreId} iniciais={iniciais} logoUrl={logoLacreUrl} ajuste={lacreAjuste} tamanho={116}/></div>
+        <div className="cv-capa-lacre"><LacreArte lacreId={lacreId} lacreCor={lacreCor} iniciais={iniciais} logoUrl={logoLacreUrl} ajuste={lacreAjuste} tamanho={116}/></div>
         <span className="cv-capa-etiqueta">Clique para abrir</span>
       </div>
     </div>

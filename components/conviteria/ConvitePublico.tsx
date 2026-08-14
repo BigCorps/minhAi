@@ -47,6 +47,7 @@ export default function ConvitePublico({ cfg, eventoId }: { cfg: ConviteConfig; 
         <Capa
           fotoUrl={cfg.midia?.fotoCapa ?? cfg.midia?.fotoPrincipal}
           lacreId={cfg.lacreId}
+          lacreCor={cfg.lacreCor}
           iniciais={cfg.anfitrioes?.iniciais}
           logoLacreUrl={cfg.logoLacreUrl}
           lacreAjuste={cfg.lacreAjuste}

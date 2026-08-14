@@ -129,6 +129,8 @@ export interface ConviteConfig {
 
   /** Arte do lacre. Ver LACRES em components/conviteria/LacreArte.tsx. */
   lacreId?: string;
+  /** Cor da cera. Sem efeito quando lacreId = 'nenhum'. */
+  lacreCor?: string;
   /** Logo do cliente no lugar das iniciais do lacre. */
   logoLacreUrl?: string | null;
   /** Fonte e ajuste fino do monograma. Ver AjusteLacre em LacreArte.tsx. */

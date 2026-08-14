@@ -182,9 +182,7 @@ export default function ModalPresentes({
                   placeholder="Uma mensagem para o casal" />
               </label>
 
-              <div ref={containerRef}
-                style={{ position:'absolute', left:'-9999px', width:1, height:1, overflow:'hidden' }}
-                aria-hidden="true" />
+              <div ref={containerRef} className="cv-turnstile" />
 
               <div className="cv-modal-acoes">
                 <button type="button" className="cv-botao cv-botao-fantasma"

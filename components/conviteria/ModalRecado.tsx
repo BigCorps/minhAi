@@ -85,9 +85,7 @@ export default function ModalRecado({
                   onChange={e => setMensagem(e.target.value)}
                   placeholder="Escreva uma mensagem para o casal" />
               </label>
-              <div ref={containerRef}
-                style={{ position:'absolute', left:'-9999px', width:1, height:1, overflow:'hidden' }}
-                aria-hidden="true" />
+              <div ref={containerRef} className="cv-turnstile" />
               {erro && <p className="cv-modal-erro">{erro}</p>}
               <button type="button" className="cv-botao" onClick={enviar} disabled={enviando}>
                 {enviando ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando…</> : 'Enviar recado'}

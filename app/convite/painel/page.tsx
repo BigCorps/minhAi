@@ -215,6 +215,8 @@ export default function PainelPage() {
                   {c.publicado ? (
                     <a
                       href={c.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-sm font-medium"
                       style={{ color: cor.acentoTexto }}
                     >

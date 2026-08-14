@@ -27,6 +27,7 @@ import Publicar from './etapas/Publicar';
 import './wizard.css';
 import './catalogo.css';
 import '../ornamentos-assets.css';
+import '../lacre-cores.css';
 
 export interface PropsEtapa {
   estado: EstadoWizard;
@@ -271,6 +272,7 @@ export default function Wizard({
               <Capa
                 fotoUrl={estado.cfg.midia?.fotoCapa ?? estado.cfg.midia?.fotoPrincipal}
                 lacreId={estado.cfg.lacreId}
+                lacreCor={estado.cfg.lacreCor}
                 iniciais={estado.cfg.anfitrioes?.iniciais}
                 logoLacreUrl={estado.cfg.logoLacreUrl}
                 lacreAjuste={estado.cfg.lacreAjuste}

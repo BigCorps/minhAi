@@ -77,7 +77,7 @@ export interface ConviteConfig {
   tipoEventoId: string;
 
   anfitrioes: {
-    /** Como aparece em destaque: "Miriam e Ithiel" */
+    /** Como aparece em destaque: "Maria & João" */
     exibicao: string;
     /** Assinatura no rodape. Opcional. */
     completo?: string;

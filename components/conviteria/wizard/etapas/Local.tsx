@@ -105,7 +105,7 @@ export default function Local({ estado, despachar }: PropsEtapa) {
       <Campo rotulo="CEP" dica="Digite o CEP e o endereço é preenchido sozinho.">
         <Texto
           valor={l.cep ?? ''}
-          placeholder="08020-370"
+          placeholder="01310-100"
           maxLength={9}
           onChange={(v) => {
             const fmt = mascaraCep(v);
@@ -122,13 +122,13 @@ export default function Local({ estado, despachar }: PropsEtapa) {
       </Campo>
 
       <Campo rotulo="Nome do espaço" dica="Opcional.">
-        <Texto valor={l.nome ?? ''} placeholder="Espaço Villa Giordano" onChange={campo('nome')} />
+        <Texto valor={l.nome ?? ''} placeholder="Espaço Celebrare" onChange={campo('nome')} />
       </Campo>
       <Campo rotulo="Rua e número">
-        <Texto valor={l.logradouro ?? ''} placeholder="Rua Pascoal Daniel, 96" onChange={campo('logradouro')} />
+        <Texto valor={l.logradouro ?? ''} placeholder="Av. Paulista, 1000" onChange={campo('logradouro')} />
       </Campo>
       <Campo rotulo="Bairro">
-        <Texto valor={l.bairro ?? ''} placeholder="Vila Giordano" onChange={campo('bairro')} />
+        <Texto valor={l.bairro ?? ''} placeholder="Bela Vista" onChange={campo('bairro')} />
       </Campo>
       <Campo rotulo="Cidade e estado">
         <Texto valor={l.cidade ?? ''} placeholder="São Paulo - SP" onChange={campo('cidade')} />

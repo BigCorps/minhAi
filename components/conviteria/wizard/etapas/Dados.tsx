@@ -66,7 +66,7 @@ export default function Dados({ estado, despachar, modo, aoEnviarArquivo }: Prop
       <Campo rotulo={rotulos.anfitrioes} dica="É o texto grande em destaque.">
         <Texto
           valor={cfg.anfitrioes.exibicao}
-          placeholder="Miriam e Ithiel"
+          placeholder="Maria & João"
           onChange={(v) => {
             despachar({ tipo: 'campo', caminho: 'anfitrioes.exibicao', valor: v });
             // Monograma acompanha o nome enquanto o usuario nao editar a mao.
@@ -316,7 +316,7 @@ export default function Dados({ estado, despachar, modo, aoEnviarArquivo }: Prop
       <Campo rotulo="Assinatura no rodapé" dica="Opcional. Nomes completos.">
         <Texto
           valor={cfg.anfitrioes.completo ?? ''}
-          placeholder="Miriam Martins & Ithiel Almeida"
+          placeholder="Maria da Silva & João Souza"
           onChange={(v) => despachar({ tipo: 'campo', caminho: 'anfitrioes.completo', valor: v })}
         />
       </Campo>

@@ -1,16 +1,30 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Copy, Check, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { useTurnstile } from '@/hooks/useTurnstile';
+import {
+  AlertCircle, Check, CheckCircle2, Copy, Gift, LayoutGrid,
+  List, Loader2, Plus, ShoppingBag, X,
+} from 'lucide-react';
 import { tokensDoConvite } from '@/lib/conviteria/tokens';
 import type { PresenteExibicao } from '@/lib/conviteria/tipos';
+import './presentes-checkout.css';
 
 const brl = (centavos: number) =>
-  (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  (centavos / 100).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
 
-type Passo = 'lista' | 'dados' | 'gerando' | 'pix' | 'pago';
+type Passo = 'escolha' | 'dados' | 'gerando' | 'pix' | 'pago';
+type Modo = 'grid' | 'lista';
+
+type Selecionado = {
+  presente: PresenteExibicao;
+  valorLivre: string;
+};
+
+function centavosLivre(v: string) {
+  const n = Number(v.replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(n) ? Math.round(n * 100) : 0;
+}
 
 export default function ModalPresentes({
   eventoId, presentes, temaId, fonteId, aoFechar,
@@ -22,18 +36,24 @@ export default function ModalPresentes({
   aoFechar: () => void;
 }) {
   const [montado, setMontado] = useState(false);
-  const [passo, setPasso] = useState<Passo>('lista');
-  const [escolhido, setEscolhido] = useState<PresenteExibicao | null>(null);
+  const [passo, setPasso] = useState<Passo>('escolha');
+  const [modo, setModo] = useState<Modo>('grid');
+  const [selecionados, setSelecionados] = useState<Record<string, Selecionado>>({});
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
   const [nome, setNome] = useState('');
   const [mensagem, setMensagem] = useState('');
-  const [valorLivre, setValorLivre] = useState('');
-  const [pix, setPix] = useState<{
-    pagamentoId: string; valorCentavos: number; qrcode?: string; copiaECola?: string
-  } | null>(null);
+  const [verificando, setVerificando] = useState(false);
 
-  const { getToken, containerRef } = useTurnstile();
+  const [pix, setPix] = useState<{
+    checkoutId: string;
+    transactionId: string;
+    quantidade: number;
+    valorCentavos: number;
+    qrcode?: string;
+    copiaECola?: string;
+    expiresAt?: string | null;
+  } | null>(null);
 
   useEffect(() => {
     setMontado(true);
@@ -47,23 +67,45 @@ export default function ModalPresentes({
     };
   }, [aoFechar]);
 
-  if (!montado) return null;
+  const listaSelecionados = useMemo(() => Object.values(selecionados), [selecionados]);
 
-  function escolher(p: PresenteExibicao) {
-    setEscolhido(p);
-    setValorLivre('');
+  const total = useMemo(() =>
+    listaSelecionados.reduce((s, item) =>
+      s + (item.presente.valorCentavos > 0
+        ? item.presente.valorCentavos
+        : centavosLivre(item.valorLivre)), 0
+    ), [listaSelecionados]);
+
+  const valoresLivresValidos = listaSelecionados.every((item) =>
+    item.presente.valorCentavos > 0 || centavosLivre(item.valorLivre) >= 500
+  );
+
+  function alternar(p: PresenteExibicao) {
+    if (p.esgotado) return;
     setErro(null);
-    setPasso('dados');
+    setSelecionados((atual) => {
+      if (atual[p.id]) {
+        const prox = { ...atual };
+        delete prox[p.id];
+        return prox;
+      }
+      return {
+        ...atual,
+        [p.id]: { presente:p, valorLivre:'' },
+      };
+    });
+  }
+
+  function mudarLivre(id: string, valor: string) {
+    setSelecionados((atual) => ({
+      ...atual,
+      [id]: { ...atual[id], valorLivre:valor.replace(/[^\d,.]/g, '') },
+    }));
   }
 
   async function gerar() {
-    if (!escolhido) return;
-    const centavos = escolhido.valorCentavos > 0
-      ? escolhido.valorCentavos
-      : Math.round(parseFloat(valorLivre.replace(',', '.')) * 100);
-
-    if (!Number.isFinite(centavos) || centavos < 500) {
-      setErro('Informe um valor de pelo menos R$ 5,00.');
+    if (listaSelecionados.length === 0 || !valoresLivresValidos) {
+      setErro('Escolha seus presentes e confira os valores.');
       return;
     }
 
@@ -71,43 +113,90 @@ export default function ModalPresentes({
     setErro(null);
 
     try {
-      const turnstile = await getToken();
       const r = await fetch('/api/conviteria/presente', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({
           eventoId,
-          presenteId: escolhido.id,
-          valorCentavos: escolhido.valorCentavos > 0 ? undefined : centavos,
-          pagadorNome: nome.trim() || undefined,
-          mensagem: mensagem.trim() || undefined,
-          turnstile,
+          itens:listaSelecionados.map(({ presente, valorLivre }) => ({
+            presenteId:presente.id,
+            valorCentavos:presente.valorCentavos > 0
+              ? undefined
+              : centavosLivre(valorLivre),
+          })),
+          pagadorNome:nome.trim() || undefined,
+          mensagem:mensagem.trim() || undefined,
         }),
       });
+
       const d = await r.json().catch(() => null);
       if (!r.ok) {
         setErro(d?.erro ?? 'Não foi possível gerar o PIX.');
         setPasso('dados');
         return;
       }
+
       setPix(d);
       setPasso('pix');
     } catch {
-      setErro('Falha de conexão. Tente de novo.');
+      setErro('Falha de conexão. Tente novamente.');
       setPasso('dados');
     }
   }
+
+  async function verificar() {
+    if (!pix?.checkoutId || verificando) return false;
+    setVerificando(true);
+    try {
+      const r = await fetch('/api/conviteria/presente/status', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ checkoutId:pix.checkoutId }),
+      });
+      const d = await r.json().catch(() => null);
+      if (r.ok && d?.pago) {
+        setPasso('pago');
+        return true;
+      }
+      return false;
+    } finally {
+      setVerificando(false);
+    }
+  }
+
+  // Igual ao checkout minhAi: enquanto o QR está aberto, consulta confirmação.
+  useEffect(() => {
+    if (passo !== 'pix' || !pix?.checkoutId) return;
+
+    let encerrado = false;
+    const atraso = window.setTimeout(() => {
+      if (!encerrado) void verificar();
+    }, 7000);
+
+    const id = window.setInterval(() => {
+      if (!encerrado) void verificar();
+    }, 5000);
+
+    return () => {
+      encerrado = true;
+      window.clearTimeout(atraso);
+      window.clearInterval(id);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [passo, pix?.checkoutId]);
 
   async function copiar() {
     if (!pix?.copiaECola) return;
     try {
       await navigator.clipboard.writeText(pix.copiaECola);
       setCopiado(true);
-      setTimeout(() => setCopiado(false), 2000);
+      setTimeout(() => setCopiado(false), 1800);
     } catch {
       setErro('Não foi possível copiar. Use o QR Code.');
     }
   }
+
+  if (!montado) return null;
 
   const modal = (
     <div
@@ -121,8 +210,8 @@ export default function ModalPresentes({
       <div className="cv-modal" onMouseDown={(e) => e.stopPropagation()}>
         <header className="cv-modal-topo">
           <h2>
-            {passo === 'lista' && 'Lista de presentes'}
-            {passo === 'dados' && escolhido?.titulo}
+            {passo === 'escolha' && 'Lista de presentes'}
+            {passo === 'dados' && 'Seu presente'}
             {(passo === 'gerando' || passo === 'pix') && 'Pagamento'}
             {passo === 'pago' && 'Obrigado!'}
           </h2>
@@ -138,55 +227,146 @@ export default function ModalPresentes({
             </p>
           )}
 
-          {passo === 'lista' && (
-            <ul className="cv-modal-lista">
-              {presentes.map((p) => (
-                <li key={p.id}>
-                  <button type="button" disabled={p.esgotado}
-                    onClick={() => escolher(p)} className="cv-modal-item">
-                    {p.imagemUrl && <img src={p.imagemUrl} alt="" loading="lazy" />}
-                    <span className="cv-modal-item-txt">
-                      <strong>{p.titulo}</strong>
-                      <small>
-                        {p.esgotado ? 'Já presenteado'
-                          : p.valorCentavos > 0 ? brl(p.valorCentavos) : 'Você escolhe o valor'}
-                      </small>
-                    </span>
+          {passo === 'escolha' && (
+            <>
+              <div className="cv-presentes-toolbar">
+                <span className="cv-presentes-toolbar-info">
+                  Escolha um ou mais presentes
+                </span>
+                <div className="cv-presentes-modos" aria-label="Modo de visualização">
+                  <button type="button" className={modo === 'grid' ? 'sel' : ''}
+                    onClick={() => setModo('grid')} aria-label="Ver em grade">
+                    <LayoutGrid className="w-4 h-4" />
                   </button>
-                </li>
-              ))}
-            </ul>
-          )}
+                  <button type="button" className={modo === 'lista' ? 'sel' : ''}
+                    onClick={() => setModo('lista')} aria-label="Ver em lista">
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
 
-          {passo === 'dados' && escolhido && (
-            <div className="cv-modal-form">
-              {escolhido.valorCentavos > 0 ? (
-                <p className="cv-modal-valor">{brl(escolhido.valorCentavos)}</p>
+              {modo === 'grid' ? (
+                <ul className="cv-presentes-grade">
+                  {presentes.map((p) => {
+                    const sel = selecionados[p.id];
+                    return (
+                      <li key={p.id}
+                        className={`cv-presente-card${sel ? ' sel' : ''}${p.esgotado ? ' esgotado' : ''}`}>
+                        {sel && <span className="cv-presente-check"><Check className="w-3.5 h-3.5" /></span>}
+                        <button type="button" className="cv-presente-card-main"
+                          disabled={p.esgotado} onClick={() => alternar(p)}>
+                          {p.imagemUrl
+                            ? <img className="cv-presente-card-img" src={p.imagemUrl} alt="" loading="lazy" />
+                            : <span className="cv-presente-card-sem-img"><Gift className="w-7 h-7" /></span>}
+                          <span className="cv-presente-card-txt">
+                            <strong>{p.titulo}</strong>
+                            <small>
+                              {p.esgotado ? 'Já presenteado'
+                                : p.valorCentavos > 0 ? brl(p.valorCentavos) : 'Você escolhe o valor'}
+                            </small>
+                          </span>
+                        </button>
+                        {sel && p.valorCentavos <= 0 && (
+                          <div className="cv-presente-livre">
+                            <input
+                              type="text" inputMode="decimal"
+                              placeholder="Valor (R$)"
+                              value={sel.valorLivre}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => mudarLivre(p.id, e.target.value)}
+                            />
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
               ) : (
-                <label>Valor do presente
-                  <input type="text" inputMode="decimal" placeholder="0,00"
-                    value={valorLivre}
-                    onChange={(e) => setValorLivre(e.target.value.replace(/[^\d,]/g, ''))} />
-                </label>
+                <ul className="cv-presentes-lista-nova">
+                  {presentes.map((p) => {
+                    const sel = selecionados[p.id];
+                    return (
+                      <li key={p.id} className={`cv-presente-linha${sel ? ' sel' : ''}`}>
+                        {p.imagemUrl
+                          ? <img src={p.imagemUrl} alt="" loading="lazy" />
+                          : <span className="cv-presente-linha-foto" />}
+                        <div className="cv-presente-linha-info">
+                          <strong>{p.titulo}</strong>
+                          <small>
+                            {p.esgotado ? 'Já presenteado'
+                              : p.valorCentavos > 0 ? brl(p.valorCentavos) : 'Você escolhe o valor'}
+                          </small>
+                          {sel && p.valorCentavos <= 0 && (
+                            <div className="cv-presente-livre" style={{ margin:'.45rem 0 0' }}>
+                              <input type="text" inputMode="decimal"
+                                placeholder="Valor (R$)" value={sel.valorLivre}
+                                onChange={(e) => mudarLivre(p.id, e.target.value)} />
+                            </div>
+                          )}
+                        </div>
+                        <button type="button" disabled={p.esgotado}
+                          className="cv-presente-toggle"
+                          onClick={() => alternar(p)}
+                          aria-label={sel ? 'Remover presente' : 'Adicionar presente'}>
+                          {sel ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
 
-              <label>Seu nome <span>(opcional)</span>
+              <div className="cv-carrinho-resumo">
+                <div className="cv-carrinho-resumo-topo">
+                  <span>
+                    <ShoppingBag className="inline w-4 h-4 mr-1" />
+                    {listaSelecionados.length} {listaSelecionados.length === 1 ? 'presente' : 'presentes'}
+                  </span>
+                  <strong>{brl(total)}</strong>
+                </div>
+                <button type="button" className="cv-botao"
+                  disabled={listaSelecionados.length === 0 || !valoresLivresValidos}
+                  onClick={() => { setErro(null); setPasso('dados'); }}>
+                  Continuar
+                </button>
+              </div>
+            </>
+          )}
+
+          {passo === 'dados' && (
+            <div className="cv-modal-form">
+              <ul className="cv-checkout-itens">
+                {listaSelecionados.map(({ presente, valorLivre }) => (
+                  <li key={presente.id}>
+                    <span>{presente.titulo}</span>
+                    <strong>
+                      {brl(presente.valorCentavos > 0
+                        ? presente.valorCentavos
+                        : centavosLivre(valorLivre))}
+                    </strong>
+                  </li>
+                ))}
+              </ul>
+
+              <p className="cv-modal-valor">{brl(total)}</p>
+
+              <label>
+                Seu nome <span>(opcional)</span>
                 <input type="text" maxLength={80} value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  placeholder="Para os noivos saberem quem foi" />
+                  placeholder="Ex.: Ana Silva" />
               </label>
 
-              <label>Recado <span>(opcional)</span>
+              <label>
+                Recado <span>(opcional)</span>
                 <textarea maxLength={400} rows={3} value={mensagem}
                   onChange={(e) => setMensagem(e.target.value)}
                   placeholder="Uma mensagem para o casal" />
               </label>
 
-              <div ref={containerRef} className="cv-turnstile" />
-
               <div className="cv-modal-acoes">
                 <button type="button" className="cv-botao cv-botao-fantasma"
-                  onClick={() => setPasso('lista')}>Voltar</button>
+                  onClick={() => setPasso('escolha')}>Voltar</button>
                 <button type="button" className="cv-botao" onClick={gerar}>Gerar PIX</button>
               </div>
             </div>
@@ -194,33 +374,50 @@ export default function ModalPresentes({
 
           {passo === 'gerando' && (
             <div className="cv-modal-centro">
-              <Loader2 className="w-8 h-8 animate-spin" /><p>Gerando o PIX…</p>
+              <Loader2 className="w-8 h-8 animate-spin" />
+              <p>Gerando o PIX…</p>
             </div>
           )}
 
           {passo === 'pix' && pix && (
             <div className="cv-modal-centro">
               <p className="cv-modal-valor">{brl(pix.valorCentavos)}</p>
-              {pix.qrcode && <img src={pix.qrcode} alt="QR Code do PIX" className="cv-modal-qr" />}
-              <p className="cv-modal-dica">Escaneie no app do seu banco.</p>
+
+              {pix.qrcode && (
+                <img src={pix.qrcode} alt="QR Code do PIX" className="cv-modal-qr" />
+              )}
+
+              <p className="cv-modal-dica">
+                Um único PIX para {pix.quantidade} {pix.quantidade === 1 ? 'presente' : 'presentes'}.
+              </p>
+
               {pix.copiaECola && (
                 <button type="button" className="cv-botao cv-botao-fantasma" onClick={copiar}>
                   {copiado ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   {copiado ? 'Código copiado!' : 'Copiar código PIX'}
                 </button>
               )}
-              <button type="button" className="cv-botao" onClick={() => setPasso('pago')}>
-                Concluir
+
+              <button type="button" className="cv-botao" onClick={() => void verificar()}
+                disabled={verificando}>
+                {verificando
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Verificando…</>
+                  : 'Já paguei — verificar'}
               </button>
+
+              <p className="cv-pix-status">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                A confirmação também acontece automaticamente.
+              </p>
             </div>
           )}
 
           {passo === 'pago' && (
             <div className="cv-modal-centro">
               <CheckCircle2 className="w-12 h-12" />
-              <p className="cv-modal-valor">Obrigado!</p>
+              <p className="cv-modal-valor">Presentes confirmados!</p>
               <p className="cv-modal-dica">
-                Assim que o pagamento cair, o presente será registrado para o casal.
+                Obrigado. O valor foi registrado para os anfitriões e as cotas foram atualizadas.
               </p>
               <button type="button" className="cv-botao" onClick={aoFechar}>
                 Voltar ao convite

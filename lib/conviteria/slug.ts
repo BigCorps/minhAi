@@ -10,7 +10,7 @@ export function normalizarSlug(entrada: string): string {
     .slice(0, 30);
 }
 
-/** Sugere a partir dos nomes: "Miriam e Ithiel" -> "miriam-e-ithiel". */
+/** Sugere a partir dos nomes: "Maria & João" -> "miriam-e-ithiel". */
 export function sugerirSlug(nomes: string): string {
   return normalizarSlug(nomes);
 }

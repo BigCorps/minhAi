@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertCircle, Check, CheckCircle2, Copy, Gift, LayoutGrid,
   List, Loader2, Plus, ShoppingBag, X,
 } from 'lucide-react';
 import { tokensDoConvite } from '@/lib/conviteria/tokens';
+import { calcularTaxa } from '@/lib/conviteria/precos';
 import type { PresenteExibicao } from '@/lib/conviteria/tipos';
 import './presentes-checkout.css';
 
@@ -43,7 +44,8 @@ export default function ModalPresentes({
   const [copiado, setCopiado] = useState(false);
   const [nome, setNome] = useState('');
   const [mensagem, setMensagem] = useState('');
-  const [verificando, setVerificando] = useState(false);
+  const [verificandoManual, setVerificandoManual] = useState(false);
+  const verificandoRef = useRef(false);
 
   const [pix, setPix] = useState<{
     checkoutId: string;
@@ -75,6 +77,18 @@ export default function ModalPresentes({
         ? item.presente.valorCentavos
         : centavosLivre(item.valorLivre)), 0
     ), [listaSelecionados]);
+
+  const taxaTotal = useMemo(
+    () => listaSelecionados.reduce((s, item) => {
+      const valor = item.presente.valorCentavos > 0
+        ? item.presente.valorCentavos
+        : centavosLivre(item.valorLivre);
+      return s + (valor > 0 ? calcularTaxa(valor).taxa : 0);
+    }, 0),
+    [listaSelecionados]
+  );
+
+  const liquidoTotal = Math.max(0, total - taxaTotal);
 
   const valoresLivresValidos = listaSelecionados.every((item) =>
     item.presente.valorCentavos > 0 || centavosLivre(item.valorLivre) >= 500
@@ -144,9 +158,10 @@ export default function ModalPresentes({
     }
   }
 
-  async function verificar() {
-    if (!pix?.checkoutId || verificando) return false;
-    setVerificando(true);
+  async function verificar(silencioso = false) {
+    if (!pix?.checkoutId || verificandoRef.current) return false;
+    verificandoRef.current = true;
+    if (!silencioso) setVerificandoManual(true);
     try {
       const r = await fetch('/api/conviteria/presente/status', {
         method:'POST',
@@ -160,7 +175,8 @@ export default function ModalPresentes({
       }
       return false;
     } finally {
-      setVerificando(false);
+      verificandoRef.current = false;
+      if (!silencioso) setVerificandoManual(false);
     }
   }
 
@@ -170,11 +186,11 @@ export default function ModalPresentes({
 
     let encerrado = false;
     const atraso = window.setTimeout(() => {
-      if (!encerrado) void verificar();
+      if (!encerrado) void verificar(true);
     }, 7000);
 
     const id = window.setInterval(() => {
-      if (!encerrado) void verificar();
+      if (!encerrado) void verificar(true);
     }, 5000);
 
     return () => {
@@ -317,6 +333,9 @@ export default function ModalPresentes({
               )}
 
               <div className="cv-carrinho-resumo">
+                <p className="cv-taxa-aviso">
+                  Taxa de serviço de 1% descontada do valor repassado aos anfitriões.
+                </p>
                 <div className="cv-carrinho-resumo-topo">
                   <span>
                     <ShoppingBag className="inline w-4 h-4 mr-1" />
@@ -349,6 +368,18 @@ export default function ModalPresentes({
               </ul>
 
               <p className="cv-modal-valor">{brl(total)}</p>
+
+              <div className="cv-taxa-resumo">
+                <span>
+                  <span>Taxa de serviço (1%)</span>
+                  <strong>- {brl(taxaTotal)}</strong>
+                </span>
+                <small>Descontada do repasse, não adicionada ao seu PIX.</small>
+                <span className="liquido">
+                  <span>Líquido aos anfitriões</span>
+                  <strong>{brl(liquidoTotal)}</strong>
+                </span>
+              </div>
 
               <label>
                 Seu nome <span>(opcional)</span>
@@ -392,22 +423,25 @@ export default function ModalPresentes({
               </p>
 
               {pix.copiaECola && (
-                <button type="button" className="cv-botao cv-botao-fantasma" onClick={copiar}>
+                <button type="button" className="cv-botao cv-botao-fantasma cv-botao-icone" onClick={copiar}>
                   {copiado ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   {copiado ? 'Código copiado!' : 'Copiar código PIX'}
                 </button>
               )}
 
-              <button type="button" className="cv-botao" onClick={() => void verificar()}
-                disabled={verificando}>
-                {verificando
+              <button
+                type="button"
+                className="cv-botao cv-botao-icone"
+                onClick={() => void verificar(false)}
+                disabled={verificandoManual}
+              >
+                {verificandoManual
                   ? <><Loader2 className="w-4 h-4 animate-spin" /> Verificando…</>
                   : 'Já paguei — verificar'}
               </button>
 
-              <p className="cv-pix-status">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                A confirmação também acontece automaticamente.
+              <p className="cv-pix-status cv-pix-status-estatico">
+                A confirmação acontece automaticamente em segundo plano.
               </p>
             </div>
           )}

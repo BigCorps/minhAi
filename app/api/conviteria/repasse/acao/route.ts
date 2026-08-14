@@ -28,6 +28,12 @@ export async function GET(req: NextRequest) {
   });
 
   if (error) {
+    console.error('ConviteIA — falha em processar_acao_repasse', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
     const m = error.message || '';
     if (m.includes('token_usado') || m.includes('repasse_finalizado'))
       return pagina('Ação já registrada', 'Este repasse já foi processado. Nenhuma nova alteração foi feita.');

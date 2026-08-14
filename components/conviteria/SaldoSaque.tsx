@@ -106,7 +106,7 @@ export default function SaldoSaque({ eventoId }: { eventoId: string }) {
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl border bg-white p-4" style={{ borderColor: '#c0607828' }}>
-                  <p className="text-xs" style={{ color: '#7c5560' }}>Disponível</p>
+                  <p className="text-xs" style={{ color: '#7c5560' }}>Disponível para saque (líquido)</p>
                   <p className="mt-1 text-lg font-semibold" style={{ color: '#40232c' }}>
                     {brlSaque(dados.saldo.disponivelCentavos)}
                   </p>
@@ -123,6 +123,10 @@ export default function SaldoSaque({ eventoId }: { eventoId: string }) {
                 className="my-4 rounded-xl px-4 py-3 text-xs leading-5"
                 style={{ backgroundColor: '#fdf0f3', color: '#7c5560' }}
               >
+                <strong style={{ color: '#40232c' }}>Taxa dos presentes: 1%.</strong>{' '}
+                O ConviteIA desconta a taxa antes de creditar o saldo, então o valor
+                disponível acima já é líquido.
+                <br />
                 Saque mínimo: <strong style={{ color: '#40232c' }}>
                   {brlSaque(dados.saqueMinimoCentavos)}
                 </strong>. O repasse será realizado via PIX em até 24 horas.

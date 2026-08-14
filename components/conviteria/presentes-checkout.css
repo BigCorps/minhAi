@@ -185,3 +185,58 @@
 @media (max-width:380px){
   .cv-presentes-grade { grid-template-columns:1fr; }
 }
+
+
+/* ConviteIA E2E: alinhamento + taxa de presentes */
+.cv-botao-icone {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+}
+.cv-botao-icone svg {
+  flex: 0 0 auto;
+  display: block;
+}
+.cv-taxa-aviso {
+  margin: 0 0 .65rem;
+  font-size: .7rem;
+  line-height: 1.45;
+  color: var(--cv-tinta-suave);
+  text-align: left;
+}
+.cv-taxa-resumo {
+  width: 100%;
+  margin: -.15rem 0 1rem;
+  padding: .75rem .85rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--cv-acento) 22%, transparent);
+  background: color-mix(in srgb, var(--cv-papel) 94%, var(--cv-acento) 6%);
+}
+.cv-taxa-resumo > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: .75rem;
+  color: var(--cv-tinta-suave);
+}
+.cv-taxa-resumo > span strong {
+  color: var(--cv-tinta);
+  white-space: nowrap;
+}
+.cv-taxa-resumo > small {
+  display: block;
+  margin: .3rem 0 .55rem;
+  font-size: .66rem;
+  line-height: 1.4;
+  color: var(--cv-tinta-suave);
+}
+.cv-taxa-resumo > span.liquido {
+  padding-top: .55rem;
+  border-top: 1px solid color-mix(in srgb, var(--cv-acento) 18%, transparent);
+  color: var(--cv-tinta);
+  font-weight: 600;
+}
+.cv-pix-status-estatico {
+  min-height: 1.1rem;
+}

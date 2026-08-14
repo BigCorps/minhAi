@@ -19,6 +19,7 @@ import RodapeMarca from '@/components/conviteria/RodapeMarca';
 import SaldoSaque from '@/components/conviteria/SaldoSaque';
 import PlanoMensalCard from '@/components/conviteria/PlanoMensalCard';
 import RecadosPainel from '@/components/conviteria/RecadosPainel';
+import PresencasPainel from '@/components/conviteria/PresencasPainel';
 
 const cor = {
   fora: '#ffffff',
@@ -241,6 +242,7 @@ export default function PainelPage() {
                   <div className="mt-3 pt-3 border-t" style={{ borderColor: cor.acento + '22' }}>
                     <AcoesConvite url={c.url} slug={c.slug} />
                   </div>
+                  <PresencasPainel eventoId={c.id} />
                   <SaldoSaque eventoId={c.id} />
                   <RecadosPainel eventoId={c.id} />
                 </>

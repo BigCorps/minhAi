@@ -20,6 +20,7 @@ import Contagem from './secoes/Contagem';
 import Calendario from './secoes/Calendario';
 import Local from './secoes/Local';
 import Acao from './secoes/Acao';
+import RSVP from './secoes/RSVP';
 import Recados from './secoes/Recados';
 import Presentes from './secoes/Presentes';
 import Padrinhos from './secoes/Padrinhos';
@@ -40,7 +41,7 @@ const MAPA: Record<string, ComponentType<PropsSecao>> = {
   contagem: Contagem,
   calendario: Calendario,
   local: Local,
-  rsvp: Acao,
+  rsvp: RSVP,
   recados: Recados,
   presentes: Presentes,
   padrinhos: Padrinhos,

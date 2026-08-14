@@ -86,7 +86,7 @@ export default function SaldoSaque({ eventoId }: { eventoId: string }) {
       <button
         type="button"
         onClick={() => setAberto(v => !v)}
-        className="inline-flex items-center gap-2 rounded-full px-1 py-1 text-sm font-medium"
+        className="inline-flex items-center gap-2 text-sm font-medium"
         style={{ color: '#a04a63' }}
       >
         <Banknote className="h-4 w-4" />

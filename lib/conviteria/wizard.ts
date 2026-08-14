@@ -67,6 +67,7 @@ export const ETAPAS: Etapa[] = [
   { id: 'local',   titulo: 'Local',          foco: 'local' },
   { id: 'fonte',   titulo: 'Fontes',         foco: 'nomes' },
   { id: 'midia',   titulo: 'Foto e música',  foco: 'foto' },
+  { id: 'logo',    titulo: 'Logo e selo',    foco: 'marca' },
   { id: 'secoes',  titulo: 'Seções',         foco: 'rsvp' },
   { id: 'presentes', titulo: 'Presentes',    foco: 'presentes' },
   { id: 'revisao',  titulo: 'Revisão' },

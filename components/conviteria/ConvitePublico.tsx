@@ -51,6 +51,7 @@ export default function ConvitePublico({ cfg, eventoId }: { cfg: ConviteConfig; 
           iniciais={cfg.anfitrioes?.iniciais}
           logoLacreUrl={cfg.logoLacreUrl}
           lacreAjuste={cfg.lacreAjuste}
+          logoLacreAjuste={cfg.logoLacreAjuste}
           envelopeId={cfg.envelopeId}
           ornamentoId={cfg.ornamentoId}
           aoAbrir={abrir}

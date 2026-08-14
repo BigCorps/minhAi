@@ -30,6 +30,16 @@ export interface AjusteLacre {
   y?: number;
 }
 
+export interface AjusteLogoLacre {
+  /** Porcentagem da caixa do lacre. */
+  escala?: number;
+  /** Deslocamento em porcentagem do tamanho total do lacre. */
+  x?: number;
+  y?: number;
+  /** Graus. */
+  rotacao?: number;
+}
+
 export const LACRES = [
   { id: 'nenhum', nome: 'Sem carimbo' },
   { id: 'liso', nome: 'Liso' },
@@ -70,6 +80,7 @@ export default function LacreArte({
   logoUrl,
   tamanho = 116,
   ajuste,
+  logoAjuste,
 }: {
   lacreId?: string;
   lacreCor?: string;
@@ -77,16 +88,39 @@ export default function LacreArte({
   logoUrl?: string | null;
   tamanho?: number;
   ajuste?: AjusteLacre;
+  logoAjuste?: AjusteLogoLacre;
 }) {
   const semCera = lacreId === 'nenhum';
-  const escala = (ajuste?.escala ?? 34) / 100;
-  const dx = ajuste?.x ?? 0;
-  const dy = ajuste?.y ?? 0;
-  const escalaLogo = semCera ? Math.min(.82, escala * 1.8) : escala;
+
+  const escalaMonograma = (ajuste?.escala ?? 34) / 100;
+  const dxMonograma = ajuste?.x ?? 0;
+  const dyMonograma = ajuste?.y ?? 0;
+
+  // Configs antigos de logo usavam lacreAjuste. O fallback preserva a aparência
+  // de convites já criados, enquanto os novos passam a ter ajuste independente.
+  const escalaLogoPct =
+    logoAjuste?.escala ??
+    (logoUrl ? ajuste?.escala : undefined) ??
+    (semCera ? 62 : 38);
+
+  const dxLogo =
+    logoAjuste?.x ??
+    (logoUrl ? ajuste?.x : undefined) ??
+    0;
+
+  const dyLogo =
+    logoAjuste?.y ??
+    (logoUrl ? ajuste?.y : undefined) ??
+    0;
+
+  const rotacaoLogo = logoAjuste?.rotacao ?? 0;
+  const escalaLogo = Math.max(0.12, Math.min(1.05, escalaLogoPct / 100));
 
   return (
-    <div className={`cv-lacre${semCera ? ' cv-lacre-sem-cera' : ''}`}
-      style={{ width: tamanho, height: tamanho }}>
+    <div
+      className={`cv-lacre${semCera ? ' cv-lacre-sem-cera' : ''}`}
+      style={{ width: tamanho, height: tamanho }}
+    >
       {!semCera && (
         <Image
           src={urlLacre(lacreId)}
@@ -106,11 +140,14 @@ export default function LacreArte({
           className="cv-lacre-logo"
           style={{
             width: tamanho * escalaLogo,
-            maxHeight: semCera ? '82%' : '46%',
+            maxHeight: semCera ? '100%' : '88%',
             filter: semCera
               ? 'drop-shadow(0 4px 8px rgba(0,0,0,.18))'
               : undefined,
-            transform: `translate(${(dx / 100) * tamanho}px, ${(dy / 100) * tamanho}px)`,
+            transform: [
+              `translate(${(dxLogo / 100) * tamanho}px, ${(dyLogo / 100) * tamanho}px)`,
+              `rotate(${rotacaoLogo}deg)`,
+            ].join(' '),
           }}
         />
       ) : (
@@ -118,9 +155,9 @@ export default function LacreArte({
           <span
             className="cv-lacre-iniciais"
             style={{
-              fontSize: tamanho * escala,
+              fontSize: tamanho * escalaMonograma,
               fontFamily: familiaLacre(ajuste?.fonte),
-              transform: `translate(${(dx / 100) * tamanho}px, ${(dy / 100) * tamanho}px)`,
+              transform: `translate(${(dxMonograma / 100) * tamanho}px, ${(dyMonograma / 100) * tamanho}px)`,
             }}
             aria-label={`Lacre com as iniciais ${iniciais}`}
           >

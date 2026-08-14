@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Check, Loader2, MessageCircle, Trash2 } from 'lucide-react';
+import { Check, Loader2, MessageSquareText, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
 type Recado = {
@@ -66,7 +66,7 @@ export default function RecadosPainel({ eventoId }: { eventoId: string }) {
       <button type="button" onClick={() => setAberto(v => !v)}
         className="inline-flex items-center gap-2 text-sm font-medium"
         style={{ color:'#a04a63' }}>
-        <MessageCircle className="h-4 w-4" />
+        <MessageSquareText className="h-4 w-4" />
         Recados
         {pendentes > 0 && (
           <span className="grid min-w-5 place-items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white"

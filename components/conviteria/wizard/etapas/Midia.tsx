@@ -70,33 +70,6 @@ export default function Midia({ estado, despachar, aoEnviarArquivo }: PropsEtapa
       )}
 
 
-      <Campo rotulo="Logo do evento" dica="Opcional. PNG, WebP ou SVG. Até 1 MB.">
-        <input
-          type="file"
-          accept="image/png,image/webp,image/svg+xml"
-          className="wz-input wz-arquivo"
-          onChange={async (e) => {
-            const f = e.target.files?.[0];
-            if (!f || !aoEnviarArquivo) return;
-            const url = await aoEnviarArquivo('logo', f);
-            despachar({ tipo: 'campo', caminho: 'midia.logoEventoUrl', valor: url });
-
-            if (!estado.cfg.secoes.some((s) => s.tipo === 'marca')) {
-              const nomes = estado.cfg.secoes.find((s) => s.tipo === 'nomes');
-              const ordem = nomes ? nomes.ordem + 1 : 25;
-              despachar({
-                tipo: 'campo',
-                caminho: 'secoes',
-                valor: [...estado.cfg.secoes, { tipo: 'marca' as const, ordem, ativo: true }],
-              });
-            }
-          }}
-        />
-      </Campo>
-      {estado.cfg.midia?.logoEventoUrl && (
-        <p className="wz-ok">Logo carregado. Você pode ligar, desligar e ordenar em “Seções”.</p>
-      )}
-
       <fieldset className="wz-grupo">
         <legend>Música</legend>
         <div className="wz-opcoes">

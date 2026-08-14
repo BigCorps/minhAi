@@ -1,0 +1,117 @@
+.wz-logo-identidade {
+  display: grid;
+  gap: .8rem;
+}
+
+.wz-logo-identidade-preview {
+  min-height: 110px;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  border: 1px solid rgba(192,96,120,.22);
+  border-radius: 14px;
+  background:
+    linear-gradient(45deg, #f8f8f8 25%, transparent 25%),
+    linear-gradient(-45deg, #f8f8f8 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f8f8f8 75%),
+    linear-gradient(-45deg, transparent 75%, #f8f8f8 75%),
+    #fff;
+  background-size: 18px 18px;
+  background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+}
+
+.wz-logo-identidade-preview img {
+  display: block;
+  max-width: 82%;
+  max-height: 100px;
+  object-fit: contain;
+}
+
+.wz-logo-identidade-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+}
+
+.wz-logo-identidade-acoes label {
+  cursor: pointer;
+}
+
+.wz-logo-usos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: .55rem;
+  margin-top: .9rem;
+}
+
+.wz-logo-usos .wz-opcao {
+  min-height: 46px;
+}
+
+.wz-logo-lacre-previa {
+  display: grid;
+  place-items: center;
+  min-height: 188px;
+  margin-bottom: .75rem;
+  overflow: visible;
+}
+
+.wz-logo-reset {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  margin-top: .7rem;
+}
+
+.wz-logo-convite-previa {
+  display: grid;
+  place-items: center;
+  min-height: 118px;
+  margin-bottom: .8rem;
+  padding: 1rem;
+  border: 1px solid rgba(192,96,120,.18);
+  border-radius: 14px;
+  background: #fff9fb;
+}
+
+.wz-logo-convite-previa img {
+  display: block;
+  max-width: 80%;
+  max-height: 92px;
+  object-fit: contain;
+}
+
+.wz-logo-alinhamentos {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: .5rem;
+  margin-top: .75rem;
+}
+
+.wz-logo-alinhamentos button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  min-height: 40px;
+  border: 1px solid rgba(192,96,120,.24);
+  border-radius: 10px;
+  background: #fff;
+  color: #7c5560;
+  font-size: .75rem;
+}
+
+.wz-logo-alinhamentos button.sel {
+  border-color: #c06078;
+  background: #fff4f7;
+  color: #a04a63;
+  box-shadow: 0 0 0 2px rgba(192,96,120,.08);
+}
+
+@media (max-width: 420px) {
+  .wz-logo-usos,
+  .wz-logo-alinhamentos {
+    grid-template-columns: 1fr;
+  }
+}

@@ -20,6 +20,7 @@ import EscolherFonte from './etapas/EscolherFonte';
 import Dados from './etapas/Dados';
 import Local from './etapas/Local';
 import Midia from './etapas/Midia';
+import Logo from './etapas/Logo';
 import Secoes from './etapas/Secoes';
 import Presentes from './etapas/Presentes';
 import Revisao from './etapas/Revisao';
@@ -45,6 +46,7 @@ const ETAPA_COMPONENTE: Record<string, React.ComponentType<PropsEtapa>> = {
   local: Local,
   fonte: EscolherFonte,
   midia: Midia,
+  logo: Logo,
   secoes: Secoes,
   presentes: Presentes,
   revisao: Revisao,
@@ -276,6 +278,7 @@ export default function Wizard({
                 iniciais={estado.cfg.anfitrioes?.iniciais}
                 logoLacreUrl={estado.cfg.logoLacreUrl}
                 lacreAjuste={estado.cfg.lacreAjuste}
+                logoLacreAjuste={estado.cfg.logoLacreAjuste}
                 envelopeId={estado.cfg.envelopeId}
                 ornamentoId={estado.cfg.ornamentoId}
                 aoAbrir={() => undefined}

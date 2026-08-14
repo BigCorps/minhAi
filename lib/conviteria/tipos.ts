@@ -133,6 +133,13 @@ export interface ConviteConfig {
   lacreCor?: string;
   /** Logo do cliente no lugar das iniciais do lacre. */
   logoLacreUrl?: string | null;
+  /** Ajuste independente do logo sobre o lacre/envelope. */
+  logoLacreAjuste?: {
+    escala?: number;
+    x?: number;
+    y?: number;
+    rotacao?: number;
+  };
   /** Fonte e ajuste fino do monograma. Ver AjusteLacre em LacreArte.tsx. */
   lacreAjuste?: {
     fonte?: string;
@@ -154,6 +161,11 @@ export interface ConviteConfig {
     fotoCapa?: string;
     /** Logo independente do lacre, exibido dentro do convite. */
     logoEventoUrl?: string;
+    /** Tamanho e alinhamento do logo dentro da seção Marca. */
+    logoEventoAjuste?: {
+      largura?: number;
+      alinhamento?: 'esquerda' | 'centro' | 'direita';
+    };
     enquadramento?: string;
     galeria?: string[];
     musica?: {

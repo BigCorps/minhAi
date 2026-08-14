@@ -16,6 +16,7 @@ import RendaBackground from '@/components/conviteria/RendaBackground';
 import AcoesConvite from '@/components/conviteria/AcoesConvite';
 import SuporteWhatsapp from '@/components/conviteria/SuporteWhatsapp';
 import RodapeMarca from '@/components/conviteria/RodapeMarca';
+import SaldoSaque from '@/components/conviteria/SaldoSaque';
 
 const cor = {
   fora: '#ffffff',
@@ -230,9 +231,12 @@ export default function PainelPage() {
               {/* Compartilhar so faz sentido depois de publicado: antes disso o
                   link responde 404 e o QR levaria o convidado a lugar nenhum. */}
               {c.publicado && (
-                <div className="mt-3 pt-3 border-t" style={{ borderColor: cor.acento + '22' }}>
-                  <AcoesConvite url={c.url} slug={c.slug} />
-                </div>
+                <>
+                  <div className="mt-3 pt-3 border-t" style={{ borderColor: cor.acento + '22' }}>
+                    <AcoesConvite url={c.url} slug={c.slug} />
+                  </div>
+                  <SaldoSaque eventoId={c.id} />
+                </>
               )}
             </li>
           ))}

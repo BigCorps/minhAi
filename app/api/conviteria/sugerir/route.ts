@@ -1,28 +1,64 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { TEMAS } from '@/lib/conviteria/temas';
+import {
+  TEMAS,
+  catalogoTemasParaIA,
+} from '@/lib/conviteria/temas';
 import { FONTES, fontesDoGrupo } from '@/lib/conviteria/fontes';
 import { acharTipo } from '@/lib/conviteria/tiposEvento';
 import { ipDaRequisicao } from '@/lib/conviteria/servidor';
 
 export const runtime = 'nodejs';
 
-// Limite por IP. IA e o unico ponto do produto com custo por chamada:
-// sem teto, uma aba aberta com script vira conta no fim do mes.
 const limite = new Map<string, { n: number; ate: number }>();
+
 function passou(ip: string) {
   const agora = Date.now();
   const e = limite.get(ip);
-  if (!e || agora > e.ate) { limite.set(ip, { n: 1, ate: agora + 3_600_000 }); return true; }
+
+  if (!e || agora > e.ate) {
+    limite.set(ip, { n: 1, ate: agora + 3_600_000 });
+    return true;
+  }
+
   if (e.n >= 30) return false;
-  e.n++; return true;
+
+  e.n++;
+  return true;
 }
 
 type Pedido =
-  | { tipo: 'frase'; tipoEventoId: string; nomes?: string; contexto?: string }
-  | { tipo: 'convocacao'; tipoEventoId: string; nomes?: string; contexto?: string }
-  | { tipo: 'estilo'; tipoEventoId: string; contexto: string };
+  | {
+      tipo: 'frase';
+      tipoEventoId: string;
+      nomes?: string;
+      contexto?: string;
+    }
+  | {
+      tipo: 'convocacao';
+      tipoEventoId: string;
+      nomes?: string;
+      contexto?: string;
+    }
+  | {
+      tipo: 'estilo';
+      tipoEventoId: string;
+      contexto: string;
+    };
 
-async function chamarModelo(sistema: string, usuario: string, maxTokens: number) {
+const ORNAMENTOS = [
+  'floral',
+  'classico',
+  'geometrico',
+  'minimal',
+  'festivo',
+  'rustico',
+] as const;
+
+async function chamarModelo(
+  sistema: string,
+  usuario: string,
+  maxTokens: number,
+) {
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -32,7 +68,7 @@ async function chamarModelo(sistema: string, usuario: string, maxTokens: number)
     body: JSON.stringify({
       model: 'gpt-4o-mini',
       max_tokens: maxTokens,
-      temperature: 0.8,
+      temperature: 0.6,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: sistema },
@@ -40,25 +76,38 @@ async function chamarModelo(sistema: string, usuario: string, maxTokens: number)
       ],
     }),
   });
+
   if (!r.ok) throw new Error('modelo indisponivel');
-  const j = (await r.json()) as { choices?: Array<{ message?: { content?: string } }> };
-  return JSON.parse(j.choices?.[0]?.message?.content ?? '{}') as Record<string, unknown>;
+
+  const j = (await r.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+
+  return JSON.parse(
+    j.choices?.[0]?.message?.content ?? '{}'
+  ) as Record<string, unknown>;
 }
 
 export async function POST(req: NextRequest) {
   if (!passou(ipDaRequisicao(req))) {
-    return NextResponse.json({ erro: 'Muitas sugestões. Tente daqui a pouco.' }, { status: 429 });
+    return NextResponse.json(
+      { erro: 'Muitas sugestões. Tente daqui a pouco.' },
+      { status: 429 }
+    );
   }
 
   const p = (await req.json().catch(() => null)) as Pedido | null;
+
   if (!p?.tipo || !p.tipoEventoId) {
-    return NextResponse.json({ erro: 'Pedido inválido.' }, { status: 400 });
+    return NextResponse.json(
+      { erro: 'Pedido inválido.' },
+      { status: 400 }
+    );
   }
 
   const tipo = acharTipo(p.tipoEventoId);
 
   try {
-    // -----------------------------------------------------------------------
     if (p.tipo === 'frase') {
       const j = await chamarModelo(
         `Você escreve frases curtas para convites brasileiros. Responda em JSON:
@@ -70,11 +119,14 @@ Use \\n para quebrar a linha em no máximo um ponto.`,
         `Evento: ${tipo.nome}. Nomes: ${p.nomes || 'não informado'}. ${p.contexto ?? ''}`,
         400
       );
-      const opcoes = Array.isArray(j.opcoes) ? j.opcoes.slice(0, 3) : [];
+
+      const opcoes = Array.isArray(j.opcoes)
+        ? j.opcoes.slice(0, 3)
+        : [];
+
       return NextResponse.json({ opcoes });
     }
 
-    // -----------------------------------------------------------------------
     if (p.tipo === 'convocacao') {
       const j = await chamarModelo(
         `Você escreve a linha curta que aparece sob os nomes em um convite.
@@ -84,44 +136,98 @@ Exemplo para casamento: "Convidam para a cerimônia de casamento".`,
         `Evento: ${tipo.nome}. Nomes: ${p.nomes || 'não informado'}. ${p.contexto ?? ''}`,
         200
       );
+
       const opcoes = (Array.isArray(j.opcoes) ? j.opcoes : [])
         .filter((o): o is string => typeof o === 'string')
         .slice(0, 3);
+
       return NextResponse.json({ opcoes });
     }
 
-    // -----------------------------------------------------------------------
-    // Estilo: o modelo escolhe de um catálogo fechado. Nunca inventa cor nem
-    // fonte — só devolve id, e o id é validado abaixo.
     const permitidas = fontesDoGrupo(tipo.grupo);
-    const catalogoTemas = TEMAS.map((t) => `${t.id}: ${t.nome}`).join('; ');
-    const catalogoFontes = (permitidas.length ? permitidas : FONTES)
-      .map((f) => `${f.id}: ${f.nome}`).join('; ');
+
+    const catalogoFontes = (
+      permitidas.length
+        ? permitidas
+        : FONTES
+    )
+      .map((f) => `${f.id}: ${f.nome}`)
+      .join('; ');
+
+    const catalogoOrnamentos = [
+      'floral: romântico, delicado, botânico',
+      'classico: elegante, tradicional, bodas, cerimônia',
+      'geometrico: moderno, masculino, corporativo, urbano',
+      'minimal: clean, sóbrio, adulto, contemporâneo',
+      'festivo: aniversário, 15 anos, infantil, alegre',
+      'rustico: campo, boho, natureza, tropical, aventura',
+    ].join('; ');
 
     const j = await chamarModelo(
-      `Escolha um tema de cor e um par tipográfico para um convite, a partir da
-descrição do usuário. Responda em JSON: {"temaId":"...","fonteId":"...","porque":"..."}
-Use APENAS ids das listas. "porque" em uma frase curta, português do Brasil.
-Temas: ${catalogoTemas}
-Fontes: ${catalogoFontes}`,
+      `Escolha tema de cor, tipografia e estilo visual para um convite brasileiro.
+
+Responda SOMENTE em JSON:
+{"temaId":"...","fonteId":"...","ornamentoId":"...","porque":"..."}
+
+Use apenas ids dos catálogos abaixo.
+Leve em conta primeiro o TIPO DO EVENTO e depois a descrição.
+Não force estética de casamento em aniversário, festa infantil, happy hour ou evento corporativo.
+
+Para aniversários adultos masculinos, considere paletas como Carvão & Cobre,
+Azul Marinho, Preto & Marfim ou Verde Noturno quando combinarem com a descrição.
+Para aniversário infantil, prefira Confete, Candy Pastel, Céu Azul ou Verde Aventura.
+Para Happy Hour, considere Grafite & Âmbar, Tropical, Marinho ou temas escuros.
+Para confraternização empresarial, considere Azul Executivo, Grafite Minimal ou Marinho.
+Para vaquinha, considere Azul Confiança ou Verde Esperança.
+
+"porque" deve ser uma frase curta em português do Brasil.
+
+TEMAS:
+${catalogoTemasParaIA(tipo.id)}
+
+FONTES:
+${catalogoFontes}
+
+ORNAMENTOS:
+${catalogoOrnamentos}`,
       `Evento: ${tipo.nome}. Descrição: ${p.contexto}`,
-      200
+      260
     );
 
-    // Validação: id inventado cai no padrão em vez de quebrar a prévia.
-    const temaId = TEMAS.some((t) => t.id === j.temaId) ? (j.temaId as string) : null;
-    const fonteId = FONTES.some((f) => f.id === j.fonteId) ? (j.fonteId as string) : null;
-    if (!temaId || !fonteId) {
-      return NextResponse.json({ erro: 'Não consegui sugerir. Escolha manualmente.' }, { status: 422 });
+    const temaId = TEMAS.some((t) => t.id === j.temaId)
+      ? (j.temaId as string)
+      : null;
+
+    const fonteId = FONTES.some((f) => f.id === j.fonteId)
+      ? (j.fonteId as string)
+      : null;
+
+    const ornamentoId =
+      typeof j.ornamentoId === 'string' &&
+      ORNAMENTOS.includes(j.ornamentoId as (typeof ORNAMENTOS)[number])
+        ? j.ornamentoId
+        : null;
+
+    if (!temaId || !fonteId || !ornamentoId) {
+      return NextResponse.json(
+        { erro: 'Não consegui sugerir. Escolha manualmente.' },
+        { status: 422 }
+      );
     }
 
     return NextResponse.json({
       temaId,
       fonteId,
-      porque: typeof j.porque === 'string' ? j.porque.slice(0, 160) : '',
+      ornamentoId,
+      porque:
+        typeof j.porque === 'string'
+          ? j.porque.slice(0, 180)
+          : '',
     });
   } catch {
-    // Falha de IA nunca pode travar o wizard: o usuário escolhe à mão.
-    return NextResponse.json({ erro: 'Sugestão indisponível agora.' }, { status: 503 });
+    return NextResponse.json(
+      { erro: 'Sugestão indisponível agora.' },
+      { status: 503 }
+    );
   }
 }

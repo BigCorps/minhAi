@@ -1,7 +1,10 @@
 import type { ConviteConfig, PresenteEscolhido, SecaoConfig, TipoSecao } from './tipos';
 import { acharTipo, TIPO_PADRAO } from './tiposEvento';
 import { fontesDoGrupo, FONTE_PADRAO } from './fontes';
-import { TEMA_PADRAO } from './temas';
+import {
+  ornamentoPadraoDoTipo,
+  temaPadraoDoTipo,
+} from './temas';
 
 const MESES = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
@@ -78,14 +81,16 @@ function secoesDe(tipoEventoId: string): SecaoConfig[] {
 
 export function configInicial(tipoEventoId = TIPO_PADRAO.id): ConviteConfig {
   const tipo = acharTipo(tipoEventoId);
+  const tema = temaPadraoDoTipo(tipo.id);
 
   const d = new Date(Date.now() + 90 * 86400000);
   d.setHours(19, 0, 0, 0);
 
   return {
-    temaId: TEMA_PADRAO.id,
+    temaId: tema.id,
     fonteId: (fontesDoGrupo(tipo.grupo)[0] ?? FONTE_PADRAO).id,
     tipoEventoId: tipo.id,
+    ornamentoId: ornamentoPadraoDoTipo(tipo.id),
     anfitrioes: {
       exibicao: '',
       iniciais: '',
@@ -159,6 +164,8 @@ export function reduzir(estado: EstadoWizard, acao: AcaoWizard): EstadoWizard {
       };
 
     case 'trocarTipoEvento': {
+      if (acao.id === estado.cfg.tipoEventoId) return estado;
+
       const tipo = acharTipo(acao.id);
       const permitidas = fontesDoGrupo(tipo.grupo);
 
@@ -171,6 +178,8 @@ export function reduzir(estado: EstadoWizard, acao: AcaoWizard): EstadoWizard {
         cfg: {
           ...estado.cfg,
           tipoEventoId: tipo.id,
+          temaId: temaPadraoDoTipo(tipo.id).id,
+          ornamentoId: ornamentoPadraoDoTipo(tipo.id),
           fonteId,
           secoes: secoesDe(tipo.id),
           evento: {

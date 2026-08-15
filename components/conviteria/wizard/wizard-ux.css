@@ -1,0 +1,56 @@
+/* Ajustes de UX adicionados sem substituir o wizard.css principal. */
+
+/* A etapa ativa acompanha automaticamente o avanço. No desktop, a trilha
+   também deixa uma scrollbar discreta visível para navegação manual. */
+@media (min-width: 900px) {
+  .wz-trilha {
+    padding-bottom: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #d9a6b9 #f8edf1;
+  }
+
+  .wz-trilha::-webkit-scrollbar {
+    display: block;
+    height: 4px;
+  }
+
+  .wz-trilha::-webkit-scrollbar-track {
+    background: #f8edf1;
+    border-radius: 999px;
+  }
+
+  .wz-trilha::-webkit-scrollbar-thumb {
+    background: #d9a6b9;
+    border-radius: 999px;
+  }
+
+  .wz-trilha::-webkit-scrollbar-thumb:hover {
+    background: #c77e99;
+  }
+}
+
+.wz-btn-carregando {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.wz-btn-spinner {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  animation: wz-girar 0.8s linear infinite;
+}
+
+@keyframes wz-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wz-btn-spinner {
+    animation-duration: 1.6s;
+  }
+}

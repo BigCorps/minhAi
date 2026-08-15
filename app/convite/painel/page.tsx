@@ -15,6 +15,7 @@ import PlanoMensalCard from '@/components/conviteria/PlanoMensalCard';
 import PlanoStatusHeader from '@/components/conviteria/PlanoStatusHeader';
 import RecadosPainel from '@/components/conviteria/RecadosPainel';
 import PresencasPainel from '@/components/conviteria/PresencasPainel';
+import CompartilharWhatsappPainel from '@/components/conviteria/CompartilharWhatsappPainel';
 
 const cor = {
   fora: '#ffffff',
@@ -236,6 +237,12 @@ export default function PainelPage() {
                   <div className="mt-3 border-t pt-3" style={{ borderColor: cor.acento + '22' }}>
                     <AcoesConvite url={c.url} slug={c.slug} />
                   </div>
+
+                  <CompartilharWhatsappPainel
+                    eventoId={c.id}
+                    titulo={c.titulo}
+                    url={c.url}
+                  />
 
                   <PresencasPainel eventoId={c.id} />
                   <SaldoSaque eventoId={c.id} />

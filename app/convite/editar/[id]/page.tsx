@@ -60,6 +60,8 @@ export default function EditarPage({ params }: { params: Promise<{ id: string }>
   }, [id, autorizacao, router]);
 
   async function salvar(novo: EstadoWizard) {
+    if (salvando) return;
+
     setSalvando(true);
     setErro(null);
 
@@ -80,13 +82,14 @@ export default function EditarPage({ params }: { params: Promise<{ id: string }>
     });
 
     const d = await r.json().catch(() => null);
-    setSalvando(false);
 
     if (!r.ok) {
+      setSalvando(false);
       setErro(d?.erro ?? 'Não foi possível salvar.');
       return;
     }
 
+    // Mantem o loading ativo ate a troca efetiva de pagina.
     router.push('/convite/painel');
   }
 
@@ -116,7 +119,8 @@ export default function EditarPage({ params }: { params: Promise<{ id: string }>
     <Wizard
       modo="editar"
       estadoInicial={estado}
-      aoConcluir={(novo) => { if (!salvando) void salvar(novo); }}
+      concluindo={salvando}
+      aoConcluir={salvar}
       aoEnviarArquivo={async (tipo, arquivo) => {
         // Na edicao o arquivo pertence ao EVENTO, nao a um rascunho: a rota
         // exige Bearer e confere a posse antes de aceitar.

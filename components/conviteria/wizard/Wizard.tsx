@@ -2,6 +2,7 @@
 
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { Dispatch } from 'react';
+import { Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import Convite from '../Convite';
 import Capa from '../Capa';
@@ -35,6 +36,7 @@ import Revisao from './etapas/Revisao';
 import Publicar from './etapas/Publicar';
 
 import './wizard.css';
+import './wizard-ux.css';
 import './catalogo.css';
 import '../ornamentos-assets.css';
 import '../lacre-cores.css';
@@ -75,7 +77,8 @@ export interface PropsWizard {
     tipo: 'foto' | 'musica' | 'logo' | 'presente',
     arquivo: File,
   ) => Promise<string>;
-  aoConcluir?: (estado: EstadoWizard) => void;
+  aoConcluir?: (estado: EstadoWizard) => Promise<void> | void;
+  concluindo?: boolean;
   modo?: 'criar' | 'editar';
 }
 
@@ -84,6 +87,7 @@ export default function Wizard({
   aoSalvar,
   aoEnviarArquivo,
   aoConcluir,
+  concluindo = false,
   modo = 'criar',
 }: PropsWizard) {
   const etapas =
@@ -120,6 +124,7 @@ export default function Wizard({
 
   const primeiraVez = useRef(true);
   const painel = useRef<HTMLDivElement>(null);
+  const trilha = useRef<HTMLOListElement>(null);
 
   const grupo = acharTipo(estado.cfg.tipoEventoId).grupo;
 
@@ -158,6 +163,24 @@ export default function Wizard({
     });
   }, [estado.etapa]);
 
+  useEffect(() => {
+    const lista = trilha.current;
+    const atual = lista?.querySelector<HTMLElement>('li.atual');
+
+    if (!lista || !atual) return;
+
+    const esquerda = Math.max(
+      0,
+      atual.offsetLeft -
+        (lista.clientWidth - atual.offsetWidth) / 2,
+    );
+
+    lista.scrollTo({
+      left: esquerda,
+      behavior: 'smooth',
+    });
+  }, [estado.etapa]);
+
   return (
     <div className="wz">
       <FontesGoogle familias={familias} />
@@ -187,7 +210,7 @@ export default function Wizard({
         </div>
 
         <header className="wz-cabecalho">
-          <ol className="wz-trilha">
+          <ol className="wz-trilha" ref={trilha}>
             {etapas.map((e, i) => (
               <li
                 key={e.id}
@@ -272,7 +295,7 @@ export default function Wizard({
           <button
             type="button"
             className="wz-btn wz-btn-fantasma"
-            disabled={estado.etapa === 0}
+            disabled={estado.etapa === 0 || concluindo}
             onClick={() =>
               despachar({ tipo: 'voltar' })
             }
@@ -282,21 +305,40 @@ export default function Wizard({
 
           <button
             type="button"
-            className="wz-btn wz-btn-principal"
-            disabled={faltas.length > 0}
-            onClick={() =>
-              ultima
-                ? aoConcluir?.(estado)
-                : despachar({
-                    tipo: 'avancar',
-                  })
-            }
+            className={`wz-btn wz-btn-principal${
+              concluindo ? ' wz-btn-carregando' : ''
+            }`}
+            disabled={faltas.length > 0 || concluindo}
+            onClick={() => {
+              if (concluindo) return;
+
+              if (ultima) {
+                void aoConcluir?.(estado);
+                return;
+              }
+
+              despachar({
+                tipo: 'avancar',
+              });
+            }}
           >
-            {ultima
-              ? modo === 'editar'
+            {ultima && concluindo ? (
+              <>
+                <Loader2
+                  className="wz-btn-spinner"
+                  aria-hidden="true"
+                />
+                {modo === 'editar'
+                  ? 'Salvando alterações…'
+                  : 'Processando…'}
+              </>
+            ) : ultima ? (
+              modo === 'editar'
                 ? 'Salvar alterações'
                 : 'Ir para o pagamento'
-              : 'Continuar'}
+            ) : (
+              'Continuar'
+            )}
           </button>
         </footer>
       </div>

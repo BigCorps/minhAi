@@ -15,7 +15,7 @@ const brl = (centavos: number) =>
 
 type Passo = 'escolha' | 'dados' | 'gerando' | 'pix' | 'pago';
 type Modo = 'grid' | 'lista';
-type Ordem = 'padrao' | 'menor' | 'maior';
+type Ordem = 'menor' | 'maior';
 
 type Selecionado = {
   presente: PresenteExibicao;
@@ -39,9 +39,7 @@ export default function ModalPresentes({
   const [montado, setMontado] = useState(false);
   const [passo, setPasso] = useState<Passo>('escolha');
   const [modo, setModo] = useState<Modo>('grid');
-  // 'padrao' preserva a ordem que o casal montou no wizard — e uma escolha
-  // deles, nao um acaso, entao e o padrao.
-  const [ordem, setOrdem] = useState<Ordem>('padrao');
+  const [ordem, setOrdem] = useState<Ordem>('menor');
   const [selecionados, setSelecionados] = useState<Record<string, Selecionado>>({});
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
@@ -51,14 +49,20 @@ export default function ModalPresentes({
   const verificandoRef = useRef(false);
 
   const listaOrdenada = useMemo(() => {
-    if (ordem === 'padrao') return presentes;
-    // Valor livre (0) vai sempre para o fim: nao tem preco para comparar, e
-    // no topo da lista "menor preco" pareceria o item mais barato de todos.
-    const peso = (p: PresenteExibicao) =>
-      p.valorCentavos > 0 ? p.valorCentavos : Number.POSITIVE_INFINITY;
-    return [...presentes].sort((a, b) =>
-      ordem === 'menor' ? peso(a) - peso(b) : peso(b) - peso(a)
-    );
+    return [...presentes].sort((a, b) => {
+      const aLivre = a.valorCentavos <= 0;
+      const bLivre = b.valorCentavos <= 0;
+
+      // Presentes de valor livre ficam no final nas duas ordenacoes, pois
+      // nao existe preco fixo para compara-los com os demais.
+      if (aLivre && bLivre) return 0;
+      if (aLivre) return 1;
+      if (bLivre) return -1;
+
+      return ordem === 'menor'
+        ? a.valorCentavos - b.valorCentavos
+        : b.valorCentavos - a.valorCentavos;
+    });
   }, [presentes, ordem]);
 
   const [pix, setPix] = useState<{
@@ -267,7 +271,6 @@ export default function ModalPresentes({
                     onChange={(e) => setOrdem(e.target.value as Ordem)}
                     aria-label="Ordenar presentes"
                   >
-                    <option value="padrao">Ordem do casal</option>
                     <option value="menor">Menor preço</option>
                     <option value="maior">Maior preço</option>
                   </select>

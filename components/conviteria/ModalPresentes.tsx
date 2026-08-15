@@ -7,7 +7,6 @@ import {
   List, Loader2, Plus, ShoppingBag, X,
 } from 'lucide-react';
 import { tokensDoConvite } from '@/lib/conviteria/tokens';
-import { calcularTaxa } from '@/lib/conviteria/precos';
 import type { PresenteExibicao } from '@/lib/conviteria/tipos';
 import './presentes-checkout.css';
 
@@ -16,7 +15,6 @@ const brl = (centavos: number) =>
 
 type Passo = 'escolha' | 'dados' | 'gerando' | 'pix' | 'pago';
 type Modo = 'grid' | 'lista';
-type Ordem = 'padrao' | 'menor' | 'maior';
 
 type Selecionado = {
   presente: PresenteExibicao;
@@ -40,9 +38,6 @@ export default function ModalPresentes({
   const [montado, setMontado] = useState(false);
   const [passo, setPasso] = useState<Passo>('escolha');
   const [modo, setModo] = useState<Modo>('grid');
-  // 'padrao' preserva a ordem que o casal montou no wizard — e uma escolha
-  // deles, nao um acaso, entao e o padrao.
-  const [ordem, setOrdem] = useState<Ordem>('padrao');
   const [selecionados, setSelecionados] = useState<Record<string, Selecionado>>({});
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
@@ -50,17 +45,6 @@ export default function ModalPresentes({
   const [mensagem, setMensagem] = useState('');
   const [verificandoManual, setVerificandoManual] = useState(false);
   const verificandoRef = useRef(false);
-
-  const listaOrdenada = useMemo(() => {
-    if (ordem === 'padrao') return presentes;
-    // Valor livre (0) vai sempre para o fim: nao tem preco para comparar, e
-    // no topo da lista "crescente" pareceria o item mais barato.
-    const peso = (p: PresenteExibicao) =>
-      p.valorCentavos > 0 ? p.valorCentavos : Number.POSITIVE_INFINITY;
-    return [...presentes].sort((a, b) =>
-      ordem === 'menor' ? peso(a) - peso(b) : peso(b) - peso(a)
-    );
-  }, [presentes, ordem]);
 
   const [pix, setPix] = useState<{
     checkoutId: string;
@@ -93,17 +77,14 @@ export default function ModalPresentes({
         : centavosLivre(item.valorLivre)), 0
     ), [listaSelecionados]);
 
-  const taxaTotal = useMemo(
-    () => listaSelecionados.reduce((s, item) => {
-      const valor = item.presente.valorCentavos > 0
-        ? item.presente.valorCentavos
-        : centavosLivre(item.valorLivre);
-      return s + (valor > 0 ? calcularTaxa(valor).taxa : 0);
-    }, 0),
-    [listaSelecionados]
-  );
-
-  const liquidoTotal = Math.max(0, total - taxaTotal);
+  // A taxa NAO aparece para o convidado. Ele escolhe R$ 156,40 e paga
+  // R$ 156,40 — a taxa sai do repasse aos anfitrioes, nao do bolso dele.
+  // Mostrar "taxa de servico" na tela de pagamento faz o convidado achar que
+  // esta sendo cobrado a mais, e o valor exibido no PIX desmente isso.
+  //
+  // Quem precisa ver a taxa e o dono do convite, no painel. O calculo real
+  // continua no servidor (app/api/conviteria/presente/route.ts), que e a
+  // unica fonte de verdade — o cliente nunca decidiu isso.
 
   const valoresLivresValidos = listaSelecionados.every((item) =>
     item.presente.valorCentavos > 0 || centavosLivre(item.valorLivre) >= 500
@@ -264,19 +245,6 @@ export default function ModalPresentes({
                 <span className="cv-presentes-toolbar-info">
                   Escolha um ou mais presentes
                 </span>
-                <label className="cv-presentes-ordem">
-                  <span className="sr-only">Ordenar por</span>
-                  <select
-                    value={ordem}
-                    onChange={(e) => setOrdem(e.target.value as Ordem)}
-                    aria-label="Ordenar presentes"
-                  >
-                    <option value="padrao">Ordem do casal</option>
-                    <option value="menor">Menor preço</option>
-                    <option value="maior">Maior preço</option>
-                  </select>
-                </label>
-
                 <div className="cv-presentes-modos" aria-label="Modo de visualização">
                   <button type="button" className={modo === 'grid' ? 'sel' : ''}
                     onClick={() => setModo('grid')} aria-label="Ver em grade">
@@ -291,7 +259,7 @@ export default function ModalPresentes({
 
               {modo === 'grid' ? (
                 <ul className="cv-presentes-grade">
-                  {listaOrdenada.map((p) => {
+                  {presentes.map((p) => {
                     const sel = selecionados[p.id];
                     return (
                       <li key={p.id}
@@ -327,7 +295,7 @@ export default function ModalPresentes({
                 </ul>
               ) : (
                 <ul className="cv-presentes-lista-nova">
-                  {listaOrdenada.map((p) => {
+                  {presentes.map((p) => {
                     const sel = selecionados[p.id];
                     return (
                       <li key={p.id} className={`cv-presente-linha${sel ? ' sel' : ''}`}>
@@ -361,9 +329,6 @@ export default function ModalPresentes({
               )}
 
               <div className="cv-carrinho-resumo">
-                <p className="cv-taxa-aviso">
-                  Taxa de serviço de 1% descontada do valor repassado aos anfitriões.
-                </p>
                 <div className="cv-carrinho-resumo-topo">
                   <span>
                     <ShoppingBag className="inline w-4 h-4 mr-1" />
@@ -396,18 +361,6 @@ export default function ModalPresentes({
               </ul>
 
               <p className="cv-modal-valor">{brl(total)}</p>
-
-              <div className="cv-taxa-resumo">
-                <span>
-                  <span>Taxa de serviço (1%)</span>
-                  <strong>- {brl(taxaTotal)}</strong>
-                </span>
-                <small>Descontada do repasse, não adicionada ao seu PIX.</small>
-                <span className="liquido">
-                  <span>Líquido aos anfitriões</span>
-                  <strong>{brl(liquidoTotal)}</strong>
-                </span>
-              </div>
 
               <label>
                 Seu nome <span>(opcional)</span>

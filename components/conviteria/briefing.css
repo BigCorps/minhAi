@@ -232,7 +232,16 @@
   }
 
   .cv-briefing-criar-landing {
+    order: 1;
     gap: .36rem;
+  }
+
+  .cv-briefing-botoes-landing > .cv-briefing-botao-lateral:last-child {
+    order: 2;
+  }
+
+  .cv-briefing-botoes-landing > .cv-briefing-botao-lateral:first-child {
+    order: 3;
   }
 
   .cv-briefing-criar-landing svg {

@@ -133,6 +133,10 @@ export async function POST(req: NextRequest) {
     const { error: erroPresentes } = await admin.from('presentes').insert(
       escolhidos.map((p, i) => ({
         evento_id: evento.id,
+        // Chave estavel do diff na edicao. Sem ela, a rota PATCH cai no
+        // casamento por titulo — e trocar so a foto de um presente nao
+        // atualizaria a linha, porque o titulo continuaria o mesmo.
+        catalogo_id: p.catalogoId,
         titulo: p.titulo,
         valor_centavos: p.valorCentavos,
         permite_valor_livre: p.permiteValorLivre ?? false,

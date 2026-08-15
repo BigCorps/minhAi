@@ -8,6 +8,11 @@ import {
 } from 'lucide-react';
 import { tokensDoConvite } from '@/lib/conviteria/tokens';
 import type { PresenteExibicao } from '@/lib/conviteria/tipos';
+import {
+  LIMITE_PRESENTES_POR_PIX,
+  MAX_VALOR_PRESENTE_CENTAVOS,
+  MIN_VALOR_PRESENTE_CENTAVOS,
+} from '@/lib/conviteria/catalogo';
 import './presentes-checkout.css';
 
 const brl = (centavos: number) =>
@@ -105,19 +110,35 @@ export default function ModalPresentes({
   // continua no servidor (app/api/conviteria/presente/route.ts), que e a
   // unica fonte de verdade — o cliente nunca decidiu isso.
 
-  const valoresLivresValidos = listaSelecionados.every((item) =>
-    item.presente.valorCentavos > 0 || centavosLivre(item.valorLivre) >= 500
-  );
+  const valoresLivresValidos = listaSelecionados.every((item) => {
+    if (item.presente.valorCentavos > 0) return true;
+    const valor = centavosLivre(item.valorLivre);
+    return (
+      valor >= MIN_VALOR_PRESENTE_CENTAVOS &&
+      valor <= MAX_VALOR_PRESENTE_CENTAVOS
+    );
+  });
 
   function alternar(p: PresenteExibicao) {
     if (p.esgotado) return;
-    setErro(null);
+
     setSelecionados((atual) => {
       if (atual[p.id]) {
         const prox = { ...atual };
         delete prox[p.id];
+        setErro(null);
         return prox;
       }
+
+      if (Object.keys(atual).length >= LIMITE_PRESENTES_POR_PIX) {
+        setErro(
+          `Você pode pagar até ${LIMITE_PRESENTES_POR_PIX} presentes por PIX. ` +
+          'Finalize este pagamento e depois escolha os demais.'
+        );
+        return atual;
+      }
+
+      setErro(null);
       return {
         ...atual,
         [p.id]: { presente:p, valorLivre:'' },
@@ -133,8 +154,19 @@ export default function ModalPresentes({
   }
 
   async function gerar() {
+    if (listaSelecionados.length > LIMITE_PRESENTES_POR_PIX) {
+      setErro(
+        `Escolha até ${LIMITE_PRESENTES_POR_PIX} presentes por pagamento.`
+      );
+      return;
+    }
+
     if (listaSelecionados.length === 0 || !valoresLivresValidos) {
-      setErro('Escolha seus presentes e confira os valores.');
+      setErro(
+        `Escolha seus presentes e use valores entre ` +
+        `${brl(MIN_VALOR_PRESENTE_CENTAVOS)} e ` +
+        `${brl(MAX_VALOR_PRESENTE_CENTAVOS)}.`
+      );
       return;
     }
 

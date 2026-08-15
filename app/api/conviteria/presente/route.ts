@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminConviteria, hashIp, ipDaRequisicao } from '@/lib/conviteria/servidor';
 import { calcularTaxa } from '@/lib/conviteria/precos';
+import {
+  LIMITE_PRESENTES_POR_PIX,
+  MAX_TOTAL_PRESENTES_PIX_CENTAVOS,
+  MAX_VALOR_PRESENTE_CENTAVOS,
+  MIN_VALOR_PRESENTE_CENTAVOS,
+} from '@/lib/conviteria/catalogo';
 
 export const runtime = 'nodejs';
 
@@ -9,7 +15,6 @@ type ItemPedido = {
   valorCentavos?: number;
 };
 
-const MAX_ITENS = 12;
 const MAX_CHECKOUTS_10_MIN = 6;
 
 export async function POST(req: NextRequest) {
@@ -27,7 +32,10 @@ export async function POST(req: NextRequest) {
   const recebidos = Array.isArray(corpo?.itens) ? corpo!.itens! : [];
 
   if (!eventoId || recebidos.length === 0) {
-    return NextResponse.json({ erro: 'Escolha pelo menos um presente.' }, { status: 400 });
+    return NextResponse.json(
+      { erro: 'Escolha pelo menos um presente.' },
+      { status: 400 }
+    );
   }
 
   // Um presente só pode entrar uma vez no mesmo carrinho.
@@ -35,10 +43,23 @@ export async function POST(req: NextRequest) {
   for (const item of recebidos) {
     if (item?.presenteId) unicos.set(item.presenteId, item);
   }
-  const itens = [...unicos.values()].slice(0, MAX_ITENS);
 
-  if (itens.length === 0 || itens.length > MAX_ITENS) {
-    return NextResponse.json({ erro: `Escolha até ${MAX_ITENS} presentes por pagamento.` }, { status: 400 });
+  // Não usamos .slice() aqui. A versão anterior cortava silenciosamente o
+  // 13º item e o valor exibido pelo navegador podia ficar diferente do PIX.
+  const itens = [...unicos.values()];
+
+  if (
+    itens.length === 0 ||
+    itens.length > LIMITE_PRESENTES_POR_PIX
+  ) {
+    return NextResponse.json(
+      {
+        erro:
+          `Escolha até ${LIMITE_PRESENTES_POR_PIX} presentes por pagamento. ` +
+          'Depois você pode fazer outro PIX com os demais.',
+      },
+      { status: 400 }
+    );
   }
 
   const admin = adminConviteria();
@@ -81,7 +102,10 @@ export async function POST(req: NextRequest) {
     .in('id', ids);
 
   if (erroPresentes || !presentes || presentes.length !== ids.length) {
-    return NextResponse.json({ erro: 'Um ou mais presentes não estão mais disponíveis.' }, { status: 409 });
+    return NextResponse.json(
+      { erro: 'Um ou mais presentes não estão mais disponíveis.' },
+      { status: 409 }
+    );
   }
 
   const porId = new Map(presentes.map((p: any) => [p.id as string, p]));
@@ -116,7 +140,11 @@ export async function POST(req: NextRequest) {
       ? Math.round(Number(pedido.valorCentavos ?? 0))
       : Number(presente.valor_centavos);
 
-    if (!Number.isSafeInteger(valor) || valor < 500 || valor > 500_000) {
+    if (
+      !Number.isSafeInteger(valor) ||
+      valor < MIN_VALOR_PRESENTE_CENTAVOS ||
+      valor > MAX_VALOR_PRESENTE_CENTAVOS
+    ) {
       return NextResponse.json(
         { erro: `Valor inválido para “${presente.titulo}”.` },
         { status: 400 }
@@ -136,8 +164,11 @@ export async function POST(req: NextRequest) {
     liquidoTotal += liquido;
   }
 
-  if (total <= 0 || total > 6_000_000) {
-    return NextResponse.json({ erro: 'Valor total fora do permitido.' }, { status: 400 });
+  if (total <= 0 || total > MAX_TOTAL_PRESENTES_PIX_CENTAVOS) {
+    return NextResponse.json(
+      { erro: 'Valor total fora do permitido.' },
+      { status: 400 }
+    );
   }
 
   const nome = corpo?.pagadorNome?.trim().slice(0, 80) || null;
@@ -159,7 +190,10 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (erroCheckout || !checkout) {
-    return NextResponse.json({ erro: 'Não foi possível preparar o checkout.' }, { status: 500 });
+    return NextResponse.json(
+      { erro: 'Não foi possível preparar o checkout.' },
+      { status: 500 }
+    );
   }
 
   const { error: erroItens } = await admin
@@ -179,8 +213,15 @@ export async function POST(req: NextRequest) {
     );
 
   if (erroItens) {
-    await admin.from('presente_checkouts').update({ status: 'expirado' }).eq('id', checkout.id);
-    return NextResponse.json({ erro: 'Não foi possível registrar os presentes.' }, { status: 500 });
+    await admin
+      .from('presente_checkouts')
+      .update({ status: 'expirado' })
+      .eq('id', checkout.id);
+
+    return NextResponse.json(
+      { erro: 'Não foi possível registrar os presentes.' },
+      { status: 500 }
+    );
   }
 
   const cfg = (evento.config ?? {}) as any;
@@ -193,10 +234,7 @@ export async function POST(req: NextRequest) {
   // ConviteIA fica na BigCorps para formar evento_saldo e posterior repasse.
   //
   // Exceção pontual: quando o evento tem `mp_user_id`, o QR sai da conta
-  // Mercado Pago daquele usuário, e não do Banco Inter da BigCorps. O saldo
-  // continua sendo creditado normalmente — o repasse é manual (o dono do
-  // evento recebe o e-mail, faz o PIX e confirma), então não há risco de a
-  // BigCorps pagar um valor que nunca recebeu.
+  // Mercado Pago daquele usuário, e não do Banco Inter da BigCorps.
   const r = await fetch(
     `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/gerar-pix-assistente`,
     {
@@ -209,12 +247,11 @@ export async function POST(req: NextRequest) {
         origem: 'conviteria',
         referencia_id: checkout.id,
         valor_centavos: total,
-        descricao: `${itens.length} presente${itens.length === 1 ? '' : 's'} para ${casal}`,
+        descricao:
+          `${itens.length} presente${itens.length === 1 ? '' : 's'} para ${casal}`,
         tipo: 'presente',
         purpose: 'conviteria_presente',
         brand: 'conviteia',
-        // Ausente na esmagadora maioria dos eventos: só vai quando a coluna
-        // estiver preenchida, e aí a edge usa a conexão MP desse usuário.
         ...(evento.mp_user_id ? { mp_user_id: evento.mp_user_id } : {}),
       }),
     }
@@ -224,9 +261,16 @@ export async function POST(req: NextRequest) {
 
   if (!r.ok || !pix?.transaction_id) {
     await Promise.all([
-      admin.from('presente_checkouts').update({ status: 'expirado' }).eq('id', checkout.id),
-      admin.from('presente_pagamentos').update({ status: 'expirado' }).eq('checkout_id', checkout.id),
+      admin
+        .from('presente_checkouts')
+        .update({ status: 'expirado' })
+        .eq('id', checkout.id),
+      admin
+        .from('presente_pagamentos')
+        .update({ status: 'expirado' })
+        .eq('checkout_id', checkout.id),
     ]);
+
     return NextResponse.json(
       { erro: pix?.message || pix?.error || 'Não foi possível gerar o PIX.' },
       { status: 502 }

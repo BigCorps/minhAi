@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { brl } from '@/lib/conviteria/precos';
-import { LIMITE_PRESENTES_CONVITE, pertenceFaixa, type FaixaCatalogo } from '@/lib/conviteria/catalogo';
+import {
+  LIMITE_PRESENTES_CONVITE,
+  MAX_VALOR_PRESENTE_CENTAVOS,
+  MIN_VALOR_PRESENTE_CENTAVOS,
+  pertenceFaixa,
+  type FaixaCatalogo,
+} from '@/lib/conviteria/catalogo';
 import type { PresenteEscolhido } from '@/lib/conviteria/tipos';
 import { parecidos, usaFotoDoCatalogo } from '@/lib/conviteria/duplicados';
 import type { PropsEtapa } from '../Wizard';
@@ -16,11 +22,6 @@ const FAIXAS: Array<{ id: FaixaCatalogo; nome: string }> = [
   { id: 'acima-250', nome: 'Acima de R$ 250' },
   { id: 'livre', nome: 'Valor livre' },
 ];
-
-/** Piso e teto por item. O mesmo intervalo é validado no servidor, em
-    `app/api/conviteria/presente` — aqui é só para avisar antes. */
-const MIN_CENTAVOS = 500;
-const MAX_CENTAVOS = 500_000;
 
 /** "132,38" ou "132.38" ou "13238" -> centavos. */
 function paraCentavos(v: string) {
@@ -149,8 +150,17 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
     if (!titulo) { setErroPainel('Dê um nome ao presente.'); return; }
 
     const centavos = rascunho.valorLivre ? 0 : paraCentavos(rascunho.valor);
-    if (!rascunho.valorLivre && (centavos < MIN_CENTAVOS || centavos > MAX_CENTAVOS)) {
-      setErroPainel(`O valor precisa ficar entre ${brl(MIN_CENTAVOS)} e ${brl(MAX_CENTAVOS)}.`);
+    if (
+      !rascunho.valorLivre &&
+      (
+        centavos < MIN_VALOR_PRESENTE_CENTAVOS ||
+        centavos > MAX_VALOR_PRESENTE_CENTAVOS
+      )
+    ) {
+      setErroPainel(
+        `O valor precisa ficar entre ${brl(MIN_VALOR_PRESENTE_CENTAVOS)} e ` +
+        `${brl(MAX_VALOR_PRESENTE_CENTAVOS)}.`
+      );
       return;
     }
 
@@ -227,7 +237,7 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
           />
         </div>
         <span className="wz-campo-dica">
-          Entre {brl(MIN_CENTAVOS)} e {brl(MAX_CENTAVOS)}.
+          Entre {brl(MIN_VALOR_PRESENTE_CENTAVOS)} e {brl(MAX_VALOR_PRESENTE_CENTAVOS)}.
         </span>
       </label>
 

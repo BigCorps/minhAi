@@ -33,8 +33,7 @@ function palavras(texto: string): Set<string> {
  * Semelhanca entre dois titulos, de 0 a 1.
  *
  * Jaccard sobre as palavras, e nao distancia de edicao: o caso real e a
- * pessoa reescrever parte da frase, nao errar letras. "fechar a tampa da
- * pasta" e "baixar a tampa" mudam varias letras mas mantem o miolo.
+ * pessoa reescrever parte da frase, nao errar letras.
  */
 export function semelhanca(a: string, b: string): number {
   const pa = palavras(a);
@@ -47,30 +46,8 @@ export function semelhanca(a: string, b: string): number {
   return comuns / (pa.size + pb.size - comuns);
 }
 
-/**
- * Acima disto os titulos sao considerados parecidos.
- *
- * So a semelhanca NAO basta, e a calibracao com o catalogo real mostrou por
- * que: "Patrocine a despedida do noivo" e "...da noiva" dao 0,50, e "Cota da
- * lua de mel: passagem" e "...: hotel" dao 0,60. Sao pares legitimos, os dois
- * itens existem de proposito. Avisar neles treinaria a pessoa a ignorar o
- * aviso.
- *
- * Por isso o alerta exige um SEGUNDO sinal — ver `ehProvavelDuplicata`.
- */
 export const LIMIAR = 0.45;
 
-/**
- * Dois itens parecidos sao provavel duplicata quando UM veio do catalogo e o
- * outro foi criado ou editado pela pessoa.
- *
- * E exatamente a forma que o erro real tomou: ela quis mudar texto e foto,
- * criou um item novo e esqueceu de tirar o do catalogo. Ficaram os dois — um
- * com foto padrao, outro com a dela.
- *
- * Pares em que os DOIS sao do catalogo (despedida do noivo / da noiva) ou os
- * DOIS sao dela sao intencionais, e nao disparam aviso.
- */
 function origemDiferente(a: PresenteEscolhido, b: PresenteEscolhido) {
   const proprio = (p: PresenteEscolhido) =>
     !!p.personalizado || !usaFotoDoCatalogo(p);
@@ -81,15 +58,12 @@ export function ehProvavelDuplicata(a: PresenteEscolhido, b: PresenteEscolhido) 
   return semelhanca(a.titulo, b.titulo) >= LIMIAR && origemDiferente(a, b);
 }
 
-/** Itens ja escolhidos parecidos com o que a pessoa esta digitando. */
+/** Itens ja escolhidos parecidos com o que esta sendo digitado. */
 export function parecidos(
   titulo: string,
   escolhidos: PresenteEscolhido[],
   ignorarId?: string
 ): PresenteEscolhido[] {
-  // Aqui o item ainda nao existe, entao nao da para comparar a origem: quem
-  // esta digitando um titulo novo esta, por definicao, criando algo proprio.
-  // Basta o outro lado ser do catalogo.
   return escolhidos
     .filter((p) => p.catalogoId !== ignorarId && usaFotoDoCatalogo(p))
     .map((p) => ({ p, s: semelhanca(titulo, p.titulo) }))
@@ -114,14 +88,24 @@ export function paresParecidos(
 }
 
 /**
- * True quando o item ainda usa a imagem que veio do catalogo.
+ * True quando o item ainda usa a imagem que veio do catálogo.
  *
- * Upload do usuario vai para o bucket `conviteria-presentes` com nome
- * `presente-<timestamp>.<ext>`; o catalogo usa o id do item como nome do
- * arquivo. Se a maioria da lista ja tem foto propria, quem ficou com a padrao
- * costuma ser esquecimento.
+ * Não usamos mais o formato da URL para decidir isso. O catálogo agora pode
+ * apontar tanto para o bucket padrão quanto para fotos reais reaproveitadas
+ * pelo ConviteIA, e algumas dessas URLs também terminam em
+ * `presente-<timestamp>.jpg`.
+ *
+ * A origem confiável já está no próprio snapshot:
+ * - `personalizado=true` => item criado pelo anfitrião;
+ * - `imagemOriginalUrl` presente => item de catálogo cuja imagem foi editada;
+ * - sem esses sinais => imagem atual é a imagem do catálogo.
  */
 export function usaFotoDoCatalogo(p: PresenteEscolhido): boolean {
-  if (!p.imagemUrl) return false;
-  return !/\/presente-\d+\.\w+$/.test(p.imagemUrl);
+  if (p.personalizado) return false;
+
+  if (p.imagemOriginalUrl !== undefined) {
+    return (p.imagemUrl ?? null) === (p.imagemOriginalUrl ?? null);
+  }
+
+  return true;
 }

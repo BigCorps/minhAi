@@ -1001,3 +1001,34 @@
    se ancora no .wz-textura-amostra, que e `position: relative`. Mantido apenas
    o recorte. */
 .wz-textura-svg { transform: none; }
+
+/* --------------------------------------------------------------------------
+   Busca de endereço
+   -------------------------------------------------------------------------- */
+
+.wz-busca { display: flex; gap: 8px; align-items: stretch; }
+.wz-busca .wz-input { flex: 1; }
+.wz-busca-btn {
+  flex-shrink: 0;
+  padding: 0 16px;
+  border: 1px solid var(--wz-rosa);
+  border-radius: 9px;
+  background: var(--wz-rosa);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.wz-busca-btn:disabled { opacity: 0.55; cursor: default; }
+
+.wz-confirmacao {
+  margin: 8px 0 0;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: #fdf0f3;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--wz-rosa-escuro);
+}

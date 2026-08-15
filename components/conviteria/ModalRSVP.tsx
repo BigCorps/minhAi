@@ -1,9 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, Loader2, Plus, Trash2, X } from 'lucide-react';
+import {
+  CalendarDays,
+  CheckCircle2,
+  Loader2,
+  MailCheck,
+  Plus,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { tokensDoConvite } from '@/lib/conviteria/tokens';
+
+type EmailStatus =
+  | 'enviado'
+  | 'sem_google'
+  | 'falhou'
+  | null;
 
 export default function ModalRSVP({
   eventoId,
@@ -24,6 +38,10 @@ export default function ModalRSVP({
   const [erro, setErro] = useState('');
   const [confirmado, setConfirmado] = useState<number | null>(null);
   const [atualizado, setAtualizado] = useState(false);
+  const [agendaUrl, setAgendaUrl] = useState<string | null>(null);
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>(null);
+
+  const solicitacaoId = useRef<string | null>(null);
 
   useEffect(() => {
     setMontado(true);
@@ -50,11 +68,15 @@ export default function ModalRSVP({
   }
 
   function alterar(i: number, valor: string) {
-    setFamilia((f) => f.map((v, idx) => idx === i ? valor : v));
+    setFamilia((f) =>
+      f.map((v, idx) => idx === i ? valor : v)
+    );
   }
 
   function remover(i: number) {
-    setFamilia((f) => f.filter((_, idx) => idx !== i));
+    setFamilia((f) =>
+      f.filter((_, idx) => idx !== i)
+    );
   }
 
   async function confirmar() {
@@ -72,6 +94,12 @@ export default function ModalRSVP({
 
     setEnviando(true);
 
+    const id =
+      solicitacaoId.current ??
+      crypto.randomUUID();
+
+    solicitacaoId.current = id;
+
     try {
       const r = await fetch('/api/conviteria/rsvp', {
         method: 'POST',
@@ -81,6 +109,7 @@ export default function ModalRSVP({
           nome: nome.trim(),
           email: email.trim(),
           acompanhantes: familia.map((x) => x.trim()).filter(Boolean),
+          solicitacaoId: id,
         }),
       });
 
@@ -92,6 +121,22 @@ export default function ModalRSVP({
 
       setConfirmado(Number(d.totalPessoas ?? 1));
       setAtualizado(Boolean(d.atualizado));
+      setAgendaUrl(
+        typeof d.agendaUrl === 'string'
+          ? d.agendaUrl
+          : null
+      );
+
+      setEmailStatus(
+        d.emailStatus === 'enviado' ||
+        d.emailStatus === 'sem_google' ||
+        d.emailStatus === 'falhou'
+          ? d.emailStatus
+          : null
+      );
+
+      // Uma futura nova confirmação manual deve ser uma nova operação.
+      solicitacaoId.current = null;
     } catch (e: any) {
       setErro(e.message || 'Não foi possível confirmar sua presença.');
     } finally {
@@ -214,17 +259,54 @@ export default function ModalRSVP({
           ) : (
             <div className="cv-modal-centro">
               <CheckCircle2 className="w-12 h-12" />
+
               <p className="cv-modal-valor">
                 {atualizado ? 'Confirmação atualizada!' : 'Presença confirmada!'}
               </p>
+
               <p className="cv-modal-dica">
                 {confirmado === 1
                   ? 'Confirmamos a sua presença.'
                   : `Confirmamos a presença de ${confirmado} pessoas da sua família.`}
               </p>
-              <button type="button" className="cv-botao" onClick={aoFechar}>
-                Voltar ao convite
-              </button>
+
+              {emailStatus === 'enviado' && (
+                <p className="cv-rsvp-email-ok">
+                  <MailCheck className="w-4 h-4" />
+                  Enviamos a confirmação para {email.trim()}.
+                </p>
+              )}
+
+              <div className="cv-rsvp-acoes-sucesso">
+                {agendaUrl && (
+                  <a
+                    href={agendaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="cv-botao cv-botao-icone"
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                    Adicionar ao Google Agenda
+                  </a>
+                )}
+
+                <button
+                  type="button"
+                  className="cv-rsvp-voltar"
+                  onClick={aoFechar}
+                >
+                  Voltar ao convite
+                </button>
+              </div>
+
+              {emailStatus !== 'enviado' && (
+                <p className="cv-rsvp-email-neutro">
+                  Sua presença já está salva no convite.
+                  {agendaUrl
+                    ? ' Você também pode guardar a data na sua agenda.'
+                    : ''}
+                </p>
+              )}
             </div>
           )}
         </div>

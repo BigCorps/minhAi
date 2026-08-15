@@ -92,3 +92,53 @@
   line-height: 1.45;
   color: var(--cv-tinta-suave);
 }
+
+/* --------------------------------------------------------------------------
+   Confirmação + Gmail + Google Agenda
+   -------------------------------------------------------------------------- */
+
+.cv-rsvp-email-ok {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  max-width: 100%;
+  margin: .25rem auto .15rem;
+  color: var(--cv-tinta-suave);
+  font-size: .7rem;
+  line-height: 1.4;
+}
+
+.cv-rsvp-acoes-sucesso {
+  width: min(100%, 310px);
+  display: grid;
+  gap: .55rem;
+  margin: 1rem auto 0;
+}
+
+.cv-rsvp-acoes-sucesso .cv-botao {
+  width: 100%;
+  margin: 0;
+  text-decoration: none;
+}
+
+.cv-rsvp-voltar {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid color-mix(in srgb, var(--cv-acento) 34%, transparent);
+  border-radius: 999px;
+  padding: .65rem 1rem;
+  background: color-mix(in srgb, var(--cv-papel) 96%, var(--cv-acento) 4%);
+  color: var(--cv-acento-texto);
+  font-size: .78rem;
+  font-weight: 650;
+}
+
+.cv-rsvp-email-neutro {
+  max-width: 34ch;
+  margin: .75rem auto 0;
+  color: var(--cv-tinta-suave);
+  text-align: center;
+  font-size: .64rem;
+  line-height: 1.45;
+}

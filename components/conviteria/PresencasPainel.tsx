@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Loader2, Mail, Trash2, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
+import GoogleConvitePainel from '@/components/conviteria/GoogleConvitePainel';
 
 type Confirmacao = {
   id: string;
@@ -127,9 +128,11 @@ export default function PresencasPainel({ eventoId }: { eventoId: string }) {
           </div>
 
           <p className="mb-4 text-xs leading-5" style={{ color: '#7c5560' }}>
-            Nome, e-mail e integrantes da família ficam organizados aqui. Essa
-            estrutura será usada posteriormente para Gmail, Drive e lembretes do evento.
+            Nome, e-mail e integrantes da família ficam organizados aqui. A conexão
+            Google deste convite será usada para Gmail, Google Agenda e lembretes do evento.
           </p>
+
+          <GoogleConvitePainel eventoId={eventoId} />
 
           {carregando && confirmacoes.length === 0 ? (
             <div className="flex justify-center py-6">

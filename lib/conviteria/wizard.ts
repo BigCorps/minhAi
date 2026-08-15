@@ -125,6 +125,8 @@ export type AcaoWizard =
   | { tipo: 'moverSecao'; secao: TipoSecao; direcao: -1 | 1 }
   | { tipo: 'configSecao'; secao: TipoSecao; chave: string; valor: string }
   | { tipo: 'alternarPresente'; presente: PresenteEscolhido }
+  | { tipo: 'editarPresente'; catalogoId: string; campos: Partial<PresenteEscolhido> }
+  | { tipo: 'removerPresente'; catalogoId: string }
   | { tipo: 'hidratar'; estado: EstadoWizard };
 
 function definir<T extends object>(alvo: T, caminho: string, valor: unknown): T {
@@ -260,6 +262,62 @@ export function reduzir(estado: EstadoWizard, acao: AcaoWizard): EstadoWizard {
         },
       };
     }
+
+    case 'editarPresente': {
+      // Edita SO a copia dentro deste convite. `presentesEscolhidos` e um
+      // snapshot no config do evento, nao uma referencia ao catalogo — entao
+      // renomear ou trocar o preco aqui nunca afeta outro usuario.
+      //
+      // Na primeira edicao de cada campo, guarda o valor original para o
+      // botao "restaurar" funcionar sem consultar a API de novo.
+      const atuais = estado.cfg.presentesEscolhidos ?? [];
+
+      return {
+        ...estado,
+        cfg: {
+          ...estado.cfg,
+          presentesEscolhidos: atuais.map((p) => {
+            if (p.catalogoId !== acao.catalogoId) return p;
+
+            const original: Partial<PresenteEscolhido> = {};
+            if (
+              acao.campos.titulo !== undefined &&
+              p.tituloOriginal === undefined &&
+              !p.personalizado
+            ) {
+              original.tituloOriginal = p.titulo;
+            }
+            if (
+              acao.campos.valorCentavos !== undefined &&
+              p.valorOriginalCentavos === undefined &&
+              !p.personalizado
+            ) {
+              original.valorOriginalCentavos = p.valorCentavos;
+            }
+            if (
+              acao.campos.imagemUrl !== undefined &&
+              p.imagemOriginalUrl === undefined &&
+              !p.personalizado
+            ) {
+              original.imagemOriginalUrl = p.imagemUrl ?? null;
+            }
+
+            return { ...p, ...original, ...acao.campos };
+          }),
+        },
+      };
+    }
+
+    case 'removerPresente':
+      return {
+        ...estado,
+        cfg: {
+          ...estado.cfg,
+          presentesEscolhidos: (estado.cfg.presentesEscolhidos ?? []).filter(
+            (p) => p.catalogoId !== acao.catalogoId
+          ),
+        },
+      };
 
     case 'configSecao':
       return {

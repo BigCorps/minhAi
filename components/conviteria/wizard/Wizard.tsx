@@ -43,7 +43,7 @@ export interface PropsEtapa {
   estado: EstadoWizard;
   despachar: Dispatch<AcaoWizard>;
   aoEnviarArquivo?: (
-    tipo: 'foto' | 'musica' | 'logo',
+    tipo: 'foto' | 'musica' | 'logo' | 'presente',
     arquivo: File,
   ) => Promise<string>;
   modo?: 'criar' | 'editar';
@@ -72,7 +72,7 @@ export interface PropsWizard {
   estadoInicial?: EstadoWizard;
   aoSalvar?: (estado: EstadoWizard) => Promise<void> | void;
   aoEnviarArquivo?: (
-    tipo: 'foto' | 'musica' | 'logo',
+    tipo: 'foto' | 'musica' | 'logo' | 'presente',
     arquivo: File,
   ) => Promise<string>;
   aoConcluir?: (estado: EstadoWizard) => void;

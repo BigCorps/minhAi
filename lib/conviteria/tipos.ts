@@ -59,6 +59,25 @@ export interface PresenteEscolhido {
   valorCentavos: number;
   permiteValorLivre?: boolean;
   imagemUrl?: string | null;
+
+  /**
+   * True quando o item foi criado pelo proprio usuario, nao veio do catalogo.
+   * Serve so para a interface: item personalizado nao aparece na grade do
+   * catalogo e ganha o botao de excluir.
+   *
+   * Editar item do catalogo NAO precisa de flag: `presentesEscolhidos` ja e
+   * um snapshot dentro do config do evento, entao a alteracao vale so para
+   * este convite. O catalogo compartilhado nunca e tocado.
+   */
+  personalizado?: boolean;
+
+  /** Titulo original do catalogo, quando o usuario renomeou. Permite o
+      "restaurar" sem consultar a API de novo. */
+  tituloOriginal?: string;
+  /** Valor original do catalogo, quando o usuario mudou o preco. */
+  valorOriginalCentavos?: number;
+  /** Imagem original do catalogo, quando o usuario trocou a foto. */
+  imagemOriginalUrl?: string | null;
 }
 
 export interface PresenteExibicao {

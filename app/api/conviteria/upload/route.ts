@@ -31,6 +31,17 @@ const REGRAS = {
     mimes: ['image/png', 'image/webp', 'image/svg+xml'],
     ext: { 'image/png': 'png', 'image/webp': 'webp', 'image/svg+xml': 'svg' },
   },
+  // Foto de presente personalizado. Limite menor que o da foto principal:
+  // aqui a imagem e exibida num card de ~150px, e o convite pode ter ate 12
+  // presentes — 12 arquivos de 5 MB pesariam mais que o convite inteiro.
+  //
+  // Sem SVG de proposito: presente e foto de produto, e SVG de origem
+  // desconhecida pode carregar script.
+  presente: {
+    limite: 2 * 1024 * 1024,
+    mimes: ['image/jpeg', 'image/png', 'image/webp'],
+    ext: { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' },
+  },
 } as const;
 
 type Tipo = keyof typeof REGRAS;
@@ -56,7 +67,7 @@ export async function POST(req: NextRequest) {
   if (token && token.length > 100) {
     return NextResponse.json({ erro: 'Token inválido.' }, { status: 400 });
   }
-  if (tipo !== 'foto' && tipo !== 'musica' && tipo !== 'logo') {
+  if (tipo !== 'foto' && tipo !== 'musica' && tipo !== 'logo' && tipo !== 'presente') {
     return NextResponse.json({ erro: 'Tipo inválido.' }, { status: 400 });
   }
   if (!(arquivo instanceof File)) {

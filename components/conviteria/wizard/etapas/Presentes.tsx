@@ -39,8 +39,19 @@ interface Rascunho {
   imagemUrl: string | null;
 }
 
+/** Os mesmos textos que `secoes/Presentes.tsx` usa quando o config esta vazio.
+    Se mudar la, mude aqui — senao o campo mostra um valor que nao corresponde
+    ao que aparece no convite. */
+const TEXTO_PADRAO = {
+  titulo: 'Lista de presentes',
+  texto:
+    'O maior presente é dividir esse dia com você. Mas, se quiser nos presentear, escolha uma cota.',
+  botao: 'Ver lista de presentes',
+} as const;
+
 export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsEtapa) {
   const escolhidos = estado.cfg.presentesEscolhidos ?? [];
+  const secaoPresentes = estado.cfg.secoes?.find((s) => s.tipo === 'presentes');
   const [itens, setItens] = useState<ItemCatalogo[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
@@ -282,6 +293,52 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
           A seção de presentes está desligada. Ligue em “Seções” para ela aparecer no convite.
         </p>
       )}
+
+      {/* Mesmo padrão da etapa "Interações", que já deixa editar os textos de
+          RSVP e recados. O valor exibido é o do config OU o padrão — nunca
+          string vazia, para o convite não mostrar título em branco. */}
+      <details className="wz-textos-secao">
+        <summary>Textos desta seção no convite</summary>
+
+        <label className="wz-campo">
+          <span className="wz-campo-rotulo">Título</span>
+          <input
+            type="text"
+            className="wz-input"
+            maxLength={80}
+            value={String(secaoPresentes?.config?.titulo ?? TEXTO_PADRAO.titulo)}
+            onChange={(e) =>
+              despachar({ tipo: 'configSecao', secao: 'presentes', chave: 'titulo', valor: e.target.value })
+            }
+          />
+        </label>
+
+        <label className="wz-campo">
+          <span className="wz-campo-rotulo">Frase</span>
+          <textarea
+            className="wz-input wz-area"
+            rows={3}
+            maxLength={300}
+            value={String(secaoPresentes?.config?.texto ?? TEXTO_PADRAO.texto)}
+            onChange={(e) =>
+              despachar({ tipo: 'configSecao', secao: 'presentes', chave: 'texto', valor: e.target.value })
+            }
+          />
+        </label>
+
+        <label className="wz-campo">
+          <span className="wz-campo-rotulo">Texto do botão</span>
+          <input
+            type="text"
+            className="wz-input"
+            maxLength={60}
+            value={String(secaoPresentes?.config?.rotuloBotao ?? TEXTO_PADRAO.botao)}
+            onChange={(e) =>
+              despachar({ tipo: 'configSecao', secao: 'presentes', chave: 'rotuloBotao', valor: e.target.value })
+            }
+          />
+        </label>
+      </details>
 
       {/* Os escolhidos vêm primeiro e em lista própria, não misturados à
           grade: item criado pelo usuário não existe no catálogo e não teria

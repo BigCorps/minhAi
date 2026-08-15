@@ -44,7 +44,7 @@ export default function Presentes({ cfg, secao, modo }: PropsSecao) {
         disabled={modo.previa || !modo.eventoId}
         onClick={() => setAberto(true)}
       >
-        Ver lista de presentes
+        {c.rotuloBotao ?? 'Ver lista de presentes'}
       </button>
 
       <p className="cv-presentes-contagem">

@@ -1032,3 +1032,135 @@
   line-height: 1.55;
   color: var(--wz-rosa-escuro);
 }
+
+/* ==========================================================================
+   ACRESCENTAR ao fim de components/conviteria/wizard/wizard.css
+   Presentes: lista de escolhidos e editor
+   ========================================================================== */
+
+.wz-subtitulo {
+  margin: 26px 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--wz-suave);
+}
+
+.wz-escolhidos { margin: 0 0 12px; padding: 0; list-style: none; }
+.wz-escolhidos > li { margin-bottom: 8px; }
+
+.wz-escolhido {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 12px;
+  background: #fff;
+}
+.wz-escolhido-img {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 9px;
+  background: #fdf0f3;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+}
+.wz-escolhido-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.wz-escolhido-info strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  /* Título longo não pode empurrar os botões para fora do card. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wz-escolhido-info span { font-size: 12.5px; color: var(--wz-rosa-escuro); font-weight: 700; }
+
+.wz-etiqueta {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: #fdf0f3;
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--wz-rosa-escuro);
+}
+
+.wz-escolhido-acoes { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+
+.wz-btn-mini {
+  padding: 5px 10px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 7px;
+  background: #fff;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--wz-suave);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.wz-btn-mini:hover:not(:disabled) { border-color: var(--wz-rosa); color: var(--wz-rosa-escuro); }
+.wz-btn-mini:disabled { opacity: .5; cursor: default; }
+
+.wz-btn-novo-presente {
+  width: 100%;
+  margin-bottom: 6px;
+  border-style: dashed;
+  color: var(--wz-rosa-escuro);
+  border-color: #e8c6d6;
+  background: #fffafb;
+}
+
+.wz-presente-editor {
+  margin: 8px 0 4px;
+  padding: 15px;
+  border: 1px solid #e8c6d6;
+  border-radius: 12px;
+  background: #fffafb;
+}
+.wz-presente-editor .wz-campo { margin-bottom: 13px; }
+
+.wz-valor { display: flex; align-items: center; gap: 8px; }
+.wz-valor > span {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--wz-suave);
+  flex-shrink: 0;
+}
+.wz-valor .wz-input:disabled { opacity: .5; }
+
+.wz-switch-solto { margin-bottom: 13px; font-size: 13.5px; }
+
+.wz-presente-foto { display: flex; align-items: center; gap: 11px; }
+.wz-presente-foto img,
+.wz-presente-foto .wz-presente-vazio {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #fdf0f3;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+}
+.wz-presente-foto-acoes { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.wz-presente-editor-acoes { display: flex; gap: 9px; margin-top: 4px; }
+
+@media (max-width: 480px) {
+  /* Em tela estreita os três botões empilhados espremem o card.
+     Na horizontal cabem, porque o título passa a truncar. */
+  .wz-escolhido-acoes { flex-direction: row; }
+}
+

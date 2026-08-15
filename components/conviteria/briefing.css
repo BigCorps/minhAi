@@ -5,7 +5,7 @@
 .cv-briefing-box {
   position: relative;
   z-index: 1;
-  width: min(92vw, 920px);
+  width: min(calc(100vw - 32px), 780px);
   margin: 0 auto;
   text-align: center;
 }
@@ -18,20 +18,20 @@
 .cv-briefing-box textarea {
   display: block;
   width: 100%;
-  height: 148px;
+  height: 108px;
   resize: none;
   overflow-y: auto;
   border: 1px solid rgba(192, 96, 120, .25);
-  border-radius: 22px;
-  padding: 1.15rem 1.25rem 1.7rem;
+  border-radius: 18px;
+  padding: .9rem 1rem 1.45rem;
   outline: none;
-  background: rgba(255, 255, 255, .95);
+  background: rgba(255, 255, 255, .96);
   color: #40232c;
-  box-shadow: 0 14px 42px rgba(90, 45, 58, .09);
+  box-shadow: 0 12px 34px rgba(90, 45, 58, .08);
   backdrop-filter: blur(8px);
   font: inherit;
-  font-size: .96rem;
-  line-height: 1.55;
+  font-size: .88rem;
+  line-height: 1.48;
   text-align: left;
   transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
 }
@@ -44,53 +44,47 @@
   border-color: #c06078;
   background: #fff;
   box-shadow:
-    0 14px 42px rgba(90, 45, 58, .09),
+    0 12px 34px rgba(90, 45, 58, .08),
     0 0 0 3px rgba(192, 96, 120, .09);
 }
 
 .cv-briefing-contador {
   position: absolute;
-  right: .95rem;
-  bottom: .55rem;
+  right: .82rem;
+  bottom: .45rem;
   color: #aa929a;
-  font-size: .66rem;
+  font-size: .64rem;
   pointer-events: none;
 }
 
 .cv-briefing-modo-acoes {
-  width: min(92vw, 720px);
+  width: min(calc(100vw - 32px), 720px);
 }
 
 .cv-briefing-exemplos {
+  margin-top: .65rem;
   text-align: center;
 }
 
-.cv-briefing-modo-completo .cv-briefing-exemplos {
-  margin-top: 1rem;
-}
-
 .cv-briefing-exemplos > span {
-  display: block;
-  margin-bottom: .55rem;
-  color: #8d717a;
-  font-size: .76rem;
-  font-weight: 650;
+  display: none;
 }
 
 .cv-briefing-exemplos > div {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: .45rem;
+  gap: .36rem;
 }
 
 .cv-briefing-exemplos button {
   border: 1px solid rgba(192, 96, 120, .23);
   border-radius: 999px;
-  padding: .42rem .72rem;
-  background: rgba(255, 255, 255, .92);
+  padding: .34rem .62rem;
+  background: rgba(255, 255, 255, .88);
   color: #7c5560;
-  font-size: .72rem;
+  font-size: .67rem;
+  line-height: 1.1;
   transition: .15s ease;
 }
 
@@ -101,25 +95,25 @@
 }
 
 .cv-briefing-texto-pronto {
-  margin: .85rem 0 0;
+  margin: .7rem 0 0;
   color: #7c5560;
-  font-size: .75rem;
+  font-size: .72rem;
 }
 
 .cv-briefing-criar,
 .cv-briefing-continuar {
-  min-height: 50px;
+  min-height: 46px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: .52rem;
-  margin-top: 1rem;
+  gap: .5rem;
+  margin-top: .68rem;
   border: 0;
   border-radius: 999px;
-  padding: .78rem 1.6rem;
+  padding: .7rem 1.45rem;
   background: #d86090;
   color: #fff;
-  font-size: .88rem;
+  font-size: .84rem;
   font-weight: 750;
   box-shadow: 0 8px 22px rgba(216, 96, 144, .22);
   transition: .18s ease;
@@ -142,12 +136,12 @@
 
 .cv-briefing-erro {
   width: min(100%, 560px);
-  margin: .75rem auto 0;
-  padding: .6rem .75rem;
+  margin: .5rem auto 0;
+  padding: .5rem .7rem;
   border-radius: 10px;
   background: #fff0f1;
   color: #a53442;
-  font-size: .74rem;
+  font-size: .7rem;
 }
 
 .cv-briefing-pensando {
@@ -155,10 +149,10 @@
   align-items: center;
   justify-content: center;
   gap: .5rem;
-  margin-top: .55rem;
+  margin-top: .4rem;
   color: #7c5560;
   text-align: center;
-  font-size: .68rem;
+  font-size: .65rem;
 }
 
 .cv-briefing-pensando span {
@@ -176,7 +170,7 @@
 
 /* ==========================================================================
    LANDING — PRIMEIRA DOBRA
-   Exatamente: logo + título + subtítulo + caixa da IA.
+   Mantém presença visual estável em 100% de zoom.
    ========================================================================== */
 
 .cv-landing {
@@ -188,38 +182,39 @@
   position: relative;
   width: 100%;
   height: 100svh;
-  min-height: 520px;
+  min-height: 640px;
   display: grid;
   place-items: center;
   overflow: hidden;
   padding:
-    max(1.25rem, env(safe-area-inset-top))
-    clamp(1rem, 4vw, 2.5rem)
-    max(1.25rem, env(safe-area-inset-bottom));
+    max(14px, env(safe-area-inset-top))
+    18px
+    max(14px, env(safe-area-inset-bottom));
 }
 
 .cv-landing-hero-conteudo {
   width: 100%;
-  max-width: 1080px;
+  max-width: 980px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(1rem, 2.4vh, 1.6rem);
+  gap: 11px;
   text-align: center;
 }
 
 .cv-landing-logo {
   width: auto;
-  height: clamp(96px, 9vw, 132px);
+  height: 104px;
   object-fit: contain;
   flex: 0 0 auto;
+  margin-bottom: 2px;
 }
 
 .cv-landing-hero h1 {
-  max-width: 950px;
+  max-width: 900px;
   margin: 0;
   color: #40232c;
-  font-size: clamp(2.6rem, 5.4vw, 4.8rem);
+  font-size: 3.65rem;
   line-height: .98;
   font-weight: 780;
   letter-spacing: -.045em;
@@ -227,100 +222,170 @@
 
 .cv-landing-hero h1 span {
   display: block;
-  margin-top: .08em;
+  margin-top: .06em;
   color: #d86090;
 }
 
 .cv-landing-subtitulo {
-  width: min(92vw, 760px);
-  margin: 0;
+  width: min(calc(100vw - 32px), 720px);
+  margin: 2px 0 4px;
   color: #6b6b73;
-  font-size: clamp(1rem, 1.55vw, 1.25rem);
-  line-height: 1.45;
+  font-size: 1rem;
+  line-height: 1.4;
 }
 
-/* Como agora existem só quatro elementos, a redução por altura é suave. */
-@media (max-height: 680px) {
+.cv-landing-acoes-secundarias {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  margin-top: -2px;
+  color: #9b7d87;
+  font-size: .72rem;
+}
+
+.cv-landing-acoes-secundarias a {
+  color: #7c5560;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.cv-landing-acoes-secundarias a:hover {
+  color: #a04a63;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Notebook/telas mais baixas: reduz só o necessário, sem efeito "miniatura". */
+@media (max-height: 760px) and (min-width: 601px) {
+  .cv-landing-hero {
+    min-height: 590px;
+  }
+
   .cv-landing-hero-conteudo {
-    gap: .8rem;
+    gap: 8px;
   }
 
   .cv-landing-logo {
-    height: 78px;
+    height: 82px;
   }
 
   .cv-landing-hero h1 {
-    font-size: clamp(2rem, 4.6vw, 3.2rem);
+    font-size: 3rem;
   }
 
   .cv-landing-subtitulo {
-    font-size: .9rem;
+    font-size: .88rem;
+    margin-bottom: 2px;
   }
 
-  .cv-briefing-modo-campo textarea {
-    height: 112px;
+  .cv-landing-hero .cv-briefing-box textarea {
+    height: 86px;
+    font-size: .8rem;
+  }
+
+  .cv-landing-hero .cv-briefing-exemplos {
+    margin-top: .48rem;
+  }
+
+  .cv-landing-hero .cv-briefing-exemplos button {
+    padding: .27rem .52rem;
+    font-size: .62rem;
+  }
+
+  .cv-landing-hero .cv-briefing-criar {
+    min-height: 42px;
+    margin-top: .5rem;
+    padding: .58rem 1.25rem;
+    font-size: .78rem;
+  }
+
+  .cv-landing-acoes-secundarias {
+    font-size: .66rem;
   }
 }
 
-@media (max-height: 560px) {
-  .cv-landing-hero {
-    min-height: 460px;
-  }
-
+/* Só em alturas realmente extremas reduz mais. */
+@media (max-height: 610px) and (min-width: 601px) {
   .cv-landing-logo {
     height: 64px;
   }
 
   .cv-landing-hero h1 {
-    font-size: clamp(1.7rem, 4.2vw, 2.5rem);
+    font-size: 2.5rem;
   }
 
   .cv-landing-subtitulo {
-    font-size: .8rem;
-    line-height: 1.35;
+    font-size: .78rem;
   }
 
-  .cv-briefing-modo-campo textarea {
-    height: 94px;
-    font-size: .82rem;
+  .cv-landing-hero .cv-briefing-box textarea {
+    height: 72px;
+  }
+
+  .cv-landing-hero .cv-briefing-exemplos button {
+    font-size: .58rem;
   }
 }
 
 @media (max-width: 600px) {
   .cv-landing-hero {
-    min-height: 100svh;
-    padding-left: .85rem;
-    padding-right: .85rem;
+    height: 100svh;
+    min-height: 620px;
+    padding-left: .75rem;
+    padding-right: .75rem;
   }
 
   .cv-landing-hero-conteudo {
-    gap: 1rem;
+    gap: 9px;
   }
 
   .cv-landing-logo {
-    height: clamp(82px, 25vw, 108px);
+    height: 82px;
   }
 
   .cv-landing-hero h1 {
     max-width: 94vw;
-    font-size: clamp(2rem, 11vw, 3.15rem);
+    font-size: clamp(2.25rem, 10.5vw, 3rem);
     line-height: 1;
   }
 
   .cv-landing-subtitulo {
-    max-width: 92vw;
-    font-size: clamp(.9rem, 4vw, 1.05rem);
+    width: min(94vw, 520px);
+    font-size: .88rem;
+    line-height: 1.35;
   }
 
   .cv-briefing-box {
-    width: min(94vw, 920px);
+    width: min(94vw, 780px);
   }
 
-  .cv-briefing-box textarea {
-    height: 118px;
-    padding: .9rem .95rem 1.5rem;
-    border-radius: 18px;
-    font-size: .84rem;
+  .cv-landing-hero .cv-briefing-box textarea {
+    height: 94px;
+    padding: .72rem .82rem 1.35rem;
+    border-radius: 16px;
+    font-size: .78rem;
+  }
+
+  .cv-briefing-exemplos {
+    margin-top: .5rem;
+  }
+
+  .cv-briefing-exemplos button {
+    padding: .28rem .5rem;
+    font-size: .61rem;
+  }
+
+  .cv-briefing-criar {
+    min-height: 44px;
+    margin-top: .55rem;
+    padding: .62rem 1.15rem;
+    font-size: .78rem;
+  }
+
+  .cv-landing-acoes-secundarias {
+    flex-wrap: wrap;
+    font-size: .66rem;
   }
 }
 
@@ -337,60 +402,18 @@
   backdrop-filter: blur(6px);
 }
 
-.cv-landing-continuar {
-  width: min(100%, 820px);
-  margin: 0 auto clamp(4rem, 9vw, 7rem);
+.cv-landing-beneficios-cabecalho {
+  width: min(100%, 780px);
+  margin: 0 auto clamp(1.8rem, 5vw, 3rem);
   text-align: center;
 }
 
-.cv-landing-continuar-titulo {
-  margin-bottom: 1.35rem;
-}
-
-.cv-landing-continuar-titulo > span,
 .cv-landing-beneficios-cabecalho > span {
   color: #a04a63;
   font-size: .74rem;
   font-weight: 750;
   text-transform: uppercase;
   letter-spacing: .08em;
-}
-
-.cv-landing-continuar-titulo h2 {
-  max-width: 680px;
-  margin: .5rem auto 0;
-  color: #40232c;
-  font-size: clamp(1.55rem, 3.4vw, 2.35rem);
-  line-height: 1.12;
-  letter-spacing: -.035em;
-}
-
-.cv-landing-acoes-secundarias {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: .55rem;
-  margin-top: .9rem;
-  color: #9b7d87;
-  font-size: .76rem;
-}
-
-.cv-landing-acoes-secundarias a {
-  color: #7c5560;
-  font-weight: 650;
-  text-decoration: none;
-}
-
-.cv-landing-acoes-secundarias a:hover {
-  color: #a04a63;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.cv-landing-beneficios-cabecalho {
-  width: min(100%, 780px);
-  margin: 0 auto clamp(1.8rem, 5vw, 3rem);
-  text-align: center;
 }
 
 .cv-landing-beneficios-cabecalho h2 {
@@ -457,10 +480,6 @@
 
   .cv-landing-beneficios-grid article {
     min-height: 0;
-  }
-
-  .cv-landing-continuar {
-    margin-bottom: 4rem;
   }
 }
 

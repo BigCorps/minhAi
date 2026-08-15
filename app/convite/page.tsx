@@ -158,7 +158,7 @@ export default function PaginaInicialConvite() {
     <main className="cv-landing text-[#40232c]">
       <RendaBackground />
 
-      {/* PRIMEIRA DOBRA: propositalmente apenas estes quatro elementos. */}
+      {/* PRIMEIRA DOBRA: identidade + criação completa, sem os benefícios. */}
       <section className="cv-landing-hero" aria-labelledby="cv-landing-titulo">
         <div className="cv-landing-hero-conteudo">
           <Image
@@ -181,23 +181,7 @@ export default function PaginaInicialConvite() {
           </p>
 
           <BriefingInteligente
-            modo="campo"
-            texto={briefingTexto}
-            aoTexto={setBriefingTexto}
-          />
-        </div>
-      </section>
-
-      {/* Tudo abaixo só aparece depois da rolagem. */}
-      <section className="cv-landing-abaixo" aria-label="Continue criando seu convite">
-        <div className="cv-landing-continuar">
-          <div className="cv-landing-continuar-titulo">
-            <span>Continue quando quiser</span>
-            <h2>A ideia já está na caixa. Agora deixe a IA adiantar o convite.</h2>
-          </div>
-
-          <BriefingInteligente
-            modo="acoes"
+            modo="completo"
             texto={briefingTexto}
             aoTexto={setBriefingTexto}
           />
@@ -208,7 +192,10 @@ export default function PaginaInicialConvite() {
             <Link href="/convite/entrar">Já tenho conta</Link>
           </nav>
         </div>
+      </section>
 
+      {/* A partir daqui só aparece quando o usuário rolar. */}
+      <section className="cv-landing-abaixo" aria-label="Conheça a ConviteIA">
         <div className="cv-landing-beneficios-cabecalho">
           <span>Do primeiro texto ao convite publicado</span>
           <h2>Você dá a ideia. A ConviteIA organiza o resto.</h2>

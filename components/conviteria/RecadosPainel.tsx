@@ -1,7 +1,8 @@
+\
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Check, Loader2, MessageSquareText, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Loader2, MessageSquareText, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
 type Recado = {
@@ -63,17 +64,28 @@ export default function RecadosPainel({ eventoId }: { eventoId: string }) {
 
   return (
     <div className="mt-3 border-t pt-3" style={{ borderColor:'#c0607822' }}>
-      <button type="button" onClick={() => setAberto(v => !v)}
-        className="inline-flex items-center gap-2 text-sm font-medium"
-        style={{ color:'#a04a63' }}>
-        <MessageSquareText className="h-4 w-4" />
-        Recados
-        {pendentes > 0 && (
-          <span className="grid min-w-5 place-items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white"
-            style={{ backgroundColor:'#c06078' }}>
-            {pendentes}
-          </span>
-        )}
+      <button
+        type="button"
+        onClick={() => setAberto(v => !v)}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <span
+          className="inline-flex items-center gap-2 text-sm font-medium"
+          style={{ color:'#a04a63' }}
+        >
+          <MessageSquareText className="h-4 w-4" />
+          Recados
+          {pendentes > 0 && (
+            <span className="grid min-w-5 place-items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white"
+              style={{ backgroundColor:'#c06078' }}>
+              {pendentes}
+            </span>
+          )}
+        </span>
+
+        {aberto
+          ? <ChevronUp className="h-4 w-4" style={{ color: '#9b7b84' }} />
+          : <ChevronDown className="h-4 w-4" style={{ color: '#9b7b84' }} />}
       </button>
 
       {aberto && (

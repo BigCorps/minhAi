@@ -1,7 +1,8 @@
+\
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Banknote, CheckCircle2, Loader2 } from 'lucide-react';
+import { Banknote, CheckCircle2, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { brlSaque } from '@/lib/conviteria/saque';
 
@@ -86,11 +87,19 @@ export default function SaldoSaque({ eventoId }: { eventoId: string }) {
       <button
         type="button"
         onClick={() => setAberto(v => !v)}
-        className="inline-flex items-center gap-2 text-sm font-medium"
-        style={{ color: '#a04a63' }}
+        className="flex w-full items-center justify-between gap-3 text-left"
       >
-        <Banknote className="h-4 w-4" />
-        {aberto ? 'Fechar saldo' : 'Saldo e saque'}
+        <span
+          className="inline-flex items-center gap-2 text-sm font-medium"
+          style={{ color: '#a04a63' }}
+        >
+          <Banknote className="h-4 w-4" />
+          {aberto ? 'Fechar saldo' : 'Saldo e saque'}
+        </span>
+
+        {aberto
+          ? <ChevronUp className="h-4 w-4" style={{ color: '#9b7b84' }} />
+          : <ChevronDown className="h-4 w-4" style={{ color: '#9b7b84' }} />}
       </button>
 
       {aberto && (

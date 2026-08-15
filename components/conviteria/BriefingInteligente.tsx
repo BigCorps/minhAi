@@ -61,30 +61,19 @@ export default function BriefingInteligente() {
   }
 
   return (
-    <section className="cv-briefing-box" aria-labelledby="cv-briefing-titulo">
-      <div className="cv-briefing-selo">
-        <Sparkles className="h-4 w-4" />
-        Comece com IA
-      </div>
+    <section className="cv-briefing-box" aria-label="Crie seu convite com IA">
+      <div className="cv-briefing-campo-wrap">
+        <textarea
+          value={texto}
+          maxLength={2500}
+          onChange={(e) => setTexto(e.target.value)}
+          placeholder="Ex.: Vou casar com João dia 10 de novembro de 2026 às 19h em São Paulo. Quero um convite romântico rosa, com nossa foto, confirmação de presença e lista de presentes…"
+          aria-label="Conte como você imagina seu convite"
+        />
 
-      <h2 id="cv-briefing-titulo">Como você imagina seu convite?</h2>
-
-      <p className="cv-briefing-sub">
-        Conte do seu jeito. Nomes, data, local, estilo, cores, presentes,
-        música ou qualquer detalhe que você já tenha em mente.
-      </p>
-
-      <textarea
-        value={texto}
-        maxLength={2500}
-        onChange={(e) => setTexto(e.target.value)}
-        placeholder="Ex.: Vou casar com João dia 10 de novembro de 2026 às 19h em São Paulo. Quero um convite romântico rosa, com nossa foto, confirmação de presença e lista de presentes…"
-        aria-label="Conte como você imagina seu convite"
-      />
-
-      <div className="cv-briefing-rodape-campo">
-        <span>{texto.length}/2500</span>
-        <span>Você poderá revisar tudo depois.</span>
+        {texto.length > 0 && (
+          <span className="cv-briefing-contador">{texto.length}/2500</span>
+        )}
       </div>
 
       <div className="cv-briefing-exemplos">

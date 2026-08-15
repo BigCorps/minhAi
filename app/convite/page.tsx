@@ -3,7 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FileText, Plus, Sparkles } from 'lucide-react';
+import {
+  FileText,
+  Palette,
+  Plus,
+  Sparkles,
+  UsersRound,
+} from 'lucide-react';
 import RendaBackground from '@/components/conviteria/RendaBackground';
 import RodapeMarca from '@/components/conviteria/RodapeMarca';
 import SuporteWhatsapp from '@/components/conviteria/SuporteWhatsapp';
@@ -148,55 +154,93 @@ export default function PaginaInicialConvite() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-6 md:p-24 text-center text-[#40232c]">
+    <main className="cv-landing text-[#40232c]">
       <RendaBackground />
 
-      <div className="mb-8 flex justify-center">
-        <Image
-          src="/brands/convite/icone-512.png"
-          alt="Logo Convite IA"
-          width={128}
-          height={128}
-          className="object-contain"
-          priority
-        />
-      </div>
+      <section className="cv-landing-hero" aria-labelledby="cv-landing-titulo">
+        <div className="cv-landing-hero-conteudo">
+          <Image
+            src="/brands/convite/icone-512.png"
+            alt="Convite IA"
+            width={104}
+            height={104}
+            className="cv-landing-logo"
+            priority
+          />
 
-      <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-        Seu evento merece um <br className="hidden md:block" />
-        <span className="text-[#d86090]">Convite Inteligente</span>
-      </h1>
+          <div className="cv-landing-chamada">
+            <h1 id="cv-landing-titulo">
+              Seu evento merece um
+              <span>Convite Inteligente</span>
+            </h1>
 
-      <p className="text-lg md:text-xl text-[#6b6b73] max-w-2xl mb-8 leading-relaxed">
-        Crie convites digitais elegantes, gerencie confirmações de presença e
-        encante seus convidados em minutos com a ConviteIA.
-      </p>
+            <p>
+              Conte como será seu evento. A IA prepara o começo do convite e
+              você personaliza cada detalhe.
+            </p>
+          </div>
 
-      <BriefingInteligente />
+          <BriefingInteligente />
 
-      <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-4">
-        <Link
-          href="/convite/criar"
-          className="flex items-center justify-center px-7 py-3.5 bg-white text-[#a04a63] font-bold rounded-full shadow-sm border border-[#e7ccd5] hover:border-[#c06078] transition-all duration-200"
-        >
-          Prefiro começar do zero
-        </Link>
+          <nav className="cv-landing-acoes-secundarias" aria-label="Outras opções">
+            <Link href="/convite/criar">Prefiro começar do zero</Link>
+            <span aria-hidden="true">•</span>
+            <Link href="/convite/entrar">Já tenho conta</Link>
+          </nav>
 
-        <Link
-          href="/convite/entrar"
-          className="flex items-center justify-center px-7 py-3.5 bg-white text-[#6b6b73] font-bold rounded-full shadow-sm border border-[#e4e4e7] hover:border-[#d9c2cc] hover:text-[#a04a63] transition-all duration-200"
-        >
-          Entrar
-        </Link>
-      </div>
+          <a className="cv-landing-rolar" href="#como-funciona">
+            Veja tudo que você pode fazer
+            <span aria-hidden="true">↓</span>
+          </a>
+        </div>
+      </section>
 
-      <div className="mt-12">
-        <SuporteWhatsapp assunto="Tenho uma dúvida sobre a ConviteIA" />
-      </div>
+      <section id="como-funciona" className="cv-landing-beneficios">
+        <div className="cv-landing-beneficios-cabecalho">
+          <span>Do primeiro texto ao convite publicado</span>
+          <h2>Você dá a ideia. A ConviteIA organiza o resto.</h2>
+        </div>
 
-      <div className="mt-6">
-        <RodapeMarca />
-      </div>
+        <div className="cv-landing-beneficios-grid">
+          <article>
+            <span className="cv-landing-beneficio-icone">
+              <Sparkles className="h-6 w-6" />
+            </span>
+            <h3>Comece com IA</h3>
+            <p>
+              Conte sua ideia naturalmente. A IA adianta tipo, estilo, nomes,
+              data, recursos e outras informações que conseguir identificar.
+            </p>
+          </article>
+
+          <article>
+            <span className="cv-landing-beneficio-icone">
+              <Palette className="h-6 w-6" />
+            </span>
+            <h3>Personalize tudo</h3>
+            <p>
+              Escolha cores, fontes, textura, envelope, foto, música, selo,
+              presentes e a ordem das seções.
+            </p>
+          </article>
+
+          <article>
+            <span className="cv-landing-beneficio-icone">
+              <UsersRound className="h-6 w-6" />
+            </span>
+            <h3>Cuide dos convidados</h3>
+            <p>
+              Centralize confirmações de presença, lista de presentes e recados
+              em um único convite e acompanhe tudo pelo painel.
+            </p>
+          </article>
+        </div>
+
+        <div className="cv-landing-pos-beneficios">
+          <SuporteWhatsapp assunto="Tenho uma dúvida sobre a ConviteIA" />
+          <RodapeMarca />
+        </div>
+      </section>
     </main>
   );
 }

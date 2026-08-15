@@ -1,132 +1,120 @@
+/* --------------------------------------------------------------------------
+   Caixa de briefing da IA — compacta e sem card externo.
+   -------------------------------------------------------------------------- */
+
 .cv-briefing-box {
   position: relative;
   z-index: 1;
-  width: min(100%, 760px);
-  margin: 0 auto 2rem;
-  padding: 1.35rem;
-  text-align: left;
-  background: rgba(255,255,255,.94);
-  border: 1px solid rgba(192,96,120,.22);
-  border-radius: 24px;
-  box-shadow: 0 18px 55px rgba(90,45,58,.10);
-  backdrop-filter: blur(8px);
+  width: min(92vw, 700px);
+  margin: 0 auto;
+  text-align: center;
 }
 
-.cv-briefing-selo {
-  display: inline-flex;
-  align-items: center;
-  gap: .4rem;
-  margin-bottom: .65rem;
-  padding: .35rem .65rem;
-  border-radius: 999px;
-  background: #fdf0f3;
-  color: #a04a63;
-  font-size: .76rem;
-  font-weight: 700;
-}
-
-.cv-briefing-box h2 {
-  margin: 0;
-  color: #40232c;
-  font-size: clamp(1.35rem, 3vw, 1.8rem);
-  font-weight: 750;
-  letter-spacing: -.02em;
-}
-
-.cv-briefing-sub {
-  margin: .5rem 0 1rem;
-  color: #7c6a70;
-  font-size: .9rem;
-  line-height: 1.55;
+.cv-briefing-campo-wrap {
+  position: relative;
 }
 
 .cv-briefing-box textarea {
+  display: block;
   width: 100%;
-  min-height: 145px;
-  resize: vertical;
-  border: 1px solid #ead7dd;
-  border-radius: 16px;
-  padding: 1rem 1.05rem;
+  height: clamp(76px, 11svh, 104px);
+  min-height: 0;
+  resize: none;
+  overflow-y: auto;
+  border: 1px solid rgba(192, 96, 120, .24);
+  border-radius: 18px;
+  padding: clamp(.75rem, 1.7svh, 1rem) 1rem 1.45rem;
   outline: none;
-  background: #fffafb;
+  background: rgba(255, 255, 255, .94);
   color: #40232c;
+  box-shadow: 0 10px 30px rgba(90, 45, 58, .08);
+  backdrop-filter: blur(8px);
   font: inherit;
-  font-size: .94rem;
-  line-height: 1.55;
-  transition: .18s ease;
+  font-size: clamp(.78rem, 1.7svh, .92rem);
+  line-height: 1.45;
+  text-align: left;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
 }
 
 .cv-briefing-box textarea::placeholder {
-  color: #aa929a;
+  color: #9d8790;
 }
 
 .cv-briefing-box textarea:focus {
   border-color: #c06078;
-  box-shadow: 0 0 0 3px rgba(192,96,120,.10);
   background: #fff;
+  box-shadow:
+    0 10px 30px rgba(90, 45, 58, .08),
+    0 0 0 3px rgba(192, 96, 120, .09);
 }
 
-.cv-briefing-rodape-campo {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: .4rem;
-  color: #9b878e;
-  font-size: .68rem;
+.cv-briefing-contador {
+  position: absolute;
+  right: .8rem;
+  bottom: .45rem;
+  color: #aa929a;
+  font-size: .62rem;
+  pointer-events: none;
 }
 
 .cv-briefing-exemplos {
-  margin-top: 1rem;
+  margin-top: clamp(.45rem, 1.15svh, .75rem);
+  text-align: center;
 }
 
 .cv-briefing-exemplos > span {
   display: block;
-  margin-bottom: .45rem;
-  color: #7c5560;
-  font-size: .72rem;
+  margin-bottom: .35rem;
+  color: #8d717a;
+  font-size: clamp(.62rem, 1.35svh, .7rem);
   font-weight: 650;
 }
 
 .cv-briefing-exemplos > div {
   display: flex;
   flex-wrap: wrap;
-  gap: .45rem;
+  justify-content: center;
+  gap: clamp(.28rem, .7svh, .4rem);
 }
 
 .cv-briefing-exemplos button {
-  border: 1px solid #ead7dd;
+  border: 1px solid rgba(192, 96, 120, .22);
   border-radius: 999px;
-  padding: .4rem .65rem;
-  background: #fff;
+  padding: clamp(.28rem, .7svh, .38rem) .62rem;
+  background: rgba(255, 255, 255, .82);
   color: #7c5560;
-  font-size: .7rem;
+  font-size: clamp(.61rem, 1.35svh, .69rem);
+  line-height: 1.1;
   transition: .15s ease;
 }
 
 .cv-briefing-exemplos button:hover {
   border-color: #c06078;
   color: #a04a63;
-  background: #fff7f9;
+  background: #fff;
 }
 
 .cv-briefing-criar,
 .cv-briefing-continuar {
-  width: 100%;
-  min-height: 52px;
+  min-height: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: .55rem;
-  margin-top: 1rem;
+  gap: .5rem;
+  margin-top: clamp(.55rem, 1.2svh, .8rem);
   border: 0;
   border-radius: 999px;
-  padding: .8rem 1.2rem;
+  padding: clamp(.66rem, 1.3svh, .78rem) clamp(1.2rem, 4vw, 1.75rem);
   background: #d86090;
   color: #fff;
-  font-size: .9rem;
+  font-size: clamp(.77rem, 1.55svh, .88rem);
   font-weight: 750;
-  box-shadow: 0 8px 22px rgba(216,96,144,.22);
+  box-shadow: 0 8px 22px rgba(216, 96, 144, .22);
   transition: .18s ease;
+}
+
+.cv-briefing-continuar {
+  width: 100%;
 }
 
 .cv-briefing-criar:hover:not(:disabled),
@@ -141,28 +129,29 @@
 }
 
 .cv-briefing-erro {
-  margin: .75rem 0 0;
-  padding: .65rem .8rem;
+  width: min(100%, 560px);
+  margin: .5rem auto 0;
+  padding: .5rem .7rem;
   border-radius: 10px;
   background: #fff0f1;
   color: #a53442;
-  font-size: .76rem;
+  font-size: .7rem;
 }
 
 .cv-briefing-pensando {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: .55rem;
-  margin-top: .7rem;
+  gap: .5rem;
+  margin-top: .45rem;
   color: #7c5560;
   text-align: center;
-  font-size: .72rem;
+  font-size: .65rem;
 }
 
 .cv-briefing-pensando span {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #d86090;
   animation: cv-briefing-pulso 1s ease-in-out infinite alternate;
@@ -173,7 +162,343 @@
   to { opacity: 1; transform: scale(1.2); }
 }
 
-/* Resumo ao entrar no wizard */
+/* --------------------------------------------------------------------------
+   Landing pública — primeira dobra sempre cabe na viewport.
+   -------------------------------------------------------------------------- */
+
+.cv-landing {
+  position: relative;
+  min-height: 100svh;
+}
+
+.cv-landing-hero {
+  position: relative;
+  height: 100svh;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding:
+    max(.55rem, env(safe-area-inset-top))
+    clamp(.75rem, 3vw, 1.5rem)
+    max(.55rem, env(safe-area-inset-bottom));
+}
+
+.cv-landing-hero-conteudo {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(.38rem, 1.25svh, .85rem);
+  text-align: center;
+}
+
+.cv-landing-logo {
+  width: auto;
+  height: clamp(52px, 11svh, 96px);
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.cv-landing-chamada {
+  display: grid;
+  gap: clamp(.25rem, .75svh, .48rem);
+}
+
+.cv-landing-chamada h1 {
+  margin: 0;
+  color: #40232c;
+  font-size: clamp(1.65rem, min(5.6vw, 6.2svh), 3.8rem);
+  line-height: .98;
+  font-weight: 780;
+  letter-spacing: -.04em;
+}
+
+.cv-landing-chamada h1 span {
+  display: block;
+  margin-top: .08em;
+  color: #d86090;
+}
+
+.cv-landing-chamada p {
+  width: min(92vw, 680px);
+  margin: 0 auto;
+  color: #6b6b73;
+  font-size: clamp(.72rem, min(1.55vw, 1.8svh), 1rem);
+  line-height: 1.4;
+}
+
+.cv-landing-acoes-secundarias {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  color: #9b7d87;
+  font-size: clamp(.65rem, 1.4svh, .76rem);
+}
+
+.cv-landing-acoes-secundarias a {
+  color: #7c5560;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.cv-landing-acoes-secundarias a:hover {
+  color: #a04a63;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cv-landing-rolar {
+  display: inline-flex;
+  align-items: center;
+  gap: .38rem;
+  color: #9b7d87;
+  font-size: clamp(.58rem, 1.25svh, .68rem);
+  text-decoration: none;
+}
+
+.cv-landing-rolar span {
+  animation: cv-landing-seta 1.4s ease-in-out infinite;
+}
+
+@keyframes cv-landing-seta {
+  0%, 100% { transform: translateY(-1px); }
+  50% { transform: translateY(3px); }
+}
+
+/* Em telas realmente baixas, prioriza a ação sem remover nada. */
+@media (max-height: 700px) {
+  .cv-landing-hero-conteudo {
+    gap: .34rem;
+  }
+
+  .cv-landing-logo {
+    height: clamp(46px, 9svh, 64px);
+  }
+
+  .cv-landing-chamada h1 {
+    font-size: clamp(1.45rem, min(5vw, 5.3svh), 2.4rem);
+  }
+
+  .cv-landing-chamada p {
+    font-size: clamp(.66rem, 1.55svh, .78rem);
+  }
+
+  .cv-briefing-box textarea {
+    height: clamp(66px, 10.5svh, 78px);
+    padding-top: .6rem;
+    font-size: .75rem;
+  }
+
+  .cv-briefing-exemplos {
+    margin-top: .32rem;
+  }
+
+  .cv-briefing-exemplos > span {
+    margin-bottom: .25rem;
+  }
+
+  .cv-briefing-exemplos button {
+    padding: .25rem .5rem;
+    font-size: .6rem;
+  }
+
+  .cv-briefing-criar {
+    margin-top: .4rem;
+    padding: .56rem 1.1rem;
+    font-size: .73rem;
+  }
+
+  .cv-landing-acoes-secundarias {
+    font-size: .62rem;
+  }
+
+  .cv-landing-rolar {
+    font-size: .56rem;
+  }
+}
+
+@media (max-height: 570px) {
+  .cv-landing-hero-conteudo {
+    gap: .22rem;
+  }
+
+  .cv-landing-logo {
+    height: 42px;
+  }
+
+  .cv-landing-chamada h1 {
+    font-size: clamp(1.25rem, 4.6svh, 1.7rem);
+  }
+
+  .cv-landing-chamada p {
+    font-size: .62rem;
+    line-height: 1.28;
+  }
+
+  .cv-briefing-box textarea {
+    height: 58px;
+    font-size: .68rem;
+    border-radius: 14px;
+  }
+
+  .cv-briefing-exemplos > span {
+    display: none;
+  }
+
+  .cv-briefing-exemplos button {
+    font-size: .56rem;
+    padding: .2rem .42rem;
+  }
+
+  .cv-briefing-criar {
+    padding: .48rem .9rem;
+    font-size: .68rem;
+  }
+
+  .cv-landing-rolar {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .cv-landing-hero {
+    padding-left: .75rem;
+    padding-right: .75rem;
+  }
+
+  .cv-landing-chamada h1 {
+    max-width: 94vw;
+  }
+
+  .cv-landing-chamada p {
+    max-width: 90vw;
+  }
+
+  .cv-briefing-box {
+    width: min(94vw, 700px);
+  }
+
+  .cv-briefing-exemplos > div {
+    gap: .3rem;
+  }
+
+  .cv-briefing-criar {
+    width: min(100%, 330px);
+  }
+
+  .cv-landing-acoes-secundarias {
+    flex-wrap: wrap;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Conteúdo abaixo da primeira dobra.
+   -------------------------------------------------------------------------- */
+
+.cv-landing-beneficios {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(3.2rem, 8vw, 6rem) 1rem 2rem;
+  background: rgba(255, 255, 255, .78);
+  border-top: 1px solid rgba(192, 96, 120, .12);
+  backdrop-filter: blur(5px);
+}
+
+.cv-landing-beneficios-cabecalho {
+  width: min(100%, 780px);
+  margin: 0 auto clamp(1.8rem, 5vw, 3rem);
+  text-align: center;
+}
+
+.cv-landing-beneficios-cabecalho > span {
+  color: #a04a63;
+  font-size: .75rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.cv-landing-beneficios-cabecalho h2 {
+  margin: .5rem 0 0;
+  color: #40232c;
+  font-size: clamp(1.7rem, 4vw, 2.7rem);
+  line-height: 1.08;
+  letter-spacing: -.035em;
+}
+
+.cv-landing-beneficios-grid {
+  width: min(100%, 1000px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.cv-landing-beneficios-grid article {
+  min-height: 230px;
+  padding: 1.5rem;
+  border: 1px solid rgba(192, 96, 120, .18);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .9);
+  box-shadow: 0 10px 35px rgba(74, 41, 51, .06);
+}
+
+.cv-landing-beneficio-icone {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 1rem;
+  border-radius: 15px;
+  background: #fdf0f3;
+  color: #a04a63;
+}
+
+.cv-landing-beneficios-grid h3 {
+  margin: 0;
+  color: #40232c;
+  font-size: 1.05rem;
+}
+
+.cv-landing-beneficios-grid p {
+  margin: .65rem 0 0;
+  color: #74636a;
+  font-size: .82rem;
+  line-height: 1.65;
+}
+
+.cv-landing-pos-beneficios {
+  display: grid;
+  place-items: center;
+  gap: 1.1rem;
+  margin-top: clamp(2rem, 5vw, 3.5rem);
+}
+
+@media (max-width: 760px) {
+  .cv-landing-beneficios {
+    justify-content: flex-start;
+  }
+
+  .cv-landing-beneficios-grid {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+  }
+
+  .cv-landing-beneficios-grid article {
+    min-height: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Resumo ao entrar no wizard — preservado.
+   -------------------------------------------------------------------------- */
+
 .cv-briefing-resumo-fundo {
   position: fixed;
   z-index: 10000;
@@ -318,17 +643,6 @@
 }
 
 @media (max-width: 560px) {
-  .cv-briefing-box {
-    padding: 1rem;
-    border-radius: 20px;
-  }
-
-  .cv-briefing-rodape-campo {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: .15rem;
-  }
-
   .cv-briefing-resumo {
     padding: 1.2rem;
     border-radius: 20px;

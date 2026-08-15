@@ -1190,3 +1190,96 @@
   border-bottom: 1px solid var(--wz-linha);
 }
 .wz-textos-secao .wz-campo:last-child { margin-bottom: 13px; }
+
+/* ==========================================================================
+   ACRESCENTAR ao fim de components/conviteria/wizard/wizard.css
+   Alertas e lista de presentes na revisão
+   ========================================================================== */
+
+.wz-alerta {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid #f0c9a8;
+  border-radius: 11px;
+  background: #fffaf3;
+}
+.wz-alerta > p { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: #a1670c; }
+.wz-alerta ul { margin: 0; padding-left: 17px; font-size: 12.5px; line-height: 1.8; color: #7c5a1e; }
+.wz-alerta ul strong { font-weight: 700; }
+.wz-alerta ul button,
+.wz-alerta-acao button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--wz-rosa-escuro);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.wz-alerta-acao {
+  margin: 8px 0 0 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.6;
+}
+
+/* Versão leve: informa, não alerta. Foto padrão não é erro — é só algo que
+   a pessoa pode ter esquecido. */
+.wz-alerta-leve { border-color: var(--wz-linha); background: var(--wz-fundo); }
+.wz-alerta-leve > p { color: var(--wz-texto); }
+.wz-alerta-leve ul { color: var(--wz-suave); }
+
+.wz-etiqueta-leve { background: var(--wz-fundo); color: var(--wz-suave); }
+
+.wz-revisao-presentes { margin-top: 20px; }
+.wz-revisao-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+.wz-revisao-topo h3 { margin: 0; font-size: 14px; font-weight: 700; }
+.wz-revisao-topo h3 span { color: var(--wz-suave); font-weight: 400; }
+
+.wz-revisao-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wz-revisao-grade > li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 7px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 10px;
+  background: #fff;
+}
+.wz-revisao-grade img,
+.wz-revisao-grade .wz-presente-vazio {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 7px;
+  background: #fdf0f3;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+}
+.wz-revisao-titulo {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--wz-texto);
+  /* Duas linhas e reticências: título longo não pode desalinhar a grade. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.wz-revisao-valor { font-size: 11px; font-weight: 700; color: var(--wz-rosa-escuro); }

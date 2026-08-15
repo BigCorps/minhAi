@@ -518,6 +518,13 @@
 .cv-landing-beneficios-grid article {
   min-height: 230px;
   padding: 1.5rem;
+  /* Coluna centralizada. `text-align` sozinho não resolveria: o ícone é um
+     bloco de 46px, não texto, e bloco ignora text-align do pai. É o
+     `align-items` que o centraliza, tratando-o como item de flex. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
   border: 1px solid rgba(192, 96, 120, .18);
   border-radius: 22px;
   background: rgba(255, 255, 255, .92);
@@ -527,6 +534,9 @@
 .cv-landing-beneficio-icone {
   width: 46px;
   height: 46px;
+  /* Agora que o article é flex column, sem `flex-shrink: 0` o quadrado do
+     ícone achata verticalmente quando o texto do card é mais longo. */
+  flex-shrink: 0;
   display: grid;
   place-items: center;
   margin-bottom: 1rem;
@@ -543,6 +553,9 @@
 
 .cv-landing-beneficios-grid p {
   margin: .65rem 0 0;
+  /* Emparelha o comprimento das linhas: texto centralizado com linhas de
+     larguras muito diferentes fica visualmente instável. */
+  max-width: 30ch;
   color: #74636a;
   font-size: .82rem;
   line-height: 1.65;

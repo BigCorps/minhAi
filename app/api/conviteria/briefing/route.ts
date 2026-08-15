@@ -1,36 +1,67 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { ipDaRequisicao } from '@/lib/conviteria/servidor';
+import {
+  NextResponse,
+  type NextRequest,
+} from 'next/server';
+import {
+  ipDaRequisicao,
+} from '@/lib/conviteria/servidor';
 import {
   aplicarBriefing,
-  ORNAMENTOS_BRIEFING,
 } from '@/lib/conviteria/briefing';
+import {
+  ORNAMENTOS_IDS,
+  catalogoOrnamentosParaIA,
+} from '@/lib/conviteria/ornamentos';
 import {
   TEMAS,
   catalogoTemasParaIA,
 } from '@/lib/conviteria/temas';
-import { TIPOS_EVENTO } from '@/lib/conviteria/tiposEvento';
+import {
+  TIPOS_EVENTO,
+} from '@/lib/conviteria/tiposEvento';
 
 export const runtime = 'nodejs';
 
-const limite = new Map<string, { n: number; ate: number }>();
+const limite = new Map<
+  string,
+  { n: number; ate: number }
+>();
 
 function passou(ip: string) {
   const agora = Date.now();
   const atual = limite.get(ip);
 
-  if (!atual || agora > atual.ate) {
-    limite.set(ip, { n: 1, ate: agora + 3_600_000 });
+  if (
+    !atual ||
+    agora > atual.ate
+  ) {
+    limite.set(ip, {
+      n: 1,
+      ate:
+        agora +
+        3_600_000,
+    });
+
     return true;
   }
 
-  if (atual.n >= 12) return false;
+  if (atual.n >= 12) {
+    return false;
+  }
 
   atual.n += 1;
   return true;
 }
 
-const idsTipos = TIPOS_EVENTO.map((t) => t.id);
-const idsTemas = TEMAS.map((t) => t.id);
+const idsTipos =
+  TIPOS_EVENTO.map(
+    (t) => t.id
+  );
+
+const idsTemas =
+  TEMAS.map(
+    (t) => t.id
+  );
 
 const schema = {
   type: 'object',
@@ -53,31 +84,57 @@ const schema = {
   properties: {
     tipoEventoId: {
       anyOf: [
-        { type: 'string', enum: idsTipos },
-        { type: 'null' },
+        {
+          type: 'string',
+          enum: idsTipos,
+        },
+        {
+          type: 'null',
+        },
       ],
     },
-    nomes: { type: ['string', 'null'] },
-    nomesCompletos: { type: ['string', 'null'] },
+    nomes: {
+      type: [
+        'string',
+        'null',
+      ],
+    },
+    nomesCompletos: {
+      type: [
+        'string',
+        'null',
+      ],
+    },
     data: {
       anyOf: [
         {
           type: 'string',
-          pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+          pattern:
+            '^\\d{4}-\\d{2}-\\d{2}$',
         },
-        { type: 'null' },
+        {
+          type: 'null',
+        },
       ],
     },
     hora: {
       anyOf: [
         {
           type: 'string',
-          pattern: '^\\d{2}:\\d{2}$',
+          pattern:
+            '^\\d{2}:\\d{2}$',
         },
-        { type: 'null' },
+        {
+          type: 'null',
+        },
       ],
     },
-    horarioTexto: { type: ['string', 'null'] },
+    horarioTexto: {
+      type: [
+        'string',
+        'null',
+      ],
+    },
     local: {
       type: 'object',
       additionalProperties: false,
@@ -89,26 +146,58 @@ const schema = {
         'cep',
       ],
       properties: {
-        nome: { type: ['string', 'null'] },
-        logradouro: { type: ['string', 'null'] },
-        bairro: { type: ['string', 'null'] },
-        cidade: { type: ['string', 'null'] },
-        cep: { type: ['string', 'null'] },
+        nome: {
+          type: [
+            'string',
+            'null',
+          ],
+        },
+        logradouro: {
+          type: [
+            'string',
+            'null',
+          ],
+        },
+        bairro: {
+          type: [
+            'string',
+            'null',
+          ],
+        },
+        cidade: {
+          type: [
+            'string',
+            'null',
+          ],
+        },
+        cep: {
+          type: [
+            'string',
+            'null',
+          ],
+        },
       },
     },
     temaId: {
       anyOf: [
-        { type: 'string', enum: idsTemas },
-        { type: 'null' },
+        {
+          type: 'string',
+          enum: idsTemas,
+        },
+        {
+          type: 'null',
+        },
       ],
     },
     ornamentoId: {
       anyOf: [
         {
           type: 'string',
-          enum: [...ORNAMENTOS_BRIEFING],
+          enum: ORNAMENTOS_IDS,
         },
-        { type: 'null' },
+        {
+          type: 'null',
+        },
       ],
     },
     recursos: {
@@ -123,51 +212,92 @@ const schema = {
         'logo',
       ],
       properties: {
-        rsvp: { type: ['boolean', 'null'] },
-        presentes: { type: ['boolean', 'null'] },
-        recados: { type: ['boolean', 'null'] },
-        foto: { type: ['boolean', 'null'] },
-        musica: { type: ['boolean', 'null'] },
-        logo: { type: ['boolean', 'null'] },
+        rsvp: {
+          type: [
+            'boolean',
+            'null',
+          ],
+        },
+        presentes: {
+          type: [
+            'boolean',
+            'null',
+          ],
+        },
+        recados: {
+          type: [
+            'boolean',
+            'null',
+          ],
+        },
+        foto: {
+          type: [
+            'boolean',
+            'null',
+          ],
+        },
+        musica: {
+          type: [
+            'boolean',
+            'null',
+          ],
+        },
+        logo: {
+          type: [
+            'boolean',
+            'null',
+          ],
+        },
       },
     },
-    fraseExata: { type: ['string', 'null'] },
+    fraseExata: {
+      type: [
+        'string',
+        'null',
+      ],
+    },
     pendencias: {
       type: 'array',
       maxItems: 8,
-      items: { type: 'string' },
+      items: {
+        type: 'string',
+      },
     },
     pedidosEspeciais: {
       type: 'array',
       maxItems: 8,
-      items: { type: 'string' },
+      items: {
+        type: 'string',
+      },
     },
   },
 } as const;
 
-async function interpretar(texto: string) {
-  const tipos = TIPOS_EVENTO
-    .map((t) => `${t.id}: ${t.nome}`)
-    .join('; ');
+async function interpretar(
+  texto: string
+) {
+  const tipos =
+    TIPOS_EVENTO
+      .map(
+        (t) =>
+          `${t.id}: ${t.nome}`
+      )
+      .join('; ');
 
-  const ornamentos = [
-    'floral: delicado, romântico, botânico',
-    'classico: elegante, tradicional, cerimônia',
-    'geometrico: moderno, masculino, corporativo, urbano',
-    'minimal: clean, sóbrio, adulto, contemporâneo',
-    'festivo: aniversário, 15 anos, infantil, alegre',
-    'rustico: campo, boho, natureza, tropical, aventura',
-  ].join('; ');
-
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje =
+    new Date()
+      .toISOString()
+      .slice(0, 10);
 
   const r = await fetch(
     'https://api.openai.com/v1/chat/completions',
     {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type':
+          'application/json',
+        Authorization:
+          `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
@@ -176,7 +306,8 @@ async function interpretar(texto: string) {
         response_format: {
           type: 'json_schema',
           json_schema: {
-            name: 'conviteia_briefing',
+            name:
+              'conviteia_briefing',
             strict: true,
             schema,
           },
@@ -207,6 +338,12 @@ REGRA PRINCIPAL: não invente informações factuais.
 - Não use estética de casamento por hábito. Respeite o contexto real:
   aniversário infantil deve parecer infantil; festa masculina pode ser sóbria;
   happy hour pode ser noturno; confraternização pode ser corporativa.
+- Para casamento romântico/floral completo, considere casamento-original.
+- Para algo muito chique/fashion, considere alta-costura.
+- Para clássico formal/tradicional, considere imperial.
+- Para luxo geométrico/Gatsby/formatura, considere art-deco.
+- Para orgânico contemporâneo/boho moderno, considere organico-chic.
+- Para urbano/rock/esporte/gamer/jovem forte, considere radical.
 - pedidosEspeciais recebe pedidos que o produto não consegue preencher
   automaticamente, como animações específicas, desenhos especiais ou efeitos.
 - pendencias recebe detalhes citados mas ainda incompletos ou que exigem
@@ -222,7 +359,7 @@ TEMAS DISPONÍVEIS:
 ${catalogoTemasParaIA()}
 
 ORNAMENTOS:
-${ornamentos}`,
+${catalogoOrnamentosParaIA()}`,
           },
           {
             role: 'user',
@@ -234,83 +371,137 @@ ${ornamentos}`,
   );
 
   if (!r.ok) {
-    const detalhe = await r.text().catch(() => '');
+    const detalhe =
+      await r
+        .text()
+        .catch(
+          () => ''
+        );
 
     console.error(
       'ConviteIA briefing — OpenAI:',
       r.status,
-      detalhe.slice(0, 300)
+      detalhe.slice(
+        0,
+        300
+      )
     );
 
-    throw new Error('modelo indisponivel');
+    throw new Error(
+      'modelo indisponivel'
+    );
   }
 
-  const j = (await r.json()) as {
-    choices?: Array<{
-      message?: { content?: string };
-    }>;
-  };
+  const j =
+    (await r.json()) as {
+      choices?: Array<{
+        message?: {
+          content?: string;
+        };
+      }>;
+    };
 
   return JSON.parse(
-    j.choices?.[0]?.message?.content ?? '{}'
+    j.choices?.[0]
+      ?.message
+      ?.content ??
+      '{}'
   );
 }
 
-export async function POST(req: NextRequest) {
-  const ip = ipDaRequisicao(req);
+export async function POST(
+  req: NextRequest
+) {
+  const ip =
+    ipDaRequisicao(req);
 
   if (!passou(ip)) {
     return NextResponse.json(
       {
         erro: 'Muitas criações com IA. Tente novamente daqui a pouco.',
       },
-      { status: 429 }
+      {
+        status: 429,
+      }
     );
   }
 
-  const corpo = await req.json().catch(() => null);
-  const texto = String(corpo?.texto ?? '').trim();
+  const corpo =
+    await req
+      .json()
+      .catch(
+        () => null
+      );
+
+  const texto =
+    String(
+      corpo?.texto ?? ''
+    ).trim();
 
   if (texto.length < 15) {
     return NextResponse.json(
       {
         erro: 'Conte um pouco mais sobre o convite que você quer criar.',
       },
-      { status: 400 }
+      {
+        status: 400,
+      }
     );
   }
 
-  if (texto.length > 2500) {
+  if (
+    texto.length >
+    2500
+  ) {
     return NextResponse.json(
       {
         erro: 'O texto ficou muito grande. Resuma sua ideia em até 2.500 caracteres.',
       },
-      { status: 400 }
+      {
+        status: 400,
+      }
     );
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (
+    !process.env
+      .OPENAI_API_KEY
+  ) {
     return NextResponse.json(
       {
         erro: 'A criação com IA está temporariamente indisponível.',
       },
-      { status: 503 }
+      {
+        status: 503,
+      }
     );
   }
 
   try {
-    const extraido = await interpretar(texto);
-    const pacote = aplicarBriefing(extraido);
+    const extraido =
+      await interpretar(texto);
 
-    return NextResponse.json(pacote);
+    const pacote =
+      aplicarBriefing(
+        extraido
+      );
+
+    return NextResponse.json(
+      pacote
+    );
   } catch (e) {
-    console.error('ConviteIA briefing:', e);
+    console.error(
+      'ConviteIA briefing:',
+      e
+    );
 
     return NextResponse.json(
       {
         erro: 'Não consegui interpretar agora. Você ainda pode começar do zero e preencher normalmente.',
       },
-      { status: 503 }
+      {
+        status: 503,
+      }
     );
   }
 }

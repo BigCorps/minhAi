@@ -1,5 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
+const FRONTEND_CALLBACK =
+  'https://conviteia.com/convite/google/callback';
+
 function bytesToHex(bytes) {
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -12,107 +15,21 @@ async function sha256Hex(value) {
   return bytesToHex(new Uint8Array(digest));
 }
 
-function safeJsonForHtml(value) {
-  return JSON.stringify(value)
-    .replace(/</g, '\\u003c')
-    .replace(/>/g, '\\u003e')
-    .replace(/&/g, '\\u0026');
-}
+function voltarAoConviteIA(status, message = '') {
+  const destino = new URL(FRONTEND_CALLBACK);
+  destino.searchParams.set('status', status);
 
-function popupHtml({
-  type,
-  title,
-  message,
-  email = null,
-  ok = false,
-}) {
-  const payload = safeJsonForHtml({
-    type,
-    email,
-    message,
+  if (message) {
+    destino.searchParams.set('message', message.slice(0, 240));
+  }
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: destino.toString(),
+      'Cache-Control': 'no-store, max-age=0',
+    },
   });
-
-  const accent = ok ? '#2e7d55' : '#a04a63';
-  const icon = ok ? '✓' : '!';
-
-  return new Response(
-    `<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>${ok ? 'Google conectado' : 'Conexão Google'}</title>
-  <style>
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      min-height:100vh;
-      display:grid;
-      place-items:center;
-      padding:24px;
-      background:#fff5f8;
-      color:#40232c;
-      font-family:Arial,Helvetica,sans-serif
-    }
-    .card{
-      width:min(100%,420px);
-      padding:32px 26px;
-      border:1px solid rgba(192,96,120,.22);
-      border-radius:24px;
-      background:#fff;
-      text-align:center;
-      box-shadow:0 18px 55px rgba(64,35,44,.10)
-    }
-    .icon{
-      width:52px;height:52px;
-      display:grid;place-items:center;
-      margin:0 auto 16px;
-      border-radius:50%;
-      background:#fdf0f3;
-      color:${accent};
-      font-size:26px;font-weight:800
-    }
-    h1{margin:0;font-size:24px}
-    p{margin:12px 0 0;color:#7c5560;line-height:1.55;font-size:14px}
-    a{
-      display:inline-flex;
-      margin-top:22px;
-      padding:11px 18px;
-      border-radius:999px;
-      background:#d86090;
-      color:white;
-      text-decoration:none;
-      font-size:13px;
-      font-weight:700
-    }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="icon">${icon}</div>
-    <h1>${title}</h1>
-    <p>${message}</p>
-    <a href="https://conviteia.com/convite/painel">Voltar ao painel</a>
-  </div>
-
-  <script>
-    const payload = ${payload};
-
-    if (window.opener) {
-      window.opener.postMessage(payload, '*');
-      setTimeout(() => window.close(), 250);
-    }
-  </script>
-</body>
-</html>`,
-    {
-      status: ok ? 200 : 400,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'no-store',
-      },
-    }
-  );
 }
 
 Deno.serve(async (req) => {
@@ -124,21 +41,17 @@ Deno.serve(async (req) => {
     const state = url.searchParams.get('state');
 
     if (googleError) {
-      return popupHtml({
-        type: 'conviteia-google-auth-cancelled',
-        title: 'Conexão cancelada',
-        message:
-          'A conta Google não foi conectada. Você pode tentar novamente pelo painel.',
-      });
+      return voltarAoConviteIA(
+        'cancelled',
+        'A conexão com o Google foi cancelada.'
+      );
     }
 
     if (!code || !state) {
-      return popupHtml({
-        type: 'conviteia-google-auth-error',
-        title: 'Não foi possível conectar',
-        message:
-          'A autorização recebida do Google está incompleta. Tente novamente.',
-      });
+      return voltarAoConviteIA(
+        'error',
+        'A autorização recebida do Google está incompleta. Tente novamente.'
+      );
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -171,22 +84,27 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (stateError || !stateRow) {
-      return popupHtml({
-        type: 'conviteia-google-auth-error',
-        title: 'Autorização expirada',
-        message:
-          'Esta tentativa de conexão expirou ou já foi utilizada. Inicie novamente pelo painel.',
-      });
+      return voltarAoConviteIA(
+        'error',
+        'Esta autorização expirou ou já foi utilizada. Inicie novamente pelo painel.'
+      );
     }
 
-    // Torna o state de uso único antes de trocar o code.
-    await conv
+    const { data: stateConsumido, error: stateConsumeError } = await conv
       .from('google_oauth_states')
       .update({ used_at: agora })
       .eq('id', stateRow.id)
-      .is('used_at', null);
+      .is('used_at', null)
+      .select('id')
+      .maybeSingle();
 
-    // Confere novamente se o evento ainda pertence ao usuário que iniciou o OAuth.
+    if (stateConsumeError || !stateConsumido) {
+      return voltarAoConviteIA(
+        'error',
+        'Esta autorização já foi utilizada. Inicie novamente pelo painel.'
+      );
+    }
+
     const { data: evento } = await conv
       .from('eventos')
       .select('id, conta_id')
@@ -306,24 +224,15 @@ Deno.serve(async (req) => {
       throw new Error('Não foi possível salvar a conexão Google.');
     }
 
-    return popupHtml({
-      type: 'conviteia-google-auth-success',
-      title: 'Google conectado',
-      message:
-        'Esta conta já está vinculada somente a este convite.',
-      email: userInfo.email,
-      ok: true,
-    });
+    return voltarAoConviteIA('success');
   } catch (error) {
     console.error('ConviteIA google-auth-callback:', error);
 
-    return popupHtml({
-      type: 'conviteia-google-auth-error',
-      title: 'Não foi possível conectar',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Tente novamente pelo painel da ConviteIA.',
-    });
+    return voltarAoConviteIA(
+      'error',
+      error instanceof Error
+        ? error.message
+        : 'Não foi possível concluir a conexão Google.'
+    );
   }
 });

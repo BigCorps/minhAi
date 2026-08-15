@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
   const { data: evento } = await admin
     .from('eventos')
-    .select('id, config')
+    .select('id, config, mp_user_id')
     .eq('id', eventoId)
     .not('publicado_em', 'is', null)
     .eq('arquivado', false)
@@ -191,6 +191,12 @@ export async function POST(req: NextRequest) {
 
   // Mesmo backend do checkout da minhAi. A diferença é que o dinheiro do
   // ConviteIA fica na BigCorps para formar evento_saldo e posterior repasse.
+  //
+  // Exceção pontual: quando o evento tem `mp_user_id`, o QR sai da conta
+  // Mercado Pago daquele usuário, e não do Banco Inter da BigCorps. O saldo
+  // continua sendo creditado normalmente — o repasse é manual (o dono do
+  // evento recebe o e-mail, faz o PIX e confirma), então não há risco de a
+  // BigCorps pagar um valor que nunca recebeu.
   const r = await fetch(
     `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/gerar-pix-assistente`,
     {
@@ -207,6 +213,9 @@ export async function POST(req: NextRequest) {
         tipo: 'presente',
         purpose: 'conviteria_presente',
         brand: 'conviteia',
+        // Ausente na esmagadora maioria dos eventos: só vai quando a coluna
+        // estiver preenchida, e aí a edge usa a conexão MP desse usuário.
+        ...(evento.mp_user_id ? { mp_user_id: evento.mp_user_id } : {}),
       }),
     }
   );

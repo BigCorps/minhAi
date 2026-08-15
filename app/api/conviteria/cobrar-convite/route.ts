@@ -80,14 +80,28 @@ export async function POST(req: NextRequest) {
 
   const pix = (await r.json()) as {
     txid?: string;
+    transaction_id?: string;
     qrcode?: string;
     copia_e_cola?: string;
   };
+
+  // `transaction_id` era descartado aqui, e era por isso que a confirmação do
+  // convite demorava: sem ele, `evento-status` só sabia ler `publicado_em` e
+  // ficava esperando o cron `auto-confirmar-pix` passar. Guardado na coluna,
+  // a página pode pedir a checagem imediata no banco — mesmo caminho que os
+  // presentes já usam.
+  if (pix.transaction_id) {
+    await admin
+      .from('eventos')
+      .update({ pix_transaction_id: pix.transaction_id })
+      .eq('id', evento.id);
+  }
 
   return NextResponse.json({
     eventoId: evento.id,
     valorCentavos: plano.centavos,
     txid: pix.txid,
+    transactionId: pix.transaction_id,
     qrcode: pix.qrcode,
     copiaECola: pix.copia_e_cola,
   });

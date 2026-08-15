@@ -7,11 +7,13 @@
 //
 // 1. Nao ha escolha de valor: o preco do convite avulso vem de PLANOS, no
 //    servidor. Comeca direto no PIX.
-// 2. O "Já paguei" nao chama confirmar-pix-assistente, porque cobrar-convite
-//    devolve `txid` e nao `transaction_id`. Quem publica e o webhook; aqui a
-//    pagina pergunta o status a /api/conviteria/evento-status.
+// 2. O "Já paguei" e o polling perguntam a /api/conviteria/evento-status, que
+//    por sua vez pede a checagem imediata ao banco via
+//    confirmar-pix-assistente. Antes essa rota so lia `publicado_em` e a
+//    confirmacao ficava presa ao cron `auto-confirmar-pix` — era essa a
+//    demora que o cliente via.
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
 import RendaBackground from '@/components/conviteria/RendaBackground';
@@ -128,10 +130,39 @@ function PagarConteudo() {
 
   // Enquanto o QR esta na tela, pergunta o status a cada 5s. O usuario paga no
   // app do banco e a pagina vira sozinha, sem ele precisar clicar em nada.
+  //
+  // Mesmo ritmo do ModalPresentes: uma primeira consulta aos 7s e depois de
+  // 5 em 5. Os 7s existem porque consultar antes disso e quase sempre em vao
+  // — ninguem paga um PIX em menos que isso — e cada consulta agora custa uma
+  // chamada ao banco, nao so uma leitura de coluna.
+  //
+  // `emVoo` evita empilhar: a rota pode levar ate 8s no pior caso, e sem essa
+  // trava o intervalo dispararia outra consulta por cima da anterior.
+  const emVoo = useRef(false);
+
   useEffect(() => {
     if (passo !== 'pix') return;
-    const id = setInterval(() => void conferir(), 5000);
-    return () => clearInterval(id);
+
+    let encerrado = false;
+
+    const tentar = async () => {
+      if (encerrado || emVoo.current) return;
+      emVoo.current = true;
+      try {
+        await conferir();
+      } finally {
+        emVoo.current = false;
+      }
+    };
+
+    const atraso = window.setTimeout(tentar, 7000);
+    const id = window.setInterval(tentar, 5000);
+
+    return () => {
+      encerrado = true;
+      window.clearTimeout(atraso);
+      window.clearInterval(id);
+    };
   }, [passo, conferir]);
 
   async function copiar() {

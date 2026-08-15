@@ -1164,3 +1164,29 @@
   .wz-escolhido-acoes { flex-direction: row; }
 }
 
+
+/* ==========================================================================
+   Bloco recolhível de textos da seção
+   ========================================================================== */
+
+.wz-textos-secao {
+  margin: 0 0 16px;
+  padding: 0 13px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 12px;
+  background: #fff;
+}
+.wz-textos-secao > summary {
+  padding: 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wz-rosa-escuro);
+  cursor: pointer;
+  /* Sem list-style o triângulo some; mantido de propósito para a pessoa
+     perceber que é um bloco que abre. */
+}
+.wz-textos-secao[open] > summary {
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--wz-linha);
+}
+.wz-textos-secao .wz-campo:last-child { margin-bottom: 13px; }

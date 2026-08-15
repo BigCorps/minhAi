@@ -181,16 +181,11 @@ export default function PaginaInicialConvite() {
           </p>
 
           <BriefingInteligente
-            modo="completo"
+            modo="landing"
             texto={briefingTexto}
             aoTexto={setBriefingTexto}
           />
 
-          <nav className="cv-landing-acoes-secundarias" aria-label="Outras opções">
-            <Link href="/convite/criar">Prefiro começar do zero</Link>
-            <span aria-hidden="true">•</span>
-            <Link href="/convite/entrar">Já tenho conta</Link>
-          </nav>
         </div>
       </section>
 

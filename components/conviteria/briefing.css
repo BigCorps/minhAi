@@ -168,6 +168,78 @@
   to { opacity: 1; transform: scale(1.2); }
 }
 
+
+/* Linha principal da landing: 3 ações lado a lado. */
+.cv-briefing-botoes-landing {
+  width: min(100%, 680px);
+  margin: .72rem auto 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 1.45fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: .55rem;
+}
+
+.cv-briefing-botao-lateral,
+.cv-briefing-criar-landing {
+  min-height: 46px;
+  margin: 0;
+  border-radius: 999px;
+  padding: .68rem .9rem;
+  font-size: .78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.cv-briefing-botao-lateral {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(192, 96, 120, .28);
+  background: rgba(255, 255, 255, .94);
+  color: #7c5560;
+  box-shadow: 0 7px 20px rgba(90, 45, 58, .05);
+  text-decoration: none;
+  transition: .18s ease;
+}
+
+.cv-briefing-botao-lateral:hover {
+  border-color: #c06078;
+  color: #a04a63;
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.cv-briefing-criar-landing {
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .cv-briefing-botoes-landing {
+    width: 100%;
+    grid-template-columns: 1fr 1.45fr 1fr;
+    gap: .32rem;
+  }
+
+  .cv-briefing-botao-lateral,
+  .cv-briefing-criar-landing {
+    min-height: 43px;
+    padding: .55rem .35rem;
+    font-size: .61rem;
+    white-space: normal;
+    line-height: 1.12;
+  }
+
+  .cv-briefing-criar-landing {
+    gap: .28rem;
+  }
+
+  .cv-briefing-criar-landing svg {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+  }
+}
+
 /* ==========================================================================
    LANDING — PRIMEIRA DOBRA
    Mantém presença visual estável em 100% de zoom.

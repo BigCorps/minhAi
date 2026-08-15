@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import './briefing.css';
 
@@ -23,7 +24,7 @@ const EXEMPLOS = [
   },
 ];
 
-type ModoBriefing = 'completo' | 'campo' | 'acoes';
+type ModoBriefing = 'completo' | 'campo' | 'acoes' | 'landing';
 
 export default function BriefingInteligente({
   modo = 'completo',
@@ -78,8 +79,15 @@ export default function BriefingInteligente({
     }
   }
 
-  const mostrarCampo = modo === 'completo' || modo === 'campo';
-  const mostrarAcoes = modo === 'completo' || modo === 'acoes';
+  const mostrarCampo =
+    modo === 'completo' ||
+    modo === 'campo' ||
+    modo === 'landing';
+
+  const mostrarAcoes =
+    modo === 'completo' ||
+    modo === 'acoes' ||
+    modo === 'landing';
 
   return (
     <section
@@ -130,16 +138,47 @@ export default function BriefingInteligente({
 
           {erro && <p className="cv-briefing-erro">{erro}</p>}
 
-          <button
-            type="button"
-            className="cv-briefing-criar"
-            onClick={criar}
-            disabled={carregando}
-          >
-            <Sparkles className="h-5 w-5" />
-            {carregando ? 'Entendendo sua ideia…' : 'Criar meu convite com IA'}
-            {!carregando && <ArrowRight className="h-5 w-5" />}
-          </button>
+          {modo === 'landing' ? (
+            <div className="cv-briefing-botoes-landing">
+              <Link
+                href="/convite/entrar"
+                className="cv-briefing-botao-lateral"
+              >
+                Já Tenho Conta
+              </Link>
+
+              <button
+                type="button"
+                className="cv-briefing-criar cv-briefing-criar-landing"
+                onClick={criar}
+                disabled={carregando}
+              >
+                <Sparkles className="h-5 w-5" />
+                <span>
+                  {carregando ? 'Entendendo…' : 'Criar meu Convite com IA'}
+                </span>
+                {!carregando && <ArrowRight className="h-5 w-5" />}
+              </button>
+
+              <Link
+                href="/convite/criar"
+                className="cv-briefing-botao-lateral"
+              >
+                Começar do Zero
+              </Link>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="cv-briefing-criar"
+              onClick={criar}
+              disabled={carregando}
+            >
+              <Sparkles className="h-5 w-5" />
+              {carregando ? 'Entendendo sua ideia…' : 'Criar meu convite com IA'}
+              {!carregando && <ArrowRight className="h-5 w-5" />}
+            </button>
+          )}
 
           {carregando && (
             <div className="cv-briefing-pensando" aria-live="polite">

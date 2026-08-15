@@ -13,6 +13,7 @@ const CASAMENTO: TipoSecao[] = [
   'foto', 'frase', 'musica', 'nomes', 'data', 'contagem',
   'calendario', 'local', 'rsvp', 'presentes', 'recados', 'dresscode', 'fim',
 ];
+
 const FESTA: TipoSecao[] = [
   'foto', 'musica', 'nomes', 'data', 'contagem', 'local',
   'rsvp', 'presentes', 'recados', 'fim',
@@ -36,6 +37,8 @@ export const TIPOS_EVENTO: TipoEvento[] = [
   { id: 'aniversario-infantil', nome: 'Aniversário Infantil', grupo: 'aniversario',
     secoesPadrao: ['foto', 'musica', 'nomes', 'data', 'contagem', 'local', 'rsvp', 'presentes', 'fim'],
     rotulos: { anfitrioes: 'Nome do aniversariante', convocacao: 'Convida para a festa' } },
+  { id: 'formatura', nome: 'Formatura', grupo: 'happy_hour', secoesPadrao: FESTA,
+    rotulos: { anfitrioes: 'Nome do formando(a) ou turma', convocacao: 'Convida para a celebração da formatura' } },
   { id: 'happy-hour', nome: 'Happy Hour', grupo: 'happy_hour', secoesPadrao: FESTA,
     rotulos: { anfitrioes: 'Nome do encontro', convocacao: 'Vamos nos encontrar' } },
   { id: 'confraternizacao', nome: 'Confraternização', grupo: 'happy_hour', secoesPadrao: FESTA,

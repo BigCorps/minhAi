@@ -147,9 +147,7 @@ Exemplo para casamento: "Convidam para a cerimônia de casamento".`,
     const permitidas = fontesDoGrupo(tipo.grupo);
 
     const catalogoFontes = (
-      permitidas.length
-        ? permitidas
-        : FONTES
+      permitidas.length ? permitidas : FONTES
     )
       .map((f) => `${f.id}: ${f.nome}`)
       .join('; ');
@@ -171,11 +169,14 @@ Responda SOMENTE em JSON:
 
 Use apenas ids dos catálogos abaixo.
 Leve em conta primeiro o TIPO DO EVENTO e depois a descrição.
-Não force estética de casamento em aniversário, festa infantil, happy hour ou evento corporativo.
+Não force estética de casamento em aniversário, festa infantil, formatura,
+happy hour ou evento corporativo.
 
-Para aniversários adultos masculinos, considere paletas como Carvão & Cobre,
-Azul Marinho, Preto & Marfim ou Verde Noturno quando combinarem com a descrição.
+Para aniversários adultos masculinos, considere Carvão & Cobre,
+Azul Marinho, Preto & Marfim ou Verde Noturno quando combinarem.
 Para aniversário infantil, prefira Confete, Candy Pastel, Céu Azul ou Verde Aventura.
+Para formatura, considere Preto & Marfim, Dourado & Marfim, Royal & Prata,
+Azul Marinho ou Azul Executivo conforme curso, horário e formalidade.
 Para Happy Hour, considere Grafite & Âmbar, Tropical, Marinho ou temas escuros.
 Para confraternização empresarial, considere Azul Executivo, Grafite Minimal ou Marinho.
 Para vaquinha, considere Azul Confiança ou Verde Esperança.

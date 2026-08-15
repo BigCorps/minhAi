@@ -30,6 +30,8 @@ function exemploDoTipo(tipoEventoId: string) {
       return '40 anos à noite, elegante, masculino e moderno';
     case 'debutante':
       return '15 anos glamouroso, lavanda com brilho e elegância';
+    case 'formatura':
+      return 'formatura elegante, preto e dourado, moderna e sofisticada';
     case 'happy-hour':
       return 'happy hour descontraído à noite, bar, grafite e âmbar';
     case 'confraternizacao':
@@ -237,21 +239,9 @@ export default function EscolherTema({ estado, despachar }: PropsEtapa) {
           <p className="wz-intro">Onde a textura aparece.</p>
 
           {([
-            [
-              'papel',
-              'No convite',
-              'Atrás do texto. Aparece em qualquer tela.',
-            ],
-            [
-              'externa',
-              'Ao redor',
-              'Só na área em volta do papel. No celular o papel ocupa a largura toda.',
-            ],
-            [
-              'ambas',
-              'Nos dois',
-              'Dentro e fora do papel.',
-            ],
+            ['papel', 'No convite', 'Atrás do texto. Aparece em qualquer tela.'],
+            ['externa', 'Ao redor', 'Só na área em volta do papel. No celular o papel ocupa a largura toda.'],
+            ['ambas', 'Nos dois', 'Dentro e fora do papel.'],
           ] as const).map(([id, nome, dica]) => {
             const sel = (estado.cfg.texturaOnde ?? 'papel') === id;
 

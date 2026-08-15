@@ -41,6 +41,22 @@ interface BrandInfo {
   logo: string;
   title: string;
   description: string;
+
+  // ── Cores da marca ────────────────────────────────────────────────────────
+  // Usadas por componentes COMPARTILHADOS entre as marcas — banner de
+  // cookies, toasts, modais de sistema. Não substituem o CSS de cada app.
+  //
+  // Os três valores foram validados em contraste WCAG (mínimo 4,5:1 para
+  // texto normal). Se trocar alguma, recalcule as outras duas: a cor de
+  // marca crua quase nunca atende sozinha.
+
+  /** Fundo de botão primário. */
+  cor: string;
+  /** Texto SOBRE `cor`. Nem toda marca comporta branco. */
+  corTextoBotao: string;
+  /** A cor como TEXTO sobre fundo claro (link). Precisa ser mais escura
+      que `cor`: 4,5:1 sobre branco é exigência maior que a do botão. */
+  corTexto: string;
 }
 
 export const BRANDS: Record<BrandKey, BrandInfo> = {
@@ -49,6 +65,10 @@ export const BRANDS: Record<BrandKey, BrandInfo> = {
     logo: '/logo.png',
     title: 'minhAi',
     description: 'Uma IA pra chamar de sua!',
+    // verde da marca; branco daria 1,97:1, por isso texto escuro
+    cor: '#a4c61e',
+    corTextoBotao: '#1a1a1a',
+    corTexto: '#687e13',
   },
 
   conviteia: {
@@ -56,6 +76,10 @@ export const BRANDS: Record<BrandKey, BrandInfo> = {
     logo: '/brands/convite/icone-512.png',
     title: 'Convite IA',
     description: 'Crie seu convite com IA!',
+    // rosa #c06078 escurecido: no original o branco dava 4,05:1
+    cor: '#b45a70',
+    corTextoBotao: '#ffffff',
+    corTexto: '#a04a63',
   },
 
   artefinal: {
@@ -63,6 +87,10 @@ export const BRANDS: Record<BrandKey, BrandInfo> = {
     logo: '/brands/artefinal/logo.png',
     title: 'ArteFinal.app',
     description: 'Seu arte-finalista com IA.',
+    // magenta #ec008c escurecido: no original o branco dava 4,25:1
+    cor: '#d1007d',
+    corTextoBotao: '#ffffff',
+    corTexto: '#c20074',
   },
 
   pix: {
@@ -70,6 +98,10 @@ export const BRANDS: Record<BrandKey, BrandInfo> = {
     logo: '/brands/pix/pixwiki.png',
     title: 'Pix.Wiki',
     description: 'Link e QR Code Pix com confirmação automática.',
+    // verde do app; branco daria 2,28:1, por isso texto escuro
+    cor: '#22c55e',
+    corTextoBotao: '#1a1a1a',
+    corTexto: '#178740',
   },
 
   consultatec: {
@@ -77,6 +109,10 @@ export const BRANDS: Record<BrandKey, BrandInfo> = {
     logo: '/brands/consultatec/logo.png',
     title: 'ConsultaTec',
     description: 'Consulta de CPF e CNPJ, sem burocracia.',
+    // bordô da paleta; já passa com folga nos dois usos
+    cor: '#7a2e2e',
+    corTextoBotao: '#ffffff',
+    corTexto: '#7a2e2e',
   },
 
   minia: {
@@ -84,5 +120,9 @@ export const BRANDS: Record<BrandKey, BrandInfo> = {
     logo: '/brands/minia/logo.png',
     title: 'min.ia.br',
     description: 'A versão mini e pessoal da minhAi!',
+    // variante da minhAi: herda a mesma paleta
+    cor: '#a4c61e',
+    corTextoBotao: '#1a1a1a',
+    corTexto: '#687e13',
   },
 };

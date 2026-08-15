@@ -81,6 +81,10 @@ export default function Musica({ cfg, secao, modo }: PropsSecao) {
             videoId={m.youtubeVideoId}
             titulo={m.titulo}
             mostrarVideo={m.mostrarVideo ?? false}
+            // O prop existia no player mas ninguem passava: por isso a musica
+            // do YouTube nunca comecava sozinha. `iniciarMidia` vira true no
+            // clique da capa, que e o gesto que libera o autoplay.
+            autoIniciar={modo.iniciarMidia ?? false}
           />
         )}
       </section>

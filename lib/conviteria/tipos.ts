@@ -237,6 +237,16 @@ export interface ModoRender {
    * de outra flag.
    */
   eventoId?: string;
+  /**
+   * Vira true depois do clique na capa. O clique e o gesto do usuario que o
+   * navegador exige para liberar autoplay — e o unico momento em que da para
+   * iniciar a musica sozinha.
+   *
+   * Precisa ser um sinal separado de `previa`: a secao Musica monta junto com
+   * o resto do convite, ANTES do clique. Se o player tentasse tocar ao montar,
+   * o navegador recusaria e a pessoa teria de apertar play na mao.
+   */
+  iniciarMidia?: boolean;
 }
 
 /**

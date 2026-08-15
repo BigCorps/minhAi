@@ -57,7 +57,10 @@ export default function ConvitePublico({ cfg, eventoId }: { cfg: ConviteConfig; 
           aoAbrir={abrir}
         />
       )}
-      <Convite cfg={cfg} revelando={aberto} modo={{ eventoId }} />
+      {/* iniciarMidia = aberto: o clique na capa e o gesto que o navegador
+          exige para liberar autoplay. Antes disso o player do YouTube nao
+          pode nem tentar. */}
+      <Convite cfg={cfg} revelando={aberto} modo={{ eventoId, iniciarMidia: aberto }} />
     </div>
     </ProvedorAudio>
   );

@@ -1,13 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import type { PropsSecao } from '@/lib/conviteria/tipos';
+import type { PresenteExibicao, PropsSecao } from '@/lib/conviteria/tipos';
 import { Broto } from '../Ornamentos';
 import ModalPresentes from '../ModalPresentes';
 
 export default function Presentes({ cfg, secao, modo }: PropsSecao) {
   const [aberto, setAberto] = useState(false);
-  const lista = cfg.presentes ?? [];
+
+  // Duas fontes para a mesma lista. No convite publicado, `presentes` vem do
+  // servidor com o id real de cada linha da tabela — e e esse id que o modal
+  // usa para gerar o PIX. Na previa do wizard esse id nao existe ainda, entao
+  // caimos em `presentesEscolhidos`, que e o snapshot dentro do config.
+  //
+  // Sem esse fallback a secao devolvia null na previa e a lista de presentes
+  // simplesmente nao aparecia.
+  const lista: PresenteExibicao[] = cfg.presentes?.length
+    ? cfg.presentes
+    : (cfg.presentesEscolhidos ?? []).map((p) => ({
+        id: p.catalogoId,
+        titulo: p.titulo,
+        valorCentavos: p.valorCentavos,
+        imagemUrl: p.imagemUrl,
+      }));
+
   const c = secao.config ?? {};
 
   if (lista.length === 0) return null;

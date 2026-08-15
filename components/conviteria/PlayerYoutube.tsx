@@ -114,7 +114,24 @@ export default function PlayerYoutube({
       vivo = false;
       try { player.current?.destroy(); } catch { /* já destruído */ }
     };
-  }, [videoId, mostrarVideo, autoIniciar]);
+    // `autoIniciar` NAO entra aqui de proposito: ele muda de false para true
+    // no clique da capa, e a mudanca destruiria e recriaria o player nesse
+    // exato momento. Quem trata a virada e o efeito logo abaixo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoId, mostrarVideo]);
+
+  // O `onReady` acima so cobre o caso de o player ficar pronto DEPOIS do
+  // clique na capa. Como a secao Musica monta junto com o resto do convite, o
+  // normal e o contrario: o player fica pronto antes, e `autoIniciar` vira
+  // true depois. Sem este efeito a musica nunca comecaria sozinha.
+  useEffect(() => {
+    if (!autoIniciar || !pronto) return;
+    try {
+      player.current?.playVideo();
+    } catch {
+      // Navegador recusou o autoplay: a pessoa usa o botao de play.
+    }
+  }, [autoIniciar, pronto]);
 
   // Relogio proprio: a IFrame API nao emite evento de progresso.
   useEffect(() => {

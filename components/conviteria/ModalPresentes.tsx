@@ -16,6 +16,7 @@ const brl = (centavos: number) =>
 
 type Passo = 'escolha' | 'dados' | 'gerando' | 'pix' | 'pago';
 type Modo = 'grid' | 'lista';
+type Ordem = 'padrao' | 'menor' | 'maior';
 
 type Selecionado = {
   presente: PresenteExibicao;
@@ -39,6 +40,9 @@ export default function ModalPresentes({
   const [montado, setMontado] = useState(false);
   const [passo, setPasso] = useState<Passo>('escolha');
   const [modo, setModo] = useState<Modo>('grid');
+  // 'padrao' preserva a ordem que o casal montou no wizard — e uma escolha
+  // deles, nao um acaso, entao e o padrao.
+  const [ordem, setOrdem] = useState<Ordem>('padrao');
   const [selecionados, setSelecionados] = useState<Record<string, Selecionado>>({});
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
@@ -46,6 +50,17 @@ export default function ModalPresentes({
   const [mensagem, setMensagem] = useState('');
   const [verificandoManual, setVerificandoManual] = useState(false);
   const verificandoRef = useRef(false);
+
+  const listaOrdenada = useMemo(() => {
+    if (ordem === 'padrao') return presentes;
+    // Valor livre (0) vai sempre para o fim: nao tem preco para comparar, e
+    // no topo da lista "crescente" pareceria o item mais barato.
+    const peso = (p: PresenteExibicao) =>
+      p.valorCentavos > 0 ? p.valorCentavos : Number.POSITIVE_INFINITY;
+    return [...presentes].sort((a, b) =>
+      ordem === 'menor' ? peso(a) - peso(b) : peso(b) - peso(a)
+    );
+  }, [presentes, ordem]);
 
   const [pix, setPix] = useState<{
     checkoutId: string;
@@ -249,6 +264,19 @@ export default function ModalPresentes({
                 <span className="cv-presentes-toolbar-info">
                   Escolha um ou mais presentes
                 </span>
+                <label className="cv-presentes-ordem">
+                  <span className="sr-only">Ordenar por</span>
+                  <select
+                    value={ordem}
+                    onChange={(e) => setOrdem(e.target.value as Ordem)}
+                    aria-label="Ordenar presentes"
+                  >
+                    <option value="padrao">Ordem do casal</option>
+                    <option value="menor">Menor preço</option>
+                    <option value="maior">Maior preço</option>
+                  </select>
+                </label>
+
                 <div className="cv-presentes-modos" aria-label="Modo de visualização">
                   <button type="button" className={modo === 'grid' ? 'sel' : ''}
                     onClick={() => setModo('grid')} aria-label="Ver em grade">
@@ -263,7 +291,7 @@ export default function ModalPresentes({
 
               {modo === 'grid' ? (
                 <ul className="cv-presentes-grade">
-                  {presentes.map((p) => {
+                  {listaOrdenada.map((p) => {
                     const sel = selecionados[p.id];
                     return (
                       <li key={p.id}
@@ -299,7 +327,7 @@ export default function ModalPresentes({
                 </ul>
               ) : (
                 <ul className="cv-presentes-lista-nova">
-                  {presentes.map((p) => {
+                  {listaOrdenada.map((p) => {
                     const sel = selecionados[p.id];
                     return (
                       <li key={p.id} className={`cv-presente-linha${sel ? ' sel' : ''}`}>

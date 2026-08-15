@@ -54,6 +54,37 @@ const MAPA: Record<string, ComponentType<PropsSecao>> = {
 /** Secoes que ja trazem fundo proprio e nao levam divisor antes. */
 const SEM_DIVISOR = new Set(['foto', 'data', 'nomes', 'musica', 'fim']);
 
+/**
+ * Secao que nao tem o que mostrar devolve null no proprio componente — mas o
+ * divisor fica no wrapper, fora dele, e continuava aparecendo. Resultado: dois
+ * divisores empilhados com um vazio no meio, que era o buraco na previa entre
+ * "Confirmacao de presenca" e "Recados".
+ *
+ * Aqui a checagem acontece ANTES de montar, para o divisor sumir junto.
+ * Manter em sincronia com o `return null` de cada secao.
+ */
+function temConteudo(tipo: string, cfg: ConviteConfig): boolean {
+  switch (tipo) {
+    case 'foto':
+      return Boolean(cfg.midia?.fotoPrincipal);
+    case 'galeria':
+      return (cfg.midia?.galeria?.length ?? 0) > 0;
+    case 'padrinhos':
+      return (cfg.padrinhos?.length ?? 0) > 0;
+    case 'musica':
+      return Boolean(cfg.midia?.musica);
+    case 'local':
+      return Boolean(cfg.local);
+    case 'presentes':
+      // Na previa do wizard a lista vive em `presentesEscolhidos`; no convite
+      // publicado, em `presentes`, montada pelo servidor.
+      return (cfg.presentes?.length ?? 0) > 0
+        || (cfg.presentesEscolhidos?.length ?? 0) > 0;
+    default:
+      return true;
+  }
+}
+
 export default function Convite({
   cfg,
   modo = {},
@@ -65,7 +96,7 @@ export default function Convite({
   revelando?: boolean;
 }) {
   const secoes = [...cfg.secoes]
-    .filter((s) => s.ativo)
+    .filter((s) => s.ativo && temConteudo(s.tipo, cfg))
     .sort((a, b) => a.ordem - b.ordem);
 
   const tema = acharTema(cfg.temaId);

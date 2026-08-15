@@ -129,49 +129,99 @@ export async function PATCH(req: NextRequest) {
   // `cotas_vendidas` e e referenciada por `presente_pagamentos`: apagar uma
   // linha ja comprada destruiria historico de dinheiro recebido.
   //
-  // Regra: item novo entra; item removido pela pessoa e apenas DESATIVADO, e
-  // so quando ninguem comprou. Item com venda permanece visivel, porque quem
-  // pagou tem direito de ver o presente que deu no convite.
+  // Regra: item novo entra; item existente e ATUALIZADO; item removido pela
+  // pessoa e apenas DESATIVADO, e so quando ninguem comprou. Item com venda
+  // permanece visivel, porque quem pagou tem direito de ver o presente que
+  // deu no convite.
+  //
+  // O casamento e por `catalogo_id`, nao por titulo. Com titulo, trocar so a
+  // foto mantinha o titulo, o item nao entrava como "novo" e nada acontecia —
+  // a imagem antiga ficava no banco para sempre. Era por isso que a previa
+  // mostrava a foto nova (le o config) e o convite publicado nao (le a
+  // tabela). O mesmo valia para preco e valor livre.
   const escolhidos = cfgNova.presentesEscolhidos ?? [];
 
   const { data: atuaisPresentes } = await admin
     .from('presentes')
-    .select('id, titulo, cotas_vendidas, ativo')
+    .select('id, catalogo_id, titulo, valor_centavos, permite_valor_livre, imagem_url, ordem, cotas_vendidas, ativo')
     .eq('evento_id', corpo.id);
 
-  const porTitulo = new Map((atuaisPresentes ?? []).map((p) => [p.titulo as string, p]));
+  // Linhas antigas nao tem `catalogo_id`. Para elas o titulo ainda e a unica
+  // chave disponivel — entao mantemos os dois indices e preenchemos o
+  // `catalogo_id` na primeira atualizacao, migrando sozinho.
+  const porCatalogo = new Map<string, (typeof atuaisPresentes)[number]>();
+  const porTitulo = new Map<string, (typeof atuaisPresentes)[number]>();
+  for (const p of atuaisPresentes ?? []) {
+    if (p.catalogo_id) porCatalogo.set(p.catalogo_id as string, p);
+    porTitulo.set(p.titulo as string, p);
+  }
 
-  const novos = escolhidos.filter((p) => !porTitulo.has(p.titulo));
-  if (novos.length > 0) {
-    await admin.from('presentes').insert(
-      novos.map((p, i) => ({
+  const usados = new Set<string>();
+
+  /** Casa por catalogo_id; cai no titulo so para linha legada sem a coluna. */
+  function achar(cat: string, titulo: string) {
+    const porId = porCatalogo.get(cat);
+    if (porId) return porId;
+    const porNome = porTitulo.get(titulo);
+    // Duas escolhas nao podem casar com a mesma linha: sem esta guarda, dois
+    // itens de titulo igual sobrescreveriam um ao outro.
+    return porNome && !usados.has(porNome.id as string) ? porNome : undefined;
+  }
+
+  for (const [i, p] of escolhidos.entries()) {
+    const existente = achar(p.catalogoId, p.titulo);
+
+    if (!existente) {
+      await admin.from('presentes').insert({
         evento_id: corpo.id,
+        catalogo_id: p.catalogoId,
         titulo: p.titulo,
         valor_centavos: p.valorCentavos,
         permite_valor_livre: p.permiteValorLivre ?? false,
         imagem_url: p.imagemUrl ?? null,
-        ordem: (porTitulo.size + i + 1) * 10,
-      }))
-    );
+        ordem: (i + 1) * 10,
+        ativo: true,
+      });
+      continue;
+    }
+
+    usados.add(existente.id as string);
+
+    // So grava se algo mudou de fato: um PATCH sem alteracao em presentes nao
+    // precisa tocar em nenhuma linha.
+    const mudou =
+      existente.catalogo_id !== p.catalogoId ||
+      existente.titulo !== p.titulo ||
+      existente.valor_centavos !== p.valorCentavos ||
+      !!existente.permite_valor_livre !== !!p.permiteValorLivre ||
+      (existente.imagem_url ?? null) !== (p.imagemUrl ?? null) ||
+      !existente.ativo;
+
+    if (mudou) {
+      await admin
+        .from('presentes')
+        .update({
+          catalogo_id: p.catalogoId,
+          titulo: p.titulo,
+          valor_centavos: p.valorCentavos,
+          permite_valor_livre: p.permiteValorLivre ?? false,
+          imagem_url: p.imagemUrl ?? null,
+          ordem: (i + 1) * 10,
+          // Reativa item que a pessoa tirou e recolocou depois.
+          ativo: true,
+        })
+        .eq('id', existente.id);
+    } else if (existente.ordem !== (i + 1) * 10) {
+      await admin.from('presentes').update({ ordem: (i + 1) * 10 }).eq('id', existente.id);
+    }
   }
 
-  const titulosEscolhidos = new Set(escolhidos.map((p) => p.titulo));
-  const paraDesativar = (atuaisPresentes ?? []).filter(
-    (p) => !titulosEscolhidos.has(p.titulo as string)
-      && (p.cotas_vendidas as number) === 0
-      && p.ativo
-  );
-
-  for (const p of paraDesativar) {
+  // Removidos: desativa, nunca apaga — e so quando ninguem comprou.
+  for (const p of atuaisPresentes ?? []) {
+    if (usados.has(p.id as string)) continue;
+    if ((p.cotas_vendidas as number) > 0) continue;
+    if (!p.ativo) continue;
     await admin.from('presentes').update({ ativo: false }).eq('id', p.id);
-  }
-
-  // Reativa item que a pessoa tirou e recolocou depois.
-  const paraReativar = (atuaisPresentes ?? []).filter(
-    (p) => titulosEscolhidos.has(p.titulo as string) && !p.ativo
-  );
-  for (const p of paraReativar) {
-    await admin.from('presentes').update({ ativo: true }).eq('id', p.id);
   }
 
   // Secoes: apaga e reinsere. Fazer diff por tipo daria o mesmo resultado com

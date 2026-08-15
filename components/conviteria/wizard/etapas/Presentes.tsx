@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { brl } from '@/lib/conviteria/precos';
 import { LIMITE_PRESENTES_CONVITE, pertenceFaixa, type FaixaCatalogo } from '@/lib/conviteria/catalogo';
 import type { PresenteEscolhido } from '@/lib/conviteria/tipos';
+import { parecidos, usaFotoDoCatalogo } from '@/lib/conviteria/duplicados';
 import type { PropsEtapa } from '../Wizard';
 
 type ItemCatalogo = PresenteEscolhido & { grupo?: string };
@@ -66,6 +67,14 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
   });
   const [enviando, setEnviando] = useState(false);
   const [erroPainel, setErroPainel] = useState('');
+
+  // Presentes ja escolhidos com titulo parecido com o que esta sendo digitado.
+  // So dispara na criacao: quem edita um item existente esta, por definicao,
+  // resolvendo o problema em vez de criar outro.
+  const semelhantes =
+    editando === 'novo' && rascunho.titulo.trim().length > 4
+      ? parecidos(rascunho.titulo, escolhidos)
+      : [];
   const inputFoto = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -95,6 +104,7 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
   }, [itens, busca, faixa]);
 
   const noLimite = escolhidos.length >= LIMITE_PRESENTES_CONVITE;
+  const temFotoPropria = escolhidos.some((p) => !usaFotoDoCatalogo(p));
 
   function alternar(item: PresenteEscolhido) {
     const ja = escolhidos.some((p) => p.catalogoId === item.catalogoId);
@@ -269,6 +279,28 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
         <span className="wz-campo-dica">JPG, PNG ou WebP. Máximo 2 MB.</span>
       </div>
 
+      {semelhantes.length > 0 && (
+        <div className="wz-alerta wz-alerta-leve">
+          <p>Você já escolheu algo parecido:</p>
+          <ul>
+            {semelhantes.slice(0, 3).map((p) => (
+              <li key={p.catalogoId}>
+                {p.titulo}{' '}
+                <button
+                  type="button"
+                  onClick={() => abrirEdicao(p)}
+                >
+                  Editar este
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="wz-alerta-acao">
+            Editar o que já existe evita ficar com os dois na lista.
+          </p>
+        </div>
+      )}
+
       {erroPainel && <p className="wz-status erro">{erroPainel}</p>}
 
       <div className="wz-presente-editor-acoes">
@@ -370,6 +402,12 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
                     <strong>{p.titulo}</strong>
                     <span>{p.valorCentavos > 0 ? brl(p.valorCentavos) : 'Valor livre'}</span>
                     {p.personalizado && <em className="wz-etiqueta">Criado por você</em>}
+                    {/* So marca quando ha mistura: num convite que usa o
+                        catalogo inteiro, todas seriam padrao e a etiqueta
+                        viraria ruido. */}
+                    {temFotoPropria && !p.personalizado && usaFotoDoCatalogo(p) && (
+                      <em className="wz-etiqueta wz-etiqueta-leve">Foto padrão</em>
+                    )}
                     {!p.personalizado && alterado && <em className="wz-etiqueta">Editado</em>}
                   </div>
                   <div className="wz-escolhido-acoes">

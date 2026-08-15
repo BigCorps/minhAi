@@ -19,6 +19,7 @@ import { createClient } from '@/lib/supabase-browser';
 export default function PaginaInicialConvite() {
   const [logado, setLogado] = useState<boolean | null>(null);
   const [criando, setCriando] = useState(false);
+  const [briefingTexto, setBriefingTexto] = useState('');
   const [supabase] = useState(() => createClient());
 
   useEffect(() => {
@@ -157,45 +158,57 @@ export default function PaginaInicialConvite() {
     <main className="cv-landing text-[#40232c]">
       <RendaBackground />
 
+      {/* PRIMEIRA DOBRA: propositalmente apenas estes quatro elementos. */}
       <section className="cv-landing-hero" aria-labelledby="cv-landing-titulo">
         <div className="cv-landing-hero-conteudo">
           <Image
             src="/brands/convite/icone-512.png"
             alt="Convite IA"
-            width={104}
-            height={104}
+            width={132}
+            height={132}
             className="cv-landing-logo"
             priority
           />
 
-          <div className="cv-landing-chamada">
-            <h1 id="cv-landing-titulo">
-              Seu evento merece um
-              <span>Convite Inteligente</span>
-            </h1>
+          <h1 id="cv-landing-titulo">
+            Seu evento merece um
+            <span>Convite Inteligente</span>
+          </h1>
 
-            <p>
-              Conte como será seu evento. A IA prepara o começo do convite e
-              você personaliza cada detalhe.
-            </p>
+          <p className="cv-landing-subtitulo">
+            Conte como será seu evento. A IA prepara o começo do convite e
+            você personaliza cada detalhe.
+          </p>
+
+          <BriefingInteligente
+            modo="campo"
+            texto={briefingTexto}
+            aoTexto={setBriefingTexto}
+          />
+        </div>
+      </section>
+
+      {/* Tudo abaixo só aparece depois da rolagem. */}
+      <section className="cv-landing-abaixo" aria-label="Continue criando seu convite">
+        <div className="cv-landing-continuar">
+          <div className="cv-landing-continuar-titulo">
+            <span>Continue quando quiser</span>
+            <h2>A ideia já está na caixa. Agora deixe a IA adiantar o convite.</h2>
           </div>
 
-          <BriefingInteligente />
+          <BriefingInteligente
+            modo="acoes"
+            texto={briefingTexto}
+            aoTexto={setBriefingTexto}
+          />
 
           <nav className="cv-landing-acoes-secundarias" aria-label="Outras opções">
             <Link href="/convite/criar">Prefiro começar do zero</Link>
             <span aria-hidden="true">•</span>
             <Link href="/convite/entrar">Já tenho conta</Link>
           </nav>
-
-          <a className="cv-landing-rolar" href="#como-funciona">
-            Veja tudo que você pode fazer
-            <span aria-hidden="true">↓</span>
-          </a>
         </div>
-      </section>
 
-      <section id="como-funciona" className="cv-landing-beneficios">
         <div className="cv-landing-beneficios-cabecalho">
           <span>Do primeiro texto ao convite publicado</span>
           <h2>Você dá a ideia. A ConviteIA organiza o resto.</h2>

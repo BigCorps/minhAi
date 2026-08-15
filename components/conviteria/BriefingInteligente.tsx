@@ -23,10 +23,28 @@ const EXEMPLOS = [
   },
 ];
 
-export default function BriefingInteligente() {
-  const [texto, setTexto] = useState('');
+type ModoBriefing = 'completo' | 'campo' | 'acoes';
+
+export default function BriefingInteligente({
+  modo = 'completo',
+  texto: textoControlado,
+  aoTexto,
+}: {
+  modo?: ModoBriefing;
+  texto?: string;
+  aoTexto?: (texto: string) => void;
+}) {
+  const [textoInterno, setTextoInterno] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
+
+  const controlado = typeof textoControlado === 'string';
+  const texto = controlado ? textoControlado : textoInterno;
+
+  function definirTexto(valor: string) {
+    if (!controlado) setTextoInterno(valor);
+    aoTexto?.(valor);
+  }
 
   async function criar() {
     setErro('');
@@ -60,58 +78,76 @@ export default function BriefingInteligente() {
     }
   }
 
+  const mostrarCampo = modo === 'completo' || modo === 'campo';
+  const mostrarAcoes = modo === 'completo' || modo === 'acoes';
+
   return (
-    <section className="cv-briefing-box" aria-label="Crie seu convite com IA">
-      <div className="cv-briefing-campo-wrap">
-        <textarea
-          value={texto}
-          maxLength={2500}
-          onChange={(e) => setTexto(e.target.value)}
-          placeholder="Ex.: Vou casar com João dia 10 de novembro de 2026 às 19h em São Paulo. Quero um convite romântico rosa, com nossa foto, confirmação de presença e lista de presentes…"
-          aria-label="Conte como você imagina seu convite"
-        />
+    <section
+      className={`cv-briefing-box cv-briefing-modo-${modo}`}
+      aria-label="Crie seu convite com IA"
+    >
+      {mostrarCampo && (
+        <div className="cv-briefing-campo-wrap">
+          <textarea
+            value={texto}
+            maxLength={2500}
+            onChange={(e) => definirTexto(e.target.value)}
+            placeholder="Ex.: Vou casar com João dia 10 de novembro de 2026 às 19h em São Paulo. Quero um convite romântico rosa, com nossa foto, confirmação de presença e lista de presentes…"
+            aria-label="Conte como você imagina seu convite"
+          />
 
-        {texto.length > 0 && (
-          <span className="cv-briefing-contador">{texto.length}/2500</span>
-        )}
-      </div>
-
-      <div className="cv-briefing-exemplos">
-        <span>Experimente:</span>
-        <div>
-          {EXEMPLOS.map((ex) => (
-            <button
-              key={ex.rotulo}
-              type="button"
-              onClick={() => {
-                setTexto(ex.texto);
-                setErro('');
-              }}
-            >
-              {ex.rotulo}
-            </button>
-          ))}
+          {texto.length > 0 && (
+            <span className="cv-briefing-contador">{texto.length}/2500</span>
+          )}
         </div>
-      </div>
+      )}
 
-      {erro && <p className="cv-briefing-erro">{erro}</p>}
+      {mostrarAcoes && (
+        <>
+          <div className="cv-briefing-exemplos">
+            <span>Não sabe por onde começar? Experimente:</span>
+            <div>
+              {EXEMPLOS.map((ex) => (
+                <button
+                  key={ex.rotulo}
+                  type="button"
+                  onClick={() => {
+                    definirTexto(ex.texto);
+                    setErro('');
+                  }}
+                >
+                  {ex.rotulo}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      <button
-        type="button"
-        className="cv-briefing-criar"
-        onClick={criar}
-        disabled={carregando}
-      >
-        <Sparkles className="h-5 w-5" />
-        {carregando ? 'Entendendo sua ideia…' : 'Criar meu convite com IA'}
-        {!carregando && <ArrowRight className="h-5 w-5" />}
-      </button>
+          {texto.trim() && modo === 'acoes' && (
+            <p className="cv-briefing-texto-pronto">
+              Sua descrição da primeira tela está pronta para ser interpretada.
+            </p>
+          )}
 
-      {carregando && (
-        <div className="cv-briefing-pensando" aria-live="polite">
-          <span />
-          Estou separando o que já consigo preencher e o que é melhor você escolher.
-        </div>
+          {erro && <p className="cv-briefing-erro">{erro}</p>}
+
+          <button
+            type="button"
+            className="cv-briefing-criar"
+            onClick={criar}
+            disabled={carregando}
+          >
+            <Sparkles className="h-5 w-5" />
+            {carregando ? 'Entendendo sua ideia…' : 'Criar meu convite com IA'}
+            {!carregando && <ArrowRight className="h-5 w-5" />}
+          </button>
+
+          {carregando && (
+            <div className="cv-briefing-pensando" aria-live="polite">
+              <span />
+              Estou separando o que já consigo preencher e o que é melhor você escolher.
+            </div>
+          )}
+        </>
       )}
     </section>
   );

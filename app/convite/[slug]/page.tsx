@@ -4,7 +4,10 @@ import ConvitePublico from '@/components/conviteria/ConvitePublico';
 import HeaderDono from '@/components/conviteria/HeaderDono';
 import { buscarEventoPublicado } from '@/lib/conviteria/servidor';
 import { familiasDaPagina, urlGoogleFonts } from '@/lib/conviteria/tokens';
-import { familiaLacre } from '@/components/conviteria/LacreArte';
+// De lib/, nao de components/: LacreArte e 'use client' e esta pagina e
+// server component — importar de la devolve referencia de cliente, e chamar
+// a funcao no servidor derruba a pagina.
+import { familiaLacre } from '@/lib/conviteria/fontesLacre';
 
 // Revalida a cada 5 min: convite muda pouco depois de publicado, e cache
 // longo evita que uma noite de divulgacao vire custo de banco.

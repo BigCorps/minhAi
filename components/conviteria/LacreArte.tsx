@@ -2,26 +2,21 @@
 
 import Image from 'next/image';
 
-export const FONTES_LACRE = [
-  { id: 'pinyon', nome: 'Pinyon', familia: "'Pinyon Script', cursive" },
-  { id: 'greatvibes', nome: 'Great Vibes', familia: "'Great Vibes', cursive" },
-  { id: 'cormorant', nome: 'Cormorant', familia: "'Cormorant Garamond', serif" },
-  { id: 'playfair', nome: 'Playfair', familia: "'Playfair Display', serif" },
-  { id: 'jost', nome: 'Jost', familia: "'Jost', sans-serif" },
-  { id: 'archivo', nome: 'Archivo', familia: "'Archivo', sans-serif" },
-] as const;
+// A tabela mora em lib/conviteria/fontesLacre.ts para poder ser lida tambem
+// pelo SERVIDOR: este arquivo e 'use client', e server component que importa
+// de modulo cliente recebe uma referencia, nao a funcao. Chamar essa
+// referencia no servidor derruba a pagina.
+//
+// Reexportado aqui para nao quebrar os imports que ja existem.
+import { familiaLacre } from '@/lib/conviteria/fontesLacre';
 
-export type FonteLacreId = (typeof FONTES_LACRE)[number]['id'];
-export const FONTE_LACRE_PADRAO: FonteLacreId = 'pinyon';
-
-export const FAMILIAS_LACRE = [
-  'Pinyon Script', 'Great Vibes', 'Cormorant Garamond',
-  'Playfair Display', 'Jost', 'Archivo',
-];
-
-export function familiaLacre(id?: string) {
-  return (FONTES_LACRE.find((f) => f.id === id) ?? FONTES_LACRE[0]).familia;
-}
+export {
+  FONTES_LACRE,
+  FAMILIAS_LACRE,
+  FONTE_LACRE_PADRAO,
+  familiaLacre,
+} from '@/lib/conviteria/fontesLacre';
+export type { FonteLacreId } from '@/lib/conviteria/fontesLacre';
 
 export interface AjusteLacre {
   fonte?: string;

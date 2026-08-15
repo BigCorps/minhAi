@@ -71,7 +71,39 @@ const PESO_UNICO = new Set([
   'Archivo Black',
 ]);
 
+// As famílias do lacre (FAMILIAS_LACRE, em components/conviteria/LacreArte)
+// são: Pinyon Script, Great Vibes, Cormorant Garamond, Playfair Display, Jost
+// e Archivo. As duas primeiras já estão acima; as outras quatro têm a faixa
+// 400..700 e entram no caminho normal. Se acrescentar fonte de lacre nova,
+// confira a faixa de pesos dela antes — peso inexistente derruba o request
+// INTEIRO com 400 e a página cai para a fonte do sistema, sem aviso.
+
 const PESOS = '400;500;600;700';
+
+/**
+ * Famílias que a PÁGINA PUBLICADA precisa carregar: as do par tipográfico
+ * mais a do carimbo do lacre.
+ *
+ * A do lacre é escolhida à parte, em `lacreAjuste.fonte`, e ficava de fora —
+ * era esse o bug do carimbo mudando de navegador para navegador. Sem a fonte
+ * baixada, a pilha `'Pinyon Script', cursive` caía no `cursive`, que cada
+ * sistema resolve para uma fonte diferente.
+ *
+ * O wizard nunca teve o problema porque carrega FAMILIAS_LACRE inteiro — por
+ * isso a prévia sempre esteve certa e só o convite publicado variava.
+ *
+ * Recebe a família já resolvida (não o id) para este módulo não importar de
+ * `components/`, o que criaria dependência de lib para componente.
+ */
+export function familiasDaPagina(fonteId: string, familiaLacre?: string): string[] {
+  const fam = new Set(familiasGoogle(fonteId));
+  if (familiaLacre) {
+    // Chega como "'Pinyon Script', cursive" — a API css2 quer só o nome.
+    const nome = familiaLacre.split(',')[0].replace(/'/g, '').trim();
+    if (nome) fam.add(nome);
+  }
+  return Array.from(fam);
+}
 
 /** Famílias únicas de todos os pares de um grupo de evento. */
 export function familiasDoGrupo(grupo: string): string[] {

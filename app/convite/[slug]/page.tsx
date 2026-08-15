@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 import ConvitePublico from '@/components/conviteria/ConvitePublico';
 import HeaderDono from '@/components/conviteria/HeaderDono';
 import { buscarEventoPublicado } from '@/lib/conviteria/servidor';
-import { familiasGoogle, urlGoogleFonts } from '@/lib/conviteria/tokens';
+import { familiasDaPagina, urlGoogleFonts } from '@/lib/conviteria/tokens';
+import { familiaLacre } from '@/components/conviteria/LacreArte';
 
 // Revalida a cada 5 min: convite muda pouco depois de publicado, e cache
 // longo evita que uma noite de divulgacao vire custo de banco.
@@ -48,13 +49,26 @@ export default async function PaginaConvite({ params }: Props) {
   const evento = await buscarEventoPublicado(slug);
   if (!evento) notFound();
 
-  // So as familias do par escolhido. Carregar as 18 de uma vez custaria
-  // varios segundos no 4G, que e como o convidado abre.
+  // So as familias que esta pagina usa: o par tipografico e a do carimbo do
+  // lacre. Carregar as 18 de uma vez custaria varios segundos no 4G, que e
+  // como o convidado abre.
+  //
+  // A do lacre entrava de fora ate agora, e era o bug do carimbo mudando de
+  // navegador para navegador: sem a fonte baixada, a pilha
+  // `'Pinyon Script', cursive` caia no `cursive`, que cada sistema resolve
+  // para uma fonte diferente. Na maioria dos convites nao custa download
+  // extra, porque o lacre costuma repetir a fonte do par.
+  //
   // urlGoogleFonts omite `wght` nas familias de peso unico (Pinyon Script,
   // Great Vibes, Parisienne, Italianno, Sacramento, Archivo Black). Pedir um
   // peso inexistente fazia a API css2 recusar o request INTEIRO com 400, e a
   // pagina caia para a fonte do sistema sem nenhum aviso.
-  const hrefFontes = urlGoogleFonts(familiasGoogle(evento.cfg.fonteId));
+  const hrefFontes = urlGoogleFonts(
+    familiasDaPagina(
+      evento.cfg.fonteId,
+      familiaLacre(evento.cfg.lacreAjuste?.fonte)
+    )
+  );
 
   return (
     <>

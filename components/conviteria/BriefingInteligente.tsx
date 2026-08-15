@@ -7,7 +7,7 @@ import './briefing.css';
 
 const EXEMPLOS = [
   {
-    rotulo: 'Casamento romântico',
+    rotulo: 'Casamento',
     texto: 'Vou casar com João no dia 10 de novembro de 2026 às 19h, em São Paulo. Quero um convite romântico em tons de rosa, com nossa foto, confirmação de presença e lista de presentes.',
   },
   {

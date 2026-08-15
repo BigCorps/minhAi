@@ -215,22 +215,24 @@
 
 @media (max-width: 600px) {
   .cv-briefing-botoes-landing {
-    width: 100%;
-    grid-template-columns: 1fr 1.45fr 1fr;
-    gap: .32rem;
+    width: min(82%, 300px);
+    margin-top: .65rem;
+    grid-template-columns: 1fr;
+    gap: .42rem;
   }
 
   .cv-briefing-botao-lateral,
   .cv-briefing-criar-landing {
-    min-height: 43px;
-    padding: .55rem .35rem;
-    font-size: .61rem;
+    width: 100%;
+    min-height: 40px;
+    padding: .56rem .85rem;
+    font-size: .72rem;
     white-space: normal;
-    line-height: 1.12;
+    line-height: 1.15;
   }
 
   .cv-briefing-criar-landing {
-    gap: .28rem;
+    gap: .36rem;
   }
 
   .cv-briefing-criar-landing svg {

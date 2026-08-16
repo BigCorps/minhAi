@@ -31,6 +31,7 @@ interface NotificationSettings {
   company_id: string;
   user_id: string;
   notification_email: string | null;
+  notification_phone: string | null;
   email_enabled: boolean;
   push_enabled: boolean;
   whatsapp_enabled: boolean;
@@ -153,6 +154,10 @@ function normalizeAmountInput(v: string) {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+function normalizePhoneInput(v: string) {
+  return v.replace(/\D/g, '').slice(0, 15);
+}
+
 async function createFromPendingSignup(
   supabase: ReturnType<typeof createClient>,
   userId: string,
@@ -257,6 +262,7 @@ function DashboardContent() {
   const [error, setError] = useState('');
 
   const [emailDraft, setEmailDraft] = useState('');
+  const [whatsappDraft, setWhatsappDraft] = useState('');
   const [pixKeyDraft, setPixKeyDraft] = useState('');
   const [pixTypeDraft, setPixTypeDraft] = useState('random');
   const [nameDraft, setNameDraft] = useState('');
@@ -355,7 +361,7 @@ function DashboardContent() {
         .select('company_id,user_id,pix_key,pix_key_type,mp_connection_id')
         .eq('company_id', activeCompany.id).maybeSingle(),
       supabase.from('pixwiki_notification_settings')
-        .select('company_id,user_id,notification_email,email_enabled,push_enabled,whatsapp_enabled')
+        .select('company_id,user_id,notification_email,notification_phone,email_enabled,push_enabled,whatsapp_enabled')
         .eq('company_id', activeCompany.id).maybeSingle(),
       supabase.from('pixwiki_receipts')
         .select('id,company_id,user_id,mp_payment_id,amount_cents,fee_amount_cents,net_amount_cents,status,source,provider,received_at')
@@ -397,6 +403,7 @@ function DashboardContent() {
         company_id: activeCompany.id,
         user_id: user.id,
         notification_email: activeCompany.email_contato || user.email || null,
+        notification_phone: activeCompany.whatsapp_number || null,
         email_enabled: true,
         push_enabled: true,
         whatsapp_enabled: false,
@@ -410,6 +417,7 @@ function DashboardContent() {
     setPixKeyDraft(paymentSettings?.pix_key || '');
     setPixTypeDraft(paymentSettings?.pix_key_type || 'random');
     setEmailDraft(notificationSettings?.notification_email || activeCompany.email_contato || user.email || '');
+    setWhatsappDraft(notificationSettings?.notification_phone || activeCompany.whatsapp_number || '');
     setReceipts((receiptRes.data || []) as ReceiptRow[]);
     setMpConnected(!!mpRes.data);
 
@@ -522,9 +530,10 @@ function DashboardContent() {
           company_id: company.id,
           user_id: userId,
           notification_email: emailDraft.trim() || authEmail || null,
+          notification_phone: normalizePhoneInput(whatsappDraft) || null,
           email_enabled: notifications?.email_enabled !== false,
           push_enabled: notifications?.push_enabled !== false,
-          whatsapp_enabled: notifications?.whatsapp_enabled === true,
+          whatsapp_enabled: effectivePlan === 'pro' && notifications?.whatsapp_enabled === true,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'company_id' }),
       ]);
@@ -534,7 +543,12 @@ function DashboardContent() {
 
       setCompany({ ...company, name: nameDraft.trim() || company.name, logo_url: logoDraft.trim() || null, email_contato: emailDraft.trim() || company.email_contato });
       setPayment(prev => prev ? { ...prev, pix_key: pixKeyDraft.trim() || null, pix_key_type: pixTypeDraft } : prev);
-      setNotifications(prev => prev ? { ...prev, notification_email: emailDraft.trim() || authEmail || null } : prev);
+      setNotifications(prev => prev ? {
+        ...prev,
+        notification_email: emailDraft.trim() || authEmail || null,
+        notification_phone: normalizePhoneInput(whatsappDraft) || null,
+        whatsapp_enabled: effectivePlan === 'pro' && prev.whatsapp_enabled === true,
+      } : prev);
       setNotice('Configurações salvas.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível salvar as configurações.');
@@ -621,9 +635,51 @@ function DashboardContent() {
     }
   }
 
-  async function toggleNotification(channel: 'email_enabled' | 'push_enabled') {
+  async function toggleNotification(channel: 'email_enabled' | 'push_enabled' | 'whatsapp_enabled') {
     if (!company || !notifications) return;
+
     const next = !notifications[channel];
+
+    if (channel === 'whatsapp_enabled') {
+      if (effectivePlan !== 'pro' || plan?.features?.whatsapp !== true) {
+        setError('As notificações por WhatsApp estão disponíveis somente no Pix Pro.');
+        return;
+      }
+
+      const phone = normalizePhoneInput(whatsappDraft);
+      if (next && (phone.length < 10 || phone.length > 15)) {
+        setError('Informe um número de WhatsApp válido antes de ativar os avisos.');
+        return;
+      }
+
+      const [settingsResult, companyResult] = await Promise.all([
+        supabase.from('pixwiki_notification_settings')
+          .update({
+            whatsapp_enabled: next,
+            notification_phone: phone || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('company_id', company.id),
+        phone
+          ? supabase.from('companies')
+              .update({ whatsapp_number: phone, updated_at: new Date().toISOString() })
+              .eq('id', company.id)
+              .eq('user_id', userId)
+          : Promise.resolve({ error: null } as any),
+      ]);
+
+      const updateError = settingsResult.error || companyResult.error;
+      if (updateError) {
+        setError('Não foi possível alterar a notificação por WhatsApp.');
+        return;
+      }
+
+      setNotifications({ ...notifications, whatsapp_enabled: next, notification_phone: phone || null });
+      setCompany({ ...company, whatsapp_number: phone || company.whatsapp_number });
+      setNotice(next ? 'Avisos por WhatsApp ativados.' : 'Avisos por WhatsApp pausados.');
+      return;
+    }
+
     const { error: updateError } = await supabase.from('pixwiki_notification_settings')
       .update({ [channel]: next, updated_at: new Date().toISOString() })
       .eq('company_id', company.id);
@@ -632,6 +688,42 @@ function DashboardContent() {
       return;
     }
     setNotifications({ ...notifications, [channel]: next });
+  }
+
+  async function saveWhatsappNumber() {
+    if (!company || !notifications) return;
+    if (effectivePlan !== 'pro' || plan?.features?.whatsapp !== true) {
+      setError('O número de avisos por WhatsApp é um recurso do Pix Pro.');
+      return;
+    }
+
+    const phone = normalizePhoneInput(whatsappDraft);
+    if (phone.length < 10 || phone.length > 15) {
+      setError('Informe um número de WhatsApp válido com DDD.');
+      return;
+    }
+
+    setError('');
+    const [settingsResult, companyResult] = await Promise.all([
+      supabase.from('pixwiki_notification_settings')
+        .update({ notification_phone: phone, updated_at: new Date().toISOString() })
+        .eq('company_id', company.id),
+      supabase.from('companies')
+        .update({ whatsapp_number: phone, updated_at: new Date().toISOString() })
+        .eq('id', company.id)
+        .eq('user_id', userId),
+    ]);
+
+    const updateError = settingsResult.error || companyResult.error;
+    if (updateError) {
+      setError('Não foi possível salvar o número de WhatsApp.');
+      return;
+    }
+
+    setNotifications({ ...notifications, notification_phone: phone });
+    setCompany({ ...company, whatsapp_number: phone });
+    setWhatsappDraft(phone);
+    setNotice('Número de WhatsApp salvo para esta empresa.');
   }
 
   async function logout() {
@@ -1015,30 +1107,91 @@ function DashboardContent() {
                 </div>
               </div>
 
-              {userId && notifications?.push_enabled !== false && <PixWikiPush userId={userId} dark={dark} />}
-
-              <div className={`rounded-2xl border p-4 ${isDark ? 'border-white/10 bg-white/[0.025]' : 'border-black/10 bg-slate-50'}`}>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-bold">Push</p>
-                    <p className={`mt-1 text-xs ${muted}`}>Ativação geral deste canal no PixWiki.</p>
+              {notifications?.push_enabled !== false ? (
+                <div>
+                  {userId && <PixWikiPush userId={userId} dark={dark} />}
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      onClick={() => toggleNotification('push_enabled')}
+                      className={`rounded-full border px-3 py-1.5 text-[11px] font-bold ${card}`}
+                    >
+                      Pausar Push
+                    </button>
                   </div>
-                  <button
-                    onClick={() => toggleNotification('push_enabled')}
-                    className={`rounded-full px-3 py-1.5 text-xs font-bold ${notifications?.push_enabled !== false ? 'bg-emerald-500 text-slate-950' : isDark ? 'bg-white/10 text-white/50' : 'bg-slate-200 text-slate-500'}`}
-                  >
-                    {notifications?.push_enabled !== false ? 'Ativo' : 'Pausado'}
-                  </button>
                 </div>
-              </div>
+              ) : (
+                <div className={`rounded-2xl border p-4 ${isDark ? 'border-white/10 bg-white/[0.025]' : 'border-black/10 bg-slate-50'}`}>
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-bold">Push PixWiki</p>
+                      <p className={`mt-1 text-xs ${muted}`}>Canal pausado para esta empresa.</p>
+                    </div>
+                    <button
+                      onClick={() => toggleNotification('push_enabled')}
+                      className="rounded-full bg-emerald-500 px-3 py-1.5 text-xs font-bold text-slate-950"
+                    >
+                      Ativar
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className={`rounded-2xl border p-4 ${effectivePlan === 'pro' ? 'border-emerald-500/20 bg-emerald-500/5' : isDark ? 'border-white/10 bg-white/[0.025]' : 'border-black/10 bg-slate-50'}`}>
-                <p className="text-sm font-bold">WhatsApp</p>
-                <p className={`mt-1 text-xs ${muted}`}>
-                  {effectivePlan === 'pro'
-                    ? 'Incluído no Pix Pro. A configuração do canal será liberada na próxima fase do backend.'
-                    : 'Incluído no Pix Pro, com 1 número de aviso por empresa/Pix configurado.'}
-                </p>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-bold">WhatsApp</p>
+                    <p className={`mt-1 text-xs leading-relaxed ${muted}`}>
+                      {effectivePlan === 'pro'
+                        ? '1 número de aviso por empresa. Se a janela estiver fechada, o PixWiki usa o template de confirmação com botão para reativar os avisos.'
+                        : 'Incluído no Pix Pro, com 1 número de aviso por empresa/Pix configurado.'}
+                    </p>
+                  </div>
+
+                  {effectivePlan === 'pro' && (
+                    <button
+                      onClick={() => toggleNotification('whatsapp_enabled')}
+                      className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${notifications?.whatsapp_enabled === true ? 'bg-emerald-500 text-slate-950' : isDark ? 'bg-white/10 text-white/50' : 'bg-slate-200 text-slate-500'}`}
+                    >
+                      {notifications?.whatsapp_enabled === true ? 'Ativo' : 'Pausado'}
+                    </button>
+                  )}
+                </div>
+
+                {effectivePlan === 'pro' ? (
+                  <div className="mt-4">
+                    <label className="block">
+                      <span className={`text-[11px] font-bold uppercase tracking-wide ${faint}`}>Número que recebe os avisos</span>
+                      <div className="mt-1 flex gap-2">
+                        <input
+                          value={whatsappDraft}
+                          onChange={e => setWhatsappDraft(normalizePhoneInput(e.target.value))}
+                          inputMode="tel"
+                          placeholder="11999999999"
+                          className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={saveWhatsappNumber}
+                          className="rounded-xl bg-emerald-500 px-4 py-3 text-xs font-black text-slate-950"
+                        >
+                          Salvar
+                        </button>
+                      </div>
+                    </label>
+                    <p className={`mt-2 text-[11px] leading-relaxed ${muted}`}>
+                      Informe DDD + número. O envio usa a mesma infraestrutura WhatsApp já utilizada pelo minhAi.
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => createInvoice('pro')}
+                    disabled={!!planBusy || !!plan?.pending_invoice}
+                    className="mt-4 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-black text-slate-950 disabled:opacity-50"
+                  >
+                    Ativar Pix Pro
+                  </button>
+                )}
               </div>
             </div>
           </div>

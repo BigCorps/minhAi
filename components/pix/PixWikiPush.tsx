@@ -116,7 +116,7 @@ export default function PixWikiPush({ userId, dark = true }: Props) {
             });
           }
 
-          const onSubscriptionChange = () => {
+          const onSubscriptionChange = async () => {
             if (!cancelled) await syncState(OneSignal);
           };
           OneSignal.User.PushSubscription.addEventListener('change', onSubscriptionChange);

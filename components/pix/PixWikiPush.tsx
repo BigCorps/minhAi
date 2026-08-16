@@ -15,12 +15,13 @@ declare global {
 
 interface Props {
   userId: string;
+  companyId: string;
   dark?: boolean;
 }
 
 type PushState = 'loading' | 'ready' | 'granted' | 'denied' | 'unsupported' | 'error';
 
-export default function PixWikiPush({ userId, dark = true }: Props) {
+export default function PixWikiPush({ userId, companyId, dark = true }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [state, setState] = useState<PushState>('loading');
   const [busy, setBusy] = useState(false);
@@ -30,17 +31,10 @@ export default function PixWikiPush({ userId, dark = true }: Props) {
     const subscriptionId = String(OneSignal?.User?.PushSubscription?.id || '');
     if (!subscriptionId) return false;
 
-    const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('segment_key', 'pix_wiki')
-      .maybeSingle();
-
-    if (companyError || !company?.id) return false;
+    if (!companyId) return false;
 
     const { error } = await supabase.rpc('pixwiki_register_push_subscription', {
-      p_company_id: company.id,
+      p_company_id: companyId,
       p_subscription_id: subscriptionId,
       p_onesignal_id: OneSignal?.User?.onesignalId || null,
       p_user_agent: navigator.userAgent || null,
@@ -177,7 +171,7 @@ export default function PixWikiPush({ userId, dark = true }: Props) {
       cancelled = true;
       removeSubscriptionListener?.();
     };
-  }, [userId, supabase]);
+  }, [userId, companyId, supabase]);
 
   async function requestPermission() {
     if (state === 'denied') {

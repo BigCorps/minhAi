@@ -19,6 +19,20 @@ interface CompanyRow {
   email_contato: string | null;
 }
 
+interface CompanyOption extends CompanyRow {
+  pix_key: string | null;
+  pix_key_type: string | null;
+  mp_connection_id: string | null;
+  mp_connected: boolean;
+  notification_email: string | null;
+  notification_phone: string | null;
+  email_enabled: boolean;
+  push_enabled: boolean;
+  whatsapp_enabled: boolean;
+  is_primary: boolean;
+  plan_access: boolean;
+}
+
 interface PaymentSettings {
   company_id: string;
   user_id: string;
@@ -249,6 +263,7 @@ function DashboardContent() {
   const [userId, setUserId] = useState('');
   const [authEmail, setAuthEmail] = useState('');
   const [company, setCompany] = useState<CompanyRow | null>(null);
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [payment, setPayment] = useState<PaymentSettings | null>(null);
   const [notifications, setNotifications] = useState<NotificationSettings | null>(null);
   const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
@@ -271,6 +286,14 @@ function DashboardContent() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [savingSlug, setSavingSlug] = useState(false);
   const [planBusy, setPlanBusy] = useState<PlanKey | ''>('');
+  const [showCompanyForm, setShowCompanyForm] = useState(false);
+  const [newCompanyName, setNewCompanyName] = useState('');
+  const [newCompanySlug, setNewCompanySlug] = useState('');
+  const [newCompanyPixKey, setNewCompanyPixKey] = useState('');
+  const [newCompanyPixType, setNewCompanyPixType] = useState('random');
+  const [newCompanyEmail, setNewCompanyEmail] = useState('');
+  const [newCompanyPhone, setNewCompanyPhone] = useState('');
+  const [creatingCompany, setCreatingCompany] = useState(false);
 
   const isDark = dark;
   const page = isDark ? 'bg-[#020617] text-white' : 'bg-[#f7f8fa] text-slate-900';
@@ -325,101 +348,128 @@ function DashboardContent() {
     setUserId(user.id);
     setAuthEmail(user.email || '');
 
-    let { data: comp } = await supabase
-      .from('companies')
-      .select('id,name,slug,logo_url,whatsapp_number,email_contato')
-      .eq('user_id', user.id)
-      .eq('segment_key', 'pix_wiki')
-      .maybeSingle();
+    const loadCompanies = async () => {
+      const { data, error: listError } = await supabase.rpc('pixwiki_list_my_companies');
+      if (listError) throw listError;
+      return (data || []) as CompanyOption[];
+    };
 
-    if (!comp) {
+    let companyRows: CompanyOption[] = [];
+    try {
+      companyRows = await loadCompanies();
+    } catch (e) {
+      setLoading(false);
+      setError(e instanceof Error ? e.message : 'Não foi possível carregar suas empresas.');
+      return;
+    }
+
+    if (companyRows.length === 0) {
       const raw = localStorage.getItem('pixWikiPendingSignup');
       if (raw) {
         try {
-          comp = await createFromPendingSignup(supabase, user.id, user.email || null, JSON.parse(raw));
-          if (comp) localStorage.removeItem('pixWikiPendingSignup');
+          const created = await createFromPendingSignup(supabase, user.id, user.email || null, JSON.parse(raw));
+          if (created) {
+            localStorage.removeItem('pixWikiPendingSignup');
+            companyRows = await loadCompanies();
+          }
         } catch (e) {
           console.error('[PixWiki] pending signup:', e);
         }
       }
     }
 
-    if (!comp) {
+    if (companyRows.length === 0) {
       setLoading(false);
       setError('Não encontramos sua empresa PixWiki. Volte ao início para concluir o cadastro.');
       return;
     }
 
-    const activeCompany = comp as CompanyRow;
+    setCompanies(companyRows);
+
+    const queryCompanyId = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('company')
+      : null;
+    const savedCompanyId = typeof window !== 'undefined'
+      ? localStorage.getItem('pixWikiActiveCompanyId')
+      : null;
+    const active = companyRows.find(c => c.id === queryCompanyId)
+      || companyRows.find(c => c.id === savedCompanyId)
+      || companyRows.find(c => c.is_primary)
+      || companyRows[0];
+
+    localStorage.setItem('pixWikiActiveCompanyId', active.id);
+
+    const activeCompany: CompanyRow = {
+      id: active.id,
+      name: active.name,
+      slug: active.slug,
+      logo_url: active.logo_url,
+      whatsapp_number: active.whatsapp_number,
+      email_contato: active.email_contato,
+    };
     setCompany(activeCompany);
-    setNameDraft(activeCompany.name);
-    setLogoDraft(activeCompany.logo_url || '');
-    setSlugDraft(activeCompany.slug);
+    setNameDraft(active.name);
+    setLogoDraft(active.logo_url || '');
+    setSlugDraft(active.slug);
 
-    const [paymentRes, notificationRes, receiptRes, mpRes] = await Promise.all([
-      supabase.from('pixwiki_payment_settings')
-        .select('company_id,user_id,pix_key,pix_key_type,mp_connection_id')
-        .eq('company_id', activeCompany.id).maybeSingle(),
-      supabase.from('pixwiki_notification_settings')
-        .select('company_id,user_id,notification_email,notification_phone,email_enabled,push_enabled,whatsapp_enabled')
-        .eq('company_id', activeCompany.id).maybeSingle(),
-      supabase.from('pixwiki_receipts')
-        .select('id,company_id,user_id,mp_payment_id,amount_cents,fee_amount_cents,net_amount_cents,status,source,provider,received_at')
-        .eq('company_id', activeCompany.id)
-        .order('received_at', { ascending: false })
-        .limit(200),
-      supabase.from('mp_connections')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .maybeSingle(),
-    ]);
+    // Empresas antigas podem ainda não ter as linhas auxiliares; só a empresa
+    // principal herda a chave legada do perfil. Empresas Pro adicionais sempre
+    // nascem pelo RPC pixwiki_create_company e já recebem seus próprios settings.
+    let paymentSettings: PaymentSettings = {
+      company_id: active.id,
+      user_id: user.id,
+      pix_key: active.pix_key,
+      pix_key_type: active.pix_key_type,
+      mp_connection_id: active.mp_connection_id,
+    };
 
-    let paymentSettings = paymentRes.data as PaymentSettings | null;
-    if (!paymentSettings) {
+    if (!active.pix_key && active.is_primary) {
       const { data: legacy } = await supabase.from('user_profiles')
         .select('withdrawal_pix_key,withdrawal_pix_key_type')
         .eq('user_id', user.id).maybeSingle();
-
-      const row = {
-        company_id: activeCompany.id,
-        user_id: user.id,
-        pix_key: legacy?.withdrawal_pix_key || null,
-        pix_key_type: legacy?.withdrawal_pix_key_type || null,
-        mp_connection_id: mpRes.data?.id || null,
-      };
-      await supabase.from('pixwiki_payment_settings').upsert(row, { onConflict: 'company_id' });
-      paymentSettings = row;
-    } else if (mpRes.data?.id && paymentSettings.mp_connection_id !== mpRes.data.id) {
-      await supabase.from('pixwiki_payment_settings')
-        .update({ mp_connection_id: mpRes.data.id, updated_at: new Date().toISOString() })
-        .eq('company_id', activeCompany.id);
-      paymentSettings = { ...paymentSettings, mp_connection_id: mpRes.data.id };
+      if (legacy?.withdrawal_pix_key) {
+        paymentSettings = {
+          ...paymentSettings,
+          pix_key: legacy.withdrawal_pix_key,
+          pix_key_type: legacy.withdrawal_pix_key_type,
+        };
+        await supabase.from('pixwiki_payment_settings').upsert({
+          ...paymentSettings,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'company_id' });
+      }
     }
 
-    let notificationSettings = notificationRes.data as NotificationSettings | null;
-    if (!notificationSettings) {
-      const row = {
-        company_id: activeCompany.id,
-        user_id: user.id,
-        notification_email: activeCompany.email_contato || user.email || null,
-        notification_phone: activeCompany.whatsapp_number || null,
-        email_enabled: true,
-        push_enabled: true,
-        whatsapp_enabled: false,
-      };
-      await supabase.from('pixwiki_notification_settings').upsert(row, { onConflict: 'company_id' });
-      notificationSettings = row;
-    }
+    const notificationSettings: NotificationSettings = {
+      company_id: active.id,
+      user_id: user.id,
+      notification_email: active.notification_email || active.email_contato || user.email || null,
+      notification_phone: active.notification_phone || active.whatsapp_number || null,
+      email_enabled: active.email_enabled !== false,
+      push_enabled: active.push_enabled !== false,
+      whatsapp_enabled: active.whatsapp_enabled === true,
+    };
+
+    await supabase.from('pixwiki_notification_settings').upsert({
+      ...notificationSettings,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'company_id' });
+
+    const { data: receiptRows, error: receiptError } = await supabase.from('pixwiki_receipts')
+      .select('id,company_id,user_id,mp_payment_id,amount_cents,fee_amount_cents,net_amount_cents,status,source,provider,received_at')
+      .eq('company_id', active.id)
+      .order('received_at', { ascending: false })
+      .limit(200);
+    if (receiptError) console.error('[PixWiki] recebimentos:', receiptError.message);
 
     setPayment(paymentSettings);
     setNotifications(notificationSettings);
-    setPixKeyDraft(paymentSettings?.pix_key || '');
-    setPixTypeDraft(paymentSettings?.pix_key_type || 'random');
-    setEmailDraft(notificationSettings?.notification_email || activeCompany.email_contato || user.email || '');
-    setWhatsappDraft(notificationSettings?.notification_phone || activeCompany.whatsapp_number || '');
-    setReceipts((receiptRes.data || []) as ReceiptRow[]);
-    setMpConnected(!!mpRes.data);
+    setPixKeyDraft(paymentSettings.pix_key || '');
+    setPixTypeDraft(paymentSettings.pix_key_type || 'random');
+    setEmailDraft(notificationSettings.notification_email || user.email || '');
+    setWhatsappDraft(notificationSettings.notification_phone || '');
+    setReceipts((receiptRows || []) as ReceiptRow[]);
+    setMpConnected(active.mp_connected === true);
 
     try {
       await loadPlan();
@@ -429,7 +479,6 @@ function DashboardContent() {
 
     setLoading(false);
   }, [loadPlan, router, supabase]);
-
   useEffect(() => {
     const saved = localStorage.getItem('publicTheme');
     if (saved === 'light' || saved === 'dark') {
@@ -441,8 +490,13 @@ function DashboardContent() {
   }, [loadData]);
 
   useEffect(() => {
-    if (search.get('mp_connected') === '1') setNotice('Mercado Pago conectado com sucesso.');
-    if (search.get('mp_error')) setError('Não foi possível concluir a conexão com o Mercado Pago. Tente novamente.');
+    if (search.get('mp_connected') === '1') setNotice('Mercado Pago conectado com sucesso para esta empresa.');
+    const mpError = search.get('mp_error');
+    if (mpError === 'account_in_use') {
+      setError('Esta conta Mercado Pago já está vinculada a outra empresa PixWiki. Cada empresa precisa da própria conta Mercado Pago.');
+    } else if (mpError) {
+      setError('Não foi possível concluir a conexão com o Mercado Pago. Tente novamente.');
+    }
   }, [search]);
 
   // Enquanto houver uma cobrança de plano, verifica automaticamente sem
@@ -488,7 +542,9 @@ function DashboardContent() {
   const monthFees = monthReceipts.reduce((a, r) => a + r.fee_amount_cents, 0);
 
   const effectivePlan = plan?.effective_plan || 'free';
-  const canLink = plan?.features?.subdomain === true;
+  const activeCompanyOption = companies.find(c => c.id === company?.id) || null;
+  const companyPlanAccess = activeCompanyOption?.plan_access !== false;
+  const canLink = plan?.features?.subdomain === true && companyPlanAccess;
   const linkBase = company && canLink ? `https://${company.slug}.pix.wiki` : '';
   const amountNumber = normalizeAmountInput(shareValue);
   const linkWithAmount = linkBase && amountNumber > 0 ? `${linkBase}/${amountNumber.toFixed(2)}` : linkBase;
@@ -541,7 +597,20 @@ function DashboardContent() {
       const firstError = companyUpdate.error || paymentUpdate.error || notificationUpdate.error;
       if (firstError) throw firstError;
 
-      setCompany({ ...company, name: nameDraft.trim() || company.name, logo_url: logoDraft.trim() || null, email_contato: emailDraft.trim() || company.email_contato });
+      const savedName = nameDraft.trim() || company.name;
+      const savedLogo = logoDraft.trim() || null;
+      const savedEmail = emailDraft.trim() || company.email_contato;
+      setCompany({ ...company, name: savedName, logo_url: savedLogo, email_contato: savedEmail });
+      setCompanies(prev => prev.map(c => c.id === company.id ? {
+        ...c,
+        name: savedName,
+        logo_url: savedLogo,
+        email_contato: savedEmail,
+        pix_key: pixKeyDraft.trim() || null,
+        pix_key_type: pixTypeDraft,
+        notification_email: emailDraft.trim() || authEmail || null,
+        notification_phone: normalizePhoneInput(whatsappDraft) || null,
+      } : c));
       setPayment(prev => prev ? { ...prev, pix_key: pixKeyDraft.trim() || null, pix_key_type: pixTypeDraft } : prev);
       setNotifications(prev => prev ? {
         ...prev,
@@ -582,6 +651,7 @@ function DashboardContent() {
       else if (msg.includes('slug_unavailable')) setError('Esse endereço já está em uso.');
       else if (msg.includes('invalid_slug')) setError('Use de 3 a 40 caracteres: letras minúsculas, números e hífen.');
       else if (msg.includes('plan_required')) setError('É necessário Pix Link ou Pix Pro.');
+      else if (msg.includes('company_paused_by_plan')) setError('Esta empresa adicional requer o Pix Pro ativo.');
       else setError('Não foi possível salvar o subdomínio.');
     } finally {
       setSavingSlug(false);
@@ -726,6 +796,58 @@ function DashboardContent() {
     setNotice('Número de WhatsApp salvo para esta empresa.');
   }
 
+  function switchCompany(companyId: string) {
+    if (!companyId || companyId === company?.id) return;
+    localStorage.setItem('pixWikiActiveCompanyId', companyId);
+    window.location.href = `/dashboard?company=${encodeURIComponent(companyId)}`;
+  }
+
+  async function createCompany() {
+    if (effectivePlan !== 'pro' || plan?.features?.multi_company !== true) {
+      setError('Multiempresa está disponível somente no Pix Pro.');
+      return;
+    }
+
+    const slug = newCompanySlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (!newCompanyName.trim()) {
+      setError('Informe o nome da nova empresa.');
+      return;
+    }
+    if (slug.length < 3) {
+      setError('Escolha um endereço com pelo menos 3 caracteres.');
+      return;
+    }
+
+    setCreatingCompany(true);
+    setError('');
+    setNotice('');
+    try {
+      const { data, error: createError } = await supabase.rpc('pixwiki_create_company', {
+        p_name: newCompanyName.trim(),
+        p_slug: slug,
+        p_logo_url: null,
+        p_whatsapp: normalizePhoneInput(newCompanyPhone) || null,
+        p_email: newCompanyEmail.trim() || authEmail || null,
+        p_pix_key: newCompanyPixKey.trim() || null,
+        p_pix_key_type: newCompanyPixType || null,
+      }).single();
+      if (createError) throw createError;
+      const created = data as { id: string; slug: string; name: string } | null;
+      if (!created?.id) throw new Error('company_create_failed');
+      localStorage.setItem('pixWikiActiveCompanyId', created.id);
+      window.location.href = `/dashboard?company=${encodeURIComponent(created.id)}`;
+    } catch (e: any) {
+      const msg = String(e?.message || '');
+      if (msg.includes('pix_pro_required')) setError('Multiempresa requer Pix Pro ativo.');
+      else if (msg.includes('reserved_slug')) setError('Esse endereço é reservado pelo PixWiki.');
+      else if (msg.includes('slug_unavailable')) setError('Esse endereço já está em uso.');
+      else if (msg.includes('invalid_slug')) setError('Use letras minúsculas, números e hífen no endereço.');
+      else setError('Não foi possível criar a nova empresa.');
+    } finally {
+      setCreatingCompany(false);
+    }
+  }
+
   async function logout() {
     if (typeof window !== 'undefined' && window.OneSignalDeferred) {
       await new Promise<void>((resolve) => {
@@ -788,7 +910,36 @@ function DashboardContent() {
                   {PLAN_COPY[effectivePlan].title}
                 </span>
               </div>
-              <p className={`text-xs ${muted}`}>{company.name}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {companies.length > 1 ? (
+                  <select
+                    value={company.id}
+                    onChange={e => switchCompany(e.target.value)}
+                    className={`max-w-[210px] rounded-lg border px-2 py-1 text-xs outline-none ${input}`}
+                    aria-label="Empresa ativa"
+                  >
+                    {companies.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}{c.plan_access === false ? ' · pausada' : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className={`text-xs ${muted}`}>{company.name}</p>
+                )}
+                {effectivePlan === 'pro' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCompanyEmail(authEmail);
+                      setShowCompanyForm(true);
+                    }}
+                    className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-400"
+                  >
+                    + Empresa
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -826,7 +977,63 @@ function DashboardContent() {
           </div>
         )}
 
-        {!mpConnected && (
+        {showCompanyForm && effectivePlan === 'pro' && (
+          <section className={`mt-5 rounded-3xl border p-5 sm:p-6 ${card}`}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-black">Nova empresa PixWiki</h2>
+                <p className={`mt-1 text-sm ${muted}`}>Cada empresa pode ter sua própria chave, Mercado Pago, subdomínio e WhatsApp.</p>
+              </div>
+              <button type="button" onClick={() => setShowCompanyForm(false)} className={`rounded-xl border px-3 py-2 text-xs font-bold ${card}`}>Fechar</button>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <label className="block">
+                <span className={`text-xs font-bold ${muted}`}>Nome da empresa</span>
+                <input value={newCompanyName} onChange={e => setNewCompanyName(e.target.value)} className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none ${input}`} />
+              </label>
+              <label className="block">
+                <span className={`text-xs font-bold ${muted}`}>Subdomínio</span>
+                <div className="relative mt-1">
+                  <input value={newCompanySlug} onChange={e => setNewCompanySlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} className={`w-full rounded-xl border px-4 py-3 pr-24 text-sm outline-none ${input}`} />
+                  <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs ${faint}`}>.pix.wiki</span>
+                </div>
+              </label>
+              <label className="block">
+                <span className={`text-xs font-bold ${muted}`}>E-mail</span>
+                <input type="email" value={newCompanyEmail} onChange={e => setNewCompanyEmail(e.target.value)} className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none ${input}`} />
+              </label>
+              <label className="block">
+                <span className={`text-xs font-bold ${muted}`}>WhatsApp de avisos</span>
+                <input inputMode="tel" value={newCompanyPhone} onChange={e => setNewCompanyPhone(normalizePhoneInput(e.target.value))} placeholder="11999999999" className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none ${input}`} />
+              </label>
+              <label className="block">
+                <span className={`text-xs font-bold ${muted}`}>Tipo da chave Pix</span>
+                <select value={newCompanyPixType} onChange={e => setNewCompanyPixType(e.target.value)} className={`mt-1 w-full rounded-xl border px-3 py-3 text-sm outline-none ${input}`}>
+                  <option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="phone">Telefone</option><option value="random">Aleatória</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className={`text-xs font-bold ${muted}`}>Chave Pix Mercado Pago</span>
+                <input value={newCompanyPixKey} onChange={e => setNewCompanyPixKey(e.target.value)} className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none ${input}`} />
+              </label>
+            </div>
+            <button type="button" onClick={createCompany} disabled={creatingCompany} className="mt-5 w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50">
+              {creatingCompany ? 'Criando...' : 'Criar empresa'}
+            </button>
+          </section>
+        )}
+
+        {!companyPlanAccess && (
+          <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-bold text-amber-300">Empresa pausada pelo plano</p>
+              <p className={`mt-1 text-sm ${muted}`}>Empresas adicionais fazem parte do Pix Pro. O histórico continua visível, mas recebimentos, subdomínio e automações ficam pausados até reativar o Pro.</p>
+            </div>
+            <button onClick={() => createInvoice('pro')} disabled={!!planBusy || !!plan?.pending_invoice} className="rounded-xl bg-emerald-500 px-4 py-3 text-xs font-black text-slate-950 disabled:opacity-50">Reativar Pix Pro</button>
+          </div>
+        )}
+
+        {!mpConnected && companyPlanAccess && (
           <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-bold text-amber-300">Conecte seu Mercado Pago</p>
@@ -1109,7 +1316,7 @@ function DashboardContent() {
 
               {notifications?.push_enabled !== false ? (
                 <div>
-                  {userId && <PixWikiPush userId={userId} dark={dark} />}
+                  {userId && <PixWikiPush userId={userId} companyId={company.id} dark={dark} />}
                   <div className="mt-2 flex justify-end">
                     <button
                       onClick={() => toggleNotification('push_enabled')}
@@ -1274,10 +1481,10 @@ function DashboardContent() {
             <div>
               <h2 className="text-lg font-black">Mercado Pago</h2>
               <p className={`mt-1 text-sm ${muted}`}>
-                {mpConnected ? 'Conectado. Seus recebimentos são conciliados automaticamente.' : 'Ainda não conectado.'}
+                {mpConnected ? 'Conectado para esta empresa. Seus recebimentos são conciliados automaticamente.' : companyPlanAccess ? 'Ainda não conectado para esta empresa.' : 'Conexão pausada enquanto esta empresa estiver fora do Pix Pro.'}
               </p>
             </div>
-            <button onClick={() => connectMercadoPago(company.id, '/dashboard')} className={`rounded-xl px-4 py-3 text-sm font-black ${mpConnected ? isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-800' : 'bg-[#009ee3] text-white'}`}>
+            <button disabled={!companyPlanAccess} onClick={() => connectMercadoPago(company.id, '/dashboard')} className={`rounded-xl px-4 py-3 text-sm font-black disabled:opacity-45 ${mpConnected ? isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-800' : 'bg-[#009ee3] text-white'}`}>
               {mpConnected ? 'Reconectar Mercado Pago' : 'Conectar Mercado Pago'}
             </button>
           </div>

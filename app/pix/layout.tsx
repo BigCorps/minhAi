@@ -16,43 +16,35 @@ function isPixApex(host: string): boolean {
   return clean === 'pix.wiki' || clean === 'www.pix.wiki';
 }
 
+function pixMetadata(metadata: Metadata): Metadata {
+  // O navegador sempre pede o manifesto na raiz. O middleware de pix.wiki já
+  // reescreve /manifest.webmanifest para o arquivo específico da marca.
+  return { ...metadata, manifest: '/manifest.webmanifest' };
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
   const host = headersList.get('host') || '';
   const { brand } = resolveSeo(host);
-  // Só o apex pode ser a landing. Em loja.pix.wiki a URL / é página
-  // transacional, portanto deve continuar fora do índice.
   const landing = isPixApex(host) && isLandingPath(headersList.get('x-pathname'));
 
   if (brand === 'pix') {
-    if (landing) {
-      return buildBrandMetadata({ host, path: '/' });
-    }
-    return buildBrandMetadata({ host, path: '/', noindex: true });
+    return pixMetadata(buildBrandMetadata({ host, path: '/', noindex: !landing }));
   }
 
   return {
     ...buildBrandMetadata({ host, path: '/', noindex: true }),
+    // Não oferecemos instalação a partir dos subdomínios públicos de cobrança;
+    // o WebApp instalável é o painel em pix.wiki.
+    manifest: undefined,
     alternates: { canonical: 'https://pix.wiki' },
   };
 }
 
-export default async function PixLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function PixLayout({ children }: { children: React.ReactNode }) {
   const headersList = await headers();
   const host = headersList.get('host') || '';
   const { brand } = resolveSeo(host);
   const landing = isPixApex(host) && isLandingPath(headersList.get('x-pathname'));
-
-  const showGraph = brand === 'pix' && landing;
-
-  return (
-    <>
-      {showGraph && <JsonLd data={pixGraph()} />}
-      {children}
-    </>
-  );
+  return <>{brand === 'pix' && landing && <JsonLd data={pixGraph()} />}{children}</>;
 }

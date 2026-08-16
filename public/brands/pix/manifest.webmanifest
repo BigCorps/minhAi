@@ -1,12 +1,14 @@
 {
-  "name": "Pix Wiki",
-  "short_name": "pix.wiki",
-  "description": "Seu link Pix simplificado",
-  "start_url": "/",
+  "id": "/",
+  "name": "PixWiki",
+  "short_name": "PixWiki",
+  "description": "Receba Pix com confirmação automática, histórico e notificações.",
+  "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "background_color": "#020617",
   "theme_color": "#020617",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/brands/pix/web-app-manifest-192x192.png",

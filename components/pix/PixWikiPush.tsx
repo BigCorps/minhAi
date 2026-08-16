@@ -24,6 +24,32 @@ export default function PixWikiPush({ userId, dark = true }: Props) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
 
+  function syncState(OneSignal: any) {
+    const permission = Notification.permission;
+    const subscription = OneSignal?.User?.PushSubscription;
+    const optedIn = subscription?.optedIn === true;
+    const hasToken = Boolean(subscription?.token);
+    const hasId = Boolean(subscription?.id);
+
+    if (permission === 'denied') {
+      setState('denied');
+      setMessage('As notificações estão bloqueadas no navegador. Libere o PixWiki nas permissões do site.');
+      return false;
+    }
+
+    if (permission === 'granted' && optedIn && (hasToken || hasId)) {
+      setState('granted');
+      setMessage('Push ativo neste dispositivo.');
+      return true;
+    }
+
+    setState('ready');
+    if (permission === 'granted') {
+      setMessage('Permissão concedida. Concluindo a assinatura Push neste dispositivo...');
+    }
+    return false;
+  }
+
   useEffect(() => {
     if (!userId || typeof window === 'undefined') return;
 
@@ -41,6 +67,7 @@ export default function PixWikiPush({ userId, dark = true }: Props) {
     }
 
     let cancelled = false;
+    let removeSubscriptionListener: (() => void) | null = null;
 
     const queueInit = () => {
       window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -54,13 +81,32 @@ export default function PixWikiPush({ userId, dark = true }: Props) {
             });
           }
 
-          await OneSignal.login(userId);
-          if (cancelled) return;
+          const onSubscriptionChange = () => {
+            if (!cancelled) syncState(OneSignal);
+          };
+          OneSignal.User.PushSubscription.addEventListener('change', onSubscriptionChange);
+          removeSubscriptionListener = () => {
+            try {
+              OneSignal.User.PushSubscription.removeEventListener('change', onSubscriptionChange);
+            } catch {
+              // best effort
+            }
+          };
 
-          const permission = Notification.permission;
-          if (permission === 'granted') setState('granted');
-          else if (permission === 'denied') setState('denied');
-          else setState('ready');
+          // O External ID precisa estar associado ao usuário autenticado.
+          await OneSignal.login(userId);
+
+          // Se a permissão do navegador já foi concedida anteriormente, mas a
+          // assinatura OneSignal ainda não foi criada/opted-in, corrige sozinho
+          // ao carregar o dashboard. Isto evita o falso positivo de apenas
+          // Notification.permission === 'granted'.
+          if (Notification.permission === 'granted' && OneSignal.User.PushSubscription.optedIn !== true) {
+            await OneSignal.User.PushSubscription.optIn();
+            await OneSignal.login(userId);
+          }
+
+          if (cancelled) return;
+          syncState(OneSignal);
         } catch (error) {
           console.error('[PixWiki Push] init:', error);
           if (!cancelled) {
@@ -90,6 +136,7 @@ export default function PixWikiPush({ userId, dark = true }: Props) {
 
     return () => {
       cancelled = true;
+      removeSubscriptionListener?.();
     };
   }, [userId]);
 
@@ -105,16 +152,24 @@ export default function PixWikiPush({ userId, dark = true }: Props) {
     window.OneSignalDeferred.push(async (OneSignal: any) => {
       try {
         await OneSignal.login(userId);
-        await OneSignal.Notifications.requestPermission();
-        const permission = Notification.permission;
-        if (permission === 'granted') {
-          setState('granted');
-          setMessage('Push ativado. Os próximos Pix podem ser avisados neste dispositivo.');
-        } else if (permission === 'denied') {
-          setState('denied');
-          setMessage('O navegador bloqueou as notificações para o PixWiki.');
-        } else {
+
+        // optIn() é a operação correta do SDK v16: se ainda não houver token,
+        // solicita a permissão; se já houver, garante que a subscription fique
+        // realmente inscrita no OneSignal.
+        await OneSignal.User.PushSubscription.optIn();
+        await OneSignal.login(userId);
+
+        // O token/Subscription ID pode chegar alguns instantes depois do aceite.
+        // Só exibimos "ativo" quando o SDK confirma uma assinatura utilizável.
+        let active = syncState(OneSignal);
+        for (let i = 0; i < 20 && !active; i += 1) {
+          await new Promise(resolve => window.setTimeout(resolve, 250));
+          active = syncState(OneSignal);
+        }
+
+        if (!active && Notification.permission === 'granted') {
           setState('ready');
+          setMessage('A permissão foi concedida, mas a assinatura ainda está sendo criada. Reabra o dashboard em alguns segundos.');
         }
       } catch (error) {
         console.error('[PixWiki Push] permission:', error);

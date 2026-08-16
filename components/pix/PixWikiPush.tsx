@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { createClient } from '@/lib/supabase-browser';
 
 const PIXWIKI_ONESIGNAL_APP_ID = '2b85c242-a04a-4251-bf2f-32f3f88b5d66';
 const SDK_URL = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
@@ -20,16 +21,40 @@ interface Props {
 type PushState = 'loading' | 'ready' | 'granted' | 'denied' | 'unsupported' | 'error';
 
 export default function PixWikiPush({ userId, dark = true }: Props) {
+  const supabase = useMemo(() => createClient(), []);
   const [state, setState] = useState<PushState>('loading');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
 
-  function syncState(OneSignal: any) {
+  async function registerDevice(OneSignal: any) {
+    const subscriptionId = String(OneSignal?.User?.PushSubscription?.id || '');
+    if (!subscriptionId) return false;
+
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('segment_key', 'pix_wiki')
+      .maybeSingle();
+
+    if (companyError || !company?.id) return false;
+
+    const { error } = await supabase.rpc('pixwiki_register_push_subscription', {
+      p_company_id: company.id,
+      p_subscription_id: subscriptionId,
+      p_onesignal_id: OneSignal?.User?.onesignalId || null,
+      p_user_agent: navigator.userAgent || null,
+    });
+
+    if (error) throw error;
+    return true;
+  }
+
+  async function syncState(OneSignal: any) {
     const permission = Notification.permission;
     const subscription = OneSignal?.User?.PushSubscription;
     const optedIn = subscription?.optedIn === true;
-    const hasToken = Boolean(subscription?.token);
-    const hasId = Boolean(subscription?.id);
+    const subscriptionId = String(subscription?.id || '');
 
     if (permission === 'denied') {
       setState('denied');
@@ -37,10 +62,20 @@ export default function PixWikiPush({ userId, dark = true }: Props) {
       return false;
     }
 
-    if (permission === 'granted' && optedIn && (hasToken || hasId)) {
-      setState('granted');
-      setMessage('Push ativo neste dispositivo.');
-      return true;
+    if (permission === 'granted' && optedIn && subscriptionId) {
+      try {
+        const registered = await registerDevice(OneSignal);
+        if (registered) {
+          setState('granted');
+          setMessage('Push ativo neste dispositivo.');
+          return true;
+        }
+      } catch (error) {
+        console.error('[PixWiki Push] register device:', error);
+        setState('error');
+        setMessage('A assinatura foi criada, mas não foi possível registrar este dispositivo no PixWiki.');
+        return false;
+      }
     }
 
     setState('ready');
@@ -82,7 +117,7 @@ export default function PixWikiPush({ userId, dark = true }: Props) {
           }
 
           const onSubscriptionChange = () => {
-            if (!cancelled) syncState(OneSignal);
+            if (!cancelled) await syncState(OneSignal);
           };
           OneSignal.User.PushSubscription.addEventListener('change', onSubscriptionChange);
           removeSubscriptionListener = () => {
@@ -106,7 +141,11 @@ export default function PixWikiPush({ userId, dark = true }: Props) {
           }
 
           if (cancelled) return;
-          syncState(OneSignal);
+          let active = await syncState(OneSignal);
+          for (let i = 0; i < 24 && !active && !cancelled; i += 1) {
+            await new Promise(resolve => window.setTimeout(resolve, 250));
+            active = await syncState(OneSignal);
+          }
         } catch (error) {
           console.error('[PixWiki Push] init:', error);
           if (!cancelled) {
@@ -138,7 +177,7 @@ export default function PixWikiPush({ userId, dark = true }: Props) {
       cancelled = true;
       removeSubscriptionListener?.();
     };
-  }, [userId]);
+  }, [userId, supabase]);
 
   async function requestPermission() {
     if (state === 'denied') {
@@ -161,10 +200,10 @@ export default function PixWikiPush({ userId, dark = true }: Props) {
 
         // O token/Subscription ID pode chegar alguns instantes depois do aceite.
         // Só exibimos "ativo" quando o SDK confirma uma assinatura utilizável.
-        let active = syncState(OneSignal);
+        let active = await syncState(OneSignal);
         for (let i = 0; i < 20 && !active; i += 1) {
           await new Promise(resolve => window.setTimeout(resolve, 250));
-          active = syncState(OneSignal);
+          active = await syncState(OneSignal);
         }
 
         if (!active && Notification.permission === 'granted') {

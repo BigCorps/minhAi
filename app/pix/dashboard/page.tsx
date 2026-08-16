@@ -635,13 +635,35 @@ function DashboardContent() {
   }
 
   async function logout() {
-    // Remove o alias do navegador antes de encerrar a sessão para evitar que
-    // um dispositivo compartilhado continue associado ao usuário anterior.
     if (typeof window !== 'undefined' && window.OneSignalDeferred) {
-      window.OneSignalDeferred.push(async (OneSignal: any) => {
-        try { await OneSignal.logout(); } catch { /* logout do Push é best effort */ }
+      await new Promise<void>((resolve) => {
+        let finished = false;
+        const finish = () => {
+          if (finished) return;
+          finished = true;
+          resolve();
+        };
+        const timeout = window.setTimeout(finish, 1500);
+
+        window.OneSignalDeferred!.push(async (OneSignal: any) => {
+          try {
+            const subscriptionId = String(OneSignal?.User?.PushSubscription?.id || '');
+            if (subscriptionId) {
+              await supabase.rpc('pixwiki_unregister_push_subscription', {
+                p_subscription_id: subscriptionId,
+              });
+            }
+            await OneSignal.logout();
+          } catch {
+            // best effort
+          } finally {
+            window.clearTimeout(timeout);
+            finish();
+          }
+        });
       });
     }
+
     await supabase.auth.signOut();
     window.location.href = 'https://pix.wiki';
   }

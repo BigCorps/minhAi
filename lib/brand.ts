@@ -17,7 +17,14 @@ export function getBrandByHost(hostname: string): BrandKey {
     return 'artefinal';
   }
 
-  if (cleanHost === 'pix.wiki' || cleanHost === 'www.pix.wiki') {
+  // O PixWiki também vive em subdomínios de cobrança, ex. loja.pix.wiki.
+  // Tratar o wildcard como marca Pix evita metadata/branding da minhAi nas
+  // páginas públicas do Pix Link.
+  if (
+    cleanHost === 'pix.wiki' ||
+    cleanHost === 'www.pix.wiki' ||
+    cleanHost.endsWith('.pix.wiki')
+  ) {
     return 'pix';
   }
 
@@ -97,7 +104,7 @@ export const BRANDS: Record<BrandKey, BrandInfo> = {
     name: 'pix.wiki',
     logo: '/brands/pix/pixwiki.png',
     title: 'Pix.Wiki',
-    description: 'Link e QR Code Pix com confirmação automática.',
+    description: 'Confirmação automática de Pix, links profissionais e notificações.',
     // verde do app; branco daria 2,28:1, por isso texto escuro
     cor: '#22c55e',
     corTextoBotao: '#1a1a1a',

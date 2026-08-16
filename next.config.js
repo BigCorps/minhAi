@@ -7,7 +7,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-// `experimental: { webpackBuildWorker: false }` removido: o Next 16 já
+  // `experimental: { webpackBuildWorker: false }` removido: o Next 16 já
   // reclama dele no log ("⨯ Experiments (use with caution)").
 
   outputFileTracingIncludes: {
@@ -71,15 +71,57 @@ const nextConfig = {
     return config;
   },
 
-  // ── Rewrites: proxy mcp.minhai.app → Supabase Edge Function ─────────────────
+  // ── Rewrites ───────────────────────────────────────────────────────────────
   async rewrites() {
     return {
       beforeFiles: [
+        // MCP da minhAi
         {
           source: '/:path*',
           has: [{ type: 'host', value: 'mcp.minhai.app' }],
           destination:
             'https://qyonozbroekuqlotqcbm.supabase.co/functions/v1/mcp-server/:path*',
+        },
+
+        // Branding básico dos subdomínios PixWiki.
+        {
+          source: '/favicon.ico',
+          has: [{ type: 'host', value: '(?<pixwikiSlug>[^.]+)\\.pix\\.wiki' }],
+          destination: '/brands/pix/favicon.png',
+        },
+        {
+          source: '/manifest.webmanifest',
+          has: [{ type: 'host', value: '(?<pixwikiSlug>[^.]+)\\.pix\\.wiki' }],
+          destination: '/brands/pix/manifest.webmanifest',
+        },
+        {
+          source: '/manifest.json',
+          has: [{ type: 'host', value: '(?<pixwikiSlug>[^.]+)\\.pix\\.wiki' }],
+          destination: '/brands/pix/manifest.webmanifest',
+        },
+
+        // PixWiki Link: slug.pix.wiki → /pix/[slug]
+        // O slug vem do host por named capture. Limitamos os rewrites às duas
+        // rotas públicas que o produto usa, evitando capturar _next e assets.
+        {
+          source: '/',
+          has: [
+            {
+              type: 'host',
+              value: '(?<pixwikiSlug>[^.]+)\\.pix\\.wiki',
+            },
+          ],
+          destination: '/pix/:pixwikiSlug',
+        },
+        {
+          source: '/:valor([0-9][0-9.,]*)',
+          has: [
+            {
+              type: 'host',
+              value: '(?<pixwikiSlug>[^.]+)\\.pix\\.wiki',
+            },
+          ],
+          destination: '/pix/:pixwikiSlug/:valor',
         },
       ],
       afterFiles: [],

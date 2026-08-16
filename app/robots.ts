@@ -1,95 +1,109 @@
 // app/robots.ts
-import { MetadataRoute } from 'next';
+// ─────────────────────────────────────────────────────────────────────────────
+// robots.txt por HOST.
+//
+// Antes, este arquivo era fixo na minhAi: conviteia.com/robots.txt anunciava
+// `Sitemap: https://www.minhai.app/sitemap.xml` e `Host: www.minhai.app`.
+// Agora cada domínio recebe as próprias regras, vindas de lib/seo.ts.
+//
+// Precisa de force-dynamic: sem isso o Next gera o robots.txt na build, com
+// o host de quem buildou, e todos os domínios recebem o mesmo arquivo.
+// ─────────────────────────────────────────────────────────────────────────────
 
-export default function robots(): MetadataRoute.Robots {
-  return {
-    rules: [
+import type { MetadataRoute } from 'next';
+import { headers } from 'next/headers';
+import { resolveSeo } from '@/lib/seo';
 
-      // ── Crawlers de busca tradicionais ─────────────────────────────────────
-      {
-        userAgent: ['Googlebot', 'Bingbot', 'Slurp', 'DuckDuckBot', 'Yandex'],
-        allow: '/',
-        disallow: [
-          '/dashboard/',
-          '/ia/',          // assistentes de clientes — não indexar
-          '/api/',
-          '/vendas/',
-          '/fila/',
-          '/pix/',
-          '/link/',
-          '/login',
-          '/cadastro',
-          '/cliente/',
-        ],
-      },
+export const dynamic = 'force-dynamic';
 
-      // ── Googlebot imagens — liberar para rich results ───────────────────────
-      {
-        userAgent: 'Googlebot-Image',
-        allow: ['/icons/', '/og-image.png', '/dispositivos.png', '/api.png', '/vantagens.png', '/webapp.png'],
-        disallow: '/dashboard/',
-      },
+// Crawlers de busca tradicionais.
+const SEARCH_BOTS = ['Googlebot', 'Bingbot', 'Slurp', 'DuckDuckBot', 'Yandex'];
 
-      // ── Crawlers de IA — liberar conteúdo público para citação ─────────────
-      // Estes bots indexam para ChatGPT, Claude, Perplexity, etc.
-      {
-        userAgent: [
-          'GPTBot',            // OpenAI — ChatGPT training e search
-          'OAI-SearchBot',     // OpenAI — ChatGPT search em tempo real
-          'ClaudeBot',         // Anthropic — Claude
-          'anthropic-ai',      // Anthropic — crawler alternativo
-          'PerplexityBot',     // Perplexity AI
-          'YouBot',            // You.com
-          'cohere-ai',         // Cohere
-          'Applebot',          // Apple Siri / Spotlight
-          'Applebot-Extended', // Apple extended crawling
-          'Google-Extended',   // Google Gemini training
-          'CCBot',             // Common Crawl (base de vários LLMs)
-          'Meta-ExternalAgent', // Meta AI
-          'Bytespider',        // ByteDance / TikTok AI
-        ],
+// Crawlers de IA — liberados de propósito: é o que faz a marca ser citada em
+// ChatGPT, Claude, Perplexity e Gemini (GEO).
+const AI_BOTS = [
+  'GPTBot',             // OpenAI — treino e ChatGPT search
+  'OAI-SearchBot',      // OpenAI — busca em tempo real
+  'ChatGPT-User',       // OpenAI — navegação a pedido do usuário
+  'ClaudeBot',          // Anthropic
+  'anthropic-ai',       // Anthropic — crawler alternativo
+  'Claude-User',        // Anthropic — navegação a pedido do usuário
+  'PerplexityBot',      // Perplexity
+  'Perplexity-User',    // Perplexity — navegação a pedido do usuário
+  'YouBot',             // You.com
+  'cohere-ai',          // Cohere
+  'Applebot',           // Apple Siri / Spotlight
+  'Applebot-Extended',  // Apple — treino
+  'Google-Extended',    // Google Gemini — treino
+  'CCBot',              // Common Crawl
+  'Meta-ExternalAgent', // Meta AI
+  'Bytespider',         // ByteDance
+];
+
+// Scrapers comerciais de SEO — bloqueados: consomem banda e não trazem visita.
+const SCRAPER_BOTS = [
+  'SemrushBot', 'SemrushBot-SA', 'AhrefsBot', 'MJ12bot',
+  'DotBot', 'BLEXBot', 'PetalBot', 'DataForSeoBot',
+];
+
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const headersList = await headers();
+  const host = headersList.get('host') || '';
+  const { seo, brand, clientPage } = resolveSeo(host);
+
+  // ── Página de cliente (slug.minhai.app, slug.conviteia.com) ────────────────
+  // Conteúdo de terceiro: assistente de uma empresa ou convite de uma família.
+  // Nada disso entra em índice de busca.
+  if (clientPage) {
+    return {
+      rules: [{ userAgent: '*', disallow: '/' }],
+    };
+  }
+
+  const rules: MetadataRoute.Robots['rules'] = [
+    {
+      userAgent: SEARCH_BOTS,
+      allow: '/',
+      disallow: seo.disallow,
+    },
+    {
+      userAgent: AI_BOTS,
+      allow: seo.aiAllow.length > 0 ? seo.aiAllow : '/',
+      disallow: seo.disallow,
+    },
+    {
+      userAgent: SCRAPER_BOTS,
+      disallow: '/',
+    },
+    // Qualquer outro robô: mesma regra dos buscadores. Sem esta entrada,
+    // um crawler fora das listas acima não encontra regra aplicável e
+    // assume liberado em tudo, inclusive /dashboard.
+    {
+      userAgent: '*',
+      allow: '/',
+      disallow: seo.disallow,
+    },
+  ];
+
+  // Googlebot-Image só faz sentido onde existem imagens de rich result.
+  if (brand === 'minhai') {
+    rules.splice(1, 0, {
+      userAgent: 'Googlebot-Image',
       allow: [
-        '/',
-        '/precos',
-        '/sobre',
-        '/contato',
-        '/docs',
-        '/blog',
-        '/para/',
-        '/ia/suporte',   // ← demo pública — crawlers de IA podem indexar
-        '/tour', 
+        '/icons/',
+        '/og-image.png',
+        '/dispositivos.png',
+        '/api.png',
+        '/vantagens.png',
+        '/webapp.png',
       ],
-      disallow: [
-        '/dashboard/',
-        '/ia/',          // bloqueia todo /ia/ exceto /ia/suporte acima
-        '/api/',
-        '/vendas/',
-        '/fila/',
-        '/pix/',
-        '/link/',
-        '/login',
-        '/cadastro',
-        '/cliente/',
-      ],
-      },
+      disallow: '/dashboard/',
+    });
+  }
 
-      // ── Scrapers comerciais — bloquear ──────────────────────────────────────
-      {
-        userAgent: [
-          'SemrushBot',
-          'SemrushBot-SA',
-          'AhrefsBot',
-          'MJ12bot',
-          'DotBot',
-          'BLEXBot',
-          'PetalBot',
-          'DataForSeoBot',
-        ],
-        disallow: '/',
-      },
-    ],
-
-    sitemap: 'https://www.minhai.app/sitemap.xml',
-    host: 'https://www.minhai.app',
+  return {
+    rules,
+    sitemap: `${seo.baseUrl}/sitemap.xml`,
+    host: seo.baseUrl,
   };
 }

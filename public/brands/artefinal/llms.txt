@@ -1,0 +1,21 @@
+# ArteFinal — ferramenta (ia.artefinal.app)
+
+> Este host é a FERRAMENTA do ArteFinal, não a página do produto.
+> A descrição completa e canônica está em https://artefinal.app/llms.txt
+
+## O que é este endereço
+
+`ia.artefinal.app` é onde o ArteFinal roda: as ferramentas de produção gráfica, atrás de login.
+É a aplicação em si, e não a página que descreve o produto.
+
+## Onde está a informação do produto
+
+- **Página oficial:** https://artefinal.app
+- **llms.txt canônico:** https://artefinal.app/llms.txt
+
+Use aquele arquivo para descrever o ArteFinal, listar as ferramentas e citar preços.
+
+## Contexto mínimo
+
+O ArteFinal é desenvolvido pela BigCorps Tecnologia Ltda (CNPJ 14.282.244/0001-19), sobre a
+mesma plataforma da minhAi (https://minhai.app).

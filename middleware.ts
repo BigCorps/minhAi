@@ -24,7 +24,32 @@ const RESERVED_SUBDOMAINS = [
   'mcp',
 ];
 
-const CRAWLER_PASSTHROUGH = ['/robots.txt', '/sitemap.xml', '/sitemap.ts'];
+const CRAWLER_PASSTHROUGH = [
+  '/robots.txt',
+  '/sitemap.xml',
+  '/sitemap.ts',
+  // llms.txt entra aqui porque, como o robots, ele precisa ser servido pelo
+  // host que o crawler pediu — sem passar por rewrite de marca antes da hora.
+  '/llms.txt',
+];
+
+// ── llms.txt por marca (GEO) ─────────────────────────────────────────────────
+// public/llms.txt descreve a minhAi. Sem este mapa, conviteia.com/llms.txt e
+// app.min.ia.br/llms.txt entregariam a descrição do produto errado para
+// ChatGPT, Claude, Perplexity e Gemini.
+// Marca sem entrada aqui continua servindo o llms.txt da raiz.
+const LLMS_TXT_BY_HOST: Record<string, string> = {
+  'conviteia.com':     '/brands/convite/llms.txt',
+  'www.conviteia.com': '/brands/convite/llms.txt',
+  'app.min.ia.br':     '/brands/minia/llms.txt',
+  'ia.artefinal.app':  '/brands/artefinal/llms.txt',
+  'pix.wiki':          '/brands/pix/llms.txt',
+  'www.pix.wiki':      '/brands/pix/llms.txt',
+  'consulta.tec.br':     '/brands/consultatec/llms.txt',
+  'www.consulta.tec.br': '/brands/consultatec/llms.txt',
+  // app.min.ia.br e ia.artefinal.app são ferramenta, não produto: os arquivos
+  // apontados aqui são curtos e mandam o modelo para o llms.txt da landing.
+};
 
 const ARTEFINAL_DOMAINS = ['ia.artefinal.app'];
 
@@ -35,10 +60,11 @@ const PIX_DOMAINS = ['pix.wiki', 'www.pix.wiki'];
 // ── Min.IA ───────────────────────────────────────────────────────────────
 const MINIA_APP_DOMAINS = ['app.min.ia.br'];
 
-// Enquanto o repo da landing (min.ia.br) não existir, redireciona quem
-// acessar o apex direto pra ferramenta. REMOVER este array e o bloco que o
-// usa quando a landing entrar no lugar (projeto Vercel separado pro apex).
-const MINIA_APEX_TEMP_REDIRECT_DOMAINS = ['min.ia.br', 'www.min.ia.br'];
+// min.ia.br e www.min.ia.br NÃO chegam neste projeto: o apex está atribuído ao
+// projeto da landing (repositório BigCorps/min.ia.br), que redireciona /min/*
+// para cá. O redirect temporário que existia aqui virou código morto e foi
+// removido — a requisição nunca passava por ele.
+// Mesma situação de artefinal.app, cuja landing também é projeto separado.
 
 // ── Todos os domínios de subdomínio de cliente ─────────────────────────────
 // Toda entrada precisa de suffix + pattern + brand:
@@ -80,13 +106,41 @@ function isSubdomainHost(hostname: string): boolean {
   );
 }
 
+// Repassa o caminho que o VISITANTE pediu para dentro do App Router.
+// Necessário para o canonical: em conviteia.com e app.min.ia.br a raiz é
+// reescrita (/ → /convite, / → /min), então o layout enxerga a rota interna,
+// não a URL real. Sem este header o canonical sai errado nos dois domínios.
+function withPathname(request: NextRequest, pathname: string): Headers {
+  const headers = new Headers(request.headers);
+  headers.set('x-pathname', pathname);
+  return headers;
+}
+
 export async function middleware(request: NextRequest) {
   const host = request.headers.get('host') || '';
   const hostname = host.split(':')[0].toLowerCase();
   const pathname = request.nextUrl.pathname;
+  const requestHeaders = withPathname(request, pathname);
+
+  // ── 0.0. llms.txt POR MARCA ───────────────────────────────────────────────
+  // Vem antes de tudo: qualquer bloco de domínio abaixo poderia sequestrar
+  // este caminho antes de ele chegar ao arquivo certo.
+  if (pathname === '/llms.txt') {
+    const target = LLMS_TXT_BY_HOST[hostname];
+    if (target) {
+      const url = request.nextUrl.clone();
+      url.pathname = target;
+      return NextResponse.rewrite(url);
+    }
+    return NextResponse.next();
+  }
 
 // ── 0. DOMÍNIO ARTEFINAL.APP ──────────────────────────────────────────────
 if (ARTEFINAL_DOMAINS.includes(hostname)) {
+
+if (CRAWLER_PASSTHROUGH.some((p) => pathname.startsWith(p))) {
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}
 
 if (pathname === '/favicon.ico') {
   const url = request.nextUrl.clone();
@@ -104,7 +158,7 @@ if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
   if (pathname === '/') {
     const url = request.nextUrl.clone();
     url.pathname = '/arte';
-    return NextResponse.rewrite(url);
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
 
   // Evita loop: /arte não redireciona de volta para /
@@ -149,19 +203,6 @@ if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
   }
 }
 
-// ── 0.05. MIN.IA — redirect temporário do apex pra ferramenta ────────────
-// min.ia.br/min.ia.br ainda não tem landing própria (repo separado não
-// existe ainda) — manda direto pra ferramenta em app.min.ia.br/min.
-// REMOVER quando o repo da landing existir e for configurado como projeto
-// Vercel próprio pro apex.
-if (MINIA_APEX_TEMP_REDIRECT_DOMAINS.includes(hostname)) {
-  const url = request.nextUrl.clone();
-  url.hostname = 'app.min.ia.br';
-  url.pathname = '/min';
-  url.search = '';
-  return NextResponse.redirect(url);
-}
-
 // ── 0.1. DOMÍNIO APP.MIN.IA.BR (Min.IA) ───────────────────────────────────
 if (MINIA_APP_DOMAINS.includes(hostname)) {
 
@@ -181,7 +222,7 @@ if (MINIA_APP_DOMAINS.includes(hostname)) {
   if (pathname === '/') {
     const url = request.nextUrl.clone();
     url.pathname = '/min';
-    return NextResponse.rewrite(url);
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
 
   // /min NÃO é protegido aqui — a página mostra o carrossel sem login e só
@@ -210,6 +251,12 @@ if (MINIA_APP_DOMAINS.includes(hostname)) {
 // ── 0.05. DOMÍNIO CONSULTA.TEC.BR (cenário A — host único) ────────────────
 if (CONSULTATEC_DOMAINS.includes(hostname)) {
 
+  // robots.txt e sitemap.xml precisam ser servidos por este host, não
+  // reescritos para dentro de /consultatec.
+  if (CRAWLER_PASSTHROUGH.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
   if (hostname === 'www.consulta.tec.br') {
     const url = request.nextUrl.clone();
     url.hostname = 'consulta.tec.br';
@@ -231,7 +278,7 @@ if (CONSULTATEC_DOMAINS.includes(hostname)) {
   if (pathname === '/') {
     const url = request.nextUrl.clone();
     url.pathname = '/consultatec';
-    return NextResponse.rewrite(url);
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
 }
 
@@ -274,9 +321,9 @@ if (PIX_DOMAINS.includes(hostname)) {
     return NextResponse.rewrite(url);
   }
 
-  // Robots e sitemap continuam normais
+  // Robots, sitemap e llms.txt continuam normais
   if (CRAWLER_PASSTHROUGH.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // Se alguém acessar pix.wiki/pix ou pix.wiki/pix/minha-loja,
@@ -292,7 +339,10 @@ if (PIX_DOMAINS.includes(hostname)) {
   // pix.wiki/loja/10   → /pix/loja/10
   const url = request.nextUrl.clone();
   url.pathname = pathname === '/' ? '/pix' : `/pix${pathname}`;
-  return NextResponse.rewrite(url);
+  // O x-pathname é o que permite ao app/pix/layout.tsx distinguir a landing
+  // (pix.wiki/) da página de cobrança de um cliente (pix.wiki/minha-loja) —
+  // as duas chegam no App Router como /pix/algo.
+  return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
 }
   
   // ── 0. PASSTHROUGH PARA CRAWLERS ──────────────────────────────────────────
@@ -338,7 +388,7 @@ if (PIX_DOMAINS.includes(hostname)) {
     if (pathname === '/') {
       const url = request.nextUrl.clone();
       url.pathname = '/convite';
-      return NextResponse.rewrite(url);
+      return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
     }
 
     // Auth e API do Conviteia usam a infra compartilhada: prefixar quebraria
@@ -348,7 +398,7 @@ if (PIX_DOMAINS.includes(hostname)) {
     }
 
     // /conviteia/criar, /conviteia/entrar e o resto seguem normalmente.
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── 1. DETECÇÃO DE SUBDOMÍNIO DE CLIENTE ──────────────────────────────────
@@ -421,7 +471,7 @@ if (PIX_DOMAINS.includes(hostname)) {
   }
 
   // ── 2. FLUXO NORMAL ────────────────────────────────────────────────────────
-  let response = NextResponse.next({ request: { headers: request.headers } });
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -431,12 +481,12 @@ if (PIX_DOMAINS.includes(hostname)) {
         get(name: string) { return request.cookies.get(name)?.value; },
         set(name: string, value: string, options: any) {
           request.cookies.set({ name, value, ...options });
-          response = NextResponse.next({ request: { headers: request.headers } });
+          response = NextResponse.next({ request: { headers: requestHeaders } });
           response.cookies.set({ name, value, ...options });
         },
         remove(name: string, options: any) {
           request.cookies.set({ name, value: '', ...options });
-          response = NextResponse.next({ request: { headers: request.headers } });
+          response = NextResponse.next({ request: { headers: requestHeaders } });
           response.cookies.set({ name, value: '', ...options });
         },
       },

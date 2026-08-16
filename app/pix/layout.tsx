@@ -1,73 +1,68 @@
 // app/pix/layout.tsx
-
 import { headers } from 'next/headers';
 import type { Metadata } from 'next';
-import { BRANDS, getBrandByHost } from '@/lib/brand';
+import JsonLd from '@/components/JsonLd';
+import { buildBrandMetadata, pixGraph, resolveSeo } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
+
+// pix.wiki/           → landing (rota interna /pix)
+// pix.wiki/minha-loja → cobrança de um cliente (rota interna /pix/minha-loja)
+// pix.wiki/loja/50    → cobrança com valor fixo
+//
+// Só a raiz é conteúdo. As páginas de cobrança são links transacionais: cada
+// cliente gera uma, cada valor gera outra, e nenhuma responde a uma busca.
+// Indexar isso enche o domínio de página fina e derruba a landing junto.
+//
+// Como elas moram na RAIZ do domínio, não dá para bloquear por prefixo no
+// robots.txt — o noindex tem que sair daqui, com o caminho que o visitante
+// pediu (x-pathname, injetado pelo middleware).
+function isLandingPath(raw: string | null): boolean {
+  const path = raw && raw.startsWith('/') ? raw : '/';
+  return path === '/' || path === '/pix' || path === '/pix/';
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
   const host = headersList.get('host') || '';
+  const { brand } = resolveSeo(host);
+  const landing = isLandingPath(headersList.get('x-pathname'));
 
-  const brandKey = getBrandByHost(host);
-  const brand = BRANDS[brandKey];
+  // ── pix.wiki ──────────────────────────────────────────────────────────────
+  if (brand === 'pix') {
+    if (landing) {
+      return buildBrandMetadata({ host, path: '/' });
+    }
+    // Página de cobrança: sai do índice, mas mantém título e cartão de
+    // compartilhamento — ela é feita para ser mandada no WhatsApp.
+    return buildBrandMetadata({ host, path: '/', noindex: true });
+  }
 
-  const isPix = brandKey === 'pix';
-
+  // ── /pix acessado por outro host (minhai.app/pix) ─────────────────────────
   return {
-    title: {
-      absolute: isPix ? 'Pix.Wiki - Link e QR Code Pix com confirmação automática' : brand.title,
-    },
-    description: brand.description,
-    applicationName: brand.name,
-
-    icons: {
-      icon: isPix
-        ? '/brands/pix/favicon.png'
-        : '/favicon.ico',
-      shortcut: isPix
-        ? '/brands/pix/favicon.png'
-        : '/favicon.ico',
-      apple: isPix
-        ? '/brands/pix/favicon.png'
-        : '/apple-touch-icon.png',
-    },
-
-    openGraph: {
-      title: isPix ? 'Pix.Wiki - Link e QR Code Pix com confirmação automática' : brand.title,
-      description: brand.description,
-      siteName: brand.name,
-      type: 'website',
-      images: [
-        {
-          url: isPix
-            ? '/brands/pix/pixwiki.png'
-            : '/brands/pix/pixwiki.png',
-          width: 512,
-          height: 512,
-          alt: brand.name,
-        },
-      ],
-    },
-
-    twitter: {
-      card: 'summary',
-      title: isPix ? 'Pix.Wiki - Link e QR Code Pix com confirmação automática' : brand.title,
-      description: brand.description,
-      images: [
-        isPix
-          ? '/brands/pix/pixwiki.png'
-          : '/brands/pix/pixwiki.png',
-      ],
-    },
+    ...buildBrandMetadata({ host, path: '/', noindex: true }),
+    alternates: { canonical: 'https://pix.wiki' },
   };
 }
 
-export default function PixLayout({
+export default async function PixLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  const headersList = await headers();
+  const host = headersList.get('host') || '';
+  const { brand } = resolveSeo(host);
+  const landing = isLandingPath(headersList.get('x-pathname'));
+
+  // O grafo descreve o produto pix.wiki. Não deve aparecer na página de
+  // cobrança de um cliente — aquilo é uma transação, não um software.
+  const showGraph = brand === 'pix' && landing;
+
+  return (
+    <>
+      {showGraph && <JsonLd data={pixGraph()} />}
+      {children}
+    </>
+  );
 }

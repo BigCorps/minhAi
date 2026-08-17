@@ -123,7 +123,7 @@ export default function PixQRCodeDisplay({
   </p>
 
   {[
-    { label: 'Empresa', value: company.name, color: textPrimary },
+    { label: 'Recebedor', value: company.name, color: textPrimary },
     { label: 'Banco', value: pixData.payment_provider === 'mercadopago' ? 'Mercado Pago' : 'Banco Inter', color: textPrimary },
     { label: 'Validade', value: 'Válido por 30 minutos', color: '#16a34a' },
   ].map(({ label, value, color }) => (

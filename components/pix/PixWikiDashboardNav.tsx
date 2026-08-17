@@ -19,10 +19,23 @@ function ReportIcon() {
   );
 }
 
+function ApiIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l-3 3 3 3m8-6 3 3-3 3M14 5l-4 14" />
+    </svg>
+  );
+}
+
 export default function PixWikiDashboardNav() {
   const pathname = usePathname();
   const internalBase = pathname.startsWith('/pix/dashboard') ? '/pix/dashboard' : '/dashboard';
   const reportsActive = pathname.includes('/dashboard/relatorios');
+  const apiActive = pathname.includes('/dashboard/api');
+  const panelActive = !reportsActive && !apiActive;
+
+  const inactive = 'text-white/60 hover:bg-white/10 hover:text-white';
+  const active = 'bg-emerald-500 text-slate-950';
 
   return (
     <nav
@@ -32,22 +45,30 @@ export default function PixWikiDashboardNav() {
       <div className="flex items-center gap-1">
         <Link
           href={internalBase}
-          className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
-            !reportsActive ? 'bg-emerald-500 text-slate-950' : 'text-white/60 hover:bg-white/10 hover:text-white'
-          }`}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition ${panelActive ? active : inactive}`}
         >
           <DashboardIcon />
           Painel
         </Link>
+
         <Link
           href={`${internalBase}/relatorios`}
-          className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
-            reportsActive ? 'bg-emerald-500 text-slate-950' : 'text-white/60 hover:bg-white/10 hover:text-white'
-          }`}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition ${reportsActive ? active : inactive}`}
         >
           <ReportIcon />
           Relatórios
-          <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-black ${reportsActive ? 'bg-slate-950/15' : 'bg-emerald-500/15 text-emerald-300'}`}>
+          <span className={`hidden rounded-full px-1.5 py-0.5 text-[9px] font-black sm:inline ${reportsActive ? 'bg-slate-950/15' : 'bg-emerald-500/15 text-emerald-300'}`}>
+            PRO
+          </span>
+        </Link>
+
+        <Link
+          href={`${internalBase}/api`}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition ${apiActive ? active : inactive}`}
+        >
+          <ApiIcon />
+          API
+          <span className={`hidden rounded-full px-1.5 py-0.5 text-[9px] font-black sm:inline ${apiActive ? 'bg-slate-950/15' : 'bg-emerald-500/15 text-emerald-300'}`}>
             PRO
           </span>
         </Link>

@@ -28,19 +28,6 @@ const nextConfig = {
   },
 
   webpack: (config, { isServer }) => {
-    // O bloco de diagnóstico que existia aqui — plugin de log por módulo e
-    // as quatro flags de optimization — foi removido. Ele servia para achar
-    // o travamento do build do ArteFinal, que já foi resolvido (era o import
-    // do RemoverFundoDisplay em app/arte/page.tsx).
-    //
-    // Manter custava caro: ~100 mil linhas de log por build, e
-    // `providedExports/usedExports = false` desligava o tree-shaking, que é
-    // o que faz código de rota de API ser avaliado ao pré-renderizar página
-    // de dashboard.
-    //
-    // Se um dia precisar diagnosticar de novo, coloque de volta, rode uma
-    // vez, e tire.
-
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -53,14 +40,12 @@ const nextConfig = {
       config.module.rules.push({ test: /\.onnx$/, type: 'asset/resource' });
       config.module.rules.push({ test: /\.wasm$/, type: 'asset/resource' });
 
-      // PDF.js worker
       config.resolve.alias = {
         ...config.resolve.alias,
         'pdfjs-dist/build/pdf.worker.entry': 'pdfjs-dist/build/pdf.worker.min.js',
       };
     }
 
-    // Canvas é problemático no server-side
     if (isServer) {
       config.resolve.alias = {
         ...config.resolve.alias,
@@ -71,7 +56,6 @@ const nextConfig = {
     return config;
   },
 
-  // ── Rewrites ───────────────────────────────────────────────────────────────
   async rewrites() {
     return {
       beforeFiles: [
@@ -81,6 +65,16 @@ const nextConfig = {
           has: [{ type: 'host', value: 'mcp.minhai.app' }],
           destination:
             'https://qyonozbroekuqlotqcbm.supabase.co/functions/v1/mcp-server/:path*',
+        },
+
+        // API pública do PixWiki.
+        // Mantém URLs bonitas como /api/v1/receipts sem precisar de uma
+        // pasta Next.js catch-all chamada "[...path]", que o upload pelo
+        // GitHub Web pode rejeitar.
+        {
+          source: '/api/v1/:path*',
+          has: [{ type: 'host', value: '(?:www\\.)?pix\\.wiki' }],
+          destination: '/api/pixwiki/v1?resource=/:path*',
         },
 
         // Branding básico dos subdomínios PixWiki.
@@ -101,8 +95,6 @@ const nextConfig = {
         },
 
         // PixWiki Link: slug.pix.wiki → /pix/[slug]
-        // O slug vem do host por named capture. Limitamos os rewrites às duas
-        // rotas públicas que o produto usa, evitando capturar _next e assets.
         {
           source: '/',
           has: [
@@ -128,11 +120,9 @@ const nextConfig = {
       fallback: [],
     };
   },
-  // ────────────────────────────────────────────────────────────────────────────
 
   async redirects() {
     return [
-      // Domínios raiz sem subdomínio → www.minhai.app
       { source: '/:path*', has: [{ type: 'host', value: 'minhai.app'        }], destination: 'https://www.minhai.app/:path*', permanent: true },
       { source: '/:path*', has: [{ type: 'host', value: 'minhai.com.br'     }], destination: 'https://www.minhai.app/:path*', permanent: true },
       { source: '/:path*', has: [{ type: 'host', value: 'www.minhai.com.br' }], destination: 'https://www.minhai.app/:path*', permanent: true },
@@ -167,7 +157,6 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Origin', value: '*' },
         ],
       },
-      // Headers para PDF.js worker
       {
         source: '/pdf-worker/:path*',
         headers: [
@@ -178,8 +167,6 @@ const nextConfig = {
       },
     ];
   },
-
-  // transpilePackages: ['@ricky0123/vad-web', 'onnxruntime-web'],
 };
 
 module.exports = nextConfig;

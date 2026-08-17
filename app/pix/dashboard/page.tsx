@@ -861,7 +861,11 @@ function DashboardContent() {
     setError('');
     const [settingsResult, companyResult] = await Promise.all([
       supabase.from('pixwiki_notification_settings')
-        .update({ notification_phone: phone, updated_at: new Date().toISOString() })
+        .update({
+          notification_phone: phone,
+          whatsapp_enabled: true,
+          updated_at: new Date().toISOString(),
+        })
         .eq('company_id', company.id),
       supabase.from('companies')
         .update({ whatsapp_number: phone, updated_at: new Date().toISOString() })
@@ -875,10 +879,10 @@ function DashboardContent() {
       return;
     }
 
-    setNotifications({ ...notifications, notification_phone: phone });
+    setNotifications({ ...notifications, notification_phone: phone, whatsapp_enabled: true });
     setCompany({ ...company, whatsapp_number: phone });
     setWhatsappDraft(phone);
-    setNotice('Número de WhatsApp salvo para esta empresa.');
+    setNotice('Número salvo e avisos por WhatsApp ativados.');
   }
 
   async function refreshNow() {

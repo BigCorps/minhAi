@@ -163,28 +163,23 @@ function dateOnly(value: string | null | undefined) {
 }
 
 function receiptDayKey(value: string) {
-  return new Date(value).toLocaleDateString('en-CA', {
-    timeZone: 'America/Sao_Paulo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
+  // Mesmo critério usado em /dashboard/saldo da minhAi:
+  // a virada do dia é sempre America/Sao_Paulo, independentemente do aparelho.
+  return new Date(value)
+    .toLocaleDateString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+    .split('/')
+    .reverse()
+    .join('-');
 }
 
 function receiptDayLabel(dayKey: string) {
-  const today = new Date().toLocaleDateString('en-CA', {
-    timeZone: 'America/Sao_Paulo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toLocaleDateString('en-CA', {
-    timeZone: 'America/Sao_Paulo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
+  const today = receiptDayKey(new Date().toISOString());
+  const yesterday = receiptDayKey(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
   if (dayKey === today) return 'Hoje';
   if (dayKey === yesterday) return 'Ontem';

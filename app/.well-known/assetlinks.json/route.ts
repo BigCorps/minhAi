@@ -21,30 +21,43 @@ const MINHAI_DEFAULT_ENTRY = [
 ];
 
 const ASSETLINKS_BY_HOST: Record<string, any[]> = {
-  'ia.artefinal.app': [
-    {
-      relation: ['delegate_permission/common.handle_all_urls'],
-      target: {
-        namespace: 'android_app',
-        package_name: 'com.artefinal.app', // confirmar o package real do TWA do ArteFinal
-        sha256_cert_fingerprints: [
-          'DA:46:AE:F5:3E:53:A7:58:F1:8D:DE:3C:92:8A:BF:7B:D1:30:35:6F:DC:BD:5A:7A:2D:A7:D9:6B:58:37:62:72',
-        ],
-      },
+ 'ia.artefinal.app': [
+  {
+    relation: [
+      'delegate_permission/common.handle_all_urls',
+      'delegate_permission/common.get_login_creds',
+    ],
+    target: {
+      namespace: 'android_app',
+      package_name: 'com.artefinal.app',
+      sha256_cert_fingerprints: [
+        // Play App Signing — confirmado: é o que www.artefinal.app publica e está verde
+        '72:A9:CE:12:52:E5:13:00:56:4E:BD:81:C7:72:28:24:3E:1F:77:A9:36:CE:14:6F:93:0D:76:62:59:02:6D:E4',
+        // chave de upload (APK local) — permite testar build local sem barra
+        'DA:46:AE:F5:3E:53:A7:58:F1:8D:DE:3C:92:8A:BF:7B:D1:30:35:6F:DC:BD:5A:7A:2D:A7:D9:6B:58:37:62:72',
+      ],
     },
-  ],
-  'app.min.ia.br': [
-    {
-      relation: ['delegate_permission/common.handle_all_urls'],
-      target: {
-        namespace: 'android_app',
-        package_name: 'com.minia.app',
-        sha256_cert_fingerprints: [
-          '48:65:D5:46:E5:C4:C9:E7:1F:2D:C1:BF:6E:AB:38:D9:94:46:16:07:E5:65:E2:3D:DA:60:17:F7:3E:7A:B6:6D',
-        ],
-      },
+  },
+],
+ 
+
+'app.min.ia.br': [
+  {
+    relation: [
+      'delegate_permission/common.handle_all_urls',
+      'delegate_permission/common.get_login_creds',
+    ],
+    target: {
+      namespace: 'android_app',
+      package_name: 'com.minia.app',
+      sha256_cert_fingerprints: [
+        'DC:15:79:EA:E1:0A:88:43:82:BA:8A:04:A6:7B:6C:C1:03:CA:42:80:ED:10:00:91:70:E1:10:27:F0:03:4A:02',
+        // chave de upload (APK local)
+        '48:65:D5:46:E5:C4:C9:E7:1F:2D:C1:BF:6E:AB:38:D9:94:46:16:07:E5:65:E2:3D:DA:60:17:F7:3E:7A:B6:6D',
+      ],
     },
-  ],
+  },
+],
 
   // ───────────────────────────────────────────────────────────────────────────
   // NOVOS TWAs (Conviteia / ConsultaTec / Pix Wiki)

@@ -122,7 +122,13 @@ Deno.serve(async (req: Request) => {
           </div>
           <a href="https://pix.wiki/dashboard" style="display:inline-block;margin-top:22px;background:#0f172a;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700">Abrir PixWiki</a>
         </div>
-        <div style="padding:16px 28px;background:#f8fafc;color:#94a3b8;font-size:12px">Notificação automática PixWiki · BigCorps</div>
+        <div style="padding:16px 28px;background:#f8fafc;color:#94a3b8;font-size:12px;text-align:center">
+          <a href="https://pix.wiki" style="color:#64748b;text-decoration:none">PixWiki</a>
+          &nbsp;|&nbsp; Tecnologia
+          <a href="https://minhai.app" style="color:#64748b;text-decoration:none">minhAi</a>
+          &nbsp;|&nbsp; Desenvolvido por
+          <a href="https://bigcorps.com.br" style="color:#64748b;text-decoration:none">BigCorps</a>
+        </div>
       </div>
     </body></html>`
 

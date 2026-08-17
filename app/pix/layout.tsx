@@ -1,6 +1,7 @@
 import { headers } from 'next/headers';
 import type { Metadata } from 'next';
 import JsonLd from '@/components/JsonLd';
+import PixWikiBrandFooter from '@/components/pix/PixWikiBrandFooter';
 import { organizationNode, resolveSeo } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,11 @@ function isLandingPath(raw: string | null): boolean {
 function isPixApex(host: string): boolean {
   const clean = host.split(':')[0].toLowerCase();
   return clean === 'pix.wiki' || clean === 'www.pix.wiki';
+}
+
+function isPixWikiHost(host: string): boolean {
+  const clean = host.split(':')[0].toLowerCase();
+  return clean === 'pix.wiki' || clean === 'www.pix.wiki' || clean.endsWith('.pix.wiki');
 }
 
 function pixMetadata(indexable: boolean): Metadata {
@@ -189,6 +195,23 @@ export default async function PixLayout({ children }: { children: React.ReactNod
   const headersList = await headers();
   const host = headersList.get('host') || '';
   const landing = isPixApex(host) && isLandingPath(headersList.get('x-pathname'));
+  const pixWikiHost = isPixWikiHost(host);
 
-  return <>{landing && <JsonLd data={pixWikiGraph()} />}{children}</>;
+  return (
+    <>
+      {landing && <JsonLd data={pixWikiGraph()} />}
+
+      {pixWikiHost && (
+        <style>{`
+          footer:not([data-pixwiki-brand-footer]) {
+            display: none !important;
+          }
+        `}</style>
+      )}
+
+      {children}
+
+      {pixWikiHost && <PixWikiBrandFooter />}
+    </>
+  );
 }

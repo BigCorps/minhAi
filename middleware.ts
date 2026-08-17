@@ -51,6 +51,12 @@ const LLMS_TXT_BY_HOST: Record<string, string> = {
   // apontados aqui são curtos e mandam o modelo para o llms.txt da landing.
 };
 
+// Caminhos das páginas legais que cada marca serve na raiz do próprio domínio.
+// Usado pelos blocos de host para reescrever conviteia.com/aviso -> /convite/aviso
+// e consulta.tec.br/aviso -> /consultatec/aviso. O Pix Wiki não usa esta lista:
+// o bloco dele já prefixa qualquer caminho com /pix.
+const PAGINAS_LEGAIS = ['/aviso', '/termos', '/exclusao'];
+
 const ARTEFINAL_DOMAINS = ['ia.artefinal.app'];
 
 const CONSULTATEC_DOMAINS = ['consulta.tec.br', 'www.consulta.tec.br'];
@@ -275,6 +281,15 @@ if (CONSULTATEC_DOMAINS.includes(hostname)) {
     return NextResponse.rewrite(url);
   }
 
+  // Páginas legais em URL curta: consulta.tec.br/aviso -> /consultatec/aviso.
+  // Sem isto, /aviso cai no fluxo normal e serve app/aviso (marca minhAi) —
+  // bug silencioso, porque a página existe e abre, só com a marca errada.
+  if (PAGINAS_LEGAIS.includes(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/consultatec${pathname}`;
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  }
+
   if (pathname === '/') {
     const url = request.nextUrl.clone();
     url.pathname = '/consultatec';
@@ -382,6 +397,15 @@ if (PIX_DOMAINS.includes(hostname)) {
     if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
       const url = request.nextUrl.clone();
       url.pathname = '/brands/convite/manifest.webmanifest';
+      return NextResponse.rewrite(url);
+    }
+
+    // Páginas legais em URL curta: conviteia.com/aviso -> /convite/aviso.
+    // Sem isto o caminho cai no fluxo normal e serve app/aviso (marca minhAi).
+    // São as URLs declaradas na ficha da Play Store.
+    if (PAGINAS_LEGAIS.includes(pathname)) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/convite${pathname}`;
       return NextResponse.rewrite(url);
     }
     

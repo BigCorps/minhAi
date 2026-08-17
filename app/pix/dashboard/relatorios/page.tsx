@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { jsPDF } from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
 import { createClient } from '@/lib/supabase-browser';
+import PixWikiHeader from '@/components/pix/PixWikiHeader';
 
 type PeriodKey = 'today' | 'week' | 'month' | 'custom';
 type SourceKey = 'all' | 'pix_key' | 'pixwiki_link';
@@ -454,31 +455,18 @@ export default function PixWikiReportsPage() {
   return (
     <main className={`min-h-screen pb-24 ${page}`}>
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black tracking-tight">Relatórios PixWiki</h1>
-              <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-black text-emerald-400">PRO</span>
-            </div>
-            <p className={`mt-1 text-sm ${muted}`}>Acompanhe todos os recebimentos e exporte seus dados.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setDark(current => {
-                  const next = !current;
-                  localStorage.setItem('publicTheme', next ? 'dark' : 'light');
-                  return next;
-                });
-              }}
-              className={`rounded-xl border px-3 py-2 text-xs font-bold ${card}`}
-            >
-              {dark ? 'Tema claro' : 'Tema escuro'}
-            </button>
-            <Link href="/dashboard" className={`rounded-xl border px-3 py-2 text-xs font-bold ${card}`}>Painel</Link>
-          </div>
-        </header>
+        <PixWikiHeader
+          plan={plan?.effective_plan || 'pro'}
+          dark={dark}
+          onThemeChange={setDark}
+        />
+
+        <div className="mt-6">
+          <h1 className="text-3xl font-black tracking-tight">Relatórios</h1>
+          <p className={`mt-2 text-sm ${muted}`}>
+            Acompanhe seus recebimentos, filtre por recebedor e período e exporte seus dados.
+          </p>
+        </div>
 
         {error && (
           <div className="mt-5 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>

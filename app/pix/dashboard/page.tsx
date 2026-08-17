@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase-browser';
 import { connectMercadoPago } from '@/lib/connectMercadoPago';
 import PixWikiPush from '@/components/pix/PixWikiPush';
+import PixWikiHeader from '@/components/pix/PixWikiHeader';
 
 type PlanKey = 'free' | 'link' | 'pro';
 type SourceKey = 'pix_key' | 'pixwiki_link';
@@ -983,40 +984,6 @@ function DashboardContent() {
     }
   }
 
-  async function logout() {
-    if (typeof window !== 'undefined' && window.OneSignalDeferred) {
-      await new Promise<void>((resolve) => {
-        let finished = false;
-        const finish = () => {
-          if (finished) return;
-          finished = true;
-          resolve();
-        };
-        const timeout = window.setTimeout(finish, 1500);
-
-        window.OneSignalDeferred!.push(async (OneSignal: any) => {
-          try {
-            const subscriptionId = String(OneSignal?.User?.PushSubscription?.id || '');
-            if (subscriptionId) {
-              await supabase.rpc('pixwiki_unregister_push_subscription', {
-                p_subscription_id: subscriptionId,
-              });
-            }
-            await OneSignal.logout();
-          } catch {
-            // best effort
-          } finally {
-            window.clearTimeout(timeout);
-            finish();
-          }
-        });
-      });
-    }
-
-    await supabase.auth.signOut();
-    window.location.href = 'https://pix.wiki';
-  }
-
   if (loading) return <Spinner />;
 
   if (!company) {
@@ -1035,76 +1002,45 @@ function DashboardContent() {
   return (
     <main className={`min-h-screen ${page}`}>
       <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Image src="/brands/pix/pixwiki.png" alt="PixWiki" width={46} height={46} className="rounded-xl" />
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-black tracking-tight">PixWiki</h1>
-                <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-400">
-                  {PLAN_COPY[effectivePlan].title}
-                </span>
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                {companies.length > 1 ? (
-                  <select
-                    value={company.id}
-                    onChange={e => switchCompany(e.target.value)}
-                    className={`max-w-[210px] rounded-lg border px-2 py-1 text-xs outline-none ${input}`}
-                    aria-label="Empresa ativa"
-                  >
-                    {companies.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}{c.plan_access === false ? ' · pausada' : ''}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className={`text-xs ${muted}`}>{company.name}</p>
-                )}
-                {effectivePlan === 'pro' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNewCompanyEmail(authEmail);
-                      setShowCompanyForm(true);
-                    }}
-                    className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-400"
-                  >
-                    + Empresa
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+        <PixWikiHeader
+          plan={effectivePlan}
+          dark={dark}
+          onThemeChange={setDark}
+        />
 
-          <div className="flex items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {companies.length > 1 ? (
+            <select
+              value={company.id}
+              onChange={e => switchCompany(e.target.value)}
+              className={`min-w-0 flex-1 rounded-xl border px-3 py-2.5 text-sm outline-none sm:max-w-sm ${input}`}
+              aria-label="Recebedor ativo"
+            >
+              {companies.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name}{c.plan_access === false ? ' · pausada' : ''}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className={`rounded-xl border px-3 py-2.5 text-sm ${card}`}>
+              {company.name}
+            </div>
+          )}
+
+          {effectivePlan === 'pro' && (
             <button
               type="button"
               onClick={() => {
-                setDark(v => {
-                  const next = !v;
-                  localStorage.setItem('publicTheme', next ? 'dark' : 'light');
-                  return next;
-                });
+                setNewCompanyEmail(authEmail);
+                setShowCompanyForm(true);
               }}
-              aria-label={dark ? 'Ativar tema claro' : 'Ativar tema escuro'}
-              title={dark ? 'Tema claro' : 'Tema escuro'}
-              className={`flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${card}`}
+              className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2.5 text-xs font-black text-emerald-400"
             >
-              {dark ? (
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              ) : (
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              )}
+              + Empresa
             </button>
-            <button onClick={logout} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${card}`}>Sair</button>
-          </div>
-        </header>
+          )}
+        </div>
 
         {(notice || error) && (
           <div className={`mt-5 rounded-2xl border px-4 py-3 text-sm ${error ? 'border-red-500/25 bg-red-500/10 text-red-300' : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'}`}>

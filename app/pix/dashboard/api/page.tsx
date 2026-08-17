@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-browser';
+import PixWikiHeader from '@/components/pix/PixWikiHeader';
 
 type PlanKey = 'free' | 'link' | 'pro';
 
@@ -76,6 +77,7 @@ function statusLabel(status: string) {
 export default function PixWikiApiPage() {
   const supabase = useMemo(() => createClient(), []);
   const [loading, setLoading] = useState(true);
+  const [dark, setDark] = useState(true);
   const [plan, setPlan] = useState<PlanStatus | null>(null);
   const [keys, setKeys] = useState<ApiKeyRow[]>([]);
   const [webhooks, setWebhooks] = useState<WebhookRow[]>([]);
@@ -151,6 +153,12 @@ export default function PixWikiApiPage() {
 
     setLoading(false);
   }, [callEdge, supabase]);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('publicTheme');
+    if (savedTheme === 'light' || savedTheme === 'dark') setDark(savedTheme === 'dark');
+    else setDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }, []);
 
   useEffect(() => {
     loadAll().catch(e => {
@@ -308,7 +316,7 @@ export default function PixWikiApiPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#020617] px-4 py-12 text-white">
+      <main className={`min-h-screen px-4 py-12 ${dark ? 'bg-[#020617] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
         <div className="mx-auto max-w-6xl">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-emerald-400" />
         </div>
@@ -320,15 +328,20 @@ export default function PixWikiApiPage() {
 
   if (!isPro) {
     return (
-      <main className="min-h-screen bg-[#020617] px-4 py-10 pb-28 text-white">
-        <div className="mx-auto max-w-3xl">
-          <Link href="/dashboard" className="text-sm text-white/55 hover:text-white">← Voltar ao painel</Link>
-          <div className="mt-8 rounded-3xl border border-emerald-500/25 bg-emerald-500/10 p-7">
+      <main className={`min-h-screen pb-28 ${dark ? 'bg-[#020617] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
+        <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <PixWikiHeader
+            plan={plan?.effective_plan || 'free'}
+            dark={dark}
+            onThemeChange={setDark}
+          />
+
+          <div className="mx-auto mt-10 max-w-3xl rounded-3xl border border-emerald-500/25 bg-emerald-500/10 p-7">
             <span className="rounded-full bg-emerald-500 px-2.5 py-1 text-[10px] font-black text-slate-950">PIX PRO</span>
-            <h1 className="mt-4 text-3xl font-black">API & Webhooks</h1>
-            <p className="mt-3 leading-relaxed text-white/65">
+            <h1 className="mt-4 text-3xl font-black">Integrações</h1>
+            <p className={`mt-3 leading-relaxed ${dark ? 'text-white/65' : 'text-slate-600'}`}>
               Conecte seu ERP, e-commerce, automação ou sistema próprio aos recebimentos do PixWiki.
-              Conecte seu ERP, e-commerce, automação ou sistema próprio ao PixWiki. Os recursos avançados de integração estão incluídos no Pix Pro.
+              Os recursos avançados de integração estão incluídos no Pix Pro.
             </p>
           </div>
         </div>
@@ -337,19 +350,19 @@ export default function PixWikiApiPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#020617] px-4 py-8 pb-28 text-white">
-      <div className="mx-auto max-w-6xl">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <Link href="/dashboard" className="text-sm text-white/50 hover:text-white">← Painel</Link>
-            <h1 className="mt-2 text-3xl font-black tracking-tight">Integrações</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/55">
-              Integre os recebimentos do PixWiki ao seu sistema sem acessar credenciais do Mercado Pago.
-            </p>
-          </div>
-          <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-black text-emerald-300">
-            PIX PRO
-          </span>
+    <main className={`min-h-screen pb-28 ${dark ? 'bg-[#020617] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
+      <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <PixWikiHeader
+          plan={plan?.effective_plan || 'pro'}
+          dark={dark}
+          onThemeChange={setDark}
+        />
+
+        <div className="mt-6">
+          <h1 className="text-3xl font-black tracking-tight">Integrações</h1>
+          <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${dark ? 'text-slate-500 dark:text-white/55' : 'text-slate-500'}`}>
+            Integre os recebimentos do PixWiki ao seu sistema sem acessar credenciais do Mercado Pago.
+          </p>
         </div>
 
         {(notice || error) && (
@@ -363,9 +376,9 @@ export default function PixWikiApiPage() {
         {newApiSecret && (
           <section className="mt-5 rounded-3xl border border-amber-400/30 bg-amber-400/10 p-5">
             <p className="font-black text-amber-300">Copie sua API Key agora</p>
-            <p className="mt-1 text-xs text-white/55">Por segurança, o PixWiki não consegue exibir esta chave novamente.</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-white/55">Por segurança, o PixWiki não consegue exibir esta chave novamente.</p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-              <code className="min-w-0 flex-1 overflow-x-auto rounded-xl bg-black/30 p-3 text-xs text-amber-100">{newApiSecret}</code>
+              <code className="min-w-0 flex-1 overflow-x-auto rounded-xl bg-slate-100 dark:bg-black/30 p-3 text-xs text-amber-100">{newApiSecret}</code>
               <button onClick={() => copy(newApiSecret)} className="rounded-xl bg-amber-300 px-4 py-3 text-xs font-black text-slate-950">Copiar</button>
             </div>
           </section>
@@ -374,22 +387,22 @@ export default function PixWikiApiPage() {
         {newWebhookSecret && (
           <section className="mt-5 rounded-3xl border border-sky-400/30 bg-sky-400/10 p-5">
             <p className="font-black text-sky-300">Segredo de assinatura do Webhook</p>
-            <p className="mt-1 text-xs text-white/55">Guarde como senha. Ele é usado para validar X-PixWiki-Signature.</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-white/55">Guarde como senha. Ele é usado para validar X-PixWiki-Signature.</p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-              <code className="min-w-0 flex-1 overflow-x-auto rounded-xl bg-black/30 p-3 text-xs text-sky-100">{newWebhookSecret}</code>
+              <code className="min-w-0 flex-1 overflow-x-auto rounded-xl bg-slate-100 dark:bg-black/30 p-3 text-xs text-sky-100">{newWebhookSecret}</code>
               <button onClick={() => copy(newWebhookSecret)} className="rounded-xl bg-sky-300 px-4 py-3 text-xs font-black text-slate-950">Copiar</button>
             </div>
           </section>
         )}
 
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
-          <section className="rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
+          <section className="rounded-3xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.035] p-5 sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-xl font-black">Chaves de API</h2>
-                <p className="mt-1 text-sm text-white/50">Até 10 chaves ativas. Limite de 120 requisições/minuto por chave.</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-white/50">Até 10 chaves ativas. Limite de 120 requisições/minuto por chave.</p>
               </div>
-              <span className="text-xs font-bold text-white/35">{keys.filter(k => !k.revoked_at).length}/10</span>
+              <span className="text-xs font-bold text-slate-400 dark:text-white/35">{keys.filter(k => !k.revoked_at).length}/10</span>
             </div>
 
             <div className="mt-5 flex gap-2">
@@ -398,7 +411,7 @@ export default function PixWikiApiPage() {
                 onChange={e => setKeyName(e.target.value)}
                 maxLength={80}
                 placeholder="Nome da integração"
-                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm outline-none focus:border-emerald-400/60"
+                className="min-w-0 flex-1 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.055] px-4 py-3 text-sm outline-none focus:border-emerald-400/60"
               />
               <button
                 onClick={createKey}
@@ -410,19 +423,19 @@ export default function PixWikiApiPage() {
             </div>
 
             <div className="mt-5 space-y-2">
-              {keys.length === 0 && <p className="rounded-2xl border border-white/10 p-4 text-sm text-white/45">Nenhuma chave criada.</p>}
+              {keys.length === 0 && <p className="rounded-2xl border border-black/10 dark:border-white/10 p-4 text-sm text-slate-500 dark:text-white/45">Nenhuma chave criada.</p>}
               {keys.map(key => (
-                <div key={key.id} className="rounded-2xl border border-white/10 bg-black/10 p-4">
+                <div key={key.id} className="rounded-2xl border border-black/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="font-bold">{key.name}</p>
-                      <code className="mt-1 block text-xs text-white/45">{key.key_prefix}••••••••</code>
-                      <p className="mt-2 text-[11px] text-white/35">
+                      <code className="mt-1 block text-xs text-slate-500 dark:text-white/45">{key.key_prefix}••••••••</code>
+                      <p className="mt-2 text-[11px] text-slate-400 dark:text-white/35">
                         Criada: {formatDate(key.created_at)} · Último uso: {formatDate(key.last_used_at)}
                       </p>
                     </div>
                     {key.revoked_at ? (
-                      <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/45">REVOGADA</span>
+                      <span className="rounded-full bg-slate-100 dark:bg-white/10 px-2.5 py-1 text-[10px] font-bold text-slate-500 dark:text-white/45">REVOGADA</span>
                     ) : (
                       <button
                         onClick={() => revokeKey(key.id)}
@@ -438,13 +451,13 @@ export default function PixWikiApiPage() {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
+          <section className="rounded-3xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.035] p-5 sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-xl font-black">Novo Webhook</h2>
-                <p className="mt-1 text-sm text-white/50">O PixWiki envia <code>pix.received</code> para uma URL HTTPS pública.</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-white/50">O PixWiki envia <code>pix.received</code> para uma URL HTTPS pública.</p>
               </div>
-              <span className="text-xs font-bold text-white/35">{webhooks.length}/10</span>
+              <span className="text-xs font-bold text-slate-400 dark:text-white/35">{webhooks.length}/10</span>
             </div>
 
             <div className="mt-5 space-y-3">
@@ -453,18 +466,18 @@ export default function PixWikiApiPage() {
                 onChange={e => setHookName(e.target.value)}
                 maxLength={80}
                 placeholder="Nome do webhook"
-                className="w-full rounded-xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm outline-none focus:border-sky-400/60"
+                className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.055] px-4 py-3 text-sm outline-none focus:border-sky-400/60"
               />
               <input
                 value={hookUrl}
                 onChange={e => setHookUrl(e.target.value)}
                 placeholder="https://seusistema.com/webhooks/pixwiki"
-                className="w-full rounded-xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm outline-none focus:border-sky-400/60"
+                className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.055] px-4 py-3 text-sm outline-none focus:border-sky-400/60"
               />
               <select
                 value={hookCompany}
                 onChange={e => setHookCompany(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm outline-none"
+                className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm text-slate-900 outline-none dark:border-white/10 dark:bg-slate-950 dark:text-white"
               >
                 <option value="">Todas as empresas</option>
                 {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -480,20 +493,20 @@ export default function PixWikiApiPage() {
           </section>
         </div>
 
-        <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
+        <section className="mt-5 rounded-3xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.035] p-5 sm:p-6">
           <h2 className="text-xl font-black">Webhooks configurados</h2>
           <div className="mt-5 grid gap-3">
-            {webhooks.length === 0 && <p className="rounded-2xl border border-white/10 p-5 text-sm text-white/45">Nenhum webhook configurado.</p>}
+            {webhooks.length === 0 && <p className="rounded-2xl border border-black/10 dark:border-white/10 p-5 text-sm text-slate-500 dark:text-white/45">Nenhum webhook configurado.</p>}
             {webhooks.map(hook => {
               const last = latestDelivery(hook.id);
               const company = companies.find(c => c.id === hook.company_id);
               return (
-                <div key={hook.id} className="rounded-2xl border border-white/10 bg-black/10 p-4">
+                <div key={hook.id} className="rounded-2xl border border-black/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 p-4">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-bold">{hook.name}</p>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${hook.is_active ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-white/45'}`}>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${hook.is_active ? 'bg-emerald-500/15 text-emerald-300' : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-white/45'}`}>
                           {hook.is_active ? 'ATIVO' : 'PAUSADO'}
                         </span>
                         {last && (
@@ -506,16 +519,16 @@ export default function PixWikiApiPage() {
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 break-all text-xs text-white/50">{hook.url}</p>
-                      <p className="mt-2 text-[11px] text-white/35">
+                      <p className="mt-1 break-all text-xs text-slate-500 dark:text-white/50">{hook.url}</p>
+                      <p className="mt-2 text-[11px] text-slate-400 dark:text-white/35">
                         Escopo: {company?.name || 'Todas as empresas'} · Último HTTP: {hook.last_status_code ?? '—'} · Sucesso: {formatDate(hook.last_success_at)}
                       </p>
-                      {last && <p className="mt-1 text-[11px] text-white/35">Última entrega: {statusLabel(last.status)} · tentativa {last.attempt_count}/5 · HTTP {last.response_status ?? '—'}</p>}
+                      {last && <p className="mt-1 text-[11px] text-slate-400 dark:text-white/35">Última entrega: {statusLabel(last.status)} · tentativa {last.attempt_count}/5 · HTTP {last.response_status ?? '—'}</p>}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => testWebhook(hook)} disabled={!!busy} className="rounded-lg bg-sky-400 px-3 py-2 text-xs font-black text-slate-950">Testar</button>
-                      <button onClick={() => toggleWebhook(hook)} disabled={!!busy} className="rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-white/70">{hook.is_active ? 'Pausar' : 'Ativar'}</button>
-                      <button onClick={() => rotateSecret(hook)} disabled={!!busy} className="rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-white/70">Novo segredo</button>
+                      <button onClick={() => toggleWebhook(hook)} disabled={!!busy} className="rounded-lg border border-black/10 dark:border-white/10 px-3 py-2 text-xs font-bold text-slate-600 dark:text-white/70">{hook.is_active ? 'Pausar' : 'Ativar'}</button>
+                      <button onClick={() => rotateSecret(hook)} disabled={!!busy} className="rounded-lg border border-black/10 dark:border-white/10 px-3 py-2 text-xs font-bold text-slate-600 dark:text-white/70">Novo segredo</button>
                       <button onClick={() => deleteWebhook(hook)} disabled={!!busy} className="rounded-lg border border-red-500/20 px-3 py-2 text-xs font-bold text-red-300">Excluir</button>
                     </div>
                   </div>
@@ -525,9 +538,9 @@ export default function PixWikiApiPage() {
           </div>
         </section>
 
-        <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
+        <section className="mt-5 rounded-3xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.035] p-5 sm:p-6">
           <h2 className="text-xl font-black">Para integrar com seu sistema</h2>
-          <p className="mt-2 text-sm leading-relaxed text-white/55">
+          <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-white/55">
             Use <code className="text-emerald-300">Authorization: Bearer SUA_API_KEY</code>. Valores monetários são retornados em centavos para evitar erros de ponto flutuante.
           </p>
 
@@ -538,30 +551,30 @@ export default function PixWikiApiPage() {
               ['GET', '/api/v1/receipts/:id', 'Consulta um recebimento específico.'],
               ['GET', '/api/v1/summary', 'Totais de bruto, tarifas, líquido e contagem no período.'],
             ].map(([method, endpoint, desc]) => (
-              <div key={endpoint} className="rounded-2xl border border-white/10 bg-black/10 p-4">
+              <div key={endpoint} className="rounded-2xl border border-black/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 p-4">
                 <div className="flex items-center gap-2">
                   <span className="rounded-md bg-emerald-500/15 px-2 py-1 text-[10px] font-black text-emerald-300">{method}</span>
-                  <code className="text-xs text-white/80">https://pix.wiki{endpoint}</code>
+                  <code className="text-xs text-slate-700 dark:text-white/80">https://pix.wiki{endpoint}</code>
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-white/45">{desc}</p>
+                <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-white/45">{desc}</p>
               </div>
             ))}
           </div>
 
-          <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-white/45">Exemplo</p>
+          <div className="mt-5 rounded-2xl border border-black/10 dark:border-white/10 bg-slate-100 dark:bg-black/20 p-4">
+            <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-white/45">Exemplo</p>
             <pre className="mt-3 overflow-x-auto whitespace-pre text-xs leading-relaxed text-emerald-200">{`curl \\
   -H "Authorization: Bearer SUA_API_KEY" \\
   "https://pix.wiki/api/v1/receipts?source=pix_key&limit=50"`}</pre>
           </div>
         </section>
 
-        <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
+        <section className="mt-5 rounded-3xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.035] p-5 sm:p-6">
           <h2 className="text-xl font-black">Validando a assinatura do Webhook</h2>
-          <p className="mt-2 text-sm leading-relaxed text-white/55">
+          <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-white/55">
             O PixWiki assina o texto <code>timestamp.corpo_bruto</code> com HMAC-SHA256. Compare em tempo constante e rejeite timestamps antigos.
           </p>
-          <pre className="mt-4 overflow-x-auto rounded-2xl bg-black/25 p-4 text-xs leading-relaxed text-sky-200">{`import { createHmac, timingSafeEqual } from "node:crypto";
+          <pre className="mt-4 overflow-x-auto rounded-2xl bg-slate-100 dark:bg-black/25 p-4 text-xs leading-relaxed text-sky-200">{`import { createHmac, timingSafeEqual } from "node:crypto";
 
 const timestamp = req.headers["x-pixwiki-timestamp"];
 const received = req.headers["x-pixwiki-signature"].replace("v1=", "");
@@ -575,7 +588,7 @@ const valid = timingSafeEqual(
   Buffer.from(received, "hex"),
   Buffer.from(expected, "hex")
 );`}</pre>
-          <p className="mt-3 text-xs text-white/40">
+          <p className="mt-3 text-xs text-slate-500 dark:text-white/40">
             Headers: X-PixWiki-Event, X-PixWiki-Event-Id, X-PixWiki-Timestamp, X-PixWiki-Signature e Idempotency-Key.
             Em falha, o PixWiki tenta novamente em 1 min, 5 min, 30 min e 2 h, até 5 tentativas no total.
           </p>

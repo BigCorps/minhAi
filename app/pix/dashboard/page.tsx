@@ -162,6 +162,37 @@ function dateOnly(value: string | null | undefined) {
   });
 }
 
+function receiptDayKey(value: string) {
+  return new Date(value).toLocaleDateString('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
+function receiptDayLabel(dayKey: string) {
+  const today = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toLocaleDateString('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
+  if (dayKey === today) return 'Hoje';
+  if (dayKey === yesterday) return 'Ontem';
+
+  const [year, month, day] = dayKey.split('-');
+  return `${day}/${month}/${year}`;
+}
+
 function normalizeAmountInput(v: string) {
   const cleaned = v.replace(/[^0-9,.]/g, '').replace(',', '.');
   const n = Number(cleaned);
@@ -581,6 +612,16 @@ function DashboardContent() {
   }, [callPlan, loadPlan, plan?.pending_invoice]);
 
   const filteredReceipts = receipts.filter(r => receiptFilter === 'all' || r.source === receiptFilter);
+
+  const receiptGroups = Object.values(
+    filteredReceipts.reduce<Record<string, { dayKey: string; totalNet: number; items: ReceiptRow[] }>>((groups, receipt) => {
+      const dayKey = receiptDayKey(receipt.received_at);
+      if (!groups[dayKey]) groups[dayKey] = { dayKey, totalNet: 0, items: [] };
+      groups[dayKey].totalNet += Number(receipt.net_amount_cents || 0);
+      groups[dayKey].items.push(receipt);
+      return groups;
+    }, {}),
+  ).sort((a, b) => b.dayKey.localeCompare(a.dayKey));
 
   const now = new Date();
   const todayKey = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
@@ -1211,21 +1252,46 @@ function DashboardContent() {
                 <p className={`mt-1 text-sm ${muted}`}>Quando um Pix for identificado, ele aparece aqui.</p>
               </div>
             ) : (
-              <div className="divide-y divide-white/5">
-                {filteredReceipts.map(r => (
-                  <div key={r.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-xl font-black">{money(r.net_amount_cents)}</p>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${r.source === 'pixwiki_link' ? 'bg-sky-500/10 text-sky-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
-                          {r.source === 'pixwiki_link' ? 'PIX LINK' : 'CHAVE PIX'}
-                        </span>
+              <div>
+                {receiptGroups.map((group, groupIndex) => (
+                  <div key={group.dayKey} className={groupIndex > 0 ? 'border-t border-white/10' : ''}>
+                    <div className={`flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-5 ${isDark ? 'border-white/5 bg-white/[0.025]' : 'border-black/5 bg-slate-50'}`}>
+                      <div>
+                        <p className="text-sm font-black">{receiptDayLabel(group.dayKey)}</p>
+                        <p className={`mt-0.5 text-[11px] ${muted}`}>
+                          {group.items.length} {group.items.length === 1 ? 'recebimento' : 'recebimentos'}
+                        </p>
                       </div>
-                      <p className={`mt-1 text-xs ${muted}`}>{dateTime(r.received_at)}</p>
+                      <div className="text-right">
+                        <p className={`text-[10px] font-bold uppercase tracking-wide ${faint}`}>Total do dia</p>
+                        <p className="mt-0.5 text-lg font-black text-emerald-400">{money(group.totalNet)}</p>
+                      </div>
                     </div>
-                    <div className="text-left sm:text-right">
-                      <p className={`text-[10px] font-bold uppercase tracking-wide ${faint}`}>Recebido</p>
-                      <p className="text-sm font-black text-emerald-400">Confirmado</p>
+
+                    <div className="divide-y divide-white/5">
+                      {group.items.map(r => (
+                        <div key={r.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-xl font-black">{money(r.net_amount_cents)}</p>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${r.source === 'pixwiki_link' ? 'bg-sky-500/10 text-sky-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                                {r.source === 'pixwiki_link' ? 'PIX LINK' : 'CHAVE PIX'}
+                              </span>
+                            </div>
+                            <p className={`mt-1 text-xs ${muted}`}>
+                              {new Date(r.received_at).toLocaleTimeString('pt-BR', {
+                                timeZone: 'America/Sao_Paulo',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          </div>
+                          <div className="text-left sm:text-right">
+                            <p className={`text-[10px] font-bold uppercase tracking-wide ${faint}`}>Recebido</p>
+                            <p className="text-sm font-black text-emerald-400">Confirmado</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}

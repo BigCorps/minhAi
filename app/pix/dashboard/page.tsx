@@ -128,17 +128,17 @@ const PLAN_COPY: Record<PlanKey, { title: string; subtitle: string; items: strin
   free: {
     title: 'Pix Grátis',
     subtitle: 'Sua chave Pix, agora inteligente.',
-    items: ['Confirmação automática', 'Dashboard', 'Push', 'E-mail'],
+    items: ['Confirmação automática', 'Painel em tempo real', 'Push', 'E-mail'],
   },
   link: {
     title: 'Pix Link',
     subtitle: 'Seu endereço profissional para receber Pix.',
-    items: ['Tudo do Grátis', 'slug.pix.wiki', 'Link com valor', 'QR Code', 'Histórico completo'],
+    items: ['Tudo do Grátis', 'Endereço próprio', 'Link com valor', 'QR Code', 'Histórico completo'],
   },
   pro: {
     title: 'Pix Pro',
     subtitle: 'Pix profissional para sua operação.',
-    items: ['Tudo do Pix Link', 'WhatsApp', 'Multiempresa', 'Relatórios', 'API e Webhooks'],
+    items: ['Tudo do Pix Link', 'WhatsApp', 'Várias empresas', 'Relatórios', 'Integrações com sistemas'],
   },
 };
 
@@ -269,6 +269,8 @@ function DashboardContent() {
   const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
   const [mpConnected, setMpConnected] = useState(false);
   const [plan, setPlan] = useState<PlanStatus | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
   const [shareValue, setShareValue] = useState('');
   const [copied, setCopied] = useState('');
@@ -333,6 +335,18 @@ function DashboardContent() {
     });
     return data;
   }, [callPlan]);
+
+  const fetchReceipts = useCallback(async (companyId: string) => {
+    const { data, error: receiptError } = await supabase.from('pixwiki_receipts')
+      .select('id,company_id,user_id,mp_payment_id,amount_cents,fee_amount_cents,net_amount_cents,status,source,provider,received_at')
+      .eq('company_id', companyId)
+      .order('received_at', { ascending: false })
+      .limit(200);
+    if (receiptError) throw receiptError;
+    setReceipts((data || []) as ReceiptRow[]);
+    setLastUpdatedAt(new Date());
+    return (data || []) as ReceiptRow[];
+  }, [supabase]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -469,6 +483,7 @@ function DashboardContent() {
     setEmailDraft(notificationSettings.notification_email || user.email || '');
     setWhatsappDraft(notificationSettings.notification_phone || '');
     setReceipts((receiptRows || []) as ReceiptRow[]);
+    setLastUpdatedAt(new Date());
     setMpConnected(active.mp_connected === true);
 
     try {
@@ -488,6 +503,41 @@ function DashboardContent() {
     }
     loadData();
   }, [loadData]);
+
+  // Atualiza a tela assim que um recebimento é gravado no banco. O polling
+  // leve é apenas uma rede de segurança para navegadores que suspendem o canal
+  // Realtime em segundo plano.
+  useEffect(() => {
+    if (!company?.id || !userId) return;
+    const companyId = company.id;
+
+    const channel = supabase
+      .channel(`pixwiki-receipts-${companyId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'mp_received_payments', filter: `company_id=eq.${companyId}` },
+        () => { void fetchReceipts(companyId).catch(() => undefined); },
+      )
+      .subscribe();
+
+    const poll = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void fetchReceipts(companyId).catch(() => undefined);
+    }, 20000);
+
+    const onFocus = () => { void fetchReceipts(companyId).catch(() => undefined); };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') void fetchReceipts(companyId).catch(() => undefined);
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      window.clearInterval(poll);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+      void supabase.removeChannel(channel);
+    };
+  }, [company?.id, fetchReceipts, supabase, userId]);
 
   useEffect(() => {
     if (search.get('mp_connected') === '1') setNotice('Mercado Pago conectado com sucesso para esta empresa.');
@@ -537,9 +587,8 @@ function DashboardContent() {
   const monthKey = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', month: '2-digit', year: 'numeric' });
   const todayReceipts = receipts.filter(r => new Date(r.received_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) === todayKey);
   const monthReceipts = receipts.filter(r => new Date(r.received_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', month: '2-digit', year: 'numeric' }) === monthKey);
-  const todayGross = todayReceipts.reduce((a, r) => a + r.amount_cents, 0);
+  const todayNet = todayReceipts.reduce((a, r) => a + r.net_amount_cents, 0);
   const monthNet = monthReceipts.reduce((a, r) => a + r.net_amount_cents, 0);
-  const monthFees = monthReceipts.reduce((a, r) => a + r.fee_amount_cents, 0);
 
   const effectivePlan = plan?.effective_plan || 'free';
   const activeCompanyOption = companies.find(c => c.id === company?.id) || null;
@@ -548,7 +597,6 @@ function DashboardContent() {
   const linkBase = company && canLink ? `https://${company.slug}.pix.wiki` : '';
   const amountNumber = normalizeAmountInput(shareValue);
   const linkWithAmount = linkBase && amountNumber > 0 ? `${linkBase}/${amountNumber.toFixed(2)}` : linkBase;
-  const estimatedMpFee = amountNumber > 0 ? Math.round(amountNumber * 100 * 0.01) : 0;
 
   async function copyText(value: string, key: string) {
     if (!value) return;
@@ -796,6 +844,57 @@ function DashboardContent() {
     setNotice('Número de WhatsApp salvo para esta empresa.');
   }
 
+  async function refreshNow() {
+    if (!company?.id || refreshing) return;
+    setRefreshing(true);
+    setError('');
+    setNotice('');
+    try {
+      if (mpConnected) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          const response = await fetch(`${FUNCTIONS_URL}/pixwiki-refresh`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+              apikey: ANON_KEY,
+            },
+            body: JSON.stringify({ company_id: company.id }),
+          });
+          if (!response.ok && response.status !== 409) throw new Error('refresh_failed');
+        }
+      }
+      const before = receipts[0]?.id || null;
+      const current = await fetchReceipts(company.id);
+      const hasNew = current[0]?.id && current[0]?.id !== before;
+      setNotice(hasNew ? 'Novo recebimento encontrado.' : 'Tudo atualizado.');
+    } catch {
+      setError('Não foi possível atualizar agora. O PixWiki continuará verificando automaticamente.');
+      await fetchReceipts(company.id).catch(() => undefined);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function disconnectMercadoPago() {
+    if (!company?.id || !mpConnected) return;
+    if (!window.confirm('Desconectar o Mercado Pago desta empresa no PixWiki? O histórico continuará salvo.')) return;
+    setError('');
+    setNotice('');
+    const { error: disconnectError } = await supabase.rpc('pixwiki_disconnect_mp_connection', {
+      p_company_id: company.id,
+    });
+    if (disconnectError) {
+      setError('Não foi possível desconectar o Mercado Pago agora.');
+      return;
+    }
+    setMpConnected(false);
+    setPayment(current => current ? { ...current, mp_connection_id: null } : current);
+    setCompanies(current => current.map(item => item.id === company.id ? { ...item, mp_connected: false, mp_connection_id: null } : item));
+    setNotice('Mercado Pago desconectado desta empresa.');
+  }
+
   function switchCompany(companyId: string) {
     if (!companyId || companyId === company?.id) return;
     localStorage.setItem('pixWikiActiveCompanyId', companyId);
@@ -988,7 +1087,7 @@ function DashboardContent() {
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-2">
               <label className="block">
-                <span className={`text-xs font-bold ${muted}`}>Nome da empresa</span>
+                <span className={`text-xs font-bold ${muted}`}>Nome do recebedor</span>
                 <input value={newCompanyName} onChange={e => setNewCompanyName(e.target.value)} className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none ${input}`} />
               </label>
               <label className="block">
@@ -1026,8 +1125,8 @@ function DashboardContent() {
         {!companyPlanAccess && (
           <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="font-bold text-amber-300">Empresa pausada pelo plano</p>
-              <p className={`mt-1 text-sm ${muted}`}>Empresas adicionais fazem parte do Pix Pro. O histórico continua visível, mas recebimentos, subdomínio e automações ficam pausados até reativar o Pro.</p>
+              <p className="font-bold text-amber-300">Empresa adicional pausada</p>
+              <p className={`mt-1 text-sm ${muted}`}>Empresas adicionais fazem parte do Pix Pro. O histórico continua salvo e volta a funcionar quando o plano é reativado.</p>
             </div>
             <button onClick={() => createInvoice('pro')} disabled={!!planBusy || !!plan?.pending_invoice} className="rounded-xl bg-emerald-500 px-4 py-3 text-xs font-black text-slate-950 disabled:opacity-50">Reativar Pix Pro</button>
           </div>
@@ -1050,150 +1149,45 @@ function DashboardContent() {
           </div>
         )}
 
-        <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            ['Recebido hoje', money(todayGross)],
-            ['Líquido no mês', money(monthNet)],
-            ['Tarifas Mercado Pago', money(monthFees)],
-            ['Pix no mês', String(monthReceipts.length)],
-          ].map(([label, value]) => (
-            <div key={label} className={`rounded-2xl border p-5 ${card}`}>
-              <p className={`text-xs font-semibold ${muted}`}>{label}</p>
-              <p className="mt-2 text-2xl font-black tracking-tight">{value}</p>
-            </div>
-          ))}
-        </section>
-
         <section className="mt-6">
-          <div className="mb-3 flex items-end justify-between gap-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-black">Como cobrar?</h2>
-              <p className={`text-sm ${muted}`}>Escolha o que faz mais sentido em cada venda.</p>
+              <h2 className="text-lg font-black">Visão rápida</h2>
+              <p className={`text-sm ${muted}`}>Os valores abaixo já mostram o que efetivamente entrou no Mercado Pago.</p>
             </div>
+            <button
+              type="button"
+              onClick={refreshNow}
+              disabled={refreshing}
+              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${card} disabled:opacity-50`}
+            >
+              <svg className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0011.8 2.5M18.5 9A7 7 0 006.7 6.5" />
+              </svg>
+              {refreshing ? 'Atualizando…' : 'Atualizar'}
+            </button>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className={`rounded-3xl border p-5 sm:p-6 ${card}`}>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-400">CHAVE PIX</span>
-                  <h3 className="mt-3 text-lg font-black">Direto, sem link</h3>
-                  <p className={`mt-1 text-sm leading-relaxed ${muted}`}>
-                    Ideal para balcão e clientes recorrentes. O cliente informa a chave e o valor manualmente.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-semibold text-emerald-400">PixWiki</p>
-                  <p className="text-lg font-black">R$ 0,00</p>
-                </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ['Recebido hoje', money(todayNet)],
+              ['Recebido no mês', money(monthNet)],
+              ['Pix no mês', String(monthReceipts.length)],
+              ['Última atualização', lastUpdatedAt ? lastUpdatedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—'],
+            ].map(([label, value]) => (
+              <div key={label} className={`rounded-2xl border p-5 ${card}`}>
+                <p className={`text-xs font-semibold ${muted}`}>{label}</p>
+                <p className="mt-2 text-2xl font-black tracking-tight">{value}</p>
               </div>
-
-              <div className={`mt-5 rounded-2xl border p-4 ${isDark ? 'border-white/10 bg-black/15' : 'border-black/10 bg-slate-50'}`}>
-                <p className={`text-[11px] font-bold uppercase tracking-wide ${faint}`}>Sua chave</p>
-                <p className="mt-1 break-all text-sm font-semibold">{payment?.pix_key || 'Cadastre sua chave nas configurações abaixo.'}</p>
-                {payment?.pix_key && (
-                  <button onClick={() => copyText(payment.pix_key || '', 'pixkey')} className="mt-3 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-bold text-slate-950">
-                    {copied === 'pixkey' ? 'Copiado!' : 'Copiar chave Pix'}
-                  </button>
-                )}
-              </div>
-
-              <p className={`mt-4 text-xs leading-relaxed ${muted}`}>
-                Nos Pix diretos testados na conta Mercado Pago conectada, o valor chegou integralmente. O PixWiki não cobra percentual por transação.
-              </p>
-            </div>
-
-            <div className={`rounded-3xl border p-5 sm:p-6 ${card}`}>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <span className="rounded-full bg-sky-500/10 px-2.5 py-1 text-[11px] font-bold text-sky-400">PIX LINK</span>
-                  <h3 className="mt-3 text-lg font-black">Profissional e com valor pronto</h3>
-                  <p className={`mt-1 text-sm leading-relaxed ${muted}`}>
-                    Ideal para WhatsApp, Instagram e vendas à distância. O cliente abre sua página e paga o valor já preenchido.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-semibold text-sky-400">PixWiki</p>
-                  <p className="text-lg font-black">R$ 0,00</p>
-                </div>
-              </div>
-
-              {!canLink ? (
-                <div className="mt-5 rounded-2xl border border-sky-500/20 bg-sky-500/10 p-4">
-                  <p className="text-sm font-bold text-sky-300">Disponível no Pix Link</p>
-                  <p className={`mt-1 text-xs ${muted}`}>Ative por R$ 29,90/mês e use seu endereço empresa.pix.wiki.</p>
-                  <button onClick={() => createInvoice('link')} className="mt-3 rounded-xl bg-sky-400 px-3 py-2 text-xs font-black text-slate-950">
-                    Ativar Pix Link
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
-                    <input
-                      value={shareValue}
-                      onChange={e => setShareValue(e.target.value)}
-                      placeholder="Valor, ex.: 149,90"
-                      inputMode="decimal"
-                      className={`w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-sky-400/60 ${input}`}
-                    />
-                    <button onClick={() => copyText(linkWithAmount, 'link')} className="rounded-xl bg-sky-400 px-4 py-3 text-sm font-black text-slate-950">
-                      {copied === 'link' ? 'Copiado!' : 'Copiar link'}
-                    </button>
-                  </div>
-                  <p className={`mt-3 break-all text-xs font-semibold ${isDark ? 'text-sky-300' : 'text-sky-700'}`}>{linkWithAmount || linkBase}</p>
-
-                  {amountNumber > 0 && (
-                    <div className={`mt-4 rounded-2xl border p-4 text-xs ${isDark ? 'border-white/10 bg-black/15' : 'border-black/10 bg-slate-50'}`}>
-                      <div className="flex justify-between gap-4"><span className={muted}>Venda</span><strong>{money(Math.round(amountNumber * 100))}</strong></div>
-                      <div className="mt-2 flex justify-between gap-4"><span className={muted}>Tarifa estimada Mercado Pago (~1%)</span><strong>{money(estimatedMpFee)}</strong></div>
-                      <div className="mt-2 flex justify-between gap-4"><span className={muted}>Tarifa PixWiki</span><strong className="text-emerald-400">R$ 0,00</strong></div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              <p className={`mt-4 text-xs leading-relaxed ${muted}`}>
-                A tarifa do Pix Link é cobrada diretamente pelo Mercado Pago. Nos pagamentos reais já medidos nesta conta, foi 1%. O histórico mostra a tarifa efetivamente retornada pelo provedor.
-              </p>
-            </div>
+            ))}
           </div>
         </section>
-
-        {plan?.pending_invoice && (
-          <section className={`mt-6 rounded-3xl border border-amber-500/25 bg-amber-500/10 p-5 sm:p-6`}>
-            <div className="grid gap-6 md:grid-cols-[180px_1fr] md:items-center">
-              <div className="mx-auto w-[180px] overflow-hidden rounded-2xl bg-white p-2">
-                {plan.pending_invoice.qr_code_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={plan.pending_invoice.qr_code_url} alt="QR Code da mensalidade PixWiki" className="h-auto w-full" />
-                ) : (
-                  <div className="flex h-40 items-center justify-center text-xs text-slate-500">QR Code indisponível</div>
-                )}
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-amber-300">Mensalidade pendente</p>
-                <h3 className="mt-1 text-xl font-black">{PLAN_COPY[plan.pending_invoice.target_plan].title} · {money(plan.pending_invoice.amount_cents)}</h3>
-                <p className={`mt-2 text-sm ${muted}`}>O PixWiki verifica o pagamento automaticamente. Esta cobrança expira em {dateTime(plan.pending_invoice.expires_at)}.</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {plan.pending_invoice.pix_code && (
-                    <button onClick={() => copyText(plan.pending_invoice?.pix_code || '', 'invoice')} className="rounded-xl bg-amber-300 px-4 py-2 text-xs font-black text-slate-950">
-                      {copied === 'invoice' ? 'Pix copiado!' : 'Copiar Pix'}
-                    </button>
-                  )}
-                  <button onClick={checkInvoice} disabled={!!planBusy} className={`rounded-xl border px-4 py-2 text-xs font-bold ${card} disabled:opacity-50`}>
-                    Conferir pagamento
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
 
         <section className="mt-6">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="text-lg font-black">Recebimentos</h2>
-              <p className={`text-sm ${muted}`}>Chave Pix e Pix Link no mesmo histórico.</p>
+              <p className={`text-sm ${muted}`}>A lista se atualiza automaticamente quando um novo Pix é identificado.</p>
             </div>
             <div className={`inline-flex rounded-xl border p-1 ${card}`}>
               {([
@@ -1214,28 +1208,24 @@ function DashboardContent() {
             {filteredReceipts.length === 0 ? (
               <div className="p-8 text-center">
                 <p className="font-semibold">Nenhum recebimento neste filtro.</p>
-                <p className={`mt-1 text-sm ${muted}`}>Quando um Pix for detectado, ele aparece aqui automaticamente.</p>
+                <p className={`mt-1 text-sm ${muted}`}>Quando um Pix for identificado, ele aparece aqui.</p>
               </div>
             ) : (
               <div className="divide-y divide-white/5">
                 {filteredReceipts.map(r => (
-                  <div key={r.id} className="grid gap-3 p-4 sm:grid-cols-[1fr_auto_auto] sm:items-center sm:p-5">
-                    <div className="min-w-0">
+                  <div key={r.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                    <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-lg font-black">{money(r.amount_cents)}</p>
+                        <p className="text-xl font-black">{money(r.net_amount_cents)}</p>
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${r.source === 'pixwiki_link' ? 'bg-sky-500/10 text-sky-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
                           {r.source === 'pixwiki_link' ? 'PIX LINK' : 'CHAVE PIX'}
                         </span>
                       </div>
-                      <p className={`mt-1 text-xs ${muted}`}>{dateTime(r.received_at)}{r.mp_payment_id ? ` · MP ${r.mp_payment_id}` : ''}</p>
+                      <p className={`mt-1 text-xs ${muted}`}>{dateTime(r.received_at)}</p>
                     </div>
                     <div className="text-left sm:text-right">
-                      <p className={`text-[10px] font-bold uppercase tracking-wide ${faint}`}>Tarifa Mercado Pago</p>
-                      <p className={`text-sm font-bold ${r.fee_amount_cents > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>{money(r.fee_amount_cents)}</p>
-                    </div>
-                    <div className="text-left sm:min-w-28 sm:text-right">
-                      <p className={`text-[10px] font-bold uppercase tracking-wide ${faint}`}>Líquido</p>
-                      <p className="text-sm font-black">{money(r.net_amount_cents)}</p>
+                      <p className={`text-[10px] font-bold uppercase tracking-wide ${faint}`}>Recebido</p>
+                      <p className="text-sm font-black text-emerald-400">Confirmado</p>
                     </div>
                   </div>
                 ))}
@@ -1244,251 +1234,169 @@ function DashboardContent() {
           </div>
         </section>
 
-        <section className="mt-8">
-          <div className="mb-3">
-            <h2 className="text-lg font-black">Planos PixWiki</h2>
-            <p className={`text-sm ${muted}`}>Três opções. Nenhuma cobra percentual das suas vendas para o PixWiki.</p>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-3">
-            {(['free', 'link', 'pro'] as PlanKey[]).map(key => {
-              const catalog = plan?.plans.find(p => p.plan === key);
-              const current = effectivePlan === key;
-              const disabledByPro = effectivePlan === 'pro' && key === 'link';
-              const price = catalog?.price_cents ?? (key === 'link' ? 2990 : key === 'pro' ? 9990 : 0);
-              return (
-                <div key={key} className={`relative rounded-3xl border p-6 ${key === 'link' ? 'border-sky-500/35' : isDark ? 'border-white/10' : 'border-black/10'} ${card}`}>
-                  {key === 'link' && <span className="absolute right-4 top-4 rounded-full bg-sky-400 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-slate-950">Mais popular</span>}
-                  <h3 className="text-xl font-black">{PLAN_COPY[key].title}</h3>
-                  <p className={`mt-1 min-h-10 text-sm ${muted}`}>{PLAN_COPY[key].subtitle}</p>
-                  <div className="mt-5 flex items-end gap-1">
-                    <span className="text-3xl font-black">{price === 0 ? 'Grátis' : money(price)}</span>
-                    {price > 0 && <span className={`pb-1 text-xs ${muted}`}>/mês</span>}
-                  </div>
-                  <div className="mt-5 space-y-2">
-                    {PLAN_COPY[key].items.map(item => <p key={item} className={`text-sm ${muted}`}>✓ {item}</p>)}
-                  </div>
-
-                  <div className="mt-6">
-                    {key === 'free' ? (
-                      <button disabled className={`w-full rounded-xl border px-4 py-3 text-sm font-bold ${card} opacity-70`}>
-                        {current ? 'Seu plano atual' : 'Plano gratuito'}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => createInvoice(key)}
-                        disabled={!!planBusy || disabledByPro || !!plan?.pending_invoice}
-                        className={`w-full rounded-xl px-4 py-3 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-45 ${key === 'pro' ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' : 'bg-sky-400 text-slate-950 hover:bg-sky-300'}`}
-                      >
-                        {planBusy === key ? 'Gerando...' : current ? `Renovar ${PLAN_COPY[key].title}` : disabledByPro ? 'Disponível após o Pro' : `Ativar ${PLAN_COPY[key].title}`}
-                      </button>
-                    )}
-                  </div>
-
-                  {current && plan?.subscription?.current_period_end && key !== 'free' && (
-                    <p className={`mt-3 text-center text-xs ${muted}`}>Ativo até {dateOnly(plan.subscription.current_period_end)}</p>
+        {plan?.pending_invoice && (
+          <section className="mt-5 rounded-3xl border border-amber-500/25 bg-amber-500/10 p-5 sm:p-6">
+            <div className="grid gap-6 md:grid-cols-[180px_1fr] md:items-center">
+              <div className="mx-auto w-[180px] overflow-hidden rounded-2xl bg-white p-2">
+                {plan.pending_invoice.qr_code_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={plan.pending_invoice.qr_code_url} alt="QR Code da mensalidade PixWiki" className="h-auto w-full" />
+                ) : (
+                  <div className="flex h-40 items-center justify-center text-xs text-slate-500">QR Code indisponível</div>
+                )}
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-300">Pagamento do plano pendente</p>
+                <h3 className="mt-1 text-xl font-black">{PLAN_COPY[plan.pending_invoice.target_plan].title} · {money(plan.pending_invoice.amount_cents)}</h3>
+                <p className={`mt-2 text-sm ${muted}`}>O PixWiki verifica esse pagamento automaticamente. Expira em {dateTime(plan.pending_invoice.expires_at)}.</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {plan.pending_invoice.pix_code && (
+                    <button onClick={() => copyText(plan.pending_invoice?.pix_code || '', 'invoice')} className="rounded-xl bg-amber-300 px-4 py-2 text-xs font-black text-slate-950">
+                      {copied === 'invoice' ? 'Pix copiado!' : 'Copiar Pix'}
+                    </button>
                   )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="mt-8 grid gap-4 lg:grid-cols-2">
-          <div className={`rounded-3xl border p-5 sm:p-6 ${card}`}>
-            <h2 className="text-lg font-black">Notificações</h2>
-            <p className={`mt-1 text-sm ${muted}`}>E-mail e Push estão incluídos desde o Pix Grátis.</p>
-
-            <div className="mt-5 space-y-3">
-              <div className={`rounded-2xl border p-4 ${isDark ? 'border-white/10 bg-white/[0.025]' : 'border-black/10 bg-slate-50'}`}>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-bold">E-mail</p>
-                    <p className={`mt-1 text-xs ${muted}`}>Aviso para {emailDraft || authEmail || 'seu e-mail'}.</p>
-                  </div>
-                  <button
-                    onClick={() => toggleNotification('email_enabled')}
-                    className={`rounded-full px-3 py-1.5 text-xs font-bold ${notifications?.email_enabled !== false ? 'bg-emerald-500 text-slate-950' : isDark ? 'bg-white/10 text-white/50' : 'bg-slate-200 text-slate-500'}`}
-                  >
-                    {notifications?.email_enabled !== false ? 'Ativo' : 'Pausado'}
+                  <button onClick={checkInvoice} disabled={!!planBusy} className={`rounded-xl border px-4 py-2 text-xs font-bold ${card} disabled:opacity-50`}>
+                    Conferir pagamento
                   </button>
                 </div>
               </div>
+            </div>
+          </section>
+        )}
 
-              {notifications?.push_enabled !== false ? (
-                <div>
-                  {userId && <PixWikiPush userId={userId} companyId={company.id} dark={dark} />}
-                  <div className="mt-2 flex justify-end">
-                    <button
-                      onClick={() => toggleNotification('push_enabled')}
-                      className={`rounded-full border px-3 py-1.5 text-[11px] font-bold ${card}`}
-                    >
-                      Pausar Push
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className={`rounded-2xl border p-4 ${isDark ? 'border-white/10 bg-white/[0.025]' : 'border-black/10 bg-slate-50'}`}>
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-bold">Push PixWiki</p>
-                      <p className={`mt-1 text-xs ${muted}`}>Canal pausado para esta empresa.</p>
-                    </div>
-                    <button
-                      onClick={() => toggleNotification('push_enabled')}
-                      className="rounded-full bg-emerald-500 px-3 py-1.5 text-xs font-bold text-slate-950"
-                    >
-                      Ativar
-                    </button>
-                  </div>
-                </div>
-              )}
+        <div className="mt-6 space-y-3">
+          <details className={`group rounded-3xl border ${card}`}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 sm:p-6">
+              <div><h2 className="text-lg font-black">Cobrar e compartilhar</h2><p className={`mt-1 text-sm ${muted}`}>Copie sua chave ou crie um Pix Link quando precisar.</p></div>
+              <span className={`text-2xl transition group-open:rotate-45 ${faint}`}>+</span>
+            </summary>
+            <div className="grid gap-4 border-t border-white/5 p-5 sm:p-6 lg:grid-cols-2">
+              <div className={`rounded-2xl border p-5 ${isDark ? 'border-white/10 bg-black/15' : 'border-black/10 bg-slate-50'}`}>
+                <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-400">CHAVE PIX</span>
+                <h3 className="mt-3 text-base font-black">Cobrar pela sua chave</h3>
+                <p className={`mt-1 text-sm ${muted}`}>Ideal para balcão e clientes recorrentes.</p>
+                <p className={`mt-5 text-[11px] font-bold uppercase tracking-wide ${faint}`}>Sua chave</p>
+                <p className="mt-1 break-all text-sm font-semibold">{payment?.pix_key || 'Cadastre sua chave nos dados da conta.'}</p>
+                {payment?.pix_key && <button onClick={() => copyText(payment.pix_key || '', 'pixkey')} className="mt-3 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-bold text-slate-950">{copied === 'pixkey' ? 'Copiado!' : 'Copiar chave Pix'}</button>}
+              </div>
 
-              <div className={`rounded-2xl border p-4 ${effectivePlan === 'pro' ? 'border-emerald-500/20 bg-emerald-500/5' : isDark ? 'border-white/10 bg-white/[0.025]' : 'border-black/10 bg-slate-50'}`}>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-bold">WhatsApp</p>
-                    <p className={`mt-1 text-xs leading-relaxed ${muted}`}>
-                      {effectivePlan === 'pro'
-                        ? '1 número de aviso por empresa. Se a janela estiver fechada, o PixWiki usa o template de confirmação com botão para reativar os avisos.'
-                        : 'Incluído no Pix Pro, com 1 número de aviso por empresa/Pix configurado.'}
-                    </p>
-                  </div>
-
-                  {effectivePlan === 'pro' && (
-                    <button
-                      onClick={() => toggleNotification('whatsapp_enabled')}
-                      className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${notifications?.whatsapp_enabled === true ? 'bg-emerald-500 text-slate-950' : isDark ? 'bg-white/10 text-white/50' : 'bg-slate-200 text-slate-500'}`}
-                    >
-                      {notifications?.whatsapp_enabled === true ? 'Ativo' : 'Pausado'}
-                    </button>
-                  )}
-                </div>
-
-                {effectivePlan === 'pro' ? (
-                  <div className="mt-4">
-                    <label className="block">
-                      <span className={`text-[11px] font-bold uppercase tracking-wide ${faint}`}>Número que recebe os avisos</span>
-                      <div className="mt-1 flex gap-2">
-                        <input
-                          value={whatsappDraft}
-                          onChange={e => setWhatsappDraft(normalizePhoneInput(e.target.value))}
-                          inputMode="tel"
-                          placeholder="11999999999"
-                          className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`}
-                        />
-                        <button
-                          type="button"
-                          onClick={saveWhatsappNumber}
-                          className="rounded-xl bg-emerald-500 px-4 py-3 text-xs font-black text-slate-950"
-                        >
-                          Salvar
-                        </button>
-                      </div>
-                    </label>
-                    <p className={`mt-2 text-[11px] leading-relaxed ${muted}`}>
-                      Informe DDD + número. O envio usa a mesma infraestrutura WhatsApp já utilizada pelo minhAi.
-                    </p>
+              <div className={`rounded-2xl border p-5 ${isDark ? 'border-white/10 bg-black/15' : 'border-black/10 bg-slate-50'}`}>
+                <span className="rounded-full bg-sky-500/10 px-2.5 py-1 text-[11px] font-bold text-sky-400">PIX LINK</span>
+                <h3 className="mt-3 text-base font-black">Enviar uma cobrança pronta</h3>
+                <p className={`mt-1 text-sm ${muted}`}>Página com seu nome, QR Code e valor preenchido.</p>
+                {!canLink ? (
+                  <div className="mt-5 rounded-xl border border-sky-500/20 bg-sky-500/10 p-4">
+                    <p className="text-sm font-bold text-sky-300">Disponível no Pix Link e Pix Pro</p>
+                    <button onClick={() => createInvoice('link')} className="mt-3 rounded-xl bg-sky-400 px-3 py-2 text-xs font-black text-slate-950">Ativar Pix Link</button>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => createInvoice('pro')}
-                    disabled={!!planBusy || !!plan?.pending_invoice}
-                    className="mt-4 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-black text-slate-950 disabled:opacity-50"
-                  >
-                    Ativar Pix Pro
-                  </button>
+                  <>
+                    <div className="mt-5 grid gap-2 sm:grid-cols-[1fr_auto]">
+                      <input value={shareValue} onChange={e => setShareValue(e.target.value)} placeholder="Valor, ex.: 149,90" inputMode="decimal" className={`w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-sky-400/60 ${input}`} />
+                      <button onClick={() => copyText(linkWithAmount, 'link')} className="rounded-xl bg-sky-400 px-4 py-3 text-sm font-black text-slate-950">{copied === 'link' ? 'Copiado!' : 'Copiar link'}</button>
+                    </div>
+                    <p className={`mt-3 break-all text-xs font-semibold ${isDark ? 'text-sky-300' : 'text-sky-700'}`}>{linkWithAmount || linkBase}</p>
+                  </>
+                )}
+                <p className={`mt-4 text-xs leading-relaxed ${muted}`}>No histórico, o valor exibido já é o que efetivamente entrou na sua conta.</p>
+              </div>
+            </div>
+          </details>
+
+          <details className={`group rounded-3xl border ${card}`}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 sm:p-6">
+              <div><h2 className="text-lg font-black">Planos PixWiki</h2><p className={`mt-1 text-sm ${muted}`}>Veja ou altere seu plano quando quiser.</p></div>
+              <span className={`text-2xl transition group-open:rotate-45 ${faint}`}>+</span>
+            </summary>
+            <div className="grid gap-4 border-t border-white/5 p-5 sm:p-6 lg:grid-cols-3">
+              {(['free', 'link', 'pro'] as PlanKey[]).map(key => {
+                const catalog = plan?.plans.find(p => p.plan === key);
+                const current = effectivePlan === key;
+                const disabledByPro = effectivePlan === 'pro' && key === 'link';
+                const price = catalog?.price_cents ?? (key === 'link' ? 2990 : key === 'pro' ? 9990 : 0);
+                return (
+                  <div key={key} className={`relative rounded-2xl border p-5 ${key === 'link' ? 'border-sky-500/35' : isDark ? 'border-white/10' : 'border-black/10'}`}>
+                    {key === 'link' && <span className="absolute right-4 top-4 rounded-full bg-sky-400 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-slate-950">Mais popular</span>}
+                    <h3 className="text-lg font-black">{PLAN_COPY[key].title}</h3>
+                    <p className={`mt-1 min-h-10 text-xs ${muted}`}>{PLAN_COPY[key].subtitle}</p>
+                    <div className="mt-4 flex items-end gap-1"><span className="text-2xl font-black">{price === 0 ? 'Grátis' : money(price)}</span>{price > 0 && <span className={`pb-1 text-xs ${muted}`}>/mês</span>}</div>
+                    <div className="mt-4 space-y-1.5">{PLAN_COPY[key].items.map(item => <p key={item} className={`text-xs ${muted}`}>✓ {item}</p>)}</div>
+                    <div className="mt-5">
+                      {key === 'free' ? (
+                        <button disabled className={`w-full rounded-xl border px-3 py-2.5 text-xs font-bold ${card} opacity-70`}>{current ? 'Seu plano atual' : 'Plano gratuito'}</button>
+                      ) : (
+                        <button onClick={() => createInvoice(key)} disabled={!!planBusy || disabledByPro || !!plan?.pending_invoice} className={`w-full rounded-xl px-3 py-2.5 text-xs font-black disabled:opacity-45 ${key === 'pro' ? 'bg-emerald-500 text-slate-950' : 'bg-sky-400 text-slate-950'}`}>
+                          {planBusy === key ? 'Gerando…' : current ? `Renovar ${PLAN_COPY[key].title}` : disabledByPro ? 'Disponível após o Pro' : `Ativar ${PLAN_COPY[key].title}`}
+                        </button>
+                      )}
+                    </div>
+                    {current && plan?.subscription?.current_period_end && key !== 'free' && <p className={`mt-3 text-center text-[11px] ${muted}`}>Ativo até {dateOnly(plan.subscription.current_period_end)}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </details>
+
+          <details className={`group rounded-3xl border ${card}`}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 sm:p-6">
+              <div><h2 className="text-lg font-black">Avisos de recebimento</h2><p className={`mt-1 text-sm ${muted}`}>Escolha como quer ser avisado quando um Pix chegar.</p></div>
+              <span className={`text-2xl transition group-open:rotate-45 ${faint}`}>+</span>
+            </summary>
+            <div className="grid gap-4 border-t border-white/5 p-5 sm:p-6 lg:grid-cols-2">
+              <div className="space-y-3">
+                <div className={`rounded-2xl border p-4 ${isDark ? 'border-white/10 bg-white/[0.025]' : 'border-black/10 bg-slate-50'}`}>
+                  <div className="flex items-center justify-between gap-4"><div><p className="text-sm font-bold">E-mail</p><p className={`mt-1 text-xs ${muted}`}>Avisos para {emailDraft || authEmail || 'seu e-mail'}.</p></div><button onClick={() => toggleNotification('email_enabled')} className={`rounded-full px-3 py-1.5 text-xs font-bold ${notifications?.email_enabled !== false ? 'bg-emerald-500 text-slate-950' : isDark ? 'bg-white/10 text-white/50' : 'bg-slate-200 text-slate-500'}`}>{notifications?.email_enabled !== false ? 'Ativo' : 'Pausado'}</button></div>
+                </div>
+                {notifications?.push_enabled !== false ? (
+                  <div>{userId && <PixWikiPush userId={userId} companyId={company.id} dark={dark} />}<div className="mt-2 flex justify-end"><button onClick={() => toggleNotification('push_enabled')} className={`rounded-full border px-3 py-1.5 text-[11px] font-bold ${card}`}>Pausar Push</button></div></div>
+                ) : (
+                  <div className={`rounded-2xl border p-4 ${isDark ? 'border-white/10 bg-white/[0.025]' : 'border-black/10 bg-slate-50'}`}><div className="flex items-center justify-between gap-4"><div><p className="text-sm font-bold">Push PixWiki</p><p className={`mt-1 text-xs ${muted}`}>Avisos no navegador estão pausados.</p></div><button onClick={() => toggleNotification('push_enabled')} className="rounded-full bg-emerald-500 px-3 py-1.5 text-xs font-bold text-slate-950">Ativar</button></div></div>
+                )}
+              </div>
+              <div className={`rounded-2xl border p-4 ${effectivePlan === 'pro' ? 'border-emerald-500/20 bg-emerald-500/5' : isDark ? 'border-white/10 bg-white/[0.025]' : 'border-black/10 bg-slate-50'}`}>
+                <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-bold">WhatsApp</p><p className={`mt-1 text-xs leading-relaxed ${muted}`}>{effectivePlan === 'pro' ? 'Escolha um número por empresa para receber seus avisos.' : 'Avisos por WhatsApp estão incluídos no Pix Pro.'}</p></div>{effectivePlan === 'pro' && <button onClick={() => toggleNotification('whatsapp_enabled')} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${notifications?.whatsapp_enabled === true ? 'bg-emerald-500 text-slate-950' : isDark ? 'bg-white/10 text-white/50' : 'bg-slate-200 text-slate-500'}`}>{notifications?.whatsapp_enabled === true ? 'Ativo' : 'Pausado'}</button>}</div>
+                {effectivePlan === 'pro' ? (
+                  <div className="mt-4"><label className="block"><span className={`text-[11px] font-bold uppercase tracking-wide ${faint}`}>Número que recebe os avisos</span><div className="mt-1 flex gap-2"><input value={whatsappDraft} onChange={e => setWhatsappDraft(normalizePhoneInput(e.target.value))} inputMode="tel" placeholder="11999999999" className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`} /><button type="button" onClick={saveWhatsappNumber} className="rounded-xl bg-emerald-500 px-4 py-3 text-xs font-black text-slate-950">Salvar</button></div></label></div>
+                ) : (
+                  <button type="button" onClick={() => createInvoice('pro')} disabled={!!planBusy || !!plan?.pending_invoice} className="mt-4 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-black text-slate-950 disabled:opacity-50">Conhecer Pix Pro</button>
                 )}
               </div>
             </div>
-          </div>
+          </details>
 
-          <div className={`rounded-3xl border p-5 sm:p-6 ${card}`}>
-            <h2 className="text-lg font-black">Configurações</h2>
-            <p className={`mt-1 text-sm ${muted}`}>Dados usados no seu painel e nas notificações.</p>
-
-            <div className="mt-5 space-y-4">
-              <label className="block">
-                <span className={`text-xs font-bold ${muted}`}>Nome da empresa</span>
-                <input value={nameDraft} onChange={e => setNameDraft(e.target.value)} className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`} />
-              </label>
-
-              <label className="block">
-                <span className={`text-xs font-bold ${muted}`}>Logo (URL)</span>
-                <input value={logoDraft} onChange={e => setLogoDraft(e.target.value)} placeholder="https://..." className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`} />
-              </label>
-
-              <label className="block">
-                <span className={`text-xs font-bold ${muted}`}>E-mail das notificações</span>
-                <input type="email" value={emailDraft} onChange={e => setEmailDraft(e.target.value)} className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`} />
-              </label>
-
-              <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
-                <label className="block">
-                  <span className={`text-xs font-bold ${muted}`}>Tipo da chave</span>
-                  <select value={pixTypeDraft} onChange={e => setPixTypeDraft(e.target.value)} className={`mt-1 w-full rounded-xl border px-3 py-3 text-sm outline-none ${input}`}>
-                    <option value="cpf">CPF</option>
-                    <option value="cnpj">CNPJ</option>
-                    <option value="email">E-mail</option>
-                    <option value="phone">Telefone</option>
-                    <option value="random">Aleatória</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className={`text-xs font-bold ${muted}`}>Chave Pix Mercado Pago</span>
-                  <input value={pixKeyDraft} onChange={e => setPixKeyDraft(e.target.value)} className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`} />
-                </label>
-              </div>
-
-              <button onClick={saveSettings} disabled={savingSettings} className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50">
-                {savingSettings ? 'Salvando...' : 'Salvar configurações'}
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section className={`mt-4 rounded-3xl border p-5 sm:p-6 ${card}`}>
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-xl">
-              <h2 className="text-lg font-black">Seu endereço PixWiki</h2>
-              <p className={`mt-1 text-sm ${muted}`}>
-                No Pix Link e Pix Pro, escolha o endereço profissional que você envia aos clientes.
-              </p>
-            </div>
-            <div className="w-full max-w-xl">
-              <div className="flex gap-2">
-                <div className="relative min-w-0 flex-1">
-                  <input
-                    value={slugDraft}
-                    onChange={e => setSlugDraft(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                    disabled={!canLink}
-                    className={`w-full rounded-xl border px-4 py-3 pr-24 text-sm outline-none focus:border-sky-400/60 disabled:opacity-50 ${input}`}
-                  />
-                  <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs ${faint}`}>.pix.wiki</span>
+          <details className={`group rounded-3xl border ${card}`}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 sm:p-6">
+              <div><h2 className="text-lg font-black">Dados e conexão</h2><p className={`mt-1 text-sm ${muted}`}>Nome, chave Pix, endereço e conta Mercado Pago desta empresa.</p></div>
+              <span className={`text-2xl transition group-open:rotate-45 ${faint}`}>+</span>
+            </summary>
+            <div className="border-t border-white/5 p-5 sm:p-6">
+              <div className="grid gap-5 lg:grid-cols-2">
+                <div className="space-y-4">
+                  <label className="block"><span className={`text-xs font-bold ${muted}`}>Nome do recebedor</span><input value={nameDraft} onChange={e => setNameDraft(e.target.value)} className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`} /></label>
+                  <label className="block"><span className={`text-xs font-bold ${muted}`}>Logo (URL)</span><input value={logoDraft} onChange={e => setLogoDraft(e.target.value)} placeholder="https://..." className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`} /></label>
+                  <label className="block"><span className={`text-xs font-bold ${muted}`}>E-mail dos avisos</span><input type="email" value={emailDraft} onChange={e => setEmailDraft(e.target.value)} className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`} /></label>
+                  <div className="grid gap-3 sm:grid-cols-[160px_1fr]"><label className="block"><span className={`text-xs font-bold ${muted}`}>Tipo da chave</span><select value={pixTypeDraft} onChange={e => setPixTypeDraft(e.target.value)} className={`mt-1 w-full rounded-xl border px-3 py-3 text-sm outline-none ${input}`}><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="phone">Telefone</option><option value="random">Aleatória</option></select></label><label className="block"><span className={`text-xs font-bold ${muted}`}>Chave Pix Mercado Pago</span><input value={pixKeyDraft} onChange={e => setPixKeyDraft(e.target.value)} className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`} /></label></div>
+                  <button onClick={saveSettings} disabled={savingSettings} className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50">{savingSettings ? 'Salvando…' : 'Salvar dados'}</button>
                 </div>
-                <button onClick={claimSlug} disabled={!canLink || savingSlug} className="rounded-xl bg-sky-400 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-45">
-                  {savingSlug ? 'Salvando...' : 'Salvar'}
-                </button>
-              </div>
-              {!canLink && <p className={`mt-2 text-xs ${muted}`}>Ative o Pix Link para publicar o subdomínio.</p>}
-              {canLink && <p className={`mt-2 break-all text-xs text-sky-400`}>https://{company.slug}.pix.wiki</p>}
-            </div>
-          </div>
-        </section>
 
-        <section className={`mt-4 rounded-3xl border p-5 sm:p-6 ${card}`}>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-black">Mercado Pago</h2>
-              <p className={`mt-1 text-sm ${muted}`}>
-                {mpConnected ? 'Conectado para esta empresa. Seus recebimentos são conciliados automaticamente.' : companyPlanAccess ? 'Ainda não conectado para esta empresa.' : 'Conexão pausada enquanto esta empresa estiver fora do Pix Pro.'}
-              </p>
+                <div className="space-y-4">
+                  <div className={`rounded-2xl border p-4 ${isDark ? 'border-white/10 bg-black/15' : 'border-black/10 bg-slate-50'}`}>
+                    <p className="text-sm font-black">Seu endereço PixWiki</p>
+                    <p className={`mt-1 text-xs ${muted}`}>No Pix Link e Pix Pro, escolha o endereço que envia aos clientes.</p>
+                    <div className="mt-3 flex gap-2"><div className="relative min-w-0 flex-1"><input value={slugDraft} onChange={e => setSlugDraft(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} disabled={!canLink} className={`w-full rounded-xl border px-4 py-3 pr-24 text-sm outline-none disabled:opacity-50 ${input}`} /><span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs ${faint}`}>.pix.wiki</span></div><button onClick={claimSlug} disabled={!canLink || savingSlug} className="rounded-xl bg-sky-400 px-4 py-3 text-xs font-black text-slate-950 disabled:opacity-45">{savingSlug ? 'Salvando…' : 'Salvar'}</button></div>
+                    {!canLink && <p className={`mt-2 text-xs ${muted}`}>Disponível no Pix Link e Pix Pro.</p>}
+                    {canLink && <p className="mt-2 break-all text-xs text-sky-400">https://{company.slug}.pix.wiki</p>}
+                  </div>
+
+                  <div className={`rounded-2xl border p-4 ${isDark ? 'border-white/10 bg-black/15' : 'border-black/10 bg-slate-50'}`}>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-black">Mercado Pago</p><p className={`mt-1 text-xs ${muted}`}>{mpConnected ? 'Conectado a esta empresa. Os novos Pix são acompanhados automaticamente.' : 'Ainda não conectado a esta empresa.'}</p></div><button disabled={!companyPlanAccess} onClick={() => connectMercadoPago(company.id, '/dashboard')} className={`rounded-xl px-4 py-2.5 text-xs font-black disabled:opacity-45 ${mpConnected ? isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-800' : 'bg-[#009ee3] text-white'}`}>{mpConnected ? 'Trocar conta' : 'Conectar'}</button></div>
+                    {mpConnected && <button type="button" onClick={disconnectMercadoPago} className="mt-3 text-xs font-bold text-red-400 hover:underline">Desconectar do PixWiki</button>}
+                  </div>
+                </div>
+              </div>
             </div>
-            <button disabled={!companyPlanAccess} onClick={() => connectMercadoPago(company.id, '/dashboard')} className={`rounded-xl px-4 py-3 text-sm font-black disabled:opacity-45 ${mpConnected ? isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-800' : 'bg-[#009ee3] text-white'}`}>
-              {mpConnected ? 'Reconectar Mercado Pago' : 'Conectar Mercado Pago'}
-            </button>
-          </div>
-        </section>
+          </details>
+        </div>
 
         <footer className={`py-8 text-center text-xs ${faint}`}>
           PixWiki · Seu dinheiro cai direto na sua conta · Tecnologia minhAi / BigCorps

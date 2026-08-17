@@ -67,7 +67,7 @@ export default function PixWikiDashboardNav() {
           className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition ${apiActive ? active : inactive}`}
         >
           <ApiIcon />
-          API
+          Integrações
           <span className={`hidden rounded-full px-1.5 py-0.5 text-[9px] font-black sm:inline ${apiActive ? 'bg-slate-950/15' : 'bg-emerald-500/15 text-emerald-300'}`}>
             PRO
           </span>

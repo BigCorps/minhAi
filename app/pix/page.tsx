@@ -1,121 +1,127 @@
 'use client';
 
-// app/pix/page.tsx — Landing/onboarding do Pix Wiki
-// Tema: controlado via state (mesmo padrão da PixLinkPage),
-// aplicado inline em cada elemento — sem dark: do Tailwind,
-// sem dependência do ThemeProvider do layout.
-//
-// Se o visitante já está logado e já tem uma empresa Pix Wiki, pula o
-// formulário de lead e mostra 2 atalhos: cobrar agora (com valor) ou
-// acessar o dashboard.
-
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { createClient } from '@/lib/supabase-browser';
-import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import PixLinkPage from '@/components/pix-link/PixLinkPage';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase-browser';
 
-// ─── Paletas de cor ───────────────────────────────────────────────────────────
-const D = {
-  pageBg:       'bg-[#020617]',
-  cardBg:       'bg-[#020617]',
-  border:       'border-white/10',
-  borderLight:  'border-white/6',
-  text:         'text-white',
-  textMuted:    'text-white/60',
-  textFaint:    'text-white/40',
-  inputBg:      'bg-white/5',
-  inputBorder:  'border-white/10',
-  inputText:    'text-white',
-  inputPh:      'placeholder-white/25',
-  divider:      'bg-white/8',
-  toggleBg:     'bg-white/8 border-white/10 text-white/50 hover:bg-white/12',
-  summaryText:  'text-white/35 hover:text-white/60',
-  detailBorder: 'border-white/6',
-  badgeBg:      'bg-white/5 border-white/6 text-white/40',
-  footerText:   'text-white/25',
-  footerLink:   'text-white/40 hover:text-white/70',
-};
+type Step = 'landing' | 'auth' | 'creating';
+type PixKeyType = 'cpf' | 'cnpj' | 'email' | 'phone' | 'random' | '';
 
-const L = {
-  pageBg:       'bg-white',
-  cardBg:       'bg-white',
-  border:       'border-black/8',
-  borderLight:  'border-black/6',
-  text:         'text-gray-900',
-  textMuted:    'text-gray-900',
-  textFaint:    'text-black/70',
-  inputBg:      'bg-black/5',
-  inputBorder:  'border-black/10',
-  inputText:    'text-gray-900',
-  inputPh:      'placeholder-black/25',
-  divider:      'bg-black/8',
-  toggleBg:     'bg-black/8 border-black/10 text-black/50 hover:bg-black/12',
-  summaryText:  'text-black/35 hover:text-black/60',
-  detailBorder: 'border-black/6',
-  badgeBg:      'bg-black/5 border-black/6 text-black/40',
-  footerText:   'text-black/30',
-  footerLink:   'text-black/40 hover:text-black/70',
-};
-
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-type Step = 'form' | 'preview' | 'auth' | 'creating' | 'logged-in';
-
-interface FormData {
-  nomeEmpresa: string;
-  documento: string;
-  documentoTipo: 'cpf' | 'cnpj' | '';
+interface SignupForm {
+  nomeRecebedor: string;
   chavePix: string;
-  chavePixTipo: 'cpf' | 'cnpj' | 'email' | 'telefone' | 'aleatoria' | '';
-  slug: string;
-  logoUrl: string;
-  whatsapp: string;
+  chavePixTipo: PixKeyType;
   emailContato: string;
+  whatsapp: string;
+  logoUrl: string;
 }
 
-interface LoggedInCompany {
-  slug: string;
+interface LoggedCompany {
+  id: string;
   name: string;
+  slug: string;
 }
 
-type SlugStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
+const PLANS = [
+  {
+    key: 'free',
+    name: 'Pix Grátis',
+    price: 'R$ 0',
+    suffix: '',
+    description: 'Para acompanhar sua chave Pix sem pagar mensalidade.',
+    features: ['Confirmação automática', 'Painel em tempo real', 'Histórico de recebimentos', 'Avisos por e-mail e Push'],
+    highlight: false,
+  },
+  {
+    key: 'link',
+    name: 'Pix Link',
+    price: 'R$ 29,90',
+    suffix: '/mês',
+    description: 'Para cobrar com um endereço profissional e valor pronto.',
+    features: ['Tudo do Pix Grátis', 'seunome.pix.wiki', 'Link com valor preenchido', 'QR Code', 'Logo e identidade do recebedor'],
+    highlight: true,
+  },
+  {
+    key: 'pro',
+    name: 'Pix Pro',
+    price: 'R$ 99,90',
+    suffix: '/mês',
+    description: 'Para quem recebe mais e precisa organizar toda a operação.',
+    features: ['Tudo do Pix Link', 'Avisos por WhatsApp', 'Várias empresas na mesma conta', 'Relatórios e exportação', 'Integrações com outros sistemas'],
+    highlight: false,
+  },
+] as const;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function slugify(v: string) {
-  return v.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+const FAQ = [
+  {
+    q: 'O dinheiro fica no PixWiki?',
+    a: 'Não. O dinheiro continua entrando diretamente na sua conta Mercado Pago. O PixWiki acompanha os recebimentos e organiza as confirmações para você.',
+  },
+  {
+    q: 'O PixWiki cobra uma porcentagem de cada Pix?',
+    a: 'Não. O PixWiki não cobra percentual por transação. Se o Mercado Pago aplicar alguma tarifa ao tipo de recebimento utilizado, o painel mostra diretamente o valor que efetivamente entrou.',
+  },
+  {
+    q: 'Posso usar como pessoa física?',
+    a: 'Sim. Você pode cadastrar o nome do recebedor e uma chave Pix da sua conta Mercado Pago, seja para uso pessoal, como autônomo, MEI ou empresa.',
+  },
+  {
+    q: 'O cliente precisa instalar alguma coisa?',
+    a: 'Não. Na Chave Pix ele paga normalmente pelo banco. No Pix Link, basta abrir a página, escanear o QR Code ou copiar o código Pix.',
+  },
+  {
+    q: 'Como eu sei quando o Pix chegou?',
+    a: 'O painel atualiza os recebimentos automaticamente. No Pix Grátis você também pode receber avisos por e-mail e Push. No Pix Pro, também pelo WhatsApp.',
+  },
+  {
+    q: 'Qual a diferença entre Chave Pix e Pix Link?',
+    a: 'Na Chave Pix o cliente informa a chave e o valor no banco. No Pix Link você envia uma página profissional com seu nome, QR Code e, se quiser, o valor já preenchido.',
+  },
+] as const;
+
+function slugify(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 28);
 }
 
-function detectDocumentoTipo(v: string): 'cpf' | 'cnpj' | '' {
-  const d = v.replace(/\D/g, '');
-  return d.length === 11 ? 'cpf' : d.length === 14 ? 'cnpj' : '';
+function makeInternalSlug(name: string) {
+  const base = slugify(name) || 'pixwiki';
+  const suffix = Math.random().toString(36).slice(2, 7);
+  return `${base}-${suffix}`.slice(0, 40);
 }
 
-function detectChavePixTipo(v: string): 'cpf' | 'cnpj' | 'email' | 'telefone' | 'aleatoria' | '' {
-  const d = v.replace(/\D/g, '');
-  if (v.includes('@')) return 'email';
-  if (d.length === 11 && !v.includes('+') && !v.startsWith('(')) return 'cpf';
-  if (d.length === 14) return 'cnpj';
-  if (v.startsWith('+') || (d.length >= 10 && v.includes('('))) return 'telefone';
-  if (v.length === 36 && v.split('-').length === 5) return 'aleatoria';
+function detectPixKeyType(value: string): PixKeyType {
+  const clean = value.trim();
+  const digits = clean.replace(/\D/g, '');
+  if (clean.includes('@')) return 'email';
+  if (/^[0-9a-fA-F-]{36}$/.test(clean)) return 'random';
+  if (digits.length === 14) return 'cnpj';
+  if (digits.length === 11 && !clean.startsWith('+') && !clean.includes('(')) return 'cpf';
+  if (clean.startsWith('+') || clean.includes('(') || (digits.length >= 10 && digits.length <= 13)) return 'phone';
   return '';
 }
 
-// ─── Sub-componentes ──────────────────────────────────────────────────────────
 function ThemeToggle({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
-  const p = dark ? D : L;
   return (
     <button
+      type="button"
       onClick={onToggle}
-      aria-label="Alternar tema"
-      className={`fixed top-4 right-4 z-50 w-9 h-9 rounded-full flex items-center justify-center border transition-colors ${p.toggleBg}`}
+      aria-label={dark ? 'Usar tema claro' : 'Usar tema escuro'}
+      title={dark ? 'Tema claro' : 'Tema escuro'}
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 backdrop-blur transition hover:bg-white/10"
     >
       {dark ? (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
       ) : (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
         </svg>
       )}
@@ -123,635 +129,424 @@ function ThemeToggle({ dark, onToggle }: { dark: boolean; onToggle: () => void }
   );
 }
 
-function Logos() {
-  return (
-    <div className="flex items-center justify-center gap-3 mb-6">
-
-      <Image src="/brands/pix/pixwiki.png" alt="Pix Wiki" width={90} height={36} className="object-contain h-9 w-auto" />
-
-      <span className="text-gray-300 text-lg font-light select-none">|</span>
-
-      <Image src="/logo-circle.png" alt="minhAi" width={36} height={36} className="rounded-xl" />
-    </div>
-  );
-}
-
-function Footer({ dark }: { dark: boolean }) {
-  const p = dark ? D : L;
-  return (
-    <footer className={`mt-6 text-center flex flex-col gap-1 ${p.footerText} text-xs`}>
-      <p>
-        <a href="https://pix.wiki" className={`transition-colors ${p.footerLink}`}>Pix.Wiki</a>
-        {' '}|{' '}
-        Desenvolvido por{' '}
-        <a href="https://bigcorps.com.br" className={`transition-colors ${p.footerLink}`}>BigCorps</a>
-        {' '}| Tecnologia{' '}
-        <a href="https://minhai.app" className={`transition-colors ${p.footerLink}`}>minhAi</a>
-      </p>
-    </footer>
-  );
-}
-
-function Input({ value, onChange, placeholder, type = 'text', dark }: {
-  value: string; onChange: (v: string) => void;
-  placeholder?: string; type?: string; dark: boolean;
-}) {
-  const p = dark ? D : L;
-  return (
-    <input
-      type={type} value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      className={`w-full px-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 transition-colors ${p.inputBg} ${p.inputBorder} ${p.inputText} ${p.inputPh}`}
-    />
-  );
-}
-
-function Field({ label, hint, optional, dark, children }: {
-  label: string; hint?: string; optional?: boolean; dark: boolean; children: React.ReactNode;
-}) {
-  const p = dark ? D : L;
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-1.5">
-        <span className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>{label}</span>
-        {optional && <span className={`text-[10px] ${p.textFaint}`}>opcional</span>}
-      </div>
-      {children}
-      {hint && <p className={`text-[10px] ${p.textFaint}`}>{hint}</p>}
-    </div>
-  );
-}
-
-// ─── Componente principal ─────────────────────────────────────────────────────
 export default function PixWikiPage() {
-  const supabase = createClient();
-  const router   = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+  const pendingSlug = useRef('');
 
-  const [dark, setDark]   = useState(true);
-  const [step, setStep]   = useState<Step>('form');
-  const [checkingAuth, setCheckingAuth] = useState(true);
-  const [loggedInCompany, setLoggedInCompany] = useState<LoggedInCompany | null>(null);
-  const [chargeValue, setChargeValue] = useState('');
-
-  const [form, setForm]   = useState<FormData>({
-    nomeEmpresa: '', documento: '', documentoTipo: '',
-    chavePix: '', chavePixTipo: '', slug: '',
-    logoUrl: '', whatsapp: '', emailContato: '',
+  const [dark, setDark] = useState(true);
+  const [step, setStep] = useState<Step>('landing');
+  const [loggedCompany, setLoggedCompany] = useState<LoggedCompany | null>(null);
+  const [form, setForm] = useState<SignupForm>({
+    nomeRecebedor: '',
+    chavePix: '',
+    chavePixTipo: '',
+    emailContato: '',
+    whatsapp: '',
+    logoUrl: '',
   });
-  const [slugStatus, setSlugStatus] = useState<SlugStatus>('idle');
-  const [authEmail, setAuthEmail]   = useState('');
-  const [authSenha, setAuthSenha]   = useState('');
-  const [authError, setAuthError]   = useState('');
-  const slugRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const slugManuallyEdited = useRef(false);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   useEffect(() => {
-   const saved = localStorage.getItem('publicTheme') as 'dark' | 'light' | null;
-   if (saved) {
-     setDark(saved === 'dark');
-     return;
-   }
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    setDark(mq.matches);
-    const h = (e: MediaQueryListEvent) => setDark(e.matches);
-    mq.addEventListener('change', h);
-    return () => mq.removeEventListener('change', h);
+    const saved = localStorage.getItem('publicTheme');
+    if (saved === 'light' || saved === 'dark') {
+      setDark(saved === 'dark');
+      return;
+    }
+    setDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
   }, []);
 
-  // Checa se o visitante já está logado e já tem uma empresa Pix Wiki —
-  // se sim, pula o formulário de lead e mostra os atalhos de cobrar/acessar.
   useEffect(() => {
     let cancelled = false;
-
     supabase.auth.getUser().then(async ({ data }) => {
-      if (cancelled) return;
-      if (!data.user) { setCheckingAuth(false); return; }
-
-      const { data: comp } = await supabase
-        .from('companies')
-        .select('slug, name')
-        .eq('user_id', data.user.id)
-        .eq('segment_key', 'pix_wiki')
-        .maybeSingle();
-
-      if (cancelled) return;
-      if (comp) {
-        setLoggedInCompany(comp);
-        setStep('logged-in');
-      }
-      setCheckingAuth(false);
+      if (!data.user || cancelled) return;
+      const { data: companies } = await supabase.rpc('pixwiki_list_my_companies');
+      if (cancelled || !Array.isArray(companies) || companies.length === 0) return;
+      const preferred = companies.find((c: any) => c.is_primary) || companies[0];
+      setLoggedCompany({ id: preferred.id, name: preferred.name, slug: preferred.slug });
     });
-
     return () => { cancelled = true; };
   }, [supabase]);
 
-  const p = dark ? D : L;
+  const page = dark ? 'bg-[#020617] text-white' : 'bg-[#f7f8fa] text-slate-900';
+  const card = dark ? 'border-white/10 bg-white/[0.035]' : 'border-black/10 bg-white shadow-sm';
+  const muted = dark ? 'text-white/60' : 'text-slate-600';
+  const faint = dark ? 'text-white/40' : 'text-slate-500';
+  const input = dark
+    ? 'border-white/10 bg-white/[0.055] text-white placeholder:text-white/25'
+    : 'border-black/10 bg-white text-slate-900 placeholder:text-slate-400';
 
-  const up = (field: keyof FormData, value: string) =>
-    setForm(f => ({ ...f, [field]: value }));
-
-  const RESERVED_PIX_SLUGS = ['login', 'conta', 'dashboard', 'suporte', 'termos', 'aviso', 'exclusao', 'api'];
-
-  const checkSlug = useCallback(async (value: string) => {
-    if (!value || value.length < 3) { setSlugStatus('idle'); return; }
-    if (!/^[a-z0-9-]+$/.test(value)) { setSlugStatus('invalid'); return; }
-    if (RESERVED_PIX_SLUGS.includes(value)) { setSlugStatus('taken'); return; }
-    setSlugStatus('checking');
-    const { data } = await supabase.from('companies').select('id').eq('slug', value).maybeSingle();
-    setSlugStatus(data ? 'taken' : 'available');
-  }, [supabase]);
-
-const toggleDark = () => {
-  setDark(v => {
-    const next = !v;
-    localStorage.setItem('publicTheme', next ? 'dark' : 'light');
-    return next;
-  });
-};
-
-  const handleSlugChange = (value: string) => {
-    slugManuallyEdited.current = true;
-    const clean = slugify(value);
-    up('slug', clean);
-    setSlugStatus('idle');
-    if (slugRef.current) clearTimeout(slugRef.current);
-    slugRef.current = setTimeout(() => checkSlug(clean), 500);
-  };
-
-  const canPreview =
-    form.nomeEmpresa.length >= 2 &&
-    form.chavePix.length >= 5 &&
-    form.slug.length >= 3 &&
-    slugStatus === 'available';
-
-  const PREVIEW_TARGET_COMPANY_ID = '3bf1e6ec-e139-4a43-9294-cf88a074355b';
-
-  const previewCompany = {
-   id: PREVIEW_TARGET_COMPANY_ID, name: form.nomeEmpresa, slug: form.slug, logo_url: form.logoUrl || null,
-  };
-
-  const createAfterAuth = useCallback(async (userId: string) => {
-   const { data: company, error } = await supabase
-     .rpc('ensure_my_pix_wiki_company', {
-       p_slug: form.slug,
-       p_name: form.nomeEmpresa,
-       p_logo_url: form.logoUrl || null,
-       p_whatsapp: form.whatsapp || null,
-       p_email: form.emailContato || null,
-     })
-     .single();
-
-   if (error || !company) throw new Error('Erro ao criar empresa.');
-
-    await supabase.from('user_profiles').upsert({
-      user_id: userId,
-      withdrawal_pix_key: form.chavePix,
-      withdrawal_pix_key_type: form.chavePixTipo || null,
-      documento: form.documento || null,
-      documento_tipo: form.documentoTipo || null,
-    }, { onConflict: 'user_id' });
-
-    await supabase.from('short_links').insert({
-      slug: company.slug, type: 'pix_wiki',
-      company_id: company.id, user_id: userId,
-      original_url: `https://minhai.app/pix/${company.slug}`,
+  function toggleTheme() {
+    setDark(current => {
+      const next = !current;
+      localStorage.setItem('publicTheme', next ? 'dark' : 'light');
+      return next;
     });
-
-    await supabase.from('demo_sessions').insert({
-      nome_negocio: form.nomeEmpresa,
-      email: form.emailContato || null,
-      phone: form.whatsapp || null,
-      origem_simples: 'pixwiki',
-      linked_user_id: userId, linked_company_id: company.id,
-      linked_at: new Date().toISOString(), status: 'converted',
-    });
-
-    router.replace('/pix/dashboard?bemvindo=1');
-  }, [form, supabase, router]);
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user &&
-          (step === 'auth' || step === 'creating')) {
-          await createAfterAuth(session.user.id);
-        }
-      }
-    );
-    return () => subscription.unsubscribe();
-  }, [step, createAfterAuth, supabase]);
-
-  const handleGoogleSignup = async () => {
-    setStep('creating');
-   // Guarda os dados do formulário pra retomar depois do login. A criação da
-   // empresa acontece de forma lazy em /pix/conta (mesmo padrão do
-   // ensure_my_arte_company() do ArteFinal) — o /auth/callback compartilhado
-   // não precisa saber nada sobre Pix Wiki.
-   localStorage.setItem('pixWikiPendingSignup', JSON.stringify({
-     slug: form.slug,
-     nome: form.nomeEmpresa,
-     pix: form.chavePix,
-     pixTipo: form.chavePixTipo || null,
-     logo: form.logoUrl || null,
-     doc: form.documento || null,
-     docTipo: form.documentoTipo || null,
-     wa: form.whatsapp || null,
-     email: form.emailContato || null,
-   }));
-   await supabase.auth.signInWithOAuth({
-     provider: 'google',
-     options: {
-       redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/dashboard')}`,
-       queryParams: { access_type: 'offline', prompt: 'consent' },
-     },
-   });
-  };
-
-  const handleEmailSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    if (!authEmail || !authSenha || authSenha.length < 6) {
-      setAuthError('E-mail e senha (mín. 6 caracteres) são obrigatórios.');
-      return;
-    }
-    setStep('creating');
-    const { data: su, error: suErr } = await supabase.auth.signUp({ email: authEmail, password: authSenha });
-    if (!suErr && su.user) { await createAfterAuth(su.user.id); return; }
-
-   // Se o signUp falhou por um motivo que NÃO é "conta já existe", mostra o erro real
-   // em vez de tentar o fallback de login (que sempre falharia com mensagem confusa).
-   if (suErr && !suErr.message.toLowerCase().includes('already registered')) {
-     setAuthError(
-       suErr.message.includes('weak')
-         ? 'Essa senha é considerada fraca ou já vazou em bancos de dados públicos. Escolha outra senha.'
-         : suErr.message
-     );
-     setStep('auth');
-    return;
-   }
-
-    const { data: si, error: siErr } = await supabase.auth.signInWithPassword({ email: authEmail, password: authSenha });
-    if (siErr || !si.user) {
-      setAuthError(siErr?.message || 'E-mail ou senha incorretos.');
-      setStep('auth'); return;
-    }
-    await createAfterAuth(si.user.id);
-  };
-
-  const handleSignOutFromLanding = async () => {
-    await supabase.auth.signOut();
-    setLoggedInCompany(null);
-    setStep('form');
-  };
-
-  // ─── Checando sessão (evita flash do formulário de lead) ──────────────────
-  if (checkingAuth) return (
-    <div className={`min-h-screen flex items-center justify-center ${p.pageBg}`}>
-      <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
-
-  // ─── STEP: já logado — atalhos de cobrar / acessar conta ──────────────────
-  if (step === 'logged-in' && loggedInCompany) {
-    const cleanCharge = chargeValue.trim().replace(',', '.');
-    const hasValidCharge = !!cleanCharge && parseFloat(cleanCharge) > 0;
-    const chargeHref = hasValidCharge
-      ? `/pix/${loggedInCompany.slug}/${cleanCharge}`
-      : `/pix/${loggedInCompany.slug}`;
-
-    return (
-      <div className={`min-h-screen flex flex-col items-center justify-center px-4 py-12 ${p.pageBg}`}>
-        <ThemeToggle dark={dark} onToggle={toggleDark} />
-        <div className="w-full max-w-md">
-          <Logos />
-
-          <div className="text-center mb-7">
-            <h1 className={`text-2xl font-bold leading-tight mb-2 ${p.text}`}>
-              Bem-vindo de volta,<br />
-              <span className="text-green-500">{loggedInCompany.name}</span>
-            </h1>
-            <p className={`text-sm ${p.textMuted}`}>
-              pix.wiki/{loggedInCompany.slug}
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {/* Card 1 — cobrar agora */}
-            <div className={`rounded-2xl border p-5 sm:p-6 flex flex-col gap-3 ${p.cardBg} ${p.border}`}>
-              <p className={`text-[10px] font-bold uppercase tracking-widest ${p.textFaint}`}>Cobrar um cliente agora</p>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold ${p.textFaint}`}>R$</span>
-                  <input
-                    type="number" step="0.01" value={chargeValue}
-                    onChange={e => setChargeValue(e.target.value)}
-                    placeholder="0,00"
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:border-green-500/60 transition-colors ${p.inputBg} ${p.inputBorder} ${p.inputText}`}
-                  />
-                </div>
-              </div>
-              <a
-                href={chargeHref}
-                className="w-full py-3 rounded-xl font-bold text-sm text-center transition-all active:scale-95 bg-green-500 hover:bg-green-400 text-white"
-              >
-                {hasValidCharge ? 'Gerar cobrança →' : 'Gerar link de cobrança →'}
-              </a>
-              {!hasValidCharge && (
-                <p className={`text-[11px] text-center -mt-1 ${p.textFaint}`}>
-                  Deixe em branco pra o cliente digitar o valor na hora
-                </p>
-              )}
-            </div>
-
-            {/* Card 2 — acessar conta */}
-            <a
-              href="/pix/dashboard"
-              className={`rounded-2xl border p-5 sm:p-6 flex items-center justify-between gap-3 transition-colors ${p.cardBg} ${p.border} hover:border-green-500/40`}
-            >
-              <div>
-                <p className={`text-sm font-bold ${p.text}`}>Acessar minha conta</p>
-                <p className={`text-xs ${p.textFaint}`}>Saldo, recebimentos e saque</p>
-              </div>
-              <svg className={`w-5 h-5 flex-shrink-0 ${p.textFaint}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
-          </div>
-
-          <p className={`text-center mt-5 text-xs ${p.textFaint}`}>
-            Não é você?{' '}
-            <button onClick={handleSignOutFromLanding} className={`transition-colors underline ${p.footerLink}`}>
-              Sair
-            </button>
-          </p>
-
-          <Footer dark={dark} />
-        </div>
-      </div>
-    );
   }
 
-  // ─── STEP: criando ────────────────────────────────────────────────────────
-  if (step === 'creating') return (
-    <div className={`min-h-screen flex flex-col items-center justify-center gap-4 ${p.pageBg}`}>
-      <ThemeToggle dark={dark} onToggle={toggleDark} />
-      <div className="w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
-      <p className={`text-sm ${p.textMuted}`}>Configurando seu link PIX…</p>
-    </div>
-  );
+  function updateForm<K extends keyof SignupForm>(key: K, value: SignupForm[K]) {
+    setForm(current => ({ ...current, [key]: value }));
+  }
 
-  // ─── STEP: preview ────────────────────────────────────────────────────────
-  if (step === 'preview') return (
-    <div className={`min-h-screen flex flex-col ${p.pageBg}`}>
-      <div className={`${p.cardBg} border-b ${p.border} px-4 py-5 flex items-center justify-between gap-3 pr-16`}>
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            onClick={() => setStep('form')}
-            className={`text-sm flex-shrink-0 transition-colors ${p.textMuted} hover:${p.text}`}
-          >
-            ← Editar
-          </button>
-          <div className={`h-4 w-px flex-shrink-0 ${p.divider}`} />
-          <span className={`text-xs truncate ${p.textFaint}`}>
-            pix.wiki/<span className="text-green-500 font-semibold">{form.slug}</span>
-          </span>
-        </div>
-       <div className="flex items-center gap-2 flex-shrink-0">
-         <button
-           onClick={() => setStep('auth')}
-           className="px-4 py-1.5 bg-green-500 text-white text-sm font-bold rounded-full hover:bg-green-400 transition-all active:scale-95"
-         >
-           Ativar meu link →
-         </button>
-         <button
-           onClick={toggleDark}
-           aria-label="Alternar tema"
-           className={`w-8 h-8 rounded-full flex items-center justify-center border transition-colors ${p.toggleBg}`}
-         >
-           {dark ? (
-             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-             </svg>
-           ) : (
-             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-             </svg>
-           )}
-         </button>
-       </div>
-     </div>
+  function beginSignup() {
+    setError('');
+    setNotice('');
+    if (form.nomeRecebedor.trim().length < 2) {
+      setError('Informe o nome do recebedor.');
+      return;
+    }
+    if (form.chavePix.trim().length < 5) {
+      setError('Informe sua chave Pix do Mercado Pago.');
+      return;
+    }
+    const type = form.chavePixTipo || detectPixKeyType(form.chavePix);
+    if (!type) {
+      setError('Não conseguimos identificar o tipo da chave Pix. Confira a chave digitada.');
+      return;
+    }
+    updateForm('chavePixTipo', type);
+    if (!pendingSlug.current) pendingSlug.current = makeInternalSlug(form.nomeRecebedor);
+    if (form.emailContato && !authEmail) setAuthEmail(form.emailContato);
+    setStep('auth');
+    window.setTimeout(() => document.getElementById('criar-conta')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  }
 
-     <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 text-center">
-       <p className="text-amber-500 text-xs font-medium">
-         ⚠️ Isso é uma demonstração — não conclua o pagamento. Depois de ativar
-         sua conta, você gera PIX de verdade no seu próprio link.
-       </p>
-     </div>
+  async function createAfterAuth(userId: string) {
+    const slug = pendingSlug.current || makeInternalSlug(form.nomeRecebedor);
+    const keyType = form.chavePixTipo || detectPixKeyType(form.chavePix) || 'random';
 
-      <div className="flex-1 overflow-auto">
-       <PixLinkPage
-         company={previewCompany}
-         initialAmount={null}
-         hideThemeToggle
-         theme={dark ? 'dark' : 'light'}
-         onToggleTheme={toggleDark}
-       />
-      </div>
-    </div>
-  );
+    const { data: company, error: companyError } = await supabase.rpc('ensure_my_pix_wiki_company', {
+      p_slug: slug,
+      p_name: form.nomeRecebedor.trim(),
+      p_logo_url: form.logoUrl.trim() || null,
+      p_whatsapp: form.whatsapp.trim() || null,
+      p_email: form.emailContato.trim() || authEmail || null,
+    }).single();
 
-  // ─── STEP: auth ───────────────────────────────────────────────────────────
-  if (step === 'auth') return (
-    <div className={`min-h-screen flex flex-col items-center justify-center px-4 py-10 ${p.pageBg}`}>
-      <ThemeToggle dark={dark} onToggle={toggleDark} />
-      <Logos />
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-5">
-          <div className={`text-xl font-bold mb-1 ${p.text}`}>
-            pix.wiki/<span className="text-green-500">{form.slug}</span>
-          </div>
-          <p className={`text-sm ${p.textMuted}`}>Crie sua conta gratuita pra ativar o link</p>
-        </div>
-        <div className={`rounded-2xl border p-5 flex flex-col gap-3 ${p.cardBg} ${p.border}`}>
-          <button
-            onClick={handleGoogleSignup}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 bg-white text-gray-800 rounded-xl font-semibold text-sm hover:bg-gray-100 transition-all active:scale-95 shadow-sm border border-black/8"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-            Continuar com Google
-          </button>
-          <div className="flex items-center gap-2">
-            <div className={`flex-1 h-px ${p.divider}`} />
-            <span className={`text-xs ${p.textFaint}`}>ou</span>
-            <div className={`flex-1 h-px ${p.divider}`} />
-          </div>
-          <form onSubmit={handleEmailSignup} className="flex flex-col gap-2">
-            <Input value={authEmail} onChange={setAuthEmail} placeholder="Seu e-mail" type="email" dark={dark} />
-            <Input value={authSenha} onChange={setAuthSenha} placeholder="Senha (mín. 6 caracteres)" type="password" dark={dark} />
-            {authError && <p className="text-red-500 text-xs">{authError}</p>}
-            <button type="submit" disabled={step === 'creating'} className="w-full py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm hover:bg-green-400 transition-all active:scale-95 disabled:opacity-50">
-              Criar conta e ativar link
-            </button>
-          </form>
-        </div>
-        <button
-          onClick={() => setStep('preview')}
-          className={`mt-4 w-full text-center text-xs transition-colors ${p.textFaint} hover:${p.textMuted}`}
-        >
-          ← Voltar ao preview
-        </button>
-      </div>
-      <Footer dark={dark} />
-    </div>
-  );
+    if (companyError || !company) throw new Error('Não foi possível criar seu cadastro PixWiki.');
 
-  // ─── STEP: formulário (default) ───────────────────────────────────────────
+    const [profileResult, paymentResult, notificationResult] = await Promise.all([
+      supabase.from('user_profiles').upsert({
+        user_id: userId,
+        withdrawal_pix_key: form.chavePix.trim(),
+        withdrawal_pix_key_type: keyType,
+      }, { onConflict: 'user_id' }),
+      supabase.from('pixwiki_payment_settings').upsert({
+        company_id: company.id,
+        user_id: userId,
+        pix_key: form.chavePix.trim(),
+        pix_key_type: keyType,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'company_id' }),
+      supabase.from('pixwiki_notification_settings').upsert({
+        company_id: company.id,
+        user_id: userId,
+        notification_email: form.emailContato.trim() || authEmail || null,
+        email_enabled: true,
+        push_enabled: true,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'company_id' }),
+    ]);
+
+    const setupError = profileResult.error || paymentResult.error || notificationResult.error;
+    if (setupError) throw setupError;
+
+    await supabase.from('demo_sessions').insert({
+      nome_negocio: form.nomeRecebedor.trim(),
+      email: form.emailContato.trim() || authEmail || null,
+      phone: form.whatsapp.trim() || null,
+      origem_simples: 'pixwiki',
+      linked_user_id: userId,
+      linked_company_id: company.id,
+      linked_at: new Date().toISOString(),
+      status: 'converted',
+    }).then(() => undefined, () => undefined);
+
+    localStorage.setItem('pixWikiActiveCompanyId', company.id);
+    router.replace(`/dashboard?bemvindo=1&company=${encodeURIComponent(company.id)}`);
+  }
+
+  async function handleGoogle() {
+    setError('');
+    setStep('creating');
+    const slug = pendingSlug.current || makeInternalSlug(form.nomeRecebedor);
+    pendingSlug.current = slug;
+    localStorage.setItem('pixWikiPendingSignup', JSON.stringify({
+      slug,
+      nome: form.nomeRecebedor.trim(),
+      pix: form.chavePix.trim(),
+      pixTipo: form.chavePixTipo || detectPixKeyType(form.chavePix) || 'random',
+      logo: form.logoUrl.trim() || null,
+      doc: null,
+      docTipo: null,
+      wa: form.whatsapp.trim() || null,
+      email: form.emailContato.trim() || authEmail || null,
+    }));
+
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/dashboard')}`,
+        queryParams: { access_type: 'offline', prompt: 'consent' },
+      },
+    });
+    if (oauthError) {
+      setError('Não foi possível entrar com Google agora. Tente novamente.');
+      setStep('auth');
+    }
+  }
+
+  async function handleEmail(event: React.FormEvent) {
+    event.preventDefault();
+    setError('');
+    setNotice('');
+    if (!authEmail || authPassword.length < 6) {
+      setError('Informe um e-mail válido e uma senha com pelo menos 6 caracteres.');
+      return;
+    }
+
+    setStep('creating');
+    try {
+      const signup = await supabase.auth.signUp({ email: authEmail, password: authPassword });
+      if (!signup.error && signup.data.user && signup.data.session) {
+        await createAfterAuth(signup.data.user.id);
+        return;
+      }
+
+      if (!signup.error && signup.data.user && !signup.data.session) {
+        setNotice('Conta criada. Confira seu e-mail para confirmar o acesso e depois entre no PixWiki.');
+        setStep('auth');
+        return;
+      }
+
+      if (signup.error && !signup.error.message.toLowerCase().includes('already registered')) {
+        throw signup.error;
+      }
+
+      const signin = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
+      if (signin.error || !signin.data.user) throw new Error('E-mail ou senha incorretos.');
+      await createAfterAuth(signin.data.user.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível concluir seu cadastro.');
+      setStep('auth');
+    }
+  }
+
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-center px-4 py-12 ${p.pageBg}`}>
-      <ThemeToggle dark={dark} onToggle={toggleDark} />
-      <a
-        href="/pix/login"
-        className={`fixed top-4 right-16 z-50 h-9 flex items-center px-3 rounded-full border text-xs font-medium transition-colors ${p.toggleBg}`}
-      >
-        Minha conta
-      </a>
-      <div className="w-full max-w-md">
-        <Logos />
-
-        <div className="text-center mb-7">
-
-          <h1 className={`text-2xl sm:text-3xl font-bold leading-tight mb-2 ${p.text}`}>
-            Nunca mais perca uma venda<br />
-            <span className="text-green-500">por comprovante falso</span>
-          </h1>
-          <p className={`text-sm leading-relaxed ${p.textMuted}`}>
-            Crie seu link de cobrança PIX. Quando o cliente pagar, você recebe
-            confirmação automática no{' '}
-            <span className={`font-medium ${p.text}`}>dashboard</span>, por{' '}
-            <span className={`font-medium ${p.text}`}>e-mail</span> e no{' '}
-            <span className={`font-medium ${p.text}`}>MercadoPago</span>
-            {' '}- sem mensalidade e sem preocupação.
-          </p>
+    <main className={`min-h-screen transition-colors ${page}`}>
+      <header className="sticky top-0 z-40 border-b border-white/5 bg-[#020617]/85 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+          <a href="https://pix.wiki" className="flex items-center gap-2" aria-label="PixWiki — início">
+            <Image src="/brands/pix/pixwiki.png" alt="PixWiki" width={42} height={42} className="rounded-xl" priority />
+            <span className="text-lg font-black tracking-tight text-white">PixWiki</span>
+          </a>
+          <div className="flex items-center gap-2">
+            <a href="/dashboard" className="rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-white/75 transition hover:bg-white/10 hover:text-white">
+              {loggedCompany ? 'Abrir painel' : 'Entrar'}
+            </a>
+            <ThemeToggle dark={dark} onToggle={toggleTheme} />
+          </div>
         </div>
+      </header>
 
-        <div className={`rounded-2xl border p-5 sm:p-6 flex flex-col gap-4 ${p.cardBg} ${p.border}`}>
-
-          <Field label="Nome da empresa" dark={dark}>
-            <Input
-              value={form.nomeEmpresa}
-              onChange={v => {
-                up('nomeEmpresa', v);
-                if (!slugManuallyEdited.current) {
-                  const s = slugify(v);
-                  up('slug', s);
-                  if (slugRef.current) clearTimeout(slugRef.current);
-                  slugRef.current = setTimeout(() => checkSlug(s), 600);
-                }
-              }}
-              placeholder="Ex: Hamburgueria do Carlos"
-              dark={dark}
-            />
-          </Field>
-
-          <Field label="Seu link" dark={dark}>
-            <div className={`flex items-center rounded-xl overflow-hidden border focus-within:border-green-500/60 transition-colors ${p.inputBg} ${p.inputBorder}`}>
-              <span className={`pl-4 pr-1 text-sm flex-shrink-0 ${p.textFaint}`}>pix.wiki/</span>
-              <input
-                type="text"
-                value={form.slug}
-                onChange={e => handleSlugChange(e.target.value)}
-                placeholder="minha-loja"
-                className={`flex-1 py-2.5 pr-2 bg-transparent text-sm focus:outline-none ${p.inputText} ${p.inputPh}`}
-              />
-              <div className="px-3 w-8 flex justify-center flex-shrink-0">
-                {slugStatus === 'checking' && (
-                  <div className={`w-3 h-3 border-2 border-t-transparent rounded-full animate-spin ${dark ? 'border-white/20' : 'border-black/20'}`} />
-                )}
-                {slugStatus === 'available' && <span className="text-green-500 text-sm font-bold">✓</span>}
-                {slugStatus === 'taken'     && <span className="text-red-500 text-sm font-bold">✗</span>}
-              </div>
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-[420px] max-w-5xl bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.18),transparent_65%)]" />
+        <div className="relative mx-auto grid max-w-6xl gap-10 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:pb-24 lg:pt-20">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              O dinheiro continua direto no seu Mercado Pago
             </div>
-            {slugStatus === 'taken'   && <p className="text-red-500 text-xs">Esse link já está em uso. Tente outro.</p>}
-            {slugStatus === 'invalid' && <p className="text-yellow-600 text-xs">Use apenas letras, números e hífens.</p>}
-          </Field>
-
-          <Field label="Chave PIX MercadoPago" hint="CPF, CNPJ, e-mail, telefone ou chave aleatória" dark={dark}>
-            <Input
-              value={form.chavePix}
-              onChange={v => { up('chavePix', v); up('chavePixTipo', detectChavePixTipo(v)); }}
-              placeholder="Sua chave MercadoPago"
-              dark={dark}
-            />
-            {form.chavePixTipo && (
-              <p className={`text-[10px] -mt-1 capitalize ${p.textFaint}`}>Detectado: {form.chavePixTipo}</p>
-            )}
-          </Field>
-
-          {/* Mais opções */}
-          <details className="group">
-            <summary className={`cursor-pointer text-xs transition-colors select-none list-none flex items-center gap-1.5 ${p.summaryText}`}>
-              <svg className="w-3 h-3 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-              Mais opções (WhatsApp, e-mail, logo, CNPJ)
-            </summary>
-            <div className={`flex flex-col gap-3 mt-3 pt-3 border-t ${p.detailBorder}`}>
-              <Field label="WhatsApp" optional hint="Para receber confirmações de pagamento" dark={dark}>
-                <Input value={form.whatsapp} onChange={v => up('whatsapp', v)} placeholder="(11) 99999-9999" dark={dark} />
-              </Field>
-              <Field label="E-mail de contato" optional hint="Para receber confirmações de pagamento" dark={dark}>
-                <Input value={form.emailContato} onChange={v => up('emailContato', v)} placeholder="contato@suaempresa.com" type="email" dark={dark} />
-              </Field>
-              <Field label="URL do logo" optional dark={dark}>
-                <Input value={form.logoUrl} onChange={v => up('logoUrl', v)} placeholder="https://suaempresa.com/logo.png" type="url" dark={dark} />
-              </Field>
-              <Field label="CNPJ ou CPF" optional hint="Necessário para emissão de notas fiscais." dark={dark}>
-                <Input
-                  value={form.documento}
-                  onChange={v => { up('documento', v); up('documentoTipo', detectDocumentoTipo(v)); }}
-                  placeholder="00.000.000/0000-00 ou 000.000.000-00"
-                  dark={dark}
-                />
-              </Field>
-            </div>
-          </details>
-
-          <button
-            disabled={!canPreview}
-            onClick={() => setStep('preview')}
-            className="w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95 bg-green-500 hover:bg-green-400 text-white disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            Ver como vai ficar →
-          </button>
-
-          {!canPreview && (
-            <p className={`text-xs text-center -mt-2 ${p.textFaint}`}>
-              Preencha o nome, a chave PIX e escolha um link disponível
+            <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
+              Receba Pix e saiba quando o dinheiro <span className="text-emerald-400">realmente chegou.</span>
+            </h1>
+            <p className={`mt-5 max-w-2xl text-base leading-relaxed sm:text-lg ${muted}`}>
+              Use sua própria chave Pix ou envie um Pix Link. O PixWiki acompanha os recebimentos, atualiza seu painel e avisa você — sem depender de print ou comprovante enviado pelo cliente.
             </p>
-          )}
-        </div>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <button onClick={() => document.getElementById('comecar')?.scrollIntoView({ behavior: 'smooth' })} className="rounded-xl bg-emerald-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-400">
+                Criar Pix Grátis
+              </button>
+              <a href="#como-funciona" className={`rounded-xl border px-5 py-3 text-sm font-bold ${card}`}>Como funciona</a>
+            </div>
+            <div className={`mt-7 grid max-w-xl gap-2 text-sm sm:grid-cols-3 ${muted}`}>
+              <p>✓ Sem mensalidade para começar</p>
+              <p>✓ Sem percentual do PixWiki por transação</p>
+              <p>✓ Pessoa física ou empresa</p>
+            </div>
+          </div>
 
-        <div className="flex items-center justify-center gap-2 mt-5 flex-wrap">
-          {['Confirmação automática', 'Sem maquininha', 'Zero comprovante falso'].map(t => (
-            <span key={t} className={`px-2.5 py-1 rounded-full text-[10px] font-medium border ${p.badgeBg}`}>{t}</span>
+          <div id="comecar" className={`rounded-[28px] border p-5 shadow-2xl shadow-emerald-950/10 sm:p-6 ${card}`}>
+            {loggedCompany ? (
+              <div className="py-3 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 text-2xl">✓</div>
+                <h2 className="mt-4 text-xl font-black">Sua conta já está pronta</h2>
+                <p className={`mt-2 text-sm ${muted}`}>Acesse o painel de {loggedCompany.name} para acompanhar recebimentos e configurar seus avisos.</p>
+                <a href="/dashboard" className="mt-5 inline-flex w-full justify-center rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-slate-950">Abrir meu painel</a>
+              </div>
+            ) : step === 'creating' ? (
+              <div className="flex min-h-72 flex-col items-center justify-center gap-4 text-center">
+                <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/15 border-t-emerald-400" />
+                <div>
+                  <p className="font-bold">Preparando seu PixWiki…</p>
+                  <p className={`mt-1 text-sm ${muted}`}>Só leva alguns segundos.</p>
+                </div>
+              </div>
+            ) : step === 'auth' ? (
+              <div id="criar-conta">
+                <button type="button" onClick={() => setStep('landing')} className={`text-xs font-bold ${faint}`}>← Voltar</button>
+                <h2 className="mt-4 text-xl font-black">Crie sua conta grátis</h2>
+                <p className={`mt-1 text-sm ${muted}`}>Depois você conecta o Mercado Pago no painel e começa a acompanhar sua chave.</p>
+
+                <button onClick={handleGoogle} className="mt-5 flex w-full items-center justify-center gap-3 rounded-xl border border-black/10 bg-white px-4 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.4-.18-2.06H12v3.9h5.38a4.6 4.6 0 01-1.99 3.02v2.54h3.22c1.89-1.74 2.99-4.3 2.99-7.4z"/><path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.61-2.37l-3.22-2.54c-.9.6-2.04.96-3.39.96-2.6 0-4.8-1.76-5.59-4.12H3.08v2.62A9.99 9.99 0 0012 22z"/><path fill="#FBBC05" d="M6.41 13.93A6 6 0 016.1 12c0-.67.11-1.32.31-1.93V7.45H3.08A10 10 0 002 12c0 1.62.39 3.15 1.08 4.55l3.33-2.62z"/><path fill="#EA4335" d="M12 5.95c1.47 0 2.78.5 3.82 1.5l2.86-2.87C16.96 2.98 14.7 2 12 2a9.99 9.99 0 00-8.92 5.45l3.33 2.62C7.2 7.71 9.4 5.95 12 5.95z"/></svg>
+                  Continuar com Google
+                </button>
+
+                <div className="my-4 flex items-center gap-3"><div className="h-px flex-1 bg-white/10"/><span className={`text-[10px] font-bold uppercase tracking-widest ${faint}`}>ou</span><div className="h-px flex-1 bg-white/10"/></div>
+
+                <form onSubmit={handleEmail} className="space-y-3">
+                  <input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="Seu e-mail" className={`w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`} />
+                  <input type="password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="Crie uma senha" className={`w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`} />
+                  <button type="submit" className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-slate-950">Criar conta grátis</button>
+                </form>
+              </div>
+            ) : (
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-400">Comece grátis</p>
+                <h2 className="mt-2 text-xl font-black">Cadastre sua chave Pix</h2>
+                <p className={`mt-1 text-sm ${muted}`}>Não precisa escolher plano agora. O Pix Grátis já inclui confirmação, painel, e-mail e Push.</p>
+
+                <div className="mt-5 space-y-4">
+                  <label className="block">
+                    <span className={`text-xs font-bold ${muted}`}>Nome do recebedor</span>
+                    <input value={form.nomeRecebedor} onChange={e => updateForm('nomeRecebedor', e.target.value)} placeholder="Ex.: Maria Silva ou Loja de Serviços" className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`} />
+                  </label>
+                  <label className="block">
+                    <span className={`text-xs font-bold ${muted}`}>Sua chave Pix do Mercado Pago</span>
+                    <input value={form.chavePix} onChange={e => { updateForm('chavePix', e.target.value); updateForm('chavePixTipo', detectPixKeyType(e.target.value)); }} placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" className={`mt-1 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-emerald-400/60 ${input}`} />
+                  </label>
+
+                  <details className={`rounded-xl border p-3 ${dark ? 'border-white/10' : 'border-black/10'}`}>
+                    <summary className={`cursor-pointer list-none text-xs font-bold ${muted}`}>Adicionar contato e logo <span className={faint}>(opcional)</span></summary>
+                    <div className="mt-3 space-y-3">
+                      <input type="email" value={form.emailContato} onChange={e => updateForm('emailContato', e.target.value)} placeholder="E-mail para avisos" className={`w-full rounded-xl border px-4 py-3 text-sm outline-none ${input}`} />
+                      <input value={form.whatsapp} onChange={e => updateForm('whatsapp', e.target.value)} placeholder="WhatsApp" inputMode="tel" className={`w-full rounded-xl border px-4 py-3 text-sm outline-none ${input}`} />
+                      <input type="url" value={form.logoUrl} onChange={e => updateForm('logoUrl', e.target.value)} placeholder="Link do seu logo" className={`w-full rounded-xl border px-4 py-3 text-sm outline-none ${input}`} />
+                    </div>
+                  </details>
+
+                  {(error || notice) && <div className={`rounded-xl border px-3 py-2 text-xs ${error ? 'border-red-500/25 bg-red-500/10 text-red-300' : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'}`}>{error || notice}</div>}
+                  <button onClick={beginSignup} className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-400">Continuar grátis</button>
+                  <p className={`text-center text-[11px] leading-relaxed ${faint}`}>Depois do cadastro, conecte o Mercado Pago. O PixWiki não movimenta nem guarda seu dinheiro.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section id="como-funciona" className={`border-y ${dark ? 'border-white/5 bg-white/[0.02]' : 'border-black/5 bg-white'}`}>
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-20">
+          <div className="max-w-2xl">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-400">Como funciona</p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight">Seu Pix continua simples. A confirmação é que fica automática.</h2>
+          </div>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {[
+              ['1', 'Cadastre sua chave', 'Use uma chave Pix da sua conta Mercado Pago e escolha o nome que aparecerá no seu painel.'],
+              ['2', 'Conecte o Mercado Pago', 'A conexão permite ao PixWiki acompanhar os recebimentos sem pedir acesso à sua senha bancária.'],
+              ['3', 'Receba e acompanhe', 'Quando um Pix for identificado, o painel atualiza e você recebe os avisos que tiver ativado.'],
+            ].map(([number, title, text]) => (
+              <div key={number} className={`rounded-3xl border p-6 ${card}`}>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 text-sm font-black text-slate-950">{number}</div>
+                <h3 className="mt-5 text-lg font-black">{title}</h3>
+                <p className={`mt-2 text-sm leading-relaxed ${muted}`}>{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-20">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className={`rounded-[30px] border p-6 sm:p-8 ${card}`}>
+            <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-400">CHAVE PIX</span>
+            <h2 className="mt-4 text-2xl font-black">Para quem quer continuar cobrando pela própria chave.</h2>
+            <p className={`mt-3 leading-relaxed ${muted}`}>O cliente paga como já está acostumado. O PixWiki organiza o histórico, mostra o valor que realmente entrou e avisa você quando o recebimento for identificado.</p>
+            <div className={`mt-5 space-y-2 text-sm ${muted}`}><p>✓ Ideal para balcão e clientes recorrentes</p><p>✓ Pode começar no Pix Grátis</p><p>✓ Sem link obrigatório</p></div>
+          </div>
+          <div className={`rounded-[30px] border border-sky-500/25 bg-sky-500/[0.06] p-6 sm:p-8`}>
+            <span className="rounded-full bg-sky-400/15 px-3 py-1 text-xs font-black text-sky-300">PIX LINK</span>
+            <h2 className="mt-4 text-2xl font-black">Para enviar uma cobrança pronta e profissional.</h2>
+            <p className={`mt-3 leading-relaxed ${muted}`}>Use um endereço como <strong className={dark ? 'text-white' : 'text-slate-900'}>sualoja.pix.wiki</strong>, com seu nome, QR Code e o valor já preenchido. Ótimo para WhatsApp, redes sociais e vendas à distância.</p>
+            <div className={`mt-5 space-y-2 text-sm ${muted}`}><p>✓ Página com identidade do recebedor</p><p>✓ Link com ou sem valor</p><p>✓ Incluído no Pix Link e Pix Pro</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="planos" className={`border-y ${dark ? 'border-white/5 bg-white/[0.02]' : 'border-black/5 bg-white'}`}>
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-400">Planos simples</p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight">Comece grátis. Evolua quando precisar.</h2>
+            <p className={`mt-3 ${muted}`}>O PixWiki cobra pelo serviço e pelos recursos do plano — não uma porcentagem de cada venda.</p>
+          </div>
+          <div className="mt-9 grid gap-4 lg:grid-cols-3">
+            {PLANS.map(plan => (
+              <article key={plan.key} className={`relative rounded-[28px] border p-6 ${plan.highlight ? 'border-sky-400/40 bg-sky-500/[0.06]' : card}`}>
+                {plan.highlight && <span className="absolute right-5 top-5 rounded-full bg-sky-400 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-950">Mais popular</span>}
+                <h3 className="text-xl font-black">{plan.name}</h3>
+                <p className={`mt-2 min-h-11 text-sm ${muted}`}>{plan.description}</p>
+                <div className="mt-5 flex items-end gap-1"><strong className="text-3xl font-black">{plan.price}</strong><span className={`pb-1 text-xs ${muted}`}>{plan.suffix}</span></div>
+                <div className={`mt-5 space-y-2 text-sm ${muted}`}>{plan.features.map(feature => <p key={feature}>✓ {feature}</p>)}</div>
+                <button onClick={() => document.getElementById('comecar')?.scrollIntoView({ behavior: 'smooth' })} className={`mt-6 w-full rounded-xl px-4 py-3 text-sm font-black ${plan.key === 'pro' ? 'bg-emerald-500 text-slate-950' : plan.highlight ? 'bg-sky-400 text-slate-950' : dark ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-900'}`}>{plan.key === 'free' ? 'Começar grátis' : `Conhecer ${plan.name}`}</button>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-20">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ['Painel ao vivo', 'Os novos recebimentos aparecem automaticamente e você também pode tocar em Atualizar quando quiser.'],
+            ['Avisos do seu jeito', 'E-mail e Push desde o grátis. WhatsApp no Pix Pro.'],
+            ['Várias empresas', 'No Pix Pro, cada empresa pode ter sua própria conta Mercado Pago, chave e avisos.'],
+            ['Relatórios', 'Veja períodos, valores recebidos e exporte seus dados no Pix Pro.'],
+          ].map(([title, text]) => (
+            <div key={title} className={`rounded-3xl border p-5 ${card}`}><h3 className="font-black">{title}</h3><p className={`mt-2 text-sm leading-relaxed ${muted}`}>{text}</p></div>
           ))}
         </div>
+      </section>
 
-        <p className={`text-center mt-3 text-xs ${p.textFaint}`}>
-          Recebeu uma cobrança?{' '}
-          <a href="/pix/suporte" className={`transition-colors ${p.footerLink}`}>
-            Clique no link que veio na mensagem
-          </a>
-        </p>
+      <section id="faq" className={`border-y ${dark ? 'border-white/5 bg-white/[0.02]' : 'border-black/5 bg-white'}`}>
+        <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:py-20">
+          <div className="text-center"><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-400">Dúvidas frequentes</p><h2 className="mt-2 text-3xl font-black">PixWiki, sem letra miúda.</h2></div>
+          <div className="mt-8 space-y-3">
+            {FAQ.map((item, index) => (
+              <details key={item.q} open={index === 0} className={`group rounded-2xl border p-5 ${card}`}>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-bold"><span>{item.q}</span><span className={`text-xl transition group-open:rotate-45 ${faint}`}>+</span></summary>
+                <p className={`mt-3 max-w-3xl text-sm leading-relaxed ${muted}`}>{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
 
-        <Footer dark={dark} />
-      </div>
-    </div>
+      <section className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 lg:py-20">
+        <h2 className="text-3xl font-black tracking-tight">Sua chave Pix já recebe. O PixWiki faz você acompanhar melhor.</h2>
+        <p className={`mx-auto mt-3 max-w-2xl ${muted}`}>Crie sua conta grátis, conecte o Mercado Pago e comece a receber confirmações sem mudar o jeito que seus clientes pagam.</p>
+        <button onClick={() => document.getElementById('comecar')?.scrollIntoView({ behavior: 'smooth' })} className="mt-6 rounded-xl bg-emerald-500 px-6 py-3 text-sm font-black text-slate-950">Criar Pix Grátis</button>
+      </section>
+
+      <footer className={`border-t px-4 py-8 text-center text-xs ${dark ? 'border-white/5 text-white/35' : 'border-black/5 text-slate-500'}`}>
+        <p>PixWiki · O dinheiro cai direto na sua conta Mercado Pago.</p>
+        <p className="mt-2"><a href="https://bigcorps.com.br" className="hover:underline">BigCorps</a> · tecnologia <a href="https://minhai.app" className="hover:underline">minhAi</a></p>
+      </footer>
+    </main>
   );
 }

@@ -328,7 +328,7 @@ export default function PixWikiApiPage() {
             <h1 className="mt-4 text-3xl font-black">API & Webhooks</h1>
             <p className="mt-3 leading-relaxed text-white/65">
               Conecte seu ERP, e-commerce, automação ou sistema próprio aos recebimentos do PixWiki.
-              Chaves de API, eventos em tempo real e histórico de entregas estão incluídos no Pix Pro.
+              Conecte seu ERP, e-commerce, automação ou sistema próprio ao PixWiki. Os recursos avançados de integração estão incluídos no Pix Pro.
             </p>
           </div>
         </div>
@@ -342,7 +342,7 @@ export default function PixWikiApiPage() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <Link href="/dashboard" className="text-sm text-white/50 hover:text-white">← Painel</Link>
-            <h1 className="mt-2 text-3xl font-black tracking-tight">API & Webhooks</h1>
+            <h1 className="mt-2 text-3xl font-black tracking-tight">Integrações</h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/55">
               Integre os recebimentos do PixWiki ao seu sistema sem acessar credenciais do Mercado Pago.
             </p>
@@ -526,7 +526,7 @@ export default function PixWikiApiPage() {
         </section>
 
         <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
-          <h2 className="text-xl font-black">API PixWiki v1</h2>
+          <h2 className="text-xl font-black">Para integrar com seu sistema</h2>
           <p className="mt-2 text-sm leading-relaxed text-white/55">
             Use <code className="text-emerald-300">Authorization: Bearer SUA_API_KEY</code>. Valores monetários são retornados em centavos para evitar erros de ponto flutuante.
           </p>

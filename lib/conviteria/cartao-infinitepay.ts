@@ -16,8 +16,8 @@ export const TAXAS_CARTAO_BPS: Record<ParcelasCartao, number> = {
 export const INFINITEPAY_HANDLE_CONVITEIA = 'bigcorps';
 export const MAX_PARCELAS_CARTAO = 6;
 
-const INFINITEPAY_LINKS_URL =
-  'https://api.checkout.infinitepay.io/links';
+const BIGCORPS_CHECKOUT_REDIRECT_URL =
+  'https://checkout.bigcorps.com.br/redirect.html';
 
 const INFINITEPAY_PAYMENT_CHECK_URL =
   'https://api.checkout.infinitepay.io/payment_check';
@@ -512,119 +512,105 @@ export async function criarLinkInfinitePay({
       ),
     ]);
 
-  const customer: {
-    name: string;
-    phone_number: string;
-    email?: string;
-  } = {
-    name:
-      String(
-        pagadorNome ?? ''
-      ).trim() ||
-      `Convidado de ${anfitrioes}`,
+  const nome =
+    String(
+      pagadorNome ?? ''
+    ).trim() ||
+    `Convidado de ${anfitrioes}`;
 
-    phone_number:
-      telefoneE164,
-  };
+  if (!emailCriador) {
+    throw new Error(
+      'O convite não possui e-mail de contato para pré-preencher o checkout.'
+    );
+  }
 
-  if (emailCriador) {
-    customer.email =
-      emailCriador;
+  if (
+    !address?.cep ||
+    !address?.number
+  ) {
+    throw new Error(
+      'Não foi possível identificar CEP e número do local do evento.'
+    );
   }
 
   const {
     redirectUrl,
-    webhookUrl,
   } = urlsConviteia();
 
-  const payload: Record<string, unknown> = {
-    handle:
-      INFINITEPAY_HANDLE_CONVITEIA,
+  /**
+   * A ConviteIA usa o redirecionador BigCorps porque ele transporta
+   * `installments` para a URL hospedada do checkout da InfinitePay.
+   *
+   * Isso é diferente do POST /links público: no fluxo BigCorps a quantidade
+   * de parcelas faz parte explicitamente da URL que chega ao checkout.
+   *
+   * `result_url` mantém o retorno dentro da ConviteIA. O redirecionador
+   * acrescenta os identificadores da transação (order_nsu, transaction_nsu,
+   * slug etc.) ao retorno após o pagamento.
+   */
+  const params =
+    new URLSearchParams({
+      valor_centavos:
+        String(
+          valorCobradoCentavos
+        ),
 
-    order_nsu:
-      orderNsu,
+      order_id:
+        orderNsu,
 
-    redirect_url:
-      redirectUrl,
+      telefone:
+        telefoneE164
+          .replace(/\D/g, ''),
 
-    webhook_url:
-      webhookUrl,
+      nome,
 
-    payment_method:
-      'credit',
+      email:
+        emailCriador,
 
-    installments:
-      parcelas,
+      cep:
+        address.cep,
 
-    items: [
-      {
-        quantity: 1,
-        price:
-          valorCobradoCentavos,
-        description:
-          `Presentes para ${anfitrioes}`,
-      },
-    ],
+      numero:
+        address.number,
 
-    customer,
-  };
+      handle:
+        INFINITEPAY_HANDLE_CONVITEIA,
 
-  if (address) {
-    payload.address =
-      address;
-  }
+      // Neste checkout da ConviteIA queremos somente cartão/carteira digital.
+      // O redirect da BigCorps mantém "all" como padrão para os outros sistemas.
+      payment_method:
+        'credit',
 
-  const response =
-    await fetch(
-      INFINITEPAY_LINKS_URL,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type':
-            'application/json',
-        },
-        body:
-          JSON.stringify(payload),
-        signal:
-          AbortSignal.timeout(
-            10_000
-          ),
-        cache: 'no-store',
-      }
-    );
+      // Opt-in para o redirect enviar o comprador diretamente de volta à ConviteIA.
+      app:
+        'conviteia',
 
-  const data =
-    (await response
-      .json()
-      .catch(() => null)) as
-      | {
-          url?: string;
-          checkout_url?: string;
-          message?: string;
-          error?: string;
-        }
-      | null;
+      installments:
+        String(parcelas),
 
-  const checkoutUrl =
-    data?.url ||
-    data?.checkout_url ||
-    '';
+      // Compatibilidade explícita com a implementação atual do redirect,
+      // que também aceita o alias `parcelas`.
+      parcelas:
+        String(parcelas),
 
-  if (
-    !response.ok ||
-    !checkoutUrl
-  ) {
-    const motivo =
-      data?.message ||
-      data?.error ||
-      `HTTP ${response.status}`;
+      resultId:
+        crypto.randomUUID(),
 
-    throw new Error(
-      `InfinitePay não criou o checkout: ${motivo}`
+      result_url:
+        redirectUrl,
+    });
+
+  if (address.complement) {
+    params.set(
+      'complemento',
+      address.complement
     );
   }
 
-  return checkoutUrl;
+  return (
+    `${BIGCORPS_CHECKOUT_REDIRECT_URL}?` +
+    params.toString()
+  );
 }
 
 export type VerificacaoInfinitePay = {

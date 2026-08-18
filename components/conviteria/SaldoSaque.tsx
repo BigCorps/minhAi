@@ -131,9 +131,14 @@ export default function SaldoSaque({ eventoId }: { eventoId: string }) {
                 className="my-4 rounded-xl px-4 py-3 text-xs leading-5"
                 style={{ backgroundColor: '#fdf0f3', color: '#7c5560' }}
               >
-                <strong style={{ color: '#40232c' }}>Taxa dos presentes: 1%.</strong>{' '}
-                O ConviteIA desconta a taxa antes de creditar o saldo, então o valor
-                disponível acima já é líquido.
+                <strong style={{ color: '#40232c' }}>
+                  O valor disponível acima já é líquido.
+                </strong>{' '}
+                O ConviteIA desconta 1% dos presentes antes de creditar o saldo.
+                Nos pagamentos com cartão, quando os anfitriões assumem a taxa
+                de processamento, ela também já vem descontada deste saldo.
+                Quando a taxa é repassada ao convidado, ela não reduz o valor
+                dos presentes creditado aos anfitriões.
                 <br />
                 Saque mínimo: <strong style={{ color: '#40232c' }}>
                   {brlSaque(dados.saqueMinimoCentavos)}

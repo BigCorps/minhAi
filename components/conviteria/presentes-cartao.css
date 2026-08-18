@@ -1,0 +1,233 @@
+/* ConviteIA — checkout por cartão
+   Arquivo isolado para não alterar os estilos já validados do PIX. */
+
+.cv-pagamento-titulo {
+  margin: 0 0 .75rem;
+  color: var(--cv-tinta);
+  font-size: .92rem;
+  font-weight: 700;
+}
+
+.cv-pagamento-metodos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+  margin-bottom: .85rem;
+}
+
+.cv-pagamento-metodo {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .8rem;
+  border: 1px solid color-mix(in srgb, var(--cv-acento) 24%, transparent);
+  border-radius: 13px;
+  background: var(--cv-papel);
+  color: var(--cv-tinta);
+  text-align: left;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.cv-pagamento-metodo:not(:disabled) {
+  cursor: pointer;
+}
+
+.cv-pagamento-metodo.sel {
+  border-color: var(--cv-acento);
+  background: color-mix(in srgb, var(--cv-papel) 92%, var(--cv-acento) 8%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cv-acento) 10%, transparent);
+}
+
+.cv-pagamento-metodo:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+}
+
+.cv-pagamento-metodo-icone {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--cv-acento) 12%, white);
+  color: var(--cv-acento);
+}
+
+.cv-pagamento-metodo > span:last-child {
+  min-width: 0;
+}
+
+.cv-pagamento-metodo strong,
+.cv-pagamento-metodo small {
+  display: block;
+}
+
+.cv-pagamento-metodo strong {
+  font-size: .79rem;
+  line-height: 1.2;
+}
+
+.cv-pagamento-metodo small {
+  margin-top: .18rem;
+  color: var(--cv-tinta-suave);
+  font-size: .65rem;
+  line-height: 1.25;
+}
+
+.cv-pagamento-box {
+  margin: 0 0 .7rem;
+  padding: .8rem .85rem;
+  border: 1px solid color-mix(in srgb, var(--cv-acento) 20%, transparent);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--cv-papel) 96%, white);
+}
+
+.cv-pagamento-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  color: var(--cv-tinta-suave);
+  font-size: .76rem;
+  line-height: 1.35;
+}
+
+.cv-pagamento-linha + .cv-pagamento-linha {
+  margin-top: .45rem;
+}
+
+.cv-pagamento-linha strong {
+  flex: 0 0 auto;
+  color: var(--cv-tinta);
+  white-space: nowrap;
+}
+
+.cv-pagamento-linha.total {
+  margin-top: .6rem;
+  padding-top: .6rem;
+  border-top: 1px solid color-mix(in srgb, var(--cv-acento) 18%, transparent);
+  color: var(--cv-tinta);
+  font-weight: 700;
+}
+
+.cv-pagamento-linha.total:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.cv-pagamento-linha.total strong {
+  color: var(--cv-acento-texto);
+  font-size: .94rem;
+}
+
+.cv-pagamento-nota {
+  margin: .55rem 0 0;
+  color: var(--cv-tinta-suave);
+  font-size: .67rem;
+  line-height: 1.45;
+}
+
+.cv-cartao-telefone {
+  display: block;
+  margin: 0 !important;
+}
+
+.cv-cartao-telefone > span {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  color: var(--cv-tinta);
+  font-size: .75rem;
+  font-weight: 650;
+}
+
+.cv-cartao-telefone input {
+  width: 100%;
+  margin-top: .45rem;
+  border: 1px solid color-mix(in srgb, var(--cv-acento) 30%, transparent);
+  border-radius: 10px;
+  padding: .68rem .75rem;
+  background: #fff;
+  color: var(--cv-tinta);
+  font-size: .86rem;
+}
+
+.cv-cartao-telefone input:focus {
+  outline: 2px solid color-mix(in srgb, var(--cv-acento) 24%, transparent);
+  border-color: var(--cv-acento);
+}
+
+.cv-cartao-telefone small {
+  display: block;
+  margin-top: .38rem;
+  color: var(--cv-tinta-suave);
+  font-size: .65rem;
+  line-height: 1.4;
+}
+
+.cv-cartao-label {
+  display: block;
+  margin-bottom: .55rem;
+  color: var(--cv-tinta);
+  font-size: .75rem;
+  font-weight: 650;
+}
+
+.cv-cartao-parcelas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .45rem;
+}
+
+.cv-cartao-parcelas button {
+  min-width: 0;
+  padding: .55rem .35rem;
+  border: 1px solid color-mix(in srgb, var(--cv-acento) 24%, transparent);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--cv-tinta);
+  text-align: center;
+  cursor: pointer;
+}
+
+.cv-cartao-parcelas button.sel {
+  border-color: var(--cv-acento);
+  background: var(--cv-acento);
+  color: #fff;
+}
+
+.cv-cartao-parcelas strong,
+.cv-cartao-parcelas small {
+  display: block;
+}
+
+.cv-cartao-parcelas strong {
+  font-size: .78rem;
+}
+
+.cv-cartao-parcelas small {
+  margin-top: .12rem;
+  color: var(--cv-tinta-suave);
+  font-size: .6rem;
+}
+
+.cv-cartao-parcelas button.sel small {
+  color: rgba(255,255,255,.82);
+}
+
+.cv-cartao-resumo {
+  margin-bottom: .9rem;
+}
+
+@media (max-width: 430px) {
+  .cv-pagamento-metodos {
+    grid-template-columns: 1fr;
+  }
+
+  .cv-pagamento-metodo {
+    padding: .7rem .75rem;
+  }
+}

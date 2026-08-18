@@ -1,0 +1,152 @@
+.wz-pagamentos-presentes {
+  margin: 0 0 1rem;
+  padding: .9rem;
+  border: 1px solid rgba(192,96,120,.24);
+  border-radius: 14px;
+  background: rgba(255,248,250,.72);
+}
+
+.wz-pagamentos-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+}
+
+.wz-pagamentos-cabecalho > div {
+  min-width: 0;
+}
+
+.wz-pagamentos-cabecalho strong {
+  display: block;
+  color: #40232c;
+  font-size: .83rem;
+}
+
+.wz-pagamentos-cabecalho > div > span {
+  display: block;
+  margin-top: .22rem;
+  color: #7c5560;
+  font-size: .68rem;
+  line-height: 1.4;
+}
+
+.wz-pagamentos-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  color: #a04a63;
+  font-size: .68rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.wz-pagamentos-toggle input,
+.wz-pagamentos-opcoes input {
+  accent-color: #c06078;
+}
+
+.wz-pagamentos-pergunta {
+  margin: .85rem 0 .55rem;
+  color: #40232c;
+  font-size: .72rem;
+  font-weight: 650;
+}
+
+.wz-pagamentos-opcoes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: .55rem;
+}
+
+.wz-pagamentos-opcoes > label {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  padding: .7rem;
+  border: 1px solid rgba(192,96,120,.2);
+  border-radius: 11px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.wz-pagamentos-opcoes > label.sel {
+  border-color: #c06078;
+  background: #fff4f7;
+}
+
+.wz-pagamentos-opcoes span {
+  min-width: 0;
+}
+
+.wz-pagamentos-opcoes strong,
+.wz-pagamentos-opcoes small {
+  display: block;
+}
+
+.wz-pagamentos-opcoes strong {
+  color: #40232c;
+  font-size: .7rem;
+}
+
+.wz-pagamentos-opcoes small {
+  margin-top: .22rem;
+  color: #7c5560;
+  font-size: .62rem;
+  line-height: 1.4;
+}
+
+.wz-pagamentos-taxas {
+  display: grid;
+  grid-template-columns: repeat(6,minmax(0,1fr));
+  gap: .35rem;
+  margin-top: .7rem;
+}
+
+.wz-pagamentos-taxas > span {
+  min-width: 0;
+  padding: .45rem .2rem;
+  border-radius: 8px;
+  background: #fdf0f3;
+  text-align: center;
+}
+
+.wz-pagamentos-taxas strong,
+.wz-pagamentos-taxas small {
+  display: block;
+}
+
+.wz-pagamentos-taxas strong {
+  color: #40232c;
+  font-size: .65rem;
+}
+
+.wz-pagamentos-taxas small {
+  margin-top: .1rem;
+  color: #a04a63;
+  font-size: .57rem;
+}
+
+.wz-pagamentos-nota {
+  margin: .55rem 0 0;
+  color: #7c5560;
+  font-size: .61rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 600px) {
+  .wz-pagamentos-cabecalho {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .wz-pagamentos-opcoes {
+    grid-template-columns: 1fr;
+  }
+
+  .wz-pagamentos-taxas {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+}

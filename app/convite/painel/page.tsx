@@ -11,6 +11,7 @@ import AcoesConvite from '@/components/conviteria/AcoesConvite';
 import SuporteWhatsapp from '@/components/conviteria/SuporteWhatsapp';
 import RodapeMarca from '@/components/conviteria/RodapeMarca';
 import SaldoSaque from '@/components/conviteria/SaldoSaque';
+import PagamentosPresentesPainel from '@/components/conviteria/PagamentosPresentesPainel';
 import PlanoMensalCard from '@/components/conviteria/PlanoMensalCard';
 import PlanoStatusHeader from '@/components/conviteria/PlanoStatusHeader';
 import RecadosPainel from '@/components/conviteria/RecadosPainel';
@@ -245,7 +246,13 @@ export default function PainelPage() {
                   />
 
                   <PresencasPainel eventoId={c.id} />
+
+                  <PagamentosPresentesPainel
+                    eventoId={c.id}
+                  />
+
                   <SaldoSaque eventoId={c.id} />
+
                   <RecadosPainel eventoId={c.id} />
                 </>
               )}

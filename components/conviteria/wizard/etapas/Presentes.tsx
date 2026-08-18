@@ -12,6 +12,7 @@ import {
 import type { PresenteEscolhido } from '@/lib/conviteria/tipos';
 import { parecidos, usaFotoDoCatalogo } from '@/lib/conviteria/duplicados';
 import type { PropsEtapa } from '../Wizard';
+import '../pagamentos-presentes.css';
 
 type ItemCatalogo = PresenteEscolhido & { grupo?: string };
 
@@ -22,6 +23,15 @@ const FAIXAS: Array<{ id: FaixaCatalogo; nome: string }> = [
   { id: 'acima-250', nome: 'Acima de R$ 250' },
   { id: 'livre', nome: 'Valor livre' },
 ];
+
+const TAXAS_CARTAO = [
+  ['1x', '4,99%'],
+  ['2x', '7,09%'],
+  ['3x', '8,01%'],
+  ['4x', '8,91%'],
+  ['5x', '9,80%'],
+  ['6x', '10,67%'],
+] as const;
 
 /** "132,38" ou "132.38" ou "13238" -> centavos. */
 function paraCentavos(v: string) {
@@ -41,9 +51,6 @@ interface Rascunho {
   imagemUrl: string | null;
 }
 
-/** Os mesmos textos que `secoes/Presentes.tsx` usa quando o config esta vazio.
-    Se mudar la, mude aqui — senao o campo mostra um valor que nao corresponde
-    ao que aparece no convite. */
 const TEXTO_PADRAO = {
   titulo: 'Lista de presentes',
   texto:
@@ -60,8 +67,14 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
   const [faixa, setFaixa] = useState<FaixaCatalogo>('todos');
   const secaoLigada = estado.cfg.secoes?.some((s) => s.tipo === 'presentes' && s.ativo);
 
-  // `null` = nenhum painel aberto. 'novo' = criando. Qualquer outra string =
-  // editando o item com aquele catalogoId.
+  const cartaoAtivo =
+    String(secaoPresentes?.config?.cartaoAtivo ?? 'sim') !== 'nao';
+
+  const taxaCartaoResponsavel =
+    String(secaoPresentes?.config?.taxaCartaoResponsavel ?? 'anfitriao') === 'convidado'
+      ? 'convidado'
+      : 'anfitriao';
+
   const [editando, setEditando] = useState<string | null>(null);
   const [rascunho, setRascunho] = useState<Rascunho>({
     titulo: '', valor: '', valorLivre: false, imagemUrl: null,
@@ -69,21 +82,23 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
   const [enviando, setEnviando] = useState(false);
   const [erroPainel, setErroPainel] = useState('');
 
-  // Presentes ja escolhidos com titulo parecido com o que esta sendo digitado.
-  // So dispara na criacao: quem edita um item existente esta, por definicao,
-  // resolvendo o problema em vez de criar outro.
   const semelhantes =
     editando === 'novo' && rascunho.titulo.trim().length > 4
       ? parecidos(rascunho.titulo, escolhidos)
       : [];
+
   const inputFoto = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelado = false;
-    setItens(null); setErro(null);
+    setItens(null);
+    setErro(null);
+
     (async () => {
       try {
-        const r = await fetch(`/api/conviteria/catalogo?tipo=${encodeURIComponent(estado.cfg.tipoEventoId)}`);
+        const r = await fetch(
+          `/api/conviteria/catalogo?tipo=${encodeURIComponent(estado.cfg.tipoEventoId)}`
+        );
         const d = await r.json();
         if (cancelado) return;
         if (!r.ok) throw new Error(d?.erro ?? 'falhou');
@@ -92,12 +107,14 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
         if (!cancelado) setErro('Não deu para carregar o catálogo agora.');
       }
     })();
+
     return () => { cancelado = true; };
   }, [estado.cfg.tipoEventoId]);
 
   const filtrados = useMemo(() => {
     if (!itens) return [];
     const q = busca.trim().toLocaleLowerCase('pt-BR');
+
     return itens.filter((item) =>
       (!q || item.titulo.toLocaleLowerCase('pt-BR').includes(q)) &&
       pertenceFaixa(item.valorCentavos, !!item.permiteValorLivre, faixa)
@@ -106,6 +123,15 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
 
   const noLimite = escolhidos.length >= LIMITE_PRESENTES_CONVITE;
   const temFotoPropria = escolhidos.some((p) => !usaFotoDoCatalogo(p));
+
+  function configurarPagamento(chave: string, valor: string) {
+    despachar({
+      tipo: 'configSecao',
+      secao: 'presentes',
+      chave,
+      valor,
+    });
+  }
 
   function alternar(item: PresenteEscolhido) {
     const ja = escolhidos.some((p) => p.catalogoId === item.catalogoId);
@@ -134,6 +160,7 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
     if (!aoEnviarArquivo) return;
     setEnviando(true);
     setErroPainel('');
+
     try {
       const url = await aoEnviarArquivo('presente', arquivo);
       setRascunho((r) => ({ ...r, imagemUrl: url }));
@@ -147,9 +174,13 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
 
   function salvar() {
     const titulo = rascunho.titulo.trim();
-    if (!titulo) { setErroPainel('Dê um nome ao presente.'); return; }
+    if (!titulo) {
+      setErroPainel('Dê um nome ao presente.');
+      return;
+    }
 
     const centavos = rascunho.valorLivre ? 0 : paraCentavos(rascunho.valor);
+
     if (
       !rascunho.valorLivre &&
       (
@@ -165,14 +196,16 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
     }
 
     if (editando === 'novo') {
-      if (noLimite) { setErroPainel(`Você chegou ao limite de ${LIMITE_PRESENTES_CONVITE} presentes.`); return; }
+      if (noLimite) {
+        setErroPainel(`Você chegou ao limite de ${LIMITE_PRESENTES_CONVITE} presentes.`);
+        return;
+      }
+
       despachar({
         tipo: 'alternarPresente',
         presente: {
-          // Prefixo `custom:` distingue do id do catálogo sem precisar de
-          // outra tabela. O sufixo aleatório evita colisão entre dois itens
-          // criados no mesmo milissegundo.
-          catalogoId: `custom:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
+          catalogoId:
+            `custom:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
           titulo,
           valorCentavos: centavos,
           permiteValorLivre: rascunho.valorLivre,
@@ -192,6 +225,7 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
         },
       });
     }
+
     setEditando(null);
   }
 
@@ -205,6 +239,7 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
         imagemUrl: p.imagemOriginalUrl ?? p.imagemUrl,
       },
     });
+
     setEditando(null);
   }
 
@@ -245,7 +280,9 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
         <input
           type="checkbox"
           checked={rascunho.valorLivre}
-          onChange={(e) => setRascunho((r) => ({ ...r, valorLivre: e.target.checked }))}
+          onChange={(e) =>
+            setRascunho((r) => ({ ...r, valorLivre: e.target.checked }))
+          }
         />
         <span>Deixar o convidado escolher o valor</span>
       </label>
@@ -256,6 +293,7 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
           {rascunho.imagemUrl
             ? <img src={rascunho.imagemUrl} alt="" loading="lazy" />
             : <span className="wz-presente-vazio">🎁</span>}
+
           <div className="wz-presente-foto-acoes">
             <button
               type="button"
@@ -263,8 +301,13 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
               disabled={enviando}
               onClick={() => inputFoto.current?.click()}
             >
-              {enviando ? 'Enviando…' : rascunho.imagemUrl ? 'Trocar foto' : 'Escolher foto'}
+              {enviando
+                ? 'Enviando…'
+                : rascunho.imagemUrl
+                  ? 'Trocar foto'
+                  : 'Escolher foto'}
             </button>
+
             {rascunho.imagemUrl && (
               <button
                 type="button"
@@ -275,6 +318,7 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
               </button>
             )}
           </div>
+
           <input
             ref={inputFoto}
             type="file"
@@ -286,6 +330,7 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
             }}
           />
         </div>
+
         <span className="wz-campo-dica">JPG, PNG ou WebP. Máximo 2 MB.</span>
       </div>
 
@@ -296,10 +341,7 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
             {semelhantes.slice(0, 3).map((p) => (
               <li key={p.catalogoId}>
                 {p.titulo}{' '}
-                <button
-                  type="button"
-                  onClick={() => abrirEdicao(p)}
-                >
+                <button type="button" onClick={() => abrirEdicao(p)}>
                   Editar este
                 </button>
               </li>
@@ -314,10 +356,20 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
       {erroPainel && <p className="wz-status erro">{erroPainel}</p>}
 
       <div className="wz-presente-editor-acoes">
-        <button type="button" className="wz-btn wz-btn-fantasma" onClick={() => setEditando(null)}>
+        <button
+          type="button"
+          className="wz-btn wz-btn-fantasma"
+          onClick={() => setEditando(null)}
+        >
           Cancelar
         </button>
-        <button type="button" className="wz-btn wz-btn-principal" onClick={salvar} disabled={enviando}>
+
+        <button
+          type="button"
+          className="wz-btn wz-btn-principal"
+          onClick={salvar}
+          disabled={enviando}
+        >
           Salvar
         </button>
       </div>
@@ -327,18 +379,100 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
   return (
     <>
       <p className="wz-intro">
-        Escolha os presentes do convite. Seus convidados pagam por PIX e vocês
-        acompanham tudo pelo painel. A taxa do ConviteIA é de 1%.
+        Escolha os presentes do convite. Seus convidados podem pagar por PIX
+        e, se você ativar abaixo, também por cartão de crédito. A taxa da
+        ConviteIA sobre presentes continua em 1%.
       </p>
+
       {!secaoLigada && (
         <p className="wz-aviso">
           A seção de presentes está desligada. Ligue em “Seções” para ela aparecer no convite.
         </p>
       )}
 
-      {/* Mesmo padrão da etapa "Interações", que já deixa editar os textos de
-          RSVP e recados. O valor exibido é o do config OU o padrão — nunca
-          string vazia, para o convite não mostrar título em branco. */}
+      <section className="wz-pagamentos-presentes">
+        <div className="wz-pagamentos-cabecalho">
+          <div>
+            <strong>Pagamentos dos presentes</strong>
+            <span>PIX continua disponível. O cartão pode ser parcelado de 1x a 6x.</span>
+          </div>
+
+          <label className="wz-pagamentos-toggle">
+            <input
+              type="checkbox"
+              checked={cartaoAtivo}
+              onChange={(e) =>
+                configurarPagamento(
+                  'cartaoAtivo',
+                  e.target.checked ? 'sim' : 'nao'
+                )
+              }
+            />
+            <span>{cartaoAtivo ? 'Cartão ativo' : 'Cartão desativado'}</span>
+          </label>
+        </div>
+
+        {cartaoAtivo && (
+          <>
+            <p className="wz-pagamentos-pergunta">
+              Quem assume a taxa de processamento do cartão?
+            </p>
+
+            <div className="wz-pagamentos-opcoes">
+              <label className={taxaCartaoResponsavel === 'anfitriao' ? 'sel' : ''}>
+                <input
+                  type="radio"
+                  name="taxa-cartao-responsavel"
+                  checked={taxaCartaoResponsavel === 'anfitriao'}
+                  onChange={() =>
+                    configurarPagamento('taxaCartaoResponsavel', 'anfitriao')
+                  }
+                />
+                <span>
+                  <strong>Eu assumo a taxa</strong>
+                  <small>
+                    O convidado paga somente os presentes. A taxa do cartão sai
+                    do saldo do evento.
+                  </small>
+                </span>
+              </label>
+
+              <label className={taxaCartaoResponsavel === 'convidado' ? 'sel' : ''}>
+                <input
+                  type="radio"
+                  name="taxa-cartao-responsavel"
+                  checked={taxaCartaoResponsavel === 'convidado'}
+                  onChange={() =>
+                    configurarPagamento('taxaCartaoResponsavel', 'convidado')
+                  }
+                />
+                <span>
+                  <strong>Repassar ao convidado</strong>
+                  <small>
+                    A taxa de processamento é acrescentada ao total do cartão
+                    antes de o convidado seguir para a InfinitePay.
+                  </small>
+                </span>
+              </label>
+            </div>
+
+            <div className="wz-pagamentos-taxas">
+              {TAXAS_CARTAO.map(([parcela, taxa]) => (
+                <span key={parcela}>
+                  <strong>{parcela}</strong>
+                  <small>{taxa}</small>
+                </span>
+              ))}
+            </div>
+
+            <p className="wz-pagamentos-nota">
+              Essas porcentagens são do processamento do cartão
+              (InfinitePay + BigCorps). O 1% da ConviteIA é separado.
+            </p>
+          </>
+        )}
+      </section>
+
       <details className="wz-textos-secao">
         <summary>Textos desta seção no convite</summary>
 
@@ -350,7 +484,12 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
             maxLength={80}
             value={String(secaoPresentes?.config?.titulo ?? TEXTO_PADRAO.titulo)}
             onChange={(e) =>
-              despachar({ tipo: 'configSecao', secao: 'presentes', chave: 'titulo', valor: e.target.value })
+              despachar({
+                tipo: 'configSecao',
+                secao: 'presentes',
+                chave: 'titulo',
+                valor: e.target.value,
+              })
             }
           />
         </label>
@@ -363,7 +502,12 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
             maxLength={300}
             value={String(secaoPresentes?.config?.texto ?? TEXTO_PADRAO.texto)}
             onChange={(e) =>
-              despachar({ tipo: 'configSecao', secao: 'presentes', chave: 'texto', valor: e.target.value })
+              despachar({
+                tipo: 'configSecao',
+                secao: 'presentes',
+                chave: 'texto',
+                valor: e.target.value,
+              })
             }
           />
         </label>
@@ -374,17 +518,21 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
             type="text"
             className="wz-input"
             maxLength={60}
-            value={String(secaoPresentes?.config?.rotuloBotao ?? TEXTO_PADRAO.botao)}
+            value={String(
+              secaoPresentes?.config?.rotuloBotao ?? TEXTO_PADRAO.botao
+            )}
             onChange={(e) =>
-              despachar({ tipo: 'configSecao', secao: 'presentes', chave: 'rotuloBotao', valor: e.target.value })
+              despachar({
+                tipo: 'configSecao',
+                secao: 'presentes',
+                chave: 'rotuloBotao',
+                valor: e.target.value,
+              })
             }
           />
         </label>
       </details>
 
-      {/* Os escolhidos vêm primeiro e em lista própria, não misturados à
-          grade: item criado pelo usuário não existe no catálogo e não teria
-          onde aparecer. E é aqui que ficam os botões de editar. */}
       <div className="wz-catalogo-resumo">
         <span>
           {escolhidos.length === 0
@@ -406,38 +554,75 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
               <li key={p.catalogoId}>
                 <div className="wz-escolhido">
                   {p.imagemUrl
-                    ? <img src={p.imagemUrl} alt="" className="wz-escolhido-img" loading="lazy" />
-                    : <span className="wz-escolhido-img wz-presente-vazio">🎁</span>}
+                    ? (
+                      <img
+                        src={p.imagemUrl}
+                        alt=""
+                        className="wz-escolhido-img"
+                        loading="lazy"
+                      />
+                    )
+                    : (
+                      <span className="wz-escolhido-img wz-presente-vazio">🎁</span>
+                    )}
+
                   <div className="wz-escolhido-info">
                     <strong>{p.titulo}</strong>
-                    <span>{p.valorCentavos > 0 ? brl(p.valorCentavos) : 'Valor livre'}</span>
-                    {p.personalizado && <em className="wz-etiqueta">Criado por você</em>}
-                    {/* So marca quando ha mistura: num convite que usa o
-                        catalogo inteiro, todas seriam padrao e a etiqueta
-                        viraria ruido. */}
-                    {temFotoPropria && !p.personalizado && usaFotoDoCatalogo(p) && (
-                      <em className="wz-etiqueta wz-etiqueta-leve">Foto padrão</em>
+                    <span>
+                      {p.valorCentavos > 0 ? brl(p.valorCentavos) : 'Valor livre'}
+                    </span>
+
+                    {p.personalizado && (
+                      <em className="wz-etiqueta">Criado por você</em>
                     )}
-                    {!p.personalizado && alterado && <em className="wz-etiqueta">Editado</em>}
-                  </div>
-                  <div className="wz-escolhido-acoes">
-                    <button type="button" className="wz-btn-mini" onClick={() => abrirEdicao(p)}>
-                      Editar
-                    </button>
+
+                    {temFotoPropria &&
+                      !p.personalizado &&
+                      usaFotoDoCatalogo(p) && (
+                        <em className="wz-etiqueta wz-etiqueta-leve">
+                          Foto padrão
+                        </em>
+                      )}
+
                     {!p.personalizado && alterado && (
-                      <button type="button" className="wz-btn-mini" onClick={() => restaurar(p)}>
-                        Restaurar
-                      </button>
+                      <em className="wz-etiqueta">Editado</em>
                     )}
+                  </div>
+
+                  <div className="wz-escolhido-acoes">
                     <button
                       type="button"
                       className="wz-btn-mini"
-                      onClick={() => despachar({ tipo: 'removerPresente', catalogoId: p.catalogoId })}
+                      onClick={() => abrirEdicao(p)}
+                    >
+                      Editar
+                    </button>
+
+                    {!p.personalizado && alterado && (
+                      <button
+                        type="button"
+                        className="wz-btn-mini"
+                        onClick={() => restaurar(p)}
+                      >
+                        Restaurar
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      className="wz-btn-mini"
+                      onClick={() =>
+                        despachar({
+                          tipo: 'removerPresente',
+                          catalogoId: p.catalogoId,
+                        })
+                      }
                     >
                       Remover
                     </button>
                   </div>
                 </div>
+
                 {editando === p.catalogoId && painel}
               </li>
             );
@@ -453,6 +638,7 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
       >
         + Criar presente do zero
       </button>
+
       {editando === 'novo' && painel}
 
       {noLimite && (
@@ -467,6 +653,7 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
       {itens && (
         <>
           <h3 className="wz-subtitulo">Sugestões</h3>
+
           <div className="wz-catalogo-topo">
             <input
               type="search"
@@ -475,6 +662,7 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
               placeholder="Buscar presente…"
               onChange={(e) => setBusca(e.target.value)}
             />
+
             <div className="wz-catalogo-filtros">
               {FAIXAS.map((f) => (
                 <button
@@ -490,28 +678,54 @@ export default function Presentes({ estado, despachar, aoEnviarArquivo }: PropsE
           </div>
 
           {filtrados.length === 0 ? (
-            <p className="wz-status">Nenhum presente encontrado com esse filtro.</p>
+            <p className="wz-status">
+              Nenhum presente encontrado com esse filtro.
+            </p>
           ) : (
             <ul className="wz-presentes">
               {filtrados.map((item) => {
-                const sel = escolhidos.some((p) => p.catalogoId === item.catalogoId);
+                const sel = escolhidos.some(
+                  (p) => p.catalogoId === item.catalogoId
+                );
                 const bloqueado = !sel && noLimite;
+
                 return (
                   <li key={item.catalogoId}>
                     <button
                       type="button"
                       disabled={bloqueado}
-                      className={`wz-presente${sel ? ' sel' : ''}${bloqueado ? ' bloqueado' : ''}`}
+                      className={
+                        `wz-presente${sel ? ' sel' : ''}` +
+                        `${bloqueado ? ' bloqueado' : ''}`
+                      }
                       onClick={() => alternar(item)}
                     >
                       {item.imagemUrl
-                        ? <img src={item.imagemUrl} alt="" className="wz-presente-img" loading="lazy" />
-                        : <span className="wz-presente-img wz-presente-vazio">🎁</span>}
+                        ? (
+                          <img
+                            src={item.imagemUrl}
+                            alt=""
+                            className="wz-presente-img"
+                            loading="lazy"
+                          />
+                        )
+                        : (
+                          <span className="wz-presente-img wz-presente-vazio">
+                            🎁
+                          </span>
+                        )}
+
                       <span className="wz-presente-titulo">{item.titulo}</span>
+
                       <span className="wz-presente-valor">
-                        {item.valorCentavos > 0 ? brl(item.valorCentavos) : 'Valor livre'}
+                        {item.valorCentavos > 0
+                          ? brl(item.valorCentavos)
+                          : 'Valor livre'}
                       </span>
-                      <span className="wz-presente-estado">{sel ? 'Selecionado' : 'Adicionar'}</span>
+
+                      <span className="wz-presente-estado">
+                        {sel ? 'Selecionado' : 'Adicionar'}
+                      </span>
                     </button>
                   </li>
                 );

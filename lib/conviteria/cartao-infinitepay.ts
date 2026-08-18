@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { adminConviteria } from '@/lib/conviteria/servidor';
 
 export type ParcelasCartao = 1 | 2 | 3 | 4 | 5 | 6;
 export type ResponsavelTaxaCartao = 'anfitriao' | 'convidado';
@@ -142,6 +143,146 @@ function urlsConviteia() {
   };
 }
 
+function checkoutIdDoOrderNsu(
+  orderNsu: string
+) {
+  const prefixo =
+    'conviteia-';
+
+  if (
+    !orderNsu.startsWith(
+      prefixo
+    )
+  ) {
+    return '';
+  }
+
+  return orderNsu
+    .slice(prefixo.length)
+    .trim();
+}
+
+function emailValido(
+  valor: unknown
+) {
+  const email =
+    String(valor ?? '')
+      .trim()
+      .toLowerCase();
+
+  if (
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+      email
+    )
+  ) {
+    return '';
+  }
+
+  return email;
+}
+
+/**
+ * Busca o e-mail da CONTA CRIADORA do convite.
+ *
+ * Importante:
+ * - o navegador nunca envia esse e-mail;
+ * - usamos o checkoutId embutido no order_nsu criado no servidor;
+ * - percorremos presente_checkouts -> eventos -> contas;
+ * - se algum registro legado não tiver e-mail, o checkout continua funcionando
+ *   sem o campo, preservando compatibilidade.
+ */
+async function buscarEmailCriadorDoCheckout(
+  orderNsu: string
+) {
+  const checkoutId =
+    checkoutIdDoOrderNsu(
+      orderNsu
+    );
+
+  if (!checkoutId) {
+    return '';
+  }
+
+  try {
+    const admin =
+      adminConviteria();
+
+    const {
+      data: checkout,
+      error: erroCheckout,
+    } = await admin
+      .from(
+        'presente_checkouts'
+      )
+      .select(
+        'evento_id'
+      )
+      .eq(
+        'id',
+        checkoutId
+      )
+      .maybeSingle();
+
+    if (
+      erroCheckout ||
+      !checkout?.evento_id
+    ) {
+      return '';
+    }
+
+    const {
+      data: evento,
+      error: erroEvento,
+    } = await admin
+      .from('eventos')
+      .select(
+        'conta_id'
+      )
+      .eq(
+        'id',
+        checkout.evento_id
+      )
+      .maybeSingle();
+
+    if (
+      erroEvento ||
+      !evento?.conta_id
+    ) {
+      return '';
+    }
+
+    const {
+      data: conta,
+      error: erroConta,
+    } = await admin
+      .from('contas')
+      .select('email')
+      .eq(
+        'id',
+        evento.conta_id
+      )
+      .maybeSingle();
+
+    if (
+      erroConta ||
+      !conta
+    ) {
+      return '';
+    }
+
+    return emailValido(
+      conta.email
+    );
+  } catch (error) {
+    console.error(
+      'ConviteIA: falha ao buscar e-mail do criador para checkout:',
+      error
+    );
+
+    return '';
+  }
+}
+
 export async function criarLinkInfinitePay({
   orderNsu,
   valorCobradoCentavos,
@@ -182,7 +323,25 @@ export async function criarLinkInfinitePay({
       local?.codigoPostal
     );
 
-  const customer = {
+  const emailCriador =
+    await buscarEmailCriadorDoCheckout(
+      orderNsu
+    );
+
+  /**
+   * O checkout abre com:
+   * - nome informado pelo convidado (ou fallback do convite);
+   * - telefone digitado no modal;
+   * - e-mail da conta criadora do convite.
+   *
+   * O e-mail é apenas PRÉ-PREENCHIMENTO da InfinitePay. O convidado continua
+   * livre para trocar pelo próprio e-mail antes de concluir o pagamento.
+   */
+  const customer: {
+    name: string;
+    phone_number: string;
+    email?: string;
+  } = {
     name:
       String(
         pagadorNome ?? ''
@@ -191,6 +350,11 @@ export async function criarLinkInfinitePay({
     phone_number:
       telefoneE164,
   };
+
+  if (emailCriador) {
+    customer.email =
+      emailCriador;
+  }
 
   const address =
     cep &&

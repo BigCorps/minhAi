@@ -8,15 +8,13 @@ import {
   ipDaRequisicao,
 } from '@/lib/conviteria/servidor';
 import {
-  calcularTaxa,
-} from '@/lib/conviteria/precos';
-import {
   LIMITE_PRESENTES_POR_PIX,
   MAX_TOTAL_PRESENTES_PIX_CENTAVOS,
   MAX_VALOR_PRESENTE_CENTAVOS,
   MIN_VALOR_PRESENTE_CENTAVOS,
 } from '@/lib/conviteria/catalogo';
 import {
+  calcularMargemConviteiaCartao,
   calcularTaxaCartao,
   criarLinkInfinitePay,
   normalizarTelefoneBrasil,
@@ -386,8 +384,13 @@ export async function POST(
       );
     }
 
+    // A taxa comercial já contém a margem da ConviteIA.
+    // Não descontamos um segundo 1% do valor do presente.
     const taxaConviteia =
-      calcularTaxa(valor).taxa;
+      calcularMargemConviteiaCartao(
+        valor,
+        parcelas
+      ).taxaCentavos;
 
     const taxaProcessamento =
       calcularTaxaCartao(
@@ -397,7 +400,6 @@ export async function POST(
 
     const liquido =
       valor -
-      taxaConviteia -
       (
         responsavelTaxa ===
         'anfitriao'
@@ -498,6 +500,8 @@ export async function POST(
       total_centavos:
         totalPresentes,
 
+      // Margem ConviteIA embutida dentro da taxa comercial do cartão.
+      // É informação contábil interna e não é somada novamente ao checkout.
       taxa_centavos:
         taxaConviteiaTotal,
 
@@ -621,7 +625,6 @@ export async function POST(
         orderNsu,
         valorCobradoCentavos:
           valorCobrado,
-        parcelas,
         telefoneE164:
           telefone.e164,
         pagadorNome:

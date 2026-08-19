@@ -4,6 +4,30 @@ import { adminConviteria } from '@/lib/conviteria/servidor';
 export type ParcelasCartao = 1 | 2 | 3 | 4 | 5 | 6;
 export type ResponsavelTaxaCartao = 'anfitriao' | 'convidado';
 
+// Taxas efetivas da InfinitePay usadas como referência interna.
+// O comprador nunca vê a margem da ConviteIA separadamente.
+export const TAXAS_INFINITEPAY_BPS: Record<ParcelasCartao, number> = {
+  1: 419,
+  2: 609,
+  3: 701,
+  4: 791,
+  5: 880,
+  6: 967,
+};
+
+// Margem comercial embutida pela ConviteIA no preço do cartão.
+// Em 1x o preço final é limitado a 4,99%, portanto a margem nominal é 0,80 p.p.
+// De 2x a 6x acrescentamos 1,00 p.p. à taxa da InfinitePay.
+export const MARGEM_CONVITEIA_CARTAO_BPS: Record<ParcelasCartao, number> = {
+  1: 80,
+  2: 100,
+  3: 100,
+  4: 100,
+  5: 100,
+  6: 100,
+};
+
+// Taxa comercial total usada no seletor da ConviteIA e no valor enviado ao checkout.
 export const TAXAS_CARTAO_BPS: Record<ParcelasCartao, number> = {
   1: 499,
   2: 709,
@@ -73,6 +97,24 @@ export function calcularTaxaCartao(
   parcelas: ParcelasCartao
 ) {
   const bps = taxaCartaoBps(parcelas);
+
+  return {
+    bps,
+    taxaCentavos: Math.round((valorCentavos * bps) / 10_000),
+  };
+}
+
+export function margemConviteiaCartaoBps(
+  parcelas: ParcelasCartao
+) {
+  return MARGEM_CONVITEIA_CARTAO_BPS[parcelas];
+}
+
+export function calcularMargemConviteiaCartao(
+  valorCentavos: number,
+  parcelas: ParcelasCartao
+) {
+  const bps = margemConviteiaCartaoBps(parcelas);
 
   return {
     bps,
@@ -477,14 +519,12 @@ async function buscarEmailCriadorDoCheckout(
 export async function criarLinkInfinitePay({
   orderNsu,
   valorCobradoCentavos,
-  parcelas,
   telefoneE164,
   pagadorNome,
   eventoConfig,
 }: {
   orderNsu: string;
   valorCobradoCentavos: number;
-  parcelas: ParcelasCartao;
   telefoneE164: string;
   pagadorNome?: string | null;
   eventoConfig?: any;
@@ -538,11 +578,10 @@ export async function criarLinkInfinitePay({
   } = urlsConviteia();
 
   /**
-   * A ConviteIA usa o redirecionador BigCorps porque ele transporta
-   * `installments` para a URL hospedada do checkout da InfinitePay.
-   *
-   * Isso é diferente do POST /links público: no fluxo BigCorps a quantidade
-   * de parcelas faz parte explicitamente da URL que chega ao checkout.
+   * A quantidade escolhida no seletor da ConviteIA é usada apenas para definir
+   * o preço comercial antes do checkout. Não enviamos `installments` nem
+   * `parcelas` à InfinitePay, preservando o checkout de cartão/carteira digital
+   * sem o seletor de parcelas que apareceu quando esse parâmetro foi incluído.
    *
    * `result_url` mantém o retorno dentro da ConviteIA. O redirecionador
    * acrescenta os identificadores da transação (order_nsu, transaction_nsu,
@@ -585,14 +624,6 @@ export async function criarLinkInfinitePay({
       app:
         'conviteia',
 
-      installments:
-        String(parcelas),
-
-      // Compatibilidade explícita com a implementação atual do redirect,
-      // que também aceita o alias `parcelas`.
-      parcelas:
-        String(parcelas),
-
       resultId:
         crypto.randomUUID(),
 
@@ -627,13 +658,11 @@ export async function verificarInfinitePay({
   transactionNsu,
   slug,
   valorEsperadoCentavos,
-  parcelasEsperadas,
 }: {
   orderNsu: string;
   transactionNsu: string;
   slug: string;
   valorEsperadoCentavos: number;
-  parcelasEsperadas: ParcelasCartao;
 }) {
   const response =
     await fetch(
@@ -688,17 +717,6 @@ export async function verificarInfinitePay({
     return {
       pago: false as const,
       motivo: 'metodo_invalido',
-      data,
-    };
-  }
-
-  if (
-    Number(data.installments) !==
-    parcelasEsperadas
-  ) {
-    return {
-      pago: false as const,
-      motivo: 'parcelas_divergentes',
       data,
     };
   }
@@ -772,8 +790,6 @@ export async function confirmarCheckoutCartao({
         Number(
           checkout.valor_cobrado_centavos
         ),
-      parcelasEsperadas:
-        checkout.parcelas,
     });
 
   if (!verificado.pago) {

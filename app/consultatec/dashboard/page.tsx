@@ -1,12 +1,6 @@
 'use client';
 
-// app/consultatec/dashboard/page.tsx
-// Base: app/pix/dashboard/page.tsx. Trocado: sem link de cobrança/saque (não
-// existe aqui — quem consulta é o próprio usuário, não recebe de terceiros),
-// sem toggle dark/light (ConsultaTec tem só o tema creme/preto), histórico é
-// de CONSULTAS (tipo, custo, data) em vez de recebimentos PIX.
-
-import { useState, useEffect, Suspense, useCallback } from 'react';
+import { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -22,13 +16,12 @@ const cor = {
   tintaMuted: '#6B6350',
   tintaFaint: '#8A8168',
   destaque: '#7A6142',
-  inputBg: '#EFE6CE',
 };
 
 interface HistoricoRow {
   id: string;
   tipo_consulta: string;
-  custo: number; // já em reais (não centavos) — confirmado no schema
+  custo: number;
   status_pagamento: string;
   created_at: string;
 }
@@ -40,6 +33,7 @@ const TIPO_LABEL: Record<string, string> = {
   restricoes_cnpj: 'Restrições CNPJ',
   consultar_protestos: 'Protestos CPF',
   completa_cpf: 'Completa CPF',
+  completa_cnpj: 'Completa CNPJ',
 };
 
 interface DayGroup { key: string; label: string; total: number; items: HistoricoRow[]; }
@@ -62,12 +56,11 @@ function agruparPorDia(rows: HistoricoRow[]): DayGroup[] {
       groups.push(group);
     }
     group.items.push(r);
-    group.total += r.custo;
+    group.total += Number(r.custo || 0);
   }
   return groups;
 }
 
-// ── Card de propaganda da minhAi ───────────────────────────────────────────
 function MinhaiPromoCard() {
   const utmUrl = 'https://minhai.app?utm_source=consultatec&utm_medium=dashboard&utm_campaign=brinde-minhai';
 
@@ -103,7 +96,7 @@ function MinhaiPromoCard() {
 }
 
 function ConsultaTecDashboardContent() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const search = useSearchParams();
   const bemVindo = search.get('bemvindo') === '1';
@@ -127,7 +120,7 @@ function ConsultaTecDashboardContent() {
         .limit(200),
     ]);
     setSaldoCents(bal?.available_balance_cents ?? 0);
-    setHistorico(hist || []);
+    setHistorico((hist || []) as HistoricoRow[]);
   }, [supabase]);
 
   useEffect(() => {
@@ -137,19 +130,19 @@ function ConsultaTecDashboardContent() {
       if (cancelled) return;
       setUserEmail(email ?? null);
 
-      const { data: cid, error } = await supabase.rpc('ensure_my_consultatec_company');
+      // V2: company dedicada do ConsultaTec. Não altera nem reaproveita a company principal da minhAi.
+      const { data: cid, error } = await supabase.rpc('ensure_my_consultatec_company_v2');
       if (cancelled) return;
 
       if (error || !cid) {
-        setErro('Não foi possível abrir sua conta. Tente sair e entrar novamente.');
+        setErro('Não foi possível abrir sua conta ConsultaTec. Tente sair e entrar novamente.');
         setLoading(false);
         return;
       }
 
       setCompanyId(cid);
       await carregar(cid);
-      if (cancelled) return;
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     };
 
     supabase.auth.getUser().then(({ data }) => {
@@ -172,8 +165,7 @@ function ConsultaTecDashboardContent() {
       subscription.unsubscribe();
       clearTimeout(timeout);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [carregar, router, supabase]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -181,17 +173,13 @@ function ConsultaTecDashboardContent() {
   };
 
   const fmt = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
-  const fmtReais = (reais: number) => `R$ ${reais.toFixed(2).replace('.', ',')}`;
-
+  const fmtReais = (reais: number) => `R$ ${Number(reais || 0).toFixed(2).replace('.', ',')}`;
   const dayGroups = agruparPorDia(historico);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: cor.fundo }}>
-        <div
-          className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin"
-          style={{ borderColor: cor.destaque, borderTopColor: 'transparent' }}
-        />
+        <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: cor.destaque, borderTopColor: 'transparent' }} />
       </div>
     );
   }
@@ -199,8 +187,6 @@ function ConsultaTecDashboardContent() {
   return (
     <div className="min-h-screen px-4 py-8" style={{ backgroundColor: cor.fundo }}>
       <div className="w-full max-w-2xl lg:max-w-5xl mx-auto">
-
-        {/* Header */}
         <div className="flex items-center justify-between mb-6 gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <Image src="/brands/consultatec/logo.png" alt="ConsultaTec" width={40} height={40} className="object-contain h-9 w-9 flex-shrink-0" />
@@ -230,10 +216,7 @@ function ConsultaTecDashboardContent() {
         </div>
 
         {bemVindo && (
-          <div
-            className="mb-4 px-4 py-3 rounded-xl border text-sm text-center"
-            style={{ backgroundColor: cor.fundoCard, borderColor: cor.destaque, color: cor.destaque }}
-          >
+          <div className="mb-4 px-4 py-3 rounded-xl border text-sm text-center" style={{ backgroundColor: cor.fundoCard, borderColor: cor.destaque, color: cor.destaque }}>
             Sua conta foi criada!
           </div>
         )}
@@ -244,13 +227,8 @@ function ConsultaTecDashboardContent() {
           </div>
         )}
 
-        {/* Layout: 1 coluna no mobile, 2 no desktop */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 items-start">
-
-          {/* ── Coluna principal: saldo + histórico ── */}
           <div className="flex flex-col gap-4 min-w-0">
-
-            {/* Saldo */}
             <div className="rounded-2xl border p-5" style={{ backgroundColor: cor.fundoCard, borderColor: cor.borda }}>
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
@@ -269,11 +247,10 @@ function ConsultaTecDashboardContent() {
                 </button>
               </div>
               <p className="text-xs mt-2" style={{ color: cor.tintaMuted }}>
-                Usado automaticamente nas próximas consultas — sem precisar pagar PIX de novo.
+                Saldo exclusivo da sua conta ConsultaTec, usado automaticamente nas próximas consultas.
               </p>
             </div>
 
-            {/* Histórico de consultas */}
             <div className="rounded-2xl border p-5" style={{ backgroundColor: cor.fundoCard, borderColor: cor.borda }}>
               <p className="text-[10px] uppercase tracking-widest mb-4" style={{ color: cor.tintaFaint }}>
                 Consultas realizadas {historico.length > 0 && `(${historico.length})`}
@@ -286,9 +263,7 @@ function ConsultaTecDashboardContent() {
                   {dayGroups.map((group) => (
                     <div key={group.key}>
                       <div className="flex items-center justify-between gap-2 pb-1.5 mb-2 border-b" style={{ borderColor: cor.borda }}>
-                        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: cor.tintaFaint }}>
-                          {group.label}
-                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: cor.tintaFaint }}>{group.label}</span>
                         <span className="text-[11px] font-semibold" style={{ color: cor.tintaMuted }}>
                           Gasto: <span style={{ color: cor.destaque }}>{fmtReais(group.total)}</span>
                         </span>
@@ -297,16 +272,12 @@ function ConsultaTecDashboardContent() {
                         {group.items.map((item) => (
                           <div key={item.id} className="flex items-center justify-between gap-2 py-2 border-b last:border-0" style={{ borderColor: cor.borda }}>
                             <div className="min-w-0">
-                              <p className="text-sm truncate" style={{ color: cor.tinta }}>
-                                {TIPO_LABEL[item.tipo_consulta] || item.tipo_consulta}
-                              </p>
+                              <p className="text-sm truncate" style={{ color: cor.tinta }}>{TIPO_LABEL[item.tipo_consulta] || item.tipo_consulta}</p>
                               <p className="text-xs" style={{ color: cor.tintaFaint }}>
                                 {new Date(item.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                               </p>
                             </div>
-                            <span className="text-sm font-semibold whitespace-nowrap" style={{ color: cor.tinta }}>
-                              {fmtReais(item.custo)}
-                            </span>
+                            <span className="text-sm font-semibold whitespace-nowrap" style={{ color: cor.tinta }}>{fmtReais(item.custo)}</span>
                           </div>
                         ))}
                       </div>
@@ -317,7 +288,6 @@ function ConsultaTecDashboardContent() {
             </div>
           </div>
 
-          {/* ── Coluna lateral: propaganda minhAi ── */}
           <div className="flex flex-col gap-4 min-w-0">
             <MinhaiPromoCard />
           </div>

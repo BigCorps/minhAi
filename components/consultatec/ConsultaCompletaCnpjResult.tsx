@@ -40,21 +40,40 @@ function Section({ title, icon, children }: { title: string; icon?: ReactNode; c
   );
 }
 
+function nonZeroRestriction(item: any) {
+  const quantidade = Number(item?.quantidade ?? 0);
+  const raw = String(item?.valor_total ?? '').trim().replace(/R\$/gi, '').replace(/\s/g, '');
+  let normalized = raw;
+  if (normalized.includes(',') && normalized.includes('.')) normalized = normalized.replace(/\./g, '').replace(',', '.');
+  else if (normalized.includes(',')) normalized = normalized.replace(',', '.');
+  normalized = normalized.replace(/[^0-9.-]/g, '');
+  const valor = normalized ? Number(normalized) : 0;
+  const detalhes = Array.isArray(item?.detalhes) ? item.detalhes : [];
+  return quantidade > 0 || (Number.isFinite(valor) && Math.abs(valor) > 0) || detalhes.length > 0;
+}
+
 export default function ConsultaCompletaCnpjResult({ result }: { result: any }) {
   const dados = result?.dados ?? {};
   const restricoes = result?.restricoes ?? {};
   const score = result?.score ?? restricoes?.score ?? {};
-  const scoreNumero = Number(score?.score);
-  const temScore = Number.isFinite(scoreNumero) && scoreNumero >= 0 && scoreNumero <= 1000;
+  const scoreNumero = score?.score === null || score?.score === undefined || score?.score === '' ? null : Number(score.score);
+  const temScore = scoreNumero !== null && Number.isFinite(scoreNumero) && scoreNumero >= 0 && scoreNumero <= 1000;
+  const faixa = score?.faixa_score?.label
+    || (score?.faixa_score?.min !== undefined && score?.faixa_score?.max !== undefined
+      ? `${score.faixa_score.min}–${score.faixa_score.max}`
+      : null);
+  const temFaixa = Boolean(faixa);
+
   const qsa = Array.isArray(dados?.qsa) ? dados.qsa : [];
   const cnaes = Array.isArray(dados?.cnaes_secundarios) ? dados.cnaes_secundarios : [];
-  const blocosRestricao = Array.isArray(restricoes?.restricoes) ? restricoes.restricoes : [];
+  const blocosRestricao = Array.isArray(restricoes?.restricoes)
+    ? restricoes.restricoes.filter(nonZeroRestriction)
+    : [];
   const detalhesProtestos = Array.isArray(result?.protestos?.detalhes)
     ? result.protestos.detalhes
     : Array.isArray(restricoes?.protestos?.detalhes)
       ? restricoes.protestos.detalhes
       : [];
-  const adicionais = Array.isArray(restricoes?.campos_adicionais) ? restricoes.campos_adicionais : [];
   const alertas = Array.isArray(result?.alertas) ? result.alertas : [];
 
   return (
@@ -83,28 +102,38 @@ export default function ConsultaCompletaCnpjResult({ result }: { result: any }) 
       )}
 
       <Section title="Score e risco" icon={<Gauge className="w-4 h-4" style={{ color: cor.destaque }} />}>
-        {temScore ? (
+        {temScore || temFaixa ? (
           <div className="space-y-3">
             <div className="flex items-end justify-between gap-3">
               <div>
-                <p className="text-3xl font-bold" style={{ color: cor.tinta }}>{Math.round(scoreNumero)}</p>
-                <p className="text-xs" style={{ color: cor.muted }}>de 1000 pontos</p>
+                <p className="text-3xl font-bold" style={{ color: cor.tinta }}>
+                  {temScore ? Math.round(scoreNumero as number) : faixa}
+                </p>
+                <p className="text-xs" style={{ color: cor.muted }}>
+                  {temScore ? 'de 1000 pontos' : 'faixa de score informada'}
+                </p>
               </div>
-              <div className="text-right">
-                <p className="text-xs font-semibold" style={{ color: cor.tinta }}>{txt(score?.risco, 'Faixa não informada')}</p>
-                <p className="text-[11px]" style={{ color: cor.muted }}>{txt(score?.fonte, 'Quod via APIBrasil')}</p>
+              {score?.risco && (
+                <div className="text-right max-w-[65%]">
+                  <p className="text-xs font-semibold" style={{ color: cor.tinta }}>{txt(score.risco)}</p>
+                </div>
+              )}
+            </div>
+
+            {temScore && (
+              <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#DED4B9' }}>
+                <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, (scoreNumero as number) / 10))}%`, backgroundColor: cor.destaque }} />
               </div>
-            </div>
-            <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#DED4B9' }}>
-              <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, scoreNumero / 10))}%`, backgroundColor: cor.destaque }} />
-            </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Info label="Probabilidade de inadimplência" value={score?.probabilidade_inadimplencia} />
-              <Info label="Fonte" value={score?.fonte} />
+              <Info label="Probabilidade de inadimplência" value={score?.probabilidade_inadimplencia !== null && score?.probabilidade_inadimplencia !== undefined ? `${score.probabilidade_inadimplencia}%` : null} />
+              {temFaixa && temScore && <Info label="Faixa de score" value={faixa} />}
             </div>
+
             {Array.isArray(score?.motivos) && score.motivos.length > 0 && (
               <div>
-                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: cor.muted }}>Fatores informados pelo fornecedor</p>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: cor.muted }}>Fatores de análise</p>
                 <ul className="text-xs space-y-1 list-disc pl-4" style={{ color: cor.tinta }}>
                   {score.motivos.map((m: string, i: number) => <li key={`${m}-${i}`}>{m}</li>)}
                 </ul>
@@ -113,9 +142,9 @@ export default function ConsultaCompletaCnpjResult({ result }: { result: any }) 
           </div>
         ) : (
           <div className="rounded-lg p-3" style={{ backgroundColor: cor.fundoAlt }}>
-            <p className="text-sm font-semibold" style={{ color: cor.tinta }}>Score numérico não retornado pelo produto Quod atual.</p>
+            <p className="text-sm font-semibold" style={{ color: cor.tinta }}>Score numérico não disponível nesta consulta.</p>
             <p className="text-xs mt-1" style={{ color: cor.muted }}>
-              A ConsultaTec não estima nem inventa pontuação. Quando conectarmos o produto de score dedicado, este bloco passa a exibir a nota e os indicadores oficiais.
+              A ConsultaTec não estima nem inventa pontuação ausente.
             </p>
           </div>
         )}
@@ -132,7 +161,6 @@ export default function ConsultaCompletaCnpjResult({ result }: { result: any }) 
           <Info label="Natureza jurídica" value={dados?.natureza_juridica} />
           <Info label="Porte" value={dados?.porte} />
           <Info label="Capital social" value={dados?.capital_social} />
-          <Info label="Fonte cadastral" value={dados?.fonte} />
         </div>
         {(dados?.cnae_principal?.codigo || dados?.cnae_principal?.descricao) && (
           <div className="mt-4 pt-3 border-t" style={{ borderColor: cor.borda }}>
@@ -174,7 +202,7 @@ export default function ConsultaCompletaCnpjResult({ result }: { result: any }) 
 
       <Section title="Restrições e apontamentos" icon={<FileWarning className="w-4 h-4" style={{ color: cor.destaque }} />}>
         {blocosRestricao.length === 0 ? (
-          <p className="text-sm" style={{ color: cor.muted }}>Nenhuma categoria de restrição retornada.</p>
+          <p className="text-sm" style={{ color: cor.muted }}>Nenhuma restrição identificada nos módulos consultados.</p>
         ) : (
           <div className="space-y-2">
             {blocosRestricao.map((r: any, index: number) => (
@@ -215,22 +243,6 @@ export default function ConsultaCompletaCnpjResult({ result }: { result: any }) 
           <Info label="Telefones" value={Array.isArray(dados?.contatos?.telefones) ? dados.contatos.telefones.join(' · ') : dados?.contatos?.telefones} />
         </div>
       </Section>
-
-      {adicionais.length > 0 && (
-        <details className="rounded-xl border overflow-hidden" style={{ borderColor: cor.borda, backgroundColor: cor.fundo }}>
-          <summary className="cursor-pointer px-4 py-3 text-sm font-bold" style={{ color: cor.tinta, backgroundColor: cor.fundoAlt }}>
-            Mais informações retornadas pelo fornecedor ({adicionais.length})
-          </summary>
-          <div className="p-4 max-h-72 overflow-y-auto space-y-2">
-            {adicionais.map((item: any, index: number) => (
-              <div key={`${item?.campo ?? 'campo'}-${index}`} className="grid grid-cols-3 gap-3 text-xs">
-                <span className="font-semibold break-words" style={{ color: cor.muted }}>{txt(item?.campo)}</span>
-                <span className="col-span-2 break-words" style={{ color: cor.tinta }}>{txt(item?.valor)}</span>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
 
       {result?.observacao && (
         <p className="text-[11px] leading-relaxed" style={{ color: cor.muted }}>{result.observacao}</p>

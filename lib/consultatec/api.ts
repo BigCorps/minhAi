@@ -31,7 +31,9 @@ export async function executarConsulta(
     paymentTransactionId?: string | null;
   },
 ): Promise<ConsultaTecApiResponse> {
-  const { data, error } = await supabase.functions.invoke('consultatec-consultas', {
+  // Camada pública da ConsultaTec: normaliza score/restrições e remove
+  // informações internas sobre as fontes antes de responder ao navegador.
+  const { data, error } = await supabase.functions.invoke('consultatec-consultas-public', {
     body: {
       company_id: input.companyId,
       action: input.action,

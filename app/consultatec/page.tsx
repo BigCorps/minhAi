@@ -33,14 +33,14 @@ const OPCOES_CPF: ConsultaOpcao[] = [
     acao: 'restricoes_cpf',
     tipo: 'cpf',
     titulo: 'Restrições',
-    descricao: 'Pendências financeiras e apontamentos Quod',
+    descricao: 'Pendências financeiras, restrições e indicadores de risco',
     precoCents: 1500,
   },
   {
     acao: 'consultar_protestos',
     tipo: 'cpf',
     titulo: 'Protestos',
-    descricao: 'Protestos em cartório e pendências retornadas pela fonte',
+    descricao: 'Protestos em cartório e pendências identificadas na consulta',
     precoCents: 1000,
   },
   {
@@ -64,14 +64,14 @@ const OPCOES_CNPJ: ConsultaOpcao[] = [
     acao: 'restricoes_cnpj',
     tipo: 'cnpj',
     titulo: 'Restrições',
-    descricao: 'Pendências, protestos agregados e apontamentos Quod',
+    descricao: 'Pendências, protestos agregados, restrições e indicadores de risco',
     precoCents: 2000,
   },
   {
     acao: 'completa_cnpj',
     tipo: 'cnpj',
     titulo: 'Completa',
-    descricao: 'Cadastro enriquecido + QSA + score quando disponível + restrições e protestos Quod',
+    descricao: 'Cadastro enriquecido + QSA + score ou faixa de risco + restrições e protestos',
     precoCents: 2300,
   },
 ];
@@ -104,20 +104,20 @@ export default function ConsultaTecPage() {
     setDocumentoOk(documentoValido(limpo));
   };
 
-  const refreshSaldo = useCallback(async (cid: string) => {
-    const { data } = await supabase
-      .from('company_balance')
-      .select('available_balance_cents')
-      .eq('company_id', cid)
-      .maybeSingle();
-    setSaldoCents(data?.available_balance_cents ?? 0);
+  const refreshSaldo = useCallback(async () => {
+    const { data, error } = await supabase.rpc('get_my_shared_minai_balance');
+    if (error) {
+      setSaldoCents(0);
+      return;
+    }
+    setSaldoCents(Number(data?.available_balance_cents ?? 0));
   }, [supabase]);
 
   const garantirCompanyId = useCallback(async (): Promise<string | null> => {
     if (companyId) return companyId;
 
-    // V2 é deliberadamente exclusiva do ConsultaTec: nunca reaproveita nem altera
-    // a company principal da minhAi do usuário.
+    // A company separa histórico/configurações do ConsultaTec; o saldo é compartilhado
+    // entre os aplicativos que usam a carteira minhAi.
     const { data, error } = await supabase.rpc('ensure_my_consultatec_company_v2');
     if (error || !data) {
       setErroAcesso('Não foi possível abrir sua conta ConsultaTec. Tente sair e entrar novamente.');
@@ -125,7 +125,7 @@ export default function ConsultaTecPage() {
     }
 
     setCompanyId(data);
-    await refreshSaldo(data);
+    await refreshSaldo();
     return data;
   }, [companyId, refreshSaldo, supabase]);
 
@@ -178,7 +178,7 @@ export default function ConsultaTecPage() {
   const fecharModal = () => {
     setOpcaoAtiva(null);
     setModalCompanyId(null);
-    if (companyId) refreshSaldo(companyId);
+    if (userId) refreshSaldo();
   };
 
   const opcoes = tipo === 'cpf' ? OPCOES_CPF : tipo === 'cnpj' ? OPCOES_CNPJ : [];
@@ -261,11 +261,6 @@ export default function ConsultaTecPage() {
                     </span>
                   </div>
                   <p className="text-sm leading-relaxed" style={{ color: cor.tintaMuted }}>{opcao.descricao}</p>
-                  {opcao.acao === 'completa_cnpj' && (
-                    <span className="inline-flex mt-3 text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full" style={{ backgroundColor: cor.fundo, color: cor.destaque }}>
-                      Novo relatório detalhado
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
@@ -302,7 +297,7 @@ export default function ConsultaTecPage() {
           descricao={opcaoAtiva.descricao}
           precoCents={opcaoAtiva.precoCents}
           onClose={fecharModal}
-          onSuccess={() => companyId && refreshSaldo(companyId)}
+          onSuccess={() => userId && refreshSaldo()}
         />
       )}
     </div>

@@ -40,9 +40,11 @@ const formatDoc = (doc: string) => doc.length === 11
 
 function normalizeRows(input: any): ResultadoFormatado[] {
   if (!Array.isArray(input)) return [];
-  return input.map((item: any) => Array.isArray(item)
-    ? { label: String(item[0] ?? ''), value: String(item[1] ?? '') }
-    : { label: String(item?.label ?? ''), value: String(item?.value ?? '') });
+  return input
+    .map((item: any) => Array.isArray(item)
+      ? { label: String(item[0] ?? ''), value: String(item[1] ?? '') }
+      : { label: String(item?.label ?? ''), value: String(item?.value ?? '') })
+    .filter((item) => !/fonte|fornecedor|provedor/i.test(item.label));
 }
 
 export default function ConsultaTecV2Modal({
@@ -197,14 +199,14 @@ export default function ConsultaTecV2Modal({
                   <div>
                     <p className="font-semibold text-sm" style={{ color: cor.tinta }}>{descricao}</p>
                     <p className="text-xs mt-1 leading-relaxed" style={{ color: cor.muted }}>
-                      Se houver saldo suficiente, o valor será descontado automaticamente. Sem saldo ou sem login, o sistema gera um PIX antes de consultar o fornecedor.
+                      Se houver saldo suficiente, o valor será descontado automaticamente. Sem saldo ou sem login, o sistema gera um PIX antes de realizar a consulta.
                     </p>
                   </div>
                 </div>
               </div>
               {action === 'completa_cnpj' && (
                 <div className="text-xs leading-relaxed" style={{ color: cor.muted }}>
-                  A versão atual combina cadastro enriquecido + QSA + restrições Quod. Score é exibido apenas quando o produto contratado o retorna; a ConsultaTec não cria pontuação própria.
+                  A consulta completa reúne cadastro enriquecido, quadro societário, score ou faixa de risco quando disponível, restrições e protestos. A ConsultaTec não estima pontuação ausente.
                 </div>
               )}
               <button
@@ -221,7 +223,7 @@ export default function ConsultaTecV2Modal({
             <div className="flex flex-col items-center justify-center py-14 text-center">
               <Loader2 className="w-10 h-10 animate-spin mb-4" style={{ color: cor.destaque }} />
               <p className="font-semibold" style={{ color: cor.tinta }}>Processando consulta...</p>
-              <p className="text-xs mt-1" style={{ color: cor.muted }}>O pagamento e os dados são validados no servidor.</p>
+              <p className="text-xs mt-1" style={{ color: cor.muted }}>O pagamento e os dados são validados com segurança no servidor.</p>
             </div>
           )}
 
@@ -231,7 +233,7 @@ export default function ConsultaTecV2Modal({
               <div className="text-center">
                 <p className="font-bold" style={{ color: cor.tinta }}>PIX de R$ {pix.amountBrl}</p>
                 <p className="text-xs mt-1" style={{ color: cor.muted }}>
-                  O pagamento é conferido diretamente no servidor antes da consulta ser liberada.
+                  O pagamento é conferido no servidor antes da consulta ser liberada.
                 </p>
               </div>
               <button onClick={copiarPix} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-semibold" style={{ borderColor: cor.borda, color: cor.tinta }}>

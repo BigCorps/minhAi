@@ -110,8 +110,8 @@ function ConsultaTecDashboardContent() {
   const [erro, setErro] = useState<string | null>(null);
 
   const carregar = useCallback(async (cid: string) => {
-    const [{ data: bal }, { data: hist }] = await Promise.all([
-      supabase.from('company_balance').select('available_balance_cents').eq('company_id', cid).maybeSingle(),
+    const [{ data: wallet, error: walletError }, { data: hist }] = await Promise.all([
+      supabase.rpc('get_my_shared_minai_balance'),
       supabase
         .from('historico_consultas')
         .select('id, tipo_consulta, custo, status_pagamento, created_at')
@@ -119,7 +119,13 @@ function ConsultaTecDashboardContent() {
         .order('created_at', { ascending: false })
         .limit(200),
     ]);
-    setSaldoCents(bal?.available_balance_cents ?? 0);
+
+    if (walletError) {
+      console.error('[ConsultaTec] Falha ao carregar saldo compartilhado:', walletError.message);
+      setErro('Não foi possível carregar seu saldo minhAi. Atualize a página e tente novamente.');
+    }
+
+    setSaldoCents(Number(wallet?.available_balance_cents ?? 0));
     setHistorico((hist || []) as HistoricoRow[]);
   }, [supabase]);
 
@@ -130,7 +136,7 @@ function ConsultaTecDashboardContent() {
       if (cancelled) return;
       setUserEmail(email ?? null);
 
-      // V2: company dedicada do ConsultaTec. Não altera nem reaproveita a company principal da minhAi.
+      // A company continua dedicada à ConsultaTec para histórico/configuração; o saldo é compartilhado por usuário entre os apps minhAi.
       const { data: cid, error } = await supabase.rpc('ensure_my_consultatec_company_v2');
       if (cancelled) return;
 
@@ -234,7 +240,7 @@ function ConsultaTecDashboardContent() {
                 <div>
                   <p className="text-[10px] uppercase tracking-widest mb-1 flex items-center gap-1.5" style={{ color: cor.tintaFaint }}>
                     <Wallet className="w-3.5 h-3.5" />
-                    Saldo disponível
+                    Saldo minhAi disponível
                   </p>
                   <p className="text-3xl font-bold" style={{ color: cor.tinta }}>{fmt(saldoCents ?? 0)}</p>
                 </div>
@@ -247,7 +253,7 @@ function ConsultaTecDashboardContent() {
                 </button>
               </div>
               <p className="text-xs mt-2" style={{ color: cor.tintaMuted }}>
-                Saldo exclusivo da sua conta ConsultaTec, usado automaticamente nas próximas consultas.
+                Saldo compartilhado da sua conta minhAi, disponível para os apps integrados e usado automaticamente nas consultas.
               </p>
             </div>
 

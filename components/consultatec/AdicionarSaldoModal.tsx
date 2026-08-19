@@ -119,7 +119,7 @@ export default function AdicionarSaldoModal({ companyId, onClose, onSuccess }: A
             </div>
             <div>
               <h2 className="text-lg font-bold" style={{ color: cor.tinta }}>Adicionar saldo</h2>
-              <p className="text-sm" style={{ color: cor.tintaMuted }}>Saldo exclusivo do ConsultaTec</p>
+              <p className="text-sm" style={{ color: cor.tintaMuted }}>Saldo compartilhado minhAi</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-full hover:opacity-70" aria-label="Fechar">
@@ -138,7 +138,7 @@ export default function AdicionarSaldoModal({ companyId, onClose, onSuccess }: A
           {step === 'valor' && (
             <div className="space-y-4">
               <div className="rounded-xl p-3 text-xs leading-relaxed" style={{ backgroundColor: cor.fundoAlt, color: cor.tintaMuted }}>
-                A recarga usa um fluxo de pagamento próprio do ConsultaTec e não altera o saldo nem as funções da sua empresa minhAi.
+                A recarga entra no seu saldo compartilhado minhAi e fica disponível para os apps integrados à mesma carteira.
               </div>
 
               <div className="grid grid-cols-4 gap-2">
@@ -210,7 +210,7 @@ export default function AdicionarSaldoModal({ companyId, onClose, onSuccess }: A
               <p className="font-semibold" style={{ color: cor.tinta }}>Saldo adicionado!</p>
               {novoSaldo !== null && (
                 <p className="text-sm" style={{ color: cor.tintaMuted }}>
-                  Novo saldo: R$ {(novoSaldo / 100).toFixed(2).replace('.', ',')}
+                  Novo saldo compartilhado: R$ {(novoSaldo / 100).toFixed(2).replace('.', ',')}
                 </p>
               )}
               <button onClick={onClose} className="mt-2 w-full py-2.5 rounded-lg font-medium border" style={{ borderColor: cor.borda, color: cor.tinta }}>

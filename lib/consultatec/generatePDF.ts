@@ -59,12 +59,17 @@ export function generateConsultaTecPDF(input: {
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 14;
   let y = 0;
+  const footerDrawnPages = new Set<number>();
 
   const footer = () => {
+    const pageNumber = doc.getCurrentPageInfo().pageNumber;
+    if (footerDrawnPages.has(pageNumber)) return;
+    footerDrawnPages.add(pageNumber);
+
     doc.setFontSize(7.5);
     doc.setTextColor(...RGB.muted);
     doc.text('Relatório informativo ConsultaTec. Consulte os avisos e condições de uso ao final do documento.', margin, pageHeight - 7);
-    doc.text(`Página ${doc.getNumberOfPages()}`, pageWidth - margin, pageHeight - 7, { align: 'right' });
+    doc.text(`Página ${pageNumber}`, pageWidth - margin, pageHeight - 7, { align: 'right' });
   };
 
   const addHeader = () => {

@@ -48,7 +48,7 @@ const OPCOES_CPF: ConsultaOpcao[] = [
     tipo: 'cpf',
     titulo: 'Completa',
     descricao: 'Dados + Restrições + Protestos em uma única consulta',
-    precoCents: 2800,
+    precoCents: 3000,
   },
 ];
 
@@ -72,7 +72,7 @@ const OPCOES_CNPJ: ConsultaOpcao[] = [
     tipo: 'cnpj',
     titulo: 'Completa',
     descricao: 'Cadastro enriquecido + QSA + score ou faixa de risco + restrições e protestos',
-    precoCents: 2300,
+    precoCents: 3000,
   },
 ];
 

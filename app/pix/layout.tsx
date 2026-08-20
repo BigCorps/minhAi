@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 import type { Metadata } from 'next';
 import JsonLd from '@/components/JsonLd';
 import PixWikiBrandFooter from '@/components/pix/PixWikiBrandFooter';
-import { SEO, pixGraph, resolveSeo } from '@/lib/seo';
+import { SEO, pixGraph } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,13 +29,27 @@ function pixMetadata(indexable: boolean): Metadata {
   return {
     metadataBase: new URL(BASE),
     applicationName: 'PixWiki',
-    title: TITLE,
+    title: { absolute: TITLE },
     description: DESCRIPTION,
     category: 'finance',
     alternates: { canonical: BASE },
     robots: indexable
-      ? { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 } }
-      : { index: false, follow: false, googleBot: { index: false, follow: false } },
+      ? {
+          index: true,
+          follow: true,
+          googleBot: {
+            index: true,
+            follow: true,
+            'max-image-preview': 'large',
+            'max-snippet': -1,
+            'max-video-preview': -1,
+          },
+        }
+      : {
+          index: false,
+          follow: false,
+          googleBot: { index: false, follow: false },
+        },
     openGraph: {
       type: 'website',
       locale: 'pt_BR',
@@ -43,7 +57,14 @@ function pixMetadata(indexable: boolean): Metadata {
       siteName: 'PixWiki',
       title: TITLE,
       description: DESCRIPTION,
-      images: [{ url: SEO.pix.ogImage, width: 1200, height: 630, alt: SEO.pix.ogImageAlt }],
+      images: [
+        {
+          url: SEO.pix.ogImage,
+          width: 1200,
+          height: 630,
+          alt: SEO.pix.ogImageAlt,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
@@ -62,18 +83,22 @@ function pixMetadata(indexable: boolean): Metadata {
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
   const host = headersList.get('host') || '';
+
+  // app/pix também contém rotas legadas da minhAi, como /pix/loja.
+  // Nessas rotas este layout não pode sobrescrever a metadata da marca pai
+  // com título, canonical, OG ou ícones do PixWiki.
+  if (!isPixWikiHost(host)) {
+    return {
+      robots: {
+        index: false,
+        follow: false,
+        googleBot: { index: false, follow: false },
+      },
+    };
+  }
+
   const landing = isPixApex(host) && isLandingPath(headersList.get('x-pathname'));
-
-  if (isPixApex(host)) return pixMetadata(landing);
-
-  const { brand } = resolveSeo(host);
-  if (brand === 'pix') return pixMetadata(false);
-
-  return {
-    ...pixMetadata(false),
-    manifest: undefined,
-    alternates: { canonical: BASE },
-  };
+  return pixMetadata(landing);
 }
 
 export default async function PixLayout({ children }: { children: React.ReactNode }) {

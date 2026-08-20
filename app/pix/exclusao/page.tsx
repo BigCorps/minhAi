@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import {
@@ -28,21 +27,21 @@ export default function ExclusaoPixWiki() {
   const [confirmText, setConfirmText] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
-    let ativo = true;
-    async function carregar() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!ativo) return;
+    let active = true;
+
+    async function loadUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!active) return;
       setUser(user);
       setLoading(false);
     }
-    carregar();
+
+    loadUser();
     return () => {
-      ativo = false;
+      active = false;
     };
   }, [supabase]);
 
@@ -66,7 +65,7 @@ export default function ExclusaoPixWiki() {
         text: 'Solicitação registrada. Você recebe a confirmação por e-mail em até 48 horas.',
       });
 
-      setTimeout(async () => {
+      window.setTimeout(async () => {
         await supabase.auth.signOut();
         router.push('/');
       }, 3000);
@@ -94,87 +93,61 @@ export default function ExclusaoPixWiki() {
     <LegalShell theme={T} title="Exclusão de Dados" scroll={false}>
       <H2>O que a exclusão faz</H2>
       <P>
-        Você pode pedir a exclusão permanente da sua conta e dos seus dados do Pix Wiki a qualquer
-        momento, conforme a Lei Geral de Proteção de Dados.
+        Você pode solicitar a exclusão da sua conta e dos dados do PixWiki conforme a LGPD.
+        A solicitação passa por revisão porque a autenticação é compartilhada com o ecossistema
+        minhAi e pode existir uso do mesmo login em outros produtos.
       </P>
 
-      <Box variant="danger">
+      <Box variant="info">
         <P>
-          <strong>Saque seu saldo antes de prosseguir.</strong> Valores disponíveis não são
-          transferidos automaticamente no encerramento, e a ação é irreversível. Se houver saldo,
-          faça o saque pelo painel e só depois solicite a exclusão.
+          <strong>O PixWiki não guarda dinheiro.</strong> Não existe saldo PixWiki para sacar antes
+          da exclusão. Seus recursos financeiros permanecem na sua conta Mercado Pago e não são
+          movimentados pelo encerramento do PixWiki.
         </P>
       </Box>
 
       <Box variant="warn">
         <P>
-          <strong>Seu link de cobrança sai do ar.</strong> Clientes que tiverem o link salvo passam a
-          ver uma página inexistente. Se você divulgou o endereço em cartão, vitrine ou rede social,
-          avise antes. O endereço curto pode ser tomado por outra pessoa depois da liberação.
+          <strong>Links PixWiki podem deixar de funcionar.</strong> Se você usa um endereço
+          `seunome.pix.wiki`, ele poderá ser desativado quando a exclusão for concluída.
         </P>
         <P>
-          A exclusão afeta a conta no ecossistema minhAi inteiro, não só o Pix Wiki &mdash; a conta é
-          a mesma em todos os produtos.
+          Se o mesmo login estiver vinculado a outros produtos minhAi, informe isso ao responder o
+          e-mail de confirmação para que o escopo do pedido seja tratado corretamente.
         </P>
       </Box>
 
-      <H2>O que será excluído</H2>
+      <H2>Dados que entram no pedido</H2>
       <UL>
-        <LI>
-          <strong>Conta:</strong> nome, e-mail, senha, vínculo de login social e credencial de
-          biometria
-        </LI>
-        <LI>
-          <strong>Contato:</strong> telefone e WhatsApp cadastrados
-        </LI>
-        <LI>
-          <strong>Documento e chave PIX:</strong> CPF ou CNPJ e a chave de recebimento
-        </LI>
-        <LI>
-          <strong>Link de cobrança:</strong> o endereço curto e a página pública do negócio
-        </LI>
-        <LI>
-          <strong>Configurações:</strong> preferências de notificação e de pagamento
-        </LI>
-        <LI>
-          <strong>Assistente:</strong> histórico de interações com o assistente de voz incluído
-        </LI>
-        <LI>
-          <strong>Registros técnicos:</strong> logs de acesso e informações de dispositivo
-        </LI>
+        <LI>dados da conta e autenticação relacionados ao PixWiki</LI>
+        <LI>recebedores/empresas e configurações PixWiki</LI>
+        <LI>chave Pix e configurações de pagamento</LI>
+        <LI>conexão e tokens Mercado Pago mantidos pelo PixWiki</LI>
+        <LI>preferências e inscrições de notificações</LI>
+        <LI>chaves API e Webhooks PixWiki</LI>
+        <LI>dados técnicos que não precisem ser preservados por segurança ou obrigação legal</LI>
       </UL>
 
-      <H2>O que não pode ser excluído</H2>
+      <H2>Registros que podem precisar ser preservados</H2>
       <Box variant="warn">
         <P>
-          <strong>Histórico de movimentação financeira.</strong> Registros de cobranças liquidadas,
-          saques e taxas têm retenção obrigatória pela legislação fiscal e pelas regras do arranjo de
-          pagamentos PIX. Ficam mantidos isolados, usados apenas para cumprir essa obrigação e para
-          responder a eventual questionamento de autoridade competente.
+          Alguns registros de transação, auditoria, segurança e suporte podem ser mantidos pelo
+          período necessário para cumprimento de obrigação legal, prevenção a fraude ou exercício
+          regular de direitos. Quando possível, esses registros são minimizados e separados do uso
+          operacional da conta.
         </P>
         <P>
-          Isso não é escolha nossa: vale para qualquer serviço que intermedeie pagamento. Não é
-          possível dispensar a pedido.
-        </P>
-        <P>
-          <strong>Registros no seu banco.</strong> As transações PIX ficam no extrato da sua
-          instituição financeira, que não temos como alterar.
+          <strong>Registros do Mercado Pago não são controlados pelo PixWiki.</strong> Para excluir
+          ou alterar dados mantidos pelo Mercado Pago, use os canais do próprio provedor.
         </P>
       </Box>
 
       <H2>Prazos</H2>
       <Box>
         <OL>
-          <LI>
-            <strong>Confirmação:</strong> e-mail em até 48 horas
-          </LI>
-          <LI>
-            <strong>Processamento:</strong> até 7 dias úteis
-          </LI>
-          <LI>
-            <strong>Conclusão:</strong> remoção definitiva dos nossos sistemas, incluindo backups na
-            rotação seguinte, exceto os registros de retenção obrigatória acima
-          </LI>
+          <LI><strong>Confirmação da solicitação:</strong> até 48 horas</LI>
+          <LI><strong>Análise do escopo:</strong> verifica vínculos com outros produtos compartilhados</LI>
+          <LI><strong>Processamento:</strong> conforme a complexidade e os prazos legais aplicáveis</LI>
         </OL>
       </Box>
 
@@ -200,12 +173,8 @@ export default function ExclusaoPixWiki() {
           )}
 
           <Box>
-            <P>
-              <strong>Conta:</strong> {user.email}
-            </P>
-            <P>
-              <strong>Nome:</strong> {user.user_metadata?.name || 'não informado'}
-            </P>
+            <P><strong>Conta:</strong> {user.email}</P>
+            <P><strong>Nome:</strong> {user.user_metadata?.name || 'não informado'}</P>
           </Box>
 
           {!showConfirmation ? (
@@ -219,10 +188,7 @@ export default function ExclusaoPixWiki() {
           ) : (
             <div className="space-y-4">
               <div>
-                <label
-                  htmlFor="confirmacao"
-                  className={`block text-sm font-medium mb-2 ${T.heading}`}
-                >
+                <label htmlFor="confirmacao" className={`block text-sm font-medium mb-2 ${T.heading}`}>
                   Para confirmar, digite: <strong>{CONFIRMACAO}</strong>
                 </label>
                 <input
@@ -258,10 +224,10 @@ export default function ExclusaoPixWiki() {
                   {isDeleting ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      Processando...
+                      Enviando...
                     </>
                   ) : (
-                    'Confirmar exclusão'
+                    'Solicitar exclusão'
                   )}
                 </button>
               </div>
@@ -269,40 +235,20 @@ export default function ExclusaoPixWiki() {
           )}
         </div>
       ) : (
-        <div className="mt-8 pt-6 border-t border-slate-800">
-          <H2>Entre para solicitar</H2>
+        <Box variant="info">
           <P>
-            Para excluir sua conta pela plataforma, é preciso estar logado. Se você não tem mais
-            acesso ao e-mail cadastrado, escreva para <strong>contato@bigcorps.com.br</strong> com o
-            assunto &ldquo;LGPD &mdash; Pix Wiki&rdquo; e o endereço do seu link.
+            Para solicitar pela plataforma, entre na sua conta. Você também pode escrever para
+            <strong> contato@bigcorps.com.br</strong> usando o e-mail cadastrado.
           </P>
-          <Link href="/login">
-            <button
-              type="button"
-              className={`w-full sm:w-auto px-6 py-3 rounded-lg font-medium transition-colors ${T.primaryBtn}`}
-            >
-              Fazer login
-            </button>
-          </Link>
-        </div>
+        </Box>
       )}
-
-      <div className="mt-8 pt-6 border-t border-slate-800">
-        <H2>Eu só paguei um link</H2>
-        <P>
-          Pagar não cria conta, então não há conta a excluir. O que existe é o registro da transação,
-          de retenção obrigatória. Para saber o que consta sobre você, escreva para{' '}
-          <strong>contato@bigcorps.com.br</strong> com data, valor e o endereço do link que você
-          pagou.
-        </P>
-      </div>
 
       <div className="mt-6">
         <LegalFooterLinks
           theme={T}
           links={[
-            { href: '/aviso', label: 'Aviso de Privacidade' },
             { href: '/termos', label: 'Termos de Uso' },
+            { href: '/aviso', label: 'Aviso de Privacidade' },
             { href: 'mailto:contato@bigcorps.com.br', label: 'Falar com a gente' },
           ]}
         />

@@ -7,6 +7,7 @@ import { jsPDF } from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
 import { createClient } from '@/lib/supabase-browser';
 import PixWikiHeader from '@/components/pix/PixWikiHeader';
+import PixWikiDashboardNav from '@/components/pix/PixWikiDashboardNav';
 
 type PeriodKey = 'today' | 'week' | 'month' | 'custom';
 type SourceKey = 'all' | 'pix_key' | 'pixwiki_link';
@@ -499,7 +500,7 @@ export default function PixWikiReportsPage() {
 
             <label className="block">
               <span className={`text-[11px] font-black uppercase tracking-wide ${faint}`}>Empresa</span>
-              <select value={companyId} onChange={event => setCompanyId(event.target.value)} className={`mt-2 w-full rounded-xl border px-3 py-3 text-sm outline-none ${input}`}>
+              <select value={companyId} onChange={event => setCompanyId(event.target.value)} className={`mt-2 w-full appearance-none rounded-xl border px-3 py-3 text-sm outline-none ${input}`} style={{ colorScheme: isDark ? "dark" : "light" }}>
                 <option value="all">Todas as empresas</option>
                 {companies.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select>
@@ -507,7 +508,7 @@ export default function PixWikiReportsPage() {
 
             <label className="block">
               <span className={`text-[11px] font-black uppercase tracking-wide ${faint}`}>Origem</span>
-              <select value={source} onChange={event => setSource(event.target.value as SourceKey)} className={`mt-2 w-full rounded-xl border px-3 py-3 text-sm outline-none ${input}`}>
+              <select value={source} onChange={event => setSource(event.target.value as SourceKey)} className={`mt-2 w-full appearance-none rounded-xl border px-3 py-3 text-sm outline-none ${input}`} style={{ colorScheme: isDark ? "dark" : "light" }}>
                 <option value="all">Chave Pix + Pix Link</option>
                 <option value="pix_key">Chave Pix</option>
                 <option value="pixwiki_link">Pix Link</option>
@@ -636,7 +637,8 @@ export default function PixWikiReportsPage() {
           )}
         </section>
 
-        <footer className={`py-8 text-center text-xs ${faint}`}>PixWiki · Relatórios protegidos por empresa e plano</footer>
+        <footer className={`py-8 text-center text-xs ${faint}`}>PixWiki | Tecnologia minhAi | Desenvolvido por BigCorps</footer>
+        <PixWikiDashboardNav dark={dark} />
       </div>
     </main>
   );

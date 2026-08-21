@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { connectMercadoPago } from '@/lib/connectMercadoPago';
 import PixWikiPush from '@/components/pix/PixWikiPush';
 import PixWikiHeader from '@/components/pix/PixWikiHeader';
+import PixWikiDashboardNav from '@/components/pix/PixWikiDashboardNav';
 
 type PlanKey = 'free' | 'link' | 'pro';
 type SourceKey = 'pix_key' | 'pixwiki_link';
@@ -323,6 +324,7 @@ function DashboardContent() {
   const [newCompanyEmail, setNewCompanyEmail] = useState('');
   const [newCompanyPhone, setNewCompanyPhone] = useState('');
   const [creatingCompany, setCreatingCompany] = useState(false);
+  const [visibleReceiptDays, setVisibleReceiptDays] = useState(1);
 
   const isDark = dark;
   const page = isDark ? 'bg-[#020617] text-white' : 'bg-[#f7f8fa] text-slate-900';
@@ -619,6 +621,13 @@ function DashboardContent() {
     }, {}),
   ).sort((a, b) => b.dayKey.localeCompare(a.dayKey));
 
+  useEffect(() => {
+    setVisibleReceiptDays(1);
+  }, [receiptFilter, company?.id]);
+
+  const visibleReceiptGroups = receiptGroups.slice(0, visibleReceiptDays);
+  const hasMoreReceiptDays = receiptGroups.length > visibleReceiptDays;
+
   const now = new Date();
   const todayKey = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   const monthKey = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', month: '2-digit', year: 'numeric' });
@@ -861,11 +870,7 @@ function DashboardContent() {
     setError('');
     const [settingsResult, companyResult] = await Promise.all([
       supabase.from('pixwiki_notification_settings')
-        .update({
-          notification_phone: phone,
-          whatsapp_enabled: true,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ notification_phone: phone, updated_at: new Date().toISOString() })
         .eq('company_id', company.id),
       supabase.from('companies')
         .update({ whatsapp_number: phone, updated_at: new Date().toISOString() })
@@ -879,10 +884,10 @@ function DashboardContent() {
       return;
     }
 
-    setNotifications({ ...notifications, notification_phone: phone, whatsapp_enabled: true });
+    setNotifications({ ...notifications, notification_phone: phone });
     setCompany({ ...company, whatsapp_number: phone });
     setWhatsappDraft(phone);
-    setNotice('Número salvo e avisos por WhatsApp ativados.');
+    setNotice('Número de WhatsApp salvo para esta empresa.');
   }
 
   async function refreshNow() {
@@ -1017,7 +1022,8 @@ function DashboardContent() {
             <select
               value={company.id}
               onChange={e => switchCompany(e.target.value)}
-              className={`min-w-0 flex-1 rounded-xl border px-3 py-2.5 text-sm outline-none sm:max-w-sm ${input}`}
+              className={`min-w-0 flex-1 appearance-none rounded-xl border px-3 py-2.5 text-sm outline-none sm:max-w-sm ${input}`}
+              style={{ colorScheme: isDark ? "dark" : "light" }}
               aria-label="Recebedor ativo"
             >
               {companies.map(c => (
@@ -1188,48 +1194,75 @@ function DashboardContent() {
               </div>
             ) : (
               <div>
-                {receiptGroups.map((group, groupIndex) => (
-                  <div key={group.dayKey} className={groupIndex > 0 ? 'border-t border-white/10' : ''}>
-                    <div className={`flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-5 ${isDark ? 'border-white/5 bg-white/[0.025]' : 'border-black/5 bg-slate-50'}`}>
-                      <div>
-                        <p className="text-sm font-black">{receiptDayLabel(group.dayKey)}</p>
-                        <p className={`mt-0.5 text-[11px] ${muted}`}>
-                          {group.items.length} {group.items.length === 1 ? 'recebimento' : 'recebimentos'}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-[10px] font-bold uppercase tracking-wide ${faint}`}>Total do dia</p>
-                        <p className="mt-0.5 text-lg font-black text-emerald-400">{money(group.totalNet)}</p>
-                      </div>
-                    </div>
+                {visibleReceiptGroups.map((group, groupIndex) => {
+                  const itemBorder = isDark ? 'border-white/5' : 'border-black/5';
+                  const dayHeader = isDark ? 'border-white/5 bg-white/[0.025]' : 'border-black/5 bg-slate-50';
+                  const rowDivider = isDark ? 'divide-white/5' : 'divide-black/5';
+                  const rowBg = isDark ? 'bg-transparent' : 'bg-white';
+                  const openByDefault = groupIndex === 0;
 
-                    <div className="divide-y divide-white/5">
-                      {group.items.map(r => (
-                        <div key={r.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-xl font-black">{money(r.net_amount_cents)}</p>
-                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${r.source === 'pixwiki_link' ? 'bg-sky-500/10 text-sky-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
-                                {r.source === 'pixwiki_link' ? 'PIX LINK' : 'CHAVE PIX'}
-                              </span>
-                            </div>
-                            <p className={`mt-1 text-xs ${muted}`}>
-                              {new Date(r.received_at).toLocaleTimeString('pt-BR', {
-                                timeZone: 'America/Sao_Paulo',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </p>
-                          </div>
-                          <div className="text-left sm:text-right">
-                            <p className={`text-[10px] font-bold uppercase tracking-wide ${faint}`}>Recebido</p>
-                            <p className="text-sm font-black text-emerald-400">Confirmado</p>
-                          </div>
+                  return (
+                    <details
+                      key={group.dayKey}
+                      className={groupIndex > 0 ?                         `border-t ${itemBorder} group` : 'group'}
+                      open={openByDefault}
+                    >
+                      <summary className={`flex cursor-pointer list-none items-center justify-between gap-4 border-b px-4 py-3 sm:px-5 ${dayHeader}`}>
+                        <div className="min-w-0">
+                          <p className="text-sm font-black">{receiptDayLabel(group.dayKey)}</p>
+                          <p className={`mt-0.5 text-[11px] ${muted}`}>
+                            {group.items.length} {group.items.length === 1 ? 'recebimento' : 'recebimentos'}
+                          </p>
                         </div>
-                      ))}
-                    </div>
+                        <div className="ml-auto flex items-center gap-3 text-right">
+                          <div>
+                            <p className={`text-[10px] font-bold uppercase tracking-wide ${faint}`}>Total do dia</p>
+                            <p className="mt-0.5 text-lg font-black text-emerald-400">{money(group.totalNet)}</p>
+                          </div>
+                          <span className={`text-xl transition group-open:rotate-180 ${faint}`} aria-hidden="true">⌄</span>
+                        </div>
+                      </summary>
+
+                      <div className={`divide-y ${rowDivider} ${rowBg}`}>
+                        {group.items.map(r => (
+                          <div key={r.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-xl font-black">{money(r.net_amount_cents)}</p>
+                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${r.source === 'pixwiki_link' ? 'bg-sky-500/10 text-sky-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                                  {r.source === 'pixwiki_link' ? 'PIX LINK' : 'CHAVE PIX'}
+                                </span>
+                              </div>
+                              <p className={`mt-1 text-xs ${muted}`}>
+                                {new Date(r.received_at).toLocaleTimeString('pt-BR', {
+                                  timeZone: 'America/Sao_Paulo',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            </div>
+                            <div className="text-left sm:text-right">
+                              <p className={`text-[10px] font-bold uppercase tracking-wide ${faint}`}>Recebido</p>
+                              <p className="text-sm font-black text-emerald-400">Confirmado</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  );
+                })}
+
+                {hasMoreReceiptDays && (
+                  <div className={`border-t px-4 py-4 text-center sm:px-5 ${isDark ? 'border-white/5 bg-white/[0.015]' : 'border-black/5 bg-slate-50/80'}`}>
+                    <button
+                      type="button"
+                      onClick={() => setVisibleReceiptDays(current => Math.min(current + 7, receiptGroups.length))}
+                      className={`rounded-xl border px-4 py-2 text-xs font-black transition ${card}`}
+                    >
+                      Ver mais dias
+                    </button>
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
@@ -1399,9 +1432,9 @@ function DashboardContent() {
           </details>
         </div>
 
-        <footer className={`py-8 text-center text-xs ${faint}`}>
-          PixWiki · Seu dinheiro cai direto na sua conta · Tecnologia minhAi / BigCorps
-        </footer>
+        <PixWikiDashboardNav dark={dark} />
+
+        <footer className={`py-8 text-center text-xs ${faint}`}>PixWiki | Tecnologia minhAi | Desenvolvido por BigCorps</footer>
       </div>
     </main>
   );

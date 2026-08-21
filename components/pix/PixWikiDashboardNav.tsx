@@ -27,20 +27,32 @@ function ApiIcon() {
   );
 }
 
-export default function PixWikiDashboardNav() {
+interface Props {
+  dark?: boolean;
+}
+
+export default function PixWikiDashboardNav({ dark = true }: Props) {
   const pathname = usePathname();
   const internalBase = pathname.startsWith('/pix/dashboard') ? '/pix/dashboard' : '/dashboard';
   const reportsActive = pathname.includes('/dashboard/relatorios');
   const apiActive = pathname.includes('/dashboard/api');
   const panelActive = !reportsActive && !apiActive;
 
-  const inactive = 'text-white/60 hover:bg-white/10 hover:text-white';
+  const shell = dark
+    ? 'border-white/10 bg-slate-950/90 shadow-black/40'
+    : 'border-black/10 bg-white/95 shadow-slate-300/60';
+  const inactive = dark
+    ? 'text-white/60 hover:bg-white/10 hover:text-white'
+    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900';
   const active = 'bg-emerald-500 text-slate-950';
+  const badgeInactive = dark
+    ? 'bg-emerald-500/15 text-emerald-300'
+    : 'bg-emerald-500/12 text-emerald-700';
 
   return (
     <nav
       aria-label="Navegação do PixWiki"
-      className="fixed bottom-4 left-1/2 z-[80] -translate-x-1/2 rounded-2xl border border-white/10 bg-slate-950/90 p-1.5 shadow-2xl shadow-black/40 backdrop-blur-xl"
+      className={`fixed bottom-4 left-1/2 z-[80] -translate-x-1/2 rounded-2xl border p-1.5 shadow-2xl backdrop-blur-xl ${shell}`}
     >
       <div className="flex items-center gap-1">
         <Link
@@ -57,7 +69,7 @@ export default function PixWikiDashboardNav() {
         >
           <ReportIcon />
           Relatórios
-          <span className={`hidden rounded-full px-1.5 py-0.5 text-[9px] font-black sm:inline ${reportsActive ? 'bg-slate-950/15' : 'bg-emerald-500/15 text-emerald-300'}`}>
+          <span className={`hidden rounded-full px-1.5 py-0.5 text-[9px] font-black sm:inline ${reportsActive ? 'bg-slate-950/15' : badgeInactive}`}>
             PRO
           </span>
         </Link>
@@ -68,7 +80,7 @@ export default function PixWikiDashboardNav() {
         >
           <ApiIcon />
           Integrações
-          <span className={`hidden rounded-full px-1.5 py-0.5 text-[9px] font-black sm:inline ${apiActive ? 'bg-slate-950/15' : 'bg-emerald-500/15 text-emerald-300'}`}>
+          <span className={`hidden rounded-full px-1.5 py-0.5 text-[9px] font-black sm:inline ${apiActive ? 'bg-slate-950/15' : badgeInactive}`}>
             PRO
           </span>
         </Link>

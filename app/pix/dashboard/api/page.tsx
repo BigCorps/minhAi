@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-browser';
 import PixWikiHeader from '@/components/pix/PixWikiHeader';
+import PixWikiDashboardNav from '@/components/pix/PixWikiDashboardNav';
 
 type PlanKey = 'free' | 'link' | 'pro';
 
@@ -477,7 +478,8 @@ export default function PixWikiApiPage() {
               <select
                 value={hookCompany}
                 onChange={e => setHookCompany(e.target.value)}
-                className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm text-slate-900 outline-none dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                className="w-full appearance-none rounded-xl border border-black/10 bg-white px-4 py-3 text-sm text-slate-900 outline-none dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                style={{ colorScheme: dark ? "dark" : "light" }}
               >
                 <option value="">Todas as empresas</option>
                 {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -593,6 +595,8 @@ const valid = timingSafeEqual(
             Em falha, o PixWiki tenta novamente em 1 min, 5 min, 30 min e 2 h, até 5 tentativas no total.
           </p>
         </section>
+
+        <PixWikiDashboardNav dark={dark} />
       </div>
     </main>
   );

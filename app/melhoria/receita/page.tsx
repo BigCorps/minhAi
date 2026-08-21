@@ -25,6 +25,7 @@ import {
 import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CampoComDitado from '@/components/melhoria/CampoComDitado';
 import { cor, toque, raio, espaco, descreverDias, NOMES_DIAS_CURTO, NOMES_DIAS } from '@/lib/melhoria/tema';
+import { R } from '@/lib/melhoria/rotas';
 import { Pagina } from '@/components/melhoria/Chrome';
 
 type Etapa = 'foto' | 'lendo' | 'conferir' | 'salvando';
@@ -151,7 +152,7 @@ export default function ReceitaPage() {
         if (e2) throw e2;
       }
 
-      router.push('/melhoria/remedios');
+      router.push(R.remedios());
     } catch (e) {
       console.error(e);
       setErro('Não consegui salvar. Verifique a internet e tente de novo.');
@@ -208,7 +209,7 @@ export default function ReceitaPage() {
 
           <button
             type="button"
-            onClick={() => router.push('/melhoria/remedios/novo')}
+            onClick={() => router.push(R.remedioNovo())}
             style={{ ...botaoSecundario, marginTop: espaco.md }}
           >
             Prefiro digitar (é grátis)

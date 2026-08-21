@@ -18,6 +18,7 @@ import {
   montarSmsPanico, contarSms,
 } from '@/lib/melhoria/telefone';
 import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { R } from '@/lib/melhoria/rotas';
 import { Pagina, Carregando } from '@/components/melhoria/Chrome';
 
 interface Contato {
@@ -49,7 +50,7 @@ export default function EmergenciaPage() {
 
   const carregar = useCallback(async () => {
     const { data: sessao } = await supabase.auth.getUser();
-    if (!sessao?.user) { router.replace('/melhoria/login'); return; }
+    if (!sessao?.user) { router.replace(R.login()); return; }
 
     const [{ data: perfis }, { data: lista }, { data: saldo }] = await Promise.all([
       mel.from('perfis').select('id, nome, mensagem_panico').limit(1),
@@ -127,7 +128,7 @@ export default function EmergenciaPage() {
 
   if (carregando) {
     return (
-      <Pagina voltarPara="/melhoria">
+      <Pagina voltarPara={R.app()}>
         <Carregando />
       </Pagina>
     );
@@ -140,7 +141,7 @@ export default function EmergenciaPage() {
   const custoPorContato = contarSms(textoFinal) * 2;
 
   return (
-    <Pagina voltarPara="/melhoria">
+    <Pagina voltarPara={R.app()}>
       <h1 style={{ fontSize: 36, fontWeight: 800, color: cor.tinta, margin: `0 0 ${espaco.md}px`, lineHeight: 1.2 }}>
         Quem avisar se eu precisar de ajuda
       </h1>

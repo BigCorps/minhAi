@@ -23,6 +23,7 @@ import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CampoComDitado from '@/components/melhoria/CampoComDitado';
 import { gerarRelatorioAdesao, type DoseRegistro } from '@/lib/melhoria/relatorioPDF';
 import { cor, toque, raio, espaco, descreverDias } from '@/lib/melhoria/tema';
+import { R } from '@/lib/melhoria/rotas';
 import { Pagina, Esqueleto } from '@/components/melhoria/Chrome';
 
 interface Acompanhado {
@@ -61,7 +62,7 @@ export default function FamiliaPage() {
 
   const carregar = useCallback(async () => {
     const { data: sessao } = await supabase.auth.getUser();
-    if (!sessao?.user) { router.replace('/melhoria/login'); return; }
+    if (!sessao?.user) { router.replace(R.login()); return; }
 
     const { data } = await supabase.rpc('melhoria_meus_acompanhados');
     const lista = (data as Acompanhado[]) ?? [];
@@ -210,7 +211,7 @@ export default function FamiliaPage() {
 
 
   return (
-    <Pagina voltarPara="/melhoria">
+    <Pagina voltarPara={R.app()}>
       <h1 style={{ fontSize: 34, fontWeight: 800, color: cor.tinta, margin: `0 0 ${espaco.md}px`, lineHeight: 1.2 }}>
         Acompanhamento
       </h1>

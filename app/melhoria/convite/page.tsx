@@ -19,6 +19,7 @@ import Image from 'next/image';
 import { Check, Loader2, AlertTriangle, Heart } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { R } from '@/lib/melhoria/rotas';
 
 const CHAVE = 'melhoria_convite_pendente';
 
@@ -75,7 +76,7 @@ function ConviteConteudo() {
     sessionStorage.removeItem(CHAVE);
     setMensagem(linha.mensagem);
     setEstado('ok');
-    setTimeout(() => router.push('/melhoria/familia'), 2500);
+    setTimeout(() => router.push(R.familia()), 2500);
   }, [token, supabase, router]);
 
   return (
@@ -103,7 +104,7 @@ function ConviteConteudo() {
           </p>
           <button
             type="button"
-            onClick={() => router.push('/melhoria/login?next=/melhoria/convite')}
+            onClick={() => router.push(`${R.login()}?next=${R.convite()}`)}
             style={botaoPrincipal}
           >
             Entrar ou criar conta
@@ -147,7 +148,7 @@ function ConviteConteudo() {
 
           <button
             type="button"
-            onClick={() => { sessionStorage.removeItem(CHAVE); router.push('/melhoria'); }}
+            onClick={() => { sessionStorage.removeItem(CHAVE); router.push(R.app()); }}
             style={{
               minHeight: toque.min, width: '100%', marginTop: espaco.md,
               background: 'none', border: 'none', color: cor.tintaMuted,
@@ -172,7 +173,7 @@ function ConviteConteudo() {
           <AlertTriangle size={72} style={{ color: cor.atencaoTexto }} aria-hidden="true" />
           <h1 style={{ ...titulo, textAlign: 'center' }}>Não deu certo</h1>
           <p style={texto}>{mensagem}</p>
-          <button type="button" onClick={() => router.push('/melhoria')} style={botaoPrincipal}>
+          <button type="button" onClick={() => router.push(R.app())} style={botaoPrincipal}>
             Ir para o aplicativo
           </button>
         </div>

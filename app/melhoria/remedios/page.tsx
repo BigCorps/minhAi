@@ -18,6 +18,7 @@ import {
   cor, fonte, px, toque, raio, espaco, descreverDias,
   type TamanhoFonte,
 } from '@/lib/melhoria/tema';
+import { R } from '@/lib/melhoria/rotas';
 import { Pagina, IconeCentral, Carregando } from '@/components/melhoria/Chrome';
 
 interface Remedio {
@@ -46,7 +47,7 @@ export default function RemediosPage() {
 
   const carregar = useCallback(async () => {
     const { data: sessao } = await supabase.auth.getUser();
-    if (!sessao?.user) { router.replace('/melhoria/login'); return; }
+    if (!sessao?.user) { router.replace(R.login()); return; }
 
     const { data } = await mel
       .from('medicamentos')
@@ -111,14 +112,14 @@ export default function RemediosPage() {
 
   if (carregando) {
     return (
-      <Pagina voltarPara="/melhoria">
+      <Pagina voltarPara={R.app()}>
         <Carregando />
       </Pagina>
     );
   }
 
   return (
-    <Pagina voltarPara="/melhoria">
+    <Pagina voltarPara={R.app()}>
       <h1 style={{ fontSize: 38, fontWeight: 800, color: cor.tinta, margin: `0 0 ${espaco.lg}px` }}>
         Meus remédios
       </h1>
@@ -227,7 +228,7 @@ export default function RemediosPage() {
 
       <button
         type="button"
-        onClick={() => router.push('/melhoria/remedios/novo')}
+        onClick={() => router.push(R.remedioNovo())}
         style={{
           minHeight: toque.critico, width: '100%', marginTop: espaco.md,
           borderRadius: raio.botao, border: 'none',

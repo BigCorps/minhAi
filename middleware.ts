@@ -303,18 +303,35 @@ if (CONSULTATEC_DOMAINS.includes(hostname)) {
 }
 
 // ── 0.15. DOMÍNIO MELHORIA.ORG (cenário A — host único) ───────────────────
+// Diferente das outras marcas, aqui reescrevemos TODOS os caminhos, não só a
+// raiz. Motivo: com rewrite só de "/", a navegação interna precisa apontar
+// para /melhoria/remedios, e é isso que a pessoa vê na barra de endereço —
+// melhoria.org/melhoria/remedios. Feio e amador.
+//
+// Com o rewrite total, o link é /remedios e a URL fica melhoria.org/remedios.
+// O arquivo continua em app/melhoria/remedios/, ninguém precisa mover nada.
 if (MELHORIA_DOMAINS.includes(hostname)) {
-
-  // robots.txt e sitemap.xml precisam ser servidos por ESTE host, não
-  // reescritos para dentro de /melhoria.
-  if (CRAWLER_PASSTHROUGH.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
-  }
 
   if (hostname === 'www.melhoria.org') {
     const url = request.nextUrl.clone();
     url.hostname = 'melhoria.org';
     return NextResponse.redirect(url);
+  }
+
+  // robots.txt e sitemap.xml precisam ser servidos por ESTE host.
+  if (CRAWLER_PASSTHROUGH.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // Infra compartilhada. Prefixar quebraria o retorno do OAuth e todas as
+  // rotas de API — mesmo cuidado dos blocos do Pix Wiki e do ConviteIA.
+  if (
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/auth/') ||
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/.well-known/')   // Digital Asset Links da TWA
+  ) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   if (pathname === '/favicon.ico') {
@@ -329,27 +346,25 @@ if (MELHORIA_DOMAINS.includes(hostname)) {
     return NextResponse.rewrite(url);
   }
 
-  // A TWA da Play Store valida a posse do domínio por este arquivo. Ele mora
-  // em public/.well-known/, e sem este passthrough o bloco de raiz abaixo o
-  // reescreveria para /melhoria/... e o app abriria com a barra do Chrome.
-  if (pathname.startsWith('/.well-known/')) {
+  // Arquivos estáticos (logo, ícones, og) passam direto.
+  if (/\.[a-z0-9]{2,5}$/i.test(pathname)) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // Páginas legais em URL curta: melhoria.org/aviso -> /melhoria/aviso.
-  // Sem isto, /aviso cai no fluxo normal e serve app/aviso (marca minhAi) —
-  // bug silencioso, porque a página existe e abre, só com a marca errada.
-  if (PAGINAS_LEGAIS.includes(pathname)) {
+  // Já veio prefixado (acesso direto ou link antigo): manda para a URL limpa,
+  // com redirect de verdade, para não existirem dois endereços do mesmo
+  // conteúdo — o Google trataria como duplicata.
+  if (pathname === '/melhoria' || pathname.startsWith('/melhoria/')) {
     const url = request.nextUrl.clone();
-    url.pathname = `/melhoria${pathname}`;
-    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    url.pathname = pathname.replace(/^\/melhoria/, '') || '/';
+    return NextResponse.redirect(url);
   }
 
-  if (pathname === '/') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/melhoria';
-    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
-  }
+  // Tudo o mais: /remedios -> /melhoria/remedios, sem mudar a barra de
+  // endereço.
+  const url = request.nextUrl.clone();
+  url.pathname = `/melhoria${pathname === '/' ? '' : pathname}`;
+  return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
 }
 
 // ── 0.2. DOMÍNIO PIX.WIKI ────────────────────────────────────────────────

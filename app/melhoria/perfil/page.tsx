@@ -23,6 +23,8 @@ import { Check, Loader2, Phone, Type, Volume2, ArrowRight } from 'lucide-react';
 import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CampoComDitado from '@/components/melhoria/CampoComDitado';
 import { Pagina, Carregando } from '@/components/melhoria/Chrome';
+import { aplicarEscala } from '@/components/melhoria/EscalaTexto';
+import { R } from '@/lib/melhoria/rotas';
 import { formatarTelefone, validarTelefone } from '@/lib/melhoria/telefone';
 import {
   cor, toque, raio, espaco, type TamanhoFonte,
@@ -54,7 +56,7 @@ export default function PerfilPage() {
 
   const carregar = useCallback(async () => {
     const { data: sessao } = await supabase.auth.getUser();
-    if (!sessao?.user) { router.replace('/melhoria/login'); return; }
+    if (!sessao?.user) { router.replace(R.login()); return; }
     setEmail(sessao.user.email ?? '');
 
     const { data } = await mel
@@ -70,7 +72,11 @@ export default function PerfilPage() {
       setNome(p.nome === 'Meu perfil' ? '' : (p.nome ?? ''));
       setTelefone(p.telefone ?? '');
       setNascimento(p.data_nascimento ?? '');
-      setTamanho((p.tamanho_fonte as TamanhoFonte) ?? 'grande');
+      // O banco é a fonte da verdade entre aparelhos; o localStorage é o
+      // cache que evita o pulo visual. Sincroniza os dois aqui.
+      const doBanco = (p.tamanho_fonte as TamanhoFonte) ?? 'grande';
+      setTamanho(doBanco);
+      aplicarEscala(doBanco);
       setFalar(!!p.falar_confirmacoes);
     }
     setCarregando(false);
@@ -89,6 +95,13 @@ export default function PerfilPage() {
     if (telefone.trim()) {
       const v = validarTelefone(telefone);
       if (!v.valido) { setErro(v.erro ?? 'Telefone inválido.'); return; }
+    }
+
+    if (!perfilId) {
+      // Sem isto, um update com id nulo não casa com nenhuma linha, NÃO
+      // devolve erro, e a tela mostra "Salvo" sem ter salvo nada.
+      setErro('Ainda estou carregando sua conta. Tente de novo em instantes.');
+      return;
     }
 
     setSalvando(true);
@@ -117,11 +130,11 @@ export default function PerfilPage() {
   }
 
   if (carregando) {
-    return <Pagina voltarPara="/melhoria" semRodape><Carregando /></Pagina>;
+    return <Pagina voltarPara={R.app()} semRodape><Carregando /></Pagina>;
   }
 
   return (
-    <Pagina voltarPara="/melhoria">
+    <Pagina voltarPara={R.app()}>
       <h1 style={titulo}>Meus dados</h1>
 
       <CampoComDitado
@@ -164,7 +177,7 @@ export default function PerfilPage() {
 
         <button
           type="button"
-          onClick={() => router.push('/melhoria/emergencia')}
+          onClick={() => router.push(R.emergencia())}
           style={{
             minHeight: toque.min, width: '100%',
             borderRadius: raio.botao, border: `2px solid ${cor.destaque}`,
@@ -203,7 +216,17 @@ export default function PerfilPage() {
             <button
               key={t.v}
               type="button"
-              onClick={() => setTamanho(t.v)}
+              onClick={() => {
+                // Aplica no mesmo instante e grava. A versão anterior só
+                // guardava no estado e esperava o botão Salvar — como nenhuma
+                // tela usava a escala, o clique parecia não fazer nada e o
+                // valor "voltava" ao recarregar.
+                setTamanho(t.v);
+                aplicarEscala(t.v);
+                if (perfilId) {
+                  mel.from('perfis').update({ tamanho_fonte: t.v }).eq('id', perfilId);
+                }
+              }}
               aria-pressed={tamanho === t.v}
               style={{
                 minHeight: toque.confortavel, textAlign: 'left',

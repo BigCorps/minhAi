@@ -17,6 +17,7 @@ import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
 import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CampoComDitado from '@/components/melhoria/CampoComDitado';
 import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { R } from '@/lib/melhoria/rotas';
 import { Pagina } from '@/components/melhoria/Chrome';
 
 type Passo = 'tipo' | 'oque' | 'quando' | 'onde' | 'preparo' | 'salvando';
@@ -67,7 +68,7 @@ export default function NovoCompromissoPage() {
 
     try {
       const { data: sessao } = await supabase.auth.getUser();
-      if (!sessao?.user) { router.replace('/melhoria/login'); return; }
+      if (!sessao?.user) { router.replace(R.login()); return; }
 
       const { data: perfis } = await mel.from('perfis').select('id').limit(1);
       const perfilId = perfis?.[0]?.id;
@@ -95,7 +96,7 @@ export default function NovoCompromissoPage() {
       });
 
       if (error) throw error;
-      router.push('/melhoria/agenda');
+      router.push(R.agenda());
     } catch (e) {
       console.error(e);
       setErro('Não consegui salvar. Verifique a internet e tente de novo.');

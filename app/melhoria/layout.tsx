@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import type { Metadata, Viewport } from 'next';
 import JsonLd from '@/components/JsonLd';
 import { buildBrandMetadata, melhoriaGraph, resolveSeo } from '@/lib/seo';
-import BotaoPanico from '@/components/melhoria/BotaoPanico';
+import EscalaTexto from '@/components/melhoria/EscalaTexto';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,17 +87,23 @@ export default async function MelhoriaLayout({
 
       {brand === 'melhoria' && <JsonLd data={melhoriaGraph()} />}
 
-      {children}
+      {/*
+        O tamanho de letra escolhido pela pessoa vale para TODAS as telas.
+        Precisa envolver o conteúdo aqui, e não em cada página, senão a
+        configuração só valeria onde alguém lembrasse de aplicá-la — que é
+        exatamente o que acontecia antes.
+      */}
+      <EscalaTexto>{children}</EscalaTexto>
 
       {/*
-        Botão de emergência. Usa createPortal para o document.body, então basta
-        montar uma vez aqui e ele aparece fixo em todas as telas.
+        O botão de ajuda NÃO fica mais aqui.
 
-        Fica fora do <main> de propósito: se ficasse dentro, herdaria o
-        maxWidth de 640px e no desktop apareceria no meio da tela, longe do
-        polegar.
+        Ele passou para dentro do <Cabecalho>, por três razões:
+          · não deve aparecer na tela de login, onde não há a quem avisar;
+          · só faz sentido quando existe contato de emergência cadastrado —
+            botão de socorro que não avisa ninguém cria confiança falsa;
+          · flutuando sobre o conteúdo, tapava o último item das listas.
       */}
-      <BotaoPanico />
     </>
   );
 }

@@ -17,6 +17,7 @@ import {
   cor, fonte, px, toque, raio, espaco,
   NOMES_DIAS_CURTO, descreverDias, NOMES_DIAS,
 } from '@/lib/melhoria/tema';
+import { R } from '@/lib/melhoria/rotas';
 import { Pagina } from '@/components/melhoria/Chrome';
 
 type Passo = 'nome' | 'dosagem' | 'horarios' | 'duracao' | 'salvando';
@@ -47,7 +48,7 @@ export default function NovoRemedioPage() {
 
     try {
       const { data: sessao } = await supabase.auth.getUser();
-      if (!sessao?.user) { router.replace('/melhoria/login'); return; }
+      if (!sessao?.user) { router.replace(R.login()); return; }
 
       const { data: perfis } = await mel.from('perfis').select('id').limit(1);
       const perfilId = perfis?.[0]?.id;
@@ -89,7 +90,7 @@ export default function NovoRemedioPage() {
 
       if (erroDoses) throw erroDoses;
 
-      router.push('/melhoria?cadastrado=1');
+      router.push(`${R.app()}?cadastrado=1`);
     } catch (e) {
       console.error(e);
       setErro('Não consegui salvar. Verifique a internet e tente de novo.');

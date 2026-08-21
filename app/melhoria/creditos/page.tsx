@@ -30,6 +30,7 @@ import Image from 'next/image';
 import { Check, Copy, Loader2, QrCode } from 'lucide-react';
 import { melhoriaAuth } from '@/lib/melhoria/supabase';
 import { cor, toque, raio, espaco, descreverCreditos } from '@/lib/melhoria/tema';
+import { R } from '@/lib/melhoria/rotas';
 import { Pagina, Carregando } from '@/components/melhoria/Chrome';
 
 interface Pacote {
@@ -66,7 +67,7 @@ export default function CreditosPage() {
 
   const carregar = useCallback(async () => {
     const { data: sessao } = await supabase.auth.getUser();
-    if (!sessao?.user) { router.replace('/melhoria/login'); return; }
+    if (!sessao?.user) { router.replace(R.login()); return; }
 
     const [{ data: cred }, { data: pkgs }] = await Promise.all([
       supabase.from('user_credits')
@@ -169,7 +170,7 @@ export default function CreditosPage() {
 
   if (carregando) {
     return (
-      <Pagina voltarPara="/melhoria">
+      <Pagina voltarPara={R.app()}>
         <Carregando />
       </Pagina>
     );
@@ -178,7 +179,7 @@ export default function CreditosPage() {
   // ── Tela de pagamento ───────────────────────────────────────────────────
   if (pagamento) {
     return (
-      <Pagina voltarPara="/melhoria">
+      <Pagina voltarPara={R.app()}>
         {pago ? (
           <div style={{ textAlign: 'center', paddingTop: 60 }}>
             <Check size={90} strokeWidth={3} style={{ color: cor.okTexto }} aria-hidden="true" />
@@ -269,7 +270,7 @@ export default function CreditosPage() {
 
   // ── Vitrine ─────────────────────────────────────────────────────────────
   return (
-    <Pagina voltarPara="/melhoria">
+    <Pagina voltarPara={R.app()}>
       <h1 style={{ fontSize: 34, fontWeight: 800, color: cor.tinta, margin: `0 0 ${espaco.md}px`, lineHeight: 1.2 }}>
         Usos da MelhorIA
       </h1>
@@ -295,6 +296,22 @@ export default function CreditosPage() {
           {descreverCreditos(saldo)}
         </p>
       </div>
+
+      {/* Os usos de boas-vindas vêm do trigger `initialize_user_credits` da
+          minhAi, que dá 20 a todo usuário novo. Não são um período de teste:
+          não expiram e não viram cobrança. Dizer isso na tela evita a leitura
+          errada de "trial" — que seria a suposição natural de quem já viu
+          outros aplicativos. */}
+      <p style={{
+        fontSize: 20, color: cor.tintaMuted, lineHeight: 1.5,
+        margin: `0 0 ${espaco.lg}px`,
+      }}>
+        Você ganhou usos de boas-vindas ao criar sua conta. Eles{' '}
+        <strong style={{ color: cor.tinta }}>não têm prazo para acabar</strong> e
+        não viram cobrança nenhuma. Quando terminarem, o aplicativo continua
+        funcionando — só as funções de câmera, conversa com IA e mensagem de
+        celular ficam indisponíveis até você comprar mais.
+      </p>
 
       {/* O que é grátis vem ANTES da vitrine, de propósito. */}
       <section style={{

@@ -12,6 +12,7 @@ import { Plus, CalendarDays, Check } from 'lucide-react';
 import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CartaoCompromisso, { type Compromisso } from '@/components/melhoria/CartaoCompromisso';
 import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { R } from '@/lib/melhoria/rotas';
 import { Pagina, BotaoGoogle, IconeCentral, Carregando } from '@/components/melhoria/Chrome';
 
 function AgendaConteudo() {
@@ -35,13 +36,13 @@ function AgendaConteudo() {
     if (g && m) {
       setAviso({ tipo: g === 'ok' ? 'ok' : 'erro', texto: m });
       // Limpa a URL para a mensagem não reaparecer se a pessoa recarregar.
-      window.history.replaceState({}, '', '/melhoria/agenda');
+      window.history.replaceState({}, '', R.agenda());
     }
   }, [params]);
 
   const carregar = useCallback(async () => {
     const { data: sessao } = await supabase.auth.getUser();
-    if (!sessao?.user) { router.replace('/melhoria/login'); return; }
+    if (!sessao?.user) { router.replace(R.login()); return; }
 
     const agora = new Date().toISOString();
 
@@ -78,14 +79,14 @@ function AgendaConteudo() {
 
   if (carregando) {
     return (
-      <Pagina voltarPara="/melhoria">
+      <Pagina voltarPara={R.app()}>
         <Carregando />
       </Pagina>
     );
   }
 
   return (
-    <Pagina voltarPara="/melhoria">
+    <Pagina voltarPara={R.app()}>
       <h1 style={{ fontSize: 38, fontWeight: 800, color: cor.tinta, margin: `0 0 ${espaco.lg}px` }}>
         Consultas e exames
       </h1>
@@ -124,7 +125,7 @@ function AgendaConteudo() {
 
       <button
         type="button"
-        onClick={() => router.push('/melhoria/agenda/novo')}
+        onClick={() => router.push(R.agendaNova())}
         style={{
           minHeight: toque.critico, width: '100%', marginTop: espaco.md,
           borderRadius: raio.botao, border: 'none',
@@ -198,7 +199,7 @@ function AgendaConteudo() {
 export default function AgendaPage() {
   return (
     <Suspense fallback={
-      <Pagina voltarPara="/melhoria">
+      <Pagina voltarPara={R.app()}>
         <Carregando />
       </Pagina>
     }>

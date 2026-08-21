@@ -19,6 +19,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { R } from '@/lib/melhoria/rotas';
+import BotaoAjuda from '@/components/melhoria/BotaoAjuda';
 
 // ── Ícones ──────────────────────────────────────────────────────────────────
 
@@ -141,7 +143,14 @@ export function Esqueleto({ altura = 120 }: { altura?: number }) {
 }
 
 // ── Cabeçalho ───────────────────────────────────────────────────────────────
-export function Cabecalho({ voltarPara, titulo }: { voltarPara?: string; titulo?: string }) {
+export function Cabecalho({
+  voltarPara, titulo, comAjuda = true,
+}: {
+  voltarPara?: string;
+  titulo?: string;
+  /** false na tela de login e na landing: ali não há a quem avisar. */
+  comAjuda?: boolean;
+}) {
   return (
     <header
       style={{
@@ -172,7 +181,7 @@ export function Cabecalho({ voltarPara, titulo }: { voltarPara?: string; titulo?
         )}
 
         <Link
-          href="/melhoria"
+          href={R.app()}
           aria-label="MelhorIA, ir para o início"
           style={{
             display: 'flex', alignItems: 'center', gap: espaco.xs,
@@ -188,7 +197,7 @@ export function Cabecalho({ voltarPara, titulo }: { voltarPara?: string; titulo?
           </span>
         </Link>
 
-        {titulo && (
+        {titulo && !comAjuda && (
           <span style={{
             marginLeft: 'auto', fontSize: 19, fontWeight: 700,
             color: cor.tintaMuted, textAlign: 'right', lineHeight: 1.2,
@@ -196,6 +205,12 @@ export function Cabecalho({ voltarPara, titulo }: { voltarPara?: string; titulo?
             {titulo}
           </span>
         )}
+
+        {/* Ajuda à direita. O componente decide sozinho o que mostrar:
+            nada enquanto verifica, "Configurar ajuda" se não houver contato
+            cadastrado, e o botão vermelho só quando houver alguém para
+            avisar. */}
+        {comAjuda && <BotaoAjuda />}
       </div>
     </header>
   );
@@ -275,9 +290,9 @@ export function Rodape() {
         }}
       >
         {[
-          ['/melhoria/termos', 'Termos de uso'],
-          ['/melhoria/aviso', 'Privacidade'],
-          ['/melhoria/exclusao', 'Apagar conta'],
+          [R.termos(), 'Termos de uso'],
+          [R.aviso(), 'Privacidade'],
+          [R.exclusao(), 'Apagar conta'],
         ].map(([href, texto]) => (
           <Link
             key={href} href={href}
@@ -297,12 +312,13 @@ export function Rodape() {
 
 // ── Casca da página ─────────────────────────────────────────────────────────
 export function Pagina({
-  children, voltarPara, titulo, semRodape = false,
+  children, voltarPara, titulo, semRodape = false, comAjuda = true,
 }: {
   children: React.ReactNode;
   voltarPara?: string;
   titulo?: string;
   semRodape?: boolean;
+  comAjuda?: boolean;
 }) {
   return (
     <main
@@ -318,7 +334,7 @@ export function Pagina({
         flexDirection: 'column',
       }}
     >
-      <Cabecalho voltarPara={voltarPara} titulo={titulo} />
+      <Cabecalho voltarPara={voltarPara} titulo={titulo} comAjuda={comAjuda} />
       {/* flex:1 faz o conteúdo ocupar a altura livre — é isso que permite ao
           <Carregando> ficar centralizado de verdade, e não colado no topo. */}
       <div style={{ flex: 1 }}>{children}</div>

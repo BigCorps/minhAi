@@ -19,6 +19,7 @@ import { melhoriaAuth } from '@/lib/melhoria/supabase';
 import { useTurnstile } from '@/hooks/useTurnstile';
 import { BotaoGoogle, Rodape } from '@/components/melhoria/Chrome';
 import { cor, fonte, px, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { R } from '@/lib/melhoria/rotas';
 
 function LoginConteudo() {
   const router   = useRouter();
@@ -27,7 +28,7 @@ function LoginConteudo() {
   const { containerRef, getToken } = useTurnstile();
 
   // Respeita ?next=, usado pelo link de convite de cuidador.
-  const destino = params.get('next') || '/melhoria';
+  const destino = params.get('next') || R.app();
 
   const [modo, setModo]         = useState<'login' | 'cadastro'>('login');
   const [carregando, setCarregando] = useState(false);
@@ -100,7 +101,7 @@ function LoginConteudo() {
 
         if (data.session) {
           localStorage.setItem('lastLoggedInUser', email);
-          router.push('/melhoria/consentimento');
+          router.push(R.consentimento());
         } else {
           setErro('Cadastro feito! Confira seu e-mail para confirmar e depois entre.');
           setModo('login');

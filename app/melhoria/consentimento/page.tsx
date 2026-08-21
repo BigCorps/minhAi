@@ -26,6 +26,7 @@ import { Check, Loader2, ShieldCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { createMelhoriaClient } from '@/lib/melhoria/supabase';
 import { cor, fonte, px, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { R } from '@/lib/melhoria/rotas';
 
 export default function ConsentimentoPage() {
   const router   = useRouter();
@@ -42,7 +43,7 @@ export default function ConsentimentoPage() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
-      if (!data?.user) { router.replace('/melhoria/login'); return; }
+      if (!data?.user) { router.replace(R.login()); return; }
 
       await supabase.rpc('ensure_my_melhoria_company');
 
@@ -52,7 +53,7 @@ export default function ConsentimentoPage() {
         .limit(1);
 
       // Já consentiu: não faz sentido perguntar de novo toda vez.
-      if (perfis?.[0]?.consentiu_saude_em) { router.replace('/melhoria'); return; }
+      if (perfis?.[0]?.consentiu_saude_em) { router.replace(R.app()); return; }
       setCarregando(false);
     })();
   }, [supabase, mel, router]);
@@ -87,7 +88,7 @@ export default function ConsentimentoPage() {
       return;
     }
 
-    router.replace('/melhoria');
+    router.replace(R.app());
   }
 
   if (carregando) {

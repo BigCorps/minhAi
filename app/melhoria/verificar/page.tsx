@@ -20,6 +20,7 @@ import {
   type ResultadoBoleto, type Veredito,
 } from '@/lib/melhoria/boleto';
 import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { R } from '@/lib/melhoria/rotas';
 import { Pagina } from '@/components/melhoria/Chrome';
 
 type Aba = 'boleto' | 'link';
@@ -87,7 +88,7 @@ export default function VerificarPage() {
   }
 
   return (
-    <Pagina voltarPara="/melhoria">
+    <Pagina voltarPara={R.app()}>
       <h1 style={{ fontSize: 36, fontWeight: 800, color: cor.tinta, margin: `0 0 ${espaco.md}px`, lineHeight: 1.2 }}>
         Isto é golpe?
       </h1>

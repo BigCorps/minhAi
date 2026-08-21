@@ -21,14 +21,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Pill, CalendarDays, ShoppingCart, ShieldCheck, Plus, Users, UserCog, Coins,
+  Pill, CalendarDays, ShoppingCart, ShieldCheck, Plus, Users, UserCog, Sparkles,
 } from 'lucide-react';
 import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CartaoDose, { type DoseDoDia } from '@/components/melhoria/CartaoDose';
 import { Pagina, IconeCentral, Carregando } from '@/components/melhoria/Chrome';
 import { R } from '@/lib/melhoria/rotas';
 import {
-  cor, fonte, px, toque, raio, espaco, diaPorExtenso, descreverCreditos,
+  cor, fonte, px, toque, raio, espaco, diaPorExtenso,
   type TamanhoFonte,
 } from '@/lib/melhoria/tema';
 
@@ -52,7 +52,6 @@ export default function MeuDiaPage() {
   const [perfil, setPerfil]         = useState<Perfil | null>(null);
   const [doses, setDoses]           = useState<DoseDoDia[]>([]);
   const [erro, setErro]             = useState<string | null>(null);
-  const [saldo, setSaldo]           = useState<number | null>(null);
 
   const escala: TamanhoFonte = perfil?.tamanho_fonte ?? 'grande';
   const tz = perfil?.timezone ?? 'America/Sao_Paulo';
@@ -61,14 +60,6 @@ export default function MeuDiaPage() {
     const { data: sessao } = await supabase.auth.getUser();
     if (!sessao?.user) { router.replace(R.login()); return; }
 
-    // Saldo em paralelo: nunca deve segurar a tela dos remédios.
-    supabase
-      .from('user_credits')
-      .select('available_credits')
-      .eq('user_id', sessao.user.id)
-      .maybeSingle()
-      .then(({ data }: { data: { available_credits: number } | null }) =>
-        setSaldo(data?.available_credits ?? 0));
 
     // Cria company + perfil no primeiro acesso. Idempotente, com advisory lock.
     const { error: erroRpc } = await supabase.rpc('ensure_my_melhoria_company');
@@ -278,57 +269,27 @@ export default function MeuDiaPage() {
         </section>
       )}
 
-      {/* Saldo de usos. Antes não havia NENHUM lugar no aplicativo que
-          mostrasse quantos usos a pessoa tem nem como comprar mais — a tela
-          de créditos existia, mas ninguém chegava nela. */}
-      {saldo !== null && (
-        <button
-          type="button"
-          onClick={() => router.push(R.creditos())}
-          style={{
-            minHeight: toque.confortavel, width: '100%', marginBottom: espaco.md,
-            padding: `${espaco.sm}px ${espaco.md}px`,
-            borderRadius: raio.card,
-            border: `2px solid ${saldo <= 5 ? '#D97706' : cor.borda}`,
-            background: saldo <= 5 ? cor.atencaoBg : cor.fundoSuave,
-            cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: espaco.sm, textAlign: 'left',
-          }}
-        >
-          <Coins
-            size={30}
-            style={{ color: saldo <= 5 ? cor.atencaoTexto : cor.destaque, flexShrink: 0 }}
-            aria-hidden="true"
-          />
-          <span style={{ flex: 1 }}>
-            <span style={{
-              display: 'block', fontSize: 21, fontWeight: 700,
-              color: saldo <= 5 ? cor.atencaoTexto : cor.tinta,
-            }}>
-              {descreverCreditos(saldo)}
-            </span>
-            <span style={{ display: 'block', fontSize: 18, color: cor.tintaMuted, marginTop: 2 }}>
-              {saldo <= 5
-                ? 'Toque para renovar'
-                : 'Para câmera, conversa com IA e mensagens'}
-            </span>
-          </span>
-        </button>
-      )}
+      {/* NÃO existe cartão de saldo aqui, de propósito.
+          Mostrar "restam 20 créditos" na abertura passa a impressão de
+          aplicativo pago — quando quase tudo o que ele faz é grátis e
+          ilimitado. O saldo aparece dentro das telas pagas (conversa, câmera,
+          SMS) e em Meus dados, para quem já decidiu usar alguma delas. */}
 
       <nav aria-label="Atalhos" style={{ display: 'grid', gap: espaco.sm }}>
         <Atalho escala={escala} icone={<Pill size={34} />}
-          rotulo="Meus remédios" destino="/melhoria/remedios" />
+          rotulo="Meus remédios" destino={R.remedios()} />
         <Atalho escala={escala} icone={<CalendarDays size={34} />}
-          rotulo="Consultas e exames" destino="/melhoria/agenda" />
+          rotulo="Consultas e exames" destino={R.agenda()} />
         <Atalho escala={escala} icone={<ShoppingCart size={34} />}
-          rotulo="Lista de compras" destino="/melhoria/compras" />
+          rotulo="Lista de compras" destino={R.compras()} />
         <Atalho escala={escala} icone={<ShieldCheck size={34} />}
-          rotulo="Verificar boleto ou link" destino="/melhoria/verificar" />
+          rotulo="Verificar boleto ou link" destino={R.verificar()} />
+        <Atalho escala={escala} icone={<Sparkles size={34} />}
+          rotulo="Conversar com a MelhorIA" destino={R.conversa()} />
         <Atalho escala={escala} icone={<Users size={34} />}
-          rotulo="Minha família" destino="/melhoria/familia" />
+          rotulo="Minha família" destino={R.familia()} />
         <Atalho escala={escala} icone={<UserCog size={34} />}
-          rotulo="Meus dados" destino="/melhoria/perfil" />
+          rotulo="Meus dados" destino={R.perfil()} />
       </nav>
     </Pagina>
   );

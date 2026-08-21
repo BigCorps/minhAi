@@ -182,9 +182,10 @@ export default function LandingMelhorIA() {
           margin: `${espaco.md}px 0 0`,
         }}>
           Nunca cobramos para lembrar alguém de tomar remédio, e nada disso
-          acaba depois de um tempo. Créditos são usados só na câmera com
-          inteligência artificial, na conversa com a IA e no envio de mensagem
-          de celular — e você ainda ganha alguns ao criar a conta.
+          acaba depois de um tempo. Créditos existem só para quatro coisas:
+          ler receita pela câmera, analisar foto de boleto, conversar com a
+          inteligência artificial e enviar mensagem de celular. Você ganha
+          alguns ao criar a conta.
         </p>
       </section>
 

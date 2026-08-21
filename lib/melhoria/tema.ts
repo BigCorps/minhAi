@@ -172,9 +172,21 @@ export function descreverDias(dias: number[]): string {
   return `${nomes.join(', ')} e ${ultimo}`;
 }
 
-/** "restam 12 usos" — nunca "12 créditos disponíveis". */
+/**
+ * "restam 12 créditos".
+ *
+ * Eu tinha escolhido "usos" achando que seria mais claro que "créditos".
+ * Estava errado: "crédito" é a palavra que a pessoa já conhece de recarga de
+ * celular, e é a mesma usada no resto do ecossistema minhAi. Inventar um termo
+ * próprio só cria uma tradução mental a mais.
+ */
 export function descreverCreditos(n: number): string {
-  if (n <= 0) return 'sem usos disponíveis';
-  if (n === 1) return 'resta 1 uso';
-  return `restam ${n} usos`;
+  if (n <= 0) return 'sem créditos';
+  if (n === 1) return 'resta 1 crédito';
+  return `restam ${n} créditos`;
+}
+
+/** "1 crédito" / "3 créditos" — para o custo de uma função. */
+export function custoEmCreditos(n: number): string {
+  return n === 1 ? '1 crédito' : `${n} créditos`;
 }

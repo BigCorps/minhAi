@@ -19,7 +19,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Loader2, Phone, Type, Volume2, ArrowRight } from 'lucide-react';
+import {
+  Check, Loader2, Phone, Type, Volume2, ArrowRight, LogOut, Coins,
+} from 'lucide-react';
 import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CampoComDitado from '@/components/melhoria/CampoComDitado';
 import { Pagina, Carregando } from '@/components/melhoria/Chrome';
@@ -27,7 +29,7 @@ import { aplicarEscala } from '@/components/melhoria/EscalaTexto';
 import { R } from '@/lib/melhoria/rotas';
 import { formatarTelefone, validarTelefone } from '@/lib/melhoria/telefone';
 import {
-  cor, toque, raio, espaco, type TamanhoFonte,
+  cor, toque, raio, espaco, descreverCreditos, type TamanhoFonte,
 } from '@/lib/melhoria/tema';
 
 const TAMANHOS: { v: TamanhoFonte; r: string; px: number }[] = [
@@ -53,11 +55,22 @@ export default function PerfilPage() {
   const [tamanho, setTamanho]   = useState<TamanhoFonte>('grande');
   const [falar, setFalar]       = useState(false);
   const [email, setEmail]       = useState('');
+  const [saldo, setSaldo]       = useState<number | null>(null);
+  const [saindo, setSaindo]     = useState(false);
 
   const carregar = useCallback(async () => {
     const { data: sessao } = await supabase.auth.getUser();
     if (!sessao?.user) { router.replace(R.login()); return; }
     setEmail(sessao.user.email ?? '');
+
+    // Saldo aqui, e não na tela inicial: é onde quem quer saber vem procurar.
+    supabase
+      .from('user_credits')
+      .select('available_credits')
+      .eq('user_id', sessao.user.id)
+      .maybeSingle()
+      .then(({ data }: { data: { available_credits: number } | null }) =>
+        setSaldo(data?.available_credits ?? 0));
 
     const { data } = await mel
       .from('perfis')
@@ -275,6 +288,41 @@ export default function PerfilPage() {
         </span>
       </button>
 
+      {/* Créditos: entrada discreta, para quem foi procurar. */}
+      {saldo !== null && (
+        <button
+          type="button"
+          onClick={() => router.push(R.creditos())}
+          style={{
+            minHeight: toque.confortavel, width: '100%',
+            marginBottom: espaco.md, padding: `${espaco.sm}px ${espaco.md}px`,
+            borderRadius: raio.card,
+            border: `2px solid ${saldo <= 5 ? '#D97706' : cor.borda}`,
+            background: saldo <= 5 ? cor.atencaoBg : cor.fundoSuave,
+            cursor: 'pointer', textAlign: 'left',
+            display: 'flex', alignItems: 'center', gap: espaco.sm,
+          }}
+        >
+          <Coins
+            size={30}
+            style={{ color: saldo <= 5 ? cor.atencaoTexto : cor.destaque, flexShrink: 0 }}
+            aria-hidden="true"
+          />
+          <span style={{ flex: 1 }}>
+            <span style={{
+              display: 'block', fontSize: 21, fontWeight: 700,
+              color: saldo <= 5 ? cor.atencaoTexto : cor.tinta,
+            }}>
+              {descreverCreditos(saldo)}
+            </span>
+            <span style={{ display: 'block', fontSize: 18, color: cor.tintaMuted, marginTop: 2 }}>
+              Usados só na câmera, na conversa com a IA e no SMS
+            </span>
+          </span>
+          <ArrowRight size={26} style={{ color: cor.tintaMuted, flexShrink: 0 }} aria-hidden="true" />
+        </button>
+      )}
+
       <p style={{
         fontSize: 19, color: cor.tintaMuted, lineHeight: 1.5,
         margin: `0 0 ${espaco.lg}px`,
@@ -312,6 +360,37 @@ export default function PerfilPage() {
             ? <><Check size={32} strokeWidth={3} aria-hidden="true" /> Salvo</>
             : 'Salvar'}
       </button>
+
+      {/* Sair. Faltava por completo — não havia como trocar de conta nem
+          voltar para a landing depois de entrar. Fica separado do Salvar por
+          uma linha e um espaço grande, para ninguém tocar sem querer. */}
+      <div style={{
+        borderTop: `2px solid ${cor.borda}`,
+        marginTop: espaco.xl, paddingTop: espaco.lg,
+      }}>
+        <button
+          type="button"
+          onClick={async () => {
+            setSaindo(true);
+            await supabase.auth.signOut();
+            // Volta para a landing, não para o login: quem sai pode estar
+            // apenas querendo mostrar o aplicativo para outra pessoa.
+            router.replace(R.landing());
+          }}
+          disabled={saindo}
+          style={{
+            minHeight: toque.confortavel, width: '100%',
+            borderRadius: raio.botao, border: `2px solid ${cor.borda}`,
+            background: cor.fundo, color: cor.perigoTexto,
+            fontSize: 21, fontWeight: 700, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: espaco.xs,
+          }}
+        >
+          {saindo
+            ? <><Loader2 size={28} className="animate-spin" aria-hidden="true" /> Saindo...</>
+            : <><LogOut size={28} aria-hidden="true" /> Sair da minha conta</>}
+        </button>
+      </div>
     </Pagina>
   );
 }

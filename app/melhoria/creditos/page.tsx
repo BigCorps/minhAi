@@ -21,7 +21,7 @@
 // ── QUEM PAGA NÃO É QUEM USA ────────────────────────────────────────────────
 // Esta tela é para o CUIDADOR, não para o idoso. Por isso ela fala em reais e
 // mostra o QR Code — coisas que a tela principal do idoso nunca mostra. Lá o
-// saldo aparece só como "restam 12 usos".
+// saldo aparece só como "restam 12 créditos".
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useCallback, useEffect, useState } from 'react';
@@ -187,7 +187,7 @@ export default function CreditosPage() {
               Pagamento confirmado
             </h1>
             <p style={{ fontSize: 22, color: cor.tintaMuted, marginTop: espaco.sm }}>
-              {pagamento.creditos} usos foram adicionados.
+              {pagamento.creditos} créditos foram adicionados.
             </p>
           </div>
         ) : (
@@ -235,7 +235,7 @@ export default function CreditosPage() {
               fontSize: 20, fontWeight: 600, lineHeight: 1.45,
               margin: `${espaco.md}px 0`,
             }}>
-              Assim que o banco confirmar, os usos entram sozinhos. Pode deixar
+              Assim que o banco confirmar, os créditos entram sozinhos. Pode deixar
               esta tela aberta.
             </p>
 
@@ -272,7 +272,7 @@ export default function CreditosPage() {
   return (
     <Pagina voltarPara={R.app()}>
       <h1 style={{ fontSize: 34, fontWeight: 800, color: cor.tinta, margin: `0 0 ${espaco.md}px`, lineHeight: 1.2 }}>
-        Usos da MelhorIA
+        Créditos da MelhorIA
       </h1>
 
       <div style={{
@@ -297,7 +297,7 @@ export default function CreditosPage() {
         </p>
       </div>
 
-      {/* Os usos de boas-vindas vêm do trigger `initialize_user_credits` da
+      {/* Os créditos de boas-vindas vêm do trigger `initialize_user_credits` da
           minhAi, que dá 20 a todo usuário novo. Não são um período de teste:
           não expiram e não viram cobrança. Dizer isso na tela evita a leitura
           errada de "trial" — que seria a suposição natural de quem já viu
@@ -306,7 +306,7 @@ export default function CreditosPage() {
         fontSize: 20, color: cor.tintaMuted, lineHeight: 1.5,
         margin: `0 0 ${espaco.lg}px`,
       }}>
-        Você ganhou usos de boas-vindas ao criar sua conta. Eles{' '}
+        Você ganhou créditos de boas-vindas ao criar sua conta. Eles{' '}
         <strong style={{ color: cor.tinta }}>não têm prazo para acabar</strong> e
         não viram cobrança nenhuma. Quando terminarem, o aplicativo continua
         funcionando — só as funções de câmera, conversa com IA e mensagem de
@@ -319,7 +319,7 @@ export default function CreditosPage() {
         borderRadius: raio.card, padding: espaco.md, marginBottom: espaco.lg,
       }}>
         <p style={{ fontSize: 22, fontWeight: 800, color: cor.okTexto, margin: `0 0 ${espaco.xs}px` }}>
-          Não precisa de usos para:
+          Não precisa de créditos para:
         </p>
         <ul style={{ margin: 0, paddingLeft: 24 }}>
           {[
@@ -337,7 +337,7 @@ export default function CreditosPage() {
 
       <section style={{ marginBottom: espaco.lg }}>
         <p style={{ fontSize: 22, fontWeight: 700, color: cor.tinta, margin: `0 0 ${espaco.xs}px` }}>
-          Os usos servem para:
+          Os créditos servem para:
         </p>
         <ul style={{ margin: 0, paddingLeft: 24 }}>
           {[
@@ -348,14 +348,14 @@ export default function CreditosPage() {
             ['Mensagem de celular (por pessoa)', 2],
           ].map(([t, n]) => (
             <li key={String(t)} style={{ fontSize: 20, color: cor.tinta, lineHeight: 1.7 }}>
-              {t} — <strong>{n} {n === 1 ? 'uso' : 'usos'}</strong>
+              {t} — <strong>{n} {n === 1 ? 'crédito' : 'créditos'}</strong>
             </li>
           ))}
         </ul>
       </section>
 
       <h2 style={{ fontSize: 26, fontWeight: 700, color: cor.tinta, margin: `0 0 ${espaco.md}px` }}>
-        Comprar usos
+        Comprar créditos
       </h2>
 
       {pacotes.map((p) => (
@@ -391,7 +391,7 @@ export default function CreditosPage() {
           ) : (
             <>
               <p style={{ fontSize: 26, fontWeight: 800, color: cor.tinta, margin: 0 }}>
-                {p.interactions} usos
+                {p.interactions} créditos
               </p>
               {p.description && (
                 <p style={{ fontSize: 19, color: cor.tintaMuted, margin: '4px 0 0', lineHeight: 1.4 }}>
@@ -417,7 +417,7 @@ export default function CreditosPage() {
         marginTop: espaco.lg,
       }}>
         <QrCode size={26} aria-hidden="true" style={{ flexShrink: 0 }} />
-        O pagamento é por PIX. Os usos entram na hora que o banco confirmar e
+        O pagamento é por PIX. Os créditos entram na hora que o banco confirmar e
         não têm prazo para acabar.
       </p>
     </Pagina>

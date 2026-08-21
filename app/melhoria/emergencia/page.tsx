@@ -309,14 +309,14 @@ export default function EmergenciaPage() {
           {avisos === 0 ? (
             <>
               <AlertTriangle size={26} aria-hidden="true" style={{ verticalAlign: 'middle', marginRight: 8 }} />
-              Seus usos acabaram, então a <strong>mensagem de celular</strong> não
+              Seus créditos acabaram, então a <strong>mensagem de celular</strong> não
               vai sair. O aviso pelo aplicativo continua funcionando normalmente.
             </>
           ) : (
             <>
               Dá para mandar mensagem para todos os seus {contatos.length} contatos{' '}
               <strong>{avisos} {avisos === 1 ? 'vez' : 'vezes'}</strong>.
-              {' '}Cada envio usa {custoPorContato} por pessoa.
+              {' '}Cada envio usa {custoPorContato} créditos por pessoa.
             </>
           )}
         </p>

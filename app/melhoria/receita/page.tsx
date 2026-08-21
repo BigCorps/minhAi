@@ -186,7 +186,7 @@ export default function ReceitaPage() {
           }}>
             A leitura por foto <strong>pode errar</strong>. Você vai conferir
             cada remédio com a receita na mão antes de qualquer coisa ser
-            salva. Isto usa 3 usos.
+            salva. Isto usa 3 créditos.
           </p>
 
           <label style={{

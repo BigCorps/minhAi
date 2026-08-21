@@ -98,7 +98,7 @@ export default function VerificarPage() {
         <BotaoAba ativo={aba === 'boleto'} onClick={() => setAba('boleto')}
                   icone={<FileDigit size={30} />} rotulo="Boleto" nota="grátis" />
         <BotaoAba ativo={aba === 'link'} onClick={() => setAba('link')}
-                  icone={<Link2 size={30} />} rotulo="Link" nota="1 uso" />
+                  icone={<Link2 size={30} />} rotulo="Link" nota="1 crédito" />
       </div>
 
       {/* ── BOLETO ───────────────────────────────────────────────────────── */}
@@ -111,7 +111,7 @@ export default function VerificarPage() {
             lineHeight: 1.45, margin: `0 0 ${espaco.lg}px`,
           }}>
             Conferir boleto pelos números é <strong>grátis e sem limite</strong>.
-            Não gasta nenhum uso.
+            Não gasta nenhum crédito.
           </p>
 
           {!resBoleto && (
@@ -190,7 +190,7 @@ export default function VerificarPage() {
             Recebeu um link por mensagem e não sabe se pode clicar? Cole aqui.
           </p>
           <p style={{ fontSize: 19, color: cor.tintaMuted, margin: `0 0 ${espaco.lg}px` }}>
-            Esta análise usa <strong>1 uso</strong>.
+            Esta análise usa <strong>1 crédito</strong>.
           </p>
 
           <CampoComDitado

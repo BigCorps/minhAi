@@ -45,6 +45,7 @@ export const R = {
   emergencia:   () => rota('/emergencia'),
   creditos:     () => rota('/creditos'),
   familia:      () => rota('/familia'),
+  conversa:     () => rota('/conversa'),
   convite:      () => rota('/convite'),
   termos:       () => rota('/termos'),
   aviso:        () => rota('/aviso'),

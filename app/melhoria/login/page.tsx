@@ -2,34 +2,32 @@
 
 // app/melhoria/login/page.tsx
 // ─────────────────────────────────────────────────────────────────────────────
-// Porte do app/consultatec/login/page.tsx. A infraestrutura de auth é
-// compartilhada e o /auth/callback já é genérico — só muda `next=/melhoria`,
-// a marca e o tema.
-//
-// O que muda em relação ao ConsultaTec, e por quê:
-//   - Entrar vem ANTES de criar conta. No ConsultaTec o padrão é cadastro; aqui
-//     quem instala geralmente já foi cadastrado pelo filho.
-//   - A biometria é o caminho de destaque, não um atalho discreto: digitar
-//     senha é a maior barreira deste público, e o WebAuthn já está pronto.
-//   - Sem "esqueci a senha" escondido em letra miúda.
-//   - Turnstile continua invisível, como nas outras marcas.
+// Correções nesta versão:
+//   · cliente ÚNICO (melhoriaAuth) — sem segunda instância de GoTrue
+//   · botão do Google com o SVG oficial de quatro cores, igual às outras marcas
+//   · Facebook removido: o público quase não usa, e cada opção a mais é uma
+//     decisão a mais para quem já trava na tela de login
+//   · cabeçalho com logo e rodapé padrão
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Fingerprint, ScanFace, Loader2, Mail, Lock, User } from 'lucide-react';
 import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser';
-import { createClient } from '@/lib/supabase-browser';
+import { melhoriaAuth } from '@/lib/melhoria/supabase';
 import { useTurnstile } from '@/hooks/useTurnstile';
+import { BotaoGoogle, Rodape } from '@/components/melhoria/Chrome';
 import { cor, fonte, px, toque, raio, espaco } from '@/lib/melhoria/tema';
 
-const DESTINO = '/melhoria';
-
-export default function LoginMelhorIA() {
+function LoginConteudo() {
   const router   = useRouter();
-  const supabase = createClient();
+  const params   = useSearchParams();
+  const supabase = melhoriaAuth();
   const { containerRef, getToken } = useTurnstile();
+
+  // Respeita ?next=, usado pelo link de convite de cuidador.
+  const destino = params.get('next') || '/melhoria';
 
   const [modo, setModo]         = useState<'login' | 'cadastro'>('login');
   const [carregando, setCarregando] = useState(false);
@@ -39,9 +37,7 @@ export default function LoginMelhorIA() {
   const [tipoBio, setTipoBio]   = useState<'face' | 'digital'>('digital');
   const [checandoBio, setChecandoBio] = useState(true);
 
-  // ── Biometria disponível? ─────────────────────────────────────────────────
   useEffect(() => {
-    // Rede ruim não pode deixar a tela travada em "verificando". 2,5s e segue.
     const guarda = setTimeout(() => setChecandoBio(false), 3000);
 
     (async () => {
@@ -73,7 +69,6 @@ export default function LoginMelhorIA() {
     return () => clearTimeout(guarda);
   }, [supabase]);
 
-  // ── E-mail e senha ────────────────────────────────────────────────────────
   async function entrarComEmail(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
@@ -105,7 +100,6 @@ export default function LoginMelhorIA() {
 
         if (data.session) {
           localStorage.setItem('lastLoggedInUser', email);
-          // Conta nova vai para o consentimento, não direto para o app.
           router.push('/melhoria/consentimento');
         } else {
           setErro('Cadastro feito! Confira seu e-mail para confirmar e depois entre.');
@@ -115,7 +109,7 @@ export default function LoginMelhorIA() {
         const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
         if (error) throw error;
         localStorage.setItem('lastLoggedInUser', email);
-        router.push(DESTINO);
+        router.push(destino);
       }
     } catch (e: any) {
       const m: string = e?.message ?? '';
@@ -131,7 +125,6 @@ export default function LoginMelhorIA() {
     }
   }
 
-  // ── Biometria ─────────────────────────────────────────────────────────────
   async function entrarComBiometria() {
     if (!emailBio) return;
     setCarregando(true);
@@ -161,7 +154,7 @@ export default function LoginMelhorIA() {
       if (e4) throw e4;
 
       localStorage.setItem('lastLoggedInUser', verif.email);
-      router.push(DESTINO);
+      router.push(destino);
     } catch (e: any) {
       const m: string = e?.message ?? '';
       setErro(
@@ -174,14 +167,13 @@ export default function LoginMelhorIA() {
     }
   }
 
-  // ── Google ────────────────────────────────────────────────────────────────
   async function entrarComGoogle() {
     setCarregando(true);
     setErro(null);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/auth/callback?next=${DESTINO}` },
+        options: { redirectTo: `${window.location.origin}/auth/callback?next=${destino}` },
       });
       if (error) throw error;
     } catch {
@@ -193,146 +185,144 @@ export default function LoginMelhorIA() {
   return (
     <main style={{
       background: cor.fundo, minHeight: '100dvh',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: espaco.md,
+      maxWidth: 520, margin: '0 auto',
+      padding: `${espaco.xl}px ${espaco.md}px 0`,
+      color: cor.tinta,
     }}>
-      <div style={{ width: '100%', maxWidth: 480 }}>
-
-        {/* Marca dupla: MelhorIA | minhAi, igual às outras verticais */}
-        <div style={{ textAlign: 'center', marginBottom: espaco.lg }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: espaco.sm }}>
-            <Image src="/brands/melhoria/logo.png" alt="MelhorIA" width={80} height={80}
-                   style={{ borderRadius: 18 }} />
-            <span style={{ fontSize: 30, color: cor.borda, fontWeight: 200 }} aria-hidden="true">|</span>
-            <Image src="/icon.png" alt="minhAi" width={44} height={44}
-                   style={{ borderRadius: 10 }} />
-          </div>
-
-          <h1 style={{ fontSize: 40, fontWeight: 800, color: cor.tinta, margin: `${espaco.md}px 0 0` }}>
-            MelhorIA
-          </h1>
-          <p style={{ fontSize: 22, color: cor.destaqueTexto, fontWeight: 700, margin: '4px 0 0' }}>
-            a IA da Melhor Idade!
-          </p>
+      {/* Marca dupla: MelhorIA | minhAi, igual às outras verticais */}
+      <div style={{ textAlign: 'center', marginBottom: espaco.lg }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: espaco.sm }}>
+          <Image src="/brands/melhoria/logo.png" alt="MelhorIA" width={80} height={80}
+                 style={{ borderRadius: 18 }} priority />
+          <span style={{ fontSize: 30, color: cor.borda, fontWeight: 200 }} aria-hidden="true">|</span>
+          <Image src="/logo-circle.png" alt="minhAi" width={44} height={44}
+                 style={{ borderRadius: 10 }} />
         </div>
 
-        {/* Biometria em destaque */}
-        {checandoBio ? (
-          <div style={{ textAlign: 'center', padding: espaco.md }}>
-            <Loader2 size={36} className="animate-spin" style={{ color: cor.destaque }} />
-          </div>
-        ) : emailBio ? (
-          <>
-            <button
-              type="button"
-              onClick={entrarComBiometria}
-              disabled={carregando}
-              style={{
-                minHeight: toque.critico, width: '100%',
-                borderRadius: raio.botao, border: 'none',
-                background: cor.destaque, color: '#FFFFFF',
-                fontSize: 26, fontWeight: 800, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: espaco.sm,
-                marginBottom: espaco.md,
-              }}
-            >
-              {tipoBio === 'face'
-                ? <ScanFace size={40} aria-hidden="true" />
-                : <Fingerprint size={40} aria-hidden="true" />}
-              {tipoBio === 'face' ? 'Entrar com o rosto' : 'Entrar com a digital'}
-            </button>
+        <h1 style={{ fontSize: 40, fontWeight: 800, color: cor.tinta, margin: `${espaco.md}px 0 0` }}>
+          MelhorIA
+        </h1>
+        <p style={{ fontSize: 22, color: cor.destaqueTexto, fontWeight: 700, margin: '4px 0 0' }}>
+          a IA da Melhor Idade!
+        </p>
+      </div>
 
-            <p style={{
-              textAlign: 'center', fontSize: 18, color: cor.tintaMuted,
-              margin: `0 0 ${espaco.md}px`,
-            }}>
-              ou entre com e-mail e senha
-            </p>
-          </>
-        ) : null}
-
-        <form onSubmit={entrarComEmail}>
-          {modo === 'cadastro' && (
-            <Campo icone={<User size={26} />} nome="nome" tipo="text"
-                   rotulo="Seu nome" exemplo="Maria" autoComplete="name" />
-          )}
-
-          <Campo icone={<Mail size={26} />} nome="email" tipo="email"
-                 rotulo="E-mail" exemplo="maria@email.com" autoComplete="email" />
-
-          <Campo icone={<Lock size={26} />} nome="senha" tipo="password"
-                 rotulo="Senha" exemplo="••••••••"
-                 autoComplete={modo === 'cadastro' ? 'new-password' : 'current-password'} />
-
-          {erro && (
-            <p role="alert" style={{
-              background: cor.perigoBg, color: cor.perigoTexto,
-              border: `2px solid ${cor.perigo}`, borderRadius: raio.campo,
-              padding: espaco.sm, fontSize: 19, fontWeight: 600,
-              margin: `0 0 ${espaco.md}px`, lineHeight: 1.4,
-            }}>
-              {erro}
-            </p>
-          )}
-
+      {checandoBio ? (
+        <div style={{ textAlign: 'center', padding: espaco.md }}>
+          <Loader2 size={36} className="animate-spin" style={{ color: cor.destaque }} />
+        </div>
+      ) : emailBio ? (
+        <>
           <button
-            type="submit"
+            type="button"
+            onClick={entrarComBiometria}
             disabled={carregando}
             style={{
               minHeight: toque.critico, width: '100%',
               borderRadius: raio.botao, border: 'none',
               background: cor.destaque, color: '#FFFFFF',
-              fontSize: 26, fontWeight: 800,
-              cursor: carregando ? 'wait' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: espaco.xs,
+              fontSize: 26, fontWeight: 800, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: espaco.sm,
+              marginBottom: espaco.md,
             }}
           >
-            {carregando && <Loader2 size={30} className="animate-spin" aria-hidden="true" />}
-            {modo === 'login' ? 'Entrar' : 'Criar minha conta'}
+            {tipoBio === 'face'
+              ? <ScanFace size={40} aria-hidden="true" />
+              : <Fingerprint size={40} aria-hidden="true" />}
+            {tipoBio === 'face' ? 'Entrar com o rosto' : 'Entrar com a digital'}
           </button>
-        </form>
+
+          <p style={{ textAlign: 'center', fontSize: 18, color: cor.tintaMuted, margin: `0 0 ${espaco.md}px` }}>
+            ou entre de outro jeito
+          </p>
+        </>
+      ) : null}
+
+      {/* Google em destaque: é o caminho com menos digitação */}
+      <div style={{ marginBottom: espaco.md }}>
+        <BotaoGoogle onClick={entrarComGoogle} carregando={carregando} />
+      </div>
+
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: espaco.sm,
+        margin: `${espaco.md}px 0`,
+      }}>
+        <span style={{ flex: 1, height: 2, background: cor.borda }} />
+        <span style={{ fontSize: 18, color: cor.tintaMuted, fontWeight: 600 }}>ou com e-mail</span>
+        <span style={{ flex: 1, height: 2, background: cor.borda }} />
+      </div>
+
+      <form onSubmit={entrarComEmail}>
+        {modo === 'cadastro' && (
+          <Campo icone={<User size={26} />} nome="nome" tipo="text"
+                 rotulo="Seu nome" exemplo="Maria" autoComplete="name" />
+        )}
+
+        <Campo icone={<Mail size={26} />} nome="email" tipo="email"
+               rotulo="E-mail" exemplo="maria@email.com" autoComplete="email" />
+
+        <Campo icone={<Lock size={26} />} nome="senha" tipo="password"
+               rotulo="Senha" exemplo="••••••••"
+               autoComplete={modo === 'cadastro' ? 'new-password' : 'current-password'} />
+
+        {erro && (
+          <p role="alert" style={{
+            background: cor.perigoBg, color: cor.perigoTexto,
+            border: `2px solid ${cor.perigo}`, borderRadius: raio.campo,
+            padding: espaco.sm, fontSize: 19, fontWeight: 600,
+            margin: `0 0 ${espaco.md}px`, lineHeight: 1.4,
+          }}>
+            {erro}
+          </p>
+        )}
 
         <button
-          type="button"
-          onClick={entrarComGoogle}
+          type="submit"
           disabled={carregando}
           style={{
-            minHeight: toque.confortavel, width: '100%', marginTop: espaco.md,
-            borderRadius: raio.botao, border: `2px solid ${cor.borda}`,
-            background: cor.fundo, color: cor.tinta,
-            fontSize: 21, fontWeight: 700, cursor: 'pointer',
+            minHeight: toque.critico, width: '100%',
+            borderRadius: raio.botao, border: 'none',
+            background: cor.destaque, color: '#FFFFFF',
+            fontSize: 26, fontWeight: 800,
+            cursor: carregando ? 'wait' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: espaco.xs,
           }}
         >
-          Entrar com o Google
+          {carregando && <Loader2 size={30} className="animate-spin" aria-hidden="true" />}
+          {modo === 'login' ? 'Entrar' : 'Criar minha conta'}
         </button>
+      </form>
 
-        <button
-          type="button"
-          onClick={() => { setModo(modo === 'login' ? 'cadastro' : 'login'); setErro(null); }}
-          style={{
-            minHeight: toque.min, width: '100%', marginTop: espaco.md,
-            background: 'none', border: 'none',
-            color: cor.destaqueTexto, fontSize: 20, fontWeight: 700,
-            cursor: 'pointer', textDecoration: 'underline',
-          }}
-        >
-          {modo === 'login' ? 'Ainda não tenho conta' : 'Já tenho conta'}
-        </button>
+      <button
+        type="button"
+        onClick={() => { setModo(modo === 'login' ? 'cadastro' : 'login'); setErro(null); }}
+        style={{
+          minHeight: toque.min, width: '100%', marginTop: espaco.md,
+          background: 'none', border: 'none',
+          color: cor.destaqueTexto, fontSize: 20, fontWeight: 700,
+          cursor: 'pointer', textDecoration: 'underline',
+        }}
+      >
+        {modo === 'login' ? 'Ainda não tenho conta' : 'Já tenho conta'}
+      </button>
 
-        {/* Turnstile invisível */}
-        <div ref={containerRef} />
+      <div ref={containerRef} />
 
-        <p style={{
-          textAlign: 'center', fontSize: 18, color: cor.tintaMuted,
-          margin: `${espaco.lg}px 0 0`, lineHeight: 1.5,
-        }}>
-          Ao entrar você aceita os{' '}
-          <a href="/termos" style={{ color: cor.destaqueTexto, fontWeight: 700 }}>termos de uso</a>
-          {' '}e o{' '}
-          <a href="/aviso" style={{ color: cor.destaqueTexto, fontWeight: 700 }}>aviso de privacidade</a>.
-        </p>
-      </div>
+      <Rodape />
     </main>
+  );
+}
+
+export default function LoginMelhorIA() {
+  return (
+    <Suspense fallback={
+      <main style={{ background: cor.fundo, minHeight: '100dvh', display: 'flex',
+                     alignItems: 'center', justifyContent: 'center' }}>
+        <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
+      </main>
+    }>
+      <LoginConteudo />
+    </Suspense>
   );
 }
 

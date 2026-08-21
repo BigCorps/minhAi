@@ -11,13 +11,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Check, Loader2, Plus, Trash2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
-import { createMelhoriaClient } from '@/lib/melhoria/supabase';
+import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CampoComDitado from '@/components/melhoria/CampoComDitado';
 import {
   cor, fonte, px, toque, raio, espaco,
   NOMES_DIAS_CURTO, descreverDias, NOMES_DIAS,
 } from '@/lib/melhoria/tema';
+import { Pagina } from '@/components/melhoria/Chrome';
 
 type Passo = 'nome' | 'dosagem' | 'horarios' | 'duracao' | 'salvando';
 
@@ -25,7 +25,7 @@ const TODOS_OS_DIAS = [0, 1, 2, 3, 4, 5, 6];
 
 export default function NovoRemedioPage() {
   const router   = useRouter();
-  const supabase = createClient();
+  const supabase = melhoriaAuth();
   const mel      = createMelhoriaClient();
 
   const [passo, setPasso]     = useState<Passo>('nome');
@@ -122,10 +122,7 @@ export default function NovoRemedioPage() {
   const numeroPasso = { nome: 1, dosagem: 2, horarios: 3, duracao: 4, salvando: 4 }[passo];
 
   return (
-    <main style={{
-      background: cor.fundo, minHeight: '100dvh', maxWidth: 640,
-      margin: '0 auto', padding: `${espaco.lg}px ${espaco.md}px`, color: cor.tinta,
-    }}>
+    <Pagina>
       <button
         type="button"
         onClick={voltar}
@@ -392,7 +389,7 @@ export default function NovoRemedioPage() {
           <>Continuar <ArrowRight size={34} aria-hidden="true" /></>
         )}
       </button>
-    </main>
+    </Pagina>
   );
 }
 

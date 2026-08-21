@@ -13,17 +13,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft, ShieldCheck, ShieldAlert, ShieldX, Loader2,
-  FileDigit, Link2, Phone, RotateCcw,
-} from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ShieldX, Loader2, FileDigit, Link2, Phone, RotateCcw } from 'lucide-react';
 import CampoComDitado from '@/components/melhoria/CampoComDitado';
 import {
   verificarBoleto, mascarar, limpar,
   type ResultadoBoleto, type Veredito,
 } from '@/lib/melhoria/boleto';
-import { cor, fonte, px, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { Pagina } from '@/components/melhoria/Chrome';
 
 type Aba = 'boleto' | 'link';
 
@@ -35,7 +32,6 @@ interface ResultadoIA {
 }
 
 export default function VerificarPage() {
-  const router = useRouter();
 
   const [aba, setAba] = useState<Aba>('boleto');
 
@@ -91,11 +87,7 @@ export default function VerificarPage() {
   }
 
   return (
-    <main style={pagina}>
-      <button type="button" onClick={() => router.push('/melhoria')} style={btnVoltar}>
-        <ArrowLeft size={30} aria-hidden="true" /> Voltar
-      </button>
-
+    <Pagina voltarPara="/melhoria">
       <h1 style={{ fontSize: 36, fontWeight: 800, color: cor.tinta, margin: `0 0 ${espaco.md}px`, lineHeight: 1.2 }}>
         Isto é golpe?
       </h1>
@@ -262,7 +254,7 @@ export default function VerificarPage() {
         cobrança usando um telefone que você já conhece — nunca o número que
         veio na mensagem.
       </p>
-    </main>
+    </Pagina>
   );
 }
 
@@ -336,18 +328,7 @@ function BotaoAba({
   );
 }
 
-const pagina: React.CSSProperties = {
-  background: cor.fundo, minHeight: '100dvh', maxWidth: 640,
-  margin: '0 auto', padding: `${espaco.lg}px ${espaco.md}px ${espaco.xl}px`,
-  color: cor.tinta,
-};
 
-const btnVoltar: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: espaco.xs,
-  minHeight: toque.min, background: 'none', border: 'none',
-  color: cor.destaqueTexto, fontSize: 21, fontWeight: 700,
-  cursor: 'pointer', padding: 0, marginBottom: espaco.md,
-};
 
 const botaoPrincipal: React.CSSProperties = {
   minHeight: toque.critico, width: '100%',

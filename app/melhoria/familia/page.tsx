@@ -18,15 +18,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft, FileText, Loader2, UserPlus, Copy, Check,
-  TrendingUp, Pill, CalendarDays,
-} from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
-import { createMelhoriaClient } from '@/lib/melhoria/supabase';
+import { FileText, Loader2, UserPlus, Copy, Check, TrendingUp, CalendarDays } from 'lucide-react';
+import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CampoComDitado from '@/components/melhoria/CampoComDitado';
 import { gerarRelatorioAdesao, type DoseRegistro } from '@/lib/melhoria/relatorioPDF';
-import { cor, fonte, px, toque, raio, espaco, descreverDias } from '@/lib/melhoria/tema';
+import { cor, toque, raio, espaco, descreverDias } from '@/lib/melhoria/tema';
+import { Pagina } from '@/components/melhoria/Chrome';
 
 interface Acompanhado {
   perfil_id: string;
@@ -44,7 +41,7 @@ const PERIODOS = [7, 30, 90] as const;
 
 export default function FamiliaPage() {
   const router   = useRouter();
-  const supabase = createClient();
+  const supabase = melhoriaAuth();
   const mel      = createMelhoriaClient();
 
   const [carregando, setCarregando] = useState(true);
@@ -207,20 +204,16 @@ export default function FamiliaPage() {
 
   if (carregando) {
     return (
-      <main style={pagina}>
+      <Pagina voltarPara="/melhoria">
         <div style={{ textAlign: 'center', paddingTop: 80 }}>
           <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
         </div>
-      </main>
+      </Pagina>
     );
   }
 
   return (
-    <main style={pagina}>
-      <button type="button" onClick={() => router.push('/melhoria')} style={btnVoltar}>
-        <ArrowLeft size={30} aria-hidden="true" /> Voltar
-      </button>
-
+    <Pagina voltarPara="/melhoria">
       <h1 style={{ fontSize: 34, fontWeight: 800, color: cor.tinta, margin: `0 0 ${espaco.md}px`, lineHeight: 1.2 }}>
         Acompanhamento
       </h1>
@@ -446,19 +439,8 @@ export default function FamiliaPage() {
         aplicativo. Doses sem confirmação podem ter sido tomadas sem ninguém
         marcar.
       </p>
-    </main>
+    </Pagina>
   );
 }
 
-const pagina: React.CSSProperties = {
-  background: cor.fundo, minHeight: '100dvh', maxWidth: 640,
-  margin: '0 auto', padding: `${espaco.lg}px ${espaco.md}px ${espaco.xl}px`,
-  color: cor.tinta,
-};
 
-const btnVoltar: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: espaco.xs,
-  minHeight: toque.min, background: 'none', border: 'none',
-  color: cor.destaqueTexto, fontSize: 21, fontWeight: 700,
-  cursor: 'pointer', padding: 0, marginBottom: espaco.md,
-};

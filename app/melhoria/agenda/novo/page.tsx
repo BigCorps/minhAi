@@ -14,10 +14,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
-import { createMelhoriaClient } from '@/lib/melhoria/supabase';
+import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CampoComDitado from '@/components/melhoria/CampoComDitado';
-import { cor, fonte, px, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { Pagina } from '@/components/melhoria/Chrome';
 
 type Passo = 'tipo' | 'oque' | 'quando' | 'onde' | 'preparo' | 'salvando';
 type Tipo  = 'consulta' | 'exame' | 'vacina' | 'retorno';
@@ -40,7 +40,7 @@ const LEVAR_PADRAO = [
 
 export default function NovoCompromissoPage() {
   const router   = useRouter();
-  const supabase = createClient();
+  const supabase = melhoriaAuth();
   const mel      = createMelhoriaClient();
 
   const [passo, setPasso] = useState<Passo>('tipo');
@@ -127,7 +127,7 @@ export default function NovoCompromissoPage() {
   const numero = { tipo: 1, oque: 2, quando: 3, onde: 4, preparo: 5, salvando: 5 }[passo];
 
   return (
-    <main style={pagina}>
+    <Pagina>
       <button type="button" onClick={voltar} style={btnVoltar}>
         <ArrowLeft size={30} aria-hidden="true" /> Voltar
       </button>
@@ -354,15 +354,10 @@ export default function NovoCompromissoPage() {
             ? <><Check size={34} strokeWidth={3} aria-hidden="true" /> Salvar</>
             : <>Continuar <ArrowRight size={32} aria-hidden="true" /></>}
       </button>
-    </main>
+    </Pagina>
   );
 }
 
-const pagina: React.CSSProperties = {
-  background: cor.fundo, minHeight: '100dvh', maxWidth: 640,
-  margin: '0 auto', padding: `${espaco.lg}px ${espaco.md}px ${espaco.xl}px`,
-  color: cor.tinta,
-};
 
 const btnVoltar: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: espaco.xs,

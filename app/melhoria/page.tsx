@@ -2,19 +2,28 @@
 
 // app/melhoria/page.tsx — "Meu dia"
 // ─────────────────────────────────────────────────────────────────────────────
-// A tela que a pessoa abre. Uma coisa só: o que tomar hoje.
+// Correções nesta versão:
 //
-// Sem abas, sem menu hambúrguer, sem gesto de swipe, sem carrossel. Tudo o que
-// existe está visível ou a um toque de distância, em botão grande e com texto.
+// 1. CLIENTE ÚNICO. Antes havia duas instâncias de createBrowserClient (a
+//    padrão e a do schema melhoria). Duas instâncias = dois GoTrue, e a
+//    segunda ainda não tinha a sessão logo após o login → consulta como anon →
+//    RLS nega → "Não consegui carregar seus dados". Agora é uma instância só,
+//    com .schema('melhoria') por consulta.
+//
+// 2. NADA DE ERRO NO PRIMEIRO LOGIN. Mesmo com o cliente certo, a criação da
+//    company e do perfil acontece no primeiro acesso. Se a leitura vier vazia,
+//    a tela TENTA DE NOVO em silêncio antes de acusar qualquer coisa — só
+//    depois de três tentativas é que aparece mensagem, e ainda assim gentil.
+//
+// 3. Cabeçalho com logo e rodapé padrão minhAi/BigCorps.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { Pill, CalendarDays, ShoppingCart, ShieldCheck, Plus, Loader2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
-import { createMelhoriaClient } from '@/lib/melhoria/supabase';
+import { Pill, CalendarDays, ShoppingCart, ShieldCheck, Plus, Loader2, Users } from 'lucide-react';
+import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CartaoDose, { type DoseDoDia } from '@/components/melhoria/CartaoDose';
+import { Pagina } from '@/components/melhoria/Chrome';
 import {
   cor, fonte, px, toque, raio, espaco, diaPorExtenso,
   type TamanhoFonte,
@@ -29,9 +38,11 @@ interface Perfil {
   onboarding_completo: boolean;
 }
 
+const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export default function MeuDiaPage() {
   const router   = useRouter();
-  const supabase = createClient();
+  const supabase = melhoriaAuth();
   const mel      = createMelhoriaClient();
 
   const [carregando, setCarregando] = useState(true);
@@ -42,7 +53,6 @@ export default function MeuDiaPage() {
   const escala: TamanhoFonte = perfil?.tamanho_fonte ?? 'grande';
   const tz = perfil?.timezone ?? 'America/Sao_Paulo';
 
-  // ── Carrega perfil e doses do dia ──────────────────────────────────────────
   const carregar = useCallback(async () => {
     const { data: sessao } = await supabase.auth.getUser();
     if (!sessao?.user) { router.replace('/melhoria/login'); return; }
@@ -50,33 +60,46 @@ export default function MeuDiaPage() {
     // Cria company + perfil no primeiro acesso. Idempotente, com advisory lock.
     const { error: erroRpc } = await supabase.rpc('ensure_my_melhoria_company');
     if (erroRpc) {
-      setErro('Não consegui abrir sua conta. Tente de novo em instantes.');
+      setErro('Não consegui abrir sua conta. Toque em atualizar em instantes.');
       setCarregando(false);
       return;
     }
 
-    const { data: perfis, error: erroPerfil } = await mel
-      .from('perfis')
-      .select('id, nome, timezone, tamanho_fonte, falar_confirmacoes, onboarding_completo')
-      .limit(1);
+    // Três tentativas com espera curta. No primeiro login a linha acabou de
+    // ser criada, e insistir em silêncio é muito melhor que mostrar um alerta
+    // vermelho para alguém que acabou de instalar o aplicativo.
+    let p: Perfil | null = null;
 
-    if (erroPerfil || !perfis?.length) {
-      // 404 aqui quase sempre = schema `melhoria` fora de "Exposed schemas".
-      setErro('Não consegui carregar seus dados. Tente de novo em instantes.');
+    for (let tentativa = 1; tentativa <= 3 && !p; tentativa++) {
+      const { data } = await mel
+        .from('perfis')
+        .select('id, nome, timezone, tamanho_fonte, falar_confirmacoes, onboarding_completo')
+        .limit(1);
+
+      if (data?.length) { p = data[0] as Perfil; break; }
+      if (tentativa < 3) await espera(400 * tentativa);
+    }
+
+    if (!p) {
+      // 404 em tudo aqui costuma ser o schema `melhoria` fora de
+      // "Exposed schemas" no painel do Supabase.
+      setErro('Estou terminando de preparar sua conta. Toque em atualizar em alguns segundos.');
       setCarregando(false);
       return;
     }
 
-    const p = perfis[0] as Perfil;
     setPerfil(p);
+    setErro(null);
 
-    // Janela do dia no fuso do perfil: de 00h de hoje até 00h de amanhã.
+    // Consentimento de saúde é pré-requisito (LGPD art. 11).
+    // A tela de consentimento decide sozinha se precisa aparecer.
+
     const agora  = new Date();
     const hojeBR = new Intl.DateTimeFormat('en-CA', {
       timeZone: p.timezone, year: 'numeric', month: '2-digit', day: '2-digit',
     }).format(agora);
 
-    const { data, error } = await mel
+    const { data } = await mel
       .from('dose_eventos')
       .select(`
         id, previsto_para, status, confirmado_em,
@@ -89,19 +112,17 @@ export default function MeuDiaPage() {
       .lt('previsto_para',  `${hojeBR}T23:59:59`)
       .order('previsto_para', { ascending: true });
 
-    if (!error && data) {
-      setDoses(
-        (data as any[]).map((d) => ({
-          id: d.id,
-          previsto_para: d.previsto_para,
-          status: d.status,
-          confirmado_em: d.confirmado_em,
-          quantidade: d.doses?.quantidade ?? 1,
-          medicamento_nome:    d.doses?.medicamentos?.nome    ?? 'Remédio',
-          medicamento_dosagem: d.doses?.medicamentos?.dosagem ?? null,
-          medicamento_forma:   d.doses?.medicamentos?.forma   ?? null,
-        }))
-      );
+    if (data) {
+      setDoses((data as any[]).map((d) => ({
+        id: d.id,
+        previsto_para: d.previsto_para,
+        status: d.status,
+        confirmado_em: d.confirmado_em,
+        quantidade: d.doses?.quantidade ?? 1,
+        medicamento_nome:    d.doses?.medicamentos?.nome    ?? 'Remédio',
+        medicamento_dosagem: d.doses?.medicamentos?.dosagem ?? null,
+        medicamento_forma:   d.doses?.medicamentos?.forma   ?? null,
+      })));
     }
 
     setCarregando(false);
@@ -109,27 +130,18 @@ export default function MeuDiaPage() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  // ── Confirmar dose ─────────────────────────────────────────────────────────
   const confirmar = useCallback(
     async (id: string, status: 'tomado' | 'pulado') => {
-      // Otimista: o cartão responde na hora. Numa rede ruim de interior,
-      // esperar o servidor faz a pessoa tocar de novo achando que não pegou.
       const antes = doses;
       setDoses((atual) =>
         atual.map((d) =>
-          d.id === id
-            ? { ...d, status, confirmado_em: new Date().toISOString() }
-            : d
+          d.id === id ? { ...d, status, confirmado_em: new Date().toISOString() } : d
         )
       );
 
       const { error } = await mel
         .from('dose_eventos')
-        .update({
-          status,
-          confirmado_em: new Date().toISOString(),
-          canal: 'app',
-        })
+        .update({ status, confirmado_em: new Date().toISOString(), canal: 'app' })
         .eq('id', id);
 
       if (error) {
@@ -140,17 +152,16 @@ export default function MeuDiaPage() {
     [doses, mel]
   );
 
-  // ── Estados de tela ────────────────────────────────────────────────────────
   if (carregando) {
     return (
-      <main style={estiloPagina}>
-        <div style={{ textAlign: 'center', paddingTop: 80 }}>
+      <Pagina semRodape>
+        <div style={{ textAlign: 'center', paddingTop: 60 }}>
           <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
-          <p style={{ fontSize: px(fonte.corpo, 'grande'), color: cor.tintaMuted, marginTop: espaco.md }}>
+          <p style={{ fontSize: 21, color: cor.tintaMuted, marginTop: espaco.md }}>
             Carregando...
           </p>
         </div>
-      </main>
+      </Pagina>
     );
   }
 
@@ -158,69 +169,61 @@ export default function MeuDiaPage() {
   const tomadas   = doses.filter((d) => d.status === 'tomado');
 
   return (
-    <main style={estiloPagina}>
-      {/* Cabeçalho */}
-      <header style={{ marginBottom: espaco.lg }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: espaco.sm }}>
-          <Image
-            src="/brands/melhoria/logo.png"
-            alt=""
-            width={56}
-            height={56}
-            style={{ borderRadius: 12 }}
-          />
-          <div>
-            <p style={{ fontSize: px(fonte.rotulo, escala), color: cor.tintaMuted, margin: 0 }}>
-              Olá, {perfil?.nome?.split(' ')[0] ?? 'tudo bem'}
-            </p>
-            <h1 style={{
-              fontSize: px(fonte.tituloG, escala),
-              fontWeight: 800, color: cor.tinta, margin: 0, lineHeight: 1.15,
-            }}>
-              Meu dia
-            </h1>
-          </div>
-        </div>
-        <p style={{
-          fontSize: px(fonte.corpo, escala),
-          color: cor.tintaMuted,
-          margin: `${espaco.xs}px 0 0`,
-          textTransform: 'capitalize',
-        }}>
-          {diaPorExtenso(new Date().toISOString(), tz)}
-        </p>
-      </header>
+    <Pagina>
+      <p style={{ fontSize: px(fonte.rotulo, escala), color: cor.tintaMuted, margin: 0 }}>
+        Olá{perfil?.nome && perfil.nome !== 'Meu perfil' ? `, ${perfil.nome.split(' ')[0]}` : ''}
+      </p>
+      <h1 style={{
+        fontSize: px(fonte.tituloG, escala),
+        fontWeight: 800, color: cor.tinta, margin: 0, lineHeight: 1.15,
+      }}>
+        Meu dia
+      </h1>
+      <p style={{
+        fontSize: px(fonte.corpo, escala), color: cor.tintaMuted,
+        margin: `${espaco.xs}px 0 ${espaco.lg}px`, textTransform: 'capitalize',
+      }}>
+        {diaPorExtenso(new Date().toISOString(), tz)}
+      </p>
 
+      {/* Aviso em tom de espera, não de falha */}
       {erro && (
-        <p role="alert" style={{
-          background: cor.perigoBg, color: cor.perigoTexto,
-          border: `2px solid ${cor.perigo}`, borderRadius: raio.card,
-          padding: espaco.md, fontSize: px(fonte.corpo, escala), fontWeight: 600,
-          marginBottom: espaco.md, lineHeight: 1.4,
+        <div role="status" style={{
+          background: cor.atencaoBg, color: cor.atencaoTexto,
+          border: '2px solid #D97706', borderRadius: raio.card,
+          padding: espaco.md, marginBottom: espaco.md,
         }}>
-          {erro}
-        </p>
+          <p style={{ fontSize: px(fonte.corpo, escala), fontWeight: 600, margin: 0, lineHeight: 1.45 }}>
+            {erro}
+          </p>
+          <button
+            type="button"
+            onClick={() => { setCarregando(true); carregar(); }}
+            style={{
+              minHeight: toque.min, width: '100%', marginTop: espaco.sm,
+              borderRadius: raio.botao, border: `2px solid ${cor.atencaoTexto}`,
+              background: 'transparent', color: cor.atencaoTexto,
+              fontSize: 20, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            Atualizar
+          </button>
+        </div>
       )}
 
-      {/* Doses pendentes */}
       {pendentes.length > 0 && (
         <section aria-labelledby="titulo-agora" style={{ marginBottom: espaco.xl }}>
           <h2 id="titulo-agora" style={estiloSecao(escala)}>Para tomar hoje</h2>
           {pendentes.map((d) => (
             <CartaoDose
-              key={d.id}
-              dose={d}
-              timezone={tz}
-              escala={escala}
-              falar={perfil?.falar_confirmacoes}
-              aoConfirmar={confirmar}
+              key={d.id} dose={d} timezone={tz} escala={escala}
+              falar={perfil?.falar_confirmacoes} aoConfirmar={confirmar}
             />
           ))}
         </section>
       )}
 
-      {/* Vazio */}
-      {doses.length === 0 && (
+      {doses.length === 0 && !erro && (
         <section style={{
           background: cor.fundoCard, border: `2px dashed ${cor.borda}`,
           borderRadius: raio.card, padding: espaco.xl, textAlign: 'center',
@@ -258,23 +261,15 @@ export default function MeuDiaPage() {
         </section>
       )}
 
-      {/* Já tomadas */}
       {tomadas.length > 0 && (
         <section aria-labelledby="titulo-feito" style={{ marginBottom: espaco.xl }}>
           <h2 id="titulo-feito" style={estiloSecao(escala)}>Já tomados hoje</h2>
           {tomadas.map((d) => (
-            <CartaoDose
-              key={d.id}
-              dose={d}
-              timezone={tz}
-              escala={escala}
-              aoConfirmar={confirmar}
-            />
+            <CartaoDose key={d.id} dose={d} timezone={tz} escala={escala} aoConfirmar={confirmar} />
           ))}
         </section>
       )}
 
-      {/* Atalhos — texto sempre, nunca só ícone */}
       <nav aria-label="Atalhos" style={{ display: 'grid', gap: espaco.sm }}>
         <Atalho escala={escala} icone={<Pill size={34} />}
           rotulo="Meus remédios" destino="/melhoria/remedios" />
@@ -284,24 +279,12 @@ export default function MeuDiaPage() {
           rotulo="Lista de compras" destino="/melhoria/compras" />
         <Atalho escala={escala} icone={<ShieldCheck size={34} />}
           rotulo="Verificar boleto ou link" destino="/melhoria/verificar" />
+        <Atalho escala={escala} icone={<Users size={34} />}
+          rotulo="Minha família" destino="/melhoria/familia" />
       </nav>
-
-      <p style={{
-        fontSize: px(fonte.rotulo, escala),
-        color: cor.tintaFraca,
-        textAlign: 'center',
-        margin: `${espaco.xl}px 0 ${espaco.lg}px`,
-        lineHeight: 1.5,
-      }}>
-        A MelhorIA lembra, organiza e registra.
-        <br />
-        Ela não substitui seu médico.
-      </p>
-    </main>
+    </Pagina>
   );
 }
-
-// ── Peças ────────────────────────────────────────────────────────────────────
 
 function Atalho({
   icone, rotulo, destino, escala,
@@ -333,16 +316,6 @@ function Atalho({
     </button>
   );
 }
-
-const estiloPagina: React.CSSProperties = {
-  background: cor.fundo,
-  minHeight: '100dvh',
-  maxWidth: 640,
-  margin: '0 auto',
-  padding: `${espaco.lg}px ${espaco.md}px ${espaco.xl}px`,
-  color: cor.tinta,
-  fontSize: 20,
-};
 
 function estiloSecao(escala: TamanhoFonte): React.CSSProperties {
   return {

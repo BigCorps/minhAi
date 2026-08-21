@@ -8,16 +8,16 @@
 
 import { useCallback, useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Plus, CalendarDays, Loader2, Link2, Check } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
-import { createMelhoriaClient } from '@/lib/melhoria/supabase';
+import { Plus, CalendarDays, Loader2, Check } from 'lucide-react';
+import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CartaoCompromisso, { type Compromisso } from '@/components/melhoria/CartaoCompromisso';
-import { cor, fonte, px, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
+import { Pagina, BotaoGoogle } from '@/components/melhoria/Chrome';
 
 function AgendaConteudo() {
   const router   = useRouter();
   const params   = useSearchParams();
-  const supabase = createClient();
+  const supabase = melhoriaAuth();
   const mel      = createMelhoriaClient();
 
   const [carregando, setCarregando] = useState(true);
@@ -78,20 +78,16 @@ function AgendaConteudo() {
 
   if (carregando) {
     return (
-      <main style={pagina}>
+      <Pagina voltarPara="/melhoria">
         <div style={{ textAlign: 'center', paddingTop: 80 }}>
           <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
         </div>
-      </main>
+      </Pagina>
     );
   }
 
   return (
-    <main style={pagina}>
-      <button type="button" onClick={() => router.push('/melhoria')} style={btnVoltar}>
-        <ArrowLeft size={30} aria-hidden="true" /> Voltar
-      </button>
-
+    <Pagina voltarPara="/melhoria">
       <h1 style={{ fontSize: 38, fontWeight: 800, color: cor.tinta, margin: `0 0 ${espaco.lg}px` }}>
         Consultas e exames
       </h1>
@@ -166,22 +162,12 @@ function AgendaConteudo() {
             <p style={{ fontSize: 18, color: cor.tintaMuted, margin: `0 0 ${espaco.md}px`, lineHeight: 1.45 }}>
               É opcional. Os lembretes já funcionam sem isso.
             </p>
-            <button
-              type="button"
+            {/* SVG oficial de quatro cores, igual aos outros logins da minhAi */}
+            <BotaoGoogle
               onClick={conectarGoogle}
-              disabled={conectando}
-              style={{
-                minHeight: toque.confortavel, width: '100%',
-                borderRadius: raio.botao, border: `2px solid ${cor.borda}`,
-                background: cor.fundo, color: cor.tinta,
-                fontSize: 21, fontWeight: 700, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: espaco.xs,
-              }}
-            >
-              {conectando
-                ? <><Loader2 size={26} className="animate-spin" aria-hidden="true" /> Abrindo...</>
-                : <><Link2 size={26} aria-hidden="true" /> Conectar minha agenda do Google</>}
-            </button>
+              carregando={conectando}
+              rotulo="Conectar minha agenda do Google"
+            />
           </>
         )}
       </section>
@@ -207,33 +193,22 @@ function AgendaConteudo() {
           )}
         </section>
       )}
-    </main>
+    </Pagina>
   );
 }
 
 export default function AgendaPage() {
   return (
     <Suspense fallback={
-      <main style={pagina}>
+      <Pagina voltarPara="/melhoria">
         <div style={{ textAlign: 'center', paddingTop: 80 }}>
           <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
         </div>
-      </main>
+      </Pagina>
     }>
       <AgendaConteudo />
     </Suspense>
   );
 }
 
-const pagina: React.CSSProperties = {
-  background: cor.fundo, minHeight: '100dvh', maxWidth: 640,
-  margin: '0 auto', padding: `${espaco.lg}px ${espaco.md}px ${espaco.xl}px`,
-  color: cor.tinta,
-};
 
-const btnVoltar: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: espaco.xs,
-  minHeight: toque.min, background: 'none', border: 'none',
-  color: cor.destaqueTexto, fontSize: 21, fontWeight: 700,
-  cursor: 'pointer', padding: 0, marginBottom: espaco.md,
-};

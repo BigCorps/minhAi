@@ -12,15 +12,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft, Plus, Pill, Clock, PackageOpen, ShoppingCart, Loader2, Check,
-} from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
-import { createMelhoriaClient } from '@/lib/melhoria/supabase';
+import { Plus, Pill, Clock, PackageOpen, ShoppingCart, Loader2, Check } from 'lucide-react';
+import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import {
   cor, fonte, px, toque, raio, espaco, descreverDias,
   type TamanhoFonte,
 } from '@/lib/melhoria/tema';
+import { Pagina } from '@/components/melhoria/Chrome';
 
 interface Remedio {
   id: string;
@@ -37,7 +35,7 @@ interface Remedio {
 
 export default function RemediosPage() {
   const router   = useRouter();
-  const supabase = createClient();
+  const supabase = melhoriaAuth();
   const mel      = createMelhoriaClient();
 
   const [carregando, setCarregando] = useState(true);
@@ -113,20 +111,16 @@ export default function RemediosPage() {
 
   if (carregando) {
     return (
-      <main style={pagina}>
+      <Pagina voltarPara="/melhoria">
         <div style={{ textAlign: 'center', paddingTop: 80 }}>
           <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
         </div>
-      </main>
+      </Pagina>
     );
   }
 
   return (
-    <main style={pagina}>
-      <button type="button" onClick={() => router.push('/melhoria')} style={btnVoltar}>
-        <ArrowLeft size={30} aria-hidden="true" /> Voltar
-      </button>
-
+    <Pagina voltarPara="/melhoria">
       <h1 style={{ fontSize: 38, fontWeight: 800, color: cor.tinta, margin: `0 0 ${espaco.lg}px` }}>
         Meus remédios
       </h1>
@@ -247,19 +241,8 @@ export default function RemediosPage() {
         <Plus size={34} strokeWidth={3} aria-hidden="true" />
         Cadastrar remédio
       </button>
-    </main>
+    </Pagina>
   );
 }
 
-const pagina: React.CSSProperties = {
-  background: cor.fundo, minHeight: '100dvh', maxWidth: 640,
-  margin: '0 auto', padding: `${espaco.lg}px ${espaco.md}px ${espaco.xl}px`,
-  color: cor.tinta,
-};
 
-const btnVoltar: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: espaco.xs,
-  minHeight: toque.min, background: 'none', border: 'none',
-  color: cor.destaqueTexto, fontSize: 21, fontWeight: 700,
-  cursor: 'pointer', padding: 0, marginBottom: espaco.md,
-};

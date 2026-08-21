@@ -22,12 +22,10 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Camera, Check, Loader2, AlertTriangle, X, Plus, Trash2,
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
-import { createMelhoriaClient } from '@/lib/melhoria/supabase';
+import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CampoComDitado from '@/components/melhoria/CampoComDitado';
-import {
-  cor, fonte, px, toque, raio, espaco, descreverDias, NOMES_DIAS_CURTO, NOMES_DIAS,
-} from '@/lib/melhoria/tema';
+import { cor, toque, raio, espaco, descreverDias, NOMES_DIAS_CURTO, NOMES_DIAS } from '@/lib/melhoria/tema';
+import { Pagina } from '@/components/melhoria/Chrome';
 
 type Etapa = 'foto' | 'lendo' | 'conferir' | 'salvando';
 
@@ -48,7 +46,7 @@ const TODOS = [0, 1, 2, 3, 4, 5, 6];
 
 export default function ReceitaPage() {
   const router   = useRouter();
-  const supabase = createClient();
+  const supabase = melhoriaAuth();
   const mel      = createMelhoriaClient();
 
   const [etapa, setEtapa]   = useState<Etapa>('foto');
@@ -164,7 +162,7 @@ export default function ReceitaPage() {
   const conferidos = itens.filter((i) => i.conferido).length;
 
   return (
-    <main style={pagina}>
+    <Pagina>
       <button type="button" onClick={() => router.back()} style={btnVoltar}>
         <ArrowLeft size={30} aria-hidden="true" /> Voltar
       </button>
@@ -436,15 +434,10 @@ export default function ReceitaPage() {
           </p>
         </>
       )}
-    </main>
+    </Pagina>
   );
 }
 
-const pagina: React.CSSProperties = {
-  background: cor.fundo, minHeight: '100dvh', maxWidth: 640,
-  margin: '0 auto', padding: `${espaco.lg}px ${espaco.md}px ${espaco.xl}px`,
-  color: cor.tinta,
-};
 
 const btnVoltar: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: espaco.xs,

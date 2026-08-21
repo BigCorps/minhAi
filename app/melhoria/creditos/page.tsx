@@ -27,9 +27,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, Check, Copy, Loader2, QrCode } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
-import { cor, fonte, px, toque, raio, espaco, descreverCreditos } from '@/lib/melhoria/tema';
+import { Check, Copy, Loader2, QrCode } from 'lucide-react';
+import { melhoriaAuth } from '@/lib/melhoria/supabase';
+import { cor, toque, raio, espaco, descreverCreditos } from '@/lib/melhoria/tema';
+import { Pagina } from '@/components/melhoria/Chrome';
 
 interface Pacote {
   id: string;
@@ -51,7 +52,7 @@ interface Pagamento {
 
 export default function CreditosPage() {
   const router   = useRouter();
-  const supabase = createClient();
+  const supabase = melhoriaAuth();
 
   const [carregando, setCarregando] = useState(true);
   const [saldo, setSaldo]           = useState(0);
@@ -168,18 +169,18 @@ export default function CreditosPage() {
 
   if (carregando) {
     return (
-      <main style={pagina}>
+      <Pagina voltarPara="/melhoria">
         <div style={{ textAlign: 'center', paddingTop: 80 }}>
           <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
         </div>
-      </main>
+      </Pagina>
     );
   }
 
   // ── Tela de pagamento ───────────────────────────────────────────────────
   if (pagamento) {
     return (
-      <main style={pagina}>
+      <Pagina voltarPara="/melhoria">
         {pago ? (
           <div style={{ textAlign: 'center', paddingTop: 60 }}>
             <Check size={90} strokeWidth={3} style={{ color: cor.okTexto }} aria-hidden="true" />
@@ -264,17 +265,13 @@ export default function CreditosPage() {
             </button>
           </>
         )}
-      </main>
+      </Pagina>
     );
   }
 
   // ── Vitrine ─────────────────────────────────────────────────────────────
   return (
-    <main style={pagina}>
-      <button type="button" onClick={() => router.push('/melhoria')} style={btnVoltar}>
-        <ArrowLeft size={30} aria-hidden="true" /> Voltar
-      </button>
-
+    <Pagina voltarPara="/melhoria">
       <h1 style={{ fontSize: 34, fontWeight: 800, color: cor.tinta, margin: `0 0 ${espaco.md}px`, lineHeight: 1.2 }}>
         Usos da MelhorIA
       </h1>
@@ -408,22 +405,11 @@ export default function CreditosPage() {
         O pagamento é por PIX. Os usos entram na hora que o banco confirmar e
         não têm prazo para acabar.
       </p>
-    </main>
+    </Pagina>
   );
 }
 
-const pagina: React.CSSProperties = {
-  background: cor.fundo, minHeight: '100dvh', maxWidth: 640,
-  margin: '0 auto', padding: `${espaco.lg}px ${espaco.md}px ${espaco.xl}px`,
-  color: cor.tinta,
-};
 
-const btnVoltar: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: espaco.xs,
-  minHeight: toque.min, background: 'none', border: 'none',
-  color: cor.destaqueTexto, fontSize: 21, fontWeight: 700,
-  cursor: 'pointer', padding: 0, marginBottom: espaco.md,
-};
 
 const avisoErro: React.CSSProperties = {
   background: cor.perigoBg, color: cor.perigoTexto,

@@ -34,22 +34,6 @@ const CUSTO = 3;   // OCR + extração estruturada + responsabilidade
 
 const INSTRUCAO = `Você transcreve receitas médicas brasileiras. Você NÃO é médico e NÃO dá orientação.
 
-Devolva SOMENTE um JSON, sem texto antes ou depois, neste formato:
-{
-  "legivel": true|false,
-  "medicamentos": [
-    {
-      "nome": "string",
-      "dosagem": "string ou null",
-      "forma": "comprimido|gota|xarope|injeção|pomada|outro ou null",
-      "frequencia_texto": "o que está escrito, ex: 'de 12 em 12 horas'",
-      "duracao_dias": número ou null,
-      "confianca": "alta|media|baixa"
-    }
-  ],
-  "observacao": "string ou null"
-}
-
 REGRAS OBRIGATÓRIAS:
 - Transcreva APENAS o que está escrito. Nunca complete, deduza ou corrija.
 - Se não conseguir ler um campo com certeza, use null e marque confianca "baixa".
@@ -59,6 +43,36 @@ REGRAS OBRIGATÓRIAS:
   com medicamentos: [].
 - Na dúvida entre dois valores de dosagem, use null e confianca "baixa". É
   melhor não saber do que errar.`;
+
+// json_schema com strict: true — mesmo padrão do app/api/conviteria/briefing
+// e do app/api/conviteria/sugerir. Aqui vale ainda mais que lá: o modelo fica
+// impedido de inventar campo, então "dose sugerida" não tem onde caber na
+// resposta, nem que ele queira.
+const ESQUEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['legivel', 'medicamentos', 'observacao'],
+  properties: {
+    legivel: { type: 'boolean' },
+    observacao: { type: ['string', 'null'] },
+    medicamentos: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['nome', 'dosagem', 'forma', 'frequencia_texto', 'duracao_dias', 'confianca'],
+        properties: {
+          nome: { type: 'string' },
+          dosagem: { type: ['string', 'null'] },
+          forma: { type: ['string', 'null'] },
+          frequencia_texto: { type: ['string', 'null'] },
+          duracao_dias: { type: ['integer', 'null'] },
+          confianca: { type: 'string', enum: ['alta', 'media', 'baixa'] },
+        },
+      },
+    },
+  },
+} as const;
 
 export async function POST(req: NextRequest) {
   try {
@@ -144,34 +158,43 @@ export async function POST(req: NextRequest) {
     let proposta: any;
 
     try {
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY!,
-          'anthropic-version': '2023-06-01',
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'gpt-4o-mini',
+          // temperatura 0: transcrever não é tarefa criativa. Variação aqui é
+          // um número de dosagem mudando.
+          temperature: 0,
           max_tokens: 1500,
-          system: INSTRUCAO,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: limpa } },
-              { type: 'text', text: 'Transcreva esta receita seguindo exatamente as regras.' },
-            ],
-          }],
+          response_format: {
+            type: 'json_schema',
+            json_schema: { name: 'melhoria_receita', strict: true, schema: ESQUEMA },
+          },
+          messages: [
+            { role: 'system', content: INSTRUCAO },
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: 'Transcreva esta receita seguindo exatamente as regras.' },
+                {
+                  type: 'image_url',
+                  // detail 'high' importa: letra de médico em 'low' vira ruído.
+                  image_url: { url: `data:image/jpeg;base64,${limpa}`, detail: 'high' },
+                },
+              ],
+            },
+          ],
         }),
       });
 
       if (!r.ok) throw new Error(`modelo ${r.status}`);
 
       const resposta = await r.json();
-      const texto = (resposta.content ?? [])
-        .filter((b: any) => b.type === 'text')
-        .map((b: any) => b.text)
-        .join('')
+      const texto = (resposta?.choices?.[0]?.message?.content ?? '')
         .replace(/```json|```/g, '')
         .trim();
 

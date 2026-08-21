@@ -1,29 +1,34 @@
 // lib/melhoria/supabase.ts
 // ─────────────────────────────────────────────────────────────────────────────
-// ⚠️ CORREÇÃO DA CAUSA DO CARD VERMELHO NO PRIMEIRO LOGIN.
+// Cliente único do navegador para a MelhorIA.
 //
-// A versão anterior fazia isto:
+// ── BUG 1 (corrigido antes): duas instâncias de GoTrue ──────────────────────
+// A primeira versão criava um `createBrowserClient` próprio, separado do
+// `@/lib/supabase-browser`. Duas instâncias = dois GoTrue, e a segunda ainda
+// não tinha a sessão logo após o login → consulta como anon → RLS nega → o
+// card vermelho "não consegui carregar seus dados".
 //
-//     createBrowserClient(url, key, { db: { schema: 'melhoria' } })
+// ── BUG 2 (o desta correção): laço infinito de renderização ─────────────────
+// `.schema('melhoria')` devolve um OBJETO NOVO a cada chamada. As telas fazem:
 //
-// ou seja, criava uma SEGUNDA instância de cliente, separada do
-// `@/lib/supabase-browser`. Cada `createBrowserClient` instancia um GoTrue
-// próprio, e o Supabase avisa disso no console:
+//     const mel = createMelhoriaClient();          // referência nova a cada render
+//     const carregar = useCallback(async () => {…}, [supabase, mel, router]);
+//     useEffect(() => { carregar(); }, [carregar]);
 //
-//     Multiple GoTrueClient instances detected in the same browser context
+// Como `mel` muda de identidade a cada render, `carregar` também muda, o
+// efeito dispara de novo, o `setState` provoca outro render — e assim sem
+// parar. Toda tela ficava refazendo as consultas indefinidamente.
 //
-// A segunda instância precisa hidratar a sessão do storage por conta própria.
-// Nos primeiros milissegundos depois do login ela ainda não tem o token, então
-// a consulta sai como `anon`, a RLS nega, o resultado volta vazio — e a tela
-// mostra "Não consegui carregar seus dados", mesmo com o perfil existindo no
-// banco.
+// Em "Meus dados" isso tinha um sintoma específico e confuso: o `carregar`
+// chama `aplicarEscala(doBanco)`. Rodando em laço, ele sobrescrevia a escolha
+// da pessoa com o valor do banco milissegundos depois do clique — daí o
+// "escolho Normal e volta para Grande sozinho".
 //
-// Confirmado no banco: o perfil estava lá e a RLS aceitava a leitura para
-// aquele usuário. O problema nunca foi permissão; era o cliente sem sessão.
+// Também explica a lentidão do Acompanhamento e um consumo de rede bem maior
+// que o necessário em todas as telas.
 //
-// A correção é ter UMA instância só, memoizada, e trocar de schema por
-// consulta com `.schema('melhoria')` — suportado desde o supabase-js 2.10
-// (o projeto está no 2.112.3).
+// A correção é memoizar TAMBÉM o cliente de schema, para a referência ser
+// estável entre renders.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createBrowserClient } from '@supabase/ssr';
@@ -31,6 +36,7 @@ import { createBrowserClient } from '@supabase/ssr';
 type Cliente = ReturnType<typeof createBrowserClient>;
 
 let instancia: Cliente | null = null;
+let instanciaSchema: ReturnType<Cliente['schema']> | null = null;
 
 /**
  * Cliente único do navegador. Use este em TODAS as telas da MelhorIA, tanto
@@ -50,11 +56,17 @@ export function melhoriaAuth(): Cliente {
 /**
  * Mesma instância, apontada para o schema `melhoria`.
  *
+ * ⚠️ A memoização não é otimização: é o que impede o laço de renderização
+ * descrito no topo. Não troque por `melhoriaAuth().schema('melhoria')` direto.
+ *
  * Se todas as consultas voltarem 404 / "relation does not exist", o schema não
  * está exposto: Supabase → Settings → API → Exposed schemas → `melhoria`.
  */
 export function createMelhoriaClient() {
-  return melhoriaAuth().schema('melhoria');
+  if (!instanciaSchema) {
+    instanciaSchema = melhoriaAuth().schema('melhoria');
+  }
+  return instanciaSchema;
 }
 
 /** Alias, para as telas ficarem legíveis: `const supabase = melhoriaAuth()`. */

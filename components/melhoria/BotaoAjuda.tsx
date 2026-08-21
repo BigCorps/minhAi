@@ -137,18 +137,23 @@ export default function BotaoAjuda() {
       <button
         type="button"
         onClick={() => router.push(R.emergencia())}
+        aria-label="Configurar quem avisar em caso de emergência"
         style={{
-          minHeight: toque.min, marginLeft: 'auto', flexShrink: 0,
-          padding: `0 ${espaco.sm}px`,
+          minHeight: toque.min, flexShrink: 0,
+          padding: `0 ${espaco.xs}px`,
           borderRadius: raio.botao,
           border: '2px solid #D97706',
           background: cor.atencaoBg, color: cor.atencaoTexto,
-          fontSize: 16, fontWeight: 800, cursor: 'pointer', lineHeight: 1.15,
-          display: 'flex', alignItems: 'center', gap: 6, textAlign: 'left',
+          fontSize: 16, fontWeight: 800, cursor: 'pointer', lineHeight: 1.1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
         }}
       >
         <UserPlus size={24} aria-hidden="true" style={{ flexShrink: 0 }} />
-        <span>Configurar<br />ajuda</span>
+        {/* A palavra some em tela estreita; o ícone e o aria-label ficam.
+            Antes o texto em duas linhas empurrava o botão para fora da tela. */}
+        <span className="mel-rotulo-ajuda" style={{ whiteSpace: 'nowrap' }}>
+          Configurar
+        </span>
       </button>
     );
   }
@@ -160,17 +165,17 @@ export default function BotaoAjuda() {
       onClick={() => setAberto(true)}
       aria-label="Pedir ajuda: avisar minha família"
       style={{
-        minHeight: toque.min, marginLeft: 'auto', flexShrink: 0,
-        padding: `0 ${espaco.md}px`,
+        minHeight: toque.min, flexShrink: 0,
+        padding: `0 ${espaco.sm}px`,
         borderRadius: raio.botao, border: 'none',
         background: cor.perigo, color: '#FFFFFF',
         fontSize: 19, fontWeight: 800, letterSpacing: 0.5,
         cursor: 'pointer',
-        display: 'flex', alignItems: 'center', gap: 6,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
       }}
     >
       <AlertTriangle size={26} strokeWidth={2.5} aria-hidden="true" />
-      AJUDA
+      <span className="mel-rotulo-ajuda" style={{ whiteSpace: 'nowrap' }}>AJUDA</span>
     </button>
   );
 

@@ -184,11 +184,11 @@ function LoginConteudo() {
   }
 
   return (
-    <main style={{
+    <main className="mel-centro" style={{
       background: cor.fundo, minHeight: '100dvh',
       maxWidth: 520, margin: '0 auto',
       padding: `${espaco.xl}px ${espaco.md}px 0`,
-      color: cor.tinta,
+      color: cor.tinta, textAlign: 'center',
     }}>
       {/* Marca dupla: MelhorIA | minhAi, igual às outras verticais */}
       <div style={{ textAlign: 'center', marginBottom: espaco.lg }}>
@@ -337,7 +337,7 @@ function Campo({
     <div style={{ marginBottom: espaco.md }}>
       <label htmlFor={nome} style={{
         display: 'block', fontSize: 20, fontWeight: 700,
-        color: cor.tinta, marginBottom: espaco.xs,
+        color: cor.tinta, marginBottom: espaco.xs, textAlign: 'center',
       }}>
         {rotulo}
       </label>

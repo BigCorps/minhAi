@@ -161,56 +161,85 @@ export function Cabecalho({
         marginRight: `-${espaco.md}px`,
         marginTop: `-${espaco.lg}px`,
         marginBottom: espaco.lg,
-        padding: `${espaco.sm}px ${espaco.md}px`,
+        padding: `${espaco.sm}px ${espaco.sm}px`,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: espaco.sm }}>
-        {voltarPara && (
-          <Link
-            href={voltarPara}
-            aria-label="Voltar"
-            style={{
-              minWidth: toque.min, minHeight: toque.min,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: raio.botao, color: cor.destaqueTexto,
-              textDecoration: 'none', flexShrink: 0,
-            }}
-          >
-            <ArrowLeft size={32} strokeWidth={2.5} />
-          </Link>
-        )}
+      {/*
+        Grid de três colunas em vez de flex com `margin-left: auto`.
 
+        Com flex, a marca ("MelhorIA" + logo) tomava toda a largura que
+        quisesse e empurrava o botão de ajuda para fora da tela no celular —
+        era o que aparecia no print: o botão cortado na borda direita.
+
+        Aqui as laterais têm largura própria e o meio é o que cede: a palavra
+        "MelhorIA" some abaixo de 430px (o logo continua, e continua clicável),
+        então o botão sempre cabe.
+      */}
+      <div
+        className="mel-cabecalho"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'auto 1fr auto',
+          alignItems: 'center',
+          gap: espaco.xs,
+        }}
+      >
+        {/* esquerda */}
+        <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+          {voltarPara && (
+            <Link
+              href={voltarPara}
+              aria-label="Voltar"
+              style={{
+                minWidth: toque.min, minHeight: toque.min,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: raio.botao, color: cor.destaqueTexto,
+                textDecoration: 'none', flexShrink: 0,
+              }}
+            >
+              <ArrowLeft size={30} strokeWidth={2.5} />
+            </Link>
+          )}
+        </div>
+
+        {/* meio — a marca, centralizada */}
         <Link
           href={R.app()}
           aria-label="MelhorIA, ir para o início"
           style={{
-            display: 'flex', alignItems: 'center', gap: espaco.xs,
-            textDecoration: 'none', minHeight: toque.min, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: espaco.xs, textDecoration: 'none',
+            minHeight: toque.min, minWidth: 0,
           }}
         >
           <Image
-            src="/brands/melhoria/logo.png" alt="" width={48} height={48}
-            style={{ borderRadius: 12, display: 'block' }} priority
+            src="/brands/melhoria/logo.png" alt="" width={44} height={44}
+            style={{ borderRadius: 11, display: 'block', flexShrink: 0 }} priority
           />
-          <span style={{ fontSize: 25, fontWeight: 800, color: cor.tinta, lineHeight: 1 }}>
+          <span
+            className="mel-marca"
+            style={{
+              fontSize: 24, fontWeight: 800, color: cor.tinta, lineHeight: 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
             MelhorIA
           </span>
         </Link>
 
-        {titulo && !comAjuda && (
-          <span style={{
-            marginLeft: 'auto', fontSize: 19, fontWeight: 700,
-            color: cor.tintaMuted, textAlign: 'right', lineHeight: 1.2,
-          }}>
-            {titulo}
-          </span>
-        )}
-
-        {/* Ajuda à direita. O componente decide sozinho o que mostrar:
-            nada enquanto verifica, "Configurar ajuda" se não houver contato
-            cadastrado, e o botão vermelho só quando houver alguém para
-            avisar. */}
-        {comAjuda && <BotaoAjuda />}
+        {/* direita */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+          {comAjuda ? <BotaoAjuda /> : (
+            titulo ? (
+              <span style={{
+                fontSize: 18, fontWeight: 700, color: cor.tintaMuted,
+                lineHeight: 1.2, whiteSpace: 'nowrap',
+              }}>
+                {titulo}
+              </span>
+            ) : <span style={{ minWidth: toque.min }} />
+          )}
+        </div>
       </div>
     </header>
   );
@@ -322,6 +351,7 @@ export function Pagina({
 }) {
   return (
     <main
+      className="mel-centro"
       style={{
         background: cor.fundo,
         minHeight: '100dvh',
@@ -332,6 +362,10 @@ export function Pagina({
         fontSize: 20,
         display: 'flex',
         flexDirection: 'column',
+        // A centralização de todo o texto vem da classe `mel-centro`,
+        // definida no layout. Ver o comentário lá sobre o porquê e sobre as
+        // duas exceções (campos de digitação e páginas legais).
+        textAlign: 'center',
       }}
     >
       <Cabecalho voltarPara={voltarPara} titulo={titulo} comAjuda={comAjuda} />

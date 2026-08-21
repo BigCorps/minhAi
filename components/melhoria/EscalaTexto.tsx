@@ -94,8 +94,17 @@ export default function EscalaTexto({ children }: { children: React.ReactNode })
       // quem escolheu outro tamanho vê qualquer transição.
       style={
         pronto && z !== 1
-          ? { zoom: z, width: `calc(100% / ${z})` }
-          : undefined
+          ? {
+              zoom: z,
+              // Sem a compensação de largura, o zoom faz o conteúdo transbordar
+              // e aparece rolagem lateral no celular.
+              width: `calc(100% / ${z})`,
+              // E sem o auto nas laterais o bloco estreitado encosta na
+              // esquerda — era o "fica tudo pra esquerda" no tamanho gigante.
+              marginLeft: 'auto',
+              marginRight: 'auto',
+            }
+          : { width: '100%', marginLeft: 'auto', marginRight: 'auto' }
       }
     >
       {children}

@@ -283,7 +283,12 @@ export function LegalShell({
             <div
               className={
                 textoGrande
-                  ? 'text-lg md:text-xl leading-relaxed'
+                  // mel-legal: mantém o CORPO do texto à esquerda. Parágrafo
+                  // longo centralizado obriga o olho a procurar onde a linha
+                  // começa a cada quebra — em duas frases não pesa, num aviso
+                  // de privacidade de várias telas atrapalha bastante.
+                  // Títulos e botões continuam centralizados.
+                  ? 'mel-legal text-lg md:text-xl leading-relaxed'
                   : scroll
                     ? 'max-h-[70vh] overflow-y-auto pr-2 md:pr-4'
                     : ''

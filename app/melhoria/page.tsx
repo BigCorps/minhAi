@@ -85,28 +85,38 @@ export default function LandingMelhorIA() {
   }, [router]);
 
   return (
-    <main style={{
+    <main className="mel-centro" style={{
       background: cor.fundo, minHeight: '100dvh', maxWidth: 720,
       margin: '0 auto', padding: `${espaco.lg}px ${espaco.md}px 0`,
-      color: cor.tinta,
+      color: cor.tinta, textAlign: 'center',
     }}>
       {/* ── Topo ── */}
       <header style={{
-        display: 'flex', alignItems: 'center', gap: espaco.sm,
-        marginBottom: espaco.xl,
+        display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center',
+        gap: espaco.sm, marginBottom: espaco.xl,
       }}>
-        <Image src="/brands/melhoria/logo.png" alt="" width={52} height={52}
-               style={{ borderRadius: 12, display: 'block' }} priority />
-        <span style={{ fontSize: 26, fontWeight: 800, color: cor.tinta }}>MelhorIA</span>
+        <span style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+          gap: espaco.xs, minWidth: 0,
+        }}>
+          <Image src="/brands/melhoria/logo.png" alt="" width={48} height={48}
+                 style={{ borderRadius: 12, display: 'block', flexShrink: 0 }} priority />
+          <span className="mel-marca" style={{
+            fontSize: 24, fontWeight: 800, color: cor.tinta, whiteSpace: 'nowrap',
+          }}>
+            MelhorIA
+          </span>
+        </span>
 
         <Link
           href={R.login()}
           style={{
-            marginLeft: 'auto', minHeight: toque.min,
-            display: 'inline-flex', alignItems: 'center',
+            minHeight: toque.min,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             padding: `0 ${espaco.md}px`, borderRadius: raio.botao,
             border: `2px solid ${cor.borda}`, color: cor.destaqueTexto,
             fontSize: 19, fontWeight: 700, textDecoration: 'none',
+            whiteSpace: 'nowrap',
           }}
         >
           Entrar
@@ -168,10 +178,11 @@ export default function LandingMelhorIA() {
         <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
           {GRATIS.map((t) => (
             <li key={t} style={{
-              display: 'flex', alignItems: 'flex-start', gap: espaco.xs,
-              fontSize: 20, color: cor.okTexto, lineHeight: 1.5, marginBottom: 8,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: espaco.xs, fontSize: 20, color: cor.okTexto,
+              lineHeight: 1.5, marginBottom: 10, textAlign: 'center',
             }}>
-              <Check size={26} strokeWidth={3} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+              <Check size={26} strokeWidth={3} aria-hidden="true" style={{ flexShrink: 0 }} />
               {t}
             </li>
           ))}
@@ -197,14 +208,15 @@ export default function LandingMelhorIA() {
 
         {RECURSOS.map(({ Icone, titulo, texto }) => (
           <article key={titulo} style={{
-            display: 'flex', gap: espaco.md, marginBottom: espaco.lg,
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            gap: espaco.sm, marginBottom: espaco.lg,
           }}>
             <span aria-hidden="true" style={{
-              flexShrink: 0, width: 56, height: 56, borderRadius: 14,
+              flexShrink: 0, width: 60, height: 60, borderRadius: 15,
               background: cor.destaqueSuave, color: cor.destaqueTexto,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <Icone size={30} />
+              <Icone size={32} />
             </span>
             <div>
               <h3 style={{ fontSize: 22, fontWeight: 700, color: cor.tinta, margin: 0, lineHeight: 1.3 }}>

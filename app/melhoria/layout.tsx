@@ -81,6 +81,51 @@ export default async function MelhoriaLayout({
               color-scheme: light;
             }
             body::before, body::after { display: none !important; }
+
+            /* ── TUDO CENTRALIZADO ────────────────────────────────────────
+               Regra do produto: nenhum texto alinhado à esquerda.
+               Aplicada aqui, num lugar só, em vez de espalhada por dezenas
+               de estilos em linha — assim não escapa nada e não volta a
+               escapar quando alguém criar uma tela nova.                    */
+            .mel-centro { text-align: center; }
+
+            /* Listas centralizadas precisam do marcador junto do texto,
+               senão a bolinha fica pendurada longe, à esquerda.             */
+            .mel-centro ul, .mel-centro ol {
+              list-style-position: inside;
+              padding-left: 0;
+            }
+
+            /* DUAS EXCEÇÕES, e ambas são acessibilidade, não estética:
+
+               1. Campo de digitação. Com o texto centralizado, o cursor
+                  "pula" para o meio a cada caractere e a pessoa perde o
+                  ponto onde estava — problema sério para quem digita
+                  devagar, que é o caso aqui.
+
+               2. Texto legal longo. Parágrafo comprido centralizado obriga
+                  o olho a procurar onde a linha começa a cada quebra. Em
+                  duas frases não pesa; num aviso de privacidade de várias
+                  telas, atrapalha bastante. Se preferir centralizar também,
+                  é só apagar este bloco.                                    */
+            .mel-centro input,
+            .mel-centro textarea,
+            .mel-centro select { text-align: left; }
+
+            .mel-legal, .mel-legal p, .mel-legal li { text-align: left; }
+
+            /* ── Cabeçalho em tela estreita ───────────────────────────────
+               Abaixo de 430px a palavra "MelhorIA" sai e fica só o logo
+               (que continua clicável e continua levando ao início). Era ela
+               que empurrava o botão de ajuda para fora da tela.             */
+            @media (max-width: 430px) {
+              .mel-marca { display: none; }
+            }
+
+            /* Em tela bem estreita o botão de ajuda fica só com o ícone.   */
+            @media (max-width: 360px) {
+              .mel-rotulo-ajuda { display: none; }
+            }
           `,
         }}
       />

@@ -105,6 +105,7 @@ export const SEO: Record<BrandKey, BrandSeo> = {
       '/min',
       '/arte',
       '/consultatec',
+      '/melhoria',
     ],
     aiAllow: [
       '/',

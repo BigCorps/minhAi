@@ -53,7 +53,40 @@ export type LegalTheme = {
   spinner: string;
 };
 
-export const LEGAL_THEMES: Record<'conviteia' | 'consultatec' | 'pix', LegalTheme> = {
+export const LEGAL_THEMES: Record<
+  'conviteia' | 'consultatec' | 'pix' | 'melhoria',
+  LegalTheme
+> = {
+  // MelhorIA — mesma paleta do aplicativo. Sem dark mode, igual ao ConsultaTec.
+  //
+  // Aqui a régua é WCAG AAA (7:1), não AA: o público é presbita e boa parte
+  // tem catarata. Por isso o corpo usa slate-800 e não slate-600, e a borda é
+  // slate-400 e não slate-200 — borda clara demais simplesmente some.
+  //
+  // O tamanho do texto destas páginas é aumentado no LegalShell quando o tema
+  // é este (ver `textoGrande`): aviso de privacidade em 14px é letra miúda de
+  // contrato, exatamente o que este público não consegue ler.
+  melhoria: {
+    pageBg: 'min-h-screen bg-white',
+    title: 'text-slate-900',
+    backBtn: 'text-slate-900 hover:bg-slate-100',
+    card: 'bg-white border-2 border-slate-300 shadow-sm',
+    body: 'text-slate-800',
+    muted: 'text-slate-600',
+    heading: 'text-slate-900',
+    marker: 'text-teal-700',
+    link: 'text-teal-800 underline underline-offset-2 hover:text-teal-900 font-semibold',
+    primaryBtn: 'bg-teal-700 text-white hover:bg-teal-800',
+    ghostBtn: 'bg-white border-2 border-slate-400 text-slate-900 hover:bg-slate-50',
+    dangerBtn: 'bg-white text-red-800 border-2 border-red-300 hover:bg-red-50',
+    infoBox: 'bg-teal-50 border-2 border-teal-200',
+    warnBox: 'bg-amber-50 border-2 border-amber-300',
+    dangerBox: 'bg-red-50 border-2 border-red-300',
+    neutralBox: 'bg-slate-50 border-2 border-slate-300',
+    input: 'bg-white border-2 border-slate-400 text-slate-900 focus:ring-2 focus:ring-teal-700',
+    spinner: 'text-teal-700',
+  },
+
   // Convite IA — rosa da paleta do manifest (#c06078 / #fdf0f3 / #40232c)
   conviteia: {
     pageBg: 'min-h-screen bg-gradient-to-br from-rose-50 via-white to-pink-50',
@@ -199,6 +232,7 @@ export function LegalShell({
   children,
   footer,
   scroll = true,
+  textoGrande = false,
 }: {
   theme: LegalTheme;
   title: string;
@@ -207,6 +241,12 @@ export function LegalShell({
   footer?: ReactNode;
   /** false para páginas com formulário, que não devem viver dentro de um scroll interno */
   scroll?: boolean;
+  /**
+   * Aumenta o corpo do texto e desliga o scroll interno. Usado pela MelhorIA:
+   * o público não consegue ler 14px, e caixa com rolagem própria dentro da
+   * página confunde quem já tem dificuldade com rolagem.
+   */
+  textoGrande?: boolean;
 }) {
   const router = useRouter();
 
@@ -240,7 +280,15 @@ export function LegalShell({
                 <strong>Última atualização:</strong> {updatedAt}
               </p>
             )}
-            <div className={scroll ? 'max-h-[70vh] overflow-y-auto pr-2 md:pr-4' : ''}>
+            <div
+              className={
+                textoGrande
+                  ? 'text-lg md:text-xl leading-relaxed'
+                  : scroll
+                    ? 'max-h-[70vh] overflow-y-auto pr-2 md:pr-4'
+                    : ''
+              }
+            >
               {children}
             </div>
           </div>

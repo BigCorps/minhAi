@@ -1,0 +1,92 @@
+{
+  "_comentario": [
+    "TWA da MelhorIA (Bubblewrap). Só use este arquivo na hora de gerar o APK:",
+    "renomeie para twa-manifest.json, gere, e restaure o da minhAi depois.",
+    "  cp twa-manifest.json twa-manifest.minhai.json",
+    "  cp twa-manifest-melhoria.json twa-manifest.json",
+    "  bubblewrap build",
+    "",
+    "fallbackType 'customtabs' é OBRIGATÓRIO aqui: é o que garante o motor do",
+    "Chrome em vez de WebView pura. O ditado por microfone depende da API",
+    "SpeechRecognition, que NÃO existe em WebView. Se trocar para 'webview',",
+    "o microfone some do aplicativo inteiro.",
+    "",
+    "orientation 'portrait': o público segura o telefone em pé. Rotação",
+    "acidental reflui o layout e desorienta.",
+    "",
+    "Antes de publicar, gere o assetlinks.json com a impressão digital da sua",
+    "chave e coloque em public/.well-known/assetlinks.json — o middleware já",
+    "tem o passthrough de /.well-known/ para melhoria.org.",
+    "  bubblewrap fingerprint generateAssetLinks"
+  ],
+
+  "packageId": "org.melhoria.twa",
+  "host": "melhoria.org",
+  "name": "MelhorIA - a IA da Melhor Idade",
+  "launcherName": "MelhorIA",
+  "display": "standalone",
+
+  "themeColor": "#0F766E",
+  "themeColorDark": "#0F766E",
+  "navigationColor": "#FFFFFF",
+  "navigationColorDark": "#FFFFFF",
+  "navigationDividerColor": "#94A3B8",
+  "navigationDividerColorDark": "#94A3B8",
+  "backgroundColor": "#FFFFFF",
+
+  "enableNotifications": true,
+  "startUrl": "/",
+
+  "iconUrl": "https://melhoria.org/brands/melhoria/icone-512.png",
+  "maskableIconUrl": "https://melhoria.org/brands/melhoria/icone-512-maskable.png",
+  "splashScreenFadeOutDuration": 300,
+
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "melhoria"
+  },
+
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+
+  "shortcuts": [
+    {
+      "name": "Meus remédios",
+      "shortName": "Remédios",
+      "url": "/melhoria/remedios",
+      "chosenIconUrl": "https://melhoria.org/brands/melhoria/icone-192.png"
+    },
+    {
+      "name": "Consultas e exames",
+      "shortName": "Consultas",
+      "url": "/melhoria/agenda",
+      "chosenIconUrl": "https://melhoria.org/brands/melhoria/icone-192.png"
+    }
+  ],
+
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://melhoria.org/manifest.webmanifest",
+  "fallbackType": "customtabs",
+
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    }
+  },
+
+  "alphaDependencies": { "enabled": false },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://melhoria.org/",
+  "minSdkVersion": 23,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "1.0.0"
+}

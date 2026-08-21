@@ -17,6 +17,7 @@ const RESERVED_SUBDOMAINS = [
   'webmaster', 'noreply', 'no-reply', 'root', 'test', 'teste', 'demo',
   'staging', 'dev', 'beta', 'null', 'undefined', 'me', 'eu',
   'minhai', 'artefinal', 'consultatec', 'pix', 'minia', 'bigcorps',
+  'melhoria', 'melhor',
   'convite', 'convites', 'conviteia', 'convite-ai', 'ai', 'ia',
   // 'mcp' precisa estar aqui: o proxy mcp.minhai.app do next.config é um
   // rewrite beforeFiles, que roda DEPOIS do middleware. Sem reservar,
@@ -46,6 +47,8 @@ const LLMS_TXT_BY_HOST: Record<string, string> = {
   'pix.wiki':          '/brands/pix/llms.txt',
   'www.pix.wiki':      '/brands/pix/llms.txt',
   'consulta.tec.br':     '/brands/consultatec/llms.txt',
+  'melhoria.org':      '/brands/melhoria/llms.txt',
+  'www.melhoria.org':  '/brands/melhoria/llms.txt',
   'www.consulta.tec.br': '/brands/consultatec/llms.txt',
   // app.min.ia.br e ia.artefinal.app são ferramenta, não produto: os arquivos
   // apontados aqui são curtos e mandam o modelo para o llms.txt da landing.
@@ -62,6 +65,8 @@ const ARTEFINAL_DOMAINS = ['ia.artefinal.app'];
 const CONSULTATEC_DOMAINS = ['consulta.tec.br', 'www.consulta.tec.br'];
 
 const PIX_DOMAINS = ['pix.wiki', 'www.pix.wiki'];
+
+const MELHORIA_DOMAINS = ['melhoria.org', 'www.melhoria.org'];
 
 // ── Min.IA ───────────────────────────────────────────────────────────────
 const MINIA_APP_DOMAINS = ['app.min.ia.br'];
@@ -293,6 +298,56 @@ if (CONSULTATEC_DOMAINS.includes(hostname)) {
   if (pathname === '/') {
     const url = request.nextUrl.clone();
     url.pathname = '/consultatec';
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  }
+}
+
+// ── 0.15. DOMÍNIO MELHORIA.ORG (cenário A — host único) ───────────────────
+if (MELHORIA_DOMAINS.includes(hostname)) {
+
+  // robots.txt e sitemap.xml precisam ser servidos por ESTE host, não
+  // reescritos para dentro de /melhoria.
+  if (CRAWLER_PASSTHROUGH.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  if (hostname === 'www.melhoria.org') {
+    const url = request.nextUrl.clone();
+    url.hostname = 'melhoria.org';
+    return NextResponse.redirect(url);
+  }
+
+  if (pathname === '/favicon.ico') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/brands/melhoria/favicon.png';
+    return NextResponse.rewrite(url);
+  }
+
+  if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/brands/melhoria/manifest.webmanifest';
+    return NextResponse.rewrite(url);
+  }
+
+  // A TWA da Play Store valida a posse do domínio por este arquivo. Ele mora
+  // em public/.well-known/, e sem este passthrough o bloco de raiz abaixo o
+  // reescreveria para /melhoria/... e o app abriria com a barra do Chrome.
+  if (pathname.startsWith('/.well-known/')) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // Páginas legais em URL curta: melhoria.org/aviso -> /melhoria/aviso.
+  // Sem isto, /aviso cai no fluxo normal e serve app/aviso (marca minhAi) —
+  // bug silencioso, porque a página existe e abre, só com a marca errada.
+  if (PAGINAS_LEGAIS.includes(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/melhoria${pathname}`;
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  }
+
+  if (pathname === '/') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/melhoria';
     return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
 }

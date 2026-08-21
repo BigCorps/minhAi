@@ -4,7 +4,8 @@ export type BrandKey =
   | 'pix'
   | 'minia'
   | 'consultatec'
-  | 'conviteia';
+  | 'conviteia'
+  | 'melhoria';
 
 export function getBrandByHost(hostname: string): BrandKey {
   const cleanHost = hostname.split(':')[0].toLowerCase();
@@ -38,6 +39,13 @@ export function getBrandByHost(hostname: string): BrandKey {
     cleanHost === 'www.min.ia.br'
   ) {
     return 'minia';
+  }
+
+  if (
+    cleanHost === 'melhoria.org' ||
+    cleanHost === 'www.melhoria.org'
+  ) {
+    return 'melhoria';
   }
 
   return 'minhai';
@@ -120,6 +128,19 @@ export const BRANDS: Record<BrandKey, BrandInfo> = {
     cor: '#7a2e2e',
     corTextoBotao: '#ffffff',
     corTexto: '#7a2e2e',
+  },
+
+  melhoria: {
+    name: 'MelhorIA',
+    logo: '/brands/melhoria/logo.png',
+    title: 'MelhorIA',
+    description: 'a IA da Melhor Idade!',
+    // Turquesa da marca (#2dd4bf) dá 1,84:1 com branco — inaceitável aqui.
+    // O público é presbita: a régua desta marca é 7:1 (WCAG AAA), não 4,5:1.
+    // #0f766e sobre branco = 5,9:1 como botão; #115e59 como texto = 7,7:1.
+    cor: '#0f766e',
+    corTextoBotao: '#ffffff',
+    corTexto: '#115e59',
   },
 
   minia: {

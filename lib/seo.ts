@@ -117,6 +117,8 @@ export const SEO: Record<BrandKey, BrandSeo> = {
       '/ia/suporte',
       '/tour',
     ],
+    // As páginas fixas. As de nicho (/para/[slug]) entram no sitemap.ts,
+    // que lê NICHO_PAGES — é lista gerada, não cabe aqui.
     sitemap: [
       { path: '/',            changeFrequency: 'weekly',  priority: 1.0  },
       { path: '/precos',      changeFrequency: 'weekly',  priority: 0.95 },
@@ -166,6 +168,14 @@ export const SEO: Record<BrandKey, BrandSeo> = {
   },
 
   // ── min.IA ─────────────────────────────────────────────────────────────────
+  // ATENÇÃO: min.ia.br NÃO é servido por este projeto. O apex está no projeto
+  // da landing (repositório BigCorps/min.ia.br), que redireciona /min/* para
+  // cá. Este build responde apenas por app.min.ia.br — a FERRAMENTA.
+  //
+  // Mesmo tratamento do ArteFinal: a ferramenta é noindex e canonicaliza para
+  // a landing. Quem ranqueia, acumula autoridade e é citado por IA é
+  // min.ia.br. O baseUrl abaixo continua sendo o host real deste build,
+  // porque é ele que monta as URLs absolutas de OG e ícones.
   minia: {
     key: 'minia',
     baseUrl: 'https://app.min.ia.br',
@@ -179,6 +189,8 @@ export const SEO: Record<BrandKey, BrandSeo> = {
     appleIcon: '/brands/minia/apple-touch-icon.png',
     manifest: '/brands/minia/manifest.webmanifest',
     twitter: '@bigcorpsbr',
+    // Aponta para a landing: este llms.txt é um redirecionamento textual, não
+    // a descrição completa do produto (essa vive em min.ia.br/llms.txt).
     llmsTxt: '/brands/minia/llms.txt',
     disallow: ['/'],
     aiAllow: [],
@@ -186,6 +198,8 @@ export const SEO: Record<BrandKey, BrandSeo> = {
   },
 
   // ── ArteFinal ──────────────────────────────────────────────────────────────
+  // A landing pública do ArteFinal é o artefinal.app (outro projeto).
+  // ia.artefinal.app é a ferramenta logada: nada aqui deve ser indexado.
   artefinal: {
     key: 'artefinal',
     baseUrl: 'https://ia.artefinal.app',
@@ -193,33 +207,46 @@ export const SEO: Record<BrandKey, BrandSeo> = {
     title: 'ArteFinal.app — Seu arte-finalista com IA',
     description:
       'Fechamento de arquivo com sangria, faca de recorte, vetorização e PDF/X-1a em CMYK ISO Coated v2. Ferramenta para gráficas, papelarias e designers.',
+    // O logo.png referenciado pelo layout antigo NÃO existe em
+    // public/brands/artefinal/ — o cartão de compartilhamento estava quebrado.
     ogImage: '/brands/artefinal/og.png',
     ogImageAlt: 'ArteFinal.app — seu arte-finalista com IA',
     favicon: '/brands/artefinal/favicon.png',
     appleIcon: '/brands/artefinal/apple-touch-icon.png',
     manifest: '/brands/artefinal/manifest.webmanifest',
+    // Aponta para a landing, igual à min.IA: este arquivo é um
+    // redirecionamento textual, não a descrição do produto.
     llmsTxt: '/brands/artefinal/llms.txt',
+    // ia.artefinal.app é a FERRAMENTA, protegida por login (bloco 0 do
+    // middleware: sem sessão, tudo cai em /arte/login). A landing pública do
+    // produto é artefinal.app, que é outro projeto. Indexar um host que só
+    // devolve tela de login gera página fina e canibaliza a landing real.
+    // Se algum dia este host servir conteúdo aberto, troque para a lista
+    // comentada abaixo.
     disallow: ['/'],
+    // disallow: ['/api/', '/auth/', '/arte/login', '/arte/perfil'],
     aiAllow: [],
     sitemap: [],
   },
 
-  // ── PixWiki ────────────────────────────────────────────────────────────────
-  // Fonte central do modelo comercial atual. Não reintroduzir saldo/saque ou
-  // porcentagem por Pix: o dinheiro entra diretamente na conta Mercado Pago.
+  // ── Pix Wiki ───────────────────────────────────────────────────────────────
   pix: {
     key: 'pix',
     baseUrl: 'https://pix.wiki',
-    siteName: 'PixWiki',
-    title: 'PixWiki — Confirmação automática de Pix com Mercado Pago',
+    siteName: 'pix.wiki',
+    title: 'Pix.Wiki — Link e QR Code Pix com confirmação automática',
     description:
-      'Receba Pix pela sua chave ou Pix Link e acompanhe as confirmações automaticamente. Painel em tempo real, avisos por e-mail e Push, WhatsApp, multiempresa e relatórios. Comece grátis.',
+      'Link de cobrança Pix grátis com o nome do seu negócio. O sistema confirma o pagamento direto no banco: fim do comprovante falso. Sem mensalidade, 1% só no saque.',
+    // pixwiki.png é o ícone 5197x5197 — pesado e quadrado, ruim como cartão.
     ogImage: '/brands/pix/og.png',
-    ogImageAlt: 'PixWiki — confirmação automática de Pix com Mercado Pago',
+    ogImageAlt: 'pix.wiki — cobrança Pix com confirmação automática',
     favicon: '/brands/pix/favicon.png',
     appleIcon: '/brands/pix/apple-touch-icon.png',
     manifest: '/brands/pix/manifest.webmanifest',
     llmsTxt: '/brands/pix/llms.txt',
+    // As páginas de cobrança de cliente moram na RAIZ do domínio
+    // (pix.wiki/minha-loja), então não há prefixo para bloquear aqui.
+    // O noindex delas é aplicado em app/pix/layout.tsx, pelo x-pathname.
     disallow: [
       '/api/',
       '/auth/',
@@ -234,6 +261,35 @@ export const SEO: Record<BrandKey, BrandSeo> = {
   },
 
   // ── ConsultaTec ────────────────────────────────────────────────────────────
+  // ── MelhorIA ───────────────────────────────────────────────────────────────
+  melhoria: {
+    key: 'melhoria',
+    baseUrl: 'https://melhoria.org',
+    siteName: 'MelhorIA',
+    title: 'MelhorIA — a IA da Melhor Idade!',
+    description:
+      'Lembrete de remédio na hora certa, consultas e exames anotados e verificação antifraude de boleto e link. Cadastrar e ser lembrado é grátis, sempre.',
+    ogImage: '/brands/melhoria/og.png',
+    ogImageAlt: 'MelhorIA — a IA da Melhor Idade!',
+    favicon: '/brands/melhoria/favicon.png',
+    appleIcon: '/brands/melhoria/apple-touch-icon.png',
+    manifest: '/brands/melhoria/manifest.webmanifest',
+    llmsTxt: '/brands/melhoria/llms.txt',
+    disallow: [
+      '/api/',
+      '/auth/',
+      '/dashboard',
+      '/login',
+      '/cadastro',
+      '/melhoria/login',
+      '/melhoria/remedios',
+      '/melhoria/agenda',
+      '/melhoria/compras',
+    ],
+    aiAllow: ['/'],
+    sitemap: [{ path: '/', changeFrequency: 'weekly', priority: 1.0 }],
+  },
+
   consultatec: {
     key: 'consultatec',
     baseUrl: 'https://consulta.tec.br',
@@ -241,6 +297,8 @@ export const SEO: Record<BrandKey, BrandSeo> = {
     title: 'ConsultaTec — Consulta de CPF e CNPJ sem burocracia',
     description:
       'Digite o documento: o sistema identifica se é CPF ou CNPJ e mostra as consultas disponíveis com o preço de cada uma. A partir de R$ 3,00, pago por Pix, sem assinatura.',
+    // O layout antigo apontava para /brands/consultatec/og.png, que NÃO existia
+    // no repositório: o cartão de compartilhamento vinha vazio. Agora existe.
     ogImage: '/brands/consultatec/og.png',
     ogImageAlt: 'ConsultaTec — consulta de CPF e CNPJ',
     favicon: '/brands/consultatec/favicon.png',
@@ -262,6 +320,16 @@ export const SEO: Record<BrandKey, BrandSeo> = {
 };
 
 // ─── Subdomínios de cliente ──────────────────────────────────────────────────
+// slug.minhai.app  → assistente de um cliente
+// slug.conviteia.com → convite publicado de um cliente
+//
+// Nenhum dos dois deve entrar em índice de busca: são páginas de terceiros,
+// pessoais, e multiplicariam o domínio em milhares de URLs finas.
+// Se um dia a decisão mudar (convites públicos indexáveis, por exemplo),
+// é aqui que se muda — robots.ts e os layouts leem esta função.
+//
+// MANTER EM SINCRONIA com SUBDOMAIN_DOMAINS e RESERVED_SUBDOMAINS do
+// middleware.ts.
 
 const CLIENT_SUBDOMAIN_SUFFIXES = [
   '.minhai.com.br',
@@ -290,6 +358,7 @@ export function cleanHost(host: string): string {
   return host.split(':')[0].toLowerCase();
 }
 
+/** true para slug.minhai.app, slug.conviteia.com e afins. */
 export function isClientSubdomain(host: string): boolean {
   const h = cleanHost(host);
   const suffix = CLIENT_SUBDOMAIN_SUFFIXES.find((s) => h.endsWith(s));
@@ -304,7 +373,9 @@ export function isClientSubdomain(host: string): boolean {
 export interface ResolvedSeo {
   brand: BrandKey;
   seo: BrandSeo;
+  /** Host da requisição, já limpo. */
   host: string;
+  /** Página de cliente (assistente ou convite publicado): não indexar. */
   clientPage: boolean;
 }
 
@@ -312,6 +383,8 @@ export function resolveSeo(host: string): ResolvedSeo {
   const h = cleanHost(host);
   const clientPage = isClientSubdomain(h);
 
+  // Em subdomínio de cliente o getBrandByHost cai no default 'minhai'.
+  // Para .conviteia.com a marca correta é conviteia.
   const brand: BrandKey = clientPage
     ? (h.endsWith('.conviteia.com') ? 'conviteia' : 'minhai')
     : getBrandByHost(h);
@@ -319,6 +392,9 @@ export function resolveSeo(host: string): ResolvedSeo {
   return { brand, seo: SEO[brand], host: h, clientPage };
 }
 
+/** URL absoluta canônica da marca. Em página de cliente, o canônico é o
+ *  próprio subdomínio — o convite do cliente não canonicaliza para a
+ *  landing do Convite IA, seria descartado pelo Google. */
 export function canonicalUrl(resolved: ResolvedSeo, path = '/'): string {
   const base = resolved.clientPage
     ? `https://${resolved.host}`
@@ -333,12 +409,17 @@ export function absoluteUrl(resolved: ResolvedSeo, path: string): string {
 }
 
 // ─── Metadata pronta ─────────────────────────────────────────────────────────
+// Usada pelos layouts de marca. Recebe o host já lido com headers() no
+// layout — este arquivo continua puro.
 
 export interface BuildMetadataOptions {
   host: string;
+  /** Caminho canônico da página. Default "/". */
   path?: string;
+  /** Sobrescreve título/descrição da marca (páginas internas). */
   title?: string;
   description?: string;
+  /** Força noindex (páginas de cliente, áreas logadas). */
   noindex?: boolean;
 }
 
@@ -361,10 +442,12 @@ export function buildBrandMetadata(opts: BuildMetadataOptions): Metadata {
     authors: [{ name: 'BigCorps', url: 'https://bigcorps.com.br' }],
     creator: 'BigCorps',
     publisher: 'BigCorps',
+
     alternates: {
       canonical,
       languages: { 'pt-BR': canonical },
     },
+
     robots: noindex
       ? { index: false, follow: true }
       : {
@@ -378,11 +461,13 @@ export function buildBrandMetadata(opts: BuildMetadataOptions): Metadata {
             'max-video-preview': -1,
           },
         },
+
     icons: {
       icon: seo.favicon,
       shortcut: seo.favicon,
       apple: seo.appleIcon,
     },
+
     openGraph: {
       type: 'website',
       url: canonical,
@@ -394,6 +479,7 @@ export function buildBrandMetadata(opts: BuildMetadataOptions): Metadata {
         { url: ogImage, width: 1200, height: 630, alt: seo.ogImageAlt, type: 'image/png' },
       ],
     },
+
     twitter: {
       card: 'summary_large_image',
       title,
@@ -405,9 +491,15 @@ export function buildBrandMetadata(opts: BuildMetadataOptions): Metadata {
 }
 
 // ─── JSON-LD ─────────────────────────────────────────────────────────────────
+// A BigCorps é a MESMA entidade nas três marcas. O que amarra tudo é o @id da
+// Organization com o mesmo CNPJ e o mesmo sameAs — é assim que um modelo de
+// linguagem liga Convite IA e min.IA à minhAi e à BigCorps em vez de tratar
+// como três empresas sem relação.
 
 const ORG_ID = 'https://bigcorps.com.br/#organization';
 
+// Landings públicas que vivem em OUTROS projetos Vercel. As rotas equivalentes
+// dentro deste build são ferramenta logada: noindex, canonical para cá.
 export const LANDING_URL: Partial<Record<BrandKey, string>> = {
   minia: 'https://min.ia.br',
   artefinal: 'https://artefinal.app',
@@ -532,6 +624,7 @@ export function conviteiaGraph() {
           ],
         },
       },
+
       {
         '@type': 'FAQPage',
         '@id': `${base}/#faq`,
@@ -578,6 +671,7 @@ export function conviteiaGraph() {
           },
         ],
       },
+
       {
         '@type': 'HowTo',
         '@id': `${base}/#howto`,
@@ -610,7 +704,9 @@ export function conviteiaGraph() {
           },
         ],
       },
+
       organizationNode(),
+
       {
         '@type': 'WebSite',
         '@id': `${base}/#website`,
@@ -624,7 +720,7 @@ export function conviteiaGraph() {
   };
 }
 
-// ── PixWiki ──────────────────────────────────────────────────────────────────
+// ── Pix Wiki ─────────────────────────────────────────────────────────────────
 
 export function pixGraph() {
   const base = SEO.pix.baseUrl;
@@ -635,124 +731,78 @@ export function pixGraph() {
       {
         '@type': 'SoftwareApplication',
         '@id': `${base}/#software`,
-        name: 'PixWiki',
-        alternateName: ['pix.wiki', 'Pix Wiki'],
+        name: 'pix.wiki',
+        alternateName: 'Pix Wiki',
         url: base,
         description: SEO.pix.description,
         applicationCategory: 'FinanceApplication',
-        applicationSubCategory: 'Confirmação e acompanhamento de recebimentos Pix',
-        operatingSystem: 'Web',
+        applicationSubCategory: 'Cobrança PIX',
+        operatingSystem: 'Web, Android',
         inLanguage: 'pt-BR',
-        isAccessibleForFree: true,
+        isPartOf: { '@id': `${SEO.minhai.baseUrl}/#software` },
         creator: { '@id': ORG_ID },
         publisher: { '@id': ORG_ID },
-        offers: [
-          {
-            '@type': 'Offer',
-            name: 'Pix Grátis',
-            price: '0',
-            priceCurrency: 'BRL',
-            description: 'Confirmação automática, painel de recebimentos, histórico, e-mail e Push.',
-            availability: 'https://schema.org/InStock',
-          },
-          {
-            '@type': 'Offer',
-            name: 'Pix Link',
-            price: '29.90',
-            priceCurrency: 'BRL',
-            description: 'Tudo do Pix Grátis, mais endereço próprio em pix.wiki, página de cobrança, link com valor e QR Code.',
-            availability: 'https://schema.org/InStock',
-          },
-          {
-            '@type': 'Offer',
-            name: 'Pix Pro',
-            price: '99.90',
-            priceCurrency: 'BRL',
-            description: 'Tudo do Pix Link, mais WhatsApp, multiempresa, relatórios, exportação e integrações com outros sistemas.',
-            availability: 'https://schema.org/InStock',
-          },
-        ],
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'BRL',
+          description:
+            'Sem mensalidade e sem maquininha. A cobrança é gratuita; a taxa de 1% incide apenas no saque do valor recebido.',
+          availability: 'https://schema.org/InStock',
+        },
         featureList: [
-          'Acompanhamento automático de recebimentos Pix em conta Mercado Pago conectada',
-          'Chave Pix no plano gratuito',
-          'Painel com atualização em tempo real e atualização manual sob demanda',
-          'Histórico com o valor que efetivamente entrou na conta',
-          'Avisos por e-mail e Web Push',
-          'Pix Link com endereço no formato seunome.pix.wiki',
-          'Link com valor preenchido e QR Code',
-          'Avisos por WhatsApp no Pix Pro',
-          'Várias empresas na mesma conta no Pix Pro',
-          'Relatórios e exportação no Pix Pro',
-          'Integrações por API e Webhooks no Pix Pro',
-          'WebApp instalável no celular',
+          'Link de cobrança PIX com o nome do negócio: pix.wiki/seu-negocio',
+          'QR Code personalizado',
+          'Confirmação de pagamento direto no banco, sem depender de comprovante enviado pelo cliente',
+          'Link com valor fixo: pix.wiki/seu-negocio/50',
+          'Painel com saldo, recebimentos e saque',
+          'Sem mensalidade — 1% apenas no saque',
+          'Assistente com ativação por voz da minhAi incluso',
         ],
         audience: {
-          '@type': 'Audience',
-          audienceType: ['Pessoa física', 'Autônomo', 'MEI', 'Prestador de serviços', 'Loja', 'Pequena empresa'],
-          geographicArea: { '@type': 'Country', name: 'Brasil' },
+          '@type': 'BusinessAudience',
+          audienceType: ['MEI', 'Autônomo', 'Pequena empresa', 'Loja física', 'Food truck'],
         },
       },
+
       {
         '@type': 'FAQPage',
         '@id': `${base}/#faq`,
         mainEntity: [
           {
             '@type': 'Question',
-            name: 'O dinheiro fica no PixWiki?',
+            name: 'Quanto custa o pix.wiki?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Não. O dinheiro continua entrando diretamente na conta Mercado Pago do recebedor. O PixWiki acompanha os recebimentos e organiza as confirmações.',
+              text: 'Não há mensalidade nem custo por cobrança. A taxa é de 1% e incide apenas no momento do saque do valor recebido.',
             },
           },
           {
             '@type': 'Question',
-            name: 'O PixWiki cobra uma porcentagem de cada Pix?',
+            name: 'Como o pix.wiki evita comprovante falso?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Não. O PixWiki não cobra percentual por transação. Eventuais tarifas do Mercado Pago dependem do tipo de recebimento utilizado, e o painel mostra o valor que efetivamente entrou.',
+              text: 'A confirmação do pagamento vem do próprio banco, pela API do PIX, e não da imagem que o cliente envia. O sistema só marca como pago quando o valor cai na conta.',
             },
           },
           {
             '@type': 'Question',
-            name: 'Posso usar o PixWiki como pessoa física?',
+            name: 'Preciso de maquininha?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Sim. O PixWiki pode ser usado por pessoa física, autônomo, MEI ou empresa que receba Pix em uma conta Mercado Pago compatível.',
-            },
-          },
-          {
-            '@type': 'Question',
-            name: 'O cliente precisa instalar o PixWiki?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'Não. O cliente paga pelo aplicativo do próprio banco. No Pix Link, basta abrir a página de cobrança e usar o QR Code ou o código Pix.',
-            },
-          },
-          {
-            '@type': 'Question',
-            name: 'Como recebo aviso de um novo Pix?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'O painel atualiza automaticamente. E-mail e Push estão disponíveis desde o Pix Grátis; avisos por WhatsApp fazem parte do Pix Pro.',
-            },
-          },
-          {
-            '@type': 'Question',
-            name: 'Qual a diferença entre Chave Pix e Pix Link?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'Na Chave Pix o cliente informa a chave e o valor no banco. No Pix Link o recebedor envia uma página profissional com nome, QR Code e, se desejar, o valor já preenchido.',
+              text: 'Não. O pagamento acontece pelo link ou pelo QR Code, no celular do próprio cliente.',
             },
           },
         ],
       },
+
       organizationNode(),
+
       {
         '@type': 'WebSite',
         '@id': `${base}/#website`,
         url: base,
-        name: 'PixWiki',
-        alternateName: 'pix.wiki',
+        name: 'pix.wiki',
         description: SEO.pix.description,
         inLanguage: 'pt-BR',
         publisher: { '@id': ORG_ID },
@@ -762,6 +812,101 @@ export function pixGraph() {
 }
 
 // ── ConsultaTec ──────────────────────────────────────────────────────────────
+
+export function melhoriaGraph() {
+  const base = SEO.melhoria.baseUrl;
+
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'SoftwareApplication',
+        '@id': `${base}/#software`,
+        name: 'MelhorIA',
+        alternateName: 'MelhorIA — a IA da Melhor Idade',
+        url: base,
+        description: SEO.melhoria.description,
+        applicationCategory: 'HealthApplication',
+        applicationSubCategory: 'Lembrete de medicação e agenda de saúde',
+        operatingSystem: 'Web, Android',
+        inLanguage: 'pt-BR',
+        isPartOf: { '@id': `${SEO.minhai.baseUrl}/#software` },
+        creator: { '@id': ORG_ID },
+        publisher: { '@id': ORG_ID },
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'BRL',
+          description:
+            'Cadastrar remédios, consultas e exames e receber os lembretes é grátis e ilimitado. Créditos só para a câmera com IA, conversa com IA e envio de SMS.',
+          availability: 'https://schema.org/InStock',
+        },
+        featureList: [
+          'Lembrete de remédio que funciona com o aplicativo fechado',
+          'Confirmação de dose tomada e relatório de adesão para o médico',
+          'Aviso quando o remédio está acabando',
+          'Agenda de consultas e exames com alerta de preparo e jejum',
+          'Verificação antifraude de boleto pela linha digitável, sem custo',
+          'Lista de compras integrada ao estoque de medicamentos',
+          'Botão de emergência que avisa a família',
+          'Letra grande, botões grandes e ditado por microfone',
+        ],
+        audience: {
+          '@type': 'PeopleAudience',
+          suggestedMinAge: 60,
+          audienceType: ['Pessoa idosa', 'Cuidador familiar', 'Filho que cuida dos pais'],
+        },
+      },
+
+      {
+        '@type': 'FAQPage',
+        '@id': `${base}/#faq`,
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: 'O lembrete funciona com o celular guardado no bolso?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Sim. O horário fica guardado no servidor, não no aparelho. O aviso chega como notificação mesmo com o aplicativo fechado, e se ninguém confirmar em 30 minutos avisamos um familiar cadastrado.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Preciso pagar para usar a MelhorIA?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Não. Cadastrar remédios, consultas e exames e receber todos os lembretes é grátis e sem limite. Créditos só são usados para ler receita por foto, analisar imagem de boleto, conversar com a inteligência artificial e enviar SMS.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Como sei se um boleto é golpe?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Digite a linha digitável do boleto e a MelhorIA confere os dígitos verificadores, o banco emissor, o vencimento e o valor, sem custo nenhum. O aplicativo nunca diz que um boleto é seguro: quando nada de errado aparece, o aviso é de que não encontramos indícios, e a orientação é sempre confirmar por telefone com quem enviou.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'O botão de emergência chama o SAMU?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Não. O botão avisa as pessoas que você cadastrou como contato de emergência, pelo aplicativo e por SMS. Ele não aciona 192, 190 ou 193. Em caso de urgência, ligue diretamente para esses números.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'A MelhorIA dá orientação médica?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Não. A MelhorIA lembra, organiza e registra. Ela não indica dose, não diz para que serve um medicamento e não interpreta resultado de exame. Toda dúvida sobre tratamento é com o médico.',
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
 
 export function consultatecGraph() {
   const base = SEO.consultatec.baseUrl;
@@ -807,6 +952,7 @@ export function consultatecGraph() {
           ],
         },
       },
+
       {
         '@type': 'FAQPage',
         '@id': `${base}/#faq`,
@@ -837,7 +983,9 @@ export function consultatecGraph() {
           },
         ],
       },
+
       organizationNode(),
+
       {
         '@type': 'WebSite',
         '@id': `${base}/#website`,
@@ -851,5 +999,8 @@ export function consultatecGraph() {
   };
 }
 
-// min.IA e ArteFinal não declaram grafo neste projeto: suas landings públicas
-// vivem em projetos separados.
+// ── min.IA e ArteFinal ───────────────────────────────────────────────────────
+// Não há grafo aqui de propósito. O SoftwareApplication dessas duas marcas
+// pertence à landing pública (min.ia.br e artefinal.app), que é indexável.
+// Declarar o mesmo software também na ferramenta criaria duas entidades
+// concorrentes para o mesmo produto.

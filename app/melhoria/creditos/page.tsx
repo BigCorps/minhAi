@@ -30,7 +30,7 @@ import Image from 'next/image';
 import { Check, Copy, Loader2, QrCode } from 'lucide-react';
 import { melhoriaAuth } from '@/lib/melhoria/supabase';
 import { cor, toque, raio, espaco, descreverCreditos } from '@/lib/melhoria/tema';
-import { Pagina } from '@/components/melhoria/Chrome';
+import { Pagina, Carregando } from '@/components/melhoria/Chrome';
 
 interface Pacote {
   id: string;
@@ -170,9 +170,7 @@ export default function CreditosPage() {
   if (carregando) {
     return (
       <Pagina voltarPara="/melhoria">
-        <div style={{ textAlign: 'center', paddingTop: 80 }}>
-          <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
-        </div>
+        <Carregando />
       </Pagina>
     );
   }

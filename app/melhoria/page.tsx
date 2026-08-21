@@ -20,10 +20,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pill, CalendarDays, ShoppingCart, ShieldCheck, Plus, Loader2, Users } from 'lucide-react';
+import { Pill, CalendarDays, ShoppingCart, ShieldCheck, Plus, Users, UserCog } from 'lucide-react';
 import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CartaoDose, { type DoseDoDia } from '@/components/melhoria/CartaoDose';
-import { Pagina } from '@/components/melhoria/Chrome';
+import { Pagina, IconeCentral, Carregando } from '@/components/melhoria/Chrome';
 import {
   cor, fonte, px, toque, raio, espaco, diaPorExtenso,
   type TamanhoFonte,
@@ -155,12 +155,7 @@ export default function MeuDiaPage() {
   if (carregando) {
     return (
       <Pagina semRodape>
-        <div style={{ textAlign: 'center', paddingTop: 60 }}>
-          <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
-          <p style={{ fontSize: 21, color: cor.tintaMuted, marginTop: espaco.md }}>
-            Carregando...
-          </p>
-        </div>
+        <Carregando />
       </Pagina>
     );
   }
@@ -229,7 +224,7 @@ export default function MeuDiaPage() {
           borderRadius: raio.card, padding: espaco.xl, textAlign: 'center',
           marginBottom: espaco.xl,
         }}>
-          <Pill size={64} style={{ color: cor.destaque }} aria-hidden="true" />
+          <IconeCentral margemAbaixo={0}><Pill size={64} style={{ color: cor.destaque }} /></IconeCentral>
           <p style={{
             fontSize: px(fonte.titulo, escala), fontWeight: 700,
             color: cor.tinta, margin: `${espaco.md}px 0 ${espaco.xs}px`,
@@ -281,6 +276,8 @@ export default function MeuDiaPage() {
           rotulo="Verificar boleto ou link" destino="/melhoria/verificar" />
         <Atalho escala={escala} icone={<Users size={34} />}
           rotulo="Minha família" destino="/melhoria/familia" />
+        <Atalho escala={escala} icone={<UserCog size={34} />}
+          rotulo="Meus dados" destino="/melhoria/perfil" />
       </nav>
     </Pagina>
   );

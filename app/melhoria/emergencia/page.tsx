@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Phone, Loader2, Check, AlertTriangle, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, Phone, Check, AlertTriangle, ArrowUp, ArrowDown } from 'lucide-react';
 import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CampoComDitado from '@/components/melhoria/CampoComDitado';
 import {
@@ -18,7 +18,7 @@ import {
   montarSmsPanico, contarSms,
 } from '@/lib/melhoria/telefone';
 import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
-import { Pagina } from '@/components/melhoria/Chrome';
+import { Pagina, Carregando } from '@/components/melhoria/Chrome';
 
 interface Contato {
   id: string;
@@ -128,9 +128,7 @@ export default function EmergenciaPage() {
   if (carregando) {
     return (
       <Pagina voltarPara="/melhoria">
-        <div style={{ textAlign: 'center', paddingTop: 80 }}>
-          <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
-        </div>
+        <Carregando />
       </Pagina>
     );
   }

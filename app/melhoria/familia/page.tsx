@@ -23,7 +23,7 @@ import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CampoComDitado from '@/components/melhoria/CampoComDitado';
 import { gerarRelatorioAdesao, type DoseRegistro } from '@/lib/melhoria/relatorioPDF';
 import { cor, toque, raio, espaco, descreverDias } from '@/lib/melhoria/tema';
-import { Pagina } from '@/components/melhoria/Chrome';
+import { Pagina, Esqueleto } from '@/components/melhoria/Chrome';
 
 interface Acompanhado {
   perfil_id: string;
@@ -45,6 +45,7 @@ export default function FamiliaPage() {
   const mel      = createMelhoriaClient();
 
   const [carregando, setCarregando] = useState(true);
+  const [carregandoMetricas, setCarregandoMetricas] = useState(true);
   const [acompanhados, setAcompanhados] = useState<Acompanhado[]>([]);
   const [ativo, setAtivo]         = useState<Acompanhado | null>(null);
   const [periodo, setPeriodo]     = useState<number>(7);
@@ -75,6 +76,10 @@ export default function FamiliaPage() {
   useEffect(() => {
     if (!ativo) return;
 
+    // Não zera aderencia/proximos aqui: manter o valor anterior na tela
+    // enquanto o novo período carrega evita o pisca-pisca de conteúdo.
+    setCarregandoMetricas(true);
+
     (async () => {
       const [{ data: ad }, { data: ag }] = await Promise.all([
         supabase.rpc('melhoria_aderencia', { p_perfil_id: ativo.perfil_id, p_dias: periodo }),
@@ -89,6 +94,7 @@ export default function FamiliaPage() {
 
       setAderencia(Array.isArray(ad) ? ad[0] : ad);
       setProximos((ag as any) ?? []);
+      setCarregandoMetricas(false);
 
       // LGPD: acesso de terceiro a dado de saúde fica registrado. A função
       // ignora sozinha quando é o próprio dono olhando.
@@ -202,15 +208,6 @@ export default function FamiliaPage() {
     setTimeout(() => setCopiado(false), 3000);
   }
 
-  if (carregando) {
-    return (
-      <Pagina voltarPara="/melhoria">
-        <div style={{ textAlign: 'center', paddingTop: 80 }}>
-          <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
-        </div>
-      </Pagina>
-    );
-  }
 
   return (
     <Pagina voltarPara="/melhoria">
@@ -263,6 +260,17 @@ export default function FamiliaPage() {
       </div>
 
       {/* Aderência — sem juízo de valor */}
+      {/* Esqueleto em vez de spinner: a casca da tela aparece
+          imediatamente e só o número chega depois. Antes, três consultas em
+          série (auth → RPC → aderência+agenda) seguravam a página inteira em
+          branco. */}
+      {(carregando || carregandoMetricas) && !aderencia && (
+        <>
+          <Esqueleto altura={140} />
+          <Esqueleto altura={88} />
+        </>
+      )}
+
       {aderencia && (
         <section style={{
           background: cor.fundoCard, border: `3px solid ${cor.borda}`,

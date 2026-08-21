@@ -18,7 +18,7 @@ import {
   cor, fonte, px, toque, raio, espaco, descreverDias,
   type TamanhoFonte,
 } from '@/lib/melhoria/tema';
-import { Pagina } from '@/components/melhoria/Chrome';
+import { Pagina, IconeCentral, Carregando } from '@/components/melhoria/Chrome';
 
 interface Remedio {
   id: string;
@@ -112,9 +112,7 @@ export default function RemediosPage() {
   if (carregando) {
     return (
       <Pagina voltarPara="/melhoria">
-        <div style={{ textAlign: 'center', paddingTop: 80 }}>
-          <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
-        </div>
+        <Carregando />
       </Pagina>
     );
   }
@@ -131,7 +129,7 @@ export default function RemediosPage() {
           borderRadius: raio.card, padding: espaco.xl, textAlign: 'center',
           marginBottom: espaco.lg,
         }}>
-          <Pill size={64} style={{ color: cor.destaque }} aria-hidden="true" />
+          <IconeCentral margemAbaixo={0}><Pill size={64} style={{ color: cor.destaque }} /></IconeCentral>
           <p style={{ fontSize: 26, fontWeight: 700, color: cor.tinta, margin: `${espaco.md}px 0 0` }}>
             Nenhum remédio cadastrado ainda
           </p>

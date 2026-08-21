@@ -8,11 +8,11 @@
 
 import { useCallback, useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, CalendarDays, Loader2, Check } from 'lucide-react';
+import { Plus, CalendarDays, Check } from 'lucide-react';
 import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CartaoCompromisso, { type Compromisso } from '@/components/melhoria/CartaoCompromisso';
 import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
-import { Pagina, BotaoGoogle } from '@/components/melhoria/Chrome';
+import { Pagina, BotaoGoogle, IconeCentral, Carregando } from '@/components/melhoria/Chrome';
 
 function AgendaConteudo() {
   const router   = useRouter();
@@ -79,9 +79,7 @@ function AgendaConteudo() {
   if (carregando) {
     return (
       <Pagina voltarPara="/melhoria">
-        <div style={{ textAlign: 'center', paddingTop: 80 }}>
-          <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
-        </div>
+        <Carregando />
       </Pagina>
     );
   }
@@ -111,7 +109,7 @@ function AgendaConteudo() {
           borderRadius: raio.card, padding: espaco.xl, textAlign: 'center',
           marginBottom: espaco.lg,
         }}>
-          <CalendarDays size={64} style={{ color: cor.destaque }} aria-hidden="true" />
+          <IconeCentral margemAbaixo={0}><CalendarDays size={64} style={{ color: cor.destaque }} /></IconeCentral>
           <p style={{ fontSize: 26, fontWeight: 700, color: cor.tinta, margin: `${espaco.md}px 0 ${espaco.xs}px` }}>
             Nenhum compromisso marcado
           </p>
@@ -201,9 +199,7 @@ export default function AgendaPage() {
   return (
     <Suspense fallback={
       <Pagina voltarPara="/melhoria">
-        <div style={{ textAlign: 'center', paddingTop: 80 }}>
-          <Loader2 size={56} className="animate-spin" style={{ color: cor.destaque }} />
-        </div>
+        <Carregando />
       </Pagina>
     }>
       <AgendaConteudo />

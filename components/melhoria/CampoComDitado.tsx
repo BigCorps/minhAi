@@ -114,7 +114,13 @@ export default function CampoComDitado({
             style={{
               position: 'absolute',
               right: espaco.xs,
-              top: espaco.xs,
+              // Centro vertical real. A versão anterior usava `top: 8px` com
+              // altura fixa, contando que o campo tivesse exatamente 64px —
+              // mas com fonte 24 e padding o campo cresce, e o microfone
+              // ficava alto demais. Em campo de várias linhas ele fica no
+              // topo, que é onde a pessoa está digitando.
+              top: multilinha ? espaco.xs : '50%',
+              transform: multilinha ? undefined : 'translateY(-50%)',
               width: toque.min - 8,
               height: toque.min - 8,
               minWidth: toque.min - 8,
@@ -126,6 +132,8 @@ export default function CampoComDitado({
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
+              padding: 0,
+              lineHeight: 0,
             }}
           >
             {ditado.gravando

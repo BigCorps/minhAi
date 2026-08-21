@@ -92,20 +92,23 @@ export default function EscalaTexto({ children }: { children: React.ReactNode })
       // Antes de hidratar usamos 1.0 para não haver salto visível; depois o
       // valor real entra. Como 'grande' (o padrão) já é 1.0, na prática só
       // quem escolheu outro tamanho vê qualquer transição.
-      style={
-        pronto && z !== 1
-          ? {
-              zoom: z,
-              // Sem a compensação de largura, o zoom faz o conteúdo transbordar
-              // e aparece rolagem lateral no celular.
-              width: `calc(100% / ${z})`,
-              // E sem o auto nas laterais o bloco estreitado encosta na
-              // esquerda — era o "fica tudo pra esquerda" no tamanho gigante.
-              marginLeft: 'auto',
-              marginRight: 'auto',
-            }
-          : { width: '100%', marginLeft: 'auto', marginRight: 'auto' }
-      }
+      // ⚠️ SÓ `zoom`. NADA de compensar a largura.
+      //
+      // Eu tinha acrescentado `width: calc(100% / z)` achando que o zoom
+      // faria o conteúdo transbordar. Está errado: no `zoom` padronizado, a
+      // largura de um bloco `auto` já é resolvida no espaço escalado — ele
+      // preenche o pai exatamente, sozinho.
+      //
+      // Com a compensação, a divisão acontecia DUAS vezes. Medido num
+      // Chromium, numa tela de 390px:
+      //
+      //   z=0.88  com compensação -> bloco de 443px  (cortava à direita)
+      //   z=1.16  com compensação -> bloco de 336px  (estreito demais)
+      //   qualquer z, sem ela     -> bloco de 390px  (exato)
+      //
+      // O 1.16 "parecia certo" porque ficava centralizado; era só menor do
+      // que devia. O 0.88 escancarava o problema.
+      style={pronto && z !== 1 ? { zoom: z } : undefined}
     >
       {children}
     </div>

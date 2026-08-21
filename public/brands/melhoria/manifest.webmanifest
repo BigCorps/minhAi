@@ -2,8 +2,8 @@
   "name": "MelhorIA — a IA da Melhor Idade",
   "short_name": "MelhorIA",
   "description": "Lembrete de remédio na hora certa, consultas e exames anotados e verificação antifraude de boleto e link.",
-  "id": "/melhoria",
-  "start_url": "/",
+  "id": "/",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -35,12 +35,14 @@
   "shortcuts": [
     {
       "name": "Meus remédios",
-      "url": "/melhoria/remedios",
+      "short_name": "Remédios",
+      "url": "/remedios",
       "icons": [{ "src": "/brands/melhoria/icone-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Consultas e exames",
-      "url": "/melhoria/agenda",
+      "short_name": "Consultas",
+      "url": "/agenda",
       "icons": [{ "src": "/brands/melhoria/icone-192.png", "sizes": "192x192" }]
     }
   ]

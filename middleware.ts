@@ -346,8 +346,22 @@ if (MELHORIA_DOMAINS.includes(hostname)) {
     return NextResponse.rewrite(url);
   }
 
-  // Arquivos estáticos (logo, ícones, og) passam direto.
-  if (/\.[a-z0-9]{2,5}$/i.test(pathname)) {
+  // Tudo que vive em /brands/ é arquivo servido de public/. Passthrough
+  // explícito, por segurança: é onde moram logo, ícones, og e o manifest.
+  if (pathname.startsWith('/brands/')) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // Arquivos estáticos passam direto.
+  //
+  // ⚠️ A extensão vai até 12 caracteres, não 5. A versão anterior usava
+  // {2,5} e por isso NÃO reconhecia `.webmanifest` (11 letras): o caminho
+  // /brands/melhoria/manifest.webmanifest caía no rewrite genérico, virava
+  // /melhoria/brands/melhoria/manifest.webmanifest e devolvia 404.
+  //
+  // Sem manifest acessível, o Chrome não oferece "Instalar" — era o
+  // "Não é possível instalar o app" na tela de atalho.
+  if (/\.[a-z0-9]{2,12}$/i.test(pathname)) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 

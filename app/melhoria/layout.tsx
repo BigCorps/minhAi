@@ -115,15 +115,14 @@ export default async function MelhoriaLayout({
             .mel-legal, .mel-legal p, .mel-legal li { text-align: left; }
 
             /* ── Cabeçalho em tela estreita ───────────────────────────────
-               Abaixo de 430px a palavra "MelhorIA" sai e fica só o logo
-               (que continua clicável e continua levando ao início). Era ela
-               que empurrava o botão de ajuda para fora da tela.             */
-            @media (max-width: 430px) {
-              .mel-marca { display: none; }
-            }
+               O rótulo do botão de ajuda ("Configurar" / "AJUDA") sai e fica
+               só o ícone, que continua com aria-label.
 
-            /* Em tela bem estreita o botão de ajuda fica só com o ícone.   */
-            @media (max-width: 360px) {
+               O limiar é 420px e não 360px por causa do zoom: no tamanho
+               gigante (fator 1.16) uma tela de 360px vira 310px de viewport
+               CSS, e a media query enxerga esse valor menor. Medido num
+               Chromium: com 360px, o botão ultrapassava a borda em 2px.     */
+            @media (max-width: 420px) {
               .mel-rotulo-ajuda { display: none; }
             }
           `,

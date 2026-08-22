@@ -17,10 +17,12 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Loader2, Menu } from 'lucide-react';
 import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
 import { R } from '@/lib/melhoria/rotas';
 import BotaoAjuda from '@/components/melhoria/BotaoAjuda';
+import MenuLateral from '@/components/melhoria/MenuLateral';
 
 // ── Ícones ──────────────────────────────────────────────────────────────────
 
@@ -151,41 +153,54 @@ export function Cabecalho({
   /** false na tela de login e na landing: ali não há a quem avisar. */
   comAjuda?: boolean;
 }) {
+  const [menuAberto, setMenuAberto] = useState(false);
+
   return (
-    <header
-      style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: cor.fundo,
-        borderBottom: `2px solid ${cor.borda}`,
-        marginLeft: `-${espaco.md}px`,
-        marginRight: `-${espaco.md}px`,
-        marginTop: `-${espaco.lg}px`,
-        marginBottom: espaco.lg,
-        padding: `${espaco.sm}px ${espaco.sm}px`,
-      }}
-    >
-      {/*
-        Grid de três colunas em vez de flex com `margin-left: auto`.
-
-        Com flex, a marca ("MelhorIA" + logo) tomava toda a largura que
-        quisesse e empurrava o botão de ajuda para fora da tela no celular —
-        era o que aparecia no print: o botão cortado na borda direita.
-
-        Aqui as laterais têm largura própria e o meio é o que cede: a palavra
-        "MelhorIA" some abaixo de 430px (o logo continua, e continua clicável),
-        então o botão sempre cabe.
-      */}
-      <div
-        className="mel-cabecalho"
+    <>
+      <header
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'auto 1fr auto',
-          alignItems: 'center',
-          gap: espaco.xs,
+          position: 'sticky', top: 0, zIndex: 50,
+          background: cor.fundo,
+          borderBottom: `2px solid ${cor.borda}`,
+          marginLeft: `-${espaco.md}px`,
+          marginRight: `-${espaco.md}px`,
+          marginTop: `-${espaco.lg}px`,
+          marginBottom: espaco.lg,
+          padding: `${espaco.sm}px ${espaco.sm}px`,
         }}
       >
-        {/* esquerda */}
-        <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+        {/*
+          Logo à ESQUERDA, sem o nome ao lado.
+
+          O nome saiu porque, no tamanho gigante, "MelhorIA" + botão de ajuda
+          não cabiam na mesma linha e o botão era cortado. Só o símbolo
+          resolve, e o nome continua no rodapé e no menu.
+        */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: espaco.xs,
+        }}>
+          <button
+            type="button"
+            onClick={() => setMenuAberto(true)}
+            aria-label="Abrir menu"
+            aria-expanded={menuAberto}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              minHeight: toque.min, padding: `0 ${espaco.xs}px 0 0`,
+              background: 'none', border: 'none', cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            <Image
+              src="/brands/melhoria/logo.png" alt="" width={46} height={46}
+              style={{ borderRadius: 11, display: 'block', flexShrink: 0 }} priority
+            />
+            {/* O traço de menu ao lado do logo não é enfeite: logo sozinho lê
+                como marca, não como botão, e ninguém descobre que dá para
+                tocar. */}
+            <Menu size={24} strokeWidth={2.5} style={{ color: cor.tintaMuted }} aria-hidden="true" />
+          </button>
+
           {voltarPara && (
             <Link
               href={voltarPara}
@@ -200,35 +215,10 @@ export function Cabecalho({
               <ArrowLeft size={30} strokeWidth={2.5} />
             </Link>
           )}
-        </div>
 
-        {/* meio — a marca, centralizada */}
-        <Link
-          href={R.app()}
-          aria-label="MelhorIA, ir para o início"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: espaco.xs, textDecoration: 'none',
-            minHeight: toque.min, minWidth: 0,
-          }}
-        >
-          <Image
-            src="/brands/melhoria/logo.png" alt="" width={44} height={44}
-            style={{ borderRadius: 11, display: 'block', flexShrink: 0 }} priority
-          />
-          <span
-            className="mel-marca"
-            style={{
-              fontSize: 24, fontWeight: 800, color: cor.tinta, lineHeight: 1,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            MelhorIA
-          </span>
-        </Link>
+          {/* espaçador: empurra a ajuda para a direita */}
+          <span style={{ flex: 1, minWidth: 0 }} />
 
-        {/* direita */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
           {comAjuda ? <BotaoAjuda /> : (
             titulo ? (
               <span style={{
@@ -237,11 +227,13 @@ export function Cabecalho({
               }}>
                 {titulo}
               </span>
-            ) : <span style={{ minWidth: toque.min }} />
+            ) : null
           )}
         </div>
-      </div>
-    </header>
+      </header>
+
+      <MenuLateral aberto={menuAberto} aoFechar={() => setMenuAberto(false)} />
+    </>
   );
 }
 

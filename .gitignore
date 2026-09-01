@@ -72,3 +72,9 @@ done.txt
 started.txt
 isolate-*.log
 *.log
+*.keystore
+*.jks
+*.p12
+*.aab
+*.apk
+*.idsig

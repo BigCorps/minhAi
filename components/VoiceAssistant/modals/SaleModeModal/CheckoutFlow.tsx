@@ -1,0 +1,1136 @@
+// components/VoiceAssistant/modals/SaleModeModal/CheckoutFlow.tsx
+// v5 — link_pagamento InfinitePay adicionado como método de pagamento + Impressão + Link Curto
+
+'use client';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Zap, Smartphone, CreditCard, Banknote, ExternalLink,
+  ArrowLeft, Check, Copy, CheckCheck, X,
+} from 'lucide-react';
+import { createClient } from '@/lib/supabase-browser';
+import { useCart } from '@/hooks/useCart';
+import { criarPedido, atualizarStatusPedido, formatarPreco } from '@/lib/produtos-venda';
+import { triggerAutoPrint, formatPurchaseReceipt } from '@/lib/auto-print';
+import RegistrationDisplay from '@/components/assistant/RegistrationDisplay';
+
+type Step = 'cliente' | 'pagamento' | 'aguardando' | 'confirmado' | 'erro';
+type MetodoPagamento = 'pix' | 'nfc_debito' | 'nfc_credito' | 'tef_debito' | 'tef_credito' | 'dinheiro' | 'link';
+
+interface CheckoutFlowProps {
+  companyId: string;
+  theme: 'dark' | 'light';
+  onClose: () => void;
+  playText?: (text: string) => Promise<void>;
+  metodosAtivos?: string[];
+  profile?: { nome: string; email?: string | null; identificador?: string | null; telefone?: string | null; endereco?: string | null } | null;
+  observacaoEntrega?: string | null;
+  onVoltar?: () => void;
+  tipoEntrega?: 'retirada' | 'delivery' | 'mesa';
+  enderecoDelivery?: string;
+  deliveryEnabled?: boolean;
+  deliveryWhoPays?: 'cliente' | 'empresa';
+  deliveryQuoteExterno?: {
+    quotation_id: string;
+    price_cents: number;
+    price_original_cents: number;
+    price_brl: string;
+    eta_minutes: number | null;
+  } | null;
+}
+
+function usePixTimer(expiresAt: string | null) {
+  const [timeLeft, setTimeLeft] = useState(0);
+  useEffect(() => {
+    if (!expiresAt) return;
+    const update = () => {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      setTimeLeft(Math.max(0, Math.floor(diff / 1000)));
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+  return timeLeft;
+}
+
+function formatTime(s: number) {
+  const m = Math.floor(s / 60);
+  return `${m}:${(s % 60).toString().padStart(2, '0')}`;
+}
+
+export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos, profile, observacaoEntrega, onVoltar, tipoEntrega, enderecoDelivery, deliveryEnabled, deliveryWhoPays, deliveryQuoteExterno }: CheckoutFlowProps) {
+  const { itens, total, clear } = useCart();
+  const isDark = theme === 'dark';
+
+  const [step, setStep] = useState<Step>('cliente');
+  const [clienteNome, setClienteNome] = useState('');
+  const [clienteTel, setClienteTel] = useState('');
+  const [showEmitirBanner, setShowEmitirBanner] = useState(false);
+
+  // Configurações de impressão da company
+  const [printOnPurchase, setPrintOnPurchase] = useState(false);
+  const [hasActivePlan, setHasActivePlan] = useState(false);
+  const [printAutoType, setPrintAutoType] = useState<'local' | 'remota' | 'recibo'>('local');
+  const [companyName, setCompanyName] = useState('');
+
+  useEffect(() => {
+    async function fetchPrintConfig() {
+      try {
+        const supabase = createClient();
+
+        // PASSO 1: Buscar empresa + user_id do dono
+        const { data: companyData, error: companyError } = await supabase
+          .from('companies')
+          .select('print_auto_type_purchase, name, user_id')
+          .eq('id', companyId)
+          .maybeSingle();
+
+        if (companyError || !companyData) {
+          setHasActivePlan(false);
+          return;
+        }
+
+        setPrintOnPurchase(!!companyData.print_auto_type_purchase);
+        setPrintAutoType((companyData.print_auto_type_purchase as any) ?? 'local');
+        setCompanyName(companyData.name ?? '');
+
+        // PASSO 2: Buscar plano do DONO da empresa (não do usuário logado)
+        const { data: credits, error: creditsError } = await supabase
+          .from('user_credits')
+          .select('has_active_plan, plan_expires_at, active_plan_id')
+          .eq('user_id', companyData.user_id)
+          .maybeSingle();
+
+        if (creditsError || !credits) {
+          setHasActivePlan(false);
+          return;
+        }
+
+        const planIsActive =
+          credits.has_active_plan === true &&
+          credits.plan_expires_at != null &&
+          new Date(credits.plan_expires_at) > new Date();
+
+        // PASSO 3: Verificar se o plano tem has_consultoria
+        let hasConsultingPlan = false;
+        if (planIsActive && credits.active_plan_id) {
+          const { data: pkg } = await supabase
+            .from('credits_packages')
+            .select('has_consultoria')
+            .eq('id', credits.active_plan_id)
+            .single();
+          hasConsultingPlan = pkg?.has_consultoria === true;
+        }
+
+        setHasActivePlan(planIsActive && hasConsultingPlan);
+      } catch { /* silencioso */ }
+    }
+    fetchPrintConfig();
+  }, [companyId]);
+
+  const handlePrint = async () => {
+    if (!hasActivePlan) return;
+
+    const receiptContent = formatPurchaseReceipt({
+      companyName,
+      clienteNome: clienteNome || undefined,
+      itens: itens.map(i => ({
+        nome_snapshot: i.nome,
+        quantidade: i.quantidade,
+        subtotal: i.preco_venda * i.quantidade,
+      })),
+      total: totalConfirmado,
+      metodo,
+    });
+
+    const result = await triggerAutoPrint({
+      companyId,
+      trigger: 'purchase',
+      content: receiptContent,
+    });
+
+    if (result.useWindowPrint) {
+const div = document.createElement('div');
+      div.id = 'receipt-print';
+      div.innerHTML = '<pre>' + receiptContent.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+      document.body.appendChild(div);
+      window.print();
+      document.body.removeChild(div);
+    } else if ((result as any).useThermalPrint && (result as any).thermalContent) {
+      try {
+        const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
+        await thermalPrinterService.printText((result as any).thermalContent, { cut: true });
+      } catch (e) { console.error('Erro impressão térmica:', e); }
+    }
+    // remota: edge já executou, nada a fazer no client
+  };
+
+  // Pré-preencher com dados do perfil logado
+  useEffect(() => {
+    if (!profile) return;
+    if (profile.nome) setClienteNome(profile.nome);
+    if (profile.telefone) setClienteTel(profile.telefone);
+  }, [profile]);
+  
+  const [metodo, setMetodo] = useState<MetodoPagamento>('pix');
+
+  const [pedidoId, setPedidoId] = useState<string | null>(null);
+  const [pixTransactionId, setPixTransactionId] = useState<string | null>(null);
+  const [pixExpiresAt, setPixExpiresAt] = useState<string | null>(null);
+  const [cobrancaId, setCobrancaId] = useState<string | null>(null);
+  const [mpOrderId, setMpOrderId] = useState<string | null>(null);
+
+  const [pixCode, setPixCode] = useState<string | null>(null);
+  const [pixQRCode, setPixQRCode] = useState<string | null>(null);
+  const [pixCopied, setPixCopied] = useState(false);
+
+  // Link InfinitePay
+  const [linkCobranca, setLinkCobranca] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [isConfirmingLink, setIsConfirmingLink] = useState(false);
+  const [linkPendingMsg, setLinkPendingMsg] = useState<string | null>(null);
+
+  const [loading, setLoading] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [polling, setPolling] = useState(false);
+
+  // Total salvo antes do clear() para exibir na tela de confirmado
+  const [totalConfirmado, setTotalConfirmado] = useState(0);
+  const totalFinalRef = useRef(0);
+
+  // Delivery
+  const [deliveryQuote, setDeliveryQuote] = useState<{
+    quotation_id: string;
+    price_cents: number;
+    price_original_cents: number;
+    price_brl: string;
+    eta_minutes: number | null;
+  } | null>(deliveryQuoteExterno ?? null);
+
+  useEffect(() => {
+    if (deliveryQuoteExterno) setDeliveryQuote(deliveryQuoteExterno);
+  }, [deliveryQuoteExterno]);
+  
+  const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [deliveryError, setDeliveryError] = useState<string | null>(null);
+  const [deliveryShareLink, setDeliveryShareLink] = useState<string | null>(null);
+
+  // Cadastro configurável
+  const [showRegistration, setShowRegistration] = useState(false);
+  const [registrationFields, setRegistrationFields] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function checkRegistration() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('registration_configs')
+        .select('fields')
+        .eq('company_id', companyId)
+        .maybeSingle();
+      const fields = data?.fields ?? [];
+      const extras = fields.filter((f: string) => f !== 'nome' && f !== 'telefone' && f !== 'sobrenome');
+      if (extras.length > 0) setRegistrationFields(fields);
+    }
+    checkRegistration();
+  }, [companyId]);
+
+  // Auto-check PIX: delay 30s após QR gerado, depois verifica a cada 5s
+  const [autoChecking, setAutoChecking] = useState(false);
+  const pixTimeLeft = usePixTimer(pixExpiresAt);
+
+  useEffect(() => {
+    if (!pixTransactionId) return;
+    const delay = setTimeout(() => setAutoChecking(true), 30_000);
+    return () => clearTimeout(delay);
+  }, [pixTransactionId]);
+
+  useEffect(() => {
+    if (!autoChecking || !pixTransactionId || !pedidoId) return;
+    const supabase = createClient();
+
+    const interval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
+          body: { transaction_id: pixTransactionId },
+        });
+        if (!error && data?.success) {
+          clearInterval(interval);
+          setAutoChecking(false);
+          setTotalConfirmado(totalFinalRef.current);
+          await dispatchDelivery(pedidoId!);
+          setStep('confirmado');
+          playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {});
+          clear();
+        }
+      } catch { /* erro pontual — continua tentando */ }
+    }, 5_000);
+
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      setAutoChecking(false);
+    }, 10 * 60 * 1000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [autoChecking, pixTransactionId, pedidoId, total, playText, clear]);
+
+  // Polling NFC / TEF
+  useEffect(() => {
+    if (!polling || !pedidoId) return;
+    if (!['nfc_debito','nfc_credito','tef_debito','tef_credito'].includes(metodo)) return;
+    const supabase = createClient();
+    const interval = setInterval(async () => {
+      try {
+        if (metodo === 'nfc_debito' || metodo === 'nfc_credito') {
+          if (!cobrancaId) return;
+          const { data: cob } = await supabase.from('cobrancas').select('status').eq('id', cobrancaId).single();
+          if (cob?.status === 'PAGA') {
+            const { data: p } = await supabase.from('pedidos').select('status').eq('id', pedidoId).single();
+            if (p?.status !== 'pago') await supabase.rpc('confirmar_pedido_pago', { p_pedido_id: pedidoId });
+            clearInterval(interval); setPolling(false);
+            setTotalConfirmado(totalFinalRef.current);
+            await dispatchDelivery(pedidoId!);
+            setStep('confirmado');
+            playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {}); clear();
+          }
+        } else if (metodo === 'tef_debito' || metodo === 'tef_credito') {
+          if (!mpOrderId) return;
+const { data: od } = await supabase.functions.invoke('consultar-order-mp-point', {
+  body: { order_id: mpOrderId },
+});
+if (od?.status === 'paid') {
+            const { data: p } = await supabase.from('pedidos').select('status').eq('id', pedidoId).single();
+            if (p?.status !== 'pago') await supabase.rpc('confirmar_pedido_pago', { p_pedido_id: pedidoId });
+            clearInterval(interval); setPolling(false);
+            setTotalConfirmado(totalFinalRef.current);
+            await dispatchDelivery(pedidoId!);
+            setStep('confirmado');
+            playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {}); clear();
+          }
+        }
+      } catch { /* erro pontual */ }
+    }, 3_000);
+    const timeout = setTimeout(() => { clearInterval(interval); setPolling(false); }, 10 * 60 * 1000);
+    return () => { clearInterval(interval); clearTimeout(timeout); };
+  }, [polling, pedidoId, cobrancaId, mpOrderId, metodo, companyId, playText, clear]);
+
+  // Verificação manual PIX
+  async function handleVerificarManual() {
+    if (!pixTransactionId) return;
+    setConfirmLoading(true);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
+        body: { transaction_id: pixTransactionId },
+      });
+      if (!error && data?.success) {
+        setTotalConfirmado(totalFinalRef.current);
+        await dispatchDelivery(pedidoId!);
+        setStep('confirmado'); setAutoChecking(false);
+        playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {}); clear();
+      } else {
+        alert('PIX ainda não confirmado. Aguarde e tente novamente.');
+      }
+    } catch { alert('Erro ao verificar pagamento. Tente novamente.'); }
+    finally { setConfirmLoading(false); }
+  }
+
+  // Confirmação manual do Link InfinitePay
+  async function handleConfirmarLink() {
+    if (!cobrancaId || isConfirmingLink) return;
+    setIsConfirmingLink(true);
+    setLinkPendingMsg(null);
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      const response = await fetch(`${supabaseUrl}/functions/v1/confirmar-pagamento-infinitepay`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ cobranca_id: cobrancaId, company_id: companyId }),
+      });
+      const json = await response.json();
+      if (response.status === 400 && json.pending) {
+        setLinkPendingMsg(json.error || 'Pagamento ainda não identificado. Aguarde o cliente pagar e tente novamente.');
+        return;
+      }
+      if (!response.ok || !json.success) {
+        setLinkPendingMsg(json.error || 'Erro ao confirmar. Tente novamente.');
+        return;
+      }
+      // Confirma o pedido no banco
+      if (pedidoId) {
+        const supabase = createClient();
+        await supabase.rpc('confirmar_pedido_pago', { p_pedido_id: pedidoId });
+      }
+      setTotalConfirmado(totalFinalRef.current);
+      await dispatchDelivery(pedidoId!);
+      setStep('confirmado');
+      playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {});
+      clear();
+    } catch {
+      setLinkPendingMsg('Erro de conexão. Verifique sua internet e tente novamente.');
+    } finally {
+      setIsConfirmingLink(false);
+    }
+  }
+
+  // Calcular frete Lalamove
+  const handleCalcularFrete = useCallback(async () => {
+    if (!enderecoDelivery?.trim()) return;
+    setDeliveryLoading(true);
+    setDeliveryError(null);
+    setDeliveryQuote(null);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.functions.invoke('lalamove-delivery', {
+        body: {
+          action: 'quote',
+          company_id: companyId,
+          delivery_address: enderecoDelivery,
+          order_total_cents: Math.round(total * 100),
+        },
+      });
+      if (error || !data?.success) throw new Error(data?.error ?? 'Erro ao calcular frete');
+      setDeliveryQuote(data);
+    } catch (e: any) {
+      setDeliveryError(e.message);
+    } finally {
+      setDeliveryLoading(false);
+    }
+  }, [companyId, enderecoDelivery, total]);
+
+  // Despachar entregador após pagamento confirmado
+  const dispatchDelivery = useCallback(async (pedidoIdParam: string) => {
+    const quoteParaDespacho = deliveryQuote ?? deliveryQuoteExterno ?? null;
+    if (tipoEntrega !== 'delivery' || !quoteParaDespacho || !enderecoDelivery) return;
+    try {
+      const supabase = createClient();
+      const { data: orderData } = await supabase.functions.invoke('lalamove-delivery', {
+        body: {
+          action: 'order',
+          company_id: companyId,
+          pedido_id: pedidoIdParam,
+          delivery_address: enderecoDelivery,
+          cliente_nome: clienteNome || undefined,
+          cliente_telefone: clienteTel || undefined,
+          quotation_id: quoteParaDespacho.quotation_id,
+          price_cents: quoteParaDespacho.price_cents,
+          price_original_cents: quoteParaDespacho.price_original_cents,
+        },
+      });
+      if (orderData?.success) setDeliveryShareLink(orderData.share_link);
+    } catch (e) {
+      console.error('Erro ao despachar entrega:', e);
+    }
+  }, [companyId, tipoEntrega, deliveryQuote, enderecoDelivery, clienteNome, clienteTel]);
+
+  // Criar pedido + cobrança
+  const handleConfirmarPagamento = useCallback(async () => {
+    setLoading(true); setErro(null);
+    try {
+      const supabase = createClient();
+
+      // Total inclui frete se cliente paga
+      const quoteAtivo = deliveryQuote ?? deliveryQuoteExterno ?? null;
+      const freteExtra = (tipoEntrega === 'delivery' && deliveryWhoPays === 'cliente' && quoteAtivo)
+        ? quoteAtivo.price_cents / 100
+        : 0;
+      const totalFinal = total + freteExtra;
+      totalFinalRef.current = totalFinal;
+
+      console.log('DEBUG checkout:', {
+        total,
+        freteExtra,
+        totalFinal,
+        tipoEntrega,
+        deliveryWhoPays,
+        deliveryQuote,
+        amountCents: Math.round(totalFinal * 100),
+      });
+
+      const pedido = await criarPedido({
+        company_id: companyId,
+        cliente_nome: clienteNome || undefined,
+        cliente_telefone: clienteTel || undefined,
+        itens,
+        metodo_pagamento: metodo === 'link'
+  ? 'nfc'
+  : (metodo === 'nfc_debito' || metodo === 'nfc_credito') ? 'nfc'
+  : (metodo === 'tef_debito' || metodo === 'tef_credito') ? 'tef'
+  : metodo,
+        observacoes: observacaoEntrega || undefined,
+      });
+      setPedidoId(pedido.id);
+
+      // Salvar dados de delivery no pedido
+      if (tipoEntrega === 'delivery' && quoteAtivo) {
+        const supabase = createClient();
+        await supabase.from('pedidos').update({
+          delivery_requested: true,
+          delivery_address: enderecoDelivery,
+          delivery_fee_cents: quoteAtivo.price_cents,
+          delivery_fee_original_cents: quoteAtivo.price_original_cents,
+        }).eq('id', pedido.id);
+      }
+
+      if (metodo === 'dinheiro') {
+        await atualizarStatusPedido(pedido.id, 'pago');
+        setTotalConfirmado(totalFinal);
+        await dispatchDelivery(pedido.id);
+        setStep('confirmado');
+        playText?.('Pedido registrado! Valor a receber: ' + formatarPreco(totalFinal)).catch(() => {});
+        clear(); return;
+      }
+
+      if (metodo === 'pix') {
+        const { data: pixData, error: pixErr } = await supabase.functions.invoke('gerar-pix-assistente', {
+          body: { company_id: companyId, amount_cents: Math.round(totalFinal * 100) },
+        });
+        if (pixErr || !pixData?.transaction_id) throw new Error('Erro ao gerar PIX');
+        await supabase.from('pix_transactions').update({ pedido_id: pedido.id }).eq('id', pixData.transaction_id);
+        await atualizarStatusPedido(pedido.id, 'aguardando_pagamento');
+        setPixTransactionId(pixData.transaction_id);
+        setPixExpiresAt(pixData.expires_at ?? null);
+        setPixCode(pixData.pix_code ?? null);
+        setPixQRCode(pixData.qr_code_url ?? null);
+        setStep('aguardando');
+        playText?.('Escaneie o QR code para pagar via PIX.').catch(() => {}); return;
+      }
+
+if (metodo === 'nfc_debito' || metodo === 'nfc_credito') {
+  const { data: cobData, error: cobErr } = await supabase.functions.invoke('gerar-cobranca-infinitepay', {
+    body: {
+      company_id: companyId,
+      amount_cents: Math.round(totalFinal * 100),
+      tipo: 'NFC',
+      nfc_payment_method: metodo === 'nfc_debito' ? 'debit' : 'credit',
+      descricao: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`,
+    },
+  });
+  if (cobErr || !cobData?.cobranca_id) throw new Error('Erro ao gerar cobrança NFC');
+  await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', cobData.cobranca_id);
+  setCobrancaId(cobData.cobranca_id); setStep('aguardando'); setPolling(true);
+  playText?.(`Aproxime o cartão ${metodo === 'nfc_credito' ? 'de crédito' : 'de débito'} na maquininha para pagar.`).catch(() => {}); return;
+}
+
+      if (metodo === 'link') {
+        const { data: cobData, error: cobErr } = await supabase.functions.invoke('gerar-cobranca-infinitepay', {
+          body: {
+            company_id: companyId,
+            amount_cents: Math.round(totalFinal * 100),
+            tipo: 'LINK_PAGAMENTO',
+            descricao: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`,
+          },
+        });
+        if (cobErr || !cobData?.cobranca_id) throw new Error('Erro ao gerar link de pagamento');
+        await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', cobData.cobranca_id);
+        
+        setCobrancaId(cobData.cobranca_id);
+
+        // Gera link curto minhai.app/pay/XXXXXX
+        let urlParaExibir = cobData.link_cobranca;
+        try {
+          const { createShortLink } = await import('@/lib/short-links');
+          urlParaExibir = await createShortLink(
+            cobData.link_cobranca,
+            companyId,
+            cobData.cobranca_id
+          );
+        } catch {
+          // fallback silencioso: usa URL original
+        }
+
+        setLinkCobranca(urlParaExibir);
+        setStep('aguardando');
+        playText?.('Link de pagamento gerado. Abra o link para o cliente pagar.').catch(() => {});
+        return;
+      }
+
+if (metodo === 'tef_debito' || metodo === 'tef_credito') {
+  const { data: orderData, error: orderErr } = await supabase.functions.invoke('criar-order-mp-point', {
+    body: {
+      company_id: companyId,
+      amount_cents: Math.round(totalFinal * 100),
+      description: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`,
+      payment_type: metodo === 'tef_debito' ? 'debit_card' : 'credit_card',
+    },
+  });
+  if (orderErr || !orderData?.order_id) throw new Error('Erro ao criar order na maquininha');
+  await supabase.from('mp_orders').update({ pedido_id: pedido.id }).eq('id', orderData.order_id);
+  await atualizarStatusPedido(pedido.id, 'aguardando_pagamento');
+  setMpOrderId(orderData.order_id); setStep('aguardando'); setPolling(true);
+  playText?.(`Insira o cartão ${metodo === 'tef_credito' ? 'de crédito' : 'de débito'} na maquininha Point para pagar.`).catch(() => {}); return;
+}
+    } catch (err: any) {
+      setErro(err?.message || 'Erro ao processar pagamento'); setStep('erro');
+    } finally { setLoading(false); }
+  }, [companyId, clienteNome, clienteTel, itens, metodo, total, playText, clear, deliveryQuote, deliveryQuoteExterno, tipoEntrega, deliveryWhoPays, enderecoDelivery, dispatchDelivery]);
+
+  const handleFinalizar = useCallback(async () => {
+  // Verificar se empresa tem NFE ativo
+  const { data: company } = await supabase
+    .from('companies')
+    .select('nfe_ativo, nfe_plano')
+    .eq('id', companyId)
+    .single();
+
+  if (company?.nfe_ativo && pedidoId) {
+    setShowEmitirBanner(true);
+    return; // não fechar ainda
+  }
+
+  // Comportamento padrão se não tiver NFE
+  clear();
+  onClose();
+}, [companyId, pedidoId, clear, onClose]);
+
+// Adicionar handler para emissão:
+const handleEmitirCupom = useCallback((pedidoId: string) => {
+  setShowEmitirBanner(false);
+  // Abrir modal de emissão (implementar na próxima fase)
+  console.log('TODO: abrir EmitirNotaModal com pedidoId:', pedidoId);
+  clear();
+  onClose();
+}, [clear, onClose]);
+
+  // Estilos
+  const textPrimary   = isDark ? 'text-white'      : 'text-gray-900';
+  const textSecondary = isDark ? 'text-white/50'   : 'text-gray-500';
+  const textMuted     = isDark ? 'text-white/30'   : 'text-gray-400';
+  const cardBase      = `rounded-xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`;
+  const inputCls      = `w-full px-3 py-2.5 rounded-xl text-sm border outline-none transition-colors ${
+    isDark ? 'bg-white/5 border-white/10 text-white placeholder-white/30 focus:border-white/30'
+           : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-gray-400'}`;
+  const labelCls    = `text-xs font-medium mb-1 block ${textSecondary}`;
+  const btnPrimary  = `w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20`;
+  const btnSecondary = `w-full py-2.5 rounded-xl text-sm font-medium transition-all active:scale-95 ${
+    isDark ? 'bg-white/5 hover:bg-white/10 text-white/60' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`;
+  const btnOutline  = `w-full py-2 rounded-xl text-xs font-medium border transition-all ${
+    isDark ? 'border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
+           : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'}`;
+
+  // ── STEP: CLIENTE ─────────────────────────────────────────────────────────
+  if (step === 'cliente') return (
+    <>
+      <div className="w-full flex flex-col gap-4">
+        <div>
+          <p className={`text-base font-bold mb-0.5 ${textPrimary}`}>Dados do cliente</p>
+          <p className={`text-xs ${textMuted}`}>Opcional — preencha para histórico</p>
+        </div>
+
+        {registrationFields.length > 0 ? (
+          <>
+            <div>
+              <label className={labelCls}>Nome</label>
+              <input type="text" value={clienteNome} onChange={e => setClienteNome(e.target.value)}
+                placeholder="Nome do cliente" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Telefone</label>
+              <input type="tel" value={clienteTel} onChange={e => setClienteTel(e.target.value)}
+                placeholder="(00) 00000-0000" className={inputCls} />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowRegistration(true)}
+              className={`w-full py-2 rounded-xl text-xs border transition-all ${
+                isDark ? 'border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
+                       : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+              }`}
+            >
+              + Cadastro completo (campos adicionais)
+            </button>
+          </>
+        ) : (
+          <>
+            <div>
+              <label className={labelCls}>Nome</label>
+              <input type="text" value={clienteNome} onChange={e => setClienteNome(e.target.value)}
+                placeholder="Nome do cliente" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Telefone</label>
+              <input type="tel" value={clienteTel} onChange={e => setClienteTel(e.target.value)}
+                placeholder="(00) 00000-0000" className={inputCls} />
+            </div>
+          </>
+        )}
+
+        {/* Frete — só aparece se delivery e empresa configurada */}
+        {tipoEntrega === 'delivery' && deliveryEnabled && (
+          <div className={`rounded-xl p-3 border ${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-xs font-medium ${textSecondary}`}>Frete (Lalamove)</span>
+              {!deliveryQuote && !deliveryLoading && (
+                <button
+                  onClick={handleCalcularFrete}
+                  disabled={!enderecoDelivery?.trim()}
+                  className="text-xs px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition-all disabled:opacity-40"
+                >
+                  Calcular
+                </button>
+              )}
+              {deliveryLoading && (
+                <span className="flex items-center gap-1.5 text-xs text-emerald-500">
+                  <span className="w-3 h-3 border border-emerald-500/40 border-t-emerald-500 rounded-full animate-spin" />
+                  Calculando...
+                </span>
+              )}
+              {deliveryQuote && !deliveryLoading && (
+                <button
+                  onClick={handleCalcularFrete}
+                  className={`text-xs ${textMuted} hover:underline`}
+                >
+                  Recalcular
+                </button>
+              )}
+            </div>
+
+            {deliveryError && (
+              <p className="text-xs text-red-400 mt-1">{deliveryError}</p>
+            )}
+
+            {deliveryQuote && (
+              <div className="space-y-1">
+                <div className={`flex justify-between text-xs ${textSecondary}`}>
+                  <span>Produtos</span>
+                  <span>{formatarPreco(total)}</span>
+                </div>
+                <div className={`flex justify-between text-xs ${textSecondary}`}>
+                  <span>
+                    Frete
+                    {deliveryQuote.eta_minutes && (
+                      <span className={`ml-1 ${textMuted}`}>~{deliveryQuote.eta_minutes} min</span>
+                    )}
+                  </span>
+                  <span className="text-emerald-500 font-semibold">
+                    {deliveryWhoPays === 'empresa' ? 'Grátis' : `+ ${formatarPreco(deliveryQuote.price_cents / 100)}`}
+                  </span>
+                </div>
+                <div className={`flex justify-between text-sm font-bold pt-1 border-t ${isDark ? 'border-white/10' : 'border-gray-200'} ${textPrimary}`}>
+                  <span>Total</span>
+                  <span className="text-emerald-500">
+                    {formatarPreco(total + (deliveryWhoPays === 'cliente' ? deliveryQuote.price_cents / 100 : 0))}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {!deliveryQuote && !deliveryLoading && !deliveryError && enderecoDelivery && (
+              <p className={`text-xs ${textMuted}`}>
+                Endereço: {enderecoDelivery}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Total simples — quando não é delivery */}
+        {tipoEntrega !== 'delivery' && (
+          <div className={`rounded-xl p-3 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
+            <div className={`flex justify-between text-sm font-bold ${textPrimary}`}>
+              <span>Total a pagar</span>
+              <span className="text-emerald-500">{formatarPreco(total)}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button onClick={onVoltar ?? onClose} className={btnSecondary}>Voltar</button>
+          <button
+            onClick={() => setStep('pagamento')}
+            disabled={tipoEntrega === 'delivery' && deliveryEnabled && !deliveryQuote}
+            className={btnPrimary + (tipoEntrega === 'delivery' && deliveryEnabled && !deliveryQuote ? ' opacity-50 cursor-not-allowed' : '')}
+          >
+            Continuar →
+          </button>
+        </div>
+      </div>
+
+      {showRegistration && (
+        <RegistrationDisplay
+          data={{ companyId }}
+          onClose={() => setShowRegistration(false)}
+          theme={theme}
+          playText={playText}
+        />
+      )}
+    </>
+  );
+
+  // ── STEP: PAGAMENTO ───────────────────────────────────────────────────────
+  if (step === 'pagamento') {
+    const todosMétodos: {
+      key: MetodoPagamento;
+      label: string;
+      Icon: React.ElementType;
+      desc: string;
+      dbKeys: string[];
+    }[] = [
+      { key: 'pix',         label: 'PIX',               Icon: Zap,          desc: 'QR Code instantâneo',       dbKeys: ['pix_generate'] },
+      { key: 'link',        label: 'Link InfinitePay',  Icon: ExternalLink, desc: 'Cliente paga pelo celular', dbKeys: ['link_pagamento'] },
+      { key: 'nfc_debito',  label: 'NFC Débito',        Icon: Smartphone,   desc: 'Aproximar — débito',        dbKeys: ['nfc_debito'] },
+      { key: 'nfc_credito', label: 'NFC Crédito',       Icon: Smartphone,   desc: 'Aproximar — crédito',       dbKeys: ['nfc_credito'] },
+      { key: 'tef_debito',  label: 'TEF Débito',        Icon: CreditCard,   desc: 'Maquininha — débito',       dbKeys: ['tef_debito'] },
+      { key: 'tef_credito', label: 'TEF Crédito',       Icon: CreditCard,   desc: 'Maquininha — crédito',      dbKeys: ['tef_credito'] },
+      { key: 'dinheiro',    label: 'Dinheiro',          Icon: Banknote,     desc: 'Pagamento em espécie',      dbKeys: ['dinheiro'] },
+    ];
+
+    const metodosFiltrados = metodosAtivos === undefined
+      ? todosMétodos
+      : todosMétodos.filter(m => m.dbKeys.some(k => metodosAtivos.includes(k)));
+
+    // Garante que o método selecionado é válido; se não for, usa o primeiro disponível
+    const primeiroAtivo = metodosFiltrados[0]?.key ?? 'pix';
+    const metodoValido = metodosFiltrados.some(m => m.key === metodo) ? metodo : primeiroAtivo;
+    if (metodoValido !== metodo) setMetodo(metodoValido);
+
+    return (
+      <div className="w-full flex flex-col gap-4">
+        <div>
+          <p className={`text-base font-bold mb-0.5 ${textPrimary}`}>Forma de pagamento</p>
+          <p className={`text-xs ${textMuted}`}>
+            {formatarPreco(
+              total + (tipoEntrega === 'delivery' && deliveryWhoPays === 'cliente' && deliveryQuote
+                ? deliveryQuote.price_cents / 100 : 0)
+            )} · {itens.length} {itens.length === 1 ? 'item' : 'itens'}
+            {tipoEntrega === 'delivery' && deliveryQuote && deliveryWhoPays === 'cliente' && (
+              <span className={`ml-1 ${textMuted}`}>(frete incl.)</span>
+            )}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {metodosFiltrados.map(m => (
+            <button key={m.key} onClick={() => setMetodo(m.key)}
+              className={`p-3 rounded-xl border-2 text-left transition-all ${
+                metodo === m.key
+                  ? isDark ? 'border-emerald-500 bg-emerald-500/10' : 'border-emerald-500 bg-emerald-50'
+                  : isDark ? 'border-white/10 hover:border-white/20' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+              <m.Icon className={`w-5 h-5 mb-1.5 ${
+                metodo === m.key
+                  ? m.key === 'link' ? 'text-violet-500' : 'text-emerald-500'
+                  : textSecondary
+              }`} />
+              <div className={`text-xs font-semibold ${textPrimary}`}>{m.label}</div>
+              <div className={`text-[10px] ${textMuted}`}>{m.desc}</div>
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setStep('cliente')} className={btnSecondary}>
+            <span className="flex items-center justify-center gap-1"><ArrowLeft className="w-4 h-4" />Voltar</span>
+          </button>
+          <button onClick={handleConfirmarPagamento} disabled={loading}
+            className={btnPrimary + (loading ? ' opacity-70 cursor-not-allowed' : '')}>
+            {loading
+              ? <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Processando...
+                </span>
+              : 'Confirmar pagamento'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── STEP: AGUARDANDO ──────────────────────────────────────────────────────
+  if (step === 'aguardando') {
+
+    // PIX — 2 colunas
+    if (metodo === 'pix') return (
+      <div className="w-full flex flex-col gap-3">
+        <div>
+          <p className={`text-base font-bold ${textPrimary}`}>Pague com PIX</p>
+          <p className={`text-xs ${textMuted}`}>Escaneie o QR Code ou copie o código abaixo</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {/* Coluna 1 — info + botões */}
+          <div className={`${cardBase} p-3 flex flex-col gap-2`}>
+            <p className={`text-[10px] font-bold uppercase tracking-wider ${textMuted}`}>Copia e Cola</p>
+
+            <div className={`rounded-lg p-2 space-y-1 ${isDark ? 'bg-white/3' : 'bg-gray-50'}`}>
+              <div className="flex justify-between text-xs">
+                <span className={textMuted}>Total</span>
+                <span className="font-bold text-emerald-500">{formatarPreco(totalFinalRef.current || total)}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className={textMuted}>Banco</span>
+                <span className={textSecondary}>Inter</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className={textMuted}>Expira</span>
+                {pixExpiresAt
+                  ? <span className={pixTimeLeft < 300 ? 'font-bold text-red-400' : 'font-medium text-emerald-500'}>{formatTime(pixTimeLeft)}</span>
+                  : <span className="text-emerald-500">30 min</span>}
+              </div>
+            </div>
+
+            {pixCode && (
+              <div className={`rounded-lg px-2 py-1 text-[9px] font-mono truncate ${
+                isDark ? 'bg-white/5 text-white/40' : 'bg-gray-50 text-gray-400 border border-gray-100'}`}>
+                {pixCode.substring(0, 38)}...
+              </div>
+            )}
+
+            <button
+              onClick={() => { if (pixCode) { navigator.clipboard.writeText(pixCode); setPixCopied(true); setTimeout(() => setPixCopied(false), 2000); }}}
+              className={`w-full py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${pixCopied ? 'bg-emerald-500 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+              {pixCopied
+                ? <><CheckCheck className="w-3.5 h-3.5" />Copiado!</>
+                : <><Copy className="w-3.5 h-3.5" />Copiar Código PIX</>}
+            </button>
+
+            <button onClick={handleVerificarManual} disabled={confirmLoading} className={btnOutline}>
+              {confirmLoading
+                ? <span className="flex items-center justify-center gap-1">
+                    <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />Verificando...
+                  </span>
+                : 'Já paguei, verificar'}
+            </button>
+
+            <button onClick={() => { setAutoChecking(false); setStep('pagamento'); }}
+              className={`text-[10px] flex items-center justify-center gap-1 transition-colors ${textMuted}`}>
+              <ArrowLeft className="w-3 h-3" />Voltar
+            </button>
+          </div>
+
+          {/* Coluna 2 — QR Code */}
+          <div className={`${cardBase} p-3 flex flex-col items-center gap-2`}>
+            <p className={`text-[10px] font-bold uppercase tracking-wider ${textMuted} self-start`}>QR Code</p>
+
+            {pixQRCode
+              ? <div className="bg-white p-2 rounded-xl w-full aspect-square flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={pixQRCode} alt="QR Code PIX" className="w-full h-full object-contain" />
+                </div>
+              : <div className={`w-full aspect-square rounded-xl flex items-center justify-center ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
+                  <span className="w-5 h-5 border-2 border-emerald-500/40 border-t-emerald-500 rounded-full animate-spin" />
+                </div>}
+
+            <div className="flex items-center gap-1.5 mt-auto">
+              {autoChecking
+                ? <><span className="w-3 h-3 border border-emerald-500/40 border-t-emerald-500 rounded-full animate-spin" /><span className={`text-[9px] ${textMuted}`}>Verificando...</span></>
+                : <span className={`text-[9px] text-center ${textMuted}`}>Auto-verificação em 30s</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+
+    // Link InfinitePay
+    if (metodo === 'link') return (
+      <div className="w-full flex flex-col gap-4">
+        <div>
+          <p className={`text-base font-bold ${textPrimary}`}>Link de Pagamento</p>
+          <p className={`text-xs ${textMuted}`}>Abra o link para o cliente pagar pelo celular</p>
+        </div>
+
+        {/* Info */}
+        <div className={`p-3 rounded-xl border text-xs ${
+          isDark ? 'bg-violet-500/10 border-violet-500/20 text-violet-300'
+                 : 'bg-violet-50 border-violet-200 text-violet-700'
+        }`}>
+          O cliente preenche o telefone na tela da InfinitePay para receber o código de confirmação.
+        </div>
+
+        {/* Valor */}
+        <div className={`rounded-xl p-3 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
+          <div className={`flex justify-between text-sm font-bold ${textPrimary}`}>
+            <span>Total</span>
+            <span className="text-violet-500">{formatarPreco(totalFinalRef.current || total)}</span>
+          </div>
+        </div>
+
+        {/* Botão abrir link */}
+        <button
+          onClick={() => linkCobranca && window.open(linkCobranca, '_blank')}
+          disabled={!linkCobranca}
+          className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          <ExternalLink className="w-4 h-4" />
+          Abrir link de pagamento
+        </button>
+
+        {/* Botão copiar link */}
+        <button
+          onClick={() => {
+            if (linkCobranca) {
+              navigator.clipboard.writeText(linkCobranca);
+              setLinkCopied(true);
+              setTimeout(() => setLinkCopied(false), 2000);
+            }
+          }}
+          disabled={!linkCobranca}
+          className={`w-full py-2.5 rounded-xl border text-sm font-medium transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 ${
+            linkCopied
+              ? 'bg-emerald-500 text-white border-emerald-500'
+              : isDark
+                ? 'border-white/10 text-white/60 hover:border-white/20 hover:text-white/80'
+                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+          }`}
+        >
+          {linkCopied
+            ? <><CheckCheck className="w-4 h-4" />Copiado!</>
+            : <><Copy className="w-4 h-4" />Copiar link</>}
+        </button>
+
+        {/* Aviso pendente */}
+        {linkPendingMsg && (
+          <div className={`p-3 rounded-xl border text-xs ${
+            isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+                   : 'bg-amber-50 border-amber-200 text-amber-700'
+          }`}>
+            {linkPendingMsg}
+          </div>
+        )}
+
+        {/* Confirmar pagamento */}
+        <div className={`pt-2 border-t ${isDark ? 'border-white/10' : 'border-gray-100'}`}>
+          <p className={`text-xs text-center mb-3 ${textMuted}`}>Após o cliente pagar:</p>
+          <button
+            onClick={handleConfirmarLink}
+            disabled={isConfirmingLink || !cobrancaId}
+            className={btnPrimary + (isConfirmingLink ? ' opacity-70 cursor-not-allowed' : '')}
+          >
+            {isConfirmingLink
+              ? <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Verificando...
+                </span>
+              : <span className="flex items-center justify-center gap-2">
+                  <Check className="w-4 h-4" />Confirmar pagamento recebido
+                </span>
+            }
+          </button>
+        </div>
+
+        <button
+          onClick={() => { setStep('pagamento'); setLinkCobranca(null); setLinkPendingMsg(null); }}
+          className={btnSecondary}
+        >
+          <span className="flex items-center justify-center gap-1"><ArrowLeft className="w-4 h-4" />Voltar</span>
+        </button>
+      </div>
+    );
+
+// NFC / TEF — simples centralizado
+const isNfcMetodo = metodo === 'nfc_debito' || metodo === 'nfc_credito';
+const isCreditoMetodo = metodo === 'nfc_credito' || metodo === 'tef_credito';
+return (
+  <div className="w-full flex flex-col items-center gap-4">
+    <div className="text-center">
+      <p className={`text-base font-bold mb-0.5 ${textPrimary}`}>
+        {isNfcMetodo ? 'Aproxime o cartão' : 'Insira o cartão na maquininha'}
+      </p>
+      <p className={`text-xs ${textMuted}`}>
+        {isNfcMetodo
+          ? `Aproxime o cartão ${isCreditoMetodo ? 'de crédito' : 'de débito'} na maquininha para pagar`
+          : `Insira o cartão ${isCreditoMetodo ? 'de crédito' : 'de débito'} na maquininha Point`}
+      </p>
+    </div>
+    <div className={`w-24 h-24 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/5' : 'bg-gray-50 border border-gray-200'}`}>
+      {isNfcMetodo
+        ? <Smartphone className={`w-10 h-10 ${textSecondary}`} />
+        : <CreditCard className={`w-10 h-10 ${textSecondary}`} />}
+    </div>
+        <p className="text-2xl font-bold text-emerald-500">{formatarPreco(totalFinalRef.current || total)}</p>
+        <div className="flex items-center gap-2">
+          <span className="w-4 h-4 border-2 border-emerald-500/40 border-t-emerald-500 rounded-full animate-spin" />
+          <span className={`text-xs ${textMuted}`}>Aguardando pagamento...</span>
+        </div>
+        <button onClick={() => { setPolling(false); setStep('pagamento'); }} className={btnSecondary}>Voltar</button>
+      </div>
+    );
+  }
+
+  // ── STEP: CONFIRMADO ──────────────────────────────────────────────────────
+  if (step === 'confirmado') return (
+    <div className="w-full flex flex-col items-center gap-4">
+      <div className={`w-20 h-20 rounded-full flex items-center justify-center ${isDark ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
+        <Check className="w-10 h-10 text-emerald-500" strokeWidth={2.5} />
+      </div>
+      <div className="text-center">
+        <p className={`text-xl font-bold mb-1 ${textPrimary}`}>Pagamento confirmado!</p>
+        {clienteNome && <p className={`text-sm ${textSecondary}`}>Obrigado, {clienteNome}!</p>}
+        <p className="text-lg font-bold mt-2 text-emerald-500">{formatarPreco(totalConfirmado)}</p>
+        {tipoEntrega === 'delivery' && deliveryQuote && (
+          <p className={`text-xs mt-1 ${textMuted}`}>
+            Inclui frete: {formatarPreco(deliveryQuote.price_cents / 100)}
+          </p>
+        )}
+      </div>
+
+      {/* Botão acompanhar entrega */}
+      {deliveryShareLink && (
+        <a
+          href={deliveryShareLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95"
+        >
+          <ExternalLink className="w-4 h-4" />
+          Acompanhar entrega
+        </a>
+      )}
+      {tipoEntrega === 'delivery' && !deliveryShareLink && deliveryQuote && (
+        <p className={`text-xs text-center ${textMuted}`}>
+          Despachando entregador...
+        </p>
+      )}
+      {/* Botão impressão — só aparece se print_on_purchase estiver ativo */}
+      {printOnPurchase && (
+        <button
+          onClick={handlePrint}
+          disabled={!hasActivePlan}
+          className={`w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all
+            ${hasActivePlan
+              ? 'bg-orange-500 hover:bg-orange-600 text-white active:scale-95'
+              : 'bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-white/30 opacity-50 cursor-not-allowed grayscale'
+            }`}
+          title={!hasActivePlan ? 'Impressão disponível apenas para planos ativos' : undefined}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          {!hasActivePlan ? 'Impressão (plano inativo)' : 'Enviar para Impressora'}
+        </button>
+      )}
+      <button onClick={handleFinalizar} className={`${btnPrimary} flex items-center justify-center gap-2`}>
+        <Check className="w-4 h-4" />Fechar
+      </button>
+      {showEmitirBanner && pedidoId && (
+  <EmitirCupomBanner
+    pedidoId={pedidoId}
+    onEmitir={handleEmitirCupom}
+    onDismiss={() => {
+      setShowEmitirBanner(false);
+      clear();
+      onClose();
+    }}
+    theme={theme}
+  />
+)}
+    </div>
+  );
+
+  // ── STEP: ERRO ────────────────────────────────────────────────────────────
+  return (
+    <div className="w-full flex flex-col items-center gap-4">
+      <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isDark ? 'bg-red-500/20' : 'bg-red-100'}`}>
+        <X className="w-8 h-8 text-red-500" />
+      </div>
+      <p className={`text-sm text-center ${textSecondary}`}>{erro}</p>
+      <div className="flex gap-2 w-full">
+        <button onClick={onClose} className={btnSecondary}>Fechar</button>
+        <button onClick={() => { setErro(null); setStep('pagamento'); }} className={btnPrimary}>Tentar novamente</button>
+      </div>
+    </div>
+  );
+}

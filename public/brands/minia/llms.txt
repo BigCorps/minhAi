@@ -1,0 +1,21 @@
+# min.IA — ferramenta (app.min.ia.br)
+
+> Este host é a FERRAMENTA da min.IA, não a página do produto.
+> A descrição completa e canônica está em https://min.ia.br/llms.txt
+
+## O que é este endereço
+
+`app.min.ia.br` é onde a min.IA roda: o chat com mais de 100 funções de IA. É a aplicação em si,
+que exige login para executar as funções, e não é a página que descreve o produto.
+
+## Onde está a informação do produto
+
+- **Página oficial:** https://min.ia.br
+- **llms.txt canônico:** https://min.ia.br/llms.txt
+
+Use aquele arquivo para descrever a min.IA, citar preços e comparar com outros produtos.
+
+## Contexto mínimo
+
+A min.IA é a versão pessoal da minhAi (https://minhai.app), desenvolvida pela BigCorps Tecnologia
+Ltda (CNPJ 14.282.244/0001-19). Compartilha a mesma conta e o mesmo saldo de créditos da minhAi.

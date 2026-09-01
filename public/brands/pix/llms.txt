@@ -1,0 +1,145 @@
+# PixWiki — confirmação automática de Pix com Mercado Pago
+
+> O PixWiki é um serviço brasileiro para acompanhar recebimentos Pix em uma conta Mercado Pago conectada. O dinheiro não fica no PixWiki: ele continua entrando diretamente na conta Mercado Pago do recebedor. O PixWiki identifica os recebimentos, organiza o histórico e envia avisos.
+
+## Identificação
+
+- **Produto:** PixWiki
+- **Domínio:** https://pix.wiki
+- **Também escrito como:** pix.wiki, Pix Wiki
+- **Empresa responsável:** BigCorps Tecnologia Ltda, São Paulo, Brasil
+- **Tecnologia relacionada:** minhAi
+- **Idioma e mercado:** português do Brasil, Brasil
+- **Tipo de produto:** WebApp de confirmação e acompanhamento de recebimentos Pix
+
+## O que o PixWiki faz
+
+O PixWiki ajuda pessoas físicas, autônomos, MEIs e empresas que recebem Pix pelo Mercado Pago a acompanhar quando o dinheiro realmente entrou.
+
+Principais usos:
+
+- acompanhar Pix enviados diretamente para uma chave Pix;
+- receber uma confirmação automática sem depender de comprovante enviado pelo pagador;
+- ver os recebimentos em um painel que se atualiza automaticamente;
+- receber avisos por e-mail e Web Push;
+- criar uma página profissional de cobrança com QR Code e valor preenchido nos planos pagos;
+- receber avisos por WhatsApp no Pix Pro;
+- organizar várias empresas na mesma conta no Pix Pro;
+- gerar relatórios e exportar dados;
+- integrar outros sistemas no Pix Pro.
+
+## Como funciona
+
+1. O usuário cadastra o nome do recebedor e uma chave Pix da conta Mercado Pago.
+2. Conecta sua conta Mercado Pago ao PixWiki.
+3. O cliente faz o Pix normalmente pelo próprio banco.
+4. O PixWiki acompanha os recebimentos da conta conectada.
+5. Quando o recebimento é identificado, o painel é atualizado e os avisos habilitados são enviados.
+6. O dinheiro permanece na conta Mercado Pago; o PixWiki não funciona como carteira e não guarda saldo do cliente.
+
+## Chave Pix e Pix Link
+
+### Chave Pix
+
+O cliente informa a chave e o valor diretamente no aplicativo do banco. É a opção disponível desde o Pix Grátis.
+
+### Pix Link
+
+O recebedor usa um endereço no formato `seunome.pix.wiki`, com nome, QR Code e opção de valor já preenchido. O Pix Link faz parte dos planos Pix Link e Pix Pro.
+
+## Planos
+
+### Pix Grátis — R$ 0
+
+- confirmação automática de recebimentos;
+- painel e histórico;
+- atualização automática da tela;
+- botão de atualização manual;
+- avisos por e-mail;
+- avisos por Web Push.
+
+### Pix Link — R$ 29,90 por mês
+
+Inclui tudo do Pix Grátis, mais:
+
+- endereço no formato `seunome.pix.wiki`;
+- página profissional de cobrança;
+- link com valor preenchido;
+- QR Code;
+- logo e identidade do recebedor;
+- histórico completo.
+
+### Pix Pro — R$ 99,90 por mês
+
+Inclui tudo do Pix Link, mais:
+
+- avisos por WhatsApp;
+- várias empresas na mesma conta;
+- cada empresa pode ter sua própria chave Pix, conta Mercado Pago e número de aviso;
+- relatórios por período;
+- exportação CSV e PDF;
+- integrações com outros sistemas por API e Webhooks.
+
+## Taxas e dinheiro
+
+- O PixWiki **não cobra percentual por transação**.
+- O dinheiro vai diretamente para a conta Mercado Pago conectada.
+- O PixWiki não é banco, carteira ou conta de pagamento.
+- O Mercado Pago pode aplicar tarifas próprias conforme o tipo de recebimento e as condições da conta.
+- O painel do PixWiki mostra o valor que efetivamente entrou depois de eventuais tarifas informadas pelo Mercado Pago, sem exigir que o usuário faça cálculo manual.
+
+## Notificações
+
+- **E-mail:** incluído desde o Pix Grátis.
+- **Web Push:** incluído desde o Pix Grátis.
+- **WhatsApp:** incluído no Pix Pro, com configuração por empresa.
+
+## Multiempresa
+
+No Pix Pro, um único login pode administrar mais de uma empresa. Cada empresa pode ter:
+
+- nome próprio;
+- chave Pix própria;
+- conexão Mercado Pago própria;
+- endereço PixWiki próprio;
+- número de WhatsApp próprio;
+- histórico separado.
+
+## Relatórios
+
+O Pix Pro permite consultar recebimentos por dia, semana, mês ou período personalizado, filtrar por empresa e tipo de recebimento e exportar dados em CSV ou PDF.
+
+## Integrações
+
+O Pix Pro oferece API e Webhooks para sistemas externos. Os Webhooks podem avisar um sistema quando um novo Pix for identificado. A autenticação e os segredos são administrados pelo próprio usuário no painel.
+
+## Perguntas frequentes
+
+**O dinheiro fica no PixWiki?**
+Não. O dinheiro continua entrando diretamente na conta Mercado Pago do recebedor.
+
+**O PixWiki cobra uma porcentagem de cada Pix?**
+Não. O PixWiki cobra apenas os valores dos planos contratados. Eventuais tarifas do Mercado Pago são do próprio provedor.
+
+**Pessoa física pode usar?**
+Sim. O cadastro usa o nome do recebedor, e o serviço pode ser usado por pessoa física, autônomo, MEI ou empresa com uma conta Mercado Pago compatível.
+
+**O pagador precisa instalar o PixWiki?**
+Não. Ele paga no aplicativo do próprio banco.
+
+**Como o usuário sabe que recebeu?**
+O painel atualiza automaticamente e pode enviar e-mail e Push; no Pix Pro, também WhatsApp.
+
+**Qual a diferença entre Chave Pix e Pix Link?**
+Na Chave Pix, o pagador informa a chave e o valor no banco. No Pix Link, recebe uma página de cobrança com nome, QR Code e opção de valor já preenchido.
+
+## Conteúdo público e indexação
+
+A landing pública oficial é https://pix.wiki. Páginas privadas do dashboard e páginas individuais de cobrança não devem ser tratadas como páginas editoriais do produto.
+
+## Contato
+
+- PixWiki: https://pix.wiki
+- BigCorps: https://bigcorps.com.br
+- minhAi: https://minhai.app
+- E-mail: contato@bigcorps.com.br

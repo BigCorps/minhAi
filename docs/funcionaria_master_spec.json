@@ -1,0 +1,584 @@
+{
+  "meta": {
+    "product": "FuncionarIA",
+    "domain": "funcionaria.net",
+    "version": "master-spec-2026-08-23",
+    "status": "product_architecture_locked_with_adjustable_pricing",
+    "source_of_truth": true
+  },
+  "brand": {
+    "institutional_slogan": "A funcionária IA que veste a camisa da sua empresa, no presencial e no online.",
+    "primary_cta": "Contrate sua FuncionarIA grátis agora mesmo.",
+    "supporting_message": "Escolha onde ela trabalha, o que ela sabe fazer e pague somente pelas habilidades que sua empresa precisa.",
+    "benefit_message": "Automatize tarefas repetitivas e deixe sua equipe focada no que realmente precisa de pessoas."
+  },
+  "business_model": {
+    "formula": "free_base + monthly_skills - quantity_discount + usage_credits",
+    "free_base": true,
+    "generative_ai_optional": true,
+    "voice_input_optional": true,
+    "hardware_required": false,
+    "hardware_rental_optional": true,
+    "cash_acceptor_removed": true
+  },
+  "free_tier": {
+    "name": "FuncionarIA Start",
+    "monthly_price_brl": 0,
+    "included": [
+      "visual_employee",
+      "company_subdomain",
+      "company_colors",
+      "shirt_primary_color",
+      "shirt_detail_color",
+      "company_logo_on_uniform",
+      "preset_or_uploaded_background",
+      "portrait_landscape_layout",
+      "basic_reception",
+      "company_information",
+      "contacts",
+      "address",
+      "business_hours",
+      "faq",
+      "touch_and_text",
+      "cached_spoken_answers",
+      "basic_mouth_animation",
+      "call_responsible",
+      "website_widget",
+      "basic_product_showcase"
+    ],
+    "excluded": [
+      "full_cart",
+      "orders",
+      "full_checkout",
+      "payments",
+      "full_queue",
+      "full_schedule",
+      "paid_channels",
+      "generative_ai",
+      "free_speech_recognition",
+      "official_fiscal_documents"
+    ]
+  },
+  "skill_pricing_bands_brl": [
+    29.9,
+    49.9,
+    79.9,
+    99.9
+  ],
+  "skills": [
+    {
+      "key": "basic_reception",
+      "name": "Recepção Básica",
+      "monthly_price_brl": 0,
+      "status": "included_free"
+    },
+    {
+      "key": "queue_service",
+      "name": "Fila & Atendimento",
+      "monthly_price_brl": 29.9,
+      "internal_functions": [
+        "modo_fila",
+        "fila_atendimento",
+        "gerar_senha",
+        "painel_fila",
+        "pre_atendimento",
+        "responder_pesquisa"
+      ]
+    },
+    {
+      "key": "pre_service_registration",
+      "name": "Pré-atendimento & Cadastro",
+      "monthly_price_brl": 29.9,
+      "internal_functions": [
+        "cadastro",
+        "pre_atendimento"
+      ]
+    },
+    {
+      "key": "instagram_facebook",
+      "name": "Instagram & Facebook",
+      "monthly_price_brl": 49.9
+    },
+    {
+      "key": "schedule",
+      "name": "Agenda & Reservas",
+      "monthly_price_brl": 49.9,
+      "internal_functions": [
+        "ver_agenda",
+        "horarios_disponiveis",
+        "agendar_compromisso",
+        "reagendar_compromisso",
+        "cancelar_agendamento",
+        "confirmar_presenca"
+      ]
+    },
+    {
+      "key": "mercado_livre",
+      "name": "Mercado Livre",
+      "monthly_price_brl": 49.9
+    },
+    {
+      "key": "sales_orders",
+      "name": "Vendas & Pedidos",
+      "monthly_price_brl": 79.9,
+      "internal_functions": [
+        "modo_venda",
+        "ver_produtos",
+        "procurar_produto",
+        "fazer_pedido",
+        "registrar_venda",
+        "meu_cupom"
+      ]
+    },
+    {
+      "key": "checkout_payments",
+      "name": "Caixa & Cobrança",
+      "monthly_price_brl": 79.9,
+      "internal_functions": [
+        "pix_generate",
+        "tef_debito",
+        "tef_credito",
+        "link_pagamento",
+        "impressao_recibo",
+        "chamar_gerente"
+      ],
+      "includes_existing_stage_2_checkout": true
+    },
+    {
+      "key": "fiscal",
+      "name": "Fiscal",
+      "monthly_price_brl": 99.9,
+      "document_types": [
+        "NFC-e",
+        "NF-e",
+        "NFS-e"
+      ],
+      "may_have_usage_fee": true
+    }
+  ],
+  "discounts": [
+    {
+      "skills_min": 1,
+      "skills_max": 1,
+      "discount_percent": 0
+    },
+    {
+      "skills_min": 2,
+      "skills_max": 3,
+      "discount_percent": 5
+    },
+    {
+      "skills_min": 4,
+      "skills_max": 5,
+      "discount_percent": 10
+    },
+    {
+      "skills_min": 6,
+      "skills_max": null,
+      "discount_percent": 15
+    }
+  ],
+  "dashboard": {
+    "permanent_sections": [
+      "Minha FuncionarIA",
+      "Habilidades",
+      "Conta e Créditos"
+    ],
+    "dynamic_sections_by_entitlement": true,
+    "backend_enforcement_required": true,
+    "examples": {
+      "basic_reception": [
+        "Atendimentos"
+      ],
+      "queue_service": [
+        "Fila"
+      ],
+      "schedule": [
+        "Agenda"
+      ],
+      "sales_orders": [
+        "Produtos",
+        "Pedidos"
+      ],
+      "checkout_payments": [
+        "Caixa",
+        "Recebimentos"
+      ],
+      "instagram_facebook": [
+        "Canais"
+      ],
+      "mercado_livre": [
+        "Mercado Livre"
+      ],
+      "fiscal": [
+        "Notas Fiscais"
+      ]
+    }
+  },
+  "visual_employee_v1": {
+    "pose": "front_facing_seated_behind_desk",
+    "headset": true,
+    "full_body_animation_required": false,
+    "customization": [
+      "shirt_primary_color",
+      "shirt_detail_color",
+      "company_logo",
+      "interface_primary_color",
+      "interface_secondary_color",
+      "preset_background",
+      "uploaded_background"
+    ],
+    "light_dark_toggle": false,
+    "mouth_animation": {
+      "technology": "Web Audio API amplitude based",
+      "states": [
+        "closed",
+        "small",
+        "medium",
+        "open"
+      ]
+    },
+    "optional_idle": [
+      "blink",
+      "micro_idle"
+    ]
+  },
+  "tts_voice": {
+    "touch_text_included": true,
+    "cached_output_voice_included": true,
+    "speech_recognition_uses_credits": true,
+    "dynamic_uncached_tts_may_use_credits": true,
+    "strategy": "pregenerate_and_cache_faq_and_standard_phrases_in_supabase_storage"
+  },
+  "routing_engine": {
+    "no_ai_order": [
+      "direct_action_or_code",
+      "deterministic_function",
+      "local_faq",
+      "skill_state_machine",
+      "optional_ai_fallback"
+    ],
+    "no_ai_fallback_message": "Não encontrei essa informação. Posso chamar um responsável para ajudar."
+  },
+  "credits": {
+    "single_wallet_name": "Créditos de uso",
+    "use_for": [
+      "generative_ai",
+      "speech_to_text",
+      "whatsapp_platform_cost",
+      "sms",
+      "paid_external_services",
+      "paid_queries",
+      "dynamic_tts_when_applicable"
+    ],
+    "do_not_use_for": [
+      "terminal_faq",
+      "widget_faq",
+      "zero_cost_deterministic_functions",
+      "cached_audio_playback",
+      "local_navigation",
+      "local_touch_text"
+    ]
+  },
+  "website_widget": {
+    "included_free": true,
+    "shared_configuration": true,
+    "inherits": [
+      "employee_visual",
+      "colors",
+      "faq",
+      "logo",
+      "skills",
+      "company"
+    ]
+  },
+  "channels": {
+    "presential": [
+      "tablet",
+      "computer",
+      "notebook",
+      "touch_all_in_one",
+      "touch_terminal",
+      "kiosk",
+      "touch_tv",
+      "PWA",
+      "TWA"
+    ],
+    "online": [
+      "subdomain",
+      "website_widget",
+      "Instagram",
+      "Facebook",
+      "WhatsApp",
+      "Mercado Livre"
+    ]
+  },
+  "whatsapp": {
+    "modes": [
+      {
+        "key": "redirect",
+        "name": "Direcionar para a FuncionarIA",
+        "positioning": "Mais econômico",
+        "behavior": "Primeira resposta direciona para empresa.funcionaria.net"
+      },
+      {
+        "key": "native",
+        "name": "Atender pelo WhatsApp",
+        "positioning": "Mais conveniente para o cliente",
+        "behavior": "FAQ, funções, fluxos e IA opcional dentro do WhatsApp"
+      },
+      {
+        "key": "hybrid",
+        "name": "Atendimento inteligente",
+        "positioning": "Recomendado",
+        "behavior": "FAQ simples no WhatsApp e fluxos complexos redirecionados para páginas da FuncionarIA"
+      }
+    ],
+    "pricing_assumption_oct_2026": "treat_as_variable_platform_cost_and_cover_with_credits",
+    "pending": "confirm official Brazil service message rates before locking credit conversion"
+  },
+  "cash_payment": {
+    "automatic_note_acceptor": false,
+    "human_assisted": true,
+    "flow": [
+      "customer_selects_cash",
+      "ask_exact_amount",
+      "if_change_needed_select_banknotes",
+      "calculate_change",
+      "notify_responsible",
+      "wait_for_human_confirmation",
+      "mark_paid"
+    ],
+    "banknotes_brl": [
+      2,
+      5,
+      10,
+      20,
+      50,
+      100,
+      200
+    ],
+    "notification_channels": [
+      "WhatsApp",
+      "email",
+      "SMS"
+    ],
+    "states": [
+      "aguardando_dinheiro",
+      "aguardando_troco",
+      "responsavel_notificado",
+      "pago"
+    ]
+  },
+  "human_assistance": {
+    "central_service": true,
+    "triggers": [
+      "customer_requested_manager",
+      "change_required",
+      "card_declined",
+      "terminal_problem",
+      "unresolved_question",
+      "order_pickup",
+      "human_service_required"
+    ],
+    "channels": [
+      "WhatsApp",
+      "email",
+      "SMS"
+    ]
+  },
+  "receipt_and_fiscal": {
+    "purchase_receipt_in_checkout_skill": true,
+    "printer_optional": true,
+    "qr_pdf_when_no_printer": true,
+    "official_fiscal_separate_skill": true,
+    "avoid_term": "recibo fiscal quando não houver documento fiscal oficial"
+  },
+  "hardware": {
+    "customer_owned_supported": true,
+    "rental_optional": true,
+    "rental_is_separate_from_saas": true
+  },
+  "onboarding": [
+    {
+      "step": 1,
+      "name": "Onde ela vai trabalhar?",
+      "options": [
+        "Presencial",
+        "Online",
+        "Presencial e online"
+      ]
+    },
+    {
+      "step": 2,
+      "name": "Qual é o seu negócio?",
+      "purpose": "recomendar habilidades"
+    },
+    {
+      "step": 3,
+      "name": "O que ela deve fazer?",
+      "show_prices": false
+    },
+    {
+      "step": 4,
+      "name": "Vista sua FuncionarIA",
+      "preview_live": true
+    },
+    {
+      "step": 5,
+      "name": "Como ela conversa?",
+      "options": [
+        "toque",
+        "texto",
+        "voz por créditos",
+        "IA por créditos"
+      ]
+    },
+    {
+      "step": 6,
+      "name": "Onde vai usar?",
+      "options": [
+        "meu equipamento",
+        "alugar terminal"
+      ]
+    },
+    {
+      "step": 7,
+      "name": "Revisão",
+      "show_prices": true
+    }
+  ],
+  "existing_stages": {
+    "stage_1": "Brand/TWA/Login já criado",
+    "stage_2": "Checkout por código já criado e incorporado à habilidade Caixa & Cobrança"
+  },
+  "roadmap": [
+    {
+      "stage": 3,
+      "name": "Arquitetura FuncionarIA 2.0",
+      "scope": [
+        "skills",
+        "pricing",
+        "discounts",
+        "entitlements",
+        "subscriptions",
+        "channels",
+        "onboarding",
+        "dynamic_dashboard"
+      ]
+    },
+    {
+      "stage": 4,
+      "name": "Funcionária visual V1",
+      "scope": [
+        "character",
+        "uniform",
+        "logo",
+        "backgrounds",
+        "colors",
+        "responsive_layout",
+        "mouth_animation"
+      ]
+    },
+    {
+      "stage": 5,
+      "name": "Motor sem IA",
+      "scope": [
+        "faq_first",
+        "deterministic_functions",
+        "state_machines",
+        "human_fallback",
+        "cached_tts"
+      ]
+    },
+    {
+      "stage": 6,
+      "name": "Canais online",
+      "scope": [
+        "widget",
+        "instagram",
+        "facebook",
+        "whatsapp",
+        "mercado_livre"
+      ]
+    },
+    {
+      "stage": 7,
+      "name": "Créditos IA/Voz/Canais",
+      "scope": [
+        "single_wallet",
+        "ai",
+        "stt",
+        "whatsapp",
+        "sms",
+        "external_costs",
+        "telemetry"
+      ]
+    },
+    {
+      "stage": 8,
+      "name": "Painel e gestão",
+      "scope": [
+        "dynamic_dashboard",
+        "skill_purchase",
+        "subscription_update",
+        "receipts",
+        "fiscal",
+        "terminal_option"
+      ]
+    },
+    {
+      "stage": "final",
+      "name": "Consolidação",
+      "scope": [
+        "full_zip",
+        "consolidated_sql",
+        "consolidated_edges",
+        "application_order",
+        "full_test"
+      ]
+    }
+  ],
+  "delivery_standard": {
+    "per_stage": [
+      "application_zip_with_complete_files_and_correct_folders",
+      "separate_sql_for_manual_supabase_execution",
+      "complete_edge_function_files_for_manual_deploy",
+      "short_change_summary"
+    ],
+    "testing_strategy": "no_intermediate_functional_tests; final consolidated application and test"
+  },
+  "locked_decisions": {
+    "name": "FuncionarIA",
+    "domain": "funcionaria.net",
+    "free_base": true,
+    "skills_model": true,
+    "credits_model": true,
+    "generative_ai_optional": true,
+    "voice_input_optional": true,
+    "cached_output_voice_included": true,
+    "widget_free": true,
+    "dynamic_dashboard": true,
+    "company_colored_slug": true,
+    "light_dark_toggle": false,
+    "customer_hardware_supported": true,
+    "terminal_rental_optional": true,
+    "cash_acceptor_removed": true,
+    "human_cash_change_flow": true,
+    "fiscal_separate": true,
+    "stage_2_checkout_preserved": true,
+    "final_test_only": true
+  },
+  "adjustable": [
+    "final_skill_prices",
+    "final_discount_percentages",
+    "terminal_rental_price",
+    "credit_policy",
+    "whatsapp_credit_conversion_after_official_brazil_rate",
+    "future_character_count",
+    "final_skill_names",
+    "fiscal_usage_pricing",
+    "free_showcase_limits",
+    "free_tier_fair_use_limits"
+  ]
+}

@@ -1,0 +1,129 @@
+.wz-interacoes {
+  display: grid;
+  gap: 14px;
+}
+
+.wz-interacao-card {
+  border: 1px solid rgba(192, 96, 120, .20);
+  border-radius: 18px;
+  padding: 16px;
+  background: #fff;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.wz-interacao-card.ativo {
+  border-color: rgba(192, 96, 120, .52);
+  box-shadow: 0 0 0 3px rgba(192, 96, 120, .06);
+}
+
+.wz-interacao-topo {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.wz-interacao-icone {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #fdf0f3;
+  color: #a04a63;
+}
+
+.wz-interacao-titulos {
+  min-width: 0;
+}
+
+.wz-interacao-titulos strong {
+  display: block;
+  color: #40232c;
+  font-size: .94rem;
+}
+
+.wz-interacao-titulos p,
+.wz-interacao-detalhe {
+  margin: 4px 0 0;
+  color: #7c6a70;
+  font-size: .75rem;
+  line-height: 1.5;
+}
+
+.wz-interacao-detalhe {
+  margin: 10px 0 0 54px;
+}
+
+.wz-interacao-toggle {
+  border: 1px solid rgba(192, 96, 120, .32);
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #fff;
+  color: #a04a63;
+  font-size: .7rem;
+  font-weight: 700;
+}
+
+.wz-interacao-toggle.ativo {
+  background: #c06078;
+  color: #fff;
+  border-color: #c06078;
+}
+
+.wz-interacao-campos {
+  display: grid;
+  gap: 11px;
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(192, 96, 120, .14);
+}
+
+.wz-interacao-campos label {
+  display: grid;
+  gap: 6px;
+}
+
+.wz-interacao-campos label > span {
+  color: #7c5560;
+  font-size: .72rem;
+  font-weight: 600;
+}
+
+.wz-interacao-campos input,
+.wz-interacao-campos textarea {
+  width: 100%;
+  border: 1px solid rgba(192, 96, 120, .28);
+  border-radius: 11px;
+  padding: 10px 12px;
+  background: #fffafb;
+  color: #40232c;
+  font: inherit;
+  font-size: .82rem;
+  outline: none;
+}
+
+.wz-interacao-campos textarea {
+  resize: vertical;
+}
+
+.wz-interacao-campos input:focus,
+.wz-interacao-campos textarea:focus {
+  border-color: #c06078;
+  box-shadow: 0 0 0 3px rgba(192, 96, 120, .08);
+}
+
+@media (max-width: 460px) {
+  .wz-interacao-topo {
+    grid-template-columns: 42px 1fr;
+  }
+
+  .wz-interacao-toggle {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .wz-interacao-detalhe {
+    margin-left: 0;
+  }
+}

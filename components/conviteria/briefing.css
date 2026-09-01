@@ -1,0 +1,734 @@
+/* ==========================================================================
+   BRIEFING IA
+   ========================================================================== */
+
+.cv-briefing-box {
+  position: relative;
+  z-index: 1;
+  width: min(calc(100vw - 32px), 780px);
+  margin: 0 auto;
+  text-align: center;
+}
+
+.cv-briefing-campo-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.cv-briefing-box textarea {
+  display: block;
+  width: 100%;
+  height: 108px;
+  resize: none;
+  overflow-y: auto;
+  border: 1px solid rgba(192, 96, 120, .25);
+  border-radius: 18px;
+  padding: .9rem 1rem 1.45rem;
+  outline: none;
+  background: rgba(255, 255, 255, .96);
+  color: #40232c;
+  box-shadow: 0 12px 34px rgba(90, 45, 58, .08);
+  backdrop-filter: blur(8px);
+  font: inherit;
+  font-size: .88rem;
+  line-height: 1.48;
+  text-align: left;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.cv-briefing-box textarea::placeholder {
+  color: #9d8790;
+}
+
+.cv-briefing-box textarea:focus {
+  border-color: #c06078;
+  background: #fff;
+  box-shadow:
+    0 12px 34px rgba(90, 45, 58, .08),
+    0 0 0 3px rgba(192, 96, 120, .09);
+}
+
+.cv-briefing-contador {
+  position: absolute;
+  right: .82rem;
+  bottom: .45rem;
+  color: #aa929a;
+  font-size: .64rem;
+  pointer-events: none;
+}
+
+.cv-briefing-modo-acoes {
+  width: min(calc(100vw - 32px), 720px);
+}
+
+.cv-briefing-exemplos {
+  margin-top: .65rem;
+  text-align: center;
+}
+
+.cv-briefing-exemplos > span {
+  display: none;
+}
+
+.cv-briefing-exemplos > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .36rem;
+}
+
+.cv-briefing-exemplos button {
+  border: 1px solid rgba(192, 96, 120, .23);
+  border-radius: 999px;
+  padding: .34rem .62rem;
+  background: rgba(255, 255, 255, .88);
+  color: #7c5560;
+  font-size: .67rem;
+  line-height: 1.1;
+  transition: .15s ease;
+}
+
+.cv-briefing-exemplos button:hover {
+  border-color: #c06078;
+  color: #a04a63;
+  background: #fff;
+}
+
+.cv-briefing-texto-pronto {
+  margin: .7rem 0 0;
+  color: #7c5560;
+  font-size: .72rem;
+}
+
+.cv-briefing-criar,
+.cv-briefing-continuar {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  margin-top: .68rem;
+  border: 0;
+  border-radius: 999px;
+  padding: .7rem 1.45rem;
+  background: #d86090;
+  color: #fff;
+  font-size: .84rem;
+  font-weight: 750;
+  box-shadow: 0 8px 22px rgba(216, 96, 144, .22);
+  transition: .18s ease;
+}
+
+.cv-briefing-continuar {
+  width: 100%;
+}
+
+.cv-briefing-criar:hover:not(:disabled),
+.cv-briefing-continuar:hover {
+  filter: brightness(.96);
+  transform: translateY(-1px);
+}
+
+.cv-briefing-criar:disabled {
+  opacity: .7;
+  cursor: wait;
+}
+
+.cv-briefing-erro {
+  width: min(100%, 560px);
+  margin: .5rem auto 0;
+  padding: .5rem .7rem;
+  border-radius: 10px;
+  background: #fff0f1;
+  color: #a53442;
+  font-size: .7rem;
+}
+
+.cv-briefing-pensando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  margin-top: .4rem;
+  color: #7c5560;
+  text-align: center;
+  font-size: .65rem;
+}
+
+.cv-briefing-pensando span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d86090;
+  animation: cv-briefing-pulso 1s ease-in-out infinite alternate;
+}
+
+@keyframes cv-briefing-pulso {
+  from { opacity: .25; transform: scale(.75); }
+  to { opacity: 1; transform: scale(1.2); }
+}
+
+
+/* Linha principal da landing: 3 ações lado a lado. */
+.cv-briefing-botoes-landing {
+  width: min(100%, 680px);
+  margin: .72rem auto 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 1.45fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: .55rem;
+}
+
+.cv-briefing-botao-lateral,
+.cv-briefing-criar-landing {
+  min-height: 46px;
+  margin: 0;
+  border-radius: 999px;
+  padding: .68rem .9rem;
+  font-size: .78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.cv-briefing-botao-lateral {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(192, 96, 120, .28);
+  background: rgba(255, 255, 255, .94);
+  color: #7c5560;
+  box-shadow: 0 7px 20px rgba(90, 45, 58, .05);
+  text-decoration: none;
+  transition: .18s ease;
+}
+
+.cv-briefing-botao-lateral:hover {
+  border-color: #c06078;
+  color: #a04a63;
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.cv-briefing-criar-landing {
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .cv-briefing-botoes-landing {
+    width: min(82%, 300px);
+    margin-top: .65rem;
+    grid-template-columns: 1fr;
+    gap: .42rem;
+  }
+
+  .cv-briefing-botao-lateral,
+  .cv-briefing-criar-landing {
+    width: 100%;
+    min-height: 40px;
+    padding: .56rem .85rem;
+    font-size: .72rem;
+    white-space: normal;
+    line-height: 1.15;
+  }
+
+  .cv-briefing-criar-landing {
+    order: 1;
+    gap: .36rem;
+  }
+
+  .cv-briefing-botoes-landing > .cv-briefing-botao-lateral:last-child {
+    order: 2;
+  }
+
+  .cv-briefing-botoes-landing > .cv-briefing-botao-lateral:first-child {
+    order: 3;
+  }
+
+  .cv-briefing-criar-landing svg {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+  }
+}
+
+/* ==========================================================================
+   LANDING — PRIMEIRA DOBRA
+   Mantém presença visual estável em 100% de zoom.
+   ========================================================================== */
+
+.cv-landing {
+  position: relative;
+  min-height: 100svh;
+}
+
+.cv-landing-hero {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  min-height: 640px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding:
+    max(14px, env(safe-area-inset-top))
+    18px
+    max(14px, env(safe-area-inset-bottom));
+}
+
+.cv-landing-hero-conteudo {
+  width: 100%;
+  max-width: 980px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  text-align: center;
+}
+
+.cv-landing-logo {
+  width: auto;
+  height: 104px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  margin-bottom: 2px;
+}
+
+.cv-landing-hero h1 {
+  max-width: 900px;
+  margin: 0;
+  color: #40232c;
+  font-size: 3.65rem;
+  line-height: .98;
+  font-weight: 780;
+  letter-spacing: -.045em;
+}
+
+.cv-landing-hero h1 span {
+  display: block;
+  margin-top: .06em;
+  color: #d86090;
+}
+
+.cv-landing-subtitulo {
+  width: min(calc(100vw - 32px), 720px);
+  margin: 2px 0 4px;
+  color: #6b6b73;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.cv-landing-acoes-secundarias {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  margin-top: -2px;
+  color: #9b7d87;
+  font-size: .72rem;
+}
+
+.cv-landing-acoes-secundarias a {
+  color: #7c5560;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.cv-landing-acoes-secundarias a:hover {
+  color: #a04a63;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Notebook/telas mais baixas: reduz só o necessário, sem efeito "miniatura". */
+@media (max-height: 760px) and (min-width: 601px) {
+  .cv-landing-hero {
+    min-height: 590px;
+  }
+
+  .cv-landing-hero-conteudo {
+    gap: 8px;
+  }
+
+  .cv-landing-logo {
+    height: 82px;
+  }
+
+  .cv-landing-hero h1 {
+    font-size: 3rem;
+  }
+
+  .cv-landing-subtitulo {
+    font-size: .88rem;
+    margin-bottom: 2px;
+  }
+
+  .cv-landing-hero .cv-briefing-box textarea {
+    height: 86px;
+    font-size: .8rem;
+  }
+
+  .cv-landing-hero .cv-briefing-exemplos {
+    margin-top: .48rem;
+  }
+
+  .cv-landing-hero .cv-briefing-exemplos button {
+    padding: .27rem .52rem;
+    font-size: .62rem;
+  }
+
+  .cv-landing-hero .cv-briefing-criar {
+    min-height: 42px;
+    margin-top: .5rem;
+    padding: .58rem 1.25rem;
+    font-size: .78rem;
+  }
+
+  .cv-landing-acoes-secundarias {
+    font-size: .66rem;
+  }
+}
+
+/* Só em alturas realmente extremas reduz mais. */
+@media (max-height: 610px) and (min-width: 601px) {
+  .cv-landing-logo {
+    height: 64px;
+  }
+
+  .cv-landing-hero h1 {
+    font-size: 2.5rem;
+  }
+
+  .cv-landing-subtitulo {
+    font-size: .78rem;
+  }
+
+  .cv-landing-hero .cv-briefing-box textarea {
+    height: 72px;
+  }
+
+  .cv-landing-hero .cv-briefing-exemplos button {
+    font-size: .58rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .cv-landing-hero {
+    height: 100svh;
+    min-height: 620px;
+    padding-left: .75rem;
+    padding-right: .75rem;
+  }
+
+  .cv-landing-hero-conteudo {
+    gap: 9px;
+  }
+
+  .cv-landing-logo {
+    height: 82px;
+  }
+
+  .cv-landing-hero h1 {
+    max-width: 94vw;
+    font-size: clamp(2.25rem, 10.5vw, 3rem);
+    line-height: 1;
+  }
+
+  .cv-landing-subtitulo {
+    width: min(94vw, 520px);
+    font-size: .88rem;
+    line-height: 1.35;
+  }
+
+  .cv-briefing-box {
+    width: min(94vw, 780px);
+  }
+
+  .cv-landing-hero .cv-briefing-box textarea {
+    height: 94px;
+    padding: .72rem .82rem 1.35rem;
+    border-radius: 16px;
+    font-size: .78rem;
+  }
+
+  .cv-briefing-exemplos {
+    margin-top: .5rem;
+  }
+
+  .cv-briefing-exemplos button {
+    padding: .28rem .5rem;
+    font-size: .61rem;
+  }
+
+  .cv-briefing-criar {
+    min-height: 44px;
+    margin-top: .55rem;
+    padding: .62rem 1.15rem;
+    font-size: .78rem;
+  }
+
+  .cv-landing-acoes-secundarias {
+    flex-wrap: wrap;
+    font-size: .66rem;
+  }
+}
+
+/* ==========================================================================
+   CONTEÚDO APÓS A ROLAGEM
+   ========================================================================== */
+
+.cv-landing-abaixo {
+  position: relative;
+  min-height: 100svh;
+  padding: clamp(3.5rem, 8vw, 6.5rem) 1rem 2rem;
+  background: rgba(255, 255, 255, .80);
+  border-top: 1px solid rgba(192, 96, 120, .12);
+  backdrop-filter: blur(6px);
+}
+
+.cv-landing-beneficios-cabecalho {
+  width: min(100%, 780px);
+  margin: 0 auto clamp(1.8rem, 5vw, 3rem);
+  text-align: center;
+}
+
+.cv-landing-beneficios-cabecalho > span {
+  color: #a04a63;
+  font-size: .74rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.cv-landing-beneficios-cabecalho h2 {
+  margin: .5rem 0 0;
+  color: #40232c;
+  font-size: clamp(1.7rem, 4vw, 2.7rem);
+  line-height: 1.08;
+  letter-spacing: -.035em;
+}
+
+.cv-landing-beneficios-grid {
+  width: min(100%, 1000px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.cv-landing-beneficios-grid article {
+  min-height: 230px;
+  padding: 1.5rem;
+  /* Coluna centralizada. `text-align` sozinho não resolveria: o ícone é um
+     bloco de 46px, não texto, e bloco ignora text-align do pai. É o
+     `align-items` que o centraliza, tratando-o como item de flex. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border: 1px solid rgba(192, 96, 120, .18);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 10px 35px rgba(74, 41, 51, .06);
+}
+
+.cv-landing-beneficio-icone {
+  width: 46px;
+  height: 46px;
+  /* Agora que o article é flex column, sem `flex-shrink: 0` o quadrado do
+     ícone achata verticalmente quando o texto do card é mais longo. */
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  margin-bottom: 1rem;
+  border-radius: 15px;
+  background: #fdf0f3;
+  color: #a04a63;
+}
+
+.cv-landing-beneficios-grid h3 {
+  margin: 0;
+  color: #40232c;
+  font-size: 1.05rem;
+}
+
+.cv-landing-beneficios-grid p {
+  margin: .65rem 0 0;
+  /* Emparelha o comprimento das linhas: texto centralizado com linhas de
+     larguras muito diferentes fica visualmente instável. */
+  max-width: 30ch;
+  color: #74636a;
+  font-size: .82rem;
+  line-height: 1.65;
+}
+
+.cv-landing-pos-beneficios {
+  display: grid;
+  place-items: center;
+  gap: 1.1rem;
+  margin-top: clamp(2rem, 5vw, 3.5rem);
+}
+
+@media (max-width: 760px) {
+  .cv-landing-beneficios-grid {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+  }
+
+  .cv-landing-beneficios-grid article {
+    min-height: 0;
+  }
+}
+
+/* ==========================================================================
+   RESUMO DO BRIEFING AO ENTRAR NO WIZARD
+   ========================================================================== */
+
+.cv-briefing-resumo-fundo {
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 1rem;
+  background: rgba(50, 31, 37, .56);
+  backdrop-filter: blur(6px);
+}
+
+.cv-briefing-resumo {
+  position: relative;
+  width: min(100%, 620px);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  border: 1px solid #efd7df;
+  border-radius: 24px;
+  padding: 1.5rem;
+  background: #fff;
+  box-shadow: 0 30px 80px rgba(43, 25, 31, .25);
+  color: #40232c;
+}
+
+.cv-briefing-resumo-fechar {
+  position: absolute;
+  top: .9rem;
+  right: .9rem;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #f8f4f5;
+  color: #7c5560;
+}
+
+.cv-briefing-resumo-icone {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  margin-bottom: .8rem;
+  border-radius: 16px;
+  background: #fdf0f3;
+  color: #c06078;
+}
+
+.cv-briefing-resumo h2 {
+  margin: 0;
+  font-size: 1.55rem;
+  letter-spacing: -.025em;
+}
+
+.cv-briefing-resumo-mensagem {
+  margin: .55rem 0 1.25rem;
+  color: #7c5560;
+  font-size: .9rem;
+  line-height: 1.55;
+}
+
+.cv-briefing-resumo section {
+  margin-top: 1rem;
+}
+
+.cv-briefing-resumo h3 {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  margin: 0 0 .55rem;
+  color: #5d3c46;
+  font-size: .78rem;
+  font-weight: 750;
+}
+
+.cv-briefing-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.cv-briefing-chips span {
+  padding: .42rem .65rem;
+  border: 1px solid #dcebdc;
+  border-radius: 999px;
+  background: #f2faf3;
+  color: #3b7147;
+  font-size: .7rem;
+  font-weight: 650;
+}
+
+.cv-briefing-chips-sugestao span {
+  border-color: #ead8f1;
+  background: #faf5fc;
+  color: #775382;
+}
+
+.cv-briefing-pendencias {
+  display: grid;
+  gap: .35rem;
+  margin: 0;
+  padding-left: 1.15rem;
+  color: #7c5560;
+  font-size: .76rem;
+  line-height: 1.45;
+}
+
+.cv-briefing-especial {
+  margin-top: 1.1rem;
+  padding: .9rem;
+  border: 1px dashed #e0bdc7;
+  border-radius: 14px;
+  background: #fff9fb;
+  color: #6d4b55;
+  font-size: .75rem;
+  line-height: 1.45;
+}
+
+.cv-briefing-especial strong {
+  display: block;
+  color: #a04a63;
+}
+
+.cv-briefing-especial ul {
+  margin: .45rem 0;
+  padding-left: 1.1rem;
+}
+
+.cv-briefing-especial p {
+  margin: .35rem 0 0;
+}
+
+.cv-briefing-revisar {
+  margin: 1.2rem 0 0;
+  padding-top: .9rem;
+  border-top: 1px solid #f0e4e8;
+  color: #927a82;
+  text-align: center;
+  font-size: .7rem;
+}
+
+@media (max-width: 560px) {
+  .cv-briefing-resumo {
+    padding: 1.2rem;
+    border-radius: 20px;
+  }
+}

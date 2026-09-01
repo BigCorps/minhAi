@@ -1,0 +1,727 @@
+// app/dashboard/assistentes/create/page.tsx
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft, Save, Loader2, Globe, Zap, Lock, CheckCircle, XCircle, AlertCircle, Sparkles, Bot, ExternalLink as ExtLink } from 'lucide-react';
+import { createClient } from '@/lib/supabase-browser';
+
+/* ─────────────────────────────────────────────────────────
+   Sub-componente: seleção de WebApp no formulário de criação
+───────────────────────────────────────────────────────── */
+function WebAppSection({
+  hasConsultingPlan,
+  hasActiveWebapp, // <-- NOVA PROP
+  wantWebapp,
+  onToggle,
+}: {
+  hasConsultingPlan: boolean;
+  hasActiveWebapp: boolean; // <-- NOVA PROP
+  wantWebapp: boolean;
+  onToggle: (v: boolean) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+        WebApp com subdomínio próprio
+      </label>
+      <div className="grid grid-cols-2 gap-4">
+
+        {/* Opção: Ativar WebApp */}
+        {hasActiveWebapp ? (
+          /* Já possui WebApp: card desabilitado com aviso */
+          <div className="flex items-start p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] opacity-70">
+            <Globe className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-gray-400" />
+            <div className="flex-1">
+              <p className="font-bold text-sm text-gray-500 dark:text-gray-400">Ativar WebApp</p>
+              <p className="text-[10px] text-gray-400 dark:text-white/30 mt-0.5 leading-tight">
+                Limite de 1 por conta. Você já possui um WebApp ativo.
+              </p>
+            </div>
+          </div>
+        ) : hasConsultingPlan ? (
+          /* Com plano e sem webapp: botão normal */
+          <button
+            type="button"
+            onClick={() => onToggle(true)}
+            className={`flex items-start p-4 rounded-xl border-2 transition-all text-left ${
+              wantWebapp
+                ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10'
+                : 'border-gray-200 dark:border-white/10 bg-transparent hover:border-amber-400/50'
+            }`}
+          >
+            <Globe className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${wantWebapp ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`} />
+            <div>
+              <p className={`font-bold text-sm ${wantWebapp ? 'text-amber-700 dark:text-amber-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                Ativar WebApp
+              </p>
+              <p className="text-[10px] opacity-70 mt-0.5 leading-tight">
+                Configurar subdomínio após criar
+              </p>
+            </div>
+          </button>
+        ) : (
+          /* Sem plano: card desabilitado com upsell */
+          <div className="flex items-start p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] opacity-70">
+            <Globe className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-gray-400" />
+            <div className="flex-1">
+              <p className="font-bold text-sm text-gray-500 dark:text-gray-400">Ativar WebApp</p>
+              <p className="text-[10px] text-gray-400 dark:text-white/30 mt-0.5 leading-tight">
+                Requer Plano Consulting
+              </p>
+              <Link
+                href="/dashboard/credits"
+                className="mt-1.5 inline-flex items-center text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Ver planos
+                <ExtLink className="w-2.5 h-2.5 ml-1" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Opção: Sem WebApp */}
+        <button
+          type="button"
+          onClick={() => onToggle(false)}
+          className={`flex items-start p-4 rounded-xl border-2 transition-all text-left ${
+            !wantWebapp
+              ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10'
+              : 'border-gray-200 dark:border-white/10 bg-transparent hover:border-blue-400/50'
+          }`}
+        >
+          <Lock className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${!wantWebapp ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
+          <div>
+            <p className={`font-bold text-sm ${!wantWebapp ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>
+              Continuar sem WebApp
+            </p>
+            <p className="text-[10px] opacity-70 mt-0.5 leading-tight">
+              Pode ativar depois se quiser
+            </p>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function NovaEmpresaPage() {
+  const router = useRouter();
+
+  // ── Demo (Passo 4 do funil /lead) ─────────────────────────
+  // Token lido do sessionStorage (gravado por app/cadastro/page.tsx).
+  // Decisão confirmada: não propaga segment_key para o onboarding de
+  // 7 passos — só pré-popula o nome aqui, neste formulário.
+  const [demoToken, setDemoToken] = useState<string | null>(null);
+  const [demoNomeNegocio, setDemoNomeNegocio] = useState<string | null>(null);
+  const [demoPreenchido, setDemoPreenchido] = useState(false);
+
+  // ── Form state ───────────────────────────────────────────
+  const [nome, setNome] = useState('');
+  const [slugValue, setSlugValue] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [wakeWord, setWakeWord] = useState('');
+  const [greetingMessage, setGreetingMessage] = useState('Olá! Como posso ajudar você hoje?');
+  const [isPublic, setIsPublic] = useState(true);
+
+  // ── Tipo do assistente ───────────────────────────────────
+  const [assistantType, setAssistantType] = useState<'smart' | 'vendas'>('vendas');
+
+  // ── WebApp state ─────────────────────────────────────────
+  const [wantWebapp, setWantWebapp] = useState(false);
+  const [hasConsultingPlan, setHasConsultingPlan] = useState(false);
+  const [hasActiveWebapp, setHasActiveWebapp] = useState(false);
+
+  // ── Slug validation ──────────────────────────────────────
+  const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ── Submit state ─────────────────────────────────────────
+  const [loading, setLoading] = useState(false);
+  const [submitMode, setSubmitMode] = useState<'manual' | 'ia' | 'ia_webapp' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // ── Ler token de demo (sessionStorage) e pré-popular nome ─
+  useEffect(() => {
+    let token: string | null = null;
+    try {
+      token = sessionStorage.getItem('minhai:demo_token');
+    } catch {
+      // sessionStorage indisponível — segue sem pré-preenchimento.
+    }
+    if (!token) return;
+
+    setDemoToken(token);
+
+    fetch(`/api/demo/${token}`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (data?.nomeNegocio) {
+          setDemoNomeNegocio(data.nomeNegocio);
+          setNome(data.nomeNegocio);
+          setSlugValue(generateSlug(data.nomeNegocio));
+          setDemoPreenchido(true);
+        }
+      })
+      .catch(() => {
+        // Demo expirada ou erro — segue sem pré-preenchimento, sem
+        // bloquear o cadastro normal.
+      });
+  }, []);
+
+  // ── Verificar plano Consulting e WebApp Existente ───────────
+  useEffect(() => {
+    async function checkPlanAndWebapp() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 1. Verificar se já existe webapp ativo em alguma empresa deste usuário
+      const { data: userCompanies } = await supabase
+        .from('companies')
+        .select('webapp_domain')
+        .eq('user_id', user.id);
+        
+      // Se houver alguma empresa com o campo webapp_domain preenchido, marca como true
+      const hasWebapp = userCompanies?.some(c => c.webapp_domain && c.webapp_domain.trim() !== '');
+      if (hasWebapp) {
+        setHasActiveWebapp(true);
+      }
+
+      // 2. Verificar plano
+      const { data: credits } = await supabase
+        .from('user_credits')
+        .select('has_active_plan, plan_expires_at, active_plan_id, active_plan_name')
+        .eq('user_id', user.id)
+        .single();
+
+      const planOk =
+        credits?.has_active_plan &&
+        credits?.plan_expires_at &&
+        new Date(credits.plan_expires_at) > new Date();
+
+      if (!planOk || !credits?.active_plan_id) return;
+
+      const { data: pkg } = await supabase
+        .from('credits_packages')
+        .select('has_consultoria')
+        .eq('id', credits.active_plan_id)
+        .single();
+
+      setHasConsultingPlan(pkg?.has_consultoria === true);
+    }
+    checkPlanAndWebapp();
+  }, []);
+
+  // ── Verificar plano Consulting ───────────────────────────
+  useEffect(() => {
+    async function checkPlan() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: credits } = await supabase
+        .from('user_credits')
+        .select('has_active_plan, plan_expires_at, active_plan_id, active_plan_name')
+        .eq('user_id', user.id)
+        .single();
+
+      const planOk =
+        credits?.has_active_plan &&
+        credits?.plan_expires_at &&
+        new Date(credits.plan_expires_at) > new Date();
+
+      if (!planOk || !credits?.active_plan_id) return;
+
+      const { data: pkg } = await supabase
+        .from('credits_packages')
+        .select('has_consultoria')
+        .eq('id', credits.active_plan_id)
+        .single();
+
+      setHasConsultingPlan(pkg?.has_consultoria === true);
+    }
+    checkPlan();
+  }, []);
+
+  // ── Slug check ───────────────────────────────────────────
+  const SLUGS_RESERVADOS = new Set([
+    'www', 'app', 'api', 'admin', 'mail', 'smtp',
+    'dashboard', 'login', 'cadastro',
+    'precos', 'sobre', 'contato', 'docs', 'blog',
+    'para', 'api',
+    'suporte',
+    'pix', 'ia', 'vendas', 'fila', 'cliente', 'link', 'atendimento',
+  ]);
+
+  const checkSlugAvailability = async (slug: string) => {
+    if (!slug || slug.length < 3) { setSlugStatus('idle'); setSlugError(null); return; }
+
+    if (SLUGS_RESERVADOS.has(slug.toLowerCase())) {
+      setSlugStatus('taken');
+      setSlugError('Este slug é reservado pelo sistema. Escolha outro.');
+      return;
+    }
+
+    setSlugStatus('checking');
+    setSlugError(null);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('companies').select('id').eq('slug', slug).single();
+      if (error && error.code !== 'PGRST116') {
+        setSlugStatus('idle'); setSlugError('Erro ao verificar disponibilidade'); return;
+      }
+      if (data) { setSlugStatus('taken'); setSlugError('Este slug já está em uso. Escolha outro.'); }
+      else { setSlugStatus('available'); setSlugError(null); }
+    } catch { setSlugStatus('idle'); setSlugError('Erro ao verificar disponibilidade'); }
+  };
+
+  useEffect(() => {
+    if (!isPublic) { setSlugStatus('idle'); setSlugError(null); return; }
+    if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
+    if (slugValue.length < 3) {
+      setSlugStatus('idle');
+      setSlugError(slugValue.length > 0 ? 'Slug deve ter no mínimo 3 caracteres' : null);
+      return;
+    }
+    checkTimeoutRef.current = setTimeout(() => checkSlugAvailability(slugValue), 500);
+    return () => { if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current); };
+  }, [slugValue, isPublic]);
+
+  function generateSlug(name: string) {
+    return name.toLowerCase().normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
+  // ── Criar assistente (lógica compartilhada) ──────────────
+  async function criarAssistente(): Promise<string | null> {
+    if (isPublic && slugStatus === 'checking') {
+      setError('Aguarde a verificação do slug terminar.');
+      return null;
+    }
+    if (isPublic && slugStatus !== 'available') {
+      setError('Por favor, escolha um slug disponível antes de continuar.');
+      return null;
+    }
+    if (!nome.trim()) { setError('Informe o nome do assistente.'); return null; }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: nome,
+          slug: isPublic ? slugValue : '',
+          logo_url: logoUrl,
+          wake_word: wakeWord || 'olá assistente',
+          greeting_message: greetingMessage || 'Olá! Como posso ajudar você hoje?',
+          is_public: isPublic,
+          assistant_type: assistantType,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao criar assistente');
+      }
+
+      const result = await response.json();
+      const newCompanyId = result.id ?? result.company?.id ?? null;
+
+      console.log('✅ Assistente criado:', newCompanyId, result);
+
+      if (!newCompanyId) {
+        throw new Error('ID do assistente não retornado pela API');
+      }
+
+      // ── Vincula a demo_session (Passo 4 do funil /lead), se houver.
+      // Fire-and-forget: não bloqueia o fluxo de criação se falhar, e
+      // não é crítico para o usuário ver sucesso na criação real.
+      if (demoToken) {
+        fetch('/api/demo/link-company', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: demoToken, companyId: newCompanyId }),
+        }).catch(() => {});
+        try {
+          sessionStorage.removeItem('minhai:demo_token');
+        } catch {
+          // não crítico
+        }
+      }
+
+      return newCompanyId;
+    } catch (err: any) {
+      setError(err.message);
+      setLoading(false);
+      return null;
+    }
+  }
+
+  // ── Submit manual ────────────────────────────────────────
+  async function handleSubmitManual() {
+    setSubmitMode('manual');
+    const id = await criarAssistente();
+    if (id) {
+      router.push('/dashboard/assistentes');
+      router.refresh();
+    }
+  }
+
+  // ── Submit com IA ────────────────────────────────────────
+  function handleSubmitComIA() {
+    router.push('/dashboard/assistentes/novo');
+  }
+
+  // ── Submit com WebApp ────────────────────────────────────
+  async function handleSubmitComWebapp() {
+    setSubmitMode('ia');
+    const id = await criarAssistente();
+    if (id) {
+      router.push(`/dashboard/webapp?companyId=${id}&from=create`);
+    }
+  }
+
+  const canSubmit = !loading && nome.trim().length > 0 && (!isPublic || slugStatus === 'available');
+
+  const renderSlugStatusIcon = () => {
+    if (!isPublic) return null;
+    switch (slugStatus) {
+      case 'checking': return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />;
+      case 'available': return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'taken':    return <XCircle className="w-5 h-5 text-red-500" />;
+      default:         return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-transparent">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <Link href="/dashboard/assistentes"
+          className="inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white mb-6 transition">
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          Voltar para Assistentes
+        </Link>
+
+        <div className="bg-white/80 dark:bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+          <div className="px-8 py-6 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Novo Assistente</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Configure as informações básicas do seu assistente IA.
+            </p>
+          </div>
+
+          <div className="p-8">
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-xl">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
+
+            <div className="space-y-6">
+              {/* Aviso: dados pré-preenchidos da demonstração */}
+              {demoPreenchido && (
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                      Pré-preenchemos o nome com os dados da sua demonstração ({demoNomeNegocio}). Pode editar livremente antes de continuar.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Nome e Slug */}
+              <div className={`grid ${isPublic ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nome do Assistente *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={nome}
+                    placeholder="Ex: Assistente Empresa"
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
+                    onChange={e => {
+                      setNome(e.target.value);
+                      if (isPublic) setSlugValue(generateSlug(e.target.value));
+                    }}
+                  />
+                </div>
+
+                {isPublic && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Slug (URL Pública) *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        value={slugValue}
+                        placeholder="assistente-empresa"
+                        onChange={e => setSlugValue(e.target.value)}
+                        className={`w-full px-4 py-2.5 pr-12 bg-white dark:bg-slate-900 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white font-mono text-sm transition ${
+                          slugStatus === 'available' ? 'border-green-500' :
+                          slugStatus === 'taken'     ? 'border-red-500' :
+                          'border-gray-300 dark:border-white/10'
+                        }`}
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderSlugStatusIcon()}</div>
+                    </div>
+                    {slugStatus === 'available' && slugValue && (
+                      <div className="mt-2 flex items-center text-sm text-green-600 dark:text-green-400">
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Slug disponível! URL: <span className="ml-1 font-mono font-bold">minhai.app/ia/{slugValue}</span>
+                      </div>
+                    )}
+                    {slugError && (
+                      <div className="mt-2 flex items-start text-sm text-red-600 dark:text-red-400">
+                        <AlertCircle className="w-4 h-4 mr-1 flex-shrink-0 mt-0.5" /><span>{slugError}</span>
+                      </div>
+                    )}
+                    {slugStatus === 'checking' && (
+                      <div className="mt-2 flex items-center text-sm text-blue-600 dark:text-blue-400">
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />Verificando...
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Logo URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Link do Logo (URL da Imagem)
+                </label>
+                <input type="url" value={logoUrl} onChange={e => setLogoUrl(e.target.value)}
+                  placeholder="https://exemplo.com/logo.png"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white transition" />
+              </div>
+
+             {/* ── Tipo do Assistente ───────────────────────────── */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Modelo do Assistente
+                </label>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+                  Esta escolha é permanente e não pode ser alterada após a criação.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+
+                  <button
+                    type="button"
+                    onClick={() => { setAssistantType('vendas'); setWantWebapp(false); }}
+                    className={`flex items-start p-4 rounded-xl border-2 transition-all text-left ${
+                      assistantType === 'vendas'
+                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-500/10'
+                        : 'border-gray-200 dark:border-white/10 hover:border-purple-400/50'
+                    }`}
+                  >
+                    <Zap className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${assistantType === 'vendas' ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`} />
+                    <div>
+                      <p className={`font-bold text-sm ${assistantType === 'vendas' ? 'text-purple-700 dark:text-purple-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                        minhAi Vendas
+                      </p>
+                      <p className="text-[10px] opacity-70 mt-0.5 leading-tight">
+                        Assistente focado totalmente em vendas, sem cobrança de mensalidade e creditos, mas cobrando comissão de 10% por venda.
+                      </p>
+                    </div>
+                  </button>
+                   
+                  <button
+                    type="button"
+                    onClick={() => { setAssistantType('smart'); setWantWebapp(false); }}
+                    className={`flex items-start p-4 rounded-xl border-2 transition-all text-left ${
+                      assistantType === 'smart'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10'
+                        : 'border-gray-200 dark:border-white/10 hover:border-blue-400/50'
+                    }`}
+                  >
+                    <Sparkles className={`w-5 h-5 mr-3 mt-0.5 flex-shrink-0 ${assistantType === 'smart' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
+                    <div>
+                      <p className={`font-bold text-sm ${assistantType === 'smart' ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                        minhAi Smart
+                      </p>
+                      <p className="text-[10px] opacity-70 mt-0.5 leading-tight">
+                        Mais de 100 funções com consumo de créditos por uso e com possibilidade de planos mensais para liberar mais funcionalidades.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+
+                {assistantType === 'vendas' && (
+                  <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-purple-700 dark:text-purple-300">
+                        No modo Vendas, o assistente é gratuito e o webapp já vem incluído. A minhAi retém 10% sobre cada venda confirmada, mais 1% no momento do saque via PIX. As taxas de InfinitePay e Mercado Pago são cobradas diretamente por eles.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Visibilidade */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Visibilidade do Assistente
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button type="button" onClick={() => setIsPublic(true)}
+                    className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                      isPublic ? 'border-green-500 bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400'
+                               : 'border-gray-200 dark:border-white/10 bg-transparent text-gray-500'}`}>
+                    <Globe className="w-5 h-5 mr-2" />
+                    <div className="text-left">
+                      <p className="font-bold text-sm">Público</p>
+                      <p className="text-[10px] opacity-70">Acessível via link</p>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => setIsPublic(false)}
+                    className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                      !isPublic ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                                : 'border-gray-200 dark:border-white/10 bg-transparent text-gray-500'}`}>
+                    <Lock className="w-5 h-5 mr-2" />
+                    <div className="text-left">
+                      <p className="font-bold text-sm">Privado</p>
+                      <p className="text-[10px] opacity-70">Acessível via login</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Wake word */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Palavras de Ativação
+                </label>
+                <input type="text" value={wakeWord} onChange={e => setWakeWord(e.target.value)}
+                  placeholder="Ex: Assistente, Alexa"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white transition" />
+                <p className="mt-1 text-xs text-gray-500">Separe múltiplas palavras com vírgula (,)</p>
+              </div>
+
+              {/* Greeting */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Mensagem de Ativação
+                </label>
+                <textarea value={greetingMessage} onChange={e => setGreetingMessage(e.target.value)}
+                  rows={3} placeholder="Frase que o assistente dirá ao ser ativado"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white transition" />
+              </div>
+
+              {/* ── Seção WebApp ─────────────────────────────────── */}
+              <WebAppSection
+                hasConsultingPlan={hasConsultingPlan}
+                hasActiveWebapp={hasActiveWebapp}
+                wantWebapp={wantWebapp}
+                onToggle={setWantWebapp}
+              />
+            </div>
+
+            {/* ── Botões ──────────────────────────────────── */}
+            <div className="mt-8 space-y-3">
+
+              {assistantType === 'smart' && (
+                <button
+                  type="button"
+                  disabled={!canSubmit}
+                  onClick={wantWebapp ? handleSubmitComWebapp : handleSubmitComIA}
+                  className={`w-full flex items-center justify-center px-6 py-3 rounded-xl transition font-bold shadow-lg text-white ${
+                    !canSubmit
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : wantWebapp
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-orange-500/20'
+                        : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-purple-500/20'
+                  }`}
+                >
+                  {wantWebapp ? (
+                    <>
+                      <Globe className="w-5 h-5 mr-2" />
+                      Criar e Configurar WebApp
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      Criar com IA (Configuração Guiada)
+                    </>
+                  )}
+                </button>
+              )}
+
+              {assistantType === 'smart' && (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-gray-200 dark:bg-white/10" />
+                  <span className="text-xs text-gray-400 dark:text-white/30">ou</span>
+                  <div className="flex-1 h-px bg-gray-200 dark:bg-white/10" />
+                </div>
+              )}
+
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  disabled={!canSubmit}
+                  onClick={handleSubmitManual}
+                  className={`flex-1 flex items-center justify-center px-6 py-3 rounded-xl transition font-bold ${
+                    !canSubmit
+                      ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed text-white/70'
+                      : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/20'
+                  }`}
+                >
+                  {loading && submitMode === 'manual'
+                    ? <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    : <Save className="w-5 h-5 mr-2" />
+                  }
+                  Criar sem configurar
+                </button>
+                <Link
+                  href="/dashboard/assistentes"
+                  className="px-6 py-3 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition font-bold"
+                >
+                  Cancelar
+                </Link>
+              </div>
+            </div>
+
+            {/* Aviso slug não disponível */}
+            {isPublic && slugStatus !== 'available' && slugValue.length >= 3 && (
+              <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-lg">
+                <div className="flex items-start">
+                  <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    {slugStatus === 'taken'
+                      ? 'Este slug já está em uso. Escolha outro nome para continuar.'
+                      : 'Aguarde a verificação do slug para poder criar o assistente.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Explicação */}
+            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+              <div className="flex items-start gap-3">
+                <Bot className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Criar e Configurar com IA</p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                    Nosso assistente recomenda as melhores funções para o seu ramo e configura tudo por conversa — WhatsApp, endereço, horários e muito mais (disponível apenas na versão Smart).
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

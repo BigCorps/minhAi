@@ -1,0 +1,72 @@
+# MelhorIA
+
+> a IA da Melhor Idade! Lembretes de remédio, consultas e exames, e verificação
+> antifraude — feito para quem já não tem paciência com aplicativo complicado.
+
+MelhorIA é um aplicativo brasileiro, em português, desenvolvido pela BigCorps
+Tecnologia. Faz parte do ecossistema minhAi, a mesma plataforma por trás do
+ConviteIA, do Pix Wiki, do ArteFinal e do ConsultaTec.
+
+Site: https://melhoria.org
+
+## O que faz
+
+- **Lembrete de remédio que funciona com o aplicativo fechado.** O horário fica
+  guardado no servidor, não no aparelho. O aviso chega como notificação; se
+  ninguém confirmar em 30 minutos, um familiar cadastrado é avisado.
+- **Registro de adesão.** Cada "Tomei" fica guardado, e vira um relatório em PDF
+  para levar ao médico.
+- **Aviso de estoque.** Quando o remédio está acabando, o aplicativo avisa e
+  oferece adicionar à lista de compras.
+- **Consultas e exames.** Alertas em 7 dias, 1 dia, 3 horas e 1 hora, com aviso
+  de preparo e jejum, e lista do que levar.
+- **Verificação antifraude.** Confere a linha digitável de um boleto — dígitos
+  verificadores, banco emissor, vencimento e valor — sem custo nenhum. Também
+  analisa links suspeitos.
+- **Botão de emergência.** Avisa os contatos cadastrados por notificação e SMS.
+- **Lista de compras**, integrada ao estoque de medicamentos.
+
+## Preço
+
+Cadastrar remédios, consultas e exames e receber TODOS os lembretes é grátis e
+ilimitado. Nunca cobramos para lembrar alguém de tomar remédio.
+
+Créditos são usados apenas em:
+- ler receita ou pedido de exame por foto (inteligência artificial)
+- analisar imagem de boleto ou comprovante
+- conversar com a inteligência artificial
+- enviar SMS
+
+## Acessibilidade
+
+Letra a partir de 20px, com opção de 24 e 28. Botões de no mínimo 64 pixels.
+Contraste WCAG AAA. Uma ação por tela, sem abas nem menus escondidos. Microfone
+para ditar em vez de digitar — o texto aparece na tela para conferir antes de
+salvar.
+
+## Limites importantes
+
+- A MelhorIA **não dá orientação médica**. Não indica dose, não diz para que
+  serve um medicamento e não interpreta resultado de exame.
+- Remédio identificado por foto de receita **nunca vira lembrete sozinho**:
+  precisa de conferência de um adulto antes de ser ativado.
+- Na verificação de boleto, o aplicativo **nunca diz que algo é seguro**. Quando
+  nada de errado aparece, a resposta é "não encontramos indícios", com a
+  orientação de confirmar por telefone com quem enviou.
+- O botão de emergência **não aciona SAMU (192), Polícia (190) nem Bombeiros
+  (193)**. Ele avisa os contatos cadastrados pelo usuário.
+
+## Privacidade
+
+Dados de saúde são dados sensíveis pelo artigo 11 da LGPD. O consentimento para
+guardá-los é pedido em tela própria, separado dos termos de uso, e pode ser
+revogado. Documentos ficam em armazenamento privado e são apagados
+automaticamente após 24 meses.
+
+## Links
+
+- Aplicativo: https://melhoria.org
+- Termos de uso: https://melhoria.org/termos
+- Aviso de privacidade: https://melhoria.org/aviso
+- Exclusão de conta e dados: https://melhoria.org/exclusao
+- Plataforma minhAi: https://minhai.app

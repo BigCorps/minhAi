@@ -1,0 +1,1088 @@
+/* ==========================================================================
+   Motor do convite — Convite IA
+
+   Tudo aqui e prefixado com .cv- e depende so das variaveis --cv-*, que
+   entram como style inline na raiz. Motivo: este cartao e renderizado dentro
+   do dashboard, que tem CSS proprio. Regra em :root perderia ou venceria
+   dependendo da ordem de injecao.
+
+   Nenhum seletor de tag (h1, h2, p) e usado nos titulos, pelo mesmo motivo.
+   ========================================================================== */
+
+.cv-fora {
+  /* `background` foi trocado por `isolation` + camada propria. Com background
+     aqui, a Textura (que e `fixed -z-10`) ficava ATRAS deste fundo e nunca
+     aparecia — o mesmo erro que escondeu a textura no painel. Quem pinta o
+     papel agora e o <rect> do SVG. */
+  padding: 0;
+  position: relative;
+  isolation: isolate;
+  /* Com a textura em `absolute`, ela cobre a CAIXA deste elemento. Sem altura
+     minima, um convite curto deixaria o resto da viewport sem papel. */
+  min-height: 100dvh;
+}
+
+/* Convite sem textura declarada continua com o fundo do tema: `texturaId`
+   ausente cai em TEXTURA_PADRAO, mas se alguem passar 'nenhuma' o proprio
+   componente pinta o papel. Esta regra e a rede de seguranca para o caso de a
+   Textura nao renderizar (erro de SVG, por exemplo). */
+.cv-fora::before {
+  content: '';
+  /* absolute e nao fixed, pelo mesmo motivo da Textura: contido no convite,
+     seja ele a pagina inteira ou o palco da previa. */
+  position: absolute;
+  inset: 0;
+  z-index: -20;
+  background: var(--cv-fora);
+}
+
+.cv-papel {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 3.2rem 1.5rem 0;
+  background: var(--cv-papel);
+  /* `relative` + `isolation` para a textura interna (absolute) se ancorar aqui
+     e ficar atras do conteudo, sem escapar para a pagina. */
+  position: relative;
+  isolation: isolate;
+  color: var(--cv-tinta);
+  font-family: var(--cv-corpo), Georgia, serif;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 5%),
+    0 2px 10px rgb(0 0 0 / 4%),
+    0 14px 44px rgb(0 0 0 / 7%),
+    0 34px 130px rgb(0 0 0 / 9%);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Reset defensivo: o dashboard nao pode vazar caixa alta nem espacamento
+   para dentro do cartao. Foi exatamente isso que quebrou os titulos em
+   cursiva na pagina de amostras. */
+.cv-papel :where(h1, h2, h3, p, blockquote, cite, ul, li) {
+  margin: 0;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: inherit;
+}
+
+.cv-canto {
+  position: absolute;
+  width: 168px;
+  height: 168px;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+.cv-canto-se { top: -14px; left: -30px; }
+.cv-canto-sd { top: -14px; right: -30px; transform: scaleX(-1); }
+.cv-canto-ie { bottom: -14px; left: -30px; transform: scaleY(-1); }
+.cv-canto-id { bottom: -14px; right: -30px; transform: scale(-1, -1); }
+
+.cv-secao {
+  position: relative;
+  z-index: 1;
+  padding: 2.4rem 0;
+  text-align: center;
+}
+.cv-secao-foto { padding-top: 0.8rem; }
+.cv-secao-fim  { padding-bottom: 4.2rem; }
+
+.cv-divisor {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  padding: 0.4rem 0;
+}
+.cv-raminho { width: 72%; max-width: 260px; height: auto; opacity: 0.92; }
+.cv-broto { display: block; width: 42px; height: 42px; margin: 0 auto 0.5rem; opacity: 0.9; }
+
+/* --------------------------------------------------------------------------
+   Tipografia
+   -------------------------------------------------------------------------- */
+
+.cv-rotulo {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--cv-tinta-suave);
+  margin-bottom: 0.7rem;
+}
+.cv-rotulo-claro { color: var(--cv-bloco-texto); opacity: 0.88; }
+
+/* Display nunca recebe caixa alta nem espacamento: so a primeira maiuscula. */
+.cv-titulo,
+.cv-nomes {
+  font-family: var(--cv-display), cursive;
+  font-weight: var(--cv-display-peso);
+  color: var(--cv-acento);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.cv-titulo {
+  font-size: calc(1.85rem * var(--cv-display-escala));
+  line-height: 1.15;
+  margin-bottom: 1rem;
+}
+.cv-nomes {
+  font-size: calc(3rem * var(--cv-display-escala));
+  line-height: 1.06;
+  margin-bottom: 0.9rem;
+}
+
+.cv-texto,
+.cv-chamada {
+  font-size: 0.94rem;
+  line-height: 1.8;
+  color: var(--cv-tinta-suave);
+  max-width: 32ch;
+  margin-inline: auto;
+  margin-bottom: 1.4rem;
+}
+.cv-sub {
+  font-size: 0.78rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cv-tinta-suave);
+}
+/* acento-texto, nao acento: em texto pequeno o acento nao atinge 4,5:1. */
+.cv-destaque {
+  font-size: 0.94rem;
+  font-weight: 600;
+  line-height: 1.75;
+  color: var(--cv-acento-texto);
+  max-width: 30ch;
+  margin-inline: auto;
+}
+
+.cv-frase p {
+  font-size: 1rem;
+  font-style: italic;
+  line-height: 1.8;
+  color: var(--cv-tinta-suave);
+  max-width: 42ch;
+  margin-inline: auto;
+  margin-bottom: 0.8rem;
+  /* A quebra vem do proprio texto, sem <br />: o editor web do GitHub
+     costuma engolir o caractere '<'. */
+  white-space: pre-line;
+}
+.cv-frase cite {
+  font-style: normal;
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--cv-acento-texto);
+}
+
+/* --------------------------------------------------------------------------
+   Foto e galeria
+   -------------------------------------------------------------------------- */
+
+.cv-moldura { position: relative; width: 92%; margin: 0 auto; aspect-ratio: 4 / 5; }
+.cv-moldura img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.cv-galeria {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  max-width: 340px;
+  margin: 0 auto;
+}
+.cv-galeria-item { aspect-ratio: 1; overflow: hidden; }
+.cv-galeria-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* --------------------------------------------------------------------------
+   Bloco da data
+   -------------------------------------------------------------------------- */
+
+.cv-bloco {
+  position: relative;
+  z-index: 1;
+  margin: 1rem -1.5rem;
+  padding: 2.4rem 1.5rem;
+  background: var(--cv-bloco);
+  color: var(--cv-bloco-texto);
+  text-align: center;
+}
+.cv-data {
+  padding: 0.7rem 0;
+  border-top: 1px solid rgb(255 255 255 / 45%);
+  border-bottom: 1px solid rgb(255 255 255 / 45%);
+  font-size: 1.45rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.cv-hora {
+  margin-top: 0.8rem;
+  font-size: 0.86rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.92;
+}
+.cv-aviso {
+  margin-top: 1.4rem;
+  font-size: clamp(0.72rem, 3.2vw, 0.84rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--cv-bloco-texto);
+  opacity: 0.95;
+}
+
+/* --------------------------------------------------------------------------
+   Contagem e calendario
+   -------------------------------------------------------------------------- */
+
+.cv-contagem { display: flex; align-items: flex-start; justify-content: center; gap: 0.9rem; }
+.cv-contagem-campo { position: relative; min-width: 3.4rem; }
+.cv-contagem-numero {
+  display: block;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--cv-acento-texto);
+  font-variant-numeric: tabular-nums;
+}
+.cv-contagem-nome {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cv-tinta-suave);
+}
+.cv-contagem-sep {
+  position: absolute;
+  top: 0;
+  right: -0.7rem;
+  font-size: 1.7rem;
+  color: var(--cv-acento);
+  opacity: 0.5;
+}
+
+.cv-mes {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--cv-tinta);
+}
+.cv-calendario {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+  max-width: 290px;
+  margin: 0 auto;
+}
+.cv-cal-cabecalho {
+  padding-bottom: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--cv-acento-texto);
+}
+.cv-cal-dia {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  font-size: 0.86rem;
+  color: var(--cv-tinta-suave);
+}
+.cv-cal-dia.marcado { color: var(--cv-acento-texto); font-weight: 600; }
+.cv-cal-numero { position: relative; z-index: 1; }
+.cv-cal-coracao { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--cv-acento); }
+
+/* --------------------------------------------------------------------------
+   Player de audio e video
+   -------------------------------------------------------------------------- */
+
+.cv-player { max-width: 300px; margin: 0 auto; }
+.cv-player input[type="range"] {
+  --cv-progresso: 0%;
+  width: 100%;
+  height: 3px;
+  margin: 0;
+  appearance: none;
+  border-radius: 3px;
+  cursor: pointer;
+  background: linear-gradient(
+    to right,
+    var(--cv-acento) var(--cv-progresso),
+    var(--cv-petala-clara) var(--cv-progresso)
+  );
+}
+.cv-player input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--cv-papel);
+  border-radius: 50%;
+  background: var(--cv-acento);
+}
+.cv-player input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--cv-papel);
+  border-radius: 50%;
+  background: var(--cv-acento);
+}
+.cv-player-tempos {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.4rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: var(--cv-tinta-suave);
+  font-variant-numeric: tabular-nums;
+}
+.cv-player-controles {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6rem;
+  margin-top: 1rem;
+}
+.cv-player-btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--cv-tinta-suave);
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+.cv-player-btn svg { width: 20px; height: 20px; }
+.cv-player-btn:hover { color: var(--cv-acento); }
+.cv-player-principal {
+  width: 52px;
+  height: 52px;
+  background: var(--cv-acento);
+  color: var(--cv-papel);
+}
+.cv-player-principal:hover { color: var(--cv-papel); transform: scale(1.05); }
+.cv-player-principal svg { width: 24px; height: 24px; }
+
+/* Repetir ligado. Fundo suave em vez de so trocar a cor do traco: o icone de
+   repeticao e fino, e mudanca de cor sozinha nao le como "ligado". */
+.cv-player-btn.ativo {
+  color: var(--cv-acento);
+  background: color-mix(in srgb, var(--cv-acento) 14%, transparent);
+}
+
+/* Os tres botoes tem a mesma largura de caixa, entao o principal cai no centro
+   geometrico exato. Com dois botoes o par era centralizado como grupo e o play
+   ficava deslocado. */
+.cv-player-controles > .cv-player-btn:not(.cv-player-principal) { flex: 0 0 34px; }
+
+.cv-video, .cv-mapa {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0 0 1.4rem;
+  overflow: hidden;
+  background: var(--cv-petala-clara);
+}
+.cv-mapa { aspect-ratio: 4 / 3; }
+.cv-video iframe, .cv-mapa iframe { width: 100%; height: 100%; border: 0; display: block; }
+.cv-video-marca {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cv-tinta-suave);
+}
+
+/* --------------------------------------------------------------------------
+   Local, botoes, presentes, padrinhos
+   -------------------------------------------------------------------------- */
+
+.cv-local-nome {
+  margin-bottom: 0.4rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cv-tinta);
+}
+.cv-local-endereco {
+  margin-bottom: 1.5rem;
+  font-size: 0.92rem;
+  line-height: 1.8;
+  color: var(--cv-tinta-suave);
+}
+
+.cv-botao {
+  display: inline-block;
+  padding: 0.85rem 2.1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cv-acento);
+  color: var(--cv-papel);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+.cv-botao:hover { filter: brightness(0.92); transform: translateY(-2px); }
+.cv-botao[aria-disabled="true"], .cv-botao:disabled {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+  filter: none;
+}
+.cv-botao-pequeno { padding: 0.6rem 1.2rem; font-size: 0.68rem; letter-spacing: 0.14em; }
+
+.cv-presentes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  max-width: 360px;
+  margin: 0 auto;
+}
+.cv-presente {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 10px 14px;
+  background: color-mix(in srgb, var(--cv-papel) 88%, var(--cv-tinta) 12%);
+}
+.cv-presente-img { width: 100%; aspect-ratio: 1; overflow: hidden; }
+.cv-presente-img img, .cv-presente-img svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cv-presente-titulo {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--cv-tinta-suave);
+  min-height: 2.2em;
+}
+.cv-presente-valor { font-size: 0.92rem; font-weight: 600; color: var(--cv-acento-texto); }
+
+.cv-padrinhos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px 10px;
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+.cv-padrinhos li { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.cv-padrinho-foto { width: 84px; height: 84px; border-radius: 50%; overflow: hidden; }
+.cv-padrinho-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cv-padrinho-nome { font-size: 0.82rem; font-weight: 600; color: var(--cv-tinta); }
+.cv-padrinho-papel {
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cv-tinta-suave);
+}
+
+.cv-despedida {
+  margin-bottom: 0.9rem;
+  font-size: 1.45rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cv-tinta);
+}
+.cv-assinatura {
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--cv-tinta-suave);
+}
+
+/* --------------------------------------------------------------------------
+   Foco do wizard e acessibilidade
+   -------------------------------------------------------------------------- */
+
+.cv-foco { animation: cv-pisca 1.2s ease 1; }
+@keyframes cv-pisca {
+  0%, 100% { background: transparent; }
+  40%      { background: color-mix(in srgb, var(--cv-acento) 10%, transparent); }
+}
+
+.cv-papel :focus-visible { outline: 2px solid var(--cv-acento); outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-foco { animation: none; }
+  .cv-botao, .cv-player-btn { transition-duration: 0.01ms; }
+}
+
+
+body.cv-travado { overflow: hidden; }
+
+.cv-capa {
+  /* Altura da aba. O lacre se ancora nela, entao mudar aqui move os dois
+     juntos. Ver .cv-capa-centro. */
+  --cv-aba-altura: 64%;
+
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: var(--cv-papel, #faeee9);
+  cursor: pointer;
+  transition: opacity 0.6s ease 0.45s, visibility 0.6s ease 0.45s;
+}
+.cv-capa-foto { position: absolute; inset: 0; overflow: hidden; }
+.cv-capa-foto img { filter: blur(2px) saturate(0.85); transform: scale(1.06); }
+.cv-capa-veu {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--cv-papel) 55%, transparent),
+    color-mix(in srgb, var(--cv-bloco) 45%, transparent)
+  );
+}
+.cv-capa-aba {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--cv-aba-altura);
+  background: color-mix(in srgb, var(--cv-papel) 82%, var(--cv-bloco) 18%);
+  clip-path: polygon(0 0, 100% 0, 100% 40%, 50% 100%, 0 40%);
+  transform-origin: top center;
+  transition: transform 0.95s cubic-bezier(0.6, 0, 0.3, 1), opacity 0.7s ease 0.25s;
+}
+.cv-capa-centro {
+  /* Ancorado na PONTA da aba, nao no centro da tela.
+     A ponta fica em `--cv-aba-altura` (o vertice do clip-path esta em 100% da
+     altura da aba). Antes o lacre era centralizado em 50% + 8vh de margem e
+     ainda era puxado para cima pela etiqueta, que dividia o mesmo grid — dois
+     numeros que precisavam concordar e eram independentes. Agora ha uma
+     variavel so. */
+  position: absolute;
+  top: var(--cv-lacre-top, var(--cv-aba-altura));
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+}
+.cv-capa-lacre {
+  filter: drop-shadow(0 8px 16px rgb(0 0 0 / 28%));
+  transition: transform 0.85s cubic-bezier(0.5, -0.3, 0.3, 1.3), opacity 0.6s ease;
+}
+.cv-capa-etiqueta {
+  /* Fora do fluxo: dentro do grid ela somava altura e o centro do bloco
+     deixava de ser o centro do lacre. */
+  position: absolute;
+  top: calc(100% + 1.4rem);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 0.5rem 1.1rem;
+  background: #fff;
+  color: var(--cv-tinta);
+  font-family: var(--cv-corpo), sans-serif;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 18%);
+  transition: opacity 0.35s ease;
+}
+
+/* --------------------------------------------------------------------------
+   Abertura em tres tempos
+
+   Tudo somindo junto le como "a tela trocou". Em sequencia le como "o envelope
+   foi aberto": o lacre se rompe, a aba cai para tras, e so entao o envelope
+   sai de cena revelando o convite. Os atrasos sao o que cria a narrativa.
+
+   Total 1300ms, que e o timeout do setTimeout na Capa.tsx. Mexer em um exige
+   mexer no outro.
+   -------------------------------------------------------------------------- */
+
+/* Perspectiva na capa: sem ela o rotateX da aba e um achatamento, nao uma
+   dobra. E o que faz parecer papel e nao um retangulo encolhendo. */
+.cv-capa { perspective: 1400px; }
+.cv-capa-aba { transform-style: preserve-3d; }
+
+/* Tempo 3: o envelope inteiro sai, depois da aba ter caido. */
+.cv-capa.abrindo {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(1.04);
+  transition:
+    opacity 0.55s ease 0.62s,
+    visibility 0.55s ease 0.62s,
+    transform 0.8s ease 0.55s;
+}
+
+/* Tempo 2: a aba dobra para tras, com um leve atraso para o lacre romper
+   primeiro. */
+.cv-capa.abrindo .cv-capa-aba {
+  transform: rotateX(-125deg);
+  opacity: 0.25;
+  transition:
+    transform 0.85s cubic-bezier(0.55, 0, 0.28, 1) 0.16s,
+    opacity 0.6s ease 0.35s;
+}
+
+/* Tempo 1: o lacre sobe, gira um toque e some. O giro pequeno sugere cera se
+   partindo; sem ele o movimento parece um botao sendo clicado. */
+.cv-capa.abrindo .cv-capa-lacre {
+  transform: translateY(-30px) scale(1.38) rotate(7deg);
+  opacity: 0;
+  transition:
+    transform 0.6s cubic-bezier(0.4, -0.4, 0.3, 1.35),
+    opacity 0.45s ease 0.12s;
+}
+
+.cv-capa.abrindo .cv-capa-etiqueta {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* As flores acompanham a aba, com atraso proprio: saindo junto com o lacre
+   chamariam atencao para o lugar errado. */
+.cv-capa.abrindo .cv-capa-flor {
+  opacity: 0;
+  transition: opacity 0.5s ease 0.2s;
+}
+
+/* O convite entra por baixo, subindo de leve enquanto o envelope sai. */
+@keyframes cv-revela {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* Depende da classe `revelando`, aplicada no clique. Sem ela a animacao
+   rodava no CARREGAMENTO — o <Convite> e renderizado junto com a capa, entao
+   os 0.7s terminavam com o envelope ainda fechado e nao havia transicao
+   nenhuma para ver. */
+.cv-fora.revelando { animation: cv-revela 0.7s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-capa, .cv-capa-aba, .cv-capa-lacre, .cv-capa-etiqueta, .cv-capa-flor {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+  .cv-capa.abrindo .cv-capa-aba,
+  .cv-capa.abrindo .cv-capa-lacre,
+  .cv-capa.abrindo { transform: none; }
+  .cv-fora.revelando { animation: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Envelope: vinco, gravacao e arranjos
+   Portado do convite de referencia (BigCorps/convite), com as cores fixas
+   trocadas pelos tokens do tema.
+   -------------------------------------------------------------------------- */
+
+/* Recuo de 5px com o mesmo clip-path da aba: e o que le como papel dobrado. */
+.cv-capa-vinco {
+  position: absolute;
+  inset: 5px;
+  background: var(--cv-papel, #faeee9);
+  opacity: 0.5;
+  clip-path: polygon(0 0, 100% 0, 100% 40%, 50% 100%, 0 40%);
+}
+
+.cv-gravado {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Textura de papel timbrado: se as folhas ficam visiveis, competem com o
+     lacre, que e o unico ponto que deve pedir o clique. */
+  opacity: 0.13;
+}
+
+.cv-capa-flor {
+  position: absolute;
+  width: 190px;
+  height: 190px;
+  opacity: 0.95;
+  pointer-events: none;
+}
+.cv-capa-flor.esquerda { left: -128px;  top: -34px; transform: rotate(-14deg); }
+.cv-capa-flor.direita  { right: -128px; top: -34px; transform: scaleX(-1) rotate(-14deg); }
+
+/* Telas estreitas: 190px de cada lado nao cabem em 360px de viewport e a flor
+   sairia cortada na vertical do lacre. Encolhe e aproxima. */
+@media (max-width: 420px) {
+  .cv-capa-flor { width: 132px; height: 132px; }
+  .cv-capa-flor.esquerda { left: -86px;  top: -18px; }
+  .cv-capa-flor.direita  { right: -86px; top: -18px; }
+}
+
+.cv-capa.abrindo .cv-capa-flor {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+/* --------------------------------------------------------------------------
+   Player do YouTube em modo musica
+
+   1px fora da area visivel, e NAO `display: none`: navegador movel pausa
+   media em elemento sem layout. Presente e renderizado, apenas invisivel.
+   -------------------------------------------------------------------------- */
+.cv-yt-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cv-player-titulo {
+  margin: 10px 0 0;
+  font-family: var(--cv-corpo), sans-serif;
+  font-size: 0.82rem;
+  color: var(--cv-tinta-suave);
+  text-align: center;
+}
+
+/* Controles desabilitados enquanto a IFrame API carrega: sem isso o botao
+   parece quebrado no primeiro segundo. */
+.cv-player-btn:disabled,
+.cv-player input:disabled { opacity: 0.45; cursor: default; }
+
+/* --------------------------------------------------------------------------
+   Lacre de cera com iniciais sobrepostas
+   -------------------------------------------------------------------------- */
+.cv-lacre {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.cv-lacre-arte {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* As artes sao de cera vermelha. Recolorir por hue-rotate estraga o brilho e o
+   relevo, que e o que faz parecer cera de verdade. Vermelho selo e convencao
+   grafica de lacre, entao fica fixo e funciona com qualquer paleta de tema. */
+
+.cv-lacre-iniciais,
+.cv-lacre-logo {
+  position: absolute;
+}
+
+/* Sem teto fixo: o tamanho do logo vem do slider, igual as iniciais. Travar
+   aqui anularia o ajuste. A altura acompanha a largura para nao distorcer logo
+   retangular. */
+.cv-lacre-logo {
+  height: auto;
+  max-height: 46%;
+}
+
+.cv-lacre-iniciais {
+  /* font-family vem do style inline: a fonte do lacre e escolha propria, nao
+     herda a display do convite. Deixar a regra aqui venceria o inline em
+     especificidade igual e travaria a escolha. */
+  line-height: 1;
+  color: #f6e2d8;
+  /* Relevo: sombra escura embaixo e luz clara em cima, para a letra parecer
+     prensada na cera e nao colada por cima. */
+  text-shadow:
+    0 1px 1px rgba(90, 12, 12, 0.75),
+    0 -1px 1px rgba(255, 220, 210, 0.35);
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.cv-lacre-logo {
+  object-fit: contain;
+  /* Logo colorido sobre cera vermelha some. O leve clareamento salva contraste
+     sem descaracterizar a marca do cliente. */
+  filter: drop-shadow(0 1px 1px rgba(90, 12, 12, 0.6)) brightness(1.08);
+}
+
+/* --------------------------------------------------------------------------
+   Barra do dono no convite publicado
+
+   `fixed` no topo com z-index acima da capa (que e 50): o dono precisa
+   alcancar "Editar" mesmo antes de abrir o envelope.
+   -------------------------------------------------------------------------- */
+.cv-header-dono {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  background: rgba(64, 35, 44, 0.93);
+  backdrop-filter: blur(6px);
+  color: #fff5f8;
+  font-family: var(--cv-corpo), system-ui, sans-serif;
+  font-size: 0.78rem;
+}
+.cv-header-dono-rotulo { opacity: 0.85; }
+.cv-header-dono-acoes { display: flex; gap: 6px; }
+.cv-header-dono-acoes a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 245, 248, 0.3);
+  border-radius: 999px;
+  color: #fff5f8;
+  text-decoration: none;
+  font-weight: 600;
+}
+.cv-header-dono-acoes a:hover { background: rgba(255, 245, 248, 0.14); }
+
+/* Em tela estreita o rotulo sai: dois botoes e o texto nao cabem, e os botoes
+   sao o que a barra existe para oferecer. */
+@media (max-width: 480px) {
+  .cv-header-dono-rotulo { display: none; }
+  .cv-header-dono { justify-content: flex-end; }
+}
+
+/* --------------------------------------------------------------------------
+   Acabamentos da foto
+
+   Todos partem da .cv-moldura ja existente e SOBRESCREVEM o que precisam. O
+   `cv-acab-moldura` nao existe de proposito: e a aparencia base, e convite
+   publicado antes desta mudanca cai nele sem alteracao.
+   -------------------------------------------------------------------------- */
+
+.cv-acab-arredondado,
+.cv-acab-arredondado img { border-radius: 22px; }
+
+.cv-acab-circulo {
+  border-radius: 50%;
+  overflow: hidden;
+  aspect-ratio: 1;
+}
+.cv-acab-circulo img { border-radius: 50%; object-fit: cover; height: 100%; }
+
+/* Arco: meia-lua no topo, reto embaixo. Referencia direta de convite
+   impresso — e o recorte mais pedido depois do circulo. */
+.cv-acab-arco {
+  border-radius: 50% 50% 8px 8px / 34% 34% 4% 4%;
+  overflow: hidden;
+}
+.cv-acab-arco img { border-radius: inherit; }
+
+/* Bordas suaves: mascara radial em vez de blur na imagem. `filter: blur`
+   desfocaria a foto inteira; a mascara desfaz so a borda. */
+.cv-acab-desfoque { border: 0; padding: 0; box-shadow: none; background: none; }
+.cv-acab-desfoque img {
+  -webkit-mask-image: radial-gradient(ellipse 74% 74% at 50% 50%, #000 58%, transparent 100%);
+  mask-image: radial-gradient(ellipse 74% 74% at 50% 50%, #000 58%, transparent 100%);
+}
+
+/* Vinheta: escurece as bordas por cima, sem tocar no arquivo. */
+.cv-acab-vinheta { position: relative; overflow: hidden; }
+.cv-acab-vinheta::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 76% 76% at 50% 50%,
+    transparent 52%,
+    color-mix(in srgb, var(--cv-tinta) 42%, transparent) 100%
+  );
+}
+
+/* Polaroid: margem grossa embaixo, como a area de escrever da foto instantanea. */
+.cv-acab-polaroid {
+  background: #fff;
+  border: 0;
+  padding: 12px 12px 52px;
+  border-radius: 3px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 16%);
+  transform: rotate(-1.2deg);
+}
+.cv-acab-polaroid img { border-radius: 0; }
+
+.cv-acab-limpo {
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+  background: none;
+}
+
+/* --------------------------------------------------------------------------
+   Modal de presentes
+   -------------------------------------------------------------------------- */
+.cv-modal-fundo {
+  position: fixed;
+  inset: 0;
+  /* Acima da capa (50) e da barra do dono (60): o modal e a camada de cima. */
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(30 14 18 / 62%);
+  backdrop-filter: blur(3px);
+}
+
+.cv-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 440px;
+  /* dvh e nao vh: no celular a barra do navegador entra e sai, e com vh o
+     rodape do modal ficava embaixo dela. */
+  max-height: 88dvh;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--cv-fora, #fff);
+  font-family: var(--cv-corpo), system-ui, sans-serif;
+  color: var(--cv-tinta);
+}
+
+.cv-modal-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--cv-acento) 20%, transparent);
+  flex-shrink: 0;
+}
+.cv-modal-topo h2 {
+  margin: 0;
+  font-family: var(--cv-display), serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.cv-modal-topo button { border: 0; background: none; color: inherit; cursor: pointer; padding: 4px; }
+
+/* O corpo rola, o topo fica. Sem isso a lista de 24 itens rolava junto com o
+   titulo e a pessoa perdia a referencia de onde esta. */
+.cv-modal-corpo { overflow-y: auto; padding: 16px; }
+
+.cv-modal-erro {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--cv-acento) 12%, transparent);
+  font-size: 0.85rem;
+}
+
+.cv-modal-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cv-modal-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--cv-acento) 22%, transparent);
+  border-radius: 12px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cv-modal-item:hover:not(:disabled) { border-color: var(--cv-acento); }
+.cv-modal-item:disabled { opacity: 0.45; cursor: default; }
+.cv-modal-item img { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+.cv-modal-item-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cv-modal-item-txt strong { font-size: 0.9rem; font-weight: 600; }
+.cv-modal-item-txt small { font-size: 0.8rem; color: var(--cv-tinta-suave); }
+
+.cv-modal-form { display: grid; gap: 12px; }
+.cv-modal-form label { display: grid; gap: 5px; font-size: 0.82rem; color: var(--cv-tinta-suave); }
+.cv-modal-form label span { opacity: 0.7; }
+.cv-modal-form input,
+.cv-modal-form textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--cv-acento) 30%, transparent);
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  color: var(--cv-tinta);
+  resize: vertical;
+}
+
+.cv-modal-acoes { display: flex; gap: 10px; margin-top: 4px; }
+.cv-modal-acoes .cv-botao { flex: 1; }
+
+.cv-modal-centro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  text-align: center;
+}
+.cv-modal-valor {
+  margin: 0;
+  font-family: var(--cv-display), serif;
+  font-size: 1.7rem;
+  font-weight: 600;
+}
+.cv-modal-qr {
+  width: 210px;
+  height: 210px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--cv-acento) 22%, transparent);
+}
+.cv-modal-dica { margin: 0; font-size: 0.84rem; color: var(--cv-tinta-suave); max-width: 30ch; }
+
+.cv-presentes-contagem {
+  margin: 10px 0 0;
+  font-family: var(--cv-corpo), sans-serif;
+  font-size: 0.78rem;
+  color: var(--cv-tinta-suave);
+}
+
+.cv-botao-fantasma {
+  background: none;
+  border: 1px solid var(--cv-acento);
+  color: var(--cv-acento);
+}
+
+/* Espaco reservado do mapa na previa. Ocupa a mesma proporcao do iframe para o
+   enquadramento nao mudar ao publicar. */
+.cv-mapa-previa {
+  display: grid;
+  place-items: center;
+  padding: 0 16px;
+  border: 1px dashed color-mix(in srgb, var(--cv-acento) 40%, transparent);
+  background: color-mix(in srgb, var(--cv-acento) 6%, transparent);
+  text-align: center;
+}
+.cv-mapa-previa span {
+  font-family: var(--cv-corpo), sans-serif;
+  font-size: 0.82rem;
+  color: var(--cv-tinta-suave);
+}
+
+.cv-previa-nota {
+  margin: 8px 0 0;
+  font-family: var(--cv-corpo), sans-serif;
+  font-size: 0.76rem;
+  font-style: italic;
+  color: var(--cv-tinta-suave);
+}

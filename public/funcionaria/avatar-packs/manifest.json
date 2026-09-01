@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "default_option_id": "option-1",
+  "options": [
+    {
+      "id": "option-1",
+      "label": "Opção 1",
+      "raw": "/funcionaria/avatar-packs/raw/option-1",
+      "processed": "/funcionaria/avatar-packs/processed/option-1"
+    },
+    {
+      "id": "option-2",
+      "label": "Opção 2",
+      "raw": "/funcionaria/avatar-packs/raw/option-2",
+      "processed": "/funcionaria/avatar-packs/processed/option-2"
+    },
+    {
+      "id": "option-3",
+      "label": "Opção 3",
+      "raw": "/funcionaria/avatar-packs/raw/option-3",
+      "processed": "/funcionaria/avatar-packs/processed/option-3"
+    }
+  ],
+  "notes": {
+    "names": "As opções não têm nome fixo; a empresa define o nome da FuncionarIA separadamente.",
+    "labels": "O usuário final vê apenas Opção 1, Opção 2 e Opção 3.",
+    "renderer": "base transparente + recoloração por máscaras + hair-front + deltas de boca/olhos processados"
+  }
+}

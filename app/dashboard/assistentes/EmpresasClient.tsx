@@ -1,0 +1,746 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase-browser';
+import {
+  Settings, ExternalLink, QrCode, Zap, Plus, Copy, Check,
+  Lock, Globe, X, Download, Mail, MessageSquare, Users,
+  Sparkles, Globe2, CheckCircle, XCircle, Loader2, Bot, Trash2
+} from 'lucide-react';
+
+interface AssistentesClientProps {
+  companies: any[];
+  user: any;
+  hasConsultingPlan: boolean;
+  activeWebappCompanyId: string | null;
+}
+
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+  );
+}
+
+function MetaIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+      xmlnsXlink="http://www.w3.org/1999/xlink"
+      viewBox="0 0 287.56 191"
+      fill="currentColor"
+    >
+      <path d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
+      <path d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
+      <path d="M82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78C38.61,71.62,31.06,99.34,31.06,126c0,11,2.41,19.41,5.56,24.51L10.14,167.91C3.34,156.6,0,141.76,0,124.85,0,94.1,8.44,62.05,24.49,37.3,38.73,15.35,59.28,0,82.85,0Z"/>
+    </svg>
+  );
+}
+
+export default function AssistentesClient({
+  companies,
+  user,
+  hasConsultingPlan,
+  activeWebappCompanyId,
+}: AssistentesClientProps) {
+
+  // Vendas fora de uso por enquanto — mesma flag de Step0.tsx, CreditsPage.tsx,
+  // PrecosSection.tsx e SaldoPage.tsx. Pra reativar, só mudar pra `true`.
+  const SHOW_VENDAS_SWITCH = false;
+
+  const [copiedId, setCopiedId]         = useState<string | null>(null);
+  const [showQrModal, setShowQrModal]   = useState<any | null>(null);
+  const [duplicating, setDuplicating]   = useState<string | null>(null);
+  const [switching, setSwitching]       = useState<string | null>(null);
+  const [confirmSwitch, setConfirmSwitch] = useState<string | null>(null);
+  const [showDuplicateModal, setShowDuplicateModal] = useState<any | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState<any | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [dupName, setDupName] = useState('');
+  const [dupSlug, setDupSlug] = useState('');
+  const [dupSlugStatus, setDupSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+
+  const handleCopy = (slug: string, id: string) => {
+    navigator.clipboard.writeText(`https://minhai.app/ia/${slug}`);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const generateQrUrl = (
+    slug: string,
+    isPublic: boolean,
+    privateSlug: string,
+    companyId: string,
+  ) => {
+    const baseUrl = isPublic
+      ? `https://minhai.app/ia/${slug}`
+      : `https://minhai.app/ia/private/${privateSlug}`;
+    return `/api/qrcode?size=300&data=${encodeURIComponent(baseUrl)}&color=%23000080&company_id=${companyId}`;
+  };
+
+  const handleDuplicate = (assistant: any) => {
+    setDupName(`${assistant.name} (cópia)`);
+    const baseSlug = `${assistant.slug}-copia`;
+    setDupSlug(baseSlug);
+    setDupSlugStatus('idle');
+    setShowDuplicateModal(assistant);
+  };
+
+  const checkDupSlug = async (slug: string) => {
+    if (slug.length < 3) { setDupSlugStatus('idle'); return; }
+    setDupSlugStatus('checking');
+    const supabase = createClient();
+    const { data } = await supabase.from('companies').select('id').eq('slug', slug).maybeSingle();
+    setDupSlugStatus(data ? 'taken' : 'available');
+  };
+
+  const executeDuplicate = async () => {
+    if (!showDuplicateModal || dupSlugStatus !== 'available') return;
+    setDuplicating(showDuplicateModal.id);
+    setShowDuplicateModal(null);
+    try {
+      const res = await fetch('/api/assistentes/duplicate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: showDuplicateModal.id, newName: dupName, newSlug: dupSlug }),
+      });
+      if (res.ok) window.location.reload();
+    } finally {
+      setDuplicating(null);
+    }
+  };
+
+  const handleSwitchVersion = async (assistant: any) => {
+    if (confirmSwitch !== assistant.id) {
+      setConfirmSwitch(assistant.id);
+      setTimeout(() => setConfirmSwitch(null), 4000);
+      return;
+    }
+    setConfirmSwitch(null);
+    setSwitching(assistant.id);
+    try {
+      const newType = assistant.assistant_type === 'vendas' ? 'smart' : 'vendas';
+      const res = await fetch('/api/assistentes/switch-version', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: assistant.id, newType }),
+      });
+      if (res.ok) window.location.reload();
+    } finally {
+      setSwitching(null);
+    }
+  };
+
+  const executeDelete = async () => {
+    if (!showDeleteModal) return;
+    const expected = `minhai.app/ia/${showDeleteModal.slug}`;
+    if (deleteConfirmText.trim() !== expected) return;
+    setDeleting(showDeleteModal.id);
+    setShowDeleteModal(null);
+    setDeleteConfirmText('');
+    try {
+      const res = await fetch('/api/assistentes/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: showDeleteModal.id }),
+      });
+      if (res.ok) window.location.reload();
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-transparent">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        {/* Cabeçalho */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Assistentes</h1>
+            <p className="mt-1 text-gray-600 dark:text-white/60">
+              Gerencie seus assistentes virtuais e configurações personalizadas
+            </p>
+          </div>
+          <Link
+            href="/dashboard/assistentes/novo"
+            className="inline-flex items-center justify-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-500/20 font-semibold active:scale-95"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Novo Assistente
+          </Link>
+        </div>
+
+        {/* Lista */}
+        <div className="space-y-6">
+          {companies.map((assistant) => {
+            const isWebappActive = assistant.id === activeWebappCompanyId;
+            const webappUrl = isWebappActive
+              ? `https://${assistant.slug}.${assistant.webapp_domain || 'minhai.app'}`
+              : null;
+
+            return (
+              <div
+                key={assistant.id}
+                className="group relative rounded-2xl border transition-all duration-300 p-6
+                  bg-white/80 border-gray-200 hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/5
+                  dark:bg-white/5 dark:border-white/10 dark:hover:border-blue-500/30 backdrop-blur-sm"
+              >
+                {/* Linha principal — info + ações */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 items-center md:items-stretch">
+
+                  {/* Info do Assistente */}
+                  <div className="flex items-center space-x-4 flex-1 justify-center md:justify-start">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 duration-300
+                      bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 overflow-hidden border border-gray-100 dark:border-white/5">
+                      {assistant.logo_url ? (
+                        <img
+                          src={assistant.logo_url}
+                          alt={assistant.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '';
+                            (e.target as HTMLImageElement).parentElement!.innerHTML =
+                              '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>';
+                          }}
+                        />
+                      ) : (
+                        <Zap className="w-8 h-8" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2 mb-1 flex-wrap gap-y-1">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                          {assistant.name}
+                        </h3>
+                        {assistant.is_public ? (
+                          <span className="flex items-center text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400 border border-green-200 dark:border-green-500/20">
+                            <Globe className="w-3 h-3 mr-1" /> Público
+                          </span>
+                        ) : (
+                          <span className="flex items-center text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
+                            <Lock className="w-3 h-3 mr-1" /> Privado
+                          </span>
+                        )}
+                        {assistant.assistant_type === 'vendas' && (
+                          <span className="flex items-center text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 font-bold">
+                            <Zap className="w-3 h-3 mr-1" /> Versão Vendas · 10% comissão
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ações — 2 linhas */}
+                  <div className="flex flex-col gap-2 items-center md:items-end">
+                    {/* Linha 1 */}
+                    <div className="flex flex-wrap gap-2 justify-center md:justify-end">
+                      {assistant.is_public && (
+                        <button
+                          onClick={() => handleCopy(assistant.slug, assistant.id)}
+                          className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                            bg-gray-100 text-gray-700 hover:bg-gray-200
+                            dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
+                        >
+                          {copiedId === assistant.id
+                            ? <Check className="w-4 h-4 mr-2 text-green-500" />
+                            : <Copy className="w-4 h-4 mr-2" />}
+                          Copiar Link
+                        </button>
+                      )}
+                      {assistant.is_public && (
+                        <button
+                          onClick={() => setShowQrModal(assistant)}
+                          className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                            bg-gray-100 text-gray-700 hover:bg-gray-200
+                            dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
+                        >
+                          <QrCode className="w-4 h-4 mr-2" />
+                          QR Code
+                        </button>
+                      )}
+                      <Link
+                        href={`/dashboard/google-connect?companyId=${assistant.id}`}
+                        className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                          bg-red-50 text-red-600 hover:bg-red-100
+                          dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 border border-red-100 dark:border-red-500/20"
+                      >
+                        <GoogleIcon className="w-4 h-4 mr-2" />
+                        Serviços Google
+                      </Link>
+                      <Link
+                        href={`/dashboard/atendimentos?companyId=${assistant.id}`}
+                        className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                          bg-green-50 text-green-600 hover:bg-green-100
+                          dark:bg-green-500/10 dark:text-green-400 dark:hover:bg-green-500/20 border border-green-100 dark:border-green-500/20"
+                      >
+                        <MetaIcon className="w-4 h-4 mr-2" />
+                        Whatsapp / Instagram / Facebook
+                      </Link>
+                    </div>
+
+                    {/* Linha 2 */}
+                    <div className="flex flex-wrap gap-2 justify-center md:justify-end">
+                      <Link
+                        href={`/dashboard/cadastros?companyId=${assistant.id}`}
+                        className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                          bg-purple-50 text-purple-600 hover:bg-purple-100
+                          dark:bg-purple-500/10 dark:text-purple-400 dark:hover:bg-purple-500/20 border border-purple-100 dark:border-purple-500/20"
+                      >
+                        <Users className="w-4 h-4 mr-2" />
+                        Usuários / Totens
+                      </Link>
+                      <Link
+                        href={`/dashboard/functions?companyId=${assistant.id}`}
+                        className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                          bg-blue-50 text-blue-600 hover:bg-blue-100
+                          dark:bg-blue-600/10 dark:text-blue-400 dark:hover:bg-blue-600/20 border border-blue-100 dark:border-blue-500/20"
+                      >
+                        <Bot className="w-4 h-4 mr-2" />
+                        Funções
+                      </Link>
+                      <button
+                        onClick={() => handleDuplicate(assistant)}
+                        disabled={!!duplicating}
+                        title="Duplicar assistente (copia configurações, produtos e prompts)"
+                        className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                          bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50
+                          dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
+                      >
+                        {duplicating === assistant.id
+                          ? <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                          : <Copy className="w-4 h-4 mr-2" />}
+                        Duplicar
+                      </button>
+
+                      <button
+                        onClick={() => handleSwitchVersion(assistant)}
+                        disabled={!!switching}
+                        title={assistant.assistant_type === 'vendas' ? 'Trocar para versão Smart (créditos)' : 'Trocar para versão Vendas (10% comissão)'}
+                        className={`flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50 border ${
+                          confirmSwitch === assistant.id
+                            ? 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30 animate-pulse'
+                            : assistant.assistant_type === 'vendas'
+                            ? 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+                            : 'bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20'
+                        }`}
+                      >
+                        {switching === assistant.id
+                          ? <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                          : <Zap className="w-4 h-4 mr-2" />}
+                        {confirmSwitch === assistant.id
+                          ? 'Confirmar troca?'
+                          : assistant.assistant_type === 'vendas'
+                          ? 'Trocar para Smart'
+                          : 'Trocar para Vendas'}
+                      </button>
+
+                      {SHOW_VENDAS_SWITCH && (
+                      <button
+                        onClick={() => handleSwitchVersion(assistant)}
+                        disabled={!!switching}
+                        title={assistant.assistant_type === 'vendas' ? 'Trocar para versão Smart (créditos)' : 'Trocar para versão Vendas (10% comissão)'}
+                        className={`flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50 border ${
+                          confirmSwitch === assistant.id
+                            ? 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30 animate-pulse'
+                            : assistant.assistant_type === 'vendas'
+                            ? 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+                            : 'bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20'
+                        }`}
+                      >
+                        {switching === assistant.id
+                          ? <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                          : <Zap className="w-4 h-4 mr-2" />}
+                        {confirmSwitch === assistant.id
+                          ? 'Confirmar troca?'
+                          : assistant.assistant_type === 'vendas'
+                          ? 'Trocar para Smart'
+                          : 'Trocar para Vendas'}
+                      </button>
+                      )}
+
+                      <Link
+                        href={`/dashboard/assistentes/${assistant.id}`}
+                        className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                          bg-gray-100 text-gray-700 hover:bg-gray-200
+                          dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
+                      >
+                        <Settings className="w-4 h-4 mr-2" />
+                        Configurar
+                      </Link>
+
+                      <button
+                        onClick={() => { setShowDeleteModal(assistant); setDeleteConfirmText(''); }}
+                        disabled={!!deleting}
+                        title="Excluir assistente"
+                        className="flex items-center px-3 py-2 rounded-lg text-xs font-bold transition-all bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-500/20 disabled:opacity-50"
+                      >
+                        {deleting === assistant.id
+                          ? <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                          : <Trash2 className="w-4 h-4" />}
+                      </button>
+
+                      <a
+                        href={
+                          assistant.is_public
+                            ? `https://minhai.app/ia/${assistant.slug}`
+                            : `https://minhai.app/ia/private/${assistant.private_slug || assistant.id}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center px-4 py-2 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20"
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Abrir
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Indicador WebApp ── */}
+                <WebAppIndicator
+                  assistant={assistant}
+                  isActive={isWebappActive}
+                  webappUrl={webappUrl}
+                  hasConsultingPlan={hasConsultingPlan}
+                  activeWebappCompanyId={activeWebappCompanyId}
+                />
+              </div>
+            );
+          })}
+
+          {companies.length === 0 && (
+            <div className="py-20 text-center border-2 border-dashed rounded-2xl
+              border-gray-200 bg-white/50 dark:border-white/10 dark:bg-white/5 backdrop-blur-sm">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 bg-gray-100 dark:bg-white/10">
+                <Zap className="w-8 h-8 text-gray-400" />
+              </div>
+              <p className="text-lg font-medium text-gray-900 dark:text-white">Nenhum assistente encontrado</p>
+              <p className="text-gray-500 dark:text-white/40">Crie seu primeiro assistente para começar.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Modal de Duplicar */}
+        {showDuplicateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-200 dark:border-white/10 relative">
+              <button
+                onClick={() => setShowDuplicateModal(null)}
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-white">Duplicar Assistente</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
+                Defina o nome e slug do novo assistente antes de duplicar.
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome</label>
+                  <input
+                    type="text"
+                    value={dupName}
+                    onChange={e => setDupName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Slug (URL)</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={dupSlug}
+                      onChange={e => {
+                        const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+                        setDupSlug(v);
+                        setDupSlugStatus('idle');
+                        clearTimeout((window as any)._dupSlugTimeout);
+                        (window as any)._dupSlugTimeout = setTimeout(() => checkDupSlug(v), 500);
+                      }}
+                      className={`w-full px-3 py-2 pr-10 rounded-lg border-2 text-sm font-mono focus:outline-none ${
+                        dupSlugStatus === 'available' ? 'border-green-500' :
+                        dupSlugStatus === 'taken' ? 'border-red-500' :
+                        'border-gray-300 dark:border-white/10'
+                      } bg-white dark:bg-slate-800 text-gray-900 dark:text-white`}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {dupSlugStatus === 'checking' && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
+                      {dupSlugStatus === 'available' && <CheckCircle className="w-4 h-4 text-green-500" />}
+                      {dupSlugStatus === 'taken' && <XCircle className="w-4 h-4 text-red-500" />}
+                    </div>
+                  </div>
+                  {dupSlugStatus === 'available' && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">✓ minhai.app/ia/{dupSlug}</p>
+                  )}
+                  {dupSlugStatus === 'taken' && (
+                    <p className="text-xs text-red-500 mt-1">Slug já em uso. Escolha outro.</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowDuplicateModal(null)}
+                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={executeDuplicate}
+                  disabled={dupSlugStatus !== 'available' || !dupName.trim()}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm flex items-center justify-center gap-2"
+                >
+                  <Copy className="w-4 h-4" />
+                  Duplicar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Excluir */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-red-200 dark:border-red-500/30 relative">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                  <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Excluir Assistente</h3>
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium">Esta ação não pode ser desfeita</p>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                Você está prestes a excluir permanentemente o assistente <strong className="text-gray-900 dark:text-white">{showDeleteModal.name}</strong> e todos os seus dados:
+              </p>
+              <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1 mb-4 ml-3">
+                <li>• Configurações, funções e prompts</li>
+                <li>• Produtos, FAQs e histórico de atendimentos</li>
+                <li>• Pedidos, agendamentos e registros</li>
+                <li>• Conexões Meta (WhatsApp, Instagram, Facebook)</li>
+              </ul>
+
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-500/20 mb-4">
+                <p className="text-xs text-red-700 dark:text-red-300 mb-2">
+                  Para confirmar, digite exatamente:
+                </p>
+                <p className="text-xs font-mono font-bold text-red-800 dark:text-red-200 mb-2 select-all">
+                  minhai.app/ia/{showDeleteModal.slug}
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={e => setDeleteConfirmText(e.target.value)}
+                  onPaste={e => e.preventDefault()}
+                  placeholder="Digite aqui para confirmar"
+                  className="w-full px-3 py-2 rounded-lg border border-red-300 dark:border-red-500/30 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-500"
+                  autoComplete="off"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowDeleteModal(null); setDeleteConfirmText(''); }}
+                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={executeDelete}
+                  disabled={deleteConfirmText.trim() !== `minhai.app/ia/${showDeleteModal.slug}`}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Excluir permanentemente
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de QR Code */}
+        {showQrModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-white/10 relative">
+              <button
+                onClick={() => setShowQrModal(null)}
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="text-center">
+                <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">QR Code do Assistente</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">{showQrModal.name}</p>
+                <div className="bg-white p-4 rounded-xl inline-block mb-6 border border-gray-100 shadow-inner">
+                  <img
+                    src={generateQrUrl(showQrModal.slug, showQrModal.is_public, showQrModal.private_slug, showQrModal.id)}
+                    alt="QR Code"
+                    className="w-48 h-48"
+                  />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  Aponte a câmera para o código para abrir o assistente.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowQrModal(null)}
+                    className="flex-1 px-4 py-2 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm"
+                  >
+                    Fechar
+                  </button>
+                  <a
+                    href={generateQrUrl(showQrModal.slug, showQrModal.is_public, showQrModal.private_slug, showQrModal.id)}
+                    download={`qrcode-${showQrModal.slug}.png`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 transition"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Baixar
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   Sub-componente: indicador de WebApp no rodapé do card
+───────────────────────────────────────────────────────── */
+function WebAppIndicator({
+  assistant,
+  isActive,
+  webappUrl,
+  hasConsultingPlan,
+  activeWebappCompanyId,
+}: {
+  assistant: any;
+  isActive: boolean;
+  webappUrl: string | null;
+  hasConsultingPlan: boolean;
+  activeWebappCompanyId: string | null;
+}) {
+  // ── Estado 1: WebApp ativo neste assistente ──────────────
+  if (isActive && webappUrl) {
+    return (
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+          <span className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full
+            bg-green-100 text-green-700 border border-green-200
+            dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            WebApp ativo
+          </span>
+          <a
+            href={webappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-mono font-medium text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[240px]"
+          >
+            {webappUrl.replace('https://', '')}
+          </a>
+        </div>
+        <div className="flex items-center gap-2 justify-center sm:justify-end">
+          <Link
+            href={`/dashboard/webapp?companyId=${assistant.id}`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
+              bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200
+              dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20 dark:border-amber-500/20"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            Editar WebApp
+          </Link>
+          <a
+            href={webappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
+              bg-gray-100 text-gray-600 hover:bg-gray-200
+              dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Abrir
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Estado 2: tem plano Consulting, mas outro assistente tem o webapp ──
+  if (hasConsultingPlan && activeWebappCompanyId && activeWebappCompanyId !== assistant.id) {
+    return (
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-3 flex-wrap">
+        <span className="text-xs text-gray-400 dark:text-white/30 flex items-center gap-1.5">
+          <Globe2 className="w-3.5 h-3.5" />
+          Outro assistente usa o WebApp desta conta
+        </span>
+      </div>
+    );
+  }
+
+  // ── Estado 3: tem plano Consulting, nenhum webapp ativo ainda ──
+  if (hasConsultingPlan && !activeWebappCompanyId) {
+    return (
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full
+            bg-amber-100 text-amber-700 border border-amber-200
+            dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20">
+            <Sparkles className="w-3 h-3" />
+            WebApp disponível
+          </span>
+          <span className="text-xs text-gray-500 dark:text-white/40">
+            Ative seu subdomínio próprio
+          </span>
+        </div>
+        <Link
+          href={`/dashboard/webapp?companyId=${assistant.id}`}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
+            bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200
+            dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20 dark:border-amber-500/20"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          Configurar WebApp
+        </Link>
+      </div>
+    );
+  }
+
+  // ── Estado 4: sem plano Consulting — upsell sutil ──────────
+  return (
+    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center gap-2">
+        <span className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full
+          bg-gray-100 text-gray-500 border border-gray-200
+          dark:bg-white/5 dark:text-white/30 dark:border-white/5">
+          <Lock className="w-3 h-3" />
+          WebApp — Plano Consulting
+        </span>
+        <span className="text-xs text-gray-400 dark:text-white/30 hidden sm:block">
+          Subdomínio próprio + PWA instalável
+        </span>
+      </div>
+      <Link
+        href="/dashboard/credits"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
+          bg-gray-100 text-gray-600 hover:bg-gray-200
+          dark:bg-white/5 dark:text-white/40 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
+      >
+        Ver planos
+      </Link>
+    </div>
+  );
+}

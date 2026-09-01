@@ -1,0 +1,1285 @@
+/* ==========================================================================
+   Wizard — Convite IA
+
+   Prefixo .wz- e cor propria. O cromo do wizard NAO herda os tokens --cv-:
+   se herdasse, o painel mudaria de cor junto com o convite e o usuario
+   perderia a referencia de qual parte e a ferramenta e qual e o produto.
+   ========================================================================== */
+
+.wz {
+  --wz-rosa: #d86090;
+  --wz-rosa-escuro: #a04a63;
+  --wz-linha: #e4e4e7;
+  --wz-fundo: #f7f7f8;
+  --wz-texto: #1c1a1e;
+  --wz-suave: #6b6b73;
+
+  display: grid;
+  min-height: 100dvh;
+  background: var(--wz-fundo);
+  color: var(--wz-texto);
+  font-family: 'Quicksand', system-ui, sans-serif;
+}
+
+/* --------------------------------------------------------------------------
+   Painel do formulario
+   -------------------------------------------------------------------------- */
+
+.wz-painel {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  overflow-y: auto;
+  /* Espaco para o botao flutuante de previa no mobile. */
+  padding-bottom: 92px;
+}
+
+.wz-cabecalho { padding: 20px 20px 0; }
+
+.wz-trilha {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 18px;
+  padding: 0 0 6px;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.wz-trilha::-webkit-scrollbar { display: none; }
+.wz-trilha button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px 7px 7px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  color: var(--wz-suave);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.wz-trilha-num {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--wz-fundo);
+  font-size: 11px;
+  font-weight: 700;
+}
+.wz-trilha .feita button { border-color: #d9c2cc; color: var(--wz-rosa-escuro); }
+.wz-trilha .feita .wz-trilha-num { background: #fbe6ee; color: var(--wz-rosa-escuro); }
+.wz-trilha .atual button { border-color: var(--wz-rosa); color: var(--wz-rosa-escuro); font-weight: 700; }
+.wz-trilha .atual .wz-trilha-num { background: var(--wz-rosa); color: #fff; }
+
+.wz-titulo { margin: 0 0 4px; font-size: 24px; font-weight: 700; }
+
+.wz-conteudo { flex: 1; padding: 14px 20px 20px; }
+
+.wz-intro, .wz-aviso {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--wz-suave);
+}
+.wz-aviso { margin: 16px 0 0; font-size: 12px; }
+.wz-ok { margin: -8px 0 16px; font-size: 12px; color: #15803d; }
+
+/* --------------------------------------------------------------------------
+   Campos
+   -------------------------------------------------------------------------- */
+
+.wz-campo { display: block; margin-bottom: 16px; }
+.wz-campo-rotulo {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wz-suave);
+}
+.wz-campo-dica {
+  display: block;
+  margin-top: 5px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--wz-suave);
+}
+.wz-input {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 9px;
+  background: #fff;
+  font: inherit;
+  font-size: 15px; /* 16px ou mais evita o zoom automatico do iOS */
+  color: var(--wz-texto);
+}
+.wz-input:focus-visible { outline: 2px solid var(--wz-rosa); outline-offset: 1px; border-color: var(--wz-rosa); }
+.wz-area { resize: vertical; line-height: 1.6; }
+.wz-arquivo { padding: 9px 10px; font-size: 13px; }
+
+.wz-grupo { margin: 22px 0 0; padding: 16px; border: 1px solid var(--wz-linha); border-radius: 12px; }
+.wz-grupo legend { padding: 0 7px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--wz-suave); }
+
+.wz-opcoes { display: flex; gap: 8px; margin-bottom: 16px; }
+.wz-opcao {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 9px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.wz-opcao.sel { border-color: var(--wz-rosa); background: #fdf0f3; font-weight: 700; color: var(--wz-rosa-escuro); }
+
+/* --------------------------------------------------------------------------
+   Cartoes de escolha
+   -------------------------------------------------------------------------- */
+
+.wz-cartoes { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.wz-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 13px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 11px;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.wz-cartao:hover { border-color: #b8b8be; }
+.wz-cartao.sel { border-color: var(--wz-rosa); box-shadow: 0 0 0 2px rgb(216 96 144 / 16%); }
+.wz-cartao-nome { font-size: 12.5px; font-weight: 700; }
+.wz-amostra { display: block; line-height: 1.15; color: var(--wz-texto); overflow: hidden; }
+.wz-faixa { display: flex; height: 30px; border-radius: 7px; overflow: hidden; }
+.wz-faixa i { flex: 1; }
+
+.wz-mais { margin-top: 16px; }
+.wz-mais summary { font-size: 13px; color: var(--wz-rosa-escuro); cursor: pointer; margin-bottom: 12px; }
+
+/* --------------------------------------------------------------------------
+   Lista de secoes
+   -------------------------------------------------------------------------- */
+
+.wz-secoes { margin: 0; padding: 0; list-style: none; border: 1px solid var(--wz-linha); border-radius: 12px; overflow: hidden; }
+.wz-secoes li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--wz-linha);
+  background: #fff;
+}
+.wz-secoes li:last-child { border-bottom: 0; }
+.wz-secoes li.off { background: var(--wz-fundo); color: var(--wz-suave); }
+.wz-switch { display: flex; align-items: center; gap: 10px; flex: 1; font-size: 14px; cursor: pointer; }
+.wz-switch input { width: 18px; height: 18px; accent-color: var(--wz-rosa); cursor: pointer; }
+.wz-switch input:disabled { cursor: default; opacity: 0.5; }
+.wz-mover { display: flex; gap: 4px; }
+.wz-mover button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 13px;
+  color: var(--wz-suave);
+  cursor: pointer;
+}
+.wz-mover button:disabled { opacity: 0.35; cursor: default; }
+
+/* --------------------------------------------------------------------------
+   Revisao
+   -------------------------------------------------------------------------- */
+
+.wz-resumo { margin: 0; border: 1px solid var(--wz-linha); border-radius: 12px; overflow: hidden; }
+.wz-resumo > div { display: flex; justify-content: space-between; gap: 14px; padding: 11px 14px; border-bottom: 1px solid var(--wz-linha); background: #fff; }
+.wz-resumo > div:last-child { border-bottom: 0; }
+.wz-resumo dt { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--wz-suave); }
+.wz-resumo dd { margin: 0; font-size: 14px; font-weight: 600; text-align: right; }
+
+.wz-problemas { margin-bottom: 18px; padding: 14px; border: 1px solid #f5d0a9; border-radius: 11px; background: #fffbf3; }
+.wz-problemas p { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #a16207; }
+.wz-problemas ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.8; color: #7c5a1e; }
+.wz-problemas button { border: 0; background: none; font: inherit; font-size: 12.5px; color: var(--wz-rosa-escuro); text-decoration: underline; cursor: pointer; padding: 0; }
+
+.wz-faltas { margin: 0 20px; padding: 11px 14px 11px 32px; border-radius: 10px; background: #fef2f2; color: #b91c1c; font-size: 13px; line-height: 1.6; }
+
+/* --------------------------------------------------------------------------
+   Rodape
+   -------------------------------------------------------------------------- */
+
+.wz-rodape {
+  /* `sticky` so gruda quando o ancestral rola, e aqui quem rola e o
+     .wz-painel — no celular o rodape descia com o conteudo e a pessoa
+     precisava rolar ate o fim para achar "Ver previa". `fixed` mantem os tres
+     botoes sempre a vista. */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--wz-linha);
+  background: #fff;
+}
+.wz-btn {
+  flex: 1;
+  padding: 13px 18px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.wz-btn-principal { flex: 2; border-color: var(--wz-rosa); background: var(--wz-rosa); color: #fff; }
+.wz-btn-principal:hover:not(:disabled) { filter: brightness(0.93); }
+.wz-btn:disabled { opacity: 0.45; cursor: default; }
+.wz-btn-fantasma { color: var(--wz-suave); }
+
+/* --------------------------------------------------------------------------
+   Previa
+   -------------------------------------------------------------------------- */
+
+.wz-previa { display: flex; flex-direction: column; background: var(--wz-fundo); }
+.wz-previa-topo {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--wz-linha);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--wz-suave);
+}
+.wz-fechar { width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--wz-fundo); font-size: 15px; cursor: pointer; }
+.wz-previa-palco { flex: 1; overflow-y: auto; padding: 24px 0 40px; }
+
+.wz-abrir-previa {
+  position: fixed;
+  right: 16px;
+  bottom: 84px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--wz-rosa);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 6px 22px rgb(216 96 144 / 38%);
+  cursor: pointer;
+}
+.wz-badge {
+  display: grid;
+  place-items: center;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--wz-rosa-escuro);
+  font-size: 11.5px;
+}
+
+/* Mobile: a previa e uma folha em tela cheia. Nunca meia tela — as duas
+   metades ficariam pequenas demais para servir. */
+@media (max-width: 899px) {
+  .wz-previa {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    transform: translateY(100%);
+    visibility: hidden;
+    transition: transform 0.28s ease, visibility 0.28s;
+  }
+  .wz-previa.aberta { transform: translateY(0); visibility: visible; }
+  .wz-previa-topo { display: flex; }
+}
+
+/* Desktop: duas colunas, previa fixa. */
+@media (min-width: 900px) {
+  .wz { grid-template-columns: minmax(380px, 46%) 1fr; }
+  .wz-painel { padding-bottom: 0; border-right: 1px solid var(--wz-linha); max-height: 100dvh; }
+  .wz-previa { position: sticky; top: 0; max-height: 100dvh; }
+  .wz-abrir-previa { display: none; }
+  .wz-cartoes { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wz-previa { transition-duration: 0.01ms; }
+}
+
+/* --------------------------------------------------------------------------
+   Publicacao
+   -------------------------------------------------------------------------- */
+
+.wz-slug { display: flex; align-items: stretch; }
+.wz-slug .wz-input { border-radius: 9px 0 0 9px; border-right: 0; text-align: right; }
+.wz-slug-dominio {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--wz-linha);
+  border-left: 0;
+  border-radius: 0 9px 9px 0;
+  background: var(--wz-fundo);
+  font-size: 14px;
+  color: var(--wz-suave);
+  white-space: nowrap;
+}
+.wz-slug-situacao { margin: -8px 0 18px; font-size: 12.5px; min-height: 18px; }
+.wz-slug-situacao.checando { color: var(--wz-suave); }
+.wz-slug-situacao.livre { color: #15803d; }
+.wz-slug-situacao.ocupado { color: #b91c1c; }
+
+.wz-plano {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 15px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wz-plano.sel { border-color: var(--wz-rosa); box-shadow: 0 0 0 2px rgb(216 96 144 / 16%); }
+.wz-plano-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.wz-plano-nome { font-size: 15px; font-weight: 700; }
+.wz-plano-preco { font-size: 17px; font-weight: 700; color: var(--wz-rosa-escuro); }
+.wz-plano-preco small { font-size: 11px; font-weight: 400; color: var(--wz-suave); }
+.wz-plano-desc { display: block; margin: 5px 0 9px; font-size: 12.5px; color: var(--wz-suave); }
+.wz-plano-lista { margin: 0; padding-left: 17px; font-size: 12.5px; line-height: 1.75; color: var(--wz-suave); }
+
+/* --------------------------------------------------------------------------
+   Sugestao por IA
+   -------------------------------------------------------------------------- */
+
+.wz-ia {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: -6px 0 16px;
+  padding: 8px 14px;
+  border: 1px solid #e8c6d6;
+  border-radius: 999px;
+  background: #fdf0f3;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--wz-rosa-escuro);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.wz-ia:hover:not(:disabled) { background: #fbe3ea; }
+.wz-ia:disabled { opacity: 0.6; cursor: default; }
+.wz-ia svg { width: 15px; height: 15px; }
+
+.wz-ia-erro { margin: -10px 0 14px; font-size: 12px; color: #b91c1c; }
+.wz-ia-porque {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #fdf0f3;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--wz-rosa-escuro);
+}
+
+.wz-ia-caixa {
+  margin-bottom: 22px;
+  padding: 15px;
+  border: 1px solid #e8c6d6;
+  border-radius: 12px;
+  background: #fffafb;
+}
+.wz-ia-caixa .wz-input { margin-bottom: 11px; }
+
+.wz-sugestoes {
+  margin: -6px 0 18px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 11px;
+  overflow: hidden;
+}
+.wz-sugestoes-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--wz-fundo);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wz-suave);
+}
+.wz-sugestoes-topo button {
+  border: 0;
+  background: none;
+  font-size: 13px;
+  color: var(--wz-suave);
+  cursor: pointer;
+}
+.wz-sugestao {
+  display: block;
+  width: 100%;
+  padding: 11px 13px;
+  border: 0;
+  border-top: 1px solid var(--wz-linha);
+  background: #fff;
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.55;
+  text-align: left;
+  white-space: pre-line;
+  cursor: pointer;
+}
+.wz-sugestao:hover { background: #fdf0f3; }
+
+/* --------------------------------------------------------------------------
+   Barra de marca
+   -------------------------------------------------------------------------- */
+.wz-marca {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--wz-linha);
+  background: #fff;
+}
+.wz-marca-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--wz-rosa-escuro);
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+}
+.wz-marca-logo img { border-radius: 50%; }
+.wz-marca-entrar {
+  color: var(--wz-suave);
+  font-size: 14px;
+  text-decoration: none;
+  padding: 6px 14px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 999px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.wz-marca-entrar:hover {
+  color: var(--wz-rosa-escuro);
+  border-color: var(--wz-rosa);
+}
+
+/* --------------------------------------------------------------------------
+   Transicao entre etapas
+
+   Deslocamento pequeno (10px) e de proposito: o suficiente para o olho
+   perceber que a etapa trocou, sem a sensacao de pagina escorregando. Passar
+   de ~250ms comeca a parecer lento em quem preenche varias etapas seguidas.
+   -------------------------------------------------------------------------- */
+@keyframes wz-entra {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.wz-conteudo { animation: wz-entra 0.24s ease-out both; }
+
+.wz-titulo { animation: wz-entra 0.3s ease-out both; }
+
+/* A trilha de etapas ganha um preenchimento suave ao avancar. */
+.wz-trilha li .wz-trilha-num { transition: background 0.25s, color 0.25s, transform 0.25s; }
+.wz-trilha li.atual .wz-trilha-num { transform: scale(1.12); }
+
+/* --------------------------------------------------------------------------
+   Botao "Ver previa" no rodape
+   -------------------------------------------------------------------------- */
+.wz-btn-previa {
+  flex: 0 0 auto;
+  padding-inline: 16px;
+  color: var(--wz-rosa-escuro);
+  border-color: var(--wz-rosa);
+  background: #fff;
+}
+/* No desktop a previa ja esta na tela: o botao seria ruido. */
+@media (min-width: 900px) {
+  .wz-btn-previa { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Barras de rolagem
+
+   O padrao escuro do navegador destoa do papel claro. `scrollbar-color`
+   cobre Firefox; o bloco -webkit- cobre Chrome, Edge e Safari.
+   -------------------------------------------------------------------------- */
+.wz, .wz-painel, .wz-previa, .wz-conteudo {
+  scrollbar-width: thin;
+  scrollbar-color: #e9b8cc #f7f7f8;
+}
+.wz *::-webkit-scrollbar,
+.wz-painel::-webkit-scrollbar,
+.wz-previa::-webkit-scrollbar { width: 10px; height: 10px; }
+
+.wz *::-webkit-scrollbar-track,
+.wz-painel::-webkit-scrollbar-track,
+.wz-previa::-webkit-scrollbar-track { background: #f7f7f8; }
+
+.wz *::-webkit-scrollbar-thumb,
+.wz-painel::-webkit-scrollbar-thumb,
+.wz-previa::-webkit-scrollbar-thumb {
+  background: #e9b8cc;
+  border-radius: 999px;
+  border: 2px solid #f7f7f8;
+}
+.wz *::-webkit-scrollbar-thumb:hover,
+.wz-painel::-webkit-scrollbar-thumb:hover,
+.wz-previa::-webkit-scrollbar-thumb:hover { background: var(--wz-rosa); }
+
+/* --------------------------------------------------------------------------
+   Carregando
+
+   Fora do escopo .wz de proposito: esta tela aparece ANTES do wizard montar,
+   entao nao pode depender das variaveis --wz-. Cores literais.
+   -------------------------------------------------------------------------- */
+.wz-carregando {
+  /* `relative` para a textura (que e `fixed`) nao escapar do contexto e para o
+     conteudo ficar acima dela. */
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 100dvh;
+  background: #fdf0f3;
+  color: #7c5560;
+  font-family: 'Quicksand', system-ui, sans-serif;
+  font-size: 15px;
+}
+.wz-carregando img { border-radius: 50%; animation: wz-pulsa 1.4s ease-in-out infinite; }
+
+@keyframes wz-pulsa {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(0.94); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wz-conteudo, .wz-titulo, .wz-carregando img { animation: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Folga para o rodape fixo
+
+   Sem isto o rodape cobre o ultimo campo de cada etapa — exatamente o
+   problema que ele veio resolver, invertido. `safe-area-inset-bottom` cobre a
+   barra de gestos do iPhone.
+   -------------------------------------------------------------------------- */
+.wz-conteudo {
+  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+}
+.wz-rodape {
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+}
+
+/* No desktop o rodape fica preso a coluna do formulario, nao a tela inteira:
+   `fixed` de ponta a ponta passaria por baixo da previa. */
+@media (min-width: 900px) {
+  .wz-rodape { position: sticky; left: auto; right: auto; z-index: 1; }
+  .wz-conteudo { padding-bottom: 20px; }
+}
+
+/* --------------------------------------------------------------------------
+   Retorno de campo (CEP, link de video)
+
+   Cor sozinha nao comunica: quem nao distingue vermelho de verde ve dois
+   textos iguais. Por isso a mensagem em si ja diz o que aconteceu e o que
+   fazer, e a cor e reforco.
+   -------------------------------------------------------------------------- */
+.wz-status {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--wz-suave);
+}
+.wz-status.ok   { color: #4a7c59; }
+.wz-status.erro { color: #a04a63; }
+
+/* Numero da etapa dentro do botao de previa no rodape. */
+.wz-btn-previa .wz-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 7px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--wz-rosa);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Campo congelado na edicao. Parece campo — mesma caixa, mesmo espaco — mas
+   sem borda de foco e com fundo morto, para ler como "informacao" e nao como
+   "input quebrado". */
+.wz-bloqueado {
+  margin: 0;
+  padding: 13px 14px;
+  border: 1px dashed var(--wz-linha);
+  border-radius: 10px;
+  background: #fafafa;
+  color: var(--wz-suave);
+  font-size: 15px;
+}
+
+/* --------------------------------------------------------------------------
+   Catalogo de presentes
+   -------------------------------------------------------------------------- */
+.wz-presentes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+.wz-presente {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 10px;
+  border: 1.5px solid var(--wz-linha);
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.wz-presente.sel {
+  border-color: var(--wz-rosa);
+  box-shadow: 0 0 0 3px rgba(216, 96, 144, 0.14);
+}
+.wz-presente-img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+}
+/* Item sem arte: bloco proprio, nao <img> quebrada. */
+.wz-presente-vazio {
+  display: grid;
+  place-items: center;
+  background: #fdf0f3;
+  font-size: 30px;
+}
+.wz-presente-titulo { font-size: 13px; line-height: 1.3; color: var(--wz-texto); }
+.wz-presente-valor  { font-size: 13px; font-weight: 700; color: var(--wz-rosa-escuro); }
+
+/* Escolha em radio dentro de um Campo. */
+.wz-escolha {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 0;
+  font-size: 14px;
+  color: var(--wz-texto);
+  cursor: pointer;
+}
+.wz-escolha input { margin-top: 2px; accent-color: var(--wz-rosa); }
+
+/* Escolha do selo. Grid de 3 no celular: o lacre precisa de tamanho para a
+   diferenca entre as artes ser perceptivel — com 6 numa linha viram borroes
+   iguais e a escolha perde sentido. */
+.wz-lacres {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.wz-lacre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 10px 4px;
+  border: 1.5px solid var(--wz-linha);
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  color: var(--wz-suave);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.wz-lacre.sel {
+  border-color: var(--wz-rosa);
+  box-shadow: 0 0 0 3px rgba(216, 96, 144, 0.14);
+  color: var(--wz-rosa-escuro);
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   Ajuste fino do monograma
+   -------------------------------------------------------------------------- */
+.wz-lacre-previa {
+  display: grid;
+  place-items: center;
+  padding: 14px 0 4px;
+}
+
+.wz-fontes-lacre {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 6px 0 14px;
+}
+.wz-fonte-lacre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border: 1.5px solid var(--wz-linha);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+/* A amostra mostra as INICIAIS do casal, nao "Aa": o problema de alinhamento
+   depende justamente de quais letras sao. */
+.wz-fonte-lacre span { font-size: 22px; line-height: 1.1; color: var(--wz-texto); }
+.wz-fonte-lacre small { font-size: 10px; color: var(--wz-suave); }
+.wz-fonte-lacre.sel {
+  border-color: var(--wz-rosa);
+  box-shadow: 0 0 0 3px rgba(216, 96, 144, 0.14);
+}
+
+.wz-slider { margin-bottom: 10px; }
+.wz-slider label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--wz-suave);
+  margin-bottom: 3px;
+}
+.wz-slider label span { font-weight: 700; color: var(--wz-rosa-escuro); }
+.wz-slider input { width: 100%; accent-color: var(--wz-rosa); }
+
+.wz-btn-mini { padding: 8px 14px; font-size: 13px; }
+
+/* Logo escolhido para o selo. Fundo quadriculado para revelar transparencia:
+   quem sobe PNG com fundo branco descobre aqui, e nao no convite publicado. */
+.wz-logo-atual {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wz-logo-atual img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid var(--wz-linha);
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%),
+    linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 6px 6px;
+}
+
+/* --------------------------------------------------------------------------
+   Escolha de acabamento da foto
+
+   As miniaturas usam um gradiente no lugar da foto real: o recorte e o que
+   diferencia as opcoes, e um bloco de cor mostra a forma melhor que uma foto
+   de 30px, onde qualquer imagem vira mancha.
+   -------------------------------------------------------------------------- */
+.wz-acabamentos {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+.wz-acabamento {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 3px;
+  border: 1.5px solid var(--wz-linha);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 10.5px;
+  line-height: 1.2;
+  color: var(--wz-suave);
+  cursor: pointer;
+  text-align: center;
+}
+.wz-acabamento.sel {
+  border-color: var(--wz-rosa);
+  box-shadow: 0 0 0 3px rgba(216, 96, 144, 0.14);
+  color: var(--wz-rosa-escuro);
+  font-weight: 700;
+}
+.wz-acab-mini {
+  display: block;
+  width: 34px;
+  height: 42px;
+  background: linear-gradient(150deg, #d8a3b4, #8f6070);
+}
+
+/* Cada forma repete o recorte do acabamento correspondente, em miniatura. */
+.wz-acab-mini.wz-acab-moldura     { border: 2px solid #fff; outline: 1px solid var(--wz-linha); }
+.wz-acab-mini.wz-acab-arredondado { border-radius: 8px; }
+.wz-acab-mini.wz-acab-circulo     { border-radius: 50%; height: 34px; }
+.wz-acab-mini.wz-acab-arco        { border-radius: 50% 50% 3px 3px / 34% 34% 4% 4%; }
+.wz-acab-mini.wz-acab-desfoque {
+  -webkit-mask-image: radial-gradient(ellipse 74% 74% at 50% 50%, #000 55%, transparent 100%);
+  mask-image: radial-gradient(ellipse 74% 74% at 50% 50%, #000 55%, transparent 100%);
+}
+.wz-acab-mini.wz-acab-vinheta {
+  background:
+    radial-gradient(ellipse 76% 76% at 50% 50%, transparent 50%, rgba(40, 20, 26, 0.6) 100%),
+    linear-gradient(150deg, #d8a3b4, #8f6070);
+}
+.wz-acab-mini.wz-acab-polaroid {
+  border: 2px solid #fff;
+  border-bottom-width: 10px;
+  outline: 1px solid var(--wz-linha);
+  transform: rotate(-3deg);
+}
+
+/* --------------------------------------------------------------------------
+   Escolha de textura
+   -------------------------------------------------------------------------- */
+.wz-texturas {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  margin: 8px 0 4px;
+}
+.wz-textura {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 3px;
+  border: 1.5px solid var(--wz-linha);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 10.5px;
+  line-height: 1.2;
+  color: var(--wz-suave);
+  cursor: pointer;
+  text-align: center;
+}
+.wz-textura.sel {
+  border-color: var(--wz-rosa);
+  box-shadow: 0 0 0 3px rgba(216, 96, 144, 0.14);
+  color: var(--wz-rosa-escuro);
+  font-weight: 700;
+}
+
+.wz-textura-amostra {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 7px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* O componente Textura e `position: fixed` — ele cobriria a tela inteira dentro
+   do cartao. `transform` cria um novo contexto de containing block, e a partir
+   dai `fixed` passa a se ancorar NESTE elemento, nao na viewport. E o truque
+   que permite reusar o mesmo componente como amostra, sem uma segunda versao
+   dele so para miniatura. */
+.wz-textura-svg {
+  position: absolute;
+  inset: 0;
+  transform: translateZ(0);
+  overflow: hidden;
+}
+.wz-textura-svg > svg,
+.wz-textura-svg > div { position: absolute !important; inset: 0; }
+
+/* --------------------------------------------------------------------------
+   Abas da previa
+   -------------------------------------------------------------------------- */
+.wz-previa-abas {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 0;
+  flex-shrink: 0;
+}
+.wz-previa-abas button {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  color: var(--wz-suave);
+  cursor: pointer;
+}
+.wz-previa-abas button.sel {
+  border-color: var(--wz-rosa);
+  background: var(--wz-rosa);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* A Capa e `position: fixed` — no palco ela cobriria a tela inteira.
+   `transform` cria containing block novo, e `fixed` passa a se ancorar aqui.
+   Mesmo truque da amostra de textura: um componente, dois contextos, sem uma
+   segunda versao dele so para a previa. */
+.wz-envelope-palco {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  max-height: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  transform: translateZ(0);
+}
+.wz-envelope-palco .cv-capa {
+  position: absolute !important;
+  inset: 0;
+  /* A etiqueta "Clique para abrir" some: na previa o clique nao abre nada, e
+     convidar para uma acao inerte confunde. */
+}
+.wz-envelope-palco .cv-capa-etiqueta { display: none; }
+.wz-envelope-palco .cv-capa { cursor: default; }
+
+/* --------------------------------------------------------------------------
+   Correcao do palco da previa
+
+   `.cv-fora` ganhou `min-height: 100dvh` para a textura cobrir a viewport no
+   convite publicado. Dentro do palco isso esticaria a previa para a altura da
+   tela e deixaria um vazio enorme abaixo do conteudo. Aqui a altura volta a
+   ser a do conteudo, e a textura acompanha porque e `absolute` a esta caixa.
+   -------------------------------------------------------------------------- */
+.wz-previa-palco .cv-fora {
+  min-height: 0;
+}
+
+/* A amostra de textura nao precisa mais do truque de transform: `absolute` ja
+   se ancora no .wz-textura-amostra, que e `position: relative`. Mantido apenas
+   o recorte. */
+.wz-textura-svg { transform: none; }
+
+/* --------------------------------------------------------------------------
+   Busca de endereço
+   -------------------------------------------------------------------------- */
+
+.wz-busca { display: flex; gap: 8px; align-items: stretch; }
+.wz-busca .wz-input { flex: 1; }
+.wz-busca-btn {
+  flex-shrink: 0;
+  padding: 0 16px;
+  border: 1px solid var(--wz-rosa);
+  border-radius: 9px;
+  background: var(--wz-rosa);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.wz-busca-btn:disabled { opacity: 0.55; cursor: default; }
+
+.wz-confirmacao {
+  margin: 8px 0 0;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: #fdf0f3;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--wz-rosa-escuro);
+}
+
+/* ==========================================================================
+   ACRESCENTAR ao fim de components/conviteria/wizard/wizard.css
+   Presentes: lista de escolhidos e editor
+   ========================================================================== */
+
+.wz-subtitulo {
+  margin: 26px 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--wz-suave);
+}
+
+.wz-escolhidos { margin: 0 0 12px; padding: 0; list-style: none; }
+.wz-escolhidos > li { margin-bottom: 8px; }
+
+.wz-escolhido {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 12px;
+  background: #fff;
+}
+.wz-escolhido-img {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 9px;
+  background: #fdf0f3;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+}
+.wz-escolhido-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.wz-escolhido-info strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  /* Título longo não pode empurrar os botões para fora do card. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wz-escolhido-info span { font-size: 12.5px; color: var(--wz-rosa-escuro); font-weight: 700; }
+
+.wz-etiqueta {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: #fdf0f3;
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--wz-rosa-escuro);
+}
+
+.wz-escolhido-acoes { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+
+.wz-btn-mini {
+  padding: 5px 10px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 7px;
+  background: #fff;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--wz-suave);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.wz-btn-mini:hover:not(:disabled) { border-color: var(--wz-rosa); color: var(--wz-rosa-escuro); }
+.wz-btn-mini:disabled { opacity: .5; cursor: default; }
+
+.wz-btn-novo-presente {
+  width: 100%;
+  margin-bottom: 6px;
+  border-style: dashed;
+  color: var(--wz-rosa-escuro);
+  border-color: #e8c6d6;
+  background: #fffafb;
+}
+
+.wz-presente-editor {
+  margin: 8px 0 4px;
+  padding: 15px;
+  border: 1px solid #e8c6d6;
+  border-radius: 12px;
+  background: #fffafb;
+}
+.wz-presente-editor .wz-campo { margin-bottom: 13px; }
+
+.wz-valor { display: flex; align-items: center; gap: 8px; }
+.wz-valor > span {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--wz-suave);
+  flex-shrink: 0;
+}
+.wz-valor .wz-input:disabled { opacity: .5; }
+
+.wz-switch-solto { margin-bottom: 13px; font-size: 13.5px; }
+
+.wz-presente-foto { display: flex; align-items: center; gap: 11px; }
+.wz-presente-foto img,
+.wz-presente-foto .wz-presente-vazio {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #fdf0f3;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+}
+.wz-presente-foto-acoes { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.wz-presente-editor-acoes { display: flex; gap: 9px; margin-top: 4px; }
+
+@media (max-width: 480px) {
+  /* Em tela estreita os três botões empilhados espremem o card.
+     Na horizontal cabem, porque o título passa a truncar. */
+  .wz-escolhido-acoes { flex-direction: row; }
+}
+
+
+/* ==========================================================================
+   Bloco recolhível de textos da seção
+   ========================================================================== */
+
+.wz-textos-secao {
+  margin: 0 0 16px;
+  padding: 0 13px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 12px;
+  background: #fff;
+}
+.wz-textos-secao > summary {
+  padding: 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wz-rosa-escuro);
+  cursor: pointer;
+  /* Sem list-style o triângulo some; mantido de propósito para a pessoa
+     perceber que é um bloco que abre. */
+}
+.wz-textos-secao[open] > summary {
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--wz-linha);
+}
+.wz-textos-secao .wz-campo:last-child { margin-bottom: 13px; }
+
+/* ==========================================================================
+   ACRESCENTAR ao fim de components/conviteria/wizard/wizard.css
+   Alertas e lista de presentes na revisão
+   ========================================================================== */
+
+.wz-alerta {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid #f0c9a8;
+  border-radius: 11px;
+  background: #fffaf3;
+}
+.wz-alerta > p { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: #a1670c; }
+.wz-alerta ul { margin: 0; padding-left: 17px; font-size: 12.5px; line-height: 1.8; color: #7c5a1e; }
+.wz-alerta ul strong { font-weight: 700; }
+.wz-alerta ul button,
+.wz-alerta-acao button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--wz-rosa-escuro);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.wz-alerta-acao {
+  margin: 8px 0 0 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.6;
+}
+
+/* Versão leve: informa, não alerta. Foto padrão não é erro — é só algo que
+   a pessoa pode ter esquecido. */
+.wz-alerta-leve { border-color: var(--wz-linha); background: var(--wz-fundo); }
+.wz-alerta-leve > p { color: var(--wz-texto); }
+.wz-alerta-leve ul { color: var(--wz-suave); }
+
+.wz-etiqueta-leve { background: var(--wz-fundo); color: var(--wz-suave); }
+
+.wz-revisao-presentes { margin-top: 20px; }
+.wz-revisao-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+.wz-revisao-topo h3 { margin: 0; font-size: 14px; font-weight: 700; }
+.wz-revisao-topo h3 span { color: var(--wz-suave); font-weight: 400; }
+
+.wz-revisao-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wz-revisao-grade > li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 7px;
+  border: 1px solid var(--wz-linha);
+  border-radius: 10px;
+  background: #fff;
+}
+.wz-revisao-grade img,
+.wz-revisao-grade .wz-presente-vazio {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 7px;
+  background: #fdf0f3;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+}
+.wz-revisao-titulo {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--wz-texto);
+  /* Duas linhas e reticências: título longo não pode desalinhar a grade. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.wz-revisao-valor { font-size: 11px; font-weight: 700; color: var(--wz-rosa-escuro); }

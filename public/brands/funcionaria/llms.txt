@@ -1,0 +1,28 @@
+# FuncionarIA
+
+FuncionarIA é um produto da BigCorps construído sobre a infraestrutura da minhAi.
+
+Slogan: "A funcionária IA que veste a camisa da sua empresa, no presencial e no online."
+CTA: "Contrate sua FuncionarIA grátis agora mesmo."
+
+## Como funciona
+
+A empresa cria uma FuncionarIA gratuitamente, recebe um subdomínio próprio e personaliza a identidade visual. A base gratuita inclui recepção, informações da empresa, FAQs, widget de site, toque/texto e respostas faladas previamente cacheadas.
+
+A empresa adiciona habilidades mensais conforme a necessidade. Exemplos: Fila & Atendimento, Agenda & Reservas, Vendas & Pedidos, Caixa & Cobrança, canais sociais, Mercado Livre e Fiscal. O dashboard mostra apenas os módulos correspondentes às habilidades ativas.
+
+## IA e créditos
+
+A FuncionarIA prioriza ações determinísticas, FAQs e fluxos estruturados. IA generativa é opcional. Créditos de uso cobrem custos variáveis como IA, reconhecimento de voz, WhatsApp, SMS e serviços externos.
+
+## Canais
+
+A mesma FuncionarIA pode trabalhar presencialmente em tablet, computador, terminal touch ou totem e online em empresa.funcionaria.net, widget do site e canais contratados.
+
+## Pagamentos
+
+A habilidade Caixa & Cobrança aproveita a infraestrutura de pagamentos da minhAi, incluindo checkout por código/QR, Pix e integrações de cartão configuradas para a empresa. Pagamento em dinheiro é assistido por funcionário humano, com cálculo antecipado de troco e chamada do responsável.
+
+Site: https://funcionaria.net
+Empresa: BigCorps Tecnologia Ltda
+Produto-base: https://minhai.app

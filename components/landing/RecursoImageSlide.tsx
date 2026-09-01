@@ -1,0 +1,170 @@
+'use client';
+
+// components/landing/RecursoImageSlide.tsx
+
+import { ReactNode, useEffect, useState } from 'react';
+
+interface RecursoImageSlideProps {
+  theme?: 'dark' | 'light';
+  label: string;
+  title: string;
+  description: string;
+  /** String única (imagem fixa) ou array (alterna automaticamente entre elas). */
+  imageSrc: string | string[];
+  imageAlt: string;
+  color: 'green' | 'blue';
+  currentIndex: number;
+  totalCount: number;
+  nextHint?: string;
+  extraContent?: ReactNode;
+  hideDots?: boolean;
+  /** Intervalo da troca automática quando imageSrc é array. Padrão: 5000ms. */
+  imageRotateMs?: number;
+}
+
+const colorStyles = {
+  green: {
+    dark:  { accent: 'text-green-400', border: 'border-green-400/20', labelBg: 'bg-green-500/10', labelText: 'text-green-400', dotActive: 'bg-green-400', glow: 'bg-green-500/5' },
+    light: { accent: 'text-green-600', border: 'border-green-500/20', labelBg: 'bg-green-100',    labelText: 'text-green-600', dotActive: 'bg-green-500', glow: 'bg-green-200/15' },
+  },
+  blue: {
+    dark:  { accent: 'text-blue-400',  border: 'border-blue-400/20',  labelBg: 'bg-blue-500/10',  labelText: 'text-blue-400',  dotActive: 'bg-blue-400',  glow: 'bg-blue-500/5' },
+    light: { accent: 'text-blue-600',  border: 'border-blue-500/20',  labelBg: 'bg-blue-100',     labelText: 'text-blue-600',  dotActive: 'bg-blue-500',  glow: 'bg-blue-200/15' },
+  },
+};
+
+export default function RecursoImageSlide({
+  theme = 'dark',
+  label,
+  title,
+  description,
+  imageSrc,
+  imageAlt,
+  color,
+  currentIndex,
+  totalCount,
+  nextHint,
+  extraContent,
+  hideDots = false,
+  imageRotateMs = 5000,
+}: RecursoImageSlideProps) {
+  const isDark = theme === 'dark';
+  const s = colorStyles[color][theme];
+
+  // Normaliza imageSrc em array — string única vira array de 1 item,
+  // tratado de forma idêntica ao caso de múltiplas imagens (sem rotação).
+  const images = Array.isArray(imageSrc) ? imageSrc : [imageSrc];
+  const [imgIndex, setImgIndex] = useState(0);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const t = setInterval(() => {
+      setImgIndex((i) => (i + 1) % images.length);
+    }, imageRotateMs);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [images.length, imageRotateMs]);
+
+  return (
+    <div
+      className={`
+        relative flex flex-col items-center justify-center
+        w-full overflow-hidden bg-transparent
+        transition-colors duration-500
+      `}
+    >
+      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+        <div className={`absolute top-1/4 right-1/4 w-[50%] h-[50%] rounded-full blur-[140px] ${s.glow}`} />
+      </div>
+
+      {/* Mobile: coluna — imagem em cima, texto abaixo. Desktop: linha lado a lado. */}
+      <div
+        className={`
+          relative z-10
+          flex flex-col md:flex-row
+          items-center justify-center md:justify-between
+          w-full max-w-7xl mx-auto
+          px-5 sm:px-10 lg:px-16
+          pt-24 pb-16 sm:pt-28 sm:pb-20 md:py-16
+          gap-8 md:gap-12
+        `}
+      >
+
+        {/* ── Imagem ─────────────────────────────────────────── */}
+        <div className="flex items-center justify-center order-1 md:order-2 w-full md:w-1/2">
+          <div
+            className="relative w-full max-w-[320px] md:max-w-full transition-transform duration-300 hover:scale-105"
+            style={{ height: 'clamp(200px, 42vh, 480px)' }}
+          >
+            {images.map((src, i) => (
+              <img
+                key={src}
+                src={src}
+                alt={imageAlt}
+                className={`absolute inset-0 m-auto drop-shadow-2xl transition-opacity duration-700 ${
+                  i === imgIndex ? 'opacity-100' : 'opacity-0'
+                }`}
+                style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* ── Texto ──────────────────────────────────────────── */}
+        <div className="flex flex-col items-center md:items-start justify-center text-center md:text-left order-2 md:order-1 w-full md:w-1/2 max-w-xl md:max-w-none">
+
+          {/* Label */}
+          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest leading-none mb-3 sm:mb-5 ${s.labelBg} ${s.labelText}`}>
+            {label}
+          </span>
+
+          {/* Título */}
+          <h2
+            className={`
+              font-bold leading-tight transition-colors
+              mb-3 sm:mb-5
+              text-2xl sm:text-3xl md:text-4xl lg:text-5xl
+              ${isDark ? 'text-white' : 'text-gray-900'}
+            `}
+          >
+            {title}
+          </h2>
+
+          {/* Descrição */}
+          <p
+            className={`
+              text-sm sm:text-base md:text-lg leading-relaxed transition-colors
+              ${isDark ? 'text-white/60' : 'text-gray-500'}
+            `}
+          >
+            {description}
+          </p>
+
+          {/* Conteúdo extra opcional — ex: DomainPreviewPicker */}
+          {extraContent && (
+            <div className="w-full mt-4 sm:mt-5">
+              {extraContent}
+            </div>
+          )}
+
+          {/* Progress dots — ocultos quando a página não pertence a uma sequência */}
+          {!hideDots && (
+            <div className="flex items-center gap-2 mt-4 sm:mt-8">
+              {Array.from({ length: totalCount }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    i === currentIndex
+                      ? `w-8 ${s.dotActive}`
+                      : `w-2 ${isDark ? 'bg-white/15' : 'bg-gray-200'}`
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}

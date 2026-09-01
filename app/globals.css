@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 255, 255, 255;
+  --background-end-rgb: 255, 255, 255;
+  --primary-blue: 162, 217, 247;
+  --primary-green: 176, 203, 31;
+  --primary-green-dark: 140, 162, 20;
+  --radius: 0.5rem;
+}
+.dark {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 2, 6, 23;
+  --background-end-rgb: 15, 23, 42;
+}
+body {
+  min-height: 100vh;
+  font-family: 'Nunito', sans-serif;
+}
+/* Fonte adaptativa para telas pequenas */
+@media screen and (max-height: 680px) {
+  html { font-size: 14px; }
+}
+@media screen and (max-height: 580px) {
+  html { font-size: 12px; }
+}
+@media screen and (max-width: 360px) {
+  html { font-size: 13px; }
+}
+/* dvh com fallback para browsers antigos */
+.h-dvh-safe {
+  height: 100vh;
+  height: 100dvh;
+}
+.min-h-dvh-safe {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  /* Cores primárias - Backgrounds */
+  .bg-primary-blue {
+    background-color: rgb(var(--primary-blue));
+  }
+  .bg-primary-green {
+    background-color: rgb(var(--primary-green));
+  }
+  .bg-primary-green-dark {
+    background-color: rgb(var(--primary-green-dark));
+  }
+  /* Cores primárias - Text */
+  .text-primary-blue {
+    color: rgb(var(--primary-blue));
+  }
+  .text-primary-green {
+    color: rgb(var(--primary-green));
+  }
+  .text-primary-green-dark {
+    color: rgb(var(--primary-green-dark));
+  }
+  /* Cores primárias - Borders */
+  .border-primary-blue {
+    border-color: rgb(var(--primary-blue));
+  }
+  .border-primary-green {
+    border-color: rgb(var(--primary-green));
+  }
+  /* Gradientes */
+  .bg-gradient-primary {
+    background: linear-gradient(to bottom right, rgb(var(--primary-blue)), rgb(220, 240, 250));
+  }
+  .bg-gradient-green {
+    background: linear-gradient(to bottom right, rgb(var(--primary-green)), rgb(200, 220, 50));
+  }
+  .bg-gradient-blue {
+    background: linear-gradient(to bottom right, rgb(var(--primary-blue)), rgb(200, 230, 245));
+  }
+}
+
+/* ── Impressão de recibo ─────────────────────────────────────────────────────
+   Esconde toda a página e exibe apenas o div#receipt-print injetado pelos
+   modais (GerarSenhaDisplay, CheckoutFlow, PixConfirmationModal).
+   O window.print() continua funcionando normalmente — o CSS é que filtra
+   o que aparece na folha impressa.
+──────────────────────────────────────────────────────────────────────────── */
+@media print {
+  body > * {
+    display: none !important;
+  }
+  body > #receipt-print {
+    display: block !important;
+  }
+  #receipt-print pre {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+    padding: 8px;
+  }
+/* Scrollbar customizada — modal e listas do dashboard */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 99px;
+  background: rgba(var(--primary-green), 0.35);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--primary-green), 0.65);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(var(--primary-green-dark), 0.4);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--primary-green-dark), 0.7);
+}
+}

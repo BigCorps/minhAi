@@ -1,0 +1,53 @@
+import { createServerClient } from '@supabase/ssr';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
+
+export function createClient() {
+  // Next.js 16+ - cookies agora retorna Promise
+  // Mas o createServerClient espera objeto síncrono
+  // Solução: criar wrapper que gerencia a Promise internamente
+  
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        async get(name: string) {
+          const cookieStore = await cookies();
+          return cookieStore.get(name)?.value;
+        },
+        async set(name: string, value: string, options: any) {
+          try {
+            const cookieStore = await cookies();
+            cookieStore.set(name, value, options);
+          } catch (error) {
+            // Server Component não pode setar cookies
+          }
+        },
+        async remove(name: string, options: any) {
+          try {
+            const cookieStore = await cookies();
+            cookieStore.set(name, '', { ...options, maxAge: 0 });
+          } catch (error) {
+            // Server Component não pode remover cookies
+          }
+        },
+      },
+    }
+  );
+}
+
+export async function getUser() {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
+
+// Cliente com service_role — bypassa RLS.
+// Usar APENAS em route handlers server-side, nunca expor ao cliente.
+export function createAdminClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}

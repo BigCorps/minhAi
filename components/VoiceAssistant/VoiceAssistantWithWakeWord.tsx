@@ -1,0 +1,2778 @@
+'use client';
+
+// ============================================================
+// VoiceAssistantWithWakeWord.tsx  ← ORQUESTRADOR PRINCIPAL
+// Caminho: components/assistant/VoiceAssistant/VoiceAssistantWithWakeWord.tsx
+// ============================================================
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Mic, MicOff, Square } from 'lucide-react';
+import { AvatarFace } from '@/components/AvatarFace';
+import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
+import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
+import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
+import { getFunctionByKey, FUNCTIONS_REGISTRY } from '@/lib/functions-registry';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './handlers/utilitiesHandlers';
+import { useLembreteWatcher } from './hooks/useLembreteWatcher';
+import { handleWifiQRCode, handleCardapio, handleCadastro, handleNossoQRCode } from '@/components/VoiceAssistant/handlers/companyHandlers';
+import { resolvePendingPaymentChoice } from '@/lib/paymentGatewayEntries';
+import { useGroqContext } from '@/hooks/useGroqContext';
+import { useProfile } from '@/hooks/useProfile';
+import { getContextualRoute } from '@/lib/routing-utils';
+import { createClient } from '@/lib/supabase-browser';
+import { useOnlinePresence } from '@/hooks/useOnlinePresence';
+
+// ── Ponto 1: Novos imports ─────────────────────────────────
+import { useFAQs } from './hooks/useFAQs';
+import { findMatchingFAQLocal } from './utils/faqUtils';
+import { useInactivityDetector } from '@/hooks/useInactivityDetector';
+import { getRandomActiveFunctionHighlight } from '@/lib/function-highlights';
+import { FeatureHighlightModal } from './FeatureHighlightModal';
+import { usePresenceDetector } from '@/hooks/usePresenceDetector';
+
+// ── Tipos ──────────────────────────────────────────────────
+import {
+  VoiceAssistantProps,
+  QRCodeData,
+  PixConfirmationData,
+  ActiveModal,
+  ActiveFunctionContext,
+  FunctionSettings,
+} from './types';
+
+// ── ActionModals ───────────────────────────────────────────
+import { ActionModals } from './ActionModals';
+
+import {
+  handleLerQRCode,
+  handleLerCodigoBarras,
+  handleValidarCupom,
+  handleImagemEmTexto,
+  handleTabelaEmTexto,
+  handleContratoEmTexto,
+  handleCanalYoutube,
+} from './handlers/companyHandlers';
+
+// ── Hooks ──────────────────────────────────────────────────
+import { useCompanyConfig } from './hooks/useCompanyConfig';
+import { useFunctionSettings } from './hooks/useFunctionSettings';
+import { useNoiseWarning } from './hooks/useNoiseWarning';
+import { useWakeWordDetector } from './hooks/useWakeWordDetector';
+import { useAudioPlayer } from './hooks/useAudioPlayer';
+
+// ── Utilitários ────────────────────────────────────────────
+import {
+  unlockAudio,
+  requestMicrophonePermission,
+  playProcessingFeedback,
+  requestCameraPermission,
+  requestLocationPermission,
+} from './utils/audioUtils';
+import { detectStopCommand, extractCommand } from './utils/textUtils';
+
+// ── Handlers ──────────────────────────────────────────────
+import {
+  registerFunctionUsage,
+  saveInteractionToHistory,
+  checkIfFunctionIsEnabled,
+} from './handlers/functionUsage';
+import { handleQRCodeCommand } from './handlers/qrcodeHandlers';
+import { handlePixCommand, handleConfirmPix, handleCancelPix } from './handlers/pixHandlers';
+import { handleNossaMarcaCommand, handleEnderecoCommand, handleVideoInstrucoesCommand, handleSequenciaVideosCommand } from './handlers/companyHandlers';
+import { detectVoiceCommand } from './handlers/voiceCommandDetector';
+
+export function VoiceAssistantWithWakeWord({
+  companyId,
+  companyName,
+  slug,
+  wakeWord,
+  greetingMessage,
+  theme = 'dark',
+  isMaximized = false,
+  onAssistantStart,
+  hideDisabledFunctions = false,
+  autoScroll = true,
+  onModalChange,
+  onTextMessage,
+  textMode = false,
+  isKioskMode = false,
+  isVendas = false,
+  startupFunctionKey,
+  widgetMode = false,
+}: VoiceAssistantProps & {
+  onModalChange?: (modal: any) => void;
+  onTextMessage?: (handler: (text: string) => Promise<{ text: string; functionKey?: string } | null>) => void;
+  textMode?: boolean;
+  isKioskMode?: boolean;
+  isVendas?: boolean;
+  startupFunctionKey?: string;
+  widgetMode?: boolean;
+}) {
+
+  // ── States básicos ────────────────────────────────────────
+  const [isListening, setIsListening] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isWakeWordDetected, setIsWakeWordDetected] = useState(false);
+  const [error, setError] = useState('');
+  const [permissionGranted, setPermissionGranted] = useState(false);
+  const [hasMicrophone, setHasMicrophone] = useState(true);
+  const [showStartButton, setShowStartButton] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(
+    () => crypto.randomUUID() // gera UUID local na montagem do componente
+  );
+  const sessionIdRef = useRef<string | null>(null);
+  useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
+  
+  const [externalInput, setExternalInput] = useState('');
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isRecordingToggle, setIsRecordingToggle] = useState(false);
+  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+useEffect(() => {
+  const handleKeyboardOpen = () => setIsKeyboardOpen(true);
+  
+const handleKeyboardClose = () => {
+  setIsKeyboardOpen(false);
+  setShowVirtualKeyboard(false); // ✅ garante fechamento ao receber evento externo
+};
+  
+  window.addEventListener('eai:virtualKeyboardOpen', handleKeyboardOpen);
+  window.addEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
+  return () => {
+    window.removeEventListener('eai:virtualKeyboardOpen', handleKeyboardOpen);
+    window.removeEventListener('eai:virtualKeyboardClose', handleKeyboardClose);
+  };
+}, []);
+
+  // -- States de Destaque de Função (Inatividade) --
+  const [showFeatureHighlight, setShowFeatureHighlight] = useState(false);
+  const [highlightedFeature, setHighlightedFeature] = useState<{ function_name: string; short_description: string; function_category: string } | null>(null);
+
+  // ── States de PIX ────────────────────────────────────────
+  const [qrCodeData, setQrCodeData] = useState<QRCodeData | null>(null);
+  const [pixConfirmationData, setPixConfirmationData] = useState<PixConfirmationData | null>(null);
+
+  // ── State unificado de modal ──────────────────────────────
+  const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
+
+useEffect(() => {
+  if (showFeatureHighlight && highlightedFeature) {
+    onModalChange?.({
+      type: 'FeatureHighlightModal',
+      data: {
+        featureName: highlightedFeature.function_name,
+        featureDescription: highlightedFeature.short_description,
+        featureCategory: highlightedFeature.function_category,
+      },
+    });
+  } else {
+    onModalChange?.(activeModal);
+  }
+}, [activeModal, showFeatureHighlight, highlightedFeature]);
+
+  // ── Sistema híbrido ───────────────────────────────────────
+  const [commandProcessor, setCommandProcessor] = useState<VoiceCommandProcessor | null>(null);
+  const [lastTranscript, setLastTranscript] = useState<string>('');
+  const [lastResponse, setLastResponse] = useState<string>('');
+  const [showConversationModal, setShowConversationModal] = useState(false);
+  const [showLastConversation, setShowLastConversation] = useState(false);
+  const conversationTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ── Refs de controle ──────────────────────────────────────
+  const isActiveRef = useRef(true);
+  const audioUnlocked = useRef<boolean>(false);
+  const processingQuestion = useRef<boolean>(false);
+  const googleSpeechRef = useRef<GoogleSpeechWebSocket | null>(null);
+  const shouldProcessAudio = useRef<boolean>(true);
+  const listeningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activeFunctionContextRef = useRef<ActiveFunctionContext | null>(null);
+
+  // ── Ref de estado PIX ─────────────────────────────────────
+  const pixStateRef = useRef<{ qrCodeData: any; pixConfirmationData: any } | null>(null);
+  useEffect(() => {
+    pixStateRef.current = { qrCodeData, pixConfirmationData };
+  }, [qrCodeData, pixConfirmationData]);
+
+  // ── Hooks customizados ────────────────────────────────────
+  const {
+    wakeWord: companyWakeWord,
+    greeting: companyGreeting,
+    avatarType,
+    wakeWordEnabled,
+    presenceGreetingEnabled,
+    inactivityTimeoutSeconds,
+    inactivityAction,
+    ttsVoice,
+    vadVolumeThreshold,
+    vadSilenceThreshold,
+    wakeWordSensitivity,
+  } = useCompanyConfig(companyId, wakeWord, greetingMessage);
+  const functionSettings = useFunctionSettings(companyId);
+
+  // ── Config de impressão ───────────────────────────────────
+  const [printConfig, setPrintConfig] = useState<{
+    print_on_purchase: boolean;
+    print_on_queue: boolean;
+    print_on_payment: boolean;
+    hasActivePlan: boolean;
+  }>({ print_on_purchase: false, print_on_queue: false, print_on_payment: false, hasActivePlan: false });
+
+useEffect(() => {
+    if (!companyId) return;
+    async function loadPrintConfig() {
+      try {
+        const supabase = createClient();
+        
+        // ✅ PASSO 1: Buscar a empresa e o user_id do dono
+        const { data: company } = await supabase
+          .from('companies')
+          .select('print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment, user_id')
+          .eq('id', companyId)
+          .maybeSingle();
+        
+        if (!company) {
+          setPrintConfig({
+            print_on_purchase: false,
+            print_on_queue: false,
+            print_on_payment: false,
+            hasActivePlan: false,
+          });
+          return;
+        }
+        
+        // ✅ PASSO 2: Buscar plano do DONO da empresa (company.user_id)
+        const { data: credits } = await supabase
+          .from('user_credits')
+          .select('has_active_plan, plan_expires_at')
+          .eq('user_id', company.user_id)
+          .maybeSingle();
+        
+        console.log('🔍 Raw credits data:', {
+          credits,
+          user_id: company.user_id,
+          has_active_plan: credits?.has_active_plan,
+          plan_expires_at: credits?.plan_expires_at,
+        });
+        
+        // ✅ PASSO 3: Verificar se plano está ativo e não expirado
+        const active =
+          credits?.has_active_plan === true &&
+          credits?.plan_expires_at != null &&
+          new Date(credits.plan_expires_at) > new Date();
+        
+        setPrintConfig({
+          // ✅ Converte print_auto_type_* para boolean
+          print_on_purchase: !!company.print_auto_type_purchase && company.print_auto_type_purchase !== 'none',
+          print_on_queue:    !!company.print_auto_type_queue    && company.print_auto_type_queue    !== 'none',
+          print_on_payment:  !!company.print_auto_type_payment  && company.print_auto_type_payment  !== 'none',
+          hasActivePlan: active,
+        });
+        
+        console.log('🖨️ Print Config:', {
+          companyId,
+          ownerId: company.user_id,
+          hasActivePlan: active,
+          planExpiresAt: credits?.plan_expires_at,
+          printOnPurchase: !!company.print_auto_type_purchase,
+          printOnQueue: !!company.print_auto_type_queue,
+          printOnPayment: !!company.print_auto_type_payment,
+        });
+      } catch (err) {
+        console.error('❌ Erro ao carregar printConfig:', err);
+        setPrintConfig({
+          print_on_purchase: false,
+          print_on_queue: false,
+          print_on_payment: false,
+          hasActivePlan: false,
+        });
+      }
+    }
+    loadPrintConfig();
+  }, [companyId]);
+  
+  const { noiseWarning, repromptWarning, handleVolumeChange, triggerRepromptWarning } = useNoiseWarning();
+  const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(
+    companyWakeWord,
+    wakeWordEnabled,
+    wakeWordSensitivity ?? 0.75
+  );
+  const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio, ttsVoice);
+  const isMobile = useIsMobile();
+  const { profile, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? '');
+  const profileRef = useRef(profile);
+  useEffect(() => { profileRef.current = profile; }, [profile]);
+
+const { onlineProfiles } = useOnlinePresence({
+  companyId,
+  profileId: profile?.id ?? '',
+  nome: profile?.nome ?? '',
+  tipo: profile?.tipo ?? '',
+  pageLocation: getContextualRoute('ia', slug ?? ''),
+});
+const onlineProfilesRef = useRef(onlineProfiles);
+useEffect(() => { onlineProfilesRef.current = onlineProfiles; }, [onlineProfiles]);
+
+// ── useEffect 1: login via evento (aba /cliente/slug) ────
+useEffect(() => {
+  const supabase = createClient();
+  let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+
+  function subscribeRealtime(profileId: string) {
+    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+    const channelName = `assistente-${companyId}-${profileId}`;
+    console.log('[Realtime] Inscrevendo no canal:', channelName);
+    realtimeChannel = supabase.channel(channelName)
+      .on('broadcast', { event: 'incoming-call' }, (payload) => {
+        console.log('[Realtime] incoming-call recebido:', payload);
+        const { callId, roomUrl, receiverToken, callerName } = payload.payload;
+        setActiveModal({
+          type: 'VideoCallIncomingDisplay',
+          data: { companyId, callId, roomUrl, token: receiverToken, callerName },
+        });
+      })
+      .subscribe((status) => {
+        console.log('[Realtime] status canal:', channelName, status);
+      });
+  }
+
+  if (profileRef.current?.id) {
+    subscribeRealtime(profileRef.current.id);
+  }
+
+  const handleProfileLogin = (e: any) => {
+    profileRef.current = e.detail;
+    if (e.detail?.id) subscribeRealtime(e.detail.id);
+  };
+  const handleProfileLogout = () => {
+    profileRef.current = null;
+    if (realtimeChannel) {
+      supabase.removeChannel(realtimeChannel);
+      realtimeChannel = null;
+    }
+  };
+
+  window.addEventListener('eai:profileLogin', handleProfileLogin);
+  window.addEventListener('eai:profileLogout', handleProfileLogout);
+
+  return () => {
+    window.removeEventListener('eai:profileLogin', handleProfileLogin);
+    window.removeEventListener('eai:profileLogout', handleProfileLogout);
+    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+  };
+}, [companyId]);
+
+// ── useEffect 2: profile carregado via useProfile (sessão salva no localStorage) ──
+useEffect(() => {
+  if (!profile?.id) return;
+
+  const supabase = createClient();
+  const channelName = `assistente-${companyId}-${profile.id}`;
+  console.log('[Realtime] profile carregado, inscrevendo:', channelName);
+
+  const channel = supabase.channel(channelName)
+    .on('broadcast', { event: 'incoming-call' }, (payload) => {
+      console.log('[Realtime] incoming-call recebido:', payload);
+      const { callId, roomUrl, receiverToken, callerName } = payload.payload;
+      setActiveModal({
+        type: 'VideoCallIncomingDisplay',
+        data: { companyId, callId, roomUrl, token: receiverToken, callerName },
+      });
+    })
+    .subscribe((status) => {
+      console.log('[Realtime] status:', status);
+    });
+
+  return () => { supabase.removeChannel(channel); };
+}, [profile?.id, companyId]);
+  const { groqContextRef, gptContextRef, fallbackMessageRef } = useGroqContext(companyId, profile);
+
+  // ── Ponto 2: Hook de FAQs ─────────────────────────────────
+  const faqs = useFAQs(companyId);
+  const faqsRef = useRef<typeof faqs>([]);
+  useEffect(() => { faqsRef.current = faqs; }, [faqs]);
+
+  // ── Lógica de Inatividade ─────────────────────────────────
+  // onInactivity fica num ref para não recriar a cada render e não
+  // disparar o useEffect do hook (que reiniciaria o timer).
+  const onInactivityRef = useRef(async () => {});
+  useEffect(() => {
+    onInactivityRef.current = async () => {
+      if (activeModal || isSpeaking || isPlayingAudio || isProcessing || showFeatureHighlight) return;
+
+      if (inactivityAction === 'offers_panel') {
+        setActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
+        return;
+      }
+
+      if (inactivityAction === 'restart') {
+        stopEverything();
+        setLastTranscript('');
+        setLastResponse('');
+        setShowLastConversation(false);
+        setSessionId(crypto.randomUUID());
+        resetInactivityTimer();
+        return;
+      }
+
+      // 'feature_highlight' — comportamento padrão
+      const feature = await getRandomActiveFunctionHighlight();
+      if (feature) {
+        setHighlightedFeature(feature);
+        setShowFeatureHighlight(true);
+        setTimeout(() => handleCloseFeatureHighlight(), 10000);
+      }
+    };
+  }); // sem deps → sempre atualizado
+
+  const { resetTimer: resetInactivityTimer } = useInactivityDetector({
+    timeoutSeconds: inactivityTimeoutSeconds ?? 120,
+    onInactivity: useCallback(() => onInactivityRef.current(), []),
+    onActivity: useCallback(() => {}, []),
+  });
+
+useEffect(() => {
+  if (!textMode) return;
+  const handler = () => onInactivityRef.current();
+  window.addEventListener('eai:triggerInactivity', handler);
+  return () => window.removeEventListener('eai:triggerInactivity', handler);
+}, [textMode]);
+
+// Reinicia o timer quando o timeout carrega do banco
+const prevTimeoutRef = useRef(inactivityTimeoutSeconds);
+useEffect(() => {
+  if (prevTimeoutRef.current !== inactivityTimeoutSeconds) {
+    prevTimeoutRef.current = inactivityTimeoutSeconds;
+    resetInactivityTimer();
+  }
+}, [inactivityTimeoutSeconds, resetInactivityTimer]);
+
+  // ── Detector de presença via câmera ──────────────────────
+usePresenceDetector({
+  enabled: presenceGreetingEnabled,
+  onPresenceDetected: useCallback(() => {
+    window.dispatchEvent(new CustomEvent('eai:presenceDetected'));
+    if (showFeatureHighlight) {
+      setShowFeatureHighlight(false);
+      setHighlightedFeature(null);
+    }
+    if (isPlayingAudio || isProcessing || isSpeaking) return;
+    const greeting = companyGreeting || greetingMessage || 'Olá! Como posso ajudar?';
+    playText(greeting)
+      .then(() => {
+        if (startupFunctionKey) {
+          setTimeout(() => handleFunctionClick(startupFunctionKey), 500);
+        }
+      })
+      .catch(() => {});
+    resetInactivityTimer();
+  }, [isPlayingAudio, isProcessing, isSpeaking, showFeatureHighlight, companyGreeting, greetingMessage, startupFunctionKey]),
+});
+
+  const handleCloseFeatureHighlight = useCallback(() => {
+    setShowFeatureHighlight(false);
+    setHighlightedFeature(null);
+    resetInactivityTimer();
+  }, [resetInactivityTimer]);
+
+  // ── Push-to-talk ───────────────────────────────────────────
+  const voiceRecorder = useVoiceRecorder();
+
+  // Wrap de playText para capturar lastResponse
+  const playText = (text: string) => {
+    if (text && text.trim()) setLastResponse(text.trim());
+    return _playText(text);
+  };
+
+  useLembreteWatcher({ setActiveModal, playText, companyId });
+
+  // playText silencioso para modo texto
+  const effectivePlayText = textMode
+    ? (text: string): Promise<void> => {
+        if (text && text.trim()) setLastResponse(text.trim());
+        return Promise.resolve();
+      }
+    : playText;
+
+  // ── Timer 30s para card de conversa ───────────────────────
+  useEffect(() => {
+    if (!lastTranscript && !lastResponse) return;
+    setShowLastConversation(true);
+    if (conversationTimerRef.current) clearTimeout(conversationTimerRef.current);
+    conversationTimerRef.current = setTimeout(() => {
+      setShowLastConversation(false);
+      conversationTimerRef.current = null;
+    }, 30000);
+    return () => { if (conversationTimerRef.current) clearTimeout(conversationTimerRef.current); };
+  }, [lastTranscript, lastResponse]);
+
+  useEffect(() => {
+    // No modo maximizado OU quando wake word está desativada (microfone manual é o único input de voz)
+    if ((isMaximized || !wakeWordEnabled) && externalInput) {
+      setLastTranscript(externalInput);
+      setExternalInput('');
+      handleTextMessage(externalInput);
+    }
+  }, [externalInput, isMaximized, wakeWordEnabled]);
+
+  // ── Inicialização ─────────────────────────────────────────
+  useEffect(() => {
+    isActiveRef.current = true;
+
+    requestMicrophonePermission().then(result => {
+      setPermissionGranted(result.granted);
+      setHasMicrophone(result.hasMicrophone);
+      if (!result.hasMicrophone) {
+        setError('Nenhum microfone detectado. O modo de voz está desativado, mas você pode usar a digitação.');
+      } else if (!result.granted) {
+        setError('Permissão do microfone negada. O modo de voz está desativado.');
+      }
+    });
+
+    requestCameraPermission().catch(() => {});
+    requestLocationPermission().catch(() => {});
+
+    const handleVerProdutoPix = (event: any) => {
+      const { companyId: cId, valorCents } = event.detail;
+      handlePixCommand(`gerar pix de ${(valorCents / 100).toFixed(2)}`, {
+        companyId: cId,
+        setIsProcessing,
+        setQrCodeData,
+        setPixConfirmationData,
+        playText,
+        functionSettings,
+        sessionId,
+        commandProcessor,
+        pixStateRef,
+        setActiveModal,
+        activeFunctionContextRef,
+      });
+    };
+    window.addEventListener('verProdutoPix', handleVerProdutoPix);
+
+    const handleExternalFunctionClick = (event: any) => {
+      handleFunctionClick(event.detail.functionKey, event);
+    };
+    window.addEventListener('voiceAssistantFunctionClick', handleExternalFunctionClick);
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') stopEverything();
+    };
+    window.addEventListener('keydown', handleKeyPress);
+
+    // ── Para áudio quando MeuSistemaDisplay abre o tour ──
+    const handleStopAudio = () => {
+      stopAudioImmediately()
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel()
+      }
+      setIsPlayingAudio(false)
+      setIsProcessing(false)
+    }
+    window.addEventListener('eai:stopAudio', handleStopAudio)
+
+// ── Listener para chamada de vídeo recebida do dashboard ──
+    const handleIncomingCall = (event: any) => {
+      const { callId, roomUrl, receiverToken, callerName } = event.detail;
+      if (!profileRef.current) return;
+      setActiveModal({
+        type: 'VideoCallIncomingDisplay',
+        data: { companyId, callId, roomUrl, token: receiverToken, callerName },
+      });
+    };
+window.addEventListener('eai:incomingVideoCall', handleIncomingCall);
+
+    // ── Pós-venda: identificação do cliente após pagamento confirmado ──
+    const handleSolicitarIdentificacao = async (e: any) => {
+      const { pedidoId } = e.detail;
+      setActiveModal({
+        type: 'LoginClienteDisplay',
+        data: {
+          companyId,
+          slug: slug ?? '',
+          profile: null,
+          pedidoIdParaVincular: pedidoId,
+        }
+      });
+      await playText('Obrigado pela compra! Para enviarmos sua confirmação, informe seu nome ou telefone.');
+    };
+
+    const handleEnviarConfirmacao = (e: any) => {
+      const { pedidoId, profileId } = e.detail;
+      const supabase = createClient();
+      supabase.functions.invoke('confirmar-venda-cliente', {
+        body: { pedido_id: pedidoId, profile_id: profileId }
+      }).catch(() => {});
+    };
+
+    window.addEventListener('eai:solicitarIdentificacaoCliente', handleSolicitarIdentificacao);
+    window.addEventListener('eai:enviarConfirmacaoCliente', handleEnviarConfirmacao);
+
+    return () => {
+      isActiveRef.current = false;
+      cleanup();
+      window.removeEventListener('verProdutoPix', handleVerProdutoPix);
+      window.removeEventListener('voiceAssistantFunctionClick', handleExternalFunctionClick);
+      window.removeEventListener('keydown', handleKeyPress);
+      window.removeEventListener('eai:stopAudio', handleStopAudio);
+      window.removeEventListener('eai:incomingVideoCall', handleIncomingCall);
+      window.removeEventListener('eai:solicitarIdentificacaoCliente', handleSolicitarIdentificacao);
+      window.removeEventListener('eai:enviarConfirmacaoCliente', handleEnviarConfirmacao);
+    };
+  }, []);
+
+  // ── VoiceCommandProcessor ─────────────────────────────────
+  useEffect(() => {
+    async function initCommandProcessor() {
+      if (!companyId) return;
+      const processor = new VoiceCommandProcessor(companyId);
+      await processor.initialize();
+      setCommandProcessor(processor);
+    }
+    initCommandProcessor();
+  }, [companyId]);
+
+  // ── Auto-start ────────────────────────────────────────────
+useEffect(() => {
+  if (!companyWakeWord) return;
+
+  // Sem microfone: libera o carrossel mas não inicia escuta de voz
+  if (!permissionGranted) {
+    const timer = setTimeout(() => {
+      setShowStartButton(false);
+      onAssistantStart?.();
+    }, 800);
+    return () => clearTimeout(timer);
+  }
+
+  // Com microfone e sem wake word: inicia direto
+  if (!wakeWordEnabled) {
+    const timer = setTimeout(() => {
+      setShowStartButton(false);
+      onAssistantStart?.();
+    }, 800);
+    return () => clearTimeout(timer);
+  }
+
+  // Com microfone e wake word: aguarda detecção
+  const timer = setTimeout(() => { handleStart(); }, 800);
+  return () => clearTimeout(timer);
+}, [companyWakeWord, permissionGranted, wakeWordEnabled, onAssistantStart]);
+
+  // ── Google Speech ─────────────────────────────────────────
+  async function startGoogleSpeech() {
+    if (!isActiveRef.current || !shouldProcessAudio.current) return;
+
+    const isInputModalOpen =
+      activeModal?.type === 'SendEmailModal' ||
+      activeModal?.type === 'CreateEventModal' ||
+      activeModal?.type === 'NossaMarcaDisplay' ||
+      activeModal?.type === 'EnderecoDisplay' ||
+      activeModal?.type === 'MeuSistemaDisplay' ||
+      activeModal?.type === 'VideoInstrucoesDisplay' ||
+      activeModal?.type === 'MeuCupomDisplay' ||
+      activeModal?.type === 'TocarMusicaDisplay' ||
+      activeModal?.type === 'SequenciaVideosDisplay';
+    if (isInputModalOpen) return;
+
+    const vadConfig = isMobile
+      ? { volumeThreshold: 0.030, silenceThreshold: 60 }
+      : {
+          volumeThreshold: vadVolumeThreshold ?? 0.015,
+          silenceThreshold: vadSilenceThreshold ?? 120,
+        };
+
+    try {
+      if (googleSpeechRef.current) {
+        googleSpeechRef.current.stopRecording();
+        googleSpeechRef.current.disconnect();
+      }
+
+      googleSpeechRef.current = new GoogleSpeechWebSocket({
+        onTranscript: (text, isFinal) => {
+          if (text && text.trim().length > 0) {
+            if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current);
+            if (!isFinal) {
+              setIsListening(true);
+              const lowerText = text.toLowerCase().trim();
+              const partialWakeWord = wakeWordDetectorRef.current?.detect(lowerText);
+              if (partialWakeWord?.detected && partialWakeWord.confidence >= 0.75) {
+                setIsWakeWordDetected(true);
+                setTimeout(() => setIsWakeWordDetected(false), 3000);
+              }
+            } else {
+              listeningTimeoutRef.current = setTimeout(() => {
+                if (!isProcessing && !isPlayingAudio) setIsListening(false);
+              }, 1000);
+            }
+          }
+          handleGoogleTranscript(text, isFinal);
+        },
+        onError: () => setIsListening(false),
+        onStatusChange: (status) => setIsListening(status === 'recording'),
+        onVolumeChange: handleVolumeChange,
+        ...vadConfig,
+      });
+
+      await googleSpeechRef.current.connect();
+      await googleSpeechRef.current.startRecording();
+    } catch {
+      setIsListening(false);
+    }
+  }
+
+  async function stopGoogleSpeech() {
+    if (googleSpeechRef.current) {
+      await googleSpeechRef.current.stopRecording();
+      googleSpeechRef.current.disconnect();
+      googleSpeechRef.current = null;
+      setIsListening(false);
+    }
+  }
+
+  function cleanup() {
+    if (googleSpeechRef.current) {
+      googleSpeechRef.current.stopRecording();
+      googleSpeechRef.current.disconnect();
+      googleSpeechRef.current = null;
+    }
+    stopAudioImmediately();
+  }
+
+  // ── Push-to-talk ──────────────────────────────────────────
+  const transcribeAndSetInput = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      const base64Audio = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+      });
+      const response = await fetch('/api/voice/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio: base64Audio }),
+      });
+      if (!response.ok) throw new Error('Erro na transcrição');
+      const { text } = await response.json();
+      if (text && text.trim()) setExternalInput(text.trim());
+    } catch {
+      // silencioso
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const handleMicButtonDown = async (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e && (isPlayingAudio || isProcessing)) { e.preventDefault(); e.stopPropagation(); }
+    if (isPlayingAudio || isProcessing) { stopEverything(); return; }
+    if (!permissionGranted || isTranscribing) return;
+    resetInactivityTimer();
+    shouldProcessAudio.current = false;
+    await stopGoogleSpeech();
+    setIsListening(true);
+    setIsRecordingToggle(true);
+    await voiceRecorder.startRecording();
+  };
+
+  const handleMicButtonUp = async () => {
+    if (!voiceRecorder.isRecording) return;
+    setIsListening(false);
+    setIsRecordingToggle(false);
+    try {
+      const audioBlob = await voiceRecorder.stopRecording();
+      if (!wakeWordEnabled) {
+        // Sem wake word: transcreve e envia direto (bypassa externalInput)
+        setIsTranscribing(true);
+        try {
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          const base64Audio = await new Promise<string>((resolve) => {
+            reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+          });
+          const response = await fetch('/api/voice/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audio: base64Audio }),
+          });
+          if (!response.ok) throw new Error('Erro na transcrição');
+          const { text } = await response.json();
+          if (text?.trim()) await handleTextMessage(text.trim());
+        } catch {
+          // silencioso
+        } finally {
+          setIsTranscribing(false);
+        }
+      } else {
+        await transcribeAndSetInput(audioBlob);
+      }
+    } catch {
+      // silencioso
+    } finally {
+      shouldProcessAudio.current = true;
+      if (wakeWordEnabled) {
+        setTimeout(async () => { if (isActiveRef.current) await startGoogleSpeech(); }, 300);
+      }
+    }
+  };
+
+  // ── Fechar modal ──────────────────────────────────────────
+  const handleCloseModal = async () => {
+    stopAudioImmediately();
+    setIsPlayingAudio(false);
+    // Reset defensivo: se algum await playText(...) ficou pendente por causa
+    // do fechamento do modal em pleno áudio, esses estados travariam
+    // permanentemente sem isso — igual ao que stopEverything() já faz.
+    setIsProcessing(false);
+    processingQuestion.current = false;
+    setActiveModal(null);
+    if (googleSpeechRef.current) await googleSpeechRef.current.stopRecording();
+    setTimeout(async () => {
+      if (isActiveRef.current) {
+        shouldProcessAudio.current = true;
+        await startGoogleSpeech();
+      }
+    }, 500);
+  };
+
+  // ── Contexto de função ativa ──────────────────────────────
+  function getActiveFunctionContext(): string | null {
+    if (!activeFunctionContextRef.current) return null;
+    const elapsed = Date.now() - activeFunctionContextRef.current.activatedAt;
+    if (elapsed > activeFunctionContextRef.current.expiresIn) {
+      activeFunctionContextRef.current = null;
+      return null;
+    }
+    return activeFunctionContextRef.current.functionKey;
+  }
+
+  // ── Stop everything ───────────────────────────────────────
+  function stopEverything() {
+    stopAudioImmediately();
+    if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
+    setIsProcessing(false);
+    setIsSpeaking(false);
+    setIsPlayingAudio(false);
+    setIsTranscribing(false);
+    setIsListening(false);
+    setQrCodeData(null);
+    setPixConfirmationData(null);
+    setActiveModal(null);
+    setShowConversationModal(false);
+    processingQuestion.current = false;
+    shouldProcessAudio.current = true;
+    activeFunctionContextRef.current = null;
+    if (voiceRecorder?.isRecording) voiceRecorder.stopRecording().catch(() => {});
+    setTimeout(async () => { if (isActiveRef.current) await startGoogleSpeech(); }, 500);
+  }
+
+  // ── Transcript handler ────────────────────────────────────
+  async function handleGoogleTranscript(text: string, isFinal: boolean) {
+    if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
+    const lowerText = text.toLowerCase().trim();
+
+    if (isFinal && detectStopCommand(lowerText)) {
+      if (isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) {
+        stopEverything();
+        return;
+      }
+    }
+
+    const CONTROL_COMMANDS = [{
+      triggers: ['finalizar cronômetro', 'parar cronômetro', 'finalizar contagem', 'parar contagem'],
+      action: () => window.dispatchEvent(new Event('eai:cronometro:stop')),
+    }];
+    for (const cmd of CONTROL_COMMANDS) {
+      if (cmd.triggers.some(t => lowerText.includes(t))) {
+        if (!isFinal) return;
+        cmd.action();
+        return;
+      }
+    }
+
+    if (isFinal) {
+      const resolved = await resolvePendingPaymentChoice(lowerText, setActiveModal, playText);
+      if (resolved) {
+        processingQuestion.current = false;
+        setTimeout(async () => { shouldProcessAudio.current = true; await startGoogleSpeech(); }, 500);
+        return;
+      }
+    }
+
+    const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
+    if (!wakeWordResult?.detected) {
+      if ((isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) && detectStopCommand(lowerText)) {
+        stopEverything();
+      }
+      return;
+    }
+
+    if (wakeWordResult.confidence < 0.75) return;
+
+    resetInactivityTimer(); // Wake word detectada (parcial ou final) = atividade real
+    setIsWakeWordDetected(true);
+    setTimeout(() => setIsWakeWordDetected(false), 1500);
+
+    if (isPlayingAudio || isSpeaking) stopEverything();
+    if (processingQuestion.current || isProcessing) return;
+    if (!isFinal) return;
+
+    const command = extractCommand(lowerText, wakeWordResult);
+    const commandWords = command.split(' ').filter((w: string) => w.length > 2);
+
+    if (!audioUnlocked.current) unlockAudio(audioUnlocked);
+
+    if (!processingQuestion.current) {
+      processingQuestion.current = true;
+      if (!command) {
+        const greeting = companyGreeting || greetingMessage || 'Oi! Como posso ajudar?';
+        playText(greeting)
+          .then(() => {
+            if (startupFunctionKey) {
+              setTimeout(() => handleFunctionClick(startupFunctionKey), 500);
+            }
+          })
+          .finally(() => { processingQuestion.current = false; });
+      } else if (commandWords.length < 2) {
+        triggerRepromptWarning();
+        playText('Pode completar sua pergunta?').finally(() => {
+          processingQuestion.current = false;
+          setTimeout(async () => {
+            if (isActiveRef.current) { shouldProcessAudio.current = true; await startGoogleSpeech(); }
+          }, 300);
+        });
+      } else {
+        processWakeWordQuestion(command);
+      }
+    }
+  }
+
+  // ── Start ─────────────────────────────────────────────────
+  async function handleStart() {
+    resetInactivityTimer();
+    unlockAudio(audioUnlocked);
+    try {
+      const testAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUB4QU6vo66lXGAo+meL0wmskBSyBzvLYiTcIGWi77OefTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQU=');
+      testAudio.volume = 0.01;
+      await testAudio.play();
+      testAudio.pause();
+    } catch {}
+    setShowStartButton(false);
+    onAssistantStart?.();
+    setTimeout(async () => { if (isActiveRef.current) await startGoogleSpeech(); }, 300);
+  }
+
+  // ── handleFunctionWithAmount ──────────────────────────────
+  async function handleFunctionWithAmount(functionKey: string, amount: number, pedidoId?: string | null) {
+    const pt = effectivePlayText;
+    const amountStr = amount.toFixed(2).replace('.', ',');
+
+    switch (functionKey) {
+      case 'pix_generate':
+        await detectVoiceCommand(`gerar pix de ${amountStr}`, {
+          companyId, slug, functionSettings, setIsProcessing,
+          setQrCodeData, setPixConfirmationData, playText: pt,
+          sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
+          setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
+          onFunctionDetected: (k) => handleFunctionClick(k),
+          profileId: profileRef.current?.id ?? undefined,
+          pedidoId: pedidoId ?? null,
+        });
+        break;
+      case 'link_pagamento':
+        await detectVoiceCommand(`gerar link de pagamento de ${amountStr}`, {
+          companyId, slug, functionSettings, setIsProcessing,
+          setQrCodeData, setPixConfirmationData, playText: pt,
+          sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
+          setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
+          onFunctionDetected: (k) => handleFunctionClick(k),
+        });
+        break;
+      case 'nfc_debito':
+        await detectVoiceCommand(`cobrar debito nfc ${amountStr}`, {
+          companyId, slug, functionSettings, setIsProcessing,
+          setQrCodeData, setPixConfirmationData, playText: pt,
+          sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
+          setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
+          onFunctionDetected: (k) => handleFunctionClick(k),
+        });
+        break;
+      case 'nfc_credito':
+        await detectVoiceCommand(`cobrar credito nfc ${amountStr}`, {
+          companyId, slug, functionSettings, setIsProcessing,
+          setQrCodeData, setPixConfirmationData, playText: pt,
+          sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
+          setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
+          onFunctionDetected: (k) => handleFunctionClick(k),
+        });
+        break;
+      case 'tef_debito':
+        await detectVoiceCommand(`cobrar debito tef ${amountStr}`, {
+          companyId, slug, functionSettings, setIsProcessing,
+          setQrCodeData, setPixConfirmationData, playText: pt,
+          sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
+          setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
+          onFunctionDetected: (k) => handleFunctionClick(k),
+        });
+        break;
+      case 'tef_credito':
+        await detectVoiceCommand(`cobrar credito tef ${amountStr}`, {
+          companyId, slug, functionSettings, setIsProcessing,
+          setQrCodeData, setPixConfirmationData, playText: pt,
+          sessionId: sessionIdRef.current, commandProcessor, pixStateRef,
+          setActiveModal, activeFunctionContextRef, groqContextRef, fallbackMessageRef,
+          onFunctionDetected: (k) => handleFunctionClick(k),
+        });
+        break;
+      default:
+        handleFunctionClick(functionKey);
+    }
+  }
+
+  // ── Function click ────────────────────────────────────────
+async function handleFunctionClick(functionKey: string, event?: any) {
+    resetInactivityTimer();
+    const pt = effectivePlayText;
+
+    // No widget, bloquear funções que navegam para outras páginas
+    const WIDGET_NAVIGATION_BLOCKED = new Set([
+      'modo_venda', 'modo_fila', 'link_na_bio',
+    ]);
+    if (widgetMode && WIDGET_NAVIGATION_BLOCKED.has(functionKey)) {
+      const slug = company?.slug ?? '';
+      await pt(`Esta função está disponível na versão completa do assistente.`);
+      setActiveModal({
+        type: '__widget_blocked_navigation__',
+        data: { slug },
+      });
+      return;
+    }
+
+    const isEnabled = await checkIfFunctionIsEnabled(companyId, functionKey);
+    if (!isEnabled) {
+      await pt('Esta função está desativada no momento. Entre em contato com o suporte para ativá-la.');
+      setTimeout(async () => {
+        if (isActiveRef.current) { shouldProcessAudio.current = true; await startGoogleSpeech(); }
+      }, 500);
+      return;
+    }
+
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      switch (functionKey) {
+        case 'faq':
+          await pt('Me faça qualquer pergunta sobre nossos produtos, serviços, horários ou políticas.');
+          break;
+        case 'chatgpt':
+          await pt('Pode me fazer qualquer pergunta! Estou aqui para conversar e te ajudar.');
+          break;
+        case 'orcamento': {
+   await stopGoogleSpeech();
+   const supabase = createClient();
+   const { data: co } = await supabase
+     .from('companies')
+     .select('orcamento_prompt')
+     .eq('id', companyId)
+     .single();
+   if (!co?.orcamento_prompt) {
+     await pt('A função de orçamento não está configurada. Configure o prompt no painel.');
+     break;
+   }
+   setActiveModal({
+     type: 'OrcamentoDisplay',
+     data: { companyId, transcriptInicial: lastTranscript || '' },
+   });
+   break;
+ }
+        case 'qrcode_whatsapp':
+        case 'qrcode_instagram':
+        case 'qrcode_website':
+        case 'qrcode_facebook':
+        case 'qrcode_email':
+        case 'qrcode_linkedin':
+        case 'qrcode_tiktok':
+        case 'qrcode_twitter':
+        case 'qrcode_telefone':
+          await handleQRCodeCommand(functionKey.replace('qrcode_', ''), {
+            companyId, setIsProcessing, setQrCodeData, playText: pt, setActiveModal: textMode ? setActiveModal : undefined,
+          });
+          break;
+        case 'tocar_video':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'TocarVideoDisplay', data: { companyId, query: '' } });
+          pt('Qual vídeo você quer assistir? Me diga o assunto.').catch(() => {});
+          break;
+
+case 'texto_em_audio':
+  await stopGoogleSpeech();
+  setActiveModal({ type: 'TextoEmAudioDisplay', data: { companyId } });
+  break;
+
+case 'transcrever_video':
+  await stopGoogleSpeech();
+  setActiveModal({ type: 'TranscreverVideoDisplay', data: { companyId } });
+  break;
+
+case 'criar_midia':
+  await stopGoogleSpeech();
+  setActiveModal({ type: 'CriarMidiaDisplay', data: { companyId, slug } });
+  break;
+          
+case 'solicitar_video_chamada':
+  await stopGoogleSpeech();
+  {
+    const currentProfile = profileRef.current;
+    const currentOnlineProfiles = onlineProfilesRef.current; // ← ref atualizado
+    console.log('[VideoCall] profile atual:', currentProfile);
+    console.log('[VideoCall] onlineProfiles (ref):', currentOnlineProfiles);
+    const tiposPermitidos = ['colaborador', 'frentista', 'atendente', 'caixa', 'gerente', 'totem', 'administrador'];
+    if (!currentProfile || !tiposPermitidos.includes(currentProfile.tipo)) {
+      await pt('Esta função está disponível apenas para colaboradores logados.');
+      setIsProcessing(false);
+      break;
+    }
+    setActiveModal({
+      type: 'VideoCallRequestDisplay',
+      data: {
+        companyId,
+        profileId: currentProfile.id,
+        profileName: currentProfile.nome,
+        onlineProfiles: currentOnlineProfiles, // ← ref atualizado
+      },
+    });
+    pt('Abrindo vídeo chamada...').catch(() => {});
+  }
+  break;
+
+case 'gerar_senha':
+  stopGoogleSpeech();
+  setActiveModal({
+    type: 'GerarSenhaDisplay',
+    data: {
+      companyId,
+      slug,
+      printOnQueue: printConfig.print_on_queue,
+      hasActivePlan: printConfig.hasActivePlan,
+    },
+  });
+  playText('Gerando sua senha...').catch(() => {});
+  break;
+
+// Funções internas (chamadas via voz ou dentro dos modais)
+case 'chamar_proxima_senha':
+case 'finalizar_atendimento':
+case 'pausar_fila':
+case 'retomar_fila':
+case 'cancelar_senha':
+case 'minha_posicao_fila':
+  // Executar handler diretamente (não abre modal)
+  await functionRegistry[functionKey]?.handler({
+    companyId,
+    playText,
+    transcript: lastTranscript || '',
+    slug,
+  });
+  break;
+
+        case 'converter_medidas':
+          setActiveModal({ type: 'ConverterMedidasDisplay', data: { companyId } });
+          pt('Abrindo a calculadora de conversão de medidas.').catch(() => {});
+          break;
+
+        case 'calculadora_juros':
+          setActiveModal({ type: 'CalculadoraJurosDisplay', data: { companyId } });
+          pt('Abrindo a calculadora de juros.').catch(() => {});
+          break;
+
+        case 'calculadora_imc':
+          setActiveModal({ type: 'CalculadoraIMCDisplay', data: { companyId } });
+          pt('Abrindo a calculadora de IMC. Informe seu peso e altura.').catch(() => {});
+          break;
+
+case 'modo_fila':
+  await stopGoogleSpeech();
+  if (widgetMode) {
+    await pt('Esta função está disponível na versão completa do assistente.');
+    setActiveModal({ type: '__widget_blocked_navigation__', data: { slug } });
+    break;
+  }
+  const filaUrl = getContextualRoute('fila', slug);
+  window.location.href = filaUrl;
+  break;
+
+case 'responder_pesquisa':
+  await stopGoogleSpeech();
+  try {
+    const supabase = createClient();
+    const { data: pesquisa } = await supabase
+      .from('pesquisas')
+      .select('id, titulo')
+      .eq('company_id', companyId)
+      .eq('ativa', true)
+      .maybeSingle();
+
+    if (!pesquisa) {
+      await pt('Não há pesquisas disponíveis no momento.');
+      setIsProcessing(false);
+      break;
+    }
+
+    setActiveModal({
+      type: 'ResponderPesquisaDisplay',
+      data: { companyId, pesquisaId: pesquisa.id },
+    });
+    pt(`Por favor, responda nossa pesquisa: ${pesquisa.titulo}`).catch(() => {});
+  } catch (err) {
+    console.error('Erro responder_pesquisa:', err);
+    await pt('Erro ao abrir pesquisa.');
+    setIsProcessing(false);
+  }
+  break;
+
+case 'pre_atendimento':
+  await stopGoogleSpeech();
+  try {
+    const supabase = createClient();
+    const { data: form } = await supabase
+      .from('pre_atendimento_forms')
+      .select('id, nome')
+      .eq('company_id', companyId)
+      .eq('ativo', true)
+      .maybeSingle();
+
+    if (!form) {
+      await pt('Não há formulários de pré-atendimento configurados.');
+      setIsProcessing(false);
+      break;
+    }
+
+    setActiveModal({
+      type: 'PreAtendimentoDisplay',
+      data: { companyId, formId: form.id },
+    });
+    pt(`Por favor, preencha o formulário: ${form.nome}`).catch(() => {});
+  } catch (err) {
+    console.error('Erro pre_atendimento:', err);
+    await pt('Erro ao abrir formulário.');
+    setIsProcessing(false);
+  }
+  break;
+          
+case 'juntar_pdfs':
+  setActiveModal({ type: 'JuntarPdfsDisplay', data: { companyId } });
+  await saveInteractionToHistory(
+    companyId,
+    'Juntar PDFs',
+    'Modal de juntar PDFs aberto'
+  );
+  break;
+
+case 'impressao_local':
+  await stopGoogleSpeech();
+  setActiveModal({ 
+    type: 'ImpressaoLocalDisplay', 
+    data: { companyId, functionKey: 'impressao_local' } 
+  });
+  pt('Prepare o arquivo para impressão local.').catch(() => {});
+  break;
+
+case 'impressao_remota':
+  await stopGoogleSpeech();
+  setActiveModal({ 
+    type: 'ImpressaoRemotaDisplay', 
+    data: { companyId, functionKey: 'impressao_remota' } 
+  });
+  pt('Prepare o arquivo para impressão remota.').catch(() => {});
+  break;
+
+case 'impressao_recibo':
+  await stopGoogleSpeech();
+  setActiveModal({ 
+    type: 'ImpressaoReciboDisplay', 
+    data: { companyId, functionKey: 'impressao_recibo' } 
+  });
+  pt('Prepare o arquivo para impressão térmica.').catch(() => {});
+  break;
+          
+        case 'minha_conta':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'LoginClienteDisplay', data: { profile, companyId, slug: slug ?? '' } });
+          pt(profile ? `Olá ${profile.nome}! Sua conta está aberta.` : 'Abrindo sua conta. Faça login ou crie uma nova conta.').catch(() => {});
+          await registerFunctionUsage(companyId, functionKey, functionSettings[functionKey]?.creditsPerUse);
+          return;
+        case 'segunda_via_boleto':
+          setActiveModal({ type: 'SegundaViaBoletoDisplay', data: { companyId } });
+          await saveInteractionToHistory(companyId, 'Segunda Via Boleto', 'Geração de segunda via iniciada');
+          break;
+        case 'traduzir_texto':
+          setActiveModal({ type: 'TranslateTextModal', data: { companyId } });
+          pt('Abrindo ferramenta de tradução.').catch(() => {});
+          break;
+        case 'transcrever_audio':
+          setActiveModal({ type: 'TranscribeAudioModal', data: { companyId } });
+          pt('Abrindo ferramenta de transcrição.').catch(() => {});
+          break;
+        case 'ver_noticias':
+          setActiveModal({ type: 'VerNoticiasDisplay', data: { companyId } });
+          break;
+        case 'procurar_produto':
+          setActiveModal({ type: 'ProcurarProdutoDisplay', data: { companyId } });
+          break;
+        case 'lista_compras':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'ListaComprasDisplay', data: { companyId } });
+          break;
+        case 'meu_sistema':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'MeuSistemaDisplay', data: { companyId } });
+          pt('Sou min I A, uma IA pra chamar de sua! Sou um funcionário de Voz e texto com Inteligência Artificial. Escaneie o QR Code para saber mais. minhai.app').catch(() => {});
+          break;
+        case 'consultar_cambio':
+          setActiveModal({ type: 'CotacaoMoedasDisplay', data: { companyId } });
+          break;
+        case 'consultar_cep':
+          setActiveModal({ type: 'ConsultarCEPDisplay', data: { companyId } });
+          break;
+        case 'dados_cnpj':
+          setActiveModal({ type: 'ConsultarCnpjModal', data: { companyId } });
+          break;
+        case 'dados_cpf':
+          setActiveModal({ type: 'ConsultarCpfModal', data: { companyId } });
+          break;
+        case 'restricoes_cpf':
+          setActiveModal({ type: 'RestricoesCPFDisplay', data: { companyId } });
+          break;
+        case 'restricoes_cnpj':
+          setActiveModal({ type: 'RestricoesCNPJDisplay', data: { companyId } });
+          break;
+        case 'consultar_feriados':
+          setActiveModal({ type: 'FeriadosNacionaisDisplay', data: { companyId } });
+          break;
+        case 'consultar_ddd':
+          setActiveModal({ type: 'ConsultarDDDDisplay', data: { companyId } });
+          break;
+        case 'consultar_placa':
+          setActiveModal({ type: 'ConsultarPlacaModal', data: { companyId } });
+          break;
+        case 'consultar_protestos':
+          setActiveModal({ type: 'ConsultarProtestosModal', data: { companyId } });
+          break;
+        case 'cadastro':
+          await handleCadastro({ companyId, setIsProcessing, setActiveModal });
+          break;
+        case 'registrar_venda':
+          await stopGoogleSpeech();
+          console.log('[DEBUG] profileRef.current:', profileRef.current)
+          setActiveModal({ type: 'RegistrarVendaDisplay', data: { companyId, profileId: profileRef.current?.id ?? null } });
+          pt('Abrindo o PDV...').catch(() => {});
+          break;
+        case 'ver_clientes':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'VerClientesDisplay', data: { companyId } });
+          pt('Carregando lista de clientes...').catch(() => {});
+          break;
+        case 'fechar_caixa':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'FecharCaixaDisplay', data: { companyId } });
+          pt('Preparando fechamento de caixa...').catch(() => {});
+          break;
+        case 'trocar_turno':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'TrocarTurnoDisplay', data: { companyId } });
+          pt('Preparando troca de turno...').catch(() => {});
+          break;
+        case 'relatorio_vendas':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'RelatorioVendasDisplay', data: { companyId } });
+          pt('Gerando relatório de vendas...').catch(() => {});
+          break;
+        case 'minhas_compras':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'MinhasComprasDisplay', data: { companyId } });
+          pt('Carregando seu histórico de compras...').catch(() => {});
+          break;
+        case 'enviar_sms': {
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'EnviarSmsDisplay', data: { companyId } });
+          pt('Abrindo formulário de SMS...').catch(() => {});
+          break;
+        }
+        case 'chamar_gerente': {
+          await stopGoogleSpeech();
+          const motivo = event?.detail?.transcript
+            ? event.detail.transcript
+                .replace(/chamar (o )?gerente/gi, '')
+                .replace(/preciso (do|da) gerente/gi, '')
+                .trim()
+            : '';
+          setActiveModal({ type: 'ChamarGerenteDisplay', data: { companyId, motivo: motivo || undefined } });
+          pt('Chamando o gerente...').catch(() => {});
+          break;
+        }
+        case 'identificar_fraude':
+          setActiveModal({ type: 'IdentificarFraudeDisplay', data: { companyId } });
+          await saveInteractionToHistory(companyId, 'Identificar Fraude', 'Análise de fraude iniciada');
+          pt('Ok').catch(() => {});
+          break;
+        case 'enviar_arquivo':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'EnviarArquivoDisplay', data: { companyId } });
+          pt('Você pode enviar um arquivo diretamente para a empresa, que já recebem na hora!').catch(() => {});
+          break;
+        case 'gerar_qrcode':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'GerarQRCodeDisplay', data: { companyId } });
+          pt('Abrindo gerador de QR Code. Diga ou digite o texto ou link.').catch(() => {});
+          break;
+        case 'gerar_codigo_barras':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'GerarCodigoBarrasDisplay', data: { companyId } });
+          pt('Abrindo gerador de código de barras. Escolha o formato e diga o conteúdo.').catch(() => {});
+          break;
+        case 'tocar_musica':
+          setActiveModal({ type: 'TocarMusicaDisplay', data: { companyId, query: '' } });
+          pt('Qual música você quer ouvir?').catch(() => {});
+          break;
+        case 'playlist':
+          setActiveModal({ type: 'PlaylistDisplay', data: { companyId } });
+          pt('Abrindo playlist...').catch(() => {});
+          break;
+        case 'porta_retrato':
+          setActiveModal({ type: 'PortaRetratoDisplay', data: { companyId } });
+          pt('Abrindo porta retrato...').catch(() => {});
+          break;
+        case 'painel_ofertas':
+          setActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
+          pt('Abrindo painel de ofertas...').catch(() => {});
+          break;
+        case 'aparelhos_smart':
+          setActiveModal({ type: 'AparelhosSmartDisplay', data: { companyId, transcript: '' } });
+          pt('Abrindo controle de dispositivos...').catch(() => {});
+          break;
+        case 'EmitirNotaModal':
+  return (
+    <EmitirNotaModal
+      data={{ companyId, nfe_plano: activeModal.data?.nfe_plano }}
+      onClose={handleClose}
+      theme={theme}
+      playText={playText} 
+    />
+  );
+        case 'confirmar_presenca':
+          setActiveModal({ type: 'ConfirmPresenceModal', data: { companyId } });
+          pt('Vou buscar seu agendamento para confirmar presença.').catch(() => {});
+          break;
+        case 'reagendar_compromisso':
+          setActiveModal({ type: 'RescheduleModal', data: { companyId } });
+          pt('Vou buscar seu agendamento para reagendar.').catch(() => {});
+          break;
+        case 'cancelar_agendamento':
+          setActiveModal({ type: 'CancelAppointmentModal', data: { companyId } });
+          pt('Vou buscar seu agendamento para cancelar.').catch(() => {});
+          break;
+        case 'horarios_disponiveis':
+          break;
+        case 'meu_cupom':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'MeuCupomDisplay', data: { companyId, prefillName: '' } });
+          await pt('Digite seu nome para gerar seu cupom de indicação.');
+          break;
+        case 'ler_qrcode':
+          await stopGoogleSpeech();
+          await handleLerQRCode({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'ler_codigo_barras':
+          await stopGoogleSpeech();
+          await handleLerCodigoBarras({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'validar_cupom':
+          await stopGoogleSpeech();
+          await handleValidarCupom({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'imagem_em_texto':
+          await stopGoogleSpeech();
+          await handleImagemEmTexto({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'tabela_em_texto':
+          await stopGoogleSpeech();
+          await handleTabelaEmTexto({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'contrato_em_texto':
+          await stopGoogleSpeech();
+          await handleContratoEmTexto({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'wifi_qrcode':
+          await stopGoogleSpeech();
+          await handleWifiQRCode({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'canal_youtube':
+          await stopGoogleSpeech();
+          await handleCanalYoutube({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'cardapio':
+          await stopGoogleSpeech();
+          await handleCardapio({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'nosso_qrcode':
+          await stopGoogleSpeech();
+          await handleNossoQRCode({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'nossa_marca':
+          await stopGoogleSpeech();
+          await handleNossaMarcaCommand({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'endereco':
+          await stopGoogleSpeech();
+          await handleEnderecoCommand({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'tracar_rota':
+          setActiveModal({ type: 'TracarRotaDisplay', data: { companyId, destinoInicial: '' } });
+          await saveInteractionToHistory(companyId, 'Traçar Rota', 'Modal aberto para calcular rota');
+          break;
+        case 'buscar_endereco':
+          setActiveModal({ type: 'BuscarEnderecoDisplay', data: { companyId, termoInicial: '' } });
+          await saveInteractionToHistory(companyId, 'Buscar Endereço', 'Modal aberto para busca');
+          break;
+        case 'rastreio_correios':
+          setActiveModal({ type: 'RastreioCorreiosDisplay', data: { companyId } });
+          await saveInteractionToHistory(companyId, 'Rastreio Correios', 'Modal de rastreamento aberto');
+          break;
+        case 'video_instrucoes':
+          await stopGoogleSpeech();
+          await handleVideoInstrucoesCommand({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'sequencia_videos':
+          await stopGoogleSpeech();
+          await handleSequenciaVideosCommand({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'enviar_email':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'SendEmailModal', data: { companyId } });
+          pt('Diga o conteúdo e quando acabar, diga CONCLUIR.').catch(() => {});
+          break;
+        case 'fichas_producao_conversacional':
+          await stopGoogleSpeech();
+          stopAudioImmediately();
+          setActiveModal({ type: 'FichaProducaoConversacionalDisplay', data: { companyId, fichaType: 'produto' } });
+          break;
+        case 'agendar_compromisso':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'CreateEventModal', data: { companyId, prefilledData: {} } });
+          break;
+        case 'ver_agenda':
+          setActiveModal({ type: 'ViewAgendaModal', data: { companyId, initialView: 'month' } });
+          pt('Abrindo o calendário.').catch(() => {});
+          break;
+        case 'criar_lembrete':
+          await handleCriarLembrete({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'cronometro':
+          await handleCronometro({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'temporizador':
+          await pt('Qual o tempo do temporizador? Por exemplo: 5 minutos, 30 segundos.');
+          break;
+        case 'relogio_mundial':
+          await handleRelogioMundial({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'alarme':
+          await handleAlarme({ companyId, setIsProcessing, setActiveModal, playText: pt });
+          break;
+        case 'cobrar_debito':
+          await stopGoogleSpeech();
+          pt('Pode me dizer o valor para cobrar no débito.').catch(() => {});
+          break;
+        case 'cobrar_credito':
+          await stopGoogleSpeech();
+          pt('Pode me dizer o valor para cobrar no crédito.').catch(() => {});
+          break;
+        case 'link_pagamento':
+          await stopGoogleSpeech();
+          pt('Posso gerar um Link de Pagamento, basta pedir um Link com o valor.').catch(() => {});
+          break;
+        case 'nfc_credito':
+          await stopGoogleSpeech();
+          pt('Posso gerar uma Cobrança no Cartão de Crédito via NFC, basta pedir uma cobrança NFC crédito e o valor.').catch(() => {});
+          break;
+        case 'nfc_debito':
+          await stopGoogleSpeech();
+          pt('Posso gerar uma Cobrança no Cartão de Débito via NFC, basta pedir uma cobrança NFC débito e o valor.').catch(() => {});
+          break;
+        case 'tef_debito':
+          await stopGoogleSpeech();
+          pt('Posso cobrar no débito direto na maquininha Point. Basta pedir uma cobrança TEF débito com o valor.').catch(() => {});
+          break;
+        case 'tef_credito':
+          await stopGoogleSpeech();
+          pt('Posso cobrar no crédito direto na maquininha Point, à vista ou parcelado. Basta pedir uma cobrança TEF crédito com o valor.').catch(() => {});
+          break;
+        case 'clima_tempo':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'ClimaTempoDisplay', data: { companyId, city: null } });
+          pt('Consultando o clima agora...').catch(() => {});
+          break;
+        case 'cadastrar_produto':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'CadastrarProdutoDisplay', data: { companyId } });
+          pt('Vou te guiar no cadastro do produto. Qual o nome?').catch(() => {});
+          await registerFunctionUsage(companyId, functionKey, functionSettings[functionKey]?.creditsPerUse);
+          return;
+case 'modo_venda': {
+  await stopGoogleSpeech();
+ if (widgetMode) {
+   await pt('Esta função está disponível na versão completa do assistente.');
+   setActiveModal({ type: '__widget_blocked_navigation__', data: { slug } });
+   break;
+ }
+  const vendaUrl = getContextualRoute('vendas', slug);
+  window.location.href = vendaUrl;
+  break;
+}
+        case 'fazer_pedido':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'FazerPedidoDisplay', data: { companyId, slug } });
+          pt('Abrindo...').catch(() => {});
+          break;
+case 'link_na_bio': {
+  await stopGoogleSpeech();
+ if (widgetMode) {
+   await pt('Esta função está disponível na versão completa do assistente.');
+   setActiveModal({ type: '__widget_blocked_navigation__', data: { slug } });
+   break;
+ }
+  const linkUrl = getContextualRoute('link', slug);
+  window.location.href = linkUrl;
+  break;
+}
+        case 'analisar_planilha':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'AnalisarPlanilhaDisplay', data: { companyId } });
+          break;
+        case 'ver_produtos':
+          break;
+        default: {
+          // Fallback via FUNCTIONS_REGISTRY
+          const registryFunc = getFunctionByKey(functionKey);
+          if (registryFunc?.handler) {
+            const success = await registryFunc.handler({
+              transcript: '',
+              companyId,
+              functionSettings,
+              playText: pt,
+              setIsProcessing,
+              sessionId,
+              setActiveModal,
+              widgetMode,
+              slug,
+              registerFunctionUsage: async (key: string, credits: number) =>
+                registerFunctionUsage(companyId, key, credits),
+              checkIfFunctionIsEnabled: async (key: string) =>
+                checkIfFunctionIsEnabled(companyId, key),
+            });
+            if (success) {
+              await registerFunctionUsage(companyId, functionKey, registryFunc.creditsPerUse ?? 0);
+              return;
+            }
+          } else {
+            await pt(`A função ${functionKey} ainda não está configurada.`);
+          }
+        }
+      }
+
+      await registerFunctionUsage(companyId, functionKey, functionSettings[functionKey]?.creditsPerUse);
+    } catch (error) {
+      console.error('Erro ao executar função:', error);
+      await pt('Desculpe, ocorreu um erro ao executar esta função.');
+    } finally {
+      setIsProcessing(false);
+      setTimeout(async () => {
+        if (isActiveRef.current) { shouldProcessAudio.current = true; await startGoogleSpeech(); }
+      }, 500);
+    }
+  }
+
+  // ── processWakeWordQuestion ───────────────────────────────
+  function processWakeWordQuestion(transcript: string) {
+    const clean = transcript.replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (endCommands.some(cmd => clean.toLowerCase().includes(cmd))) {
+      processingQuestion.current = false;
+      playGoodbye();
+      return;
+    }
+    if (clean.split(' ').filter((w: string) => w.length > 2).length === 0) {
+      processingQuestion.current = false;
+      setTimeout(async () => {
+        if (isActiveRef.current) { shouldProcessAudio.current = true; await startGoogleSpeech(); }
+      }, 300);
+      return;
+    }
+    setLastTranscript(clean);
+    processQuestion(clean);
+  }
+
+  // ── Ponto 3: processQuestion com FAQ FIRST ────────────────
+  async function processQuestion(questionText: string) {
+    console.log('⚡ Processando:', questionText);
+    shouldProcessAudio.current = false;
+    await stopGoogleSpeech();
+
+    // ── FAQ FIRST ─────────────────────────────────────────────
+    const matchedFAQ = findMatchingFAQLocal(faqsRef.current, questionText);
+    if (matchedFAQ) {
+      console.log('📚 FAQ resolvida localmente:', matchedFAQ.question);
+
+      if (matchedFAQ.function_key) {
+        // FAQ com função vinculada — falar introdução e disparar função
+        if (matchedFAQ.answer) await playText(matchedFAQ.answer);
+        handleFunctionClickSilent(matchedFAQ.function_key, matchedFAQ.function_params ?? undefined);
+      } else {
+        // FAQ simples — apenas responder
+        await playText(matchedFAQ.answer);
+      }
+
+      await registerFunctionUsage(companyId, 'faq', 1);
+      processingQuestion.current = false;
+      setTimeout(async () => {
+        shouldProcessAudio.current = true;
+        await startGoogleSpeech();
+      }, 500);
+      return;
+    }
+    // ── FIM FAQ FIRST ─────────────────────────────────────────
+
+    const activeFunction = getActiveFunctionContext();
+    if (activeFunction) {
+      const func = getFunctionByKey(activeFunction);
+      if (func?.handler) {
+        setIsProcessing(true);
+        try {
+          const handlerSuccess = await func.handler({
+            transcript: questionText,
+            companyId,
+            functionSettings,
+            playText,
+            setIsProcessing,
+            sessionId,
+            setActiveModal,
+          });
+          if (handlerSuccess) {
+            activeFunctionContextRef.current = {
+              functionKey: func.functionKey,
+              activatedAt: Date.now(),
+              expiresIn: 5 * 60 * 1000,
+            };
+            await registerFunctionUsage(companyId, activeFunction, functionSettings[activeFunction]?.creditsPerUse ?? 2);
+          }
+        } catch { setIsProcessing(false); }
+        processingQuestion.current = false;
+        setTimeout(async () => { shouldProcessAudio.current = true; await startGoogleSpeech(); }, 500);
+        return;
+      }
+    }
+
+    // ✅ slug passado aqui
+    const isCommand = await detectVoiceCommand(questionText, {
+      companyId,
+      slug,
+      widgetMode,
+      functionSettings,
+      setIsProcessing,
+      setQrCodeData,
+      setPixConfirmationData,
+      playText,
+      sessionId,
+      commandProcessor,
+      pixStateRef,
+      setActiveModal,
+      activeFunctionContextRef,
+      groqContextRef,
+      fallbackMessageRef,
+      onFunctionDetected: (key: string) => {
+        const parts = key.split(':');
+        const functionKey = parts[0];
+        const rawAmount = parts[1];
+        const pedidoId = parts[2] ?? null;
+        if (rawAmount) {
+          const amount = parseFloat(rawAmount);
+          handleFunctionWithAmount(functionKey, amount, pedidoId);
+        } else {
+          handleFunctionClick(functionKey);
+        }
+      },
+    });
+
+    if (isCommand) {
+      processingQuestion.current = false;
+      setTimeout(async () => { shouldProcessAudio.current = true; await startGoogleSpeech(); }, 500);
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const startTime = Date.now();
+      const formData = new FormData();
+      const textBlob = new Blob([questionText], { type: 'text/plain' });
+      formData.append('audio', textBlob, 'question.txt');
+      formData.append('companyId', companyId);
+      if (typeof window !== 'undefined' && window.location.pathname.includes('/vendas')) {
+        formData.append('saleMode', 'true');
+      }
+      formData.append('directQuestion', questionText);
+      if (sessionId) formData.append('sessionId', sessionId);
+      formData.append('companyContext', gptContextRef.current);
+
+      let feedbackStarted = false;
+      const feedbackTimeout = setTimeout(() => {
+        if (!feedbackStarted) {
+          feedbackStarted = true;
+          playProcessingFeedback().then(audio => { feedbackAudioRef.current = audio; }).catch(() => {});
+        }
+      }, 1000);
+
+const voiceController = new AbortController();
+const voiceTimeoutId = setTimeout(() => voiceController.abort(), 45000); // abaixo do maxDuration=60s da rota
+let response: Response;
+try {
+  response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/process', {
+    method: 'POST',
+    body: formData,
+    signal: voiceController.signal,
+  });
+} finally {
+  clearTimeout(voiceTimeoutId);
+}
+
+      const newSessionId = response.headers.get('X-Session-Id');
+      if (newSessionId) {
+        setSessionId(newSessionId);
+        sessionIdRef.current = newSessionId;
+      }
+
+      const responseTextHeader = response.headers.get('X-Response-Text');
+      if (responseTextHeader) setLastResponse(decodeURIComponent(responseTextHeader));
+
+      if (!response.ok) throw new Error(`Erro: ${response.status}`);
+
+      clearTimeout(feedbackTimeout);
+
+      if (feedbackStarted && feedbackAudioRef.current) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 1200) await new Promise(resolve => setTimeout(resolve, 1200 - elapsed));
+        try { feedbackAudioRef.current.pause(); feedbackAudioRef.current.currentTime = 0; feedbackAudioRef.current = null; } catch {}
+      }
+
+      setIsProcessing(false);
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audio.playbackRate = 1.05;
+      currentAudioRef.current = audio;
+      setIsPlayingAudio(true);
+
+      audio.onplay = () => setIsPlayingAudio(true);
+audio.onended = () => {
+  setIsPlayingAudio(false);
+  currentAudioRef.current = null;
+  processingQuestion.current = false;
+
+  // ── Fase 2: atualizar memória em background ──
+  if (sessionId && lastTranscript && lastResponse) {
+    fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/update-session-memory`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+      session_id: sessionIdRef.current,
+          company_id: companyId,
+          user_message: lastTranscript,
+          assistant_message: lastResponse,
+          function_key: null, // funções específicas atualizam via próprio handler
+        }),
+      }
+    ).catch(() => {}); // fire-and-forget — nunca bloqueia o fluxo de voz
+  }
+
+  setTimeout(async () => { shouldProcessAudio.current = true; await startGoogleSpeech(); }, 2000);
+};
+      audio.onerror = () => {
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+        processingQuestion.current = false;
+        setTimeout(async () => { shouldProcessAudio.current = true; await startGoogleSpeech(); }, 1000);
+      };
+
+      const safetyTimeout = setTimeout(() => {
+        if (!isPlayingAudio && currentAudioRef.current === audio) {
+          setIsPlayingAudio(false);
+          currentAudioRef.current = null;
+          processingQuestion.current = false;
+          setTimeout(async () => { if (isActiveRef.current) { shouldProcessAudio.current = true; await startGoogleSpeech(); } }, 1000);
+        }
+      }, 1500);
+
+      try {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => clearTimeout(safetyTimeout))
+            .catch(() => {
+              setTimeout(() => {
+                audio.play().then(() => clearTimeout(safetyTimeout)).catch(() => {
+                  clearTimeout(safetyTimeout);
+                  setIsPlayingAudio(false);
+                  currentAudioRef.current = null;
+                  processingQuestion.current = false;
+                });
+              }, 100);
+            });
+        }
+      } catch {
+        clearTimeout(safetyTimeout);
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+        processingQuestion.current = false;
+      }
+    } catch {
+      setIsProcessing(false);
+      processingQuestion.current = false;
+      if (feedbackAudioRef.current) {
+        try { feedbackAudioRef.current.pause(); feedbackAudioRef.current = null; } catch {}
+      }
+      setTimeout(async () => { shouldProcessAudio.current = true; await startGoogleSpeech(); }, 1000);
+    }
+  }
+
+  // ── handleTextMessage (modo voz input text) ───────────────
+const handleTextMessage = async (message: string) => {
+  resetInactivityTimer();
+  if (detectStopCommand(message)) { stopEverything(); return; }
+  if (message.trim()) setLastTranscript(message.trim());
+
+  if (currentAudioRef.current) {
+    currentAudioRef.current.pause();
+    currentAudioRef.current.currentTime = 0;
+    currentAudioRef.current = null;
+  }
+
+  // ── FAQ FIRST ─────────────────────────────────────────────
+  const matchedFAQ = findMatchingFAQLocal(faqsRef.current, message);
+  console.log('🔎 FAQ check (text):', faqsRef.current.length, 'faqs | match:', matchedFAQ?.question ?? 'null');
+  if (matchedFAQ) {
+    console.log('📚 FAQ resolvida (texto):', matchedFAQ.question);
+    if (matchedFAQ.function_key) {
+      if (matchedFAQ.answer) await playText(matchedFAQ.answer);
+      handleFunctionClickSilent(matchedFAQ.function_key, matchedFAQ.function_params ?? undefined);
+    } else {
+      await playText(matchedFAQ.answer);
+    }
+    await registerFunctionUsage(companyId, 'faq', 1);
+    return;
+  }
+
+    setIsProcessing(true);
+
+    try {
+      // ✅ slug passado aqui
+      const isCommand = await detectVoiceCommand(message, {
+        companyId,
+        slug,
+        widgetMode,
+        functionSettings,
+        setIsProcessing,
+        setQrCodeData,
+        setPixConfirmationData,
+        playText,
+        sessionId,
+        commandProcessor,
+        pixStateRef,
+        setActiveModal,
+        activeFunctionContextRef,
+        groqContextRef,
+        fallbackMessageRef,
+        onFunctionDetected: (key: string) => {
+          const parts = key.split(':');
+          const functionKey = parts[0];
+          const rawAmount = parts[1];
+          const pedidoId = parts[2] ?? null;
+          if (rawAmount) {
+            const amount = parseFloat(rawAmount);
+            handleFunctionWithAmount(functionKey, amount, pedidoId);
+          } else {
+            handleFunctionClick(functionKey);
+          }
+        },
+      });
+
+      if (isCommand) return;
+
+      const formData = new FormData();
+      formData.append('audio', new Blob([message], { type: 'text/plain' }));
+      formData.append('companyId', companyId);
+      formData.append('directQuestion', message);
+      if (sessionIdRef.current) formData.append('sessionId', sessionIdRef.current);
+      formData.append('companyContext', gptContextRef.current);
+
+const response = await fetch('/api/voice/process', { method: 'POST', body: formData });
+
+      const newSessionId = response.headers.get('X-Session-Id');
+      if (newSessionId) {
+        setSessionId(newSessionId);
+        sessionIdRef.current = newSessionId;
+      }
+
+      const responseTextHeader = response.headers.get('X-Response-Text');
+      if (responseTextHeader) setLastResponse(decodeURIComponent(responseTextHeader));
+
+      const hintFunctionKey = response.headers.get('X-Function-Key');
+      if (hintFunctionKey) {
+        setIsProcessing(false);
+        processingQuestion.current = false;
+        handleFunctionClick(hintFunctionKey);
+        setTimeout(async () => { shouldProcessAudio.current = true; await startGoogleSpeech(); }, 500);
+        return;
+      }
+
+      if (!response.ok) throw new Error(`Erro: ${response.status}`);
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audio.playbackRate = 1.05;
+      currentAudioRef.current = audio;
+      setIsPlayingAudio(true);
+      audio.onended = () => { setIsPlayingAudio(false); currentAudioRef.current = null; };
+      audio.onerror = () => { setIsPlayingAudio(false); currentAudioRef.current = null; };
+      await audio.play();
+    } catch {
+      await playText('Desculpe, ocorreu um erro ao processar sua mensagem.');
+    } finally {
+      setIsProcessing(false);
+      setTimeout(async () => {
+        if (isActiveRef.current) { shouldProcessAudio.current = true; await startGoogleSpeech(); }
+      }, 500);
+    }
+  };
+
+  // ── detectRegistryFunction ────────────────────────────────
+  function detectRegistryFunction(text: string) {
+    const lowerText = text.toLowerCase().trim();
+    let bestMatch: any = null;
+    let bestScore = 0;
+
+    for (const func of Object.values(FUNCTIONS_REGISTRY)) {
+      let score = 0;
+      for (const trigger of func.voiceTriggers) {
+        const triggerLower = trigger.toLowerCase();
+        const escaped = triggerLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(
+          `(?<![a-záéíóúãõâêîôûç])${escaped}(?![a-záéíóúãõâêîôûç])`, 'i'
+        );
+        if (regex.test(lowerText)) {
+          score += triggerLower.split(' ').length >= 2 ? 15 : 8;
+        }
+      }
+      if (score > bestScore) { bestScore = score; bestMatch = func; }
+    }
+
+    return bestScore >= 8 ? bestMatch : null;
+  }
+
+  // ── Ponto 4: handleTextMessageForText com FAQ FIRST ───────
+  const handleTextMessageForText = async (
+    message: string
+  ): Promise<{ text: string; functionKey?: string } | null> => {
+    if (detectStopCommand(message)) { stopEverything(); return null; }
+
+    let capturedText = '';
+    const silentPlayText = (text: string): Promise<void> => {
+      if (text && text.trim()) capturedText = text.trim();
+      return Promise.resolve();
+    };
+
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // ── FAQ FIRST ─────────────────────────────────────────────
+      const matchedFAQ = findMatchingFAQLocal(faqsRef.current, message);
+      console.log('🔎 FAQ check:', faqsRef.current.length, 'faqs | match:', matchedFAQ?.question ?? 'null');
+      if (matchedFAQ) {
+        console.log('📚 FAQ resolvida localmente (texto):', matchedFAQ.question);
+
+        if (matchedFAQ.function_key) {
+          if (matchedFAQ.answer) capturedText = matchedFAQ.answer;
+          handleFunctionClickSilent(matchedFAQ.function_key, matchedFAQ.function_params ?? undefined);
+        } else {
+          capturedText = matchedFAQ.answer;
+        }
+
+        await registerFunctionUsage(companyId, 'faq', 1);
+        setIsProcessing(false);
+        return { text: capturedText, functionKey: matchedFAQ.function_key ?? undefined };
+      }
+      // ── FIM FAQ FIRST ─────────────────────────────────────────
+
+      // ── ETAPA 1: Contexto de função ativa
+      const activeFunction = getActiveFunctionContext();
+      if (activeFunction) {
+        const func = getFunctionByKey(activeFunction);
+        if (func?.handler) {
+          const handlerSuccess = await func.handler({
+            transcript: message,
+            companyId,
+            functionSettings,
+            playText: silentPlayText,
+            setIsProcessing,
+            sessionId,
+            setActiveModal,
+            registerFunctionUsage: async (key: string, credits: number) =>
+              registerFunctionUsage(companyId, key, credits),
+            checkIfFunctionIsEnabled: async (key: string) =>
+              checkIfFunctionIsEnabled(companyId, key),
+          });
+          if (handlerSuccess) {
+            activeFunctionContextRef.current = null;
+            await registerFunctionUsage(companyId, activeFunction, functionSettings[activeFunction]?.creditsPerUse ?? 2);
+            return { text: capturedText || '', functionKey: activeFunction };
+          }
+        }
+        activeFunctionContextRef.current = null;
+      }
+
+      // ETAPA 2: detectVoiceCommand — usa ref dummy para não poluir o ref real
+      const dummyContextRef = { current: null };
+
+      // ✅ slug passado aqui também
+      const isCommand = await detectVoiceCommand(message, {
+        companyId,
+        slug,
+        widgetMode,
+        functionSettings,
+        setIsProcessing,
+        setQrCodeData,
+        setPixConfirmationData,
+        playText: silentPlayText,
+        sessionId,
+        commandProcessor,
+        pixStateRef,
+        setActiveModal,
+        activeFunctionContextRef: dummyContextRef,
+        groqContextRef,
+        fallbackMessageRef,
+        onFunctionDetected: (key: string) => handleFunctionClickSilent(key),
+      });
+
+      if (isCommand) {
+        activeFunctionContextRef.current = null;
+        return { text: capturedText || '', functionKey: undefined };
+      }
+
+      // ETAPA 3: detectRegistryFunction
+      const registryFunc = detectRegistryFunction(message);
+      if (registryFunc?.handler) {
+        const isEnabled = await checkIfFunctionIsEnabled(companyId, registryFunc.functionKey);
+        if (isEnabled) {
+          try {
+            const success = await registryFunc.handler({
+              transcript: message,
+              companyId,
+              functionSettings,
+              playText: silentPlayText,
+              setIsProcessing,
+              sessionId,
+              setActiveModal,                 
+              widgetMode,
+              slug,
+              registerFunctionUsage: async (key: string, credits: number) =>
+                registerFunctionUsage(companyId, key, credits),
+              checkIfFunctionIsEnabled: async (key: string) =>
+                checkIfFunctionIsEnabled(companyId, key),
+            });
+            if (success) {
+              activeFunctionContextRef.current = null;
+              await registerFunctionUsage(companyId, registryFunc.functionKey, registryFunc.creditsPerUse ?? 0);
+              return { text: capturedText || '', functionKey: registryFunc.functionKey };
+            }
+          } catch {}
+        }
+      }
+
+      // ETAPA 4: Backend
+      const formData = new FormData();
+      formData.append('audio', new Blob([message], { type: 'text/plain' }), 'question.txt');
+      formData.append('companyId', companyId);
+      formData.append('directQuestion', message);
+      formData.append('returnText', 'true');
+      if (sessionIdRef.current) formData.append('sessionId', sessionIdRef.current);
+      // ✅ FIX PONTO B: companyContext estava faltando no modo texto puro
+      // Mesmo bug que havia na voice/process route — corrigido aqui também
+      formData.append('companyContext', gptContextRef.current);
+ 
+const response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/process', { method: 'POST', body: formData });
+
+      const newSessionId = response.headers.get('X-Session-Id');
+      if (newSessionId && !sessionIdRef.current) setSessionId(newSessionId);
+
+      const hintFunctionKey = response.headers.get('X-Function-Key');
+      if (hintFunctionKey) {
+        setIsProcessing(false);
+        handleFunctionClickSilent(hintFunctionKey);
+        const headerText = response.headers.get('X-Response-Text');
+        const hintText = headerText ? decodeURIComponent(headerText) : '';
+        if (hintText) setLastResponse(hintText);
+        return { text: hintText || '', functionKey: hintFunctionKey };
+      }
+
+      if (!response.ok) throw new Error(`Erro: ${response.status}`);
+
+      let responseText = '';
+      let usedFAQ = false;
+      const contentType = response.headers.get('content-type') ?? '';
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
+        responseText = data.response || data.text || '';
+        usedFAQ = !!data.usedFAQ;
+      } else {
+        const headerText = response.headers.get('X-Response-Text');
+        responseText = headerText ? decodeURIComponent(headerText) : '';
+      }
+
+      if (responseText) setLastResponse(responseText);
+
+      if (!usedFAQ && commandProcessor) {
+        commandProcessor.saveUnrecognizedHint(message);
+      }
+
+      return { text: responseText, functionKey: undefined };
+    } catch {
+      return { text: 'Desculpe, ocorreu um erro ao processar sua mensagem.', functionKey: undefined };
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // ── handleFunctionClickSilent ─────────────────────────────
+  const handleFunctionClickSilent = (functionKey: string, functionParams?: any) => {
+    const modalOnlyFunctions: Record<string, ActiveModal> = {
+      tocar_video:        { type: 'TocarVideoDisplay',                data: { companyId, query: '' } },
+      meu_sistema:        { type: 'MeuSistemaDisplay',                data: { companyId } },
+      consultar_cambio:   { type: 'CotacaoMoedasDisplay',             data: { companyId } },
+      consultar_cep:      { type: 'ConsultarCEPDisplay',              data: { companyId } },
+      dados_cnpj:     { type: 'ConsultarCnpjModal',               data: { companyId } },
+      dados_cpf:      { type: 'ConsultarCpfModal',                data: { companyId } },
+      restricoes_cpf:     { type: 'RestricoesCPFDisplay',             data: { companyId } },
+      restricoes_cnpj:    { type: 'RestricoesCNPJDisplay',            data: { companyId } },
+      consultar_feriados: { type: 'FeriadosNacionaisDisplay',         data: { companyId } },
+      consultar_ddd:      { type: 'ConsultarDDDDisplay',              data: { companyId } },
+      consultar_placa:    { type: 'ConsultarPlacaModal',              data: { companyId } },
+      consultar_protestos:   { type: 'ConsultarProtestosModal',          data: { companyId } },
+      enviar_arquivo:     { type: 'EnviarArquivoDisplay',             data: { companyId } },
+      gerar_qrcode:       { type: 'GerarQRCodeDisplay',               data: { companyId } },
+      gerar_codigo_barras:{ type: 'GerarCodigoBarrasDisplay',         data: { companyId } },
+      tocar_musica:       { type: 'TocarMusicaDisplay',               data: { companyId, query: '' } },
+      playlist:           { type: 'PlaylistDisplay',                  data: { companyId } },
+      porta_retrato:      { type: 'PortaRetratoDisplay',              data: { companyId } },
+      painel_ofertas:     { type: 'PainelOfertasDisplay',             data: { companyId } },
+      confirmar_presenca: { type: 'ConfirmPresenceModal',             data: { companyId } },
+      reagendar_compromisso: { type: 'RescheduleModal',               data: { companyId } },
+      cancelar_agendamento:  { type: 'CancelAppointmentModal',        data: { companyId } },
+      meu_cupom:          { type: 'MeuCupomDisplay',                  data: { companyId, prefillName: '' } },
+      traduzir_texto:     { type: 'TranslateTextModal',               data: { companyId } },
+      transcrever_audio:  { type: 'TranscribeAudioModal',             data: { companyId } },
+      ver_noticias:       { type: 'VerNoticiasDisplay',               data: { companyId } },
+      procurar_produto:   { type: 'ProcurarProdutoDisplay',           data: { companyId } },
+      segunda_via_boleto: { type: 'SegundaViaBoletoDisplay',          data: { companyId } },
+      identificar_fraude: { type: 'IdentificarFraudeDisplay',         data: { companyId } },
+      clima_tempo:        { type: 'ClimaTempoDisplay',                data: { companyId, city: null } },
+      cadastrar_produto:  { type: 'CadastrarProdutoDisplay',          data: { companyId } },
+      enviar_email:       { type: 'SendEmailModal',                   data: { companyId } },
+      agendar_compromisso:{ type: 'CreateEventModal',                 data: { companyId, prefilledData: {} } },
+      ver_agenda:         { type: 'ViewAgendaModal',                  data: { companyId, initialView: 'month' } },
+      relogio_mundial:    { type: 'RelogioMundialDisplay',            data: { companyId } },
+      rastreio_correios:  { type: 'RastreioCorreiosDisplay',          data: { companyId } },
+      tracar_rota:        { type: 'TracarRotaDisplay',                data: { companyId, destinoInicial: '' } },
+      buscar_endereco:    { type: 'BuscarEnderecoDisplay',            data: { companyId, termoInicial: '' } },
+      fichas_producao_conversacional: { type: 'FichaProducaoConversacionalDisplay', data: { companyId, fichaType: 'produto' } },
+      minha_conta:        { type: 'LoginClienteDisplay',              data: { profile, companyId, slug: slug ?? '' } },
+      criar_nota:         { type: 'CriarNotaDisplay',                 data: { companyId } },
+      lembrete_remedios:  { type: 'LembreteRemediosDisplay',          data: { companyId } },
+      converter_arquivo:  { type: 'ConverterArquivoDisplay',          data: { companyId } },
+      editar_imagem:      { type: 'EditarImagemDisplay',              data: { companyId } },
+      remover_fundo:      { type: 'RemoverFundoDisplay',              data: { companyId } },
+      duplicar_imagem:    { type: 'DuplicarImagemDisplay',            data: { companyId } },
+      lista_compras:      { type: 'ListaComprasDisplay',              data: { companyId } },
+      orcamento:          { type: 'OrcamentoDisplay',                data: { companyId, transcriptInicial: '' } },
+      analisar_planilha:  { type: 'AnalisarPlanilhaDisplay',          data: { companyId } },
+      texto_em_audio:     { type: 'TextoEmAudioDisplay',     data: { companyId } },
+      transcrever_video:  { type: 'TranscreverVideoDisplay',  data: { companyId } },
+      criar_midia: { type: 'CriarMidiaDisplay', data: { companyId, slug: slug ?? '' } },
+    };
+
+    const modal = modalOnlyFunctions[functionKey];
+    if (modal) {
+      setActiveModal(modal);
+    } else {
+      const registryFunc = getFunctionByKey(functionKey);
+      if (registryFunc?.handler) {
+        registryFunc.handler({
+          transcript: '',
+          companyId,
+          functionSettings,
+          functionParams,
+          playText: () => Promise.resolve(),
+          setIsProcessing,
+          sessionId,
+          setActiveModal,
+          widgetMode,
+          slug,
+        }).catch(() => {});
+      } else {
+        handleFunctionClick(functionKey);
+      }
+    }
+  };
+
+  // ── Registra handler externo ──────────────────────────────
+  useEffect(() => {
+    if (onTextMessage) {
+      onTextMessage(async (text: string) => {
+        return await handleTextMessageForText(text);
+      });
+    }
+  }, [onTextMessage, commandProcessor]);
+
+  useEffect(() => {
+    function handleOpenListaCompras(event: CustomEvent) {
+      const { listaId, companyId: cId } = event.detail;
+      setActiveModal({ type: 'ListaComprasDisplay', data: { companyId: cId, listaId } });
+    }
+    window.addEventListener('openListaCompras', handleOpenListaCompras as EventListener);
+    return () => window.removeEventListener('openListaCompras', handleOpenListaCompras as EventListener);
+  }, [setActiveModal]);
+
+  // ── Helpers ───────────────────────────────────────────────
+  async function playGoodbye() {
+    try { await playText('Até logo!'); } catch {}
+    setTimeout(async () => { if (isActiveRef.current) { shouldProcessAudio.current = true; await startGoogleSpeech(); } }, 1000);
+  }
+
+  const handleConfirmPixLocal = () =>
+    handleConfirmPix(pixStateRef.current?.pixConfirmationData ?? null, {
+      companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings,
+      profileId: profileRef.current?.id ?? null,
+    });
+
+  const handleCancelPixLocal = () =>
+    handleCancelPix(pixStateRef.current?.pixConfirmationData ?? null, {
+      companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings,
+    });
+
+const getStatusMessage = (maximized = false) => {
+  if (isKioskMode && isKeyboardOpen)
+    return 'Use o teclado abaixo';
+  if (!permissionGranted) return 'Aguardando permissão de voz...';
+  if (isTranscribing) return 'Transcrevendo...';
+  if (isPlayingAudio) return 'Falando...';
+  if (isProcessing) return 'Processando...';
+  const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
+  if (!wakeWordEnabled) return maximized
+    ? 'Pressione o orbe para interagir'
+    : 'Pressione o microfone para interagir';
+  return primaryWakeWord ? `diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
+};
+
+  const getMicButtonColor = () => {
+    if (voiceRecorder.isRecording || isPlayingAudio) return 'bg-red-500 animate-pulse';
+    if (isTranscribing) return 'bg-orange-400 animate-pulse';
+    if (!hasMicrophone || !permissionGranted) return 'bg-gray-400';
+    if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
+    if (isProcessing) return 'bg-yellow-400 animate-pulse';
+    if (isListening) return 'bg-blue-400 animate-pulse';
+    return 'bg-green-400 animate-pulse';
+  };
+
+  const getMicHintText = () => {
+    if (!hasMicrophone) return 'Microfone não detectado';
+    if (!permissionGranted) return 'Permissão de voz necessária';
+    if (voiceRecorder.isRecording) return isMobile ? 'solte para enviar...' : 'clique novamente para enviar...';
+    if (isTranscribing) return 'transcrevendo...';
+    if (isPlayingAudio || isProcessing) return 'clique para parar';
+    return isMobile ? 'segure para falar ou' : 'clique para falar ou';
+  };
+
+  const avatarIsHidden =
+    activeModal !== null &&
+    activeModal.type !== 'QRCodeDisplay' &&
+    activeModal.type !== 'PIXConfirmationModal';
+
+  // ── RENDER: MAXIMIZED ─────────────────────────────────────
+  if (isMaximized) {
+    return (
+      <div className="flex flex-col items-center gap-2 md:gap-3 w-full">
+        <div
+          className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 cursor-pointer select-none"
+          onMouseDown={(e) => { if (!isMobile) { isRecordingToggle ? handleMicButtonUp() : handleMicButtonDown(e); } }}
+          onMouseUp={(e) => { if (!isMobile) e.preventDefault(); }}
+          onTouchStart={(e) => { if (isMobile) handleMicButtonDown(e); }}
+          onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
+        >
+          {voiceRecorder.isRecording && (
+            <div className="absolute inset-0 rounded-full border-4 border-red-500 animate-ping opacity-40 pointer-events-none z-10" />
+          )}
+          <AvatarFace
+            isListening={isListening || voiceRecorder.isRecording}
+            isSpeaking={isPlayingAudio}
+            isProcessing={isProcessing || isTranscribing}
+            isWakeWordDetected={isWakeWordDetected}
+            theme={theme}
+            qrCodeData={qrCodeData}
+            pixConfirmationData={pixConfirmationData}
+            onCloseQRCode={() => setQrCodeData(null)}
+            onCopyQRCode={() => {}}
+            onConfirmPix={handleConfirmPixLocal}
+            onCancelPix={handleCancelPixLocal}
+            isHidden={avatarIsHidden}
+            avatarType={avatarType}
+            printOnPayment={printConfig.print_on_payment}
+            hasActivePlan={printConfig.hasActivePlan}
+            companyId={companyId}
+          />
+        </div>
+
+        {!showStartButton && (
+          <p className={`text-sm font-medium -mt-6 ${theme === 'dark' ? 'text-white/40' : 'text-gray-400'}`}>
+            {voiceRecorder.isRecording
+  ? (isMobile ? 'solte para enviar...' : 'clique novamente para enviar...')
+  : isTranscribing
+  ? 'transcrevendo...'
+  : (isMobile ? 'segure para falar' : 'clique para falar')}
+          </p>
+        )}
+
+        <div className="text-center px-4 max-w-md">
+          <p className={`text-lg sm:text-xl md:text-2xl font-bold mb-2 whitespace-nowrap ${theme === 'dark' ? 'text-white/50' : 'text-gray-900/50'}`}>
+            {getStatusMessage(true)}
+          </p>
+          <div className={`mt-2 transition-all duration-300 ${(repromptWarning || noiseWarning) ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <span className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${
+              theme === 'dark' ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300' : 'bg-blue-50 border border-blue-200 text-blue-700'
+            }`}>
+              {repromptWarning ? 'Não consegui entender — pode repetir?' : 'Ambiente ruidoso — fale mais perto do microfone'}
+            </span>
+          </div>
+          {error && <p className={`text-xs sm:text-sm mt-2 ${theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'}`}>{error}</p>}
+        </div>
+
+        {!textMode && (
+          <ActionModals
+            activeModal={activeModal}
+            onClose={handleCloseModal}
+            theme={theme}
+            onConfirmPix={handleConfirmPixLocal}
+            onCancelPix={handleCancelPixLocal}
+            playText={playText}
+            isKioskMode={isKioskMode}
+            printConfig={printConfig}
+            widgetMode={widgetMode}
+            slug={slug}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // ── RENDER: TEXT MODE — apenas modais, sem UI de voz ────────
+  if (textMode) {
+    return (
+      <ActionModals
+        activeModal={activeModal}
+        onClose={handleCloseModal}
+        theme={theme}
+        onConfirmPix={handleConfirmPixLocal}
+        onCancelPix={handleCancelPixLocal}
+        playText={playText}
+        isKioskMode={isKioskMode}
+        printConfig={printConfig}
+        widgetMode={widgetMode}
+        slug={slug}
+      />
+    );
+  }
+  // ── RENDER: NORMAL ────────────────────────────────────────
+  return (
+    <div className="w-full max-w-6xl mx-auto">
+      {/* Modal de Destaque de Função */}
+      {highlightedFeature && (
+        <FeatureHighlightModal
+          isOpen={showFeatureHighlight}
+          onClose={handleCloseFeatureHighlight}
+          featureName={highlightedFeature.function_name}
+          featureDescription={highlightedFeature.short_description}
+          featureCategory={highlightedFeature.function_category}
+          theme={theme}
+        />
+      )}
+      <div className="grid md:grid-cols-2 gap-8">
+
+        {/* Card esquerdo: Avatar */}
+<div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-all duration-300 flex flex-col ${
+  showVirtualKeyboard ? "h-[250px]" : "h-[448px]"
+} ${
+  theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
+}`}>
+          <div className={`relative h-96 transition-all duration-300 ${
+  isKeyboardOpen ? 'scale-[0.6]' : 'scale-100'
+}`}>
+            <AvatarFace
+              isListening={isListening}
+              isSpeaking={isPlayingAudio}
+              isProcessing={isProcessing}
+              isWakeWordDetected={isWakeWordDetected}
+              theme={theme}
+              qrCodeData={qrCodeData}
+              pixConfirmationData={pixConfirmationData}
+              onCloseQRCode={() => setQrCodeData(null)}
+              onCopyQRCode={() => {}}
+              onConfirmPix={handleConfirmPixLocal}
+              onCancelPix={handleCancelPixLocal}
+              isHidden={avatarIsHidden}
+              avatarType={avatarType}
+              printOnPayment={printConfig.print_on_payment}
+              hasActivePlan={printConfig.hasActivePlan}
+              companyId={companyId}
+            />
+          </div>
+        </div>
+
+        {/* Card direito: Status / Microfone */}
+          <div className={`rounded-3xl shadow-2xl p-8 border flex flex-col overflow-hidden transition-all duration-300 ${
+            showVirtualKeyboard ? "h-[250px]" : "h-[448px]"
+          } ${
+            theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
+          }`}>
+            <div className="flex flex-col items-center flex-1 min-h-0">
+
+    {/* Microfone oculto quando teclado estiver aberto */}
+    {!showVirtualKeyboard && (
+      <div className="relative flex items-center justify-center mt-2">
+        <button
+          onMouseDown={(e) => { if (!isMobile) { isRecordingToggle ? handleMicButtonUp() : handleMicButtonDown(e); } }}
+          onMouseUp={(e) => { if (!isMobile) e.preventDefault(); }}
+          onTouchStart={(e) => { if (isMobile) handleMicButtonDown(e); }}
+          onTouchEnd={() => { if (isMobile) handleMicButtonUp(); }}
+          disabled={(!permissionGranted && hasMicrophone) || !hasMicrophone || showStartButton || isTranscribing}
+          className={`w-[102px] h-[102px] rounded-full ${getMicButtonColor()} flex items-center justify-center transition-all shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300/50 disabled:opacity-50 select-none`}
+          aria-label="Segurar para falar"
+        >
+          {(isPlayingAudio || isProcessing) ? (
+            <Square className="w-[51px] h-[51px] text-white fill-current" />
+          ) : hasMicrophone && permissionGranted ? (
+            <Mic className="w-[51px] h-[51px] text-white" />
+          ) : (
+            <MicOff className="w-[51px] h-[51px] text-white opacity-50" />
+          )}
+        </button>
+      </div>
+    )}
+
+{!showVirtualKeyboard && !showStartButton && (
+      <p className={`text-xs font-medium mt-1 ${theme === 'dark' ? 'text-white/40' : 'text-gray-400'}`}>
+        {getMicHintText()}
+      </p>
+    )}
+
+            <div className="text-center w-full mt-4">
+              <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                {getStatusMessage()}
+              </p>
+              {wakeWordEnabled && (
+                <p className={`text-sm ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
+                  Utilize a palavra de ativação apenas no modo voz.
+                </p>
+              )}
+            </div>
+
+            {error && (
+              <div className={`w-full mt-3 p-3 rounded-xl border-2 ${
+                theme === 'dark' ? 'bg-red-500/10 border-red-500/30 text-red-300' : 'bg-red-50 border-red-200 text-red-700'
+              }`}>
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+
+            {!showStartButton && (
+              <div className="w-full min-w-0 overflow-hidden mt-auto flex flex-col gap-0.5">
+
+                <div className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 border transition-all duration-300 ${
+                  (repromptWarning || noiseWarning)
+                    ? theme === 'dark'
+                      ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
+                      : 'bg-blue-50 border-blue-200 text-blue-700'
+                    : 'opacity-0 pointer-events-none border-transparent bg-transparent'
+                }`}>
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 18.364a9 9 0 000-12.728M8.464 15.536a5 5 0 010-7.072" />
+                  </svg>
+                  <span className="truncate">
+                    {repromptWarning ? 'Não consegui entender — pode repetir?' : 'Estou ouvindo... fale mais perto do microfone'}
+                  </span>
+                </div>
+
+                <div
+                  onClick={() => {
+                    if (showLastConversation && (lastTranscript || lastResponse)) {
+                      setShowConversationModal(true);
+                      setTimeout(() => setShowConversationModal(false), 5000);
+                    }
+                  }}
+                  className={`w-full rounded-xl border transition-all duration-500 overflow-hidden ${
+                    showLastConversation
+                      ? theme === 'dark'
+                        ? 'bg-emerald-500/15 border-emerald-500/30 cursor-pointer hover:bg-emerald-500/25'
+                        : 'bg-emerald-50 border-emerald-200 cursor-pointer hover:bg-emerald-100'
+                      : 'opacity-0 pointer-events-none border-transparent bg-transparent'
+                  }`}
+                >
+                  {lastTranscript && (
+                    <div className={`px-3 py-1.5 flex items-center gap-2 text-xs font-medium min-w-0 ${
+                      theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'
+                    }`}>
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
+                      <span className="truncate min-w-0 flex-1">{lastTranscript}</span>
+                    </div>
+                  )}
+                  {lastTranscript && lastResponse && (
+                    <div className={`mx-3 h-px ${theme === 'dark' ? 'bg-emerald-500/20' : 'bg-emerald-200/60'}`} />
+                  )}
+                  {lastResponse && (
+                    <div className={`px-3 py-1.5 flex items-center gap-2 text-xs min-w-0 ${
+                      theme === 'dark' ? 'text-emerald-400/80' : 'text-emerald-600/80'
+                    }`}>
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                      </svg>
+                      <span className="truncate min-w-0 flex-1">{lastResponse}</span>
+                    </div>
+                  )}
+                </div>
+
+                <TextInputChat
+                  onSendMessage={handleTextMessage}
+                  isProcessing={isProcessing || isPlayingAudio || isTranscribing}
+                  theme={theme}
+                  disabled={false}
+                  externalValue={externalInput}
+                  onExternalValueConsumed={() => setExternalInput('')}
+                  showVirtualKeyboard={showVirtualKeyboard}
+                  onVirtualKeyboardToggle={isKioskMode ? () => setShowVirtualKeyboard(v => !v) : undefined}
+                  autoOpenKeyboard={isKioskMode} 
+                />
+              </div>
+            )}
+
+            {showConversationModal && (
+              <div
+                className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+                style={{ background: 'rgba(0,0,0,0.60)', backdropFilter: 'blur(6px)' }}
+                onClick={() => setShowConversationModal(false)}
+              >
+                <div
+                  className={`relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${
+                    theme === 'dark' ? 'bg-slate-900 border border-emerald-500/30' : 'bg-white border border-emerald-200'
+                  }`}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div className={`flex items-center justify-between px-5 py-3 border-b ${
+                    theme === 'dark' ? 'border-emerald-500/20 bg-emerald-500/10' : 'border-emerald-100 bg-emerald-50'
+                  }`}>
+                    <span className={`text-sm font-semibold ${theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                      Última conversa
+                    </span>
+                    <button
+                      onClick={() => setShowConversationModal(false)}
+                      className={`text-lg font-bold leading-none ${theme === 'dark' ? 'text-white/50 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}
+                    >✕</button>
+                  </div>
+                  {lastTranscript && (
+                    <div className={`px-5 py-4 ${theme === 'dark' ? 'bg-emerald-500/5' : 'bg-white'}`}>
+                      <div className={`flex items-start gap-2 mb-1 text-xs font-semibold uppercase tracking-wider ${
+                        theme === 'dark' ? 'text-emerald-500/60' : 'text-emerald-600/60'
+                      }`}>
+                        <svg className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                        </svg>
+                        Você disse
+                      </div>
+                      <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-white/90' : 'text-gray-800'}`}>{lastTranscript}</p>
+                    </div>
+                  )}
+                  {lastTranscript && lastResponse && (
+                    <div className={`mx-5 h-px ${theme === 'dark' ? 'bg-emerald-500/15' : 'bg-emerald-100'}`} />
+                  )}
+                  {lastResponse && (
+                    <div className={`px-5 py-4 ${theme === 'dark' ? 'bg-emerald-500/5' : 'bg-white'}`}>
+                      <div className={`flex items-start gap-2 mb-1 text-xs font-semibold uppercase tracking-wider ${
+                        theme === 'dark' ? 'text-emerald-500/60' : 'text-emerald-600/60'
+                      }`}>
+                        <svg className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                        Resposta
+                      </div>
+                      <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-white/90' : 'text-gray-800'}`}>{lastResponse}</p>
+                    </div>
+                  )}
+                  <div className={`px-5 py-2 text-center text-xs border-t ${
+                    theme === 'dark' ? 'border-emerald-500/20 text-white/25' : 'border-emerald-100 text-gray-400'
+                  }`}>
+                    Fecha automaticamente em 5s
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {!textMode && (
+        <ActionModals
+          activeModal={activeModal}
+          onClose={handleCloseModal}
+          theme={theme}
+          onConfirmPix={handleConfirmPixLocal}
+          onCancelPix={handleCancelPixLocal}
+          playText={playText}
+          isKioskMode={isKioskMode}
+          printConfig={printConfig}
+          widgetMode={widgetMode}
+          slug={slug}
+        />
+      )}
+    </div>
+  );
+}

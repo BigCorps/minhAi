@@ -135,6 +135,30 @@ const ASSETLINKS_BY_HOST: Record<string, any[]> = {
     },
   ],
 
+  // ── MelhorIA (a publicar) ──────────────────────────────────────────────────
+  'melhoria.org': [
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'org.melhoria.twa',
+        sha256_cert_fingerprints: [],
+      },
+    },
+  ],
+
+  // ── FuncionarIA (a publicar) ───────────────────────────────────────────────
+  'funcionaria.net': [
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'net.funcionaria.twa',
+        sha256_cert_fingerprints: [],
+      },
+    },
+  ],
+  
   // ── Pix Wiki (ativo) ───────────────────────────────────────────────────────
   'pix.wiki': [
     {

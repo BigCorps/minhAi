@@ -79,6 +79,11 @@ const OPCOES_CNPJ: ConsultaOpcao[] = [
 const formatBRL = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 const GUEST_COMPANY_ID = process.env.NEXT_PUBLIC_CONSULTATEC_GUEST_COMPANY_ID || '';
 
+// Link da ficha na Play Store. O id é o package_name declarado no Play Console
+// e no app/.well-known/assetlinks.json — os três precisam ser idênticos.
+const CONSULTATEC_PLAY_URL =
+  'https://play.google.com/store/apps/details?id=br.tec.consulta.twa';
+
 export default function ConsultaTecPage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -194,25 +199,50 @@ export default function ConsultaTecPage() {
             <span className="font-serif text-xl font-bold tracking-tight truncate">ConsultaTec</span>
           </div>
 
-          {!userId ? (
-            <button
-              onClick={() => router.push('/consultatec/login')}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold flex-shrink-0"
-              style={{ backgroundColor: cor.destaque, color: cor.fundo }}
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {/* Selo da Play Store — mesmo padrão e mesmas medidas do PixWiki
+                (62px no mobile, 108px no desktop, arte em /cards/play.png).
+                Aqui não é preciso portal: o header da ConsultaTec é renderizado
+                nesta própria página, então o selo entra direto no JSX. */}
+            <a
+              href={CONSULTATEC_PLAY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Baixar ConsultaTec no Google Play"
+              title="Disponível no Google Play"
+              className="inline-flex shrink-0 items-center justify-center rounded-md transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
             >
-              <LogIn className="w-4 h-4" />
-              Entrar
-            </button>
-          ) : (
-            <button
-              onClick={() => router.push('/consultatec/dashboard')}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border flex-shrink-0"
-              style={{ borderColor: cor.borda, color: cor.tinta }}
-            >
-              <Wallet className="w-4 h-4" />
-              {saldoCents === null ? '...' : formatBRL(saldoCents)}
-            </button>
-          )}
+              <Image
+                src="/cards/play.png"
+                alt="Disponível no Google Play"
+                width={1760}
+                height={134}
+                sizes="(max-width: 639px) 62px, 108px"
+                className="h-auto w-[62px] max-w-none sm:w-[108px]"
+                priority
+              />
+            </a>
+
+            {!userId ? (
+              <button
+                onClick={() => router.push('/consultatec/login')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold flex-shrink-0"
+                style={{ backgroundColor: cor.destaque, color: cor.fundo }}
+              >
+                <LogIn className="w-4 h-4" />
+                Entrar
+              </button>
+            ) : (
+              <button
+                onClick={() => router.push('/consultatec/dashboard')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border flex-shrink-0"
+                style={{ borderColor: cor.borda, color: cor.tinta }}
+              >
+                <Wallet className="w-4 h-4" />
+                {saldoCents === null ? '...' : formatBRL(saldoCents)}
+              </button>
+            )}
+          </div>
         </div>
       </header>
 

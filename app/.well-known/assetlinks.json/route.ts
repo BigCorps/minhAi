@@ -54,6 +54,36 @@ const CONVITEIA_ENTRY = [
   },
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MelhorIA — em análise na Play Store (set/2026)
+//
+// Constante, e não literal inline, porque a MESMA entrada precisa responder em
+// melhoria.org e www.melhoria.org. A verificação de TWA é por ORIGEM e NÃO
+// segue redirecionamento: o redirect www -> apex do middleware não conta para
+// o Android. Mesmo motivo pelo qual o ConviteIA está declarado nos dois hosts.
+// ─────────────────────────────────────────────────────────────────────────────
+const MELHORIA_ENTRY = [
+  {
+    relation: [
+      'delegate_permission/common.handle_all_urls',
+      // get_login_creds permite ao Gerenciador de Senhas do Google compartilhar
+      // a credencial entre melhoria.org e o app. Vale especialmente aqui: para
+      // este público, digitar senha é a maior barreira do produto.
+      'delegate_permission/common.get_login_creds',
+    ],
+    target: {
+      namespace: 'android_app',
+      package_name: 'org.melhoria.twa',
+      sha256_cert_fingerprints: [
+        // Fornecidos pelo Play Console (assinatura do app + chaves adicionais)
+        '55:94:96:CD:E1:FB:17:65:2B:3F:5A:31:DA:E3:BB:4C:A1:56:7A:05:AC:F7:8B:66:39:36:F4:70:6B:B6:D0:A9',
+        '25:D4:CC:9A:B6:A1:86:F7:45:33:20:1A:9F:85:4D:1E:3B:16:C2:DC:C8:E1:2D:E6:AC:BA:DB:00:37:26:AC:B5',
+        '45:82:E1:56:CC:4C:63:C4:A6:4D:B4:99:BC:BE:48:85:B1:82:73:EC:4C:70:4A:6E:65:F9:5F:CA:C7:65:78:63',
+      ],
+    },
+  },
+];
+
 const ASSETLINKS_BY_HOST: Record<string, any[]> = {
  'ia.artefinal.app': [
   {
@@ -135,17 +165,9 @@ const ASSETLINKS_BY_HOST: Record<string, any[]> = {
     },
   ],
 
-  // ── MelhorIA (a publicar) ──────────────────────────────────────────────────
-  'melhoria.org': [
-    {
-      relation: ['delegate_permission/common.handle_all_urls'],
-      target: {
-        namespace: 'android_app',
-        package_name: 'org.melhoria.twa',
-        sha256_cert_fingerprints: [],
-      },
-    },
-  ],
+  // ── MelhorIA (em análise, set/2026) ────────────────────────────────────────
+  'melhoria.org': MELHORIA_ENTRY,
+  'www.melhoria.org': MELHORIA_ENTRY,
 
   // ── FuncionarIA (a publicar) ───────────────────────────────────────────────
   'funcionaria.net': [

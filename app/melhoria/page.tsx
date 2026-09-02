@@ -144,7 +144,7 @@ export default function LandingMelhorIA() {
           fontSize: 40, fontWeight: 800, color: cor.tinta,
           margin: `0 0 ${espaco.md}px`, lineHeight: 1.15,
         }}>
-          Seu pai esqueceu o remédio de novo?
+          Você, seus pais ou avós esqueceram o remédio ou cairam num golpe de novo?
         </h1>
 
         <p style={{

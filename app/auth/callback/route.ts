@@ -3,6 +3,7 @@
 // Modificação: detecta fluxo MCP via cookie e redireciona corretamente
 
 import { createClient }  from '@/lib/supabase-server'
+import { recordPlatformOAuthLogin } from '@/lib/platform-activity-server'
 import { NextResponse }  from 'next/server'
 import { cookies }       from 'next/headers'
 
@@ -73,6 +74,23 @@ export async function GET(request: Request) {
           })
           console.log('🔗 Conta Google vinculada para:', data.session.user.email)
           return response
+        }
+        // ────────────────────────────────────────────────────────────────────
+
+        // ── Telemetria first-party: login por produto ───────────────────────
+        // É deliberadamente não-crítica: uma indisponibilidade da telemetria
+        // nunca pode bloquear o login do cliente.
+        try {
+          await recordPlatformOAuthLogin({
+            user: data.session.user,
+            hostname: requestUrl.hostname,
+            nextPath: next,
+          })
+        } catch (activityError) {
+          console.error(
+            '⚠️ Não foi possível registrar login da plataforma (não-crítico):',
+            activityError
+          )
         }
         // ────────────────────────────────────────────────────────────────────
 

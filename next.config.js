@@ -59,6 +59,65 @@ const nextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
+        // Admin BigCorps / minhAi.
+        // Isolamento por host: qualquer página que NÃO pertença à pequena
+        // superfície pública do Admin é reescrita para o 404 administrativo.
+        // /api e /_next ficam fora porque são infraestrutura compartilhada.
+        {
+          source:
+            '/:adminPath((?!api(?:/|$)|_next(?:/|$)|login$|logout$|auth/callback$|usuarios(?:/|$)|dashboard(?:/|$)|robots\\.txt$|favicon\\.ico$).+)',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin/not-found',
+        },
+
+        // O subdomínio "admin" já é reservado no middleware, então estes
+        // rewrites entregam somente as rotas administrativas sem interferir
+        // nos slugs de clientes nem nos demais produtos do monorepo.
+        {
+          source: '/',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin',
+        },
+        {
+          source: '/robots.txt',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin/robots.txt',
+        },
+        {
+          source: '/login',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin/login',
+        },
+        {
+          source: '/logout',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin/logout',
+        },
+        {
+          source: '/usuarios/:path*',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin/usuarios/:path*',
+        },
+        {
+          source: '/auth/callback',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin/auth/callback',
+        },
+
+        // O middleware compartilhado redireciona um usuário autenticado que
+        // abre /login para /dashboard. No host admin esse destino volta para
+        // a home administrativa em vez de expor o dashboard da minhAi.
+        {
+          source: '/dashboard',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin',
+        },
+        {
+          source: '/dashboard/:path*',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin',
+        },
+
         // MCP da minhAi
         {
           source: '/:path*',
@@ -134,6 +193,22 @@ const nextConfig = {
 
   async headers() {
     return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+        headers: [
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive, nosnippet' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+          },
+        ],
+      },
       {
         source: '/:path*.onnx',
         headers: [

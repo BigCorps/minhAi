@@ -10,6 +10,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import 'react-image-crop/dist/ReactCrop.css';
 import ClarityInit from '@/components/analytics/ClarityInit';
 import ProductAnalytics from '@/components/analytics/ProductAnalytics';
+import PlatformActivityTracker from '@/components/analytics/PlatformActivityTracker';
 import CookieConsentBanner from '@/components/CookieConsentBanner';
 import { SEO } from '@/lib/seo';
 
@@ -128,6 +129,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SpeedInsights />
         <ClarityInit />
         <ProductAnalytics />
+        <PlatformActivityTracker />
         <CookieConsentBanner />
       </body>
     </html>

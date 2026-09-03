@@ -10,10 +10,12 @@ const FAST_INTERVAL_MS = 2000;
 export default function PixWikiFastWatch() {
   const supabase = useMemo(() => createClient(), []);
   const inFlight = useRef(false);
+  const accessToken = useRef('');
 
   useEffect(() => {
     let cancelled = false;
     let timer: number | null = null;
+    let authSubscription: { unsubscribe: () => void } | null = null;
 
     const schedule = (delay = FAST_INTERVAL_MS) => {
       if (cancelled) return;
@@ -36,15 +38,16 @@ export default function PixWikiFastWatch() {
       }
 
       inFlight.current = true;
+      const cycleStartedAt = performance.now();
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) return;
+        const token = accessToken.current;
+        if (!token) return;
 
         await fetch(`${FUNCTIONS_URL}/pixwiki-fast-watch`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${token}`,
             apikey: ANON_KEY,
           },
           body: JSON.stringify({ company_id: companyId }),
@@ -54,7 +57,10 @@ export default function PixWikiFastWatch() {
         // Best effort. O cron de 1 minuto e o botão Atualizar continuam como fallback.
       } finally {
         inFlight.current = false;
-        schedule();
+        // Mantém ~2 s entre o INÍCIO dos ciclos. Antes esperávamos 2 s após
+        // terminar uma chamada de ~1 s, transformando a cadência real em ~3 s.
+        const elapsed = performance.now() - cycleStartedAt;
+        schedule(Math.max(150, FAST_INTERVAL_MS - elapsed));
       }
     };
 
@@ -67,6 +73,17 @@ export default function PixWikiFastWatch() {
       if (event.key === 'pixWikiActiveCompanyId') schedule(100);
     };
 
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      accessToken.current = session?.access_token || '';
+      schedule(100);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      accessToken.current = session?.access_token || '';
+      if (accessToken.current) schedule(100);
+    });
+    authSubscription = authListener.subscription;
+
     document.addEventListener('visibilitychange', wake);
     window.addEventListener('focus', onFocus);
     window.addEventListener('storage', onStorage);
@@ -75,6 +92,7 @@ export default function PixWikiFastWatch() {
     return () => {
       cancelled = true;
       if (timer !== null) window.clearTimeout(timer);
+      authSubscription?.unsubscribe();
       document.removeEventListener('visibilitychange', wake);
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('storage', onStorage);

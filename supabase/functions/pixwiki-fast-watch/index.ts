@@ -9,6 +9,8 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '3600',
+  'Cache-Control': 'no-store',
   'Content-Type': 'application/json',
 }
 
@@ -183,17 +185,27 @@ Deno.serve(async (req: Request) => {
     const now = new Date()
     const begin = new Date(now.getTime() - 5 * 60 * 1000)
     const search = new URL('https://api.mercadopago.com/v1/payments/search')
+    // Para confirmação de balcão, date_approved é o relógio certo: cobre tanto
+    // Pix espontâneo quanto QR criado antes e pago agora. Filtrar Pix no provedor
+    // reduz payload e trabalho sem perder os demais fluxos.
     search.searchParams.set('status', 'approved')
-    search.searchParams.set('sort', 'date_last_updated')
+    search.searchParams.set('payment_method_id', 'pix')
+    search.searchParams.set('sort', 'date_approved')
     search.searchParams.set('criteria', 'desc')
-    search.searchParams.set('range', 'date_last_updated')
+    search.searchParams.set('range', 'date_approved')
     search.searchParams.set('begin_date', begin.toISOString())
     search.searchParams.set('end_date', now.toISOString())
-    search.searchParams.set('limit', '20')
+    search.searchParams.set('limit', '10')
     search.searchParams.set('offset', '0')
 
+    const providerStartedAt = Date.now()
     const response = await fetch(search, {
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+        'Cache-Control': 'no-cache, no-store',
+        Pragma: 'no-cache',
+      },
     })
     const payload = await response.json().catch(() => ({}))
     if (!response.ok) throw new Error(`mp_search_failed:${response.status}`)
@@ -206,7 +218,13 @@ Deno.serve(async (req: Request) => {
       await markState(supabase, companyId, {
         last_finished_at: new Date().toISOString(), last_new_count: 0, last_error: null,
       })
-      return json({ ok: true, new_count: 0, checked: 0, duration_ms: Date.now() - startedAt })
+      return json({
+        ok: true,
+        new_count: 0,
+        checked: 0,
+        provider_ms: Date.now() - providerStartedAt,
+        duration_ms: Date.now() - startedAt,
+      })
     }
 
     const [{ data: existing }, { data: linkTransactions }] = await Promise.all([
@@ -319,6 +337,7 @@ Deno.serve(async (req: Request) => {
       ok: true,
       new_count: newReceiptIds.length,
       checked: pixPayments.length,
+      provider_ms: Date.now() - providerStartedAt,
       duration_ms: Date.now() - startedAt,
     })
   } catch (error) {

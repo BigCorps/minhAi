@@ -91,6 +91,7 @@ export default function PixWikiLinkPage({ company, initialAmount }: Props) {
       }
 
       autoCheckInFlight.current = true;
+      const cycleStartedAt = performance.now();
       try {
         const { ok, data } = await invoke('pixwiki-confirm-payment', { transaction_id: transactionId });
         if (ok && data?.success && !cancelled) {
@@ -103,7 +104,10 @@ export default function PixWikiLinkPage({ company, initialAmount }: Props) {
         autoCheckInFlight.current = false;
       }
 
-      schedule();
+      // Mantém a cadência pelo início da consulta, não pelo fim. Assim uma
+      // chamada de ~1 s não transforma o intervalo de 2 s em ~3 s.
+      const elapsed = performance.now() - cycleStartedAt;
+      schedule(Math.max(150, nextDelay() - elapsed));
     };
 
     const onVisibility = () => {

@@ -135,3 +135,58 @@ if (failures.length) {
 }
 
 console.log('Admin security validation: OK');
+
+// Expansão de gestão: rotas e APIs obrigatórias.
+const expansionFiles = [
+  'app/admin/financeiro/page.tsx',
+  'app/admin/custos/page.tsx',
+  'app/admin/margem/page.tsx',
+  'app/admin/atencao/page.tsx',
+  'app/admin/agora/page.tsx',
+  'app/api/admin/financeiro/route.ts',
+  'app/api/admin/custos/route.ts',
+  'app/api/admin/margem/route.ts',
+  'app/api/admin/atencao/route.ts',
+  'app/api/admin/agora/route.ts',
+  'components/admin/AdminHeader.tsx',
+  'lib/platform-openai-admin.ts',
+  'types/platform-admin-business.ts',
+];
+for (const file of expansionFiles) read(file);
+
+for (const route of ['financeiro', 'custos', 'margem', 'atencao', 'agora']) {
+  if (!nextConfig.includes(`source: '/${route}'`)) {
+    fail(`Rewrite do Admin ausente: /${route}`);
+  }
+  if (!nextConfig.includes(`destination: '/admin/${route}'`)) {
+    fail(`Destino interno ausente: /admin/${route}`);
+  }
+}
+
+const openaiAdmin = read('lib/platform-openai-admin.ts');
+if (!openaiAdmin.includes('OPENAI_ADMIN_KEY')) {
+  fail('Integração opcional OpenAI Admin não usa OPENAI_ADMIN_KEY.');
+}
+if (openaiAdmin.includes('NEXT_PUBLIC_OPENAI_ADMIN_KEY')) {
+  fail('OpenAI Admin key foi marcada como NEXT_PUBLIC.');
+}
+
+for (const file of [
+  'components/admin/AdminFinance.tsx',
+  'components/admin/AdminCosts.tsx',
+  'components/admin/AdminMargin.tsx',
+  'components/admin/AdminAttention.tsx',
+  'components/admin/AdminNow.tsx',
+]) {
+  const content = read(file);
+  if (content.includes('process.env.SUPABASE_SERVICE_ROLE_KEY') || content.includes('process.env.OPENAI_ADMIN_KEY') || content.includes('NEXT_PUBLIC_OPENAI_ADMIN_KEY')) {
+    fail(`Segredo apareceu em componente client: ${file}`);
+  }
+}
+
+if (failures.length) {
+  console.error('\nAdmin expansion security validation: FALHOU\n');
+  for (const message of failures) console.error(` - ${message}`);
+  process.exit(1);
+}
+console.log('Admin expansion security validation: OK');

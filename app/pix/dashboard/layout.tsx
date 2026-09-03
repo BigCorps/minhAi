@@ -1,14 +1,13 @@
-import PixWikiDashboardNav from '@/components/pix/PixWikiDashboardNav';
+'use client';
 
-export default function PixWikiDashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+import type { ReactNode } from 'react';
+import PixWikiFastWatch from '@/components/pix/PixWikiFastWatch';
+
+export default function PixWikiDashboardLayout({ children }: { children: ReactNode }) {
   return (
     <>
+      <PixWikiFastWatch />
       {children}
-      <PixWikiDashboardNav />
     </>
   );
 }

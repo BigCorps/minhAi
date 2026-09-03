@@ -7,9 +7,7 @@ import {
   CalendarClock,
   CircleUserRound,
   Clock3,
-  LogOut,
   RefreshCw,
-  ShieldCheck,
   Sparkles,
   UserPlus,
   UsersRound,
@@ -30,6 +28,8 @@ import {
   AppsDistributionChart,
   DailyActivityChart,
 } from './AdminOverviewCharts';
+import AdminHeader from './AdminHeader';
+import AdminHomeBusinessPulse from './AdminHomeBusinessPulse';
 import AdminUsersTable, {
   type UsersFilters,
 } from './AdminUsersTable';
@@ -93,7 +93,6 @@ export default function AdminDashboard({ admin, basePath }: Props) {
   const usersRequestRef = useRef(0);
 
   const loginPath = `${basePath}/login`;
-  const logoutPath = `${basePath}/logout`;
 
   const handleUnauthorized = useCallback(() => {
     window.location.assign(loginPath);
@@ -235,57 +234,7 @@ export default function AdminDashboard({ admin, basePath }: Props) {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime-300 text-slate-950">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-black tracking-tight">
-                Admin minhAi
-              </p>
-              <p className="truncate text-[11px] font-bold uppercase tracking-[0.15em] text-lime-300">
-                BigCorps
-              </p>
-            </div>
-          </div>
-
-          <nav className="hidden items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1 md:flex">
-            <a
-              href="#visao-geral"
-              className="rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-white"
-            >
-              Visão geral
-            </a>
-            <a
-              href="#usuarios"
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white"
-            >
-              Usuários
-            </a>
-          </nav>
-
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="hidden min-w-0 text-right sm:block">
-              <p className="max-w-[220px] truncate text-xs font-bold text-slate-200">
-                {admin.name || admin.email || 'Administrador'}
-              </p>
-              <p className="max-w-[220px] truncate text-[11px] text-slate-600">
-                {admin.email}
-              </p>
-            </div>
-            <a
-              href={logoutPath}
-              className="rounded-xl border border-white/10 p-2.5 text-slate-400 transition hover:bg-white/5 hover:text-white"
-              aria-label="Sair"
-              title="Sair"
-            >
-              <LogOut className="h-4 w-4" />
-            </a>
-          </div>
-        </div>
-      </header>
+      <AdminHeader admin={admin} basePath={basePath} active="overview" />
 
       <div
         id="visao-geral"
@@ -330,6 +279,8 @@ export default function AdminDashboard({ admin, basePath }: Props) {
             </button>
           </div>
         </div>
+
+        <AdminHomeBusinessPulse basePath={basePath} />
 
         {dashboardError ? (
           <div className="mb-6 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-100">

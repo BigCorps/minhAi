@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import PixValueForm from '@/components/pix-link/PixValueForm';
 import PixQRCodeDisplay from '@/components/pix-link/PixQRCodeDisplay';
 
@@ -17,6 +17,7 @@ async function invoke(name: string, body: Record<string, unknown>) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ANON_KEY}`, apikey: ANON_KEY },
     body: JSON.stringify(body),
+    cache: 'no-store',
   });
   const data = await response.json().catch(() => ({}));
   return { ok: response.ok, status: response.status, data };
@@ -29,10 +30,10 @@ export default function PixWikiLinkPage({ company, initialAmount }: Props) {
   const [pixData, setPixData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const [autoChecking, setAutoChecking] = useState(false);
   const [options, setOptions] = useState<PaymentOptions | null>(null);
   const [selectedMode, setSelectedMode] = useState<PaymentMode>('mercadopago');
   const [choiceConfirmed, setChoiceConfirmed] = useState(false);
+  const autoCheckInFlight = useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -57,20 +58,70 @@ export default function PixWikiLinkPage({ company, initialAmount }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Confirmação automática rápida do Pix Link.
+  // Antes a tela esperava 15 s e só então consultava a cada 5 s. Agora começa
+  // cedo, consulta a cada ~2 s nos primeiros 60 s e depois reduz a frequência.
+  // A chamada é pausada em aba oculta e nunca deixa duas consultas sobrepostas.
   useEffect(() => {
-    if (!pixData) return;
-    const id = window.setTimeout(() => setAutoChecking(true), 15000);
-    return () => window.clearTimeout(id);
-  }, [pixData]);
+    const transactionId = String(pixData?.transaction_id || '');
+    if (!transactionId || confirmed) return;
 
-  useEffect(() => {
-    if (!autoChecking || !pixData?.transaction_id) return;
-    const id = window.setInterval(async () => {
-      const { ok, data } = await invoke('pixwiki-confirm-payment', { transaction_id: pixData.transaction_id });
-      if (ok && data?.success) { setConfirmed(true); window.clearInterval(id); }
-    }, 5000);
-    return () => window.clearInterval(id);
-  }, [autoChecking, pixData]);
+    let cancelled = false;
+    let timeoutId: number | null = null;
+    const startedAt = Date.now();
+
+    const nextDelay = () => {
+      const age = Date.now() - startedAt;
+      if (age < 60_000) return 2000;
+      if (age < 5 * 60_000) return 4000;
+      return 7000;
+    };
+
+    const schedule = (delay = nextDelay()) => {
+      if (cancelled) return;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(check, delay);
+    };
+
+    const check = async () => {
+      if (cancelled || confirmed) return;
+      if (document.visibilityState !== 'visible' || autoCheckInFlight.current) {
+        schedule();
+        return;
+      }
+
+      autoCheckInFlight.current = true;
+      try {
+        const { ok, data } = await invoke('pixwiki-confirm-payment', { transaction_id: transactionId });
+        if (ok && data?.success && !cancelled) {
+          setConfirmed(true);
+          return;
+        }
+      } catch {
+        // Best effort: o botão "Já paguei" continua disponível.
+      } finally {
+        autoCheckInFlight.current = false;
+      }
+
+      schedule();
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') schedule(150);
+    };
+    const onFocus = () => schedule(150);
+
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', onFocus);
+    schedule(1200);
+
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [confirmed, pixData?.transaction_id]);
 
   function toggleTheme() {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -80,6 +131,7 @@ export default function PixWikiLinkPage({ company, initialAmount }: Props) {
 
   async function generatePix(value: number, forcedMode?: PaymentMode) {
     setLoading(true);
+    setConfirmed(false);
     try {
       const { ok, status, data } = await invoke('pixwiki-create-payment', {
         company_id: company.id,
@@ -110,8 +162,8 @@ export default function PixWikiLinkPage({ company, initialAmount }: Props) {
     setLoading(true);
     try {
       const { ok, status, data } = await invoke('pixwiki-confirm-payment', { transaction_id: pixData.transaction_id });
-      if (!ok && status === 400) { alert('Pagamento ainda não identificado. Aguarde alguns segundos e tente novamente.'); return; }
       if (!ok && data?.error === 'ambiguous_direct_payment') { alert('Encontramos mais de um Pix compatível. A confirmação automática foi bloqueada por segurança; o recebedor poderá conferir o recebimento.'); return; }
+      if (!ok && status === 400) { alert('Pagamento ainda não identificado. Aguarde alguns segundos e tente novamente.'); return; }
       if (!ok) throw new Error(data?.error || `HTTP ${status}`);
       if (data?.success) setConfirmed(true);
     } catch (error) {
@@ -168,5 +220,5 @@ export default function PixWikiLinkPage({ company, initialAmount }: Props) {
 
   if (!pixData) return <PixValueForm company={company} initialAmount={initialAmount} onSubmit={value => generatePix(value)} loading={loading} theme={theme} onToggleTheme={toggleTheme} />;
 
-  return <PixQRCodeDisplay company={company} pixData={pixData} amount={amount!} onConfirm={confirmPix} onNewPix={() => { setPixData(null); setAmount(null); setAutoChecking(false); }} loading={loading} theme={theme} onToggleTheme={toggleTheme} />;
+  return <PixQRCodeDisplay company={company} pixData={pixData} amount={amount!} onConfirm={confirmPix} onNewPix={() => { setPixData(null); setAmount(null); setConfirmed(false); }} loading={loading} theme={theme} onToggleTheme={toggleTheme} />;
 }

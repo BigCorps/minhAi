@@ -65,7 +65,7 @@ const nextConfig = {
         // /api e /_next ficam fora porque são infraestrutura compartilhada.
         {
           source:
-            '/:adminPath((?!api(?:/|$)|_next(?:/|$)|login$|logout$|auth/callback$|usuarios(?:/|$)|dashboard(?:/|$)|robots\\.txt$|favicon\\.ico$).+)',
+            '/:adminPath((?!api(?:/|$)|_next(?:/|$)|login$|logout$|auth/callback$|usuarios(?:/|$)|financeiro$|custos$|margem$|atencao$|agora$|dashboard(?:/|$)|robots\\.txt$|favicon\\.ico$).+)',
           has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
           destination: '/admin/not-found',
         },
@@ -97,6 +97,31 @@ const nextConfig = {
           source: '/usuarios/:path*',
           has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
           destination: '/admin/usuarios/:path*',
+        },
+        {
+          source: '/financeiro',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin/financeiro',
+        },
+        {
+          source: '/custos',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin/custos',
+        },
+        {
+          source: '/margem',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin/margem',
+        },
+        {
+          source: '/atencao',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin/atencao',
+        },
+        {
+          source: '/agora',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin/agora',
         },
         {
           source: '/auth/callback',

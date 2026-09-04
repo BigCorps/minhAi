@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 };
 
 const itens = [
-  ['QR Code para convidados', QrCode],
-  ['Até 300 fotos', Camera],
+  ['Arte de QR Code para convidados', QrCode],
+  ['Até 300 fotos e imagens', Camera],
   ['30 vídeos de até 30 segundos', Film],
   ['Sem aplicativo e sem cadastro', Users],
   ['Slideshow horizontal para TV e telão', Monitor],
@@ -23,9 +23,9 @@ export default function MemoriasComercial() {
       <section className="mx-auto max-w-5xl px-5 pb-12 pt-10 sm:pt-16">
         <div className="text-center">
           <img src="/brands/convite/icone-512.png" alt="Convite IA" className="mx-auto h-16 w-16 rounded-full" />
-          <p className="mt-5 text-xs font-semibold uppercase tracking-[.22em] text-[#a04a63]">Opcional do Convite IA</p>
+          <p className="mt-5 text-xs font-semibold uppercase tracking-[.22em] text-[#a04a63]">Memórias em Slideshow</p>
           <h1 className="mx-auto mt-3 max-w-3xl text-4xl font-semibold tracking-tight sm:text-6xl">Cada convidado vê um momento diferente. Guarde todos.</h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#7c5560] sm:text-lg">Com o Memórias do Evento, seus convidados apontam a câmera para um QR Code, enviam fotos e vídeos e tudo aparece no seu álbum. No dia da festa, o slideshow pode atualizar sozinho no telão.</p>
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#7c5560] sm:text-lg">Com as Memórias do Evento, seus convidados apontam a câmera para um QR Code, enviam fotos e vídeos e tudo aparece no seu álbum. No dia do evento, o slideshow se atualiza sozinho em tempo real.</p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3"><span className="rounded-full bg-[#c06078] px-6 py-3 text-lg font-semibold text-white">R$ 19,90 por evento</span><span className="text-sm text-[#7c5560]">pago uma única vez</span></div>
         </div>
 

@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
   const ativo = pacote?.status === 'ativo' && (!pacote.expira_em || new Date(pacote.expira_em) > new Date());
   const uso = ativo ? await usoMemorias(d.eventoId) : { fotos: 0, videos: 0, bytes: 0 };
   const midias = ativo ? await midiasAssinadas(d.eventoId, false, 3600) : [];
+  const cfg = (d.evento.config ?? {}) as Record<string, any>;
 
   return NextResponse.json({
     ativo,
@@ -38,6 +39,7 @@ export async function GET(req: NextRequest) {
     precoCentavos: MEMORIAS_PRECO_CENTAVOS,
     aprovacaoManual: Boolean(pacote?.aprovacao_manual),
     expiraEm: pacote?.expira_em ?? null,
+    ornamentoId: typeof cfg.ornamentoId === 'string' ? cfg.ornamentoId : 'casamento-original',
     limites: pacote ? {
       fotos: Number(pacote.limite_fotos),
       videos: Number(pacote.limite_videos),
@@ -84,20 +86,38 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const d = await dono(req);
   if (!d) return NextResponse.json({ erro: 'Convite não encontrado.' }, { status: 404 });
-  const memoriaId = new URL(req.url).searchParams.get('memoriaId');
-  if (!memoriaId) return NextResponse.json({ erro: 'Memória não informada.' }, { status: 400 });
+
+  const url = new URL(req.url);
+  const memoriaId = url.searchParams.get('memoriaId');
+  const corpo = (await req.json().catch(() => null)) as { memoriaIds?: string[] } | null;
+
+  const idsDoCorpo = Array.isArray(corpo?.memoriaIds)
+    ? corpo!.memoriaIds.filter((id) => typeof id === 'string' && id.length > 0).slice(0, 400)
+    : [];
+  const ids = memoriaId ? [memoriaId] : [...new Set(idsDoCorpo)];
+  if (!ids.length) return NextResponse.json({ erro: 'Memória não informada.' }, { status: 400 });
 
   const admin = adminConviteria();
-  const { data: memoria } = await admin.from('evento_memorias')
+  const { data: memorias, error: buscaError } = await admin.from('evento_memorias')
     .select('id,storage_path')
-    .eq('id', memoriaId).eq('evento_id', d.eventoId).neq('status', 'excluido').maybeSingle();
-  if (!memoria) return NextResponse.json({ ok: true });
+    .eq('evento_id', d.eventoId)
+    .in('id', ids)
+    .neq('status', 'excluido');
 
-  const { error: storageError } = await adminPublic().storage.from(MEMORIAS_BUCKET).remove([memoria.storage_path]);
-  if (storageError) return NextResponse.json({ erro: 'Não foi possível excluir o arquivo.' }, { status: 502 });
+  if (buscaError) return NextResponse.json({ erro: 'Não foi possível localizar os arquivos.' }, { status: 500 });
+  if (!memorias?.length) return NextResponse.json({ ok: true, excluidos: 0 });
 
-  await admin.from('evento_memorias').update({
+  const caminhos = memorias.map((m: any) => m.storage_path as string).filter(Boolean);
+  if (caminhos.length) {
+    const { error: storageError } = await adminPublic().storage.from(MEMORIAS_BUCKET).remove(caminhos);
+    if (storageError) return NextResponse.json({ erro: 'Não foi possível excluir os arquivos.' }, { status: 502 });
+  }
+
+  const memoriaIds = memorias.map((m: any) => m.id as string);
+  const { error: updateError } = await admin.from('evento_memorias').update({
     status: 'excluido', updated_at: new Date().toISOString(),
-  }).eq('id', memoria.id);
-  return NextResponse.json({ ok: true });
+  }).eq('evento_id', d.eventoId).in('id', memoriaIds);
+
+  if (updateError) return NextResponse.json({ erro: 'Os arquivos foram removidos, mas o histórico não pôde ser atualizado.' }, { status: 500 });
+  return NextResponse.json({ ok: true, excluidos: memoriaIds.length });
 }

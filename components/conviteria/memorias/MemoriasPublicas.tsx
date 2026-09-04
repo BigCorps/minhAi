@@ -1,10 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, CheckCircle2, Film, Loader2, XCircle } from 'lucide-react';
+import { Camera, CheckCircle2, Film, Loader2, UserRound, XCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { MEMORIAS_ARQUIVO_MAX_BYTES } from '@/lib/conviteria/memorias-config';
 import { prepararVideoMemorias } from '@/lib/conviteria/memorias-video';
+import {
+  MEMORIAS_NOME_ERRO,
+  MEMORIAS_NOME_MAX,
+  nomeConvidadoValido,
+  normalizarNomeConvidado,
+} from '@/lib/conviteria/memorias-nome';
 
 type Info = {
   eventoId: string;
@@ -69,10 +75,14 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState('');
   const [nome, setNome] = useState('');
+  const [nomeTocado, setNomeTocado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [progresso, setProgresso] = useState('');
   const fotosRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
+
+  const nomeNormalizado = normalizarNomeConvidado(nome);
+  const nomeValido = nomeConvidadoValido(nomeNormalizado);
 
   const carregar = useCallback(async () => {
     const r = await fetch(`/api/conviteria/memorias/publico?slug=${encodeURIComponent(slug)}`, { cache: 'no-store' });
@@ -83,7 +93,27 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
 
   useEffect(() => { carregar().catch((e) => setErro(e.message)); }, [carregar]);
 
+  useEffect(() => {
+    try {
+      const salvo = window.sessionStorage.getItem(`conviteia-memorias-nome:${slug}`);
+      if (salvo && nomeConvidadoValido(salvo)) setNome(normalizarNomeConvidado(salvo));
+    } catch { /* storage pode estar indisponível */ }
+  }, [slug]);
+
+  const garantirNome = useCallback(() => {
+    setNomeTocado(true);
+    if (!nomeValido) {
+      setErro(MEMORIAS_NOME_ERRO);
+      return false;
+    }
+    setErro('');
+    try { window.sessionStorage.setItem(`conviteia-memorias-nome:${slug}`, nomeNormalizado); } catch { /* best effort */ }
+    return true;
+  }, [nomeNormalizado, nomeValido, slug]);
+
   const enviarUm = useCallback(async (p: Preparado) => {
+    if (!nomeValido) throw new Error(MEMORIAS_NOME_ERRO);
+
     const reservaR = await fetch('/api/conviteria/memorias/reservar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -95,7 +125,7 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
         duracaoSegundos: p.duracaoSegundos,
         largura: p.largura,
         altura: p.altura,
-        nomeConvidado: nome.trim() || null,
+        nomeConvidado: nomeNormalizado,
       }),
     });
     const reserva = await reservaR.json().catch(() => null);
@@ -119,10 +149,6 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
       throw new Error('A conexão falhou durante o upload. Tente novamente.');
     }
 
-    // O Storage normalmente torna o objeto visível imediatamente, mas pode
-    // existir uma pequena janela de consistência após o upload assinado. Um
-    // 409 de /finalizar é transitório: tenta novamente antes de abandonar a
-    // reserva, evitando arquivo enviado que fica preso como "reservado".
     let fim: any = null;
     let ultimoStatus = 0;
     for (let tentativa = 0; tentativa < 4; tentativa++) {
@@ -143,18 +169,19 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
       }
     }
 
-    // Depois de ~3 s o objeto deveria estar visível. Mantemos a reserva por
-    // segurança (ela expira sozinha em 30 min) e orientamos tentar novamente;
-    // não apagamos um upload que pode ter concluído no Storage.
     throw new Error(
       ultimoStatus === 409
         ? 'O arquivo terminou de enviar, mas ainda está sendo confirmado. Aguarde alguns segundos e tente novamente.'
         : (fim?.erro ?? 'O arquivo subiu, mas não pôde ser confirmado.'),
     );
-  }, [nome, slug]);
+  }, [nomeNormalizado, nomeValido, slug]);
 
   async function enviarFotos(files: FileList | null) {
     if (!files?.length || enviando) return;
+    if (!garantirNome()) {
+      if (fotosRef.current) fotosRef.current.value = '';
+      return;
+    }
     const lista = Array.from(files).slice(0, 50);
     setErro(''); setSucesso(''); setEnviando(true);
     let enviados = 0;
@@ -167,8 +194,8 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
         enviados++;
       }
       setSucesso(info?.aprovacaoManual
-        ? `${enviados} foto${enviados === 1 ? '' : 's'} enviada${enviados === 1 ? '' : 's'} para aprovação.`
-        : `${enviados} foto${enviados === 1 ? '' : 's'} compartilhada${enviados === 1 ? '' : 's'} com sucesso!`);
+        ? `${enviados} foto${enviados === 1 ? '' : 's'} enviada${enviados === 1 ? '' : 's'} para aprovação em nome de ${nomeNormalizado}.`
+        : `${enviados} foto${enviados === 1 ? '' : 's'} compartilhada${enviados === 1 ? '' : 's'} com sucesso por ${nomeNormalizado}!`);
       await carregar();
     } catch (e: any) {
       setErro(e?.message ?? 'Não foi possível enviar.');
@@ -181,6 +208,10 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
 
   async function enviarVideo(file: File | undefined) {
     if (!file || enviando) return;
+    if (!garantirNome()) {
+      if (videoRef.current) videoRef.current.value = '';
+      return;
+    }
     setErro(''); setSucesso(''); setEnviando(true);
     try {
       const v = await prepararVideoMemorias(file, setProgresso);
@@ -193,7 +224,9 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
       };
       setProgresso('Enviando vídeo…');
       await enviarUm(p);
-      setSucesso(info?.aprovacaoManual ? 'Vídeo enviado para aprovação.' : 'Vídeo compartilhado com sucesso!');
+      setSucesso(info?.aprovacaoManual
+        ? `Vídeo enviado para aprovação em nome de ${nomeNormalizado}.`
+        : `Vídeo compartilhado com sucesso por ${nomeNormalizado}!`);
       await carregar();
     } catch (e: any) {
       setErro(e?.message ?? 'Não foi possível enviar o vídeo.');
@@ -224,15 +257,32 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
         </header>
 
         <section className="rounded-3xl border border-[#c0607830] bg-white p-5 shadow-sm">
-          <label className="block text-sm font-medium">Seu nome <span className="font-normal text-[#7c5560]">(opcional)</span></label>
-          <input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={80} placeholder="Como devemos identificar você?" className="mt-2 w-full rounded-xl border border-[#c0607840] px-4 py-3 outline-none focus:ring-2 focus:ring-[#c0607830]" />
+          <div className="rounded-2xl bg-[#fff8fa] p-4">
+            <label htmlFor="memorias-nome" className="flex items-center gap-2 text-sm font-semibold">
+              <UserRound className="h-4 w-4 text-[#a04a63]" />
+              Seu nome e sobrenome <span className="text-red-600">*</span>
+            </label>
+            <p className="mt-1 text-xs text-[#7c5560]">Os anfitriões verão quem enviou cada foto e vídeo.</p>
+            <input
+              id="memorias-nome"
+              value={nome}
+              onChange={(e) => { setNome(e.target.value); if (nomeTocado) setErro(''); }}
+              onBlur={() => setNomeTocado(true)}
+              maxLength={MEMORIAS_NOME_MAX}
+              autoComplete="name"
+              placeholder="Ex.: Ana Souza"
+              aria-invalid={nomeTocado && !nomeValido}
+              className={`mt-3 w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 ${nomeTocado && !nomeValido ? 'border-red-300 bg-red-50/40 focus:ring-red-100' : 'border-[#c0607840] bg-white focus:ring-[#c0607830]'}`}
+            />
+            {nomeTocado && !nomeValido && <p className="mt-2 text-xs font-medium text-red-700">{MEMORIAS_NOME_ERRO}</p>}
+          </div>
 
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <button disabled={enviando || info.uso.fotos >= info.limites.fotos} onClick={() => fotosRef.current?.click()} className="flex min-h-32 flex-col items-center justify-center rounded-2xl bg-[#c06078] p-5 font-semibold text-white disabled:opacity-45">
+            <button disabled={enviando || info.uso.fotos >= info.limites.fotos} onClick={() => { if (garantirNome()) fotosRef.current?.click(); }} className="flex min-h-32 flex-col items-center justify-center rounded-2xl bg-[#c06078] p-5 font-semibold text-white disabled:opacity-45">
               <Camera className="mb-2 h-8 w-8" />Enviar fotos
               <span className="mt-1 text-xs font-normal opacity-90">até 50 por vez</span>
             </button>
-            <button disabled={enviando || info.uso.videos >= info.limites.videos} onClick={() => videoRef.current?.click()} className="flex min-h-32 flex-col items-center justify-center rounded-2xl border-2 border-[#c0607855] bg-[#fff5f8] p-5 font-semibold text-[#a04a63] disabled:opacity-45">
+            <button disabled={enviando || info.uso.videos >= info.limites.videos} onClick={() => { if (garantirNome()) videoRef.current?.click(); }} className="flex min-h-32 flex-col items-center justify-center rounded-2xl border-2 border-[#c0607855] bg-[#fff5f8] p-5 font-semibold text-[#a04a63] disabled:opacity-45">
               <Film className="mb-2 h-8 w-8" />Enviar vídeo
               <span className="mt-1 text-xs font-normal">até 30 s · compactação automática</span>
             </button>

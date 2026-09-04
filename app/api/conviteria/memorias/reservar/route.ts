@@ -13,6 +13,11 @@ import {
   MEMORIAS_RESERVA_MINUTOS,
   type MemoriaTipo,
 } from '@/lib/conviteria/memorias-config';
+import {
+  MEMORIAS_NOME_ERRO,
+  nomeConvidadoValido,
+  normalizarNomeConvidado,
+} from '@/lib/conviteria/memorias-nome';
 
 export const runtime = 'nodejs';
 
@@ -43,6 +48,11 @@ export async function POST(req: NextRequest) {
 
   if (!corpo?.slug || !corpo.tipo || !corpo.mimeType || !Number.isFinite(corpo.tamanhoBytes)) {
     return NextResponse.json({ erro: 'Arquivo inválido.' }, { status: 400 });
+  }
+
+  const nomeConvidado = normalizarNomeConvidado(corpo.nomeConvidado);
+  if (!nomeConvidadoValido(nomeConvidado)) {
+    return NextResponse.json({ erro: MEMORIAS_NOME_ERRO }, { status: 400 });
   }
 
   const evento = await buscarEventoMemoriasPublicado(corpo.slug.trim().toLowerCase());
@@ -94,11 +104,7 @@ export async function POST(req: NextRequest) {
   const storagePath = `${evento.id}/${mes}/${id}.${extensao(corpo.tipo, corpo.mimeType)}`;
   const largura = corpo.largura && corpo.largura > 0 ? Math.round(corpo.largura) : null;
   const altura = corpo.altura && corpo.altura > 0 ? Math.round(corpo.altura) : null;
-  const nomeConvidado = corpo.nomeConvidado?.trim().slice(0, 80) || null;
 
-  // A função trava somente a linha de configuração deste evento enquanto soma
-  // a quota e insere a reserva. Assim uploads simultâneos não ultrapassam os
-  // limites por condição de corrida.
   const { data: resultadoReserva, error: reservaError } = await admin.rpc(
     'reservar_evento_memoria',
     {

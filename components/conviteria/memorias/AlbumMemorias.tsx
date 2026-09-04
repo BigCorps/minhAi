@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Maximize, Monitor, Pause, Play, RotateCcw, Smartphone } from 'lucide-react';
+import * as QRCode from 'qrcode';
 import { createClient } from '@/lib/supabase-browser';
 import { festaEstaAtiva } from '@/lib/conviteria/memorias-config';
 
@@ -18,6 +19,7 @@ type Album = {
   titulo: string;
   dataEvento: string | null;
   fotoCapa: string | null;
+  urlMemorias: string;
   midias: Midia[];
 };
 
@@ -31,10 +33,11 @@ export default function AlbumMemorias({ slug }: { slug: string }) {
   const [erro, setErro] = useState('');
   const [videoBloqueado, setVideoBloqueado] = useState(false);
   const [relogio, setRelogio] = useState(() => Date.now());
+  const [qrFesta, setQrFesta] = useState('');
   const palcoRef = useRef<HTMLDivElement>(null);
   const currentIdRef = useRef<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const idsConhecidosRef = useRef<Set<string>>(new Set());
+  const idsConhecidosRef = useRef<Set<string>>(new Set<string>());
   const prioridadeRef = useRef<string[]>([]);
 
   const festaAtiva = useMemo(
@@ -42,9 +45,6 @@ export default function AlbumMemorias({ slug }: { slug: string }) {
     [album?.dataEvento, relogio],
   );
 
-  // Uma tela pode ficar aberta antes da festa ou atravessar a madrugada. O
-  // relógio local faz o Realtime entrar/sair automaticamente do Modo Festa
-  // sem exigir F5 quando chega meia-noite ou passa das 06:00.
   useEffect(() => {
     const id = window.setInterval(() => setRelogio(Date.now()), 60_000);
     return () => window.clearInterval(id);
@@ -59,8 +59,6 @@ export default function AlbumMemorias({ slug }: { slug: string }) {
       const conhecidos = idsConhecidosRef.current;
       const presentes = new Set<string>(j.midias.map((m: Midia) => m.id));
 
-      // No Modo Festa, uma memória nova entra na fila preferencial e será
-      // exibida na PRÓXIMA transição. A mídia atual nunca é interrompida.
       if (modoFesta && conhecidos.size > 0) {
         const jaPriorizados = new Set(prioridadeRef.current);
         for (const m of j.midias as Midia[]) {
@@ -85,9 +83,6 @@ export default function AlbumMemorias({ slug }: { slug: string }) {
 
   useEffect(() => { carregar(false).catch((e) => setErro(e.message)); }, [carregar]);
 
-  // Assim que conhecemos a data do evento, aplica imediatamente a janela
-  // correta: 100 mídias recentes no Modo Festa, álbum completo fora dela.
-  // Também reage à virada de meia-noite/06:00 sem precisar recarregar a página.
   useEffect(() => {
     if (!album?.eventoId) return;
     void carregar(festaAtiva).catch(() => undefined);
@@ -117,12 +112,26 @@ export default function AlbumMemorias({ slug }: { slug: string }) {
     };
   }, [album?.eventoId, festaAtiva, carregar]);
 
-  // Renova as URLs assinadas em telas deixadas abertas por horas.
   useEffect(() => {
     if (!album) return;
     const id = window.setInterval(() => void carregar(festaAtiva).catch(() => undefined), 45 * 60_000);
     return () => window.clearInterval(id);
   }, [album, festaAtiva, carregar]);
+
+  useEffect(() => {
+    if (!festaAtiva || !album?.urlMemorias) {
+      setQrFesta('');
+      return;
+    }
+    let cancelado = false;
+    QRCode.toDataURL(album.urlMemorias, {
+      width: 420,
+      margin: 2,
+      errorCorrectionLevel: 'H',
+      color: { dark: '#1f1115', light: '#ffffff' },
+    }).then((data) => { if (!cancelado) setQrFesta(data); }).catch(() => { if (!cancelado) setQrFesta(''); });
+    return () => { cancelado = true; };
+  }, [album?.urlMemorias, festaAtiva]);
 
   const midias = album?.midias ?? [];
   const atual = midias[indice];
@@ -186,7 +195,7 @@ export default function AlbumMemorias({ slug }: { slug: string }) {
           <p className="text-xs font-semibold uppercase tracking-[.2em] text-[#e9a9b9]">Álbum ao vivo</p>
           <h1 className="mt-2 text-3xl font-semibold">{album.titulo}</h1>
           <p className="mt-3 text-sm text-white/70">Escolha como esta tela será usada. Você pode trocar depois.</p>
-          {festaAtiva && <p className="mx-auto mt-4 inline-flex rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-300">● Modo Festa — atualizações em tempo real</p>}
+          {festaAtiva && <p className="mx-auto mt-4 inline-flex rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-300">● Modo Festa — atualizações em tempo real + QR de envio na tela</p>}
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <button onClick={() => setOrientacao('horizontal')} className="rounded-3xl border border-white/20 bg-white/10 p-7 hover:bg-white/15"><Monitor className="mx-auto mb-3 h-10 w-10" /><strong className="block text-lg">Deitado</strong><span className="mt-1 block text-sm text-white/60">TV, projetor e telão 16:9</span></button>
             <button onClick={() => setOrientacao('vertical')} className="rounded-3xl border border-white/20 bg-white/10 p-7 hover:bg-white/15"><Smartphone className="mx-auto mb-3 h-10 w-10" /><strong className="block text-lg">Em pé</strong><span className="mt-1 block text-sm text-white/60">TV vertical, painel e totem 9:16</span></button>
@@ -234,6 +243,16 @@ export default function AlbumMemorias({ slug }: { slug: string }) {
                 ▶ Toque para reproduzir o vídeo
               </span>
             </button>
+          )}
+
+          {festaAtiva && qrFesta && (
+            <div className="pointer-events-none absolute bottom-20 right-3 z-20 flex max-w-[270px] items-center gap-2.5 rounded-2xl border border-white/70 bg-white/95 p-2.5 text-[#28151b] shadow-2xl backdrop-blur sm:bottom-20 sm:right-5 sm:max-w-[320px] sm:gap-3 sm:p-3">
+              <img src={qrFesta} alt="QR Code para enviar fotos e vídeos" className="h-20 w-20 shrink-0 rounded-lg bg-white sm:h-24 sm:w-24" />
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold leading-tight sm:text-sm">Envie suas fotos e vídeos do evento agora</p>
+                <p className="mt-1 text-[9px] leading-tight text-[#6f515a] sm:text-[11px]">Aponte a câmera para o QR Code. Não precisa instalar aplicativo.</p>
+              </div>
+            </div>
           )}
 
           <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent px-5 pb-5 pt-16">

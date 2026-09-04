@@ -1,306 +1,238 @@
 'use client';
 
-// app/convite/pagar/page.tsx
-//
-// Mesma maquina de estados do AdicionarSaldoModal do ConsultaTec
-// (valor → pix → confirmando → sucesso), com duas diferencas:
-//
-// 1. Nao ha escolha de valor: o preco do convite avulso vem de PLANOS, no
-//    servidor. Comeca direto no PIX.
-// 2. O "Já paguei" e o polling perguntam a /api/conviteria/evento-status, que
-//    por sua vez pede a checagem imediata ao banco via
-//    confirmar-pix-assistente. Antes essa rota so lia `publicado_em` e a
-//    confirmacao ficava presa ao cron `auto-confirmar-pix` — era essa a
-//    demora que o cliente via.
-
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useCallback, useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
 import RendaBackground from '@/components/conviteria/RendaBackground';
-import { Loader2, AlertCircle, CheckCircle2, Copy, Check } from 'lucide-react';
+import {
+  AlertCircle, Check, CheckCircle2, Copy, ExternalLink, Images, Loader2,
+  MonitorPlay, QrCode, Video,
+} from 'lucide-react';
 import { MARCA } from '@/lib/conviteria/marca';
 
 const cor = {
-  fora: '#ffffff',
-  papel: '#fdf0f3',
-  acento: '#c06078',
-  acentoTexto: '#a04a63',
-  tinta: '#40232c',
-  tintaSuave: '#7c5560',
-  blocoTexto: '#fff5f8',
-  erroBg: '#f7e2e6',
-  erroTexto: '#8c2f43',
+  fora: '#ffffff', papel: '#fdf0f3', acento: '#c06078', acentoTexto: '#a04a63',
+  tinta: '#40232c', tintaSuave: '#7c5560', blocoTexto: '#fff5f8',
+  erroBg: '#f7e2e6', erroTexto: '#8c2f43',
 };
 
-type Passo = 'gerando' | 'pix' | 'conferindo' | 'sucesso';
-
-interface Cobranca {
+type Passo = 'carregando' | 'oferta' | 'gerando' | 'pix' | 'conferindo' | 'sucesso';
+type Info = {
+  eventoId: string;
+  slug: string;
+  url: string;
+  publicado: boolean;
+  origemPlano: 'avulso' | 'mensal';
+  conviteCentavos: number;
+  pixConvitePendente: boolean;
+  memorias: { precoCentavos: number; status: string; ativas: boolean; expiraEm: string | null };
+};
+type Cobranca = {
   valorCentavos: number;
+  conviteCentavos: number;
+  memoriasCentavos: number;
+  incluiMemorias: boolean;
   qrcode: string;
   copiaECola: string;
-}
+};
 
-function brl(centavos: number) {
-  return (centavos / 100).toFixed(2).replace('.', ',');
+function brl(c: number) {
+  return (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
 function PagarConteudo() {
-  const [passo, setPasso] = useState<Passo>('gerando');
-  const [erro, setErro] = useState<string | null>(null);
-  const [cobranca, setCobranca] = useState<Cobranca | null>(null);
-  const [urlConvite, setUrlConvite] = useState<string | null>(null);
-  const [copiado, setCopiado] = useState(false);
-
   const params = useSearchParams();
   const eventoId = params.get('evento');
+  const querMemoriasPorUrl = params.get('memorias') === '1';
   const [supabase] = useState(() => createClient());
+  const [passo, setPasso] = useState<Passo>('carregando');
+  const [info, setInfo] = useState<Info | null>(null);
+  const [incluirMemorias, setIncluirMemorias] = useState(querMemoriasPorUrl);
+  const [cobranca, setCobranca] = useState<Cobranca | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState(false);
+  const [urlConvite, setUrlConvite] = useState<string | null>(null);
+  const emVoo = useRef(false);
 
   const autorizacao = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token ?? null;
   }, [supabase]);
 
-  /** Consulta o status. Devolve true quando ja publicou. */
-  const conferir = useCallback(async (): Promise<boolean> => {
+  const carregarInfo = useCallback(async () => {
+    if (!eventoId) throw new Error('Convite não informado.');
     const acesso = await autorizacao();
-    if (!acesso || !eventoId) return false;
+    if (!acesso) throw new Error('Faça login para continuar.');
+    const r = await fetch(`/api/conviteria/memorias/checkout-info?eventoId=${encodeURIComponent(eventoId)}`, {
+      headers: { Authorization: `Bearer ${acesso}` }, cache: 'no-store',
+    });
+    const j = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(j?.erro ?? 'Não foi possível carregar o pagamento.');
+    setInfo(j);
+    // Uma cobrança de Memórias já iniciada não pode ser silenciosamente
+    // trocada por outra combinação ao recarregar a página.
+    if (j.memorias?.status === 'aguardando_pagamento') setIncluirMemorias(true);
+    else if (j.pixConvitePendente) setIncluirMemorias(false);
+    else if (querMemoriasPorUrl) setIncluirMemorias(true);
+    return j as Info;
+  }, [autorizacao, eventoId, querMemoriasPorUrl]);
 
-    const r = await fetch(
-      `/api/conviteria/evento-status?eventoId=${encodeURIComponent(eventoId)}`,
-      { headers: { Authorization: `Bearer ${acesso}` } }
-    );
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      try {
+        const i = await carregarInfo();
+        if (cancelado) return;
+        // Se entrou pelo painel para comprar o add-on, ou veio da criação, a
+        // oferta aparece antes de qualquer PIX ser criado.
+        if (i.publicado && i.memorias.ativas) {
+          setUrlConvite(i.url); setPasso('sucesso');
+        } else setPasso('oferta');
+      } catch (e: any) {
+        if (!cancelado) { setErro(e.message); setPasso('oferta'); }
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [carregarInfo]);
+
+  const conferir = useCallback(async (): Promise<boolean> => {
+    if (!eventoId) return false;
+    const acesso = await autorizacao();
+    if (!acesso) return false;
+    const espera = cobranca?.incluiMemorias || incluirMemorias;
+    const r = await fetch(`/api/conviteria/evento-status?eventoId=${encodeURIComponent(eventoId)}${espera ? '&memorias=1' : ''}`, {
+      headers: { Authorization: `Bearer ${acesso}` }, cache: 'no-store',
+    });
     if (!r.ok) return false;
-
-    const d = await r.json();
-    if (d.publicado) {
-      setUrlConvite(d.url);
+    const j = await r.json();
+    if (j.concluido) {
+      localStorage.removeItem('conviteia:rascunho');
+      setUrlConvite(j.url);
       setPasso('sucesso');
+      await carregarInfo().catch(() => undefined);
       return true;
     }
     return false;
-  }, [autorizacao, eventoId]);
+  }, [autorizacao, eventoId, cobranca?.incluiMemorias, incluirMemorias, carregarInfo]);
 
-  // Gera a cobranca uma vez, ao abrir.
-  useEffect(() => {
-    if (!eventoId) {
-      setErro('Convite não informado.');
+  async function continuar() {
+    if (!info || !eventoId) return;
+    setErro(null);
+
+    // Mensal ou convite já publicado sem add-on: não há cobrança. Apenas
+    // conclui o fluxo e preserva o convite que já está no ar.
+    const totalPrevisto = info.conviteCentavos + (incluirMemorias && !info.memorias.ativas ? info.memorias.precoCentavos : 0);
+    if (totalPrevisto === 0) {
+      localStorage.removeItem('conviteia:rascunho');
+      setUrlConvite(info.url);
+      setPasso('sucesso');
       return;
     }
 
-    let cancelado = false;
+    setPasso('gerando');
+    const acesso = await autorizacao();
+    if (!acesso) { setErro('Faça login para continuar.'); setPasso('oferta'); return; }
 
-    (async () => {
-      const acesso = await autorizacao();
-      if (!acesso) {
-        setErro('Faça login para continuar.');
-        return;
-      }
-
-      // Se o webhook ja publicou (usuario recarregou a pagina depois de pagar),
-      // nao gera PIX novo.
-      if (await conferir()) return;
-
-      const r = await fetch('/api/conviteria/cobrar-convite', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${acesso}`,
-        },
-        body: JSON.stringify({ eventoId }),
-      });
-
-      const d = await r.json().catch(() => null);
-      if (cancelado) return;
-
-      if (!r.ok) {
-        setErro(d?.erro ?? 'Não foi possível gerar o PIX.');
-        return;
-      }
-
-      setCobranca({
-        valorCentavos: d.valorCentavos,
-        qrcode: d.qrcode,
-        copiaECola: d.copiaECola,
-      });
-      setPasso('pix');
-    })();
-
-    return () => { cancelado = true; };
-  }, [eventoId, autorizacao, conferir]);
-
-  // Enquanto o QR esta na tela, pergunta o status a cada 5s. O usuario paga no
-  // app do banco e a pagina vira sozinha, sem ele precisar clicar em nada.
-  //
-  // Mesmo ritmo do ModalPresentes: uma primeira consulta aos 7s e depois de
-  // 5 em 5. Os 7s existem porque consultar antes disso e quase sempre em vao
-  // — ninguem paga um PIX em menos que isso — e cada consulta agora custa uma
-  // chamada ao banco, nao so uma leitura de coluna.
-  //
-  // `emVoo` evita empilhar: a rota pode levar ate 8s no pior caso, e sem essa
-  // trava o intervalo dispararia outra consulta por cima da anterior.
-  const emVoo = useRef(false);
+    const r = await fetch('/api/conviteria/cobrar-convite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${acesso}` },
+      body: JSON.stringify({ eventoId, incluirMemorias }),
+    });
+    const j = await r.json().catch(() => null);
+    if (!r.ok) { setErro(j?.erro ?? 'Não foi possível gerar o PIX.'); setPasso('oferta'); return; }
+    if (j.semCobranca) {
+      setUrlConvite(info.url); setPasso('sucesso'); return;
+    }
+    setCobranca({
+      valorCentavos: Number(j.valorCentavos),
+      conviteCentavos: Number(j.conviteCentavos || 0),
+      memoriasCentavos: Number(j.memoriasCentavos || 0),
+      incluiMemorias: Boolean(j.incluiMemorias),
+      qrcode: j.qrcode,
+      copiaECola: j.copiaECola,
+    });
+    setPasso('pix');
+  }
 
   useEffect(() => {
     if (passo !== 'pix') return;
-
     let encerrado = false;
-
     const tentar = async () => {
       if (encerrado || emVoo.current) return;
       emVoo.current = true;
-      try {
-        await conferir();
-      } finally {
-        emVoo.current = false;
-      }
+      try { await conferir(); } finally { emVoo.current = false; }
     };
-
     const atraso = window.setTimeout(tentar, 7000);
     const id = window.setInterval(tentar, 5000);
-
-    return () => {
-      encerrado = true;
-      window.clearTimeout(atraso);
-      window.clearInterval(id);
-    };
+    return () => { encerrado = true; clearTimeout(atraso); clearInterval(id); };
   }, [passo, conferir]);
 
   async function copiar() {
     if (!cobranca) return;
     await navigator.clipboard.writeText(cobranca.copiaECola);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2000);
+    setCopiado(true); setTimeout(() => setCopiado(false), 1800);
   }
 
   async function conferirAgora() {
-    setPasso('conferindo');
-    setErro(null);
-    const ok = await conferir();
-    if (!ok) {
-      setErro('Ainda não identificamos o pagamento. Aguarde alguns segundos e tente de novo.');
+    setErro(null); setPasso('conferindo');
+    if (!(await conferir())) {
+      setErro('Ainda não identificamos o pagamento. Aguarde alguns segundos e tente novamente.');
       setPasso('pix');
     }
   }
 
-  return (
-    <main
-      className="min-h-screen flex items-center justify-center px-4 py-10"
-    >
-      {/* Sem backgroundColor: o SVG e `-z-10` e o fundo do <main> o cobriria. */}
-      <RendaBackground />
+  const total = info ? info.conviteCentavos + (incluirMemorias && !info.memorias.ativas ? info.memorias.precoCentavos : 0) : 0;
+  const memoriaPendente = info?.memorias.status === 'aguardando_pagamento';
 
-      <div
-        className="w-full max-w-md rounded-2xl border shadow-sm overflow-hidden"
-        style={{ backgroundColor: cor.fora, borderColor: cor.acento + '33' }}
-      >
-        <header
-          className="px-6 py-5 text-center border-b"
-          style={{ borderColor: cor.acento + '22' }}
-        >
-          <h1 className="text-xl font-semibold" style={{ color: cor.tinta }}>
-            Publicar seu convite
-          </h1>
-          <p className="text-sm mt-1" style={{ color: cor.tintaSuave }}>
-            {MARCA}
-          </p>
+  return (
+    <main className="min-h-screen flex items-center justify-center px-4 py-10">
+      <RendaBackground />
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border shadow-sm" style={{ backgroundColor: cor.fora, borderColor: cor.acento + '33' }}>
+        <header className="border-b px-6 py-5 text-center" style={{ borderColor: cor.acento + '22' }}>
+          <h1 className="text-xl font-semibold" style={{ color: cor.tinta }}>{info?.publicado ? 'Adicionar ao seu convite' : 'Publicar seu convite'}</h1>
+          <p className="mt-1 text-sm" style={{ color: cor.tintaSuave }}>{MARCA}</p>
         </header>
 
-        <div className="px-6 py-6">
-          {erro && (
-            <div
-              className="mb-5 rounded-lg px-4 py-3 flex items-start gap-2 text-sm"
-              style={{ backgroundColor: cor.erroBg, color: cor.erroTexto }}
-            >
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <p>{erro}</p>
+        <div className="px-5 py-6 sm:px-6">
+          {erro && <div className="mb-5 flex items-start gap-2 rounded-lg px-4 py-3 text-sm" style={{ backgroundColor: cor.erroBg, color: cor.erroTexto }}><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><p>{erro}</p></div>}
+
+          {(passo === 'carregando' || passo === 'gerando' || passo === 'conferindo') && <div className="flex flex-col items-center py-12"><Loader2 className="mb-3 h-9 w-9 animate-spin" style={{ color: cor.acento }} /><p style={{ color: cor.tinta }}>{passo === 'carregando' ? 'Preparando…' : passo === 'gerando' ? 'Gerando o PIX…' : 'Conferindo o pagamento…'}</p></div>}
+
+          {passo === 'oferta' && info && <div>
+            {!info.memorias.ativas && <button type="button" disabled={memoriaPendente || info.pixConvitePendente} onClick={() => setIncluirMemorias((v) => !v)} className="w-full rounded-2xl border-2 p-4 text-left transition disabled:cursor-default" style={{ borderColor: incluirMemorias ? cor.acento : cor.acento + '32', backgroundColor: incluirMemorias ? cor.papel : '#fff' }}>
+              <div className="flex items-start gap-3">
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl" style={{ backgroundColor: cor.acento + '18', color: cor.acentoTexto }}><Images className="h-5 w-5" /></div>
+                <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><strong style={{ color: cor.tinta }}>Memórias do Evento</strong><strong style={{ color: cor.acentoTexto }}>+ {brl(info.memorias.precoCentavos)}</strong></div><p className="mt-1 text-sm leading-5" style={{ color: cor.tintaSuave }}>Seus convidados enviam fotos e vídeos por QR Code. Você recebe um álbum com slideshow ao vivo para TV, telão ou painel.</p><div className="mt-3 grid grid-cols-2 gap-2 text-xs" style={{ color: cor.tintaSuave }}><span className="flex items-center gap-1"><Images className="h-3.5 w-3.5" />300 fotos</span><span className="flex items-center gap-1"><Video className="h-3.5 w-3.5" />30 vídeos</span><span className="flex items-center gap-1"><QrCode className="h-3.5 w-3.5" />QR para convidados</span><span className="flex items-center gap-1"><MonitorPlay className="h-3.5 w-3.5" />Modo Festa</span></div></div>
+                <span className="mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-md border" style={{ borderColor: incluirMemorias ? cor.acento : cor.acento + '55', backgroundColor: incluirMemorias ? cor.acento : '#fff', color:'#fff' }}>{incluirMemorias && <Check className="h-4 w-4" />}</span>
+              </div>
+              {memoriaPendente && <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">Há um PIX de Memórias pendente para este convite. Ele será reutilizado.</p>}
+              {info.pixConvitePendente && <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">Já existe um PIX de R$ 29,90 deste convite. Para evitar cobrança duplicada, conclua este PIX primeiro e ative Memórias depois no painel por R$ 19,90.</p>}
+            </button>}
+
+            {info.memorias.ativas && <div className="rounded-2xl border bg-emerald-50 p-4 text-sm text-emerald-800"><CheckCircle2 className="mb-2 h-5 w-5" /><strong>Memórias já está ativo neste convite.</strong>{info.memorias.expiraEm && <p className="mt-1 text-xs">Disponível até {new Date(info.memorias.expiraEm).toLocaleDateString('pt-BR')}.</p>}</div>}
+
+            {!info.memorias.ativas && <a href="/memorias" target="_blank" className="mx-auto mt-3 flex w-fit items-center gap-1 text-xs font-semibold" style={{ color: cor.acentoTexto }}>Ver todos os detalhes <ExternalLink className="h-3 w-3" /></a>}
+
+            <div className="mt-6 rounded-2xl bg-[#fff9fb] p-4 text-sm">
+              {info.conviteCentavos > 0 && <div className="flex justify-between"><span style={{ color: cor.tintaSuave }}>Convite avulso</span><span style={{ color: cor.tinta }}>{brl(info.conviteCentavos)}</span></div>}
+              {info.origemPlano === 'mensal' && info.conviteCentavos === 0 && <div className="flex justify-between"><span style={{ color: cor.tintaSuave }}>Convite · plano mensal</span><span className="font-medium text-emerald-700">Incluído</span></div>}
+              {incluirMemorias && !info.memorias.ativas && <div className="mt-2 flex justify-between"><span style={{ color: cor.tintaSuave }}>Memórias do Evento</span><span style={{ color: cor.tinta }}>{brl(info.memorias.precoCentavos)}</span></div>}
+              <div className="mt-3 flex justify-between border-t pt-3 text-base font-semibold" style={{ borderColor: cor.acento + '22', color: cor.tinta }}><span>Total agora</span><span>{total > 0 ? brl(total) : 'R$ 0,00'}</span></div>
             </div>
-          )}
 
-          {(passo === 'gerando' || passo === 'conferindo') && (
-            <div className="flex flex-col items-center py-12">
-              <Loader2
-                className="w-9 h-9 animate-spin mb-3"
-                style={{ color: cor.acento }}
-              />
-              <p style={{ color: cor.tinta }}>
-                {passo === 'gerando' ? 'Gerando o PIX…' : 'Conferindo o pagamento…'}
-              </p>
-            </div>
-          )}
+            <button onClick={() => void continuar()} className="mt-5 w-full rounded-lg py-3 font-semibold" style={{ backgroundColor: cor.acento, color: cor.blocoTexto }}>{total > 0 ? 'Continuar para o PIX' : 'Continuar sem Memórias'}</button>
+            {!incluirMemorias && !info.memorias.ativas && <p className="mt-2 text-center text-xs" style={{ color: cor.tintaSuave }}>Você pode ativar Memórias depois pelo painel deste convite.</p>}
+          </div>}
 
-          {passo === 'pix' && cobranca && (
-            <div className="flex flex-col items-center gap-4">
-              <p className="text-2xl font-semibold" style={{ color: cor.tinta }}>
-                R$ {brl(cobranca.valorCentavos)}
-              </p>
+          {passo === 'pix' && cobranca && <div className="flex flex-col items-center gap-4">
+            <div className="w-full rounded-xl bg-[#fff9fb] px-4 py-3 text-sm"><div className="flex justify-between font-semibold" style={{ color: cor.tinta }}><span>Total</span><span>{brl(cobranca.valorCentavos)}</span></div>{cobranca.conviteCentavos > 0 && <div className="mt-1 flex justify-between text-xs" style={{ color: cor.tintaSuave }}><span>Convite</span><span>{brl(cobranca.conviteCentavos)}</span></div>}{cobranca.memoriasCentavos > 0 && <div className="mt-1 flex justify-between text-xs" style={{ color: cor.tintaSuave }}><span>Memórias</span><span>{brl(cobranca.memoriasCentavos)}</span></div>}</div>
+            <img src={cobranca.qrcode} alt="QR Code do PIX" className="h-56 w-56 rounded-lg border" style={{ borderColor: cor.acento + '44' }} />
+            <p className="text-center text-sm" style={{ color: cor.tintaSuave }}>Escaneie no app do seu banco. A tela avança automaticamente quando o PIX for confirmado.</p>
+            <button onClick={() => void copiar()} className="flex w-full items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium" style={{ borderColor: cor.acento + '55', color: cor.tinta }}>{copiado ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copiado ? 'Código copiado!' : 'Copiar código PIX'}</button>
+            <button onClick={() => void conferirAgora()} className="w-full rounded-lg py-3 font-semibold" style={{ backgroundColor: cor.acento, color: cor.blocoTexto }}>Já paguei</button>
+          </div>}
 
-              {/* `qrcode` vem como URL https no fluxo Banco Inter e como data:
-                  URI no fluxo Mercado Pago. <img> aceita os dois — por isso
-                  nao ha validacao de prefixo aqui. */}
-              <img
-                src={cobranca.qrcode}
-                alt="QR Code do PIX"
-                className="w-56 h-56 rounded-lg border"
-                style={{ borderColor: cor.acento + '44' }}
-              />
-
-              <p className="text-sm text-center" style={{ color: cor.tintaSuave }}>
-                Escaneie o código no app do seu banco. Assim que o pagamento
-                cair, o convite entra no ar sozinho.
-              </p>
-
-              <button
-                type="button"
-                onClick={copiar}
-                className="w-full py-2.5 rounded-lg border text-sm font-medium flex items-center justify-center gap-2"
-                style={{ borderColor: cor.acento + '55', color: cor.tinta }}
-              >
-                {copiado ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copiado ? 'Código copiado!' : 'Copiar código PIX'}
-              </button>
-
-              <button
-                type="button"
-                onClick={conferirAgora}
-                className="w-full py-3 rounded-lg font-semibold"
-                style={{ backgroundColor: cor.acento, color: cor.blocoTexto }}
-              >
-                Já paguei
-              </button>
-            </div>
-          )}
-
-          {passo === 'sucesso' && (
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <CheckCircle2 className="w-12 h-12" style={{ color: cor.acento }} />
-              <p className="font-semibold text-lg" style={{ color: cor.tinta }}>
-                Convite publicado!
-              </p>
-              {urlConvite && (
-                <>
-                  <p className="text-sm break-all" style={{ color: cor.tintaSuave }}>
-                    {urlConvite}
-                  </p>
-                  <a
-                    href={urlConvite}
-                    className="mt-2 w-full py-3 rounded-lg font-semibold"
-                    style={{ backgroundColor: cor.acento, color: cor.blocoTexto }}
-                  >
-                    Ver meu convite
-                  </a>
-                  {/* Sem esta saida a pessoa termina o pagamento sem caminho
-                      de volta e precisa fechar tudo para achar o painel. */}
-                  <a
-                    href="/convite/painel"
-                    className="w-full py-3 rounded-lg font-semibold border"
-                    style={{ borderColor: cor.acento + '55', color: cor.acentoTexto }}
-                  >
-                    Meus convites
-                  </a>
-                </>
-              )}
-            </div>
-          )}
+          {passo === 'sucesso' && <div className="flex flex-col items-center gap-3 py-6 text-center"><CheckCircle2 className="h-12 w-12" style={{ color: cor.acento }} /><p className="text-lg font-semibold" style={{ color: cor.tinta }}>{info?.publicado ? (info?.memorias.ativas || incluirMemorias ? 'Tudo pronto!' : 'Convite pronto!') : 'Convite publicado!'}</p>{urlConvite && <><p className="break-all text-sm" style={{ color: cor.tintaSuave }}>{urlConvite}</p><a href={urlConvite} className="mt-2 w-full rounded-lg py-3 font-semibold" style={{ backgroundColor: cor.acento, color: cor.blocoTexto }}>Ver meu convite</a><a href="/convite/painel" className="w-full rounded-lg border py-3 font-semibold" style={{ borderColor: cor.acento + '55', color: cor.acentoTexto }}>Meus convites</a></>}</div>}
         </div>
       </div>
     </main>
@@ -308,9 +240,5 @@ function PagarConteudo() {
 }
 
 export default function PagarPage() {
-  return (
-    <Suspense fallback={null}>
-      <PagarConteudo />
-    </Suspense>
-  );
+  return <Suspense fallback={null}><PagarConteudo /></Suspense>;
 }

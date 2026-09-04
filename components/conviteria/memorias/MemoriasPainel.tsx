@@ -6,6 +6,7 @@ import { Check, Download, ExternalLink, Film, Image as ImageIcon, Loader2, QrCod
 import { createClient } from '@/lib/supabase-browser';
 import JSZip from 'jszip';
 import * as QRCode from 'qrcode';
+import MateriaisMemorias from './MateriaisMemorias';
 
 type Midia = {
   id: string;
@@ -70,7 +71,7 @@ export default function MemoriasPainel({ eventoId, titulo }: { eventoId: string;
   useEffect(() => { if (aberto && !dados) void carregar(); }, [aberto, dados, carregar]);
   useEffect(() => {
     if (!dados?.urlMemorias) return;
-    QRCode.toDataURL(dados.urlMemorias, { width: 640, margin: 2, errorCorrectionLevel: 'M' })
+    QRCode.toDataURL(dados.urlMemorias, { width: 1600, margin: 4, errorCorrectionLevel: 'H' })
       .then(setQr).catch(() => setQr(''));
   }, [dados?.urlMemorias]);
 
@@ -157,6 +158,14 @@ export default function MemoriasPainel({ eventoId, titulo }: { eventoId: string;
             <div className="rounded-2xl border bg-white p-3 text-center" style={{ borderColor:'#c0607830' }}>{qr ? <img src={qr} alt="QR Code das Memórias" className="mx-auto w-full max-w-36" /> : <QrCode className="mx-auto h-20 w-20 text-[#c06078]" />}<button onClick={() => void baixarQr()} className="mt-2 text-xs font-semibold" style={{ color:'#a04a63' }}>Baixar QR em PNG</button></div>
             <div className="rounded-2xl border bg-white p-4" style={{ borderColor:'#c0607830' }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color:'#a04a63' }}>Compartilhar com convidados</p><p className="mt-1 break-all text-sm" style={{ color:'#40232c' }}>{dados.urlMemorias}</p><div className="mt-3 flex flex-wrap gap-2"><a href={dados.urlMemorias} target="_blank" className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium" style={{ borderColor:'#c0607844',color:'#a04a63' }}>Abrir envios <ExternalLink className="h-3 w-3" /></a><a href={dados.urlAlbum} target="_blank" className="inline-flex items-center gap-1 rounded-full bg-[#c06078] px-3 py-2 text-xs font-semibold text-white">Abrir álbum/telão <ExternalLink className="h-3 w-3" /></a><button onClick={() => void baixarTudo()} disabled={baixando || !dados.midias.length} className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium disabled:opacity-50" style={{ borderColor:'#c0607844',color:'#a04a63' }}>{baixando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />} Baixar tudo (.zip)</button></div></div>
           </div>
+
+          {qr && (
+            <MateriaisMemorias
+              titulo={titulo}
+              urlMemorias={dados.urlMemorias}
+              qrDataUrl={qr}
+            />
+          )}
 
           {erro && <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{erro}</p>}
 

@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Download, FileText, Image as ImageIcon, Loader2, RotateCcw, Sparkles } from 'lucide-react';
+import type { ChangeEvent } from 'react';
+import { FileText, Image as ImageIcon, Loader2, RotateCcw, Sparkles } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { ORNAMENTOS_ASSETS } from '@/lib/conviteria/ornamentos';
 
@@ -45,6 +46,34 @@ const ORNAMENTOS = ORNAMENTOS_ASSETS;
 
 const TITULO_SUGERIDO = 'Compartilhe suas memórias';
 const TEXTO_SUGERIDO = 'Escaneie o QR Code e envie as fotos e vídeos que você fizer neste dia especial. Não precisa instalar nenhum aplicativo.';
+
+const TITULO_DESAFIO_SUGERIDO = 'Desafio';
+const DESAFIOS_SUGERIDOS = [
+  { id: 'selfie-anfitrioes', texto: 'Uma selfie sorrindo com os anfitriões' },
+  { id: 'detalhe-lugar', texto: 'Foto do detalhe mais bonito do lugar' },
+  { id: 'nova-amizade', texto: 'Uma foto com alguém que você acabou de conhecer' },
+  { id: 'geracoes', texto: 'Foto com três gerações juntas' },
+  { id: 'abraco', texto: 'Foto de um abraço inesperado' },
+  { id: 'animado', texto: 'Registre o momento mais animado da festa' },
+  { id: 'engracada', texto: 'Faça a foto mais engraçada da noite' },
+  { id: 'brinde', texto: 'Registre o brinde da sua mesa' },
+  { id: 'favorito', texto: 'Registre o que mais gostou na festa' },
+] as const;
+
+const CAMPO_CLARO = {
+  backgroundColor: '#ffffff',
+  color: '#40232c',
+  WebkitTextFillColor: '#40232c',
+  colorScheme: 'light',
+} as const;
+
+function limiteDesafios(formato: FormatoId) {
+  if (formato === 'a4-vertical') return 9;
+  if (formato === 'a4-horizontal') return 6;
+  if (formato === '15x21') return 6;
+  if (formato === 'a5-vertical') return 5;
+  return 4;
+}
 
 function nomeSeguro(valor: string) {
   return valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 80) || 'Evento';
@@ -206,14 +235,39 @@ function desenharDivisor(ctx: CanvasRenderingContext2D, id: string, paleta: Pale
   ctx.restore();
 }
 
-async function renderizarMaterial({ formato, paleta, ornamentoId, tituloEvento, tituloChamada, texto, qrDataUrl, urlMemorias, dpi }: {
-  formato: Formato; paleta: Paleta; ornamentoId: string; tituloEvento: string; tituloChamada: string; texto: string; qrDataUrl: string; urlMemorias: string; dpi: number;
+async function renderizarMaterial({
+  formato,
+  paleta,
+  ornamentoId,
+  tituloEvento,
+  tituloChamada,
+  texto,
+  qrDataUrl,
+  urlMemorias,
+  dpi,
+  incluirDesafios,
+  tituloDesafio,
+  desafios,
+}: {
+  formato: Formato;
+  paleta: Paleta;
+  ornamentoId: string;
+  tituloEvento: string;
+  tituloChamada: string;
+  texto: string;
+  qrDataUrl: string;
+  urlMemorias: string;
+  dpi: number;
+  incluirDesafios: boolean;
+  tituloDesafio: string;
+  desafios: string[];
 }) {
   const pxPorMm = dpi / 25.4;
   const largura = Math.round(formato.larguraMm * pxPorMm);
   const altura = Math.round(formato.alturaMm * pxPorMm);
   const canvas = document.createElement('canvas');
-  canvas.width = largura; canvas.height = altura;
+  canvas.width = largura;
+  canvas.height = altura;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Seu navegador não conseguiu montar a arte.');
 
@@ -221,148 +275,371 @@ async function renderizarMaterial({ formato, paleta, ornamentoId, tituloEvento, 
   const base = Math.min(largura, altura);
   const margem = base * .07;
   const ornTam = base * (vertical ? .31 : .27);
-  ctx.fillStyle = paleta.fundo; ctx.fillRect(0, 0, largura, altura);
+  const mostrarDesafios = incluirDesafios && desafios.length > 0;
 
-  // Moldura dupla bem leve para a peça já parecer material gráfico acabado.
-  ctx.strokeStyle = paleta.acento; ctx.lineWidth = Math.max(2, base*.003); ctx.globalAlpha = .58;
-  arredondado(ctx, margem*.48, margem*.48, largura-margem*.96, altura-margem*.96, base*.025); ctx.stroke();
-  ctx.strokeStyle = paleta.detalhe; ctx.lineWidth = Math.max(1, base*.0014); ctx.globalAlpha = .62;
-  arredondado(ctx, margem*.72, margem*.72, largura-margem*1.44, altura-margem*1.44, base*.018); ctx.stroke();
+  ctx.fillStyle = paleta.fundo;
+  ctx.fillRect(0, 0, largura, altura);
+
+  ctx.strokeStyle = paleta.acento;
+  ctx.lineWidth = Math.max(2, base * .003);
+  ctx.globalAlpha = .58;
+  arredondado(ctx, margem * .48, margem * .48, largura - margem * .96, altura - margem * .96, base * .025);
+  ctx.stroke();
+  ctx.strokeStyle = paleta.detalhe;
+  ctx.lineWidth = Math.max(1, base * .0014);
+  ctx.globalAlpha = .62;
+  arredondado(ctx, margem * .72, margem * .72, largura - margem * 1.44, altura - margem * 1.44, base * .018);
+  ctx.stroke();
   ctx.globalAlpha = 1;
 
-  desenharCanto(ctx, ornamentoId, paleta, margem*.45, margem*.45, ornTam, false, false);
-  desenharCanto(ctx, ornamentoId, paleta, largura-margem*.45, altura-margem*.45, ornTam, true, true);
+  desenharCanto(ctx, ornamentoId, paleta, margem * .45, margem * .45, ornTam, false, false);
+  desenharCanto(ctx, ornamentoId, paleta, largura - margem * .45, altura - margem * .45, ornTam, true, true);
 
   const qr = await carregarImagem(qrDataUrl);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
 
   if (vertical) {
-    const centroX = largura/2;
-    ctx.fillStyle = paleta.tinta;
-    ctx.font = `600 ${Math.round(base*.072)}px Georgia, serif`;
-    const tituloLinhas = linhasDoTexto(ctx, tituloChamada.trim() || TITULO_SUGERIDO, largura-margem*2.3, 2);
-    const tituloY = altura*.18 - (tituloLinhas.length-1)*base*.045;
-    tituloLinhas.forEach((l,i)=>ctx.fillText(l,centroX,tituloY+i*base*.09));
+    const centroX = largura / 2;
+    const compacto = mostrarDesafios;
 
-    desenharDivisor(ctx, ornamentoId, paleta, centroX, altura*.285, base*.34);
+    ctx.fillStyle = paleta.tinta;
+    ctx.font = `600 ${Math.round(base * (compacto ? .058 : .072))}px Georgia, serif`;
+    const tituloLinhas = linhasDoTexto(ctx, tituloChamada.trim() || TITULO_SUGERIDO, largura - margem * 2.3, 2);
+    const tituloBaseY = altura * (compacto ? .135 : .18);
+    const tituloY = tituloBaseY - (tituloLinhas.length - 1) * base * .038;
+    tituloLinhas.forEach((linha, i) => ctx.fillText(linha, centroX, tituloY + i * base * (compacto ? .072 : .09)));
+
+    desenharDivisor(ctx, ornamentoId, paleta, centroX, altura * (compacto ? .225 : .285), base * .34);
 
     ctx.fillStyle = paleta.suave;
-    ctx.font = `400 ${Math.round(base*.032)}px Arial, sans-serif`;
-    const corpo = linhasDoTexto(ctx, texto.trim() || TEXTO_SUGERIDO, largura-margem*2.6, 5);
-    corpo.forEach((l,i)=>ctx.fillText(l,centroX,altura*.34+i*base*.047));
+    ctx.font = `400 ${Math.round(base * (compacto ? .025 : .032))}px Arial, sans-serif`;
+    const corpo = linhasDoTexto(ctx, texto.trim() || TEXTO_SUGERIDO, largura - margem * 2.7, compacto ? 3 : 5);
+    corpo.forEach((linha, i) => ctx.fillText(linha, centroX, altura * (compacto ? .27 : .34) + i * base * (compacto ? .036 : .047)));
 
-    const qrTam = Math.min(base*.46, altura*.34);
-    const qrX = centroX-qrTam/2; const qrY = altura*.50;
-    ctx.fillStyle = paleta.papelQr; ctx.shadowColor='rgba(0,0,0,.12)'; ctx.shadowBlur=base*.018; ctx.shadowOffsetY=base*.008;
-    arredondado(ctx,qrX-base*.025,qrY-base*.025,qrTam+base*.05,qrTam+base*.05,base*.022); ctx.fill();
-    ctx.shadowColor='transparent'; ctx.drawImage(qr,qrX,qrY,qrTam,qrTam);
+    const qrTam = compacto ? Math.min(base * .34, altura * .205) : Math.min(base * .46, altura * .34);
+    const qrX = centroX - qrTam / 2;
+    const qrY = altura * (compacto ? .355 : .50);
+    ctx.fillStyle = paleta.papelQr;
+    ctx.shadowColor = 'rgba(0,0,0,.12)';
+    ctx.shadowBlur = base * .018;
+    ctx.shadowOffsetY = base * .008;
+    arredondado(ctx, qrX - base * .025, qrY - base * .025, qrTam + base * .05, qrTam + base * .05, base * .022);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.drawImage(qr, qrX, qrY, qrTam, qrTam);
 
-    ctx.fillStyle = paleta.suave; ctx.font = `500 ${Math.round(base*.021)}px Arial, sans-serif`;
-    ctx.fillText('Aponte a câmera para o QR Code',centroX,qrY+qrTam+base*.065);
-    ctx.font = `400 ${Math.round(base*.017)}px Arial, sans-serif`;
-    const urlCurta = urlMemorias.replace(/^https?:\/\//,'');
-    ctx.fillText(urlCurta,centroX,qrY+qrTam+base*.105);
+    ctx.fillStyle = paleta.suave;
+    ctx.font = `500 ${Math.round(base * (compacto ? .017 : .021))}px Arial, sans-serif`;
+    ctx.fillText('Aponte a câmera para o QR Code', centroX, qrY + qrTam + base * (compacto ? .045 : .065));
 
-    ctx.fillStyle = paleta.tinta; ctx.font = `600 ${Math.round(base*.03)}px Georgia, serif`;
-    const eventoLinhas = linhasDoTexto(ctx,tituloEvento,largura-margem*2.5,2);
-    const eventoY = altura*.91-(eventoLinhas.length-1)*base*.02;
-    eventoLinhas.forEach((l,i)=>ctx.fillText(l,centroX,eventoY+i*base*.042));
+    if (mostrarDesafios) {
+      const blocoY = qrY + qrTam + base * .105;
+      const listaDensa = desafios.length >= 8;
+      ctx.fillStyle = paleta.acento;
+      ctx.font = `italic 600 ${Math.round(base * .042)}px Georgia, serif`;
+      ctx.fillText(tituloDesafio.trim() || TITULO_DESAFIO_SUGERIDO, centroX, blocoY);
+      ctx.fillStyle = paleta.suave;
+      ctx.font = `400 ${Math.round(base * (listaDensa ? .0145 : .0165))}px Arial, sans-serif`;
+      ctx.fillText('Você consegue capturar todos esses momentos?', centroX, blocoY + base * .035);
+
+      ctx.textAlign = 'left';
+      const listaX = margem * 1.55;
+      const textoX = listaX + base * .045;
+      const larguraLista = largura - textoX - margem * 1.35;
+      let y = blocoY + base * .072;
+      for (const item of desafios) {
+        const linhas = linhasDoTexto(ctx, item, larguraLista, 2);
+        ctx.fillStyle = paleta.acento;
+        ctx.font = `400 ${Math.round(base * (listaDensa ? .020 : .024))}px Georgia, serif`;
+        ctx.fillText('♡', listaX, y + base * .003);
+        ctx.fillStyle = paleta.suave;
+        ctx.font = `400 ${Math.round(base * (listaDensa ? .0155 : .0185))}px Arial, sans-serif`;
+        linhas.forEach((linha, i) => ctx.fillText(linha, textoX, y + i * base * (listaDensa ? .020 : .025)));
+        y += base * (linhas.length > 1 ? (listaDensa ? .044 : .057) : (listaDensa ? .031 : .041));
+      }
+      ctx.textAlign = 'center';
+    } else {
+      ctx.font = `400 ${Math.round(base * .017)}px Arial, sans-serif`;
+      const urlCurta = urlMemorias.replace(/^https?:\/\//, '');
+      ctx.fillText(urlCurta, centroX, qrY + qrTam + base * .105);
+    }
+
+    ctx.fillStyle = paleta.tinta;
+    ctx.font = `600 ${Math.round(base * (mostrarDesafios ? .026 : .03))}px Georgia, serif`;
+    const eventoLinhas = linhasDoTexto(ctx, tituloEvento, largura - margem * 2.5, 2);
+    const eventoY = altura * .925 - (eventoLinhas.length - 1) * base * .02;
+    eventoLinhas.forEach((linha, i) => ctx.fillText(linha, centroX, eventoY + i * base * .042));
   } else {
-    const esquerda = largura*.34; const direita = largura*.72;
-    ctx.fillStyle=paleta.tinta; ctx.font=`600 ${Math.round(base*.072)}px Georgia, serif`;
-    const tituloLinhas=linhasDoTexto(ctx,tituloChamada.trim()||TITULO_SUGERIDO,largura*.46,3);
-    tituloLinhas.forEach((l,i)=>ctx.fillText(l,esquerda,altura*.27+i*base*.085));
-    desenharDivisor(ctx,ornamentoId,paleta,esquerda,altura*.48,base*.28);
-    ctx.fillStyle=paleta.suave; ctx.font=`400 ${Math.round(base*.031)}px Arial, sans-serif`;
-    const corpo=linhasDoTexto(ctx,texto.trim()||TEXTO_SUGERIDO,largura*.43,5);
-    corpo.forEach((l,i)=>ctx.fillText(l,esquerda,altura*.57+i*base*.045));
-    ctx.fillStyle=paleta.tinta; ctx.font=`600 ${Math.round(base*.026)}px Georgia, serif`; ctx.fillText(tituloEvento,esquerda,altura*.84);
+    const esquerda = largura * .34;
+    const direita = largura * .72;
+    const compacto = mostrarDesafios;
 
-    const qrTam=base*.48; const qrX=direita-qrTam/2; const qrY=altura*.5-qrTam/2;
-    ctx.fillStyle=paleta.papelQr; ctx.shadowColor='rgba(0,0,0,.14)'; ctx.shadowBlur=base*.018; ctx.shadowOffsetY=base*.008;
-    arredondado(ctx,qrX-base*.025,qrY-base*.025,qrTam+base*.05,qrTam+base*.05,base*.022); ctx.fill(); ctx.shadowColor='transparent';
-    ctx.drawImage(qr,qrX,qrY,qrTam,qrTam);
-    ctx.fillStyle=paleta.suave; ctx.font=`500 ${Math.round(base*.02)}px Arial, sans-serif`; ctx.fillText('Escaneie e envie agora',direita,qrY+qrTam+base*.06);
-    ctx.font=`400 ${Math.round(base*.015)}px Arial, sans-serif`; ctx.fillText(urlMemorias.replace(/^https?:\/\//,''),direita,qrY+qrTam+base*.095);
+    ctx.fillStyle = paleta.tinta;
+    ctx.font = `600 ${Math.round(base * (compacto ? .057 : .072))}px Georgia, serif`;
+    const tituloLinhas = linhasDoTexto(ctx, tituloChamada.trim() || TITULO_SUGERIDO, largura * .46, 3);
+    tituloLinhas.forEach((linha, i) => ctx.fillText(linha, esquerda, altura * (compacto ? .18 : .27) + i * base * (compacto ? .067 : .085)));
+    desenharDivisor(ctx, ornamentoId, paleta, esquerda, altura * (compacto ? .38 : .48), base * .28);
+
+    ctx.fillStyle = paleta.suave;
+    ctx.font = `400 ${Math.round(base * (compacto ? .025 : .031))}px Arial, sans-serif`;
+    const corpo = linhasDoTexto(ctx, texto.trim() || TEXTO_SUGERIDO, largura * .43, compacto ? 3 : 5);
+    corpo.forEach((linha, i) => ctx.fillText(linha, esquerda, altura * (compacto ? .45 : .57) + i * base * (compacto ? .035 : .045)));
+
+    if (mostrarDesafios) {
+      const blocoY = altura * .64;
+      const listaDensa = desafios.length >= 5;
+      ctx.fillStyle = paleta.acento;
+      ctx.font = `italic 600 ${Math.round(base * .031)}px Georgia, serif`;
+      ctx.fillText(tituloDesafio.trim() || TITULO_DESAFIO_SUGERIDO, esquerda, blocoY);
+      ctx.fillStyle = paleta.suave;
+      ctx.font = `400 ${Math.round(base * .0125)}px Arial, sans-serif`;
+      ctx.fillText('Você consegue capturar todos esses momentos?', esquerda, blocoY + base * .028);
+
+      ctx.textAlign = 'left';
+      const listaX = largura * .13;
+      const textoX = listaX + base * .038;
+      const larguraLista = largura * .42;
+      let y = blocoY + base * .055;
+      for (const item of desafios) {
+        const linhas = linhasDoTexto(ctx, item, larguraLista, 2);
+        ctx.fillStyle = paleta.acento;
+        ctx.font = `400 ${Math.round(base * (listaDensa ? .018 : .021))}px Georgia, serif`;
+        ctx.fillText('♡', listaX, y);
+        ctx.fillStyle = paleta.suave;
+        ctx.font = `400 ${Math.round(base * (listaDensa ? .0135 : .0155))}px Arial, sans-serif`;
+        linhas.forEach((linha, i) => ctx.fillText(linha, textoX, y + i * base * (listaDensa ? .018 : .022)));
+        y += base * (linhas.length > 1 ? (listaDensa ? .039 : .048) : (listaDensa ? .028 : .034));
+      }
+      ctx.textAlign = 'center';
+    }
+
+    ctx.fillStyle = paleta.tinta;
+    ctx.font = `600 ${Math.round(base * .026)}px Georgia, serif`;
+    ctx.fillText(tituloEvento, esquerda, altura * .9);
+
+    const qrTam = base * (compacto ? .43 : .48);
+    const qrX = direita - qrTam / 2;
+    const qrY = altura * .5 - qrTam / 2;
+    ctx.fillStyle = paleta.papelQr;
+    ctx.shadowColor = 'rgba(0,0,0,.14)';
+    ctx.shadowBlur = base * .018;
+    ctx.shadowOffsetY = base * .008;
+    arredondado(ctx, qrX - base * .025, qrY - base * .025, qrTam + base * .05, qrTam + base * .05, base * .022);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.drawImage(qr, qrX, qrY, qrTam, qrTam);
+    ctx.fillStyle = paleta.suave;
+    ctx.font = `500 ${Math.round(base * .02)}px Arial, sans-serif`;
+    ctx.fillText('Escaneie e envie agora', direita, qrY + qrTam + base * .06);
+    ctx.font = `400 ${Math.round(base * .015)}px Arial, sans-serif`;
+    ctx.fillText(urlMemorias.replace(/^https?:\/\//, ''), direita, qrY + qrTam + base * .095);
   }
+
   return canvas;
 }
 
-export default function MateriaisMemorias({ titulo, urlMemorias, qrDataUrl, ornamentoInicial }: { titulo: string; urlMemorias: string; qrDataUrl: string; ornamentoInicial?: string }) {
-  const [formatoId,setFormatoId]=useState<FormatoId>('a5-vertical');
-  const [paletaId,setPaletaId]=useState<PaletaId>('rose');
-  const inicial = ORNAMENTOS.some((o)=>o.id===ornamentoInicial) ? ornamentoInicial! : 'casamento-original';
-  const [ornamentoId,setOrnamentoId]=useState(inicial);
-  const [tituloChamada,setTituloChamada]=useState(TITULO_SUGERIDO);
-  const [texto,setTexto]=useState(TEXTO_SUGERIDO);
-  const [preview,setPreview]=useState('');
-  const [gerando,setGerando]=useState<'preview'|'png'|'pdf'|null>(null);
-  const [erro,setErro]=useState('');
+export default function MateriaisMemorias({
+  titulo,
+  urlMemorias,
+  qrDataUrl,
+  ornamentoInicial,
+}: {
+  titulo: string;
+  urlMemorias: string;
+  qrDataUrl: string;
+  ornamentoInicial?: string;
+}) {
+  const [formatoId, setFormatoId] = useState<FormatoId>('a5-vertical');
+  const [paletaId, setPaletaId] = useState<PaletaId>('rose');
+  const inicial = ORNAMENTOS.some((o) => o.id === ornamentoInicial) ? ornamentoInicial! : 'casamento-original';
+  const [ornamentoId, setOrnamentoId] = useState(inicial);
+  const [tituloChamada, setTituloChamada] = useState(TITULO_SUGERIDO);
+  const [texto, setTexto] = useState(TEXTO_SUGERIDO);
+  const [incluirDesafios, setIncluirDesafios] = useState(false);
+  const [tituloDesafio, setTituloDesafio] = useState(TITULO_DESAFIO_SUGERIDO);
+  const [desafiosSelecionados, setDesafiosSelecionados] = useState<string[]>(
+    DESAFIOS_SUGERIDOS.slice(0, 5).map((d) => d.id),
+  );
+  const [preview, setPreview] = useState('');
+  const [gerando, setGerando] = useState<'preview' | 'png' | 'pdf' | null>(null);
+  const [erro, setErro] = useState('');
 
-  const formato=useMemo(()=>FORMATOS.find((f)=>f.id===formatoId)!,[formatoId]);
-  const paleta=useMemo(()=>PALETAS.find((p)=>p.id===paletaId)!,[paletaId]);
+  const formato = useMemo(() => FORMATOS.find((f) => f.id === formatoId)!, [formatoId]);
+  const paleta = useMemo(() => PALETAS.find((p) => p.id === paletaId)!, [paletaId]);
+  const maxDesafios = limiteDesafios(formatoId);
+  const desafiosAtivos = useMemo(
+    () => DESAFIOS_SUGERIDOS.filter((d) => desafiosSelecionados.includes(d.id)).slice(0, maxDesafios).map((d) => d.texto),
+    [desafiosSelecionados, maxDesafios],
+  );
 
-  useEffect(()=>{
-    let cancelado=false;
-    setGerando('preview'); setErro('');
-    const id=window.setTimeout(()=>{
-      void renderizarMaterial({formato,paleta,ornamentoId,tituloEvento:titulo,tituloChamada,texto,qrDataUrl,urlMemorias,dpi:105})
-        .then((canvas)=>{ if(!cancelado) setPreview(canvas.toDataURL('image/png')); })
-        .catch((e)=>{ if(!cancelado) setErro(e?.message||'Não foi possível montar a prévia.'); })
-        .finally(()=>{ if(!cancelado) setGerando(null); });
-    },180);
-    return()=>{cancelado=true;window.clearTimeout(id);};
-  },[formato,paleta,ornamentoId,titulo,tituloChamada,texto,qrDataUrl,urlMemorias]);
+  useEffect(() => {
+    setDesafiosSelecionados((atuais) => atuais.slice(0, limiteDesafios(formatoId)));
+  }, [formatoId]);
 
-  async function gerar(tipo:'png'|'pdf'){
-    setGerando(tipo);setErro('');
-    try{
-      const canvas=await renderizarMaterial({formato,paleta,ornamentoId,tituloEvento:titulo,tituloChamada,texto,qrDataUrl,urlMemorias,dpi:300});
-      const data=canvas.toDataURL('image/png');
-      const base=`Plaquinha-Memorias-${nomeSeguro(titulo)}-${formato.id}`;
-      if(tipo==='png'){
-        const a=document.createElement('a');a.href=data;a.download=`${base}.png`;a.click();
-      }else{
-        const orientacao=formato.larguraMm>formato.alturaMm?'landscape':'portrait';
-        const pdf=new jsPDF({orientation:orientacao,unit:'mm',format:[formato.larguraMm,formato.alturaMm],compress:true});
-        pdf.addImage(data,'PNG',0,0,formato.larguraMm,formato.alturaMm,undefined,'FAST');
+  useEffect(() => {
+    let cancelado = false;
+    setGerando('preview');
+    setErro('');
+    const id = window.setTimeout(() => {
+      void renderizarMaterial({
+        formato,
+        paleta,
+        ornamentoId,
+        tituloEvento: titulo,
+        tituloChamada,
+        texto,
+        qrDataUrl,
+        urlMemorias,
+        dpi: 105,
+        incluirDesafios,
+        tituloDesafio,
+        desafios: desafiosAtivos,
+      })
+        .then((canvas) => { if (!cancelado) setPreview(canvas.toDataURL('image/png')); })
+        .catch((e) => { if (!cancelado) setErro(e?.message || 'Não foi possível montar a prévia.'); })
+        .finally(() => { if (!cancelado) setGerando(null); });
+    }, 180);
+    return () => { cancelado = true; window.clearTimeout(id); };
+  }, [formato, paleta, ornamentoId, titulo, tituloChamada, texto, qrDataUrl, urlMemorias, incluirDesafios, tituloDesafio, desafiosAtivos]);
+
+  async function gerar(tipo: 'png' | 'pdf') {
+    setGerando(tipo);
+    setErro('');
+    try {
+      const canvas = await renderizarMaterial({
+        formato,
+        paleta,
+        ornamentoId,
+        tituloEvento: titulo,
+        tituloChamada,
+        texto,
+        qrDataUrl,
+        urlMemorias,
+        dpi: 300,
+        incluirDesafios,
+        tituloDesafio,
+        desafios: desafiosAtivos,
+      });
+      const data = canvas.toDataURL('image/png');
+      const base = `Plaquinha-Memorias-${nomeSeguro(titulo)}-${formato.id}`;
+      if (tipo === 'png') {
+        const a = document.createElement('a');
+        a.href = data;
+        a.download = `${base}.png`;
+        a.click();
+      } else {
+        const orientacao = formato.larguraMm > formato.alturaMm ? 'landscape' : 'portrait';
+        const pdf = new jsPDF({ orientation: orientacao, unit: 'mm', format: [formato.larguraMm, formato.alturaMm], compress: true });
+        pdf.addImage(data, 'PNG', 0, 0, formato.larguraMm, formato.alturaMm, undefined, 'FAST');
         pdf.save(`${base}.pdf`);
       }
-    }catch(e:any){setErro(e?.message||'Não foi possível gerar o material.');}
-    finally{setGerando(null);}
+    } catch (e: any) {
+      setErro(e?.message || 'Não foi possível gerar o material.');
+    } finally {
+      setGerando(null);
+    }
   }
 
-  function restaurar(){setTituloChamada(TITULO_SUGERIDO);setTexto(TEXTO_SUGERIDO);setPaletaId('rose');setOrnamentoId(inicial);}
+  function alternarDesafio(id: string) {
+    setDesafiosSelecionados((atuais) => {
+      if (atuais.includes(id)) return atuais.filter((x) => x !== id);
+      if (atuais.length >= maxDesafios) return atuais;
+      return [...atuais, id];
+    });
+  }
 
-  return <div className="rounded-2xl border bg-white p-4" style={{borderColor:'#c0607830'}}>
+  function restaurar() {
+    setTituloChamada(TITULO_SUGERIDO);
+    setTexto(TEXTO_SUGERIDO);
+    setPaletaId('rose');
+    setOrnamentoId(inicial);
+    setIncluirDesafios(false);
+    setTituloDesafio(TITULO_DESAFIO_SUGERIDO);
+    setDesafiosSelecionados(DESAFIOS_SUGERIDOS.slice(0, limiteDesafios(formatoId)).map((d) => d.id));
+  }
+
+  return <div className="rounded-2xl border bg-white p-4" style={{ borderColor: '#c0607830' }}>
     <div className="flex flex-wrap items-start justify-between gap-2">
-      <div><p className="flex items-center gap-2 font-semibold text-[#40232c]"><Sparkles className="h-4 w-4 text-[#a04a63]"/>Materiais para imprimir</p><p className="mt-1 text-xs text-[#7c5560]">Escolha um ornamento do ConviteIA, personalize o texto e baixe a plaquinha pronta.</p></div>
-      <button type="button" onClick={restaurar} className="inline-flex items-center gap-1 rounded-full bg-[#fff5f8] px-3 py-2 text-xs font-semibold text-[#a04a63]"><RotateCcw className="h-3.5 w-3.5"/>Restaurar sugestão</button>
+      <div>
+        <p className="flex items-center gap-2 font-semibold text-[#40232c]"><Sparkles className="h-4 w-4 text-[#a04a63]" />Materiais para imprimir</p>
+        <p className="mt-1 text-xs text-[#7c5560]">Escolha um ornamento do ConviteIA, personalize o texto e baixe a plaquinha pronta.</p>
+      </div>
+      <button type="button" onClick={restaurar} className="inline-flex items-center gap-1 rounded-full bg-[#fff5f8] px-3 py-2 text-xs font-semibold text-[#a04a63]"><RotateCcw className="h-3.5 w-3.5" />Restaurar sugestão</button>
     </div>
 
     <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_340px]">
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-xs font-semibold text-[#69434f]">Tamanho<select value={formatoId} onChange={(e)=>setFormatoId(e.target.value as FormatoId)} className="mt-1.5 w-full rounded-xl border border-[#c0607835] bg-white px-3 py-2.5 text-sm font-normal text-[#40232c]">{FORMATOS.map((f)=><option key={f.id} value={f.id}>{f.nome} — {f.detalhe}</option>)}</select></label>
-          <label className="text-xs font-semibold text-[#69434f]">Cores<select value={paletaId} onChange={(e)=>setPaletaId(e.target.value as PaletaId)} className="mt-1.5 w-full rounded-xl border border-[#c0607835] bg-white px-3 py-2.5 text-sm font-normal text-[#40232c]">{PALETAS.map((p)=><option key={p.id} value={p.id}>{p.nome}</option>)}</select></label>
+          <label className="text-xs font-semibold text-[#69434f]">Tamanho
+            <select value={formatoId} onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormatoId(e.target.value as FormatoId)} style={CAMPO_CLARO} className="mt-1.5 w-full rounded-xl border border-[#c0607835] bg-white px-3 py-2.5 text-sm font-normal text-[#40232c]">
+              {FORMATOS.map((f) => <option key={f.id} value={f.id}>{f.nome} — {f.detalhe}</option>)}
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-[#69434f]">Cores
+            <select value={paletaId} onChange={(e: ChangeEvent<HTMLSelectElement>) => setPaletaId(e.target.value as PaletaId)} style={CAMPO_CLARO} className="mt-1.5 w-full rounded-xl border border-[#c0607835] bg-white px-3 py-2.5 text-sm font-normal text-[#40232c]">
+              {PALETAS.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+            </select>
+          </label>
         </div>
 
-        <label className="block text-xs font-semibold text-[#69434f]">Arabesco / ornamento<select value={ornamentoId} onChange={(e)=>setOrnamentoId(e.target.value)} className="mt-1.5 w-full rounded-xl border border-[#c0607835] bg-white px-3 py-2.5 text-sm font-normal text-[#40232c]">{ORNAMENTOS.map((o)=><option key={o.id} value={o.id}>{o.nome} — {o.descricao}</option>)}</select><span className="mt-1 block font-normal text-[#8b6872]">Quando possível, abrimos já com o ornamento usado no próprio convite.</span></label>
+        <label className="block text-xs font-semibold text-[#69434f]">Arabesco / ornamento
+          <select value={ornamentoId} onChange={(e: ChangeEvent<HTMLSelectElement>) => setOrnamentoId(e.target.value)} style={CAMPO_CLARO} className="mt-1.5 w-full rounded-xl border border-[#c0607835] bg-white px-3 py-2.5 text-sm font-normal text-[#40232c]">
+            {ORNAMENTOS.map((o) => <option key={o.id} value={o.id}>{o.nome} — {o.descricao}</option>)}
+          </select>
+          <span className="mt-1 block font-normal text-[#8b6872]">Quando possível, abrimos já com o ornamento usado no próprio convite.</span>
+        </label>
 
-        <label className="block text-xs font-semibold text-[#69434f]">Título<input value={tituloChamada} onChange={(e)=>setTituloChamada(e.target.value)} maxLength={70} className="mt-1.5 w-full rounded-xl border border-[#c0607835] px-3 py-2.5 text-sm font-normal text-[#40232c]"/></label>
-        <label className="block text-xs font-semibold text-[#69434f]">Mensagem<textarea value={texto} onChange={(e)=>setTexto(e.target.value)} maxLength={260} rows={4} className="mt-1.5 w-full resize-none rounded-xl border border-[#c0607835] px-3 py-2.5 text-sm font-normal leading-relaxed text-[#40232c]"/><span className="mt-1 block text-right font-normal text-[#9a7c84]">{texto.length}/260</span></label>
+        <label className="block text-xs font-semibold text-[#69434f]">Título
+          <input value={tituloChamada} onChange={(e: ChangeEvent<HTMLInputElement>) => setTituloChamada(e.target.value)} maxLength={70} style={CAMPO_CLARO} className="mt-1.5 w-full rounded-xl border border-[#c0607835] bg-white px-3 py-2.5 text-sm font-normal text-[#40232c] caret-[#a04a63]" />
+        </label>
+        <label className="block text-xs font-semibold text-[#69434f]">Mensagem
+          <textarea value={texto} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setTexto(e.target.value)} maxLength={260} rows={4} style={CAMPO_CLARO} className="mt-1.5 w-full resize-none rounded-xl border border-[#c0607835] bg-white px-3 py-2.5 text-sm font-normal leading-relaxed text-[#40232c] caret-[#a04a63]" />
+          <span className="mt-1 block text-right font-normal text-[#9a7c84]">{texto.length}/260</span>
+        </label>
+
+        <div className="rounded-2xl border border-[#c0607828] bg-[#fff9fb] p-3">
+          <label className="flex cursor-pointer items-center justify-between gap-3">
+            <span>
+              <strong className="block text-sm text-[#40232c]">Incluir desafio fotográfico</strong>
+              <span className="mt-0.5 block text-xs font-normal text-[#7c5560]">Opcional: transforma a plaquinha em uma brincadeira para incentivar mais fotos.</span>
+            </span>
+            <input type="checkbox" checked={incluirDesafios} onChange={(e: ChangeEvent<HTMLInputElement>) => setIncluirDesafios(e.target.checked)} className="h-5 w-5 shrink-0 accent-[#c06078]" />
+          </label>
+
+          {incluirDesafios && <div className="mt-3 border-t border-[#c0607820] pt-3">
+            <label className="block text-xs font-semibold text-[#69434f]">Título do desafio
+              <input value={tituloDesafio} onChange={(e: ChangeEvent<HTMLInputElement>) => setTituloDesafio(e.target.value)} maxLength={40} style={CAMPO_CLARO} className="mt-1.5 w-full rounded-xl border border-[#c0607835] bg-white px-3 py-2.5 text-sm font-normal text-[#40232c] caret-[#a04a63]" />
+            </label>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-[#69434f]">Escolha os desafios</p>
+              <span className="text-[11px] text-[#8b6872]">{desafiosSelecionados.length}/{maxDesafios} neste tamanho</span>
+            </div>
+            <div className="mt-2 space-y-1.5">
+              {DESAFIOS_SUGERIDOS.map((desafio) => {
+                const marcado = desafiosSelecionados.includes(desafio.id);
+                const bloqueado = !marcado && desafiosSelecionados.length >= maxDesafios;
+                return <label key={desafio.id} className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs ${marcado ? 'border-[#c0607840] bg-white text-[#40232c]' : 'border-transparent bg-white/60 text-[#7c5560]'} ${bloqueado ? 'opacity-45' : 'cursor-pointer'}`}>
+                  <input type="checkbox" checked={marcado} disabled={bloqueado} onChange={() => alternarDesafio(desafio.id)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#c06078]" />
+                  <span>{desafio.texto}</span>
+                </label>;
+              })}
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-[#8b6872]">A quantidade máxima muda automaticamente conforme o tamanho para preservar a leitura do QR e da arte.</p>
+          </div>}
+        </div>
 
         <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={Boolean(gerando)} onClick={()=>void gerar('png')} className="inline-flex items-center gap-2 rounded-full bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{gerando==='png'?<Loader2 className="h-4 w-4 animate-spin"/>:<ImageIcon className="h-4 w-4"/>}Baixar PNG 300 DPI</button>
-          <button type="button" disabled={Boolean(gerando)} onClick={()=>void gerar('pdf')} className="inline-flex items-center gap-2 rounded-full border border-[#c0607845] px-4 py-2.5 text-sm font-semibold text-[#a04a63] disabled:opacity-50">{gerando==='pdf'?<Loader2 className="h-4 w-4 animate-spin"/>:<FileText className="h-4 w-4"/>}Baixar PDF</button>
+          <button type="button" disabled={Boolean(gerando)} onClick={() => void gerar('png')} className="inline-flex items-center gap-2 rounded-full bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{gerando === 'png' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}Baixar PNG 300 DPI</button>
+          <button type="button" disabled={Boolean(gerando)} onClick={() => void gerar('pdf')} className="inline-flex items-center gap-2 rounded-full border border-[#c0607845] px-4 py-2.5 text-sm font-semibold text-[#a04a63] disabled:opacity-50">{gerando === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}Baixar PDF</button>
         </div>
-        {erro&&<p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{erro}</p>}
+        {erro && <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{erro}</p>}
       </div>
 
       <div className="rounded-2xl bg-[#f7f3f4] p-3">
         <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-wide text-[#8b6872]">Prévia</p>
         <div className="grid min-h-64 place-items-center overflow-hidden rounded-xl bg-[#ded7d9] p-3">
-          {preview?<img src={preview} alt="Prévia da plaquinha" className="max-h-[470px] max-w-full rounded-sm shadow-xl"/>:<Loader2 className="h-6 w-6 animate-spin text-[#a04a63]"/>}
+          {preview ? <img src={preview} alt="Prévia da plaquinha" className="max-h-[470px] max-w-full rounded-sm shadow-xl" /> : <Loader2 className="h-6 w-6 animate-spin text-[#a04a63]" />}
         </div>
         <p className="mt-2 text-center text-[10px] text-[#8b6872]">A prévia é leve. O arquivo baixado é gerado em 300 DPI e no tamanho físico escolhido.</p>
       </div>

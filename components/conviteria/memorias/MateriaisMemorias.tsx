@@ -5,6 +5,11 @@ import type { ChangeEvent } from 'react';
 import { FileText, Image as ImageIcon, Loader2, RotateCcw, Sparkles } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { ORNAMENTOS_ASSETS } from '@/lib/conviteria/ornamentos';
+import {
+  MEMORIAS_DESAFIOS_SUGERIDOS,
+  MEMORIAS_DESAFIOS_TITULO_PADRAO,
+  type MemoriasDesafiosConfig,
+} from '@/lib/conviteria/memorias-desafios';
 
 type FormatoId = 'a4-vertical' | 'a5-vertical' | '10x15' | '15x21' | 'a4-horizontal';
 type PaletaId = 'rose' | 'sage' | 'noite';
@@ -47,18 +52,8 @@ const ORNAMENTOS = ORNAMENTOS_ASSETS;
 const TITULO_SUGERIDO = 'Compartilhe suas memórias';
 const TEXTO_SUGERIDO = 'Escaneie o QR Code e envie as fotos e vídeos que você fizer neste dia especial. Não precisa instalar nenhum aplicativo.';
 
-const TITULO_DESAFIO_SUGERIDO = 'Desafio';
-const DESAFIOS_SUGERIDOS = [
-  { id: 'selfie-anfitrioes', texto: 'Uma selfie sorrindo com os anfitriões' },
-  { id: 'detalhe-lugar', texto: 'Foto do detalhe mais bonito do lugar' },
-  { id: 'nova-amizade', texto: 'Uma foto com alguém que você acabou de conhecer' },
-  { id: 'geracoes', texto: 'Foto com três gerações juntas' },
-  { id: 'abraco', texto: 'Foto de um abraço inesperado' },
-  { id: 'animado', texto: 'Registre o momento mais animado da festa' },
-  { id: 'engracada', texto: 'Faça a foto mais engraçada da noite' },
-  { id: 'brinde', texto: 'Registre o brinde da sua mesa' },
-  { id: 'favorito', texto: 'Registre o que mais gostou na festa' },
-] as const;
+const TITULO_DESAFIO_SUGERIDO = MEMORIAS_DESAFIOS_TITULO_PADRAO;
+const DESAFIOS_SUGERIDOS = MEMORIAS_DESAFIOS_SUGERIDOS;
 
 const CAMPO_CLARO = {
   backgroundColor: '#ffffff',
@@ -444,11 +439,15 @@ export default function MateriaisMemorias({
   urlMemorias,
   qrDataUrl,
   ornamentoInicial,
+  desafiosInicial,
+  onSalvarDesafios,
 }: {
   titulo: string;
   urlMemorias: string;
   qrDataUrl: string;
   ornamentoInicial?: string;
+  desafiosInicial?: MemoriasDesafiosConfig;
+  onSalvarDesafios?: (config: MemoriasDesafiosConfig) => Promise<void>;
 }) {
   const [formatoId, setFormatoId] = useState<FormatoId>('a5-vertical');
   const [paletaId, setPaletaId] = useState<PaletaId>('rose');
@@ -456,11 +455,13 @@ export default function MateriaisMemorias({
   const [ornamentoId, setOrnamentoId] = useState(inicial);
   const [tituloChamada, setTituloChamada] = useState(TITULO_SUGERIDO);
   const [texto, setTexto] = useState(TEXTO_SUGERIDO);
-  const [incluirDesafios, setIncluirDesafios] = useState(false);
-  const [tituloDesafio, setTituloDesafio] = useState(TITULO_DESAFIO_SUGERIDO);
+  const [incluirDesafios, setIncluirDesafios] = useState(Boolean(desafiosInicial?.ativo));
+  const [tituloDesafio, setTituloDesafio] = useState(desafiosInicial?.titulo || TITULO_DESAFIO_SUGERIDO);
   const [desafiosSelecionados, setDesafiosSelecionados] = useState<string[]>(
-    DESAFIOS_SUGERIDOS.slice(0, 5).map((d) => d.id),
+    desafiosInicial?.ids?.length ? desafiosInicial.ids : DESAFIOS_SUGERIDOS.slice(0, 5).map((d) => d.id),
   );
+  const [salvandoDesafios, setSalvandoDesafios] = useState(false);
+  const [desafiosSalvos, setDesafiosSalvos] = useState(true);
   const [preview, setPreview] = useState('');
   const [gerando, setGerando] = useState<'preview' | 'png' | 'pdf' | null>(null);
   const [erro, setErro] = useState('');
@@ -472,10 +473,6 @@ export default function MateriaisMemorias({
     () => DESAFIOS_SUGERIDOS.filter((d) => desafiosSelecionados.includes(d.id)).slice(0, maxDesafios).map((d) => d.texto),
     [desafiosSelecionados, maxDesafios],
   );
-
-  useEffect(() => {
-    setDesafiosSelecionados((atuais) => atuais.slice(0, limiteDesafios(formatoId)));
-  }, [formatoId]);
 
   useEffect(() => {
     let cancelado = false;
@@ -507,6 +504,7 @@ export default function MateriaisMemorias({
     setGerando(tipo);
     setErro('');
     try {
+      if (onSalvarDesafios && !desafiosSalvos) await salvarDesafios();
       const canvas = await renderizarMaterial({
         formato,
         paleta,
@@ -542,11 +540,31 @@ export default function MateriaisMemorias({
   }
 
   function alternarDesafio(id: string) {
+    setDesafiosSalvos(false);
     setDesafiosSelecionados((atuais) => {
       if (atuais.includes(id)) return atuais.filter((x) => x !== id);
-      if (atuais.length >= maxDesafios) return atuais;
+      if (atuais.length >= DESAFIOS_SUGERIDOS.length) return atuais;
       return [...atuais, id];
     });
+  }
+
+  async function salvarDesafios() {
+    if (!onSalvarDesafios) return;
+    setSalvandoDesafios(true);
+    setErro('');
+    try {
+      await onSalvarDesafios({
+        ativo: incluirDesafios && desafiosSelecionados.length > 0,
+        titulo: tituloDesafio.trim() || TITULO_DESAFIO_SUGERIDO,
+        ids: desafiosSelecionados,
+      });
+      setDesafiosSalvos(true);
+    } catch (e: any) {
+      setErro(e?.message || 'Não foi possível salvar os desafios do evento.');
+      throw e;
+    } finally {
+      setSalvandoDesafios(false);
+    }
   }
 
   function restaurar() {
@@ -556,7 +574,8 @@ export default function MateriaisMemorias({
     setOrnamentoId(inicial);
     setIncluirDesafios(false);
     setTituloDesafio(TITULO_DESAFIO_SUGERIDO);
-    setDesafiosSelecionados(DESAFIOS_SUGERIDOS.slice(0, limiteDesafios(formatoId)).map((d) => d.id));
+    setDesafiosSelecionados(DESAFIOS_SUGERIDOS.slice(0, 5).map((d) => d.id));
+    setDesafiosSalvos(false);
   }
 
   return <div className="rounded-2xl border bg-white p-4" style={{ borderColor: '#c0607830' }}>
@@ -604,28 +623,36 @@ export default function MateriaisMemorias({
               <strong className="block text-sm text-[#40232c]">Incluir desafio fotográfico</strong>
               <span className="mt-0.5 block text-xs font-normal text-[#7c5560]">Opcional: transforma a plaquinha em uma brincadeira para incentivar mais fotos.</span>
             </span>
-            <input type="checkbox" checked={incluirDesafios} onChange={(e: ChangeEvent<HTMLInputElement>) => setIncluirDesafios(e.target.checked)} className="h-5 w-5 shrink-0 accent-[#c06078]" />
+            <input type="checkbox" checked={incluirDesafios} onChange={(e: ChangeEvent<HTMLInputElement>) => { setIncluirDesafios(e.target.checked); setDesafiosSalvos(false); }} className="h-5 w-5 shrink-0 accent-[#c06078]" />
           </label>
+          {!incluirDesafios && onSalvarDesafios && !desafiosSalvos && <button type="button" disabled={salvandoDesafios} onClick={() => void salvarDesafios()} className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#40232c] px-4 py-2 text-xs font-semibold text-white disabled:opacity-45">{salvandoDesafios ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}Salvar desafios do evento</button>}
 
           {incluirDesafios && <div className="mt-3 border-t border-[#c0607820] pt-3">
             <label className="block text-xs font-semibold text-[#69434f]">Título do desafio
-              <input value={tituloDesafio} onChange={(e: ChangeEvent<HTMLInputElement>) => setTituloDesafio(e.target.value)} maxLength={40} style={CAMPO_CLARO} className="mt-1.5 w-full rounded-xl border border-[#c0607835] bg-white px-3 py-2.5 text-sm font-normal text-[#40232c] caret-[#a04a63]" />
+              <input value={tituloDesafio} onChange={(e: ChangeEvent<HTMLInputElement>) => { setTituloDesafio(e.target.value); setDesafiosSalvos(false); }} maxLength={40} style={CAMPO_CLARO} className="mt-1.5 w-full rounded-xl border border-[#c0607835] bg-white px-3 py-2.5 text-sm font-normal text-[#40232c] caret-[#a04a63]" />
             </label>
             <div className="mt-3 flex items-center justify-between gap-2">
               <p className="text-xs font-semibold text-[#69434f]">Escolha os desafios</p>
-              <span className="text-[11px] text-[#8b6872]">{desafiosSelecionados.length}/{maxDesafios} neste tamanho</span>
+              <span className="text-[11px] text-[#8b6872]">{desafiosAtivos.length}/{maxDesafios} impressos neste tamanho · {desafiosSelecionados.length} online</span>
             </div>
             <div className="mt-2 space-y-1.5">
               {DESAFIOS_SUGERIDOS.map((desafio) => {
                 const marcado = desafiosSelecionados.includes(desafio.id);
-                const bloqueado = !marcado && desafiosSelecionados.length >= maxDesafios;
+                const bloqueado = !marcado && desafiosSelecionados.length >= DESAFIOS_SUGERIDOS.length;
                 return <label key={desafio.id} className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs ${marcado ? 'border-[#c0607840] bg-white text-[#40232c]' : 'border-transparent bg-white/60 text-[#7c5560]'} ${bloqueado ? 'opacity-45' : 'cursor-pointer'}`}>
                   <input type="checkbox" checked={marcado} disabled={bloqueado} onChange={() => alternarDesafio(desafio.id)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#c06078]" />
                   <span>{desafio.texto}</span>
                 </label>;
               })}
             </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-[#8b6872]">A quantidade máxima muda automaticamente conforme o tamanho para preservar a leitura do QR e da arte.</p>
+            <p className="mt-2 text-[11px] leading-relaxed text-[#8b6872]">Todos os desafios selecionados aparecem na página de envio. Na plaquinha impressa, o sistema usa apenas os primeiros {maxDesafios} para preservar a leitura do QR e da arte.</p>
+            {onSalvarDesafios && <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button type="button" disabled={salvandoDesafios || desafiosSalvos} onClick={() => void salvarDesafios()} className="inline-flex items-center gap-2 rounded-full bg-[#40232c] px-4 py-2 text-xs font-semibold text-white disabled:opacity-45">
+                {salvandoDesafios ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                {desafiosSalvos ? 'Desafios salvos' : 'Salvar desafios do evento'}
+              </button>
+              <span className="text-[11px] text-[#8b6872]">Os desafios salvos também aparecem para quem abrir o QR Code.</span>
+            </div>}
           </div>}
         </div>
 

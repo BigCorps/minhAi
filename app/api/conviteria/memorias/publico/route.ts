@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from 'next/server';
 import {
   buscarEventoMemoriasPublicado,
   resumoPublico,
-  usoMemorias,
 } from '@/lib/conviteria/memorias-servidor';
 
 export const runtime = 'nodejs';
@@ -14,6 +13,7 @@ export async function GET(req: NextRequest) {
   const evento = await buscarEventoMemoriasPublicado(slug);
   if (!evento) return NextResponse.json({ erro: 'Memórias indisponíveis.' }, { status: 404 });
 
-  const uso = await usoMemorias(evento.id);
-  return NextResponse.json({ ...resumoPublico(evento), uso });
+  // A capacidade do pacote é administrativa e aparece somente no painel do dono.
+  // A página pública recebe apenas o necessário para enviar e participar do evento.
+  return NextResponse.json(resumoPublico(evento));
 }

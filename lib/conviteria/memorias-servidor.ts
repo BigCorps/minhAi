@@ -12,6 +12,7 @@ import {
   urlAlbum,
   urlMemorias,
 } from './memorias-config';
+import { configDesafiosPublica, textosDosDesafios } from './memorias-desafios';
 
 export interface EventoMemoriasPublico {
   id: string;
@@ -23,6 +24,7 @@ export interface EventoMemoriasPublico {
     status: string;
     aprovacaoManual: boolean;
     expiraEm: string | null;
+    desafios: { ativo: boolean; titulo: string; ids: string[] };
   };
 }
 
@@ -40,7 +42,7 @@ export async function buscarEventoMemoriasPublicado(slug: string): Promise<Event
 
   const { data: pacote } = await admin
     .from('evento_memorias_config')
-    .select('status,aprovacao_manual,expira_em')
+    .select('status,aprovacao_manual,expira_em,desafios_ativos,desafios_titulo,desafios_ids')
     .eq('evento_id', evento.id)
     .maybeSingle();
 
@@ -58,6 +60,7 @@ export async function buscarEventoMemoriasPublicado(slug: string): Promise<Event
       status: pacote.status as string,
       aprovacaoManual: Boolean(pacote.aprovacao_manual),
       expiraEm: (pacote.expira_em as string | null) ?? null,
+      desafios: configDesafiosPublica(pacote),
     },
   };
 }
@@ -200,6 +203,7 @@ export async function midiasAssinadas(eventoId: string, apenasAprovadas = true, 
 }
 
 export function resumoPublico(evento: EventoMemoriasPublico) {
+  const desafios = evento.memorias.desafios;
   return {
     eventoId: evento.id,
     slug: evento.slug,
@@ -211,12 +215,10 @@ export function resumoPublico(evento: EventoMemoriasPublico) {
     modoFestaAtivo: festaEstaAtiva(evento.dataEvento),
     urlMemorias: urlMemorias(evento.slug),
     urlAlbum: urlAlbum(evento.slug),
-    limites: {
-      fotos: MEMORIAS_LIMITE_FOTOS,
-      videos: MEMORIAS_LIMITE_VIDEOS,
-      bytes: MEMORIAS_LIMITE_BYTES,
-      videoSegundos: MEMORIAS_VIDEO_MAX_SEGUNDOS,
-      videoBytes: MEMORIAS_VIDEO_MAX_BYTES,
+    desafios: {
+      ativo: desafios.ativo,
+      titulo: desafios.titulo,
+      itens: desafios.ativo ? textosDosDesafios(desafios.ids) : [],
     },
   };
 }

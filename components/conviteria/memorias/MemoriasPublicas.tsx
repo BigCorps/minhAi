@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, CheckCircle2, Film, Loader2, UserRound, XCircle } from 'lucide-react';
+import { Camera, CheckCircle2, Film, Heart, Loader2, Sparkles, UserRound, XCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { MEMORIAS_ARQUIVO_MAX_BYTES } from '@/lib/conviteria/memorias-config';
 import { prepararVideoMemorias } from '@/lib/conviteria/memorias-video';
@@ -19,8 +19,7 @@ type Info = {
   fotoCapa: string | null;
   aprovacaoManual: boolean;
   expiraEm: string | null;
-  uso: { fotos: number; videos: number; bytes: number };
-  limites: { fotos: number; videos: number; bytes: number; videoSegundos: number; videoBytes: number };
+  desafios: { ativo: boolean; titulo: string; itens: string[] };
 };
 
 type Preparado = {
@@ -244,7 +243,6 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
     return <main className="min-h-screen grid place-items-center bg-[#fff9fb] px-6 text-center"><div><XCircle className="mx-auto mb-3 h-10 w-10 text-[#a04a63]" /><h1 className="text-xl font-semibold text-[#40232c]">Memórias indisponíveis</h1><p className="mt-2 text-sm text-[#7c5560]">{erro}</p></div></main>;
   }
 
-  const pct = Math.min(100, Math.round((info.uso.bytes / info.limites.bytes) * 100));
 
   return (
     <main className="min-h-screen bg-[#fff9fb] px-4 py-8 text-[#40232c]">
@@ -278,11 +276,11 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <button disabled={enviando || info.uso.fotos >= info.limites.fotos} onClick={() => { if (garantirNome()) fotosRef.current?.click(); }} className="flex min-h-32 flex-col items-center justify-center rounded-2xl bg-[#c06078] p-5 font-semibold text-white disabled:opacity-45">
+            <button disabled={enviando} onClick={() => { if (garantirNome()) fotosRef.current?.click(); }} className="flex min-h-32 flex-col items-center justify-center rounded-2xl bg-[#c06078] p-5 font-semibold text-white disabled:opacity-45">
               <Camera className="mb-2 h-8 w-8" />Enviar fotos
               <span className="mt-1 text-xs font-normal opacity-90">até 50 por vez</span>
             </button>
-            <button disabled={enviando || info.uso.videos >= info.limites.videos} onClick={() => { if (garantirNome()) videoRef.current?.click(); }} className="flex min-h-32 flex-col items-center justify-center rounded-2xl border-2 border-[#c0607855] bg-[#fff5f8] p-5 font-semibold text-[#a04a63] disabled:opacity-45">
+            <button disabled={enviando} onClick={() => { if (garantirNome()) videoRef.current?.click(); }} className="flex min-h-32 flex-col items-center justify-center rounded-2xl border-2 border-[#c0607855] bg-[#fff5f8] p-5 font-semibold text-[#a04a63] disabled:opacity-45">
               <Film className="mb-2 h-8 w-8" />Enviar vídeo
               <span className="mt-1 text-xs font-normal">até 30 s · compactação automática</span>
             </button>
@@ -294,13 +292,27 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
           {enviando && <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-[#fff5f8] px-4 py-3 text-sm text-[#7c5560]"><Loader2 className="h-4 w-4 animate-spin" />{progresso || 'Enviando…'}</div>}
           {sucesso && <div className="mt-4 flex items-start gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />{sucesso}</div>}
           {erro && <div className="mt-4 flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800"><XCircle className="mt-0.5 h-4 w-4 shrink-0" />{erro}</div>}
+          {info.aprovacaoManual && <p className="mt-4 rounded-xl bg-[#fff8fa] px-4 py-3 text-xs text-[#7c5560]">Os anfitriões escolheram revisar as memórias antes de elas aparecerem no álbum.</p>}
         </section>
 
-        <section className="mt-4 rounded-2xl border border-[#c0607825] bg-white px-5 py-4 text-sm">
-          <div className="flex justify-between text-[#7c5560]"><span>{info.uso.fotos}/{info.limites.fotos} fotos · {info.uso.videos}/{info.limites.videos} vídeos</span><span>{pct}% do espaço</span></div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#f7e2e6]"><div className="h-full rounded-full bg-[#c06078]" style={{ width: `${pct}%` }} /></div>
-          {info.aprovacaoManual && <p className="mt-3 text-xs text-[#7c5560]">O anfitrião escolheu revisar as memórias antes de elas aparecerem no álbum.</p>}
-        </section>
+        {info.desafios?.ativo && info.desafios.itens.length > 0 && (
+          <section className="mt-4 overflow-hidden rounded-3xl border border-[#c0607830] bg-white shadow-sm">
+            <div className="bg-[#fff5f8] px-5 py-4 text-center">
+              <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[.16em] text-[#a04a63]"><Sparkles className="h-4 w-4" /> Desafio do evento</p>
+              <h2 className="mt-2 text-2xl font-semibold text-[#40232c]">{info.desafios.titulo || 'Desafio'}</h2>
+              <p className="mt-1 text-sm text-[#7c5560]">Você consegue capturar todos esses momentos?</p>
+            </div>
+            <div className="space-y-2 px-5 py-4">
+              {info.desafios.itens.map((item, i) => (
+                <div key={`${i}-${item}`} className="flex items-start gap-3 rounded-2xl bg-[#fffafc] px-3 py-3 text-sm text-[#69434f]">
+                  <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#f5dce3] text-[#a04a63]"><Heart className="h-3.5 w-3.5" /></span>
+                  <span className="leading-relaxed">{item}</span>
+                </div>
+              ))}
+              <p className="pt-1 text-center text-xs text-[#8b6872]">Escolha um ou vários desafios e envie suas fotos acima.</p>
+            </div>
+          </section>
+        )}
 
         <p className="mt-6 text-center text-xs text-[#7c5560]">Não precisa instalar aplicativo nem criar conta.</p>
       </div>

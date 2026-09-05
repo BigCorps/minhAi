@@ -12,6 +12,12 @@ import {
   urlAlbum,
   urlMemorias,
 } from '@/lib/conviteria/memorias-config';
+import {
+  configDesafiosPublica,
+  sanitizarDesafiosIds,
+  sanitizarTituloDesafios,
+  type MemoriasDesafiosConfig,
+} from '@/lib/conviteria/memorias-desafios';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,6 +46,7 @@ export async function GET(req: NextRequest) {
     aprovacaoManual: Boolean(pacote?.aprovacao_manual),
     expiraEm: pacote?.expira_em ?? null,
     ornamentoId: typeof cfg.ornamentoId === 'string' ? cfg.ornamentoId : 'casamento-original',
+    desafios: configDesafiosPublica(pacote),
     limites: pacote ? {
       fotos: Number(pacote.limite_fotos),
       videos: Number(pacote.limite_videos),
@@ -59,8 +66,23 @@ export async function PATCH(req: NextRequest) {
     aprovacaoManual?: boolean;
     memoriaId?: string;
     status?: 'aprovado' | 'pendente' | 'oculto';
+    desafios?: Partial<MemoriasDesafiosConfig>;
   } | null;
   const admin = adminConviteria();
+
+  if (corpo?.desafios && typeof corpo.desafios === 'object') {
+    const ids = sanitizarDesafiosIds(corpo.desafios.ids);
+    const titulo = sanitizarTituloDesafios(corpo.desafios.titulo);
+    const ativo = Boolean(corpo.desafios.ativo) && ids.length > 0;
+    const { error } = await admin.from('evento_memorias_config').update({
+      desafios_ativos: ativo,
+      desafios_titulo: titulo,
+      desafios_ids: ids,
+      updated_at: new Date().toISOString(),
+    }).eq('evento_id', d.eventoId).eq('status', 'ativo');
+    if (error) return NextResponse.json({ erro: 'Não foi possível salvar os desafios.' }, { status: 500 });
+    return NextResponse.json({ ok: true, desafios: { ativo, titulo, ids } });
+  }
 
   if (typeof corpo?.aprovacaoManual === 'boolean') {
     const { error } = await admin.from('evento_memorias_config').update({

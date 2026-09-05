@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-browser';
 import JSZip from 'jszip';
 import * as QRCode from 'qrcode';
 import MateriaisMemorias from './MateriaisMemorias';
+import type { MemoriasDesafiosConfig } from '@/lib/conviteria/memorias-desafios';
 
 type Midia = {
   id: string;
@@ -26,6 +27,7 @@ type Dados = {
   aprovacaoManual: boolean;
   expiraEm: string | null;
   ornamentoId?: string | null;
+  desafios: MemoriasDesafiosConfig;
   limites: { fotos: number; videos: number; bytes: number };
   uso: { fotos: number; videos: number; bytes: number };
   urlMemorias: string;
@@ -125,6 +127,17 @@ export default function MemoriasPainel({ eventoId, titulo }: { eventoId: string;
     const j = await r.json().catch(() => null);
     if (!r.ok) throw new Error(j?.erro || 'Não foi possível salvar.');
     await carregar();
+  }
+
+  async function salvarDesafios(config: MemoriasDesafiosConfig) {
+    const r = await fetch(`/api/conviteria/memorias/painel?eventoId=${encodeURIComponent(eventoId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` },
+      body: JSON.stringify({ desafios: config }),
+    });
+    const j = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(j?.erro || 'Não foi possível salvar os desafios.');
+    setDados((atual) => atual ? { ...atual, desafios: config } : atual);
   }
 
   async function excluir(id: string) {
@@ -230,7 +243,14 @@ export default function MemoriasPainel({ eventoId, titulo }: { eventoId: string;
             <div className="rounded-2xl border bg-white p-4" style={{ borderColor:'#c0607830' }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color:'#a04a63' }}>Compartilhar com convidados</p><p className="mt-1 break-all text-sm" style={{ color:'#40232c' }}>{dados.urlMemorias}</p><p className="mt-1 text-xs text-[#7c5560]">No dia do evento este QR também aparece automaticamente no canto do slideshow.</p><div className="mt-3 flex flex-wrap gap-2"><a href={dados.urlMemorias} target="_blank" className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium" style={{ borderColor:'#c0607844',color:'#a04a63' }}>Abrir envios <ExternalLink className="h-3 w-3" /></a><a href={dados.urlAlbum} target="_blank" className="inline-flex items-center gap-1 rounded-full bg-[#c06078] px-3 py-2 text-xs font-semibold text-white">Abrir álbum/telão <ExternalLink className="h-3 w-3" /></a><button onClick={() => void baixarTudo()} disabled={baixando || !dados.midias.length} className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium disabled:opacity-50" style={{ borderColor:'#c0607844',color:'#a04a63' }}>{baixando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />} Baixar tudo (.zip)</button></div></div>
           </div>
 
-          {qr && <MateriaisMemorias titulo={titulo} urlMemorias={dados.urlMemorias} qrDataUrl={qr} ornamentoInicial={dados.ornamentoId ?? undefined} />}
+          {qr && <MateriaisMemorias
+            titulo={titulo}
+            urlMemorias={dados.urlMemorias}
+            qrDataUrl={qr}
+            ornamentoInicial={dados.ornamentoId ?? undefined}
+            desafiosInicial={dados.desafios}
+            onSalvarDesafios={salvarDesafios}
+          />}
 
           {erro && <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{erro}</p>}
 

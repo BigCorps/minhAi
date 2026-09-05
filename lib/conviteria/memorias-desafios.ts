@@ -1,15 +1,14 @@
 export const MEMORIAS_DESAFIOS_TITULO_PADRAO = 'Desafio';
 
 export const MEMORIAS_DESAFIOS_SUGERIDOS = [
-  { id: 'selfie-anfitrioes', texto: 'Uma selfie sorrindo com os anfitriões' },
-  { id: 'detalhe-lugar', texto: 'Foto do detalhe mais bonito do lugar' },
-  { id: 'nova-amizade', texto: 'Uma foto com alguém que você acabou de conhecer' },
-  { id: 'geracoes', texto: 'Foto com três gerações juntas' },
-  { id: 'abraco', texto: 'Foto de um abraço inesperado' },
-  { id: 'animado', texto: 'Registre o momento mais animado da festa' },
-  { id: 'engracada', texto: 'Faça a foto mais engraçada da noite' },
-  { id: 'brinde', texto: 'Registre o brinde da sua mesa' },
-  { id: 'favorito', texto: 'Registre o que mais gostou na festa' },
+  { id: 'selfie-anfitrioes', texto: 'Uma foto em grupo da sua mesa' },
+  { id: 'detalhe-lugar', texto: 'Um momento engraçado' },
+  { id: 'nova-amizade', texto: 'Os noivos se beijando' },
+  { id: 'geracoes', texto: 'Sorrisos' },
+  { id: 'abraco', texto: 'Alguém fazendo um brinde' },
+  { id: 'animado', texto: 'Os mais velhos se divertindo' },
+  { id: 'engracada', texto: 'O melhor momento na pista de dança' },
+  { id: 'brinde', texto: 'Uma selfie engraçada' },
 ] as const;
 
 export const MEMORIAS_DESAFIOS_MAX = MEMORIAS_DESAFIOS_SUGERIDOS.length;

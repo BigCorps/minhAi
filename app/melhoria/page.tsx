@@ -42,6 +42,11 @@ import { R } from '@/lib/melhoria/rotas';
 import { Rodape } from '@/components/melhoria/Chrome';
 import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
 
+// Link da ficha na Play Store. O id é o package_name declarado no Play Console
+// e em app/.well-known/assetlinks.json — os três precisam ser idênticos.
+const MELHORIA_PLAY_URL =
+  'https://play.google.com/store/apps/details?id=org.melhoria.twa';
+
 const RECURSOS = [
   {
     Icone: Bell,
@@ -121,21 +126,52 @@ export default function LandingMelhorIA() {
           </span>
         </span>
 
-        {/* <a> comum, não <Link>: precisa ser carregamento completo (ver o
-            comentário no topo do arquivo sobre o Clarity). */}
-        <a
-          href={R.login()}
-          style={{
-            minHeight: toque.min,
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            padding: `0 ${espaco.md}px`, borderRadius: raio.botao,
-            border: `2px solid ${cor.borda}`, color: cor.destaqueTexto,
-            fontSize: 19, fontWeight: 700, textDecoration: 'none',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          Entrar
-        </a>
+        <span style={{
+          display: 'flex', alignItems: 'center', gap: espaco.xs, minWidth: 0,
+        }}>
+          {/* Selo da Play Store — mesma arte e mesmas medidas do PixWiki e do
+              ConsultaTec (/cards/play.png, 62px no mobile, 108px no desktop).
+
+              ⚠️ width/height declarados como 1760x537, que é o tamanho REAL do
+              arquivo. O PixWiki e o ConsultaTec declaram 1760x134, o que dá uma
+              proporção de 13:1 em vez de 3,3:1 — o Next reserva a altura errada
+              e o selo provoca deslocamento de layout ao carregar. Vale corrigir
+              lá também. */}
+          <a
+            href={MELHORIA_PLAY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Baixar a MelhorIA no Google Play"
+            title="Disponível no Google Play"
+            className="inline-flex shrink-0 items-center justify-center rounded-md transition hover:opacity-90"
+          >
+            <Image
+              src="/cards/play.png"
+              alt="Disponível no Google Play"
+              width={1760}
+              height={537}
+              sizes="(max-width: 639px) 62px, 108px"
+              className="h-auto w-[62px] max-w-none sm:w-[108px]"
+              priority
+            />
+          </a>
+
+          {/* <a> comum, não <Link>: precisa ser carregamento completo (ver o
+              comentário no topo do arquivo sobre o Clarity). */}
+          <a
+            href={R.login()}
+            style={{
+              minHeight: toque.min,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              padding: `0 ${espaco.md}px`, borderRadius: raio.botao,
+              border: `2px solid ${cor.borda}`, color: cor.destaqueTexto,
+              fontSize: 19, fontWeight: 700, textDecoration: 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Entrar
+          </a>
+        </span>
       </header>
 
       {/* ── Chamada ── */}
@@ -290,6 +326,68 @@ export default function LandingMelhorIA() {
         Criar minha conta grátis
         <ArrowRight size={32} aria-hidden="true" />
       </button>
+
+      {/* ── Instalar pela Play Store ────────────────────────────────────────
+          Este bloco não é decoração nem repetição do selo do topo.
+
+          A notificação de lembrete é MUITO mais confiável no aplicativo
+          instalado que na aba do navegador: o Android suspende aba em segundo
+          plano de forma agressiva, e no iOS o push web depende de a pessoa ter
+          adicionado à tela de início. Num produto cujo núcleo é avisar na hora
+          do remédio, levar a pessoa para o app instalado não é preferência de
+          canal — é confiabilidade do que a gente promete.
+
+          Por isso o selo aparece grande aqui embaixo, para quem leu a página
+          inteira, e não só pequeno no cabeçalho.                             */}
+      <section style={{
+        background: cor.destaqueSuave,
+        border: `2px solid ${cor.destaque}`,
+        borderRadius: raio.card,
+        padding: espaco.lg,
+        marginTop: espaco.xl,
+      }}>
+        <h2 style={{
+          fontSize: 24, fontWeight: 800, color: cor.destaqueTexto,
+          margin: `0 0 ${espaco.xs}px`, lineHeight: 1.3,
+        }}>
+          Prefere instalar o aplicativo?
+        </h2>
+
+        <p style={{
+          fontSize: 20, color: cor.destaqueTexto, lineHeight: 1.5,
+          margin: `0 0 ${espaco.md}px`,
+        }}>
+          O lembrete chega com mais segurança no aplicativo instalado do que
+          pelo navegador. É grátis e são poucos toques.
+        </p>
+
+        <a
+          href={MELHORIA_PLAY_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Baixar a MelhorIA no Google Play"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            // Alvo de toque generoso: o selo é uma imagem, e a área clicável
+            // dele por si só ficaria abaixo dos 64px que o resto do app usa.
+            minHeight: toque.confortavel,
+            padding: `${espaco.xs}px ${espaco.sm}px`,
+            borderRadius: raio.botao,
+            background: cor.fundo,
+            border: `2px solid ${cor.destaque}`,
+            textDecoration: 'none',
+          }}
+        >
+          <Image
+            src="/cards/play.png"
+            alt="Disponível no Google Play"
+            width={1760}
+            height={537}
+            sizes="(max-width: 639px) 180px, 220px"
+            className="h-auto w-[180px] max-w-none sm:w-[220px]"
+          />
+        </a>
+      </section>
 
       <Rodape />
     </main>

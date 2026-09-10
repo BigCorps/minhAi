@@ -3,8 +3,8 @@
 //
 // Banner de consentimento de cookies (LGPD). Não inicializa o Clarity —
 // isso já é feito em outro lugar (ClarityInit.tsx, conforme o relatório
-// de implementação). Esse componente informa a escolha ao Clarity e também
-// ao Google Consent Mode v2 usado pelos GTMs das marcas.
+// de implementação). Esse componente informa a escolha ao Clarity, ao
+// Google Consent Mode v2 e aos pixels publicitários das marcas.
 //
 // Guarda a escolha em localStorage — o banner não aparece de novo depois
 // que o usuário decide, em nenhum dos dois casos (aceitar ou recusar).
@@ -18,6 +18,7 @@ import {
   ANALYTICS_CONSENT_STORAGE_KEY,
   applyGoogleConsent,
 } from '@/lib/analytics';
+import { announceAnalyticsConsent } from '@/lib/meta-pixel';
 
 function applyConsent(granted: boolean) {
   try {
@@ -33,6 +34,11 @@ function applyConsent(granted: boolean) {
   // O GTM pode não existir neste host (ex.: minhAi principal). A função é
   // segura nesses casos e apenas prepara/atualiza o estado quando necessário.
   applyGoogleConsent(granted ? 'granted' : 'denied');
+
+  // Avisa integrações client-side (ex.: Meta Pixel da ConviteIA) imediatamente
+  // na mesma aba. O evento `storage` do browser não é disparado na aba que fez
+  // a própria alteração, por isso usamos um CustomEvent explícito.
+  announceAnalyticsConsent(granted);
 }
 
 export default function CookieConsentBanner() {

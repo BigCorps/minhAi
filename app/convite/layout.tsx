@@ -2,6 +2,7 @@
 import { headers } from 'next/headers';
 import type { Metadata } from 'next';
 import JsonLd from '@/components/JsonLd';
+import ConviteMetaPixel from '@/components/analytics/ConviteMetaPixel';
 import { buildBrandMetadata, conviteiaGraph, resolveSeo } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -60,6 +61,7 @@ export default async function ConviteLayout({
   return (
     <>
       {showGraph && <JsonLd data={conviteiaGraph()} />}
+      {showGraph && <ConviteMetaPixel />}
       {children}
     </>
   );

@@ -9,6 +9,11 @@ import {
   MonitorPlay, QrCode, Video,
 } from 'lucide-react';
 import { MARCA } from '@/lib/conviteria/marca';
+import { trackEventOnce } from '@/lib/analytics';
+import {
+  trackConviteIAMetaInitiateCheckout,
+  trackConviteIAMetaPurchase,
+} from '@/lib/meta-pixel';
 
 const cor = {
   fora: '#ffffff', papel: '#fdf0f3', acento: '#c06078', acentoTexto: '#a04a63',
@@ -28,6 +33,7 @@ type Info = {
   memorias: { precoCentavos: number; status: string; ativas: boolean; expiraEm: string | null };
 };
 type Cobranca = {
+  transactionId: string;
   valorCentavos: number;
   conviteCentavos: number;
   memoriasCentavos: number;
@@ -106,6 +112,32 @@ function PagarConteudo() {
     if (!r.ok) return false;
     const j = await r.json();
     if (j.concluido) {
+      if (cobranca) {
+        const value = cobranca.valorCentavos / 100;
+        const itemName = cobranca.incluiMemorias
+          ? 'Convite + Memórias do Evento'
+          : 'ConviteIA';
+
+        // Usa a mesma chave de deduplicação que o fallback legado de
+        // ProductAnalytics. Como este trecho roda antes de a tela de sucesso
+        // aparecer, o evento correto (valor real + transaction_id do PIX)
+        // vence e impede o fallback fixo de R$ 29,90 de duplicar a compra.
+        trackEventOnce(`conviteia:purchase:${eventoId}`, 'purchase', {
+          product: 'conviteia',
+          currency: 'BRL',
+          value,
+          item_name: itemName,
+          item_category: cobranca.incluiMemorias ? 'invite_with_memories' : 'invite',
+          transaction_id: cobranca.transactionId,
+        });
+
+        trackConviteIAMetaPurchase({
+          transactionId: cobranca.transactionId,
+          value,
+          includesMemories: cobranca.incluiMemorias,
+        });
+      }
+
       localStorage.removeItem('conviteia:rascunho');
       setUrlConvite(j.url);
       setPasso('sucesso');
@@ -113,7 +145,7 @@ function PagarConteudo() {
       return true;
     }
     return false;
-  }, [autorizacao, eventoId, cobranca?.incluiMemorias, incluirMemorias, carregarInfo]);
+  }, [autorizacao, eventoId, cobranca, incluirMemorias, carregarInfo]);
 
   async function continuar() {
     if (!info || !eventoId) return;
@@ -143,14 +175,25 @@ function PagarConteudo() {
     if (j.semCobranca) {
       setUrlConvite(info.url); setPasso('sucesso'); return;
     }
-    setCobranca({
+
+    const proximaCobranca: Cobranca = {
+      transactionId: String(j.transactionId),
       valorCentavos: Number(j.valorCentavos),
       conviteCentavos: Number(j.conviteCentavos || 0),
       memoriasCentavos: Number(j.memoriasCentavos || 0),
       incluiMemorias: Boolean(j.incluiMemorias),
       qrcode: j.qrcode,
       copiaECola: j.copiaECola,
+    };
+
+    setCobranca(proximaCobranca);
+
+    trackConviteIAMetaInitiateCheckout({
+      transactionId: proximaCobranca.transactionId,
+      value: proximaCobranca.valorCentavos / 100,
+      includesMemories: proximaCobranca.incluiMemorias,
     });
+
     setPasso('pix');
   }
 

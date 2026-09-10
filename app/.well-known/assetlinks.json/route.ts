@@ -172,14 +172,23 @@ const ASSETLINKS_BY_HOST: Record<string, any[]> = {
   // ── FuncionarIA (a publicar) ───────────────────────────────────────────────
   'funcionaria.net': [
     {
-      relation: ['delegate_permission/common.handle_all_urls'],
+      relation: [
+        'delegate_permission/common.handle_all_urls',
+        'delegate_permission/common.get_login_creds',
+      ],
       target: {
         namespace: 'android_app',
         package_name: 'net.funcionaria.twa',
-        sha256_cert_fingerprints: [],
+        sha256_cert_fingerprints: [
+          // Fornecidos pelo Play Console (assinatura do app + chaves adicionais)
+          '96:D0:39:62:C6:D6:18:BA:0B:D9:D9:10:8F:89:23:CE:61:6A:3E:80:B0:C1:F8:5E:00:5F:73:B0:E0:06:B9:ED',
+          '25:F9:7C:7B:D6:99:19:22:2B:EA:74:92:13:2C:AE:EC:5B:CB:E9:4C:26:8A:97:9F:A1:82:98:09:11:CA:CE:17',
+          'FA:AC:9F:77:64:3D:16:AA:AA:C0:00:D6:87:A8:41:8A:F0:BC:D8:A2:B9:3A:65:75:45:C3:C8:B0:FE:97:32:11',
+          // Chave de upload — extraída do app-release-bundle.aab com keytool
+          '67:1B:31:B9:7E:98:64:70:71:D2:3B:FA:A6:16:32:07:FF:6F:60:BE:2A:8E:26:6B:80:BF:AF:94:13:39:7F:75',
+        ],
       },
     },
-  ],
   
   // ── Pix Wiki (ativo) ───────────────────────────────────────────────────────
   'pix.wiki': [

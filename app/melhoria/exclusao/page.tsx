@@ -1,23 +1,12 @@
 'use client';
 
 // app/melhoria/exclusao/page.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Exclusão de conta e dados. Porte fiel do fluxo do ConsultaTec — mesma edge
-// function `delete-user-data`, só muda a marca e o tema.
-//
-// A Play Store EXIGE que esta página seja acessível de duas formas: por dentro
-// do aplicativo e por uma URL pública, sem login. Por isso a página abre e
-// explica tudo mesmo para quem não está logado — só o botão fica indisponível.
-//
-// O texto evita a armadilha de tratar exclusão como coisa banal: aqui apagar a
-// conta significa parar de ser lembrado de tomar remédio, e a pessoa precisa
-// entender isso ANTES de confirmar.
-// ─────────────────────────────────────────────────────────────────────────────
+// Exclusão de conta e dados. Reusa delete-user-data, passando brand=melhoria.
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
+import { melhoriaAuth } from '@/lib/melhoria/supabase';
 import {
   LEGAL_THEMES, LegalShell, LegalFooterLinks, ControladorBox,
   H2, P, UL, LI, Box,
@@ -27,15 +16,15 @@ const T = LEGAL_THEMES.melhoria;
 const CONFIRMACAO = 'apagar minha conta';
 
 export default function ExclusaoMelhorIA() {
-  const [user, setUser]                 = useState<any>(null);
-  const [carregando, setCarregando]     = useState(true);
-  const [apagando, setApagando]         = useState(false);
-  const [confirmando, setConfirmando]   = useState(false);
-  const [texto, setTexto]               = useState('');
-  const [msg, setMsg]                   = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [apagando, setApagando] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
+  const [texto, setTexto] = useState('');
+  const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
 
-  const router   = useRouter();
-  const supabase = createClient();
+  const router = useRouter();
+  const supabase = melhoriaAuth();
 
   useEffect(() => {
     let ativo = true;
@@ -75,9 +64,7 @@ export default function ExclusaoMelhorIA() {
     } catch (e: any) {
       setMsg({
         tipo: 'erro',
-        texto:
-          e?.message ||
-          'Não consegui registrar o pedido. Tente de novo ou escreva para contato@bigcorps.com.br.',
+        texto: e?.message || 'Não consegui registrar o pedido. Tente de novo ou escreva para contato@bigcorps.com.br.',
       });
     } finally {
       setApagando(false);
@@ -169,9 +156,7 @@ export default function ExclusaoMelhorIA() {
 
       {user && (
         <>
-          <P>
-            Conta conectada: <strong>{user.email}</strong>
-          </P>
+          <P>Conta conectada: <strong>{user.email}</strong></P>
 
           {!confirmando ? (
             <button

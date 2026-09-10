@@ -1,26 +1,13 @@
 'use client';
 
 // app/melhoria/perfil/page.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Meus dados. Faltava um lugar para a pessoa dizer como se chama e qual é o
-// telefone dela.
-//
-// Uma distinção que a tela deixa explícita, porque confunde:
-//
-//   · O telefone AQUI é o da própria pessoa. Serve para identificá-la na
-//     mensagem que a família recebe, e para contato. Nós não mandamos SMS
-//     para ele.
-//   · Os telefones que RECEBEM o SMS de emergência ficam em
-//     "Quem avisar se eu precisar de ajuda" (/melhoria/emergencia).
-//
-// Sem isso a pessoa cadastra o próprio número achando que vai receber o
-// aviso — e na hora da emergência ninguém é avisado.
-// ─────────────────────────────────────────────────────────────────────────────
+// Meus dados + retirada do consentimento específico de saúde.
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Check, Loader2, Phone, Type, Volume2, ArrowRight, LogOut, Coins,
+  ShieldX, AlertTriangle,
 } from 'lucide-react';
 import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CampoComDitado from '@/components/melhoria/CampoComDitado';
@@ -33,37 +20,44 @@ import {
 } from '@/lib/melhoria/tema';
 
 const TAMANHOS: { v: TamanhoFonte; r: string; px: number }[] = [
-  { v: 'normal',  r: 'Normal',  px: 20 },
-  { v: 'grande',  r: 'Grande',  px: 24 },
+  { v: 'normal', r: 'Normal', px: 20 },
+  { v: 'grande', r: 'Grande', px: 24 },
   { v: 'gigante', r: 'Gigante', px: 28 },
 ];
 
+const FRASE_REVOGAR = 'RETIRAR AUTORIZAÇÃO';
+
 export default function PerfilPage() {
-  const router   = useRouter();
+  const router = useRouter();
   const supabase = melhoriaAuth();
-  const mel      = createMelhoriaClient();
+  const mel = createMelhoriaClient();
 
   const [carregando, setCarregando] = useState(true);
-  const [salvando, setSalvando]     = useState(false);
-  const [salvou, setSalvou]         = useState(false);
-  const [erro, setErro]             = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [salvou, setSalvou] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   const [perfilId, setPerfilId] = useState<string | null>(null);
-  const [nome, setNome]         = useState('');
+  const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
   const [nascimento, setNascimento] = useState('');
-  const [tamanho, setTamanho]   = useState<TamanhoFonte>('grande');
-  const [falar, setFalar]       = useState(false);
-  const [email, setEmail]       = useState('');
-  const [saldo, setSaldo]       = useState<number | null>(null);
-  const [saindo, setSaindo]     = useState(false);
+  const [tamanho, setTamanho] = useState<TamanhoFonte>('grande');
+  const [falar, setFalar] = useState(false);
+  const [email, setEmail] = useState('');
+  const [saldo, setSaldo] = useState<number | null>(null);
+  const [saindo, setSaindo] = useState(false);
+
+  const [consentiuSaude, setConsentiuSaude] = useState(false);
+  const [confirmarRevogacao, setConfirmarRevogacao] = useState(false);
+  const [textoRevogacao, setTextoRevogacao] = useState('');
+  const [revogando, setRevogando] = useState(false);
+  const [msgRevogacao, setMsgRevogacao] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     const { data: sessao } = await supabase.auth.getUser();
     if (!sessao?.user) { router.replace(R.login()); return; }
     setEmail(sessao.user.email ?? '');
 
-    // Saldo aqui, e não na tela inicial: é onde quem quer saber vem procurar.
     supabase
       .from('user_credits')
       .select('available_credits')
@@ -74,23 +68,20 @@ export default function PerfilPage() {
 
     const { data } = await mel
       .from('perfis')
-      .select('id, nome, telefone, data_nascimento, tamanho_fonte, falar_confirmacoes')
+      .select('id, nome, telefone, data_nascimento, tamanho_fonte, falar_confirmacoes, consentiu_saude_em')
       .limit(1);
 
     const p = data?.[0];
     if (p) {
       setPerfilId(p.id);
-      // "Meu perfil" é o nome provisório que a RPC cria. Não faz sentido
-      // mostrar isso num campo que pede o nome da pessoa.
       setNome(p.nome === 'Meu perfil' ? '' : (p.nome ?? ''));
       setTelefone(p.telefone ?? '');
       setNascimento(p.data_nascimento ?? '');
-      // O banco é a fonte da verdade entre aparelhos; o localStorage é o
-      // cache que evita o pulo visual. Sincroniza os dois aqui.
       const doBanco = (p.tamanho_fonte as TamanhoFonte) ?? 'grande';
       setTamanho(doBanco);
       aplicarEscala(doBanco);
       setFalar(!!p.falar_confirmacoes);
+      setConsentiuSaude(!!p.consentiu_saude_em);
     }
     setCarregando(false);
   }, [supabase, mel, router]);
@@ -111,8 +102,6 @@ export default function PerfilPage() {
     }
 
     if (!perfilId) {
-      // Sem isto, um update com id nulo não casa com nenhuma linha, NÃO
-      // devolve erro, e a tela mostra "Salvo" sem ter salvo nada.
       setErro('Ainda estou carregando sua conta. Tente de novo em instantes.');
       return;
     }
@@ -142,6 +131,39 @@ export default function PerfilPage() {
     setTimeout(() => setSalvou(false), 4000);
   }
 
+  async function revogarConsentimento() {
+    if (textoRevogacao.trim().toUpperCase() !== FRASE_REVOGAR) {
+      setMsgRevogacao(`Escreva “${FRASE_REVOGAR}” para confirmar.`);
+      return;
+    }
+
+    setRevogando(true);
+    setMsgRevogacao(null);
+
+    try {
+      const r = await fetch('/api/melhoria/revogar-consentimento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmacao: FRASE_REVOGAR }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j?.erro ?? 'falhou');
+
+      setConsentiuSaude(false);
+      setConfirmarRevogacao(false);
+      setTextoRevogacao('');
+      setMsgRevogacao(
+        'Autorização retirada. Seus remédios, doses, consultas, exames e documentos de saúde foram apagados do MelhorIA.'
+      );
+    } catch (e: any) {
+      setMsgRevogacao(
+        e?.message || 'Não consegui concluir agora. Tente novamente em instantes.'
+      );
+    } finally {
+      setRevogando(false);
+    }
+  }
+
   if (carregando) {
     return <Pagina voltarPara={R.app()} semRodape><Carregando /></Pagina>;
   }
@@ -169,8 +191,6 @@ export default function PerfilPage() {
         aoMudar={(v) => { setTelefone(v); setErro(null); }}
       />
 
-      {/* A confusão mais provável do aplicativo, resolvida no ponto exato onde
-          ela aconteceria. */}
       <div style={{
         background: cor.destaqueSuave, border: `2px solid ${cor.destaque}`,
         borderRadius: raio.card, padding: espaco.md, margin: `0 0 ${espaco.lg}px`,
@@ -213,7 +233,6 @@ export default function PerfilPage() {
         aoMudar={setNascimento}
       />
 
-      {/* ── Tamanho da letra ── */}
       <fieldset style={{ border: 'none', padding: 0, margin: `0 0 ${espaco.lg}px` }}>
         <legend style={{
           display: 'flex', alignItems: 'center', gap: espaco.xs,
@@ -230,10 +249,6 @@ export default function PerfilPage() {
               key={t.v}
               type="button"
               onClick={() => {
-                // Aplica no mesmo instante e grava. A versão anterior só
-                // guardava no estado e esperava o botão Salvar — como nenhuma
-                // tela usava a escala, o clique parecia não fazer nada e o
-                // valor "voltava" ao recarregar.
                 setTamanho(t.v);
                 aplicarEscala(t.v);
                 if (perfilId) {
@@ -248,8 +263,6 @@ export default function PerfilPage() {
                 border: `3px solid ${tamanho === t.v ? cor.destaque : cor.borda}`,
                 background: tamanho === t.v ? cor.destaqueSuave : cor.fundo,
                 color: cor.tinta, cursor: 'pointer',
-                // Mostra o tamanho no próprio botão: a pessoa vê o resultado
-                // antes de escolher, em vez de adivinhar pelo rótulo.
                 fontSize: t.px, fontWeight: 700,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}
@@ -261,7 +274,6 @@ export default function PerfilPage() {
         </div>
       </fieldset>
 
-      {/* ── Falar confirmações ── */}
       <button
         type="button"
         onClick={() => setFalar((v) => !v)}
@@ -288,7 +300,6 @@ export default function PerfilPage() {
         </span>
       </button>
 
-      {/* Créditos: entrada discreta, para quem foi procurar. */}
       {saldo !== null && (
         <button
           type="button"
@@ -361,20 +372,120 @@ export default function PerfilPage() {
             : 'Salvar'}
       </button>
 
-      {/* Sair. Faltava por completo — não havia como trocar de conta nem
-          voltar para a landing depois de entrar. Fica separado do Salvar por
-          uma linha e um espaço grande, para ninguém tocar sem querer. */}
-      <div style={{
-        borderTop: `2px solid ${cor.borda}`,
-        marginTop: espaco.xl, paddingTop: espaco.lg,
-      }}>
+      <div style={{ borderTop: `2px solid ${cor.borda}`, marginTop: espaco.xl, paddingTop: espaco.lg }}>
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: cor.tinta, margin: `0 0 ${espaco.sm}px` }}>
+          Privacidade dos dados de saúde
+        </h2>
+
+        {consentiuSaude ? (
+          <>
+            <p style={{ fontSize: 19, color: cor.tintaMuted, lineHeight: 1.5, margin: `0 0 ${espaco.md}px` }}>
+              Você pode retirar a autorização a qualquer momento. Isso apaga do MelhorIA seus remédios,
+              histórico de doses, consultas, exames e documentos de saúde. Sua conta, créditos e contatos
+              de emergência continuam existindo.
+            </p>
+
+            {!confirmarRevogacao ? (
+              <button
+                type="button"
+                onClick={() => { setConfirmarRevogacao(true); setMsgRevogacao(null); }}
+                style={{
+                  minHeight: toque.confortavel, width: '100%',
+                  borderRadius: raio.botao, border: `2px solid ${cor.perigo}`,
+                  background: cor.perigoBg, color: cor.perigoTexto,
+                  fontSize: 20, fontWeight: 800, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: espaco.xs,
+                }}
+              >
+                <ShieldX size={28} aria-hidden="true" /> Retirar autorização de saúde
+              </button>
+            ) : (
+              <div style={{
+                border: `2px solid ${cor.perigo}`,
+                background: cor.perigoBg,
+                borderRadius: raio.card,
+                padding: espaco.md,
+              }}>
+                <p style={{
+                  display: 'flex', gap: espaco.xs, alignItems: 'flex-start',
+                  color: cor.perigoTexto, fontSize: 19, fontWeight: 700,
+                  lineHeight: 1.45, margin: `0 0 ${espaco.md}px`,
+                }}>
+                  <AlertTriangle size={26} style={{ flexShrink: 0 }} aria-hidden="true" />
+                  <span>Os lembretes de remédio e de consultas vão parar. Esta exclusão dos dados de saúde não tem volta.</span>
+                </p>
+                <label htmlFor="revogar-saude" style={{ display: 'block', fontSize: 18, fontWeight: 700, color: cor.tinta, marginBottom: 6 }}>
+                  Para confirmar, escreva: {FRASE_REVOGAR}
+                </label>
+                <input
+                  id="revogar-saude"
+                  value={textoRevogacao}
+                  onChange={(e) => setTextoRevogacao(e.target.value)}
+                  autoComplete="off"
+                  style={{
+                    minHeight: toque.min, width: '100%', padding: `0 ${espaco.sm}px`,
+                    borderRadius: raio.campo, border: `2px solid ${cor.bordaForte}`,
+                    background: cor.fundo, color: cor.tinta, fontSize: 20,
+                  }}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: espaco.sm, marginTop: espaco.md }}>
+                  <button
+                    type="button"
+                    onClick={() => { setConfirmarRevogacao(false); setTextoRevogacao(''); setMsgRevogacao(null); }}
+                    disabled={revogando}
+                    style={{
+                      minHeight: toque.min, borderRadius: raio.botao,
+                      border: `2px solid ${cor.borda}`, background: cor.fundo,
+                      color: cor.tinta, fontSize: 19, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={revogarConsentimento}
+                    disabled={revogando}
+                    style={{
+                      minHeight: toque.min, borderRadius: raio.botao,
+                      border: 'none', background: cor.perigo,
+                      color: '#FFFFFF', fontSize: 19, fontWeight: 800, cursor: 'pointer',
+                    }}
+                  >
+                    {revogando ? 'Apagando...' : 'Confirmar'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <p style={{
+            background: cor.destaqueSuave, color: cor.destaqueTexto,
+            borderRadius: raio.card, padding: espaco.md,
+            fontSize: 19, fontWeight: 600, lineHeight: 1.45,
+          }}>
+            A autorização para guardar dados de saúde está desativada. Para voltar a usar
+            lembretes e histórico, entre em “Meu dia” e autorize novamente.
+          </p>
+        )}
+
+        {msgRevogacao && (
+          <p role="status" style={{
+            marginTop: espaco.md, padding: espaco.md,
+            borderRadius: raio.card, background: consentiuSaude ? cor.atencaoBg : cor.destaqueSuave,
+            color: consentiuSaude ? cor.atencaoTexto : cor.destaqueTexto,
+            fontSize: 19, fontWeight: 700, lineHeight: 1.45,
+          }}>
+            {msgRevogacao}
+          </p>
+        )}
+      </div>
+
+      <div style={{ borderTop: `2px solid ${cor.borda}`, marginTop: espaco.xl, paddingTop: espaco.lg }}>
         <button
           type="button"
           onClick={async () => {
             setSaindo(true);
             await supabase.auth.signOut();
-            // Volta para a landing, não para o login: quem sai pode estar
-            // apenas querendo mostrar o aplicativo para outra pessoa.
             router.replace(R.landing());
           }}
           disabled={saindo}

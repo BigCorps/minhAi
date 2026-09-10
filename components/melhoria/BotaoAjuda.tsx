@@ -1,24 +1,5 @@
 'use client';
 
-// components/melhoria/BotaoAjuda.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Substitui o botão flutuante vermelho. Agora vive no cabeçalho, à direita.
-//
-// ── TRÊS ESTADOS, E O DO MEIO É O QUE IMPORTA ───────────────────────────────
-//
-//   sem contato  → botão âmbar "Configurar ajuda", leva para /emergencia
-//   com contato  → botão vermelho "AJUDA", dispara
-//   sem sessão   → não aparece (o componente nem é montado no login)
-//
-// O estado do meio existe porque um botão de emergência que não avisa ninguém
-// é pior que nenhum botão: ele cria uma confiança falsa. Alguém pode passar
-// meses achando que tem socorro a um toque, e descobrir que não tem
-// exatamente na hora em que precisa.
-//
-// Enquanto não sabemos se há contato, o botão não é renderizado — em vez de
-// aparecer vermelho e mudar depois.
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
@@ -29,21 +10,28 @@ import { cor, toque, raio, espaco } from '@/lib/melhoria/tema';
 
 const SEGUNDOS = 5;
 
-interface Notificado { nome: string; canal: string; status: 'enviado' | 'sem_credito' | 'falhou'; }
+interface Notificado {
+  nome: string;
+  canal: string;
+  status: 'enviado' | 'sem_credito' | 'falhou';
+}
+
 interface Resultado {
-  pushEnviados: number; smsEnviados: number; bloqueados: number;
-  notificados: Notificado[]; semContatos: boolean;
+  pushEnviados: number;
+  smsEnviados: number;
+  bloqueados: number;
+  notificados: Notificado[];
+  semContatos: boolean;
 }
 
 export default function BotaoAjuda() {
-  const router   = useRouter();
+  const router = useRouter();
   const supabase = melhoriaAuth();
-  const mel      = createMelhoriaClient();
+  const mel = createMelhoriaClient();
 
-  // null = ainda não sabemos. Não renderiza nada nesse estado.
   const [temContato, setTemContato] = useState<boolean | null>(null);
-  const [montado, setMontado]   = useState(false);
-  const [aberto, setAberto]     = useState(false);
+  const [montado, setMontado] = useState(false);
+  const [aberto, setAberto] = useState(false);
   const [restante, setRestante] = useState(SEGUNDOS);
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<Resultado | null>(null);
@@ -54,7 +42,6 @@ export default function BotaoAjuda() {
 
   useEffect(() => { setMontado(true); }, []);
 
-  // Consulta leve: só o count, e só uma vez por montagem.
   useEffect(() => {
     let vivo = true;
     (async () => {
@@ -89,8 +76,10 @@ export default function BotaoAjuda() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          latitude: c?.latitude, longitude: c?.longitude,
-          precisao: c?.accuracy, origem: 'botao',
+          latitude: c?.latitude,
+          longitude: c?.longitude,
+          precisao: c?.accuracy,
+          origem: 'botao',
         }),
       });
       const dados = await r.json();
@@ -112,7 +101,7 @@ export default function BotaoAjuda() {
       setRestante((s) => {
         if (s <= 1) {
           if (timerRef.current) clearInterval(timerRef.current);
-          disparar();
+          void disparar();
           return 0;
         }
         return s - 1;
@@ -131,7 +120,6 @@ export default function BotaoAjuda() {
 
   if (!montado || temContato === null) return null;
 
-  // ── Sem contato: convite para configurar, não botão de pânico ────────────
   if (!temContato) {
     return (
       <button
@@ -149,16 +137,11 @@ export default function BotaoAjuda() {
         }}
       >
         <UserPlus size={24} aria-hidden="true" style={{ flexShrink: 0 }} />
-        {/* A palavra some em tela estreita; o ícone e o aria-label ficam.
-            Antes o texto em duas linhas empurrava o botão para fora da tela. */}
-        <span className="mel-rotulo-ajuda" style={{ whiteSpace: 'nowrap' }}>
-          Configurar
-        </span>
+        <span className="mel-rotulo-ajuda" style={{ whiteSpace: 'nowrap' }}>Configurar</span>
       </button>
     );
   }
 
-  // ── Com contato: o botão de verdade ─────────────────────────────────────
   const botao = (
     <button
       type="button"
@@ -178,6 +161,8 @@ export default function BotaoAjuda() {
       <span className="mel-rotulo-ajuda" style={{ whiteSpace: 'nowrap' }}>AJUDA</span>
     </button>
   );
+
+  const houveEnvio = !!resultado && (resultado.pushEnviados > 0 || resultado.smsEnviados > 0);
 
   const painel = aberto && montado && createPortal(
     <div
@@ -244,10 +229,24 @@ export default function BotaoAjuda() {
               display: 'flex', flexDirection: 'column', alignItems: 'center',
               marginBottom: espaco.md,
             }}>
-              <Check size={72} strokeWidth={3} style={{ color: cor.okTexto }} aria-hidden="true" />
-              <p style={{ fontSize: 30, fontWeight: 800, color: cor.tinta, margin: `${espaco.xs}px 0 0` }}>
-                Avisamos sua família
+              {houveEnvio
+                ? <Check size={72} strokeWidth={3} style={{ color: cor.okTexto }} aria-hidden="true" />
+                : <AlertTriangle size={72} strokeWidth={2.5} style={{ color: cor.perigo }} aria-hidden="true" />}
+              <p role="status" style={{
+                fontSize: 30, fontWeight: 800,
+                color: houveEnvio ? cor.tinta : cor.perigoTexto,
+                margin: `${espaco.xs}px 0 0`, textAlign: 'center',
+              }}>
+                {houveEnvio ? 'Avisamos sua família' : 'Não consegui avisar sua família'}
               </p>
+              {!houveEnvio && (
+                <p style={{
+                  fontSize: 20, color: cor.perigoTexto, textAlign: 'center',
+                  lineHeight: 1.4, margin: `${espaco.xs}px 0 0`,
+                }}>
+                  Não conte com este envio. Se precisar de ajuda agora, ligue diretamente para um serviço de emergência.
+                </p>
+              )}
             </div>
 
             <ul style={{ margin: `0 0 ${espaco.md}px`, padding: 0, listStyle: 'none' }}>
@@ -265,10 +264,16 @@ export default function BotaoAjuda() {
                   {n.status === 'enviado'
                     ? `Mensagem enviada para ${n.nome}`
                     : n.status === 'sem_credito'
-                      ? `${n.nome}: mensagem não enviada, seus usos acabaram`
-                      : `${n.nome}: a mensagem não chegou`}
+                      ? `${n.nome}: SMS não enviado porque os créditos acabaram`
+                      : `${n.nome}: o SMS não chegou`}
                 </li>
               ))}
+              {resultado.semContatos && (
+                <li style={itemPendente}>
+                  <AlertTriangle size={26} aria-hidden="true" style={{ flexShrink: 0 }} />
+                  Nenhum contato de emergência ativo foi encontrado.
+                </li>
+              )}
             </ul>
 
             <p style={{
@@ -304,7 +309,6 @@ export default function BotaoAjuda() {
   return <>{botao}{painel}</>;
 }
 
-/** 192 e 190 sempre visíveis: o app avisa a família, ele não é o SAMU. */
 function Emergencias() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: espaco.sm }}>

@@ -1,30 +1,6 @@
 // app/api/melhoria/panico/route.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// Disparo do botão de emergência.
-//
-// ── O QUE FOI REAPROVEITADO DA minhAi ───────────────────────────────────────
-// A edge function `send-sms-gerente` é usada EXATAMENTE como o
-// EnviarSmsDisplay a usa, com o mesmo payload:
-//     { number, gerente_nome, motivo }
-// Não mexi nela, não criei outra. É a mesma função, o mesmo provedor (API
-// Brasil) e o mesmo formato que já roda em produção.
-//
-// ── O QUE MUDA AQUI, E POR QUÊ ──────────────────────────────────────────────
-// 1. A COBRANÇA. No modal da minhAi, o `send-sms-gerente` é chamado direto do
-//    navegador com a ANON KEY e SEM nenhuma chamada de cobrança — quem debita
-//    é o `register_function_usage`, disparado quando a função é ABERTA. Cinco
-//    SMS com o modal aberto cobram uma vez só. Aqui a cobrança é por
-//    destinatário, no servidor, com `cobrar_credito_se_suficiente`, que é
-//    fail-closed.
-//
-// 2. O ENVIO NÃO PODE SER DO NAVEGADOR. Chamar send-sms-gerente do cliente
-//    significa que qualquer pessoa com o devtools aberto manda SMS de graça,
-//    pulando a cobrança. Numa loja isso é um vazamento pequeno; num app com
-//    botão de emergência é um vetor de abuso.
-//
-// 3. PUSH SEMPRE, SMS SÓ COM CRÉDITO. O botão nunca morre por falta de saldo:
-//    push e aviso no app são grátis e saem sempre. O SMS é a camada paga.
-// ─────────────────────────────────────────────────────────────────────────────
+// Disparo do botão de emergência do MelhorIA.
+// Push é gratuito; SMS é cobrado por destinatário e estornado se o provedor falhar.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -34,8 +10,6 @@ import { montarSmsPanico, mensagemPanicoPadrao, contarSms } from '@/lib/melhoria
 
 export const runtime = 'nodejs';
 
-// Mesmo valor global de assistant_functions.enviar_sms. Não há
-// custom_credits_per_use aqui: a MelhorIA usa o preço da minhAi.
 const CREDITOS_POR_SMS = 2;
 
 interface Contato {
@@ -46,8 +20,15 @@ interface Contato {
 }
 
 async function enviarPush(externalId: string, titulo: string, msg: string, url: string) {
-  const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
-  const key   = process.env.ONESIGNAL_REST_API_KEY;
+  // Credenciais próprias do MelhorIA. O fallback mantém compatibilidade até
+  // as novas variáveis serem cadastradas no Vercel.
+  const appId =
+    process.env.NEXT_PUBLIC_MELHORIA_ONESIGNAL_APP_ID ||
+    process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
+  const key =
+    process.env.MELHORIA_ONESIGNAL_REST_API_KEY ||
+    process.env.ONESIGNAL_REST_API_KEY;
+
   if (!appId || !key) return false;
 
   try {
@@ -64,8 +45,11 @@ async function enviarPush(externalId: string, titulo: string, msg: string, url: 
         priority: 10,
       }),
     });
-    const j = await r.json();
-    return r.ok && !j.errors;
+
+    const j = await r.json().catch(() => ({}));
+    // HTTP 200 com recipients=0 NÃO é entrega. O frontend só pode dizer que
+    // avisou alguém quando existe pelo menos um destinatário real.
+    return r.ok && !j.errors && Number(j.recipients ?? 0) > 0;
   } catch {
     return false;
   }
@@ -74,7 +58,9 @@ async function enviarPush(externalId: string, titulo: string, msg: string, url: 
 export async function POST(req: NextRequest) {
   try {
     const { latitude, longitude, precisao, origem } = (await req.json()) as {
-      latitude?: number; longitude?: number; precisao?: number;
+      latitude?: number;
+      longitude?: number;
+      precisao?: number;
       origem?: 'botao' | 'texto' | 'ditado';
     };
 
@@ -98,18 +84,30 @@ export async function POST(req: NextRequest) {
     const mel = admin.schema('melhoria');
 
     const { data: companies } = await admin
-      .from('companies').select('id')
-      .eq('user_id', sessao.user.id).eq('segment_key', 'melhoria').limit(1);
+      .from('companies')
+      .select('id')
+      .eq('user_id', sessao.user.id)
+      .eq('segment_key', 'melhoria')
+      .limit(1);
+
     const companyId = companies?.[0]?.id;
-    if (!companyId) return NextResponse.json({ erro: 'conta não encontrada' }, { status: 404 });
+    if (!companyId) {
+      return NextResponse.json({ erro: 'conta não encontrada' }, { status: 404 });
+    }
 
     const { data: perfis } = await mel
-      .from('perfis').select('id, nome, mensagem_panico')
-      .eq('company_id', companyId).limit(1);
-    const perfil = perfis?.[0];
-    if (!perfil) return NextResponse.json({ erro: 'perfil não encontrado' }, { status: 404 });
+      .from('perfis')
+      .select('id, nome, mensagem_panico')
+      .eq('company_id', companyId)
+      .limit(1);
 
-    const local = latitude && longitude ? { latitude, longitude } : null;
+    const perfil = perfis?.[0];
+    if (!perfil) {
+      return NextResponse.json({ erro: 'perfil não encontrado' }, { status: 404 });
+    }
+
+    const temLocal = Number.isFinite(latitude) && Number.isFinite(longitude);
+    const local = temLocal ? { latitude: latitude!, longitude: longitude! } : null;
     const texto = montarSmsPanico(
       perfil.mensagem_panico || mensagemPanicoPadrao(perfil.nome),
       local,
@@ -117,9 +115,7 @@ export async function POST(req: NextRequest) {
     const smsPorContato = contarSms(texto);
     const custoPorContato = smsPorContato * CREDITOS_POR_SMS;
 
-    // ── 1. PUSH para os cuidadores — grátis, sempre, primeiro ─────────────
-    // Vem antes do SMS de propósito: é instantâneo e não depende de crédito
-    // nem de operadora. Se tudo o mais falhar, isto já saiu.
+    // 1. Push para cuidadores — grátis e sempre primeiro.
     const { data: cuidadores } = await mel
       .from('cuidadores')
       .select('user_id, nome')
@@ -141,7 +137,7 @@ export async function POST(req: NextRequest) {
       if (ok) pushEnviados++;
     }
 
-    // ── 2. SMS — só com crédito, cobrado por destinatário ─────────────────
+    // 2. SMS — cobra antes de cada destinatário.
     const { data: contatos } = await mel
       .from('contatos_emergencia')
       .select('id, nome, telefone, ordem')
@@ -154,9 +150,6 @@ export async function POST(req: NextRequest) {
     let bloqueados = 0;
 
     for (const contato of (contatos ?? []) as Contato[]) {
-      // Cobra ANTES de mandar. Se o saldo acabar no meio da lista, os
-      // primeiros já receberam e os últimos voltam 'sem_credito' — e a tela
-      // mostra exatamente isso, nome por nome.
       const { data: cobranca } = await admin.rpc('cobrar_credito_se_suficiente', {
         p_company_id: companyId,
         p_function_key: 'enviar_sms',
@@ -168,14 +161,11 @@ export async function POST(req: NextRequest) {
 
       if (!res?.sucesso) {
         bloqueados++;
-        notificados.push({
-          nome: contato.nome, canal: 'sms', status: 'sem_credito',
-        });
+        notificados.push({ nome: contato.nome, canal: 'sms', status: 'sem_credito' });
         continue;
       }
 
       try {
-        // Mesmo payload do EnviarSmsDisplay. Não inventamos formato novo.
         const r = await fetch(
           `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-sms-gerente`,
           {
@@ -192,15 +182,13 @@ export async function POST(req: NextRequest) {
           },
         );
 
-        const resultado = await r.json();
-
+        const resultado = await r.json().catch(() => ({}));
         if (!r.ok || resultado?.error) throw new Error(resultado?.error ?? 'falhou');
 
         smsEnviados++;
         notificados.push({ nome: contato.nome, canal: 'sms', status: 'enviado' });
       } catch (e) {
-        // Não entregou: devolve o crédito. Cobrar por SMS que não saiu é
-        // errado, e neste contexto é especialmente errado.
+        // Não entregou: devolve o crédito.
         await admin.rpc('cobrar_credito_se_suficiente', {
           p_company_id: companyId,
           p_function_key: 'enviar_sms',
@@ -209,20 +197,23 @@ export async function POST(req: NextRequest) {
         });
 
         notificados.push({
-          nome: contato.nome, canal: 'sms', status: 'falhou', erro: String(e).slice(0, 120),
+          nome: contato.nome,
+          canal: 'sms',
+          status: 'falhou',
+          erro: String(e).slice(0, 120),
         });
       }
     }
 
-    // ── 3. Registro ───────────────────────────────────────────────────────
+    // 3. Registro do disparo.
     const { data: evento } = await mel
       .from('panico_eventos')
       .insert({
         perfil_id: perfil.id,
         origem: origem ?? 'botao',
-        latitude: latitude ?? null,
-        longitude: longitude ?? null,
-        precisao_m: precisao ? Math.round(precisao) : null,
+        latitude: temLocal ? latitude : null,
+        longitude: temLocal ? longitude : null,
+        precisao_m: Number.isFinite(precisao) ? Math.round(precisao!) : null,
         contatos_notificados: notificados,
         push_enviados: pushEnviados,
         sms_enviados: smsEnviados,
@@ -239,7 +230,6 @@ export async function POST(req: NextRequest) {
       smsEnviados,
       bloqueados,
       notificados,
-      // A tela usa isto para dizer o que FOI feito antes de falar em recarga.
       semContatos: (contatos ?? []).length === 0,
     });
   } catch (e) {

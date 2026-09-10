@@ -1,43 +1,25 @@
 'use client';
 
 // app/melhoria/consentimento/page.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Consentimento específico e destacado para dado de saúde (LGPD art. 11).
-//
-// Por que esta tela existe separada dos termos: o art. 11 exige consentimento
-// "específico e destacado" para dado sensível. Um aceite genérico de "li e
-// concordo com os termos" NÃO cobre remédio, receita e exame. Se o
-// consentimento estiver enterrado nos termos, ele é frágil — e é o tipo de
-// coisa que só aparece quando já virou problema.
-//
-// Duas consequências de desenho que vêm daí:
-//   1. São DOIS aceites separados. Guardar dados de saúde é obrigatório para o
-//      aplicativo funcionar. Enviar para a Agenda do Google é opcional e vem
-//      desligado — não dá para amarrar os dois num checkbox só.
-//   2. Cada aceite grava seu próprio carimbo de tempo em melhoria.perfis
-//      (consentiu_saude_em, consentiu_agenda_em). Sem data registrada, não há
-//      como provar quando foi dado.
-// ─────────────────────────────────────────────────────────────────────────────
+// Consentimento específico e destacado para dados de saúde.
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Check, Loader2, ShieldCheck } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
-import { createMelhoriaClient } from '@/lib/melhoria/supabase';
+import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import { cor, fonte, px, toque, raio, espaco } from '@/lib/melhoria/tema';
 import { R } from '@/lib/melhoria/rotas';
 
 export default function ConsentimentoPage() {
-  const router   = useRouter();
-  const supabase = createClient();
-  const mel      = createMelhoriaClient();
+  const router = useRouter();
+  const supabase = melhoriaAuth();
+  const mel = createMelhoriaClient();
 
   const [carregando, setCarregando] = useState(true);
-  const [salvando, setSalvando]     = useState(false);
-  const [erro, setErro]             = useState<string | null>(null);
-
-  const [aceitaSaude, setAceitaSaude]   = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [aceitaSaude, setAceitaSaude] = useState(false);
   const [aceitaAgenda, setAceitaAgenda] = useState(false);
 
   useEffect(() => {
@@ -52,7 +34,6 @@ export default function ConsentimentoPage() {
         .select('consentiu_saude_em')
         .limit(1);
 
-      // Já consentiu: não faz sentido perguntar de novo toda vez.
       if (perfis?.[0]?.consentiu_saude_em) { router.replace(R.app()); return; }
       setCarregando(false);
     })();
@@ -64,7 +45,6 @@ export default function ConsentimentoPage() {
     setErro(null);
 
     const agora = new Date().toISOString();
-
     const { data: perfis } = await mel.from('perfis').select('id').limit(1);
     const perfilId = perfis?.[0]?.id;
 
@@ -104,13 +84,7 @@ export default function ConsentimentoPage() {
   return (
     <main style={pagina}>
       <div style={{ textAlign: 'center', marginBottom: espaco.lg }}>
-        <Image
-          src="/brands/melhoria/logo.png"
-          alt=""
-          width={72}
-          height={72}
-          style={{ borderRadius: 16 }}
-        />
+        <Image src="/brands/melhoria/logo.png" alt="" width={72} height={72} style={{ borderRadius: 16 }} />
         <h1 style={{
           fontSize: 34, fontWeight: 800, color: cor.tinta,
           margin: `${espaco.md}px 0 0`, lineHeight: 1.2,
@@ -128,7 +102,6 @@ export default function ConsentimentoPage() {
         protegida, e precisamos da sua autorização.
       </p>
 
-      {/* ── Aceite 1: obrigatório ── */}
       <button
         type="button"
         onClick={() => setAceitaSaude((v) => !v)}
@@ -136,11 +109,14 @@ export default function ConsentimentoPage() {
         style={{
           ...caixaAceite,
           borderColor: aceitaSaude ? cor.destaque : cor.borda,
-          background:  aceitaSaude ? cor.destaqueSuave : cor.fundo,
+          background: aceitaSaude ? cor.destaqueSuave : cor.fundo,
         }}
       >
-        <span style={{ ...quadrado, background: aceitaSaude ? cor.destaque : cor.fundo,
-                       borderColor: aceitaSaude ? cor.destaque : cor.bordaForte }}>
+        <span style={{
+          ...quadrado,
+          background: aceitaSaude ? cor.destaque : cor.fundo,
+          borderColor: aceitaSaude ? cor.destaque : cor.bordaForte,
+        }}>
           {aceitaSaude && <Check size={30} strokeWidth={4} color="#FFFFFF" />}
         </span>
         <span>
@@ -153,13 +129,11 @@ export default function ConsentimentoPage() {
           }}>
             Usamos só para avisar você na hora certa e montar seu histórico.
             Nunca vendemos nem compartilhamos com plano de saúde, farmácia,
-            seguradora ou banco. Você pode retirar esta autorização quando
-            quiser.
+            seguradora ou banco. Você pode retirar esta autorização quando quiser.
           </span>
         </span>
       </button>
 
-      {/* ── Aceite 2: opcional, desligado ── */}
       <button
         type="button"
         onClick={() => setAceitaAgenda((v) => !v)}
@@ -167,11 +141,14 @@ export default function ConsentimentoPage() {
         style={{
           ...caixaAceite,
           borderColor: aceitaAgenda ? cor.destaque : cor.borda,
-          background:  aceitaAgenda ? cor.destaqueSuave : cor.fundo,
+          background: aceitaAgenda ? cor.destaqueSuave : cor.fundo,
         }}
       >
-        <span style={{ ...quadrado, background: aceitaAgenda ? cor.destaque : cor.fundo,
-                       borderColor: aceitaAgenda ? cor.destaque : cor.bordaForte }}>
+        <span style={{
+          ...quadrado,
+          background: aceitaAgenda ? cor.destaque : cor.fundo,
+          borderColor: aceitaAgenda ? cor.destaque : cor.bordaForte,
+        }}>
           {aceitaAgenda && <Check size={30} strokeWidth={4} color="#FFFFFF" />}
         </span>
         <span>
@@ -224,14 +201,9 @@ export default function ConsentimentoPage() {
         textAlign: 'center', margin: `${espaco.lg}px 0 0`, lineHeight: 1.5,
       }}>
         Leia o{' '}
-        <a href="/aviso" style={{ color: cor.destaqueTexto, fontWeight: 700 }}>
-          aviso de privacidade
-        </a>{' '}
+        <a href="/aviso" style={{ color: cor.destaqueTexto, fontWeight: 700 }}>aviso de privacidade</a>{' '}
         e os{' '}
-        <a href="/termos" style={{ color: cor.destaqueTexto, fontWeight: 700 }}>
-          termos de uso
-        </a>
-        .
+        <a href="/termos" style={{ color: cor.destaqueTexto, fontWeight: 700 }}>termos de uso</a>.
       </p>
     </main>
   );

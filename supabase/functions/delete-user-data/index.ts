@@ -11,6 +11,8 @@ const ALLOWED_ORIGINS = new Set([
   'https://ia.artefinal.app',
   'https://consulta.tec.br',
   'https://www.consulta.tec.br',
+  'https://melhoria.org',
+  'https://www.melhoria.org',
 ]);
 
 const EMAIL_TO = 'contato@bigcorps.com.br';
@@ -89,7 +91,9 @@ Deno.serve(async (req) => {
           ? 'ConviteIA'
           : requestedBrand === 'consultatec'
             ? 'ConsultaTec'
-            : 'minhAi';
+            : requestedBrand === 'melhoria'
+              ? 'MelhorIA'
+              : 'minhAi';
 
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',

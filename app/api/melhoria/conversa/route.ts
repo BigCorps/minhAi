@@ -1,27 +1,6 @@
 // app/api/melhoria/conversa/route.ts
-// ─────────────────────────────────────────────────────────────────────────────
 // Conversa com a IA. 1 crédito por resposta.
-//
-// ── O RISCO DESTA ROTA ──────────────────────────────────────────────────────
-// Um chat aberto, num aplicativo de saúde, usado por alguém de 78 anos, é o
-// lugar mais provável do produto inteiro para aparecer a pergunta
-// "posso tomar meio comprimido?" ou "esse remédio pode com aquele?".
-//
-// Responder isso seria: (a) perigoso, (b) reclassificar o produto como apoio
-// à decisão clínica — RDC 657/2022 da ANVISA — e (c) contradizer a declaração
-// de saúde da Play Store, onde respondemos "não" para diagnóstico e
-// recomendação de tratamento.
-//
-// Por isso a instrução não pede "seja cuidadoso": ela lista o que a IA NÃO
-// responde e diz exatamente o que dizer no lugar. Uma recusa vaga ("consulte
-// um médico") deixa a pessoa sem saída; a recusa aqui sempre aponta um caminho
-// concreto — ligar para o médico, falar com o farmacêutico, chamar um
-// familiar.
-//
-// A IA também não inventa dados do usuário. Ela recebe a lista de remédios e
-// compromissos como CONTEXTO e pode ler de volta o que está lá — mas não pode
-// alterar nada, e não tem ferramenta nenhuma.
-// ─────────────────────────────────────────────────────────────────────────────
+// Dados de saúde só entram no contexto se houver consentimento específico ativo.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -31,7 +10,7 @@ import { cookies } from 'next/headers';
 export const runtime = 'nodejs';
 
 const CUSTO = 1;
-const MAX_HISTORICO = 12;   // 6 idas e voltas: suficiente e barato em tokens
+const MAX_HISTORICO = 12;
 
 const INSTRUCAO = `Você é a MelhorIA, assistente de um aplicativo brasileiro para pessoas idosas.
 
@@ -43,8 +22,8 @@ COMO FALAR
 
 O QUE VOCÊ FAZ
 - Explica como usar o aplicativo (cadastrar remédio, marcar consulta, conferir boleto, avisar a família).
-- Lê de volta as informações que a pessoa já cadastrou, quando pedirem.
-- Ajuda a organizar: "que horas eu tomo o losartana?", "quando é minha consulta?".
+- Lê de volta as informações que a pessoa já cadastrou, quando pedirem e quando esse contexto estiver autorizado.
+- Ajuda a organizar horários e compromissos já cadastrados, sem dar orientação clínica.
 - Conversa sobre assuntos gerais do dia a dia, com naturalidade.
 
 O QUE VOCÊ NUNCA FAZ — sem exceção, nem se insistirem
@@ -59,7 +38,7 @@ COMO RECUSAR
 Recuse em uma frase e ofereça um caminho concreto. Nunca só "procure um médico".
 Exemplos do tom certo:
 - "Essa é uma pergunta para o seu médico. Quer que eu mostre a data da sua próxima consulta?"
-- "Não posso responder sobre dose, mas o farmacêutico da sua drogaria pode, e é de graça."
+- "Não posso responder sobre dose, mas o farmacêutico da sua drogaria pode ajudar."
 - "Isso quem sabe é quem receitou. Se quiser, eu mostro o telefone que você cadastrou."
 
 EMERGÊNCIA
@@ -109,11 +88,14 @@ export async function POST(req: NextRequest) {
     if (!companyId) return NextResponse.json({ erro: 'conta não encontrada' }, { status: 404 });
 
     const { data: perfis } = await mel
-      .from('perfis').select('id, nome, timezone').eq('company_id', companyId).limit(1);
+      .from('perfis')
+      .select('id, nome, timezone, consentiu_saude_em')
+      .eq('company_id', companyId)
+      .eq('user_id', sessao.user.id)
+      .limit(1);
     const perfil = perfis?.[0];
     if (!perfil) return NextResponse.json({ erro: 'perfil não encontrado' }, { status: 404 });
 
-    // ── Cobrança fail-closed, ANTES do modelo ─────────────────────────────
     const { data: cobranca } = await admin.rpc('cobrar_credito_se_suficiente', {
       p_company_id: companyId,
       p_function_key: 'chatgpt',
@@ -138,42 +120,46 @@ export async function POST(req: NextRequest) {
       });
     };
 
-    // ── Contexto: o que a pessoa já cadastrou ─────────────────────────────
-    // Só leitura, e só o essencial. Mandar o histórico inteiro de doses
-    // encheria o contexto sem melhorar resposta nenhuma.
-    const [{ data: meds }, { data: agenda }] = await Promise.all([
-      mel.from('medicamentos')
-         .select('nome, dosagem, doses ( horario, dias_semana, ativo )')
-         .eq('perfil_id', perfil.id).eq('ativo', true).limit(20),
-      mel.from('agendamentos')
-         .select('titulo, tipo, data_hora, local, profissional')
-         .eq('perfil_id', perfil.id)
-         .gte('data_hora', new Date().toISOString())
-         .neq('status', 'cancelado')
-         .order('data_hora', { ascending: true }).limit(5),
-    ]);
-
-    const listaMeds = (meds ?? []).map((m: any) => {
-      const horas = (m.doses ?? [])
-        .filter((d: any) => d.ativo)
-        .map((d: any) => String(d.horario).slice(0, 5))
-        .sort()
-        .join(', ');
-      return `- ${[m.nome, m.dosagem].filter(Boolean).join(' ')}${horas ? ` às ${horas}` : ''}`;
-    }).join('\n') || '- (nenhum remédio cadastrado)';
+    let listaMeds = '- (dados de saúde não autorizados)';
+    let listaAgenda = '- (dados de saúde não autorizados)';
 
     const fmt = new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
       timeZone: perfil.timezone || 'America/Sao_Paulo',
     });
 
-    const listaAgenda = (agenda ?? []).map((a: any) =>
-      `- ${a.titulo} em ${fmt.format(new Date(a.data_hora))}${a.local ? ` (${a.local})` : ''}`
-    ).join('\n') || '- (nenhum compromisso marcado)';
+    if (perfil.consentiu_saude_em) {
+      const [{ data: meds }, { data: agenda }] = await Promise.all([
+        mel.from('medicamentos')
+          .select('nome, dosagem, doses ( horario, dias_semana, ativo )')
+          .eq('perfil_id', perfil.id).eq('ativo', true).limit(20),
+        mel.from('agendamentos')
+          .select('titulo, tipo, data_hora, local, profissional')
+          .eq('perfil_id', perfil.id)
+          .gte('data_hora', new Date().toISOString())
+          .neq('status', 'cancelado')
+          .order('data_hora', { ascending: true }).limit(5),
+      ]);
+
+      listaMeds = (meds ?? []).map((m: any) => {
+        const horas = (m.doses ?? [])
+          .filter((d: any) => d.ativo)
+          .map((d: any) => String(d.horario).slice(0, 5))
+          .sort()
+          .join(', ');
+        return `- ${[m.nome, m.dosagem].filter(Boolean).join(' ')}${horas ? ` às ${horas}` : ''}`;
+      }).join('\n') || '- (nenhum remédio cadastrado)';
+
+      listaAgenda = (agenda ?? []).map((a: any) =>
+        `- ${a.titulo} em ${fmt.format(new Date(a.data_hora))}${a.local ? ` (${a.local})` : ''}`
+      ).join('\n') || '- (nenhum compromisso marcado)';
+    }
 
     const contexto = `DADOS QUE ESTA PESSOA JÁ CADASTROU (só leitura, não altere nada):
 
 Nome: ${perfil.nome === 'Meu perfil' ? '(não informado)' : perfil.nome}
+
+Consentimento de saúde ativo: ${perfil.consentiu_saude_em ? 'sim' : 'não'}
 
 Remédios:
 ${listaMeds}
@@ -183,7 +169,6 @@ ${listaAgenda}
 
 Hoje é ${fmt.format(new Date())}.`;
 
-    // ── Modelo ────────────────────────────────────────────────────────────
     const mensagens = [
       { role: 'system', content: INSTRUCAO },
       { role: 'system', content: contexto },
@@ -206,8 +191,6 @@ Hoje é ${fmt.format(new Date())}.`;
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           temperature: 0.4,
-          // Teto baixo de propósito: resposta longa cansa e esconde o que
-          // importa. A instrução já pede no máximo 4 frases.
           max_tokens: 400,
           messages: mensagens,
         }),
@@ -226,10 +209,7 @@ Hoje é ${fmt.format(new Date())}.`;
       }, { status: 502 });
     }
 
-    return NextResponse.json({
-      resposta,
-      saldoRestante: cob.saldo_novo,
-    });
+    return NextResponse.json({ resposta, saldoRestante: cob.saldo_novo });
   } catch (e) {
     console.error('/api/melhoria/conversa:', e);
     return NextResponse.json({ erro: 'erro interno' }, { status: 500 });

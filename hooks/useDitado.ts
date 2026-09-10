@@ -1,32 +1,14 @@
 'use client';
 
 // hooks/useDitado.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// Ditado por microfone — SEMPRE GRATUITO.
-//
-// A minhAi bifurca por useIsMobile(), que olha só `window.innerWidth < 768`, e
-// manda o caminho "mobile" para o GoogleSpeechWebSocket, que é PAGO por uso.
-// Numa loja isso é marginal, porque a maioria dos acessos é desktop. Na
-// MelhorIA seria quase todo acesso — todo ditado, de todo idoso, todo dia,
-// saindo do bolso.
-//
-// Aqui o critério é DETECÇÃO DE RECURSO, não largura de tela:
-//   tem SpeechRecognition  → nativo do navegador, custo zero
-//   não tem                → o campo continua funcionando por digitação
-//
-// O Google Speech NÃO entra neste caminho em hipótese nenhuma. Se um dia for
-// preciso um fallback de reconhecimento, é o /api/vosk-proxy que já existe no
-// repositório — também gratuito.
-//
-// O ditado NÃO É COMANDO. Ele só preenche a caixa de texto; a pessoa confere e
-// corrige antes de salvar. Nada é executado a partir do que foi falado.
-// ─────────────────────────────────────────────────────────────────────────────
+// Ditado do MelhorIA com privacidade fail-closed:
+// só oferece microfone quando o navegador permite EXIGIR processamento local.
+// Se não puder garantir isso, o campo continua disponível para digitação.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-// Palavras que encerram a gravação. Vindas do CriarNotaDisplay da minhAi, que
-// já validou essa lista em campo.
 const GATILHOS_FIM = ['concluir', 'acabou', 'terminou', 'pronto', 'fim'];
+const IDIOMA = 'pt-BR';
 
 function normalizar(texto: string): string {
   return texto
@@ -45,17 +27,20 @@ function removerGatilhoFinal(texto: string): string {
   return saida.trim();
 }
 
+function construtorLocal(): any | null {
+  if (typeof window === 'undefined') return null;
+  const SR = (window as any).SpeechRecognition;
+  if (!SR?.prototype || !('processLocally' in SR.prototype)) return null;
+  return SR;
+}
+
 export interface UseDitadoOpts {
-  /** Recebe o texto final. O componente decide o que fazer com ele. */
   aoFinalizar?: (texto: string) => void;
-  /** Recebe o texto parcial, para exibir enquanto a pessoa fala. */
   aoParcial?: (texto: string) => void;
-  /** Encerra sozinho após N ms sem fala. 0 desliga. Padrão: 8000. */
   silencioMs?: number;
 }
 
 export interface UseDitado {
-  /** false = navegador sem suporte. Esconda o ícone de microfone. */
   suportado: boolean;
   gravando: boolean;
   parcial: string;
@@ -69,34 +54,30 @@ export function useDitado(opts: UseDitadoOpts = {}): UseDitado {
   const { aoFinalizar, aoParcial, silencioMs = 8000 } = opts;
 
   const [suportado, setSuportado] = useState(false);
-  const [gravando, setGravando]   = useState(false);
-  const [parcial, setParcial]     = useState('');
-  const [erro, setErro]           = useState<string | null>(null);
+  const [gravando, setGravando] = useState(false);
+  const [parcial, setParcial] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
 
-  const recRef      = useRef<any>(null);
-  const finalRef    = useRef<string>('');
-  const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pararManual = useRef(false);
+  const recRef = useRef<any>(null);
+  const finalRef = useRef<string>('');
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cbFinal = useRef(aoFinalizar);
+  const cbParcial = useRef(aoParcial);
+  cbFinal.current = aoFinalizar;
+  cbParcial.current = aoParcial;
 
-  // Callbacks em ref: sem isso, cada render recria o reconhecedor e a gravação
-  // morre no meio de uma frase.
-  const cbFinal   = useRef(aoFinalizar); cbFinal.current   = aoFinalizar;
-  const cbParcial = useRef(aoParcial);   cbParcial.current = aoParcial;
-
-  // ── Detecção de recurso ────────────────────────────────────────────────────
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const ok =
-      'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
-    setSuportado(ok);
+    setSuportado(!!construtorLocal());
   }, []);
 
   const limparTimer = useCallback(() => {
-    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
   }, []);
 
   const parar = useCallback(() => {
-    pararManual.current = true;
     limparTimer();
     try { recRef.current?.stop(); } catch { /* já parado */ }
   }, [limparTimer]);
@@ -110,100 +91,133 @@ export function useDitado(opts: UseDitadoOpts = {}): UseDitado {
   }, [silencioMs, limparTimer]);
 
   const iniciar = useCallback(() => {
-    if (typeof window === 'undefined') return;
+    void (async () => {
+      const SR = construtorLocal();
+      if (!SR) {
+        setErro('O ditado privado não está disponível neste aparelho. Você pode digitar normalmente.');
+        setSuportado(false);
+        return;
+      }
 
-    const SR =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
+      setErro(null);
 
-    if (!SR) {
-      setErro('Este aparelho não permite ditar. Você pode digitar normalmente.');
-      return;
-    }
+      // Quando o navegador expõe os controles de pacote local, validamos antes
+      // de abrir o microfone. Nunca fazemos fallback automático para nuvem.
+      if (typeof SR.available === 'function') {
+        try {
+          const disponibilidade = await SR.available({
+            langs: [IDIOMA],
+            processLocally: true,
+            quality: 'dictation',
+          });
 
-    // Se já havia um reconhecedor, encerra antes de abrir outro.
-    try { recRef.current?.abort(); } catch { /* ignora */ }
-
-    const rec = new SR();
-    rec.lang            = 'pt-BR';
-    rec.continuous      = true;
-    rec.interimResults  = true;
-    rec.maxAlternatives = 1;
-
-    finalRef.current  = '';
-    pararManual.current = false;
-    setErro(null);
-    setParcial('');
-
-    rec.onstart = () => { setGravando(true); armarSilencio(); };
-
-    rec.onresult = (evento: any) => {
-      armarSilencio();
-      let provisorio = '';
-
-      for (let i = evento.resultIndex; i < evento.results.length; i++) {
-        const trecho = evento.results[i][0].transcript as string;
-
-        if (evento.results[i].isFinal) {
-          const limpo = trecho.trim();
-
-          // "pronto" sozinho encerra e não entra no texto.
-          if (GATILHOS_FIM.includes(normalizar(limpo))) {
-            pararManual.current = true;
-            try { rec.stop(); } catch { /* ignora */ }
+          if (disponibilidade === 'unavailable') {
+            setErro('O reconhecimento de voz local em português não está disponível neste aparelho.');
             return;
           }
 
-          finalRef.current = `${finalRef.current} ${limpo}`.trim();
-        } else {
-          provisorio += trecho;
+          if (disponibilidade === 'downloadable' || disponibilidade === 'downloading') {
+            if (typeof SR.install !== 'function') {
+              setErro('O pacote de voz local ainda não está instalado. Você pode digitar normalmente.');
+              return;
+            }
+
+            const instalou = await SR.install({
+              langs: [IDIOMA],
+              processLocally: true,
+              quality: 'dictation',
+            });
+            if (!instalou) {
+              setErro('Não consegui preparar o ditado local. Você pode digitar normalmente.');
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('[MelhorIA ditado] disponibilidade local:', e);
+          setErro('Não consegui confirmar o modo privado do microfone. Você pode digitar normalmente.');
+          return;
         }
       }
 
-      const visivel = `${finalRef.current} ${provisorio}`.trim();
-      setParcial(visivel);
-      cbParcial.current?.(visivel);
-    };
+      try { recRef.current?.abort(); } catch { /* ignora */ }
 
-    rec.onerror = (evento: any) => {
-      const codigo = evento?.error;
-      // 'aborted' e 'no-speech' são fluxo normal, não erro que mereça alarme.
-      if (codigo === 'aborted' || codigo === 'no-speech') return;
+      const rec = new SR();
+      rec.lang = IDIOMA;
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
+      rec.processLocally = true;
 
-      setErro(
-        codigo === 'not-allowed' || codigo === 'service-not-allowed'
-          ? 'Precisamos da sua permissão para usar o microfone.'
-          : 'Não consegui ouvir. Tente de novo ou digite.'
-      );
-      setGravando(false);
-      limparTimer();
-    };
+      finalRef.current = '';
+      setParcial('');
 
-    rec.onend = () => {
-      setGravando(false);
-      limparTimer();
+      rec.onstart = () => {
+        setGravando(true);
+        armarSilencio();
+      };
 
-      const texto = removerGatilhoFinal(finalRef.current);
-      setParcial(texto);
-      if (texto) cbFinal.current?.(texto);
-    };
+      rec.onresult = (evento: any) => {
+        armarSilencio();
+        let provisorio = '';
 
-    recRef.current = rec;
+        for (let i = evento.resultIndex; i < evento.results.length; i++) {
+          const trecho = evento.results[i][0].transcript as string;
 
-    try {
-      rec.start();
-    } catch {
-      setErro('Não consegui abrir o microfone. Tente de novo.');
-      setGravando(false);
-    }
+          if (evento.results[i].isFinal) {
+            const limpo = trecho.trim();
+            if (GATILHOS_FIM.includes(normalizar(limpo))) {
+              try { rec.stop(); } catch { /* ignora */ }
+              return;
+            }
+            finalRef.current = `${finalRef.current} ${limpo}`.trim();
+          } else {
+            provisorio += trecho;
+          }
+        }
+
+        const visivel = `${finalRef.current} ${provisorio}`.trim();
+        setParcial(visivel);
+        cbParcial.current?.(visivel);
+      };
+
+      rec.onerror = (evento: any) => {
+        const codigo = evento?.error;
+        if (codigo === 'aborted' || codigo === 'no-speech') return;
+
+        setErro(
+          codigo === 'not-allowed' || codigo === 'service-not-allowed'
+            ? 'Precisamos da sua permissão para usar o microfone.'
+            : codigo === 'language-not-supported'
+              ? 'O pacote de voz local em português não está disponível. Você pode digitar normalmente.'
+              : 'Não consegui ouvir no modo privado. Tente de novo ou digite.'
+        );
+        setGravando(false);
+        limparTimer();
+      };
+
+      rec.onend = () => {
+        setGravando(false);
+        limparTimer();
+        const texto = removerGatilhoFinal(finalRef.current);
+        setParcial(texto);
+        if (texto) cbFinal.current?.(texto);
+      };
+
+      recRef.current = rec;
+
+      try {
+        rec.start();
+      } catch {
+        setErro('Não consegui abrir o microfone no modo privado. Você pode digitar normalmente.');
+        setGravando(false);
+      }
+    })();
   }, [armarSilencio, limparTimer]);
 
   const alternar = useCallback(() => {
     gravando ? parar() : iniciar();
   }, [gravando, parar, iniciar]);
 
-  // Limpeza no unmount: reconhecedor vivo depois da tela fechar mantém o
-  // microfone aberto, e o indicador do sistema fica ligado sem explicação.
   useEffect(() => {
     return () => {
       limparTimer();

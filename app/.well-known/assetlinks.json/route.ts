@@ -189,6 +189,7 @@ const ASSETLINKS_BY_HOST: Record<string, any[]> = {
         ],
       },
     },
+  ],
   
   // ── Pix Wiki (ativo) ───────────────────────────────────────────────────────
   'pix.wiki': [

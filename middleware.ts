@@ -174,6 +174,17 @@ export async function middleware(request: NextRequest) {
       return NextResponse.rewrite(url);
     }
 
+    // Aviso de Privacidade, Termos e Exclusão de Dados.
+    // Precisam responder no host da marca porque o Google Play valida estas
+    // URLs automaticamente — /aviso dando 404 reprova o envio do app.
+    // Fica antes da consulta ao Supabase: são páginas públicas e não devem
+    // custar um round-trip de autenticação.
+    if (PAGINAS_LEGAIS.includes(pathname)) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/funcionaria${pathname}`;
+      return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    }
+
     if (pathname.startsWith('/brands/') || /\.[a-z0-9]{2,12}$/i.test(pathname)) {
       return NextResponse.next({ request: { headers: requestHeaders } });
     }

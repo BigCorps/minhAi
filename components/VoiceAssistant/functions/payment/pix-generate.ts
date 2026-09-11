@@ -20,25 +20,25 @@ export const pixGenerateHandler: FunctionHandler = {
     if (!Number.isFinite(amount) || amount <= 0) { await context.playText('Valor inválido para PIX'); return; }
 
     try {
-      // A configuração atual da minhAi usa receiving_pix_key. A V2 decide se
-      // o cliente permanece no fluxo legado ou se fez opt-in no Pix Grátis.
-      const { data: company, error: companyError } = await context.supabase
-        .from('companies')
-        .select('receiving_pix_key, receiving_pix_key_type')
-        .eq('id', context.companyId)
-        .single();
-      if (companyError) { await context.playText('Erro ao verificar configurações do PIX.'); return; }
-      if (!company?.receiving_pix_key) {
-        await context.playText('A função PIX ainda não foi configurada. Configure sua chave PIX nas configurações do assistente.');
-        return;
-      }
-
+      // A Edge Function é a autoridade sobre configuração e modo de PIX.
+      // O navegador não lê mais receiving_pix_key nem receiving_pix_key_type.
       context.setIsProcessing(true);
       const response = await context.supabase.functions.invoke('gerar-pix-assistente-v2', {
         body: { company_id: context.companyId, amount_cents: Math.round(amount * 100) },
       });
-      if (response.error) throw response.error;
+
       const data = response.data;
+      const providerError = String(data?.error || response.error?.message || '');
+      if (providerError === 'pix_key_required') {
+        await context.playText('A função PIX ainda não foi configurada. Configure sua chave PIX nas configurações do assistente.');
+        return;
+      }
+      if (providerError === 'mp_connection_required') {
+        await context.playText('A confirmação automática do PIX ainda não está configurada. Revise a conexão Mercado Pago no painel.');
+        return;
+      }
+      if (response.error) throw response.error;
+      if (!data?.success && providerError) throw new Error(providerError);
       if (!data?.transaction_id || !data?.pix_code) throw new Error('invalid_pix_response');
 
       const effective = Number(data.amount_brl || amount);
@@ -59,6 +59,8 @@ export const pixGenerateHandler: FunctionHandler = {
       console.error('❌ Erro ao gerar PIX:', error);
       const msg = String(error?.message || error || '');
       if (msg.includes('pix_direct_slots_unavailable')) await context.playText('Há muitas cobranças iguais abertas agora. Tente novamente em instantes.');
+      else if (msg.includes('pix_key_required')) await context.playText('A função PIX ainda não foi configurada. Configure sua chave PIX nas configurações do assistente.');
+      else if (msg.includes('mp_connection_required')) await context.playText('A confirmação automática do PIX ainda não está configurada. Revise a conexão Mercado Pago no painel.');
       else await context.playText('Desculpe, não consegui gerar o PIX.');
     } finally { context.setIsProcessing(false); }
   },

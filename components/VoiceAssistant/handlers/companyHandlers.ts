@@ -9,6 +9,7 @@
 import { createClient } from '@/lib/supabase-browser';
 import { ActiveModal, NossaMarcaData, EnderecoData } from '../types';
 import { saveInteractionToHistory } from './functionUsage';
+import { getPublicWifiConfig } from '@/lib/public-company-capabilities';
 
 // ── Deps compartilhados ───────────────────────────────────────
 interface CompanyHandlerDeps {
@@ -334,12 +335,7 @@ export async function handleSequenciaVideosCommand({
 export async function handleWifiQRCode({ companyId, setIsProcessing, setActiveModal, playText }: CompanyHandlerDeps): Promise<void> {
   try {
     setIsProcessing(true);
-    const supabase = createClient();
-    const { data } = await supabase
-      .from('companies')
-      .select('wifi_network_name, wifi_network_password, name')
-      .eq('id', companyId)
-      .single();
+    const data = await getPublicWifiConfig(companyId);
     if (!data?.wifi_network_name) {
       await playText('O Wi-Fi ainda não foi configurado. Configure no painel.');
       return;

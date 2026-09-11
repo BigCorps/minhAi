@@ -16,6 +16,7 @@
 import { createClient } from '@/lib/supabase-browser';
 import { cobrar_debito, cobrar_credito } from './paymentGatewayEntries'
 import { getContextualRoute } from '@/lib/routing-utils';
+import { getPublicPaymentCompanyConfig, getPublicWifiConfig } from './public-company-capabilities';
 
 export type ResponseType = 'voice' | 'modal' | 'page' | 'voice+modal' | 'voice+page';
 
@@ -229,11 +230,7 @@ handler: async ({ transcript, playText, setActiveModal, companyId, sessionId }) 
     }
 
 // 2. Se tem valor, continua o fluxo normal
-    const { data: company } = await supabase
-      .from('companies')
-      .select('mp_access_token, mp_terminal_id')
-      .eq('id', companyId)
-      .single()
+    const company = await getPublicPaymentCompanyConfig(companyId)
 
     if (!company?.mp_access_token || !company?.mp_terminal_id) {
       await playText('A maquininha Mercado Pago não está configurada. Configure o Access Token e o Terminal ID no painel.')
@@ -321,11 +318,7 @@ handler: async ({ transcript, playText, setActiveModal, companyId, sessionId }) 
     const installmentsMatch = (transcript ?? '').match(/(\d{1,2})\s*(?:vezes|x\b|parcelas?)/)
     const installments = installmentsMatch ? Math.min(parseInt(installmentsMatch[1]), 12) : 1
 
-    const { data: company } = await supabase
-      .from('companies')
-      .select('mp_access_token, mp_terminal_id')
-      .eq('id', companyId)
-      .single()
+    const company = await getPublicPaymentCompanyConfig(companyId)
 
     if (!company?.mp_access_token || !company?.mp_terminal_id) {
       await playText('A maquininha Mercado Pago não está configurada. Configure o Access Token e o Terminal ID no painel.')
@@ -5594,12 +5587,7 @@ wifi_qrcode: {
     isPremium: false,
     handler: async ({ playText, setActiveModal, companyId }) => {
       try {
-        const supabase = createClient();
-        const { data } = await supabase
-          .from('companies')
-          .select('wifi_network_name, wifi_network_password, name')
-          .eq('id', companyId)
-          .single();
+        const data = await getPublicWifiConfig(companyId);
         if (!data?.wifi_network_name) {
           await playText('O Wi-Fi ainda não foi configurado. Configure no painel.');
           return false;

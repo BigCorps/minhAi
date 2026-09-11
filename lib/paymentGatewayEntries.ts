@@ -4,6 +4,7 @@
 
 import { createClient } from '@/lib/supabase-browser'
 import type { FunctionDefinition } from './functions-registry'   // ajuste o caminho se necessário
+import { getPublicPaymentCompanyConfig } from './public-company-capabilities'
 
 // ─── Helper: quais funções de pagamento estão habilitadas ────────────────────
 
@@ -172,12 +173,7 @@ export const cobrar_debito: FunctionDefinition = {
 
     // ── Apenas TEF habilitado ──────────────────────────────────────────────
     if (hasTef && !hasNfc) {
-      const supabase = createClient()
-      const { data: company } = await supabase
-        .from('companies')
-        .select('mp_access_token, mp_terminal_id')
-        .eq('id', companyId)
-        .single()
+      const company = await getPublicPaymentCompanyConfig(companyId)
 
       if (!company?.mp_access_token || !company?.mp_terminal_id) {
         await playText(
@@ -340,12 +336,7 @@ export const cobrar_credito: FunctionDefinition = {
 
     // ── Apenas TEF habilitado ──────────────────────────────────────────────
     if (hasTef && !hasNfc) {
-      const supabase = createClient()
-      const { data: company } = await supabase
-        .from('companies')
-        .select('mp_access_token, mp_terminal_id')
-        .eq('id', companyId)
-        .single()
+      const company = await getPublicPaymentCompanyConfig(companyId)
 
       if (!company?.mp_access_token || !company?.mp_terminal_id) {
         await playText(

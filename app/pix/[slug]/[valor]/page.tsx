@@ -1,6 +1,6 @@
 // app/pix/[slug]/[valor]/page.tsx
 import { headers } from 'next/headers';
-import { createClient } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
 import PixLinkPage from '@/components/pix-link/PixLinkPage';
 import PixWikiLinkPage from '@/components/pix/PixWikiLinkPage';
 
@@ -42,7 +42,8 @@ export default async function PixSlugValorPage({ params }: PageProps) {
   const headerList = await headers();
   const host = headerList.get('host') || '';
   const pixWiki = isPixWikiHost(host);
-  const supabase = createClient();
+  // Rota pública: consulta server-side com service role e devolve só campos seguros.
+  const supabase = createAdminClient();
 
   const amount = Number.parseFloat(decodeURIComponent(valor).replace(',', '.'));
   const initialAmount = Number.isFinite(amount) && amount > 0 ? amount : null;

@@ -1,6 +1,6 @@
 // app/pix/[slug]/page.tsx
 import { headers } from 'next/headers';
-import { createClient } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
 import PixLinkPage from '@/components/pix-link/PixLinkPage';
 import PixWikiLinkPage from '@/components/pix/PixWikiLinkPage';
 
@@ -42,10 +42,10 @@ export default async function PixSlugPage({ params }: PageProps) {
   const headerList = await headers();
   const host = headerList.get('host') || '';
   const pixWiki = isPixWikiHost(host);
-  const supabase = createClient();
+  // Rota pública: consulta server-side com service role e devolve só campos seguros.
+  const supabase = createAdminClient();
 
   if (pixWiki) {
-    // PixWiki: apenas recebedores PixWiki com Pix Link ativo no plano.
     const { data: allowed } = await supabase.rpc('pixwiki_can_serve_subdomain', {
       p_slug: slug,
     });
@@ -63,9 +63,6 @@ export default async function PixSlugPage({ params }: PageProps) {
     return <PixWikiLinkPage company={company as Company} initialAmount={null} />;
   }
 
-  // minhAi/legado: preserva a lógica histórica de /pix/[slug].
-  // Não exige segment_key porque empresas antigas (como as criadas antes do
-  // PixWiki) podem ter segment_key nulo.
   const { data: company } = await supabase
     .from('companies')
     .select('id,name,slug,logo_url')

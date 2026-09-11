@@ -32,26 +32,21 @@ export default function VendasPage({ params }: VendasPageProps) {
   const [quantidadeInicial, setQuantidadeInicial] = useState<number>(1);
   const [opcoesIniciais, setOpcoesIniciais] = useState<any[]>([]);
 
-  // ── Estados de voz ────────────────────────────────────────────────────────
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState(false);
-
-  // ── Modal state — alimentado pelo VoiceAssistant oculto via onModalChange ─
   const [vendaActiveModal, setVendaActiveModal] = useState<ActiveModal | null>(null);
 
   const voiceRecorder = useVoiceRecorder();
   const { currentAudioRef, playText } = useAudioPlayer(setIsPlayingAudio, companyData?.tts_voice);
   const companyIdRef = useRef<string | null>(null);
 
-  // Handler do VoiceAssistant oculto — registrado via onTextMessage
   const textMessageHandlerRef = useRef<
     ((text: string) => Promise<{ text: string; functionKey?: string } | null>) | null
   >(null);
 
-  // ── Mounted + permissão de microfone ──────────────────────────────────────
   useEffect(() => {
     setMounted(true);
     requestMicrophonePermission().then((result) => {
@@ -59,69 +54,72 @@ export default function VendasPage({ params }: VendasPageProps) {
     });
   }, []);
 
-  // ── Detector de inatividade (modo vendas) ─────────────────────────────────
-const onInactivityVendas = useCallback(() => {
-  const action = companyData?.inactivity_action ?? 'restart';
-  if (action === 'offers_panel') {
-    setVendaActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
-  } else if (action === 'feature_highlight') {
-    // Dispara a lógica de inatividade do VoiceAssistant oculto via evento
-    window.dispatchEvent(new CustomEvent('eai:triggerInactivity'));
-  } else {
-    // 'restart' — volta para o assistente
-    if (slug) router.push(getContextualRoute('ia', slug));
-  }
-}, [companyData?.inactivity_action, companyId, slug, router]);
+  const onInactivityVendas = useCallback(() => {
+    const action = companyData?.inactivity_action ?? 'restart';
+    if (action === 'offers_panel') {
+      setVendaActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
+    } else if (action === 'feature_highlight') {
+      window.dispatchEvent(new CustomEvent('eai:triggerInactivity'));
+    } else if (slug) {
+      router.push(getContextualRoute('ia', slug));
+    }
+  }, [companyData?.inactivity_action, companyId, slug, router]);
 
   useInactivityDetector({
     timeoutSeconds: companyData?.inactivity_timeout_seconds ?? 300,
     onInactivity: onInactivityVendas,
   });
 
-  // ── Await params ──────────────────────────────────────────────────────────
   useEffect(() => {
     async function unwrapParams() {
       const resolvedParams = await params;
       setSlug(resolvedParams.slug);
     }
-    unwrapParams();
+    void unwrapParams();
   }, [params]);
 
-  // ── Fetch company data ────────────────────────────────────────────────────
+  // IMPORTANTE: página pública nunca mais lê a linha administrativa inteira
+  // de public.companies. A API server-side devolve somente campos públicos.
   useEffect(() => {
     if (!slug) return;
 
+    let active = true;
     async function fetchCompany() {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('companies')
-        .select('*')
-        .eq('slug', slug)
-        .single();
+      try {
+        const response = await fetch(`/api/public/company?slug=${encodeURIComponent(slug)}`, {
+          cache: 'no-store',
+        });
+        const payload = await response.json().catch(() => ({}));
+        const data = payload?.company;
 
-      if (error || !data) {
-        console.error('Empresa não encontrada:', error);
+        if (!response.ok || !data?.id) {
+          console.error('Empresa pública não encontrada:', payload?.error || response.status);
+          router.push('/');
+          return;
+        }
+
+        if (!active) return;
+        setCompanyId(data.id);
+        companyIdRef.current = data.id;
+        setCompanyData(data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Erro ao carregar empresa pública:', error);
         router.push('/');
-        return;
       }
-
-      setCompanyId(data.id);
-      companyIdRef.current = data.id;
-      setCompanyData(data);
-      setLoading(false);
     }
 
-    fetchCompany();
+    void fetchCompany();
+    return () => { active = false; };
   }, [slug, router]);
 
-  // ── Detectar produto inicial via query params ─────────────────────────────
   useEffect(() => {
     if (!companyId || typeof window === 'undefined') return;
 
-    const params = new URLSearchParams(window.location.search);
-    const produtoId = params.get('produto');
-    const quantidade = params.get('quantidade');
-    const opcoesJson = params.get('opcoes');
+    const search = new URLSearchParams(window.location.search);
+    const produtoId = search.get('produto');
+    const quantidade = search.get('quantidade');
+    const opcoesJson = search.get('opcoes');
 
     if (!produtoId) return;
 
@@ -150,27 +148,23 @@ const onInactivityVendas = useCallback(() => {
         }
       }
 
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, '', cleanUrl);
+      window.history.replaceState({}, '', window.location.pathname);
     }
 
-    fetchProduto();
+    void fetchProduto();
   }, [companyId]);
 
-  // ── Detectar múltiplos itens via query param (fazer_pedido) ──────────────
   useEffect(() => {
     if (!companyId || typeof window === 'undefined') return;
 
-    const params = new URLSearchParams(window.location.search);
-    const itensJson = params.get('itens');
-
+    const search = new URLSearchParams(window.location.search);
+    const itensJson = search.get('itens');
     if (!itensJson) return;
 
     async function buscarItens() {
       try {
         const itensBrutos = JSON.parse(itensJson);
         const { buscarProdutoPorNome } = await import('@/lib/produtos-venda');
-
         const itensResolvidos: { produto: any; quantidade: number }[] = [];
 
         for (const item of itensBrutos) {
@@ -185,17 +179,15 @@ const onInactivityVendas = useCallback(() => {
           setQuantidadeInicial(itensResolvidos[0].quantidade);
         }
 
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, '', cleanUrl);
+        window.history.replaceState({}, '', window.location.pathname);
       } catch (e) {
         console.error('Erro ao buscar itens:', e);
       }
     }
 
-    buscarItens();
+    void buscarItens();
   }, [companyId]);
 
-  // ── Handlers de microfone ─────────────────────────────────────────────────
   const handleMicDown = useCallback(async () => {
     if (isPlayingAudio) {
       if (currentAudioRef.current) {
@@ -241,17 +233,13 @@ const onInactivityVendas = useCallback(() => {
     }
   }, [voiceRecorder]);
 
-  // ── handleTextMessage — delega ao VoiceAssistant oculto ──────────────────
   const handleTextMessage = useCallback(async (message: string) => {
-    if (!message.trim()) return;
-    if (!textMessageHandlerRef.current) return;
+    if (!message.trim() || !textMessageHandlerRef.current) return;
 
     setIsProcessing(true);
     try {
       const result = await textMessageHandlerRef.current(message);
-      if (result?.text) {
-        await playText(result.text);
-      }
+      if (result?.text) await playText(result.text);
     } catch {
       // silencioso
     } finally {
@@ -288,10 +276,6 @@ const onInactivityVendas = useCallback(() => {
 
   return (
     <div className="relative min-h-screen">
-
-      {/* ── VoiceAssistant oculto — processa funções, FAQ, GROQ ─────────────
-          textMode=true: não usa TTS interno, retorna texto para handleTextMessage.
-          onModalChange: expõe activeModal para o VendasPage montar via ActionModals. */}
       <div className="hidden">
         <VoiceAssistantWithWakeWord
           companyId={companyId}
@@ -309,7 +293,6 @@ const onInactivityVendas = useCallback(() => {
         />
       </div>
 
-      {/* ── ActionModals — renderiza modais abertos pelo VoiceAssistant oculto */}
       <ActionModals
         activeModal={vendaActiveModal}
         onClose={() => setVendaActiveModal(null)}
@@ -317,19 +300,17 @@ const onInactivityVendas = useCallback(() => {
         playText={playText}
       />
 
-{vendaActiveModal?.type === 'FeatureHighlightModal' && (
-  <FeatureHighlightModal
-    isOpen={true}
-    onClose={() => setVendaActiveModal(null)}
-    featureName={vendaActiveModal.data.featureName}
-    featureDescription={vendaActiveModal.data.featureDescription}
-    featureCategory={vendaActiveModal.data.featureCategory}
-    theme={theme}
-  />
-)}
+      {vendaActiveModal?.type === 'FeatureHighlightModal' && (
+        <FeatureHighlightModal
+          isOpen={true}
+          onClose={() => setVendaActiveModal(null)}
+          featureName={vendaActiveModal.data.featureName}
+          featureDescription={vendaActiveModal.data.featureDescription}
+          featureCategory={vendaActiveModal.data.featureCategory}
+          theme={theme}
+        />
+      )}
 
-      {/* ── SaleModeModal fullscreen ─────────────────────────────────────────
-          bottom-8 = altura do SlugFooter (h-8 = 32px) */}
       <div className={`fixed inset-x-0 top-0 bottom-8 z-[50] ${
         theme === 'dark' ? 'bg-slate-900' : 'bg-gray-50'
       }`}>
@@ -342,9 +323,9 @@ const onInactivityVendas = useCallback(() => {
           webapp_home={companyData?.webapp_home ?? null}
           website={companyData?.website ?? null}
           avatarType={companyData?.assistant_avatar_type}
-          avatarType={companyData?.assistant_avatar_type}
           modo_vendas_enabled={companyData?.modo_vendas_enabled ?? true}
           modo_fila_enabled={companyData?.modo_fila_enabled ?? false}
+          modo_links_enabled={companyData?.modo_links_enabled ?? false}
           isFullscreen={true}
           footerHeight={32}
           onClose={handleClose}
@@ -363,7 +344,6 @@ const onInactivityVendas = useCallback(() => {
         />
       </div>
 
-      {/* ── SlugFooter — fica acima do modal ─────────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 z-[310]">
         <SlugFooter
           theme={theme}

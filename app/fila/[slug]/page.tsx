@@ -1,15 +1,11 @@
 'use client';
 
-// FIX: substituído SlugHeader direto por SlugHeaderWrapper para que
-//      kiosk, wake lock e tema funcionem identicamente ao modo ia.
-
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { createClient } from '@/lib/supabase-browser';
 import PainelFilaDisplay from '@/components/VoiceAssistant/modals/FilaAtendimentoDisplay/PainelFilaDisplay';
 import SlugFooter from '@/components/slug/SlugFooter';
-import SlugHeaderWrapper from '@/app/ia/[slug]/SlugHeaderWrapper';  // ajuste o caminho se necessário
+import SlugHeaderWrapper from '@/app/ia/[slug]/SlugHeaderWrapper';
 
 interface FilaPageProps {
   params: Promise<{ slug: string }>;
@@ -33,34 +29,39 @@ export default function FilaPage({ params }: FilaPageProps) {
       const resolvedParams = await params;
       setSlug(resolvedParams.slug);
     }
-    unwrapParams();
+    void unwrapParams();
   }, [params]);
 
   useEffect(() => {
     if (!slug) return;
 
+    let active = true;
     async function fetchCompany() {
-      const supabase = createClient();
+      try {
+        const response = await fetch(`/api/public/company?slug=${encodeURIComponent(slug)}`, {
+          cache: 'no-store',
+        });
+        const payload = await response.json().catch(() => ({}));
+        const data = payload?.company;
 
-      // FIX: busca todos os campos de modo para o header ter navegação completa
-      const { data, error } = await supabase
-        .from('companies')
-        .select('id, name, slug, logo_url, assistant_role, webapp_enabled, webapp_home, website, modo_vendas_enabled, modo_fila_enabled, modo_links_enabled')
-        .eq('slug', slug)
-        .single();
+        if (!response.ok || !data?.id) {
+          console.error('Empresa pública não encontrada:', payload?.error || response.status);
+          router.push('/');
+          return;
+        }
 
-      if (error || !data) {
-        console.error('Empresa não encontrada:', error);
+        if (!active) return;
+        setCompanyId(data.id);
+        setCompanyData(data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Erro ao carregar empresa pública:', error);
         router.push('/');
-        return;
       }
-
-      setCompanyId(data.id);
-      setCompanyData(data);
-      setLoading(false);
     }
 
-    fetchCompany();
+    void fetchCompany();
+    return () => { active = false; };
   }, [slug, router]);
 
   const handlePlayText = async (text: string) => {
@@ -95,9 +96,6 @@ export default function FilaPage({ params }: FilaPageProps) {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-
-      {/* FIX: SlugHeaderWrapper em vez de SlugHeader direto
-              — kiosk, wake lock, tema e todos os modos de navegação funcionam */}
       <div className="flex-shrink-0">
         <SlugHeaderWrapper
           company={{
@@ -118,7 +116,6 @@ export default function FilaPage({ params }: FilaPageProps) {
         />
       </div>
 
-      {/* PAINEL */}
       <div className="flex-1 overflow-hidden pb-8">
         <PainelFilaDisplay
           companyId={companyId}
@@ -127,7 +124,6 @@ export default function FilaPage({ params }: FilaPageProps) {
         />
       </div>
 
-      {/* FOOTER */}
       <div className="flex-shrink-0">
         <SlugFooter
           theme={theme}

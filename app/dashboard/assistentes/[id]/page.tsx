@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Save, Loader2, Globe, Lock, AlertCircle, Code, VolumeX, Volume1, Volume2 } from 'lucide-react'; // Adicione 'Code'
 import WidgetConfigModal from '@/components/dashboard/assistentes/WidgetConfigModal'; // Importe o modal
 import { createClient } from '@/lib/supabase-browser';
+import { getPrivateCompanyConfig } from '@/lib/company-private-config';
 
 interface PageProps {
   params: Promise<{
@@ -32,17 +33,12 @@ export default function EditarAssistentePage({ params }: PageProps) {
   useEffect(() => {
     async function loadAssistant() {
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from('companies')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        setError('Erro ao carregar assistente');
-      } else {
+      try {
+        const data = await getPrivateCompanyConfig<any>(id, 'safe');
         setAssistant(data);
         setStartupFunctionKey(data.startup_function_key ?? '');
+      } catch {
+        setError('Erro ao carregar assistente');
       }
 
       // Carregar funções disponíveis para autocomplete

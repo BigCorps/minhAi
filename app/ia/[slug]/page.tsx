@@ -116,7 +116,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
 
   const { data: company, error } = await supabase
     .from('companies')
-    .select('*')
+    .select('id, name, slug, assistant_type, webapp_enabled, webapp_home, website, modo_vendas_enabled, modo_fila_enabled, modo_links_enabled, wake_word, greeting_message, logo_url, assistant_role, hide_disabled_functions_carousel, carousel_auto_scroll')
     .eq('slug', slug)
     .single();
 

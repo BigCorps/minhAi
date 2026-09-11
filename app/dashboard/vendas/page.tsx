@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
+import { getPrivateCompanyConfig } from '@/lib/company-private-config';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
 import ModoToggle from '@/components/dashboard/ModoToggle';
@@ -2209,13 +2210,21 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const { data } = await supabase
-        .from('companies')
-        .select('receiving_pix_key, infinitepay_handle, mp_access_token, mp_terminal_id, \
-  print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment, print_auto_type')
-        .eq('id', companyId)
-        .single();
-      setConfig(data ?? {});
+      const [{ data }, paymentStatus] = await Promise.all([
+        supabase
+          .from('companies')
+          .select('print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment, print_auto_type')
+          .eq('id', companyId)
+          .single(),
+        getPrivateCompanyConfig<any>(companyId, 'payment-status').catch(() => null),
+      ]);
+      setConfig({
+        ...(data ?? {}),
+        receiving_pix_key: paymentStatus?.pix_configured ? '__configured__' : null,
+        mp_access_token: paymentStatus?.mp_point_configured ? '__configured__' : null,
+        mp_terminal_id: paymentStatus?.mp_point_configured ? '__configured__' : null,
+        infinitepay_handle: paymentStatus?.infinitepay_configured ? '__configured__' : null,
+      });
 
       // Verificar plano ativo
       const { data: { user } } = await supabase.auth.getUser();

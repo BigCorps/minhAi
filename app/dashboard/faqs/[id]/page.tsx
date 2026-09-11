@@ -65,7 +65,7 @@ export default function CompanyFAQsPage() {
         // Buscar empresa
         const { data: companyData, error: companyError } = await supabase
           .from('companies')
-          .select('*')
+          .select('id, name, user_id')
           .eq('id', companyId)
           .single();
 

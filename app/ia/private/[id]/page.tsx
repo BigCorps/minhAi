@@ -73,7 +73,7 @@ export default async function AssistentePrivadoPage({ params }: PageProps) {
   // 2. Buscar a empresa pelo private_slug (ou ID como fallback)
   const { data: company, error } = await supabase
     .from('companies')
-    .select('*')
+    .select('id, user_id, name, wake_word, greeting_message, logo_url, assistant_role, hide_disabled_functions_carousel, carousel_auto_scroll')
     .or(`private_slug.eq.${id},id.eq.${id}`)
     .single();
 

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { usePlayText, stopAudio } from '@/hooks/usePlayText';
 import { CheckCircle, UserPlus, Info, Mic, Sparkles, Loader2, X, Mail, Calendar, Bell, ExternalLink, Settings, AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
+import { getPrivateCompanyConfig } from '@/lib/company-private-config';
 import { useRouter } from 'next/navigation';
 import { InfinitePayConfigForm } from './InfinitePayConfigModal';
 import { MpPointConfigForm } from './MpPointConfigModal'
@@ -5012,14 +5013,26 @@ try {
         setHasActivePlan(false);
       }
 
+      const [privatePayments, privateWifi, privatePrintNode] = await Promise.all([
+        getPrivateCompanyConfig<any>(companyId, 'payments').catch(() => null),
+        getPrivateCompanyConfig<any>(companyId, 'wifi').catch(() => null),
+        getPrivateCompanyConfig<any>(companyId, 'printnode').catch(() => null),
+      ]);
+
       const { data, error } = await supabase
         .from('companies')
-        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, groq_fallback_message, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle, wifi_network_name, wifi_network_password, cardapio_url, cardapio_description, validar_cupom, qrcode_content, qrcode_label, manual_payment_enabled, print_price_per_page, print_max_pages_per_job, print_color_enabled, print_price_bw, print_price_color, printnode_computer_id, printnode_printer_id_bw, printnode_printer_id_color, thermal_printer_id, thermal_connection_type, youtube_channel_url, youtube_channel_name, youtube_channel_description, print_on_purchase, print_on_queue, print_on_payment, print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment, consultas_payment_method')
+        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, groq_fallback_message, tiktok, twitter, telefone_fixo, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle, wifi_network_name, cardapio_url, cardapio_description, validar_cupom, qrcode_content, qrcode_label, manual_payment_enabled, print_price_per_page, print_max_pages_per_job, print_color_enabled, print_price_bw, print_price_color, printnode_computer_id, printnode_printer_id_bw, printnode_printer_id_color, thermal_printer_id, thermal_connection_type, youtube_channel_url, youtube_channel_name, youtube_channel_description, print_on_purchase, print_on_queue, print_on_payment, print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment, consultas_payment_method')
         .eq('id', companyId)
         .single();
 
       if (data) {
-        setSettings(data);
+        setSettings({
+          ...data,
+          receiving_pix_key: privatePayments?.receiving_pix_key || '',
+          receiving_pix_key_type: privatePayments?.receiving_pix_key_type || '',
+          wifi_network_password: privateWifi?.wifi_network_password || '',
+          printnode_api_key: privatePrintNode?.printnode_api_key || '',
+        });
       } else if (error) {
         console.error('Erro ao carregar configurações:', error);
       }

@@ -2,7 +2,13 @@
 // Cliente para configurações privadas de uma empresa.
 // A autorização real acontece server-side em /api/company/private-config.
 
-export type CompanyPrivateScope = 'safe' | 'payments' | 'wifi' | 'payment-status';
+export type CompanyPrivateScope =
+  | 'safe'
+  | 'payments'
+  | 'wifi'
+  | 'payment-status'
+  | 'fiscal'
+  | 'printnode';
 
 export async function getPrivateCompanyConfig<T = Record<string, any>>(
   companyId: string,

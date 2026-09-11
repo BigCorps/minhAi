@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
+import { getPrivateCompanyConfig } from '@/lib/company-private-config';
 import { InfinitePayConfigForm } from './InfinitePayConfigModal';
 import { MpPointConfigForm } from './MpPointConfigModal';
 import PixPaymentModeSettings from '@/components/pix/PixPaymentModeSettings';
@@ -88,8 +89,9 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
     async function load() {
       setLoading(true);
       try {
+        const privatePayments = await getPrivateCompanyConfig<any>(companyId, 'payments').catch(() => null);
         const { data: company } = await supabase.from('companies').select(
-          'system_prompt, assistant_role, greeting_message, wake_word, business_address, business_hours, telefone_fixo, whatsapp_number, email_contato, website, receiving_pix_key, receiving_pix_key_type'
+          'system_prompt, assistant_role, greeting_message, wake_word, business_address, business_hours, telefone_fixo, whatsapp_number, email_contato, website'
         ).eq('id', companyId).single();
         if (company) {
           setSystemPrompt(company.system_prompt || ''); setAssistantRole(company.assistant_role || 'Assistente IA');
@@ -97,7 +99,7 @@ export default function VendasConfigPanel({ companyId, companyName }: VendasConf
           setBusinessAddress(company.business_address || ''); setBusinessHours(company.business_hours || '');
           setTelefoneFixo(company.telefone_fixo || ''); setWhatsappNumber(company.whatsapp_number || '');
           setEmailContato(company.email_contato || ''); setWebsite(company.website || '');
-          setReceivingPixKey(company.receiving_pix_key || ''); setReceivingPixKeyType(company.receiving_pix_key_type || '');
+          setReceivingPixKey(privatePayments?.receiving_pix_key || ''); setReceivingPixKeyType(privatePayments?.receiving_pix_key_type || '');
         }
         const { data: settings } = await supabase.from('company_function_settings').select('function_key, is_enabled').eq('company_id', companyId).in('function_key', VENDAS_FUNCTIONS.map(f => f.key));
         const map: Record<string, boolean> = {}; VENDAS_FUNCTIONS.forEach(f => { map[f.key] = false; });

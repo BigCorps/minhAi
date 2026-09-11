@@ -11,6 +11,12 @@ export type PublicWifiCompanyConfig = {
   name: string;
 };
 
+export type PublicFiscalCompanyConfig = {
+  brasilnfe_token: string | null;
+  nfe_ativo: boolean;
+  nfe_plano: string | null;
+};
+
 export async function getPublicPaymentCompanyConfig(
   companyId: string,
 ): Promise<PublicPaymentCompanyConfig> {
@@ -67,5 +73,38 @@ export async function getPublicWifiConfig(
     };
   } catch {
     return null;
+  }
+}
+
+export async function getPublicFiscalCompanyConfig(
+  companyId: string,
+): Promise<PublicFiscalCompanyConfig> {
+  try {
+    const response = await fetch(
+      `/api/public/fiscal-capabilities?company_id=${encodeURIComponent(companyId)}`,
+      { cache: 'no-store' },
+    );
+
+    if (!response.ok) {
+      return {
+        brasilnfe_token: null,
+        nfe_ativo: false,
+        nfe_plano: null,
+      };
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return {
+      // Sentinela apenas; o token Brasil NFE nunca é enviado ao navegador.
+      brasilnfe_token: data?.configured ? '__configured__' : null,
+      nfe_ativo: data?.active === true,
+      nfe_plano: data?.plan ? String(data.plan) : null,
+    };
+  } catch {
+    return {
+      brasilnfe_token: null,
+      nfe_ativo: false,
+      nfe_plano: null,
+    };
   }
 }

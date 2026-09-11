@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
+import { getPrivateCompanyConfig } from '@/lib/company-private-config';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
 import { usePlayText } from '@/hooks/usePlayText';
@@ -1206,20 +1207,28 @@ function FiscalPageContent() {
 
   const loadCompany = async () => {
     if (!companyId) return;
-    const { data } = await supabase
-      .from('companies')
-      .select(`
-        id, name, assistant_type,
-        brasilnfe_token, brasilnfe_ambiente,
-        nfe_plano, nfe_ativo, nfe_cert_expiracao,
-        nfe_cnpj, nfe_crt, nfe_cnae,
-        nfe_ie, nfe_im, nfe_csc_identificador, nfe_csc_codigo
-      `)
-      .eq('id', companyId)
-      .single();
+    const [privateFiscal, { data }] = await Promise.all([
+      getPrivateCompanyConfig<any>(companyId, 'fiscal').catch(() => null),
+      supabase
+        .from('companies')
+        .select(`
+          id, name, assistant_type, brasilnfe_ambiente,
+          nfe_plano, nfe_ativo, nfe_cert_expiracao,
+          nfe_cnpj, nfe_crt, nfe_cnae,
+          nfe_ie, nfe_im, nfe_ultimo_rps, nfe_serie_rps
+        `)
+        .eq('id', companyId)
+        .single(),
+    ]);
 
     if (data) {
-      setCompany(data as Company);
+      const merged = {
+        ...data,
+        brasilnfe_token: privateFiscal?.brasilnfe_token ?? null,
+        nfe_csc_identificador: privateFiscal?.nfe_csc_identificador ?? null,
+        nfe_csc_codigo: privateFiscal?.nfe_csc_codigo ?? null,
+      } as Company;
+      setCompany(merged);
       setIsVendas(data.assistant_type === 'vendas');
     }
   };

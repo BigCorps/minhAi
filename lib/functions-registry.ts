@@ -16,7 +16,7 @@
 import { createClient } from '@/lib/supabase-browser';
 import { cobrar_debito, cobrar_credito } from './paymentGatewayEntries'
 import { getContextualRoute } from '@/lib/routing-utils';
-import { getPublicPaymentCompanyConfig, getPublicWifiConfig } from './public-company-capabilities';
+import { getPublicFiscalCompanyConfig, getPublicPaymentCompanyConfig, getPublicWifiConfig } from './public-company-capabilities';
 
 export type ResponseType = 'voice' | 'modal' | 'page' | 'voice+modal' | 'voice+page';
 
@@ -3660,12 +3660,7 @@ emitir_nota: {
 
   handler: async ({ playText, setActiveModal, companyId }) => {
     try {
-      const supabase = createClient();
-      const { data: company } = await supabase
-        .from('companies')
-        .select('nfe_ativo, brasilnfe_token, nfe_plano')
-        .eq('id', companyId)
-        .single();
+      const company = await getPublicFiscalCompanyConfig(companyId);
 
       if (!company?.brasilnfe_token || !company?.nfe_ativo) {
         await playText('A emissão fiscal não está ativada. Configure no painel do dashboard.');

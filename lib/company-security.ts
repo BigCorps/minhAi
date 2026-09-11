@@ -1,7 +1,5 @@
 // lib/company-security.ts
 // Campos administrativos que nunca devem sair em respostas "safe" da empresa.
-// A lista é deliberadamente maior que a R3B: inclui segredos já identificados
-// nas fases anteriores, mesmo quando ainda existem telas privadas legadas para eles.
 
 export const COMPANY_SECRET_FIELDS = [
   'mp_access_token',
@@ -11,10 +9,12 @@ export const COMPANY_SECRET_FIELDS = [
   'wifi_network_password',
   'fullscreen_password',
   'brasilnfe_token',
+  'nfe_csc_identificador',
   'nfe_csc_codigo',
   'printnode_api_key',
   'tuya_access_token',
   'tuya_refresh_token',
+  'tuya_token_expires_at',
 ] as const;
 
 export function stripCompanySecrets<T extends Record<string, any> | null | undefined>(

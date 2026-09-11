@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser';
+import { getPrivateCompanyConfig } from '@/lib/company-private-config';
 
 // ─── Form inline (para plugar no FunctionConfigModal genérico) ────────────────
 
@@ -29,11 +30,10 @@ export function MpPointConfigForm({ companyId, functionKey, onSaved }: MpPointCo
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const { data: company } = await supabase
-        .from('companies')
-        .select('mp_access_token, mp_terminal_id')
-        .eq('id', companyId)
-        .single()
+      const company = await getPrivateCompanyConfig<{
+        mp_access_token: string | null;
+        mp_terminal_id: string | null;
+      }>(companyId, 'payments').catch(() => null)
 
       if (company) {
         setAccessToken(company.mp_access_token || '')

@@ -9,10 +9,23 @@ const RESPONSE_HEADERS = {
   Vary: 'Cookie, Authorization',
 };
 
-type Scope = 'safe' | 'payments' | 'wifi' | 'payment-status';
+type Scope =
+  | 'safe'
+  | 'payments'
+  | 'wifi'
+  | 'payment-status'
+  | 'fiscal'
+  | 'printnode';
 
 function json(body: unknown, status = 200) {
   return NextResponse.json(body, { status, headers: RESPONSE_HEADERS });
+}
+
+function cleanCompanyId(value: string | null) {
+  const id = String(value || '').trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+    ? id
+    : '';
 }
 
 async function loadAuthorizedCompany(companyId: string) {
@@ -50,11 +63,11 @@ async function loadAuthorizedCompany(companyId: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const companyId = String(request.nextUrl.searchParams.get('company_id') || '').trim();
+  const companyId = cleanCompanyId(request.nextUrl.searchParams.get('company_id'));
   const scope = String(request.nextUrl.searchParams.get('scope') || 'safe') as Scope;
 
   if (!companyId) return json({ error: 'company_id_required' }, 400);
-  if (!['safe', 'payments', 'wifi', 'payment-status'].includes(scope)) {
+  if (!['safe', 'payments', 'wifi', 'payment-status', 'fiscal', 'printnode'].includes(scope)) {
     return json({ error: 'invalid_scope' }, 400);
   }
 
@@ -91,6 +104,25 @@ export async function GET(request: NextRequest) {
         mp_point_configured: Boolean(company.mp_access_token && company.mp_terminal_id),
         pix_configured: Boolean(company.receiving_pix_key),
         infinitepay_configured: Boolean(company.infinitepay_handle),
+      },
+    });
+  }
+
+  if (scope === 'fiscal') {
+    return json({
+      config: {
+        // O token do provedor nunca precisa ser exibido no navegador.
+        brasilnfe_token: company.brasilnfe_token ? '__configured__' : null,
+        nfe_csc_identificador: company.nfe_csc_identificador ?? '',
+        nfe_csc_codigo: company.nfe_csc_codigo ?? '',
+      },
+    });
+  }
+
+  if (scope === 'printnode') {
+    return json({
+      config: {
+        printnode_api_key: company.printnode_api_key ?? '',
       },
     });
   }

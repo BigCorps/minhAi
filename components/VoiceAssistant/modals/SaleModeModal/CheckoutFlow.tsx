@@ -59,6 +59,28 @@ function formatTime(s: number) {
   return `${m}:${(s % 60).toString().padStart(2, '0')}`;
 }
 
+async function confirmOrderPayment(input: {
+  pedidoId: string;
+  companyId: string;
+  provider: 'infinitepay' | 'mp_point';
+  providerId: string;
+}) {
+  const response = await fetch('/api/orders/confirm-payment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({
+      pedido_id: input.pedidoId,
+      company_id: input.companyId,
+      provider: input.provider,
+      provider_id: input.providerId,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  return { ok: response.ok && data?.success === true, status: response.status, data };
+}
+
 export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos, profile, observacaoEntrega, onVoltar, tipoEntrega, enderecoDelivery, deliveryEnabled, deliveryWhoPays, deliveryQuoteExterno }: CheckoutFlowProps) {
   const { itens, total, clear } = useCart();
   const isDark = theme === 'dark';
@@ -287,10 +309,13 @@ const div = document.createElement('div');
       try {
         if (metodo === 'nfc_debito' || metodo === 'nfc_credito') {
           if (!cobrancaId) return;
-          const { data: cob } = await supabase.from('cobrancas').select('status').eq('id', cobrancaId).single();
-          if (cob?.status === 'PAGA') {
-            const { data: p } = await supabase.from('pedidos').select('status').eq('id', pedidoId).single();
-            if (p?.status !== 'pago') await supabase.rpc('confirmar_pedido_pago', { p_pedido_id: pedidoId });
+          const confirmed = await confirmOrderPayment({
+            pedidoId,
+            companyId,
+            provider: 'infinitepay',
+            providerId: cobrancaId,
+          });
+          if (confirmed.ok) {
             clearInterval(interval); setPolling(false);
             setTotalConfirmado(totalFinalRef.current);
             await dispatchDelivery(pedidoId!);
@@ -299,12 +324,13 @@ const div = document.createElement('div');
           }
         } else if (metodo === 'tef_debito' || metodo === 'tef_credito') {
           if (!mpOrderId) return;
-const { data: od } = await supabase.functions.invoke('consultar-order-mp-point', {
-  body: { order_id: mpOrderId },
+const confirmed = await confirmOrderPayment({
+  pedidoId,
+  companyId,
+  provider: 'mp_point',
+  providerId: mpOrderId,
 });
-if (od?.status === 'paid') {
-            const { data: p } = await supabase.from('pedidos').select('status').eq('id', pedidoId).single();
-            if (p?.status !== 'pago') await supabase.rpc('confirmar_pedido_pago', { p_pedido_id: pedidoId });
+if (confirmed.ok) {
             clearInterval(interval); setPolling(false);
             setTotalConfirmado(totalFinalRef.current);
             await dispatchDelivery(pedidoId!);
@@ -345,33 +371,32 @@ if (od?.status === 'paid') {
     setIsConfirmingLink(true);
     setLinkPendingMsg(null);
     try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-      const response = await fetch(`${supabaseUrl}/functions/v1/confirmar-pagamento-infinitepay`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-          'apikey': supabaseAnonKey,
-        },
-        body: JSON.stringify({ cobranca_id: cobrancaId, company_id: companyId }),
+      if (!pedidoId) {
+        setLinkPendingMsg('Pedido não encontrado para esta cobrança.');
+        return;
+      }
+
+      const confirmed = await confirmOrderPayment({
+        pedidoId,
+        companyId,
+        provider: 'infinitepay',
+        providerId: cobrancaId,
       });
-      const json = await response.json();
-      if (response.status === 400 && json.pending) {
-        setLinkPendingMsg(json.error || 'Pagamento ainda não identificado. Aguarde o cliente pagar e tente novamente.');
+
+      if (!confirmed.ok) {
+        if (confirmed.data?.pending || confirmed.status === 409) {
+          setLinkPendingMsg(
+            confirmed.data?.error ||
+              'Pagamento ainda não identificado. Aguarde o cliente pagar e tente novamente.',
+          );
+        } else {
+          setLinkPendingMsg(confirmed.data?.error || 'Erro ao confirmar. Tente novamente.');
+        }
         return;
       }
-      if (!response.ok || !json.success) {
-        setLinkPendingMsg(json.error || 'Erro ao confirmar. Tente novamente.');
-        return;
-      }
-      // Confirma o pedido no banco
-      if (pedidoId) {
-        const supabase = createClient();
-        await supabase.rpc('confirmar_pedido_pago', { p_pedido_id: pedidoId });
-      }
+
       setTotalConfirmado(totalFinalRef.current);
-      await dispatchDelivery(pedidoId!);
+      await dispatchDelivery(pedidoId);
       setStep('confirmado');
       playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {});
       clear();
@@ -564,7 +589,6 @@ if (metodo === 'tef_debito' || metodo === 'tef_credito') {
     },
   });
   if (orderErr || !orderData?.order_id) throw new Error('Erro ao criar order na maquininha');
-  await supabase.from('mp_orders').update({ pedido_id: pedido.id }).eq('id', orderData.order_id);
   await atualizarStatusPedido(pedido.id, 'aguardando_pagamento');
   setMpOrderId(orderData.order_id); setStep('aguardando'); setPolling(true);
   playText?.(`Insira o cartão ${metodo === 'tef_credito' ? 'de crédito' : 'de débito'} na maquininha Point para pagar.`).catch(() => {}); return;

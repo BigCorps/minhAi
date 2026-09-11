@@ -28,14 +28,20 @@ export default function FuncionarIAPublicPage() {
         return;
       }
       setProfile(data);
-      const productRes = await supabase
-        .from('produtos_venda')
-        .select('id,nome,descricao,imagem_url,preco_venda')
-        .eq('company_id', data.company.id)
-        .eq('is_active', true)
-        .order('display_order')
-        .limit(6);
-      setProducts(productRes.data || []);
+
+      // Produto público passa por uma rota server-side com whitelist. Assim o
+      // navegador nunca ganha acesso a custo, EAN interno, estoque exato ou IDs
+      // do Mercado Livre, mesmo quando a tabela administrativa for endurecida.
+      try {
+        const response = await fetch(
+          `/api/public/products?company_id=${encodeURIComponent(data.company.id)}&limit=6`,
+          { cache: 'no-store' },
+        );
+        const body = await response.json().catch(() => ({}));
+        setProducts(response.ok && Array.isArray(body?.products) ? body.products : []);
+      } catch {
+        setProducts([]);
+      }
       setLoading(false);
     }
     if (slug) void load();
@@ -104,12 +110,6 @@ export default function FuncionarIAPublicPage() {
 
         <section className="mt-4 overflow-hidden rounded-[34px] border border-black/5 bg-white shadow-xl shadow-slate-950/5">
           <div className="grid items-stretch lg:grid-cols-[minmax(0,1.05fr)_440px]">
-            {/*
-              A coluna do avatar era `min-h-[760px]` fixa e a de conteudo
-              crescia com o texto, entao as duas quase nunca terminavam na mesma
-              altura. Com `lg:h-full` ela acompanha a coluna vizinha, e o avatar
-              preenche o espaco que sobrar em vez de definir a altura do cartao.
-            */}
             <div className="relative overflow-hidden border-b border-black/5 bg-white lg:h-full lg:border-b-0 lg:border-r">
               <FuncionarIAAvatarPhoto
                 primaryColor={primary}
@@ -126,18 +126,11 @@ export default function FuncionarIAPublicPage() {
                 audioElement={audioElement}
                 className="h-full !min-h-[420px] sm:!min-h-[520px]"
               />
-
             </div>
 
             <div className="bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(248,250,252,0.98))] p-3 sm:p-4 lg:p-5">
               <div className="flex h-full flex-col rounded-[28px] border border-slate-200 bg-white/90 p-3 shadow-sm backdrop-blur-xl sm:p-4">
                 <div className="mb-3 rounded-[22px] border border-violet-100 bg-white px-4 py-4 shadow-sm sm:px-5">
-                  {/*
-                    Textos escritos para quem chega no site, nao para quem
-                    administra o sistema. "Funcao", "inteligente" e o nome do
-                    produto sao vocabulario interno — o cliente quer saber se
-                    tem alguem para atender, nao como o atendimento funciona.
-                  */}
                   <div className="text-[10px] font-black uppercase tracking-[.18em]" style={{ color: primary }}>Estamos online</div>
                   <div className="mt-1 text-lg font-black leading-tight text-slate-950 sm:text-xl">Fale com a {company.name}</div>
                   <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Escreva sua dúvida, escolha uma opção ou use o microfone.</p>

@@ -52,10 +52,17 @@ type EyeRegistry = Map<string, HTMLImageElement | null>;
  * microgestos. Assim não recortamos braço, ombro, camiseta ou crachá.
  */
 const HEAD_PATCH_STYLE: CSSProperties = {
+  /*
+    V15 — o patch da cabeça ficou bom, mas a borda feathered ainda descia um
+    pouco demais sobre a gola escura, produzindo um halo/brilho no colo. A nova
+    máscara reduz a cobertura inferior e aperta a transição apenas no pescoço.
+    Mantemos testa, cabelo, fones e rosto com folga; o contorno passa a morrer
+    antes de tocar a camiseta.
+  */
   WebkitMaskImage:
-    'radial-gradient(ellipse 36% 33% at 50% 27%, rgb(0 0 0 / 1) 0%, rgb(0 0 0 / 1) 76%, rgb(0 0 0 / .95) 84%, rgb(0 0 0 / .55) 93%, rgb(0 0 0 / 0) 100%)',
+    'radial-gradient(ellipse 34% 30% at 50% 25.3%, rgb(0 0 0 / 1) 0%, rgb(0 0 0 / 1) 74%, rgb(0 0 0 / .98) 80%, rgb(0 0 0 / .82) 85%, rgb(0 0 0 / .34) 90%, rgb(0 0 0 / 0) 94%)',
   maskImage:
-    'radial-gradient(ellipse 36% 33% at 50% 27%, rgb(0 0 0 / 1) 0%, rgb(0 0 0 / 1) 76%, rgb(0 0 0 / .95) 84%, rgb(0 0 0 / .55) 93%, rgb(0 0 0 / 0) 100%)',
+    'radial-gradient(ellipse 34% 30% at 50% 25.3%, rgb(0 0 0 / 1) 0%, rgb(0 0 0 / 1) 74%, rgb(0 0 0 / .98) 80%, rgb(0 0 0 / .82) 85%, rgb(0 0 0 / .34) 90%, rgb(0 0 0 / 0) 94%)',
   WebkitMaskRepeat: 'no-repeat',
   maskRepeat: 'no-repeat',
   WebkitMaskSize: '100% 100%',
@@ -174,7 +181,7 @@ export default function FuncionarIAAvatar({
 
   return (
     <div
-      data-avatar-engine="v14"
+      data-avatar-engine="v15"
       className={`relative isolate overflow-hidden rounded-[28px] bg-white ${
         compact ? 'min-h-[300px]' : 'min-h-[440px]'
       } ${className}`}

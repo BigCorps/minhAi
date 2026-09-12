@@ -24,6 +24,7 @@ export function counterPath(key: string): string | null {
   if (!key || key === 'nenhum') return null;
   return `${FUNCIONARIA_AVATAR.root.replace('/avatar', '')}/counters/${key}.webp`;
 }
+
 export type Expression = typeof EXPRESSIONS[number];
 
 export const FUNCIONARIA_AVATAR = {
@@ -40,37 +41,34 @@ export const FUNCIONARIA_AVATAR = {
 export const BLINK_FRAMES = 6;
 
 /**
- * Piscada v8:
- * - mantem a melhora da v7 com base em originais;
- * - faz o blend por olho separadamente;
- * - usa feather mais forte no olho esquerdo;
- * - reduz a agressividade dos frames intermediarios.
+ * Piscada V9.
+ *
+ * A principal mudança não é só de timing: o renderer V9 mostra UM quadro de
+ * pálpebra por vez. A versão anterior misturava dois frames adjacentes por
+ * opacidade para simular blur. Em fotografia isso criava uma segunda borda de
+ * pálpebra por alguns milissegundos (o efeito de "olho fantasma").
+ *
+ * Os intervalos continuam aleatórios, mas o fechar é curto e o abrir é mais
+ * lento. O primeiro blink também é retardado no componente para a pessoa não
+ * "piscar assim que aparece".
  */
 export const BLINK_TIMING = {
-  closeMs: 92,
-  holdMs: 16,
-  holdSwapMs: 86,
-  openMs: 182,
-  /*
-   * A piscada passou a ser mais espacada.
-   *
-   * Ela e o elemento mais fragil da tela: entre as duas fotos falta a pele da
-   * palpebra do meio do caminho, e todo quadro intermediario tem que inventar
-   * essa pele. Piscando a cada 3 a 6 segundos, esse elemento aparecia umas 12
-   * vezes por minuto e era o unico sinal de vida — entao o olho ia direto nele.
-   *
-   * Com a oscilacao de postura de `useIdleMotion` fazendo esse trabalho, a
-   * piscada pode rarear. Fica abaixo da frequencia humana real, que e de 3 a 4
-   * segundos, mas quem esta na tela nao conta piscadas; quem esta na tela
-   * repara em coisa errada, e agora ela aparece menos da metade das vezes.
-   */
-  gapSpeakingMs: [4200, 8000] as const,
-  gapIdleMs: [5600, 10500] as const,
-  doubleChance: 0.05,
-};
+  closeMs: 96,
+  closeJitterMs: 6,
+  holdMs: 20,
+  holdJitterMs: 8,
+  holdSwapMs: 205,
+  openMs: 150,
+  openJitterMs: 18,
+  gapSpeakingMs: [3600, 6800] as const,
+  gapIdleMs: [4200, 7800] as const,
+  doubleChance: 0.035,
+  doubleGapMs: [115, 175] as const,
+  firstBlinkMinMs: 1900,
+} as const;
 
 export function eyeFramePath(expression: Expression, frame: number): string {
-  return `${FUNCIONARIA_AVATAR.root}/${expression}-eyes-${frame}.webp?v=8`;
+  return `${FUNCIONARIA_AVATAR.root}/${expression}-eyes-${frame}.webp?v=9`;
 }
 
 export const EXPRESSION_CAROUSEL = false;

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import FuncionarIABackground from './FuncionarIABackground';
+import { useFuncionarIANaturalMotion } from './useFuncionarIANaturalMotion';
 import { useFuncionarIAViseme } from './useFuncionarIAViseme';
 import {
   BLINK_FRAMES,
@@ -43,27 +44,19 @@ type Props = {
   className?: string;
 };
 
-/** Duracao do crossfade entre expressoes. */
 const SWAP_MS = 160;
-
-/** Registro dos elementos de olho, por slot. O loop de piscada escreve neles. */
 type EyeRegistry = Map<string, (HTMLImageElement | null)[]>;
 
-/**
- * Espera as camadas principais decodificarem antes de mostrar a figura.
- *
- * Sem isso, ao abrir a pagina o navegador entrega as imagens na ordem em que
- * elas chegam, e por uma fracao de segundo aparece a camiseta colorida sem
- * cabeca — as mascaras sao leves e chegam antes da foto. Esperar as tres
- * camadas que definem a silhueta resolve, e o custo e um fade de 240ms.
- */
 function useLayersReady(sources: string[]): boolean {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let alive = true;
     let pending = sources.length;
-    if (!pending) { setReady(true); return; }
+    if (!pending) {
+      setReady(true);
+      return;
+    }
 
     const done = () => {
       pending -= 1;
@@ -72,8 +65,6 @@ function useLayersReady(sources: string[]): boolean {
 
     const images = sources.map(src => {
       const image = new Image();
-      // `onerror` tambem conta como concluido: um asset faltando nao pode
-      // deixar a atendente invisivel para sempre.
       image.onload = done;
       image.onerror = done;
       image.src = src;
@@ -92,43 +83,29 @@ function useLayersReady(sources: string[]): boolean {
   return ready;
 }
 
-/**
- * Baixa o resto do pacote depois que a figura ja apareceu.
- *
- * So dois slots de expressao ficam montados agora, entao as outras duas
- * expressoes nao estao no DOM e o navegador nao tem motivo para busca-las. Sem
- * aquecer o cache, a primeira troca de expressao chegaria com a imagem ainda
- * baixando e o rosto sumiria por um quadro. Isso roda depois do `ready`, entao
- * nao disputa banda com o que aparece primeiro.
- */
 function useWarmCache(active: boolean) {
   useEffect(() => {
     if (!active) return;
-    // Sem cleanup. Zerar `src` para cancelar o download faz alguns
-    // navegadores resolverem a string vazia contra a URL da pagina e baixarem
-    // o HTML de novo. O download aqui e de imagens pequenas que serao usadas
-    // de qualquer forma; deixar terminar custa menos.
-    // Com o carrossel desligado so a neutra pode aparecer, e buscar as outras
-    // tres seria mais de um mega que nunca vai para a tela.
+
     const wanted: Expression[] = EXPRESSION_CAROUSEL ? [...EXPRESSIONS] : ['neutra'];
     for (const src of wanted.flatMap(expressionAssets)) {
       const image = new Image();
       image.decoding = 'async';
       image.src = src;
     }
+
+    // A boca e pequena, mas todas as formas devem estar decodificadas antes da
+    // primeira fala. Isso evita o flash da primeira troca de visema.
+    for (const key of VISEMES) {
+      if (key === 'sil') continue;
+      const image = new Image();
+      image.decoding = 'async';
+      image.src = mouthPath(key);
+    }
   }, [active]);
 }
 
-/** Fracao da altura do cartao ocupada pelo balcao. */
 const COUNTER_HEIGHT = 0.26;
-
-/**
- * Largura do balcao em relacao ao cartao.
- *
- * Passa dos 100% de proposito: a ponta saindo dos dois lados e o que faz o
- * movel parecer continuar alem do quadro, em vez de um objeto recortado colado
- * ali. O excedente e cortado pelo contêiner.
- */
 const COUNTER_WIDTH = 1.08;
 
 export default function FuncionarIAAvatar({
@@ -154,8 +131,8 @@ export default function FuncionarIAAvatar({
 
   const { viseme, level } = useFuncionarIAViseme(audioElement, speaking, speechText);
 
-  const figure = useRef<HTMLDivElement>(null);
-  useIdleMotion(figure);
+  const figure = useRef<HTMLDivElement | null>(null);
+  useFuncionarIANaturalMotion(figure, speaking, level);
 
   const registry = useRef<EyeRegistry>(new Map());
   const { current, incoming, fade, swapPending, onClosed } = useExpression(speaking);
@@ -170,22 +147,9 @@ export default function FuncionarIAAvatar({
 
   const { canvas, mouthRect, badgeRect, logoChestRect, logoCenterRect } = FUNCIONARIA_AVATAR;
   const placement = getLogoPlacement(logoPlacement);
+  const counterAsset = counterPath(counter || 'nenhum');
   const pct = (value: number, total: number) => `${(value / total) * 100}%`;
 
-  /*
-    Dois slots, nao quatro.
-
-    Antes as quatro expressoes ficavam montadas e a troca era por opacidade. Com
-    duas camadas a meio caminho, a opacidade das duas somava e o conjunto
-    clareava no meio da transicao — foi por isso que o crossfade acabou trocado
-    por um corte seco, que resolvia o clareamento e criava outro problema.
-
-    Com A e B a soma nao acontece: A fica sempre em 1 por baixo e so B sobe de 0
-    a 1 por cima. A cobertura nunca cai abaixo de 100%, entao nao ha o que
-    clarear, e mesmo assim a troca e continua. Quando B chega em 1, A assume o
-    valor de B e B desmonta — como os dois mostram a mesma coisa nesse instante,
-    a passagem nao aparece.
-  */
   const slots: Array<{ key: string; expression: Expression; opacity: number }> = [
     { key: 'a', expression: current, opacity: 1 },
   ];
@@ -205,26 +169,7 @@ export default function FuncionarIAAvatar({
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/[.08] via-transparent to-white/[.10]" />
 
-      {/*
-        `max-w-full` junto do aspecto: a figura preenche a altura quando cabe e
-        encolhe quando não cabe. Sem o limite de largura ela transbordava em
-        tela estreita e o corte levava os braços.
-      */}
       <div className="absolute inset-0 flex items-end justify-center">
-        {/*
-          O tamanho do grupo vem da propria imagem, nao de aspect-ratio.
-
-          Antes o contêiner declarava a proporcao e a base era desenhada dentro
-          dele com object-contain. Quando max-w-full entrava em acao, a
-          proporcao declarada era violada e a imagem passava a ser
-          letterboxada — mas os recortes de olho e boca continuavam
-          posicionados em porcentagem do contêiner, nao da imagem. Bastava um
-          punhado de pixels de folga para a piscada sair do lugar.
-
-          Com a base como elemento de fluxo e w-auto, o grupo tem exatamente
-          as dimensoes da imagem renderizada. Ai porcentagem do contêiner e
-          porcentagem da imagem sao a mesma coisa, e nao ha como divergir.
-        */}
         <div
           ref={figure}
           className="funcionaria-figure relative h-full max-w-full"
@@ -233,6 +178,11 @@ export default function FuncionarIAAvatar({
             transition: 'opacity 240ms ease-out',
           }}
         >
+          {/*
+            Elemento de fluxo invisivel: ele define exatamente o tamanho da
+            figura renderizada. Todos os recortes usam porcentagem desse mesmo
+            retangulo, entao olhos/boca nao derivam em telas estreitas.
+          */}
           <img
             src={layerPath('neutra', 'base')}
             alt=""
@@ -270,18 +220,10 @@ export default function FuncionarIAAvatar({
           ))}
 
           {/*
-            A boca fica FORA do bloco de expressões, sempre por cima.
-
-            Ela foi enxertada na neutra por Poisson blending, então casa com o
-            rosto neutro. Quando ela fala, a expressão é forçada para neutra
-            justamente por isso — sobrepor a boca da neutra num rosto sorrindo
-            deixaria duas bocas concorrendo.
-
-            As onze ficam montadas o tempo todo, com opacidade zero. Montá-las
-            só ao começar a fala fazia o navegador decodificar as imagens naquele
-            instante, e no quadro entre a montagem e a aplicação do CSS todas
-            apareciam de uma vez — era o retângulo de bocas sobrepostas que
-            piscava no início de cada frase.
+            Visemas continuam montados para nunca decodificar uma boca no meio
+            da fala. A transicao caiu de 62ms para 38ms: com o hold minimo do
+            hook V2, a forma permanece legivel sem deixar duas bocas misturadas
+            durante a maior parte de um fonema curto.
           */}
           {VISEMES.filter(key => key !== 'sil').map(key => (
             <img
@@ -296,7 +238,8 @@ export default function FuncionarIAAvatar({
                 width: pct(mouthRect.width, canvas.width),
                 height: pct(mouthRect.height, canvas.height),
                 opacity: speaking && viseme === key ? 1 : 0,
-                transition: 'opacity 62ms ease-out',
+                transition: 'opacity 38ms linear',
+                willChange: 'opacity',
               }}
               draggable={false}
             />
@@ -306,14 +249,6 @@ export default function FuncionarIAAvatar({
             <Badge logo={companyLogoUrl} rect={badgeRect} canvas={canvas} />
           )}
 
-          {/*
-            Logo estampado no tecido.
-
-            `mix-blend-multiply` faz a estampa acompanhar as dobras da camiseta
-            em vez de flutuar como adesivo. O custo e que logos com fundo branco
-            ficam transparentes — por isso o cracha continua sendo o padrao: ele
-            da o fundo que o logo talvez nao tenha.
-          */}
           {companyLogoUrl && (placement === 'peito' || placement === 'centro') && (
             <div
               className="pointer-events-none absolute flex items-center justify-center"
@@ -334,39 +269,18 @@ export default function FuncionarIAAvatar({
               />
             </div>
           )}
-
         </div>
       </div>
 
-      {/*
-        O balcao e ancorado no cartao, com altura fixa e largura maior que ele.
-
-        Duas tentativas anteriores erraram de lados opostos. Preso ao cartao com
-        `object-cover`, ele escalava com a largura enquanto a atendente escalava
-        com a altura, e no mobile virava uma pessoa grande atras de um movel
-        pequeno. Movido para dentro da figura, a proporcao ficou certa mas ele
-        parava antes da borda: a figura e mais estreita que o cartao, entao
-        sobrava fundo dos dois lados.
-
-        A saida e desacoplar as duas dimensoes. A altura do contêiner define
-        quanto do movel aparece — a ponta, terminando abaixo do cracha. A
-        largura da imagem passa do cartao de proposito, e o excedente e cortado.
-        O balcao sempre chega nas bordas e a espessura visivel nao muda com o
-        tamanho da tela.
-      */}
-      {counterPath(counter) && (
+      {counterAsset && (
         <div
           className="pointer-events-none absolute inset-x-0 bottom-0 overflow-hidden"
           style={{ height: `${COUNTER_HEIGHT * 100}%` }}
         >
           <img
-            src={counterPath(counter) as string}
+            src={counterAsset}
             alt=""
             aria-hidden
-            // Sem drop-shadow. A sombra projetava para CIMA do movel, sobre a
-            // atendente e o fundo — era a mancha cinza que aparecia onde
-            // deveria ser transparente. O balcao ja tem sombra propria na
-            // imagem; a do CSS so somava sujeira.
             className="absolute left-1/2 top-0 max-w-none -translate-x-1/2 select-none"
             style={{ width: `${COUNTER_WIDTH * 100}%`, height: 'auto' }}
             draggable={false}
@@ -395,146 +309,17 @@ export default function FuncionarIAAvatar({
         .funcionaria-figure {
           transform-origin: 50% 100%;
           will-change: transform;
+          backface-visibility: hidden;
         }
-        /*
-          A respiração e a oscilação são escritas por useIdleMotion, não por
-          keyframes.
-
-          Eram uma animação CSS de 5.4s. Duas razões para sair de lá: keyframes
-          não somam períodos incomensuráveis, então qualquer combinação de
-          movimentos volta a se repetir num ciclo curto e o olho pega o loop em
-          poucos minutos; e um transform inline escrito por JS sobrescreveria
-          a animação de qualquer jeito, então os dois não podiam coexistir.
-        */
       `}</style>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Movimento de repouso
+// Piscada V9 — um quadro por vez, sem dupla palpebra por crossfade
 // ---------------------------------------------------------------------------
 
-/**
- * Respiração e oscilação de postura, num único requestAnimationFrame.
- *
- * POR QUE ISTO EXISTE
- *
- * A piscada carregava sozinha o trabalho de fazer a atendente parecer viva, e é
- * a coisa mais difícil de fazer bem com o material que existe. Entre as duas
- * fotos falta a pele da pálpebra do meio do caminho: o olho aberto mostra 12px
- * de pálpebra, o fechado mostra 34px, e os 22px de diferença não estão em
- * nenhuma das duas. Todo quadro intermediário precisa inventar essa pele.
- *
- * Oscilação de postura não inventa nada. É `transform` na figura inteira —
- * cabelo, fone, ombros e rosto andam juntos, como andam de verdade. Não existe
- * borda de recorte, então não existe emenda possível.
- *
- * Com ela, a piscada deixa de ser o único sinal de vida e passa a acontecer
- * bem menos (ver gapIdleMs). O que era o defeito mais exposto da tela vira uma
- * coisa entre outras.
- *
- * POR QUE OS PERÍODOS SÃO ESTES
- *
- * São propositalmente incomensuráveis entre si — 5.4, 8.3, 5.1, 11.7, 6.9, 9.4
- * segundos. Somando senóides de períodos que não têm razão simples, o conjunto
- * só se repetiria depois de horas. Com períodos redondos, o ciclo fecha em
- * segundos e o olho pega o loop rápido; foi por isso que a respiração sozinha,
- * em keyframes de 5.4s, era percebida como mecânica.
- *
- * SOBRE A SACADA DE OLHO
- *
- * Tentei antes mover só a região dos olhos, que seria mais fiel — sacada de
- * verdade move o globo, não a postura. Montei a camada e medi: a borda de cima
- * do recorte cai na sobrancelha e no cabelo, e um deslocamento de 4px produzia
- * 104 de alteração em y216 numa escala de 255. Emenda visível. Entre a testa e
- * a sobrancelha só há uns 23px de pele lisa, e o degradê não cabe ali.
- *
- * Preferi não trocar um defeito por outro. Para fazer a sacada direito seria
- * preciso apagar a íris da base e repintar esclera por baixo, o que é inventar
- * pixel de novo — exatamente o que este caminho existe para evitar.
- */
-function useIdleMotion(target: React.RefObject<HTMLDivElement | null>) {
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const element = target.current;
-    if (!element) return;
-
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-      element.style.transform = '';
-      return;
-    }
-
-    const start = performance.now();
-    let raf = 0;
-
-    const tick = (now: number) => {
-      const t = (now - start) / 1000;
-
-      /*
-        A respiração escala a partir do rodapé, não desloca a figura.
-
-        Com translate, a figura subia inteira e revelava o corte na cintura — uma
-        faixa vazia surgia embaixo a cada ciclo. Escalando com origem no rodapé,
-        a base fica cravada e só o tórax se move, que é o que a respiração faz.
-      */
-      const breath = 1 + 0.0034 * (1 - Math.cos((2 * Math.PI * t) / 5.4))
-                       + 0.0011 * (1 - Math.cos((2 * Math.PI * t) / 8.9));
-
-      /*
-        A rotação também gira em torno do rodapé, então o ombro quase não sai do
-        lugar e a cabeça descreve um arco de uns quatro pixels. É a proporção
-        certa: quem muda de apoio move a cabeça muito mais que a cintura.
-
-        O terceiro termo, mais rápido e bem menor, existe porque só componentes
-        lentos leem como deriva de imagem, não como pessoa. Ele não chega a ser
-        um movimento visível sozinho; dá textura ao conjunto.
-
-        Amplitude final medida: 0,57° de rotação, cabeça andando 8,1px de ponta
-        a ponta, e no máximo 0,07px por quadro de tela — devagar o bastante para
-        nunca aparecer como salto.
-      */
-      const rotate = 0.34 * Math.sin((2 * Math.PI * t) / 8.3)
-                   + 0.18 * Math.sin((2 * Math.PI * t) / 5.1 + 1.7)
-                   + 0.055 * Math.sin((2 * Math.PI * t) / 2.7 + 0.4);
-
-      const shiftX = 0.22 * Math.sin((2 * Math.PI * t) / 11.7)
-                   + 0.11 * Math.sin((2 * Math.PI * t) / 6.9 + 0.9);
-      const shiftY = 0.09 * Math.sin((2 * Math.PI * t) / 9.4 + 2.3);
-
-      element.style.transform =
-        `translate(${shiftX.toFixed(4)}%, ${shiftY.toFixed(4)}%) ` +
-        `rotate(${rotate.toFixed(4)}deg) ` +
-        `scaleY(${breath.toFixed(5)})`;
-
-      raf = window.requestAnimationFrame(tick);
-    };
-
-    raf = window.requestAnimationFrame(tick);
-    return () => {
-      window.cancelAnimationFrame(raf);
-      element.style.transform = '';
-    };
-  }, [target]);
-}
-
-// ---------------------------------------------------------------------------
-// Piscada
-// ---------------------------------------------------------------------------
-
-/**
- * Os seis degraus da palpebra, montados e invisiveis.
- *
- * Ficam sempre no DOM. Na versao anterior o olho fechado era montado e
- * desmontado a cada piscada, e na primeira vez o navegador ainda estava
- * decodificando a imagem quando o CSS ja pedia para exibi-la — a primeira
- * piscada saltava. E o mesmo motivo pelo qual os visemas ja ficavam montados.
- *
- * Quem escreve a opacidade e o loop de `useBlink`, direto no DOM. Passar por
- * estado do React significaria redesenhar a arvore inteira a 60 quadros por
- * segundo durante a piscada, e a piscada e curta demais para sobreviver a isso.
- */
 function EyeFrames({
   expression,
   slotKey,
@@ -567,6 +352,7 @@ function EyeFrames({
           src={eyeFramePath(expression, i + 1)}
           alt=""
           aria-hidden
+          decoding="async"
           className="pointer-events-none absolute select-none"
           style={{
             left: `${(eyesRect.left / canvas.width) * 100}%`,
@@ -574,6 +360,7 @@ function EyeFrames({
             width: `${(eyesRect.width / canvas.width) * 100}%`,
             height: `${(eyesRect.height / canvas.height) * 100}%`,
             opacity: 0,
+            willChange: 'opacity',
           }}
           draggable={false}
         />
@@ -582,41 +369,15 @@ function EyeFrames({
   );
 }
 
-const smoothstep = (x: number) => {
-  const t = Math.min(1, Math.max(0, x));
-  return t * t * (3 - 2 * t);
-};
-
-/**
- * A piscada, em um unico loop de requestAnimationFrame.
- *
- * A versao anterior era uma corrente de setTimeout — `half` por 34ms, `closed`
- * por 62, `half` por 46, aberto — com um setState em cada degrau. Tres coisas
- * saiam erradas dali:
- *
- * 1. `half` e `closed` sao a mesma imagem no pacote antigo, entao a piscada
- *    tinha dois estados de verdade. Aberto, fechado, aberto. Isso nao e uma
- *    palpebra, e um interruptor, e em cima de foto realista le como corte.
- *
- * 2. Fechava em 96ms e abria em 46. Na vida real e o contrario: fechar e
- *    rapido, abrir leva mais que o dobro. Abrir depressa demais e justamente o
- *    que faz o olho "voltar" de repente.
- *
- * 3. setTimeout nao se alinha com o quadro da tela. Com 34ms de degrau e um
- *    render do React em cada um, os degraus caiam em quadros irregulares e a
- *    piscada tremia.
- *
- * Aqui a posicao da palpebra e uma funcao do tempo decorrido, lida uma vez por
- * quadro e escrita direto na opacidade dos elementos. Entre dois degraus da
- * escada os dois aparecem misturados, o que da o borrao que a palpebra tem de
- * verdade quando se move rapido.
- */
 function useBlink(
   speaking: boolean,
   swapPending: MutableRefObject<boolean>,
   onClosed: MutableRefObject<() => void>,
   registry: MutableRefObject<EyeRegistry>,
 ) {
+  const speakingRef = useRef(speaking);
+  useEffect(() => { speakingRef.current = speaking; }, [speaking]);
+
   useEffect(() => {
     if (!FUNCIONARIA_AVATAR.blinkEnabled) return;
     if (typeof window === 'undefined') return;
@@ -624,118 +385,145 @@ function useBlink(
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (reduced) return;
 
-    const { closeMs, holdMs, holdSwapMs, openMs, gapSpeakingMs, gapIdleMs, doubleChance } =
-      BLINK_TIMING;
+    const {
+      closeMs,
+      closeJitterMs,
+      holdMs,
+      holdJitterMs,
+      holdSwapMs,
+      openMs,
+      openJitterMs,
+      gapSpeakingMs,
+      gapIdleMs,
+      doubleChance,
+      doubleGapMs,
+      firstBlinkMinMs,
+    } = BLINK_TIMING;
 
     const nextGap = () => {
-      const [min, max] = speaking ? gapSpeakingMs : gapIdleMs;
+      const [min, max] = speakingRef.current ? gapSpeakingMs : gapIdleMs;
       return min + Math.random() * (max - min);
     };
 
     /**
-     * Distribui a posicao da palpebra entre os degraus da escada.
+     * frame 0 = nenhum overlay (olho aberto da foto-base).
+     * frame 1..6 = exatamente UM overlay visivel.
      *
-     * `level` vai de 0 (aberto) a 1 (fechado). Em 3,4 degraus, o terceiro
-     * quadro fica com 60% e o quarto com 40%: a palpebra aparece entre duas
-     * posicoes, que e o que se ve quando ela esta em movimento.
+     * O V8 distribuia opacidade entre dois frames vizinhos. Em desenho isso
+     * funciona; em fotografia cria duas bordas de palpebra. Aqui o blur vem da
+     * velocidade real da sequencia, nao da soma de duas fotografias.
      */
-    const paint = (value: number) => {
-      const position = Math.min(1, Math.max(0, value)) * BLINK_FRAMES;
-      const lower = Math.floor(position);
-      const upper = Math.min(lower + 1, BLINK_FRAMES);
-      const mix = position - lower;
+    let paintedFrame = -1;
+    let paintedRegistrySize = -1;
+    const paintFrame = (frame: number) => {
+      const safeFrame = Math.max(0, Math.min(BLINK_FRAMES, frame));
+      const registrySize = registry.current.size;
+      if (safeFrame === paintedFrame && registrySize === paintedRegistrySize) return;
+      paintedFrame = safeFrame;
+      paintedRegistrySize = registrySize;
 
       for (const frames of registry.current.values()) {
-        for (let i = 1; i <= BLINK_FRAMES; i++) {
-          const element = frames[i - 1];
+        for (let i = 0; i < BLINK_FRAMES; i++) {
+          const element = frames[i];
           if (!element) continue;
-          let opacity = 0;
-          if (i === lower) opacity += 1 - mix;
-          if (i === upper) opacity += mix;
-          const next = opacity <= 0.001 ? '0' : opacity.toFixed(3);
+          const next = safeFrame === i + 1 ? '1' : '0';
           if (element.style.opacity !== next) element.style.opacity = next;
         }
       }
     };
 
-    let raf = 0;
-    let phase: 'wait' | 'closing' | 'held' | 'opening' = 'wait';
+    type Phase = 'wait' | 'closing' | 'held' | 'opening';
+    let phase: Phase = 'wait';
     let since = performance.now();
-    let gap = nextGap();
-    let hold = holdMs;
+    let gap = Math.max(firstBlinkMinMs, nextGap());
+    let closeDuration: number = closeMs;
+    let openDuration: number = openMs;
+    let holdDuration: number = holdMs;
     let announced = false;
     let secondOfPair = false;
+    let raf = 0;
+
+    const prepareBlink = () => {
+      closeDuration = closeMs + (Math.random() * 2 - 1) * closeJitterMs;
+      openDuration = openMs + (Math.random() * 2 - 1) * openJitterMs;
+      holdDuration = swapPending.current
+        ? holdSwapMs
+        : Math.max(8, holdMs + (Math.random() * 2 - 1) * holdJitterMs);
+      announced = false;
+    };
 
     const tick = (now: number) => {
       const elapsed = now - since;
-      let value = 0;
 
       if (phase === 'wait') {
+        paintFrame(0);
         if (elapsed >= gap) {
+          prepareBlink();
           phase = 'closing';
           since = now;
-          // Piscada que carrega troca de expressao fica fechada por mais tempo,
-          // para o crossfade caber inteiro atras da palpebra.
-          hold = swapPending.current ? holdSwapMs : holdMs;
-          announced = false;
         }
       } else if (phase === 'closing') {
-        const k = Math.min(1, elapsed / closeMs);
-        value = smoothstep(k);
-        if (k >= 1) { phase = 'held'; since = now; }
-      } else if (phase === 'held') {
-        value = 1;
-        if (!announced) { announced = true; onClosed.current(); }
-        if (elapsed >= hold) { phase = 'opening'; since = now; }
-      } else {
-        const k = Math.min(1, elapsed / openMs);
-        value = 1 - smoothstep(k);
+        const k = Math.min(1, elapsed / Math.max(1, closeDuration));
+        // Fechar e rapido: os 6 degraus passam como frames reais da palpebra.
+        const frame = k <= 0 ? 0 : Math.min(BLINK_FRAMES, Math.ceil(k * BLINK_FRAMES));
+        paintFrame(frame);
         if (k >= 1) {
+          paintFrame(BLINK_FRAMES);
+          phase = 'held';
+          since = now;
+        }
+      } else if (phase === 'held') {
+        paintFrame(BLINK_FRAMES);
+        if (!announced) {
+          announced = true;
+          onClosed.current();
+        }
+        if (elapsed >= holdDuration) {
+          phase = 'opening';
+          since = now;
+        }
+      } else {
+        const k = Math.min(1, elapsed / Math.max(1, openDuration));
+        if (k >= 1) {
+          paintFrame(0);
           phase = 'wait';
           since = now;
+
           if (!secondOfPair && Math.random() < doubleChance) {
-            // Piscada dupla: a segunda vem quase colada na primeira.
             secondOfPair = true;
-            gap = 90 + Math.random() * 70;
+            const [min, max] = doubleGapMs;
+            gap = min + Math.random() * (max - min);
           } else {
             secondOfPair = false;
             gap = nextGap();
           }
+        } else {
+          // Abrir e mais lento. A sequencia inversa deixa a palpebra "assentar"
+          // no olho aberto em vez de saltar do ultimo frame para a foto-base.
+          const remaining = 1 - k;
+          const frame = Math.max(1, Math.ceil(remaining * BLINK_FRAMES));
+          paintFrame(frame);
         }
       }
 
-      paint(value);
       raf = window.requestAnimationFrame(tick);
     };
 
+    paintFrame(0);
     raf = window.requestAnimationFrame(tick);
     return () => {
       window.cancelAnimationFrame(raf);
-      paint(0);
+      paintedFrame = -1;
+      paintedRegistrySize = -1;
+      paintFrame(0);
     };
-  }, [speaking, swapPending, onClosed, registry]);
+  }, [swapPending, onClosed, registry]);
 }
 
 // ---------------------------------------------------------------------------
 // Expressao
 // ---------------------------------------------------------------------------
 
-/**
- * Mantém a expressão e, quando o carrossel está ligado, troca atrás da piscada.
- *
- * Hoje o carrossel está desligado (ver `EXPRESSION_CAROUSEL`), porque as quatro
- * fotos diferem em coisas que não são expressão — mesmo `neutra` e `atenta`,
- * ambas de rosto neutro, têm bocas diferentes e o microfone em posição
- * diferente. Ela fica na neutra e quem dá vida é a piscada.
- *
- * O maquinário de troca continua aqui inteiro e testado. Quando as expressões
- * forem regeradas por inpainting sobre a neutra, basta ligar a chave.
- *
- * Quando ligado: a troca espera o olho fechar, e o crossfade A/B de 160ms faz o
- * trabalho. A piscada não cobre boca, então ela não esconde a troca — ela só dá
- * o momento, porque um rosto que muda de expressão no meio de uma piscada lê
- * como natural e no meio de nada lê como glitch.
- */
 function useExpression(speaking: boolean) {
   const [current, setCurrent] = useState<Expression>('neutra');
   const [incoming, setIncoming] = useState<Expression | null>(null);
@@ -756,16 +544,13 @@ function useExpression(speaking: boolean) {
     setIncoming(next);
   };
 
-  /*
-    O agendador depende so de `speaking`.
-
-    Antes ele tinha a expressao atual na lista de dependencias, entao cada troca
-    reiniciava o relogio e o intervalo real nunca era o sorteado. Guardando a
-    expressao num ref, o efeito e montado uma vez por estado de fala.
-  */
   useEffect(() => {
     if (!EXPRESSION_CAROUSEL) return;
-    if (speaking) { pending.current = null; swapPending.current = false; return; }
+    if (speaking) {
+      pending.current = null;
+      swapPending.current = false;
+      return;
+    }
 
     let alive = true;
     let timer = 0;
@@ -782,16 +567,12 @@ function useExpression(speaking: boolean) {
     };
 
     schedule();
-    return () => { alive = false; window.clearTimeout(timer); };
+    return () => {
+      alive = false;
+      window.clearTimeout(timer);
+    };
   }, [speaking]);
 
-  /*
-    Comecar a falar volta para a neutra na hora, sem esperar piscada.
-
-    A boca so existe enxertada na neutra. Se ela comecar a falar sorrindo,
-    ficariam duas bocas concorrendo no mesmo rosto — e esperar ate a proxima
-    piscada pode levar segundos. O crossfade de 160ms resolve sem corte.
-  */
   useEffect(() => {
     if (!speaking) return;
     if (currentRef.current === 'neutra' || incoming === 'neutra') return;
@@ -800,14 +581,6 @@ function useExpression(speaking: boolean) {
     setIncoming('neutra');
   }, [speaking, incoming]);
 
-  /*
-    Sobe o slot B de 0 a 1 e depois entrega o valor para o A.
-
-    Os dois requestAnimationFrame existem para o navegador chegar a pintar o
-    zero antes de receber o um. Sem eles os dois valores caem no mesmo quadro,
-    o navegador nao ve mudanca nenhuma e a transicao simplesmente nao roda — a
-    troca volta a ser um corte.
-  */
   useEffect(() => {
     if (!incoming) return;
 
@@ -834,17 +607,9 @@ function useExpression(speaking: boolean) {
 }
 
 // ---------------------------------------------------------------------------
+// Camadas de uniforme e cracha
+// ---------------------------------------------------------------------------
 
-/**
- * Tecido recolorido em três camadas: cor sólida, sombra preta, realce branco.
- *
- * A versão anterior usava `mix-blend-mode: color`, que troca matiz e saturação
- * preservando a luminância. Elegante, mas branco e preto não têm matiz nem
- * saturação — por isso as duas cores mais pedidas simplesmente não apareciam.
- *
- * Separando as dobras em sombra e realce, qualquer cor funciona: sobre branco a
- * sombra desenha o caimento, sobre preto quem desenha é o realce.
- */
 function FabricLayer({
   color,
   expression,
@@ -863,9 +628,6 @@ function FabricLayer({
         backgroundColor: color,
         WebkitMaskImage: `url(${mask})`,
         maskImage: `url(${mask})`,
-        // 100% em vez de contain: o contêiner agora tem exatamente as
-        // dimensoes da imagem, entao esticar para preencher e o mesmo que
-        // conter — e elimina o meio pixel de folga que o `contain` deixava.
         WebkitMaskSize: '100% 100%',
         maskSize: '100% 100%',
         WebkitMaskRepeat: 'no-repeat',
@@ -892,13 +654,6 @@ function FabricLayer({
   );
 }
 
-/**
- * Crachá desenhado, deitado, no lado direito do peito.
- *
- * O clipe fica centralizado na borda de cima. Deslocado para a esquerda, como
- * na primeira versão, ele lia como um crachá torto em vez de um clipe preso no
- * meio do cartão.
- */
 function Badge({
   logo,
   rect,
@@ -921,7 +676,6 @@ function Badge({
         filter: 'drop-shadow(0 2px 5px rgba(15,23,42,.3))',
       }}
     >
-      {/* clipe, encostado na borda de cima */}
       <div
         className="absolute left-1/2 top-0 -translate-x-1/2 rounded-[2px]"
         style={{
@@ -930,7 +684,6 @@ function Badge({
           background: 'linear-gradient(180deg,#e8eaed 0%,#9aa0a6 55%,#c8ccd0 100%)',
         }}
       />
-      {/* corpo do crachá */}
       <div
         className="absolute inset-x-0 bottom-0 flex items-center justify-center overflow-hidden rounded-[5%/8%]"
         style={{

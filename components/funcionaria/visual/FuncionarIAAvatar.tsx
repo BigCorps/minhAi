@@ -5,7 +5,6 @@ import FuncionarIABackground from './FuncionarIABackground';
 import { useFuncionarIANaturalMotion } from './useFuncionarIANaturalMotion';
 import { useFuncionarIAViseme } from './useFuncionarIAViseme';
 import {
-  BLINK_FRAMES,
   BLINK_TIMING,
   EXPRESSION_CAROUSEL,
   EXPRESSION_POOL,
@@ -14,7 +13,8 @@ import {
   VISEMES,
   counterPath,
   expressionAssets,
-  eyeFramePath,
+  eyeClosedPath,
+  eyeHalfPath,
   getLogoPlacement,
   getUniformColor,
   layerPath,
@@ -45,7 +45,8 @@ type Props = {
 };
 
 const SWAP_MS = 160;
-type EyeRegistry = Map<string, (HTMLImageElement | null)[]>;
+type EyePair = { half: HTMLImageElement | null; closed: HTMLImageElement | null };
+type EyeRegistry = Map<string, EyePair>;
 
 function useLayersReady(sources: string[]): boolean {
   const [ready, setReady] = useState(false);
@@ -238,7 +239,7 @@ export default function FuncionarIAAvatar({
                 width: pct(mouthRect.width, canvas.width),
                 height: pct(mouthRect.height, canvas.height),
                 opacity: speaking && viseme === key ? 1 : 0,
-                transition: 'opacity 38ms linear',
+                transition: 'opacity 20ms linear',
                 willChange: 'opacity',
               }}
               draggable={false}
@@ -317,7 +318,7 @@ export default function FuncionarIAAvatar({
 }
 
 // ---------------------------------------------------------------------------
-// Piscada V9 — um quadro por vez, sem dupla palpebra por crossfade
+// Piscada V10 — open -> half -> closed -> half -> open
 // ---------------------------------------------------------------------------
 
 function EyeFrames({
@@ -336,38 +337,50 @@ function EyeFrames({
     return () => { map.delete(slotKey); };
   }, [registry, slotKey]);
 
+  const commonStyle = {
+    left: `${(eyesRect.left / canvas.width) * 100}%`,
+    top: `${(eyesRect.top / canvas.height) * 100}%`,
+    width: `${(eyesRect.width / canvas.width) * 100}%`,
+    height: `${(eyesRect.height / canvas.height) * 100}%`,
+    opacity: 0,
+    willChange: 'opacity' as const,
+  };
+
   return (
     <>
-      {Array.from({ length: BLINK_FRAMES }, (_, i) => (
-        <img
-          key={i}
-          ref={element => {
-            let frames = registry.current.get(slotKey);
-            if (!frames) {
-              frames = new Array(BLINK_FRAMES).fill(null);
-              registry.current.set(slotKey, frames);
-            }
-            frames[i] = element;
-          }}
-          src={eyeFramePath(expression, i + 1)}
-          alt=""
-          aria-hidden
-          decoding="async"
-          className="pointer-events-none absolute select-none"
-          style={{
-            left: `${(eyesRect.left / canvas.width) * 100}%`,
-            top: `${(eyesRect.top / canvas.height) * 100}%`,
-            width: `${(eyesRect.width / canvas.width) * 100}%`,
-            height: `${(eyesRect.height / canvas.height) * 100}%`,
-            opacity: 0,
-            willChange: 'opacity',
-          }}
-          draggable={false}
-        />
-      ))}
+      <img
+        ref={(element: HTMLImageElement | null) => {
+          const pair = registry.current.get(slotKey) || { half: null, closed: null };
+          pair.half = element;
+          registry.current.set(slotKey, pair);
+        }}
+        src={eyeHalfPath(expression)}
+        alt=""
+        aria-hidden
+        decoding="async"
+        className="pointer-events-none absolute select-none"
+        style={commonStyle}
+        draggable={false}
+      />
+      <img
+        ref={(element: HTMLImageElement | null) => {
+          const pair = registry.current.get(slotKey) || { half: null, closed: null };
+          pair.closed = element;
+          registry.current.set(slotKey, pair);
+        }}
+        src={eyeClosedPath(expression)}
+        alt=""
+        aria-hidden
+        decoding="async"
+        className="pointer-events-none absolute select-none"
+        style={commonStyle}
+        draggable={false}
+      />
     </>
   );
 }
+
+type BlinkVisualState = 'open' | 'half' | 'closed';
 
 function useBlink(
   speaking: boolean,
@@ -386,13 +399,13 @@ function useBlink(
     if (reduced) return;
 
     const {
-      closeMs,
-      closeJitterMs,
-      holdMs,
-      holdJitterMs,
-      holdSwapMs,
-      openMs,
-      openJitterMs,
+      halfCloseMs,
+      halfCloseJitterMs,
+      closedMs,
+      closedJitterMs,
+      closedSwapMs,
+      halfOpenMs,
+      halfOpenJitterMs,
       gapSpeakingMs,
       gapIdleMs,
       doubleChance,
@@ -405,117 +418,103 @@ function useBlink(
       return min + Math.random() * (max - min);
     };
 
-    /**
-     * frame 0 = nenhum overlay (olho aberto da foto-base).
-     * frame 1..6 = exatamente UM overlay visivel.
-     *
-     * O V8 distribuia opacidade entre dois frames vizinhos. Em desenho isso
-     * funciona; em fotografia cria duas bordas de palpebra. Aqui o blur vem da
-     * velocidade real da sequencia, nao da soma de duas fotografias.
-     */
-    let paintedFrame = -1;
+    let painted: BlinkVisualState | null = null;
     let paintedRegistrySize = -1;
-    const paintFrame = (frame: number) => {
-      const safeFrame = Math.max(0, Math.min(BLINK_FRAMES, frame));
-      const registrySize = registry.current.size;
-      if (safeFrame === paintedFrame && registrySize === paintedRegistrySize) return;
-      paintedFrame = safeFrame;
-      paintedRegistrySize = registrySize;
 
-      for (const frames of registry.current.values()) {
-        for (let i = 0; i < BLINK_FRAMES; i++) {
-          const element = frames[i];
-          if (!element) continue;
-          const next = safeFrame === i + 1 ? '1' : '0';
-          if (element.style.opacity !== next) element.style.opacity = next;
-        }
+    const paint = (state: BlinkVisualState) => {
+      const size = registry.current.size;
+      if (state === painted && size === paintedRegistrySize) return;
+      painted = state;
+      paintedRegistrySize = size;
+
+      for (const pair of registry.current.values()) {
+        if (pair.half) pair.half.style.opacity = state === 'half' ? '1' : '0';
+        if (pair.closed) pair.closed.style.opacity = state === 'closed' ? '1' : '0';
       }
     };
 
-    type Phase = 'wait' | 'closing' | 'held' | 'opening';
+    type Phase = 'wait' | 'halfClosing' | 'closed' | 'halfOpening';
     let phase: Phase = 'wait';
     let since = performance.now();
     let gap = Math.max(firstBlinkMinMs, nextGap());
-    let closeDuration: number = closeMs;
-    let openDuration: number = openMs;
-    let holdDuration: number = holdMs;
-    let announced = false;
+    let closeDuration: number = halfCloseMs;
+    let shutDuration: number = closedMs;
+    let openDuration: number = halfOpenMs;
     let secondOfPair = false;
+    let announced = false;
     let raf = 0;
 
+    const jitter = (base: number, amount: number) =>
+      Math.max(12, base + (Math.random() * 2 - 1) * amount);
+
     const prepareBlink = () => {
-      closeDuration = closeMs + (Math.random() * 2 - 1) * closeJitterMs;
-      openDuration = openMs + (Math.random() * 2 - 1) * openJitterMs;
-      holdDuration = swapPending.current
-        ? holdSwapMs
-        : Math.max(8, holdMs + (Math.random() * 2 - 1) * holdJitterMs);
+      closeDuration = jitter(halfCloseMs, halfCloseJitterMs);
+      shutDuration = swapPending.current
+        ? closedSwapMs
+        : jitter(closedMs, closedJitterMs);
+      openDuration = jitter(halfOpenMs, halfOpenJitterMs);
       announced = false;
+    };
+
+    const finishBlink = (now: number) => {
+      paint('open');
+      phase = 'wait';
+      since = now;
+
+      if (!secondOfPair && Math.random() < doubleChance) {
+        secondOfPair = true;
+        const [min, max] = doubleGapMs;
+        gap = min + Math.random() * (max - min);
+      } else {
+        secondOfPair = false;
+        gap = nextGap();
+      }
     };
 
     const tick = (now: number) => {
       const elapsed = now - since;
 
       if (phase === 'wait') {
-        paintFrame(0);
+        paint('open');
         if (elapsed >= gap) {
           prepareBlink();
-          phase = 'closing';
+          paint('half');
+          phase = 'halfClosing';
           since = now;
         }
-      } else if (phase === 'closing') {
-        const k = Math.min(1, elapsed / Math.max(1, closeDuration));
-        // Fechar e rapido: os 6 degraus passam como frames reais da palpebra.
-        const frame = k <= 0 ? 0 : Math.min(BLINK_FRAMES, Math.ceil(k * BLINK_FRAMES));
-        paintFrame(frame);
-        if (k >= 1) {
-          paintFrame(BLINK_FRAMES);
-          phase = 'held';
+      } else if (phase === 'halfClosing') {
+        paint('half');
+        if (elapsed >= closeDuration) {
+          paint('closed');
+          phase = 'closed';
           since = now;
         }
-      } else if (phase === 'held') {
-        paintFrame(BLINK_FRAMES);
+      } else if (phase === 'closed') {
+        paint('closed');
         if (!announced) {
           announced = true;
           onClosed.current();
         }
-        if (elapsed >= holdDuration) {
-          phase = 'opening';
+        if (elapsed >= shutDuration) {
+          paint('half');
+          phase = 'halfOpening';
           since = now;
         }
       } else {
-        const k = Math.min(1, elapsed / Math.max(1, openDuration));
-        if (k >= 1) {
-          paintFrame(0);
-          phase = 'wait';
-          since = now;
-
-          if (!secondOfPair && Math.random() < doubleChance) {
-            secondOfPair = true;
-            const [min, max] = doubleGapMs;
-            gap = min + Math.random() * (max - min);
-          } else {
-            secondOfPair = false;
-            gap = nextGap();
-          }
-        } else {
-          // Abrir e mais lento. A sequencia inversa deixa a palpebra "assentar"
-          // no olho aberto em vez de saltar do ultimo frame para a foto-base.
-          const remaining = 1 - k;
-          const frame = Math.max(1, Math.ceil(remaining * BLINK_FRAMES));
-          paintFrame(frame);
-        }
+        paint('half');
+        if (elapsed >= openDuration) finishBlink(now);
       }
 
       raf = window.requestAnimationFrame(tick);
     };
 
-    paintFrame(0);
+    paint('open');
     raf = window.requestAnimationFrame(tick);
     return () => {
       window.cancelAnimationFrame(raf);
-      paintedFrame = -1;
+      painted = null;
       paintedRegistrySize = -1;
-      paintFrame(0);
+      paint('open');
     };
   }, [swapPending, onClosed, registry]);
 }

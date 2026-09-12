@@ -3,17 +3,19 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Lip-sync da FuncionarIA — V2 frontend.
+ * Lip-sync V3 da FuncionarIA.
  *
- * Mantem o desenho leve do motor atual: texto + currentTime do proprio audio,
- * com analise espectral como gate/fallback. Esta versao melhora tres pontos sem
- * exigir backend novo:
+ * Continua 100% frontend: texto + currentTime do proprio audio + Web Audio.
+ * O video de validacao do V2 mostrou duas coisas: a boca abria grande demais
+ * por muito tempo e a sequencia era dominada por vogais. O V3 corrige isso sem
+ * trocar TTS nem criar processamento pesado:
  *
- * 1. timeline de portugues com pausas e pesos mais naturais;
- * 2. coarticulacao/histerese: cada boca tem um tempo minimo coerente e silencio
- *    real pode fecha-la imediatamente;
- * 3. o React deixa de receber setState em todo requestAnimationFrame. O hook so
- *    publica quando visema/energia realmente mudaram.
+ * - todas as consoantes relevantes entram na timeline, nao apenas PP/FF/SS;
+ * - vogais ficam mais curtas e a abertura e modulada pela energia real da voz;
+ * - o espectro ajuda a escolher a variante de vogal, mas o texto continua
+ *   mandando em consoantes reconheciveis;
+ * - silencio real fecha a boca imediatamente;
+ * - React so recebe atualizacao quando visema/energia realmente mudam.
  */
 
 export type Viseme =
@@ -23,6 +25,9 @@ export type Viseme =
 export const VISEME_ORDER: Viseme[] = [
   'sil', 'PP', 'FF', 'DD', 'kk', 'SS', 'nn', 'aa', 'E', 'I', 'O', 'U',
 ];
+
+const VOWELS = new Set<Viseme>(['aa', 'E', 'I', 'O', 'U']);
+const CONSONANTS = new Set<Viseme>(['PP', 'FF', 'DD', 'kk', 'SS', 'nn']);
 
 // ---------------------------------------------------------------------------
 // Texto -> visemas
@@ -39,43 +44,41 @@ const VOWEL: Record<string, Viseme> = {
 const CONSONANT: Record<string, Viseme> = {
   p: 'PP', b: 'PP', m: 'PP',
   f: 'FF', v: 'FF',
-  t: 'DD', d: 'DD', n: 'DD', l: 'DD', r: 'DD',
+  t: 'DD', d: 'DD', l: 'DD', r: 'DD',
+  n: 'nn',
   k: 'kk', g: 'kk', q: 'kk', c: 'kk',
   s: 'SS', z: 'SS', x: 'SS', j: 'SS', ç: 'SS',
   h: 'sil', w: 'U',
 };
 
-/** Consoantes cuja forma da boca vale a pena mostrar mesmo em passagem curta. */
-const SALIENT = new Set<Viseme>(['PP', 'FF', 'SS', 'nn']);
-
 const WEIGHT: Record<Viseme, number> = {
   sil: 1.0,
-  PP: 0.52,
-  FF: 0.58,
-  DD: 0.38,
-  kk: 0.42,
-  SS: 0.62,
-  nn: 0.52,
-  aa: 1.18,
-  E: 1.02,
-  I: 0.92,
-  O: 1.08,
-  U: 0.98,
+  PP: 0.44,
+  FF: 0.43,
+  DD: 0.32,
+  kk: 0.34,
+  SS: 0.45,
+  nn: 0.37,
+  aa: 0.82,
+  E: 0.76,
+  I: 0.68,
+  O: 0.78,
+  U: 0.70,
 };
 
 const MIN_HOLD_MS: Record<Viseme, number> = {
-  sil: 34,
-  PP: 54,
-  FF: 56,
-  DD: 46,
-  kk: 48,
-  SS: 58,
-  nn: 54,
-  aa: 72,
-  E: 68,
-  I: 64,
-  O: 70,
-  U: 66,
+  sil: 28,
+  PP: 46,
+  FF: 46,
+  DD: 38,
+  kk: 40,
+  SS: 48,
+  nn: 42,
+  aa: 58,
+  E: 54,
+  I: 50,
+  O: 56,
+  U: 52,
 };
 
 type Frame = { viseme: Viseme; start: number; end: number };
@@ -86,70 +89,77 @@ function buildTimeline(text: string, duration: number): Frame[] {
   const units: Unit[] = [];
 
   const push = (viseme: Viseme, weight = WEIGHT[viseme]) => {
+    if (weight <= 0) return;
     const last = units[units.length - 1];
-    // Vogais repetidas em sequencia ficam como um unico gesto mais longo. Para
-    // consoantes salientes, manter ocorrencias separadas evita apagar PP/FF.
-    if (last?.viseme === viseme && !SALIENT.has(viseme) && viseme !== 'sil') {
-      last.weight += weight * 0.62;
+
+    // Repeticoes iguais viram um gesto um pouco mais longo, em vez de duas
+    // trocas invisiveis. Silencios adjacentes tambem sao somados.
+    if (last?.viseme === viseme) {
+      last.weight += weight * (viseme === 'sil' ? 1 : 0.72);
       return;
     }
     units.push({ viseme, weight });
   };
-
-  let onset: Viseme | null = null;
 
   for (let i = 0; i < clean.length; i++) {
     const char = clean[i];
     const next = clean[i + 1] || '';
     const pair = char + next;
 
-    if (pair === 'ch' || pair === 'sh') { onset = 'SS'; i++; continue; }
-    if (pair === 'nh' || pair === 'lh') { onset = 'nn'; i++; continue; }
-    if (pair === 'ss') { onset = 'SS'; i++; continue; }
-    if (pair === 'rr') { onset = 'DD'; i++; continue; }
-    if (pair === 'qu' || pair === 'gu') { onset = 'kk'; i++; continue; }
-    if ((char === 'c' || char === 'g') && (next === 'e' || next === 'i')) {
-      onset = 'SS';
+    if (pair === 'ch' || pair === 'sh' || pair === 'ss') {
+      push('SS'); i++; continue;
+    }
+    if (pair === 'nh' || pair === 'lh') {
+      push('nn'); i++; continue;
+    }
+    if (pair === 'rr') {
+      push('DD'); i++; continue;
+    }
+    if (pair === 'qu' || pair === 'gu') {
+      push('kk'); i++; continue;
+    }
+    if ((char === 'c' || char === 'g') && (next === 'e' || next === 'é' || next === 'ê' || next === 'i' || next === 'í')) {
+      push('SS');
       continue;
     }
 
     const vowel = VOWEL[char];
     if (vowel) {
-      if (onset && SALIENT.has(onset)) push(onset);
-      onset = null;
       push(vowel);
       continue;
     }
 
     const consonant = CONSONANT[char];
     if (consonant) {
-      // M no final e visualmente importante porque fecha os labios. Guardar o
-      // onset permite emiti-lo caso uma pausa venha antes de outra vogal.
-      onset = consonant;
+      // H isolado nao deve criar um quadro de boca fechada no meio da palavra.
+      if (consonant !== 'sil') push(consonant);
       continue;
     }
 
-    if (/[\s,;:]/.test(char)) {
-      if (onset && SALIENT.has(onset)) push(onset);
-      onset = null;
-      push('sil', char === ' ' ? 0.28 : 0.62);
+    if (char === ' ') {
+      // Espaco e apenas uma micro-pausa; o gate de audio decide se ela chega a
+      // ficar visivel ou se a palavra seguinte emenda naturalmente.
+      push('sil', 0.16);
       continue;
     }
 
-    if (/[.!?…—-]/.test(char)) {
-      if (onset && SALIENT.has(onset)) push(onset);
-      onset = null;
-      push('sil', /[.!?…]/.test(char) ? 1.65 : 0.82);
+    if (/[,;:]/.test(char)) {
+      push('sil', char === ',' ? 0.48 : 0.64);
+      continue;
     }
+
+    if (/[.!?…]/.test(char)) {
+      push('sil', 1.25);
+      continue;
+    }
+
+    if (/[—-]/.test(char)) push('sil', 0.70);
   }
 
-  if (onset && SALIENT.has(onset)) push(onset);
-  push('sil', 0.85);
+  push('sil', 0.68);
 
-  // Pequena margem para ataque/cauda naturais do TTS. O gate de energia ainda
-  // e a autoridade final: se nao ha voz, a boca fecha independentemente daqui.
   const span = Math.max(0.2, duration);
-  const guard = Math.min(0.08, span * 0.025);
+  const guard = Math.min(0.055, span * 0.018);
   const usable = Math.max(0.12, span - guard * 2);
   const total = units.reduce((sum, unit) => sum + unit.weight, 0) || 1;
 
@@ -205,7 +215,7 @@ function getGraph(audio: HTMLAudioElement): Graph | null {
     const context: AudioContext = new Ctor();
     const analyser = context.createAnalyser();
     analyser.fftSize = 1024;
-    analyser.smoothingTimeConstant = 0.58;
+    analyser.smoothingTimeConstant = 0.52;
     const source = context.createMediaElementSource(audio);
     source.connect(analyser);
     analyser.connect(context.destination);
@@ -224,17 +234,16 @@ function band(spectrum: Uint8Array, from: number, to: number): number {
 }
 
 function fromSpectrum(spectrum: Uint8Array, level: number): Viseme {
-  if (level < 0.055) return 'sil';
+  if (level < 0.050) return 'sil';
 
-  // fftSize 1024 a 44.1kHz: cada bin ~43Hz.
   const low = band(spectrum, 2, 18);
   const mid = band(spectrum, 18, 70);
   const high = band(spectrum, 90, 200);
 
-  if (high > low * 1.12 && high > 0.135) return 'SS';
-  if (low > 0.29 && mid < low * 0.77) return level > 0.52 ? 'aa' : 'O';
-  if (mid > low * 1.08) return level > 0.38 ? 'E' : 'I';
-  if (level > 0.48) return 'aa';
+  if (high > low * 1.14 && high > 0.14) return 'SS';
+  if (low > 0.27 && mid < low * 0.78) return level > 0.46 ? 'O' : 'U';
+  if (mid > low * 1.10) return level > 0.34 ? 'E' : 'I';
+  if (level > 0.50) return 'aa';
   if (level > 0.24) return 'E';
   return 'U';
 }
@@ -246,7 +255,40 @@ function rmsLevel(wave: Uint8Array): number {
     squares += value * value;
   }
   const rms = Math.sqrt(squares / wave.length);
-  return Math.max(0, Math.min(1, (rms - 0.0115) * 8.8));
+  return Math.max(0, Math.min(1, (rms - 0.0105) * 8.6));
+}
+
+/**
+ * A forma textual diz QUAL fonema estamos tentando mostrar. A energia diz QUANTO
+ * a boca deve abrir. Como os assets sao discretos, usamos uma forma menos aberta
+ * quando a voz esta fraca. Isso evita o "aa" enorme em quase toda silaba.
+ */
+function softenByEnergy(viseme: Viseme, level: number): Viseme {
+  if (!VOWELS.has(viseme)) return viseme;
+
+  if (viseme === 'aa') {
+    if (level < 0.16) return 'I';
+    if (level < 0.31) return 'E';
+    return 'aa';
+  }
+  if (viseme === 'E') return level < 0.15 ? 'I' : 'E';
+  if (viseme === 'O') return level < 0.20 ? 'U' : 'O';
+  return viseme;
+}
+
+function blendVowelWithSpectrum(textViseme: Viseme, spectral: Viseme): Viseme {
+  if (!VOWELS.has(textViseme) || !VOWELS.has(spectral)) return textViseme;
+
+  // So misturamos dentro de familias visualmente vizinhas para nao trocar o
+  // fonema por completo por causa de um espectro imperfeito.
+  if ((textViseme === 'E' || textViseme === 'I') && (spectral === 'E' || spectral === 'I')) {
+    return spectral;
+  }
+  if ((textViseme === 'O' || textViseme === 'U') && (spectral === 'O' || spectral === 'U')) {
+    return spectral;
+  }
+  if (textViseme === 'aa' && spectral === 'aa') return 'aa';
+  return textViseme;
 }
 
 // ---------------------------------------------------------------------------
@@ -283,18 +325,17 @@ export function useFuncionarIAViseme(
       return;
     }
 
-    // Previa do onboarding: sem audio real, variar devagar e com pausas curtas.
     if (!audio) {
-      const pool: Viseme[] = ['aa', 'E', 'O', 'DD', 'I', 'PP', 'U', 'SS', 'E', 'aa', 'sil'];
+      const pool: Viseme[] = ['E', 'DD', 'aa', 'PP', 'I', 'SS', 'O', 'nn', 'E', 'U', 'sil'];
       let index = 0;
       const timer = window.setInterval(() => {
-        index = (index + 1 + Math.floor(Math.random() * 2)) % pool.length;
+        index = (index + 1) % pool.length;
         const viseme = pool[index];
         setState({
           viseme,
-          level: viseme === 'sil' ? 0.02 : 0.28 + Math.random() * 0.38,
+          level: viseme === 'sil' ? 0.02 : 0.22 + Math.random() * 0.32,
         });
-      }, 105 + Math.floor(Math.random() * 28));
+      }, 88 + Math.floor(Math.random() * 26));
       return () => {
         window.clearInterval(timer);
         setState({ viseme: 'sil', level: 0 });
@@ -315,8 +356,6 @@ export function useFuncionarIAViseme(
     let lastPublishedAt = 0;
 
     const publish = (viseme: Viseme, level: number, now: number) => {
-      // 20 degraus sao mais do que suficientes para indicador de audio e
-      // movimento corporal. Isso evita rerender por diferencas invisiveis.
       const quantized = Math.round(Math.max(0, Math.min(1, level)) * 20) / 20;
       const shouldPublish =
         viseme !== publishedViseme ||
@@ -337,28 +376,42 @@ export function useFuncionarIAViseme(
       if (graph && spectrum && wave) {
         graph.analyser.getByteTimeDomainData(wave);
         const level = rmsLevel(wave);
-        smooth = smooth * 0.60 + level * 0.40;
+        smooth = smooth * 0.56 + level * 0.44;
 
         graph.analyser.getByteFrequencyData(spectrum);
         detected = fromSpectrum(spectrum, smooth);
       } else {
-        smooth = 0.30;
-        detected = 'aa';
+        smooth = 0.28;
+        detected = 'E';
       }
 
       const timeline = timelineRef.current;
       let next = detected;
 
-      if (timeline.length) {
-        // Um pequeno look-ahead visual e natural em lip-sync: a boca inicia a
-        // forma uma fracao antes do centro acustico do fonema.
-        const visualTime = audio.currentTime + 0.024;
-        next = smooth < 0.045 ? 'sil' : visemeAt(timeline, visualTime);
+      if (smooth < 0.038) {
+        next = 'sil';
+      } else if (timeline.length) {
+        const visualTime = audio.currentTime + 0.012;
+        const textViseme = visemeAt(timeline, visualTime);
+
+        if (textViseme === 'sil') {
+          // Se o TTS emendou duas palavras, nao forcar uma boca neutra so por
+          // causa de um espaco no texto. Pontuacao/pausa real ainda fecha pelo
+          // gate de energia.
+          next = detected === 'sil' ? 'sil' : softenByEnergy(detected, smooth);
+        } else if (CONSONANTS.has(textViseme)) {
+          next = textViseme;
+        } else {
+          const blended = blendVowelWithSpectrum(textViseme, detected);
+          next = softenByEnergy(blended, smooth);
+        }
+      } else {
+        next = softenByEnergy(detected, smooth);
       }
 
-      // Silencio real tem prioridade sobre a histerese. Para os demais frames,
-      // o piso por visema elimina vibracao entre duas bocas em fronteiras.
-      if (next === 'sil' && smooth < 0.038) {
+      // Silencio real sempre ganha. Fora dele, uma forma fica no minimo alguns
+      // milissegundos para a boca nao vibrar entre assets em fronteiras.
+      if (next === 'sil') {
         active = 'sil';
         heldUntil = now + MIN_HOLD_MS.sil;
       } else if (next !== active && now >= heldUntil) {

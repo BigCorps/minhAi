@@ -41,34 +41,43 @@ export const FUNCIONARIA_AVATAR = {
 export const BLINK_FRAMES = 6;
 
 /**
- * Piscada V9.
+ * Piscada V10.
  *
- * A principal mudança não é só de timing: o renderer V9 mostra UM quadro de
- * pálpebra por vez. A versão anterior misturava dois frames adjacentes por
- * opacidade para simular blur. Em fotografia isso criava uma segunda borda de
- * pálpebra por alguns milissegundos (o efeito de "olho fantasma").
+ * O video de validacao mostrou que os seis assets `eyes-1..6` atuais parecem
+ * quase fechados desde o primeiro quadro. Mesmo com timing correto, isso
+ * transforma a piscada em ~260 ms de olhos fechados.
  *
- * Os intervalos continuam aleatórios, mas o fechar é curto e o abrir é mais
- * lento. O primeiro blink também é retardado no componente para a pessoa não
- * "piscar assim que aparece".
+ * O V10 usa apenas os dois assets antigos que representam estados semanticamente
+ * distintos: HALF e CLOSED. A base da expressao continua sendo o olho aberto.
+ * Isso da uma sequencia clara open -> half -> closed -> half -> open, curta o
+ * bastante para parecer uma piscada real mesmo em telas de 30 Hz.
  */
 export const BLINK_TIMING = {
-  closeMs: 96,
-  closeJitterMs: 6,
-  holdMs: 20,
-  holdJitterMs: 8,
-  holdSwapMs: 205,
-  openMs: 150,
-  openJitterMs: 18,
-  gapSpeakingMs: [3600, 6800] as const,
-  gapIdleMs: [4200, 7800] as const,
-  doubleChance: 0.035,
-  doubleGapMs: [115, 175] as const,
-  firstBlinkMinMs: 1900,
+  halfCloseMs: 32,
+  halfCloseJitterMs: 5,
+  closedMs: 24,
+  closedJitterMs: 6,
+  closedSwapMs: 190,
+  halfOpenMs: 42,
+  halfOpenJitterMs: 7,
+  gapSpeakingMs: [3300, 6600] as const,
+  gapIdleMs: [4100, 8200] as const,
+  doubleChance: 0.028,
+  doubleGapMs: [120, 175] as const,
+  firstBlinkMinMs: 2100,
 } as const;
 
+/** Mantidos para compatibilidade com packs/ferramentas antigas. */
 export function eyeFramePath(expression: Expression, frame: number): string {
-  return `${FUNCIONARIA_AVATAR.root}/${expression}-eyes-${frame}.webp?v=9`;
+  return `${FUNCIONARIA_AVATAR.root}/${expression}-eyes-${frame}.webp?v=10`;
+}
+
+export function eyeHalfPath(expression: Expression): string {
+  return `${FUNCIONARIA_AVATAR.root}/${expression}-eyes-half.webp?v=10`;
+}
+
+export function eyeClosedPath(expression: Expression): string {
+  return `${FUNCIONARIA_AVATAR.root}/${expression}-eyes-closed.webp?v=10`;
 }
 
 export const EXPRESSION_CAROUSEL = false;
@@ -97,8 +106,9 @@ export function expressionAssets(expression: Expression): string[] {
     'trim-mask', 'trim-shadow', 'trim-light',
   ].map(layer => layerPath(expression, layer));
 
-  const eyes: string[] = [];
-  for (let i = 1; i <= BLINK_FRAMES; i++) eyes.push(eyeFramePath(expression, i));
+  // Runtime V10 usa apenas HALF + CLOSED. Os seis frames continuam no repo
+  // para compatibilidade, mas nao sao baixados pelo avatar ao vivo.
+  const eyes = [eyeHalfPath(expression), eyeClosedPath(expression)];
 
   return [...layers, ...eyes];
 }

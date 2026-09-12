@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject } from 'react';
 import FuncionarIABackground from './FuncionarIABackground';
 import { useFuncionarIANaturalMotion } from './useFuncionarIANaturalMotion';
 import { useFuncionarIAViseme } from './useFuncionarIAViseme';
@@ -24,27 +24,43 @@ import {
 type Props = {
   primaryColor?: string;
   secondaryColor?: string;
-  /** Id da paleta. Ignorado quando shirtColor vem preenchido. */
   uniformColorId?: string | null;
-  /** Hex livre, para a cor exata da marca. */
   shirtColor?: string | null;
   trimColor?: string | null;
   companyLogoUrl?: string | null;
-  /** Onde o logo aparece. Ver LOGO_PLACEMENTS. */
   logoPlacement?: string | null;
   backgroundPreset?: string;
   backgroundUrl?: string | null;
   speaking?: boolean;
   audioElement?: HTMLAudioElement | null;
   speechText?: string | null;
-  /** Balcao na frente da atendente. Ver COUNTERS. */
   counter?: string | null;
   compact?: boolean;
   className?: string;
 };
 
 const SWAP_MS = 160;
+const COUNTER_HEIGHT = 0.26;
+const COUNTER_WIDTH = 1.08;
 type EyeRegistry = Map<string, HTMLImageElement | null>;
+
+/**
+ * Máscara fotográfica da cabeça V14.
+ *
+ * É propositalmente feathered e termina antes do uniforme. A foto original
+ * continua por baixo; este patch só substitui a cabeça/rosto durante os
+ * microgestos. Assim não recortamos braço, ombro, camiseta ou crachá.
+ */
+const HEAD_PATCH_STYLE: CSSProperties = {
+  WebkitMaskImage:
+    'radial-gradient(ellipse 36% 33% at 50% 27%, rgb(0 0 0 / 1) 0%, rgb(0 0 0 / 1) 76%, rgb(0 0 0 / .95) 84%, rgb(0 0 0 / .55) 93%, rgb(0 0 0 / 0) 100%)',
+  maskImage:
+    'radial-gradient(ellipse 36% 33% at 50% 27%, rgb(0 0 0 / 1) 0%, rgb(0 0 0 / 1) 76%, rgb(0 0 0 / .95) 84%, rgb(0 0 0 / .55) 93%, rgb(0 0 0 / 0) 100%)',
+  WebkitMaskRepeat: 'no-repeat',
+  maskRepeat: 'no-repeat',
+  WebkitMaskSize: '100% 100%',
+  maskSize: '100% 100%',
+};
 
 function useLayersReady(sources: string[]): boolean {
   const [ready, setReady] = useState(false);
@@ -93,8 +109,6 @@ function useWarmCache(active: boolean) {
       image.src = src;
     }
 
-    // A boca e pequena, mas todas as formas devem estar decodificadas antes da
-    // primeira fala. Isso evita o flash da primeira troca de visema.
     for (const key of VISEMES) {
       if (key === 'sil') continue;
       const image = new Image();
@@ -103,9 +117,6 @@ function useWarmCache(active: boolean) {
     }
   }, [active]);
 }
-
-const COUNTER_HEIGHT = 0.26;
-const COUNTER_WIDTH = 1.08;
 
 export default function FuncionarIAAvatar({
   primaryColor = '#6D28D9',
@@ -127,11 +138,18 @@ export default function FuncionarIAAvatar({
   const preset = getUniformColor(uniformColorId);
   const shirt = shirtColor || preset.shirt;
   const trim = trimColor || preset.trim;
-
   const { viseme, level } = useFuncionarIAViseme(audioElement, speaking, speechText);
 
   const figure = useRef<HTMLDivElement | null>(null);
-  useFuncionarIANaturalMotion(figure, speaking, level);
+  const headMotion = useRef<HTMLDivElement | null>(null);
+  useFuncionarIANaturalMotion(
+    figure,
+    headMotion,
+    speaking,
+    level,
+    audioElement,
+    speechText,
+  );
 
   const registry = useRef<EyeRegistry>(new Map());
   const { current, incoming, fade, swapPending, onClosed } = useExpression(speaking);
@@ -156,7 +174,7 @@ export default function FuncionarIAAvatar({
 
   return (
     <div
-      data-avatar-engine="v12"
+      data-avatar-engine="v14"
       className={`relative isolate overflow-hidden rounded-[28px] bg-white ${
         compact ? 'min-h-[300px]' : 'min-h-[440px]'
       } ${className}`}
@@ -178,11 +196,6 @@ export default function FuncionarIAAvatar({
             transition: 'opacity 240ms ease-out',
           }}
         >
-          {/*
-            Elemento de fluxo invisivel: ele define exatamente o tamanho da
-            figura renderizada. Todos os recortes usam porcentagem desse mesmo
-            retangulo, entao olhos/boca nao derivam em telas estreitas.
-          */}
           <img
             src={layerPath('neutra', 'base')}
             alt=""
@@ -191,6 +204,7 @@ export default function FuncionarIAAvatar({
             draggable={false}
           />
 
+          {/* Corpo-base: totalmente estável; cabeça fotográfica móvel vem depois. */}
           {slots.map(slot => (
             <div
               key={slot.key}
@@ -207,43 +221,65 @@ export default function FuncionarIAAvatar({
                 className="pointer-events-none absolute inset-0 h-full w-full select-none"
                 draggable={false}
               />
-
               <FabricLayer color={shirt} expression={slot.expression} prefix="shirt" />
               <FabricLayer color={trim} expression={slot.expression} prefix="trim" />
-
-              <EyeFrames
-                expression={slot.expression}
-                slotKey={slot.key}
-                registry={registry}
-              />
             </div>
           ))}
 
           {/*
-            Visemas continuam montados para nunca decodificar uma boca no meio
-            da fala. Na V4 o crossfade visual ficou em 12ms: a timeline textual
-            ja decide o fonema e a troca precisa parecer articulacao, nao morph
-            durante a maior parte de um fonema curto.
+            Cabeça 2.5D: o patch é a MESMA fotografia do corpo-base, mas com uma
+            máscara feathered. Boca + piscada ficam dentro do grupo, portanto
+            acompanham qualquer microinclinação sem escapar do rosto.
           */}
-          {VISEMES.filter(key => key !== 'sil').map(key => (
-            <img
-              key={key}
-              src={mouthPath(key)}
-              alt=""
-              aria-hidden
-              className="pointer-events-none absolute select-none"
-              style={{
-                left: pct(mouthRect.left, canvas.width),
-                top: pct(mouthRect.top, canvas.height),
-                width: pct(mouthRect.width, canvas.width),
-                height: pct(mouthRect.height, canvas.height),
-                opacity: speaking && viseme === key ? 1 : 0,
-                transition: 'opacity 12ms linear',
-                willChange: 'opacity',
-              }}
-              draggable={false}
-            />
-          ))}
+          <div
+            ref={headMotion}
+            className="funcionaria-head absolute inset-0 pointer-events-none"
+          >
+            {slots.map(slot => (
+              <div
+                key={`head-${slot.key}`}
+                className="absolute inset-0"
+                style={{
+                  opacity: slot.opacity,
+                  transition: slot.key === 'b' ? `opacity ${SWAP_MS}ms ease-in-out` : 'none',
+                }}
+              >
+                <img
+                  src={layerPath(slot.expression, 'base')}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 h-full w-full select-none"
+                  style={HEAD_PATCH_STYLE}
+                  draggable={false}
+                />
+                <EyeFrames
+                  expression={slot.expression}
+                  slotKey={slot.key}
+                  registry={registry}
+                />
+              </div>
+            ))}
+
+            {VISEMES.filter(key => key !== 'sil').map(key => (
+              <img
+                key={key}
+                src={mouthPath(key)}
+                alt=""
+                aria-hidden
+                className="pointer-events-none absolute select-none"
+                style={{
+                  left: pct(mouthRect.left, canvas.width),
+                  top: pct(mouthRect.top, canvas.height),
+                  width: pct(mouthRect.width, canvas.width),
+                  height: pct(mouthRect.height, canvas.height),
+                  opacity: speaking && viseme === key ? 1 : 0,
+                  transition: 'opacity 12ms linear',
+                  willChange: 'opacity',
+                }}
+                draggable={false}
+              />
+            ))}
+          </div>
 
           {placement === 'cracha' && (
             <Badge logo={companyLogoUrl} rect={badgeRect} canvas={canvas} />
@@ -311,13 +347,18 @@ export default function FuncionarIAAvatar({
           will-change: transform;
           backface-visibility: hidden;
         }
+        .funcionaria-head {
+          transform-origin: 50% 51%;
+          will-change: transform;
+          backface-visibility: hidden;
+        }
       `}</style>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Piscada V12 — um unico asset visualmente fechado, sem alternancia falsa
+// Piscada V13 preservada — a máscara de app/globals.css continua valendo.
 // ---------------------------------------------------------------------------
 
 function EyeFrames({
@@ -336,16 +377,6 @@ function EyeFrames({
     return () => { map.delete(slotKey); };
   }, [registry, slotKey]);
 
-  /*
-    Importante: no pack atual o arquivo historicamente chamado `eyes-half`
-    e o que visualmente representa a palpebra fechada. O arquivo `eyes-closed`
-    parece aberto na gravacao real. Usar os dois em sequencia produzia:
-      fechado -> aberto -> fechado -> aberto
-    em quatro frames consecutivos de uma tela de ~30 Hz.
-
-    Enquanto os assets de olhos nao forem regenerados, usar somente o estado
-    que de fato parece fechado e mais anatomico do que confiar nos nomes.
-  */
   return (
     <img
       ref={(element: HTMLImageElement | null) => {
@@ -473,7 +504,7 @@ function useBlink(
     raf = window.requestAnimationFrame(tick);
     return () => {
       window.cancelAnimationFrame(raf);
-      visible = true; // força a escrita final mesmo se ja estava aberto
+      visible = true;
       paintedRegistrySize = -1;
       paint(false);
     };
@@ -481,7 +512,7 @@ function useBlink(
 }
 
 // ---------------------------------------------------------------------------
-// Expressao
+// Expressões (carrossel continua desligado até termos packs compatíveis).
 // ---------------------------------------------------------------------------
 
 function useExpression(speaking: boolean) {
@@ -565,10 +596,6 @@ function useExpression(speaking: boolean) {
 
   return { current, incoming, fade, swapPending, onClosed };
 }
-
-// ---------------------------------------------------------------------------
-// Camadas de uniforme e cracha
-// ---------------------------------------------------------------------------
 
 function FabricLayer({
   color,

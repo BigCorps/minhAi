@@ -128,3 +128,55 @@ body {
   background: rgba(var(--primary-green-dark), 0.7);
 }
 }
+
+/* ── FuncionarIA — piscada V13 ──────────────────────────────────────────────
+   O asset histórico `*-eyes-half.webp` contém um recorte retangular grande do
+   rosto (pele + sobrancelhas + olhos). Quando sua opacidade vai de 0 para 1,
+   não é só a pálpebra que troca: todo o retângulo muda por um quadro.
+
+   A máscara abaixo mantém visível somente a região anatômica dos dois olhos e
+   dissolve a borda no rosto-base. Assim sobrancelhas, testa, ponte do nariz e
+   pele ao redor continuam sendo SEMPRE os pixels da foto-base.
+──────────────────────────────────────────────────────────────────────────── */
+[data-avatar-engine] img[src*="-eyes-half.webp"] {
+  -webkit-mask-image:
+    radial-gradient(
+      ellipse 22% 31% at 27.5% 72%,
+      rgb(0 0 0 / 1) 0%,
+      rgb(0 0 0 / 1) 54%,
+      rgb(0 0 0 / .96) 68%,
+      rgb(0 0 0 / .58) 82%,
+      rgb(0 0 0 / 0) 100%
+    ),
+    radial-gradient(
+      ellipse 22% 31% at 72.5% 72%,
+      rgb(0 0 0 / 1) 0%,
+      rgb(0 0 0 / 1) 54%,
+      rgb(0 0 0 / .96) 68%,
+      rgb(0 0 0 / .58) 82%,
+      rgb(0 0 0 / 0) 100%
+    );
+  mask-image:
+    radial-gradient(
+      ellipse 22% 31% at 27.5% 72%,
+      rgb(0 0 0 / 1) 0%,
+      rgb(0 0 0 / 1) 54%,
+      rgb(0 0 0 / .96) 68%,
+      rgb(0 0 0 / .58) 82%,
+      rgb(0 0 0 / 0) 100%
+    ),
+    radial-gradient(
+      ellipse 22% 31% at 72.5% 72%,
+      rgb(0 0 0 / 1) 0%,
+      rgb(0 0 0 / 1) 54%,
+      rgb(0 0 0 / .96) 68%,
+      rgb(0 0 0 / .58) 82%,
+      rgb(0 0 0 / 0) 100%
+    );
+  -webkit-mask-repeat: no-repeat, no-repeat;
+  mask-repeat: no-repeat, no-repeat;
+  -webkit-mask-size: 100% 100%, 100% 100%;
+  mask-size: 100% 100%, 100% 100%;
+  -webkit-mask-position: center, center;
+  mask-position: center, center;
+}

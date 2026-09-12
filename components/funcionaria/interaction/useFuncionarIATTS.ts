@@ -21,6 +21,18 @@ type Options = {
   speed?: number | null;
 };
 
+/**
+ * O texto fica preso ao proprio HTMLAudioElement.
+ *
+ * Assim qualquer avatar que receba o `audioElement` ganha tambem o roteiro
+ * exato que originou aquele MP3, sem obrigar pagina publica/widget/preview a
+ * carregar uma prop nova em paralelo. E uma propriedade somente em memoria;
+ * nao vai para DOM, rede, storage ou backend.
+ */
+export type FuncionarIAAudioElement = HTMLAudioElement & {
+  __funcionariaSpeechText?: string;
+};
+
 export function useFuncionarIATTS({ voiceId, speed }: Options = {}) {
   const voice = getFuncionarIAVoice(voiceId);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -35,6 +47,7 @@ export function useFuncionarIATTS({ voiceId, speed }: Options = {}) {
         audio.pause();
         audio.currentTime = 0;
       } catch {}
+      delete (audio as FuncionarIAAudioElement).__funcionariaSpeechText;
     }
     currentAudioRef.current = null;
     setAudioElement(null);
@@ -68,7 +81,10 @@ export function useFuncionarIATTS({ voiceId, speed }: Options = {}) {
     const objectUrl = URL.createObjectURL(blob);
     currentObjectUrlRef.current = objectUrl;
 
-    const audio = new Audio(objectUrl);
+    const audio = new Audio(objectUrl) as FuncionarIAAudioElement;
+    // Ponto central da V4: o lipsync passa a conhecer o texto real falado.
+    audio.__funcionariaSpeechText = cleanText;
+
     currentAudioRef.current = audio;
     setAudioElement(audio);
 
@@ -76,6 +92,7 @@ export function useFuncionarIATTS({ voiceId, speed }: Options = {}) {
       audio.onplay = () => setSpeaking(true);
       audio.onended = () => {
         setSpeaking(false);
+        delete audio.__funcionariaSpeechText;
         currentAudioRef.current = null;
         setAudioElement(null);
         if (currentObjectUrlRef.current === objectUrl) {
@@ -86,6 +103,7 @@ export function useFuncionarIATTS({ voiceId, speed }: Options = {}) {
       };
       audio.onerror = () => {
         setSpeaking(false);
+        delete audio.__funcionariaSpeechText;
         currentAudioRef.current = null;
         setAudioElement(null);
         if (currentObjectUrlRef.current === objectUrl) {

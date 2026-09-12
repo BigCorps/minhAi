@@ -3,19 +3,19 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Lip-sync V3 da FuncionarIA.
+ * Lip-sync V4 da FuncionarIA.
  *
  * Continua 100% frontend: texto + currentTime do proprio audio + Web Audio.
- * O video de validacao do V2 mostrou duas coisas: a boca abria grande demais
- * por muito tempo e a sequencia era dominada por vogais. O V3 corrige isso sem
- * trocar TTS nem criar processamento pesado:
  *
- * - todas as consoantes relevantes entram na timeline, nao apenas PP/FF/SS;
- * - vogais ficam mais curtas e a abertura e modulada pela energia real da voz;
- * - o espectro ajuda a escolher a variante de vogal, mas o texto continua
- *   mandando em consoantes reconheciveis;
- * - silencio real fecha a boca imediatamente;
- * - React so recebe atualizacao quando visema/energia realmente mudam.
+ * A gravacao V3 revelou o defeito estrutural que as calibracoes anteriores nao
+ * conseguiam resolver: pagina publica e widget passavam `audioElement`, mas nao
+ * passavam `speechText`. Com isso a boca caia no fallback espectral e a voz
+ * feminina ficava classificada como O/U por trechos longos.
+ *
+ * O V4 le o texto exato que o hook de TTS grava no proprio HTMLAudioElement.
+ * Quando existe texto, ele manda na identidade do visema e o Web Audio fica
+ * responsavel principalmente por silencio e intensidade. Sem texto continua
+ * existindo fallback espectral para compatibilidade.
  */
 
 export type Viseme =
@@ -25,6 +25,10 @@ export type Viseme =
 export const VISEME_ORDER: Viseme[] = [
   'sil', 'PP', 'FF', 'DD', 'kk', 'SS', 'nn', 'aa', 'E', 'I', 'O', 'U',
 ];
+
+type FuncionarIATimedAudio = HTMLAudioElement & {
+  __funcionariaSpeechText?: string;
+};
 
 const VOWELS = new Set<Viseme>(['aa', 'E', 'I', 'O', 'U']);
 const CONSONANTS = new Set<Viseme>(['PP', 'FF', 'DD', 'kk', 'SS', 'nn']);
@@ -53,32 +57,32 @@ const CONSONANT: Record<string, Viseme> = {
 
 const WEIGHT: Record<Viseme, number> = {
   sil: 1.0,
-  PP: 0.44,
-  FF: 0.43,
-  DD: 0.32,
-  kk: 0.34,
-  SS: 0.45,
-  nn: 0.37,
-  aa: 0.82,
-  E: 0.76,
-  I: 0.68,
-  O: 0.78,
-  U: 0.70,
+  PP: 0.52,
+  FF: 0.50,
+  DD: 0.38,
+  kk: 0.40,
+  SS: 0.52,
+  nn: 0.42,
+  aa: 0.74,
+  E: 0.70,
+  I: 0.64,
+  O: 0.70,
+  U: 0.64,
 };
 
 const MIN_HOLD_MS: Record<Viseme, number> = {
   sil: 28,
-  PP: 46,
-  FF: 46,
-  DD: 38,
-  kk: 40,
-  SS: 48,
-  nn: 42,
-  aa: 58,
-  E: 54,
-  I: 50,
-  O: 56,
-  U: 52,
+  PP: 42,
+  FF: 42,
+  DD: 34,
+  kk: 36,
+  SS: 44,
+  nn: 38,
+  aa: 50,
+  E: 48,
+  I: 46,
+  O: 50,
+  U: 46,
 };
 
 type Frame = { viseme: Viseme; start: number; end: number };
@@ -276,19 +280,8 @@ function softenByEnergy(viseme: Viseme, level: number): Viseme {
   return viseme;
 }
 
-function blendVowelWithSpectrum(textViseme: Viseme, spectral: Viseme): Viseme {
-  if (!VOWELS.has(textViseme) || !VOWELS.has(spectral)) return textViseme;
-
-  // So misturamos dentro de familias visualmente vizinhas para nao trocar o
-  // fonema por completo por causa de um espectro imperfeito.
-  if ((textViseme === 'E' || textViseme === 'I') && (spectral === 'E' || spectral === 'I')) {
-    return spectral;
-  }
-  if ((textViseme === 'O' || textViseme === 'U') && (spectral === 'O' || spectral === 'U')) {
-    return spectral;
-  }
-  if (textViseme === 'aa' && spectral === 'aa') return 'aa';
-  return textViseme;
+function textVisemeWithEnergy(viseme: Viseme, level: number): Viseme {
+  return softenByEnergy(viseme, level);
 }
 
 // ---------------------------------------------------------------------------
@@ -303,11 +296,16 @@ export function useFuncionarIAViseme(
 
   useEffect(() => {
     timelineRef.current = [];
-    if (!audio || !speechText) return;
+    if (!audio) return;
+
+    const embeddedText =
+      (audio as FuncionarIATimedAudio).__funcionariaSpeechText?.trim() || '';
+    const resolvedText = String(speechText || embeddedText || '').trim();
+    if (!resolvedText) return;
 
     const build = () => {
       const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
-      if (duration > 0) timelineRef.current = buildTimeline(speechText, duration);
+      if (duration > 0) timelineRef.current = buildTimeline(resolvedText, duration);
     };
 
     if (audio.readyState >= 1) build();
@@ -376,7 +374,7 @@ export function useFuncionarIAViseme(
       if (graph && spectrum && wave) {
         graph.analyser.getByteTimeDomainData(wave);
         const level = rmsLevel(wave);
-        smooth = smooth * 0.56 + level * 0.44;
+        smooth = smooth * 0.48 + level * 0.52;
 
         graph.analyser.getByteFrequencyData(spectrum);
         detected = fromSpectrum(spectrum, smooth);
@@ -388,24 +386,28 @@ export function useFuncionarIAViseme(
       const timeline = timelineRef.current;
       let next = detected;
 
-      if (smooth < 0.038) {
+      if (smooth < 0.036) {
         next = 'sil';
       } else if (timeline.length) {
-        const visualTime = audio.currentTime + 0.012;
+        // O texto agora e a fonte primaria de QUAL boca usar. A energia do
+        // audio decide apenas o quanto uma vogal deve abrir e se ha silencio.
+        // Isso elimina o O/U prolongado observado na gravacao V3.
+        const visualTime = audio.currentTime + 0.018;
         const textViseme = visemeAt(timeline, visualTime);
 
         if (textViseme === 'sil') {
-          // Se o TTS emendou duas palavras, nao forcar uma boca neutra so por
-          // causa de um espaco no texto. Pontuacao/pausa real ainda fecha pelo
-          // gate de energia.
-          next = detected === 'sil' ? 'sil' : softenByEnergy(detected, smooth);
-        } else if (CONSONANTS.has(textViseme)) {
-          next = textViseme;
+          // Espacos curtos entre palavras nao devem escolher um novo fonema
+          // aleatorio pelo espectro. Mantemos a forma anterior enquanto existe
+          // voz; pausas reais ainda fecham pelo gate acima.
+          next = active !== 'sil'
+            ? active
+            : (detected === 'sil' ? 'E' : softenByEnergy(detected, smooth));
         } else {
-          const blended = blendVowelWithSpectrum(textViseme, detected);
-          next = softenByEnergy(blended, smooth);
+          next = textVisemeWithEnergy(textViseme, smooth);
         }
       } else {
+        // Compatibilidade para qualquer audio externo que nao tenha o texto
+        // anexado pelo useFuncionarIATTS.
         next = softenByEnergy(detected, smooth);
       }
 

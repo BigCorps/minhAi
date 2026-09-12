@@ -41,43 +41,40 @@ export const FUNCIONARIA_AVATAR = {
 export const BLINK_FRAMES = 6;
 
 /**
- * Piscada V10.
+ * Piscada V12.
  *
- * O video de validacao mostrou que os seis assets `eyes-1..6` atuais parecem
- * quase fechados desde o primeiro quadro. Mesmo com timing correto, isso
- * transforma a piscada em ~260 ms de olhos fechados.
+ * A gravacao V3 em zoom mostrou que `eyes-half.webp` ainda se parece demais
+ * com o olho fechado. Portanto ele nao entra mais no fechamento. O runtime usa
+ * OPEN -> CLOSED -> HALF -> OPEN, com CLOSED e HALF muito curtos.
  *
- * O V10 usa apenas os dois assets antigos que representam estados semanticamente
- * distintos: HALF e CLOSED. A base da expressao continua sendo o olho aberto.
- * Isso da uma sequencia clara open -> half -> closed -> half -> open, curta o
- * bastante para parecer uma piscada real mesmo em telas de 30 Hz.
+ * Em captura de 30 fps o objetivo e registrar aproximadamente 1-2 quadros de
+ * olho fechado, que e muito mais proximo de uma piscada humana do que os 4-5
+ * quadros observados na V3.
  */
 export const BLINK_TIMING = {
-  halfCloseMs: 32,
-  halfCloseJitterMs: 5,
-  closedMs: 24,
-  closedJitterMs: 6,
-  closedSwapMs: 190,
-  halfOpenMs: 42,
-  halfOpenJitterMs: 7,
-  gapSpeakingMs: [3300, 6600] as const,
-  gapIdleMs: [4100, 8200] as const,
-  doubleChance: 0.028,
-  doubleGapMs: [120, 175] as const,
-  firstBlinkMinMs: 2100,
+  // O asset `eyes-half` atual e o que realmente parece fechado na gravacao.
+  // Mantemos o fechamento por ~1-2 quadros em uma tela de 30 Hz.
+  shutMs: 42,
+  shutJitterMs: 7,
+  shutSwapMs: 165,
+  gapSpeakingMs: [3200, 6500] as const,
+  gapIdleMs: [4000, 8200] as const,
+  doubleChance: 0.018,
+  doubleGapMs: [125, 180] as const,
+  firstBlinkMinMs: 2200,
 } as const;
 
 /** Mantidos para compatibilidade com packs/ferramentas antigas. */
 export function eyeFramePath(expression: Expression, frame: number): string {
-  return `${FUNCIONARIA_AVATAR.root}/${expression}-eyes-${frame}.webp?v=10`;
+  return `${FUNCIONARIA_AVATAR.root}/${expression}-eyes-${frame}.webp?v=12`;
 }
 
 export function eyeHalfPath(expression: Expression): string {
-  return `${FUNCIONARIA_AVATAR.root}/${expression}-eyes-half.webp?v=10`;
+  return `${FUNCIONARIA_AVATAR.root}/${expression}-eyes-half.webp?v=12`;
 }
 
 export function eyeClosedPath(expression: Expression): string {
-  return `${FUNCIONARIA_AVATAR.root}/${expression}-eyes-closed.webp?v=10`;
+  return `${FUNCIONARIA_AVATAR.root}/${expression}-eyes-closed.webp?v=12`;
 }
 
 export const EXPRESSION_CAROUSEL = false;
@@ -106,7 +103,7 @@ export function expressionAssets(expression: Expression): string[] {
     'trim-mask', 'trim-shadow', 'trim-light',
   ].map(layer => layerPath(expression, layer));
 
-  // Runtime V10 usa apenas HALF + CLOSED. Os seis frames continuam no repo
+  // Runtime V11 usa apenas HALF + CLOSED. Os seis frames continuam no repo
   // para compatibilidade, mas nao sao baixados pelo avatar ao vivo.
   const eyes = [eyeHalfPath(expression), eyeClosedPath(expression)];
 

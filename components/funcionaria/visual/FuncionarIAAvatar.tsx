@@ -13,7 +13,6 @@ import {
   VISEMES,
   counterPath,
   expressionAssets,
-  eyeClosedPath,
   eyeHalfPath,
   getLogoPlacement,
   getUniformColor,
@@ -45,8 +44,7 @@ type Props = {
 };
 
 const SWAP_MS = 160;
-type EyePair = { half: HTMLImageElement | null; closed: HTMLImageElement | null };
-type EyeRegistry = Map<string, EyePair>;
+type EyeRegistry = Map<string, HTMLImageElement | null>;
 
 function useLayersReady(sources: string[]): boolean {
   const [ready, setReady] = useState(false);
@@ -158,6 +156,7 @@ export default function FuncionarIAAvatar({
 
   return (
     <div
+      data-avatar-engine="v12"
       className={`relative isolate overflow-hidden rounded-[28px] bg-white ${
         compact ? 'min-h-[300px]' : 'min-h-[440px]'
       } ${className}`}
@@ -222,8 +221,8 @@ export default function FuncionarIAAvatar({
 
           {/*
             Visemas continuam montados para nunca decodificar uma boca no meio
-            da fala. A transicao caiu de 62ms para 38ms: com o hold minimo do
-            hook V2, a forma permanece legivel sem deixar duas bocas misturadas
+            da fala. Na V4 o crossfade visual ficou em 12ms: a timeline textual
+            ja decide o fonema e a troca precisa parecer articulacao, nao morph
             durante a maior parte de um fonema curto.
           */}
           {VISEMES.filter(key => key !== 'sil').map(key => (
@@ -239,7 +238,7 @@ export default function FuncionarIAAvatar({
                 width: pct(mouthRect.width, canvas.width),
                 height: pct(mouthRect.height, canvas.height),
                 opacity: speaking && viseme === key ? 1 : 0,
-                transition: 'opacity 20ms linear',
+                transition: 'opacity 12ms linear',
                 willChange: 'opacity',
               }}
               draggable={false}
@@ -318,7 +317,7 @@ export default function FuncionarIAAvatar({
 }
 
 // ---------------------------------------------------------------------------
-// Piscada V10 — open -> half -> closed -> half -> open
+// Piscada V12 — um unico asset visualmente fechado, sem alternancia falsa
 // ---------------------------------------------------------------------------
 
 function EyeFrames({
@@ -337,50 +336,38 @@ function EyeFrames({
     return () => { map.delete(slotKey); };
   }, [registry, slotKey]);
 
-  const commonStyle = {
-    left: `${(eyesRect.left / canvas.width) * 100}%`,
-    top: `${(eyesRect.top / canvas.height) * 100}%`,
-    width: `${(eyesRect.width / canvas.width) * 100}%`,
-    height: `${(eyesRect.height / canvas.height) * 100}%`,
-    opacity: 0,
-    willChange: 'opacity' as const,
-  };
+  /*
+    Importante: no pack atual o arquivo historicamente chamado `eyes-half`
+    e o que visualmente representa a palpebra fechada. O arquivo `eyes-closed`
+    parece aberto na gravacao real. Usar os dois em sequencia produzia:
+      fechado -> aberto -> fechado -> aberto
+    em quatro frames consecutivos de uma tela de ~30 Hz.
 
+    Enquanto os assets de olhos nao forem regenerados, usar somente o estado
+    que de fato parece fechado e mais anatomico do que confiar nos nomes.
+  */
   return (
-    <>
-      <img
-        ref={(element: HTMLImageElement | null) => {
-          const pair = registry.current.get(slotKey) || { half: null, closed: null };
-          pair.half = element;
-          registry.current.set(slotKey, pair);
-        }}
-        src={eyeHalfPath(expression)}
-        alt=""
-        aria-hidden
-        decoding="async"
-        className="pointer-events-none absolute select-none"
-        style={commonStyle}
-        draggable={false}
-      />
-      <img
-        ref={(element: HTMLImageElement | null) => {
-          const pair = registry.current.get(slotKey) || { half: null, closed: null };
-          pair.closed = element;
-          registry.current.set(slotKey, pair);
-        }}
-        src={eyeClosedPath(expression)}
-        alt=""
-        aria-hidden
-        decoding="async"
-        className="pointer-events-none absolute select-none"
-        style={commonStyle}
-        draggable={false}
-      />
-    </>
+    <img
+      ref={(element: HTMLImageElement | null) => {
+        registry.current.set(slotKey, element);
+      }}
+      src={eyeHalfPath(expression)}
+      alt=""
+      aria-hidden
+      decoding="async"
+      className="pointer-events-none absolute select-none"
+      style={{
+        left: `${(eyesRect.left / canvas.width) * 100}%`,
+        top: `${(eyesRect.top / canvas.height) * 100}%`,
+        width: `${(eyesRect.width / canvas.width) * 100}%`,
+        height: `${(eyesRect.height / canvas.height) * 100}%`,
+        opacity: 0,
+        willChange: 'opacity',
+      }}
+      draggable={false}
+    />
   );
 }
-
-type BlinkVisualState = 'open' | 'half' | 'closed';
 
 function useBlink(
   speaking: boolean,
@@ -399,13 +386,9 @@ function useBlink(
     if (reduced) return;
 
     const {
-      halfCloseMs,
-      halfCloseJitterMs,
-      closedMs,
-      closedJitterMs,
-      closedSwapMs,
-      halfOpenMs,
-      halfOpenJitterMs,
+      shutMs,
+      shutJitterMs,
+      shutSwapMs,
       gapSpeakingMs,
       gapIdleMs,
       doubleChance,
@@ -418,46 +401,35 @@ function useBlink(
       return min + Math.random() * (max - min);
     };
 
-    let painted: BlinkVisualState | null = null;
+    let visible = false;
     let paintedRegistrySize = -1;
 
-    const paint = (state: BlinkVisualState) => {
+    const paint = (closed: boolean) => {
       const size = registry.current.size;
-      if (state === painted && size === paintedRegistrySize) return;
-      painted = state;
+      if (closed === visible && size === paintedRegistrySize) return;
+      visible = closed;
       paintedRegistrySize = size;
 
-      for (const pair of registry.current.values()) {
-        if (pair.half) pair.half.style.opacity = state === 'half' ? '1' : '0';
-        if (pair.closed) pair.closed.style.opacity = state === 'closed' ? '1' : '0';
+      for (const element of registry.current.values()) {
+        if (!element) continue;
+        element.style.opacity = closed ? '1' : '0';
       }
     };
 
-    type Phase = 'wait' | 'halfClosing' | 'closed' | 'halfOpening';
+    type Phase = 'wait' | 'shut';
     let phase: Phase = 'wait';
     let since = performance.now();
     let gap = Math.max(firstBlinkMinMs, nextGap());
-    let closeDuration: number = halfCloseMs;
-    let shutDuration: number = closedMs;
-    let openDuration: number = halfOpenMs;
+    let shutDuration = shutMs;
     let secondOfPair = false;
     let announced = false;
     let raf = 0;
 
     const jitter = (base: number, amount: number) =>
-      Math.max(12, base + (Math.random() * 2 - 1) * amount);
-
-    const prepareBlink = () => {
-      closeDuration = jitter(halfCloseMs, halfCloseJitterMs);
-      shutDuration = swapPending.current
-        ? closedSwapMs
-        : jitter(closedMs, closedJitterMs);
-      openDuration = jitter(halfOpenMs, halfOpenJitterMs);
-      announced = false;
-    };
+      Math.max(20, base + (Math.random() * 2 - 1) * amount);
 
     const finishBlink = (now: number) => {
-      paint('open');
+      paint(false);
       phase = 'wait';
       since = now;
 
@@ -475,46 +447,35 @@ function useBlink(
       const elapsed = now - since;
 
       if (phase === 'wait') {
-        paint('open');
+        paint(false);
         if (elapsed >= gap) {
-          prepareBlink();
-          paint('half');
-          phase = 'halfClosing';
+          shutDuration = swapPending.current
+            ? shutSwapMs
+            : jitter(shutMs, shutJitterMs);
+          announced = false;
+          paint(true);
+          phase = 'shut';
           since = now;
         }
-      } else if (phase === 'halfClosing') {
-        paint('half');
-        if (elapsed >= closeDuration) {
-          paint('closed');
-          phase = 'closed';
-          since = now;
-        }
-      } else if (phase === 'closed') {
-        paint('closed');
+      } else {
+        paint(true);
         if (!announced) {
           announced = true;
           onClosed.current();
         }
-        if (elapsed >= shutDuration) {
-          paint('half');
-          phase = 'halfOpening';
-          since = now;
-        }
-      } else {
-        paint('half');
-        if (elapsed >= openDuration) finishBlink(now);
+        if (elapsed >= shutDuration) finishBlink(now);
       }
 
       raf = window.requestAnimationFrame(tick);
     };
 
-    paint('open');
+    paint(false);
     raf = window.requestAnimationFrame(tick);
     return () => {
       window.cancelAnimationFrame(raf);
-      painted = null;
+      visible = true; // força a escrita final mesmo se ja estava aberto
       paintedRegistrySize = -1;
-      paint('open');
+      paint(false);
     };
   }, [swapPending, onClosed, registry]);
 }

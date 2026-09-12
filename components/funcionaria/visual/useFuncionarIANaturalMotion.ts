@@ -36,7 +36,7 @@ function pick<T>(items: readonly T[]): T {
 }
 
 /**
- * V3: amplitudes ainda pequenas, mas agora perceptiveis na tela real.
+ * V4: movimento perceptivel sem virar balanco mecanico.
  *
  * No video de validacao do V2 o cabelo se deslocava somente 3-4 px durante
  * varios segundos. Isso e tecnicamente movimento, mas visualmente parece uma
@@ -45,20 +45,20 @@ function pick<T>(items: readonly T[]): T {
  */
 const IDLE_POSES: readonly Pose[] = [
   { x: 0.00, y: 0.00, rotate: 0.00, zoom: 1.0000 },
-  { x: -0.22, y: 0.00, rotate: -0.36, zoom: 1.0003 },
-  { x: 0.24, y: -0.01, rotate: 0.39, zoom: 1.0004 },
-  { x: -0.10, y: -0.075, rotate: -0.15, zoom: 1.0010 },
-  { x: 0.12, y: -0.065, rotate: 0.17, zoom: 1.0009 },
-  { x: -0.26, y: -0.025, rotate: -0.48, zoom: 1.0002 },
-  { x: 0.27, y: -0.020, rotate: 0.50, zoom: 1.0002 },
+  { x: -0.34, y: 0.00, rotate: -0.48, zoom: 1.0005 },
+  { x: 0.36, y: -0.01, rotate: 0.51, zoom: 1.0006 },
+  { x: -0.14, y: -0.090, rotate: -0.20, zoom: 1.0014 },
+  { x: 0.16, y: -0.080, rotate: 0.22, zoom: 1.0013 },
+  { x: -0.40, y: -0.030, rotate: -0.58, zoom: 1.0004 },
+  { x: 0.41, y: -0.025, rotate: 0.60, zoom: 1.0004 },
 ];
 
 const SPEAKING_POSES: readonly Pose[] = [
-  { x: 0.00, y: -0.085, rotate: 0.00, zoom: 1.0012 },
-  { x: -0.14, y: -0.080, rotate: -0.22, zoom: 1.0011 },
-  { x: 0.15, y: -0.075, rotate: 0.24, zoom: 1.0011 },
-  { x: -0.06, y: -0.115, rotate: 0.10, zoom: 1.0015 },
-  { x: 0.07, y: -0.110, rotate: -0.09, zoom: 1.0015 },
+  { x: 0.00, y: -0.110, rotate: 0.00, zoom: 1.0020 },
+  { x: -0.20, y: -0.100, rotate: -0.28, zoom: 1.0019 },
+  { x: 0.21, y: -0.095, rotate: 0.30, zoom: 1.0019 },
+  { x: -0.09, y: -0.140, rotate: 0.13, zoom: 1.0023 },
+  { x: 0.10, y: -0.135, rotate: -0.12, zoom: 1.0023 },
 ];
 
 /**
@@ -151,7 +151,7 @@ export function useFuncionarIANaturalMotion(
         : 650 + Math.random() * 320;
       gestureDirection = Math.random() < 0.5 ? -1 : 1;
       gestureStrength = 0.82 + Math.random() * 0.36;
-      nextGestureAt = now + 1900 + Math.random() * 2800;
+      nextGestureAt = now + 1350 + Math.random() * 1700;
     };
 
     const tick = (now: number) => {
@@ -160,7 +160,7 @@ export function useFuncionarIANaturalMotion(
       if (speakingNow !== lastSpeaking) {
         lastSpeaking = speakingNow;
         schedulePose(now, speakingNow, true);
-        nextGestureAt = now + 1100 + Math.random() * 1500;
+        nextGestureAt = now + 420 + Math.random() * 520;
       } else if (now >= holdUntil) {
         schedulePose(now, speakingNow);
       }
@@ -179,8 +179,8 @@ export function useFuncionarIANaturalMotion(
       // corpo, mas nao existe "quique" por fonema.
       const targetEnergy = speakingNow ? clamp01(levelRef.current) : 0;
       energy += (targetEnergy - energy) * (speakingNow ? 0.045 : 0.020);
-      const voiceLift = speakingNow ? -energy * 0.035 : 0;
-      const voiceZoom = speakingNow ? energy * 0.00075 : 0;
+      const voiceLift = speakingNow ? -energy * 0.050 : 0;
+      const voiceZoom = speakingNow ? energy * 0.00110 : 0;
 
       if (speakingNow && now >= nextGestureAt) scheduleGesture(now);
 
@@ -195,12 +195,12 @@ export function useFuncionarIANaturalMotion(
         // drift acumulado na pose.
         const arc = Math.sin(Math.PI * smoothstep(gp));
         if (gestureKind === 'nod') {
-          gestureY = 0.105 * gestureStrength * arc;
-          gestureRotate = 0.060 * gestureDirection * gestureStrength * arc;
+          gestureY = 0.145 * gestureStrength * arc;
+          gestureRotate = 0.085 * gestureDirection * gestureStrength * arc;
           gestureZoom = 0.00055 * gestureStrength * arc;
         } else {
-          gestureX = 0.085 * gestureDirection * gestureStrength * arc;
-          gestureRotate = 0.115 * gestureDirection * gestureStrength * arc;
+          gestureX = 0.115 * gestureDirection * gestureStrength * arc;
+          gestureRotate = 0.155 * gestureDirection * gestureStrength * arc;
           gestureZoom = 0.00040 * gestureStrength * arc;
         }
       }

@@ -181,7 +181,7 @@ export default function FuncionarIAAvatar({
 
   return (
     <div
-      data-avatar-engine="v15"
+      data-avatar-engine="v16"
       className={`relative isolate overflow-hidden rounded-[28px] bg-white ${
         compact ? 'min-h-[300px]' : 'min-h-[440px]'
       } ${className}`}

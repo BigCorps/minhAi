@@ -43,9 +43,8 @@ function pick<T>(items: readonly T[]): T {
 }
 
 /**
- * O corpo fica deliberadamente mais calmo que na V4. A V7 adiciona uma camada
- * independente de cabeça, então o tronco não precisa "balançar" para transmitir
- * vida. O ganho vem da combinação de pequenos apoios + cabeça + respiração.
+ * O corpo continua deliberadamente mais calmo que a cabeça.
+ * Nesta fase B1 o ganho principal vem de intenção e timing, não de amplitude.
  */
 const IDLE_POSES: readonly Pose[] = [
   { x: 0.00, y: 0.000, rotate: 0.00, zoom: 1.0000 },
@@ -69,55 +68,87 @@ function readSpeechText(audio: HTMLAudioElement | null, explicit?: string | null
   return String((audio as FuncionarIAAudio | null)?.__funcionariaSpeechText || '').trim();
 }
 
+function normalizeWord(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
+}
+
+function pushCue(cues: SpeechCue[], at: number, kind: GestureKind) {
+  const t = clamp01(at);
+  const last = cues[cues.length - 1];
+  if (last && Math.abs(last.at - t) < 0.11) return;
+  cues.push({ at: t, kind });
+}
+
 /**
- * Texto -> pontos de comportamento, não de lip-sync.
+ * B1: timing semântico melhor.
  *
- * A duração real continua sendo o relógio mestre: guardamos cada marcador como
- * fração do texto e comparamos com currentTime/duration. Não tenta adivinhar cada
- * palavra; só cria poucos "beats" semânticos, como o Lanshu recomenda para
- * gestos controlados que acontecem e depois assentam.
+ * Em vez de usar proporção de caracteres, esta versão usa progressão por palavra
+ * e identifica alguns sinais simples do português coloquial: confirmações no
+ * começo da fala, perguntas e pontos de fechamento. Assim a cabeça reage de
+ * maneira mais "intencional", inspirada na filosofia do Lanshu/Duix, mas ainda
+ * 100% leve e determinística.
  */
 function buildSpeechCues(text: string): SpeechCue[] {
   const clean = String(text || '').trim();
   if (!clean) return [];
 
+  const tokens = Array.from(clean.matchAll(/[A-Za-zÀ-ÿ0-9]+|[?!.,;:…]/g)).map(match => match[0]);
+  const words = tokens.filter(token => /[A-Za-zÀ-ÿ0-9]/.test(token));
+  const totalWords = Math.max(1, words.length);
   const cues: SpeechCue[] = [];
-  const length = Math.max(1, clean.length);
-  let lastAt = -1;
 
-  const add = (index: number, kind: GestureKind) => {
-    const at = clamp01(index / length);
-    // Evita uma coreografia em toda vírgula. Gestos precisam ser raros.
-    if (lastAt >= 0 && at - lastAt < 0.13) return;
-    cues.push({ at, kind });
-    lastAt = at;
-  };
+  const lead = words.slice(0, 4).map(normalizeWord);
+  const joinedLead = lead.join(' ');
+  const affirmative = new Set([
+    'sim', 'claro', 'perfeito', 'certo', 'ok', 'okay', 'otimo', 'ótimo',
+    'combinado', 'isso', 'pronto', 'beleza', 'exato'
+  ]);
+  const reflectiveStart = [
+    'vou verificar', 'deixe me', 'deixa eu', 'vamos ver', 'um momento', 'aguarde'
+  ];
 
-  for (let i = 0; i < clean.length; i++) {
-    const char = clean[i];
-    if (char === '?') add(i, 'tilt');
-    else if (char === '!') add(i, 'emphasis');
-    else if (char === '.' || char === '…') add(i, 'nod');
-    else if (char === ',' || char === ';' || char === ':') add(i, 'settle');
+  if (lead.some(word => affirmative.has(word))) pushCue(cues, 0.14, 'nod');
+  else if (reflectiveStart.some(pattern => joinedLead.startsWith(pattern))) pushCue(cues, 0.18, 'tilt');
+
+  let wordIndex = 0;
+  for (const token of tokens) {
+    if (/[A-Za-zÀ-ÿ0-9]/.test(token)) {
+      wordIndex += 1;
+      continue;
+    }
+
+    // Usa a quantidade de palavras consumidas como relógio aproximado.
+    const ratio = (wordIndex + 0.15) / totalWords;
+    if (token === '?') pushCue(cues, ratio, 'tilt');
+    else if (token === '!') pushCue(cues, ratio, 'emphasis');
+    else if (token === '.' || token === '…') pushCue(cues, ratio, 'nod');
+    else if (token === ',' || token === ';' || token === ':') pushCue(cues, ratio, 'settle');
   }
 
-  // Frases sem pontuação ainda recebem no máximo um gesto perto do fechamento.
-  if (!cues.length && clean.length > 26) cues.push({ at: 0.72, kind: 'nod' });
-  return cues.slice(0, 4);
+  if (!cues.length) {
+    if (totalWords >= 12) {
+      pushCue(cues, 0.36, 'emphasis');
+      pushCue(cues, 0.76, 'nod');
+    } else if (totalWords >= 6) {
+      pushCue(cues, 0.68, 'nod');
+    }
+  }
+
+  cues.sort((a, b) => a.at - b.at);
+  return cues.slice(0, 5);
 }
 
 /**
- * FuncionarIA Natural Motion V7.
+ * FuncionarIA Natural Motion V9 — Fase B1.
  *
- * Três princípios:
- * 1. corpo e cabeça têm escalas de movimento diferentes;
- * 2. áudio é o relógio mestre durante a fala;
- * 3. movimento acontece, assenta e volta ao repouso — nunca vira um loop de
- *    "boneco balançando".
- *
- * O `headTarget` deve ser um overlay fotográfico do mesmo rosto. Ele recebe
- * transformações mínimas ao redor do pescoço; boca e piscada vivem dentro desse
- * mesmo grupo e acompanham a cabeça sem desalinhamento.
+ * Melhorias desta rodada:
+ * - timing de gestos por palavra/pontuação, não por caracteres;
+ * - entrada de fala mais natural (aproximação + primeiro gesto cedo);
+ * - corpo mais calmo e cabeça mais "intencional";
+ * - pequenos desvios atentos em repouso, sem parecer loop mecânico.
  */
 export function useFuncionarIANaturalMotion(
   bodyTarget: RefObject<HTMLDivElement | null>,
@@ -174,14 +205,14 @@ export function useFuncionarIANaturalMotion(
       bodyTo = pick(speakingNow ? SPEAKING_POSES : IDLE_POSES);
       bodyTransitionAt = now;
       bodyTransitionDuration = quicker
-        ? 620 + Math.random() * 260
+        ? 620 + Math.random() * 240
         : speakingNow
-          ? 1450 + Math.random() * 1300
-          : 2600 + Math.random() * 3200;
+          ? 1500 + Math.random() * 1200
+          : 2700 + Math.random() * 3200;
       bodyHoldUntil = bodyTransitionAt + bodyTransitionDuration + (
         speakingNow
-          ? 900 + Math.random() * 1900
-          : 2200 + Math.random() * 4600
+          ? 1100 + Math.random() * 1800
+          : 2500 + Math.random() * 4500
       );
     };
 
@@ -211,23 +242,34 @@ export function useFuncionarIANaturalMotion(
     const centerHead = (now: number, speakingNow: boolean) => {
       setHeadBase(now, {
         x: 0,
-        y: speakingNow ? -0.025 : 0,
+        y: speakingNow ? -0.023 : 0,
         rotate: 0,
-        zoom: speakingNow ? 1.0006 : 1,
-      }, 420 + Math.random() * 180);
+        zoom: speakingNow ? 1.0007 : 1,
+      }, 430 + Math.random() * 170);
+      glanceDirection = 0;
+    };
+
+    const enterSpeakingPose = (now: number) => {
+      setHeadBase(now, {
+        x: 0,
+        y: -0.030,
+        rotate: 0,
+        zoom: 1.0010,
+      }, 320 + Math.random() * 120);
       glanceDirection = 0;
     };
 
     const startIdleGlance = (now: number) => {
       const direction = Math.random() < 0.5 ? -1 : 1;
       glanceDirection = direction;
+      const down = Math.random() < 0.28;
       setHeadBase(now, {
-        x: 0.070 * direction,
-        y: -0.010,
-        rotate: 0.20 * direction,
-        zoom: 1.0003,
-      }, 380 + Math.random() * 190);
-      glanceReturnAt = now + 420 + Math.random() * 620;
+        x: 0.060 * direction,
+        y: down ? 0.012 : -0.008,
+        rotate: 0.18 * direction,
+        zoom: 1.0002,
+      }, 360 + Math.random() * 160);
+      glanceReturnAt = now + 420 + Math.random() * 680;
     };
 
     let gestureKind: GestureKind = 'nod';
@@ -242,13 +284,13 @@ export function useFuncionarIANaturalMotion(
       gestureKind = kind;
       gestureStartedAt = now;
       gestureDirection = Math.random() < 0.5 ? -1 : 1;
-      gestureStrength = Math.max(0.72, Math.min(1.18, strength));
+      gestureStrength = Math.max(0.70, Math.min(1.20, strength));
       gestureDuration = kind === 'tilt'
         ? 760 + Math.random() * 180
         : kind === 'settle'
-          ? 430 + Math.random() * 120
-          : 520 + Math.random() * 180;
-      gestureCooldownUntil = now + (kind === 'settle' ? 500 : 1150);
+          ? 440 + Math.random() * 120
+          : 520 + Math.random() * 170;
+      gestureCooldownUntil = now + (kind === 'settle' ? 520 : 1080);
     };
 
     // ---------------------------------------------------------------------
@@ -261,6 +303,8 @@ export function useFuncionarIANaturalMotion(
     let energy = 0;
     let previousEnergy = 0;
     let lastEnergyGestureAt = -Infinity;
+    let scheduledEntryGestureAt = -Infinity;
+    let scheduledEntryGestureDone = true;
 
     const resetSpeechPlan = () => {
       lastText = readSpeechText(audioRef.current, textRef.current);
@@ -281,20 +325,22 @@ export function useFuncionarIANaturalMotion(
       if (speakingNow !== lastSpeaking) {
         lastSpeaking = speakingNow;
         scheduleBody(now, speakingNow, true);
-        centerHead(now, speakingNow);
         if (speakingNow) {
+          enterSpeakingPose(now);
           resetSpeechPlan();
-          // Um início discreto dá sensação de "entrar na conversa" sem gesto teatral.
-          gestureCooldownUntil = now + 260;
+          scheduledEntryGestureAt = now + 260 + Math.random() * 260;
+          scheduledEntryGestureDone = false;
+          gestureCooldownUntil = now + 220;
         } else {
-          nextIdleGlanceAt = now + 3100 + Math.random() * 3100;
+          centerHead(now, false);
+          startGesture(now, 'settle', 0.9);
+          nextIdleGlanceAt = now + 3000 + Math.random() * 3200;
           glanceReturnAt = -Infinity;
         }
       }
 
       if (now >= bodyHoldUntil) scheduleBody(now, speakingNow);
 
-      // Se o texto foi associado ao audio depois do play, atualiza o plano uma vez.
       const currentText = readSpeechText(audioRef.current, textRef.current);
       if (speakingNow && currentText && currentText !== lastText) {
         lastText = currentText;
@@ -302,7 +348,6 @@ export function useFuncionarIANaturalMotion(
         cueIndex = 0;
       }
 
-      // Idle: raros desvios de cabeça e retorno ao contato visual.
       if (!speakingNow) {
         if (!glanceDirection && now >= nextIdleGlanceAt) startIdleGlance(now);
         if (glanceDirection && now >= glanceReturnAt) {
@@ -311,19 +356,28 @@ export function useFuncionarIANaturalMotion(
         }
       }
 
-      // Fala: os pontos de pontuação usam a duração real do audio como master clock.
       const currentAudio = audioRef.current;
       if (speakingNow && currentAudio && Number.isFinite(currentAudio.duration) && currentAudio.duration > 0) {
         const ratio = clamp01(currentAudio.currentTime / currentAudio.duration);
+
+        if (!scheduledEntryGestureDone && now >= scheduledEntryGestureAt) {
+          scheduledEntryGestureDone = true;
+          // Se a fala começa com confirmação, tende a um aceno; caso contrário,
+          // uma ênfase muito leve de entrada.
+          const firstCue = cues[0]?.kind;
+          if (firstCue === 'tilt') startGesture(now, 'tilt', 0.80);
+          else startGesture(now, 'nod', 0.82);
+        }
+
         while (cueIndex < cues.length && ratio >= cues[cueIndex].at) {
           const cue = cues[cueIndex++];
           if (cue.kind === 'settle') {
             centerHead(now, true);
-            startGesture(now, 'settle', 0.82);
+            startGesture(now, 'settle', 0.84);
           } else if (cue.kind === 'tilt') {
-            startGesture(now, 'tilt', 0.95);
+            startGesture(now, 'tilt', 0.96);
           } else if (cue.kind === 'emphasis') {
-            startGesture(now, 'emphasis', 1.05);
+            startGesture(now, 'emphasis', 1.04);
           } else {
             startGesture(now, 'nod', 0.92);
           }
@@ -334,16 +388,14 @@ export function useFuncionarIANaturalMotion(
       previousEnergy = energy;
       energy += (targetEnergy - energy) * (speakingNow ? 0.050 : 0.022);
 
-      // Pico de voz pode criar uma ênfase, mas no máximo uma a cada ~1.5 s.
-      const rising = energy - previousEnergy;
       if (
         speakingNow &&
-        energy > 0.50 &&
-        rising > 0.010 &&
-        now - lastEnergyGestureAt > 1500 &&
+        energy > 0.52 &&
+        energy - previousEnergy > 0.010 &&
+        now - lastEnergyGestureAt > 1600 &&
         now >= gestureCooldownUntil
       ) {
-        startGesture(now, 'emphasis', 0.80 + energy * 0.30);
+        startGesture(now, 'emphasis', 0.80 + energy * 0.28);
         lastEnergyGestureAt = now;
       }
 
@@ -351,13 +403,12 @@ export function useFuncionarIANaturalMotion(
       const headPose = headBaseAt(now);
       const seconds = (now - startedAt) / 1000;
 
-      // Respiração fica no corpo; cabeça não "respira" separadamente.
-      const breathAmp = speakingNow ? 0.00125 : 0.00210;
+      const breathAmp = speakingNow ? 0.00125 : 0.00205;
       const breath = 1
         + breathAmp * (1 - Math.cos((2 * Math.PI * seconds) / 5.7)) * 0.5
-        + 0.00055 * (1 - Math.cos((2 * Math.PI * seconds) / 9.8 + 1.1)) * 0.5;
+        + 0.00050 * (1 - Math.cos((2 * Math.PI * seconds) / 9.8 + 1.1)) * 0.5;
 
-      const voiceLift = speakingNow ? -energy * 0.035 : 0;
+      const voiceLift = speakingNow ? -energy * 0.034 : 0;
       const voiceZoom = speakingNow ? energy * 0.00070 : 0;
 
       let headGestureX = 0;
@@ -374,24 +425,23 @@ export function useFuncionarIANaturalMotion(
         const arc = Math.sin(Math.PI * p);
 
         if (gestureKind === 'nod') {
-          headGestureY = 0.125 * gestureStrength * arc;
-          headGestureRotate = 0.045 * gestureDirection * gestureStrength * arc;
-          bodyGestureY = 0.030 * gestureStrength * arc;
+          headGestureY = 0.132 * gestureStrength * arc;
+          headGestureRotate = 0.050 * gestureDirection * gestureStrength * arc;
+          bodyGestureY = 0.032 * gestureStrength * arc;
         } else if (gestureKind === 'tilt') {
-          headGestureX = 0.075 * gestureDirection * gestureStrength * arc;
-          headGestureRotate = 0.30 * gestureDirection * gestureStrength * arc;
-          headGestureY = -0.018 * gestureStrength * arc;
-          bodyGestureRotate = 0.035 * gestureDirection * gestureStrength * arc;
+          headGestureX = 0.082 * gestureDirection * gestureStrength * arc;
+          headGestureRotate = 0.34 * gestureDirection * gestureStrength * arc;
+          headGestureY = -0.020 * gestureStrength * arc;
+          bodyGestureRotate = 0.038 * gestureDirection * gestureStrength * arc;
         } else if (gestureKind === 'emphasis') {
-          headGestureY = 0.085 * gestureStrength * arc;
-          headGestureRotate = 0.075 * gestureDirection * gestureStrength * arc;
-          headGestureZoom = 0.00085 * gestureStrength * arc;
-          bodyGestureX = 0.035 * gestureDirection * gestureStrength * arc;
-          bodyGestureY = 0.018 * gestureStrength * arc;
+          headGestureY = 0.088 * gestureStrength * arc;
+          headGestureRotate = 0.080 * gestureDirection * gestureStrength * arc;
+          headGestureZoom = 0.00095 * gestureStrength * arc;
+          bodyGestureX = 0.040 * gestureDirection * gestureStrength * arc;
+          bodyGestureY = 0.020 * gestureStrength * arc;
         } else {
-          // "settle": um pequeno assentamento e retorno ao centro.
-          headGestureY = 0.035 * gestureStrength * arc;
-          headGestureRotate = -headPose.rotate * 0.45 * arc;
+          headGestureY = 0.040 * gestureStrength * arc;
+          headGestureRotate = -headPose.rotate * 0.42 * arc;
         }
       }
 

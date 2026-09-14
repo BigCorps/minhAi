@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Send, LogOut, Loader2, Sparkles, CreditCard, Flag, X, CheckCircle2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase-browser';
+import { registerAuthenticatedFunctionUsage } from '@/lib/register-authenticated-function-usage';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { AssistantProvider, useAssistant } from '@/contexts/AssistantContext';
 import { AssistantSelectorHeader } from '@/components/layout/AssistantSelectorHeader';
@@ -551,11 +552,14 @@ const handleSubmitReport = useCallback(async (reason: string) => {
       });
 
       if (success && def.creditsPerUse) {
-        supabase.rpc('register_function_usage', {
-          p_company_id: selectedAssistantId,
-          p_function_key: fn.function_key,
-          p_credits_consumed: def.creditsPerUse,
-        }).then(({ error }) => { if (error) console.error('register_function_usage:', error); });
+        registerAuthenticatedFunctionUsage({
+          companyId: selectedAssistantId,
+          functionKey: fn.function_key,
+          fallbackCredits: def.creditsPerUse,
+          metadata: { source: 'minia_function_card' },
+        }).then(({ error: usageError }) => {
+          if (usageError) console.error('register_function_usage:', usageError);
+        });
       }
     } catch (err) {
       console.error(`Erro ao executar ${fn.function_key}:`, err);

@@ -6,6 +6,7 @@ import { X, Send, Loader2, Bot, ChevronDown, Sparkles } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { createClient } from '@/lib/supabase-browser';
+import { registerAuthenticatedFunctionUsage } from '@/lib/register-authenticated-function-usage';
 import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
 import { AssistantSelectorHeader } from '@/components/layout/AssistantSelectorHeader';
 import { FUNCTIONS_REGISTRY } from '@/lib/functions-registry';
@@ -414,11 +415,14 @@ export default function DashboardMcpWidget() {
       });
 
       if (success && def.creditsPerUse) {
-        supabase.rpc('register_function_usage', {
-          p_company_id: selectedAssistantId,
-          p_function_key: fn.function_key,
-          p_credits_consumed: def.creditsPerUse,
-        }).then(({ error }) => { if (error) console.error('register_function_usage:', error); });
+        registerAuthenticatedFunctionUsage({
+          companyId: selectedAssistantId,
+          functionKey: fn.function_key,
+          fallbackCredits: def.creditsPerUse,
+          metadata: { source: 'dashboard_mcp_widget' },
+        }).then(({ error: usageError }) => {
+          if (usageError) console.error('register_function_usage:', usageError);
+        });
       }
     } catch (err) {
       console.error(`Erro ao executar ${fn.function_key}:`, err);

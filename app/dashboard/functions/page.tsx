@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { Lightbulb, Send, Loader2, X, Bot } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase-browser';
+import { registerAuthenticatedFunctionUsage } from '@/lib/register-authenticated-function-usage';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useTheme } from 'next-themes';
 import { Search, Settings, User } from 'lucide-react';
@@ -597,13 +598,13 @@ function FunctionsPageContent() {
 
         // Registrar uso
         const credits = getFunctionCredits(fn.function_key);
-        supabase.rpc('register_function_usage', {
-          p_company_id: companyId,
-          p_function_key: fn.function_key,
-          p_credits_consumed: credits,
-          p_metadata: { source: 'dashboard_preview' },
-        }).then(({ error: rpcErr }) => {
-          if (rpcErr) console.error('[handlePlay QR] register_function_usage:', rpcErr);
+        registerAuthenticatedFunctionUsage({
+          companyId,
+          functionKey: fn.function_key,
+          fallbackCredits: credits,
+          metadata: { source: 'dashboard_preview' },
+        }).then(({ error: usageError }) => {
+          if (usageError) console.error('[handlePlay QR] register_function_usage:', usageError);
         });
 
         setActiveModal({
@@ -631,13 +632,13 @@ function FunctionsPageContent() {
 
     // Registrar uso (fire-and-forget)
     const credits = getFunctionCredits(fn.function_key);
-    supabase.rpc('register_function_usage', {
-      p_company_id: companyId,
-      p_function_key: fn.function_key,
-      p_credits_consumed: credits,
-      p_metadata: { source: 'dashboard_preview' },
-    }).then(({ error }) => {
-      if (error) console.error('[handlePlay] register_function_usage:', error);
+    registerAuthenticatedFunctionUsage({
+      companyId,
+      functionKey: fn.function_key,
+      fallbackCredits: credits,
+      metadata: { source: 'dashboard_preview' },
+    }).then(({ error: usageError }) => {
+      if (usageError) console.error('[handlePlay] register_function_usage:', usageError);
     });
 
     setActiveModal({

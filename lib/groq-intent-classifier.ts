@@ -1,5 +1,6 @@
 // lib/groq-intent-classifier.ts — v5: contexto pendente fora do isConfirmation
 import { createClient } from '@/lib/supabase-browser';
+import { criarPedidoPagamentoPorValor } from '@/lib/orders-client';
 
 interface ClassifierDeps {
   companyId: string;
@@ -146,23 +147,11 @@ export async function classifyIntentWithGroq(
 // Criar pedido antes de disparar o pagamento
               let pedidoId: string | null = null;
               try {
-                const supabase = createClient();
-                const { data: pedido } = await supabase
-                  .from('pedidos')
-                  .insert({
-                    company_id: deps.companyId,
-                    subtotal: amount,
-                    total: amount,
-                    metodo_pagamento: pendingFunction === 'pix_generate' ? 'pix'
-                      : pendingFunction === 'link_pagamento' ? 'pix'
-                      : pendingFunction.includes('nfc') ? 'nfc'
-                      : 'tef',
-                    status: 'aguardando_pagamento',
-                    observacoes: 'Pedido via assistente de voz',
-                  })
-                  .select('id')
-                  .single();
-                pedidoId = pedido?.id ?? null;
+                pedidoId = await criarPedidoPagamentoPorValor({
+                  companyId: deps.companyId,
+                  valor: amount,
+                  functionKey: pendingFunction,
+                });
               } catch { /* não crítico */ }
 
               await deps.playText(`Gerando agora.`);
@@ -183,23 +172,11 @@ export async function classifyIntentWithGroq(
 
 let pedidoId: string | null = null;
               try {
-                const supabase = createClient();
-                const { data: pedido } = await supabase
-                  .from('pedidos')
-                  .insert({
-                    company_id: deps.companyId,
-                    subtotal: amount,
-                    total: amount,
-                    metodo_pagamento: pendingFunction === 'pix_generate' ? 'pix'
-                      : pendingFunction === 'link_pagamento' ? 'pix'
-                      : pendingFunction.includes('nfc') ? 'nfc'
-                      : 'tef',
-                    status: 'aguardando_pagamento',
-                    observacoes: 'Pedido via assistente de voz',
-                  })
-                  .select('id')
-                  .single();
-                pedidoId = pedido?.id ?? null;
+                pedidoId = await criarPedidoPagamentoPorValor({
+                  companyId: deps.companyId,
+                  valor: amount,
+                  functionKey: pendingFunction,
+                });
               } catch { /* não crítico */ }
 
           await deps.playText('Gerando agora.');

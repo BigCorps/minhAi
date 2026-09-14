@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-browser';
 import { PixConfirmationData, FunctionSettings } from '../types';
 import { saveInteractionToHistory, registerFunctionUsage } from './functionUsage';
+import { vincularPerfilAposPix } from '@/lib/orders-client';
 
 interface PixDeps {
   companyId: string;
@@ -10,6 +11,7 @@ interface PixDeps {
   functionSettings: Record<string, FunctionSettings>;
   setActiveModal?: (modal: { type: string; data: any } | null) => void;
   profileId?: string | null;
+  profileToken?: string | null;
   pedidoId?: string | null;
 }
 
@@ -62,7 +64,7 @@ export async function handleConfirmPix(
   pixConfirmationData: PixConfirmationData | null,
   deps: PixDeps
 ): Promise<void> {
-  const { companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings, setActiveModal, profileId } = deps;
+  const { companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings, setActiveModal, profileToken } = deps;
   console.log('🔘 handleConfirmPix chamada');
 
   if (!pixConfirmationData) {
@@ -101,25 +103,26 @@ export async function handleConfirmPix(
 
     await playText('Pagamento confirmado com sucesso!');
 
-    // Pós-venda: vincular cliente ao pedido se houver contexto de produto
+    // Pós-venda: consulta/vincula o perfil somente no servidor, usando a transação confirmada.
     if (pixConfirmationData.pedidoId) {
-      const { data: pedido } = await supabase
-        .from('pedidos')
-        .select('profile_id, cliente_nome')
-        .eq('id', pixConfirmationData.pedidoId)
-        .single();
+      try {
+        const orderState = await vincularPerfilAposPix({
+          pedidoId: pixConfirmationData.pedidoId,
+          transactionId: pixConfirmationData.transactionId,
+          profileToken: profileToken ?? null,
+        });
 
-      if (profileId && !pedido?.profile_id) {
-        await supabase.from('pedidos')
-          .update({ profile_id: profileId })
-          .eq('id', pixConfirmationData.pedidoId);
-        window.dispatchEvent(new CustomEvent('eai:enviarConfirmacaoCliente', {
-          detail: { pedidoId: pixConfirmationData.pedidoId, profileId }
-        }));
-      } else if (!pedido?.profile_id && !pedido?.cliente_nome) {
-        window.dispatchEvent(new CustomEvent('eai:solicitarIdentificacaoCliente', {
-          detail: { pedidoId: pixConfirmationData.pedidoId }
-        }));
+        if (orderState.linked && orderState.profile_id) {
+          window.dispatchEvent(new CustomEvent('eai:enviarConfirmacaoCliente', {
+            detail: { pedidoId: pixConfirmationData.pedidoId, profileId: orderState.profile_id },
+          }));
+        } else if (!orderState.profile_id && !orderState.cliente_nome) {
+          window.dispatchEvent(new CustomEvent('eai:solicitarIdentificacaoCliente', {
+            detail: { pedidoId: pixConfirmationData.pedidoId },
+          }));
+        }
+      } catch (profileError) {
+        console.warn('Pós-venda PIX: não foi possível consultar/vincular perfil', profileError);
       }
     }
 

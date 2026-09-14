@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ShoppingCart, Check, Loader2, AlertCircle, DollarSign, Zap } from 'lucide-react';
-import { atualizarStatusPedido } from '@/lib/produtos-venda';
+import { registrarVendaManual } from '@/lib/orders-client';
 import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
 import MercadoPagoPointDisplay from '@/components/assistant/MercadoPagoPointDisplay';
 
@@ -130,101 +130,18 @@ export default function RegistrarVendaDisplay({
     setValor(formatCurrency(e.target.value));
   }
 
-  // ── Registrar venda (fallback direto no Supabase) ─────────────────────────
+  // ── Registrar venda via servidor ───────────────────────────────────────────
   async function handleSaveFallback(valorNumerico: number, statusFinal: 'pago' | 'aberto' = 'pago') {
-    const { createClient } = await import('@/lib/supabase-browser');
-    const supabase  = createClient();
+    if (statusFinal !== 'pago') throw new Error('manual_sale_status_not_supported');
     const descricao = produto.trim() || 'Venda rápida';
-    const metodoDB  = PAGAMENTO_MAP[pagamento] ?? 'dinheiro';
-    const now       = new Date().toISOString();
-
-    try {
-      let userId: string | null = null;
-      const { data: authData } = await supabase.auth.getUser();
-      if (authData?.user?.id) {
-        userId = authData.user.id;
-      } else {
-        const { data: company } = await supabase
-          .from('companies')
-          .select('user_id')
-          .eq('id', companyId)
-          .maybeSingle();
-        userId = company?.user_id ?? null;
-      }
-
-      const resolvedProfileId = profileId ?? null;
-
-      const { data: pedidoInserido, error: pedidoError } = await supabase
-        .from('pedidos')
-        .insert({
-          company_id:       companyId,
-          user_id:          userId,
-          profile_id:       resolvedProfileId,
-          subtotal:         valorNumerico,
-          desconto:         0,
-          total:            valorNumerico,
-          metodo_pagamento: metodoDB,
-          status:           statusFinal,
-          observacoes:      descricao !== 'Venda rápida' ? descricao : null,
-          paid_at:          statusFinal === 'pago' ? now : null,
-          created_at:       now,
-          updated_at:       now,
-        })
-        .select('id')
-        .single();
-
-      if (pedidoError) throw pedidoError;
-
-// Produto placeholder
-if (pedidoInserido?.id) {
-  try {
-    let produtoId: string | null = null;
-    const { data: produtoAvulso } = await supabase
-      .from('produtos_venda')
-      .select('id')
-      .eq('company_id', companyId)
-      .eq('nome', 'Venda Avulsa')
-      .limit(1)
-      .maybeSingle();
-
-    if (produtoAvulso) {
-      produtoId = produtoAvulso.id;
-    } else {
-      const { data: novoProduto } = await supabase
-        .from('produtos_venda')
-        .insert({
-          company_id:       companyId,
-          nome:             'Venda Avulsa',
-          descricao:        'Placeholder para vendas rápidas via assistente',
-          preco_venda:      valorNumerico,
-          unidade:          'un',
-          controla_estoque: false,
-          is_active:        false,
-        })
-        .select('id')
-        .single();
-      produtoId = novoProduto?.id ?? null;
-    }
-
-    if (produtoId) {
-      await supabase.from('pedido_itens').insert({
-        pedido_id:      pedidoInserido.id,
-        produto_id:     produtoId,
-        nome_snapshot:  descricao,
-        preco_unitario: valorNumerico,
-        quantidade:     1,
-        subtotal:       valorNumerico,
-      });
-    }
-  } catch {
-    // RLS anônima não permite produtos_venda — venda salva sem item
-  }
-}
-
-      return pedidoInserido?.id ?? null;
-    } catch (err) {
-      throw err;
-    }
+    const metodoDB = PAGAMENTO_MAP[pagamento] ?? 'dinheiro';
+    return registrarVendaManual({
+      companyId,
+      profileId: profileId ?? null,
+      valor: valorNumerico,
+      metodoPagamento: metodoDB,
+      descricao,
+    });
   }
 
   // ── Fluxo principal ───────────────────────────────────────────────────────

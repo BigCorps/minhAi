@@ -294,7 +294,7 @@ useEffect(() => {
   );
   const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio, ttsVoice);
   const isMobile = useIsMobile();
-  const { profile, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? '');
+  const { profile, token: profileToken, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? '');
   const profileRef = useRef(profile);
   useEffect(() => { profileRef.current = profile; }, [profile]);
 
@@ -2374,6 +2374,7 @@ const response = await fetch(isVendas ? '/api/voice/vendas' : '/api/voice/proces
     handleConfirmPix(pixStateRef.current?.pixConfirmationData ?? null, {
       companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings,
       profileId: profileRef.current?.id ?? null,
+      profileToken,
     });
 
   const handleCancelPixLocal = () =>

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { useCart } from '@/hooks/useCart';
-import { criarPedido, atualizarStatusPedido, formatarPreco } from '@/lib/produtos-venda';
+import { criarPedido, atualizarPedidoCheckout, atualizarStatusPedido, formatarPreco } from '@/lib/produtos-venda';
 import { triggerAutoPrint, formatPurchaseReceipt } from '@/lib/auto-print';
 import RegistrationDisplay from '@/components/assistant/RegistrationDisplay';
 
@@ -495,19 +495,19 @@ if (confirmed.ok) {
       });
       setPedidoId(pedido.id);
 
-      // Salvar dados de delivery no pedido
+      // Salvar dados de delivery no pedido via rota server-side vinculada ao token do pedido
       if (tipoEntrega === 'delivery' && quoteAtivo) {
-        const supabase = createClient();
-        await supabase.from('pedidos').update({
+        await atualizarPedidoCheckout(pedido.id, {
+          company_id: companyId,
           delivery_requested: true,
           delivery_address: enderecoDelivery,
           delivery_fee_cents: quoteAtivo.price_cents,
           delivery_fee_original_cents: quoteAtivo.price_original_cents,
-        }).eq('id', pedido.id);
+        });
       }
 
       if (metodo === 'dinheiro') {
-        await atualizarStatusPedido(pedido.id, 'pago');
+        await atualizarStatusPedido(pedido.id, 'pago', undefined, companyId);
         setTotalConfirmado(totalFinal);
         await dispatchDelivery(pedido.id);
         setStep('confirmado');
@@ -524,7 +524,7 @@ if (confirmed.ok) {
           },
         });
         if (pixErr || !pixData?.transaction_id) throw new Error('Erro ao gerar PIX');
-        await atualizarStatusPedido(pedido.id, 'aguardando_pagamento');
+        await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', undefined, companyId);
         setPixTransactionId(pixData.transaction_id);
         setPixExpiresAt(pixData.expires_at ?? null);
         setPixCode(pixData.pix_code ?? null);
@@ -544,7 +544,7 @@ if (metodo === 'nfc_debito' || metodo === 'nfc_credito') {
     },
   });
   if (cobErr || !cobData?.cobranca_id) throw new Error('Erro ao gerar cobrança NFC');
-  await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', cobData.cobranca_id);
+  await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', cobData.cobranca_id, companyId);
   setCobrancaId(cobData.cobranca_id); setStep('aguardando'); setPolling(true);
   playText?.(`Aproxime o cartão ${metodo === 'nfc_credito' ? 'de crédito' : 'de débito'} na maquininha para pagar.`).catch(() => {}); return;
 }
@@ -559,7 +559,7 @@ if (metodo === 'nfc_debito' || metodo === 'nfc_credito') {
           },
         });
         if (cobErr || !cobData?.cobranca_id) throw new Error('Erro ao gerar link de pagamento');
-        await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', cobData.cobranca_id);
+        await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', cobData.cobranca_id, companyId);
         
         setCobrancaId(cobData.cobranca_id);
 
@@ -592,7 +592,7 @@ if (metodo === 'tef_debito' || metodo === 'tef_credito') {
     },
   });
   if (orderErr || !orderData?.order_id) throw new Error('Erro ao criar order na maquininha');
-  await atualizarStatusPedido(pedido.id, 'aguardando_pagamento');
+  await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', undefined, companyId);
   setMpOrderId(orderData.order_id); setStep('aguardando'); setPolling(true);
   playText?.(`Insira o cartão ${metodo === 'tef_credito' ? 'de crédito' : 'de débito'} na maquininha Point para pagar.`).catch(() => {}); return;
 }

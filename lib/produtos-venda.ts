@@ -257,73 +257,93 @@ export async function importarDeProducao(
 
 // ─── Pedidos ──────────────────────────────────────────────────────────────────
 
-/** Cria pedido + itens */
+/** Cria pedido + itens via servidor, com preço/opcionais recalculados no backend */
+const pedidoMutationTokens = new Map<string, string>();
+
 export async function criarPedido(input: CriarPedidoInput): Promise<Pedido> {
-  const supabase = createClient();
-
-  const subtotal = input.itens.reduce((acc, i) => acc + i.subtotal, 0);
-  const desconto = input.desconto || 0;
-  const total = Math.max(0, subtotal - desconto);
-
-  const { data: pedido, error: pedidoErr } = await supabase
-    .from('pedidos')
-    .insert({
+  const response = await fetch('/api/orders/public-create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({
       company_id: input.company_id,
       session_id: input.session_id,
       cliente_nome: input.cliente_nome,
       cliente_telefone: input.cliente_telefone,
-      subtotal,
-      desconto,
-      total,
       metodo_pagamento: input.metodo_pagamento,
-      status: 'aberto',
       observacoes: input.observacoes,
-    })
-    .select()
-    .single();
+      itens: input.itens.map((i) => ({
+        produto_id: i.produto.id,
+        quantidade: i.quantidade,
+        opcoes_selecionadas: (i.produto as any)._opcoes_selecionadas ?? [],
+      })),
+    }),
+  });
 
-  if (pedidoErr) throw pedidoErr;
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data?.order?.id || !data?.mutation_token) {
+    throw new Error(data?.error || 'order_create_failed');
+  }
 
-const itensInsert = input.itens.map((i) => ({
-  pedido_id:             pedido.id,
-  produto_id:            i.produto.id,
-  nome_snapshot:         i.produto.nome,
-  preco_unitario:        i.produto.preco_venda, // já inclui adicionais
-  quantidade:            i.quantidade,
-  subtotal:              i.subtotal,
-  opcoes_selecionadas:   (i.produto as any)._opcoes_selecionadas ?? [],
-}));
-
-  const { error: itensErr } = await supabase
-    .from('pedido_itens')
-    .insert(itensInsert);
-
-  if (itensErr) throw itensErr;
-
-  return pedido;
+  pedidoMutationTokens.set(String(data.order.id), String(data.mutation_token));
+  return data.order as Pedido;
 }
 
-/** Atualiza status do pedido */
+export async function atualizarPedidoCheckout(
+  pedidoId: string,
+  update: {
+    company_id: string;
+    delivery_requested: boolean;
+    delivery_address?: string | null;
+    delivery_fee_cents?: number | null;
+    delivery_fee_original_cents?: number | null;
+  },
+): Promise<void> {
+  const mutationToken = pedidoMutationTokens.get(pedidoId);
+  if (!mutationToken) throw new Error('order_mutation_token_missing');
+
+  const response = await fetch('/api/orders/public-mutate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({
+      action: 'delivery',
+      pedido_id: pedidoId,
+      company_id: update.company_id,
+      mutation_token: mutationToken,
+      ...update,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error || 'order_update_failed');
+}
+
+/** Atualiza status do pedido somente pela rota server-side ligada ao pedido recém-criado */
 export async function atualizarStatusPedido(
   pedidoId: string,
   status: Pedido['status'],
   cobrancaId?: string,
+  companyId?: string,
 ): Promise<void> {
-  const supabase = createClient();
-  const update: Record<string, unknown> = {
-    status,
-    updated_at: new Date().toISOString(),
-  };
-  if (cobrancaId) update.cobranca_id = cobrancaId;
-  if (status === 'pago') update.paid_at = new Date().toISOString();
-  if (status === 'cancelado') update.cancelled_at = new Date().toISOString();
+  const mutationToken = pedidoMutationTokens.get(pedidoId);
+  if (!mutationToken) throw new Error('order_mutation_token_missing');
+  if (!companyId) throw new Error('order_company_id_required');
 
-  const { error } = await supabase
-    .from('pedidos')
-    .update(update)
-    .eq('id', pedidoId);
-
-  if (error) throw error;
+  const response = await fetch('/api/orders/public-mutate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({
+      action: 'status',
+      pedido_id: pedidoId,
+      company_id: companyId,
+      mutation_token: mutationToken,
+      status,
+      cobranca_id: cobrancaId || null,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error || 'order_status_update_failed');
 }
 
 // ─── Estoque ──────────────────────────────────────────────────────────────────

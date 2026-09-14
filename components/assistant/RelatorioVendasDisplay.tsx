@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ShoppingCart, Check, Loader2, AlertCircle, DollarSign } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
+import { registrarVendaManual } from '@/lib/orders-client';
 
 interface RegistrarVendaDisplayProps {
   data: {
@@ -144,102 +145,22 @@ export default function RegistrarVendaDisplay({
 
     setIsSaving(true);
     try {
-      // ── perfil de caixa/atendente (opcional) ────────────────────────────
-      let profileId: string | null = null;
-      const { data: authData } = await supabase.auth.getUser();
-      const sessionUser = authData?.user ?? null;
-
-      if (sessionUser) {
-        const { data: session } = await supabase
-          .from('profile_sessions')
-          .select('profile_id')
-          .eq('company_id', companyId)
-          .gt('expires_at', new Date().toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        profileId = session?.profile_id ?? null;
-      }
-
-      const metodoDB  = PAGAMENTO_MAP[pagamento] ?? 'dinheiro';
+      const metodoDB = (PAGAMENTO_MAP[pagamento] ?? 'dinheiro') as 'pix' | 'nfc' | 'tef' | 'dinheiro' | 'fiado';
       const descricao = produto.trim() || 'Venda rápida';
-      const now       = new Date().toISOString();
-
-      // ── 1. Insere o pedido ────────────────────────────────────────────────
-      // user_id = ownerUserId garante que a política RLS de SELECT
-      // (user_id = auth.uid()) deixa o dono ver a linha no dashboard.
-      const { data: pedidoInserido, error: pedidoError } = await supabase
-        .from('pedidos')
-        .insert({
-          company_id:       companyId,
-          user_id:          ownerUserId,   // ← chave para o RLS funcionar
-          profile_id:       profileId,
-          subtotal:         valorNumerico,
-          desconto:         0,
-          total:            valorNumerico,
-          metodo_pagamento: metodoDB,
-          status:           'pago',
-          observacoes:      descricao !== 'Venda rápida' ? descricao : null,
-          paid_at:          now,
-          created_at:       now,
-          updated_at:       now,
-        })
-        .select('id')
-        .single();
-
-      if (pedidoError) throw pedidoError;
-
-      // ── 2. Garante produto placeholder "Venda Avulsa" para o item ────────
-      // pedido_itens.produto_id é FK NOT NULL → precisa de um produto_id válido.
-      let produtoId: string | null = null;
-
-      const { data: produtoAvulso } = await supabase
-        .from('produtos_venda')
-        .select('id')
-        .eq('company_id', companyId)
-        .eq('nome', 'Venda Avulsa')
-        .limit(1)
-        .maybeSingle();
-
-      if (produtoAvulso) {
-        produtoId = produtoAvulso.id;
-      } else {
-        const { data: novoProduto } = await supabase
-          .from('produtos_venda')
-          .insert({
-            company_id:       companyId,
-            nome:             'Venda Avulsa',
-            descricao:        'Produto placeholder para vendas rápidas via assistente',
-            preco_venda:      valorNumerico,
-            unidade:          'un',
-            controla_estoque: false,
-            is_active:        false,  // não aparece no catálogo público
-          })
-          .select('id')
-          .single();
-        produtoId = novoProduto?.id ?? null;
-      }
-
-      // ── 3. Insere o item ──────────────────────────────────────────────────
-      if (produtoId && pedidoInserido?.id) {
-        await supabase.from('pedido_itens').insert({
-          pedido_id:      pedidoInserido.id,
-          produto_id:     produtoId,
-          nome_snapshot:  descricao,       // aparece na linha expandida de "Itens"
-          preco_unitario: valorNumerico,
-          quantidade:     1,
-          subtotal:       valorNumerico,
-        });
-      }
+      await registrarVendaManual({
+        companyId,
+        valor: valorNumerico,
+        metodoPagamento: metodoDB,
+        descricao,
+      });
 
       showToast('Venda registrada com sucesso!', 'success');
       if (playText) {
         await playText(
-          `Venda de ${valorNumerico.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} registrada com sucesso!`
+          `Venda de ${valorNumerico.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} registrada com sucesso!`,
         );
       }
       setTimeout(() => onClose(), 1500);
-
     } catch (err) {
       console.error('Erro ao registrar venda:', err);
       showToast('Erro ao registrar venda. Tente novamente.', 'error');

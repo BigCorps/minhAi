@@ -30,16 +30,39 @@ export default function FuncionarIAOrdersPanel({ companyId }: { companyId: strin
   async function markDelivered(id: string) {
     setBusy(id);
     setNotice(null);
-    const { error } = await supabase
-      .from('pedidos')
-      .update({ status: 'entregue', updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .eq('company_id', companyId)
-      .eq('status', 'pago');
-    if (error) setNotice(error.message);
-    else setNotice('Pedido marcado como entregue.');
-    setBusy(null);
-    await load();
+    try {
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const refreshed = await supabase.auth.refreshSession();
+        session = refreshed.data.session;
+      }
+      if (!session) throw new Error('Faça login novamente para continuar.');
+
+      const response = await fetch('/api/funcionaria/orders/mark-delivered', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        cache: 'no-store',
+        body: JSON.stringify({ company_id: companyId, pedido_id: id }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.ok !== true) {
+        if (response.status === 401) throw new Error('Faça login novamente para continuar.');
+        if (response.status === 403) throw new Error('Você não tem permissão para alterar este pedido.');
+        if (response.status === 409) throw new Error('Este pedido não está mais disponível para marcar como entregue.');
+        throw new Error(data?.error || 'Falha ao atualizar o pedido.');
+      }
+
+      setNotice('Pedido marcado como entregue.');
+    } catch (error: any) {
+      setNotice(error?.message || 'Falha ao atualizar o pedido.');
+    } finally {
+      setBusy(null);
+      await load();
+    }
   }
 
   return (

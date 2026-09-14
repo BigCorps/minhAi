@@ -86,7 +86,7 @@ export default function FuncionarIAInteraction({
     try { await playText(text); } catch (error) { console.warn('[FuncionarIA] TTS:', error); }
   }
 
-  async function runParityAction(action: FuncionarIAParityAction) {
+  async function runParityAction(action: FuncionarIAParityAction, transcript = '') {
     setPendingAction(null);
     setAnswer(action.text);
     setLastSource(action.kind === 'human' ? 'human' : 'skill');
@@ -103,6 +103,33 @@ export default function FuncionarIAInteraction({
         data: { companyId: company.id },
       });
       await speak(action.text);
+      return;
+    }
+
+    if (action.kind === 'legacy') {
+      try {
+        // Carregado apenas quando necessário. Não colocamos todo o registry
+        // no bundle inicial da FuncionarIA.
+        const { getFunctionByKey } = await import('@/lib/functions-registry');
+        const definition = getFunctionByKey(action.functionKey);
+        if (!definition?.handler) {
+          throw new Error(`Handler legado não encontrado: ${action.functionKey}`);
+        }
+        await definition.handler({
+          transcript,
+          companyId: company.id,
+          functionSettings: {},
+          playText,
+          setIsProcessing: setProcessing,
+          setActiveModal,
+        });
+      } catch (error) {
+        console.warn('[FuncionarIA] ação legada:', action.functionKey, error);
+        const text = 'Não consegui abrir essa opção agora. Posso chamar um responsável para ajudar.';
+        setAnswer(text);
+        setLastSource('human');
+        await speak(text);
+      }
       return;
     }
 
@@ -139,6 +166,9 @@ export default function FuncionarIAInteraction({
         type: action.modalType,
         data: { companyId: company.id },
       });
+    } else if (action?.kind === 'legacy') {
+      await runParityAction(action, faq.question);
+      return;
     } else if (action?.kind === 'human') {
       onCallHuman(action.text);
     }
@@ -180,7 +210,7 @@ export default function FuncionarIAInteraction({
 
       const parityAction = detectFuncionarIAFunctionIntent(question, activeFunctionKeys);
       if (parityAction) {
-        await runParityAction(parityAction);
+        await runParityAction(parityAction, question);
         return;
       }
 

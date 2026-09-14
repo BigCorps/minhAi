@@ -24,6 +24,13 @@ export type FuncionarIAParityAction =
     }
   | {
       key: string;
+      kind: 'legacy';
+      functionKey: string;
+      label: string;
+      text: string;
+    }
+  | {
+      key: string;
       kind: 'human';
       label: string;
       text: string;
@@ -194,6 +201,17 @@ const MODAL_ACTIONS: Record<string, Omit<Extract<FuncionarIAParityAction, { kind
   },
 };
 
+const LEGACY_ACTIONS: Record<string, Omit<Extract<FuncionarIAParityAction, { kind: 'legacy' }>, 'key'>> = {
+  // Pesquisa precisa descobrir qual pesquisa ativa está vigente antes de abrir
+  // o modal. Essa regra já existe na minhAi, então reutilizamos o handler legado.
+  responder_pesquisa: {
+    kind: 'legacy',
+    functionKey: 'responder_pesquisa',
+    label: 'Responder pesquisa',
+    text: 'Vou abrir a pesquisa de atendimento disponível.',
+  },
+};
+
 const HUMAN_ACTIONS: Record<string, Omit<Extract<FuncionarIAParityAction, { kind: 'human' }>, 'key'>> = {
   chamar_gerente: {
     kind: 'human',
@@ -211,6 +229,9 @@ export function getFuncionarIAFunctionAction(functionKey?: string | null): Funci
 
   const modal = MODAL_ACTIONS[key];
   if (modal) return { key, ...modal };
+
+  const legacy = LEGACY_ACTIONS[key];
+  if (legacy) return { key, ...legacy };
 
   const human = HUMAN_ACTIONS[key];
   if (human) return { key, ...human };
@@ -294,6 +315,13 @@ export function detectFuncionarIAFunctionIntent(
     return firstActiveAction(activeFunctionKeys, ['cadastro']);
   }
 
+  if (hasAny(text, [
+    'responder pesquisa', 'responder a pesquisa', 'pesquisa de satisfacao',
+    'avaliar atendimento', 'dar minha opiniao', 'deixar avaliacao',
+  ])) {
+    return firstActiveAction(activeFunctionKeys, ['responder_pesquisa']);
+  }
+
   // Pagamento sempre continua pelo checkout validado da minhAi.
   if (hasAny(text, [
     'pagar pedido', 'fazer pagamento', 'pagar compra', 'pagar com pix',
@@ -316,6 +344,7 @@ export function detectFuncionarIAFunctionIntent(
 const QUICK_PRIORITY = [
   'cadastro',
   'pre_atendimento',
+  'responder_pesquisa',
   'agendar_compromisso',
   'horarios_disponiveis',
   'ver_agenda',
@@ -346,7 +375,9 @@ export function getFuncionarIAQuickActions(
         ? `route:${action.href}`
         : action.kind === 'modal'
           ? `modal:${action.modalType}`
-          : 'human';
+          : action.kind === 'legacy'
+            ? `legacy:${action.functionKey}`
+            : 'human';
 
     if (seen.has(identity)) continue;
     seen.add(identity);

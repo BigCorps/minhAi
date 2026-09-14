@@ -23,20 +23,17 @@ export async function handlePixCommand(
     const amountCents = Math.round(amount * 100);
     const supabase = createClient();
 
-    const response = await supabase.functions.invoke('gerar-pix-assistente', {
-      body: { company_id: companyId, amount_cents: amountCents },
+    const response = await supabase.functions.invoke('gerar-pix-assistente-v2', {
+      body: {
+        company_id: companyId,
+        amount_cents: amountCents,
+        ...(pedidoId ? { pedido_id: pedidoId } : {}),
+      },
     });
 
     if (response.error) throw response.error;
     const data = response.data;
 
-    // Vincular pedido ao PIX se vier de contexto de produto
-    if (pedidoId && data.transaction_id) {
-      await supabase
-        .from('pix_transactions')
-        .update({ pedido_id: pedidoId })
-        .eq('id', data.transaction_id);
-    }
 
     const pixData: PixConfirmationData = {
       transactionId: data.transaction_id,

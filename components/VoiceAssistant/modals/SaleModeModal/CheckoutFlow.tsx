@@ -516,11 +516,14 @@ if (confirmed.ok) {
       }
 
       if (metodo === 'pix') {
-        const { data: pixData, error: pixErr } = await supabase.functions.invoke('gerar-pix-assistente', {
-          body: { company_id: companyId, amount_cents: Math.round(totalFinal * 100) },
+        const { data: pixData, error: pixErr } = await supabase.functions.invoke('gerar-pix-assistente-v2', {
+          body: {
+            company_id: companyId,
+            amount_cents: Math.round(totalFinal * 100),
+            pedido_id: pedido.id,
+          },
         });
         if (pixErr || !pixData?.transaction_id) throw new Error('Erro ao gerar PIX');
-        await supabase.from('pix_transactions').update({ pedido_id: pedido.id }).eq('id', pixData.transaction_id);
         await atualizarStatusPedido(pedido.id, 'aguardando_pagamento');
         setPixTransactionId(pixData.transaction_id);
         setPixExpiresAt(pixData.expires_at ?? null);

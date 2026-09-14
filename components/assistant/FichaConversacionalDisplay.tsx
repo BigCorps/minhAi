@@ -18,6 +18,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
+import { registerAuthenticatedFunctionUsage } from '@/lib/register-authenticated-function-usage';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import {
   Loader2, Send, Mic, X, Plus, Trash2,
@@ -546,13 +547,16 @@ const { error: ingError } = await supabase
       playTextSafe(msgSucesso.content);
 
       // ── Cobrar créditos: 3 por ficha criada ──────────────────
-      supabase.rpc('register_function_usage', {
-        p_company_id: companyId,
-        p_function_key: 'fichas_producao_conversacional',
-        p_credits_consumed: 3,
-        p_metadata: { source: 'dashboard_producao', ficha_nome: fichaPreview.nome },
-      }).then(({ error }) => {
-        if (error) console.error('[salvarFicha] register_function_usage:', error);
+      registerAuthenticatedFunctionUsage({
+        companyId,
+        functionKey: 'fichas_producao_conversacional',
+        fallbackCredits: 3,
+        metadata: {
+          source: 'dashboard_producao',
+          ficha_nome: fichaPreview.nome,
+        },
+      }).then(({ error: usageError }) => {
+        if (usageError) console.error('[salvarFicha] register_function_usage:', usageError);
       });
 
       setFichaPreview({

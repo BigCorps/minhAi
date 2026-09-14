@@ -14,6 +14,7 @@
  */
 
 import { createClient } from '@/lib/supabase-browser';
+import { registerPublicFunctionUsage } from '@/lib/register-public-function-usage';
 import {
   FUNCTIONS_REGISTRY,
   detectFunctionFromTranscript,
@@ -445,16 +446,18 @@ export class VoiceCommandProcessor {
    */
   async registerUsage(functionKey: string) {
     try {
-      const supabase = createClient();
-      const credits = this.getFunctionCredits(functionKey);
-      
-      await supabase.rpc('register_function_usage', {
-        p_company_id: this.companyId,
-        p_function_key: functionKey,
-        p_credits_consumed: credits,
+      const { error } = await registerPublicFunctionUsage({
+        companyId: this.companyId,
+        functionKey,
+        source: 'voice_command_processor',
       });
-      
-      console.log(`✅ Uso registrado: ${functionKey} (${credits} créditos)`);
+
+      if (error) {
+        console.error('❌ Erro ao registrar uso:', error);
+        return;
+      }
+
+      console.log(`✅ Uso registrado no servidor: ${functionKey}`);
     } catch (error) {
       console.error('❌ Erro ao registrar uso:', error);
     }

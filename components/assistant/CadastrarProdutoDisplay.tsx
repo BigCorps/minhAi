@@ -17,6 +17,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
+import { registerAuthenticatedFunctionUsage } from '@/lib/register-authenticated-function-usage';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
 import { formatarPreco } from '@/lib/produtos-venda';
@@ -1311,10 +1312,14 @@ const playText = useCallback(async (text: string) => {
 
       // 5. Cobrar crédito (1 crédito por produto salvo)
       try {
-        await supabase.rpc('register_function_usage', {
-          p_company_id:       companyId,
-          p_function_key:     'cadastrar_produto',
-          p_credits_consumed: validos.length,
+        await registerAuthenticatedFunctionUsage({
+          companyId,
+          functionKey: 'cadastrar_produto',
+          fallbackCredits: validos.length,
+          metadata: {
+            source: 'cadastrar_produto_display',
+            quantidade: validos.length,
+          },
         });
       } catch { /* não bloqueia se falhar */ }
 

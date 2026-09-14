@@ -2,15 +2,26 @@
 
 import { ArrowRight, Bot, Headphones, Loader2, MessageCircle, Mic, Send, Sparkles, Square, UserRound } from 'lucide-react';
 import { FormEvent, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useFAQs, type FAQEntry } from '@/components/VoiceAssistant/hooks/useFAQs';
 import { findMatchingFAQLocal } from '@/components/VoiceAssistant/utils/faqUtils';
 import { createClient } from '@/lib/supabase-browser';
 import {
-  functionKeyRoute,
   resolveFuncionarIADeterministic,
   type FuncionarIACompanyPublicInfo,
 } from '@/lib/funcionaria-deterministic';
 import { contrastTextColor, rgbaFromHex } from '@/lib/funcionaria-visual';
+import {
+  detectFuncionarIAFunctionIntent,
+  getFuncionarIAFunctionAction,
+  getFuncionarIAQuickActions,
+  type FuncionarIAParityAction,
+} from '@/lib/funcionaria-function-parity';
+
+const LegacyActionModals = dynamic(
+  () => import('@/components/VoiceAssistant/ActionModals').then(mod => mod.ActionModals),
+  { ssr: false },
+);
 
 type PendingAction = { href: string; label: string } | null;
 type InteractionSource = 'webapp' | 'widget' | 'terminal';
@@ -62,6 +73,7 @@ export default function FuncionarIAInteraction({
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [activeModal, setActiveModal] = useState<{ type: string; data: any } | null>(null);
   const [lastSource, setLastSource] = useState<'company' | 'faq' | 'skill' | 'ai' | 'human' | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -72,6 +84,30 @@ export default function FuncionarIAInteraction({
 
   async function speak(text: string) {
     try { await playText(text); } catch (error) { console.warn('[FuncionarIA] TTS:', error); }
+  }
+
+  async function runParityAction(action: FuncionarIAParityAction) {
+    setPendingAction(null);
+    setAnswer(action.text);
+    setLastSource(action.kind === 'human' ? 'human' : 'skill');
+
+    if (action.kind === 'route') {
+      setPendingAction({ href: action.href, label: action.label });
+      await speak(action.text);
+      return;
+    }
+
+    if (action.kind === 'modal') {
+      setActiveModal({
+        type: action.modalType,
+        data: { companyId: company.id },
+      });
+      await speak(action.text);
+      return;
+    }
+
+    await speak(action.text);
+    onCallHuman(action.text);
   }
 
   async function registerFaqUse(faq: FAQEntry) {
@@ -95,12 +131,21 @@ export default function FuncionarIAInteraction({
       return;
     }
 
-    const route = functionKeyRoute(faq.function_key);
-    if (route) setPendingAction(route);
+    const action = getFuncionarIAFunctionAction(faq.function_key);
+    if (action?.kind === 'route') {
+      setPendingAction({ href: action.href, label: action.label });
+    } else if (action?.kind === 'modal') {
+      setActiveModal({
+        type: action.modalType,
+        data: { companyId: company.id },
+      });
+    } else if (action?.kind === 'human') {
+      onCallHuman(action.text);
+    }
 
-    const text = faq.answer || (route ? 'Posso abrir essa opção para você.' : 'Encontrei essa informação.');
+    const text = faq.answer || action?.text || 'Encontrei essa informação.';
     setAnswer(text);
-    setLastSource('faq');
+    setLastSource(action?.kind === 'human' ? 'human' : 'faq');
     await speak(text);
   }
 
@@ -130,6 +175,12 @@ export default function FuncionarIAInteraction({
         setPendingAction({ href: direct.href, label: direct.label });
         setLastSource('skill');
         await speak(direct.text);
+        return;
+      }
+
+      const parityAction = detectFuncionarIAFunctionIntent(question, activeFunctionKeys);
+      if (parityAction) {
+        await runParityAction(parityAction);
         return;
       }
 
@@ -280,18 +331,10 @@ export default function FuncionarIAInteraction({
   const primaryText = contrastTextColor(primaryColor);
   const quickFaqs = faqs.slice(0, 4);
   const dock = variant === 'dock';
-  const quickActions = useMemo(() => {
-    const seen = new Set<string>();
-    const items: Array<{ href: string; label: string }> = [];
-    for (const key of activeFunctionKeys) {
-      const route = functionKeyRoute(key);
-      if (!route || seen.has(route.href)) continue;
-      seen.add(route.href);
-      items.push(route);
-      if (items.length >= 4) break;
-    }
-    return items;
-  }, [activeFunctionKeys]);
+  const quickActions = useMemo(
+    () => getFuncionarIAQuickActions(activeFunctionKeys),
+    [activeFunctionKeys],
+  );
 
   return (
     <section className={dock
@@ -358,9 +401,24 @@ export default function FuncionarIAInteraction({
       {quickActions.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {quickActions.map(action => (
-            <a key={action.href} href={action.href} className={`${dock ? 'px-3 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'} rounded-full border border-violet-200 bg-violet-50 font-black text-violet-700 hover:bg-violet-100`}>
-              {action.label}
-            </a>
+            action.kind === 'route' ? (
+              <a
+                key={action.key}
+                href={action.href}
+                className={`${dock ? 'px-3 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'} rounded-full border border-violet-200 bg-violet-50 font-black text-violet-700 hover:bg-violet-100`}
+              >
+                {action.label}
+              </a>
+            ) : (
+              <button
+                key={action.key}
+                type="button"
+                onClick={() => void runParityAction(action)}
+                className={`${dock ? 'px-3 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'} rounded-full border border-violet-200 bg-violet-50 font-black text-violet-700 hover:bg-violet-100`}
+              >
+                {action.label}
+              </button>
+            )
           ))}
         </div>
       )}
@@ -406,6 +464,17 @@ export default function FuncionarIAInteraction({
           <UserRound className="h-4 w-4" /> Chamar responsável
         </button>
       </div>
+
+      {activeModal && (
+        <LegacyActionModals
+          activeModal={activeModal}
+          onClose={() => setActiveModal(null)}
+          theme="light"
+          playText={playText}
+          widgetMode={source === 'widget'}
+          slug={company.slug}
+        />
+      )}
     </section>
   );
 }

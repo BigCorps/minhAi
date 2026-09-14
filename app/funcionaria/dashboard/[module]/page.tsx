@@ -14,6 +14,7 @@ import FuncionarIAOrdersPanel from '@/components/funcionaria/management/Funciona
 import FuncionarIACashierPanel from '@/components/funcionaria/management/FuncionarIACashierPanel';
 import FuncionarIAReceivablesPanel from '@/components/funcionaria/management/FuncionarIAReceivablesPanel';
 import FuncionarIAAgendaPanel from '@/components/funcionaria/management/FuncionarIAAgendaPanel';
+import FuncionarIAPreServicePanel from '@/components/funcionaria/management/FuncionarIAPreServicePanel';
 import { GerarFilaConfigForm } from '@/components/dashboard/functions/GerarFilaConfigModal';
 import FiscalPage from '@/app/dashboard/fiscal/page';
 
@@ -26,7 +27,7 @@ export default function Page(){
   if(key==='conta')return <Wrap t="Conta e Créditos" s="Créditos são usados apenas quando existe custo variável: IA, voz, WhatsApp, SMS ou serviços externos.">{state.company?.id?<FuncionarIACreditsPanel companyId={state.company.id}/>:null}</Wrap>;
   if(!FUNCIONARIA_MODULES[key]||!state.active_modules.includes(key))return <Locked/>;
   if(!state.company)return null;
-  if(key==='atendimentos')return <Wrap t="Respostas da sua FuncionarIA" s="FAQ e respostas rápidas são tentadas antes de qualquer IA."><FAQManagerClient companyId={state.company.id} isDark={false}/></Wrap>;
+  if(key==='atendimentos')return <Wrap t="Respostas da sua FuncionarIA" s="FAQ e respostas rápidas são tentadas antes de qualquer IA."><div className="space-y-8"><FAQManagerClient companyId={state.company.id} isDark={false}/>{(state.active_skill_keys.includes('pre_service_registration')||state.active_skill_keys.includes('queue_service'))?<FuncionarIAPreServicePanel companyId={state.company.id}/>:null}</div></Wrap>;
   if(key==='canais')return <Wrap t="Instagram e Facebook" s="A mesma conexão Meta da minhAi, simplificada para as habilidades contratadas."><FuncionarIAChannelsPanel mode="meta"/></Wrap>;
   if(key==='whatsapp')return <Wrap t="WhatsApp" s="Escolha entre direcionar, atender no WhatsApp ou usar o modo híbrido."><FuncionarIAChannelsPanel mode="whatsapp"/></Wrap>;
   if(key==='mercado_livre')return <Wrap t="Mercado Livre" s="FAQ e dados do anúncio vêm antes da IA."><FuncionarIAMercadoLivrePanel/></Wrap>;

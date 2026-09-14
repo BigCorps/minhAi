@@ -231,7 +231,7 @@ useEffect(() => {
         // ✅ PASSO 1: Buscar a empresa e o user_id do dono
         const { data: company } = await supabase
           .from('companies')
-          .select('print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment, user_id')
+          .select('print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment')
           .eq('id', companyId)
           .maybeSingle();
         
@@ -245,25 +245,18 @@ useEffect(() => {
           return;
         }
         
-        // ✅ PASSO 2: Buscar plano do DONO da empresa (company.user_id)
-        const { data: credits } = await supabase
-          .from('user_credits')
-          .select('has_active_plan, plan_expires_at')
-          .eq('user_id', company.user_id)
-          .maybeSingle();
-        
-        console.log('🔍 Raw credits data:', {
-          credits,
-          user_id: company.user_id,
-          has_active_plan: credits?.has_active_plan,
-          plan_expires_at: credits?.plan_expires_at,
-        });
-        
-        // ✅ PASSO 3: Verificar se plano está ativo e não expirado
-        const active =
-          credits?.has_active_plan === true &&
-          credits?.plan_expires_at != null &&
-          new Date(credits.plan_expires_at) > new Date();
+        // ✅ PASSO 2: Consultar somente o estado público mínimo do plano.
+        // O browser não precisa conhecer user_id nem ler user_credits diretamente.
+        const planResponse = await fetch(
+          `/api/public/company-plan-state?company_id=${encodeURIComponent(companyId)}`,
+          { cache: 'no-store' },
+        );
+        const planState = planResponse.ok
+          ? await planResponse.json()
+          : { active: false };
+
+        // ✅ PASSO 3: Estado já validado no servidor.
+        const active = planState?.active === true;
         
         setPrintConfig({
           // ✅ Converte print_auto_type_* para boolean
@@ -275,9 +268,7 @@ useEffect(() => {
         
         console.log('🖨️ Print Config:', {
           companyId,
-          ownerId: company.user_id,
           hasActivePlan: active,
-          planExpiresAt: credits?.plan_expires_at,
           printOnPurchase: !!company.print_auto_type_purchase,
           printOnQueue: !!company.print_auto_type_queue,
           printOnPayment: !!company.print_auto_type_payment,

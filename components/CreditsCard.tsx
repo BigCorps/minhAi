@@ -38,27 +38,23 @@ export function CreditsCard({ userId }: CreditsCardProps) {
 
         if (error) {
           console.error('Erro ao carregar créditos:', error);
-          // Se não encontrar, criar registro inicial
-          const { error: insertError } = await supabase
-            .from('user_credits')
-            .insert({
-              user_id: userId,
-              available_credits: 20,
-              total_purchased: 20,
-              total_used: 0,
-              has_active_plan: false,
-              plan_expires_at: null,
-              active_plan_name: null
-            });
 
-          if (!insertError) {
-            setCredits({ 
-              available_credits: 20, 
-              total_used: 0,
-              has_active_plan: false,
-              plan_expires_at: null,
-              active_plan_name: null
-            });
+          // Fallback legado preservado, agora autenticado e server-side.
+          // O endpoint deriva o user_id da sessão e nunca aceita user_id do browser.
+          const ensureResponse = await fetch('/api/credits/ensure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          if (ensureResponse.ok) {
+            const ensured = await ensureResponse.json();
+            setCredits(ensured);
+          } else {
+            console.error(
+              'Erro ao garantir créditos:',
+              ensureResponse.status,
+              await ensureResponse.text(),
+            );
           }
         } else {
           setCredits(data);

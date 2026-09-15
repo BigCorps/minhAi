@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
+import { callNextQueueManaged, cancelQueueManaged, finalizeQueueManaged, saveQueueConfigManaged, setQueueActiveManaged, startQueueServiceManaged } from '@/lib/queue-client';
 import { 
   Bell, 
   BarChart3, 
@@ -245,49 +246,24 @@ export default function FilaAtendimentoDisplay({
     }
 
     try {
-      // ✅ CORREÇÃO: Finalizar senha em atendimento antes de chamar próxima
-      if (senhaAtual && (senhaAtual.status === 'chamando' || senhaAtual.status === 'atendimento')) {
-        console.log('🔄 Finalizando senha anterior automaticamente:', senhaAtual.senha_completa);
-        
-        await supabase
-          .from('fila_senhas')
-          .update({
-            status: 'finalizado',
-            finalizada_em: new Date().toISOString(),
-          })
-          .eq('id', senhaAtual.id);
+      const result = await callNextQueueManaged(companyId);
+      const proximaSenha = result.ticket;
+      if (!proximaSenha) {
+        showToast('Não há senhas aguardando', 'info');
+        return;
       }
 
-      const proximaSenha = senhasAguardando[0];
-
-      // Atualizar status para "chamando"
-      await supabase
-        .from('fila_senhas')
-        .update({ 
-          status: 'chamando',
-          chamada_em: new Date().toISOString(),
-        })
-        .eq('id', proximaSenha.id);
-
-      // TTS
       await speakSenha(proximaSenha.senha_completa);
-
       showToast(`Senha ${proximaSenha.senha_completa} chamada!`, 'success');
 
-      // Após 3s, mudar para "atendimento"
-      setTimeout(async () => {
-        await supabase
-          .from('fila_senhas')
-          .update({ 
-            status: 'atendimento',
-            atendimento_iniciado_em: new Date().toISOString(),
-          })
-          .eq('id', proximaSenha.id);
+      setTimeout(() => {
+        void startQueueServiceManaged(companyId, proximaSenha.id).catch((error) => {
+          console.error('Erro ao iniciar atendimento:', error);
+        });
       }, 3000);
-
     } catch (error) {
       console.error('Erro ao chamar senha:', error);
-      showToast('Erro ao chamar senha', 'error');
+      showToast('Você precisa estar autorizado para gerenciar a fila', 'error');
     }
   }
 
@@ -298,19 +274,9 @@ export default function FilaAtendimentoDisplay({
     }
 
     try {
-      await supabase
-        .from('fila_senhas')
-        .update({
-          status: 'finalizado',
-          finalizada_em: new Date().toISOString(),
-        })
-        .eq('id', senhaAtual.id);
-
+      await finalizeQueueManaged(companyId, senhaAtual.id);
       showToast('Atendimento finalizado!', 'success');
-      
-      if (playText) {
-        await playText('Atendimento finalizado');
-      }
+      if (playText) await playText('Atendimento finalizado');
     } catch (error) {
       console.error('Erro ao finalizar:', error);
       showToast('Erro ao finalizar atendimento', 'error');
@@ -321,15 +287,8 @@ export default function FilaAtendimentoDisplay({
     if (!config) return;
 
     try {
-      await supabase
-        .from('fila_configs')
-        .update({ fila_ativa: !config.fila_ativa })
-        .eq('id', config.id);
-
-      showToast(
-        config.fila_ativa ? 'Fila pausada' : 'Fila retomada',
-        'info'
-      );
+      await setQueueActiveManaged(companyId, !config.fila_ativa, config.id);
+      showToast(config.fila_ativa ? 'Fila pausada' : 'Fila retomada', 'info');
     } catch (error) {
       console.error('Erro ao pausar/retomar:', error);
       showToast('Erro ao alterar status da fila', 'error');
@@ -338,11 +297,7 @@ export default function FilaAtendimentoDisplay({
 
   async function cancelarSenha(senhaId: string) {
     try {
-      await supabase
-        .from('fila_senhas')
-        .update({ status: 'cancelado' })
-        .eq('id', senhaId);
-
+      await cancelQueueManaged(companyId, { ticketId: senhaId });
       showToast('Senha cancelada', 'info');
     } catch (error) {
       console.error('Erro ao cancelar:', error);
@@ -354,11 +309,7 @@ export default function FilaAtendimentoDisplay({
     if (!config) return;
 
     try {
-      await supabase
-        .from('fila_configs')
-        .update(editedConfig)
-        .eq('id', config.id);
-
+      await saveQueueConfigManaged(companyId, editedConfig as Record<string, unknown>, config.id);
       showToast('Configuração salva!', 'success');
       setEditMode(false);
       await carregarDados();

@@ -8,6 +8,7 @@ import {
   Hash, FileText, Calendar,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
+import { callNextQueueManaged, cancelQueueManaged, finalizeQueueManaged, saveQueueConfigManaged, setQueueActiveManaged, startQueueServiceManaged } from '@/lib/queue-client';
 
 // ------------------------------------
 // Tipos locais
@@ -239,41 +240,18 @@ const colors = prefersDark ? FILA_COLORS.dark : FILA_COLORS.light;
     }
 
     try {
-      if (
-        senhaAtual &&
-        (senhaAtual.status === 'chamando' ||
-          senhaAtual.status === 'atendimento')
-      ) {
-        await supabase
-          .from('fila_senhas')
-          .update({
-            status: 'finalizado',
-            finalizada_em: new Date().toISOString(),
-          })
-          .eq('id', senhaAtual.id);
+      const result = await callNextQueueManaged(companyId);
+      const proxima = result.ticket;
+      if (!proxima) {
+        showToast('Não há senhas aguardando', 'info');
+        return;
       }
-
-      const proxima = senhasAguardando[0];
-
-      await supabase
-        .from('fila_senhas')
-        .update({
-          status: 'chamando',
-          chamada_em: new Date().toISOString(),
-        })
-        .eq('id', proxima.id);
-
       speakSenha(proxima.senha_completa);
       showToast(`Senha ${proxima.senha_completa} chamada!`, 'success');
-
-      setTimeout(async () => {
-        await supabase
-          .from('fila_senhas')
-          .update({
-            status: 'atendimento',
-            atendimento_iniciado_em: new Date().toISOString(),
-          })
-          .eq('id', proxima.id);
+      setTimeout(() => {
+        void startQueueServiceManaged(companyId, proxima.id).catch((error) => {
+          console.error('Erro ao iniciar atendimento:', error);
+        });
       }, 3000);
     } catch (error) {
       console.error('Erro ao chamar senha:', error);
@@ -288,14 +266,7 @@ const colors = prefersDark ? FILA_COLORS.dark : FILA_COLORS.light;
     }
 
     try {
-      await supabase
-        .from('fila_senhas')
-        .update({
-          status: 'finalizado',
-          finalizada_em: new Date().toISOString(),
-        })
-        .eq('id', senhaAtual.id);
-
+      await finalizeQueueManaged(companyId, senhaAtual.id);
       showToast('Atendimento finalizado!', 'success');
     } catch (error) {
       console.error('Erro ao finalizar:', error);
@@ -307,11 +278,7 @@ const colors = prefersDark ? FILA_COLORS.dark : FILA_COLORS.light;
     if (!config) return;
 
     try {
-      await supabase
-        .from('fila_configs')
-        .update({ fila_ativa: !config.fila_ativa })
-        .eq('id', config.id);
-
+      await setQueueActiveManaged(companyId, !config.fila_ativa, config.id);
       showToast(config.fila_ativa ? 'Fila pausada' : 'Fila retomada', 'info');
     } catch (error) {
       console.error('Erro ao pausar/retomar fila:', error);
@@ -321,11 +288,7 @@ const colors = prefersDark ? FILA_COLORS.dark : FILA_COLORS.light;
 
   async function cancelarSenha(senhaId: string) {
     try {
-      await supabase
-        .from('fila_senhas')
-        .update({ status: 'cancelado' })
-        .eq('id', senhaId);
-
+      await cancelQueueManaged(companyId, { ticketId: senhaId });
       showToast('Senha cancelada', 'info');
     } catch (error) {
       console.error('Erro ao cancelar senha:', error);
@@ -337,20 +300,15 @@ const colors = prefersDark ? FILA_COLORS.dark : FILA_COLORS.light;
     setIsSavingConfig(true);
 
     try {
-      if (config?.id) {
-        // Já existe — update
-        await supabase
-          .from('fila_configs')
-          .update(editedConfig)
-          .eq('id', config.id);
-      } else {
-        // Não existe ainda — upsert pelo company_id
-        await supabase.from('fila_configs').upsert(
-          { company_id: companyId, ...editedConfig },
-          { onConflict: 'company_id' }
-        );
+      const result = await saveQueueConfigManaged(
+        companyId,
+        editedConfig as Record<string, unknown>,
+        config?.id || null,
+      );
+      if (result?.config) {
+        setConfig(result.config as FilaConfig);
+        setEditedConfig(result.config as FilaConfig);
       }
-
       showToast('Configuração salva!', 'success');
       setEditMode(false);
       await carregarDados();
@@ -1003,9 +961,9 @@ const colors = prefersDark ? FILA_COLORS.dark : FILA_COLORS.light;
         </div>
         <button
           onClick={async () => {
-            await supabase.from('fila_configs').upsert(
+            await saveQueueConfigManaged(
+              companyId,
               {
-                company_id: companyId,
                 prefixo_senha: 'A',
                 nome_tipo_atendimento: 'Atendimento Geral',
                 cor_fila: '#3B82F6',
@@ -1015,7 +973,7 @@ const colors = prefersDark ? FILA_COLORS.dark : FILA_COLORS.light;
                 fila_ativa: true,
                 mensagem_fila_pausada: 'Fila temporariamente pausada',
               },
-              { onConflict: 'company_id,prefixo_senha' }
+              null,
             );
             await carregarDados();
           }}

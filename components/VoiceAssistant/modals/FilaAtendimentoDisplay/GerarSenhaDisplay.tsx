@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
 import { triggerAutoPrint, formatQueueReceipt } from '@/lib/auto-print';
+import { cancelPublicQueueTicket, generatePublicQueueTicket } from '@/lib/queue-client';
 import { 
   MapPin, 
   Clock, 
@@ -84,6 +85,7 @@ export default function GerarSenhaDisplay({
 
   const [loading, setLoading] = useState(true);
   const [senha, setSenha] = useState<FilaSenha | null>(null);
+  const [cancelToken, setCancelToken] = useState('');
   const [posicao, setPosicao] = useState(0);
   const [ultimaChamada, setUltimaChamada] = useState<FilaSenha | null>(null);
   const [tempoEstimado, setTempoEstimado] = useState(0);
@@ -191,97 +193,40 @@ const div = document.createElement('div');
   async function gerarNovaSenha() {
     try {
       setLoading(true);
-
-      const { data: config, error: configError } = await supabase
-        .from('fila_configs')
-        .select('*')
-        .eq('company_id', companyId)
-        .eq('fila_ativa', true)
-        .maybeSingle();
-
-      if (configError) {
-        console.error('Erro ao buscar config:', configError);
-      }
-
-      if (!config) {
-        showToast('Fila não disponível no momento', 'error');
-        setLoading(false);
-        return;
-      }
-
-      // Verificar se fila está ativa
-      if (!config.fila_ativa) {
-        showToast(config.mensagem_fila_pausada || 'Fila pausada', 'error');
-        setLoading(false);
-        return;
-      }
-
-      // Incrementar número
-      const proximoNumero = config.ultimo_numero_gerado + 1;
-      const senhaCompleta = `${config.prefixo_senha}${proximoNumero.toString().padStart(3, '0')}`;
-
-      // Criar senha
-      const { data: novaSenha, error: senhaError } = await supabase
-        .from('fila_senhas')
-        .insert({
-          company_id: companyId,
-          fila_config_id: config.id,
-          senha_completa: senhaCompleta,
-          numero: proximoNumero,
-          prefixo: config.prefixo_senha,
-          status: 'aguardando',
-        })
-        .select()
-        .single();
-
-      if (senhaError || !novaSenha) {
-        console.error('Erro ao criar senha:', senhaError);
-        showToast('Erro ao gerar senha', 'error');
-        setLoading(false);
-        return;
-      }
-
-      // Atualizar último número
-      await supabase
-        .from('fila_configs')
-        .update({ ultimo_numero_gerado: proximoNumero })
-        .eq('id', config.id);
-
+      const result = await generatePublicQueueTicket(companyId);
+      const novaSenha = result.ticket as FilaSenha;
       setSenha(novaSenha);
+      setCancelToken(result.cancelToken);
 
-      // TTS
       if (playText) {
-        const prefixo = senhaCompleta[0];
-        const numeros = senhaCompleta.slice(1).split('');
+        const prefixo = novaSenha.senha_completa[0];
+        const numeros = novaSenha.senha_completa.slice(1).split('');
         const texto = `Sua senha é ${prefixo}. ${numeros.join('. ')}. Aguarde ser chamado.`;
         await playText(texto);
       }
 
-      // Calcular posição e tempo
-      await atualizarPosicao();
-
+      await atualizarPosicao(novaSenha);
       setLoading(false);
       showToast('Senha gerada com sucesso!', 'success');
 
-      // Impressão automática — dispara se print_on_queue estiver ativo
       if (printOnQueue && hasActivePlan) {
-        // posicao e tempoEstimado ainda não foram atualizados no state (async)
-        // usamos os valores calculados em atualizarPosicao via state updates
-        // por isso chamamos com um pequeno delay para garantir que o state atualizou
         setTimeout(() => {
           handleAutoPrint(novaSenha, posicao, tempoEstimado);
         }, 300);
       }
-
     } catch (error) {
       console.error('Erro ao gerar senha:', error);
-      showToast('Erro ao gerar senha', 'error');
+      const code = error instanceof Error ? error.message : '';
+      if (code === 'queue_paused') showToast('Fila pausada no momento', 'error');
+      else if (code === 'queue_daily_limit_reached') showToast('Limite diário de senhas atingido', 'error');
+      else if (code === 'queue_not_available') showToast('Fila não disponível no momento', 'error');
+      else showToast('Erro ao gerar senha', 'error');
       setLoading(false);
     }
   }
 
-  async function atualizarPosicao() {
-    if (!senha) return;
+  async function atualizarPosicao(targetSenha: FilaSenha | null = senha) {
+    if (!targetSenha) return;
 
     try {
       // Calcular posição
@@ -290,7 +235,7 @@ const div = document.createElement('div');
         .select('*', { count: 'exact', head: true })
         .eq('company_id', companyId)
         .eq('status', 'aguardando')
-        .lt('gerada_em', senha.gerada_em);
+        .lt('gerada_em', targetSenha.gerada_em);
 
       setPosicao(count || 0);
 
@@ -331,23 +276,17 @@ const div = document.createElement('div');
   }
 
   async function cancelarSenha() {
-    if (!senha) return;
+    if (!senha || !cancelToken) return;
 
     try {
-      await supabase
-        .from('fila_senhas')
-        .update({ status: 'cancelado' })
-        .eq('id', senha.id);
-
+      await cancelPublicQueueTicket(companyId, senha.id, cancelToken);
       showToast('Senha cancelada', 'info');
-
       setTimeout(() => {
         onClose();
       }, 2000);
-
     } catch (error) {
       console.error('Erro ao cancelar:', error);
-      showToast('Erro ao cancelar senha', 'error');
+      showToast('Não foi possível cancelar esta senha', 'error');
     }
   }
 

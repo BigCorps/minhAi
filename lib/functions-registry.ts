@@ -16,6 +16,7 @@
 import { createClient } from '@/lib/supabase-browser';
 import { cobrar_debito, cobrar_credito } from './paymentGatewayEntries'
 import { getContextualRoute } from '@/lib/routing-utils';
+import { authorizeQueueManaged, callNextQueueManaged, cancelQueueManaged, finalizeQueueManaged, setQueueActiveManaged, startQueueServiceManaged } from '@/lib/queue-client';
 import { getPublicFiscalCompanyConfig, getPublicPaymentCompanyConfig, getPublicWifiConfig } from './public-company-capabilities';
 
 export type ResponseType = 'voice' | 'modal' | 'page' | 'voice+modal' | 'voice+page';
@@ -1030,6 +1031,12 @@ fila_atendimento: {
   requiresPayment: false,
   isPremium: false,
   handler: async ({ companyId, setActiveModal, playText }) => {
+    try {
+      await authorizeQueueManaged(companyId);
+    } catch {
+      await playText('O painel de gerenciamento da fila é restrito à equipe autorizada.');
+      return false;
+    }
     await playText('Abrindo painel de atendimento...');
     setActiveModal?.({
       type: 'FilaAtendimentoDisplay',
@@ -1038,7 +1045,6 @@ fila_atendimento: {
     return true;
   },
 },
-
 // 2. GERAR SENHA (pública - aparece no carrossel)
 gerar_senha: {
   functionKey: 'gerar_senha',
@@ -1123,50 +1129,22 @@ chamar_proxima_senha: {
   requiresPayment: false,
   isPremium: false,
   handler: async ({ companyId, playText }) => {
-    const supabase = createClient();
-
     try {
-      // Buscar próxima senha aguardando
-      const { data: proximaSenha, error } = await supabase
-        .from('fila_senhas')
-        .select('*')
-        .eq('company_id', companyId)
-        .eq('status', 'aguardando')
-        .order('gerada_em', { ascending: true })
-        .limit(1)
-        .single();
-
-      if (error || !proximaSenha) {
+      const { ticket: proximaSenha } = await callNextQueueManaged(companyId);
+      if (!proximaSenha) {
         await playText('Não há senhas aguardando no momento.');
         return true;
       }
 
-      // Atualizar status para "chamando"
-      await supabase
-        .from('fila_senhas')
-        .update({
-          status: 'chamando',
-          chamada_em: new Date().toISOString(),
-        })
-        .eq('id', proximaSenha.id);
-
-      // TTS especial
       const prefixo = proximaSenha.senha_completa[0];
       const numeros = proximaSenha.senha_completa.slice(1).split('');
-      const texto = `Senha ${prefixo}. ${numeros.join('. ')}.`;
-      await playText(texto);
+      await playText(`Senha ${prefixo}. ${numeros.join('. ')}.`);
 
-      // Após 3s, mudar para "atendimento"
-      setTimeout(async () => {
-        await supabase
-          .from('fila_senhas')
-          .update({
-            status: 'atendimento',
-            atendimento_iniciado_em: new Date().toISOString(),
-          })
-          .eq('id', proximaSenha.id);
+      setTimeout(() => {
+        void startQueueServiceManaged(companyId, proximaSenha.id).catch((error) => {
+          console.error('Erro ao iniciar atendimento:', error);
+        });
       }, 3000);
-
       return true;
     } catch (err) {
       console.error('Erro ao chamar senha:', err);
@@ -1175,7 +1153,6 @@ chamar_proxima_senha: {
     }
   },
 },
-
 // 4. FINALIZAR ATENDIMENTO (interna)
 finalizar_atendimento: {
   functionKey: 'finalizar_atendimento',
@@ -1201,31 +1178,12 @@ finalizar_atendimento: {
   requiresPayment: false,
   isPremium: false,
   handler: async ({ companyId, playText }) => {
-    const supabase = createClient();
-
     try {
-      // Buscar senha em atendimento
-      const { data: senhaAtual, error } = await supabase
-        .from('fila_senhas')
-        .select('*')
-        .eq('company_id', companyId)
-        .eq('status', 'atendimento')
-        .single();
-
-      if (error || !senhaAtual) {
+      const { ticket } = await finalizeQueueManaged(companyId);
+      if (!ticket) {
         await playText('Nenhum atendimento em andamento.');
         return true;
       }
-
-      // Finalizar
-      await supabase
-        .from('fila_senhas')
-        .update({
-          status: 'finalizado',
-          finalizada_em: new Date().toISOString(),
-        })
-        .eq('id', senhaAtual.id);
-
       await playText('Atendimento finalizado com sucesso.');
       return true;
     } catch (err) {
@@ -1235,7 +1193,6 @@ finalizar_atendimento: {
     }
   },
 },
-
 // 5. PAUSAR FILA (interna)
 pausar_fila: {
   functionKey: 'pausar_fila',
@@ -1262,14 +1219,8 @@ pausar_fila: {
   requiresPayment: false,
   isPremium: false,
   handler: async ({ companyId, playText }) => {
-    const supabase = createClient();
-
     try {
-      await supabase
-        .from('fila_configs')
-        .update({ fila_ativa: false })
-        .eq('company_id', companyId);
-
+      await setQueueActiveManaged(companyId, false);
       await playText('Fila pausada. Novas senhas não serão geradas.');
       return true;
     } catch (err) {
@@ -1279,7 +1230,6 @@ pausar_fila: {
     }
   },
 },
-
 // 6. RETOMAR FILA (interna)
 retomar_fila: {
   functionKey: 'retomar_fila',
@@ -1306,14 +1256,8 @@ retomar_fila: {
   requiresPayment: false,
   isPremium: false,
   handler: async ({ companyId, playText }) => {
-    const supabase = createClient();
-
     try {
-      await supabase
-        .from('fila_configs')
-        .update({ fila_ativa: true })
-        .eq('company_id', companyId);
-
+      await setQueueActiveManaged(companyId, true);
       await playText('Fila retomada. Clientes podem gerar senhas novamente.');
       return true;
     } catch (err) {
@@ -1323,7 +1267,6 @@ retomar_fila: {
     }
   },
 },
-
 // 7. CANCELAR SENHA (interna)
 cancelar_senha: {
   functionKey: 'cancelar_senha',
@@ -1350,29 +1293,19 @@ cancelar_senha: {
   requiresPayment: false,
   isPremium: false,
   handler: async ({ companyId, playText, transcript }) => {
-    // Extrair número da senha do transcript
-    const match = transcript.match(/[A-Z]\d{3}/i);
+    const match = transcript.match(/[A-Z]\d{3,}/i);
     if (!match) {
       await playText('Por favor, informe o número da senha que deseja cancelar.');
       return false;
     }
 
     const senhaCompleta = match[0].toUpperCase();
-    const supabase = createClient();
-
     try {
-      const { error } = await supabase
-        .from('fila_senhas')
-        .update({ status: 'cancelado' })
-        .eq('company_id', companyId)
-        .eq('senha_completa', senhaCompleta)
-        .eq('status', 'aguardando');
-
-      if (error) {
-        await playText('Erro ao cancelar senha.');
-        return false;
+      const { ticket } = await cancelQueueManaged(companyId, { senhaCompleta });
+      if (!ticket) {
+        await playText('Senha não encontrada ou já foi chamada.');
+        return true;
       }
-
       await playText(`Senha ${senhaCompleta} cancelada com sucesso.`);
       return true;
     } catch (err) {
@@ -1382,7 +1315,6 @@ cancelar_senha: {
     }
   },
 },
-
 // 8. MINHA POSIÇÃO NA FILA (interna)
 minha_posicao_fila: {
   functionKey: 'minha_posicao_fila',

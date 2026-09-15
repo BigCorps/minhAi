@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, getUser } from '@/lib/supabase-server';
+import { getUser } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 export async function POST(req: NextRequest) {
   const user = await getUser();
@@ -8,7 +9,7 @@ export async function POST(req: NextRequest) {
   const { companyId } = await req.json();
   if (!companyId) return NextResponse.json({ error: 'companyId obrigatório' }, { status: 400 });
 
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   // Verifica ownership
   const { data: company } = await supabase

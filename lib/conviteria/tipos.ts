@@ -228,6 +228,8 @@ export interface ConviteConfig {
 export interface ModoRender {
   /** Na previa, links nao navegam e a musica nao toca sozinha. */
   previa?: boolean;
+  /** Trial de 24 h: recursos nao financeiros funcionam, pagamentos reais nao. */
+  teste?: boolean;
   /** Secao que o wizard esta editando agora, para rolar ate ela. */
   secaoFoco?: TipoSecao;
   /**

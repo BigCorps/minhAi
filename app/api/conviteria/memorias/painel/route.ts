@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { adminConviteria, adminPublic } from '@/lib/conviteria/servidor';
+import { adminConviteria, adminPublic, buscarTesteAtivoEvento } from '@/lib/conviteria/servidor';
 import {
   buscarEventoDoDono,
   midiasAssinadas,
@@ -34,13 +34,19 @@ export async function GET(req: NextRequest) {
   const d = await dono(req);
   if (!d) return NextResponse.json({ erro: 'Convite não encontrado.' }, { status: 404 });
   const pacote = await pacoteDoEvento(d.eventoId);
-  const ativo = pacote?.status === 'ativo' && (!pacote.expira_em || new Date(pacote.expira_em) > new Date());
+  const teste = await buscarTesteAtivoEvento(d.eventoId);
+  const emTeste = ['teste', 'aguardando_pagamento'].includes(String(pacote?.status)) && Boolean(teste) &&
+    (!pacote.expira_em || new Date(pacote.expira_em) > new Date());
+  const ativoPago = pacote?.status === 'ativo' && (!pacote.expira_em || new Date(pacote.expira_em) > new Date());
+  const ativo = Boolean(ativoPago || emTeste);
   const uso = ativo ? await usoMemorias(d.eventoId) : { fotos: 0, videos: 0, bytes: 0 };
   const midias = ativo ? await midiasAssinadas(d.eventoId, false, 3600) : [];
   const cfg = (d.evento.config ?? {}) as Record<string, any>;
 
   return NextResponse.json({
     ativo,
+    emTeste,
+    testeExpiraEm: emTeste ? teste?.expiraEm ?? null : null,
     status: pacote?.status ?? 'nao_contratado',
     precoCentavos: MEMORIAS_PRECO_CENTAVOS,
     aprovacaoManual: Boolean(pacote?.aprovacao_manual),
@@ -79,7 +85,7 @@ export async function PATCH(req: NextRequest) {
       desafios_titulo: titulo,
       desafios_ids: ids,
       updated_at: new Date().toISOString(),
-    }).eq('evento_id', d.eventoId).eq('status', 'ativo');
+    }).eq('evento_id', d.eventoId).in('status', ['ativo', 'teste', 'aguardando_pagamento']);
     if (error) return NextResponse.json({ erro: 'Não foi possível salvar os desafios.' }, { status: 500 });
     return NextResponse.json({ ok: true, desafios: { ativo, titulo, ids } });
   }
@@ -88,7 +94,7 @@ export async function PATCH(req: NextRequest) {
     const { error } = await admin.from('evento_memorias_config').update({
       aprovacao_manual: corpo.aprovacaoManual,
       updated_at: new Date().toISOString(),
-    }).eq('evento_id', d.eventoId).eq('status', 'ativo');
+    }).eq('evento_id', d.eventoId).in('status', ['ativo', 'teste', 'aguardando_pagamento']);
     if (error) return NextResponse.json({ erro: 'Não foi possível alterar a moderação.' }, { status: 500 });
     return NextResponse.json({ ok: true });
   }
@@ -112,7 +118,6 @@ export async function DELETE(req: NextRequest) {
   const url = new URL(req.url);
   const memoriaId = url.searchParams.get('memoriaId');
   const corpo = (await req.json().catch(() => null)) as { memoriaIds?: string[] } | null;
-
   const idsDoCorpo = Array.isArray(corpo?.memoriaIds)
     ? corpo!.memoriaIds.filter((id) => typeof id === 'string' && id.length > 0).slice(0, 400)
     : [];

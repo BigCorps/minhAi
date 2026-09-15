@@ -20,6 +20,7 @@ type Album = {
   dataEvento: string | null;
   fotoCapa: string | null;
   urlMemorias: string;
+  modoTeste?: boolean;
   midias: Midia[];
 };
 
@@ -41,8 +42,8 @@ export default function AlbumMemorias({ slug }: { slug: string }) {
   const prioridadeRef = useRef<string[]>([]);
 
   const festaAtiva = useMemo(
-    () => festaEstaAtiva(album?.dataEvento, new Date(relogio)),
-    [album?.dataEvento, relogio],
+    () => Boolean(album?.modoTeste) || festaEstaAtiva(album?.dataEvento, new Date(relogio)),
+    [album?.modoTeste, album?.dataEvento, relogio],
   );
 
   useEffect(() => {
@@ -234,24 +235,15 @@ export default function AlbumMemorias({ slug }: { slug: string }) {
           )}
 
           {atual?.tipo === 'video' && videoBloqueado && !pausado && (
-            <button
-              type="button"
-              onClick={() => void reproduzirVideoBloqueado()}
-              className="absolute inset-0 z-10 grid place-items-center bg-black/35"
-            >
-              <span className="rounded-full bg-black/70 px-5 py-3 text-sm font-semibold backdrop-blur">
-                ▶ Toque para reproduzir o vídeo
-              </span>
+            <button type="button" onClick={() => void reproduzirVideoBloqueado()} className="absolute inset-0 z-10 grid place-items-center bg-black/35">
+              <span className="rounded-full bg-black/70 px-5 py-3 text-sm font-semibold backdrop-blur">▶ Toque para reproduzir o vídeo</span>
             </button>
           )}
 
           {festaAtiva && qrFesta && (
             <div className="pointer-events-none absolute bottom-20 right-3 z-20 flex max-w-[270px] items-center gap-2.5 rounded-2xl border border-white/70 bg-white/95 p-2.5 text-[#28151b] shadow-2xl backdrop-blur sm:bottom-20 sm:right-5 sm:max-w-[320px] sm:gap-3 sm:p-3">
               <img src={qrFesta} alt="QR Code para enviar fotos e vídeos" className="h-20 w-20 shrink-0 rounded-lg bg-white sm:h-24 sm:w-24" />
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold leading-tight sm:text-sm">Envie suas fotos e vídeos do evento agora</p>
-                <p className="mt-1 text-[9px] leading-tight text-[#6f515a] sm:text-[11px]">Aponte a câmera para o QR Code. Não precisa instalar aplicativo.</p>
-              </div>
+              <div className="min-w-0"><p className="text-[11px] font-bold leading-tight sm:text-sm">Envie suas fotos e vídeos do evento agora</p><p className="mt-1 text-[9px] leading-tight text-[#6f515a] sm:text-[11px]">Aponte a câmera para o QR Code. Não precisa instalar aplicativo.</p></div>
             </div>
           )}
 

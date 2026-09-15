@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { timingSafeEqual } from 'node:crypto';
 import { adminConviteria } from '@/lib/conviteria/servidor';
 import { ativarMemorias } from '@/lib/conviteria/memorias-servidor';
+import { limparDadosDoTeste } from '@/lib/conviteria/teste-servidor';
 
 export const runtime = 'nodejs';
 
@@ -25,16 +27,12 @@ export async function POST(req: NextRequest) {
     status?: string;
   } | null;
 
-  if (!corpo?.tipo || !corpo.referenciaId) {
-    return NextResponse.json({ erro: 'Payload inválido' }, { status: 400 });
-  }
+  if (!corpo?.tipo || !corpo.referenciaId) return NextResponse.json({ erro: 'Payload inválido' }, { status: 400 });
   if (corpo.status !== 'pago') return NextResponse.json({ ok: true, ignorado: true });
 
   const admin = adminConviteria();
 
   if (corpo.tipo === 'convite') {
-    // Um mesmo PIX pode publicar o convite avulso e ativar o add-on. No plano
-    // mensal o evento já está publicado e apenas a segunda operação acontece.
     const { data: publicado } = await admin.from('eventos')
       .update({ publicado_em: new Date().toISOString() })
       .eq('id', corpo.referenciaId)
@@ -42,12 +40,34 @@ export async function POST(req: NextRequest) {
       .select('id,slug')
       .maybeSingle();
 
-    const memoriasAtivadas = await ativarMemorias(corpo.referenciaId, corpo.txid ?? null);
     let slug = publicado?.slug as string | undefined;
     if (!slug) {
       const { data: evento } = await admin.from('eventos').select('slug').eq('id', corpo.referenciaId).maybeSingle();
       slug = evento?.slug as string | undefined;
     }
+
+    // Se a compra aconteceu durante/depois do trial, remove exclusivamente os
+    // dados marcados como demonstração antes de liberar o uso definitivo.
+    const { data: teste } = await admin.from('evento_testes')
+      .select('id,convertido_em')
+      .eq('evento_id', corpo.referenciaId)
+      .maybeSingle();
+    if (teste && !teste.convertido_em) {
+      try {
+        await limparDadosDoTeste({
+          eventoId: corpo.referenciaId,
+          testeId: teste.id as string,
+          convertido: true,
+        });
+      } catch (e) {
+        // O pagamento/publicação nunca pode ser revertido por uma limpeza.
+        console.error('ConviteIA: falha ao limpar dados do trial na conversão:', e);
+      }
+    }
+
+    const memoriasAtivadas = await ativarMemorias(corpo.referenciaId, corpo.txid ?? null);
+
+    if (slug) revalidatePath(`/convite/${slug}`);
 
     return NextResponse.json({
       ok: true,
@@ -57,7 +77,6 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Checkout/carrinho atual de presentes. referenciaId é o checkout_id.
   const { data: checkout } = await admin.from('presente_checkouts')
     .select('id').eq('id', corpo.referenciaId).maybeSingle();
 
@@ -72,7 +91,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, checkout: true, jaProcessado: processado !== true });
   }
 
-  // Compatibilidade com cobranças antigas de um único presente.
   const { data: pg } = await admin.from('presente_pagamentos')
     .update({ status: 'pago', pago_em: new Date().toISOString() })
     .eq('id', corpo.referenciaId).eq('status', 'pendente')

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 import type { ConviteConfig, SecaoConfig } from './tipos';
+import { expiracaoEfetivaTeste } from './teste';
 
 /** Cliente admin. O schema conviteria nao e exposto ao PostgREST publico. */
 export function adminConviteria() {
@@ -55,29 +56,191 @@ export async function validarTurnstile(token: string | undefined, ip: string) {
   }
 }
 
+type AdminConviteria = ReturnType<typeof adminConviteria>;
+
+type EventoBaseAcesso = {
+  id: string;
+  slug: string;
+  config: unknown;
+  publicado_em: string | null;
+  arquivado: boolean;
+  data_evento: string | null;
+};
+
+type TesteAcesso = {
+  id: string;
+  expira_em: string;
+  convertido_em: string | null;
+};
+
+export type AcessoEventoPublico = {
+  modo: 'publicado' | 'teste';
+  testeId: string | null;
+  testeExpiraEm: string | null;
+};
+
+export type SituacaoEventoPublico =
+  | ({ eventoId: string; slug: string; estado: 'publicado' } & AcessoEventoPublico)
+  | ({ eventoId: string; slug: string; estado: 'teste' } & AcessoEventoPublico)
+  | { eventoId: string; slug: string; estado: 'teste_expirado'; testeId: string; testeExpiraEm: string }
+  | { eventoId: string; slug: string; estado: 'indisponivel'; testeId: null; testeExpiraEm: null };
+
+async function testeDoEvento(admin: AdminConviteria, eventoId: string): Promise<TesteAcesso | null> {
+  const { data } = await admin
+    .from('evento_testes')
+    .select('id,expira_em,convertido_em')
+    .eq('evento_id', eventoId)
+    .maybeSingle();
+  return (data as TesteAcesso | null) ?? null;
+}
+
+function acessoDoTeste(
+  teste: TesteAcesso | null,
+  dataEvento: string | null | undefined,
+  agora = Date.now(),
+): AcessoEventoPublico | null {
+  if (!teste || teste.convertido_em) return null;
+  const expiraEfetiva = expiracaoEfetivaTeste(teste.expira_em, dataEvento);
+  if (new Date(expiraEfetiva).getTime() <= agora) return null;
+  return {
+    modo: 'teste',
+    testeId: teste.id,
+    testeExpiraEm: expiraEfetiva,
+  };
+}
+
+async function resolverAcesso(
+  admin: AdminConviteria,
+  evento: Pick<EventoBaseAcesso, 'id' | 'publicado_em' | 'arquivado' | 'data_evento'>,
+): Promise<AcessoEventoPublico | null> {
+  if (evento.arquivado) return null;
+  if (evento.publicado_em) {
+    return { modo: 'publicado', testeId: null, testeExpiraEm: null };
+  }
+  return acessoDoTeste(await testeDoEvento(admin, evento.id), evento.data_evento);
+}
+
+/**
+ * Retorna um convite quando ele pode ser usado por um convidado: publicação
+ * definitiva OU trial de 24 h ainda válido. `publicado_em` continua sendo a
+ * verdade exclusiva da publicação paga; o trial fica em `evento_testes`.
+ */
+export async function buscarEventoAcessivelPorId(eventoId: string) {
+  const admin = adminConviteria();
+  const { data: evento } = await admin
+    .from('eventos')
+    .select('id,slug,config,publicado_em,arquivado,data_evento')
+    .eq('id', eventoId)
+    .maybeSingle();
+
+  if (!evento) return null;
+  const acesso = await resolverAcesso(admin, evento as EventoBaseAcesso);
+  if (!acesso) return null;
+  return { evento, acesso };
+}
+
+/** Trial ativo de um evento. Utilizado também pelo módulo de Memórias. */
+export async function buscarTesteAtivoEvento(eventoId: string) {
+  const admin = adminConviteria();
+  const { data: evento } = await admin
+    .from('eventos')
+    .select('data_evento,publicado_em,arquivado')
+    .eq('id', eventoId)
+    .maybeSingle();
+  // Publicação definitiva sempre vence o trial, inclusive se uma limpeza
+  // pós-pagamento precisar ser repetida depois pelo cron.
+  if (!evento || evento.arquivado || evento.publicado_em) return null;
+  const teste = await testeDoEvento(admin, eventoId);
+  const acesso = acessoDoTeste(teste, evento.data_evento as string | null);
+  return acesso?.modo === 'teste'
+    ? { id: acesso.testeId!, expiraEm: acesso.testeExpiraEm! }
+    : null;
+}
+
+/**
+ * Estado leve para a página do subdomínio diferenciar trial expirado de slug
+ * inexistente. Não libera conteúdo por si só.
+ */
+export async function buscarSituacaoEventoPorSlug(slug: string): Promise<SituacaoEventoPublico | null> {
+  const admin = adminConviteria();
+  const { data: evento } = await admin
+    .from('eventos')
+    .select('id,slug,publicado_em,arquivado,data_evento')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (!evento || evento.arquivado) return null;
+
+  if (evento.publicado_em) {
+    return {
+      eventoId: evento.id as string,
+      slug: evento.slug as string,
+      estado: 'publicado',
+      modo: 'publicado',
+      testeId: null,
+      testeExpiraEm: null,
+    };
+  }
+
+  const teste = await testeDoEvento(admin, evento.id as string);
+  if (teste && !teste.convertido_em) {
+    const expiraEfetiva = expiracaoEfetivaTeste(
+      teste.expira_em,
+      evento.data_evento as string | null,
+    );
+    if (new Date(expiraEfetiva).getTime() > Date.now()) {
+      return {
+        eventoId: evento.id as string,
+        slug: evento.slug as string,
+        estado: 'teste',
+        modo: 'teste',
+        testeId: teste.id,
+        testeExpiraEm: expiraEfetiva,
+      };
+    }
+    return {
+      eventoId: evento.id as string,
+      slug: evento.slug as string,
+      estado: 'teste_expirado',
+      testeId: teste.id,
+      testeExpiraEm: expiraEfetiva,
+    };
+  }
+
+  return {
+    eventoId: evento.id as string,
+    slug: evento.slug as string,
+    estado: 'indisponivel',
+    testeId: null,
+    testeExpiraEm: null,
+  };
+}
+
 export interface EventoPublico {
   id: string;
   slug: string;
   cfg: ConviteConfig;
+  modoTeste: boolean;
+  testeExpiraEm: string | null;
 }
 
 /**
- * Le o convite publicado. Filtra por `publicado_em`, NUNCA pelo status do
- * plano: quem tem o link e o convidado, e derrubar o convite quebraria o
- * evento de alguem que nem e cliente.
+ * Le o convite definitivamente publicado ou temporariamente liberado pelo
+ * trial. O estado financeiro continua separado: `publicado_em` só é gravado
+ * pelo fluxo já existente de publicação/pagamento.
  */
 export async function buscarEventoPublicado(slug: string): Promise<EventoPublico | null> {
   const admin = adminConviteria();
 
   const { data: evento } = await admin
     .from('eventos')
-    .select('id, slug, config')
+    .select('id,slug,config,publicado_em,arquivado,data_evento')
     .eq('slug', slug)
-    .not('publicado_em', 'is', null)
     .eq('arquivado', false)
     .maybeSingle();
 
   if (!evento) return null;
+  const acesso = await resolverAcesso(admin, evento as EventoBaseAcesso);
+  if (!acesso) return null;
 
   const [{ data: secoes }, { data: presentes }] = await Promise.all([
     admin.from('evento_secoes').select('tipo, ordem, ativo, config')
@@ -92,6 +255,8 @@ export async function buscarEventoPublicado(slug: string): Promise<EventoPublico
   return {
     id: evento.id as string,
     slug: evento.slug as string,
+    modoTeste: acesso.modo === 'teste',
+    testeExpiraEm: acesso.testeExpiraEm,
     cfg: {
       ...cfg,
       secoes: (secoes ?? []) as unknown as SecaoConfig[],

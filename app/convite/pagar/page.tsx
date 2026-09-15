@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
 import RendaBackground from '@/components/conviteria/RendaBackground';
 import {
-  AlertCircle, Check, CheckCircle2, Copy, ExternalLink, Images, Loader2,
+  AlertCircle, Check, CheckCircle2, Clock3, Copy, ExternalLink, Images, Loader2,
   MonitorPlay, QrCode, Video,
 } from 'lucide-react';
 import { MARCA } from '@/lib/conviteria/marca';
@@ -30,7 +30,21 @@ type Info = {
   origemPlano: 'avulso' | 'mensal';
   conviteCentavos: number;
   pixConvitePendente: boolean;
-  memorias: { precoCentavos: number; status: string; ativas: boolean; expiraEm: string | null };
+  teste: {
+    usado: boolean;
+    ativo: boolean;
+    elegivel: boolean;
+    iniciadoEm: string | null;
+    expiraEm: string | null;
+    motivo: string | null;
+  };
+  memorias: {
+    precoCentavos: number;
+    status: string;
+    ativas: boolean;
+    emTeste?: boolean;
+    expiraEm: string | null;
+  };
 };
 type Cobranca = {
   transactionId: string;
@@ -58,6 +72,7 @@ function PagarConteudo() {
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
   const [urlConvite, setUrlConvite] = useState<string | null>(null);
+  const [iniciandoTeste, setIniciandoTeste] = useState(false);
   const emVoo = useRef(false);
 
   const autorizacao = useCallback(async () => {
@@ -75,8 +90,6 @@ function PagarConteudo() {
     const j = await r.json().catch(() => null);
     if (!r.ok) throw new Error(j?.erro ?? 'Não foi possível carregar o pagamento.');
     setInfo(j);
-    // Uma cobrança de Memórias já iniciada não pode ser silenciosamente
-    // trocada por outra combinação ao recarregar a página.
     if (j.memorias?.status === 'aguardando_pagamento') setIncluirMemorias(true);
     else if (j.pixConvitePendente) setIncluirMemorias(false);
     else if (querMemoriasPorUrl) setIncluirMemorias(true);
@@ -89,8 +102,6 @@ function PagarConteudo() {
       try {
         const i = await carregarInfo();
         if (cancelado) return;
-        // Se entrou pelo painel para comprar o add-on, ou veio da criação, a
-        // oferta aparece antes de qualquer PIX ser criado.
         if (i.publicado && i.memorias.ativas) {
           setUrlConvite(i.url); setPasso('sucesso');
         } else setPasso('oferta');
@@ -114,30 +125,14 @@ function PagarConteudo() {
     if (j.concluido) {
       if (cobranca) {
         const value = cobranca.valorCentavos / 100;
-        const itemName = cobranca.incluiMemorias
-          ? 'Convite + Memórias do Evento'
-          : 'ConviteIA';
-
-        // Usa a mesma chave de deduplicação que o fallback legado de
-        // ProductAnalytics. Como este trecho roda antes de a tela de sucesso
-        // aparecer, o evento correto (valor real + transaction_id do PIX)
-        // vence e impede o fallback fixo de R$ 29,90 de duplicar a compra.
+        const itemName = cobranca.incluiMemorias ? 'Convite + Memórias do Evento' : 'ConviteIA';
         trackEventOnce(`conviteia:purchase:${eventoId}`, 'purchase', {
-          product: 'conviteia',
-          currency: 'BRL',
-          value,
-          item_name: itemName,
+          product: 'conviteia', currency: 'BRL', value, item_name: itemName,
           item_category: cobranca.incluiMemorias ? 'invite_with_memories' : 'invite',
           transaction_id: cobranca.transactionId,
         });
-
-        trackConviteIAMetaPurchase({
-          transactionId: cobranca.transactionId,
-          value,
-          includesMemories: cobranca.incluiMemorias,
-        });
+        trackConviteIAMetaPurchase({ transactionId: cobranca.transactionId, value, includesMemories: cobranca.incluiMemorias });
       }
-
       localStorage.removeItem('conviteia:rascunho');
       setUrlConvite(j.url);
       setPasso('sucesso');
@@ -147,24 +142,41 @@ function PagarConteudo() {
     return false;
   }, [autorizacao, eventoId, cobranca, incluirMemorias, carregarInfo]);
 
+  async function iniciarTeste() {
+    if (!info || !eventoId || iniciandoTeste) return;
+    setErro(null);
+    setIniciandoTeste(true);
+    try {
+      const acesso = await autorizacao();
+      if (!acesso) throw new Error('Faça login para continuar.');
+      const r = await fetch('/api/conviteria/teste', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${acesso}` },
+        body: JSON.stringify({ eventoId }),
+      });
+      const j = await r.json().catch(() => null);
+      if (!r.ok) throw new Error(j?.erro ?? 'Não foi possível iniciar o teste.');
+      await carregarInfo().catch(() => undefined);
+      window.location.assign(j.url || info.url);
+    } catch (e: any) {
+      setErro(e?.message ?? 'Não foi possível iniciar o teste.');
+    } finally {
+      setIniciandoTeste(false);
+    }
+  }
+
   async function continuar() {
     if (!info || !eventoId) return;
     setErro(null);
-
-    // Mensal ou convite já publicado sem add-on: não há cobrança. Apenas
-    // conclui o fluxo e preserva o convite que já está no ar.
     const totalPrevisto = info.conviteCentavos + (incluirMemorias && !info.memorias.ativas ? info.memorias.precoCentavos : 0);
     if (totalPrevisto === 0) {
       localStorage.removeItem('conviteia:rascunho');
-      setUrlConvite(info.url);
-      setPasso('sucesso');
-      return;
+      setUrlConvite(info.url); setPasso('sucesso'); return;
     }
 
     setPasso('gerando');
     const acesso = await autorizacao();
     if (!acesso) { setErro('Faça login para continuar.'); setPasso('oferta'); return; }
-
     const r = await fetch('/api/conviteria/cobrar-convite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${acesso}` },
@@ -172,28 +184,19 @@ function PagarConteudo() {
     });
     const j = await r.json().catch(() => null);
     if (!r.ok) { setErro(j?.erro ?? 'Não foi possível gerar o PIX.'); setPasso('oferta'); return; }
-    if (j.semCobranca) {
-      setUrlConvite(info.url); setPasso('sucesso'); return;
-    }
+    if (j.semCobranca) { setUrlConvite(info.url); setPasso('sucesso'); return; }
 
     const proximaCobranca: Cobranca = {
-      transactionId: String(j.transactionId),
-      valorCentavos: Number(j.valorCentavos),
-      conviteCentavos: Number(j.conviteCentavos || 0),
-      memoriasCentavos: Number(j.memoriasCentavos || 0),
-      incluiMemorias: Boolean(j.incluiMemorias),
-      qrcode: j.qrcode,
-      copiaECola: j.copiaECola,
+      transactionId: String(j.transactionId), valorCentavos: Number(j.valorCentavos),
+      conviteCentavos: Number(j.conviteCentavos || 0), memoriasCentavos: Number(j.memoriasCentavos || 0),
+      incluiMemorias: Boolean(j.incluiMemorias), qrcode: j.qrcode, copiaECola: j.copiaECola,
     };
-
     setCobranca(proximaCobranca);
-
     trackConviteIAMetaInitiateCheckout({
       transactionId: proximaCobranca.transactionId,
       value: proximaCobranca.valorCentavos / 100,
       includesMemories: proximaCobranca.incluiMemorias,
     });
-
     setPasso('pix');
   }
 
@@ -242,10 +245,26 @@ function PagarConteudo() {
           {(passo === 'carregando' || passo === 'gerando' || passo === 'conferindo') && <div className="flex flex-col items-center py-12"><Loader2 className="mb-3 h-9 w-9 animate-spin" style={{ color: cor.acento }} /><p style={{ color: cor.tinta }}>{passo === 'carregando' ? 'Preparando…' : passo === 'gerando' ? 'Gerando o PIX…' : 'Conferindo o pagamento…'}</p></div>}
 
           {passo === 'oferta' && info && <div>
+            {info.teste.ativo && info.teste.expiraEm && !info.publicado && (
+              <div className="mb-5 rounded-2xl border border-[#c0607844] bg-[#fff5f8] p-4">
+                <div className="flex items-start gap-3">
+                  <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-[#a04a63]" />
+                  <div className="min-w-0 flex-1">
+                    <strong style={{ color: cor.tinta }}>Seu teste de 24 horas está ativo</strong>
+                    <p className="mt-1 text-sm leading-5" style={{ color: cor.tintaSuave }}>O endereço real, dashboard, RSVP, recados e uma demonstração de Memórias estão liberados até {new Date(info.teste.expiraEm).toLocaleString('pt-BR')}.</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <a href={info.url} className="rounded-lg bg-[#c06078] px-3 py-2 text-xs font-semibold text-white">Abrir meu teste</a>
+                      <a href="/convite/painel" className="rounded-lg border border-[#c0607855] px-3 py-2 text-xs font-semibold text-[#a04a63]">Abrir dashboard</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {!info.memorias.ativas && <button type="button" disabled={memoriaPendente || info.pixConvitePendente} onClick={() => setIncluirMemorias((v) => !v)} className="w-full rounded-2xl border-2 p-4 text-left transition disabled:cursor-default" style={{ borderColor: incluirMemorias ? cor.acento : cor.acento + '32', backgroundColor: incluirMemorias ? cor.papel : '#fff' }}>
               <div className="flex items-start gap-3">
                 <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl" style={{ backgroundColor: cor.acento + '18', color: cor.acentoTexto }}><Images className="h-5 w-5" /></div>
-                <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><strong style={{ color: cor.tinta }}>Memórias do Evento</strong><strong style={{ color: cor.acentoTexto }}>+ {brl(info.memorias.precoCentavos)}</strong></div><p className="mt-1 text-sm leading-5" style={{ color: cor.tintaSuave }}>Seus convidados enviam fotos e vídeos por QR Code. Você recebe um álbum com slideshow ao vivo para TV, telão ou painel.</p><div className="mt-3 grid grid-cols-2 gap-2 text-xs" style={{ color: cor.tintaSuave }}><span className="flex items-center gap-1"><Images className="h-3.5 w-3.5" />300 fotos</span><span className="flex items-center gap-1"><Video className="h-3.5 w-3.5" />30 vídeos</span><span className="flex items-center gap-1"><QrCode className="h-3.5 w-3.5" />QR para convidados</span><span className="flex items-center gap-1"><MonitorPlay className="h-3.5 w-3.5" />Modo Festa</span></div></div>
+                <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><strong style={{ color: cor.tinta }}>Memórias do Evento</strong><strong style={{ color: cor.acentoTexto }}>+ {brl(info.memorias.precoCentavos)}</strong></div><p className="mt-1 text-sm leading-5" style={{ color: cor.tintaSuave }}>Seus convidados enviam fotos e vídeos por QR Code. Você recebe um álbum com slideshow ao vivo para TV, telão ou painel.</p><div className="mt-3 grid grid-cols-2 gap-2 text-xs" style={{ color: cor.tintaSuave }}><span className="flex items-center gap-1"><Images className="h-3.5 w-3.5" />300 fotos</span><span className="flex items-center gap-1"><Video className="h-3.5 w-3.5" />30 vídeos</span><span className="flex items-center gap-1"><QrCode className="h-3.5 w-3.5" />QR para convidados</span><span className="flex items-center gap-1"><MonitorPlay className="h-3.5 w-3.5" />Modo Festa</span></div>{info.memorias.emTeste && <p className="mt-3 rounded-lg bg-white/80 px-3 py-2 text-xs">No teste: 10 fotos, 2 vídeos e 30 MB. Ao contratar, os limites completos são liberados.</p>}</div>
                 <span className="mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-md border" style={{ borderColor: incluirMemorias ? cor.acento : cor.acento + '55', backgroundColor: incluirMemorias ? cor.acento : '#fff', color:'#fff' }}>{incluirMemorias && <Check className="h-4 w-4" />}</span>
               </div>
               {memoriaPendente && <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">Há um PIX de Memórias pendente para este convite. Ele será reutilizado.</p>}
@@ -265,6 +284,24 @@ function PagarConteudo() {
 
             <button onClick={() => void continuar()} className="mt-5 w-full rounded-lg py-3 font-semibold" style={{ backgroundColor: cor.acento, color: cor.blocoTexto }}>{total > 0 ? 'Continuar para o PIX' : 'Continuar sem Memórias'}</button>
             {!incluirMemorias && !info.memorias.ativas && <p className="mt-2 text-center text-xs" style={{ color: cor.tintaSuave }}>Você pode ativar Memórias depois pelo painel deste convite.</p>}
+
+            {!info.publicado && !info.teste.ativo && info.teste.elegivel && (
+              <div className="mt-6 border-t pt-5" style={{ borderColor: cor.acento + '22' }}>
+                <button disabled={iniciandoTeste} onClick={() => void iniciarTeste()} className="flex w-full items-center justify-center gap-2 rounded-lg border-2 py-3 font-semibold disabled:opacity-60" style={{ borderColor: cor.acento + '70', color: cor.acentoTexto, backgroundColor:'#fff' }}>
+                  {iniciandoTeste ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock3 className="h-4 w-4" />}
+                  {iniciandoTeste ? 'Preparando seu teste…' : 'Testar grátis por 24 horas'}
+                </button>
+                <p className="mt-2 text-center text-xs leading-5" style={{ color: cor.tintaSuave }}>Abra o subdomínio real, explore o dashboard, teste RSVP, recados e Memórias antes de pagar. Uma utilização por conta.</p>
+              </div>
+            )}
+
+            {!info.publicado && !info.teste.ativo && info.teste.usado && (
+              <p className="mt-5 rounded-xl bg-[#fff9fb] px-4 py-3 text-center text-xs" style={{ color: cor.tintaSuave }}>O teste gratuito de 24 horas desta conta já foi utilizado. Seu convite continua salvo e pode ser publicado normalmente.</p>
+            )}
+
+            {!info.publicado && !info.teste.ativo && !info.teste.usado && !info.teste.elegivel && info.teste.motivo && (
+              <p className="mt-5 text-center text-xs" style={{ color: cor.tintaSuave }}>{info.teste.motivo}</p>
+            )}
           </div>}
 
           {passo === 'pix' && cobranca && <div className="flex flex-col items-center gap-4">

@@ -1,4 +1,8 @@
-import { adminConviteria, adminPublic } from './servidor';
+import {
+  adminConviteria,
+  adminPublic,
+  buscarEventoAcessivelPorId,
+} from './servidor';
 import {
   MEMORIAS_BUCKET,
   MEMORIAS_LIMITE_BYTES,
@@ -20,6 +24,9 @@ export interface EventoMemoriasPublico {
   titulo: string;
   dataEvento: string | null;
   fotoCapa: string | null;
+  modoTeste: boolean;
+  testeId: string | null;
+  testeExpiraEm: string | null;
   memorias: {
     status: string;
     aprovacaoManual: boolean;
@@ -34,11 +41,12 @@ export async function buscarEventoMemoriasPublicado(slug: string): Promise<Event
     .from('eventos')
     .select('id,slug,config,data_evento,publicado_em,arquivado')
     .eq('slug', slug)
-    .not('publicado_em', 'is', null)
     .eq('arquivado', false)
     .maybeSingle();
 
   if (!evento) return null;
+  const acesso = await buscarEventoAcessivelPorId(evento.id as string);
+  if (!acesso) return null;
 
   const { data: pacote } = await admin
     .from('evento_memorias_config')
@@ -46,7 +54,9 @@ export async function buscarEventoMemoriasPublicado(slug: string): Promise<Event
     .eq('evento_id', evento.id)
     .maybeSingle();
 
-  if (!pacote || pacote.status !== 'ativo') return null;
+  const modoTeste = acesso.acesso.modo === 'teste';
+  const statusPermitido = pacote?.status === 'ativo' || (modoTeste && ['teste', 'aguardando_pagamento'].includes(String(pacote?.status)));
+  if (!pacote || !statusPermitido) return null;
   if (pacote.expira_em && new Date(pacote.expira_em) <= new Date()) return null;
 
   const cfg = (evento.config ?? {}) as Record<string, any>;
@@ -56,6 +66,9 @@ export async function buscarEventoMemoriasPublicado(slug: string): Promise<Event
     titulo: cfg.anfitrioes?.exibicao || 'Nosso evento',
     dataEvento: (evento.data_evento as string | null) ?? null,
     fotoCapa: cfg.midia?.fotoCapa ?? cfg.midia?.fotoPrincipal ?? null,
+    modoTeste,
+    testeId: modoTeste ? acesso.acesso.testeId : null,
+    testeExpiraEm: modoTeste ? acesso.acesso.testeExpiraEm : null,
     memorias: {
       status: pacote.status as string,
       aprovacaoManual: Boolean(pacote.aprovacao_manual),
@@ -151,6 +164,11 @@ export async function ativarMemorias(eventoId: string, txid?: string | null) {
     .from('evento_memorias_config')
     .update({
       status: 'ativo',
+      limite_fotos: MEMORIAS_LIMITE_FOTOS,
+      limite_videos: MEMORIAS_LIMITE_VIDEOS,
+      limite_bytes: MEMORIAS_LIMITE_BYTES,
+      video_max_segundos: MEMORIAS_VIDEO_MAX_SEGUNDOS,
+      video_max_bytes: MEMORIAS_VIDEO_MAX_BYTES,
       comprado_em: agora.toISOString(),
       expira_em: expiraEm,
       updated_at: agora.toISOString(),
@@ -158,7 +176,6 @@ export async function ativarMemorias(eventoId: string, txid?: string | null) {
     .eq('evento_id', eventoId)
     .eq('status', 'aguardando_pagamento');
 
-  // Se o webhook recebeu txid, evita que um PIX antigo ative uma compra nova.
   if (txid) q = q.eq('pix_txid', txid);
   const { data, error } = await q.select('evento_id').maybeSingle();
   if (error) console.error('Falha ao ativar Memórias:', error);
@@ -212,7 +229,9 @@ export function resumoPublico(evento: EventoMemoriasPublico) {
     fotoCapa: evento.fotoCapa,
     expiraEm: evento.memorias.expiraEm,
     aprovacaoManual: evento.memorias.aprovacaoManual,
-    modoFestaAtivo: festaEstaAtiva(evento.dataEvento),
+    modoTeste: evento.modoTeste,
+    testeExpiraEm: evento.testeExpiraEm,
+    modoFestaAtivo: evento.modoTeste || festaEstaAtiva(evento.dataEvento),
     urlMemorias: urlMemorias(evento.slug),
     urlAlbum: urlAlbum(evento.slug),
     desafios: {

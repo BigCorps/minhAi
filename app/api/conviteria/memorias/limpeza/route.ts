@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminConviteria, adminPublic } from '@/lib/conviteria/servidor';
 import { MEMORIAS_BUCKET } from '@/lib/conviteria/memorias-config';
+import { limparDadosDoTeste } from '@/lib/conviteria/teste-servidor';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -26,7 +27,9 @@ export async function GET(req: NextRequest) {
   const agora = new Date().toISOString();
   let eventosExpirados = 0;
   let reservasLimpas = 0;
+  let testesLimpos = 0;
 
+  // Retenção normal de Memórias compradas: regra já existente, preservada.
   const { data: pacotes } = await admin.from('evento_memorias_config')
     .select('evento_id')
     .eq('status', 'ativo')
@@ -51,6 +54,28 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Trial expirado: o acesso público já é bloqueado pelo timestamp. Este trecho
+  // apenas remove os dados de demonstração e devolve Memórias ao estado normal.
+  const { data: testes } = await admin.from('evento_testes')
+    .select('id,evento_id')
+    .is('convertido_em', null)
+    .is('limpo_em', null)
+    .lt('expira_em', agora)
+    .limit(30);
+
+  for (const teste of testes ?? []) {
+    try {
+      if (teste.evento_id) {
+        await limparDadosDoTeste({ eventoId: teste.evento_id as string, testeId: teste.id as string });
+      } else {
+        await admin.from('evento_testes').update({ limpo_em: agora, updated_at: agora }).eq('id', teste.id);
+      }
+      testesLimpos++;
+    } catch (e) {
+      console.error('Falha ao limpar trial ConviteIA:', teste.id, e);
+    }
+  }
+
   const { data: reservas } = await admin.from('evento_memorias')
     .select('id,storage_path')
     .eq('status', 'reservado')
@@ -58,14 +83,10 @@ export async function GET(req: NextRequest) {
     .limit(200);
 
   for (const r of reservas ?? []) {
-    try {
-      await removerCaminhos([r.storage_path]); // remove é idempotente se o objeto nem chegou a existir
-    } catch {
-      // Mesmo sem objeto, a reserva precisa deixar de consumir quota.
-    }
+    try { await removerCaminhos([r.storage_path]); } catch { /* objeto pode nem ter sido enviado */ }
     await admin.from('evento_memorias').update({ status: 'excluido', updated_at: agora }).eq('id', r.id);
     reservasLimpas++;
   }
 
-  return NextResponse.json({ ok: true, eventosExpirados, reservasLimpas });
+  return NextResponse.json({ ok: true, eventosExpirados, testesLimpos, reservasLimpas });
 }

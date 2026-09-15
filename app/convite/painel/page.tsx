@@ -31,6 +31,15 @@ interface Convite {
   dataExtenso: string | null;
   publicado: boolean;
   url: string;
+  teste: { usado: boolean; desteEvento: boolean; ativo: boolean; expiraEm: string | null };
+}
+
+function tempoRestante(expiraEm: string | null, agora: number) {
+  if (!expiraEm) return '';
+  const ms = Math.max(0, new Date(expiraEm).getTime() - agora);
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  return `${h}h ${String(m).padStart(2, '0')}min`;
 }
 
 export default function PainelPage() {
@@ -38,6 +47,7 @@ export default function PainelPage() {
   const [convites, setConvites] = useState<Convite[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [nome, setNome] = useState('');
+  const [agora, setAgora] = useState(() => Date.now());
   const router = useRouter();
   const [supabase] = useState(() => createClient());
 
@@ -48,7 +58,9 @@ export default function PainelPage() {
 
     setNome((data.session?.user.user_metadata?.name as string) || data.session?.user.email || '');
     try {
-      const r = await fetch('/api/conviteria/meus-convites', { headers: { Authorization: `Bearer ${acesso}` } });
+      const r = await fetch('/api/conviteria/meus-convites', {
+        headers: { Authorization: `Bearer ${acesso}` }, cache: 'no-store',
+      });
       const d = await r.json();
       if (!r.ok) throw new Error(d?.erro ?? 'Falha ao carregar.');
       setConvites(d.convites ?? []);
@@ -58,6 +70,11 @@ export default function PainelPage() {
   }, [router, supabase]);
 
   useEffect(() => { void carregar(); }, [carregar]);
+  useEffect(() => {
+    const id = window.setInterval(() => setAgora(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
   async function sair() { await supabase.auth.signOut(); router.replace('/convite'); }
 
   return (
@@ -87,25 +104,45 @@ export default function PainelPage() {
         {!carregando && !erro && convites.length === 0 && <div className="rounded-2xl border px-6 py-12 text-center" style={{ backgroundColor: cor.fora, borderColor: cor.acento + '33' }}><p className="mb-2 font-medium" style={{ color: cor.tinta }}>Você ainda não criou nenhum convite.</p><p className="mb-6 text-sm" style={{ color: cor.tintaSuave }}>Leva alguns minutos, e você só paga quando publicar.</p><Link href="/convite/criar" className="inline-flex rounded-full px-6 py-3 font-semibold" style={{ backgroundColor: cor.acento, color: cor.blocoTexto }}>Criar meu convite</Link></div>}
 
         <ul className="space-y-3">
-          {convites.map((c) => <li key={c.id} className="rounded-2xl border px-5 py-4" style={{ backgroundColor: cor.fora, borderColor: cor.acento + '33' }}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0"><p className="truncate font-semibold" style={{ color: cor.tinta }}>{c.titulo}</p>{c.dataExtenso && <p className="text-sm" style={{ color: cor.tintaSuave }}>{c.dataExtenso}</p>}<p className="mt-1 truncate text-xs" style={{ color: cor.tintaSuave }}>{c.slug}.conviteia.com</p></div>
-              <div className="flex flex-shrink-0 items-center gap-4">
-                <Link href={`/convite/editar/${c.id}`} className="flex items-center gap-1.5 text-sm font-medium" style={{ color: cor.tintaSuave }}><Pencil className="h-4 w-4" />Editar</Link>
-                {c.publicado ? <a href={c.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm font-medium" style={{ color: cor.acentoTexto }}>Ver<ExternalLink className="h-4 w-4" /></a> : <Link href={`/convite/pagar?evento=${c.id}`} className="flex items-center gap-1.5 text-sm font-medium" style={{ color: cor.acentoTexto }}><Clock className="h-4 w-4" />Publicar</Link>}
+          {convites.map((c) => {
+            const trialAindaAtivo = c.teste.ativo && !!c.teste.expiraEm && new Date(c.teste.expiraEm).getTime() > agora;
+            const acessivel = c.publicado || trialAindaAtivo;
+            return <li key={c.id} className="rounded-2xl border px-5 py-4" style={{ backgroundColor: cor.fora, borderColor: cor.acento + '33' }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0"><p className="truncate font-semibold" style={{ color: cor.tinta }}>{c.titulo}</p>{c.dataExtenso && <p className="text-sm" style={{ color: cor.tintaSuave }}>{c.dataExtenso}</p>}<p className="mt-1 truncate text-xs" style={{ color: cor.tintaSuave }}>{c.slug}.conviteia.com</p></div>
+                <div className="flex flex-shrink-0 items-center gap-4">
+                  <Link href={`/convite/editar/${c.id}`} className="flex items-center gap-1.5 text-sm font-medium" style={{ color: cor.tintaSuave }}><Pencil className="h-4 w-4" />Editar</Link>
+                  {acessivel ? <a href={c.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm font-medium" style={{ color: cor.acentoTexto }}>Ver<ExternalLink className="h-4 w-4" /></a> : <Link href={`/convite/pagar?evento=${c.id}`} className="flex items-center gap-1.5 text-sm font-medium" style={{ color: cor.acentoTexto }}><Clock className="h-4 w-4" />Publicar</Link>}
+                </div>
               </div>
-            </div>
 
-            {c.publicado && <>
-              <div className="mt-3 border-t pt-3" style={{ borderColor: cor.acento + '22' }}><AcoesConvite url={c.url} slug={c.slug} /></div>
-              <MemoriasPainel eventoId={c.id} slug={c.slug} titulo={c.titulo} />
-              <CompartilharWhatsappPainel eventoId={c.id} titulo={c.titulo} url={c.url} />
-              <PresencasPainel eventoId={c.id} />
-              <PagamentosPresentesPainel eventoId={c.id} />
-              <SaldoSaque eventoId={c.id} />
-              <RecadosPainel eventoId={c.id} />
-            </>}
-          </li>)}
+              {trialAindaAtivo && !c.publicado && (
+                <div className="mt-4 rounded-xl border border-[#c0607840] bg-[#fff5f8] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-[#40232c]">Modo Teste · {tempoRestante(c.teste.expiraEm, agora)} restantes</p>
+                      <p className="mt-1 text-xs leading-5 text-[#7c5560]">Subdomínio real, RSVP, recados e Memórias de demonstração estão ativos. Pagamentos de presentes e saldo ficam bloqueados até a publicação.</p>
+                    </div>
+                    <Link href={`/convite/pagar?evento=${c.id}`} className="rounded-lg bg-[#c06078] px-3 py-2 text-xs font-semibold text-white">Publicar definitivamente</Link>
+                  </div>
+                </div>
+              )}
+
+              {!c.publicado && c.teste.desteEvento && !trialAindaAtivo && (
+                <div className="mt-4 rounded-xl bg-[#fff9fb] p-3 text-xs text-[#7c5560]">O teste terminou. Todas as configurações continuam salvas. <Link href={`/convite/pagar?evento=${c.id}`} className="font-semibold text-[#a04a63]">Publicar este convite</Link>.</div>
+              )}
+
+              {acessivel && <>
+                <div className="mt-3 border-t pt-3" style={{ borderColor: cor.acento + '22' }}><AcoesConvite url={c.url} slug={c.slug} /></div>
+                <MemoriasPainel eventoId={c.id} slug={c.slug} titulo={c.titulo} />
+                <CompartilharWhatsappPainel eventoId={c.id} titulo={c.titulo} url={c.url} />
+                <PresencasPainel eventoId={c.id} modoTeste={!c.publicado} />
+                {c.publicado && <PagamentosPresentesPainel eventoId={c.id} />}
+                {c.publicado && <SaldoSaque eventoId={c.id} />}
+                <RecadosPainel eventoId={c.id} />
+              </>}
+            </li>;
+          })}
         </ul>
 
         <div id="plano-mensal" className="mt-8 scroll-mt-6"><PlanoMensalCard /></div>

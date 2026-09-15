@@ -8,13 +8,6 @@ import ModalPresentes from '../ModalPresentes';
 export default function Presentes({ cfg, secao, modo }: PropsSecao) {
   const [aberto, setAberto] = useState(false);
 
-  // Duas fontes para a mesma lista. No convite publicado, `presentes` vem do
-  // servidor com o id real de cada linha da tabela — e e esse id que o modal
-  // usa para gerar o PIX. Na previa do wizard esse id nao existe ainda, entao
-  // caimos em `presentesEscolhidos`, que e o snapshot dentro do config.
-  //
-  // Sem esse fallback a secao devolvia null na previa e a lista de presentes
-  // simplesmente nao aparecia.
   const lista: PresenteExibicao[] = cfg.presentes?.length
     ? cfg.presentes
     : (cfg.presentesEscolhidos ?? []).map((p) => ({
@@ -38,14 +31,29 @@ export default function Presentes({ cfg, secao, modo }: PropsSecao) {
           'O maior presente é dividir esse dia com você. Mas, se quiser nos presentear, escolha uma cota.'}
       </p>
 
-      <button
-        type="button"
-        className="cv-botao"
-        disabled={modo.previa || !modo.eventoId}
-        onClick={() => setAberto(true)}
-      >
-        {c.rotuloBotao ?? 'Ver lista de presentes'}
-      </button>
+      {!modo.teste ? (
+        <button
+          type="button"
+          className="cv-botao"
+          disabled={modo.previa || !modo.eventoId}
+          onClick={() => setAberto(true)}
+        >
+          {c.rotuloBotao ?? 'Ver lista de presentes'}
+        </button>
+      ) : (
+        <div className="mx-auto mt-5 w-full max-w-xl rounded-2xl border border-black/10 bg-white/55 p-3 text-left">
+          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[.12em] opacity-65">Demonstração da lista</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {lista.map((p) => (
+              <div key={p.id} className="rounded-xl border border-black/10 bg-white/70 px-3 py-2">
+                <p className="truncate text-sm font-semibold">{p.titulo}</p>
+                <p className="mt-0.5 text-xs opacity-70">{p.valorCentavos > 0 ? (p.valorCentavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'Valor livre'}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-center text-xs opacity-70">No modo teste, nenhum pagamento é gerado. PIX e cartão são liberados após a publicação definitiva.</p>
+        </div>
+      )}
 
       <p className="cv-presentes-contagem">
         {disponiveis === 0
@@ -53,7 +61,7 @@ export default function Presentes({ cfg, secao, modo }: PropsSecao) {
           : `${disponiveis} ${disponiveis === 1 ? 'opção disponível' : 'opções disponíveis'}`}
       </p>
 
-      {aberto && modo.eventoId && (
+      {aberto && modo.eventoId && !modo.teste && (
         <ModalPresentes
           eventoId={modo.eventoId}
           presentes={lista}

@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
   if (!evento) return NextResponse.json({ erro: 'Memórias indisponíveis.' }, { status: 404 });
 
   const pacote = await pacoteDoEvento(evento.id);
-  if (!pacote || pacote.status !== 'ativo') {
+  const pacotePermitido = pacote?.status === 'ativo' || (evento.modoTeste && ['teste', 'aguardando_pagamento'].includes(String(pacote?.status)));
+  if (!pacote || !pacotePermitido) {
     return NextResponse.json({ erro: 'O álbum não está ativo.' }, { status: 403 });
   }
 
@@ -138,6 +139,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ erro: 'Não foi possível reservar espaço para o arquivo.' }, { status: 500 });
   }
 
+  if (evento.testeId) {
+    const { error: marcaError } = await admin.from('evento_memorias')
+      .update({ teste_id: evento.testeId, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('evento_id', evento.id)
+      .eq('status', 'reservado');
+    if (marcaError) {
+      await admin.from('evento_memorias').update({ status: 'excluido' }).eq('id', id);
+      return NextResponse.json({ erro: 'Não foi possível identificar o envio de teste.' }, { status: 500 });
+    }
+  }
+
   const storage = adminPublic().storage.from(MEMORIAS_BUCKET);
   const { data: signed, error: signedError } = await storage.createSignedUploadUrl(storagePath);
   if (signedError || !signed?.token) {
@@ -151,5 +164,6 @@ export async function POST(req: NextRequest) {
     path: storagePath,
     token: signed.token,
     reservaExpiraEm: reservaExpira.toISOString(),
+    modoTeste: evento.modoTeste,
   });
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Users, Search, Mail, Phone, Loader2, User } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
+import { listCompanyClientsManaged } from '@/lib/orders-client';
 
 interface VerClientesDisplayProps {
   data: {
@@ -71,71 +72,24 @@ export default function VerClientesDisplay({
     };
   }, []);
 
-  // Buscar clientes da empresa
+  // Buscar clientes via servidor autorizado (owner/admin/profile_session operacional)
   useEffect(() => {
     async function fetchClientes() {
       setLoading(true);
       try {
-        // Busca perfis do tipo 'cliente' na empresa
-        const { data: clientesData, error } = await supabase
-          .from('company_profiles')
-          .select(`
-            id,
-            nome,
-            email,
-            telefone,
-            identificador,
-            created_at
-          `)
-          .eq('company_id', companyId)
-          .eq('tipo', 'cliente')
-          .eq('is_active', true)
-          .order('nome', { ascending: true });
-
-        if (error) throw error;
-
-        // Para cada cliente, busca total de pedidos e último pedido
-        const clientesComStats = await Promise.all(
-          (clientesData || []).map(async (cliente) => {
-            const { count } = await supabase
-              .from('pedidos')
-              .select('*', { count: 'exact', head: true })
-              .eq('company_id', companyId)
-              .eq('profile_id', cliente.id);
-
-            const { data: ultimoPedido } = await supabase
-              .from('pedidos')
-              .select('created_at')
-              .eq('company_id', companyId)
-              .eq('profile_id', cliente.id)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            return {
-              ...cliente,
-              total_pedidos: count || 0,
-              ultimo_pedido: ultimoPedido?.created_at || null,
-            };
-          })
-        );
-
-        setClientes(clientesComStats);
-        setFilteredClientes(clientesComStats);
-
-        // Fala quantidade de clientes
-        if (playText && clientesComStats.length > 0) {
-          await playText(`${clientesComStats.length} ${clientesComStats.length === 1 ? 'cliente cadastrado' : 'clientes cadastrados'}.`);
-        }
-
+        const rows = await listCompanyClientsManaged(companyId);
+        setClientes(rows);
+        setFilteredClientes(rows);
+        if (playText && rows.length > 0) await playText(String(rows.length) + ' ' + (rows.length === 1 ? 'cliente cadastrado' : 'clientes cadastrados') + '.');
       } catch (error) {
         console.error('Erro ao buscar clientes:', error);
+        setClientes([]);
+        setFilteredClientes([]);
       } finally {
         setLoading(false);
       }
     }
-
-    fetchClientes();
+    void fetchClientes();
   }, [companyId]);
 
   // Filtrar clientes

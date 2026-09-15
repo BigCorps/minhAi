@@ -95,3 +95,26 @@ export async function vincularPerfilAposPix(input: {
     cliente_nome?: string | null;
   };
 }
+
+
+async function requestOrderRead<T>(payload: Record<string, unknown>): Promise<T> {
+  const { accessToken, profileTokens } = await collectOrderClientAuth();
+  const response = await fetch('/api/orders/read', {
+    method: 'POST', cache: 'no-store',
+    headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: 'Bearer ' + accessToken } : {}) },
+    body: JSON.stringify({ ...payload, profile_tokens: profileTokens }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error || 'order_read_failed');
+  return data as T;
+}
+
+export async function listCustomerOrdersManaged(companyId: string): Promise<any[]> {
+  const data = await requestOrderRead<{ orders: any[] }>({ mode: 'customer', company_id: companyId });
+  return data.orders || [];
+}
+
+export async function listCompanyClientsManaged(companyId: string): Promise<any[]> {
+  const data = await requestOrderRead<{ clients: any[] }>({ mode: 'clients', company_id: companyId });
+  return data.clients || [];
+}

@@ -14,6 +14,7 @@
 
 // ✅ ADICIONAR ESTE IMPORT NO TOPO
 import { createClient } from '@/lib/supabase-browser';
+import { setAssistantSessionLastFunctions } from '@/lib/assistant-session-client';
 import { cobrar_debito, cobrar_credito } from './paymentGatewayEntries'
 import { getContextualRoute } from '@/lib/routing-utils';
 import { authorizeQueueManaged, callNextQueueManaged, cancelQueueManaged, finalizeQueueManaged, setQueueActiveManaged, startQueueServiceManaged } from '@/lib/queue-client';
@@ -136,11 +137,7 @@ handler: async ({ playText, setActiveModal, companyId, transcript, sessionId }) 
         if (sessionId) {
           try {
             const supabase = createClient();
-            await supabase
-              .from('assistant_sessions')
-              .update({ last_function_keys: ['__pending__link_pagamento'] })
-              .eq('id', sessionId)
-              .eq('company_id', companyId);
+            await setAssistantSessionLastFunctions(companyId, sessionId, ['__pending__link_pagamento']);
           } catch (e) {
             console.error('Erro ao salvar contexto pendente', e);
           }
@@ -217,11 +214,7 @@ handler: async ({ transcript, playText, setActiveModal, companyId, sessionId }) 
     if (!amount) {
       if (sessionId) {
         try {
-          await supabase
-            .from('assistant_sessions')
-            .update({ last_function_keys: ['__pending__tef_debito'] })
-            .eq('id', sessionId)
-            .eq('company_id', companyId);
+          await setAssistantSessionLastFunctions(companyId, sessionId, ['__pending__tef_debito']);
         } catch (e) {
           console.error('Erro ao salvar contexto pendente para tef_debito', e);
         }
@@ -301,11 +294,7 @@ handler: async ({ transcript, playText, setActiveModal, companyId, sessionId }) 
     if (!amount) {
       if (sessionId) {
         try {
-          await supabase
-            .from('assistant_sessions')
-            .update({ last_function_keys: ['__pending__tef_credito'] })
-            .eq('id', sessionId)
-            .eq('company_id', companyId);
+          await setAssistantSessionLastFunctions(companyId, sessionId, ['__pending__tef_credito']);
         } catch (e) {
           console.error('Erro ao salvar contexto pendente para tef_credito', e);
         }
@@ -402,11 +391,7 @@ pix_generate: {
       if (sessionId) {
         try {
           const supabase = createClient();
-          await supabase
-            .from('assistant_sessions')
-            .update({ last_function_keys: ['__pending__pix_generate'] })
-            .eq('id', sessionId)
-            .eq('company_id', companyId);
+          await setAssistantSessionLastFunctions(companyId, sessionId, ['__pending__pix_generate']);
         } catch (e) {
           console.error('Erro ao salvar contexto pendente pix_generate', e);
         }
@@ -480,11 +465,7 @@ handler: async ({ playText, setActiveModal, companyId, transcript, sessionId }) 
         if (sessionId) {
           try {
             const supabase = createClient();
-            await supabase
-              .from('assistant_sessions')
-              .update({ last_function_keys: ['__pending__nfc_debito'] })
-              .eq('id', sessionId)
-              .eq('company_id', companyId);
+            await setAssistantSessionLastFunctions(companyId, sessionId, ['__pending__nfc_debito']);
           } catch (e) {
             console.error('Erro ao salvar contexto pendente', e);
           }
@@ -559,11 +540,7 @@ handler: async ({ playText, setActiveModal, companyId, transcript, sessionId }) 
         if (sessionId) {
           try {
             const supabase = createClient();
-            await supabase
-              .from('assistant_sessions')
-              .update({ last_function_keys: ['__pending__nfc_credito'] })
-              .eq('id', sessionId)
-              .eq('company_id', companyId);
+            await setAssistantSessionLastFunctions(companyId, sessionId, ['__pending__nfc_credito']);
           } catch (e) {
             console.error('Erro ao salvar contexto pendente', e);
           }

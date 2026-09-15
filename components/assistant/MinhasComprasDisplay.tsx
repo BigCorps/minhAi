@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ShoppingBag, Package, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
+import { listCustomerOrdersManaged } from '@/lib/orders-client';
 
 interface MinhasComprasDisplayProps {
   data: {
@@ -70,88 +71,31 @@ export default function MinhasComprasDisplay({
     };
   }, []);
 
-  // Buscar pedidos do cliente logado
+  // Buscar pedidos do cliente autenticado por profile_session
   useEffect(() => {
     async function fetchPedidos() {
       setLoading(true);
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          console.log('Usuário não autenticado');
-          setLoading(false);
-          return;
-        }
-
-        // Busca perfil ativo do cliente
-        const { data: session } = await supabase
-          .from('profile_sessions')
-          .select('profile_id, company_profiles(email, identificador)')
-          .eq('user_id', user.id)
-          .eq('company_id', companyId)
-          .eq('is_active', true)
-          .maybeSingle();
-
-        if (!session?.profile_id) {
-          console.log('Perfil não encontrado');
-          setLoading(false);
-          return;
-        }
-
-        // Busca pedidos do cliente (via email ou identificador)
-        const { data: pedidosData, error } = await supabase
-          .from('pedidos')
-          .select(`
-            id,
-            numero_pedido,
-            created_at,
-            status,
-            total,
-            tipo_pagamento,
-            pedido_itens (
-              quantidade,
-              preco_unitario,
-              produtos_venda (
-                nome
-              )
-            )
-          `)
-          .eq('company_id', companyId)
-          .eq('profile_id', session.profile_id)
-          .order('created_at', { ascending: false })
-          .limit(20);
-
-        if (error) throw error;
-
-        // Formata dados
-        const formatted: Pedido[] = (pedidosData || []).map((p: any) => ({
+        const rows = await listCustomerOrdersManaged(companyId);
+        const formatted: Pedido[] = rows.map((p: any) => ({
           id: p.id,
-          numero_pedido: p.numero_pedido,
+          numero_pedido: p.numero_pedido || String(p.id).slice(0, 8).toUpperCase(),
           created_at: p.created_at,
           status: p.status,
-          total: p.total,
-          tipo_pagamento: p.tipo_pagamento,
-          itens: (p.pedido_itens || []).map((item: any) => ({
-            produto_nome: item.produtos_venda?.nome || 'Produto',
-            quantidade: item.quantidade,
-            preco_unitario: item.preco_unitario,
-          })),
+          total: Number(p.total || 0),
+          tipo_pagamento: p.tipo_pagamento || p.metodo_pagamento || '',
+          itens: p.itens || [],
         }));
-
         setPedidos(formatted);
-
-        // Fala quantidade de pedidos
-        if (playText && formatted.length > 0) {
-          await playText(`Você tem ${formatted.length} ${formatted.length === 1 ? 'pedido' : 'pedidos'}.`);
-        }
-
+        if (playText && formatted.length > 0) await playText('Você tem ' + formatted.length + ' ' + (formatted.length === 1 ? 'pedido' : 'pedidos') + '.');
       } catch (error) {
         console.error('Erro ao buscar pedidos:', error);
+        setPedidos([]);
       } finally {
         setLoading(false);
       }
     }
-
-    fetchPedidos();
+    void fetchPedidos();
   }, [companyId]);
 
   function getStatusConfig(status: string) {

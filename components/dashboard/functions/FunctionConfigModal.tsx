@@ -4747,7 +4747,7 @@ function GoogleCalendarScheduleForm({
       const supabase = createClient();
       const { data, error } = await supabase
         .from('google_accounts')
-        .select('*')
+        .select('id,company_id,google_email,google_user_id,scopes,is_active,expires_at,last_token_refresh,created_at,updated_at,gbp_location_name,gbp_account_name,gbp_last_sync,place_id')
         .eq('company_id', companyId)
         .single();
 

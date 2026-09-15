@@ -1,6 +1,7 @@
 // app/api/voice/vendas/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
 import { synthesizeSpeech, BRAZILIAN_VOICES } from '@/lib/google-tts';
 
 export const runtime = 'nodejs';
@@ -136,6 +137,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient();
+    const sessionDb = createAdminClient();
 
     const { data: company } = await supabase
       .from('companies')
@@ -157,8 +159,7 @@ export async function POST(request: NextRequest) {
     let currentSessionId = sessionId;
 
     if (sessionId) {
-      const { data: session } = await supabase
-        .from('assistant_sessions')
+      const { data: session } = await sessionDb.from('assistant_sessions')
         .select('messages')
         .eq('id', sessionId)
         .eq('company_id', companyId)
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
 
     if (!currentSessionId) {
       currentSessionId = crypto.randomUUID();
-      await supabase.from('assistant_sessions').insert({
+      await sessionDb.from('assistant_sessions').insert({
         id: currentSessionId,
         company_id: companyId,
         messages: [],
@@ -231,8 +232,7 @@ export async function POST(request: NextRequest) {
       conversationHistory = conversationHistory.slice(-10);
     }
 
-    await supabase
-      .from('assistant_sessions')
+    await sessionDb.from('assistant_sessions')
       .update({
         messages: conversationHistory,
         last_activity_at: new Date().toISOString(),

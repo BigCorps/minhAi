@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
 import { processWithGPT } from '@/lib/openai';
 import { synthesizeSpeech, BRAZILIAN_VOICES } from '@/lib/google-tts';
 import { randomUUID } from 'crypto';
@@ -296,6 +297,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient();
+    const sessionDb = createAdminClient();
 
     const { data: company } = await supabase
       .from('companies')
@@ -313,8 +315,7 @@ export async function POST(request: NextRequest) {
     let conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
     if (sessionId) {
-      const { data: session } = await supabase
-        .from('assistant_sessions')
+      const { data: session } = await sessionDb.from('assistant_sessions')
         .select('*')
         .eq('id', sessionId)
         .eq('company_id', companyId)
@@ -332,8 +333,7 @@ export async function POST(request: NextRequest) {
     if (!currentSession) {
       const newSessionId = sessionId || randomUUID();
 
-      const { data: newSession, error: sessionError } = await supabase
-        .from('assistant_sessions')
+      const { data: newSession, error: sessionError } = await sessionDb.from('assistant_sessions')
         .insert({
           id: newSessionId,
           company_id: companyId,
@@ -557,8 +557,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      await supabase
-        .from('assistant_sessions')
+      await sessionDb.from('assistant_sessions')
         .update({
           messages: conversationHistory,
           last_activity_at: new Date().toISOString(),

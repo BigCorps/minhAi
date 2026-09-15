@@ -19,6 +19,7 @@ import {
   Package, Loader2,
 } from 'lucide-react';
 import { SlugProfile } from '@/hooks/useProfile';
+import { listCustomerOrdersManaged } from '@/lib/orders-client';
 import CardMinhaConta from './shared/CardMinhaConta';
 import BotaoLogout from './shared/BotaoLogout';
 
@@ -72,33 +73,14 @@ export default function ClienteDashboard({ profile, company, theme }: ClienteDas
   useEffect(() => { loadPedidos(); }, [profile.id]);
 
   async function loadPedidos() {
-    setLoading(true);
+    setLoadingPedidos(true);
     try {
-      const supabase      = createClient();
-      const nome          = profile.nome?.trim() ?? '';
-      const identificador = (profile.identificador ?? profile.email ?? '').trim();
-
-      if (!nome && !identificador) { setPedidos([]); return; }
-
-      const orFilters: string[] = [];
-      if (nome)          orFilters.push(`cliente_nome.ilike.%${nome}%`);
-      if (identificador) orFilters.push(`cliente_telefone.eq.${identificador}`);
-
-      const { data, error } = await supabase
-        .from('pedidos')
-        .select('id, total, status, created_at, metodo_pagamento, cliente_nome')
-        .eq('company_id', company.id)
-        .or(orFilters.join(','))
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) console.error('[ClienteDashboard] pedidos:', error);
-      setPedidos(data ?? []);
+      setPedidos(await listCustomerOrdersManaged(company.id));
     } catch (err) {
       console.error('[ClienteDashboard] loadPedidos:', err);
       setPedidos([]);
     } finally {
-      setLoading(false);
+      setLoadingPedidos(false);
     }
   }
 

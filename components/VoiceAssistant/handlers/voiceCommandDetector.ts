@@ -24,6 +24,7 @@ import { getFunctionByKey } from '@/lib/functions-registry';
 import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './utilitiesHandlers';
 import { handleWifiQRCode, handleCardapio, handleCanalYoutube, handleCadastro, handleNossoQRCode } from './companyHandlers';
 import { getContextualRoute } from '@/lib/routing-utils';
+import { getAssistantSessionContext, setAssistantSessionLastFunctions } from '@/lib/assistant-session-client';
 
 // ── Interface de dependências ─────────────────────────────────
 interface DetectorDeps {
@@ -790,11 +791,7 @@ if (lowerTranscript.includes('pix')) {
         try {
           const { createClient } = await import('@/lib/supabase-browser');
           const supabase = createClient();
-          await supabase
-            .from('assistant_sessions')
-            .update({ last_function_keys: ['__pending__pix_generate'] })
-            .eq('id', deps.sessionId)
-            .eq('company_id', companyId);
+          await setAssistantSessionLastFunctions(companyId, deps.sessionId, ['__pending__pix_generate']);
           console.log('⏳ Contexto pendente salvo: __pending__pix_generate');
         } catch (err) {
           console.error('❌ Erro ao salvar contexto pendente para PIX:', err);
@@ -865,14 +862,7 @@ if (lowerTranscript.includes('pix')) {
   // ── Fix 4 — resolução de __payment_choice__ sem chamar o Groq ────────────
   if (!fromGroq && deps.sessionId) {
     try {
-      const { createClient } = await import('@/lib/supabase-browser');
-      const supabase = createClient();
-      const { data: sessionData } = await supabase
-        .from('assistant_sessions')
-        .select('last_function_keys')
-        .eq('id', deps.sessionId)
-        .eq('company_id', companyId)
-        .maybeSingle();
+      const sessionData = await getAssistantSessionContext(companyId, deps.sessionId);
 
       const lastKeys: string[] = sessionData?.last_function_keys ?? [];
       const lastKey = lastKeys[lastKeys.length - 1];
@@ -889,12 +879,7 @@ if (lowerTranscript.includes('pix')) {
           console.log(`⚡ Fix4: __payment_choice__ resolvido sem Groq → ${resolved}`);
           await playText('Abrindo agora.');
           if (deps.onFunctionDetected) deps.onFunctionDetected(resolved);
-          supabase
-            .from('assistant_sessions')
-            .update({ last_function_keys: [] })
-            .eq('id', deps.sessionId)
-            .then(() => {})
-            .catch(() => {});
+          void setAssistantSessionLastFunctions(companyId, deps.sessionId, []);
           return true;
         }
       }

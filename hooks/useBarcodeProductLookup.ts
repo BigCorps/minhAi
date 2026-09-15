@@ -16,7 +16,7 @@ export function useBarcodeProductLookup(companyId: string) {
       .from('produtos_venda')
       .select(`
         id, company_id, nome, descricao, categoria, imagem_url, ean,
-        preco_custo, preco_venda, unidade, estoque_atual, estoque_minimo,
+        preco_venda, unidade, estoque_atual, estoque_minimo,
         controla_estoque, is_active, display_order, created_at, updated_at,
         ingrediente_id, ficha_id
       `)

@@ -1,6 +1,7 @@
 // lib/groq-intent-classifier.ts — v5: contexto pendente fora do isConfirmation
 import { createClient } from '@/lib/supabase-browser';
 import { criarPedidoPagamentoPorValor } from '@/lib/orders-client';
+import { getAssistantSessionContext, setAssistantSessionLastFunctions } from '@/lib/assistant-session-client';
 
 interface ClassifierDeps {
   companyId: string;
@@ -83,13 +84,7 @@ export async function classifyIntentWithGroq(
     
     if (effectiveSessionId) {
       try {
-        const supabase = createClient();
-        const { data: sessionData } = await supabase
-          .from('assistant_sessions')
-          .select('context_summary, last_function_keys, messages')
-          .eq('id', effectiveSessionId)
-          .eq('company_id', deps.companyId)
-          .maybeSingle();
+        const sessionData = await getAssistantSessionContext(deps.companyId, effectiveSessionId);
         if (sessionData) {
           sessionContext = {
             summary: sessionData.context_summary ?? '',
@@ -116,11 +111,7 @@ export async function classifyIntentWithGroq(
 
           if (effectiveSessionId) {
             const supabase = createClient();
-            supabase
-              .from('assistant_sessions')
-              .update({ last_function_keys: [] })
-              .eq('id', effectiveSessionId)
-              .then(() => {}).catch(() => {});
+            void setAssistantSessionLastFunctions(deps.companyId, effectiveSessionId, []);
         } else {
           // Sem valor numérico — tenta extrair preço do histórico de conversa
           const allMessages = conversationHistory;
@@ -137,11 +128,7 @@ export async function classifyIntentWithGroq(
 
               if (effectiveSessionId) {
                 const supabase = createClient();
-                supabase
-                  .from('assistant_sessions')
-                  .update({ last_function_keys: [] })
-                  .eq('id', effectiveSessionId)
-                  .then(() => {}).catch(() => {});
+                void setAssistantSessionLastFunctions(deps.companyId, effectiveSessionId, []);
               }
 
 // Criar pedido antes de disparar o pagamento
@@ -200,11 +187,7 @@ let pedidoId: string | null = null;
           console.log('🛒 __payment_choice__ com produto no histórico → abrindo fazer_pedido');
           if (effectiveSessionId) {
             const supabase = createClient();
-            supabase
-              .from('assistant_sessions')
-              .update({ last_function_keys: [] })
-              .eq('id', effectiveSessionId)
-              .then(() => {}).catch(() => {});
+            void setAssistantSessionLastFunctions(deps.companyId, effectiveSessionId, []);
           }
           await deps.playText('Perfeito! Abrindo o assistente de compra.');
           if (deps.onFunctionDetected) {
@@ -220,11 +203,7 @@ let pedidoId: string | null = null;
           // Salva como __pending__ aguardando o valor
           if (effectiveSessionId) {
             const supabase = createClient();
-            supabase
-              .from('assistant_sessions')
-              .update({ last_function_keys: [`__pending__${resolved}`] })
-              .eq('id', effectiveSessionId)
-              .then(() => {}).catch(() => {});
+            void setAssistantSessionLastFunctions(deps.companyId, effectiveSessionId, [`__pending__${resolved}`]);
           }
 
 // Tenta extrair valor do histórico antes de pedir
@@ -241,11 +220,7 @@ let pedidoId: string | null = null;
 
               if (effectiveSessionId) {
                 const supabase = createClient();
-                supabase
-                  .from('assistant_sessions')
-                  .update({ last_function_keys: [] })
-                  .eq('id', effectiveSessionId)
-                  .then(() => {}).catch(() => {});
+                void setAssistantSessionLastFunctions(deps.companyId, effectiveSessionId, []);
               }
 
               await deps.playText('Gerando agora.');
@@ -271,12 +246,7 @@ let pedidoId: string | null = null;
         }
         if (effectiveSessionId) {
           const supabase = createClient();
-          supabase
-            .from('assistant_sessions')
-            .update({ last_function_keys: [] })
-            .eq('id', effectiveSessionId)
-            .then(() => {})
-            .catch(() => {});
+          void setAssistantSessionLastFunctions(deps.companyId, effectiveSessionId, []);
         }
         return true;
       }
@@ -347,11 +317,7 @@ const groqController = new AbortController();
         console.log(`⚡ Disparando função imediata: ${functionKey}`);
         if (effectiveSessionId) {
           const supabase = createClient();
-          supabase
-            .from('assistant_sessions')
-            .update({ last_function_keys: [] })
-            .eq('id', effectiveSessionId)
-            .then(() => {}).catch(() => {});
+          void setAssistantSessionLastFunctions(deps.companyId, effectiveSessionId, []);
         }
         setTimeout(() => deps.onFunctionDetected!(functionKey), 300);
         return true;
@@ -363,12 +329,7 @@ const groqController = new AbortController();
         // Salva como __pending__ para próxima mensagem já ter contexto
         if (effectiveSessionId) {
           const supabase = createClient();
-          supabase
-            .from('assistant_sessions')
-            .update({ last_function_keys: [`__pending__${functionKey}`] })
-            .eq('id', effectiveSessionId)
-            .then(() => {})
-            .catch(() => {});
+          void setAssistantSessionLastFunctions(deps.companyId, effectiveSessionId, [`__pending__${functionKey}`]);
         }
 
         // Fala para o usuário informar o valor — sem silêncio
@@ -388,12 +349,7 @@ const groqController = new AbortController();
       const pendingContext = detectPendingContext(groqResponse);
       console.log(`💬 Fix2: pergunta de esclarecimento → salvando contexto: ${pendingContext}`);
       const supabase = createClient();
-      supabase
-        .from('assistant_sessions')
-        .update({ last_function_keys: [pendingContext] })
-        .eq('id', effectiveSessionId)
-        .then(() => {})
-        .catch(() => {});
+      void setAssistantSessionLastFunctions(deps.companyId, effectiveSessionId, [pendingContext]);
     }
 
     deps.commandProcessor?.saveUnrecognizedHint(transcript);

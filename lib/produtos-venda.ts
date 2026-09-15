@@ -108,7 +108,7 @@ export async function listarProdutos(companyId: string): Promise<ProdutoVenda[]>
   const supabase = createClient();
   const { data, error } = await supabase
     .from('produtos_venda')
-    .select('*')
+    .select('id,company_id,ingrediente_id,ficha_id,nome,descricao,categoria,imagem_url,ean,preco_venda,unidade,estoque_atual,estoque_minimo,controla_estoque,is_active,is_favorito,display_order,created_at,updated_at,marca')
     .eq('company_id', companyId)
     .eq('is_active', true)
     .order('display_order', { ascending: true })
@@ -142,7 +142,7 @@ export async function buscarProduto(produtoId: string): Promise<ProdutoVenda | n
   const supabase = createClient();
   const { data, error } = await supabase
     .from('produtos_venda')
-    .select('*')
+    .select('id,company_id,ingrediente_id,ficha_id,nome,descricao,categoria,imagem_url,ean,preco_venda,unidade,estoque_atual,estoque_minimo,controla_estoque,is_active,is_favorito,display_order,created_at,updated_at,marca')
     .eq('id', produtoId)
     .single();
 
@@ -158,7 +158,7 @@ export async function buscarProdutoPorNome(
   const supabase = createClient();
   const { data, error } = await supabase
     .from('produtos_venda')
-    .select('*')
+    .select('id,company_id,ingrediente_id,ficha_id,nome,descricao,categoria,imagem_url,ean,preco_venda,unidade,estoque_atual,estoque_minimo,controla_estoque,is_active,is_favorito,display_order,created_at,updated_at,marca')
     .eq('company_id', companyId)
     .eq('is_active', true)
     .ilike('nome', `%${termo}%`)
@@ -177,7 +177,7 @@ export async function buscarProdutoPorEan(
   const supabase = createClient();
   const { data, error } = await supabase
     .from('produtos_venda')
-    .select('*')
+    .select('id,company_id,ingrediente_id,ficha_id,nome,descricao,categoria,imagem_url,ean,preco_venda,unidade,estoque_atual,estoque_minimo,controla_estoque,is_active,is_favorito,display_order,created_at,updated_at,marca')
     .eq('company_id', companyId)
     .eq('ean', ean)
     .single();

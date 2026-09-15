@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { RefreshCw, Check, Loader2, AlertCircle, Clock } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
+import { getCurrentProfileManaged } from '@/lib/profile-client';
 
 interface TrocarTurnoDisplayProps {
   data: {
@@ -70,19 +71,9 @@ export default function TrocarTurnoDisplay({
     async function fetchTurnoAtual() {
       setLoadingTurno(true);
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // Busca perfil ativo do usuário
-        const { data: session } = await supabase
-          .from('profile_sessions')
-          .select('profile_id, company_profiles(nome)')
-          .eq('user_id', user.id)
-          .eq('company_id', companyId)
-          .eq('is_active', true)
-          .maybeSingle();
-
-        if (!session?.profile_id) return;
+        const currentProfile = await getCurrentProfileManaged(companyId);
+        if (!currentProfile?.id) return;
+        const session = { profile_id: currentProfile.id, company_profiles: { nome: currentProfile.nome } };
 
         // Busca turno ativo do perfil
         const { data: turno } = await supabase
@@ -127,19 +118,8 @@ export default function TrocarTurnoDisplay({
     setIsSaving(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
-      // Busca perfil ativo do usuário
-      const { data: session } = await supabase
-        .from('profile_sessions')
-        .select('profile_id')
-        .eq('user_id', user.id)
-        .eq('company_id', companyId)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      const profileId = session?.profile_id;
+      const currentProfile = await getCurrentProfileManaged(companyId);
+      const profileId = currentProfile?.id;
       if (!profileId) throw new Error('Perfil não encontrado');
 
       const agora = new Date().toISOString();

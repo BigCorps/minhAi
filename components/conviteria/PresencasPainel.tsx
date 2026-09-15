@@ -92,7 +92,7 @@ export default function PresencasPainel({
 
           {modoTeste ? (
             <p className="mb-4 rounded-xl bg-white p-3 text-xs leading-5" style={{ color: '#7c5560' }}>
-              No modo teste, você pode confirmar presenças e vê-las aqui. Envio real de e-mails, lembretes e integração Google ficam preservados para depois da publicação.
+              No modo teste, você pode confirmar presenças e vê-las aqui. Depois da publicação, este convite também pode ser conectado ao Google: o Gmail envia a confirmação aos convidados e os lembretes programados de 30 dias, 7 dias e 1 dia antes do evento, enquanto o Google Agenda ajuda a manter o evento organizado. Os envios reais ficam preservados para depois da publicação.
             </p>
           ) : (
             <>

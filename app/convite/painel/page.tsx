@@ -121,7 +121,7 @@ export default function PainelPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="text-sm font-semibold text-[#40232c]">Modo Teste · {tempoRestante(c.teste.expiraEm, agora)} restantes</p>
-                      <p className="mt-1 text-xs leading-5 text-[#7c5560]">Subdomínio real, RSVP, recados e Memórias de demonstração estão ativos. Pagamentos de presentes e saldo ficam bloqueados até a publicação.</p>
+                      <p className="mt-1 text-xs leading-5 text-[#7c5560]">Subdomínio real, RSVP, recados e Memórias de demonstração estão ativos. A lista de presentes funciona de verdade com PIX e cartão; saldo e saque são liberados após a publicação definitiva.</p>
                     </div>
                     <Link href={`/convite/pagar?evento=${c.id}`} className="rounded-lg bg-[#c06078] px-3 py-2 text-xs font-semibold text-white">Publicar definitivamente</Link>
                   </div>
@@ -137,7 +137,7 @@ export default function PainelPage() {
                 <MemoriasPainel eventoId={c.id} slug={c.slug} titulo={c.titulo} />
                 <CompartilharWhatsappPainel eventoId={c.id} titulo={c.titulo} url={c.url} />
                 <PresencasPainel eventoId={c.id} modoTeste={!c.publicado} />
-                {c.publicado && <PagamentosPresentesPainel eventoId={c.id} />}
+                {acessivel && <PagamentosPresentesPainel eventoId={c.id} />}
                 {c.publicado && <SaldoSaque eventoId={c.id} />}
                 <RecadosPainel eventoId={c.id} />
               </>}

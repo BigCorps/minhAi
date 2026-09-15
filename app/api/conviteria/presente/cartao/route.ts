@@ -4,6 +4,7 @@ import {
 } from 'next/server';
 import {
   adminConviteria,
+  buscarEventoAcessivelPorId,
   hashIp,
   ipDaRequisicao,
 } from '@/lib/conviteria/servidor';
@@ -192,26 +193,13 @@ export async function POST(
         item.presenteId!
     );
 
+  // Mesmo checkout do convite publicado, porém somente enquanto o trial
+  // permanece efetivamente ativo. Fora do trial/publicação o evento não passa.
   const [
-    { data: evento },
+    acessoEvento,
     { data: configCartao },
   ] = await Promise.all([
-    admin
-      .from('eventos')
-      .select(
-        'id,slug,config'
-      )
-      .eq('id', eventoId)
-      .not(
-        'publicado_em',
-        'is',
-        null
-      )
-      .eq(
-        'arquivado',
-        false
-      )
-      .maybeSingle(),
+    buscarEventoAcessivelPorId(eventoId),
 
     admin
       .from(
@@ -226,6 +214,9 @@ export async function POST(
       )
       .maybeSingle(),
   ]);
+
+  const evento =
+    acessoEvento?.evento ?? null;
 
   if (!evento) {
     return NextResponse.json(

@@ -13,7 +13,7 @@ async function dono(req: NextRequest, eventoId: string) {
   if (!auth.user) return { erro:'Sessão inválida.', status:401 as const };
 
   const { data: evento } = await admin.from('eventos')
-    .select('id, config, contas!inner(user_id,email,nome)')
+    .select('id, config, publicado_em, contas!inner(user_id,email,nome)')
     .eq('id',eventoId).maybeSingle();
   const conta = (evento as any)?.contas;
   if (!evento || conta?.user_id !== auth.user.id)
@@ -63,6 +63,16 @@ export async function POST(req: NextRequest) {
   const ctx = await dono(req, eventoId);
   if ('erro' in ctx) return NextResponse.json({erro:ctx.erro},{status:ctx.status});
   const { admin, evento } = ctx;
+
+  // Durante o trial os presentes podem ser pagos de verdade, mas o dinheiro
+  // só pode ser retirado quando o convite for definitivamente publicado/pago.
+  // A proteção é server-side; esconder o componente no painel não é suficiente.
+  if (!evento.publicado_em) {
+    return NextResponse.json(
+      { erro:'O saque é liberado após a publicação definitiva do convite.' },
+      { status:409 }
+    );
+  }
 
   const { data: saldoAntes } = await admin.from('evento_saldo')
     .select('disponivel_centavos').eq('evento_id',eventoId).maybeSingle();

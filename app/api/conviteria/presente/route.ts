@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { adminConviteria, hashIp, ipDaRequisicao } from '@/lib/conviteria/servidor';
+import {
+  adminConviteria,
+  buscarEventoAcessivelPorId,
+  hashIp,
+  ipDaRequisicao,
+} from '@/lib/conviteria/servidor';
 import { calcularTaxa } from '@/lib/conviteria/precos';
 import {
   LIMITE_PRESENTES_POR_PIX,
@@ -82,13 +87,11 @@ export async function POST(req: NextRequest) {
 
   const ids = itens.map((i) => i.presenteId!) as string[];
 
-  const { data: evento } = await admin
-    .from('eventos')
-    .select('id, config, mp_user_id')
-    .eq('id', eventoId)
-    .not('publicado_em', 'is', null)
-    .eq('arquivado', false)
-    .maybeSingle();
+  // Pagamentos reais de presentes são aceitos tanto no convite publicado
+  // quanto durante o trial de 24h ainda ativo. Fora desses dois estados, o
+  // endpoint continua fechado — não basta conhecer o eventoId.
+  const acessoEvento = await buscarEventoAcessivelPorId(eventoId);
+  const evento = acessoEvento?.evento ?? null;
 
   if (!evento) {
     return NextResponse.json({ erro: 'Convite indisponível.' }, { status: 404 });

@@ -228,15 +228,15 @@ export interface ConviteConfig {
 export interface ModoRender {
   /** Na previa, links nao navegam e a musica nao toca sozinha. */
   previa?: boolean;
-  /** Trial de 24 h: recursos nao financeiros funcionam, pagamentos reais nao. */
+  /** Trial de 24 h: identifica a experiencia temporaria sem alterar a publicacao paga. */
   teste?: boolean;
   /** Secao que o wizard esta editando agora, para rolar ate ela. */
   secaoFoco?: TipoSecao;
   /**
-   * Id do evento. Presente so no convite publicado — a previa do wizard nao
-   * tem evento ainda. E o que o modal de presentes usa para gerar o PIX, e
-   * tambem o que faz o botao "Presentear" ficar inerte na previa sem precisar
-   * de outra flag.
+   * Id do evento. Presente no convite publicado e no trial ativo — a previa
+   * do wizard nao tem evento ainda. E o que o modal de presentes usa para
+   * gerar PIX/cartao reais, e tambem o que faz o botao "Presentear" ficar
+   * inerte na previa sem precisar de outra flag.
    */
   eventoId?: string;
   /**

@@ -129,7 +129,7 @@ export async function buscarEventoAcessivelPorId(eventoId: string) {
   const admin = adminConviteria();
   const { data: evento } = await admin
     .from('eventos')
-    .select('id,slug,config,publicado_em,arquivado,data_evento')
+    .select('id,slug,config,publicado_em,arquivado,data_evento,mp_user_id')
     .eq('id', eventoId)
     .maybeSingle();
 

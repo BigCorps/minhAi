@@ -4,6 +4,7 @@ import {
 } from 'next/server';
 import {
   adminConviteria,
+  buscarEventoAcessivelPorId,
 } from '@/lib/conviteria/servidor';
 
 export const runtime = 'nodejs';
@@ -27,30 +28,14 @@ export async function GET(
     );
   }
 
-  const admin =
-    adminConviteria();
-
-  const {
-    data: evento,
-  } = await admin
-    .from('eventos')
-    .select('id')
-    .eq(
-      'id',
+  // A configuração pública do cartão acompanha a mesma regra de acesso do
+  // convite: publicação definitiva ou trial de 24h ainda ativo.
+  const acessoEvento =
+    await buscarEventoAcessivelPorId(
       eventoId
-    )
-    .not(
-      'publicado_em',
-      'is',
-      null
-    )
-    .eq(
-      'arquivado',
-      false
-    )
-    .maybeSingle();
+    );
 
-  if (!evento) {
+  if (!acessoEvento) {
     return NextResponse.json(
       {
         erro:
@@ -59,6 +44,9 @@ export async function GET(
       { status: 404 }
     );
   }
+
+  const admin =
+    adminConviteria();
 
   const {
     data: config,

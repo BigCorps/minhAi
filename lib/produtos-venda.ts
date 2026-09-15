@@ -2,6 +2,7 @@
 // Queries Supabase para o Modo Venda
 
 import { createClient } from '@/lib/supabase-browser';
+import { createProductManaged, updateProductManaged, deleteProductManaged } from '@/lib/products-client';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -185,45 +186,26 @@ export async function buscarProdutoPorEan(
   return data;
 }
 
-/** Cria produto */
+/** Cria produto via servidor autenticado */
 export async function criarProduto(input: ProdutoVendaInput): Promise<ProdutoVenda> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('produtos_venda')
-    .insert(input)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+  return createProductManaged<ProdutoVenda>(input.company_id, input as unknown as Record<string, unknown>);
 }
 
-/** Atualiza produto */
+/** Atualiza produto via servidor autenticado */
 export async function atualizarProduto(
   id: string,
   input: Partial<ProdutoVendaInput>,
 ): Promise<ProdutoVenda> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('produtos_venda')
-    .update({ ...input, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+  return updateProductManaged<ProdutoVenda>(
+    id,
+    input.company_id ?? null,
+    input as unknown as Record<string, unknown>,
+  );
 }
 
-/** Exclui produto */
+/** Exclui produto via servidor autenticado; a empresa é derivada do produto no backend */
 export async function excluirProduto(id: string): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from('produtos_venda')
-    .delete()
-    .eq('id', id);
-
-  if (error) throw error;
+  await deleteProductManaged(id);
 }
 
 /** Importa ingrediente da linha de produção como produto de venda */

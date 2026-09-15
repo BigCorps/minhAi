@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
 import QRCode from 'qrcode'
 import sharp from 'sharp'
 import fs from 'fs'
@@ -55,7 +56,8 @@ async function getLogoBuffer(companyId: string | null, overrideUrl?: string | nu
       isArteFinal = !!company?.slug?.startsWith('arte-')
 
       if (company?.user_id) {
-        const { data: isPaidResult } = await supabaseAnon
+        const supabaseAdmin = createAdminClient()
+        const { data: isPaidResult } = await supabaseAdmin
           .rpc('get_is_paid_plan', { p_user_id: company.user_id })
 
         const isPaid = isPaidResult === true

@@ -11,7 +11,7 @@
 // estoque_atual, estoque_minimo, controla_estoque, ean, imagem_url
 
 import { useState, useRef, useCallback } from 'react';
-import { createClient } from '@/lib/supabase-browser';
+import { bulkCreateProductsManaged } from '@/lib/products-client';
 import { triggerBulkEmbeddingSync } from '@/lib/embeddings'; // PATCH 2.1
 import {
   X, Upload, Download, AlertCircle, CheckCircle2,
@@ -155,7 +155,6 @@ export default function ImportarCSVModal({
   onClose,
   onImportado,
 }: ImportarCSVModalProps) {
-  const supabase = createClient();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [stage, setStage] = useState<'upload' | 'preview' | 'importing' | 'done'>('upload');
@@ -267,11 +266,11 @@ export default function ImportarCSVModal({
         is_active:        true,
       }));
 
-      const { error } = await supabase.from('produtos_venda').insert(rows);
-      if (error) {
-        errosImport.push(`Lote ${Math.floor(i / LOTE) + 1}: ${error.message}`);
-      } else {
+      try {
+        await bulkCreateProductsManaged(companyId, rows);
         count += lote.length;
+      } catch (error: any) {
+        errosImport.push(`Lote ${Math.floor(i / LOTE) + 1}: ${error?.message || 'erro ao importar'}`);
       }
 
       setProgresso(Math.round(((i + LOTE) / selecionadosValidos.length) * 100));

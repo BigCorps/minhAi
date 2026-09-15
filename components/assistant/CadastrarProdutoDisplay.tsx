@@ -20,6 +20,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { registerAuthenticatedFunctionUsage } from '@/lib/register-authenticated-function-usage';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
+import { createProductManaged } from '@/lib/products-client';
 import { formatarPreco } from '@/lib/produtos-venda';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -1245,31 +1246,28 @@ const playText = useCallback(async (text: string) => {
       const salvos: ProdutoVenda[] = [];
 
       for (const item of validos) {
-        // 1. Salvar produto
-        const { data: inserted, error: errProd } = await supabase
-          .from('produtos_venda')
-          .insert({
-            company_id:       companyId,
-            nome:             item.nome.trim(),
-            descricao:        item.descricao?.trim() || null,
-            categoria:        item.categoria?.trim() || null,
-            preco_venda:      item.preco_venda,
-            preco_custo:      item.preco_custo || 0,
-            unidade:          item.unidade || 'un',
-            estoque_atual:    item.estoque_atual || 0,
-            estoque_minimo:   item.estoque_minimo || 0,
-            imagem_url:       item.imagem_url?.trim() || null,
-            ean:              item.ean?.trim() || null,
-            marca:            item.marca?.trim() || null,
-            controla_estoque: false,
-            is_active:        true,
-            is_favorito:      false,
-          })
-          .select('*')
-          .single();
-
-        if (errProd) throw errProd;
-        salvos.push(inserted as ProdutoVenda);
+        // 1. Salvar produto pelo servidor autenticado. Campos ML entram no mesmo INSERT.
+        const inserted = await createProductManaged<ProdutoVenda>(companyId, {
+          nome:             item.nome.trim(),
+          descricao:        item.descricao?.trim() || null,
+          categoria:        item.categoria?.trim() || null,
+          preco_venda:      item.preco_venda,
+          preco_custo:      item.preco_custo || 0,
+          unidade:          item.unidade || 'un',
+          estoque_atual:    item.estoque_atual || 0,
+          estoque_minimo:   item.estoque_minimo || 0,
+          imagem_url:       item.imagem_url?.trim() || null,
+          ean:              item.ean?.trim() || null,
+          marca:            item.marca?.trim() || null,
+          controla_estoque: false,
+          is_active:        true,
+          is_favorito:      false,
+          ...(mlPublicar && item.ml_category_id ? {
+            ml_category_id: item.ml_category_id,
+            ml_listing_type: item.ml_listing_type || 'bronze',
+          } : {}),
+        });
+        salvos.push(inserted);
 
         // 2. Salvar dados fiscais se existirem
         if (pedirFiscal && item.ncm && item.ncm.length === 8) {
@@ -1285,16 +1283,7 @@ const playText = useCallback(async (text: string) => {
             }, { onConflict: 'produto_id' });
         }
 
-        // 3. Salvar dados ML se solicitado
-        if (mlPublicar && item.ml_category_id) {
-          await supabase
-            .from('produtos_venda')
-            .update({
-              ml_category_id:   item.ml_category_id,
-              ml_listing_type:  item.ml_listing_type || 'bronze',
-            })
-            .eq('id', inserted.id);
-        }
+        // 3. Dados ML já foram persistidos junto com o produto no servidor.
 
         // 4. Embedding (sem dados fiscais — regra arquitetural)
         try {

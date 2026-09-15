@@ -37,6 +37,7 @@ import {
 
 import type { ProdutoVenda, Pedido, ProdutoVendaInput } from '@/lib/produtos-venda';
 import { formatarPreco } from '@/lib/produtos-venda';
+import { createProductManaged, updateProductManaged, deleteProductManaged, bulkCreateProductsManaged } from '@/lib/products-client';
 import OpcionaisModal from '@/components/dashboard/vendas/OpcionaisModal';
 import ImportarCSVModal from '@/components/dashboard/vendas/ImportarCSVModal';
 import SecaoFiscalProduto from '@/components/dashboard/vendas/SecaoFiscalProduto';
@@ -164,27 +165,20 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
     setSaving(true);
     setErro(null);
     try {
-      // PATCH 1.3 — UPDATE com id garantido / INSERT capturando id retornado
+      // Produto é criado/alterado por rota autenticada; o browser não recebe permissão DML.
       let produtoId: string;
 
       if (produto) {
-        // UPDATE — id já existe
-        const { error } = await supabase
-          .from('produtos_venda')
-          .update({ ...form, updated_at: new Date().toISOString() })
-          .eq('id', produto.id);
-        if (error) throw error;
+        await updateProductManaged(produto.id, companyId, form as Record<string, unknown>);
         produtoId = produto.id;
       } else {
-        // INSERT — captura o id retornado pelo Supabase
-        const { data: inserted, error } = await supabase
-          .from('produtos_venda')
-          .insert({ ...form, company_id: companyId })
-          .select('id')
-          .single();
-        if (error) throw error;
+        const inserted = await createProductManaged<{ id: string }>(
+          companyId,
+          form as Record<string, unknown>,
+        );
         produtoId = inserted.id;
       }
+
 
       // Salvar dados fiscais (apenas se NCM preenchido corretamente)
       if (dadosFiscais.ncm && dadosFiscais.ncm.length === 8) {
@@ -230,8 +224,7 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
   async function handleDeletar() {
     setDeletando(true);
     try {
-      const { error } = await supabase.from('produtos_venda').delete().eq('id', produto!.id);
-      if (error) throw error;
+      await deleteProductManaged(produto!.id, companyId);
       onSalvo();
       onClose();
     } catch (e: any) {
@@ -682,8 +675,7 @@ function ImportarModal({
         }));
 
       // PATCH 1.4 — reindexação bulk após importar ingredientes
-      const { error } = await supabase.from('produtos_venda').insert(itens);
-      if (error) throw error;
+      await bulkCreateProductsManaged(companyId, itens);
 
       triggerBulkEmbeddingSync(companyId);
 
@@ -1371,9 +1363,7 @@ function AbaProducts({ companyId, mlConnected }: { companyId: string; mlConnecte
   }
 
   async function toggleAtivo(id: string, atual: boolean) {
-    await supabase.from('produtos_venda')
-      .update({ is_active: !atual, updated_at: new Date().toISOString() })
-      .eq('id', id);
+    await updateProductManaged(id, companyId, { is_active: !atual });
     setProdutos(prev => prev.map(p => p.id === id ? { ...p, is_active: !atual } : p));
   }
 

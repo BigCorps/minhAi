@@ -70,6 +70,7 @@ async function notify(supabase: any, company: any, checkout: any, totalCents: nu
     }).catch(() => undefined) as Promise<void>)
   }
 
+  // PHASE6_INTERNAL_CHANNEL_AUTH
   // PHASE5_CASH_WA_PREPAID_RESERVATION — WhatsApp é reservado antes do envio.
   // Em falha do provedor, o crédito é estornado; e-mail/SMS continuam best-effort.
   if (phone) {
@@ -85,7 +86,7 @@ async function notify(supabase: any, company: any, checkout: any, totalCents: nu
 
       try {
         const r = await fetch(`${NOTIFY_URL}/enviar-whatsapp`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ANON_KEY}` },
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SERVICE_ROLE}` },
           body: JSON.stringify({ to: phone, message: reason }),
         })
         const b = await r.json().catch(() => ({}))
@@ -110,7 +111,7 @@ async function notify(supabase: any, company: any, checkout: any, totalCents: nu
 
   if (config.notificar_sms === true && phone) {
     tasks.push(fetch(`${NOTIFY_URL}/send-sms-gerente`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ANON_KEY}` },
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SERVICE_ROLE}` },
       body: JSON.stringify({ company_id: company.id, number: phone, gerente_nome: name, motivo: reason, usage_idempotency_key: `cash-sms:${checkout.id}` }),
     }).then(async r => {
       const b = await r.json().catch(() => ({}))

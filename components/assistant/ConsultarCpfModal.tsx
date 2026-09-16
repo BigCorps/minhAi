@@ -120,7 +120,7 @@ export default function ConsultarCpfModal({
 
       // Saldo insuficiente — abrir fluxo PIX
       if (res.requires_payment) {
-        setPendingParams({ company_id: companyId, action: 'dados_cpf', cpf: cpfLimpo, payment_confirmed: true });
+        setPendingParams({ company_id: companyId, action: 'dados_cpf', cpf: cpfLimpo, payment_confirmed: true, idempotency_key: res.idempotency_key });
         setPixAmountBrl(res.amount_brl ?? '3,00');
         setStep('input');
 
@@ -133,6 +133,9 @@ export default function ConsultarCpfModal({
           },
         });
         if (pixRes.error) throw new Error(pixRes.error.message);
+
+        // PHASE6_BOUND_PIX — browser sinaliza; o servidor confirma e vincula o PIX real.
+        setPendingParams((current) => ({ ...(current ?? {}), payment_transaction_id: pixRes.data.transaction_id }));
 
         setPixData({
           qrCodeUrl: pixRes.data.qr_code_url,

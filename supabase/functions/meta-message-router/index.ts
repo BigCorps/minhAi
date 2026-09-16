@@ -74,6 +74,67 @@ function withAiBilling(result: any, reservation: any, scope: string) {
   }
 }
 
+// PHASE6_SERVICE_LOOKUP_PREPAID — serviços externos reservam paid_lookup antes do worker.
+async function reserveFuncionarIAServiceLookup(companyId: string, usageContext: any, scope: string) {
+  if (usageContext?.mode !== 'funcionaria') return null
+  const supabase = createClient(supabaseUrl, serviceKey)
+  const messageId = String(usageContext?.messageId || crypto.randomUUID())
+  const { data, error } = await supabase.rpc('funcionaria_consume_usage', {
+    p_company_id: companyId,
+    p_usage_key: 'paid_lookup',
+    p_units: 1,
+    p_source: `funcionaria_meta_service_${scope}`.slice(0, 80),
+    p_channel: String(usageContext?.channel || 'meta').slice(0, 40),
+    p_idempotency_key: `meta-service:${messageId}:${scope}`.slice(0, 180),
+    p_metadata: { phase: '6', billing_mode: 'prepaid_reservation', scope },
+  })
+  if (error) return { ok: false, reason: 'usage_reservation_failed', detail: error.message }
+  return data
+}
+
+async function refundFuncionarIAServiceLookup(reservation: any, reason: string) {
+  if (!reservation?.usage_event_id) return
+  const supabase = createClient(supabaseUrl, serviceKey)
+  const { error } = await supabase.rpc('funcionaria_refund_usage', {
+    p_usage_event_id: reservation.usage_event_id,
+    p_reason: reason,
+    p_metadata: { phase: '6' },
+  })
+  if (error) console.warn('[meta-message-router] estorno paid_lookup:', error.message)
+}
+
+function detectFuncionarIAPaidService(msgLower: string, connection: any): string | null {
+  const has = (terms: string[]) => terms.some((term) => msgLower.includes(term))
+  if (connection.clima_tempo_enabled === true && has(['clima','tempo','temperatura','vai chover','previsão','previsao','chuva','frio','calor','céu','ceu','meteorologia'])) return 'clima_tempo'
+  if (connection.ver_noticias_enabled === true && has(['notícias','noticias','manchetes','novidades','últimas notícias','ultimas noticias','news','jornal'])) return 'ver_noticias'
+  if (connection.rastreio_enabled === true && has(['rastrear','rastreio','rastreamento','correios','encomenda','pacote','objeto postal','entrega'])) return 'rastreio_correios'
+  if (connection.traduzir_enabled === true && has(['traduzir','traduz','translate','como se diz','como fala','em inglês','em ingles','em espanhol','em francês','em frances','em italiano','em alemão','em alemao'])) return 'traduzir_texto'
+  return null
+}
+
+function paidLookupInsufficient(reservation: any) {
+  return {
+    responseText: 'Essa consulta usa um serviço externo e os créditos de uso estão insuficientes. Você pode pedir ajuda a um responsável.',
+    functionKey: 'paid_lookup_without_balance',
+    creditsUsed: 0,
+    billing: { paid_lookup_reserved: false, reason: reservation?.reason || 'usage_reservation_failed' },
+  } as any
+}
+
+function withPaidLookupBilling(result: any, reservation: any, scope: string) {
+  if (!reservation?.ok) return result
+  return {
+    ...result,
+    billing: {
+      ...(result?.billing || {}),
+      paid_lookup_reserved: true,
+      usage_event_id: reservation.usage_event_id,
+      credits_consumed: reservation.credits_consumed ?? 0,
+      scope,
+    },
+  }
+}
+
 // ── Respostas textuais para funções de boas-vindas no Meta ───────────────────
 const STARTUP_FUNCTION_RESPONSES: Record<string, (company: any) => string> = {
   modo_venda: (company) =>
@@ -377,7 +438,7 @@ if (connection.cardapio_enabled === true) {
     connection.consultar_cep_enabled, connection.consultar_cnpj_enabled,
     connection.consultar_cambio_enabled, connection.consultar_cpf_enabled,
     connection.consultar_placa_enabled, connection.restricoes_cpf_enabled,
-    connection.restricoes_cnpj_enabled, connection.consultar_leilao_enabled,
+    connection.restricoes_cnpj_enabled, connection.consultar_protestos_enabled, connection.consultar_leilao_enabled,
     connection.consultar_ddd_enabled, connection.consultar_feriados_enabled,
   ].some(v => v === true)
 
@@ -394,8 +455,37 @@ if (connection.cardapio_enabled === true) {
   ].some(v => v === true)
 
   if (hasServicos) {
+    const paidServiceScope = usageContext?.mode === 'funcionaria'
+      ? detectFuncionarIAPaidService(msgLower, connection)
+      : null
+    const lookupReservation = paidServiceScope
+      ? await reserveFuncionarIAServiceLookup(companyId, usageContext, paidServiceScope)
+      : null
+    if (lookupReservation && !lookupReservation.ok) return paidLookupInsufficient(lookupReservation)
+    if (lookupReservation?.duplicate === true) {
+      return {
+        responseText: 'Essa solicitação já foi processada. Se precisar, envie uma nova mensagem.',
+        functionKey: 'paid_lookup_duplicate',
+        creditsUsed: 0,
+        billing: { paid_lookup_reserved: true, duplicate: true },
+      } as any
+    }
+
     const servicoResult = await tryEdge('meta-servicos', { msg, msgLower, connection, companyId, company, usageContext })
-    if (servicoResult) return servicoResult
+    if (servicoResult) {
+      if (lookupReservation?.ok && paidServiceScope && servicoResult.functionKey === paidServiceScope) {
+        return withPaidLookupBilling(servicoResult, lookupReservation, paidServiceScope)
+      }
+      if (lookupReservation?.ok) await refundFuncionarIAServiceLookup(lookupReservation, 'meta_service_not_consumed')
+      return servicoResult
+    }
+    // Em erro/timeout do worker, o resultado do provedor é indeterminado; não estornar.
+    if (lookupReservation?.ok) return {
+      responseText: 'Não consegui concluir essa consulta agora. Para evitar cobrança duplicada, não vou repeti-la automaticamente.',
+      functionKey: 'paid_lookup_indeterminate',
+      creditsUsed: 0,
+      billing: { paid_lookup_reserved: true, indeterminate: true },
+    } as any
   }
 
   // ── AGENDA (meta-agenda) ───────────────────────────────────────────────

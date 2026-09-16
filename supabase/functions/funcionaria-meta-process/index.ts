@@ -244,16 +244,11 @@ async function processMessage(data: Incoming) {
       source = 'ai_without_balance'
     }
   } else if (PAID_LOOKUP_KEYS.has(source) && routeResult?.billing?.paid_lookup_reserved !== true) {
-    const debit = await consumeUsage(supabase, connection.company_id, 'paid_lookup', 1, {
-      source: `funcionaria_meta_${source}`,
-      channel: data.platform,
-      idempotencyKey: `meta-lookup:${baseMessageId}:${source}`,
-      metadata: { function_key: source },
-    })
-    if (!debit?.ok) {
-      response = `Essa consulta usa um serviço externo e os créditos de uso estão insuficientes. Você pode pedir ajuda a um responsável.`
-      source = 'paid_lookup_without_balance'
-    }
+    // PHASE6_NO_POST_PROVIDER_LOOKUP_DEBIT — nunca cobrar depois do provedor.
+    // Todos os caminhos externos conhecidos agora reservam antes da chamada.
+    console.warn('[FuncionarIA Meta] lookup externo retornou sem reserva prévia:', source)
+    response = 'Essa consulta está temporariamente indisponível. Tente novamente em instantes.'
+    source = 'paid_lookup_unreserved_blocked'
   }
 
   if (!response) {
@@ -544,6 +539,15 @@ async function sendMetaMessage(recipientId: string, message: string, connection:
     })
     if (!whatsappReservation?.ok) {
       return { sent: false, reason: whatsappReservation?.reason || 'insufficient_credits' }
+    }
+    // PHASE6_WA_IDEMPOTENT_SEND — a mesma chave nunca dispara o provedor duas vezes.
+    if (whatsappReservation?.duplicate === true) {
+      return {
+        sent: true,
+        duplicate: true,
+        credits_consumed: whatsappReservation?.credits_consumed ?? 0,
+        balance_after: whatsappReservation?.balance_after ?? null,
+      }
     }
 
     url = `https://graph.facebook.com/v19.0/${connection.whatsapp_number_id}/messages`

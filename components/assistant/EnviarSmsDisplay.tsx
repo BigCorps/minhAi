@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { MessageSquare, Send, Loader2, AlertCircle, Check, Phone } from 'lucide-react';
+import { createClient } from '@/lib/supabase-browser';
 
 interface EnviarSmsDisplayProps {
   data: {
@@ -30,7 +31,8 @@ export default function EnviarSmsDisplay({
   const isDark = theme === 'dark';
 
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  // PHASE6_AUTHENTICATED_SMS — SMS arbitrário exige sessão real.
+  const supabase = createClient();
 
   const DARK = {
     bg: 'bg-slate-900',
@@ -122,15 +124,20 @@ export default function EnviarSmsDisplay({
     try {
       console.log('📱 Enviando SMS para:', numeros);
 
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error('Faça login para enviar SMS');
+
       const response = await fetch(`${SUPABASE_URL}/functions/v1/send-sms-gerente`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
+          company_id: companyId,
           number: numeros,
-          gerente_nome: '', // Não usado nesta função
+          gerente_nome: '', // SMS genérico, não notificação ao gerente
           motivo: mensagem.trim(),
         }),
       });

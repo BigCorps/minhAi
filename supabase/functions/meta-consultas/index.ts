@@ -24,8 +24,8 @@ serve(async (req) => {
   }
 
   try {
-    const { msg, msgLower, connection, companyId } = await req.json()
-    const result = await detectAndRun(msg, msgLower, connection, companyId)
+    const { msg, msgLower, connection, companyId, usageContext } = await req.json()
+    const result = await detectAndRun(msg, msgLower, connection, companyId, usageContext)
     return Response.json(result)
   } catch (err: any) {
     console.error('❌ meta-consultas erro:', err.message)
@@ -34,17 +34,27 @@ serve(async (req) => {
 })
 
 async function callFerramentasConsultas(action: string, params: Record<string, any>, companyId: string): Promise<string> {
+  const { __funcionaria_usage_context, ...cleanParams } = params
+  const trustedUsageContext = __funcionaria_usage_context?.mode === 'funcionaria'
+    ? __funcionaria_usage_context
+    : null
   const res = await fetch(`${supabaseUrl}/functions/v1/ferramentas-consultas`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ company_id: companyId, action, ...params })
+    body: JSON.stringify({
+      company_id: companyId, action, ...cleanParams,
+      ...(trustedUsageContext ? { funcionaria_usage_context: trustedUsageContext } : {}),
+    })
   })
   const data = await res.json()
   if (!data.success) throw new Error(data.error || 'Erro na consulta')
   return data.speech_text || 'Consulta realizada.'
 }
 
-async function detectAndRun(msg: string, msgLower: string, connection: any, companyId: string) {
+async function detectAndRun(msg: string, msgLower: string, connection: any, companyId: string, usageContext: any = null) {
+  // PHASE6_FUNCIONARIA_LOOKUP_CONTEXT — contexto assinado pelo worker interno.
+  const callConsulta = (action: string, params: Record<string, any>, _legacyCompanyId?: string) =>
+    callConsulta(action, { ...params, __funcionaria_usage_context: usageContext }, companyId)
 
   // ── CEP ───────────────────────────────────────────────────────────────
   if (connection.consultar_cep_enabled === true) {
@@ -53,7 +63,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
     if (hasTrigger && cepMatch) {
       console.log('📮 Rota: Consultar CEP')
       try {
-        const texto = await callFerramentasConsultas('consultar_cep', { cep: cepMatch[1] }, companyId)
+        const texto = await callConsulta('consultar_cep', { cep: cepMatch[1] }, companyId)
         return { responseText: texto, functionKey: 'consultar_cep', creditsUsed: 0 }
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_cep', creditsUsed: 0 }
@@ -72,7 +82,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
     if (hasTrigger && cnpjMatch) {
       console.log('🏢 Rota: Consultar CNPJ')
       try {
-        const texto = await callFerramentasConsultas('dados_cnpj', { cnpj: cnpjMatch[1] }, companyId)
+        const texto = await callConsulta('dados_cnpj', { cnpj: cnpjMatch[1] }, companyId)
         return { responseText: texto, functionKey: 'dados_cnpj', creditsUsed: 0 }
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_cnpj', creditsUsed: 0 }
@@ -94,7 +104,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
       else if (msgLower.includes('bitcoin') || msgLower.includes('btc')) moedas = 'BTC-BRL'
       else if (msgLower.includes('dolar') || msgLower.includes('dólar')) moedas = 'USD-BRL'
       try {
-        const texto = await callFerramentasConsultas('consultar_cambio', { moedas }, companyId)
+        const texto = await callConsulta('consultar_cambio', { moedas }, companyId)
         return { responseText: texto, functionKey: 'consultar_cambio', creditsUsed: 0 }
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_cambio', creditsUsed: 0 }
@@ -109,7 +119,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
     if (hasTrigger && cpfMatch) {
       console.log('👤 Rota: Consultar CPF')
       try {
-        const texto = await callFerramentasConsultas('dados_cpf', { cpf: cpfMatch[1] }, companyId)
+        const texto = await callConsulta('dados_cpf', { cpf: cpfMatch[1] }, companyId)
         return { responseText: texto, functionKey: 'consultar_cpf', creditsUsed: 0 }
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_cpf', creditsUsed: 0 }
@@ -128,7 +138,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
     if (hasTrigger && placaMatch) {
       console.log('🚗 Rota: Consultar Placa')
       try {
-        const texto = await callFerramentasConsultas('consultar_placa', { placa: placaMatch[1].toUpperCase().replace('-','') }, companyId)
+        const texto = await callConsulta('consultar_placa', { placa: placaMatch[1].toUpperCase().replace('-','') }, companyId)
         return { responseText: texto, functionKey: 'consultar_placa', creditsUsed: 0 }
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_placa', creditsUsed: 0 }
@@ -146,7 +156,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
     if (hasTrigger && cpfMatch) {
       console.log('🔍 Rota: Restrições CPF')
       try {
-        const texto = await callFerramentasConsultas('restricoes_cpf', { cpf: cpfMatch[1] }, companyId)
+        const texto = await callConsulta('restricoes_cpf', { cpf: cpfMatch[1] }, companyId)
         return { responseText: texto, functionKey: 'restricoes_cpf', creditsUsed: 0 }
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'restricoes_cpf', creditsUsed: 0 }
@@ -164,7 +174,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
     if (hasTrigger && cnpjMatch) {
       console.log('🔍 Rota: Restrições CNPJ')
       try {
-        const texto = await callFerramentasConsultas('restricoes_cnpj', { cnpj: cnpjMatch[1] }, companyId)
+        const texto = await callConsulta('restricoes_cnpj', { cnpj: cnpjMatch[1] }, companyId)
         return { responseText: texto, functionKey: 'restricoes_cnpj', creditsUsed: 0 }
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'restricoes_cnpj', creditsUsed: 0 }
@@ -182,7 +192,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
     if (hasTrigger && docMatch) {
       console.log('⚖️ Rota: Consultar Protestos')
       try {
-        const texto = await callFerramentasConsultas('consultar_protestos', { documento: docMatch[1] }, companyId)
+        const texto = await callConsulta('consultar_protestos', { documento: docMatch[1] }, companyId)
         return { responseText: texto, functionKey: 'consultar_protestos', creditsUsed: 0 }
       } catch (e: any) {
         return { responseText: `⚖️ ...`, functionKey: 'consultar_protestos', creditsUsed: 0 }
@@ -200,7 +210,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
     if (hasTrigger && dddMatch) {
       console.log('📞 Rota: Consultar DDD')
       try {
-        const texto = await callFerramentasConsultas('consultar_ddd', { ddd: dddMatch[1] }, companyId)
+        const texto = await callConsulta('consultar_ddd', { ddd: dddMatch[1] }, companyId)
         return { responseText: texto, functionKey: 'consultar_ddd', creditsUsed: 0 }
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_ddd', creditsUsed: 0 }
@@ -219,7 +229,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
       const anoMatch = msg.match(/\b(20\d{2})\b/)
       const ano = anoMatch ? anoMatch[1] : new Date().getFullYear().toString()
       try {
-        const texto = await callFerramentasConsultas('consultar_feriados', { ano }, companyId)
+        const texto = await callConsulta('consultar_feriados', { ano }, companyId)
         return { responseText: texto, functionKey: 'consultar_feriados', creditsUsed: 0 }
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_feriados', creditsUsed: 0 }

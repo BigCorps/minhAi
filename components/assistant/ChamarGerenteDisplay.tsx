@@ -239,7 +239,9 @@ if (notificarSms && gerenteTelefone) {
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
     },
     body: JSON.stringify({
-      number: numeroLimpo, // ← usar numeroLimpo, não gerenteTelefone
+      // PHASE6_LOCK_MANAGER_SMS_DESTINATION — server resolve o telefone do gerente.
+      company_id: companyId,
+      number: numeroLimpo,
       gerente_nome: gerenteNome,
       motivo: motivo,
     }),

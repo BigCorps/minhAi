@@ -123,7 +123,7 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
       if (error) throw new Error(error.message);
 
       if (res.requires_payment) {
-        setPendingParams({ company_id: data.companyId, action: 'restricoes_cnpj', cnpj, payment_confirmed: true });
+        setPendingParams({ company_id: data.companyId, action: 'restricoes_cnpj', cnpj, payment_confirmed: true, idempotency_key: res.idempotency_key });
         setPixAmountBrl(res.amount_brl ?? '3,00');
         setStage('input');
 
@@ -136,6 +136,9 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
           },
         });
         if (pixRes.error) throw new Error(pixRes.error.message);
+
+        // PHASE6_BOUND_PIX — browser sinaliza; o servidor confirma e vincula o PIX real.
+        setPendingParams((current) => ({ ...(current ?? {}), payment_transaction_id: pixRes.data.transaction_id }));
 
         setPixData({
           qrCodeUrl: pixRes.data.qr_code_url,

@@ -85,7 +85,7 @@ export default function CompletaCpfModal({ data, onClose }: CompletaCpfModalProp
       if (fnError) throw new Error(fnError.message);
 
       if (res.requires_payment) {
-        setPendingParams({ company_id: companyId, action: 'completa_cpf', cpf: cpfLimpo, payment_confirmed: true });
+        setPendingParams({ company_id: companyId, action: 'completa_cpf', cpf: cpfLimpo, payment_confirmed: true, idempotency_key: res.idempotency_key });
         setStep('input');
 
         const pixRes = await supabase.functions.invoke('gerar-pix-assistente', {
@@ -98,6 +98,9 @@ export default function CompletaCpfModal({ data, onClose }: CompletaCpfModalProp
           },
         });
         if (pixRes.error) throw new Error(pixRes.error.message);
+
+        // PHASE6_BOUND_PIX — browser sinaliza; o servidor confirma e vincula o PIX real.
+        setPendingParams((current) => ({ ...(current ?? {}), payment_transaction_id: pixRes.data.transaction_id }));
 
         setPixInfo({
           qrCodeUrl: pixRes.data.qr_code_url,

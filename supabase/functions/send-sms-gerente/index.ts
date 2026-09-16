@@ -27,8 +27,15 @@ Deno.serve(async (req) => {
     let isFuncionarIA = false
     let supabase: any = null
 
+    // PHASE6_SMS_CALLER_AUTH — remove o relay público para números arbitrários.
+    const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const authHeader = req.headers.get('authorization') ?? ''
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+    const isServiceRole = Boolean(serviceRole) && authHeader === `Bearer ${serviceRole}`
+    let authenticatedUserId: string | null = null
+
     if (companyId) {
-      supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
+      supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceRole)
 
       const [{ data: settings }, { data: company }] = await Promise.all([
         supabase.from('funcionaria_company_settings').select('company_id').eq('company_id', companyId).maybeSingle(),
@@ -66,6 +73,51 @@ Deno.serve(async (req) => {
         if ((count || 0) >= 3) return json({ error: 'Limite temporário de SMS atingido', reason: 'rate_limited' }, 429)
 
       }
+
+      if (!isFuncionarIA && !isServiceRole) {
+        // Chamada pública de "chamar gerente": destino sempre vem do cadastro,
+        // nunca do número informado pelo navegador.
+        if (gerenteNomeInput) {
+          const { data: profile } = await supabase
+            .from('company_profiles')
+            .select('nome,telefone')
+            .eq('company_id', companyId)
+            .eq('tipo', 'gerente')
+            .eq('is_active', true)
+            .limit(1)
+            .maybeSingle()
+          number = String(profile?.telefone || '').replace(/\D/g, '')
+          gerenteNome = String(profile?.nome || gerenteNomeInput || 'Responsável').trim()
+          if (!number) return json({ error: 'Telefone do responsável não configurado' }, 400)
+
+          // Limite de abuso/custo para o fluxo público legado.
+          const since = new Date(Date.now() - 10 * 60_000).toISOString()
+          const { count } = await supabase
+            .from('assistant_function_logs')
+            .select('id', { count: 'exact', head: true })
+            .eq('company_id', companyId)
+            .eq('function_key', 'phase6_public_manager_sms')
+            .gte('executed_at', since)
+          if ((count || 0) >= 3) return json({ error: 'Limite temporário de SMS atingido', reason: 'rate_limited' }, 429)
+        } else {
+          // Envio SMS genérico/arbitrário exige sessão real do dono/admin.
+          if (!token) return json({ error: 'Autenticação obrigatória' }, 401)
+          const { data: authData, error: authError } = await supabase.auth.getUser(token)
+          if (authError || !authData?.user?.id) return json({ error: 'Autenticação inválida' }, 401)
+          authenticatedUserId = authData.user.id
+          const { data: company } = await supabase.from('companies').select('user_id').eq('id', companyId).maybeSingle()
+          let allowed = company?.user_id === authenticatedUserId
+          if (!allowed) {
+            const { data: admin } = await supabase.from('company_admins')
+              .select('role').eq('company_id', companyId).eq('user_id', authenticatedUserId).maybeSingle()
+            allowed = Boolean(admin && ['owner','manager'].includes(String(admin.role)))
+          }
+          if (!allowed) return json({ error: 'Acesso não autorizado' }, 403)
+        }
+      }
+    } else if (!isServiceRole) {
+      // Sem company_id, só backend pode escolher destino arbitrário.
+      return json({ error: 'company_id ou autenticação de backend obrigatória' }, 401)
     }
 
     if (!number) return json({ error: 'Parâmetro obrigatório: number' }, 400)
@@ -136,6 +188,15 @@ Deno.serve(async (req) => {
         return json({ error: data?.message || 'Falha ao enviar SMS', details: data }, response.status)
       }
 
+      if (companyId && supabase && gerenteNomeInput && !isFuncionarIA && !isServiceRole) {
+        await supabase.from('assistant_function_logs').insert({
+          company_id: companyId,
+          function_key: 'phase6_public_manager_sms',
+          credits_consumed: 0,
+          executed_at: new Date().toISOString(),
+          metadata: { destination_suffix: number.slice(-4), phase: '6' },
+        }).catch(() => null)
+      }
       return json({ success: true, data })
     } catch (fetchError: any) {
       clearTimeout(timeoutId)

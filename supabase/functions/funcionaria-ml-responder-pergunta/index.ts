@@ -11,6 +11,14 @@ const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405)
+
+  // PHASE5_SERVICE_ROLE_ONLY — worker interno: somente service_role.
+  const expectedServiceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  const receivedAuthorization = req.headers.get('authorization') ?? ''
+  if (!expectedServiceRole || receivedAuthorization !== `Bearer ${expectedServiceRole}`) {
+    return json({ error: 'unauthorized' }, 401)
+  }
 
   try {
     const body = JSON.parse(await req.text())
@@ -63,28 +71,30 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!answer && settings.ai_enabled === true) {
-      const allowance = await checkUsage(supabase, company_id, 'ai_generation', 1)
-      if (allowance?.ok) {
+      // PHASE5_ML_AI_PREPAID_RESERVATION — reserva antes da chamada OpenAI.
+      const reservation = await consumeUsage(supabase, company_id, 'ai_generation', 1, {
+        source: 'funcionaria_ml',
+        channel: 'mercado_livre',
+        idempotencyKey: `ml-ai:${questionIdClean}`,
+        metadata: {
+          phase: '5',
+          billing_mode: 'prepaid_reservation',
+          question_id: questionIdClean,
+          ml_item_id: itemId,
+          produto_nome: item.title || null,
+          model: 'gpt-4o-mini',
+        },
+      })
+      if (reservation?.ok) {
         const generated = await generateAiAnswer(supabase, company_id, questionText, item)
         if (generated?.answer) {
-          const debit = await consumeUsage(supabase, company_id, 'ai_generation', 1, {
-            source: 'funcionaria_ml',
-            channel: 'mercado_livre',
-            idempotencyKey: `ml-ai:${questionIdClean}`,
-            metadata: {
-              question_id: questionIdClean,
-              ml_item_id: itemId,
-              produto_nome: item.title || null,
-              model: 'gpt-4o-mini',
-              prompt_tokens: generated.usage?.prompt_tokens ?? null,
-              completion_tokens: generated.usage?.completion_tokens ?? null,
-              total_tokens: generated.usage?.total_tokens ?? null,
-            },
+          answer = generated.answer
+          source = 'ai'
+        } else if (reservation?.usage_event_id) {
+          await refundUsage(supabase, reservation.usage_event_id, 'ml_openai_no_answer', {
+            question_id: questionIdClean,
+            ml_item_id: itemId,
           })
-          if (debit?.ok) {
-            answer = generated.answer
-            source = 'ai'
-          }
         }
       }
     }
@@ -305,6 +315,15 @@ async function consumeUsage(
   })
   if (error) console.warn('[FuncionarIA ML] consume usage:', error.message)
   return data
+}
+
+async function refundUsage(supabase: any, usageEventId: string, reason: string, metadata: Record<string, unknown> = {}) {
+  const { error } = await supabase.rpc('funcionaria_refund_usage', {
+    p_usage_event_id: usageEventId,
+    p_reason: reason,
+    p_metadata: metadata,
+  })
+  if (error) console.warn('[FuncionarIA ML] refund usage:', error.message)
 }
 
 async function generateAiAnswer(supabase: any, companyId: string, question: string, item: any): Promise<{ answer: string; usage: any } | null> {

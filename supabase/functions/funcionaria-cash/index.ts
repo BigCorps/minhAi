@@ -70,24 +70,42 @@ async function notify(supabase: any, company: any, checkout: any, totalCents: nu
     }).catch(() => undefined) as Promise<void>)
   }
 
-  // WhatsApp é best-effort: se a janela/um template compatível não permitir o envio,
-  // o e-mail/SMS continuam sendo os canais de garantia.
+  // PHASE5_CASH_WA_PREPAID_RESERVATION — WhatsApp é reservado antes do envio.
+  // Em falha do provedor, o crédito é estornado; e-mail/SMS continuam best-effort.
   if (phone) {
-    tasks.push(fetch(`${NOTIFY_URL}/enviar-whatsapp`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ANON_KEY}` },
-      body: JSON.stringify({ to: phone, message: reason }),
-    }).then(async r => {
-      const b = await r.json().catch(() => ({}))
-      if (r.ok && b?.success) {
-        channels.push('WhatsApp')
-        await supabase.rpc('funcionaria_consume_usage', {
-          p_company_id: company.id, p_usage_key: 'whatsapp_message', p_units: 1,
-          p_source: 'cash_manager_alert', p_channel: 'whatsapp',
-          p_idempotency_key: `cash-wa:${checkout.id}`,
-          p_metadata: { checkout_id: checkout.id, code: checkout.codigo },
+    tasks.push((async () => {
+      const { data: reservation } = await supabase.rpc('funcionaria_consume_usage', {
+        p_company_id: company.id, p_usage_key: 'whatsapp_message', p_units: 1,
+        p_source: 'cash_manager_alert', p_channel: 'whatsapp',
+        p_idempotency_key: `cash-wa:${checkout.id}`,
+        p_metadata: { phase: '5', billing_mode: 'prepaid_reservation', checkout_id: checkout.id, code: checkout.codigo },
+      })
+      if (!reservation?.ok) return
+      if (reservation?.duplicate === true) { channels.push('WhatsApp'); return }
+
+      try {
+        const r = await fetch(`${NOTIFY_URL}/enviar-whatsapp`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ANON_KEY}` },
+          body: JSON.stringify({ to: phone, message: reason }),
+        })
+        const b = await r.json().catch(() => ({}))
+        if (r.ok && b?.success) {
+          channels.push('WhatsApp')
+          return
+        }
+        await supabase.rpc('funcionaria_refund_usage', {
+          p_usage_event_id: reservation.usage_event_id,
+          p_reason: 'cash_whatsapp_http_error',
+          p_metadata: { status: r.status },
+        }).catch(() => null)
+      } catch (error: any) {
+        await supabase.rpc('funcionaria_refund_usage', {
+          p_usage_event_id: reservation.usage_event_id,
+          p_reason: 'cash_whatsapp_network_error',
+          p_metadata: { message: String(error?.message || error).slice(0, 160) },
         }).catch(() => null)
       }
-    }).catch(() => undefined) as Promise<void>)
+    })())
   }
 
   if (config.notificar_sms === true && phone) {

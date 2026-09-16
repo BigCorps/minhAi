@@ -47,22 +47,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, reason: 'ai_disabled' }, { status: 403 });
     }
 
-    const { data: allowance } = await supabase.rpc('funcionaria_check_usage', {
-      p_company_id: companyId,
-      p_usage_key: 'ai_generation',
-      p_units: 1,
-    });
-
-    if (!allowance?.ok) {
-      return NextResponse.json({
-        ok: false,
-        reason: allowance?.reason || 'insufficient_credits',
-        available_credits: allowance?.available_credits ?? 0,
-        credits_required: allowance?.credits_required ?? 2,
-      }, { status: 402 });
-    }
-
-    // Endpoint público: limita rajadas por empresa além da trava financeira.
+    // Endpoint público: limita rajadas por empresa antes de qualquer reserva/custo.
     const since = new Date(Date.now() - 60_000).toISOString();
     const { count } = await supabase
       .from('funcionaria_usage_events')
@@ -79,6 +64,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'OPENAI_API_KEY não configurada' }, { status: 500 });
     }
 
+    // PHASE5_AI_PREPAID_RESERVATION — reserva crédito ANTES de gerar custo no provedor.
+    const idempotencyKey = `ai:${companyId}:${randomUUID()}`;
+    const { data: reservation, error: reservationError } = await supabase.rpc('funcionaria_consume_usage', {
+      p_company_id: companyId,
+      p_usage_key: 'ai_generation',
+      p_units: 1,
+      p_source: String(source || 'public').slice(0, 80),
+      p_channel: source === 'widget' ? 'widget' : 'webapp',
+      p_idempotency_key: idempotencyKey,
+      p_metadata: {
+        phase: '5',
+        billing_mode: 'prepaid_reservation',
+        model: 'gpt-4o-mini',
+      },
+    });
+
+    if (reservationError || !reservation?.ok) {
+      const reason = reservation?.reason || 'usage_reservation_failed';
+      return NextResponse.json({
+        ok: false,
+        reason,
+        available_credits: reservation?.available_credits ?? 0,
+        credits_required: reservation?.credits_required ?? 2,
+      }, { status: reason === 'insufficient_credits' ? 402 : 409 });
+    }
+
+    async function refund(reason: string, metadata: Record<string, unknown> = {}) {
+      if (!reservation?.usage_event_id) return;
+      const { error } = await supabase.rpc('funcionaria_refund_usage', {
+        p_usage_event_id: reservation.usage_event_id,
+        p_reason: reason,
+        p_metadata: metadata,
+      });
+      if (error) console.warn('[FuncionarIA AI] estorno falhou:', error.message);
+    }
+
     const systemPrompt = [
       `Você é a FuncionarIA da empresa "${company.name}".`,
       'Responda em português brasileiro, de forma curta, clara e útil.',
@@ -91,61 +112,55 @@ export async function POST(request: NextRequest) {
       company.system_prompt ? `Contexto adicional da empresa: ${company.system_prompt}` : '',
     ].filter(Boolean).join('\n');
 
-    const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        temperature: 0.25,
-        max_tokens: 350,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
-        ],
-      }),
-    });
+    let aiRes: Response;
+    try {
+      aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${openaiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          temperature: 0.25,
+          max_tokens: 350,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage },
+          ],
+        }),
+      });
+    } catch (error: any) {
+      await refund('openai_network_error', { message: String(error?.message || error).slice(0, 160) });
+      throw error;
+    }
 
     if (!aiRes.ok) {
       const detail = await aiRes.text().catch(() => '');
+      await refund('openai_http_error', { status: aiRes.status });
       console.error('[FuncionarIA AI] OpenAI:', aiRes.status, detail.slice(0, 250));
       return NextResponse.json({ ok: false, error: 'Falha temporária na IA' }, { status: 502 });
     }
 
-    const aiData = await aiRes.json();
-    const answer = String(aiData?.choices?.[0]?.message?.content || '').trim();
-    if (!answer) {
-      return NextResponse.json({ ok: false, error: 'Resposta vazia' }, { status: 502 });
+    let aiData: any;
+    try {
+      aiData = await aiRes.json();
+    } catch (error: any) {
+      await refund('openai_invalid_json', { message: String(error?.message || error).slice(0, 160) });
+      return NextResponse.json({ ok: false, error: 'Resposta inválida da IA' }, { status: 502 });
     }
 
-    const idempotencyKey = `ai:${companyId}:${randomUUID()}`;
-    const { data: debit } = await supabase.rpc('funcionaria_consume_usage', {
-      p_company_id: companyId,
-      p_usage_key: 'ai_generation',
-      p_units: 1,
-      p_source: String(source || 'public').slice(0, 80),
-      p_channel: source === 'widget' ? 'widget' : 'webapp',
-      p_idempotency_key: idempotencyKey,
-      p_metadata: {
-        model: 'gpt-4o-mini',
-        prompt_tokens: aiData?.usage?.prompt_tokens ?? null,
-        completion_tokens: aiData?.usage?.completion_tokens ?? null,
-        total_tokens: aiData?.usage?.total_tokens ?? null,
-      },
-    });
-
-    if (!debit?.ok) {
-      console.warn('[FuncionarIA AI] resposta gerada, mas débito não concluído:', debit);
-      return NextResponse.json({ ok: false, reason: debit?.reason || 'usage_debit_failed' }, { status: debit?.reason === 'insufficient_credits' ? 402 : 500 });
+    const answer = String(aiData?.choices?.[0]?.message?.content || '').trim();
+    if (!answer) {
+      await refund('openai_empty_answer');
+      return NextResponse.json({ ok: false, error: 'Resposta vazia' }, { status: 502 });
     }
 
     return NextResponse.json({
       ok: true,
       answer,
-      credits_consumed: debit?.credits_consumed ?? allowance?.credits_required ?? 0,
-      balance_after: debit?.balance_after ?? null,
+      credits_consumed: reservation?.credits_consumed ?? 0,
+      balance_after: reservation?.balance_after ?? null,
     });
   } catch (error: any) {
     console.error('[FuncionarIA AI] erro:', error);

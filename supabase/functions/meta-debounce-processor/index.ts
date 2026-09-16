@@ -7,6 +7,17 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 serve(async (req) => {
+  // PHASE5_SERVICE_ROLE_ONLY — worker interno: somente service_role.
+  if (req.method !== 'OPTIONS') {
+    const expectedServiceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const receivedAuthorization = req.headers.get('authorization') ?? ''
+    if (!expectedServiceRole || receivedAuthorization !== `Bearer ${expectedServiceRole}`) {
+      return new Response(JSON.stringify({ error: 'unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+  }
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*' } })
   }

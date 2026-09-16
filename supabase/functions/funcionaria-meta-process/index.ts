@@ -41,6 +41,17 @@ const PAID_LOOKUP_KEYS = new Set([
 ])
 
 serve(async (req) => {
+  // PHASE5_SERVICE_ROLE_ONLY — worker interno: somente service_role.
+  if (req.method !== 'OPTIONS') {
+    const expectedServiceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const receivedAuthorization = req.headers.get('authorization') ?? ''
+    if (!expectedServiceRole || receivedAuthorization !== `Bearer ${expectedServiceRole}`) {
+      return new Response(JSON.stringify({ error: 'unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+  }
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return Response.json({ error: 'method_not_allowed' }, { status: 405, headers: cors })
 
@@ -107,23 +118,34 @@ async function processMessage(data: Incoming) {
       return { handled: true, source: 'voice_disabled', sent: sent.sent, reason: sent.reason }
     }
 
-    const allowance = await checkUsage(supabase, connection.company_id, 'stt_minute', 1)
-    if (!allowance?.ok) return { handled: true, skipped: true, reason: allowance?.reason || 'insufficient_credits', usage_key: 'stt_minute' }
-
-    const transcription = await transcribeMetaAudio(data.media_id, connection)
-    if (!transcription?.text) return { handled: true, skipped: true, reason: 'audio_not_understood' }
-
-    const sttUnits = Math.max(1, Math.ceil(Number(transcription.durationSeconds || 1) / 60))
-    const finalAllowance = sttUnits === 1 ? allowance : await checkUsage(supabase, connection.company_id, 'stt_minute', sttUnits)
-    if (!finalAllowance?.ok) return { handled: true, skipped: true, reason: finalAllowance?.reason || 'insufficient_credits', usage_key: 'stt_minute' }
-
-    const debit = await consumeUsage(supabase, connection.company_id, 'stt_minute', sttUnits, {
+    // Reserva o primeiro minuto ANTES do Whisper. Se a transcrição falhar, estorna.
+    const sttReservation = await consumeUsage(supabase, connection.company_id, 'stt_minute', 1, {
       source: 'funcionaria_meta_voice',
       channel: data.platform,
-      idempotencyKey: `meta-stt:${baseMessageId}`,
-      metadata: { mime_type: data.mime_type || null, media_id: data.media_id, duration_seconds: transcription.durationSeconds, actual_provider: 'OpenAI Whisper' },
+      idempotencyKey: `meta-stt:${baseMessageId}:minute:1`,
+      metadata: { phase: '5', billing_mode: 'prepaid_reservation', mime_type: data.mime_type || null, media_id: data.media_id, actual_provider: 'OpenAI Whisper' },
     })
-    if (!debit?.ok) return { handled: true, skipped: true, reason: debit?.reason || 'usage_debit_failed', usage_key: 'stt_minute' }
+    if (!sttReservation?.ok) return { handled: true, skipped: true, reason: sttReservation?.reason || 'usage_reservation_failed', usage_key: 'stt_minute' }
+
+    const transcription = await transcribeMetaAudio(data.media_id, connection)
+    if (!transcription?.text) {
+      await refundUsage(supabase, sttReservation.usage_event_id, 'meta_whisper_no_transcript', { media_id: data.media_id })
+      return { handled: true, skipped: true, reason: 'audio_not_understood' }
+    }
+
+    const sttUnits = Math.max(1, Math.ceil(Number(transcription.durationSeconds || 1) / 60))
+    if (sttUnits > 1) {
+      const extra = await consumeUsage(supabase, connection.company_id, 'stt_minute', sttUnits - 1, {
+        source: 'funcionaria_meta_voice_extra',
+        channel: data.platform,
+        idempotencyKey: `meta-stt:${baseMessageId}:extra`,
+        metadata: { phase: '5', duration_seconds: transcription.durationSeconds, additional_minutes: sttUnits - 1 },
+      })
+      if (!extra?.ok) {
+        console.warn('[FuncionarIA Meta] áudio excedeu 1 minuto sem saldo para unidades adicionais:', extra)
+        return { handled: true, skipped: true, reason: extra?.reason || 'insufficient_credits', usage_key: 'stt_minute' }
+      }
+    }
     text = transcription.text
     data.message_text = transcription.text
   }
@@ -192,6 +214,12 @@ async function processMessage(data: Incoming) {
       company,
       userId: company.user_id,
       companyId: connection.company_id,
+      usageContext: {
+        mode: 'funcionaria',
+        companyId: connection.company_id,
+        channel: data.platform,
+        messageId: baseMessageId,
+      },
     }),
   })
 
@@ -204,7 +232,7 @@ async function processMessage(data: Incoming) {
   let response = routeResult?.responseText ?? null
   let source = String(routeResult?.functionKey || 'fallback')
 
-  if (source === 'meta_reply') {
+  if (source === 'meta_reply' && routeResult?.billing?.ai_reserved !== true) {
     const debit = await consumeUsage(supabase, connection.company_id, 'ai_generation', 1, {
       source: 'funcionaria_meta_ai',
       channel: data.platform,
@@ -215,7 +243,7 @@ async function processMessage(data: Incoming) {
       response = `Não consegui usar a IA agora por falta de créditos de uso. Você pode continuar em ${rootUrl} ou pedir atendimento de um responsável.`
       source = 'ai_without_balance'
     }
-  } else if (PAID_LOOKUP_KEYS.has(source)) {
+  } else if (PAID_LOOKUP_KEYS.has(source) && routeResult?.billing?.paid_lookup_reserved !== true) {
     const debit = await consumeUsage(supabase, connection.company_id, 'paid_lookup', 1, {
       source: `funcionaria_meta_${source}`,
       channel: data.platform,
@@ -253,7 +281,7 @@ async function processMessage(data: Incoming) {
   return {
     handled: true,
     source,
-    ai_used: source === 'meta_reply',
+    ai_used: routeResult?.billing?.ai_reserved === true || source === 'meta_reply',
     platform_cost: data.platform === 'whatsapp',
     response_count: messages.length,
   }
@@ -401,6 +429,22 @@ async function consumeUsage(
   return data
 }
 
+async function refundUsage(
+  supabase: any,
+  usageEventId: string | null | undefined,
+  reason: string,
+  metadata: Record<string, unknown> = {},
+) {
+  if (!usageEventId) return null
+  const { data, error } = await supabase.rpc('funcionaria_refund_usage', {
+    p_usage_event_id: usageEventId,
+    p_reason: reason,
+    p_metadata: metadata,
+  })
+  if (error) console.warn('[FuncionarIA Meta] refund usage:', error.message)
+  return data
+}
+
 function buildEntitledConnection(connection: any, functionKeys: string[], aiAllowed: boolean) {
   const c = { ...connection }
   const featureFlags = [
@@ -482,11 +526,25 @@ async function sendMetaMessage(recipientId: string, message: string, connection:
   if (!recipientId || !message) return { sent: false, reason: 'empty_outgoing_message' }
   let url = ''
   let payload: any
+  let whatsappReservation: any = null
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
 
   if (platform === 'whatsapp') {
-    const allowance = await checkUsage(usage.supabase, usage.companyId, 'whatsapp_message', 1)
-    if (!allowance?.ok) return { sent: false, reason: allowance?.reason || 'insufficient_credits' }
+    // Reserva ANTES de gerar custo na Meta. Em falha HTTP/rede, o valor é estornado.
+    whatsappReservation = await consumeUsage(usage.supabase, usage.companyId, 'whatsapp_message', 1, {
+      source: usage.source,
+      channel: 'whatsapp',
+      idempotencyKey: usage.idempotencyKey,
+      metadata: {
+        phase: '5',
+        billing_mode: 'prepaid_reservation',
+        recipient_suffix: recipientId.slice(-4),
+        message_length: message.length,
+      },
+    })
+    if (!whatsappReservation?.ok) {
+      return { sent: false, reason: whatsappReservation?.reason || 'insufficient_credits' }
+    }
 
     url = `https://graph.facebook.com/v19.0/${connection.whatsapp_number_id}/messages`
     headers.Authorization = `Bearer ${connection.user_access_token || connection.encrypted_page_access_token}`
@@ -496,23 +554,33 @@ async function sendMetaMessage(recipientId: string, message: string, connection:
     payload = { recipient: { id: recipientId }, message: { text: message }, messaging_type: 'RESPONSE' }
   }
 
-  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) })
+  let res: Response
+  try {
+    res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) })
+  } catch (error: any) {
+    if (platform === 'whatsapp' && whatsappReservation?.usage_event_id) {
+      await refundUsage(usage.supabase, whatsappReservation.usage_event_id, 'meta_network_error', {
+        message: String(error?.message || error).slice(0, 160),
+      })
+    }
+    throw error
+  }
+
   if (!res.ok) {
     const detail = await res.text().catch(() => '')
+    if (platform === 'whatsapp' && whatsappReservation?.usage_event_id) {
+      await refundUsage(usage.supabase, whatsappReservation.usage_event_id, 'meta_http_error', {
+        status: res.status,
+      })
+    }
     throw new Error(`meta_send_failed:${res.status}:${detail.slice(0,180)}`)
   }
 
-  if (platform === 'whatsapp') {
-    const debit = await consumeUsage(usage.supabase, usage.companyId, 'whatsapp_message', 1, {
-      source: usage.source,
-      channel: 'whatsapp',
-      idempotencyKey: usage.idempotencyKey,
-      metadata: { recipient_suffix: recipientId.slice(-4), message_length: message.length },
-    })
-    if (!debit?.ok) console.warn('[FuncionarIA Meta] WhatsApp enviado, mas débito não concluído:', debit)
+  return {
+    sent: true,
+    credits_consumed: whatsappReservation?.credits_consumed ?? 0,
+    balance_after: whatsappReservation?.balance_after ?? null,
   }
-
-  return { sent: true }
 }
 
 async function transcribeMetaAudio(mediaId: string, connection: any): Promise<{ text: string; durationSeconds: number } | null> {

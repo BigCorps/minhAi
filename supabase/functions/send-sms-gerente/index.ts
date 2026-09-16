@@ -53,15 +53,7 @@ Deno.serve(async (req) => {
         gerenteNome = String(profile?.nome || gerenteNomeInput || 'Responsável').trim()
         if (!number) return json({ error: 'Telefone do responsável não configurado' }, 400)
 
-        if (usageIdempotencyKey) {
-          const { data: existing } = await supabase
-            .from('funcionaria_usage_events')
-            .select('id')
-            .eq('idempotency_key', usageIdempotencyKey)
-            .maybeSingle()
-          if (existing?.id) return json({ success: true, duplicate: true })
-        }
-
+        // PHASE5_SMS_PREPAID_RESERVATION — a idempotência passa pelo RPC atômico.
         // Proteção simples contra spam do botão público.
         const since = new Date(Date.now() - 10 * 60_000).toISOString()
         const { count } = await supabase
@@ -73,19 +65,6 @@ Deno.serve(async (req) => {
           .gte('created_at', since)
         if ((count || 0) >= 3) return json({ error: 'Limite temporário de SMS atingido', reason: 'rate_limited' }, 429)
 
-        const { data: allowance } = await supabase.rpc('funcionaria_check_usage', {
-          p_company_id: companyId,
-          p_usage_key: 'sms_message',
-          p_units: 1,
-        })
-        if (!allowance?.ok) {
-          return json({
-            error: 'Créditos de uso insuficientes para SMS',
-            reason: allowance?.reason || 'insufficient_credits',
-            available_credits: allowance?.available_credits ?? 0,
-            credits_required: allowance?.credits_required ?? 1,
-          }, 402)
-        }
       }
     }
 
@@ -95,6 +74,46 @@ Deno.serve(async (req) => {
     const message = gerenteNome
       ? `${isFuncionarIA ? 'FuncionarIA' : 'minhAi'}: ${gerenteNome}, voce foi chamado(a). Motivo: ${motivoResumido}`
       : motivo
+
+    let smsReservation: any = null
+    if (isFuncionarIA && companyId && supabase) {
+      const idempotencyKey = usageIdempotencyKey || `manager-sms:${companyId}:${crypto.randomUUID()}`
+      const { data: reservation, error: reservationError } = await supabase.rpc('funcionaria_consume_usage', {
+        p_company_id: companyId,
+        p_usage_key: 'sms_message',
+        p_units: 1,
+        p_source: 'manager_assistance',
+        p_channel: 'sms',
+        p_idempotency_key: idempotencyKey,
+        p_metadata: {
+          phase: '5',
+          billing_mode: 'prepaid_reservation',
+          manager_name: gerenteNome || null,
+          destination_suffix: number.slice(-4),
+        },
+      })
+      if (reservationError || !reservation?.ok) {
+        const reason = reservation?.reason || 'usage_reservation_failed'
+        return json({
+          error: reason === 'insufficient_credits' ? 'Créditos de uso insuficientes para SMS' : 'Não foi possível reservar créditos para SMS',
+          reason,
+          available_credits: reservation?.available_credits ?? 0,
+          credits_required: reservation?.credits_required ?? 1,
+        }, reason === 'insufficient_credits' ? 402 : 409)
+      }
+      if (reservation?.duplicate === true) return json({ success: true, duplicate: true })
+      smsReservation = reservation
+    }
+
+    async function refundSms(reason: string, metadata: Record<string, unknown> = {}) {
+      if (!supabase || !smsReservation?.usage_event_id) return
+      const { error } = await supabase.rpc('funcionaria_refund_usage', {
+        p_usage_event_id: smsReservation.usage_event_id,
+        p_reason: reason,
+        p_metadata: metadata,
+      })
+      if (error) console.warn('[send-sms-gerente] estorno falhou:', error.message)
+    }
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 30_000)
@@ -112,29 +131,15 @@ Deno.serve(async (req) => {
       clearTimeout(timeoutId)
 
       const data = await response.json().catch(() => ({}))
-      if (!response.ok) return json({ error: data?.message || 'Falha ao enviar SMS', details: data }, response.status)
-
-      if (isFuncionarIA && companyId && supabase) {
-        const idempotencyKey = usageIdempotencyKey || `manager-sms:${companyId}:${crypto.randomUUID()}`
-        const { data: debit, error: debitError } = await supabase.rpc('funcionaria_consume_usage', {
-          p_company_id: companyId,
-          p_usage_key: 'sms_message',
-          p_units: 1,
-          p_source: 'manager_assistance',
-          p_channel: 'sms',
-          p_idempotency_key: idempotencyKey,
-          p_metadata: {
-            manager_name: gerenteNome || null,
-            destination_suffix: number.slice(-4),
-            provider_response_id: data?.id || data?.messageId || null,
-          },
-        })
-        if (debitError || !debit?.ok) console.warn('[send-sms-gerente] SMS enviado, débito não concluído:', debitError?.message || debit)
+      if (!response.ok) {
+        await refundSms('sms_provider_http_error', { status: response.status })
+        return json({ error: data?.message || 'Falha ao enviar SMS', details: data }, response.status)
       }
 
       return json({ success: true, data })
     } catch (fetchError: any) {
       clearTimeout(timeoutId)
+      await refundSms('sms_provider_network_error', { message: String(fetchError?.message || fetchError).slice(0, 160) })
       throw fetchError
     }
   } catch (error: any) {

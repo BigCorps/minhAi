@@ -54,7 +54,7 @@ async function callFerramentasConsultas(action: string, params: Record<string, a
 async function detectAndRun(msg: string, msgLower: string, connection: any, companyId: string, usageContext: any = null) {
   // PHASE6_FUNCIONARIA_LOOKUP_CONTEXT — contexto assinado pelo worker interno.
   const callConsulta = (action: string, params: Record<string, any>, _legacyCompanyId?: string) =>
-    callConsulta(action, { ...params, __funcionaria_usage_context: usageContext }, companyId)
+    callFerramentasConsultas(action, { ...params, __funcionaria_usage_context: usageContext }, companyId)
 
   // ── CEP ───────────────────────────────────────────────────────────────
   if (connection.consultar_cep_enabled === true) {

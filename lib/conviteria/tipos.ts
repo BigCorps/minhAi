@@ -52,6 +52,8 @@ export interface InformacaoItem {
   tipo: 'traje' | 'criancas' | 'estacionamento' | 'transporte' | 'hospedagem' | 'fotos' | 'outro';
   titulo: string;
   texto: string;
+  /** Imagem opcional de referência exibida junto da informação no convite. */
+  imagemUrl?: string;
 }
 
 export type OrigemMusica = 'upload' | 'youtube';

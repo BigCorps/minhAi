@@ -1,0 +1,75 @@
+/*
+ * ConviteIA usa apenas interface clara.
+ * Este escopo impede que prefers-color-scheme/dark mode do SO ou navegador
+ * transforme os controles nativos da Gestão do Evento em campos escuros.
+ */
+.root {
+  color-scheme: light !important;
+}
+
+.root :global(input),
+.root :global(select),
+.root :global(textarea),
+.root :global(button) {
+  color-scheme: light !important;
+}
+
+.root :global(input:not([type='checkbox']):not([type='radio']):not([type='color']):not([type='file'])),
+.root :global(select),
+.root :global(textarea) {
+  background-color: #ffffff !important;
+  color: #40232c !important;
+  -webkit-text-fill-color: #40232c !important;
+  border-color: rgba(192, 96, 120, 0.30) !important;
+  caret-color: #a04a63;
+}
+
+.root :global(input:not([type='checkbox']):not([type='radio']):not([type='color']):not([type='file']):focus),
+.root :global(select:focus),
+.root :global(textarea:focus) {
+  border-color: rgba(192, 96, 120, 0.72) !important;
+  outline: 2px solid rgba(192, 96, 120, 0.14);
+  outline-offset: 1px;
+}
+
+.root :global(input::placeholder),
+.root :global(textarea::placeholder) {
+  color: #9b7b84 !important;
+  -webkit-text-fill-color: #9b7b84 !important;
+  opacity: 1;
+}
+
+.root :global(select),
+.root :global(option),
+.root :global(optgroup) {
+  background-color: #ffffff !important;
+  color: #40232c !important;
+}
+
+.root :global(input[type='checkbox']),
+.root :global(input[type='radio']) {
+  accent-color: #c06078;
+}
+
+.root :global(input[type='color']) {
+  background-color: #ffffff !important;
+  border-color: rgba(192, 96, 120, 0.30) !important;
+}
+
+/* Chrome/Edge/Safari podem recolorir autofill em modo escuro. */
+.root :global(input:-webkit-autofill),
+.root :global(input:-webkit-autofill:hover),
+.root :global(input:-webkit-autofill:focus),
+.root :global(textarea:-webkit-autofill),
+.root :global(select:-webkit-autofill) {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #40232c !important;
+  caret-color: #a04a63 !important;
+  transition: background-color 9999s ease-out 0s;
+}
+
+/* Mantém também os controles de data/hora/number legíveis no dark do SO. */
+.root :global(input::-webkit-calendar-picker-indicator) {
+  opacity: 0.72;
+  filter: none !important;
+}

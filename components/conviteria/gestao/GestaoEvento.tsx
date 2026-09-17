@@ -11,6 +11,7 @@ import PadrinhosPainel from './PadrinhosPainel';
 import MesasPainel from './MesasPainel';
 import CheckinPainel from './CheckinPainel';
 import PapelariaPainel from './PapelariaPainel';
+import estilos from './gestao-light.module.css';
 
 type Aba = 'detalhes' | 'convidados' | 'padrinhos' | 'mesas' | 'checkin' | 'papelaria';
 const ABAS: Array<{ id: Aba; nome: string; Icon: typeof Users }> = [
@@ -37,7 +38,7 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
   if (erro) return <div className="mx-auto max-w-3xl p-6 text-center text-red-600">{erro}</div>;
   if (!token || !cfg) return <div className="grid min-h-[60vh] place-items-center"><Loader2 className="h-8 w-8 animate-spin text-[#c06078]" /></div>;
   return (
-    <main className="min-h-screen bg-[#fff9fb] px-4 py-6 text-[#40232c]">
+    <main className={`${estilos.root} min-h-screen bg-[#fff9fb] px-4 py-6 text-[#40232c]`}>
       <div className="mx-auto max-w-5xl">
         <header className="mb-5 flex items-center justify-between gap-3"><div><Link href="/convite/painel" className="inline-flex items-center gap-1 text-sm text-[#7c5560]"><ArrowLeft className="h-4 w-4" />Meus convites</Link><h1 className="mt-2 text-2xl font-semibold">Gestão do Evento</h1><p className="text-sm text-[#7c5560]">{cfg.anfitrioes.exibicao} · {slug}.conviteia.com</p></div><a href={`https://${slug}.conviteia.com`} target="_blank" rel="noreferrer" className="rounded-xl border border-[#c0607844] bg-white px-4 py-2 text-sm font-semibold text-[#a04a63]">Ver convite</a></header>
         <nav className="mb-5 flex gap-2 overflow-x-auto pb-2">{ABAS.map(({ id, nome, Icon }) => <button key={id} type="button" onClick={() => setAba(id)} className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold ${aba === id ? 'bg-[#c06078] text-white' : 'border border-[#c0607833] bg-white text-[#7c5560]'}`}><Icon className="h-4 w-4" />{nome}</button>)}</nav>

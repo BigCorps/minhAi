@@ -315,3 +315,128 @@
 .cv-capa.envelope-organico .cv-env-base {
   clip-path: url(#env-base-organico);
 }
+
+/* ==========================================================================
+   Três formatos com geometria própria
+
+   Os seis originais compartilham a mesma estrutura: aba no topo, laterais em X,
+   base embaixo. Estes três quebram essa estrutura de propósito — a dobra não
+   vem de cima. Por isso cada um redefine a aba e desliga o que não usa.
+
+   `--cv-lacre-left` acompanha `--cv-lacre-top`: o lacre pousa na dobra, e nos
+   formatos verticais a dobra não está no meio horizontal.
+   ========================================================================== */
+
+/* Padrão dos seis originais: dobra no meio horizontal. */
+.cv-capa { --cv-lacre-left: 50%; }
+
+/* ── Reto horizontal ───────────────────────────────────────────────────────
+   Aba termina numa linha reta, sem bico. É o envelope comercial, e o que
+   melhor acomoda logo largo no lugar do lacre. */
+.cv-capa.envelope-reto-horizontal {
+  --cv-aba-altura: 54%;
+  --cv-lacre-top: 54%;
+}
+.cv-capa.envelope-reto-horizontal .cv-env-lado { display: none; }
+.cv-capa.envelope-reto-horizontal .cv-env-base {
+  top: 54%;
+  bottom: 0;
+  height: auto;
+}
+/* Linha de luz reta na dobra, no lugar do X das laterais. */
+.cv-capa.envelope-reto-horizontal .cv-env-corpo::after {
+  background: linear-gradient(
+    to bottom,
+    transparent calc(54% - 0.5px),
+    color-mix(in srgb, #fff 60%, transparent) 54%,
+    transparent calc(54% + 0.5px)
+  );
+}
+
+/* ── Reto vertical ─────────────────────────────────────────────────────────
+   Costura vertical no meio: o cartão dobra em vez de envelopar. A aba cobre a
+   metade esquerda e o lacre pousa sobre a emenda. */
+.cv-capa.envelope-reto-vertical {
+  --cv-aba-altura: 100%;
+  --cv-lacre-top: 50%;
+  --cv-lacre-left: 50%;
+}
+.cv-capa.envelope-reto-vertical .cv-capa-aba,
+.cv-capa.envelope-reto-vertical .cv-capa-vinco,
+.cv-capa.envelope-reto-vertical .cv-capa-aba-sombra {
+  right: 50%;
+  height: 100%;
+  /* A dobra é a borda direita, então o eixo do giro muda de lugar. */
+  transform-origin: right center;
+}
+.cv-capa.envelope-reto-vertical .cv-env-lado { display: none; }
+.cv-capa.envelope-reto-vertical .cv-env-base {
+  top: 0;
+  left: 50%;
+  right: 0;
+  bottom: 0;
+  height: auto;
+}
+.cv-capa.envelope-reto-vertical .cv-env-corpo::after {
+  background: linear-gradient(
+    to right,
+    transparent calc(50% - 0.5px),
+    color-mix(in srgb, #fff 60%, transparent) 50%,
+    transparent calc(50% + 0.5px)
+  );
+}
+/* Abre para o lado, não para cima. */
+.cv-capa.envelope-reto-vertical.abrindo .cv-capa-aba,
+.cv-capa.envelope-reto-vertical.abrindo .cv-capa-aba-sombra {
+  transform: rotateY(-118deg);
+}
+
+/* ── Clássico lateral ──────────────────────────────────────────────────────
+   O bico do clássico apontando para o lado. */
+.cv-capa.envelope-classico-lateral {
+  --cv-aba-altura: 100%;
+  --cv-lacre-top: 50%;
+  --cv-lacre-left: 62%;
+}
+.cv-capa.envelope-classico-lateral .cv-capa-aba,
+.cv-capa.envelope-classico-lateral .cv-capa-vinco,
+.cv-capa.envelope-classico-lateral .cv-capa-aba-sombra {
+  right: 38%;
+  height: 100%;
+  transform-origin: left center;
+}
+.cv-capa.envelope-classico-lateral .cv-env-lado { display: none; }
+.cv-capa.envelope-classico-lateral .cv-env-base {
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: auto;
+}
+.cv-capa.envelope-classico-lateral .cv-env-corpo::after { display: none; }
+.cv-capa.envelope-classico-lateral.abrindo .cv-capa-aba,
+.cv-capa.envelope-classico-lateral.abrindo .cv-capa-aba-sombra {
+  transform: rotateY(118deg);
+}
+
+/* Recortes dos três formatos novos. O reto-horizontal e o reto-vertical usam
+   retângulo (a forma vem das dimensões da aba, não do recorte); o
+   clássico-lateral usa o bico deitado. */
+.cv-capa.envelope-reto-horizontal .cv-capa-aba,
+.cv-capa.envelope-reto-horizontal .cv-capa-vinco,
+.cv-capa.envelope-reto-horizontal .cv-capa-aba-sombra {
+  clip-path: url(#env-aba-reto-horizontal);
+}
+.cv-capa.envelope-reto-vertical .cv-capa-aba,
+.cv-capa.envelope-reto-vertical .cv-capa-vinco,
+.cv-capa.envelope-reto-vertical .cv-capa-aba-sombra {
+  clip-path: url(#env-aba-reto-vertical);
+}
+.cv-capa.envelope-classico-lateral .cv-capa-aba,
+.cv-capa.envelope-classico-lateral .cv-capa-vinco,
+.cv-capa.envelope-classico-lateral .cv-capa-aba-sombra {
+  clip-path: url(#env-aba-classico-lateral);
+}
+.cv-capa.envelope-reto-horizontal .cv-env-base { clip-path: none; }
+.cv-capa.envelope-reto-vertical .cv-env-base { clip-path: none; }
+.cv-capa.envelope-classico-lateral .cv-env-base { clip-path: none; }

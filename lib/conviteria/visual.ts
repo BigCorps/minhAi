@@ -14,6 +14,9 @@ export const ENVELOPES = [
   { id: 'reto', nome: 'Reto' },
   { id: 'onda', nome: 'Onda' },
   { id: 'organico', nome: 'Orgânico' },
+  { id: 'reto-horizontal', nome: 'Reto horizontal' },
+  { id: 'reto-vertical', nome: 'Reto vertical' },
+  { id: 'classico-lateral', nome: 'Clássico lateral' },
 ] as const;
 
 export type OrnamentoId = OrnamentoCatalogoId;

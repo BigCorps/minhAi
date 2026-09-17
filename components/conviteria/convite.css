@@ -573,7 +573,9 @@ body.cv-travado { overflow: hidden; }
      variavel so. */
   position: absolute;
   top: var(--cv-lacre-top, var(--cv-aba-altura));
-  left: 50%;
+  /* Variavel tambem no eixo horizontal: nos formatos vertical e lateral a
+     dobra nao esta no meio da tela, e o lacre pousa na dobra. */
+  left: var(--cv-lacre-left, 50%);
   transform: translate(-50%, -50%);
   z-index: 2;
   display: grid;

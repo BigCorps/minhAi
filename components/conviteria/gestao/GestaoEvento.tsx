@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CalendarClock, LayoutGrid, Loader2, QrCode, Shirt, Sparkles, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
@@ -23,20 +23,124 @@ const ABAS: Array<{ id: Aba; nome: string; Icon: typeof Users }> = [
   { id: 'papelaria', nome: 'Papelaria', Icon: Sparkles },
 ];
 
+const MARGEM_RENOVACAO_MS = 5 * 60 * 1000;
+const INTERVALO_CONFERENCIA_MS = 5 * 60 * 1000;
+
 export default function GestaoEvento({ eventoId }: { eventoId: string }) {
-  const [aba, setAba] = useState<Aba>('detalhes'); const [token, setToken] = useState(''); const [cfg, setCfg] = useState<ConviteConfig | null>(null); const [slug, setSlug] = useState(''); const [gestao, setGestao] = useState<{ rsvpRestrito: boolean; qrModo: 'familia' | 'individual' }>({ rsvpRestrito: false, qrModo: 'familia' }); const [erro, setErro] = useState('');
+  const [aba, setAba] = useState<Aba>('detalhes');
+  const [token, setToken] = useState('');
+  const [cfg, setCfg] = useState<ConviteConfig | null>(null);
+  const [slug, setSlug] = useState('');
+  const [gestao, setGestao] = useState<{ rsvpRestrito: boolean; qrModo: 'familia' | 'individual' }>({ rsvpRestrito: false, qrModo: 'familia' });
+  const [erro, setErro] = useState('');
+  const [supabase] = useState(() => createClient());
+
+  /**
+   * Mantém o Bearer usado pelas abas sempre sincronizado com a sessão real do
+   * Supabase. Antes, a Gestão guardava o access_token obtido ao abrir a página
+   * e continuava usando esse mesmo valor mesmo depois de ele expirar (~1h).
+   */
+  const obterTokenAtual = useCallback(async (forcarRenovacao = false) => {
+    const { data: atual } = await supabase.auth.getSession();
+    let sessao = atual.session;
+
+    const expiraEmMs = (sessao?.expires_at ?? 0) * 1000;
+    const pertoDeExpirar = !sessao || expiraEmMs <= Date.now() + MARGEM_RENOVACAO_MS;
+
+    if (forcarRenovacao || pertoDeExpirar) {
+      const { data: renovada, error } = await supabase.auth.refreshSession();
+      if (!error && renovada.session) sessao = renovada.session;
+    }
+
+    const atualToken = sessao?.access_token;
+    if (!atualToken) {
+      window.location.href = '/convite/entrar';
+      return null;
+    }
+
+    setToken(atualToken);
+    return atualToken;
+  }, [supabase]);
+
+  const carregarGestao = useCallback(async () => {
+    setErro('');
+    let t = await obterTokenAtual(false);
+    if (!t) return;
+
+    const requisitar = (accessToken: string) =>
+      fetch(`/api/conviteria/gestao?eventoId=${encodeURIComponent(eventoId)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      });
+
+    let r = await requisitar(t);
+
+    // Se a sessão virou exatamente entre a leitura e a chamada, renova e
+    // repete uma única vez. Evita mandar o usuário de volta ao login por um
+    // token velho enquanto a sessão continua válida no navegador.
+    if (r.status === 401) {
+      const renovado = await obterTokenAtual(true);
+      if (!renovado) return;
+      t = renovado;
+      r = await requisitar(t);
+    }
+
+    const d = await r.json().catch(() => null);
+    if (!r.ok) {
+      setErro(d?.erro || 'Não foi possível carregar a gestão.');
+      return;
+    }
+
+    setCfg(d.evento.config);
+    setSlug(d.evento.slug);
+    setGestao(d.gestao);
+  }, [eventoId, obterTokenAtual]);
+
   useEffect(() => {
-    const sb = createClient();
-    sb.auth.getSession().then(async ({ data }) => {
-      const t = data.session?.access_token; if (!t) { location.href = '/convite/entrar'; return; }
-      setToken(t);
-      const r = await fetch(`/api/conviteria/gestao?eventoId=${encodeURIComponent(eventoId)}`, { headers: { Authorization: `Bearer ${t}` }, cache: 'no-store' });
-      const d = await r.json().catch(() => null); if (!r.ok) { setErro(d?.erro || 'Não foi possível carregar a gestão.'); return; }
-      setCfg(d.evento.config); setSlug(d.evento.slug); setGestao(d.gestao);
+    void carregarGestao();
+
+    // O browser client renova a sessão automaticamente. Este listener mantém
+    // o token passado às abas atualizado toda vez que isso acontecer.
+    const { data: authListener } = supabase.auth.onAuthStateChange((evento, sessao) => {
+      if (sessao?.access_token) {
+        setToken(sessao.access_token);
+        return;
+      }
+      if (evento === 'SIGNED_OUT') window.location.href = '/convite/entrar';
     });
-  }, [eventoId]);
+
+    // Safari/iOS e notebooks podem suspender timers quando a aba fica em
+    // segundo plano. Ao voltar para a página, conferimos/renovamos antes que a
+    // sessão antiga seja usada novamente.
+    const conferirSessao = () => {
+      if (document.visibilityState === 'visible') void obterTokenAtual(false);
+    };
+    const aoFocar = () => void obterTokenAtual(false);
+    const aoVoltarDoCache = () => void obterTokenAtual(false);
+
+    document.addEventListener('visibilitychange', conferirSessao);
+    window.addEventListener('focus', aoFocar);
+    window.addEventListener('pageshow', aoVoltarDoCache);
+
+    // Enquanto a página estiver aberta, verifica periodicamente e só renova
+    // quando faltar menos de cinco minutos para o vencimento.
+    const intervalo = window.setInterval(
+      () => void obterTokenAtual(false),
+      INTERVALO_CONFERENCIA_MS,
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', conferirSessao);
+      window.removeEventListener('focus', aoFocar);
+      window.removeEventListener('pageshow', aoVoltarDoCache);
+      window.clearInterval(intervalo);
+    };
+  }, [carregarGestao, obterTokenAtual, supabase]);
+
   if (erro) return <div className="mx-auto max-w-3xl p-6 text-center text-red-600">{erro}</div>;
   if (!token || !cfg) return <div className="grid min-h-[60vh] place-items-center"><Loader2 className="h-8 w-8 animate-spin text-[#c06078]" /></div>;
+
   return (
     <main className={`${estilos.root} min-h-screen bg-[#fff9fb] px-4 py-6 text-[#40232c]`}>
       <div className="mx-auto max-w-5xl">

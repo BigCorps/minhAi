@@ -2,12 +2,35 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Check, MonitorSmartphone, Puzzle, Shirt, Sparkles } from 'lucide-react';
 
+const FUNCIONARIA_PLAY_URL = 'https://play.google.com/store/apps/details?id=net.funcionaria.twa';
+
 export default function FuncionarIALandingPage() {
   return (
     <main className="min-h-screen bg-[#F8FAFC] text-slate-950">
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6">
         <div className="flex items-center gap-2"><Image src="/brands/funcionaria/logo.png" alt="FuncionarIA" width={50} height={50} className="h-12 w-12 object-contain"/><span className="text-lg font-black">FuncionarIA</span></div>
-        <div className="flex items-center gap-2"><Link href="/login" className="rounded-xl px-4 py-2.5 text-sm font-black text-slate-600 hover:bg-white">Entrar</Link><Link href="/onboarding?new=1" className="rounded-xl bg-[#6D28D9] px-4 py-2.5 text-sm font-black text-white">Criar grátis</Link></div>
+        <div className="flex items-center gap-2">
+          <a
+            href={FUNCIONARIA_PLAY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Baixar FuncionarIA no Google Play"
+            title="Disponível no Google Play"
+            className="inline-flex shrink-0 items-center justify-center rounded-md transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
+          >
+            <Image
+              src="/cards/play.png"
+              alt="Disponível no Google Play"
+              width={1760}
+              height={134}
+              sizes="(max-width: 639px) 62px, 108px"
+              className="h-auto w-[62px] max-w-none sm:w-[108px]"
+              priority
+            />
+          </a>
+          <Link href="/login" className="rounded-xl px-4 py-2.5 text-sm font-black text-slate-600 hover:bg-white">Entrar</Link>
+          <Link href="/onboarding?new=1" className="rounded-xl bg-[#6D28D9] px-4 py-2.5 text-sm font-black text-white">Criar grátis</Link>
+        </div>
       </header>
 
       <section className="mx-auto grid max-w-7xl gap-10 px-4 pb-16 pt-8 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:py-20">

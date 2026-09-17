@@ -203,3 +203,23 @@ O hardening de SELECT ficou explicitamente fora da 4E8. Policies de leitura ampl
 5. Enviar a saída completa do verificador e o JSON `phase4e_orders_dml_hardening_result`.
 
 Não fazer commit antes da revisão desse resultado.
+
+## Atualização 16/09/2026 — Fase 7: Loja grátis + Mercado Livre + entrega local
+
+<!-- PHASE7_STOREFRONT_ROADMAP_20260916 -->
+
+A Fase 6 (idempotência / zero-cost) foi implementada e validada estruturalmente. O cross-check final ainda mantém uma pendência de propagação do marcador `paid_lookup_reserved` no caminho `ferramentas-consultas -> meta-consultas -> meta-message-router -> funcionaria-meta-process`; essa pendência deve ser corrigida antes de declarar a Fase 6 totalmente encerrada. Antes de Telefone/Pipecat, entra a nova **Fase 7**.
+
+Decisões:
+- storefront básico passa a fazer parte da base;
+- grátis = recebimento BigCorps + 5% por venda confirmada;
+- mensal = recebimento direto na conta própria, sem 5%;
+- online = loja + widget; ambos = alternância loja/atendimento; presencial = fluxo atual, loja opcional;
+- Mercado Livre ganha importação e sincronização ML -> FuncionarIA;
+- entrega local Lalamove entra no storefront com markup default de 50%, separado da comissão de 5%;
+- criação de entrega real só ocorre após pagamento confirmado no servidor;
+- `produtos_venda` permanece catálogo único;
+- primeiro pacote 7A/7B formaliza a especificação e adiciona o badge da Play Store;
+- Pipecat passa para Fase 8.
+
+Fonte detalhada: `docs/FUNCIONARIA_PHASE7_LOJA_GRATIS_MERCADOLIVRE.md`.

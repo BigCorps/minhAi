@@ -6,6 +6,30 @@
 
 ---
 
+## ADITIVO 16/09/2026 — Fase 7: loja virtual grátis, Mercado Livre e entrega local
+
+<!-- PHASE7_STOREFRONT_OVERRIDE -->
+
+Este aditivo **substitui**, onde houver conflito, as regras anteriores deste documento sobre vitrine, carrinho, pedidos, checkout e monetização da loja virtual. A especificação detalhada está em `docs/FUNCIONARIA_PHASE7_LOJA_GRATIS_MERCADOLIVRE.md`.
+
+Regras congeladas:
+
+- loja básica, catálogo, carrinho e pedido passam a integrar a base da FuncionarIA;
+- modo `commission`: sem mensalidade da loja, recebimento pela infraestrutura BigCorps e comissão de **5%** sobre venda confirmada;
+- modo `monthly_direct`: mensalidade configurável, recebimento na conta própria e sem a comissão de 5%;
+- IA, voz, canais e conexões continuam independentes e seguem seus próprios preços/créditos;
+- `produtos_venda` continua sendo a fonte única de catálogo;
+- produto importado do Mercado Livre deve usar upsert idempotente por empresa + `ml_item_id`;
+- `online` abre loja com FuncionarIA em widget; `ambos` alterna loja/atendimento; `presencial` preserva o foco atual e só mostra loja quando ativada;
+- a habilidade `sales_orders` permanece para capacidades operacionais avançadas, mas deixa de ser pré-requisito do storefront básico;
+- entrega local via Lalamove integra o storefront, preservando `LALAMOVE_MARKUP_PERCENT=50` como default comercial;
+- frete bruto, markup do frete e comissão de 5% são contabilmente separados;
+- criação/despacho Lalamove ocorre somente após pagamento confirmado server-side;
+- pagamentos e comissão são sempre confirmados/calculados server-side;
+- depois da Fase 7 o roadmap retoma Telefone/Pipecat como Fase 8.
+
+---
+
 ## 1. Visão do produto
 
 A **FuncionarIA** é uma funcionária digital personalizável, multicanal e modular, construída sobre a base técnica já existente da minhAi.

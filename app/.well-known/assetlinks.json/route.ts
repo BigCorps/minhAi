@@ -169,7 +169,7 @@ const ASSETLINKS_BY_HOST: Record<string, any[]> = {
   'melhoria.org': MELHORIA_ENTRY,
   'www.melhoria.org': MELHORIA_ENTRY,
 
-  // ── FuncionarIA (a publicar) ───────────────────────────────────────────────
+  // ── FuncionarIA (publicado na Play Store, set/2026) ────────────────────────
   'funcionaria.net': [
     {
       relation: [

@@ -2,9 +2,10 @@
   "meta": {
     "product": "FuncionarIA",
     "domain": "funcionaria.net",
-    "version": "master-spec-2026-08-23",
+    "version": "master-spec-2026-09-16-phase7",
     "status": "product_architecture_locked_with_adjustable_pricing",
-    "source_of_truth": true
+    "source_of_truth": true,
+    "phase7_storefront_override": true
   },
   "brand": {
     "institutional_slogan": "A funcionária IA que veste a camisa da sua empresa, no presencial e no online.",
@@ -13,13 +14,18 @@
     "benefit_message": "Automatize tarefas repetitivas e deixe sua equipe focada no que realmente precisa de pessoas."
   },
   "business_model": {
-    "formula": "free_base + monthly_skills - quantity_discount + usage_credits",
+    "formula": "free_base + storefront_commission_or_monthly_direct + monthly_skills - quantity_discount + usage_credits",
     "free_base": true,
     "generative_ai_optional": true,
     "voice_input_optional": true,
     "hardware_required": false,
     "hardware_rental_optional": true,
-    "cash_acceptor_removed": true
+    "cash_acceptor_removed": true,
+    "storefront_modes": [
+      "commission",
+      "monthly_direct"
+    ],
+    "free_storefront_commission_bps": 500
   },
   "free_tier": {
     "name": "FuncionarIA Start",
@@ -44,13 +50,14 @@
       "basic_mouth_animation",
       "call_responsible",
       "website_widget",
-      "basic_product_showcase"
+      "basic_product_showcase",
+      "storefront",
+      "product_catalog",
+      "cart",
+      "orders",
+      "bigcorps_checkout_commission_mode"
     ],
     "excluded": [
-      "full_cart",
-      "orders",
-      "full_checkout",
-      "payments",
       "full_queue",
       "full_schedule",
       "paid_channels",
@@ -115,7 +122,10 @@
     {
       "key": "mercado_livre",
       "name": "Mercado Livre",
-      "monthly_price_brl": 49.9
+      "monthly_price_brl": 49.9,
+      "import_to_storefront": true,
+      "sync_direction_default": "mercadolivre_to_funcionaria",
+      "idempotent_import_required": true
     },
     {
       "key": "sales_orders",
@@ -128,7 +138,10 @@
         "fazer_pedido",
         "registrar_venda",
         "meu_cupom"
-      ]
+      ],
+      "storefront_required": false,
+      "scope": "advanced_sales_operations",
+      "note": "Storefront básico, carrinho e pedido fazem parte da base; esta habilidade cobre operação avançada."
     },
     {
       "key": "checkout_payments",
@@ -580,5 +593,60 @@
     "fiscal_usage_pricing",
     "free_showcase_limits",
     "free_tier_fair_use_limits"
-  ]
+  ],
+  "storefront": {
+    "included_in_base": true,
+    "product_source": "produtos_venda",
+    "commission_mode": {
+      "key": "commission",
+      "monthly_price_brl": 0,
+      "bigcorps_commission_bps": 500,
+      "pix_provider": "inter_bigcorps",
+      "card_provider": "infinitepay_bigcorps",
+      "commission_only_after_confirmed_payment": true
+    },
+    "monthly_direct_mode": {
+      "key": "monthly_direct",
+      "monthly_price_configurable": true,
+      "bigcorps_sales_commission_bps": 0,
+      "merchant_receives_directly": true
+    },
+    "delivery": {
+      "provider": "lalamove",
+      "included_in_storefront": true,
+      "default_markup_percent": 50,
+      "markup_env": "LALAMOVE_MARKUP_PERCENT",
+      "quote_before_payment_allowed": true,
+      "dispatch_requires_confirmed_payment": true,
+      "fee_and_sales_commission_accounted_separately": true,
+      "existing_runtime_requires_hardening_before_public_storefront": true
+    },
+    "workplace_behavior": {
+      "online": "store_with_funcionaria_widget",
+      "ambos": "switchable_store_and_assistant",
+      "presencial": "assistant_first_store_optional"
+    },
+    "public_home_mode_values": [
+      "store",
+      "assistant"
+    ]
+  },
+  "phase7": {
+    "name": "Loja grátis + Mercado Livre + entrega local + modelo 5%",
+    "status": "implementation_started",
+    "steps": [
+      "7A",
+      "7B",
+      "7C",
+      "7D",
+      "7E",
+      "7F",
+      "7G",
+      "7H",
+      "7I",
+      "7J",
+      "7K"
+    ],
+    "next_after_completion": "Fase 8 — Telefone / Pipecat"
+  }
 }

@@ -208,7 +208,7 @@ Não fazer commit antes da revisão desse resultado.
 
 <!-- PHASE7_STOREFRONT_ROADMAP_20260916 -->
 
-A Fase 6 (idempotência / zero-cost) foi implementada e validada estruturalmente. O cross-check final ainda mantém uma pendência de propagação do marcador `paid_lookup_reserved` no caminho `ferramentas-consultas -> meta-consultas -> meta-message-router -> funcionaria-meta-process`; essa pendência deve ser corrigida antes de declarar a Fase 6 totalmente encerrada. Antes de Telefone/Pipecat, entra a nova **Fase 7**.
+A Fase 6 (idempotência / zero-cost) foi implementada, validada estruturalmente e teve o residual final de propagação de `paid_lookup_reserved` fechado no caminho `ferramentas-consultas -> meta-consultas -> meta-message-router -> funcionaria-meta-process`. Consultas FuncionarIA só propagam o marcador após retorno `success` do worker que reserva/idempotentiza antes do provedor; prompts locais e erros permanecem sem o marcador. A **Fase 7** segue antes de Telefone/Pipecat.
 
 Decisões:
 - storefront básico passa a fazer parte da base;

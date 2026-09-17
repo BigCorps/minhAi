@@ -53,8 +53,28 @@ async function callFerramentasConsultas(action: string, params: Record<string, a
 
 async function detectAndRun(msg: string, msgLower: string, connection: any, companyId: string, usageContext: any = null) {
   // PHASE6_FUNCIONARIA_LOOKUP_CONTEXT — contexto assinado pelo worker interno.
-  const callConsulta = (action: string, params: Record<string, any>, _legacyCompanyId?: string) =>
-    callFerramentasConsultas(action, { ...params, __funcionaria_usage_context: usageContext }, companyId)
+  // PHASE6_META_LOOKUP_BILLING_PROPAGATION — o worker externo já fez a
+  // reserva/idempotência antes do provedor. Só marcamos billing depois de uma
+  // resposta success de ferramentas-consultas; prompts locais e erros nunca
+  // recebem paid_lookup_reserved.
+  let paidLookupReserved = false
+  const callConsulta = async (action: string, params: Record<string, any>, _legacyCompanyId?: string) => {
+    const texto = await callFerramentasConsultas(
+      action,
+      { ...params, __funcionaria_usage_context: usageContext },
+      companyId,
+    )
+    if (usageContext?.mode === 'funcionaria') paidLookupReserved = true
+    return texto
+  }
+  const consultaSuccess = (responseText: string, functionKey: string) => ({
+    responseText,
+    functionKey,
+    creditsUsed: 0,
+    ...(paidLookupReserved
+      ? { billing: { paid_lookup_reserved: true, billing_mode: 'funcionaria_usage' } }
+      : {}),
+  })
 
   // ── CEP ───────────────────────────────────────────────────────────────
   if (connection.consultar_cep_enabled === true) {
@@ -64,7 +84,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
       console.log('📮 Rota: Consultar CEP')
       try {
         const texto = await callConsulta('consultar_cep', { cep: cepMatch[1] }, companyId)
-        return { responseText: texto, functionKey: 'consultar_cep', creditsUsed: 0 }
+        return consultaSuccess(texto, 'consultar_cep')
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_cep', creditsUsed: 0 }
       }
@@ -83,7 +103,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
       console.log('🏢 Rota: Consultar CNPJ')
       try {
         const texto = await callConsulta('dados_cnpj', { cnpj: cnpjMatch[1] }, companyId)
-        return { responseText: texto, functionKey: 'dados_cnpj', creditsUsed: 0 }
+        return consultaSuccess(texto, 'dados_cnpj')
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_cnpj', creditsUsed: 0 }
       }
@@ -105,7 +125,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
       else if (msgLower.includes('dolar') || msgLower.includes('dólar')) moedas = 'USD-BRL'
       try {
         const texto = await callConsulta('consultar_cambio', { moedas }, companyId)
-        return { responseText: texto, functionKey: 'consultar_cambio', creditsUsed: 0 }
+        return consultaSuccess(texto, 'consultar_cambio')
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_cambio', creditsUsed: 0 }
       }
@@ -120,7 +140,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
       console.log('👤 Rota: Consultar CPF')
       try {
         const texto = await callConsulta('dados_cpf', { cpf: cpfMatch[1] }, companyId)
-        return { responseText: texto, functionKey: 'consultar_cpf', creditsUsed: 0 }
+        return consultaSuccess(texto, 'consultar_cpf')
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_cpf', creditsUsed: 0 }
       }
@@ -139,7 +159,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
       console.log('🚗 Rota: Consultar Placa')
       try {
         const texto = await callConsulta('consultar_placa', { placa: placaMatch[1].toUpperCase().replace('-','') }, companyId)
-        return { responseText: texto, functionKey: 'consultar_placa', creditsUsed: 0 }
+        return consultaSuccess(texto, 'consultar_placa')
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_placa', creditsUsed: 0 }
       }
@@ -157,7 +177,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
       console.log('🔍 Rota: Restrições CPF')
       try {
         const texto = await callConsulta('restricoes_cpf', { cpf: cpfMatch[1] }, companyId)
-        return { responseText: texto, functionKey: 'restricoes_cpf', creditsUsed: 0 }
+        return consultaSuccess(texto, 'restricoes_cpf')
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'restricoes_cpf', creditsUsed: 0 }
       }
@@ -175,7 +195,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
       console.log('🔍 Rota: Restrições CNPJ')
       try {
         const texto = await callConsulta('restricoes_cnpj', { cnpj: cnpjMatch[1] }, companyId)
-        return { responseText: texto, functionKey: 'restricoes_cnpj', creditsUsed: 0 }
+        return consultaSuccess(texto, 'restricoes_cnpj')
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'restricoes_cnpj', creditsUsed: 0 }
       }
@@ -193,7 +213,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
       console.log('⚖️ Rota: Consultar Protestos')
       try {
         const texto = await callConsulta('consultar_protestos', { documento: docMatch[1] }, companyId)
-        return { responseText: texto, functionKey: 'consultar_protestos', creditsUsed: 0 }
+        return consultaSuccess(texto, 'consultar_protestos')
       } catch (e: any) {
         return { responseText: `⚖️ ...`, functionKey: 'consultar_protestos', creditsUsed: 0 }
       }
@@ -211,7 +231,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
       console.log('📞 Rota: Consultar DDD')
       try {
         const texto = await callConsulta('consultar_ddd', { ddd: dddMatch[1] }, companyId)
-        return { responseText: texto, functionKey: 'consultar_ddd', creditsUsed: 0 }
+        return consultaSuccess(texto, 'consultar_ddd')
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_ddd', creditsUsed: 0 }
       }
@@ -230,7 +250,7 @@ async function detectAndRun(msg: string, msgLower: string, connection: any, comp
       const ano = anoMatch ? anoMatch[1] : new Date().getFullYear().toString()
       try {
         const texto = await callConsulta('consultar_feriados', { ano }, companyId)
-        return { responseText: texto, functionKey: 'consultar_feriados', creditsUsed: 0 }
+        return consultaSuccess(texto, 'consultar_feriados')
       } catch (e: any) {
         return { responseText: `❌ ${e.message}`, functionKey: 'consultar_feriados', creditsUsed: 0 }
       }

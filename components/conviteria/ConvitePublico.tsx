@@ -52,6 +52,8 @@ export default function ConvitePublico({
           logoLacreAjuste={cfg.logoLacreAjuste}
           envelopeId={cfg.envelopeId}
           ornamentoId={cfg.ornamentoId}
+          etiquetaId={cfg.etiquetaId}
+          textoEtiqueta={cfg.textoEtiqueta}
           aoAbrir={abrir}
         />
       )}

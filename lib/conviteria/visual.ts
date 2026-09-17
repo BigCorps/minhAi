@@ -17,6 +17,15 @@ export const ENVELOPES = [
 ] as const;
 
 export type OrnamentoId = OrnamentoCatalogoId;
+export const ETIQUETAS = [
+  { id: 'caixa',  nome: 'Caixinha',     dica: 'Retângulo abaixo do lacre.' },
+  { id: 'curva',  nome: 'Curvada',      dica: 'Acompanha a borda do lacre.' },
+  { id: 'nenhuma', nome: 'Sem etiqueta', dica: 'Só o lacre convida ao toque.' },
+] as const;
+
+export type EtiquetaId = (typeof ETIQUETAS)[number]['id'];
+export const ETIQUETA_PADRAO: EtiquetaId = 'caixa';
+
 export type EnvelopeId = (typeof ENVELOPES)[number]['id'];
 
 export const ORNAMENTO_PADRAO: OrnamentoId = 'casamento-original';

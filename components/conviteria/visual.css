@@ -132,3 +132,156 @@
     height: 66px;
   }
 }
+
+/* ==========================================================================
+   Corpo do envelope — profundidade
+
+   O envelope era chapado: uma aba colorida sobre um fundo. O que faz um
+   envelope de verdade parecer papel sao tres coisas, e nenhuma e o formato da
+   aba:
+
+     1. paineis laterais e base, cada um com tom levemente diferente
+     2. sombra na juncao entre eles
+     3. sombra projetada pela borda da aba sobre o corpo
+
+   Tudo derivado de --cv-papel por color-mix, entao acompanha qualquer tema
+   sem cor fixa.
+   ========================================================================== */
+
+.cv-env-corpo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Abaixo da aba (que nao tem z-index e cria contexto pelo transform) e
+     acima da foto de fundo. */
+  z-index: 1;
+}
+
+/* Laterais: triangulos que sobem das bordas ate o centro, como as orelhas
+   dobradas de um envelope real. Tom mais escuro que a aba porque ficam por
+   baixo dela e recebem menos luz. */
+.cv-env-lado {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 52%;
+  background: color-mix(in srgb, var(--cv-papel) 90%, var(--cv-tinta) 10%);
+}
+.cv-env-lado.esquerda {
+  left: 0;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+.cv-env-lado.direita {
+  right: 0;
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+/* Base: o painel de baixo, o mais claro dos tres — e o que fica por cima
+   quando o envelope esta fechado. */
+.cv-env-base {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56%;
+  background: color-mix(in srgb, var(--cv-papel) 96%, var(--cv-tinta) 4%);
+  clip-path: polygon(0 100%, 50% 0, 100% 100%);
+}
+
+/* Linha de luz nas dobras: um fio claro de 1px onde os paineis se encontram.
+   E o detalhe que mais rende — sem ele os triangulos parecem recorte de papel
+   colorido; com ele, vinco. */
+.cv-env-corpo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom right,
+      transparent calc(50% - 0.5px),
+      color-mix(in srgb, #fff 55%, transparent) 50%,
+      transparent calc(50% + 0.5px)),
+    linear-gradient(to bottom left,
+      transparent calc(50% - 0.5px),
+      color-mix(in srgb, #fff 55%, transparent) 50%,
+      transparent calc(50% + 0.5px));
+  opacity: 0.6;
+}
+
+/* Sombra da aba sobre o corpo. Elemento proprio porque `box-shadow` nao
+   acompanha `clip-path`: a sombra sairia retangular, aparecendo por baixo do
+   recorte em V e denunciando o truque. */
+/* Leva a classe .cv-capa-aba junto, entao herda o clip-path do envelope
+   escolhido sem precisar repetir os seis recortes. Fica abaixo da aba real e
+   so projeta a sombra: o conteudo proprio e invisivel. */
+.cv-capa-aba-sombra {
+  /* !important porque a sombra TAMBEM carrega a classe .cv-capa-aba (e assim
+     herda o clip-path dos seis envelopes). Sem isto ela pegaria o z-index 2
+     daquela regra, que vem depois no arquivo, e ficaria na frente da aba
+     real. */
+  z-index: 1 !important;
+  filter: drop-shadow(0 7px 11px rgb(0 0 0 / 20%));
+  /* `background-image` da aba nao deve aparecer duas vezes. */
+  background-image: none;
+  /* A sombra acompanha a aba na abertura; sem isto ela ficaria parada
+     enquanto a aba cai. */
+  transition: inherit;
+}
+
+/* A aba fica acima do corpo e ganha um degrade sutil: papel dobrado reflete
+   mais luz perto do vinco do que na ponta. */
+.cv-capa-aba {
+  z-index: 2;
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, #fff 16%, transparent),
+    transparent 60%
+  );
+}
+
+/* Ao abrir, o corpo some depois da aba: sumir junto entregaria que sao
+   camadas separadas. */
+.cv-capa.abrindo .cv-env-corpo {
+  opacity: 0;
+  transition: opacity 0.5s ease 0.35s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-capa.abrindo .cv-env-corpo { transition-duration: 0.01ms; }
+}
+
+/* ==========================================================================
+   Etiqueta curvada
+
+   Centrada no MESMO ponto do lacre, num circulo maior, para o texto orbitar o
+   selo. `pointer-events: none` porque o SVG e um quadrado de 190px e sem isso
+   ele engoliria o clique destinado ao lacre.
+   ========================================================================== */
+.cv-etiqueta-curva {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  overflow: visible;
+}
+.cv-etiqueta-curva text {
+  font-family: var(--cv-corpo), system-ui, sans-serif;
+  /* Em viewBox de 100 unidades, 6.2 equivale a ~11px no tamanho renderizado. */
+  font-size: 6.2px;
+  letter-spacing: 0.34px;
+  text-transform: uppercase;
+  fill: var(--cv-tinta-suave);
+}
+
+/* O lacre sobe um pouco quando ha texto curvado: centrado no mesmo ponto, o
+   arco de baixo encostaria na borda do selo. */
+.cv-capa-centro:has(.cv-etiqueta-curva) .cv-capa-lacre {
+  transform: translateY(-6px);
+}
+
+/* Some junto com o resto da capa, sem atraso proprio — o texto nao e
+   protagonista da animacao. */
+.cv-capa.abrindo .cv-etiqueta-curva {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}

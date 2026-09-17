@@ -438,6 +438,8 @@ export default function Wizard({
                 ornamentoId={
                   estado.cfg.ornamentoId
                 }
+                etiquetaId={estado.cfg.etiquetaId}
+                textoEtiqueta={estado.cfg.textoEtiqueta}
                 aoAbrir={() => undefined}
               />
             </div>

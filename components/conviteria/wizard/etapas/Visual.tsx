@@ -1,7 +1,8 @@
 'use client';
 
 import type { PropsEtapa } from '../Wizard';
-import { ENVELOPES } from '@/lib/conviteria/visual';
+import { Campo, Texto } from '../Campos';
+import { ENVELOPES, ETIQUETAS, ETIQUETA_PADRAO } from '@/lib/conviteria/visual';
 import { ORNAMENTOS_ASSETS } from '@/lib/conviteria/ornamentos';
 import { tokensDoConvite } from '@/lib/conviteria/tokens';
 import { OrnamentoCanto } from '../../OrnamentoVisual';
@@ -114,6 +115,46 @@ export default function Visual({
           );
         })}
       </div>
+
+      <p className="wz-intro" style={{ marginTop: '1.25rem' }}>
+        Convite para abrir.
+      </p>
+
+      {ETIQUETAS.map((t) => {
+        const sel = (estado.cfg.etiquetaId ?? ETIQUETA_PADRAO) === t.id;
+        return (
+          <label className="wz-escolha" key={t.id}>
+            <input
+              type="radio"
+              name="etiquetaId"
+              checked={sel}
+              onChange={() =>
+                despachar({ tipo: 'campo', caminho: 'etiquetaId', valor: t.id })
+              }
+            />
+            <span>
+              <strong>{t.nome}</strong>
+              <br />
+              <small style={{ opacity: 0.75 }}>{t.dica}</small>
+            </span>
+          </label>
+        );
+      })}
+
+      {/* Texto proprio: "Toque para abrir" no celular, "Abra nosso convite",
+          ou o que o casal quiser. So aparece quando ha etiqueta. */}
+      {(estado.cfg.etiquetaId ?? ETIQUETA_PADRAO) !== 'nenhuma' && (
+        <Campo rotulo="Texto da etiqueta" dica="Deixe vazio para usar o padrão.">
+          <Texto
+            valor={estado.cfg.textoEtiqueta ?? ''}
+            placeholder="Clique para abrir"
+            maxLength={40}
+            onChange={(v) =>
+              despachar({ tipo: 'campo', caminho: 'textoEtiqueta', valor: v })
+            }
+          />
+        </Campo>
+      )}
     </>
   );
 }

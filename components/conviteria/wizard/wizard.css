@@ -914,6 +914,9 @@
 }
 
 .wz-textura-amostra {
+  /* SEM background aqui: a Textura e `-z-10` e ficaria atras do fundo do
+     proprio elemento — a mesma armadilha que ja escondeu a textura no painel e
+     na previa. Quem pinta o papel e o <rect> do SVG. */
   display: block;
   width: 100%;
   aspect-ratio: 1;
@@ -1304,6 +1307,17 @@
   /* A aba ocupa metade da altura: e na metade de baixo que os seis formatos se
      diferenciam, e ela precisa caber inteira no cartao. */
   --cv-aba-altura: 56%;
+  /* A .cv-capa perdeu o `background` (agora e o ::before, atras da textura).
+     A miniatura nao renderiza textura, entao precisa do papel de volta — mas
+     no ::before, para nao reintroduzir o problema se um dia ela passar a
+     renderizar. */
+  isolation: isolate;
+}
+.wz-env-mini::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -20;
   background: var(--cv-papel, #faeee9);
 }
 .wz-env-mini .cv-capa-aba { height: var(--cv-aba-altura); }

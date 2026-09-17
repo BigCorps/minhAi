@@ -54,6 +54,8 @@ export default function ConvitePublico({
           ornamentoId={cfg.ornamentoId}
           etiquetaId={cfg.etiquetaId}
           textoEtiqueta={cfg.textoEtiqueta}
+          texturaId={cfg.texturaId}
+          temaId={cfg.temaId}
           aoAbrir={abrir}
         />
       )}

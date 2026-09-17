@@ -440,6 +440,8 @@ export default function Wizard({
                 }
                 etiquetaId={estado.cfg.etiquetaId}
                 textoEtiqueta={estado.cfg.textoEtiqueta}
+                texturaId={estado.cfg.texturaId}
+                temaId={estado.cfg.temaId}
                 aoAbrir={() => undefined}
               />
             </div>

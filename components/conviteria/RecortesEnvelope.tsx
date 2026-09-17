@@ -63,7 +63,9 @@ export const RECORTES_ENVELOPE = {
     'reto-vertical': 'M0,0 L1,0 L1,1 L0,1 Z',
 
     // Classico deitado: o bico aponta para o lado em vez de para baixo.
-    'classico-lateral': 'M0,0 L1,0.5 L0,1 Z',
+    // Aponta para a ESQUERDA (x=0 no meio da altura), com a aba ocupando a
+    // metade direita da tela — e de la que a dobra vira.
+    'classico-lateral': 'M1,0 L0,0.5 L1,1 Z',
   },
 
   // Painel de baixo. (0,0) e o canto superior esquerdo do painel.

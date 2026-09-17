@@ -217,7 +217,6 @@ export default function EscolherTema({ estado, despachar }: PropsEtapa) {
             >
               <span
                 className="wz-textura-amostra"
-                style={{ background: tema.papel }}
               >
                 <span className="wz-textura-svg">
                   <Textura

@@ -538,9 +538,20 @@ body.cv-travado { overflow: hidden; }
   z-index: 50;
   display: grid;
   place-items: center;
-  background: var(--cv-papel, #faeee9);
   cursor: pointer;
+  /* SEM `background` aqui: a Textura do envelope e `-z-10` e ficaria atras
+     dele. O papel e pintado pelo ::before, uma camada abaixo da textura. */
+  isolation: isolate;
   transition: opacity 0.6s ease 0.45s, visibility 0.6s ease 0.45s;
+}
+/* Papel do envelope, uma camada abaixo da textura. Continua existindo para o
+   caso de nao haver textura escolhida. */
+.cv-capa::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -20;
+  background: var(--cv-papel, #faeee9);
 }
 .cv-capa-foto { position: absolute; inset: 0; overflow: hidden; }
 .cv-capa-foto img { filter: blur(2px) saturate(0.85); transform: scale(1.06); }

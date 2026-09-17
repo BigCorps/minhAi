@@ -364,16 +364,18 @@
 .cv-capa.envelope-reto-vertical .cv-capa-aba,
 .cv-capa.envelope-reto-vertical .cv-capa-vinco,
 .cv-capa.envelope-reto-vertical .cv-capa-aba-sombra {
-  right: 50%;
+  /* Aba na metade DIREITA: a dobra fica na borda esquerda dela, que e onde o
+     olho ocidental espera a virada de uma pagina. */
+  left: 50%;
+  right: 0;
   height: 100%;
-  /* A dobra é a borda direita, então o eixo do giro muda de lugar. */
-  transform-origin: right center;
+  transform-origin: left center;
 }
 .cv-capa.envelope-reto-vertical .cv-env-lado { display: none; }
 .cv-capa.envelope-reto-vertical .cv-env-base {
   top: 0;
-  left: 50%;
-  right: 0;
+  left: 0;
+  right: 50%;
   bottom: 0;
   height: auto;
 }
@@ -388,7 +390,13 @@
 /* Abre para o lado, não para cima. */
 .cv-capa.envelope-reto-vertical.abrindo .cv-capa-aba,
 .cv-capa.envelope-reto-vertical.abrindo .cv-capa-aba-sombra {
-  transform: rotateY(-118deg);
+  transform: rotateY(118deg);
+}
+/* Sombra horizontal: a vertical vinha de `drop-shadow(0 7px ...)`, pensada
+   para aba que cai de cima, e numa dobra lateral ela aparecia como um borrao
+   embaixo em vez de uma sombra na emenda. */
+.cv-capa.envelope-reto-vertical .cv-capa-aba-sombra {
+  filter: drop-shadow(-8px 0 12px rgb(0 0 0 / 18%));
 }
 
 /* ── Clássico lateral ──────────────────────────────────────────────────────
@@ -396,14 +404,20 @@
 .cv-capa.envelope-classico-lateral {
   --cv-aba-altura: 100%;
   --cv-lacre-top: 50%;
-  --cv-lacre-left: 62%;
+  /* O bico aponta para a ESQUERDA, entao a ponta — e o lacre — fica em 38%. */
+  --cv-lacre-left: 38%;
 }
 .cv-capa.envelope-classico-lateral .cv-capa-aba,
 .cv-capa.envelope-classico-lateral .cv-capa-vinco,
 .cv-capa.envelope-classico-lateral .cv-capa-aba-sombra {
-  right: 38%;
+  left: 38%;
+  right: 0;
   height: 100%;
-  transform-origin: left center;
+  transform-origin: right center;
+}
+/* Sombra para a esquerda, acompanhando o bico. */
+.cv-capa.envelope-classico-lateral .cv-capa-aba-sombra {
+  filter: drop-shadow(-8px 0 12px rgb(0 0 0 / 18%));
 }
 .cv-capa.envelope-classico-lateral .cv-env-lado { display: none; }
 .cv-capa.envelope-classico-lateral .cv-env-base {
@@ -416,7 +430,7 @@
 .cv-capa.envelope-classico-lateral .cv-env-corpo::after { display: none; }
 .cv-capa.envelope-classico-lateral.abrindo .cv-capa-aba,
 .cv-capa.envelope-classico-lateral.abrindo .cv-capa-aba-sombra {
-  transform: rotateY(118deg);
+  transform: rotateY(-118deg);
 }
 
 /* Recortes dos três formatos novos. O reto-horizontal e o reto-vertical usam

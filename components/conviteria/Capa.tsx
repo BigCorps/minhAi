@@ -8,11 +8,14 @@ import { PadraoGravado } from './Ornamentos';
 import { OrnamentoCanto } from './OrnamentoVisual';
 import EtiquetaCurva from './EtiquetaCurva';
 import RecortesEnvelope from './RecortesEnvelope';
+import Textura from './Texturas';
+import { acharTema } from '@/lib/conviteria/temas';
 import './visual.css';
 
 export default function Capa({
   fotoUrl, lacreId, lacreCor, iniciais, logoLacreUrl, lacreAjuste, logoLacreAjuste, envelopeId = 'classico',
-  ornamentoId = 'floral', etiquetaId = 'caixa', textoEtiqueta, aoAbrir,
+  ornamentoId = 'floral', etiquetaId = 'caixa', textoEtiqueta,
+  texturaId, temaId, aoAbrir,
 }: {
   fotoUrl?: string;
   lacreId?: string;
@@ -25,6 +28,8 @@ export default function Capa({
   ornamentoId?: string;
   etiquetaId?: string;
   textoEtiqueta?: string;
+  texturaId?: string;
+  temaId?: string;
   aoAbrir: () => void;
 }) {
   const [abrindo, setAbrindo] = useState(false);
@@ -47,6 +52,23 @@ export default function Capa({
     >
       {fotoUrl && <div className="cv-capa-foto"><Image src={fotoUrl} alt="" fill priority sizes="100vw" style={{ objectFit:'cover' }}/><div className="cv-capa-veu"/></div>}
       <RecortesEnvelope />
+
+      {/* Textura no papel do envelope. Antes so o convite recebia — o
+          envelope, que e a PRIMEIRA coisa que o convidado ve, ficava liso e
+          parecia de outro produto.
+
+          Uniforme (sem `cantos`): o envelope ocupa a tela inteira, e o
+          esmaecimento radial deixaria o centro vazio justamente onde fica o
+          lacre. Opacidade menor que no convite porque aqui ela concorre com a
+          aba, as dobras e a sombra. */}
+      {texturaId && texturaId !== 'nenhuma' && temaId && (
+        <Textura
+          texturaId={texturaId}
+          cor={acharTema(temaId).floral.petalaEscura}
+          papel={acharTema(temaId).papel}
+          opacidade={0.10}
+        />
+      )}
 
       {/* Corpo do envelope: abas lateral esquerda, direita e base.
           Cada uma com um tom levemente diferente do papel, porque e a

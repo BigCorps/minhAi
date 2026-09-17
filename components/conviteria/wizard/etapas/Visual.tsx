@@ -2,6 +2,7 @@
 
 import type { PropsEtapa } from '../Wizard';
 import { Campo, Texto } from '../Campos';
+import RecortesEnvelope from '../../RecortesEnvelope';
 import { ENVELOPES, ETIQUETAS, ETIQUETA_PADRAO } from '@/lib/conviteria/visual';
 import { ORNAMENTOS_ASSETS } from '@/lib/conviteria/ornamentos';
 import { tokensDoConvite } from '@/lib/conviteria/tokens';
@@ -61,6 +62,11 @@ export default function Visual({
         })}
       </div>
 
+      {/* Os <clipPath> precisam estar no DOM desta tela: os cartoes usam
+          `clip-path: url(#env-aba-...)`, e a Capa (que normalmente os
+          renderiza) nao esta montada aqui. */}
+      <RecortesEnvelope />
+
       <p className="wz-intro" style={{ marginTop: '1.25rem' }}>
         Formato da aba do envelope.
       </p>
@@ -87,26 +93,34 @@ export default function Visual({
               <span
                 style={{
                   display: 'block',
-                  height: 52,
+                  height: 86,
                   position: 'relative',
                   overflow: 'hidden',
                   marginBottom: 6,
                 }}
               >
+                {/* Envelope em miniatura de verdade: corpo + aba. Antes o
+                    cartao mostrava so a aba numa faixa de 52px, e com o
+                    recorte aplicado a essa altura os seis formatos ficavam
+                    praticamente identicos — a diferenca entre eles esta na
+                    METADE DE BAIXO do desenho, que estava fora da caixa. */}
                 <span
-                  className={`cv-capa envelope-${e.id}`}
+                  className={`cv-capa envelope-${e.id} wz-env-mini`}
+                  // Tokens do tema: sem eles `var(--cv-papel)` nao resolve e a
+                  // miniatura sai transparente. Mesma causa do lacre preto e da
+                  // aba invisivel na previa — todo pedaco do convite
+                  // renderizado fora do <Convite> precisa recebe-los.
                   style={{
-                    position: 'absolute',
-                    inset: 0,
-                    minHeight: 52,
-                    height: 52,
                     pointerEvents: 'none',
+                    ...tokensDoConvite(estado.cfg.temaId, estado.cfg.fonteId),
                   }}
                 >
-                  <span
-                    className="cv-capa-aba"
-                    style={{ height: 52 }}
-                  />
+                  <span className="cv-env-corpo">
+                    <span className="cv-env-lado esquerda" />
+                    <span className="cv-env-lado direita" />
+                    <span className="cv-env-base" />
+                  </span>
+                  <span className="cv-capa-aba" />
                 </span>
               </span>
 

@@ -982,7 +982,11 @@
   /* A etiqueta "Clique para abrir" some: na previa o clique nao abre nada, e
      convidar para uma acao inerte confunde. */
 }
-.wz-envelope-palco .cv-capa-etiqueta { display: none; }
+/* A etiqueta APARECE na previa: ela e uma das escolhas da etapa Visual, e
+   esconde-la tornava impossivel comparar "caixinha" com "curvada" — que era
+   exatamente o que a pessoa esta decidindo ali. Escrevi esta regra quando o
+   clique na previa nao abria nada; o motivo nao vale mais. */
+.wz-envelope-palco .cv-capa-etiqueta { pointer-events: none; }
 .wz-envelope-palco .cv-capa { cursor: default; }
 
 /* --------------------------------------------------------------------------
@@ -1283,3 +1287,27 @@
   overflow: hidden;
 }
 .wz-revisao-valor { font-size: 11px; font-weight: 700; color: var(--wz-rosa-escuro); }
+
+/* --------------------------------------------------------------------------
+   Envelope em miniatura nos cartões de escolha
+
+   `.cv-capa` e `position: fixed` — no cartao ela cobriria a tela. Aqui vira
+   absolute e ganha as variaveis de tema, que normalmente vem do <Convite>.
+   -------------------------------------------------------------------------- */
+.wz-env-mini {
+  position: absolute !important;
+  inset: 0;
+  display: block !important;
+  overflow: hidden;
+  border-radius: 8px;
+  cursor: default;
+  /* A aba ocupa metade da altura: e na metade de baixo que os seis formatos se
+     diferenciam, e ela precisa caber inteira no cartao. */
+  --cv-aba-altura: 56%;
+  background: var(--cv-papel, #faeee9);
+}
+.wz-env-mini .cv-capa-aba { height: var(--cv-aba-altura); }
+
+/* Sem a sombra e sem a gravacao: em 86px de altura viram sujeira. */
+.wz-env-mini .cv-capa-aba-sombra,
+.wz-env-mini .cv-gravado { display: none; }

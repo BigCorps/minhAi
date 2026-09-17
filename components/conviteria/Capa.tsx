@@ -7,6 +7,7 @@ import type { AjusteLacre } from './LacreArte';
 import { PadraoGravado } from './Ornamentos';
 import { OrnamentoCanto } from './OrnamentoVisual';
 import EtiquetaCurva from './EtiquetaCurva';
+import RecortesEnvelope from './RecortesEnvelope';
 import './visual.css';
 
 export default function Capa({
@@ -45,6 +46,8 @@ export default function Capa({
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); } }}
     >
       {fotoUrl && <div className="cv-capa-foto"><Image src={fotoUrl} alt="" fill priority sizes="100vw" style={{ objectFit:'cover' }}/><div className="cv-capa-veu"/></div>}
+      <RecortesEnvelope />
+
       {/* Corpo do envelope: abas lateral esquerda, direita e base.
           Cada uma com um tom levemente diferente do papel, porque e a
           diferenca de tom entre os paineis — e a sombra na juncao — que faz o

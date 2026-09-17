@@ -11,7 +11,16 @@ import type { PropsEtapa } from '../Wizard';
 /** Índice da etapa de presentes, para os atalhos "Revisar lista". */
 const ETAPA_PRESENTES = ETAPAS.findIndex((e) => e.id === 'presentes');
 
-export default function Revisao({ estado, despachar }: PropsEtapa) {
+const RECURSOS_GESTAO = [
+  ['👥', 'Convidados e famílias'],
+  ['💌', 'Convites para padrinhos'],
+  ['🪑', 'Organização das mesas'],
+  ['✅', 'Check-in com QR Code'],
+  ['🗓️', 'Programação e informações'],
+  ['🎨', 'Papelaria personalizada'],
+] as const;
+
+export default function Revisao({ estado, despachar, modo }: PropsEtapa) {
   const { cfg } = estado;
   const ativas = cfg.secoes.filter((s) => s.ativo).length;
   const presentes = cfg.presentesEscolhidos ?? [];
@@ -72,6 +81,47 @@ export default function Revisao({ estado, despachar }: PropsEtapa) {
           </div>
         ))}
       </dl>
+
+      {modo !== 'editar' && (
+        <section className="mt-5 rounded-2xl border border-[#d8609040] bg-[#fff7fa] p-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-xl shadow-sm"
+              aria-hidden="true"
+            >
+              ✨
+            </div>
+            <div>
+              <p className="m-0 text-[11px] font-bold uppercase tracking-[0.14em] text-[#a04a63]">
+                Tudo para organizar seu evento
+              </p>
+              <h3 className="mt-1 text-lg font-bold text-[#40232c]">
+                Seu convite vai além do convite
+              </h3>
+              <p className="mt-1 text-sm leading-6 text-[#7c5560]">
+                Depois de criar seu convite, o painel do evento terá ferramentas para organizar tudo em um só lugar.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {RECURSOS_GESTAO.map(([icone, titulo]) => (
+              <div
+                key={titulo}
+                className="flex items-center gap-2 rounded-xl border border-[#d8609026] bg-white px-3 py-2.5 text-sm font-semibold text-[#40232c]"
+              >
+                <span className="text-base" aria-hidden="true">{icone}</span>
+                <span>{titulo}</span>
+              </div>
+            ))}
+          </div>
+
+          <p className="mb-0 mt-4 rounded-xl bg-white px-3 py-2.5 text-xs leading-5 text-[#7c5560]">
+            <strong className="text-[#a04a63]">Você não precisa configurar isso agora.</strong>{' '}
+            Esses recursos ficam disponíveis depois no painel do seu evento.
+          </p>
+        </section>
+      )}
 
       {/* A lista de presentes não aparecia em lugar nenhum antes de publicar.
           Com 20 ou mais itens, a pessoa nunca via os escolhidos juntos — e foi

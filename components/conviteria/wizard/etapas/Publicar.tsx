@@ -95,6 +95,17 @@ export default function Publicar({ estado: wz, despachar }: PropsEtapa) {
         ))}
       </fieldset>
 
+      <section className="mt-5 rounded-xl border border-[#d8609033] bg-[#fff7fa] px-4 py-3">
+        <p className="m-0 text-sm font-bold text-[#40232c]">
+          ✨ E depois de publicar?
+        </p>
+        <p className="mb-0 mt-1 text-xs leading-5 text-[#7c5560]">
+          No painel do evento você poderá organizar convidados, padrinhos, mesas,
+          check-in com QR Code e criar sua papelaria personalizada. Nada disso
+          precisa ser configurado agora.
+        </p>
+      </section>
+
       <p className="wz-aviso">
         Presentes recebidos por PIX têm taxa de 1%. O valor fica disponível
         para saque pelos anfitriões, mediante CPF.

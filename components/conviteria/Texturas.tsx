@@ -181,7 +181,9 @@ export default function Textura({
         ))}
       </defs>
 
-      <rect width="100%" height="100%" fill={papel} />
+      {/* `papel="transparent"` deixa a textura por cima de um fundo que ja
+          existe — e como ela cobre a aba do envelope sem apagar a cor dela. */}
+      {papel !== 'transparent' && <rect width="100%" height="100%" fill={papel} />}
 
       {cantos ? (
         (['tl', 'tr', 'bl', 'br'] as const).map((n) => (

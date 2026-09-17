@@ -66,7 +66,7 @@ export default function Capa({
           texturaId={texturaId}
           cor={acharTema(temaId).floral.petalaEscura}
           papel={acharTema(temaId).papel}
-          opacidade={0.10}
+          opacidade={0.2}
         />
       )}
 
@@ -89,7 +89,22 @@ export default function Capa({
       <div className="cv-capa-aba cv-capa-aba-sombra" aria-hidden="true" />
 
       <div className="cv-capa-aba">
-        <PadraoGravado/>
+        {/* A gravacao de folhagem sai quando ha textura escolhida: as duas no
+            mesmo papel viram sujeira, e a folhagem estava sendo confundida com
+            a textura do usuario — ele escolhia losangos e via folhas. */}
+        {(!texturaId || texturaId === 'nenhuma') && <PadraoGravado/>}
+
+        {/* A aba tem fundo solido proprio, entao a textura do envelope nao a
+            atravessa. Uma segunda instancia cobre a aba — sem isso a textura
+            aparecia so na metade de baixo e o envelope ficava partido. */}
+        {texturaId && texturaId !== 'nenhuma' && temaId && (
+          <Textura
+            texturaId={texturaId}
+            cor={acharTema(temaId).floral.petalaEscura}
+            papel="transparent"
+            opacidade={0.2}
+          />
+        )}
         <div className="cv-capa-vinco"/>
       </div>
       <div className="cv-capa-centro">

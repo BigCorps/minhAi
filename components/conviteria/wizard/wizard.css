@@ -923,6 +923,11 @@
   border-radius: 7px;
   overflow: hidden;
   position: relative;
+  /* `isolation: isolate` e o que faltava. `position: relative` sozinho NAO cria
+     contexto de empilhamento, entao o `-z-10` da Textura continuava subindo e
+     ia parar atras do `background: #fff` do cartao — invisivel. Com o contexto
+     isolado, o -10 fica contido aqui e pinta acima do cartao. */
+  isolation: isolate;
 }
 
 /* O componente Textura e `position: fixed` — ele cobriria a tela inteira dentro

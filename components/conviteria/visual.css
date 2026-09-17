@@ -395,8 +395,21 @@
 /* Sombra horizontal: a vertical vinha de `drop-shadow(0 7px ...)`, pensada
    para aba que cai de cima, e numa dobra lateral ela aparecia como um borrao
    embaixo em vez de uma sombra na emenda. */
+/* A sombra fica EXATAMENTE sob uma aba do mesmo tamanho, entao so escapa pelas
+   bordas — e com blur de 12px isso era quase nada. Deslocamento maior que o
+   blur garante que a faixa apareca do lado da dobra. */
 .cv-capa.envelope-reto-vertical .cv-capa-aba-sombra {
-  filter: drop-shadow(-8px 0 12px rgb(0 0 0 / 18%));
+  filter: drop-shadow(-14px 0 16px rgb(0 0 0 / 26%));
+}
+/* Vinco da dobra: linha escura fina colada na emenda. E o que le como papel
+   sobreposto — a sombra difusa sozinha so escurece uma area. */
+.cv-capa.envelope-reto-vertical .cv-capa-aba {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--cv-tinta) 14%, transparent);
+  background-image: linear-gradient(
+    to right,
+    color-mix(in srgb, #fff 20%, transparent),
+    transparent 45%
+  );
 }
 
 /* ── Clássico lateral ──────────────────────────────────────────────────────
@@ -416,8 +429,17 @@
   transform-origin: right center;
 }
 /* Sombra para a esquerda, acompanhando o bico. */
+/* Mesmo raciocinio do reto-vertical: deslocamento maior que o blur. */
 .cv-capa.envelope-classico-lateral .cv-capa-aba-sombra {
-  filter: drop-shadow(-8px 0 12px rgb(0 0 0 / 18%));
+  filter: drop-shadow(-14px 0 16px rgb(0 0 0 / 26%));
+}
+/* No bico a luz vem da ponta: degrade da esquerda para a direita. */
+.cv-capa.envelope-classico-lateral .cv-capa-aba {
+  background-image: linear-gradient(
+    to right,
+    color-mix(in srgb, #fff 22%, transparent),
+    transparent 55%
+  );
 }
 .cv-capa.envelope-classico-lateral .cv-env-lado { display: none; }
 .cv-capa.envelope-classico-lateral .cv-env-base {

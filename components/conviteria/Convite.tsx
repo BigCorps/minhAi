@@ -12,12 +12,7 @@ import {
   MessageSquare,
   Sparkles,
 } from 'lucide-react';
-import type {
-  ConviteConfig,
-  ModoRender,
-  PropsSecao,
-  TipoSecao,
-} from '@/lib/conviteria/tipos';
+import type { ConviteConfig, ModoRender, PropsSecao, TipoSecao } from '@/lib/conviteria/tipos';
 import { tokensDoConvite } from '@/lib/conviteria/tokens';
 import { acharTema } from '@/lib/conviteria/temas';
 import Textura from './Texturas';
@@ -34,6 +29,7 @@ import RSVP from './secoes/RSVP';
 import Recados from './secoes/Recados';
 import Presentes from './secoes/Presentes';
 import Padrinhos from './secoes/Padrinhos';
+import DressCode from './secoes/DressCode';
 import Programacao from './secoes/Programacao';
 import Informacoes from './secoes/Informacoes';
 import Galeria from './secoes/Galeria';
@@ -46,17 +42,12 @@ const MAPA: Record<string, ComponentType<PropsSecao>> = {
   foto: Foto, frase: Frase, musica: Musica, nomes: Nomes, data: DataHora,
   contagem: Contagem, calendario: Calendario, local: Local, rsvp: RSVP,
   recados: Recados, presentes: Presentes, padrinhos: Padrinhos,
-  dresscode: Frase, programacao: Programacao, informacoes: Informacoes,
+  dresscode: DressCode, programacao: Programacao, informacoes: Informacoes,
   galeria: Galeria, marca: Marca, fim: Fim,
 };
 
 const SEM_DIVISOR = new Set(['foto', 'data', 'nomes', 'musica', 'fim']);
 
-/**
- * Atalhos rápidos inspirados no exemplo de referência enviado pelo usuário.
- * A barra é dinâmica: só mostra itens que realmente existem no convite e
- * aponta para os ids que o próprio motor já cria em cada seção.
- */
 const ATALHOS = [
   { tipo: 'local', rotulo: 'Localização', Icone: MapPin },
   { tipo: 'rsvp', rotulo: 'Presença', Icone: CheckCircle2 },
@@ -77,15 +68,30 @@ function urlHttp(valor?: string) {
   catch { return false; }
 }
 
+function fotosGaleriaVisiveis(cfg: ConviteConfig) {
+  const fotos = Array.from(new Set(cfg.midia?.galeria ?? []));
+  const fotoPrincipalAtiva = cfg.secoes.some((s) => s.tipo === 'foto' && s.ativo);
+  if (!fotoPrincipalAtiva || !cfg.midia?.fotoPrincipal) return fotos;
+  return fotos.filter((url) => url !== cfg.midia?.fotoPrincipal);
+}
+
 function temConteudo(tipo: string, cfg: ConviteConfig): boolean {
   switch (tipo) {
     case 'foto': return Boolean(cfg.midia?.fotoPrincipal);
-    case 'galeria': return (cfg.midia?.galeria?.length ?? 0) > 0;
+    case 'galeria': return fotosGaleriaVisiveis(cfg).length > 0;
     case 'padrinhos': return (cfg.padrinhos?.length ?? 0) > 0;
     case 'musica': return Boolean(cfg.midia?.musica);
     case 'local': return Boolean(cfg.local);
     case 'programacao': return (cfg.programacao?.length ?? 0) > 0;
     case 'informacoes': return (cfg.informacoes?.length ?? 0) > 0;
+    case 'dresscode':
+      return Boolean(
+        cfg.dressCode?.tipo?.trim()
+        || cfg.dressCode?.texto?.trim()
+        || cfg.dressCode?.evitar?.trim()
+        || cfg.dressCode?.subtitulo?.trim()
+        || cfg.dressCode?.imagens?.length
+      );
     case 'presentes':
       return (cfg.presentes?.length ?? 0) > 0
         || (cfg.presentesEscolhidos?.length ?? 0) > 0
@@ -96,8 +102,6 @@ function temConteudo(tipo: string, cfg: ConviteConfig): boolean {
 
 function NavegacaoRapida({ tipos }: { tipos: Set<TipoSecao> }) {
   const disponiveis = ATALHOS.filter((atalho) => tipos.has(atalho.tipo));
-
-  // Com apenas um destino, a barra ocupa mais espaço do que ajuda.
   if (disponiveis.length < 2) return null;
 
   function navegar(tipo: TipoSecao) {
@@ -107,14 +111,8 @@ function NavegacaoRapida({ tipos }: { tipos: Set<TipoSecao> }) {
   }
 
   return (
-    <section
-      aria-label="Atalhos para as seções do convite"
-      className="relative px-5 py-8 text-center"
-    >
-      <p
-        className="m-0 text-[10px] font-semibold uppercase tracking-[0.28em]"
-        style={{ color: 'var(--cv-tinta-suave)' }}
-      >
+    <section aria-label="Atalhos para as seções do convite" className="relative px-5 py-8 text-center">
+      <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.28em]" style={{ color: 'var(--cv-tinta-suave)' }}>
         Clique para{' '}
         <span
           className="normal-case tracking-normal"
@@ -130,10 +128,7 @@ function NavegacaoRapida({ tipos }: { tipos: Set<TipoSecao> }) {
         </span>
       </p>
 
-      <nav
-        className="mx-auto mt-5 flex max-w-[390px] flex-wrap items-start justify-center gap-x-3 gap-y-4"
-        aria-label="Navegação rápida do convite"
-      >
+      <nav className="mx-auto mt-5 flex max-w-[390px] flex-wrap items-start justify-center gap-x-3 gap-y-4" aria-label="Navegação rápida do convite">
         {disponiveis.map(({ tipo, rotulo, Icone }) => (
           <button
             key={tipo}
@@ -144,20 +139,11 @@ function NavegacaoRapida({ tipos }: { tipos: Set<TipoSecao> }) {
           >
             <span
               className="grid h-11 w-11 place-items-center rounded-full shadow-sm transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md group-focus-visible:-translate-y-0.5"
-              style={{
-                backgroundColor: 'var(--cv-acento)',
-                color: 'var(--cv-bloco-texto)',
-              }}
+              style={{ backgroundColor: 'var(--cv-acento)', color: 'var(--cv-bloco-texto)' }}
             >
               <Icone className="h-[19px] w-[19px]" strokeWidth={1.8} />
             </span>
-            <span
-              className="max-w-[62px] text-center text-[9px] leading-[1.15]"
-              style={{
-                color: 'var(--cv-tinta-suave)',
-                fontFamily: 'var(--cv-corpo)',
-              }}
-            >
+            <span className="max-w-[62px] text-center text-[9px] leading-[1.15]" style={{ color: 'var(--cv-tinta-suave)', fontFamily: 'var(--cv-corpo)' }}>
               {rotulo}
             </span>
           </button>
@@ -194,8 +180,6 @@ export default function Convite({ cfg, modo = {}, revelando = false }: { cfg: Co
 
           const anterior = secoes[i - 1];
           const inserirNavegacao = temNavegacao && i === indiceNavegacao;
-          // A própria barra funciona como separação visual; evita um divisor
-          // decorativo encostado logo abaixo dos ícones.
           const divisor = i > 0
             && !inserirNavegacao
             && !SEM_DIVISOR.has(secao.tipo)

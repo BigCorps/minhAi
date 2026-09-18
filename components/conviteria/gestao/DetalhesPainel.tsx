@@ -264,8 +264,8 @@ export default function DetalhesPainel({
           <div>
             <h2 className="font-semibold">Informações aos convidados</h2>
             <p className="text-sm text-[#7c5560]">
-              Traje, crianças, estacionamento, transporte, hospedagem, fotos ou
-              texto livre. Você também pode adicionar uma imagem de referência.
+              Crianças, estacionamento, transporte, hospedagem, fotos ou texto livre.
+              Para orientações de roupa, use a seção própria <strong>Traje / Dress Code</strong> do convite.
             </p>
           </div>
           <button
@@ -303,7 +303,9 @@ export default function DetalhesPainel({
                   }
                   className="rounded-lg border px-3 py-2"
                 >
-                  <option value="traje">Traje</option>
+                  {p.tipo === 'traje' && (
+                    <option value="traje">Traje (item antigo)</option>
+                  )}
                   <option value="criancas">Crianças</option>
                   <option value="estacionamento">Estacionamento</option>
                   <option value="transporte">Transporte</option>

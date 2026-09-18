@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { ImagePlus, Loader2, Star, Trash2 } from 'lucide-react';
 import { Campo, Texto } from '../Campos';
 import { ACABAMENTOS, ACABAMENTO_PADRAO } from '../../secoes/Foto';
 import type { PropsEtapa } from '../Wizard';
 
-/** Aceita url completa ou id puro do YouTube. */
 function idDoYoutube(entrada: string): string {
   const t = entrada.trim();
   const m = t.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
@@ -13,39 +13,114 @@ function idDoYoutube(entrada: string): string {
   return /^[A-Za-z0-9_-]{11}$/.test(t) ? t : '';
 }
 
+function unicas(valores: Array<string | undefined | null>) {
+  return Array.from(new Set(valores.filter((x): x is string => Boolean(x))));
+}
+
 export default function Midia({ estado, despachar, aoEnviarArquivo }: PropsEtapa) {
   const m = estado.cfg.midia?.musica;
   const origem = m?.origem ?? 'upload';
-
-  // O campo mostra o texto cru; o config guarda so o id de 11 caracteres.
-  // Antes o `valor` do input era o proprio id extraido, entao digitar "h"
-  // virava '' e o campo se apagava a cada tecla — so colar funcionava, e o
-  // link colado aparecia mutilado na tela.
   const [linkVideo, setLinkVideo] = useState(
     m?.youtubeVideoId ? `https://youtu.be/${m.youtubeVideoId}` : ''
   );
+  const [enviandoFotos, setEnviandoFotos] = useState(false);
+  const [erroFotos, setErroFotos] = useState('');
   const idAtual = idDoYoutube(linkVideo);
+
+  const fotos = useMemo(
+    () => unicas([estado.cfg.midia?.fotoPrincipal, ...(estado.cfg.midia?.galeria ?? [])]).slice(0, 5),
+    [estado.cfg.midia?.fotoPrincipal, estado.cfg.midia?.galeria],
+  );
+
+  async function adicionarFotos(arquivos: FileList | null) {
+    if (!arquivos || !aoEnviarArquivo) return;
+    const restantes = Math.max(0, 5 - fotos.length);
+    const escolhidos = Array.from(arquivos).slice(0, restantes);
+    if (!escolhidos.length) {
+      setErroFotos('O convite já tem o limite de 5 fotos.');
+      return;
+    }
+
+    setEnviandoFotos(true);
+    setErroFotos('');
+    try {
+      const novas: string[] = [];
+      for (const arquivo of escolhidos) {
+        novas.push(await aoEnviarArquivo('foto', arquivo));
+      }
+      const todas = unicas([...fotos, ...novas]).slice(0, 5);
+      despachar({ tipo: 'campo', caminho: 'midia.galeria', valor: todas });
+      if (!estado.cfg.midia?.fotoPrincipal && todas[0]) {
+        despachar({ tipo: 'campo', caminho: 'midia.fotoPrincipal', valor: todas[0] });
+      }
+    } catch (e: any) {
+      setErroFotos(e?.message || 'Não foi possível carregar uma das fotos.');
+    } finally {
+      setEnviandoFotos(false);
+    }
+  }
+
+  function removerFoto(url: string) {
+    const restantes = fotos.filter((x) => x !== url);
+    despachar({ tipo: 'campo', caminho: 'midia.galeria', valor: restantes });
+    if (estado.cfg.midia?.fotoPrincipal === url) {
+      despachar({ tipo: 'campo', caminho: 'midia.fotoPrincipal', valor: restantes[0] });
+    }
+  }
 
   return (
     <>
-      <Campo rotulo="Foto principal" dica="Vertical funciona melhor. Máximo 5 MB.">
-        <input
-          type="file"
-          accept="image/*"
-          className="wz-input wz-arquivo"
-          onChange={async (e) => {
-            const f = e.target.files?.[0];
-            if (!f || !aoEnviarArquivo) return;
-            const url = await aoEnviarArquivo('foto', f);
-            despachar({ tipo: 'campo', caminho: 'midia.fotoPrincipal', valor: url });
-          }}
-        />
+      <Campo
+        rotulo="Fotos do convite"
+        dica="Você pode usar até 5 fotos. Escolha uma como principal e decida na revisão se quer mostrar também a galeria."
+      >
+        <label className="wz-input wz-arquivo" style={{ cursor: enviandoFotos ? 'wait' : 'pointer' }}>
+          <span className="inline-flex items-center gap-2">
+            {enviandoFotos ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+            {fotos.length ? `Adicionar fotos (${fotos.length}/5)` : 'Escolher fotos'}
+          </span>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            disabled={enviandoFotos || fotos.length >= 5}
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              void adicionarFotos(e.target.files);
+              e.currentTarget.value = '';
+            }}
+          />
+        </label>
+
+        {fotos.length > 0 && (
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {fotos.map((url) => {
+              const principal = estado.cfg.midia?.fotoPrincipal === url;
+              return (
+                <div key={url} className="relative overflow-hidden rounded-xl border border-[#c0607833] bg-white p-1.5">
+                  <img src={url} alt="" className="h-28 w-full rounded-lg object-cover" />
+                  <div className="mt-1.5 flex items-center justify-between gap-1">
+                    <button
+                      type="button"
+                      onClick={() => despachar({ tipo: 'campo', caminho: 'midia.fotoPrincipal', valor: url })}
+                      className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] ${principal ? 'bg-[#c06078] text-white' : 'bg-[#fff5f8] text-[#7c5560]'}`}
+                    >
+                      <Star className="h-3 w-3" />{principal ? 'Principal' : 'Tornar principal'}
+                    </button>
+                    <button type="button" onClick={() => removerFoto(url)} className="rounded-lg p-1.5 text-red-500" aria-label="Remover foto">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {erroFotos && <p className="wz-status erro">{erroFotos}</p>}
       </Campo>
 
-      {/* So aparece com foto escolhida: escolher acabamento sem imagem na tela
-          e escolher no escuro. */}
       {estado.cfg.midia?.fotoPrincipal && (
-        <Campo rotulo="Acabamento da foto" dica="Veja o resultado na prévia ao lado.">
+        <Campo rotulo="Acabamento da foto principal" dica="Veja o resultado na prévia ao lado.">
           <div className="wz-acabamentos">
             {ACABAMENTOS.map((a) => {
               const sel = (estado.cfg.midia?.acabamento ?? ACABAMENTO_PADRAO) === a.id;
@@ -65,10 +140,6 @@ export default function Midia({ estado, despachar, aoEnviarArquivo }: PropsEtapa
           </div>
         </Campo>
       )}
-      {estado.cfg.midia?.fotoPrincipal && (
-        <p className="wz-ok">Foto carregada.</p>
-      )}
-
 
       <fieldset className="wz-grupo">
         <legend>Música</legend>
@@ -101,10 +172,7 @@ export default function Midia({ estado, despachar, aoEnviarArquivo }: PropsEtapa
             />
           </Campo>
         ) : (
-          <Campo
-            rotulo="Link da música no YouTube"
-            dica="Toca como música de fundo, com os controles do convite."
-          >
+          <Campo rotulo="Link da música no YouTube" dica="Toca como música de fundo, com os controles do convite.">
             <Texto
               valor={linkVideo}
               placeholder="https://youtu.be/..."
@@ -123,35 +191,19 @@ export default function Midia({ estado, despachar, aoEnviarArquivo }: PropsEtapa
         )}
 
         {origem === 'youtube' && idAtual && (
-          <Campo
-            rotulo="Como aparece no convite"
-            dica="A maioria prefere só a música. O vídeo ocupa espaço e desvia a atenção."
-          >
+          <Campo rotulo="Como aparece no convite" dica="A maioria prefere só a música. O vídeo ocupa espaço e desvia a atenção.">
             <label className="wz-escolha">
-              <input
-                type="radio"
-                name="mostrarVideo"
-                checked={!m?.mostrarVideo}
-                onChange={() => despachar({ tipo: 'campo', caminho: 'midia.musica.mostrarVideo', valor: false })}
-              />
+              <input type="radio" name="mostrarVideo" checked={!m?.mostrarVideo} onChange={() => despachar({ tipo: 'campo', caminho: 'midia.musica.mostrarVideo', valor: false })} />
               <span>Só a música, com os controles do convite</span>
             </label>
             <label className="wz-escolha">
-              <input
-                type="radio"
-                name="mostrarVideo"
-                checked={!!m?.mostrarVideo}
-                onChange={() => despachar({ tipo: 'campo', caminho: 'midia.musica.mostrarVideo', valor: true })}
-              />
+              <input type="radio" name="mostrarVideo" checked={!!m?.mostrarVideo} onChange={() => despachar({ tipo: 'campo', caminho: 'midia.musica.mostrarVideo', valor: true })} />
               <span>Mostrar o vídeo do YouTube</span>
             </label>
           </Campo>
         )}
 
-        <p className="wz-aviso">
-          Use música que você tenha o direito de usar. Você é responsável pelo
-          conteúdo que enviar.
-        </p>
+        <p className="wz-aviso">Use música que você tenha o direito de usar. Você é responsável pelo conteúdo que enviar.</p>
       </fieldset>
     </>
   );

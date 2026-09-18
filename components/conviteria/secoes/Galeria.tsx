@@ -5,7 +5,12 @@ import type { PropsSecao } from '@/lib/conviteria/tipos';
 import { Broto } from '../Ornamentos';
 
 export default function Galeria({ cfg, secao }: PropsSecao) {
-  const fotos = cfg.midia?.galeria ?? [];
+  const fotoPrincipalAtiva = cfg.secoes.some((s) => s.tipo === 'foto' && s.ativo);
+  const principal = cfg.midia?.fotoPrincipal;
+  const fotos = Array.from(new Set(cfg.midia?.galeria ?? []))
+    .filter((src) => !(fotoPrincipalAtiva && principal && src === principal))
+    .slice(0, 5);
+
   if (fotos.length === 0) return null;
 
   return (
@@ -13,7 +18,7 @@ export default function Galeria({ cfg, secao }: PropsSecao) {
       <Broto className="cv-broto" />
       <h2 className="cv-titulo">{secao.config?.titulo ?? 'Nossos momentos'}</h2>
       <div className="cv-galeria">
-        {fotos.slice(0, 12).map((src, i) => (
+        {fotos.map((src, i) => (
           <div className="cv-galeria-item" key={src}>
             <Image
               src={src}

@@ -1,10 +1,7 @@
 import type { ConviteConfig, PresenteEscolhido, SecaoConfig, TipoSecao } from './tipos';
 import { acharTipo, TIPO_PADRAO } from './tiposEvento';
 import { fontesDoGrupo, FONTE_PADRAO } from './fontes';
-import {
-  ornamentoPadraoDoTipo,
-  temaPadraoDoTipo,
-} from './temas';
+import { ornamentoPadraoDoTipo, temaPadraoDoTipo } from './temas';
 
 const MESES = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
@@ -27,7 +24,6 @@ export function formatarDiaSemana(d: Date) {
 export function daEntradaDeData(valor: string) {
   const d = new Date(valor);
   if (Number.isNaN(d.getTime())) return null;
-
   return {
     dataIso: d.toISOString(),
     dataExtenso: formatarExtenso(d),
@@ -38,9 +34,7 @@ export function daEntradaDeData(valor: string) {
 export function paraEntradaDeData(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-
   const p = (n: number) => String(n).padStart(2, '0');
-
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
@@ -52,7 +46,7 @@ export interface Etapa {
 
 export const ETAPAS: Etapa[] = [
   { id: 'tipo',       titulo: 'Tipo de convite' },
-  { id: 'midia',      titulo: 'Foto e música', foco: 'foto' },
+  { id: 'midia',      titulo: 'Fotos e música', foco: 'foto' },
   { id: 'tema',       titulo: 'Cores' },
   { id: 'visual',     titulo: 'Estilo visual' },
   { id: 'dados',      titulo: 'Nomes e data', foco: 'nomes' },
@@ -60,6 +54,7 @@ export const ETAPAS: Etapa[] = [
   { id: 'fonte',      titulo: 'Fontes', foco: 'nomes' },
   { id: 'logo',       titulo: 'Logo e selo', foco: 'marca' },
   { id: 'interacoes', titulo: 'Interações', foco: 'rsvp' },
+  { id: 'traje',      titulo: 'Traje / Dress Code', foco: 'dresscode' },
   { id: 'presentes',  titulo: 'Lista de presentes', foco: 'presentes' },
   { id: 'secoes',     titulo: 'Seções', foco: 'rsvp' },
   { id: 'revisao',    titulo: 'Revisão' },
@@ -71,18 +66,54 @@ export interface EstadoWizard {
   cfg: ConviteConfig;
 }
 
+const OPCIONAIS_UNIVERSAIS: TipoSecao[] = ['dresscode', 'galeria'];
+
 function secoesDe(tipoEventoId: string): SecaoConfig[] {
-  return acharTipo(tipoEventoId).secoesPadrao.map((tipo, i) => ({
+  const padrao = acharTipo(tipoEventoId).secoesPadrao;
+  const lista: SecaoConfig[] = padrao.map((tipo, i) => ({
     tipo,
     ordem: (i + 1) * 10,
     ativo: true,
   }));
+
+  for (const tipo of OPCIONAIS_UNIVERSAIS) {
+    if (lista.some((s) => s.tipo === tipo)) continue;
+    lista.push({ tipo, ordem: (lista.length + 1) * 10, ativo: false });
+  }
+  return lista;
+}
+
+function normalizarSecoes(cfg: ConviteConfig): SecaoConfig[] {
+  const existentes = Array.isArray(cfg.secoes) ? [...cfg.secoes] : [];
+  let maior = existentes.reduce((m, s) => Math.max(m, Number(s.ordem) || 0), 0);
+
+  for (const tipo of OPCIONAIS_UNIVERSAIS) {
+    if (existentes.some((s) => s.tipo === tipo)) continue;
+    maior += 10;
+    const temConteudo = tipo === 'dresscode'
+      ? Boolean(cfg.dressCode?.tipo || cfg.dressCode?.texto || cfg.dressCode?.imagens?.length)
+      : Boolean(cfg.midia?.galeria?.length);
+    existentes.push({ tipo, ordem: maior, ativo: temConteudo });
+  }
+
+  return existentes;
+}
+
+/** Mantém convites antigos compatíveis com etapas/seções adicionadas depois. */
+export function normalizarEstadoWizard(estado: EstadoWizard): EstadoWizard {
+  return {
+    ...estado,
+    etapa: Math.max(0, Math.min(ETAPAS.length - 1, Number(estado.etapa) || 0)),
+    cfg: {
+      ...estado.cfg,
+      secoes: normalizarSecoes(estado.cfg),
+    },
+  };
 }
 
 export function configInicial(tipoEventoId = TIPO_PADRAO.id): ConviteConfig {
   const tipo = acharTipo(tipoEventoId);
   const tema = temaPadraoDoTipo(tipo.id);
-
   const d = new Date(Date.now() + 90 * 86400000);
   d.setHours(19, 0, 0, 0);
 
@@ -91,10 +122,7 @@ export function configInicial(tipoEventoId = TIPO_PADRAO.id): ConviteConfig {
     fonteId: (fontesDoGrupo(tipo.grupo)[0] ?? FONTE_PADRAO).id,
     tipoEventoId: tipo.id,
     ornamentoId: ornamentoPadraoDoTipo(tipo.id),
-    anfitrioes: {
-      exibicao: '',
-      iniciais: '',
-    },
+    anfitrioes: { exibicao: '', iniciais: '' },
     evento: {
       dataIso: d.toISOString(),
       dataExtenso: formatarExtenso(d),
@@ -107,10 +135,7 @@ export function configInicial(tipoEventoId = TIPO_PADRAO.id): ConviteConfig {
 }
 
 export function criarEstadoInicial(tipoEventoId = TIPO_PADRAO.id): EstadoWizard {
-  return {
-    etapa: 0,
-    cfg: configInicial(tipoEventoId),
-  };
+  return { etapa: 0, cfg: configInicial(tipoEventoId) };
 }
 
 export type AcaoWizard =
@@ -132,45 +157,32 @@ export type AcaoWizard =
 function definir<T extends object>(alvo: T, caminho: string, valor: unknown): T {
   const [chave, ...resto] = caminho.split('.');
   const atual = (alvo as Record<string, unknown>)[chave];
-
   return {
     ...alvo,
-    [chave]:
-      resto.length === 0
-        ? valor
-        : definir((atual as object) ?? {}, resto.join('.'), valor),
+    [chave]: resto.length === 0
+      ? valor
+      : definir((atual as object) ?? {}, resto.join('.'), valor),
   };
 }
 
 export function reduzir(estado: EstadoWizard, acao: AcaoWizard): EstadoWizard {
   switch (acao.tipo) {
     case 'hidratar':
-      return acao.estado;
+      return normalizarEstadoWizard(acao.estado);
 
     case 'ir':
-      return {
-        ...estado,
-        etapa: Math.max(0, Math.min(ETAPAS.length - 1, acao.etapa)),
-      };
+      return { ...estado, etapa: Math.max(0, Math.min(ETAPAS.length - 1, acao.etapa)) };
 
     case 'avancar':
-      return {
-        ...estado,
-        etapa: Math.min(ETAPAS.length - 1, estado.etapa + 1),
-      };
+      return { ...estado, etapa: Math.min(ETAPAS.length - 1, estado.etapa + 1) };
 
     case 'voltar':
-      return {
-        ...estado,
-        etapa: Math.max(0, estado.etapa - 1),
-      };
+      return { ...estado, etapa: Math.max(0, estado.etapa - 1) };
 
     case 'trocarTipoEvento': {
       if (acao.id === estado.cfg.tipoEventoId) return estado;
-
       const tipo = acharTipo(acao.id);
       const permitidas = fontesDoGrupo(tipo.grupo);
-
       const fonteId = permitidas.some((f) => f.id === estado.cfg.fonteId)
         ? estado.cfg.fonteId
         : (permitidas[0] ?? FONTE_PADRAO).id;
@@ -184,31 +196,19 @@ export function reduzir(estado: EstadoWizard, acao: AcaoWizard): EstadoWizard {
           ornamentoId: ornamentoPadraoDoTipo(tipo.id),
           fonteId,
           secoes: secoesDe(tipo.id),
-          evento: {
-            ...estado.cfg.evento,
-            convocacao: tipo.rotulos.convocacao,
-          },
+          evento: { ...estado.cfg.evento, convocacao: tipo.rotulos.convocacao },
         },
       };
     }
 
     case 'trocarTema':
-      return {
-        ...estado,
-        cfg: { ...estado.cfg, temaId: acao.id },
-      };
+      return { ...estado, cfg: { ...estado.cfg, temaId: acao.id } };
 
     case 'trocarFonte':
-      return {
-        ...estado,
-        cfg: { ...estado.cfg, fonteId: acao.id },
-      };
+      return { ...estado, cfg: { ...estado.cfg, fonteId: acao.id } };
 
     case 'campo':
-      return {
-        ...estado,
-        cfg: definir(estado.cfg, acao.caminho, acao.valor),
-      };
+      return { ...estado, cfg: definir(estado.cfg, acao.caminho, acao.valor) };
 
     case 'alternarSecao':
       return {
@@ -216,9 +216,7 @@ export function reduzir(estado: EstadoWizard, acao: AcaoWizard): EstadoWizard {
         cfg: {
           ...estado.cfg,
           secoes: estado.cfg.secoes.map((s) =>
-            s.tipo === acao.secao
-              ? { ...s, ativo: !s.ativo }
-              : s
+            s.tipo === acao.secao ? { ...s, ativo: !s.ativo } : s
           ),
         },
       };
@@ -227,81 +225,49 @@ export function reduzir(estado: EstadoWizard, acao: AcaoWizard): EstadoWizard {
       const lista = [...estado.cfg.secoes].sort((a, b) => a.ordem - b.ordem);
       const i = lista.findIndex((s) => s.tipo === acao.secao);
       const j = i + acao.direcao;
-
       if (i < 0 || j < 0 || j >= lista.length) return estado;
-
       [lista[i], lista[j]] = [lista[j], lista[i]];
-
       return {
         ...estado,
         cfg: {
           ...estado.cfg,
-          secoes: lista.map((s, k) => ({
-            ...s,
-            ordem: (k + 1) * 10,
-          })),
+          secoes: lista.map((s, k) => ({ ...s, ordem: (k + 1) * 10 })),
         },
       };
     }
 
     case 'alternarPresente': {
       const atuais = estado.cfg.presentesEscolhidos ?? [];
-      const jaTem = atuais.some(
-        (p) => p.catalogoId === acao.presente.catalogoId
-      );
-
+      const jaTem = atuais.some((p) => p.catalogoId === acao.presente.catalogoId);
       return {
         ...estado,
         cfg: {
           ...estado.cfg,
           presentesEscolhidos: jaTem
-            ? atuais.filter(
-                (p) => p.catalogoId !== acao.presente.catalogoId
-              )
+            ? atuais.filter((p) => p.catalogoId !== acao.presente.catalogoId)
             : [...atuais, acao.presente],
         },
       };
     }
 
     case 'editarPresente': {
-      // Edita SO a copia dentro deste convite. `presentesEscolhidos` e um
-      // snapshot no config do evento, nao uma referencia ao catalogo — entao
-      // renomear ou trocar o preco aqui nunca afeta outro usuario.
-      //
-      // Na primeira edicao de cada campo, guarda o valor original para o
-      // botao "restaurar" funcionar sem consultar a API de novo.
       const atuais = estado.cfg.presentesEscolhidos ?? [];
-
       return {
         ...estado,
         cfg: {
           ...estado.cfg,
           presentesEscolhidos: atuais.map((p) => {
             if (p.catalogoId !== acao.catalogoId) return p;
-
             const original: Partial<PresenteEscolhido> = {};
-            if (
-              acao.campos.titulo !== undefined &&
-              p.tituloOriginal === undefined &&
-              !p.personalizado
-            ) {
+            if (acao.campos.titulo !== undefined && p.tituloOriginal === undefined && !p.personalizado) {
               original.tituloOriginal = p.titulo;
             }
-            if (
-              acao.campos.valorCentavos !== undefined &&
-              p.valorOriginalCentavos === undefined &&
-              !p.personalizado
-            ) {
+            if (acao.campos.valorCentavos !== undefined && p.valorOriginalCentavos === undefined && !p.personalizado) {
               original.valorOriginalCentavos = p.valorCentavos;
             }
-            if (
-              acao.campos.imagemUrl !== undefined &&
-              p.imagemOriginalUrl === undefined &&
-              !p.personalizado
-            ) {
+            if (acao.campos.imagemUrl !== undefined && p.imagemOriginalUrl === undefined && !p.personalizado) {
               original.imagemOriginalUrl = p.imagemUrl ?? null;
             }
-
             return { ...p, ...original, ...acao.campos };
           }),
         },
@@ -326,13 +292,7 @@ export function reduzir(estado: EstadoWizard, acao: AcaoWizard): EstadoWizard {
           ...estado.cfg,
           secoes: estado.cfg.secoes.map((s) =>
             s.tipo === acao.secao
-              ? {
-                  ...s,
-                  config: {
-                    ...s.config,
-                    [acao.chave]: acao.valor,
-                  },
-                }
+              ? { ...s, config: { ...s.config, [acao.chave]: acao.valor } }
               : s
           ),
         },
@@ -343,28 +303,18 @@ export function reduzir(estado: EstadoWizard, acao: AcaoWizard): EstadoWizard {
   }
 }
 
-export function pendencias(
-  estado: EstadoWizard,
-  etapa = estado.etapa,
-): string[] {
+export function pendencias(estado: EstadoWizard, etapa = estado.etapa): string[] {
   const { cfg } = estado;
   const faltas: string[] = [];
 
   switch (ETAPAS[etapa]?.id) {
     case 'dados':
-      if (!cfg.anfitrioes.exibicao.trim()) {
-        faltas.push('Preencha os nomes.');
-      }
-      if (!cfg.evento.dataExtenso.trim()) {
-        faltas.push('Escolha a data.');
-      }
+      if (!cfg.anfitrioes.exibicao.trim()) faltas.push('Preencha os nomes.');
+      if (!cfg.evento.dataExtenso.trim()) faltas.push('Escolha a data.');
       break;
 
     case 'local':
-      if (
-        cfg.secoes.some((s) => s.tipo === 'local' && s.ativo) &&
-        !cfg.local?.logradouro?.trim()
-      ) {
+      if (cfg.secoes.some((s) => s.tipo === 'local' && s.ativo) && !cfg.local?.logradouro?.trim()) {
         faltas.push('Preencha o endereço ou desligue a seção de local.');
       }
       break;

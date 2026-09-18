@@ -1,48 +1,60 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PropsSecao } from '@/lib/conviteria/tipos';
 import { Broto } from '../Ornamentos';
 import ModalRSVP from '../ModalRSVP';
 import '../rsvp.css';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export default function RSVP({ cfg, secao, modo }: PropsSecao) {
   const [aberto, setAberto] = useState(false);
+  const [tokenInicial, setTokenInicial] = useState<string | null>(null);
   const c = secao.config ?? {};
+
+  useEffect(() => {
+    if (modo.previa || !modo.eventoId || typeof window === 'undefined') return;
+    const token = new URL(window.location.href).searchParams.get('rsvp')?.trim() ?? '';
+    if (!UUID_RE.test(token)) return;
+    setTokenInicial(token);
+    setAberto(true);
+  }, [modo.eventoId, modo.previa]);
+
+  function fechar() {
+    setAberto(false);
+    if (!tokenInicial || typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('rsvp');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    setTokenInicial(null);
+  }
 
   return (
     <section className="cv-secao">
       <Broto className="cv-broto" />
-      <h2 className="cv-titulo">
-        {c.titulo ?? 'Confirmação de presença'}
-      </h2>
-
+      <h2 className="cv-titulo">{c.titulo ?? 'Confirmação de presença'}</h2>
       <p className="cv-texto">
-        {c.texto ??
-          'Sua presença é muito importante para nós. Confirme seu nome e quem da sua família irá ao evento.'}
+        {c.texto ?? 'Sua presença é muito importante para nós. Confirme seu nome e quem da sua família irá ao evento.'}
       </p>
-
       <button
         type="button"
         className="cv-botao"
         disabled={modo.previa || !modo.eventoId}
-        onClick={() => setAberto(true)}
+        onClick={() => { setTokenInicial(null); setAberto(true); }}
       >
         {c.rotuloBotao ?? 'Confirmar presença'}
       </button>
 
-      {modo.previa && (
-        <p className="cv-rsvp-previa">
-          O formulário fica disponível depois que o convite é publicado.
-        </p>
-      )}
+      {modo.previa && <p className="cv-rsvp-previa">O formulário fica disponível depois que o convite é publicado.</p>}
 
       {aberto && modo.eventoId && (
         <ModalRSVP
           eventoId={modo.eventoId}
           temaId={cfg.temaId}
           fonteId={cfg.fonteId}
-          aoFechar={() => setAberto(false)}
+          tokenInicial={tokenInicial}
+          aoFechar={fechar}
         />
       )}
     </section>

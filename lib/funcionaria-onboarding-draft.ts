@@ -1,6 +1,8 @@
 import { uploadFuncionarIAAsset } from '@/lib/funcionaria-assets';
 import type {
   FuncionarIAEquipmentMode,
+  FuncionarIAMercadoLivreChoice,
+  FuncionarIAPublicHomeMode,
   FuncionarIAWhatsAppMode,
   FuncionarIAWorkplaceMode,
 } from '@/lib/funcionaria-skills';
@@ -15,6 +17,9 @@ export type FuncionarIAOnboardingDraft = {
   version: 1;
   step: number;
   workplace: FuncionarIAWorkplaceMode;
+  storefrontEnabled: boolean;
+  publicHomeMode: FuncionarIAPublicHomeMode;
+  mercadoLivreChoice: FuncionarIAMercadoLivreChoice;
   companyName: string;
   companySlug: string;
   businessType: string;
@@ -101,6 +106,9 @@ export async function saveFuncionarIAOnboardingDraft(draft: FuncionarIAOnboardin
     ...draft,
     version: 1,
     step: normalizeStep(draft.step),
+    storefrontEnabled: draft.storefrontEnabled ?? draft.workplace !== 'presencial',
+    publicHomeMode: draft.publicHomeMode || (draft.workplace === 'online' ? 'store' : 'assistant'),
+    mercadoLivreChoice: draft.mercadoLivreChoice || 'later',
     selected: Array.from(new Set(draft.selected || [])),
     counter: draft.counter || 'nenhum',
     voiceId: draft.voiceId || 'clara',
@@ -149,6 +157,9 @@ export async function loadFuncionarIAOnboardingDraft(): Promise<FuncionarIAOnboa
         ...value,
         version: 1,
         step: normalizeStep(value.step),
+        storefrontEnabled: value.storefrontEnabled ?? value.workplace !== 'presencial',
+        publicHomeMode: value.publicHomeMode || (value.workplace === 'online' ? 'store' : 'assistant'),
+        mercadoLivreChoice: value.mercadoLivreChoice || 'later',
         selected: Array.from(new Set(value.selected || [])),
         counter: value.counter || 'nenhum',
         voiceId: value.voiceId || 'clara',
@@ -169,6 +180,9 @@ export async function loadFuncionarIAOnboardingDraft(): Promise<FuncionarIAOnboa
       ...value,
       version: 1,
       step: normalizeStep(value.step),
+      storefrontEnabled: value.storefrontEnabled ?? value.workplace !== 'presencial',
+      publicHomeMode: value.publicHomeMode || (value.workplace === 'online' ? 'store' : 'assistant'),
+      mercadoLivreChoice: value.mercadoLivreChoice || 'later',
       selected: Array.from(new Set(value.selected || [])),
       counter: value.counter || 'nenhum',
       voiceId: value.voiceId || 'clara',
@@ -292,6 +306,14 @@ export async function completeFuncionarIAOnboardingDraft(
     p_logo_placement: draft.logoPlacement || 'cracha',
   });
   if (visualError) throw visualError;
+
+  const { error: storefrontError } = await supabase.rpc('funcionaria_save_storefront_settings', {
+    p_company_id: companyId,
+    p_storefront_enabled: draft.storefrontEnabled,
+    p_public_home_mode: draft.publicHomeMode,
+    p_mercadolivre_onboarding_choice: draft.mercadoLivreChoice,
+  });
+  if (storefrontError) throw storefrontError;
 
   return { companyId, companyName: draft.companyName.trim() };
 }

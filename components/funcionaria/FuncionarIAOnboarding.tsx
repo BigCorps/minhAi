@@ -24,6 +24,8 @@ import {
   formatBrlCents,
   slugifyCompanyName,
   type FuncionarIAEquipmentMode,
+  type FuncionarIAMercadoLivreChoice,
+  type FuncionarIAPublicHomeMode,
   type FuncionarIAQuote,
   type FuncionarIASkill,
   type FuncionarIAWhatsAppMode,
@@ -53,6 +55,9 @@ export default function FuncionarIAOnboarding() {
   const [slugMessage, setSlugMessage] = useState('');
 
   const [workplace, setWorkplace] = useState<FuncionarIAWorkplaceMode>('ambos');
+  const [storefrontEnabled, setStorefrontEnabled] = useState(true);
+  const [publicHomeMode, setPublicHomeMode] = useState<FuncionarIAPublicHomeMode>('assistant');
+  const [mercadoLivreChoice, setMercadoLivreChoice] = useState<FuncionarIAMercadoLivreChoice>('later');
   const [companyName, setCompanyName] = useState('');
   const [companySlug, setCompanySlug] = useState('');
   const [businessType, setBusinessType] = useState('Loja');
@@ -112,6 +117,9 @@ export default function FuncionarIAOnboarding() {
         const { data: state } = await supabase.rpc('funcionaria_get_state', { p_company_id: selectedAssistantId });
         if (state?.settings) {
           setWorkplace(state.settings.workplace_mode || 'ambos');
+          setStorefrontEnabled(state.settings.storefront_enabled ?? state.settings.workplace_mode !== 'presencial');
+          setPublicHomeMode(state.settings.public_home_mode || (state.settings.workplace_mode === 'online' ? 'store' : 'assistant'));
+          setMercadoLivreChoice(state.settings.mercadolivre_onboarding_choice || 'later');
           setBusinessType(state.settings.business_type || 'Loja');
           setPrimaryColor(state.settings.primary_color || '#6D28D9');
           setSecondaryColor(state.settings.secondary_color || '#A3E635');
@@ -145,6 +153,9 @@ export default function FuncionarIAOnboarding() {
         if (draft) {
           setStep(draft.step);
           setWorkplace(draft.workplace);
+          setStorefrontEnabled(draft.storefrontEnabled ?? draft.workplace !== 'presencial');
+          setPublicHomeMode(draft.publicHomeMode || (draft.workplace === 'online' ? 'store' : 'assistant'));
+          setMercadoLivreChoice(draft.mercadoLivreChoice || 'later');
           setCompanyName(draft.companyName);
           setCompanySlug(draft.companySlug);
           setBusinessType(draft.businessType);
@@ -252,7 +263,9 @@ export default function FuncionarIAOnboarding() {
 
   function toggleSkill(key: string) {
     setServerQuote(null);
+    const wasSelected = selected.includes(key);
     setSelected(current => current.includes(key) ? current.filter(k => k !== key) : [...current, key]);
+    if (key === 'mercado_livre') setMercadoLivreChoice(wasSelected ? 'later' : 'connect');
   }
 
   async function handleUniformLogo(file?: File) {
@@ -293,11 +306,45 @@ export default function FuncionarIAOnboarding() {
     if (backgroundInputRef.current) backgroundInputRef.current.value = '';
   }
 
+  function chooseWorkplace(mode: FuncionarIAWorkplaceMode) {
+    setWorkplace(mode);
+    if (mode === 'online') {
+      setStorefrontEnabled(true);
+      setPublicHomeMode('store');
+    } else if (mode === 'ambos') {
+      setStorefrontEnabled(true);
+      setPublicHomeMode('assistant');
+    } else {
+      setStorefrontEnabled(false);
+      setPublicHomeMode('assistant');
+      setMercadoLivreChoice('later');
+      setSelected(current => current.filter(key => key !== 'mercado_livre'));
+    }
+  }
+
+  function chooseMercadoLivre(choice: FuncionarIAMercadoLivreChoice) {
+    setMercadoLivreChoice(choice);
+    setServerQuote(null);
+    setSelected(current => {
+      const withoutMl = current.filter(key => key !== 'mercado_livre');
+      return choice === 'connect' ? [...withoutMl, 'mercado_livre'] : withoutMl;
+    });
+  }
+
+  function togglePresentialStorefront() {
+    if (workplace !== 'presencial') return;
+    setStorefrontEnabled(current => !current);
+    setPublicHomeMode('assistant');
+  }
+
   function buildDraft(targetStep = step): FuncionarIAOnboardingDraft {
     return {
       version: 1,
       step: targetStep,
       workplace,
+      storefrontEnabled,
+      publicHomeMode,
+      mercadoLivreChoice,
       companyName: companyName.trim(),
       companySlug: companySlug.trim(),
       businessType,
@@ -399,12 +446,22 @@ export default function FuncionarIAOnboarding() {
         <div className="mb-6 h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-[#6D28D9] transition-all" style={{ width: `${step / 7 * 100}%` }} /></div>
 
         <section className="rounded-[28px] border border-violet-100 bg-white p-5 text-slate-900 shadow-xl shadow-violet-950/5 sm:p-8">
-          {step === 1 && <Step title="Onde sua FuncionarIA vai trabalhar?" subtitle="Isso serve apenas para recomendar as habilidades mais úteis.">
+          {step === 1 && <Step title="Onde sua FuncionarIA vai trabalhar?" subtitle="Isso define a experiência pública e recomenda as habilidades mais úteis.">
             <div className="grid gap-3 md:grid-cols-3">{([
               ['presencial', 'Presencial', 'Tablet, computador, terminal ou totem'],
-              ['online', 'Online', 'Site, redes sociais e canais digitais'],
-              ['ambos', 'Presencial e online', 'A mesma funcionária em todos os lugares'],
-            ] as const).map(([key,label,desc]) => <Choice key={key} active={workplace===key} title={label} description={desc} onClick={() => setWorkplace(key)} />)}</div>
+              ['online', 'Online', 'Loja virtual, site, redes sociais e canais digitais'],
+              ['ambos', 'Presencial e online', 'A mesma funcionária e a mesma loja em todos os lugares'],
+            ] as const).map(([key,label,desc]) => <Choice key={key} active={workplace===key} title={label} description={desc} onClick={() => chooseWorkplace(key)} />)}</div>
+
+            {workplace === 'presencial' ? (
+              <button type="button" onClick={togglePresentialStorefront} className={`mt-5 w-full rounded-2xl border p-4 text-left transition ${storefrontEnabled ? 'border-lime-300 bg-lime-50' : 'border-slate-200 bg-slate-50'}`}>
+                <div className="flex items-center justify-between gap-3"><div><div className="font-black text-slate-950">Também quero uma loja virtual grátis</div><p className="mt-1 text-xs leading-5 text-slate-600">Opcional no modo presencial. Inclui catálogo, carrinho e pedidos básicos.</p></div><div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${storefrontEnabled ? 'border-lime-600 bg-lime-600 text-white' : 'border-slate-300'}`}>{storefrontEnabled && <Check className="h-4 w-4" />}</div></div>
+              </button>
+            ) : (
+              <div className="mt-5 rounded-2xl border border-lime-300 bg-lime-50 p-4 text-left">
+                <div className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-lime-700" /><div><div className="font-black text-lime-950">Sua loja virtual está incluída</div><p className="mt-1 text-xs leading-5 text-lime-800">Catálogo público, busca, carrinho e pedidos básicos fazem parte da base da FuncionarIA.</p></div></div>
+              </div>
+            )}
           </Step>}
 
           {step === 2 && <Step title="Qual é o seu negócio?" subtitle="Se você já usa uma empresa da minhAi, vamos aproveitar o mesmo cadastro.">
@@ -413,6 +470,18 @@ export default function FuncionarIAOnboarding() {
               <label className="block text-slate-900"><span className="text-sm font-black text-slate-900">Subdomínio</span><div className={`mt-2 flex overflow-hidden rounded-2xl border bg-white transition focus-within:ring-2 focus-within:ring-violet-100 ${slugStatus === 'available' ? 'border-emerald-300' : slugStatus === 'taken' || slugStatus === 'invalid' ? 'border-red-300' : 'border-slate-200 focus-within:border-[#6D28D9]'}`}><input value={companySlug} onChange={e => setCompanySlug(slugifyCompanyName(e.target.value))} disabled={editingExisting} className="min-w-0 flex-1 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 outline-none disabled:bg-slate-50 disabled:text-slate-500" placeholder="minhaempresa" /><span className="flex items-center border-l border-slate-100 bg-slate-50 px-3 text-xs font-bold text-slate-500">.funcionaria.net</span></div>{!editingExisting && slugStatus !== 'idle' && <div aria-live="polite" className={`mt-2 flex items-center gap-1.5 text-xs font-bold ${slugStatus === 'available' ? 'text-emerald-600' : slugStatus === 'checking' ? 'text-slate-500' : slugStatus === 'error' ? 'text-amber-600' : 'text-red-600'}`}>{slugStatus === 'checking' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : slugStatus === 'available' ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}<span>{slugMessage}</span></div>}</label>
             </div>
             <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{businessTypes.map(type => <Choice key={type} active={businessType===type} title={type} description="" onClick={() => setBusinessType(type)} compact />)}</div>
+
+            {workplace !== 'presencial' && (
+              <div className="mt-6 rounded-3xl border border-amber-200 bg-amber-50/60 p-5">
+                <div className="text-lg font-black text-slate-950">Já vende no Mercado Livre?</div>
+                <p className="mt-1 text-xs leading-5 text-slate-600">Se quiser conectar e importar produtos, a habilidade Mercado Livre entra na sua seleção. O valor adicional aparece na revisão antes de você concluir.</p>
+                <div className="mt-4 grid gap-2 md:grid-cols-3">
+                  <Choice active={mercadoLivreChoice==='connect'} title="Sim, quero conectar" description="Quero importar meus produtos para a FuncionarIA." onClick={() => chooseMercadoLivre('connect')} compact />
+                  <Choice active={mercadoLivreChoice==='no'} title="Não vendo no Mercado Livre" description="Vou cadastrar meus produtos diretamente na loja." onClick={() => chooseMercadoLivre('no')} compact />
+                  <Choice active={mercadoLivreChoice==='later'} title="Fazer depois" description="Continuar agora e decidir mais tarde." onClick={() => chooseMercadoLivre('later')} compact />
+                </div>
+              </div>
+            )}
           </Step>}
 
           {step === 3 && <Step title="O que você quer que ela faça?" subtitle="Escolha as responsabilidades. Os valores serão mostrados somente no final.">
@@ -544,7 +613,7 @@ export default function FuncionarIAOnboarding() {
           {step === 7 && <Step title="Revise sua FuncionarIA" subtitle="Agora sim mostramos o valor da configuração escolhida.">
             <div className="grid gap-6 lg:grid-cols-[1fr_.8fr]">
               <div className="space-y-3"><div className="flex items-center justify-between rounded-2xl border border-lime-200 bg-lime-50 p-4 text-slate-900"><span className="font-black text-slate-900">FuncionarIA Start</span><span className="font-black text-lime-800">Grátis</span></div>{quote.items.map(item => <div key={item.skill_key} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 text-slate-900"><span className="font-bold text-slate-900">{item.name}</span><span className="font-black text-slate-900">{formatBrlCents(item.monthly_price_cents)}</span></div>)}</div>
-              <div className="rounded-3xl bg-slate-950 p-6 text-white"><div className="text-xs font-black uppercase tracking-[.16em] text-lime-300">Sua configuração</div><div className="mt-5 space-y-2 text-sm"><div className="flex justify-between"><span className="text-white/60">Habilidades</span><span>{formatBrlCents(quote.subtotal_cents)}</span></div><div className="flex justify-between"><span className="text-white/60">Desconto ({quote.discount_percent}%)</span><span>- {formatBrlCents(quote.discount_cents)}</span></div><div className="mt-3 flex justify-between border-t border-white/10 pt-4 text-xl font-black"><span>Total mensal</span><span>{formatBrlCents(quote.total_cents)}</span></div></div><div className="mt-5 space-y-1 text-xs text-white/55"><div>IA: {aiEnabled?'ativada por créditos':'desativada'}</div><div>Voz do cliente: {voiceEnabled?'ativada por créditos':'desativada'}</div><div>Equipamento: {equipmentMode==='own'?'próprio':'solicitar aluguel'}</div></div></div>
+              <div className="rounded-3xl bg-slate-950 p-6 text-white"><div className="text-xs font-black uppercase tracking-[.16em] text-lime-300">Sua configuração</div><div className="mt-5 space-y-2 text-sm"><div className="flex justify-between"><span className="text-white/60">Habilidades</span><span>{formatBrlCents(quote.subtotal_cents)}</span></div><div className="flex justify-between"><span className="text-white/60">Desconto ({quote.discount_percent}%)</span><span>- {formatBrlCents(quote.discount_cents)}</span></div><div className="mt-3 flex justify-between border-t border-white/10 pt-4 text-xl font-black"><span>Total mensal</span><span>{formatBrlCents(quote.total_cents)}</span></div></div><div className="mt-5 space-y-1 text-xs text-white/55"><div>IA: {aiEnabled?'ativada por créditos':'desativada'}</div><div>Voz do cliente: {voiceEnabled?'ativada por créditos':'desativada'}</div><div>Equipamento: {equipmentMode==='own'?'próprio':'solicitar aluguel'}</div><div>Loja virtual: {storefrontEnabled?'incluída':'não ativada'}</div>{workplace!=='presencial'&&<div>Mercado Livre: {mercadoLivreChoice==='connect'?'conectar/importar':mercadoLivreChoice==='no'?'não usa':'fazer depois'}</div>}</div></div>
             </div>
           </Step>}
 

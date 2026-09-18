@@ -22,9 +22,10 @@ export async function POST(request: NextRequest) {
   const companyId = String(body?.company_id || '').trim();
   const clienteNome = String(body?.cliente_nome || '').trim().slice(0, 120) || null;
   const observacoes = String(body?.observacoes || '').trim().slice(0, 500) || null;
+  const idempotencyKey = String(body?.idempotency_key || '').trim().slice(0, 120);
   const items = normalizeItems(body?.itens);
 
-  if (!companyId || !items.length) {
+  if (!companyId || !items.length || !/^[A-Za-z0-9:_-]{16,120}$/.test(idempotencyKey)) {
     return NextResponse.json({ error: 'invalid_order' }, { status: 400 });
   }
 
@@ -55,9 +56,6 @@ export async function POST(request: NextRequest) {
   }
 
   const skills: string[] = Array.isArray(entitlements?.skill_keys) ? entitlements.skill_keys : [];
-  if (!skills.includes('sales_orders')) {
-    return NextResponse.json({ error: 'sales_skill_not_active' }, { status: 403 });
-  }
 
   const productIds = items.map((item) => item.produto_id);
   const { data: products, error: productsError } = await supabase
@@ -100,10 +98,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, kind: 'checkout', checkout });
   }
 
+  const { data: existingOrder } = await supabase
+    .from('pedidos')
+    .select('id,total,status')
+    .eq('company_id', companyId)
+    .eq('public_order_idempotency_key', idempotencyKey)
+    .maybeSingle();
+  if (existingOrder) {
+    return NextResponse.json({
+      ok: true,
+      kind: 'order',
+      replayed: true,
+      order: {
+        pedido_id: existingOrder.id,
+        total: Number(existingOrder.total || subtotal),
+        status: existingOrder.status,
+      },
+    });
+  }
+
   const { data: pedido, error: pedidoError } = await supabase
     .from('pedidos')
     .insert({
       company_id: companyId,
+      public_order_idempotency_key: idempotencyKey,
       cliente_nome: clienteNome,
       subtotal,
       desconto: 0,
@@ -115,6 +133,26 @@ export async function POST(request: NextRequest) {
     .select('id,total,status')
     .single();
 
+  if (pedidoError?.code === '23505') {
+    const { data: replay } = await supabase
+      .from('pedidos')
+      .select('id,total,status')
+      .eq('company_id', companyId)
+      .eq('public_order_idempotency_key', idempotencyKey)
+      .maybeSingle();
+    if (replay) {
+      return NextResponse.json({
+        ok: true,
+        kind: 'order',
+        replayed: true,
+        order: {
+          pedido_id: replay.id,
+          total: Number(replay.total || subtotal),
+          status: replay.status,
+        },
+      });
+    }
+  }
   if (pedidoError || !pedido) {
     console.error('[funcionaria/public-order] pedido:', pedidoError?.message);
     return NextResponse.json({ error: 'order_create_failed' }, { status: 500 });

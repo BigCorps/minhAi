@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   Puzzle,
+  ShoppingBag,
   Sparkles,
   UserRoundCog,
   X,
@@ -43,11 +44,13 @@ export const useFuncionarIAState = () => useContext(FuncionarIAStateContext);
 
 const permanent = [
   { href: '/dashboard', label: 'Minha FuncionarIA', icon: Bot },
+  { href: '/dashboard/loja', label: 'Loja', icon: ShoppingBag },
   { href: '/dashboard/habilidades', label: 'Habilidades', icon: Puzzle },
   { href: '/dashboard/conta', label: 'Conta e Créditos', icon: CircleDollarSign },
 ];
 
 const moduleIcon: Record<string, typeof LayoutDashboard> = {
+  loja: ShoppingBag,
   atendimentos: UserRoundCog,
   fila: LayoutDashboard,
   agenda: LayoutDashboard,

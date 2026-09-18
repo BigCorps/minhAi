@@ -15,16 +15,18 @@ import FuncionarIACashierPanel from '@/components/funcionaria/management/Funcion
 import FuncionarIAReceivablesPanel from '@/components/funcionaria/management/FuncionarIAReceivablesPanel';
 import FuncionarIAAgendaPanel from '@/components/funcionaria/management/FuncionarIAAgendaPanel';
 import FuncionarIAPreServicePanel from '@/components/funcionaria/management/FuncionarIAPreServicePanel';
+import FuncionarIAStorefrontManager from '@/components/funcionaria/management/FuncionarIAStorefrontManager';
 import { GerarFilaConfigForm } from '@/components/dashboard/functions/GerarFilaConfigModal';
 import FiscalPage from '@/app/dashboard/fiscal/page';
 
 export default function Page(){
   const p=useParams<{module:string}>();
   const key=String(p.module||'');
-  const {state,loading}=useFuncionarIAState();
+  const {state,loading,reload}=useFuncionarIAState();
   if(loading)return <div className="py-16 text-center text-sm font-bold text-slate-400">Carregando…</div>;
   if(key==='habilidades')return <Wrap t="Habilidades" s="Escolha o que sua FuncionarIA sabe fazer. O preço aparece na revisão e o painel cresce somente depois da contratação."><FuncionarIASkillsManager/></Wrap>;
   if(key==='conta')return <Wrap t="Conta e Créditos" s="Créditos são usados apenas quando existe custo variável: IA, voz, WhatsApp, SMS ou serviços externos.">{state.company?.id?<FuncionarIACreditsPanel companyId={state.company.id}/>:null}</Wrap>;
+  if(key==='loja'&&state.company&&state.settings)return <Wrap t="Loja" s="A loja básica faz parte da FuncionarIA. Catálogo, carrinho e pedidos não exigem a habilidade Vendas & Pedidos."><FuncionarIAStorefrontManager companyId={state.company.id} slug={state.company.slug} settings={state.settings} onSaved={reload}/></Wrap>;
   if(!FUNCIONARIA_MODULES[key]||!state.active_modules.includes(key))return <Locked/>;
   if(!state.company)return null;
   if(key==='atendimentos')return <Wrap t="Respostas da sua FuncionarIA" s="FAQ e respostas rápidas são tentadas antes de qualquer IA."><div className="space-y-8"><FAQManagerClient companyId={state.company.id} isDark={false}/>{(state.active_skill_keys.includes('pre_service_registration')||state.active_skill_keys.includes('queue_service'))?<FuncionarIAPreServicePanel companyId={state.company.id}/>:null}</div></Wrap>;

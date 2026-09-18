@@ -31,13 +31,13 @@ type Product = {
 
 type CartItem = { product: Product; quantity: number };
 
-type Props = { slug: string };
+type Props = { slug: string; embedded?: boolean };
 
 function brl(value: number) {
   return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-export default function FuncionarIAPublicSales({ slug }: Props) {
+export default function FuncionarIAPublicSales({ slug, embedded = false }: Props) {
   const [profile, setProfile] = useState<any>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -49,6 +49,7 @@ export default function FuncionarIAPublicSales({ slug }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [orderKey, setOrderKey] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -62,10 +63,6 @@ export default function FuncionarIAPublicSales({ slug }: Props) {
         const companyData = await companyResponse.json().catch(() => ({}));
         if (!companyResponse.ok || !companyData?.company?.id || !companyData?.is_funcionaria) {
           throw new Error('FuncionarIA não encontrada.');
-        }
-        if (!Array.isArray(companyData.active_skill_keys) || !companyData.active_skill_keys.includes('sales_orders')) {
-          if (active) setProfile({ ...companyData, salesUnavailable: true });
-          return;
         }
         if (active) setProfile(companyData);
 
@@ -148,6 +145,8 @@ export default function FuncionarIAPublicSales({ slug }: Props) {
 
   async function submit() {
     if (!profile?.company?.id || !cart.length || submitting) return;
+    const requestKey = orderKey || crypto.randomUUID();
+    if (!orderKey) setOrderKey(requestKey);
     setSubmitting(true);
     setError(null);
     try {
@@ -158,6 +157,7 @@ export default function FuncionarIAPublicSales({ slug }: Props) {
           company_id: profile.company.id,
           cliente_nome: customerName,
           observacoes: notes,
+          idempotency_key: requestKey,
           itens: cart.map((item) => ({ produto_id: item.product.id, quantidade: item.quantity })),
         }),
       });
@@ -170,6 +170,7 @@ export default function FuncionarIAPublicSales({ slug }: Props) {
       }
       setResult(data);
       setCart([]);
+      setOrderKey(crypto.randomUUID());
     } catch (err: any) {
       setError(err?.message || 'Não foi possível concluir o pedido.');
     } finally {
@@ -179,19 +180,6 @@ export default function FuncionarIAPublicSales({ slug }: Props) {
 
   if (loading) {
     return <main className="min-h-screen bg-slate-50 py-24 text-center text-sm font-bold text-slate-400">Carregando produtos…</main>;
-  }
-
-  if (profile?.salesUnavailable) {
-    return (
-      <main className="min-h-screen bg-slate-50 px-4 py-20">
-        <div className="mx-auto max-w-xl rounded-3xl border border-amber-200 bg-white p-8 text-center shadow-sm">
-          <ShoppingBag className="mx-auto h-9 w-9 text-amber-500" />
-          <h1 className="mt-4 text-2xl font-black">Vendas online indisponíveis</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Esta empresa ainda não ativou a habilidade Vendas & Pedidos.</p>
-          <Link href="/" className="mt-6 inline-flex rounded-xl bg-slate-900 px-5 py-3 text-sm font-black text-white">Voltar ao atendimento</Link>
-        </div>
-      </main>
-    );
   }
 
   if (!profile?.company || error && !products.length) {
@@ -209,11 +197,11 @@ export default function FuncionarIAPublicSales({ slug }: Props) {
   const company = profile.company;
 
   return (
-    <main className="min-h-screen bg-[#F8FAFC] text-slate-950">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+    <main className={`${embedded ? 'min-h-0' : 'min-h-screen'} bg-[#F8FAFC] text-slate-950`}>
+      <header className={`${embedded ? 'relative' : 'sticky top-0'} z-20 border-b border-slate-200 bg-white/95 backdrop-blur-xl`}>
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <Link href="/" aria-label="Voltar" className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"><ArrowLeft className="h-5 w-5" /></Link>
+            {!embedded ? <Link href="/" aria-label="Voltar" className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"><ArrowLeft className="h-5 w-5" /></Link> : null}
             {company.logo_url ? <img src={company.logo_url} alt="" className="h-10 w-10 rounded-xl object-contain" /> : null}
             <div className="min-w-0">
               <h1 className="truncate text-lg font-black">{company.name}</h1>

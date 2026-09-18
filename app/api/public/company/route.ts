@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
   const { data: funcionariaSettings } = await supabase
     .from('funcionaria_company_settings')
     .select(
-      'company_id,primary_color,secondary_color,shirt_color,shirt_detail_color,uniform_logo_url,background_preset,background_url,ai_enabled,voice_input_enabled,whatsapp_mode,avatar_option_id,counter,voice_id,logo_placement',
+      'company_id,workplace_mode,storefront_enabled,public_home_mode,primary_color,secondary_color,shirt_color,shirt_detail_color,uniform_logo_url,background_preset,background_url,ai_enabled,voice_input_enabled,whatsapp_mode,avatar_option_id,counter,voice_id,logo_placement',
     )
     .eq('company_id', company.id)
     .maybeSingle();

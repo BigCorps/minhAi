@@ -69,7 +69,7 @@ export default function FuncionarIAWidget() {
   const primaryText = contrastTextColor(primary);
   const activeSkillKeys = Array.isArray(profile.active_skill_keys) ? profile.active_skill_keys : [];
   const activeFunctionKeys = Array.isArray(profile.active_function_keys) ? profile.active_function_keys : [];
-  const fullUrl = `https://${company.slug}.funcionaria.net`;
+  const fullUrl = `https://${company.slug}.funcionaria.net/?view=assistant`;
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">

@@ -1,4 +1,6 @@
 export type FuncionarIAWorkplaceMode = 'presencial' | 'online' | 'ambos';
+export type FuncionarIAPublicHomeMode = 'store' | 'assistant';
+export type FuncionarIAMercadoLivreChoice = 'connect' | 'no' | 'later';
 export type FuncionarIAWhatsAppMode = 'redirect' | 'native' | 'hybrid';
 export type FuncionarIAEquipmentMode = 'own' | 'rental';
 export type FuncionarIASkillStatus = 'selected' | 'active' | 'cancel_pending' | 'canceled';
@@ -22,6 +24,9 @@ export interface FuncionarIASkill {
 export interface FuncionarIASettings {
   company_id: string;
   workplace_mode: FuncionarIAWorkplaceMode;
+  storefront_enabled: boolean;
+  public_home_mode: FuncionarIAPublicHomeMode;
+  mercadolivre_onboarding_choice: FuncionarIAMercadoLivreChoice;
   business_type: string | null;
   primary_color: string;
   secondary_color: string;
@@ -72,6 +77,10 @@ export const FUNCIONARIA_MODULES: Record<string, {
   label: string;
   description: string;
 }> = {
+  loja: {
+    label: 'Loja',
+    description: 'Catálogo, carrinho, pedidos básicos e configuração da vitrine pública.',
+  },
   atendimentos: {
     label: 'Atendimentos',
     description: 'Recepção, respostas rápidas e histórico da sua FuncionarIA.',

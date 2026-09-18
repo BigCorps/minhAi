@@ -8,7 +8,7 @@ export default function FuncionarIALandingPage() {
   return (
     <main className="min-h-screen bg-[#F8FAFC] text-slate-950">
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6">
-        <div className="flex items-center gap-2"><Image src="/brands/funcionaria/logo.png" alt="FuncionarIA" width={50} height={50} className="h-12 w-12 object-contain"/><span className="text-lg font-black">FuncionarIA</span></div>
+        <div className="flex items-center gap-2"><Image src="/brands/funcionaria/logo.png" alt="FuncionarIA" width={50} height={50} className="h-12 w-12 object-contain"/><span className="hidden text-lg font-black sm:inline">FuncionarIA</span></div>
         <div className="flex items-center gap-2">
           <a
             href={FUNCIONARIA_PLAY_URL}
@@ -29,7 +29,7 @@ export default function FuncionarIALandingPage() {
             />
           </a>
           <Link href="/login" className="rounded-xl px-4 py-2.5 text-sm font-black text-slate-600 hover:bg-white">Entrar</Link>
-          <Link href="/onboarding?new=1" className="rounded-xl bg-[#6D28D9] px-4 py-2.5 text-sm font-black text-white">Criar grátis</Link>
+          <Link href="/onboarding?new=1" className="rounded-xl bg-[#6D28D9] px-4 py-2.5 text-sm font-black text-white"><span className="sm:hidden">Criar</span><span className="hidden sm:inline">Criar grátis</span></Link>
         </div>
       </header>
 

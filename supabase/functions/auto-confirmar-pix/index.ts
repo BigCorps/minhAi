@@ -2,10 +2,25 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+const CRON_SECRET_KEY_NAME = 'cron_automations'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Content-Type': 'application/json',
+}
+
+function isAuthorizedCronRequest(req: Request): boolean {
+  const receivedKey = req.headers.get('apikey')
+  const rawSecretKeys = Deno.env.get('SUPABASE_SECRET_KEYS')
+  if (!receivedKey || !rawSecretKeys) return false
+  try {
+    const secretKeys = JSON.parse(rawSecretKeys) as Record<string, string>
+    const expectedKey = secretKeys[CRON_SECRET_KEY_NAME]
+    return typeof expectedKey === 'string' && expectedKey.length > 0 && receivedKey === expectedKey
+  } catch {
+    return false
+  }
 }
 
 async function callFunction(name: string, body: unknown) {
@@ -24,6 +39,13 @@ async function callFunction(name: string, body: unknown) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+
+  if (!isAuthorizedCronRequest(req)) {
+    return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+      status: 401,
+      headers: corsHeaders,
+    })
+  }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE)
   const now = new Date().toISOString()

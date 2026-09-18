@@ -146,8 +146,11 @@ function paymentPayload(tx: any, checkout: any) {
   }
 }
 
-async function dispatchIfNeeded(supabase: any, pedido: any) {
+async function dispatchIfNeeded(supabase: any, pedido: any, company: any) {
   if (pedido?.delivery_requested !== true) return null
+  if (company?.delivery_auto_dispatch !== true) {
+    return { ok: true, skipped: 'auto_dispatch_disabled' }
+  }
 
   try {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/lalamove-delivery`, {
@@ -194,7 +197,7 @@ async function settlePix(supabase: any, loaded: any, tx: any, paidAt: string) {
 
   if (error) throw error
 
-  const dispatch = await dispatchIfNeeded(supabase, loaded.pedido)
+  const dispatch = await dispatchIfNeeded(supabase, loaded.pedido, loaded.company)
   return { settlement, dispatch }
 }
 

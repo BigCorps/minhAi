@@ -31,6 +31,7 @@ import BarcodePdvModal from '@/components/assistant/BarcodePdvModal';
 import { AvatarFace } from '@/components/AvatarFace';
 import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
 import { listarProdutos, listarCategorias } from '@/lib/produtos-venda';
+import { requestDeliveryQuote } from '@/lib/delivery-client';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
 import SlugHeaderWrapper from '@/app/ia/[slug]/SlugHeaderWrapper';  // FIX: usa wrapper com kiosk/wakelock
 import { ArrowLeft, ArrowRight, Truck, Store, UtensilsCrossed } from 'lucide-react';
@@ -110,7 +111,7 @@ function SaleModeInner({
     setTheme(effectiveTheme === 'dark' ? 'light' : 'dark');
   }, [effectiveTheme, setTheme]);
 
-  const { totalItens, total: totalCarrinho, addItem } = useCart();
+  const { itens, totalItens, total: totalCarrinho, addItem } = useCart();
 
   const [produtos, setProdutos] = useState<ProdutoVenda[]>([]);
   const [categorias, setCategorias] = useState<string[]>([]);
@@ -131,6 +132,10 @@ function SaleModeInner({
     price_original_cents: number;
     price_brl: string;
     eta_minutes: number | null;
+    distance_km: number | null;
+    expires_at: string | null;
+    quote_token: string;
+    customer_pays: boolean;
   } | null>(null);
   const [deliveryQuoteLoading, setDeliveryQuoteLoading] = useState(false);
   const [deliveryQuoteError, setDeliveryQuoteError] = useState<string | null>(null);
@@ -272,16 +277,11 @@ useEffect(() => {
     setDeliveryQuoteLoading(true);
     setDeliveryQuoteError(null);
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('lalamove-delivery', {
-        body: {
-          action: 'quote',
-          company_id: companyId,
-          delivery_address: enderecoDelivery,
-          order_total_cents: Math.round(totalCarrinho * 100),
-        },
+      const data = await requestDeliveryQuote({
+        companyId,
+        deliveryAddress: enderecoDelivery,
+        items: itens.map((item) => ({ produto_id: item.produto.id, quantidade: item.quantidade })),
       });
-      if (error || !data?.success) throw new Error(data?.error ?? 'Erro ao calcular frete');
       setDeliveryQuote(data);
       setShowEntrega(false);
       setShowCheckout(true);
@@ -290,7 +290,7 @@ useEffect(() => {
     } finally {
       setDeliveryQuoteLoading(false);
     }
-  }, [companyId, tipoEntrega, deliveryEnabled, enderecoDelivery]);
+  }, [companyId, tipoEntrega, deliveryEnabled, enderecoDelivery, itens]);
 
   const handleConfirmarEntrega = handleCalcularFreteEAvancar;
 

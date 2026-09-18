@@ -279,6 +279,7 @@ export async function atualizarPedidoCheckout(
     delivery_address?: string | null;
     delivery_fee_cents?: number | null;
     delivery_fee_original_cents?: number | null;
+    delivery_quote_token?: string | null;
   },
 ): Promise<void> {
   const mutationToken = pedidoMutationTokens.get(pedidoId);
@@ -298,6 +299,27 @@ export async function atualizarPedidoCheckout(
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data?.error || 'order_update_failed');
+}
+
+/** Solicita despacho usando o token efêmero do próprio pedido. O servidor só aceita
+ * depois de o pagamento estar confirmado; o token não permite forçar despacho manual. */
+export async function despacharPedidoEntrega(pedidoId: string, companyId: string) {
+  const mutationToken = pedidoMutationTokens.get(pedidoId);
+  if (!mutationToken) throw new Error('order_mutation_token_missing');
+  const response = await fetch('/api/delivery/dispatch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({
+      pedido_id: pedidoId,
+      company_id: companyId,
+      mutation_token: mutationToken,
+      manual: false,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error || 'delivery_dispatch_failed');
+  return data;
 }
 
 /** Atualiza status do pedido somente pela rota server-side ligada ao pedido recém-criado */

@@ -49,6 +49,14 @@ async function invokeEdge(functionName: string, body: Record<string, unknown>) {
   return { ok: response.ok, status: response.status, data };
 }
 
+async function maybeDispatchDelivery(admin: ReturnType<typeof createAdminClient>, pedidoId: string, companyId: string, pedido: any) {
+  if (pedido?.delivery_requested !== true || pedido?.lalamove_order_id) return null;
+  const { data: company } = await admin.from('companies').select('delivery_auto_dispatch').eq('id', companyId).maybeSingle();
+  if (company?.delivery_auto_dispatch !== true) return { skipped: true, reason: 'auto_dispatch_disabled' };
+  const result = await invokeEdge('lalamove-delivery', { action: 'order', company_id: companyId, pedido_id: pedidoId });
+  return result.data ?? { success: false, error: 'delivery_dispatch_failed' };
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
 
@@ -65,7 +73,7 @@ export async function POST(request: NextRequest) {
 
   const { data: pedido, error: pedidoError } = await admin
     .from('pedidos')
-    .select('id,company_id,total,status,cobranca_id,metodo_pagamento,stock_deducted_at')
+    .select('id,company_id,total,status,cobranca_id,metodo_pagamento,stock_deducted_at,delivery_requested,lalamove_order_id')
     .eq('id', pedidoId)
     .eq('company_id', companyId)
     .maybeSingle();
@@ -78,7 +86,8 @@ export async function POST(request: NextRequest) {
   if (!pedido) return json({ error: 'pedido_not_found' }, 404);
 
   if (pedido.status === 'pago' || pedido.status === 'entregue') {
-    return json({ success: true, status: pedido.status, already_confirmed: true });
+    const deliveryDispatch = await maybeDispatchDelivery(admin, pedidoId, companyId, pedido);
+    return json({ success: true, status: pedido.status, already_confirmed: true, delivery_dispatch: deliveryDispatch });
   }
 
   if (!['aberto', 'aguardando_pagamento'].includes(String(pedido.status || ''))) {
@@ -232,14 +241,17 @@ export async function POST(request: NextRequest) {
 
   const { data: finalPedido } = await admin
     .from('pedidos')
-    .select('status,paid_at,stock_deducted_at')
+    .select('status,paid_at,stock_deducted_at,delivery_requested,lalamove_order_id')
     .eq('id', pedidoId)
     .maybeSingle();
+
+  const deliveryDispatch = await maybeDispatchDelivery(admin, pedidoId, companyId, finalPedido);
 
   return json({
     success: true,
     status: finalPedido?.status || 'pago',
     paid_at: finalPedido?.paid_at || null,
     stock_deducted: Boolean(finalPedido?.stock_deducted_at),
+    delivery_dispatch: deliveryDispatch,
   });
 }

@@ -13,7 +13,9 @@ import {
   Search,
   ShoppingBag,
   Trash2,
+  Truck,
 } from 'lucide-react';
+import { requestDeliveryQuote, type DeliveryQuote } from '@/lib/delivery-client';
 
 type Product = {
   id: string;
@@ -50,6 +52,12 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
   const [result, setResult] = useState<any>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [orderKey, setOrderKey] = useState('');
+  const [deliveryMode, setDeliveryMode] = useState<'pickup' | 'delivery'>('pickup');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null);
+  const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [deliveryError, setDeliveryError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -116,6 +124,12 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
     () => cart.reduce((sum, item) => sum + item.product.preco_venda * item.quantity, 0),
     [cart],
   );
+  const displayTotal = total + (deliveryMode === 'delivery' && deliveryQuote?.customer_pays ? deliveryQuote.price_cents / 100 : 0);
+
+  useEffect(() => {
+    setDeliveryQuote(null);
+    setDeliveryError(null);
+  }, [cart, deliveryAddress, deliveryMode]);
 
   const primary = profile?.settings?.primary_color || '#6D28D9';
   const secondary = profile?.settings?.secondary_color || '#A3E635';
@@ -143,8 +157,36 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
     }));
   }
 
+  async function calculateDelivery() {
+    if (!profile?.company?.id || !cart.length || deliveryAddress.trim().length < 8) return;
+    setDeliveryLoading(true);
+    setDeliveryError(null);
+    try {
+      const quote = await requestDeliveryQuote({
+        companyId: profile.company.id,
+        deliveryAddress,
+        items: cart.map((item) => ({ produto_id: item.product.id, quantidade: item.quantity })),
+      });
+      setDeliveryQuote(quote);
+    } catch (error: any) {
+      const map: Record<string,string> = {
+        minimum_order_not_met: 'O pedido ainda não atingiu o valor mínimo para entrega.',
+        delivery_outside_radius: 'Este endereço está fora do raio de entrega da loja.',
+        delivery_outside_schedule: 'A entrega não está disponível neste horário.',
+      };
+      setDeliveryError(map[error?.message] || error?.message || 'Não foi possível calcular o frete.');
+    } finally {
+      setDeliveryLoading(false);
+    }
+  }
+
   async function submit() {
     if (!profile?.company?.id || !cart.length || submitting) return;
+    if (deliveryMode === 'delivery') {
+      if (!deliveryQuote) { setError('Calcule o frete antes de enviar o pedido.'); return; }
+      const phone = customerPhone.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
+      if (phone.length !== 10 && phone.length !== 11) { setError('Informe um telefone com DDD para a entrega.'); return; }
+    }
     const requestKey = orderKey || crypto.randomUUID();
     if (!orderKey) setOrderKey(requestKey);
     setSubmitting(true);
@@ -156,6 +198,8 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
         body: JSON.stringify({
           company_id: profile.company.id,
           cliente_nome: customerName,
+          cliente_telefone: deliveryMode === 'delivery' ? customerPhone : null,
+          delivery_quote_token: deliveryMode === 'delivery' ? deliveryQuote?.quote_token : null,
           observacoes: notes,
           idempotency_key: requestKey,
           itens: cart.map((item) => ({ produto_id: item.product.id, quantidade: item.quantity })),
@@ -171,6 +215,10 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
       setResult(data);
       setCart([]);
       setOrderKey(crypto.randomUUID());
+      setDeliveryMode('pickup');
+      setDeliveryAddress('');
+      setCustomerPhone('');
+      setDeliveryQuote(null);
     } catch (err: any) {
       setError(err?.message || 'Não foi possível concluir o pedido.');
     } finally {
@@ -307,7 +355,32 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4"><span className="text-sm font-bold text-slate-500">Total</span><span className="text-2xl font-black">{brl(total)}</span></div>
+                <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4"><span className="text-sm font-bold text-slate-500">Total</span><span className="text-2xl font-black">{brl(displayTotal)}</span></div>
+
+                {profile?.company?.delivery_enabled === true && (
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center gap-2 text-sm font-black"><Truck className="h-4 w-4" style={{ color: primary }} /> Como quer receber?</div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => setDeliveryMode('pickup')} className={`rounded-xl border px-3 py-2 text-xs font-black ${deliveryMode === 'pickup' ? 'border-violet-300 bg-white text-violet-700' : 'border-slate-200 text-slate-500'}`}>Retirar no local</button>
+                      <button type="button" onClick={() => setDeliveryMode('delivery')} className={`rounded-xl border px-3 py-2 text-xs font-black ${deliveryMode === 'delivery' ? 'border-violet-300 bg-white text-violet-700' : 'border-slate-200 text-slate-500'}`}>Receber por entrega</button>
+                    </div>
+                    {deliveryMode === 'delivery' && (
+                      <div className="mt-3 space-y-2">
+                        <input value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} placeholder="Endereço completo para entrega" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none focus:border-violet-300" />
+                        <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Telefone com DDD" inputMode="tel" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none focus:border-violet-300" />
+                        <button type="button" onClick={() => void calculateDelivery()} disabled={deliveryLoading || deliveryAddress.trim().length < 8} className="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-xs font-black text-[#6D28D9] disabled:opacity-50">{deliveryLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />} Calcular entrega</button>
+                        {deliveryError && <div className="text-xs font-bold text-red-600">{deliveryError}</div>}
+                        {deliveryQuote && (
+                          <div className="rounded-xl bg-white p-3 text-xs">
+                            <div className="flex items-center justify-between gap-3"><span className="font-bold text-slate-500">Entrega</span><span className="font-black text-slate-900">{deliveryQuote.customer_pays ? brl(deliveryQuote.price_cents / 100) : 'Grátis'}</span></div>
+                            {(deliveryQuote.eta_minutes != null || deliveryQuote.distance_km != null) && <div className="mt-1 text-[11px] font-semibold text-slate-400">{deliveryQuote.eta_minutes != null ? `Estimativa: ~${deliveryQuote.eta_minutes} min` : ''}{deliveryQuote.eta_minutes != null && deliveryQuote.distance_km != null ? ' • ' : ''}{deliveryQuote.distance_km != null ? `${deliveryQuote.distance_km.toFixed(1)} km` : ''}</div>}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Seu nome (opcional)" className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-violet-300" />
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observação (opcional)" rows={2} className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-violet-300" />
                 <button onClick={submit} disabled={submitting} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-black text-white disabled:opacity-60" style={{ backgroundColor: primary }}>

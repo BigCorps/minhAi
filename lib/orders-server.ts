@@ -32,6 +32,60 @@ function mutationSecret(): string {
   return String(process.env.ORDER_MUTATION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || '');
 }
 
+export type DeliveryQuoteTokenPayload = {
+  companyId: string;
+  address: string;
+  subtotalCents: number;
+  quotationId: string;
+  quoteRequestId: string;
+  priceCents: number;
+  priceOriginalCents: number;
+  expiresAt: string | null;
+  whoPays: 'cliente' | 'empresa';
+  exp: number;
+};
+
+export function signDeliveryQuoteToken(input: Omit<DeliveryQuoteTokenPayload, 'exp'>): string {
+  const secret = mutationSecret();
+  if (!secret) throw new Error('order_mutation_secret_missing');
+
+  const now = Math.floor(Date.now() / 1000);
+  const providerExpiry = input.expiresAt ? Math.floor(new Date(input.expiresAt).getTime() / 1000) : now + 4 * 60;
+  if (!Number.isFinite(providerExpiry) || providerExpiry <= now + 5) throw new Error('delivery_quote_expired');
+  const exp = Math.min(providerExpiry, now + 10 * 60);
+  const payload: DeliveryQuoteTokenPayload = { ...input, exp };
+  const encoded = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+  const signature = createHmac('sha256', secret).update(encoded).digest('base64url');
+  return `${encoded}.${signature}`;
+}
+
+export function verifyDeliveryQuoteToken(token: unknown): DeliveryQuoteTokenPayload | null {
+  const secret = mutationSecret();
+  const raw = String(token || '').trim();
+  if (!secret || !raw) return null;
+  const parts = raw.split('.');
+  if (parts.length !== 2) return null;
+  const [encoded, signature] = parts;
+  const expected = createHmac('sha256', secret).update(encoded).digest('base64url');
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+  try {
+    const value = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')) as DeliveryQuoteTokenPayload;
+    const now = Math.floor(Date.now() / 1000);
+    if (!value || value.exp < now || !value.companyId || !value.quotationId || !value.quoteRequestId) return null;
+    if (!value.address || value.address.length > 500) return null;
+    if (!Number.isFinite(value.subtotalCents) || value.subtotalCents <= 0) return null;
+    if (!Number.isFinite(value.priceCents) || value.priceCents <= 0) return null;
+    if (!Number.isFinite(value.priceOriginalCents) || value.priceOriginalCents <= 0) return null;
+    if (!['cliente','empresa'].includes(value.whoPays)) return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+
 export function signOrderMutationToken(pedidoId: string, companyId: string, ttlSeconds = 6 * 60 * 60): string {
   const secret = mutationSecret();
   if (!secret) throw new Error('order_mutation_secret_missing');

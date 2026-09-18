@@ -41,6 +41,7 @@ import { createProductManaged, updateProductManaged, deleteProductManaged, bulkC
 import OpcionaisModal from '@/components/dashboard/vendas/OpcionaisModal';
 import ImportarCSVModal from '@/components/dashboard/vendas/ImportarCSVModal';
 import SecaoFiscalProduto from '@/components/dashboard/vendas/SecaoFiscalProduto';
+import { requestDeliveryDispatch } from '@/lib/delivery-client';
 
 // ─── Tipos locais ─────────────────────────────────────────────────────────────
 
@@ -1833,24 +1834,11 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
     if (!pedido.delivery_share_link) {
       setDespachando(pedido.id);
       try {
-        const supabaseLocal = createClient();
-        const { data, error } = await supabaseLocal.functions.invoke('lalamove-delivery', {
-          body: {
-            action: 'order',
-            company_id: companyId,
-            pedido_id: pedido.id,
-            delivery_address: pedido.delivery_address,
-            cliente_nome: pedido.cliente_nome || undefined,
-            cliente_telefone: pedido.cliente_telefone || undefined,
-            quotation_id: '',
-            price_cents: pedido.delivery_fee_cents,
-            price_original_cents: pedido.delivery_fee_original_cents,
-          },
-        });
+        const data = await requestDeliveryDispatch({ companyId, pedidoId: pedido.id, manual: true });
         if (data?.success) {
           setPedidos(prev => prev.map(p =>
             p.id === pedido.id
-              ? { ...p, delivery_status: 'assigning', delivery_share_link: data.share_link }
+              ? { ...p, delivery_status: data.already_created ? p.delivery_status : 'assigning', delivery_share_link: data.share_link || p.delivery_share_link }
               : p
           ));
         }

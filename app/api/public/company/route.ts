@@ -26,6 +26,9 @@ const SAFE_COMPANY_FIELDS = [
   'inactivity_action',
   'tts_voice',
   'voice_speed',
+  'delivery_enabled',
+  'delivery_who_pays',
+  'delivery_min_order_cents',
 ].join(',');
 
 function cleanSlug(value: string | null) {

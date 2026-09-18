@@ -10,7 +10,8 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { useCart } from '@/hooks/useCart';
-import { criarPedido, atualizarPedidoCheckout, atualizarStatusPedido, formatarPreco } from '@/lib/produtos-venda';
+import { criarPedido, atualizarPedidoCheckout, atualizarStatusPedido, despacharPedidoEntrega, formatarPreco } from '@/lib/produtos-venda';
+import { requestDeliveryQuote } from '@/lib/delivery-client';
 import { triggerAutoPrint, formatPurchaseReceipt } from '@/lib/auto-print';
 import RegistrationDisplay from '@/components/assistant/RegistrationDisplay';
 
@@ -36,6 +37,10 @@ interface CheckoutFlowProps {
     price_original_cents: number;
     price_brl: string;
     eta_minutes: number | null;
+    distance_km: number | null;
+    expires_at: string | null;
+    quote_token: string;
+    customer_pays: boolean;
   } | null;
 }
 
@@ -229,6 +234,10 @@ const div = document.createElement('div');
     price_original_cents: number;
     price_brl: string;
     eta_minutes: number | null;
+    distance_km: number | null;
+    expires_at: string | null;
+    quote_token: string;
+    customer_pays: boolean;
   } | null>(deliveryQuoteExterno ?? null);
 
   useEffect(() => {
@@ -414,44 +423,26 @@ if (confirmed.ok) {
     setDeliveryError(null);
     setDeliveryQuote(null);
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('lalamove-delivery', {
-        body: {
-          action: 'quote',
-          company_id: companyId,
-          delivery_address: enderecoDelivery,
-          order_total_cents: Math.round(total * 100),
-        },
+      const data = await requestDeliveryQuote({
+        companyId,
+        deliveryAddress: enderecoDelivery,
+        items: itens.map((item) => ({ produto_id: item.produto.id, quantidade: item.quantidade })),
       });
-      if (error || !data?.success) throw new Error(data?.error ?? 'Erro ao calcular frete');
       setDeliveryQuote(data);
     } catch (e: any) {
       setDeliveryError(e.message);
     } finally {
       setDeliveryLoading(false);
     }
-  }, [companyId, enderecoDelivery, total]);
+  }, [companyId, enderecoDelivery, itens]);
 
   // Despachar entregador após pagamento confirmado
   const dispatchDelivery = useCallback(async (pedidoIdParam: string) => {
     const quoteParaDespacho = deliveryQuote ?? deliveryQuoteExterno ?? null;
     if (tipoEntrega !== 'delivery' || !quoteParaDespacho || !enderecoDelivery) return;
     try {
-      const supabase = createClient();
-      const { data: orderData } = await supabase.functions.invoke('lalamove-delivery', {
-        body: {
-          action: 'order',
-          company_id: companyId,
-          pedido_id: pedidoIdParam,
-          delivery_address: enderecoDelivery,
-          cliente_nome: clienteNome || undefined,
-          cliente_telefone: clienteTel || undefined,
-          quotation_id: quoteParaDespacho.quotation_id,
-          price_cents: quoteParaDespacho.price_cents,
-          price_original_cents: quoteParaDespacho.price_original_cents,
-        },
-      });
-      if (orderData?.success) setDeliveryShareLink(orderData.share_link);
+      const orderData = await despacharPedidoEntrega(pedidoIdParam, companyId);
+      if (orderData?.success && orderData?.share_link) setDeliveryShareLink(orderData.share_link);
     } catch (e) {
       console.error('Erro ao despachar entrega:', e);
     }
@@ -503,6 +494,7 @@ if (confirmed.ok) {
           delivery_address: enderecoDelivery,
           delivery_fee_cents: quoteAtivo.price_cents,
           delivery_fee_original_cents: quoteAtivo.price_original_cents,
+          delivery_quote_token: quoteAtivo.quote_token,
         });
       }
 

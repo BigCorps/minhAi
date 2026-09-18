@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-admin';
+import { cleanUuid, verifyDeliveryQuoteToken } from '@/lib/orders-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,9 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const companyId = String(body?.company_id || '').trim();
   const clienteNome = String(body?.cliente_nome || '').trim().slice(0, 120) || null;
+  const clienteTelefone = String(body?.cliente_telefone || '').replace(/\D/g, '').slice(0, 13) || null;
   const observacoes = String(body?.observacoes || '').trim().slice(0, 500) || null;
+  const deliveryQuoteToken = String(body?.delivery_quote_token || '').trim();
   const idempotencyKey = String(body?.idempotency_key || '').trim().slice(0, 120);
   const items = normalizeItems(body?.itens);
 
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
   const supabase = createAdminClient();
   const { data: company } = await supabase
     .from('companies')
-    .select('id,name,is_active,is_public')
+    .select('id,name,is_active,is_public,delivery_enabled,delivery_who_pays')
     .eq('id', companyId)
     .eq('is_active', true)
     .maybeSingle();
@@ -83,7 +86,26 @@ export async function POST(request: NextRequest) {
     subtotal += Number(product.preco_venda || 0) * item.quantidade;
   }
 
-  if (skills.includes('checkout_payments')) {
+  const subtotalCents = Math.round(subtotal * 100);
+  let orderTotal = subtotal;
+  const deliveryQuote = deliveryQuoteToken ? verifyDeliveryQuoteToken(deliveryQuoteToken) : null;
+  if (deliveryQuoteToken && !deliveryQuote) {
+    return NextResponse.json({ error: 'invalid_or_expired_delivery_quote' }, { status: 409 });
+  }
+  if (deliveryQuote) {
+    if (company.delivery_enabled !== true || deliveryQuote.companyId !== companyId || deliveryQuote.subtotalCents !== subtotalCents) {
+      return NextResponse.json({ error: 'delivery_quote_mismatch' }, { status: 409 });
+    }
+    const phoneDigits = String(clienteTelefone || '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
+    if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
+      return NextResponse.json({ error: 'customer_phone_required' }, { status: 400 });
+    }
+    orderTotal = subtotal + (deliveryQuote.whoPays === 'cliente' ? deliveryQuote.priceCents / 100 : 0);
+  }
+
+  // O checkout antigo exige auth.uid() e será redesenhado na 7F. Para delivery
+  // usamos por enquanto o pedido básico, preservando o frete validado no servidor.
+  if (skills.includes('checkout_payments') && !deliveryQuote) {
     const { data, error } = await supabase.rpc('funcionaria_criar_checkout', {
       p_company_id: companyId,
       p_itens: items,
@@ -111,7 +133,7 @@ export async function POST(request: NextRequest) {
       replayed: true,
       order: {
         pedido_id: existingOrder.id,
-        total: Number(existingOrder.total || subtotal),
+        total: Number(existingOrder.total || orderTotal),
         status: existingOrder.status,
       },
     });
@@ -123,10 +145,22 @@ export async function POST(request: NextRequest) {
       company_id: companyId,
       public_order_idempotency_key: idempotencyKey,
       cliente_nome: clienteNome,
+      cliente_telefone: clienteTelefone,
       subtotal,
       desconto: 0,
-      total: subtotal,
+      total: orderTotal,
       status: 'aberto',
+      ...(deliveryQuote ? {
+        delivery_requested: true,
+        delivery_address: deliveryQuote.address,
+        delivery_fee_cents: deliveryQuote.priceCents,
+        delivery_fee_original_cents: deliveryQuote.priceOriginalCents,
+        delivery_who_pays_snapshot: deliveryQuote.whoPays,
+        lalamove_quotation_id: deliveryQuote.quotationId,
+        lalamove_quote_expires_at: deliveryQuote.expiresAt,
+        delivery_quote_request_id: cleanUuid(deliveryQuote.quoteRequestId) || null,
+        delivery_dispatch_state: 'ready',
+      } : {}),
       observacoes,
       platform: 'funcionaria_web',
     })
@@ -147,7 +181,7 @@ export async function POST(request: NextRequest) {
         replayed: true,
         order: {
           pedido_id: replay.id,
-          total: Number(replay.total || subtotal),
+          total: Number(replay.total || orderTotal),
           status: replay.status,
         },
       });
@@ -183,7 +217,7 @@ export async function POST(request: NextRequest) {
     kind: 'order',
     order: {
       pedido_id: pedido.id,
-      total: Number(pedido.total || subtotal),
+      total: Number(pedido.total || orderTotal),
       status: pedido.status,
     },
   });

@@ -1,13 +1,14 @@
 'use client';
 
-import { ExternalLink, Loader2, Package, ReceiptText, Store } from 'lucide-react';
+import { ExternalLink, Loader2, Package, ReceiptText, Store, Truck } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import type { FuncionarIASettings, FuncionarIAPublicHomeMode } from '@/lib/funcionaria-skills';
 import FuncionarIAProductsPanel from '@/components/funcionaria/management/FuncionarIAProductsPanel';
 import FuncionarIAOrdersPanel from '@/components/funcionaria/management/FuncionarIAOrdersPanel';
+import FuncionarIADeliverySettings from '@/components/funcionaria/management/FuncionarIADeliverySettings';
 
-type Tab = 'products' | 'orders';
+type Tab = 'products' | 'orders' | 'delivery';
 
 export default function FuncionarIAStorefrontManager({
   companyId,
@@ -80,7 +81,7 @@ export default function FuncionarIAStorefrontManager({
             <h2 className="mt-2 text-2xl font-black">Sua loja em {slug}.funcionaria.net</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
               Catálogo, carrinho e pedidos básicos fazem parte da base da FuncionarIA.
-              Pagamentos online e entrega entram nas próximas etapas da Fase 7.
+              A entrega local já pode ser configurada. Pagamentos online entram na próxima etapa da Fase 7.
             </p>
           </div>
           <a
@@ -169,6 +170,15 @@ export default function FuncionarIAStorefrontManager({
             >
               <ReceiptText className="h-4 w-4" /> Pedidos
             </button>
+            <button
+              type="button"
+              onClick={() => setTab('delivery')}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black ${
+                tab === 'delivery' ? 'bg-slate-950 text-white' : 'border border-slate-200 bg-white text-slate-600'
+              }`}
+            >
+              <Truck className="h-4 w-4" /> Entrega
+            </button>
           </div>
 
           <div className={tab === 'products' ? 'block' : 'hidden'}>
@@ -176,6 +186,9 @@ export default function FuncionarIAStorefrontManager({
           </div>
           <div className={tab === 'orders' ? 'block' : 'hidden'}>
             <FuncionarIAOrdersPanel companyId={companyId} />
+          </div>
+          <div className={tab === 'delivery' ? 'block' : 'hidden'}>
+            <FuncionarIADeliverySettings companyId={companyId} />
           </div>
         </>
       ) : (

@@ -85,13 +85,9 @@ function temConteudo(tipo: string, cfg: ConviteConfig): boolean {
     case 'programacao': return (cfg.programacao?.length ?? 0) > 0;
     case 'informacoes': return (cfg.informacoes?.length ?? 0) > 0;
     case 'dresscode':
-      return Boolean(
-        cfg.dressCode?.tipo?.trim()
-        || cfg.dressCode?.texto?.trim()
-        || cfg.dressCode?.evitar?.trim()
-        || cfg.dressCode?.subtitulo?.trim()
-        || cfg.dressCode?.imagens?.length
-      );
+      // Se a seção estiver ligada, há sempre o texto padrão de orientação.
+      // O usuário só precisa preencher algo quando quiser personalizar.
+      return true;
     case 'presentes':
       return (cfg.presentes?.length ?? 0) > 0
         || (cfg.presentesEscolhidos?.length ?? 0) > 0

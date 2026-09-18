@@ -5,11 +5,12 @@ import { Shirt } from 'lucide-react';
 import type { PropsSecao } from '@/lib/conviteria/tipos';
 import { Broto } from '../Ornamentos';
 
+const TEXTO_PADRAO = 'Para tornar este momento ainda mais especial, sugerimos trajes elegantes e confortáveis para aproveitar toda a celebração.';
+
 export default function DressCode({ cfg, secao }: PropsSecao) {
   const d = cfg.dressCode ?? {};
   const imagens = Array.from(new Set(d.imagens ?? [])).slice(0, 5);
-  const temTexto = Boolean(d.tipo?.trim() || d.texto?.trim() || d.evitar?.trim() || d.subtitulo?.trim());
-  if (!temTexto && imagens.length === 0) return null;
+  const texto = d.texto?.trim() || TEXTO_PADRAO;
 
   return (
     <section className="cv-secao" style={{ textAlign: 'center' }}>
@@ -72,7 +73,7 @@ export default function DressCode({ cfg, secao }: PropsSecao) {
                 alt={`Referência de traje ${i + 1}`}
                 fill
                 sizes="(max-width: 480px) 88vw, 560px"
-                style={{ objectFit: 'cover' }}
+                style={{ objectFit: 'contain' }}
               />
             </div>
           ))}
@@ -94,14 +95,12 @@ export default function DressCode({ cfg, secao }: PropsSecao) {
         </p>
       )}
 
-      {d.texto?.trim() && (
-        <p
-          className="cv-texto"
-          style={{ marginLeft: 'auto', marginRight: 'auto', maxWidth: 600, textAlign: 'center' }}
-        >
-          {d.texto}
-        </p>
-      )}
+      <p
+        className="cv-texto"
+        style={{ marginLeft: 'auto', marginRight: 'auto', maxWidth: 600, textAlign: 'center' }}
+      >
+        {texto}
+      </p>
 
       {d.evitar?.trim() && (
         <div

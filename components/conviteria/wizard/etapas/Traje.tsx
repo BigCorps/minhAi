@@ -5,6 +5,8 @@ import { ImagePlus, Loader2, Trash2 } from 'lucide-react';
 import { AreaTexto, Campo, Texto } from '../Campos';
 import type { PropsEtapa } from '../Wizard';
 
+const TEXTO_PADRAO = 'Para tornar este momento ainda mais especial, sugerimos trajes elegantes e confortáveis para aproveitar toda a celebração.';
+
 export default function Traje({ estado, despachar, aoEnviarArquivo }: PropsEtapa) {
   const dress = estado.cfg.dressCode ?? {};
   const imagens = Array.from(new Set(dress.imagens ?? [])).slice(0, 5);
@@ -65,8 +67,8 @@ export default function Traje({ estado, despachar, aoEnviarArquivo }: PropsEtapa
         <Texto valor={dress.subtitulo ?? ''} placeholder="Uma orientação para nossos convidados" maxLength={160} onChange={(v) => campo('subtitulo', v)} />
       </Campo>
 
-      <Campo rotulo="Orientação" dica="Explique o estilo desejado de forma simples.">
-        <AreaTexto valor={dress.texto ?? ''} placeholder="Sugerimos trajes elegantes e confortáveis para aproveitar toda a celebração." linhas={4} maxLength={700} onChange={(v) => campo('texto', v)} />
+      <Campo rotulo="Orientação" dica="Este texto padrão já aparece no convite. Altere somente se quiser personalizar.">
+        <AreaTexto valor={dress.texto ?? TEXTO_PADRAO} placeholder={TEXTO_PADRAO} linhas={4} maxLength={700} onChange={(v) => campo('texto', v)} />
       </Campo>
 
       <Campo rotulo="O que evitar" dica="Opcional. Ex.: branco, off-white, jeans, tons reservados aos anfitriões.">
@@ -96,7 +98,7 @@ export default function Traje({ estado, despachar, aoEnviarArquivo }: PropsEtapa
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {imagens.map((url) => (
               <div key={url} className="relative overflow-hidden rounded-xl border border-[#c0607833] bg-white p-1.5">
-                <img src={url} alt="Referência de traje" className="h-32 w-full rounded-lg object-cover" />
+                <img src={url} alt="Referência de traje" className="h-32 w-full rounded-lg bg-[#fff9fb] object-contain" />
                 <button
                   type="button"
                   onClick={() => campo('imagens', imagens.filter((x) => x !== url))}

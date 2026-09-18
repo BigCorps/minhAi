@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import FuncionarIAStorefrontPaymentPanel from '@/components/funcionaria/public/FuncionarIAStorefrontPaymentPanel';
 import {
   AlertCircle,
   ArrowLeft,
@@ -133,7 +134,6 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
 
   const primary = profile?.settings?.primary_color || '#6D28D9';
   const secondary = profile?.settings?.secondary_color || '#A3E635';
-  const hasCheckout = profile?.active_skill_keys?.includes('checkout_payments') === true;
 
   function add(product: Product) {
     if (!product.disponivel) return;
@@ -320,7 +320,24 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
               <div className="mt-5 text-center">
                 <CheckCircle2 className="mx-auto h-12 w-12 text-lime-500" />
                 <h3 className="mt-3 text-xl font-black">Pedido recebido</h3>
-                {result.kind === 'checkout' && result.checkout ? (
+                {result.kind === 'storefront_checkout' && result.storefront_payment?.payment_token ? (
+                  <>
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                      Pedido criado. Conclua o pagamento abaixo para confirmar a venda.
+                    </p>
+                    <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-black">
+                      Pedido #{String(result?.order?.pedido_id || '').slice(0, 8).toUpperCase()}
+                    </div>
+                    <FuncionarIAStorefrontPaymentPanel
+                      paymentToken={result.storefront_payment.payment_token}
+                      primaryColor={primary}
+                      onPaid={() => setResult((current: any) => ({
+                        ...current,
+                        order: { ...(current?.order || {}), status: 'pago' },
+                      }))}
+                    />
+                  </>
+                ) : result.kind === 'checkout' && result.checkout ? (
                   <>
                     <p className="mt-2 text-sm leading-6 text-slate-500">Mostre o código abaixo no caixa/terminal para escolher a forma de pagamento com segurança.</p>
                     <div className="mt-5 rounded-3xl bg-slate-950 p-5 text-white">
@@ -384,10 +401,12 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
                 <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Seu nome (opcional)" className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-violet-300" />
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observação (opcional)" rows={2} className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-violet-300" />
                 <button onClick={submit} disabled={submitting} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-black text-white disabled:opacity-60" style={{ backgroundColor: primary }}>
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : hasCheckout ? <QrCode className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                  {submitting ? 'Enviando…' : hasCheckout ? 'Gerar pedido e código de pagamento' : 'Enviar pedido'}
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  {submitting ? 'Enviando…' : 'Finalizar pedido'}
                 </button>
-                {hasCheckout ? <p className="mt-2 text-center text-[11px] leading-4 text-slate-400">O pagamento é confirmado no terminal da empresa; esta página nunca marca uma venda como paga.</p> : null}
+                <p className="mt-2 text-center text-[11px] leading-4 text-slate-400">
+                  No modo gratuito, o pagamento é processado pela BigCorps e a loja recebe o saldo líquido após a confirmação.
+                </p>
               </>
             ) : (
               <div className="mt-5 rounded-2xl bg-slate-50 p-6 text-center text-sm font-semibold text-slate-400">Adicione produtos para montar o pedido.</div>

@@ -1,10 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-admin';
-import { cleanUuid, verifyDeliveryQuoteToken } from '@/lib/orders-server';
+import { cleanUuid, signStorefrontPaymentToken, verifyDeliveryQuoteToken } from '@/lib/orders-server';
 
 export const dynamic = 'force-dynamic';
 
 type RequestedItem = { produto_id: string; quantidade: number };
+
+async function prepareStorefrontPayment(
+  supabase: ReturnType<typeof createAdminClient>,
+  pedidoId: string,
+  companyId: string,
+) {
+  const { data, error } = await supabase.rpc('funcionaria_prepare_storefront_checkout', {
+    p_pedido_id: pedidoId,
+  });
+  if (error || !data?.checkout_id) {
+    console.error('[funcionaria/public-order] storefront checkout:', error?.message || data);
+    throw new Error('storefront_checkout_failed');
+  }
+  return {
+    checkout_id: String(data.checkout_id),
+    codigo: String(data.codigo || ''),
+    status: String(data.status || 'aguardando_pagamento'),
+    expires_at: data.expires_at || null,
+    payment_mode: String(data.payment_mode || 'commission'),
+    commission_bps: Number(data.commission_bps || 500),
+    payment_token: signStorefrontPaymentToken(
+      String(data.checkout_id),
+      pedidoId,
+      companyId,
+    ),
+  };
+}
 
 function normalizeItems(value: unknown): RequestedItem[] {
   if (!Array.isArray(value)) return [];
@@ -44,21 +71,10 @@ export async function POST(request: NextRequest) {
 
   const { data: settings } = await supabase
     .from('funcionaria_company_settings')
-    .select('company_id')
+    .select('company_id,storefront_payment_mode,storefront_commission_bps')
     .eq('company_id', companyId)
     .maybeSingle();
   if (!settings) return NextResponse.json({ error: 'not_funcionaria' }, { status: 404 });
-
-  const { data: entitlements, error: entitlementError } = await supabase.rpc(
-    'funcionaria_active_entitlements',
-    { p_company_id: companyId },
-  );
-  if (entitlementError) {
-    console.error('[funcionaria/public-order] entitlements:', entitlementError.message);
-    return NextResponse.json({ error: 'entitlements_lookup_failed' }, { status: 500 });
-  }
-
-  const skills: string[] = Array.isArray(entitlements?.skill_keys) ? entitlements.skill_keys : [];
 
   const productIds = items.map((item) => item.produto_id);
   const { data: products, error: productsError } = await supabase
@@ -103,23 +119,6 @@ export async function POST(request: NextRequest) {
     orderTotal = subtotal + (deliveryQuote.whoPays === 'cliente' ? deliveryQuote.priceCents / 100 : 0);
   }
 
-  // O checkout antigo exige auth.uid() e será redesenhado na 7F. Para delivery
-  // usamos por enquanto o pedido básico, preservando o frete validado no servidor.
-  if (skills.includes('checkout_payments') && !deliveryQuote) {
-    const { data, error } = await supabase.rpc('funcionaria_criar_checkout', {
-      p_company_id: companyId,
-      p_itens: items,
-      p_cliente_nome: clienteNome,
-      p_observacoes: observacoes,
-    });
-    if (error) {
-      console.error('[funcionaria/public-order] checkout:', error.message);
-      return NextResponse.json({ error: error.message || 'checkout_create_failed' }, { status: 409 });
-    }
-    const checkout = Array.isArray(data) ? data[0] : data;
-    return NextResponse.json({ ok: true, kind: 'checkout', checkout });
-  }
-
   const { data: existingOrder } = await supabase
     .from('pedidos')
     .select('id,total,status')
@@ -127,16 +126,22 @@ export async function POST(request: NextRequest) {
     .eq('public_order_idempotency_key', idempotencyKey)
     .maybeSingle();
   if (existingOrder) {
-    return NextResponse.json({
-      ok: true,
-      kind: 'order',
-      replayed: true,
-      order: {
-        pedido_id: existingOrder.id,
-        total: Number(existingOrder.total || orderTotal),
-        status: existingOrder.status,
-      },
-    });
+    try {
+      const storefrontPayment = await prepareStorefrontPayment(supabase, existingOrder.id, companyId);
+      return NextResponse.json({
+        ok: true,
+        kind: 'storefront_checkout',
+        replayed: true,
+        order: {
+          pedido_id: existingOrder.id,
+          total: Number(existingOrder.total || orderTotal),
+          status: existingOrder.status,
+        },
+        storefront_payment: storefrontPayment,
+      });
+    } catch {
+      return NextResponse.json({ error: 'storefront_checkout_failed' }, { status: 500 });
+    }
   }
 
   const { data: pedido, error: pedidoError } = await supabase
@@ -150,6 +155,8 @@ export async function POST(request: NextRequest) {
       desconto: 0,
       total: orderTotal,
       status: 'aberto',
+      storefront_payment_mode_snapshot: settings.storefront_payment_mode || 'commission',
+      storefront_commission_bps_snapshot: Number(settings.storefront_commission_bps || 500),
       ...(deliveryQuote ? {
         delivery_requested: true,
         delivery_address: deliveryQuote.address,
@@ -175,16 +182,22 @@ export async function POST(request: NextRequest) {
       .eq('public_order_idempotency_key', idempotencyKey)
       .maybeSingle();
     if (replay) {
-      return NextResponse.json({
-        ok: true,
-        kind: 'order',
-        replayed: true,
-        order: {
-          pedido_id: replay.id,
-          total: Number(replay.total || orderTotal),
-          status: replay.status,
-        },
-      });
+      try {
+        const storefrontPayment = await prepareStorefrontPayment(supabase, replay.id, companyId);
+        return NextResponse.json({
+          ok: true,
+          kind: 'storefront_checkout',
+          replayed: true,
+          order: {
+            pedido_id: replay.id,
+            total: Number(replay.total || orderTotal),
+            status: replay.status,
+          },
+          storefront_payment: storefrontPayment,
+        });
+      } catch {
+        return NextResponse.json({ error: 'storefront_checkout_failed' }, { status: 500 });
+      }
     }
   }
   if (pedidoError || !pedido) {
@@ -212,13 +225,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'order_items_create_failed' }, { status: 500 });
   }
 
-  return NextResponse.json({
-    ok: true,
-    kind: 'order',
-    order: {
-      pedido_id: pedido.id,
-      total: Number(pedido.total || orderTotal),
-      status: pedido.status,
-    },
-  });
+  try {
+    const storefrontPayment = await prepareStorefrontPayment(supabase, pedido.id, companyId);
+    return NextResponse.json({
+      ok: true,
+      kind: 'storefront_checkout',
+      order: {
+        pedido_id: pedido.id,
+        total: Number(pedido.total || orderTotal),
+        status: pedido.status,
+      },
+      storefront_payment: storefrontPayment,
+    });
+  } catch (checkoutError) {
+    console.error('[funcionaria/public-order] storefront payment:', checkoutError);
+    return NextResponse.json({ error: 'storefront_checkout_failed' }, { status: 500 });
+  }
 }

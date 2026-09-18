@@ -86,6 +86,56 @@ export function verifyDeliveryQuoteToken(token: unknown): DeliveryQuoteTokenPayl
   }
 }
 
+export type StorefrontPaymentTokenPayload = {
+  checkoutId: string;
+  pedidoId: string;
+  companyId: string;
+  exp: number;
+};
+
+export function signStorefrontPaymentToken(
+  checkoutId: string,
+  pedidoId: string,
+  companyId: string,
+  ttlSeconds = 60 * 60,
+): string {
+  const secret = mutationSecret();
+  if (!secret) throw new Error('order_mutation_secret_missing');
+  const payload: StorefrontPaymentTokenPayload = {
+    checkoutId,
+    pedidoId,
+    companyId,
+    exp: Math.floor(Date.now() / 1000) + ttlSeconds,
+  };
+  const encoded = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+  const signature = createHmac('sha256', secret).update(encoded).digest('base64url');
+  return `${encoded}.${signature}`;
+}
+
+export function verifyStorefrontPaymentToken(token: unknown): StorefrontPaymentTokenPayload | null {
+  const secret = mutationSecret();
+  const raw = String(token || '').trim();
+  if (!secret || !raw) return null;
+  const parts = raw.split('.');
+  if (parts.length !== 2) return null;
+  const [encoded, signature] = parts;
+  const expected = createHmac('sha256', secret).update(encoded).digest('base64url');
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+  try {
+    const payload = JSON.parse(
+      Buffer.from(encoded, 'base64url').toString('utf8'),
+    ) as StorefrontPaymentTokenPayload;
+    if (!payload?.checkoutId || !payload?.pedidoId || !payload?.companyId) return null;
+    if (!Number.isFinite(payload.exp) || payload.exp < Math.floor(Date.now() / 1000)) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 export function signOrderMutationToken(pedidoId: string, companyId: string, ttlSeconds = 6 * 60 * 60): string {
   const secret = mutationSecret();
   if (!secret) throw new Error('order_mutation_secret_missing');

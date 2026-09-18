@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
   let pixwikiChecked = 0
   let minhaiDirectChecked = 0
   let funcionariaDirectChecked = 0
+  let funcionariaStorefrontChecked = 0
   let mercadoPagoChecked = 0
   let legacyChecked = 0
   let ambiguous = 0
@@ -89,6 +90,18 @@ Deno.serve(async (req) => {
         })
         if (!finalizeError) confirmed++
         else console.error('[auto-confirmar-pix] FuncionarIA finalizar:', finalizeError.message)
+        continue
+      }
+
+      // Loja gratuita FuncionarIA: o Banco Inter recebe na infraestrutura
+      // BigCorps e o finalizador próprio registra exatamente 5% + saldo líquido.
+      if (tx.payment_provider === 'bigcorps' && origem === 'funcionaria_storefront_commission') {
+        funcionariaStorefrontChecked++
+        const { response, data } = await callFunction('funcionaria-storefront-payments', {
+          action: 'check_pix',
+          transaction_id: tx.id,
+        })
+        if (response.ok && data?.status === 'paid') confirmed++
         continue
       }
 
@@ -142,6 +155,7 @@ Deno.serve(async (req) => {
     pixwiki_checked: pixwikiChecked,
     minhai_direct_checked: minhaiDirectChecked,
     funcionaria_direct_checked: funcionariaDirectChecked,
+    funcionaria_storefront_checked: funcionariaStorefrontChecked,
     mercadopago_checked: mercadoPagoChecked,
     legacy_checked: legacyChecked,
     ambiguous,

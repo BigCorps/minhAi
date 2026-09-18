@@ -1,6 +1,7 @@
 export type FuncionarIAWorkplaceMode = 'presencial' | 'online' | 'ambos';
 export type FuncionarIAPublicHomeMode = 'store' | 'assistant';
 export type FuncionarIAMercadoLivreChoice = 'connect' | 'no' | 'later';
+export type FuncionarIAStorefrontPaymentMode = 'commission' | 'monthly_direct';
 export type FuncionarIAWhatsAppMode = 'redirect' | 'native' | 'hybrid';
 export type FuncionarIAEquipmentMode = 'own' | 'rental';
 export type FuncionarIASkillStatus = 'selected' | 'active' | 'cancel_pending' | 'canceled';
@@ -27,6 +28,8 @@ export interface FuncionarIASettings {
   storefront_enabled: boolean;
   public_home_mode: FuncionarIAPublicHomeMode;
   mercadolivre_onboarding_choice: FuncionarIAMercadoLivreChoice;
+  storefront_payment_mode: FuncionarIAStorefrontPaymentMode;
+  storefront_commission_bps: number;
   business_type: string | null;
   primary_color: string;
   secondary_color: string;

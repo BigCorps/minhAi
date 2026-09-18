@@ -5,7 +5,11 @@ import { ImagePlus, Loader2, Trash2 } from 'lucide-react';
 import { AreaTexto, Campo, Texto } from '../Campos';
 import type { PropsEtapa } from '../Wizard';
 
-const TEXTO_PADRAO = 'Para tornar este momento ainda mais especial, sugerimos trajes elegantes e confortáveis para aproveitar toda a celebração.';
+const TITULO_PADRAO = 'Dress Code';
+const TIPO_PADRAO = 'Traje esporte fino';
+const TEXTO_PADRAO = 'Nossa celebração foi pensada com muito carinho. Para tornar este momento ainda mais especial, sugerimos trajes elegantes e confortáveis.';
+const EVITAR_PADRAO = 'Solicitamos que sejam evitados jeans, branco, off-white e tons muito claros.';
+const EVITAR_PADRAO_CASAMENTO = 'Solicitamos que sejam evitados jeans, branco, off-white e tons muito claros, reservados à noiva.';
 
 export default function Traje({ estado, despachar, aoEnviarArquivo }: PropsEtapa) {
   const dress = estado.cfg.dressCode ?? {};
@@ -14,6 +18,12 @@ export default function Traje({ estado, despachar, aoEnviarArquivo }: PropsEtapa
   const ativo = !!secao?.ativo;
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
+
+  const titulo = dress.titulo?.trim() || TITULO_PADRAO;
+  const tipoTraje = dress.tipo?.trim() || TIPO_PADRAO;
+  const texto = dress.texto?.trim() || TEXTO_PADRAO;
+  const evitar = dress.evitar?.trim()
+    || (estado.cfg.tipoEventoId === 'casamento' ? EVITAR_PADRAO_CASAMENTO : EVITAR_PADRAO);
 
   function campo(chave: string, valor: unknown) {
     despachar({ tipo: 'campo', caminho: `dressCode.${chave}`, valor });
@@ -43,7 +53,7 @@ export default function Traje({ estado, despachar, aoEnviarArquivo }: PropsEtapa
   return (
     <>
       <p className="wz-intro">
-        O traje agora tem uma seção própria no convite. Use referências visuais para deixar a orientação clara sem misturá-la às informações gerais.
+        O traje tem uma seção própria no convite. Os textos abaixo já vêm preenchidos com um padrão e você só precisa alterar se quiser personalizar.
       </p>
 
       <label className="wz-escolha" style={{ marginBottom: 18 }}>
@@ -55,12 +65,12 @@ export default function Traje({ estado, despachar, aoEnviarArquivo }: PropsEtapa
         <span>Mostrar a seção Traje / Dress Code no convite</span>
       </label>
 
-      <Campo rotulo="Título da seção" dica="Ex.: Dress Code, Traje, Como se vestir.">
-        <Texto valor={dress.titulo ?? ''} placeholder="Dress Code" maxLength={80} onChange={(v) => campo('titulo', v)} />
+      <Campo rotulo="Título da seção" dica="Padrão: Dress Code. Altere somente se quiser.">
+        <Texto valor={titulo} placeholder={TITULO_PADRAO} maxLength={80} onChange={(v) => campo('titulo', v)} />
       </Campo>
 
-      <Campo rotulo="Tipo de traje" dica="Ex.: Esporte fino, Passeio completo, Social.">
-        <Texto valor={dress.tipo ?? ''} placeholder="Esporte fino" maxLength={100} onChange={(v) => campo('tipo', v)} />
+      <Campo rotulo="Tipo de traje" dica="Padrão: Traje esporte fino. Altere somente se quiser.">
+        <Texto valor={tipoTraje} placeholder={TIPO_PADRAO} maxLength={100} onChange={(v) => campo('tipo', v)} />
       </Campo>
 
       <Campo rotulo="Subtítulo opcional">
@@ -68,11 +78,11 @@ export default function Traje({ estado, despachar, aoEnviarArquivo }: PropsEtapa
       </Campo>
 
       <Campo rotulo="Orientação" dica="Este texto padrão já aparece no convite. Altere somente se quiser personalizar.">
-        <AreaTexto valor={dress.texto ?? TEXTO_PADRAO} placeholder={TEXTO_PADRAO} linhas={4} maxLength={700} onChange={(v) => campo('texto', v)} />
+        <AreaTexto valor={texto} placeholder={TEXTO_PADRAO} linhas={4} maxLength={700} onChange={(v) => campo('texto', v)} />
       </Campo>
 
-      <Campo rotulo="O que evitar" dica="Opcional. Ex.: branco, off-white, jeans, tons reservados aos anfitriões.">
-        <AreaTexto valor={dress.evitar ?? ''} placeholder="Pedimos que sejam evitados branco, off-white e tons muito claros." linhas={3} maxLength={500} onChange={(v) => campo('evitar', v)} />
+      <Campo rotulo="O que evitar" dica="Também vem preenchido com um padrão e pode ser personalizado.">
+        <AreaTexto valor={evitar} placeholder={EVITAR_PADRAO} linhas={3} maxLength={500} onChange={(v) => campo('evitar', v)} />
       </Campo>
 
       <Campo rotulo="Imagens de referência" dica="Até 5 imagens. JPG, PNG, WebP ou HEIC conforme suporte do aparelho.">

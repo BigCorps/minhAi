@@ -5,12 +5,20 @@ import { Shirt } from 'lucide-react';
 import type { PropsSecao } from '@/lib/conviteria/tipos';
 import { Broto } from '../Ornamentos';
 
-const TEXTO_PADRAO = 'Para tornar este momento ainda mais especial, sugerimos trajes elegantes e confortáveis para aproveitar toda a celebração.';
+const TITULO_PADRAO = 'Dress Code';
+const TIPO_PADRAO = 'Traje esporte fino';
+const TEXTO_PADRAO = 'Nossa celebração foi pensada com muito carinho. Para tornar este momento ainda mais especial, sugerimos trajes elegantes e confortáveis.';
+const EVITAR_PADRAO = 'Solicitamos que sejam evitados jeans, branco, off-white e tons muito claros.';
+const EVITAR_PADRAO_CASAMENTO = 'Solicitamos que sejam evitados jeans, branco, off-white e tons muito claros, reservados à noiva.';
 
 export default function DressCode({ cfg, secao }: PropsSecao) {
   const d = cfg.dressCode ?? {};
   const imagens = Array.from(new Set(d.imagens ?? [])).slice(0, 5);
+  const titulo = d.titulo?.trim() || secao.config?.titulo?.trim() || TITULO_PADRAO;
+  const tipo = d.tipo?.trim() || TIPO_PADRAO;
   const texto = d.texto?.trim() || TEXTO_PADRAO;
+  const evitar = d.evitar?.trim()
+    || (cfg.tipoEventoId === 'casamento' ? EVITAR_PADRAO_CASAMENTO : EVITAR_PADRAO);
 
   return (
     <section className="cv-secao" style={{ textAlign: 'center' }}>
@@ -31,7 +39,7 @@ export default function DressCode({ cfg, secao }: PropsSecao) {
         <Shirt size={20} strokeWidth={1.6} />
       </div>
 
-      <h2 className="cv-titulo">{d.titulo?.trim() || secao.config?.titulo || 'Traje'}</h2>
+      <h2 className="cv-titulo">{titulo}</h2>
       {d.subtitulo?.trim() && (
         <p
           style={{
@@ -80,20 +88,18 @@ export default function DressCode({ cfg, secao }: PropsSecao) {
         </div>
       )}
 
-      {d.tipo?.trim() && (
-        <p
-          style={{
-            margin: '24px auto 0',
-            color: 'var(--cv-acento-texto)',
-            fontFamily: 'var(--cv-display)',
-            fontSize: 'clamp(22px, 6vw, 34px)',
-            fontWeight: 'var(--cv-display-peso)',
-            lineHeight: 1.2,
-          }}
-        >
-          {d.tipo}
-        </p>
-      )}
+      <p
+        style={{
+          margin: '24px auto 0',
+          color: 'var(--cv-acento-texto)',
+          fontFamily: 'var(--cv-display)',
+          fontSize: 'clamp(22px, 6vw, 34px)',
+          fontWeight: 'var(--cv-display-peso)',
+          lineHeight: 1.2,
+        }}
+      >
+        {tipo}
+      </p>
 
       <p
         className="cv-texto"
@@ -102,43 +108,41 @@ export default function DressCode({ cfg, secao }: PropsSecao) {
         {texto}
       </p>
 
-      {d.evitar?.trim() && (
-        <div
+      <div
+        style={{
+          margin: '20px auto 0',
+          maxWidth: 590,
+          padding: '14px 16px',
+          borderRadius: 14,
+          background: 'color-mix(in srgb, var(--cv-acento) 9%, transparent)',
+        }}
+      >
+        <span
           style={{
-            margin: '20px auto 0',
-            maxWidth: 590,
-            padding: '14px 16px',
-            borderRadius: 14,
-            background: 'color-mix(in srgb, var(--cv-acento) 9%, transparent)',
+            display: 'block',
+            marginBottom: 5,
+            color: 'var(--cv-acento-texto)',
+            fontFamily: 'var(--cv-corpo)',
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '.12em',
+            textTransform: 'uppercase',
           }}
         >
-          <span
-            style={{
-              display: 'block',
-              marginBottom: 5,
-              color: 'var(--cv-acento-texto)',
-              fontFamily: 'var(--cv-corpo)',
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: '.12em',
-              textTransform: 'uppercase',
-            }}
-          >
-            Orientação
-          </span>
-          <p
-            style={{
-              margin: 0,
-              color: 'var(--cv-tinta)',
-              fontFamily: 'var(--cv-corpo)',
-              lineHeight: 1.6,
-              textAlign: 'center',
-            }}
-          >
-            {d.evitar}
-          </p>
-        </div>
-      )}
+          O que evitar
+        </span>
+        <p
+          style={{
+            margin: 0,
+            color: 'var(--cv-tinta)',
+            fontFamily: 'var(--cv-corpo)',
+            lineHeight: 1.6,
+            textAlign: 'center',
+          }}
+        >
+          {evitar}
+        </p>
+      </div>
     </section>
   );
 }

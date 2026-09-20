@@ -5,16 +5,6 @@ export function tokenBearer(req: NextRequest) {
   return req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim() || null;
 }
 
-/**
- * Normalização usada para comparação e novos cadastros.
- *
- * Brasil: armazenamos somente DDD + número (10 ou 11 dígitos). Assim
- * 51 99207-8290, (51) 99207-8290, +55 51 99207-8290 e 5551992078290
- * resultam na mesma chave: 51992078290.
- *
- * Outros países: quando há um + explícito diferente de +55, preservamos o
- * código internacional em dígitos. Não tentamos adivinhar país/DDD.
- */
 export function normalizarTelefone(valor?: string | null) {
   const bruto = String(valor ?? '').trim();
   const digitos = bruto.replace(/\D/g, '');
@@ -29,11 +19,6 @@ export function normalizarTelefone(valor?: string | null) {
   return digitos.slice(0, 15);
 }
 
-/**
- * Variantes somente para LEITURA/compatibilidade. Não migra nem regrava dados
- * antigos. Permite localizar registros brasileiros que tenham sido salvos
- * antes com o 55 e registros novos sem o 55.
- */
 export function variantesTelefoneBusca(valor?: string | null) {
   const bruto = String(valor ?? '').trim();
   const digitos = bruto.replace(/\D/g, '');
@@ -67,12 +52,6 @@ export function slugSeguro(valor: unknown) {
     .replace(/^-+|-+$/g, '').slice(0, 60);
 }
 
-/**
- * Todas as rotas da Gestão do Evento usam este helper.
- * A gestão é um benefício do convite publicado definitivamente: trial ativo,
- * trial expirado e convite aguardando pagamento continuam pertencendo ao
- * usuário, mas não liberam as ferramentas operacionais.
- */
 export async function exigirEventoDoUsuario(req: NextRequest, eventoId: string) {
   const token = tokenBearer(req);
   if (!token) return { erro: 'Faça login.', status: 401 as const };
@@ -100,6 +79,81 @@ export async function exigirEventoDoUsuario(req: NextRequest, eventoId: string) 
   }
 
   return { admin, evento, user: auth.user };
+}
+
+export type PerfilAcessoCheckin = 'dono' | 'responsavel_checkin';
+
+export async function exigirAcessoCheckin(req: NextRequest, eventoId: string) {
+  const token = tokenBearer(req);
+  if (!token) return { erro: 'Faça login.', status: 401 as const };
+
+  const admin = adminConviteria();
+  const { data: auth, error } = await admin.auth.getUser(token);
+  if (error || !auth.user) return { erro: 'Sessão inválida.', status: 401 as const };
+
+  const { data: evento } = await admin
+    .from('eventos')
+    .select('id,slug,config,publicado_em,data_evento,arquivado,contas!inner(user_id)')
+    .eq('id', eventoId)
+    .maybeSingle();
+
+  if (!evento) return { erro: 'Convite não encontrado.', status: 404 as const };
+
+  if (!evento.publicado_em) {
+    return {
+      erro: 'O check-in é liberado após a publicação definitiva do convite.',
+      status: 403 as const,
+    };
+  }
+
+  const dono = (evento as unknown as { contas?: { user_id?: string } })?.contas?.user_id;
+  if (dono === auth.user.id) {
+    return {
+      admin,
+      evento,
+      user: auth.user,
+      perfilAcesso: 'dono' as PerfilAcessoCheckin,
+    };
+  }
+
+  const email = normalizarEmail(auth.user.email);
+  if (!email) return { erro: 'Acesso de check-in não autorizado.', status: 403 as const };
+
+  const { data: acesso, error: acessoErro } = await admin
+    .from('checkin_acessos')
+    .select('id,email,user_id,ativo')
+    .eq('evento_id', eventoId)
+    .eq('email', email)
+    .eq('ativo', true)
+    .maybeSingle();
+
+  if (acessoErro) {
+    console.error('[ConviteIA/checkin] Falha ao consultar acesso externo:', acessoErro);
+    return { erro: 'Acesso de check-in não autorizado.', status: 403 as const };
+  }
+
+  if (!acesso) return { erro: 'Acesso de check-in não autorizado ou revogado.', status: 403 as const };
+
+  const vinculado = (acesso as { user_id?: string | null }).user_id;
+  if (vinculado && vinculado !== auth.user.id) {
+    return { erro: 'Este acesso está vinculado a outra conta.', status: 403 as const };
+  }
+
+  const agora = new Date().toISOString();
+  const atualizacao: Record<string, unknown> = { ultimo_acesso_em: agora, updated_at: agora };
+  if (!vinculado) atualizacao.user_id = auth.user.id;
+
+  void admin
+    .from('checkin_acessos')
+    .update(atualizacao)
+    .eq('id', (acesso as { id: string }).id);
+
+  return {
+    admin,
+    evento,
+    user: auth.user,
+    perfilAcesso: 'responsavel_checkin' as PerfilAcessoCheckin,
+  };
 }
 
 export function extrairTokenQr(valor: string) {

@@ -379,7 +379,6 @@ export async function POST(req: NextRequest) {
       evento_id: eventoId,
       nome: principal.nome,
       email: emailBusca,
-      email_normalizado: emailBusca,
       telefone: telefoneBusca ? contatoRaw.trim().slice(0, 40) : null,
       telefone_normalizado: telefoneBusca,
       contato: (telefoneBusca ? contatoRaw.trim().slice(0, 40) : null) || emailBusca || null,
@@ -402,7 +401,17 @@ export async function POST(req: NextRequest) {
     if (resp.error?.code === '23505' && emailBusca) {
       return NextResponse.json({ erro: 'Este e-mail já está associado a outra confirmação deste evento. Use outro e-mail ou deixe o campo vazio.' }, { status: 409 });
     }
-    if (resp.error || !resp.data) return NextResponse.json({ erro: 'Não foi possível confirmar sua presença.' }, { status: 500 });
+    if (resp.error || !resp.data) {
+      console.error('ConviteIA RSVP: falha ao salvar confirmação identificada', {
+        eventoId,
+        acao: corpo?.acao,
+        familiaId: grupo.familiaId ?? null,
+        convidadoListaId: grupo.familiaId ? null : principal.id,
+        codigo: resp.error?.code ?? null,
+        mensagem: resp.error?.message ?? 'resposta sem dados',
+      });
+      return NextResponse.json({ erro: 'Não foi possível confirmar sua presença.' }, { status: 500 });
+    }
 
     await admin.from('convidado_confirmacoes_membros').delete().eq('confirmacao_id', resp.data.id);
     if (idsConfirmados.length) {
@@ -458,7 +467,7 @@ export async function POST(req: NextRequest) {
   }
 
   const dados = {
-    evento_id: eventoId, nome, email: email || null, email_normalizado: email || null,
+    evento_id: eventoId, nome, email: email || null,
     telefone: telefone || null, telefone_normalizado: telefoneNormalizado, contato: telefone || email || null, comparecera: true,
     adultos: 1 + acompanhantesDetalhes.filter((p) => p.tipo !== 'crianca').length,
     criancas: acompanhantesDetalhes.filter((p) => p.tipo === 'crianca').length,
@@ -471,7 +480,14 @@ export async function POST(req: NextRequest) {
   if (resp.error?.code === '23505' && email) {
     resp = await admin.from('convidados').update(dados).eq('evento_id', eventoId).eq('email_normalizado', email).select('id').single();
   }
-  if (resp.error || !resp.data) return NextResponse.json({ erro: 'Não foi possível confirmar sua presença.' }, { status: 500 });
+  if (resp.error || !resp.data) {
+    console.error('ConviteIA RSVP: falha ao salvar confirmação livre', {
+      eventoId,
+      codigo: resp.error?.code ?? null,
+      mensagem: resp.error?.message ?? 'resposta sem dados',
+    });
+    return NextResponse.json({ erro: 'Não foi possível confirmar sua presença.' }, { status: 500 });
+  }
 
   if (!emTeste) {
     try { await sincronizarConfirmacoesEvento(eventoId); }

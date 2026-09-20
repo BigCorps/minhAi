@@ -29,7 +29,7 @@ import ConvidadosPainel from './ConvidadosPainel';
 import PadrinhosPainel from './PadrinhosPainel';
 import MesasPainel from './MesasPainel';
 import CheckinPainel from './CheckinPainel';
-import PapelariaPainel from './PapelariaPainel';
+import PapelariaPainel, { type CategoriaPapelaria } from './PapelariaPainel';
 import WhatsAppPainel from './WhatsAppPainel';
 import estilos from './gestao-light.module.css';
 
@@ -39,10 +39,10 @@ type Aba =
   | 'padrinhos'
   | 'mesas'
   | 'checkin'
+  | 'papelaria'
   | 'memorias'
   | 'recados'
   | 'financeiro'
-  | 'papelaria'
   | 'configuracoes';
 
 const ABAS: Array<{ id: Aba; nome: string; Icon: typeof Users }> = [
@@ -51,10 +51,10 @@ const ABAS: Array<{ id: Aba; nome: string; Icon: typeof Users }> = [
   { id: 'padrinhos', nome: 'Padrinhos', Icon: Shirt },
   { id: 'mesas', nome: 'Mesas', Icon: LayoutGrid },
   { id: 'checkin', nome: 'Check-in', Icon: QrCode },
+  { id: 'papelaria', nome: 'Papelaria', Icon: Sparkles },
   { id: 'memorias', nome: 'Memórias', Icon: Images },
   { id: 'recados', nome: 'Recados', Icon: MessageSquareText },
   { id: 'financeiro', nome: 'Financeiro', Icon: WalletCards },
-  { id: 'papelaria', nome: 'Papelaria', Icon: Sparkles },
   { id: 'configuracoes', nome: 'Configurações', Icon: Settings2 },
 ];
 
@@ -63,6 +63,7 @@ const INTERVALO_CONFERENCIA_MS = 5 * 60 * 1000;
 
 export default function GestaoEvento({ eventoId }: { eventoId: string }) {
   const [aba, setAba] = useState<Aba>('convidados');
+  const [papelariaCategoria, setPapelariaCategoria] = useState<CategoriaPapelaria>('evento');
   const [token, setToken] = useState('');
   const [cfg, setCfg] = useState<ConviteConfig | null>(null);
   const [slug, setSlug] = useState('');
@@ -157,6 +158,12 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
     };
   }, [carregarGestao, obterTokenAtual, supabase]);
 
+  function abrirPapelaria(categoria: CategoriaPapelaria) {
+    setPapelariaCategoria(categoria);
+    setAba('papelaria');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   if (erro) return <div className="mx-auto max-w-3xl p-6 text-center text-red-600">{erro}</div>;
   if (!token || !cfg) return <div className="grid min-h-[60vh] place-items-center"><Loader2 className="h-8 w-8 animate-spin text-[#c06078]" /></div>;
 
@@ -178,7 +185,7 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
             <button
               key={id}
               type="button"
-              onClick={() => setAba(id)}
+              onClick={() => { if (id === 'papelaria') setPapelariaCategoria('evento'); setAba(id); }}
               className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold ${aba === id ? 'bg-[#c06078] text-white' : 'border border-[#c0607833] bg-white text-[#7c5560]'}`}
             >
               <Icon className="h-4 w-4" />{nome}
@@ -211,7 +218,16 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
         {aba === 'padrinhos' && <PadrinhosPainel eventoId={eventoId} token={token} slug={slug} />}
         {aba === 'mesas' && <MesasPainel eventoId={eventoId} token={token} />}
         {aba === 'checkin' && <CheckinPainel eventoId={eventoId} token={token} />}
-        {aba === 'memorias' && <MemoriasPainel eventoId={eventoId} slug={slug} titulo={cfg.anfitrioes.exibicao} sempreAberto />}
+        {aba === 'papelaria' && <PapelariaPainel cfg={cfg} slug={slug} eventoId={eventoId} token={token} qrModo={gestao.qrModo} categoriaInicial={papelariaCategoria} />}
+        {aba === 'memorias' && (
+          <MemoriasPainel
+            eventoId={eventoId}
+            slug={slug}
+            titulo={cfg.anfitrioes.exibicao}
+            sempreAberto
+            onAbrirPapelaria={() => abrirPapelaria('memorias')}
+          />
+        )}
         {aba === 'recados' && <RecadosPainel eventoId={eventoId} sempreAberto />}
         {aba === 'financeiro' && (
           <section className="space-y-4">
@@ -223,7 +239,6 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
             <SaldoSaque eventoId={eventoId} sempreAberto />
           </section>
         )}
-        {aba === 'papelaria' && <PapelariaPainel cfg={cfg} slug={slug} />}
         {aba === 'configuracoes' && (
           <section className="space-y-4">
             <div className="rounded-2xl border border-[#c0607833] bg-white p-4">

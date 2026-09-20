@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Check, ChevronDown, ChevronUp, Download, ExternalLink, Eye, EyeOff, Image as ImageIcon, Loader2, QrCode, Trash2, UserRound, Users } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Download, ExternalLink, Eye, EyeOff, Image as ImageIcon, Loader2, QrCode, Sparkles, Trash2, UserRound, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import JSZip from 'jszip';
 import * as QRCode from 'qrcode';
-import MateriaisMemorias from './MateriaisMemorias';
 import type { MemoriasDesafiosConfig } from '@/lib/conviteria/memorias-desafios';
 
 type Midia = {
@@ -66,11 +65,13 @@ export default function MemoriasPainel({
   eventoId,
   titulo,
   sempreAberto = false,
+  onAbrirPapelaria,
 }: {
   eventoId: string;
   slug: string;
   titulo: string;
   sempreAberto?: boolean;
+  onAbrirPapelaria?: () => void;
 }) {
   const [aberto, setAberto] = useState(false);
   const [dados, setDados] = useState<Dados | null>(null);
@@ -136,17 +137,6 @@ export default function MemoriasPainel({
     const j = await r.json().catch(() => null);
     if (!r.ok) throw new Error(j?.erro || 'Não foi possível salvar.');
     await carregar();
-  }
-
-  async function salvarDesafios(config: MemoriasDesafiosConfig) {
-    const r = await fetch(`/api/conviteria/memorias/painel?eventoId=${encodeURIComponent(eventoId)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` },
-      body: JSON.stringify({ desafios: config }),
-    });
-    const j = await r.json().catch(() => null);
-    if (!r.ok) throw new Error(j?.erro || 'Não foi possível salvar os desafios.');
-    setDados((atual) => atual ? { ...atual, desafios: config } : atual);
   }
 
   async function excluir(id: string) {
@@ -261,6 +251,7 @@ export default function MemoriasPainel({
         <div className="mt-3 flex flex-wrap gap-2">
           <Link href={`/convite/pagar?evento=${eventoId}&memorias=1`} className="rounded-full px-4 py-2 text-sm font-semibold text-white" style={{ background:'#c06078' }}>Ativar por R$ 19,90</Link>
           <a href="/memorias" target="_blank" className="rounded-full border px-4 py-2 text-sm font-medium" style={{ borderColor:'#c0607844', color:'#a04a63' }}>Conhecer</a>
+          {onAbrirPapelaria && <button type="button" onClick={onAbrirPapelaria} className="inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold" style={{ borderColor:'#c0607844', color:'#a04a63' }}><Sparkles className="h-4 w-4" />Ver Papelaria</button>}
         </div>
       </section>
     );
@@ -278,18 +269,19 @@ export default function MemoriasPainel({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
-        <div className="rounded-2xl border bg-white p-3 text-center" style={{ borderColor:'#c0607830' }}>{qr ? <img src={qr} alt="QR Code das Memórias" className="mx-auto w-full max-w-36" /> : <QrCode className="mx-auto h-20 w-20 text-[#c06078]" />}<button onClick={() => void baixarQr()} className="mt-2 text-xs font-semibold" style={{ color:'#a04a63' }}>Baixar QR em PNG</button></div>
+        <div className="rounded-2xl border bg-white p-3 text-center" style={{ borderColor:'#c0607830' }}>{qr ? <img src={qr} alt="QR Code das Memórias" className="mx-auto w-full max-w-36" /> : <QrCode className="mx-auto h-20 w-20 text-[#c06078]" />}<button onClick={() => void baixarQr()} className="mt-2 text-xs font-semibold" style={{ color:'#a04a63' }}>Baixar QR simples</button><p className="mt-1 text-[10px] leading-4 text-[#9b7b84]">Para uso técnico. As artes prontas para imprimir ficam em Papelaria.</p></div>
         <div className="rounded-2xl border bg-white p-4" style={{ borderColor:'#c0607830' }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color:'#a04a63' }}>Compartilhar com convidados</p><p className="mt-1 break-all text-sm" style={{ color:'#40232c' }}>{dados.urlMemorias}</p><p className="mt-1 text-xs text-[#7c5560]">No dia do evento este QR também aparece automaticamente no canto do slideshow.</p><div className="mt-3 flex flex-wrap gap-2"><a href={dados.urlMemorias} target="_blank" className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium" style={{ borderColor:'#c0607844',color:'#a04a63' }}>Abrir envios <ExternalLink className="h-3 w-3" /></a><a href={dados.urlAlbum} target="_blank" className="inline-flex items-center gap-1 rounded-full bg-[#c06078] px-3 py-2 text-xs font-semibold text-white">Abrir álbum/telão <ExternalLink className="h-3 w-3" /></a><button onClick={() => void baixarTudo()} disabled={baixando || !dados.midias.length} className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium disabled:opacity-50" style={{ borderColor:'#c0607844',color:'#a04a63' }}>{baixando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />} Baixar tudo (.zip)</button></div></div>
       </div>
 
-      {qr && <MateriaisMemorias
-        titulo={titulo}
-        urlMemorias={dados.urlMemorias}
-        qrDataUrl={qr}
-        ornamentoInicial={dados.ornamentoId ?? undefined}
-        desafiosInicial={dados.desafios}
-        onSalvarDesafios={salvarDesafios}
-      />}
+      <div className="rounded-2xl border bg-[linear-gradient(135deg,#fff,#fff6f8)] p-4" style={{ borderColor:'#c0607830' }}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="max-w-2xl">
+            <p className="flex items-center gap-2 font-semibold text-[#40232c]"><Sparkles className="h-4 w-4 text-[#a04a63]" />Artes e materiais para imprimir</p>
+            <p className="mt-1 text-sm leading-6 text-[#7c5560]">As artes de Memórias agora ficam em Papelaria. Assim, álbum, fotos e telão continuam aqui, enquanto QR, plaquinhas e materiais de impressão ficam reunidos em uma única área visual.</p>
+          </div>
+          {onAbrirPapelaria && <button type="button" onClick={onAbrirPapelaria} className="shrink-0 rounded-full bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white">Abrir Papelaria</button>}
+        </div>
+      </div>
 
       {erro && <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{erro}</p>}
 

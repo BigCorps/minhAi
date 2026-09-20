@@ -392,13 +392,39 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
   }
 
   async function baixarQr(tokenQr: string, nome: string) {
-    const QRCode = (await import('qrcode')).default;
-    const url = `https://${slug}.conviteia.com/entrada/${tokenQr}`;
-    const data = await QRCode.toDataURL(url, { width: 1000, margin: 2 });
-    const a = document.createElement('a'); a.href = data;
-    a.download = `qr-${nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`;
-    a.click();
-    setToast('QR de check-in baixado.');
+    setErro('');
+    setToast('Montando a arte do check-in…');
+    try {
+      const r = await fetch(`/api/conviteria/gestao?eventoId=${encodeURIComponent(eventoId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      });
+      const d = await r.json().catch(() => null);
+      if (!r.ok || !d?.evento?.config) throw new Error(d?.erro || 'Não foi possível carregar o visual do convite.');
+
+      const {
+        baixarCanvasPng,
+        formatoPapelaria,
+        nomeSeguro,
+        renderizarArteCheckin,
+      } = await import('@/lib/conviteria/papelaria-canvas');
+
+      const canvas = await renderizarArteCheckin({
+        cfg: d.evento.config,
+        slug,
+        qrToken: tokenQr,
+        nome,
+        formato: formatoPapelaria('10x15'),
+        dpi: 300,
+      });
+
+      baixarCanvasPng(canvas, `Check-in-${nomeSeguro(nome)}-10x15.png`);
+      setToast('Arte de check-in baixada.');
+    } catch (e: any) {
+      setErro(e?.message || 'Não foi possível gerar a arte do check-in.');
+      setToast('');
+      return;
+    }
     window.setTimeout(() => setToast(''), 2200);
   }
 
@@ -729,7 +755,7 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
                     {acoesAberta === p.id && <div className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-[#c0607833] bg-white p-1.5 shadow-xl">
                       <button type="button" onClick={() => f ? editarFamilia(f) : editarPessoa(p)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Pencil className="h-3.5 w-3.5" />{f ? 'Editar grupo e membros' : 'Editar convidado'}</button>
                       <button type="button" onClick={() => { setAcoesAberta(null); void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.'); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Copy className="h-3.5 w-3.5" />Copiar link de confirmação</button>
-                      <button type="button" onClick={() => { setAcoesAberta(null); void baixarQr(qrCheckin, qrNome); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Download className="h-3.5 w-3.5" />Baixar QR de check-in</button>
+                      <button type="button" onClick={() => { setAcoesAberta(null); void baixarQr(qrCheckin, qrNome); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Download className="h-3.5 w-3.5" />Baixar arte de check-in</button>
                       <button type="button" onClick={() => { setAcoesAberta(null); void excluir('convidado', p.id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" />Excluir pessoa</button>
                     </div>}
                   </div>
@@ -753,7 +779,7 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
               {principal && <button type="button" onClick={() => abrirConfirmacaoManual(f?.nome ?? p.nome, membros)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700"><Check className="h-3.5 w-3.5" />{grupoConfirmado ? 'Revisar presença' : 'Confirmar presença'}</button>}
               <button type="button" onClick={() => f ? editarFamilia(f) : editarPessoa(p)} className="inline-flex items-center gap-1 rounded-lg bg-[#fff5f8] px-2.5 py-1.5 text-xs font-semibold text-[#a04a63]"><Pencil className="h-3.5 w-3.5" />Editar</button>
               <button type="button" onClick={() => void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.')} className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs text-[#7c5560]"><Copy className="h-3.5 w-3.5" />Confirmação</button>
-              <button type="button" onClick={() => void baixarQr(qrCheckin, qrNome)} className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs text-[#7c5560]"><Download className="h-3.5 w-3.5" />QR</button>
+              <button type="button" onClick={() => void baixarQr(qrCheckin, qrNome)} className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs text-[#7c5560]"><Download className="h-3.5 w-3.5" />Arte QR</button>
             </div>
           </div>;
         })}</div>

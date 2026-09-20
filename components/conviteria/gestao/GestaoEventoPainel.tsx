@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronRight, LayoutGrid, Lock, QrCode, Sparkles, Users } from 'lucide-react';
+import { ChevronRight, Images, Lock, MessageCircle, QrCode, Users, WalletCards } from 'lucide-react';
 
 export default function GestaoEventoPainel({
   eventoId,
@@ -26,8 +26,8 @@ export default function GestaoEventoPainel({
           </p>
           <p className="mt-1 text-xs leading-5 text-[#7c5560]">
             {liberado
-              ? 'Convidados, padrinhos, mesas, check-in, programação e papelaria em um só lugar.'
-              : 'Organize convidados, padrinhos, mesas, check-in, programação e papelaria depois de publicar seu convite.'}
+              ? 'Convidados, comunicações, check-in, Memórias, recados e financeiro ficam organizados em um único lugar.'
+              : 'Depois da publicação, toda a operação do evento fica concentrada aqui.'}
           </p>
         </div>
 
@@ -36,7 +36,7 @@ export default function GestaoEventoPainel({
             href={`/convite/gestao/${eventoId}`}
             className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[#c06078] px-3 py-2 text-xs font-semibold text-white"
           >
-            Abrir
+            Abrir Gestão
             <ChevronRight className="h-4 w-4" />
           </Link>
         ) : (
@@ -50,27 +50,12 @@ export default function GestaoEventoPainel({
         )}
       </div>
 
-      <div
-        className={`mt-3 flex flex-wrap gap-2 text-[11px] text-[#7c5560] ${
-          liberado ? '' : 'opacity-65'
-        }`}
-      >
-        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1">
-          <Users className="h-3 w-3" />
-          Convidados
-        </span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1">
-          <LayoutGrid className="h-3 w-3" />
-          Mesas
-        </span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1">
-          <QrCode className="h-3 w-3" />
-          Check-in
-        </span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1">
-          <Sparkles className="h-3 w-3" />
-          Papelaria
-        </span>
+      <div className={`mt-3 flex flex-wrap gap-2 text-[11px] text-[#7c5560] ${liberado ? '' : 'opacity-65'}`}>
+        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1"><Users className="h-3 w-3" />Convidados</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1"><MessageCircle className="h-3 w-3" />Comunicações</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1"><QrCode className="h-3 w-3" />Check-in</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1"><Images className="h-3 w-3" />Memórias</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1"><WalletCards className="h-3 w-3" />Financeiro</span>
       </div>
 
       {!liberado && (

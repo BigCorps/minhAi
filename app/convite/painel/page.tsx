@@ -4,26 +4,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import {
-  Clock,
-  ExternalLink,
-  Loader2,
-  LogOut,
-  Pencil,
-  Plus,
-} from 'lucide-react';
+import { Clock, ExternalLink, Loader2, LogOut, Pencil, Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import RendaBackground from '@/components/conviteria/RendaBackground';
 import AcoesConvite from '@/components/conviteria/AcoesConvite';
 import SuporteWhatsapp from '@/components/conviteria/SuporteWhatsapp';
 import RodapeMarca from '@/components/conviteria/RodapeMarca';
-import SaldoSaque from '@/components/conviteria/SaldoSaque';
 import PagamentosPresentesPainel from '@/components/conviteria/PagamentosPresentesPainel';
 import PlanoMensalCard from '@/components/conviteria/PlanoMensalCard';
 import PlanoStatusHeader from '@/components/conviteria/PlanoStatusHeader';
 import RecadosPainel from '@/components/conviteria/RecadosPainel';
 import PresencasPainel from '@/components/conviteria/PresencasPainel';
-import CompartilharWhatsappPainel from '@/components/conviteria/CompartilharWhatsappPainel';
+import CompartilharConvitePainel from '@/components/conviteria/CompartilharConvitePainel';
 import MemoriasPainel from '@/components/conviteria/memorias/MemoriasPainel';
 import GestaoEventoPainel from '@/components/conviteria/gestao/GestaoEventoPainel';
 
@@ -89,7 +81,6 @@ export default function PainelPage() {
         cache: 'no-store',
       });
       const d = await r.json();
-
       if (!r.ok) throw new Error(d?.erro ?? 'Falha ao carregar.');
       setConvites(d.convites ?? []);
     } catch (e: any) {
@@ -99,9 +90,7 @@ export default function PainelPage() {
     }
   }, [router, supabase]);
 
-  useEffect(() => {
-    void carregar();
-  }, [carregar]);
+  useEffect(() => { void carregar(); }, [carregar]);
 
   useEffect(() => {
     const id = window.setInterval(() => setAgora(Date.now()), 30_000);
@@ -120,19 +109,8 @@ export default function PainelPage() {
       <div className="mx-auto w-full max-w-2xl flex-1">
         <header className="flex items-center justify-between gap-3 mb-8">
           <Link href="/convite" className="flex min-w-0 items-center gap-2">
-            <Image
-              src="/brands/convite/icone-512.png"
-              alt="Convite IA"
-              width={36}
-              height={36}
-              className="rounded-full"
-            />
-            <span
-              className="hidden font-bold sm:inline"
-              style={{ color: cor.acentoTexto }}
-            >
-              Convite IA
-            </span>
+            <Image src="/brands/convite/icone-512.png" alt="Convite IA" width={36} height={36} className="rounded-full" />
+            <span className="hidden font-bold sm:inline" style={{ color: cor.acentoTexto }}>Convite IA</span>
           </Link>
 
           <div className="flex items-center gap-2">
@@ -142,10 +120,7 @@ export default function PainelPage() {
               type="button"
               onClick={sair}
               className="flex items-center gap-2 rounded-full border px-3 py-2 text-sm"
-              style={{
-                borderColor: cor.acento + '44',
-                color: cor.tintaSuave,
-              }}
+              style={{ borderColor: cor.acento + '44', color: cor.tintaSuave }}
             >
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Sair</span>
@@ -160,62 +135,31 @@ export default function PainelPage() {
         )}
 
         <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold" style={{ color: cor.tinta }}>
-            Meus convites
-          </h1>
+          <div>
+            <h1 className="text-2xl font-semibold" style={{ color: cor.tinta }}>Meus convites</h1>
+            <p className="mt-1 text-xs" style={{ color: cor.tintaSuave }}>
+              Aqui você cria, edita, visualiza e compartilha. A operação do evento fica concentrada em Gestão do Evento.
+            </p>
+          </div>
           <Link
             href="/convite/criar"
             className="flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold"
-            style={{
-              backgroundColor: cor.acento,
-              color: cor.blocoTexto,
-            }}
+            style={{ backgroundColor: cor.acento, color: cor.blocoTexto }}
           >
             <Plus className="h-4 w-4" />
             Novo
           </Link>
         </div>
 
-        {carregando && (
-          <div className="flex justify-center py-16">
-            <Loader2
-              className="h-8 w-8 animate-spin"
-              style={{ color: cor.acento }}
-            />
-          </div>
-        )}
+        {carregando && <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin" style={{ color: cor.acento }} /></div>}
 
-        {erro && (
-          <p
-            className="py-8 text-center text-sm"
-            style={{ color: cor.acentoTexto }}
-          >
-            {erro}
-          </p>
-        )}
+        {erro && <p className="py-8 text-center text-sm" style={{ color: cor.acentoTexto }}>{erro}</p>}
 
         {!carregando && !erro && convites.length === 0 && (
-          <div
-            className="rounded-2xl border px-6 py-12 text-center"
-            style={{
-              backgroundColor: cor.fora,
-              borderColor: cor.acento + '33',
-            }}
-          >
-            <p className="mb-2 font-medium" style={{ color: cor.tinta }}>
-              Você ainda não criou nenhum convite.
-            </p>
-            <p className="mb-6 text-sm" style={{ color: cor.tintaSuave }}>
-              Leva alguns minutos, e você só paga quando publicar.
-            </p>
-            <Link
-              href="/convite/criar"
-              className="inline-flex rounded-full px-6 py-3 font-semibold"
-              style={{
-                backgroundColor: cor.acento,
-                color: cor.blocoTexto,
-              }}
-            >
+          <div className="rounded-2xl border px-6 py-12 text-center" style={{ backgroundColor: cor.fora, borderColor: cor.acento + '33' }}>
+            <p className="mb-2 font-medium" style={{ color: cor.tinta }}>Você ainda não criou nenhum convite.</p>
+            <p className="mb-6 text-sm" style={{ color: cor.tintaSuave }}>Leva alguns minutos, e você só paga quando publicar.</p>
+            <Link href="/convite/criar" className="inline-flex rounded-full px-6 py-3 font-semibold" style={{ backgroundColor: cor.acento, color: cor.blocoTexto }}>
               Criar meu convite
             </Link>
           </div>
@@ -223,99 +167,47 @@ export default function PainelPage() {
 
         <ul className="space-y-3">
           {convites.map((c) => {
-            const trialAindaAtivo =
-              c.teste.ativo &&
-              !!c.teste.expiraEm &&
-              new Date(c.teste.expiraEm).getTime() > agora;
+            const trialAindaAtivo = c.teste.ativo && !!c.teste.expiraEm && new Date(c.teste.expiraEm).getTime() > agora;
             const acessivel = c.publicado || trialAindaAtivo;
 
             return (
-              <li
-                key={c.id}
-                className="rounded-2xl border px-5 py-4"
-                style={{
-                  backgroundColor: cor.fora,
-                  borderColor: cor.acento + '33',
-                }}
-              >
+              <li key={c.id} className="rounded-2xl border px-5 py-4" style={{ backgroundColor: cor.fora, borderColor: cor.acento + '33' }}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p
-                      className="truncate font-semibold"
-                      style={{ color: cor.tinta }}
-                    >
-                      {c.titulo}
-                    </p>
-                    {c.dataExtenso && (
-                      <p className="text-sm" style={{ color: cor.tintaSuave }}>
-                        {c.dataExtenso}
-                      </p>
-                    )}
-                    <p
-                      className="mt-1 truncate text-xs"
-                      style={{ color: cor.tintaSuave }}
-                    >
-                      {c.slug}.conviteia.com
-                    </p>
+                    <p className="truncate font-semibold" style={{ color: cor.tinta }}>{c.titulo}</p>
+                    {c.dataExtenso && <p className="text-sm" style={{ color: cor.tintaSuave }}>{c.dataExtenso}</p>}
+                    <p className="mt-1 truncate text-xs" style={{ color: cor.tintaSuave }}>{c.slug}.conviteia.com</p>
                   </div>
 
                   <div className="flex flex-shrink-0 items-center gap-4">
-                    <Link
-                      href={`/convite/editar/${c.id}`}
-                      className="flex items-center gap-1.5 text-sm font-medium"
-                      style={{ color: cor.tintaSuave }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      Editar
+                    <Link href={`/convite/editar/${c.id}`} className="flex items-center gap-1.5 text-sm font-medium" style={{ color: cor.tintaSuave }}>
+                      <Pencil className="h-4 w-4" />Editar
                     </Link>
 
                     {acessivel ? (
-                      <a
-                        href={c.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-sm font-medium"
-                        style={{ color: cor.acentoTexto }}
-                      >
-                        Ver
-                        <ExternalLink className="h-4 w-4" />
+                      <a href={c.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm font-medium" style={{ color: cor.acentoTexto }}>
+                        Ver <ExternalLink className="h-4 w-4" />
                       </a>
                     ) : (
-                      <Link
-                        href={`/convite/pagar?evento=${c.id}`}
-                        className="flex items-center gap-1.5 text-sm font-medium"
-                        style={{ color: cor.acentoTexto }}
-                      >
-                        <Clock className="h-4 w-4" />
-                        Publicar
+                      <Link href={`/convite/pagar?evento=${c.id}`} className="flex items-center gap-1.5 text-sm font-medium" style={{ color: cor.acentoTexto }}>
+                        <Clock className="h-4 w-4" />Publicar
                       </Link>
                     )}
                   </div>
                 </div>
 
-                <GestaoEventoPainel
-                  eventoId={c.id}
-                  liberado={c.publicado}
-                />
+                <GestaoEventoPainel eventoId={c.id} liberado={c.publicado} />
 
                 {trialAindaAtivo && !c.publicado && (
                   <div className="mt-4 rounded-xl border border-[#c0607840] bg-[#fff5f8] p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <p className="text-sm font-semibold text-[#40232c]">
-                          Modo Teste · {tempoRestante(c.teste.expiraEm, agora)} restantes
-                        </p>
+                        <p className="text-sm font-semibold text-[#40232c]">Modo Teste · {tempoRestante(c.teste.expiraEm, agora)} restantes</p>
                         <p className="mt-1 text-xs leading-5 text-[#7c5560]">
-                          Subdomínio real, RSVP, recados e Memórias de demonstração
-                          estão ativos. A lista de presentes funciona de verdade com
-                          PIX e cartão; saldo e saque são liberados após a publicação
-                          definitiva.
+                          Subdomínio real, RSVP, recados e Memórias de demonstração estão ativos. A lista de presentes funciona de verdade com PIX e cartão; saldo e saque são liberados após a publicação definitiva.
                         </p>
                       </div>
-                      <Link
-                        href={`/convite/pagar?evento=${c.id}`}
-                        className="rounded-lg bg-[#c06078] px-3 py-2 text-xs font-semibold text-white"
-                      >
+                      <Link href={`/convite/pagar?evento=${c.id}`} className="rounded-lg bg-[#c06078] px-3 py-2 text-xs font-semibold text-white">
                         Publicar definitivamente
                       </Link>
                     </div>
@@ -325,41 +217,29 @@ export default function PainelPage() {
                 {!c.publicado && c.teste.desteEvento && !trialAindaAtivo && (
                   <div className="mt-4 rounded-xl bg-[#fff9fb] p-3 text-xs text-[#7c5560]">
                     O teste terminou. Todas as configurações continuam salvas.{' '}
-                    <Link
-                      href={`/convite/pagar?evento=${c.id}`}
-                      className="font-semibold text-[#a04a63]"
-                    >
-                      Publicar este convite
-                    </Link>
-                    .
+                    <Link href={`/convite/pagar?evento=${c.id}`} className="font-semibold text-[#a04a63]">Publicar este convite</Link>.
                   </div>
                 )}
 
                 {acessivel && (
                   <>
-                    <div
-                      className="mt-3 border-t pt-3"
-                      style={{ borderColor: cor.acento + '22' }}
-                    >
+                    <div className="mt-3 border-t pt-3" style={{ borderColor: cor.acento + '22' }}>
                       <AcoesConvite url={c.url} slug={c.slug} />
                     </div>
-                    <MemoriasPainel
-                      eventoId={c.id}
-                      slug={c.slug}
-                      titulo={c.titulo}
-                    />
-                    <CompartilharWhatsappPainel
-                      eventoId={c.id}
-                      titulo={c.titulo}
-                      url={c.url}
-                    />
-                    <PresencasPainel
-                      eventoId={c.id}
-                      modoTeste={!c.publicado}
-                    />
-                    <PagamentosPresentesPainel eventoId={c.id} />
-                    {c.publicado && <SaldoSaque eventoId={c.id} />}
-                    <RecadosPainel eventoId={c.id} />
+                    <CompartilharConvitePainel eventoId={c.id} titulo={c.titulo} url={c.url} />
+
+                    {trialAindaAtivo && !c.publicado && (
+                      <div className="mt-3 rounded-xl border border-dashed border-[#c0607830] bg-[#fffafb] p-3">
+                        <p className="mb-2 text-xs font-semibold text-[#a04a63]">Dados do modo teste</p>
+                        <p className="mb-1 text-[11px] leading-5 text-[#7c5560]">
+                          Estes painéis aparecem aqui somente durante o teste. Depois da publicação, convidados, comunicações, Memórias, recados e financeiro ficam organizados em Gestão do Evento.
+                        </p>
+                        <MemoriasPainel eventoId={c.id} slug={c.slug} titulo={c.titulo} />
+                        <PresencasPainel eventoId={c.id} modoTeste />
+                        <PagamentosPresentesPainel eventoId={c.id} />
+                        <RecadosPainel eventoId={c.id} />
+                      </div>
+                    )}
                   </>
                 )}
               </li>
@@ -367,9 +247,7 @@ export default function PainelPage() {
           })}
         </ul>
 
-        <div id="plano-mensal" className="mt-8 scroll-mt-6">
-          <PlanoMensalCard />
-        </div>
+        <div id="plano-mensal" className="mt-8 scroll-mt-6"><PlanoMensalCard /></div>
       </div>
 
       <RodapeMarca />

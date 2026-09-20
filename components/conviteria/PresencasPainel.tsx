@@ -18,9 +18,11 @@ type Confirmacao = {
 export default function PresencasPainel({
   eventoId,
   modoTeste = false,
+  mostrarGoogle = true,
 }: {
   eventoId: string;
   modoTeste?: boolean;
+  mostrarGoogle?: boolean;
 }) {
   const [aberto, setAberto] = useState(false);
   const [confirmacoes, setConfirmacoes] = useState<Confirmacao[]>([]);
@@ -69,7 +71,7 @@ export default function PresencasPainel({
       <button type="button" onClick={() => setAberto(v => !v)} className="flex w-full items-center justify-between gap-3 text-left">
         <span className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: '#a04a63' }}>
           <Users className="h-4 w-4" />
-          Confirmações de presença
+          Histórico de confirmações
           {totalPessoas > 0 && (
             <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ backgroundColor: '#c06078' }}>{totalPessoas}</span>
           )}
@@ -92,16 +94,15 @@ export default function PresencasPainel({
 
           {modoTeste ? (
             <p className="mb-4 rounded-xl bg-white p-3 text-xs leading-5" style={{ color: '#7c5560' }}>
-              No modo teste, você pode confirmar presenças e vê-las aqui. Depois da publicação, este convite também pode ser conectado ao Google: o Gmail envia a confirmação aos convidados e os lembretes programados de 30 dias, 7 dias e 1 dia antes do evento, enquanto o Google Agenda ajuda a manter o evento organizado. Os envios reais ficam preservados para depois da publicação.
+              No modo teste, você pode confirmar presenças e vê-las aqui. Depois da publicação, a operação completa fica concentrada em Gestão do Evento.
             </p>
           ) : (
-            <>
-              <p className="mb-4 text-xs leading-5" style={{ color: '#7c5560' }}>
-                Nome, e-mail e integrantes da família ficam organizados aqui. A conexão Google deste convite será usada para Gmail, Google Agenda e lembretes do evento.
-              </p>
-              <GoogleConvitePainel eventoId={eventoId} />
-            </>
+            <p className="mb-4 text-xs leading-5" style={{ color: '#7c5560' }}>
+              Este histórico mostra as respostas recebidas. A lista operacional e os status de cada pessoa ficam na Central de convidados logo acima.
+            </p>
           )}
+
+          {mostrarGoogle && !modoTeste && <GoogleConvitePainel eventoId={eventoId} />}
 
           {carregando && confirmacoes.length === 0 ? (
             <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin" style={{ color: '#c06078' }} /></div>

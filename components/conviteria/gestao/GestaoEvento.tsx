@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CalendarClock, LayoutGrid, Loader2, QrCode, Shirt, Sparkles, Users } from 'lucide-react';
+import { ArrowLeft, CalendarClock, LayoutGrid, Loader2, MessageCircle, QrCode, Shirt, Sparkles, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import type { ConviteConfig } from '@/lib/conviteria/tipos';
 import DetalhesPainel from './DetalhesPainel';
@@ -11,12 +11,14 @@ import PadrinhosPainel from './PadrinhosPainel';
 import MesasPainel from './MesasPainel';
 import CheckinPainel from './CheckinPainel';
 import PapelariaPainel from './PapelariaPainel';
+import WhatsAppPainel from './WhatsAppPainel';
 import estilos from './gestao-light.module.css';
 
-type Aba = 'detalhes' | 'convidados' | 'padrinhos' | 'mesas' | 'checkin' | 'papelaria';
+type Aba = 'detalhes' | 'convidados' | 'whatsapp' | 'padrinhos' | 'mesas' | 'checkin' | 'papelaria';
 const ABAS: Array<{ id: Aba; nome: string; Icon: typeof Users }> = [
   { id: 'detalhes', nome: 'Detalhes', Icon: CalendarClock },
   { id: 'convidados', nome: 'Convidados', Icon: Users },
+  { id: 'whatsapp', nome: 'WhatsApp', Icon: MessageCircle },
   { id: 'padrinhos', nome: 'Padrinhos', Icon: Shirt },
   { id: 'mesas', nome: 'Mesas', Icon: LayoutGrid },
   { id: 'checkin', nome: 'Check-in', Icon: QrCode },
@@ -148,6 +150,7 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
         <nav className="mb-5 flex gap-2 overflow-x-auto pb-2">{ABAS.map(({ id, nome, Icon }) => <button key={id} type="button" onClick={() => setAba(id)} className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold ${aba === id ? 'bg-[#c06078] text-white' : 'border border-[#c0607833] bg-white text-[#7c5560]'}`}><Icon className="h-4 w-4" />{nome}</button>)}</nav>
         {aba === 'detalhes' && <DetalhesPainel eventoId={eventoId} token={token} cfg={cfg} gestao={gestao} aoSalvar={(novoCfg, novaGestao) => { setCfg(novoCfg); setGestao(novaGestao); }} />}
         {aba === 'convidados' && <ConvidadosPainel eventoId={eventoId} token={token} slug={slug} qrModo={gestao.qrModo} />}
+        {aba === 'whatsapp' && <WhatsAppPainel eventoId={eventoId} token={token} slug={slug} />}
         {aba === 'padrinhos' && <PadrinhosPainel eventoId={eventoId} token={token} slug={slug} />}
         {aba === 'mesas' && <MesasPainel eventoId={eventoId} token={token} />}
         {aba === 'checkin' && <CheckinPainel eventoId={eventoId} token={token} />}

@@ -1,11 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { exigirEventoDoUsuario, normalizarEmail, normalizarTelefone, texto } from '@/lib/conviteria/gestao-servidor';
+import {
+  exigirEventoDoUsuario,
+  normalizarEmail,
+  normalizarTelefone,
+  texto,
+  variantesTelefoneBusca,
+} from '@/lib/conviteria/gestao-servidor';
+import { sincronizarConfirmacoesEvento } from '@/lib/conviteria/convidados-sync';
 
 export const runtime = 'nodejs';
 
-const LADOS = new Set(['noiva','noivo','ambos','outro']);
-const STATUS = new Set(['pendente','confirmado','nao_vai']);
+const LADOS = new Set(['noiva', 'noivo', 'ambos', 'outro']);
+const STATUS = new Set(['pendente', 'confirmado', 'nao_vai']);
 const MAX_IMPORTACAO = 600;
+const MAX_MEMBROS = 50;
 
 function nomeChave(valor: unknown) {
   return texto(valor, 120)
@@ -14,9 +22,7 @@ function nomeChave(valor: unknown) {
 }
 
 function dependentesDo(valor: unknown) {
-  const itens = Array.isArray(valor)
-    ? valor
-    : String(valor ?? '').split('|');
+  const itens = Array.isArray(valor) ? valor : String(valor ?? '').split('|');
   const vistos = new Set<string>();
   const nomes: string[] = [];
   for (const item of itens) {
@@ -31,81 +37,22 @@ function dependentesDo(valor: unknown) {
   return nomes;
 }
 
-async function sincronizarConfirmacoes(admin: any, eventoId: string) {
-  const [famsR, pessoasR, confsR, membrosR] = await Promise.all([
-    admin.from('convidado_familias').select('id,nome,email_normalizado,telefone_normalizado').eq('evento_id', eventoId),
-    admin.from('convidados_lista').select('id,familia_id,nome,email_normalizado,telefone_normalizado,status').eq('evento_id', eventoId),
-    admin.from('convidados').select('id,nome,email,contato,comparecera,acompanhantes,familia_lista_id,convidado_lista_id').eq('evento_id', eventoId).is('teste_id', null),
-    admin.from('convidado_confirmacoes_membros').select('confirmacao_id,convidado_lista_id').eq('evento_id', eventoId),
-  ]);
+async function primeiraFamiliaPorTelefone(admin: any, eventoId: string, telefone: unknown) {
+  const variantes = variantesTelefoneBusca(String(telefone ?? ''));
+  if (!variantes.length) return null;
+  const { data } = await admin.from('convidado_familias')
+    .select('*').eq('evento_id', eventoId).in('telefone_normalizado', variantes)
+    .order('created_at').limit(1).maybeSingle();
+  return data ?? null;
+}
 
-  const familias = famsR.data ?? [];
-  const pessoas = pessoasR.data ?? [];
-  const confirmacoes = confsR.data ?? [];
-  const membros = membrosR.data ?? [];
-  let vinculadas = 0;
-  let statusAtualizados = 0;
-
-  const porEmailFamilia = new Map(familias.filter((f: any) => f.email_normalizado).map((f: any) => [f.email_normalizado, f]));
-  const porTelFamilia = new Map(familias.filter((f: any) => f.telefone_normalizado).map((f: any) => [f.telefone_normalizado, f]));
-  const porEmailPessoa = new Map(pessoas.filter((p: any) => p.email_normalizado).map((p: any) => [p.email_normalizado, p]));
-  const porTelPessoa = new Map(pessoas.filter((p: any) => p.telefone_normalizado).map((p: any) => [p.telefone_normalizado, p]));
-
-  for (const c of confirmacoes as any[]) {
-    let familiaId = c.familia_lista_id as string | null;
-    let pessoaId = c.convidado_lista_id as string | null;
-
-    if (!familiaId && !pessoaId) {
-      const email = normalizarEmail(c.email || c.contato);
-      const tel = normalizarTelefone(c.contato);
-      const fam = (email && porEmailFamilia.get(email)) || (tel && porTelFamilia.get(tel));
-      const pes = !fam ? ((email && porEmailPessoa.get(email)) || (tel && porTelPessoa.get(tel))) : null;
-
-      if (fam) {
-        familiaId = (fam as any).id;
-        await admin.from('convidados').update({ familia_lista_id: familiaId }).eq('id', c.id);
-        vinculadas += 1;
-      } else if (pes) {
-        pessoaId = (pes as any).id;
-        await admin.from('convidados').update({ convidado_lista_id: pessoaId }).eq('id', c.id);
-        vinculadas += 1;
-      }
-    }
-
-    const novoStatus = c.comparecera === false ? 'nao_vai' : 'confirmado';
-
-    if (pessoaId) {
-      await admin.from('convidados_lista').update({ status: novoStatus }).eq('evento_id', eventoId).eq('id', pessoaId);
-      statusAtualizados += 1;
-      continue;
-    }
-
-    if (familiaId) {
-      const idsRegistrados = membros
-        .filter((m: any) => m.confirmacao_id === c.id)
-        .map((m: any) => m.convidado_lista_id);
-
-      if (idsRegistrados.length) {
-        await admin.from('convidados_lista').update({ status: novoStatus }).eq('evento_id', eventoId).in('id', idsRegistrados);
-        statusAtualizados += idsRegistrados.length;
-        continue;
-      }
-
-      const nomesConfirmados = new Set([
-        nomeChave(c.nome),
-        ...(Array.isArray(c.acompanhantes) ? c.acompanhantes.map(nomeChave) : []),
-      ].filter(Boolean));
-      const ids = pessoas
-        .filter((p: any) => p.familia_id === familiaId && nomesConfirmados.has(nomeChave(p.nome)))
-        .map((p: any) => p.id);
-      if (ids.length) {
-        await admin.from('convidados_lista').update({ status: novoStatus }).eq('evento_id', eventoId).in('id', ids);
-        statusAtualizados += ids.length;
-      }
-    }
-  }
-
-  return { vinculadas, statusAtualizados, confirmacoes: confirmacoes.length };
+async function primeiraPessoaPorTelefone(admin: any, eventoId: string, telefone: unknown) {
+  const variantes = variantesTelefoneBusca(String(telefone ?? ''));
+  if (!variantes.length) return null;
+  const { data } = await admin.from('convidados_lista')
+    .select('*').eq('evento_id', eventoId).in('telefone_normalizado', variantes)
+    .order('created_at').limit(1).maybeSingle();
+  return data ?? null;
 }
 
 async function registrarConfirmacaoManual(r: any, eventoId: string, ids: string[]) {
@@ -168,6 +115,12 @@ async function registrarConfirmacaoManual(r: any, eventoId: string, ids: string[
   await r.admin.from('convidado_confirmacoes_membros').insert(
     ids.map((id: string) => ({ evento_id: eventoId, confirmacao_id: resp.data.id, convidado_lista_id: id })),
   );
+
+  if (familiaId) {
+    const { data: todos } = await r.admin.from('convidados_lista').select('id').eq('evento_id', eventoId).eq('familia_id', familiaId);
+    const todosIds = (todos ?? []).map((p: any) => p.id);
+    if (todosIds.length) await r.admin.from('convidados_lista').update({ status: 'nao_vai' }).eq('evento_id', eventoId).in('id', todosIds);
+  }
   await r.admin.from('convidados_lista').update({ status: 'confirmado' }).eq('evento_id', eventoId).in('id', ids);
   return { ok: true, confirmacaoId: resp.data.id };
 }
@@ -207,7 +160,7 @@ export async function POST(req: NextRequest) {
     for (const linha of linhas) {
       const nome = texto(linha?.nome, 120);
       if (!nome) { ignorados += 1; continue; }
-      const deps = dependentesDo(linha?.dependentes);
+      const deps = dependentesDo(linha?.membros ?? linha?.dependentes).filter((dep) => nomeChave(dep) !== nomeChave(nome));
       const email = texto(linha?.email, 180) || null;
       const telefone = texto(linha?.telefone, 40) || null;
       const emailN = normalizarEmail(email);
@@ -216,15 +169,12 @@ export async function POST(req: NextRequest) {
       if (deps.length > 0) {
         let familia: any = null;
         if (emailN) {
-          const { data } = await r.admin.from('convidado_familias').select('*').eq('evento_id', eventoId).eq('email_normalizado', emailN).limit(1).maybeSingle();
+          const { data } = await r.admin.from('convidado_familias').select('*').eq('evento_id', eventoId).eq('email_normalizado', emailN).order('created_at').limit(1).maybeSingle();
           familia = data;
         }
-        if (!familia && telN) {
-          const { data } = await r.admin.from('convidado_familias').select('*').eq('evento_id', eventoId).eq('telefone_normalizado', telN).limit(1).maybeSingle();
-          familia = data;
-        }
+        if (!familia && telefone) familia = await primeiraFamiliaPorTelefone(r.admin, eventoId, telefone);
         if (!familia) {
-          const { data } = await r.admin.from('convidado_familias').select('*').eq('evento_id', eventoId).ilike('nome', `Família / grupo de ${nome}`).limit(1).maybeSingle();
+          const { data } = await r.admin.from('convidado_familias').select('*').eq('evento_id', eventoId).ilike('nome', `Família / grupo de ${nome}`).order('created_at').limit(1).maybeSingle();
           familia = data;
         }
 
@@ -236,7 +186,6 @@ export async function POST(req: NextRequest) {
           email,
           email_normalizado: emailN,
           lado: 'ambos',
-          max_acompanhantes: deps.length,
         };
 
         if (familia) {
@@ -244,7 +193,7 @@ export async function POST(req: NextRequest) {
           familia = data ?? familia;
           atualizados += 1;
         } else {
-          const { data, error } = await r.admin.from('convidado_familias').insert(dadosFamilia).select('*').single();
+          const { data, error } = await r.admin.from('convidado_familias').insert({ ...dadosFamilia, extras_permitidos: 0 }).select('*').single();
           if (error || !data) { ignorados += 1; continue; }
           familia = data;
           familiasCriadas += 1;
@@ -252,8 +201,12 @@ export async function POST(req: NextRequest) {
 
         const { data: existentes } = await r.admin.from('convidados_lista').select('*').eq('evento_id', eventoId).eq('familia_id', familia.id);
         const lista = existentes ?? [];
-        let principal = lista.find((p: any) => (emailN && p.email_normalizado === emailN) || (telN && p.telefone_normalizado === telN) || nomeChave(p.nome) === nomeChave(nome));
-        const dadosPrincipal = {
+        let principal = lista.find((p: any) =>
+          (emailN && p.email_normalizado === emailN)
+          || variantesTelefoneBusca(telefone).includes(p.telefone_normalizado)
+          || nomeChave(p.nome) === nomeChave(nome));
+
+        const dadosPrincipal: any = {
           evento_id: eventoId,
           familia_id: familia.id,
           nome,
@@ -264,43 +217,49 @@ export async function POST(req: NextRequest) {
           tipo: 'adulto',
           lado: 'ambos',
           status: principal?.status ?? 'pendente',
+          rsvp_extra: false,
         };
         if (principal) {
           await r.admin.from('convidados_lista').update(dadosPrincipal).eq('id', principal.id);
           atualizados += 1;
         } else {
           const { data } = await r.admin.from('convidados_lista').insert(dadosPrincipal).select('*').single();
-          if (data) { principal = data; convidadosCriados += 1; }
+          if (data) { principal = data; lista.push(data); convidadosCriados += 1; }
         }
 
         for (const dep of deps) {
-          if (lista.some((p: any) => nomeChave(p.nome) === nomeChave(dep))) continue;
-          const { error } = await r.admin.from('convidados_lista').insert({
+          const existente = lista.find((p: any) => nomeChave(p.nome) === nomeChave(dep));
+          if (existente) {
+            if (existente.rsvp_extra) {
+              await r.admin.from('convidados_lista').update({ rsvp_extra: false, status: existente.status ?? 'pendente' }).eq('id', existente.id);
+              atualizados += 1;
+            }
+            continue;
+          }
+          const { data, error } = await r.admin.from('convidados_lista').insert({
             evento_id: eventoId,
             familia_id: familia.id,
             nome: dep,
             tipo: 'adulto',
             lado: 'ambos',
             status: 'pendente',
-          });
-          if (!error) convidadosCriados += 1;
+            rsvp_extra: false,
+          }).select('*').single();
+          if (!error && data) { lista.push(data); convidadosCriados += 1; }
         }
       } else {
         let pessoa: any = null;
         if (emailN) {
-          const { data } = await r.admin.from('convidados_lista').select('*').eq('evento_id', eventoId).eq('email_normalizado', emailN).limit(1).maybeSingle();
+          const { data } = await r.admin.from('convidados_lista').select('*').eq('evento_id', eventoId).eq('email_normalizado', emailN).order('created_at').limit(1).maybeSingle();
           pessoa = data;
         }
-        if (!pessoa && telN) {
-          const { data } = await r.admin.from('convidados_lista').select('*').eq('evento_id', eventoId).eq('telefone_normalizado', telN).limit(1).maybeSingle();
-          pessoa = data;
-        }
+        if (!pessoa && telefone) pessoa = await primeiraPessoaPorTelefone(r.admin, eventoId, telefone);
         if (!pessoa) {
-          const { data } = await r.admin.from('convidados_lista').select('*').eq('evento_id', eventoId).is('familia_id', null).ilike('nome', nome).limit(1).maybeSingle();
+          const { data } = await r.admin.from('convidados_lista').select('*').eq('evento_id', eventoId).is('familia_id', null).ilike('nome', nome).order('created_at').limit(1).maybeSingle();
           pessoa = data;
         }
 
-        const dados = {
+        const dados: any = {
           evento_id: eventoId,
           familia_id: null,
           nome,
@@ -313,16 +272,17 @@ export async function POST(req: NextRequest) {
           status: pessoa?.status ?? 'pendente',
         };
         if (pessoa) {
+          if (!pessoa.rsvp_extra) dados.rsvp_extra = false;
           await r.admin.from('convidados_lista').update(dados).eq('id', pessoa.id);
           atualizados += 1;
         } else {
-          const { error } = await r.admin.from('convidados_lista').insert(dados);
+          const { error } = await r.admin.from('convidados_lista').insert({ ...dados, rsvp_extra: false });
           if (error) ignorados += 1; else convidadosCriados += 1;
         }
       }
     }
 
-    const sync = await sincronizarConfirmacoes(r.admin, eventoId);
+    const sync = await sincronizarConfirmacoesEvento(eventoId);
     return NextResponse.json({
       ok: true,
       importados: linhas.length - ignorados,
@@ -335,7 +295,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (acao === 'sincronizar') {
-    const resultado = await sincronizarConfirmacoes(r.admin, eventoId);
+    const resultado = await sincronizarConfirmacoesEvento(eventoId);
     return NextResponse.json({ ok: true, ...resultado });
   }
 
@@ -343,23 +303,101 @@ export async function POST(req: NextRequest) {
     const id = texto(body?.id, 80) || null;
     const nome = texto(body?.nome, 120);
     if (!nome) return NextResponse.json({ erro: 'Informe o nome da família/grupo.' }, { status: 400 });
-    const dados = {
+
+    const membrosEntrada = Array.isArray(body?.membros)
+      ? body.membros.slice(0, MAX_MEMBROS).map((m: any) => ({
+          id: texto(m?.id, 80) || null,
+          nome: texto(m?.nome, 120),
+          tipo: m?.tipo === 'crianca' ? 'crianca' : 'adulto',
+        })).filter((m: any) => m.nome)
+      : [];
+    if (!membrosEntrada.length) {
+      return NextResponse.json({ erro: 'Cadastre pelo menos uma pessoa neste grupo. O nome da família não cria membros automaticamente.' }, { status: 400 });
+    }
+
+    const nomes = new Set<string>();
+    for (const m of membrosEntrada) {
+      const chave = nomeChave(m.nome);
+      if (nomes.has(chave)) return NextResponse.json({ erro: `O membro “${m.nome}” está repetido no grupo.` }, { status: 400 });
+      nomes.add(chave);
+    }
+
+    const removerIds: string[] = Array.isArray(body?.removerMembroIds)
+      ? Array.from(new Set<string>(body.removerMembroIds.map((x: unknown) => texto(x, 80)).filter(Boolean))).slice(0, MAX_MEMBROS)
+      : [];
+
+    let existente: any = null;
+    let existentesMembros: any[] = [];
+    if (id) {
+      const [{ data: fam }, { data: ms }] = await Promise.all([
+        r.admin.from('convidado_familias').select('*').eq('evento_id', eventoId).eq('id', id).maybeSingle(),
+        r.admin.from('convidados_lista').select('id,rsvp_extra').eq('evento_id', eventoId).eq('familia_id', id),
+      ]);
+      if (!fam) return NextResponse.json({ erro: 'Família não encontrada.' }, { status: 404 });
+      existente = fam;
+      existentesMembros = ms ?? [];
+      const permitidos = new Set(existentesMembros.filter((m: any) => !m.rsvp_extra).map((m: any) => m.id));
+      if (membrosEntrada.some((m: any) => m.id && !permitidos.has(m.id))) {
+        return NextResponse.json({ erro: 'Há um membro inválido nesta família.' }, { status: 400 });
+      }
+      if (removerIds.some((x) => !permitidos.has(x))) {
+        return NextResponse.json({ erro: 'Não foi possível validar um membro removido.' }, { status: 400 });
+      }
+    } else if (membrosEntrada.some((m: any) => m.id)) {
+      return NextResponse.json({ erro: 'Um novo grupo não pode reutilizar IDs de convidados.' }, { status: 400 });
+    }
+
+    const telefone = texto(body?.telefone, 40) || null;
+    const email = texto(body?.email, 180) || null;
+    const lado = LADOS.has(body?.lado) ? body.lado : 'ambos';
+    const dadosFamilia: any = {
       evento_id: eventoId,
       nome,
-      telefone: texto(body?.telefone, 40) || null,
-      telefone_normalizado: normalizarTelefone(body?.telefone),
-      email: texto(body?.email, 180) || null,
-      email_normalizado: normalizarEmail(body?.email),
-      lado: LADOS.has(body?.lado) ? body.lado : 'ambos',
-      max_acompanhantes: Math.max(0, Math.min(50, Number(body?.maxAcompanhantes) || 0)),
+      telefone,
+      telefone_normalizado: normalizarTelefone(telefone),
+      email,
+      email_normalizado: normalizarEmail(email),
+      lado,
+      extras_permitidos: Math.max(0, Math.min(50, Number(body?.extrasPermitidos) || 0)),
       observacoes: texto(body?.observacoes, 1000) || null,
     };
-    const q = id
-      ? r.admin.from('convidado_familias').update(dados).eq('evento_id', eventoId).eq('id', id).select('*').single()
-      : r.admin.from('convidado_familias').insert(dados).select('*').single();
-    const { data, error } = await q;
-    if (error) return NextResponse.json({ erro: 'Não foi possível salvar a família.' }, { status: 500 });
-    return NextResponse.json({ ok: true, familia: data });
+
+    const respostaFamilia = id
+      ? await r.admin.from('convidado_familias').update(dadosFamilia).eq('evento_id', eventoId).eq('id', id).select('*').single()
+      : await r.admin.from('convidado_familias').insert(dadosFamilia).select('*').single();
+    if (respostaFamilia.error || !respostaFamilia.data) {
+      return NextResponse.json({ erro: 'Não foi possível salvar a família.' }, { status: 500 });
+    }
+    const familiaId = respostaFamilia.data.id as string;
+
+    for (const m of membrosEntrada) {
+      if (m.id) {
+        const { error } = await r.admin.from('convidados_lista').update({ nome: m.nome, tipo: m.tipo, lado })
+          .eq('evento_id', eventoId).eq('familia_id', familiaId).eq('id', m.id).eq('rsvp_extra', false);
+        if (error) return NextResponse.json({ erro: `A família foi salva, mas não foi possível atualizar ${m.nome}.` }, { status: 500 });
+      } else {
+        const { error } = await r.admin.from('convidados_lista').insert({
+          evento_id: eventoId,
+          familia_id: familiaId,
+          nome: m.nome,
+          tipo: m.tipo,
+          lado,
+          status: 'pendente',
+          rsvp_extra: false,
+        });
+        if (error) return NextResponse.json({ erro: `A família foi salva, mas não foi possível adicionar ${m.nome}.` }, { status: 500 });
+      }
+    }
+
+    if (removerIds.length) {
+      const { error } = await r.admin.from('convidados_lista').delete()
+        .eq('evento_id', eventoId).eq('familia_id', familiaId).eq('rsvp_extra', false).in('id', removerIds);
+      if (error) return NextResponse.json({ erro: 'A família foi salva, mas não foi possível remover um dos membros.' }, { status: 500 });
+    }
+
+    const { data: membrosSalvos } = await r.admin.from('convidados_lista').select('*')
+      .eq('evento_id', eventoId).eq('familia_id', familiaId).eq('rsvp_extra', false).order('created_at');
+    return NextResponse.json({ ok: true, familia: respostaFamilia.data, membros: membrosSalvos ?? [], legadoPreservado: existente?.max_acompanhantes ?? 0 });
   }
 
   if (acao === 'salvar_convidado') {
@@ -371,19 +409,22 @@ export async function POST(req: NextRequest) {
       const { data: fam } = await r.admin.from('convidado_familias').select('id').eq('evento_id', eventoId).eq('id', familiaId).maybeSingle();
       if (!fam) return NextResponse.json({ erro: 'Família inválida.' }, { status: 400 });
     }
-    const dados = {
+    const telefone = texto(body?.telefone, 40) || null;
+    const email = texto(body?.email, 180) || null;
+    const dados: any = {
       evento_id: eventoId,
       familia_id: familiaId,
       nome,
-      telefone: texto(body?.telefone, 40) || null,
-      telefone_normalizado: normalizarTelefone(body?.telefone),
-      email: texto(body?.email, 180) || null,
-      email_normalizado: normalizarEmail(body?.email),
+      telefone,
+      telefone_normalizado: normalizarTelefone(telefone),
+      email,
+      email_normalizado: normalizarEmail(email),
       tipo: body?.tipo === 'crianca' ? 'crianca' : 'adulto',
       lado: LADOS.has(body?.lado) ? body.lado : 'ambos',
       observacoes: texto(body?.observacoes, 1000) || null,
       status: STATUS.has(body?.status) ? body.status : 'pendente',
     };
+    if (!id) dados.rsvp_extra = false;
     const q = id
       ? r.admin.from('convidados_lista').update(dados).eq('evento_id', eventoId).eq('id', id).select('*').single()
       : r.admin.from('convidados_lista').insert(dados).select('*').single();
@@ -424,7 +465,7 @@ export async function DELETE(req: NextRequest) {
   const eventoId = u.searchParams.get('eventoId')?.trim();
   const tipo = u.searchParams.get('tipo');
   const id = u.searchParams.get('id')?.trim();
-  if (!eventoId || !id || !['familia','convidado'].includes(tipo ?? '')) {
+  if (!eventoId || !id || !['familia', 'convidado'].includes(tipo ?? '')) {
     return NextResponse.json({ erro: 'Dados inválidos.' }, { status: 400 });
   }
   const r = await exigirEventoDoUsuario(req, eventoId);

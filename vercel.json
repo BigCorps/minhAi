@@ -5,6 +5,10 @@
     {
       "path": "/api/conviteria/memorias/limpeza",
       "schedule": "15 8 * * *"
+    },
+    {
+      "path": "/api/conviteria/whatsapp/cron",
+      "schedule": "17 * * * *"
     }
   ]
 }

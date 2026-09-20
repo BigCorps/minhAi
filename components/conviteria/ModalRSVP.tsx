@@ -30,6 +30,8 @@ export default function ModalRSVP({
   const [grupoTitulo, setGrupoTitulo] = useState('');
   const [pessoas, setPessoas] = useState<PessoaRestrita[]>([]);
   const [selecionados, setSelecionados] = useState<string[]>([]);
+  const [extrasPermitidos, setExtrasPermitidos] = useState(0);
+  const [extras, setExtras] = useState<string[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   const [confirmado, setConfirmado] = useState<number | null>(null);
@@ -70,11 +72,24 @@ export default function ModalRSVP({
   function alterar(i: number, valor: string) { setFamilia((f) => f.map((v, idx) => idx === i ? valor : v)); }
   function remover(i: number) { setFamilia((f) => f.filter((_, idx) => idx !== i)); }
 
+  function adicionarExtra() {
+    if (extras.length < extrasPermitidos) setExtras((atuais) => [...atuais, '']);
+  }
+  function alterarExtra(i: number, valor: string) {
+    setExtras((atuais) => atuais.map((v, idx) => idx === i ? valor : v));
+  }
+  function removerExtra(i: number) {
+    setExtras((atuais) => atuais.filter((_, idx) => idx !== i));
+  }
+
   function aplicarGrupo(d: any) {
-    setGrupoTitulo(d.grupo?.titulo ?? 'Convidados');
-    setPessoas(d.grupo?.pessoas ?? []);
-    setContato(d.grupo?.contatoPrincipal ?? contato);
-    setSelecionados((d.grupo?.pessoas ?? [])
+    const grupo = d.grupo ?? {};
+    setGrupoTitulo(grupo.titulo ?? 'Convidados');
+    setPessoas(grupo.pessoas ?? []);
+    setContato(grupo.contatoPrincipal ?? contato);
+    setExtrasPermitidos(Math.max(0, Number(grupo.extrasPermitidos ?? 0)));
+    setExtras((grupo.extrasAtuais ?? []).map((x: any) => String(x?.nome ?? '')).filter(Boolean));
+    setSelecionados((grupo.pessoas ?? [])
       .filter((p: PessoaRestrita) => p.status !== 'nao_vai')
       .map((p: PessoaRestrita) => p.id));
   }
@@ -92,6 +107,9 @@ export default function ModalRSVP({
       if (!r.ok) throw new Error(d?.erro || 'Este link de confirmação não foi encontrado.');
       aplicarGrupo(d);
     } catch (e: any) {
+      setPessoas([]);
+      setExtras([]);
+      setExtrasPermitidos(0);
       setErro(e.message || 'Este link de confirmação não foi encontrado.');
     } finally {
       setEnviando(false);
@@ -111,6 +129,9 @@ export default function ModalRSVP({
       if (!r.ok) throw new Error(d?.erro || 'Não encontramos este contato.');
       aplicarGrupo(d);
     } catch (e: any) {
+      setPessoas([]);
+      setExtras([]);
+      setExtrasPermitidos(0);
       setErro(e.message || 'Não encontramos este contato.');
     } finally {
       setEnviando(false);
@@ -122,7 +143,9 @@ export default function ModalRSVP({
     const modoLista = porLink || restrito;
     if (modoLista) {
       if (!pessoas.length) return setErro('Não foi possível localizar os nomes deste convite.');
-      if (!selecionados.length) return setErro('Selecione ao menos uma pessoa que irá ao evento.');
+      if (!selecionados.length) return setErro('Selecione ao menos uma pessoa convidada que irá ao evento.');
+      const extrasPreenchidos = extras.map((x) => x.trim()).filter(Boolean);
+      if (extrasPreenchidos.length > extrasPermitidos) return setErro(`Este convite permite até ${extrasPermitidos} acompanhante(s) extra(s).`);
     } else {
       if (nome.trim().length < 2) return setErro('Informe seu nome.');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setErro('Informe um e-mail válido.');
@@ -134,10 +157,30 @@ export default function ModalRSVP({
 
     try {
       const payload = porLink
-        ? { eventoId, acao: 'confirmar_token', tokenConvite: tokenInicial, convidadoIds: selecionados, solicitacaoId: id }
+        ? {
+            eventoId,
+            acao: 'confirmar_token',
+            tokenConvite: tokenInicial,
+            convidadoIds: selecionados,
+            acompanhantesExtras: extras.map((x) => x.trim()).filter(Boolean),
+            solicitacaoId: id,
+          }
         : restrito
-          ? { eventoId, acao: 'confirmar_restrito', contato, convidadoIds: selecionados, solicitacaoId: id }
-          : { eventoId, nome: nome.trim(), email: email.trim(), acompanhantes: familia.map((x) => x.trim()).filter(Boolean), solicitacaoId: id };
+          ? {
+              eventoId,
+              acao: 'confirmar_restrito',
+              contato,
+              convidadoIds: selecionados,
+              acompanhantesExtras: extras.map((x) => x.trim()).filter(Boolean),
+              solicitacaoId: id,
+            }
+          : {
+              eventoId,
+              nome: nome.trim(),
+              email: email.trim(),
+              acompanhantes: familia.map((x) => x.trim()).filter(Boolean),
+              solicitacaoId: id,
+            };
 
       const r = await fetch('/api/conviteria/rsvp', {
         method: 'POST',
@@ -150,7 +193,7 @@ export default function ModalRSVP({
       setConfirmado(Number(d.totalPessoas ?? 1));
       setAtualizado(Boolean(d.atualizado));
       setAgendaUrl(typeof d.agendaUrl === 'string' ? d.agendaUrl : null);
-      setEmailStatus(['enviado','sem_google','falhou'].includes(d.emailStatus) ? d.emailStatus : null);
+      setEmailStatus(['enviado', 'sem_google', 'falhou'].includes(d.emailStatus) ? d.emailStatus : null);
       solicitacaoId.current = null;
     } catch (e: any) {
       setErro(e.message || 'Não foi possível confirmar sua presença.');
@@ -182,9 +225,7 @@ export default function ModalRSVP({
               {(restrito || porLink) ? (
                 <>
                   {porLink ? (
-                    <p className="cv-rsvp-intro">
-                      Seu convite foi localizado. Confira os nomes abaixo e marque quem estará presente.
-                    </p>
+                    <p className="cv-rsvp-intro">Confira os nomes abaixo e marque quem estará presente.</p>
                   ) : (
                     <>
                       <p className="cv-rsvp-intro">Este evento usa lista de convidados. Informe o e-mail ou telefone cadastrado para localizar sua família.</p>
@@ -195,7 +236,13 @@ export default function ModalRSVP({
                           maxLength={180}
                           placeholder="voce@email.com ou telefone"
                           value={contato}
-                          onChange={(e) => { setContato(e.target.value); setPessoas([]); }}
+                          onChange={(e) => {
+                            setContato(e.target.value);
+                            setPessoas([]);
+                            setExtras([]);
+                            setExtrasPermitidos(0);
+                            setGrupoTitulo('');
+                          }}
                         />
                       </label>
                       <button type="button" className="cv-botao cv-botao-icone" disabled={enviando || contato.trim().length < 5} onClick={buscarRestrito}>
@@ -206,7 +253,7 @@ export default function ModalRSVP({
 
                   {pessoas.length > 0 && (
                     <div className="cv-rsvp-familia">
-                      <div className="cv-rsvp-familia-topo"><div><strong>{grupoTitulo}</strong><small>Marque quem irá ao evento.</small></div></div>
+                      <div className="cv-rsvp-familia-topo"><div><strong>{grupoTitulo}</strong><small>Marque os membros do grupo que irão ao evento.</small></div></div>
                       <div className="cv-rsvp-pessoas">
                         {pessoas.map((p) => (
                           <label key={p.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 10 }}>
@@ -217,6 +264,24 @@ export default function ModalRSVP({
                             />
                             <span>{p.nome}{p.tipo === 'crianca' ? ' · criança' : ''}</span>
                           </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {pessoas.length > 0 && extrasPermitidos > 0 && (
+                    <div className="cv-rsvp-familia">
+                      <div className="cv-rsvp-familia-topo">
+                        <div><strong>Acompanhantes extras</strong><small>Você pode informar até {extrasPermitidos} {extrasPermitidos === 1 ? 'pessoa adicional' : 'pessoas adicionais'}.</small></div>
+                        <button type="button" onClick={adicionarExtra} disabled={extras.length >= extrasPermitidos}><Plus className="w-4 h-4" />Adicionar</button>
+                      </div>
+                      {extras.length === 0 && <p className="cv-rsvp-sozinho">Este campo é opcional. Os membros já cadastrados ficam separados dos acompanhantes extras.</p>}
+                      <div className="cv-rsvp-pessoas">
+                        {extras.map((extra, i) => (
+                          <div className="cv-rsvp-pessoa" key={i}>
+                            <input type="text" maxLength={120} placeholder={`Acompanhante extra ${i + 1}`} value={extra} onChange={(e) => alterarExtra(i, e.target.value)} />
+                            <button type="button" onClick={() => removerExtra(i)} aria-label="Remover acompanhante extra"><Trash2 className="w-4 h-4" /></button>
+                          </div>
                         ))}
                       </div>
                     </div>

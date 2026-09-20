@@ -77,6 +77,24 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // WhatsApp do Evento usa o mesmo gerador/confirmador PIX já existente do
+  // ConviteIA, mas continua sendo um adicional separado. O `referenciaId` é o
+  // ID do evento; o txid impede que um PIX antigo ative uma compra nova.
+  const { data: whatsapp } = await admin.from('evento_whatsapp_config')
+    .select('evento_id,status,pix_txid')
+    .eq('evento_id', corpo.referenciaId)
+    .eq('status', 'aguardando_pagamento')
+    .maybeSingle();
+
+  if (whatsapp && (!whatsapp.pix_txid || !corpo.txid || whatsapp.pix_txid === corpo.txid)) {
+    await admin.from('evento_whatsapp_config').update({
+      status: 'ativo',
+      comprado_em: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('evento_id', corpo.referenciaId).eq('status', 'aguardando_pagamento');
+    return NextResponse.json({ ok: true, whatsappAtivado: true, eventoId: corpo.referenciaId });
+  }
+
   const { data: checkout } = await admin.from('presente_checkouts')
     .select('id').eq('id', corpo.referenciaId).maybeSingle();
 

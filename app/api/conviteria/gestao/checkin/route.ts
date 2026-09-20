@@ -3,12 +3,14 @@ import { exigirEventoDoUsuario, extrairTokenQr, texto } from '@/lib/conviteria/g
 
 export const runtime = 'nodejs';
 
+const ERRO_FAMILIA_SEM_MEMBROS = 'Esta família foi localizada, mas ainda não possui convidados cadastrados. Cadastre os membros antes de usar o QR familiar.';
+
 export async function GET(req: NextRequest) {
   const eventoId = new URL(req.url).searchParams.get('eventoId')?.trim();
   if (!eventoId) return NextResponse.json({ erro: 'Convite não informado.' }, { status: 400 });
   const r = await exigirEventoDoUsuario(req, eventoId); if ('erro' in r) return NextResponse.json({ erro: r.erro }, { status: r.status });
   const [{ data: convidados }, { data: checkins }, { data: familias }] = await Promise.all([
-    r.admin.from('convidados_lista').select('id,nome,tipo,status,familia_id,qr_token').eq('evento_id', eventoId).order('nome'),
+    r.admin.from('convidados_lista').select('id,nome,tipo,status,familia_id,qr_token,rsvp_extra').eq('evento_id', eventoId).order('nome'),
     r.admin.from('checkins').select('id,convidado_lista_id,familia_id,origem,checked_in_at').eq('evento_id', eventoId).order('checked_in_at', { ascending: false }),
     r.admin.from('convidado_familias').select('id,nome,qr_token').eq('evento_id', eventoId),
   ]);
@@ -26,10 +28,14 @@ export async function POST(req: NextRequest) {
     const token = extrairTokenQr(String(b?.codigo ?? '')); if (!token) return NextResponse.json({ erro: 'QR Code inválido.' }, { status: 400 });
     const { data: fam } = await r.admin.from('convidado_familias').select('id,nome').eq('evento_id', eventoId).eq('qr_token', token).maybeSingle();
     if (fam) {
-      const { data: pessoas } = await r.admin.from('convidados_lista').select('id,nome,tipo,status').eq('evento_id', eventoId).eq('familia_id', fam.id).order('created_at');
+      const { data: pessoas } = await r.admin.from('convidados_lista').select('id,nome,tipo,status,rsvp_extra').eq('evento_id', eventoId).eq('familia_id', fam.id).order('created_at');
+      const membrosFixos = (pessoas ?? []).filter((p: any) => !p.rsvp_extra);
+      if (!membrosFixos.length) {
+        return NextResponse.json({ erro: ERRO_FAMILIA_SEM_MEMBROS, codigo: 'FAMILIA_SEM_MEMBROS' }, { status: 409 });
+      }
       return NextResponse.json({ ok: true, alvo: { tipo: 'familia', token, id: fam.id, nome: fam.nome, pessoas: pessoas ?? [] } });
     }
-    const { data: pessoa } = await r.admin.from('convidados_lista').select('id,nome,tipo,status,familia_id').eq('evento_id', eventoId).eq('qr_token', token).maybeSingle();
+    const { data: pessoa } = await r.admin.from('convidados_lista').select('id,nome,tipo,status,familia_id,rsvp_extra').eq('evento_id', eventoId).eq('qr_token', token).maybeSingle();
     if (!pessoa) return NextResponse.json({ erro: 'QR Code não pertence a este evento.' }, { status: 404 });
     return NextResponse.json({ ok: true, alvo: { tipo: 'individual', token, id: pessoa.id, nome: pessoa.nome, pessoas: [pessoa] } });
   }
@@ -41,7 +47,11 @@ export async function POST(req: NextRequest) {
     const { data: fam } = await r.admin.from('convidado_familias').select('id').eq('evento_id', eventoId).eq('qr_token', token).maybeSingle();
     if (fam) {
       familiaId = fam.id as string; origem = 'familia';
-      const { data: pessoas } = await r.admin.from('convidados_lista').select('id').eq('evento_id', eventoId).eq('familia_id', familiaId); permitidos = (pessoas ?? []).map((p: any) => p.id);
+      const { data: pessoas } = await r.admin.from('convidados_lista').select('id,rsvp_extra').eq('evento_id', eventoId).eq('familia_id', familiaId);
+      if (!(pessoas ?? []).some((p: any) => !p.rsvp_extra)) {
+        return NextResponse.json({ erro: ERRO_FAMILIA_SEM_MEMBROS, codigo: 'FAMILIA_SEM_MEMBROS' }, { status: 409 });
+      }
+      permitidos = (pessoas ?? []).map((p: any) => p.id);
     } else {
       const { data: p } = await r.admin.from('convidados_lista').select('id,familia_id').eq('evento_id', eventoId).eq('qr_token', token).maybeSingle();
       if (!p) return NextResponse.json({ erro: 'QR Code inválido.' }, { status: 404 }); permitidos = [p.id as string]; familiaId = p.familia_id as string | null;

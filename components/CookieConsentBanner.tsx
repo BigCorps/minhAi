@@ -45,40 +45,36 @@ export default function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
   const { marca } = useMarca();
 
-useEffect(() => {
-  const hostname = window.location.hostname.toLowerCase();
+  useEffect(() => {
+    const hostname = window.location.hostname.toLowerCase();
+    const pathname = window.location.pathname;
 
-  // Convites públicos: qualquer subdomínio de conviteia.com,
-  // exceto www.conviteia.com.
-  const convitePublico =
-    hostname.endsWith('.conviteia.com') &&
-    hostname !== 'www.conviteia.com';
+    // Convites públicos: qualquer subdomínio de conviteia.com (exceto www)
+    // e também os links individuais /c/TOKEN e /r/TOKEN usados pelo WhatsApp.
+    const convitePublico =
+      (hostname.endsWith('.conviteia.com') && hostname !== 'www.conviteia.com') ||
+      ((hostname === 'conviteia.com' || hostname === 'www.conviteia.com') && /^\/(?:c|r)\//.test(pathname));
 
-  if (convitePublico) {
-    // Nunca mostra o banner dentro do convite público.
-    // Se já houve consentimento nesta origem, respeita.
-    // Caso contrário, mantém analytics não essenciais negados.
-    const stored = localStorage.getItem(
-      ANALYTICS_CONSENT_STORAGE_KEY
-    );
+    if (convitePublico) {
+      // Nunca mostra o banner dentro do convite público ou confirmação direta.
+      // Se já houve consentimento nesta origem, respeita; caso contrário,
+      // mantém analytics não essenciais negados.
+      const stored = localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY);
+      applyConsent(stored === 'granted');
+      setVisible(false);
+      return;
+    }
 
-    applyConsent(stored === 'granted');
-    setVisible(false);
-    return;
-  }
+    const stored = localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY);
 
-  const stored = localStorage.getItem(
-    ANALYTICS_CONSENT_STORAGE_KEY
-  );
-
-  if (stored === 'granted') {
-    applyConsent(true);
-  } else if (stored === 'denied') {
-    applyConsent(false);
-  } else {
-    setVisible(true);
-  }
-}, []);
+    if (stored === 'granted') {
+      applyConsent(true);
+    } else if (stored === 'denied') {
+      applyConsent(false);
+    } else {
+      setVisible(true);
+    }
+  }, []);
 
   const handleChoice = (granted: boolean) => {
     localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, granted ? 'granted' : 'denied');

@@ -5,9 +5,50 @@ export function tokenBearer(req: NextRequest) {
   return req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim() || null;
 }
 
+/**
+ * Normalização usada para comparação e novos cadastros.
+ *
+ * Brasil: armazenamos somente DDD + número (10 ou 11 dígitos). Assim
+ * 51 99207-8290, (51) 99207-8290, +55 51 99207-8290 e 5551992078290
+ * resultam na mesma chave: 51992078290.
+ *
+ * Outros países: quando há um + explícito diferente de +55, preservamos o
+ * código internacional em dígitos. Não tentamos adivinhar país/DDD.
+ */
 export function normalizarTelefone(valor?: string | null) {
-  const d = String(valor ?? '').replace(/\D/g, '');
-  return d.length >= 8 ? d.slice(-13) : null;
+  const bruto = String(valor ?? '').trim();
+  const digitos = bruto.replace(/\D/g, '');
+  if (digitos.length < 8) return null;
+
+  if (digitos.startsWith('55') && (digitos.length === 12 || digitos.length === 13)) {
+    return digitos.slice(2);
+  }
+
+  if (digitos.length === 10 || digitos.length === 11) return digitos;
+
+  return digitos.slice(0, 15);
+}
+
+/**
+ * Variantes somente para LEITURA/compatibilidade. Não migra nem regrava dados
+ * antigos. Permite localizar registros brasileiros que tenham sido salvos
+ * antes com o 55 e registros novos sem o 55.
+ */
+export function variantesTelefoneBusca(valor?: string | null) {
+  const bruto = String(valor ?? '').trim();
+  const digitos = bruto.replace(/\D/g, '');
+  const normalizado = normalizarTelefone(bruto);
+  if (!normalizado) return [] as string[];
+
+  const variantes = new Set<string>([normalizado]);
+  const internacionalExplicitoNaoBr = bruto.startsWith('+') && !digitos.startsWith('55');
+
+  if (!internacionalExplicitoNaoBr && (normalizado.length === 10 || normalizado.length === 11)) {
+    variantes.add(`55${normalizado}`);
+  }
+
+  if (digitos.length >= 8 && digitos.length <= 15) variantes.add(digitos);
+  return [...variantes];
 }
 
 export function normalizarEmail(valor?: string | null) {

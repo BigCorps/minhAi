@@ -114,7 +114,8 @@ export default function ModalRSVP({
     const grupo = d.grupo ?? {};
     setGrupoTitulo(grupo.titulo ?? 'Convidados');
     setPessoas(grupo.pessoas ?? []);
-    setContato(grupo.contatoPrincipal ?? contato);
+    setContato(grupo.telefonePrincipal ?? contato);
+    setEmail(typeof grupo.emailPrincipal === 'string' ? grupo.emailPrincipal : '');
     setExtrasPermitidos(Math.max(0, Number(grupo.extrasPermitidos ?? 0)));
     setExtras((grupo.extrasAtuais ?? []).map((x: any) => ({
       nome: String(x?.nome ?? ''),
@@ -179,6 +180,7 @@ export default function ModalRSVP({
     if (modoLista) {
       if (!pessoas.length) return setErro('Não foi possível localizar os nomes deste convite.');
       if (!selecionados.length) return setErro('Selecione ao menos uma pessoa convidada que irá ao evento.');
+      if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setErro('Informe um e-mail válido ou deixe o campo vazio.');
       const criancaFixaSemIdade = pessoas.find((p) => p.tipo === 'crianca' && selecionados.includes(p.id) && (!Number.isInteger(idadesCriancas[p.id]) || Number(idadesCriancas[p.id]) < 1 || Number(idadesCriancas[p.id]) > 12));
       if (criancaFixaSemIdade) return setErro(`Informe a idade de ${criancaFixaSemIdade.nome} (de 1 a 12 anos).`);
       const extrasPreenchidos = extras.map((x) => ({ ...x, nome: x.nome.trim() })).filter((x) => x.nome);
@@ -189,8 +191,7 @@ export default function ModalRSVP({
       if (nome.trim().length < 2) return setErro('Informe seu nome.');
       if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setErro('Informe um e-mail válido ou deixe o campo vazio.');
       const digitos = telefone.replace(/\D/g, '');
-      if (telefone.trim() && digitos.length < 8) return setErro('Informe um telefone/WhatsApp válido ou deixe o campo vazio.');
-      if (!email.trim() && !telefone.trim()) return setErro('Informe seu e-mail ou telefone/WhatsApp.');
+      if (digitos.length < 8) return setErro('Informe seu telefone/WhatsApp para identificar a confirmação.');
       const familiares = familia.map((x) => ({ ...x, nome: x.nome.trim() })).filter((x) => x.nome);
       const criancaSemIdade = familiares.find((x) => !idadeValida(x));
       if (criancaSemIdade) return setErro(`Informe a idade de ${criancaSemIdade.nome} (de 1 a 12 anos).`);
@@ -207,6 +208,7 @@ export default function ModalRSVP({
             acao: 'confirmar_token',
             tokenConvite: tokenInicial,
             convidadoIds: selecionados,
+            email: email.trim(),
             idadesCriancas,
             acompanhantesExtras: extras.map((x) => ({ ...x, nome: x.nome.trim() })).filter((x) => x.nome),
             solicitacaoId: id,
@@ -217,6 +219,7 @@ export default function ModalRSVP({
               acao: 'confirmar_restrito',
               contato,
               convidadoIds: selecionados,
+              email: email.trim(),
               idadesCriancas,
               acompanhantesExtras: extras.map((x) => ({ ...x, nome: x.nome.trim() })).filter((x) => x.nome),
               solicitacaoId: id,
@@ -286,16 +289,18 @@ export default function ModalRSVP({
                     <p className="cv-rsvp-intro">Confira os nomes abaixo e marque quem estará presente.</p>
                   ) : (
                     <>
-                      <p className="cv-rsvp-intro">Este evento usa lista de convidados. Informe o e-mail ou telefone cadastrado para localizar sua família.</p>
+                      <p className="cv-rsvp-intro">Este evento usa lista de convidados. Informe o telefone/WhatsApp cadastrado para localizar sua família.</p>
                       <label>
-                        E-mail ou telefone
+                        Telefone / WhatsApp
                         <input
-                          type="text"
-                          maxLength={180}
-                          placeholder="voce@email.com ou telefone"
+                          type="tel"
+                          maxLength={40}
+                          autoComplete="tel"
+                          placeholder="(11) 99999-9999"
                           value={contato}
                           onChange={(e) => {
                             setContato(e.target.value);
+                            setEmail('');
                             setPessoas([]);
                             setExtras([]);
                             setExtrasPermitidos(0);
@@ -308,6 +313,14 @@ export default function ModalRSVP({
                         {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}Localizar convite
                       </button>
                     </>
+                  )}
+
+                  {pessoas.length > 0 && (
+                    <label>
+                      Seu e-mail <small>(opcional)</small>
+                      <input type="email" maxLength={180} autoComplete="email" placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                      <small style={{ display: 'block', marginTop: 6, opacity: .78 }}>Se informar o e-mail, você também poderá receber lembretes e atualizações deste evento por e-mail.</small>
+                    </label>
                   )}
 
                   {pessoas.length > 0 && (
@@ -357,10 +370,10 @@ export default function ModalRSVP({
                 </>
               ) : (
                 <>
-                  <p className="cv-rsvp-intro">Informe quem irá ao evento. Use seu e-mail ou telefone/WhatsApp para que a confirmação possa ser localizada e atualizada depois.</p>
+                  <p className="cv-rsvp-intro">Informe quem irá ao evento. O telefone/WhatsApp identifica sua confirmação para que ela possa ser atualizada depois.</p>
                   <label>Seu nome<input type="text" maxLength={120} autoComplete="name" placeholder="Ex.: Ana Silva" value={nome} onChange={(e) => setNome(e.target.value)} /></label>
-                  <label>Seu e-mail <small>(opcional se informar WhatsApp)</small><input type="email" maxLength={180} autoComplete="email" placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-                  <label>Seu telefone / WhatsApp <small>(opcional se informar e-mail)</small><input type="tel" maxLength={40} autoComplete="tel" placeholder="(11) 99999-9999" value={telefone} onChange={(e) => setTelefone(e.target.value)} /></label>
+                  <label>Seu telefone / WhatsApp<input type="tel" maxLength={40} autoComplete="tel" placeholder="(11) 99999-9999" value={telefone} onChange={(e) => setTelefone(e.target.value)} /></label>
+                  <label>Seu e-mail <small>(opcional)</small><input type="email" maxLength={180} autoComplete="email" placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} /><small style={{ display: 'block', marginTop: 6, opacity: .78 }}>Se informar o e-mail, você também poderá receber lembretes e atualizações deste evento por e-mail.</small></label>
                   <div className="cv-rsvp-familia">
                     <div className="cv-rsvp-familia-topo">
                       <div><strong>Pessoas da sua família que também irão</strong><small>Não repita seu próprio nome.</small></div>

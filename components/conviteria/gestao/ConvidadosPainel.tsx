@@ -324,9 +324,6 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
       .filter((m) => m.nome);
     if (!familia.nome.trim()) return setErro('Informe o nome da família ou grupo.');
     if (!membros.length) return setErro('Cadastre pelo menos uma pessoa neste grupo. O nome da família não cria membros automaticamente.');
-    const criancaSemIdade = membros.find((m) => m.tipo === 'crianca' && (!Number.isInteger(m.idade) || Number(m.idade) < 1 || Number(m.idade) > 12));
-    if (criancaSemIdade) return setErro(`Informe a idade de ${criancaSemIdade.nome} (de 1 a 12 anos).`);
-
     setSalvando(true); setErro(''); setAviso('');
     try {
       await acao({ acao: 'salvar_familia', ...familia, membros });
@@ -340,9 +337,6 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
 
   async function salvarPessoa() {
     if (!pessoa.nome.trim()) return;
-    if (pessoa.tipo === 'crianca' && (!Number.isInteger(pessoa.idade) || Number(pessoa.idade) < 1 || Number(pessoa.idade) > 12)) {
-      return setErro('Informe a idade da criança (de 1 a 12 anos).');
-    }
     setSalvando(true); setErro('');
     try { await acao({ acao: 'salvar_convidado', ...pessoa }); setPessoa(vazioPessoa); setModalCadastro(null); await carregar(); }
     catch (e: any) { setErro(e.message); }
@@ -379,11 +373,6 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
   async function salvarConfirmacaoManual() {
     if (!confirmacaoManual?.selecionados.length) {
       setErro('Selecione ao menos uma pessoa que irá ao evento.');
-      return;
-    }
-    const criancaSemIdade = confirmacaoManual.pessoas.find((p) => p.tipo === 'crianca' && confirmacaoManual.selecionados.includes(p.id) && (!Number.isInteger(confirmacaoManual.idadesCriancas[p.id]) || Number(confirmacaoManual.idadesCriancas[p.id]) < 1 || Number(confirmacaoManual.idadesCriancas[p.id]) > 12));
-    if (criancaSemIdade) {
-      setErro(`Informe a idade de ${criancaSemIdade.nome} (de 1 a 12 anos).`);
       return;
     }
     setSalvandoConfirmacaoManual(true);
@@ -513,6 +502,41 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
     }
     const selecionados = tipo === 'individual' ? [alvoId] : [];
     setRevisaoReconciliacao((atual) => atual ? { ...atual, tipo, alvoId, selecionados } : atual);
+  }
+
+  function proximaRevisao() {
+    if (!revisaoReconciliacao) return;
+    const indice = itensRevisao.findIndex((item) => item.id === revisaoReconciliacao.item.id);
+    const proximo = indice >= 0 ? itensRevisao[indice + 1] : null;
+    setErro('');
+    if (proximo) abrirRevisao(proximo);
+    else {
+      setRevisaoReconciliacao(null);
+      setAviso('Você chegou ao fim das confirmações desta revisão. As respostas não vinculadas continuam pendentes para revisar depois.');
+    }
+  }
+
+  async function ignorarReconciliacao() {
+    if (!revisaoReconciliacao) return;
+    if (!window.confirm('Ignorar esta resposta antiga? Use esta opção apenas quando ela for duplicada ou não deva ser vinculada à lista atual. Ela continuará no histórico, mas deixará de bloquear o WhatsApp e a conciliação.')) return;
+    const idAtual = revisaoReconciliacao.item.id;
+    const indice = itensRevisao.findIndex((item) => item.id === idAtual);
+    const proximo = indice >= 0 ? itensRevisao[indice + 1] : null;
+    setSalvandoReconciliacao(true); setErro(''); setAviso('');
+    try {
+      const r = await fetch('/api/conviteria/gestao/convidados/reconciliacao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ eventoId, acao: 'ignorar', confirmacaoId: idAtual }),
+      });
+      const d = await r.json().catch(() => null);
+      if (!r.ok) throw new Error(d?.erro || 'Não foi possível ignorar esta resposta.');
+      setAviso('Resposta antiga ignorada na conciliação. Ela continua disponível no histórico.');
+      await carregarReconciliacao();
+      if (proximo) abrirRevisao(proximo);
+      else setRevisaoReconciliacao(null);
+    } catch (e: any) { setErro(e.message); }
+    finally { setSalvandoReconciliacao(false); }
   }
 
   async function salvarReconciliacao() {
@@ -758,14 +782,14 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
           <input placeholder="Ex.: Thais e Bruno" value={familia.nome} onChange={(e) => setFamilia({ ...familia, nome: e.target.value })} className="rounded-xl border px-3 py-2" />
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><input placeholder="Telefone principal" value={familia.telefone} onChange={(e) => setFamilia({ ...familia, telefone: e.target.value })} className="rounded-xl border px-3 py-2" /><input placeholder="E-mail principal" value={familia.email} onChange={(e) => setFamilia({ ...familia, email: e.target.value })} className="rounded-xl border px-3 py-2" /></div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><select value={familia.lado} onChange={(e) => setFamilia({ ...familia, lado: e.target.value })} className="rounded-xl border px-3 py-2"><option value="ambos">Ambos</option><option value="noiva">Lado da noiva</option><option value="noivo">Lado do noivo</option><option value="outro">Outro</option></select><label className="grid gap-1 text-xs text-[#7c5560]">Acompanhantes extras permitidos<input type="number" min={0} max={50} value={familia.extrasPermitidos} onChange={(e) => setFamilia({ ...familia, extrasPermitidos: Math.max(0, Math.min(50, Number(e.target.value) || 0)) })} className="rounded-xl border px-3 py-2 text-sm text-[#40232c]" /></label></div>
-          <div className="mt-1 rounded-xl border border-[#c0607822] bg-[#fff9fb] p-3"><div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Membros do grupo</p><p className="text-xs text-[#7c5560]">São as pessoas que aparecerão no RSVP. Para crianças, informe a idade de 1 a 12 anos.</p></div><button type="button" onClick={adicionarMembro} className="inline-flex items-center gap-1 rounded-lg bg-white px-2 py-1.5 text-xs font-semibold text-[#a04a63]"><UserPlus className="h-3.5 w-3.5" />Adicionar</button></div><div className="mt-3 space-y-2">{familia.membros.map((m, i) => <div key={m.id ?? `novo-${i}`} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_108px_108px_36px]"><input placeholder={`Nome da pessoa ${i + 1}`} value={m.nome} onChange={(e) => alterarMembro(i, { nome: e.target.value })} className="min-w-0 rounded-lg border bg-white px-2.5 py-2 text-sm" /><select value={m.tipo} onChange={(e) => alterarMembro(i, { tipo: e.target.value as 'adulto' | 'crianca', idade: e.target.value === 'crianca' ? (m.idade ?? 1) : null })} className="rounded-lg border bg-white px-2 py-2 text-xs"><option value="adulto">Adulto</option><option value="crianca">Criança</option></select>{m.tipo === 'crianca' ? <select value={m.idade ?? ''} onChange={(e) => alterarMembro(i, { idade: e.target.value ? Number(e.target.value) : null })} className="rounded-lg border bg-white px-2 py-2 text-xs"><option value="">Idade</option>{Array.from({ length: 12 }, (_, n) => n + 1).map((idade) => <option key={idade} value={idade}>{idade} {idade === 1 ? 'ano' : 'anos'}</option>)}</select> : <div className="hidden sm:block"/>}<button type="button" onClick={() => removerMembro(i)} title="Remover membro" className="grid place-items-center rounded-lg text-red-500"><Trash2 className="h-4 w-4" /></button></div>)}</div></div>
+          <div className="mt-1 rounded-xl border border-[#c0607822] bg-[#fff9fb] p-3"><div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Membros do grupo</p><p className="text-xs text-[#7c5560]">São as pessoas que aparecerão no RSVP. Para crianças, a idade é opcional aqui e será confirmada pelo convidado no RSVP.</p></div><button type="button" onClick={adicionarMembro} className="inline-flex items-center gap-1 rounded-lg bg-white px-2 py-1.5 text-xs font-semibold text-[#a04a63]"><UserPlus className="h-3.5 w-3.5" />Adicionar</button></div><div className="mt-3 space-y-2">{familia.membros.map((m, i) => <div key={m.id ?? `novo-${i}`} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_108px_108px_36px]"><input placeholder={`Nome da pessoa ${i + 1}`} value={m.nome} onChange={(e) => alterarMembro(i, { nome: e.target.value })} className="min-w-0 rounded-lg border bg-white px-2.5 py-2 text-sm" /><select value={m.tipo} onChange={(e) => alterarMembro(i, { tipo: e.target.value as 'adulto' | 'crianca', idade: e.target.value === 'crianca' ? (m.idade ?? null) : null })} className="rounded-lg border bg-white px-2 py-2 text-xs"><option value="adulto">Adulto</option><option value="crianca">Criança</option></select>{m.tipo === 'crianca' ? <select value={m.idade ?? ''} onChange={(e) => alterarMembro(i, { idade: e.target.value ? Number(e.target.value) : null })} className="rounded-lg border bg-white px-2 py-2 text-xs"><option value="">Idade</option>{Array.from({ length: 12 }, (_, n) => n + 1).map((idade) => <option key={idade} value={idade}>{idade} {idade === 1 ? 'ano' : 'anos'}</option>)}</select> : <div className="hidden sm:block"/>}<button type="button" onClick={() => removerMembro(i)} title="Remover membro" className="grid place-items-center rounded-lg text-red-500"><Trash2 className="h-4 w-4" /></button></div>)}</div></div>
           <textarea placeholder="Observações" value={familia.observacoes} onChange={(e) => setFamilia({ ...familia, observacoes: e.target.value })} className="rounded-xl border px-3 py-2" />
           <div className="mt-2 flex flex-wrap justify-between gap-2">{familia.id ? <button type="button" onClick={() => { const id = familia.id; setModalCadastro(null); void excluir('familia', id); }} className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-600"><Trash2 className="h-4 w-4" />Excluir grupo</button> : <span/>}<div className="flex gap-2"><button type="button" onClick={() => setModalCadastro(null)} className="rounded-xl border px-4 py-2.5 text-sm font-semibold text-[#7c5560]">Cancelar</button><button type="button" onClick={salvarFamilia} disabled={salvando} className="inline-flex items-center gap-2 rounded-xl bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{familia.id ? 'Salvar alterações' : 'Adicionar grupo'}</button></div></div>
         </div> : <div className="mt-4 grid gap-2">
           <input placeholder="Nome completo" value={pessoa.nome} onChange={(e) => setPessoa({ ...pessoa, nome: e.target.value })} className="rounded-xl border px-3 py-2" />
           <select value={pessoa.familiaId} onChange={(e) => setPessoa({ ...pessoa, familiaId: e.target.value })} className="rounded-xl border px-3 py-2"><option value="">Sem família/grupo</option>{familias.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><input placeholder="Telefone" value={pessoa.telefone} onChange={(e) => setPessoa({ ...pessoa, telefone: e.target.value })} className="rounded-xl border px-3 py-2" /><input placeholder="E-mail" value={pessoa.email} onChange={(e) => setPessoa({ ...pessoa, email: e.target.value })} className="rounded-xl border px-3 py-2" /></div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3"><select value={pessoa.tipo} onChange={(e) => setPessoa({ ...pessoa, tipo: e.target.value as 'adulto' | 'crianca', idade: e.target.value === 'crianca' ? (pessoa.idade ?? 1) : null })} className="rounded-xl border px-3 py-2"><option value="adulto">Adulto</option><option value="crianca">Criança</option></select>{pessoa.tipo === 'crianca' ? <select value={pessoa.idade ?? ''} onChange={(e) => setPessoa({ ...pessoa, idade: e.target.value ? Number(e.target.value) : null })} className="rounded-xl border px-3 py-2"><option value="">Idade</option>{Array.from({ length: 12 }, (_, n) => n + 1).map((idade) => <option key={idade} value={idade}>{idade} {idade === 1 ? 'ano' : 'anos'}</option>)}</select> : <div className="hidden sm:block"/>}<select value={pessoa.lado} onChange={(e) => setPessoa({ ...pessoa, lado: e.target.value })} className="rounded-xl border px-3 py-2"><option value="ambos">Ambos</option><option value="noiva">Lado da noiva</option><option value="noivo">Lado do noivo</option><option value="outro">Outro</option></select></div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3"><select value={pessoa.tipo} onChange={(e) => setPessoa({ ...pessoa, tipo: e.target.value as 'adulto' | 'crianca', idade: e.target.value === 'crianca' ? (pessoa.idade ?? null) : null })} className="rounded-xl border px-3 py-2"><option value="adulto">Adulto</option><option value="crianca">Criança</option></select>{pessoa.tipo === 'crianca' ? <select value={pessoa.idade ?? ''} onChange={(e) => setPessoa({ ...pessoa, idade: e.target.value ? Number(e.target.value) : null })} className="rounded-xl border px-3 py-2"><option value="">Idade</option>{Array.from({ length: 12 }, (_, n) => n + 1).map((idade) => <option key={idade} value={idade}>{idade} {idade === 1 ? 'ano' : 'anos'}</option>)}</select> : <div className="hidden sm:block"/>}<select value={pessoa.lado} onChange={(e) => setPessoa({ ...pessoa, lado: e.target.value })} className="rounded-xl border px-3 py-2"><option value="ambos">Ambos</option><option value="noiva">Lado da noiva</option><option value="noivo">Lado do noivo</option><option value="outro">Outro</option></select></div>
           <textarea placeholder="Observações" value={pessoa.observacoes} onChange={(e) => setPessoa({ ...pessoa, observacoes: e.target.value })} className="rounded-xl border px-3 py-2" />
           <div className="mt-2 flex justify-end gap-2"><button type="button" onClick={() => setModalCadastro(null)} className="rounded-xl border px-4 py-2.5 text-sm font-semibold text-[#7c5560]">Cancelar</button><button type="button" onClick={salvarPessoa} disabled={salvando} className="inline-flex items-center gap-2 rounded-xl bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{pessoa.id ? 'Salvar alterações' : 'Adicionar convidado'}</button></div>
         </div>}
@@ -787,7 +811,7 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
         <div className="mt-4 rounded-xl bg-[#fff9fb] p-4"><p className="font-semibold text-[#40232c]">{revisaoReconciliacao.item.nome}</p>{revisaoReconciliacao.item.email && <p className="mt-1 text-xs text-[#7c5560]">{revisaoReconciliacao.item.email}</p>}<p className="mt-2 text-xs text-[#7c5560]">Resposta antiga: {revisaoReconciliacao.item.comparecera === false ? 'não comparecerá' : 'presença confirmada'}{revisaoReconciliacao.item.acompanhantes.length ? ` · ${revisaoReconciliacao.item.acompanhantes.join(', ')}` : ''}</p>{revisaoReconciliacao.item.sugestao && <p className="mt-2 rounded-lg bg-white px-3 py-2 text-xs text-[#7c5560]">Sugestão: <strong>{revisaoReconciliacao.item.sugestao.alvoNome}</strong> · {revisaoReconciliacao.item.sugestao.motivo}</p>}</div>
         <label className="mt-4 block text-sm font-medium text-[#40232c]">Correspondente na lista<select value={revisaoReconciliacao.tipo && revisaoReconciliacao.alvoId ? `${revisaoReconciliacao.tipo}:${revisaoReconciliacao.alvoId}` : ''} onChange={(e) => trocarAlvoRevisao(e.target.value)} className="mt-1 block w-full rounded-xl border px-3 py-2.5"><option value="">Escolha…</option><optgroup label="Famílias / grupos">{familias.map((f) => <option key={`f-${f.id}`} value={`familia:${f.id}`}>{f.nome}</option>)}</optgroup><optgroup label="Convidados individuais">{pessoas.filter((p) => !p.familia_id).map((p) => <option key={`p-${p.id}`} value={`individual:${p.id}`}>{p.nome}</option>)}</optgroup></select></label>
         {revisaoReconciliacao.tipo === 'familia' && <div className="mt-4"><p className="text-sm font-semibold text-[#40232c]">Quem desta família confirmou?</p><div className="mt-2 space-y-2">{membrosAlvoRevisao.map((p) => <label key={p.id} className="flex cursor-pointer items-center gap-3 rounded-xl border p-3"><input type="checkbox" checked={revisaoReconciliacao.selecionados.includes(p.id)} disabled={revisaoReconciliacao.item.comparecera === false} onChange={(e) => setRevisaoReconciliacao((atual) => atual ? { ...atual, selecionados: e.target.checked ? [...new Set([...atual.selecionados, p.id])] : atual.selecionados.filter((id) => id !== p.id) } : atual)} className="h-4 w-4 accent-[#c06078]" /><span><strong className="block text-sm">{p.nome}</strong><small className="text-[#7c5560]">{p.tipo === 'crianca' ? `Criança · ${p.idade ? `${p.idade} ${p.idade === 1 ? 'ano' : 'anos'}` : 'idade não informada'}` : 'Adulto'}</small></span></label>)}</div></div>}
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-[#7c5560]">{itensRevisao.length} confirmação(ões) ainda aguardam revisão.</span><div className="flex gap-2"><button type="button" onClick={() => setRevisaoReconciliacao(null)} className="rounded-xl border px-4 py-2.5 text-sm font-semibold text-[#7c5560]">Fechar</button><button type="button" onClick={() => void salvarReconciliacao()} disabled={salvandoReconciliacao || !revisaoReconciliacao.tipo || !revisaoReconciliacao.alvoId || (revisaoReconciliacao.item.comparecera !== false && revisaoReconciliacao.tipo === 'familia' && revisaoReconciliacao.selecionados.length === 0)} className="inline-flex items-center gap-2 rounded-xl bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{salvandoReconciliacao ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}Vincular confirmação</button></div></div>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3"><span className="text-xs text-[#7c5560]">{itensRevisao.length} confirmação(ões) ainda aguardam revisão.</span><div className="flex flex-wrap justify-end gap-2"><button type="button" disabled={salvandoReconciliacao} onClick={proximaRevisao} className="rounded-xl border px-4 py-2.5 text-sm font-semibold text-[#7c5560]">Próxima</button><button type="button" disabled={salvandoReconciliacao} onClick={() => void ignorarReconciliacao()} className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-900">Ignorar esta resposta</button><button type="button" onClick={() => setRevisaoReconciliacao(null)} className="rounded-xl border px-4 py-2.5 text-sm font-semibold text-[#7c5560]">Fechar</button><button type="button" onClick={() => void salvarReconciliacao()} disabled={salvandoReconciliacao || !revisaoReconciliacao.tipo || !revisaoReconciliacao.alvoId || (revisaoReconciliacao.item.comparecera !== false && revisaoReconciliacao.tipo === 'familia' && revisaoReconciliacao.selecionados.length === 0)} className="inline-flex items-center gap-2 rounded-xl bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{salvandoReconciliacao ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}Vincular confirmação</button></div></div>
       </div>
     </div>}
 

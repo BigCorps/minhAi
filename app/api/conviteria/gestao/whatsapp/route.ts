@@ -41,7 +41,8 @@ async function confirmacoesNaoConciliadas(admin: any, eventoId: string) {
     .eq('evento_id', eventoId)
     .is('teste_id', null)
     .is('familia_lista_id', null)
-    .is('convidado_lista_id', null);
+    .is('convidado_lista_id', null)
+    .is('conciliacao_ignorada_em', null);
   return Number(count ?? 0);
 }
 

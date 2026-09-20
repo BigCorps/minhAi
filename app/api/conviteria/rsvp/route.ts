@@ -80,7 +80,8 @@ async function grupoDaFamilia(admin: any, eventoId: string, familia: any, contat
     pessoas,
     extrasAtuais: extrasAtuais.map((p: any) => ({ id: p.id, nome: p.nome, tipo: p.tipo, idade: p.idade ?? null })),
     extrasPermitidos: Math.max(0, Number(familia.extras_permitidos ?? 0)),
-    contatoPrincipal: familia.email || familia.telefone || contatoFallback,
+    telefonePrincipal: familia.telefone || contatoFallback || '',
+    emailPrincipal: familia.email || '',
     lado: familia.lado || 'ambos',
     semMembros: pessoas.length === 0,
   };
@@ -114,30 +115,13 @@ async function primeiraPessoaPorTelefone(admin: any, eventoId: string, contato: 
 
 async function buscarGrupo(eventoId: string, contato: string) {
   const admin = adminConviteria();
-  const email = normalizarEmail(contato);
   const variantes = variantesTelefoneBusca(contato);
-  if (!email && !variantes.length) return null;
+  if (!variantes.length) return null;
 
-  let familia: any = null;
-  if (email) {
-    const { data } = await admin.from('convidado_familias')
-      .select('id,nome,email,telefone,extras_permitidos,lado')
-      .eq('evento_id', eventoId).eq('email_normalizado', email)
-      .order('created_at').limit(1).maybeSingle();
-    familia = data;
-  }
-  if (!familia && variantes.length) familia = await primeiraFamiliaPorTelefone(admin, eventoId, contato);
+  const familia = await primeiraFamiliaPorTelefone(admin, eventoId, contato);
   if (familia) return grupoDaFamilia(admin, eventoId, familia, contato);
 
-  let pessoa: any = null;
-  if (email) {
-    const { data } = await admin.from('convidados_lista')
-      .select('id,nome,tipo,idade,status,familia_id,email,telefone,rsvp_extra')
-      .eq('evento_id', eventoId).eq('email_normalizado', email)
-      .order('created_at').limit(1).maybeSingle();
-    pessoa = data;
-  }
-  if (!pessoa && variantes.length) pessoa = await primeiraPessoaPorTelefone(admin, eventoId, contato);
+  const pessoa = await primeiraPessoaPorTelefone(admin, eventoId, contato);
   if (!pessoa) return null;
 
   if (pessoa.familia_id) {
@@ -145,7 +129,7 @@ async function buscarGrupo(eventoId: string, contato: string) {
       .select('id,nome,email,telefone,extras_permitidos,lado')
       .eq('evento_id', eventoId).eq('id', pessoa.familia_id).maybeSingle();
     if (!fam) return null;
-    return grupoDaFamilia(admin, eventoId, fam, pessoa.email || pessoa.telefone || contato);
+    return grupoDaFamilia(admin, eventoId, fam, pessoa.telefone || contato);
   }
 
   return {
@@ -154,7 +138,8 @@ async function buscarGrupo(eventoId: string, contato: string) {
     pessoas: [pessoa],
     extrasAtuais: [],
     extrasPermitidos: 0,
-    contatoPrincipal: pessoa.email || pessoa.telefone || contato,
+    telefonePrincipal: pessoa.telefone || contato,
+    emailPrincipal: pessoa.email || '',
     lado: pessoa.lado || 'ambos',
     semMembros: false,
   };
@@ -192,14 +177,15 @@ async function buscarGrupoPorToken(eventoId: string, token: string) {
     pessoas: [pessoa],
     extrasAtuais: [],
     extrasPermitidos: 0,
-    contatoPrincipal: pessoa.email || pessoa.telefone || '',
+    telefonePrincipal: pessoa.telefone || '',
+    emailPrincipal: pessoa.email || '',
     lado: pessoa.lado || 'ambos',
     semMembros: false,
   };
 }
 
 function respostaGrupo(grupo: any) {
-  if (!grupo) return NextResponse.json({ erro: 'Não encontramos este contato na lista de convidados.' }, { status: 404 });
+  if (!grupo) return NextResponse.json({ erro: 'Não encontramos este telefone/WhatsApp na lista de convidados.' }, { status: 404 });
   if (grupo.semMembros) {
     return NextResponse.json({ erro: ERRO_FAMILIA_SEM_MEMBROS, codigo: 'FAMILIA_SEM_MEMBROS' }, { status: 409 });
   }
@@ -351,9 +337,16 @@ export async function POST(req: NextRequest) {
       }
     }
     const principal = pessoasFixas[0];
-    const contatoRaw = porToken ? String(grupo.contatoPrincipal ?? '') : String(corpo?.contato ?? '');
-    const emailBusca = normalizarEmail(contatoRaw);
+    const contatoRaw = porToken ? String(grupo.telefonePrincipal ?? '') : String(corpo?.contato ?? '');
     const telefoneBusca = normalizarTelefone(contatoRaw);
+    if (!porToken && !telefoneBusca) {
+      return NextResponse.json({ erro: 'Informe o telefone/WhatsApp cadastrado na lista.' }, { status: 400 });
+    }
+    const emailInformado = String(corpo?.email ?? grupo.emailPrincipal ?? '').trim().toLowerCase().slice(0, 180);
+    if (emailInformado && !EMAIL_RE.test(emailInformado)) {
+      return NextResponse.json({ erro: 'Informe um e-mail válido ou deixe o campo vazio.' }, { status: 400 });
+    }
+    const emailBusca = normalizarEmail(emailInformado);
     let existente: any = null;
 
     if (grupo.familiaId) {
@@ -389,7 +382,7 @@ export async function POST(req: NextRequest) {
       email_normalizado: emailBusca,
       telefone: telefoneBusca ? contatoRaw.trim().slice(0, 40) : null,
       telefone_normalizado: telefoneBusca,
-      contato: contatoRaw.trim().slice(0, 180) || null,
+      contato: (telefoneBusca ? contatoRaw.trim().slice(0, 40) : null) || emailBusca || null,
       comparecera: true,
       adultos: pessoasFixas.filter((p: any) => p.tipo !== 'crianca').length + extras.filter((p) => p.tipo !== 'crianca').length,
       criancas: pessoasFixas.filter((p: any) => p.tipo === 'crianca').length + extras.filter((p) => p.tipo === 'crianca').length,
@@ -407,9 +400,7 @@ export async function POST(req: NextRequest) {
       : await admin.from('convidados').insert(dados).select('id').single();
 
     if (resp.error?.code === '23505' && emailBusca) {
-      resp = await admin.from('convidados').update(dados)
-        .eq('evento_id', eventoId).eq('email_normalizado', emailBusca)
-        .select('id').single();
+      return NextResponse.json({ erro: 'Este e-mail já está associado a outra confirmação deste evento. Use outro e-mail ou deixe o campo vazio.' }, { status: 409 });
     }
     if (resp.error || !resp.data) return NextResponse.json({ erro: 'Não foi possível confirmar sua presença.' }, { status: 500 });
 
@@ -437,7 +428,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, atualizado: !!existente, totalPessoas: pessoasFixas.length + extras.length, agendaUrl, emailStatus: google.emailStatus, modoTeste: emTeste });
   }
 
-  if (identificado) return NextResponse.json({ erro: 'Use seu e-mail ou telefone para localizar os nomes da lista antes de confirmar.' }, { status: 400 });
+  if (identificado) return NextResponse.json({ erro: 'Use o telefone/WhatsApp cadastrado para localizar os nomes da lista antes de confirmar.' }, { status: 400 });
 
   const nome = String(corpo?.nome ?? '').trim().replace(/\s+/g, ' ').slice(0, 120);
   const email = String(corpo?.email ?? '').trim().toLowerCase().slice(0, 180);
@@ -449,16 +440,15 @@ export async function POST(req: NextRequest) {
   const acompanhantes = acompanhantesDetalhes.map((p) => p.nome);
   if (nome.length < 2) return NextResponse.json({ erro: 'Informe seu nome.' }, { status: 400 });
   if (email && !EMAIL_RE.test(email)) return NextResponse.json({ erro: 'Informe um e-mail válido ou deixe o campo vazio.' }, { status: 400 });
-  if (telefone && !telefoneNormalizado) return NextResponse.json({ erro: 'Informe um telefone/WhatsApp válido ou deixe o campo vazio.' }, { status: 400 });
-  if (!email && !telefoneNormalizado) return NextResponse.json({ erro: 'Informe seu e-mail ou telefone/WhatsApp para identificar a confirmação.' }, { status: 400 });
+  if (!telefoneNormalizado) return NextResponse.json({ erro: 'Informe seu telefone/WhatsApp para identificar a confirmação.' }, { status: 400 });
 
   let existente: any = null;
-  if (email) {
-    const { data } = await admin.from('convidados').select('id').eq('evento_id', eventoId).eq('email_normalizado', email).maybeSingle();
+  if (telefoneNormalizado) {
+    const { data } = await admin.from('convidados').select('id').eq('evento_id', eventoId).eq('telefone_normalizado', telefoneNormalizado).order('updated_at', { ascending: false }).limit(1).maybeSingle();
     existente = data;
   }
-  if (!existente && telefoneNormalizado) {
-    const { data } = await admin.from('convidados').select('id').eq('evento_id', eventoId).eq('telefone_normalizado', telefoneNormalizado).order('updated_at', { ascending: false }).limit(1).maybeSingle();
+  if (!existente && email) {
+    const { data } = await admin.from('convidados').select('id').eq('evento_id', eventoId).eq('email_normalizado', email).maybeSingle();
     existente = data;
   }
   if (!existente) {
@@ -469,7 +459,7 @@ export async function POST(req: NextRequest) {
 
   const dados = {
     evento_id: eventoId, nome, email: email || null, email_normalizado: email || null,
-    telefone: telefone || null, telefone_normalizado: telefoneNormalizado, contato: email || telefone || null, comparecera: true,
+    telefone: telefone || null, telefone_normalizado: telefoneNormalizado, contato: telefone || email || null, comparecera: true,
     adultos: 1 + acompanhantesDetalhes.filter((p) => p.tipo !== 'crianca').length,
     criancas: acompanhantesDetalhes.filter((p) => p.tipo === 'crianca').length,
     acompanhantes, acompanhantes_detalhes: acompanhantesDetalhes, ip_hash: ipHash,

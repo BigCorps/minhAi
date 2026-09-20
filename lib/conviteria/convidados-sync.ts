@@ -39,7 +39,7 @@ export async function sincronizarConfirmacoesEvento(eventoId: string) {
   const [famsR, pessoasR, confsR, membrosR] = await Promise.all([
     admin.from('convidado_familias').select('id,nome,email_normalizado,telefone_normalizado').eq('evento_id', eventoId),
     admin.from('convidados_lista').select('id,familia_id,nome,email_normalizado,telefone_normalizado,status,rsvp_extra').eq('evento_id', eventoId),
-    admin.from('convidados').select('id,nome,email,contato,comparecera,acompanhantes,familia_lista_id,convidado_lista_id').eq('evento_id', eventoId).is('teste_id', null),
+    admin.from('convidados').select('id,nome,email,contato,comparecera,acompanhantes,familia_lista_id,convidado_lista_id,conciliacao_ignorada_em').eq('evento_id', eventoId).is('teste_id', null).is('conciliacao_ignorada_em', null),
     admin.from('convidado_confirmacoes_membros').select('confirmacao_id,convidado_lista_id').eq('evento_id', eventoId),
   ]);
 

@@ -36,6 +36,7 @@ async function carregar(admin: any, eventoId: string) {
       .is('teste_id', null)
       .is('familia_lista_id', null)
       .is('convidado_lista_id', null)
+      .is('conciliacao_ignorada_em', null)
       .order('created_at'),
   ]);
 
@@ -258,6 +259,28 @@ export async function POST(req: NextRequest) {
     } catch (e: any) {
       return NextResponse.json({ erro: e?.message || 'Não foi possível sincronizar automaticamente.' }, { status: 500 });
     }
+  }
+
+  if (acao === 'ignorar') {
+    const confirmacaoId = texto(body?.confirmacaoId, 80);
+    if (!confirmacaoId) return NextResponse.json({ erro: 'Confirmação não informada.' }, { status: 400 });
+    const { data: confirmacao } = await r.admin.from('convidados')
+      .select('id,familia_lista_id,convidado_lista_id')
+      .eq('evento_id', eventoId)
+      .eq('id', confirmacaoId)
+      .is('teste_id', null)
+      .maybeSingle();
+    if (!confirmacao) return NextResponse.json({ erro: 'Confirmação histórica não encontrada.' }, { status: 404 });
+    if (confirmacao.familia_lista_id || confirmacao.convidado_lista_id) {
+      return NextResponse.json({ erro: 'Esta confirmação já foi sincronizada e não precisa ser ignorada.' }, { status: 409 });
+    }
+    const { error } = await r.admin.from('convidados')
+      .update({ conciliacao_ignorada_em: new Date().toISOString() })
+      .eq('evento_id', eventoId)
+      .eq('id', confirmacaoId)
+      .is('teste_id', null);
+    if (error) return NextResponse.json({ erro: 'Não foi possível ignorar esta resposta.' }, { status: 500 });
+    return NextResponse.json({ ok: true });
   }
 
   if (acao === 'aplicar') {

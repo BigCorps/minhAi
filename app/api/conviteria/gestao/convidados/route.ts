@@ -82,7 +82,7 @@ async function registrarConfirmacaoManual(r: any, eventoId: string, ids: string[
   }
   for (const pessoa of pessoas as any[]) {
     if (pessoa.tipo !== 'crianca') continue;
-    const validacao = idadeCrianca('crianca', idadesCriancas[pessoa.id] ?? pessoa.idade, true);
+    const validacao = idadeCrianca('crianca', idadesCriancas[pessoa.id] ?? pessoa.idade, false);
     if (validacao.erro) return { erro: `${pessoa.nome}: ${validacao.erro}`, status: 400 as const };
     pessoa.idade = validacao.idade;
     const { error } = await r.admin.from('convidados_lista').update({ idade: validacao.idade }).eq('evento_id', eventoId).eq('id', pessoa.id).eq('tipo', 'crianca');
@@ -445,7 +445,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ erro: 'Cadastre pelo menos uma pessoa neste grupo. O nome da família não cria membros automaticamente.' }, { status: 400 });
     }
     for (const membro of membrosEntrada) {
-      const validacao = idadeCrianca(membro.tipo, membro.idadeBruta, true);
+      const validacao = idadeCrianca(membro.tipo, membro.idadeBruta, false);
       if (validacao.erro) return NextResponse.json({ erro: `${membro.nome}: ${validacao.erro}` }, { status: 400 });
       membro.idade = validacao.idade;
     }
@@ -548,7 +548,7 @@ export async function POST(req: NextRequest) {
     const telefone = texto(body?.telefone, 40) || null;
     const email = texto(body?.email, 180) || null;
     const tipoPessoa: 'adulto' | 'crianca' = body?.tipo === 'crianca' ? 'crianca' : 'adulto';
-    const idadePessoa = idadeCrianca(tipoPessoa, body?.idade, true);
+    const idadePessoa = idadeCrianca(tipoPessoa, body?.idade, false);
     if (idadePessoa.erro) return NextResponse.json({ erro: idadePessoa.erro }, { status: 400 });
     const dados: any = {
       evento_id: eventoId,

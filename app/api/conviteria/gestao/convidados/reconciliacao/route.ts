@@ -5,16 +5,43 @@ import {
   texto,
   variantesTelefoneBusca,
 } from '@/lib/conviteria/gestao-servidor';
-import {
-  membrosProvaveisDaFamilia,
-  sugerirPorNome,
-  type ConfirmacaoReconciliacao,
-  type FamiliaReconciliacao,
-  type PessoaReconciliacao,
-  type SugestaoReconciliacao,
-} from '@/lib/conviteria/reconciliacao-convidados';
 
 export const runtime = 'nodejs';
+
+type Familia = {
+  id: string;
+  nome: string;
+  email_normalizado?: string | null;
+  telefone_normalizado?: string | null;
+};
+
+type Pessoa = {
+  id: string;
+  familia_id?: string | null;
+  nome: string;
+  email_normalizado?: string | null;
+  telefone_normalizado?: string | null;
+  status?: string | null;
+  rsvp_extra?: boolean | null;
+};
+
+type Confirmacao = {
+  id: string;
+  nome: string;
+  email?: string | null;
+  contato?: string | null;
+  comparecera?: boolean | null;
+  acompanhantes?: unknown;
+};
+
+type Sugestao = {
+  tipo: 'familia' | 'individual';
+  alvoId: string;
+  alvoNome: string;
+  membroIds: string[];
+  confianca: 'alta';
+  motivo: string;
+};
 
 function telefoneBate(valor: unknown, armazenado: unknown) {
   const alvo = String(armazenado ?? '').trim();
@@ -23,7 +50,7 @@ function telefoneBate(valor: unknown, armazenado: unknown) {
 }
 
 async function carregar(admin: any, eventoId: string) {
-  const [famsR, pessoasR, confsR] = await Promise.all([
+  const [famsR, pessoasR, confsR, membrosR] = await Promise.all([
     admin.from('convidado_familias')
       .select('id,nome,email_normalizado,telefone_normalizado')
       .eq('evento_id', eventoId),
@@ -38,24 +65,37 @@ async function carregar(admin: any, eventoId: string) {
       .is('convidado_lista_id', null)
       .is('conciliacao_ignorada_em', null)
       .order('created_at'),
+    admin.from('convidado_confirmacoes_membros')
+      .select('confirmacao_id,convidado_lista_id')
+      .eq('evento_id', eventoId),
   ]);
 
-  if (famsR.error || pessoasR.error || confsR.error) {
+  if (famsR.error || pessoasR.error || confsR.error || membrosR.error) {
     throw new Error('Não foi possível analisar as confirmações antigas.');
   }
 
   return {
-    familias: (famsR.data ?? []) as FamiliaReconciliacao[],
-    pessoas: (pessoasR.data ?? []) as PessoaReconciliacao[],
-    confirmacoes: (confsR.data ?? []) as ConfirmacaoReconciliacao[],
+    familias: (famsR.data ?? []) as Familia[],
+    pessoas: (pessoasR.data ?? []) as Pessoa[],
+    confirmacoes: (confsR.data ?? []) as Confirmacao[],
+    membros: (membrosR.data ?? []) as Array<{ confirmacao_id: string; convidado_lista_id: string }>,
   };
 }
 
+function idsHistoricosSeguros(confirmacaoId: string, pessoas: Pessoa[], membros: Array<{ confirmacao_id: string; convidado_lista_id: string }>, familiaId?: string | null) {
+  const ids = membros
+    .filter((m) => m.confirmacao_id === confirmacaoId)
+    .map((m) => m.convidado_lista_id);
+  if (!familiaId) return ids.filter((id) => pessoas.some((p) => p.id === id && !p.familia_id && !p.rsvp_extra));
+  return ids.filter((id) => pessoas.some((p) => p.id === id && p.familia_id === familiaId && !p.rsvp_extra));
+}
+
 function sugestaoPorContato(
-  c: ConfirmacaoReconciliacao,
-  familias: FamiliaReconciliacao[],
-  pessoas: PessoaReconciliacao[],
-): SugestaoReconciliacao | null {
+  c: Confirmacao,
+  familias: Familia[],
+  pessoas: Pessoa[],
+  membros: Array<{ confirmacao_id: string; convidado_lista_id: string }>,
+): Sugestao | null {
   const email = normalizarEmail(c.email || c.contato);
   const fams = familias.filter((f) =>
     Boolean(email && f.email_normalizado === email)
@@ -66,17 +106,19 @@ function sugestaoPorContato(
       tipo: 'familia',
       alvoId: fams[0].id,
       alvoNome: fams[0].nome,
-      membroIds: membrosProvaveisDaFamilia(c, fams[0].id, pessoas),
+      membroIds: idsHistoricosSeguros(c.id, pessoas, membros, fams[0].id),
       confianca: 'alta',
-      motivo: 'contato único corresponde ao grupo',
+      motivo: 'contato único corresponde ao grupo; nomes não foram usados para identificar pessoas',
     };
   }
+  if (fams.length > 1) return null;
 
-  const pes = pessoas.filter((p) =>
+  const pes = pessoas.filter((p) => !p.rsvp_extra && (
     Boolean(email && p.email_normalizado === email)
-    || telefoneBate(c.contato, p.telefone_normalizado),
-  );
+    || telefoneBate(c.contato, p.telefone_normalizado)
+  ));
   if (pes.length !== 1) return null;
+
   const p = pes[0];
   if (p.familia_id) {
     const familia = familias.find((f) => f.id === p.familia_id);
@@ -85,11 +127,12 @@ function sugestaoPorContato(
       tipo: 'familia',
       alvoId: familia.id,
       alvoNome: familia.nome,
-      membroIds: membrosProvaveisDaFamilia(c, familia.id, pessoas),
+      membroIds: idsHistoricosSeguros(c.id, pessoas, membros, familia.id),
       confianca: 'alta',
-      motivo: 'contato único corresponde a um membro deste grupo',
+      motivo: 'contato único corresponde a um membro deste grupo; nomes não foram usados para identificar pessoas',
     };
   }
+
   return {
     tipo: 'individual',
     alvoId: p.id,
@@ -101,14 +144,15 @@ function sugestaoPorContato(
 }
 
 function analisar(
-  confirmacoes: ConfirmacaoReconciliacao[],
-  familias: FamiliaReconciliacao[],
-  pessoas: PessoaReconciliacao[],
+  confirmacoes: Confirmacao[],
+  familias: Familia[],
+  pessoas: Pessoa[],
+  membros: Array<{ confirmacao_id: string; convidado_lista_id: string }>,
 ) {
   const itens = confirmacoes.map((c) => ({
     ...c,
     acompanhantes: Array.isArray(c.acompanhantes) ? c.acompanhantes.map(String) : [],
-    sugestao: sugestaoPorContato(c, familias, pessoas) ?? sugerirPorNome(c, familias, pessoas),
+    sugestao: sugestaoPorContato(c, familias, pessoas, membros),
   }));
 
   const chavesAltas = itens
@@ -119,10 +163,13 @@ function analisar(
 
   const automaticas = itens.filter((x) => {
     const s = x.sugestao;
-    if (!s || s.confianca !== 'alta') return false;
+    if (!s) return false;
     if ((frequencia.get(`${s.tipo}:${s.alvoId}`) ?? 0) !== 1) return false;
-    if (x.comparecera !== false && s.tipo === 'familia' && s.membroIds.length === 0) return false;
-    return true;
+    if (s.tipo === 'individual') return true;
+    if (x.comparecera === false) return true;
+    // Família só é automática quando a confirmação histórica já guarda IDs
+    // dos membros. Nunca inferimos membros a partir de nomes.
+    return s.membroIds.length > 0;
   });
 
   return { itens, automaticas };
@@ -163,6 +210,7 @@ async function aplicarVinculo(
       .select('id,familia_id')
       .eq('evento_id', eventoId)
       .eq('id', alvoId)
+      .eq('rsvp_extra', false)
       .maybeSingle();
     if (!pessoa || pessoa.familia_id) return { erro: 'Convidado individual inválido.', status: 400 as const };
 
@@ -226,7 +274,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const dados = await carregar(r.admin, eventoId);
-    const analise = analisar(dados.confirmacoes, dados.familias, dados.pessoas);
+    const analise = analisar(dados.confirmacoes, dados.familias, dados.pessoas, dados.membros);
     return NextResponse.json({
       pendentes: analise.itens.length,
       automaticasSeguras: analise.automaticas.length,
@@ -248,7 +296,7 @@ export async function POST(req: NextRequest) {
   if (acao === 'auto') {
     try {
       const dados = await carregar(r.admin, eventoId);
-      const analise = analisar(dados.confirmacoes, dados.familias, dados.pessoas);
+      const analise = analisar(dados.confirmacoes, dados.familias, dados.pessoas, dados.membros);
       let aplicadas = 0;
       for (const item of analise.automaticas) {
         const s = item.sugestao!;

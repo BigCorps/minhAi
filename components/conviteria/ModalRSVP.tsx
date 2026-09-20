@@ -35,6 +35,7 @@ export default function ModalRSVP({
   const [contato, setContato] = useState('');
   const [grupoTitulo, setGrupoTitulo] = useState('');
   const [pessoas, setPessoas] = useState<PessoaRestrita[]>([]);
+  const [nomesPessoas, setNomesPessoas] = useState<Record<string, string>>({});
   const [selecionados, setSelecionados] = useState<string[]>([]);
   const [idadesCriancas, setIdadesCriancas] = useState<Record<string, number | null>>({});
   const [extrasPermitidos, setExtrasPermitidos] = useState(0);
@@ -110,10 +111,16 @@ export default function ModalRSVP({
     return p.tipo !== 'crianca' || (Number.isInteger(p.idade) && Number(p.idade) >= 1 && Number(p.idade) <= 12);
   }
 
+  function nomeAtualPessoa(p: PessoaRestrita) {
+    return nomesPessoas[p.id] ?? p.nome;
+  }
+
   function aplicarGrupo(d: any) {
     const grupo = d.grupo ?? {};
+    const pessoasGrupo = Array.isArray(grupo.pessoas) ? grupo.pessoas as PessoaRestrita[] : [];
     setGrupoTitulo(grupo.titulo ?? 'Convidados');
-    setPessoas(grupo.pessoas ?? []);
+    setPessoas(pessoasGrupo);
+    setNomesPessoas(Object.fromEntries(pessoasGrupo.map((p) => [p.id, p.nome])));
     setContato(grupo.telefonePrincipal ?? contato);
     setEmail(typeof grupo.emailPrincipal === 'string' ? grupo.emailPrincipal : '');
     setExtrasPermitidos(Math.max(0, Number(grupo.extrasPermitidos ?? 0)));
@@ -122,10 +129,10 @@ export default function ModalRSVP({
       tipo: x?.tipo === 'crianca' ? 'crianca' : 'adulto',
       idade: x?.tipo === 'crianca' && Number(x?.idade) >= 1 && Number(x?.idade) <= 12 ? Number(x.idade) : null,
     })).filter((x: PessoaAdicional) => x.nome));
-    setSelecionados((grupo.pessoas ?? [])
+    setSelecionados(pessoasGrupo
       .filter((p: PessoaRestrita) => p.status !== 'nao_vai')
       .map((p: PessoaRestrita) => p.id));
-    setIdadesCriancas(Object.fromEntries((grupo.pessoas ?? [])
+    setIdadesCriancas(Object.fromEntries(pessoasGrupo
       .filter((p: PessoaRestrita) => p.tipo === 'crianca')
       .map((p: PessoaRestrita) => [p.id, p.idade ?? null])));
   }
@@ -144,6 +151,7 @@ export default function ModalRSVP({
       aplicarGrupo(d);
     } catch (e: any) {
       setPessoas([]);
+      setNomesPessoas({});
       setExtras([]);
       setExtrasPermitidos(0);
       setErro(e.message || 'Este link de confirmação não foi encontrado.');
@@ -166,6 +174,7 @@ export default function ModalRSVP({
       aplicarGrupo(d);
     } catch (e: any) {
       setPessoas([]);
+      setNomesPessoas({});
       setExtras([]);
       setExtrasPermitidos(0);
       setErro(e.message || 'Não encontramos este contato.');
@@ -174,15 +183,47 @@ export default function ModalRSVP({
     }
   }
 
+  async function salvarCorrecoesDeNome() {
+    if (!(porLink || restrito) || !pessoas.length) return;
+    const correcoes = pessoas.map((p) => ({ id: p.id, nome: nomeAtualPessoa(p).trim() }));
+    const invalida = correcoes.find((x) => x.nome.length < 2);
+    if (invalida) throw new Error('Confira os nomes da família antes de confirmar. Cada nome precisa ter pelo menos 2 caracteres.');
+
+    const alteradas = correcoes.filter((x) => {
+      const original = pessoas.find((p) => p.id === x.id)?.nome.trim() ?? '';
+      return x.nome !== original;
+    });
+    if (!alteradas.length) return;
+
+    const r = await fetch('/api/conviteria/rsvp/corrigir-nomes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventoId,
+        tokenConvite: porLink ? tokenInicial : null,
+        contato: porLink ? null : contato,
+        correcoes: alteradas,
+      }),
+    });
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.erro || 'Não foi possível corrigir os nomes deste convite.');
+    setPessoas((atuais) => atuais.map((p) => {
+      const nova = alteradas.find((x) => x.id === p.id);
+      return nova ? { ...p, nome: nova.nome } : p;
+    }));
+  }
+
   async function confirmar() {
     setErro('');
     const modoLista = porLink || restrito;
     if (modoLista) {
       if (!pessoas.length) return setErro('Não foi possível localizar os nomes deste convite.');
       if (!selecionados.length) return setErro('Selecione ao menos uma pessoa convidada que irá ao evento.');
+      const nomeInvalido = pessoas.find((p) => nomeAtualPessoa(p).trim().length < 2);
+      if (nomeInvalido) return setErro('Confira os nomes da família antes de confirmar. Cada nome precisa ter pelo menos 2 caracteres.');
       if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setErro('Informe um e-mail válido ou deixe o campo vazio.');
       const criancaFixaSemIdade = pessoas.find((p) => p.tipo === 'crianca' && selecionados.includes(p.id) && (!Number.isInteger(idadesCriancas[p.id]) || Number(idadesCriancas[p.id]) < 1 || Number(idadesCriancas[p.id]) > 12));
-      if (criancaFixaSemIdade) return setErro(`Informe a idade de ${criancaFixaSemIdade.nome} (de 1 a 12 anos).`);
+      if (criancaFixaSemIdade) return setErro(`Informe a idade de ${nomeAtualPessoa(criancaFixaSemIdade)} (de 1 a 12 anos).`);
       const extrasPreenchidos = extras.map((x) => ({ ...x, nome: x.nome.trim() })).filter((x) => x.nome);
       if (extrasPreenchidos.length > extrasPermitidos) return setErro(`Este convite permite até ${extrasPermitidos} acompanhante(s) extra(s).`);
       const criancaSemIdade = extrasPreenchidos.find((x) => !idadeValida(x));
@@ -202,6 +243,8 @@ export default function ModalRSVP({
     solicitacaoId.current = id;
 
     try {
+      if (modoLista) await salvarCorrecoesDeNome();
+
       const payload = porLink
         ? {
             eventoId,
@@ -286,7 +329,7 @@ export default function ModalRSVP({
               {(restrito || porLink) ? (
                 <>
                   {porLink ? (
-                    <p className="cv-rsvp-intro">Confira os nomes abaixo e marque quem estará presente.</p>
+                    <p className="cv-rsvp-intro">Confira os nomes abaixo e marque quem estará presente. Se algum nome estiver incompleto ou incorreto, você pode corrigir antes de confirmar.</p>
                   ) : (
                     <>
                       <p className="cv-rsvp-intro">Este evento usa lista de convidados. Informe o telefone/WhatsApp cadastrado para localizar sua família.</p>
@@ -302,6 +345,7 @@ export default function ModalRSVP({
                             setContato(e.target.value);
                             setEmail('');
                             setPessoas([]);
+                            setNomesPessoas({});
                             setExtras([]);
                             setExtrasPermitidos(0);
                             setGrupoTitulo('');
@@ -325,7 +369,7 @@ export default function ModalRSVP({
 
                   {pessoas.length > 0 && (
                     <div className="cv-rsvp-familia">
-                      <div className="cv-rsvp-familia-topo"><div><strong>{grupoTitulo}</strong><small>Marque os membros do grupo que irão ao evento.</small></div></div>
+                      <div className="cv-rsvp-familia-topo"><div><strong>{grupoTitulo}</strong><small>Marque quem irá ao evento. Os nomes podem ser corrigidos aqui quando necessário.</small></div></div>
                       <div className="cv-rsvp-pessoas">
                         {pessoas.map((p) => (
                           <label key={p.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 10 }}>
@@ -334,8 +378,18 @@ export default function ModalRSVP({
                               checked={selecionados.includes(p.id)}
                               onChange={(e) => setSelecionados((s) => e.target.checked ? [...s, p.id] : s.filter((id) => id !== p.id))}
                             />
-                            <span style={{ flex: 1 }}>{p.nome}<small style={{ display: 'block', opacity: .75 }}>{p.tipo === 'crianca' ? 'Criança' : 'Adulto'}</small></span>
-                            {p.tipo === 'crianca' && selecionados.includes(p.id) && <select value={idadesCriancas[p.id] ?? ''} onChange={(e) => setIdadesCriancas((atuais) => ({ ...atuais, [p.id]: e.target.value ? Number(e.target.value) : null }))} aria-label={`Idade de ${p.nome}`} style={{ minHeight: 40 }}>
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <input
+                                type="text"
+                                maxLength={120}
+                                value={nomeAtualPessoa(p)}
+                                onChange={(e) => setNomesPessoas((atuais) => ({ ...atuais, [p.id]: e.target.value }))}
+                                aria-label={`Nome de ${p.nome}`}
+                                style={{ width: '100%', minHeight: 40 }}
+                              />
+                              <small style={{ display: 'block', marginTop: 4, opacity: .75 }}>{p.tipo === 'crianca' ? 'Criança' : 'Adulto'}</small>
+                            </span>
+                            {p.tipo === 'crianca' && selecionados.includes(p.id) && <select value={idadesCriancas[p.id] ?? ''} onChange={(e) => setIdadesCriancas((atuais) => ({ ...atuais, [p.id]: e.target.value ? Number(e.target.value) : null }))} aria-label={`Idade de ${nomeAtualPessoa(p)}`} style={{ minHeight: 40 }}>
                               <option value="">Idade</option>{Array.from({ length: 12 }, (_, n) => n + 1).map((idade) => <option key={idade} value={idade}>{idade} {idade === 1 ? 'ano' : 'anos'}</option>)}
                             </select>}
                           </label>

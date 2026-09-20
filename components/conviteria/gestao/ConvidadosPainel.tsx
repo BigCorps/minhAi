@@ -38,6 +38,7 @@ type Familia = {
   extras_permitidos?: number | null;
   observacoes?: string | null;
   qr_token: string;
+  created_at?: string;
 };
 
 type Convidado = {
@@ -53,6 +54,7 @@ type Convidado = {
   status: 'pendente' | 'confirmado' | 'nao_vai';
   qr_token: string;
   rsvp_extra?: boolean;
+  created_at?: string;
 };
 
 type MembroForm = { id?: string; nome: string; tipo: 'adulto' | 'crianca'; idade: number | null };
@@ -80,6 +82,8 @@ type PessoaForm = {
   lado: string;
   observacoes: string;
   status: 'pendente' | 'confirmado' | 'nao_vai';
+  criarNovaFamilia: boolean;
+  novaFamiliaNome: string;
 };
 
 type ConfirmacaoManual = {
@@ -131,6 +135,7 @@ function novaFamilia(): FamiliaForm {
 const vazioPessoa: PessoaForm = {
   id: '', familiaId: '', nome: '', telefone: '', email: '', tipo: 'adulto',
   idade: null, lado: 'ambos', observacoes: '', status: 'pendente',
+  criarNovaFamilia: false, novaFamiliaNome: '',
 };
 
 export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
@@ -219,12 +224,50 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
 
   useEffect(() => { void carregarReconciliacao(); }, [carregarReconciliacao]);
 
-  const filtrados = useMemo(() => {
-    const q = busca.trim().toLowerCase();
-    return q
-      ? pessoas.filter((p) => [p.nome, p.email, p.telefone].filter(Boolean).some((v) => String(v).toLowerCase().includes(q)))
-      : pessoas;
-  }, [busca, pessoas]);
+  const gruposLista = useMemo(() => {
+    const gruposFamilia = familias.map((f) => {
+      const membros = pessoas
+        .filter((p) => p.familia_id === f.id)
+        .sort((a, b) => {
+          if (Boolean(a.rsvp_extra) !== Boolean(b.rsvp_extra)) return a.rsvp_extra ? 1 : -1;
+          return String(a.created_at ?? '').localeCompare(String(b.created_at ?? ''));
+        });
+      return {
+        chave: `familia:${f.id}`,
+        familia: f,
+        pessoas: membros,
+        ordem: membros[0]?.created_at ?? f.created_at ?? '',
+      };
+    }).filter((g) => g.pessoas.length > 0);
+
+    const individuais = pessoas
+      .filter((p) => !p.familia_id)
+      .map((p) => ({
+        chave: `individual:${p.id}`,
+        familia: null as Familia | null,
+        pessoas: [p],
+        ordem: p.created_at ?? '',
+      }));
+
+    return [...gruposFamilia, ...individuais].sort((a, b) => {
+      const porData = String(a.ordem).localeCompare(String(b.ordem));
+      if (porData !== 0) return porData;
+      return a.chave.localeCompare(b.chave);
+    });
+  }, [familias, pessoas]);
+
+  const gruposFiltrados = useMemo(() => {
+    const q = busca.trim().toLocaleLowerCase('pt-BR');
+    if (!q) return gruposLista;
+    return gruposLista.filter((grupo) => {
+      if (grupo.familia?.nome.toLocaleLowerCase('pt-BR').includes(q)) return true;
+      return grupo.pessoas.some((p) => [p.nome, p.email, p.telefone]
+        .filter(Boolean)
+        .some((v) => String(v).toLocaleLowerCase('pt-BR').includes(q)));
+    });
+  }, [busca, gruposLista]);
+
+  const filtrados = useMemo(() => gruposFiltrados.flatMap((grupo) => grupo.pessoas), [gruposFiltrados]);
 
   function membrosFixos(familiaId: string) {
     return pessoas.filter((p) => p.familia_id === familiaId && !p.rsvp_extra);
@@ -292,6 +335,8 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
       lado: p.lado,
       observacoes: p.observacoes ?? '',
       status: p.status,
+      criarNovaFamilia: false,
+      novaFamiliaNome: '',
     });
     setModalCadastro('pessoa');
     setAcoesAberta(null);
@@ -336,10 +381,28 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
   }
 
   async function salvarPessoa() {
-    if (!pessoa.nome.trim()) return;
+    if (!pessoa.nome.trim()) return setErro('Informe o nome do convidado.');
     setSalvando(true); setErro('');
-    try { await acao({ acao: 'salvar_convidado', ...pessoa }); setPessoa(vazioPessoa); setModalCadastro(null); await carregar(); }
-    catch (e: any) { setErro(e.message); }
+    try {
+      if (pessoa.criarNovaFamilia) {
+        const r = await fetch('/api/conviteria/gestao/convidados/criar-familia', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            eventoId,
+            ...pessoa,
+            novaFamiliaNome: pessoa.novaFamiliaNome.trim() || `Família / grupo de ${pessoa.nome.trim()}`,
+          }),
+        });
+        const d = await r.json().catch(() => null);
+        if (!r.ok) throw new Error(d?.erro || 'Não foi possível criar a família para este convidado.');
+      } else {
+        await acao({ acao: 'salvar_convidado', ...pessoa });
+      }
+      setPessoa(vazioPessoa);
+      setModalCadastro(null);
+      await Promise.all([carregar(), carregarReconciliacao()]);
+    } catch (e: any) { setErro(e.message); }
     finally { setSalvando(false); }
   }
 
@@ -473,8 +536,18 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
     if (!linhasCsv.length) return;
     setImportando(true); setErro(''); setAviso('');
     try {
-      const d = await acao({ acao: 'importar_csv', linhas: linhasCsv.map((l) => ({ ...l, dependentes: l.membros })) });
-      setAviso(`${d.importados ?? linhasCsv.length} linhas importadas. As confirmações anteriores também foram sincronizadas.`);
+      const r = await fetch('/api/conviteria/gestao/convidados/importar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ eventoId, linhas: linhasCsv.map((l) => ({ ...l, dependentes: l.membros })) }),
+      });
+      const d = await r.json().catch(() => null);
+      if (!r.ok) throw new Error(d?.erro || 'Não foi possível importar a lista.');
+      const avisosImportacao = [
+        Number(d?.ambiguos ?? 0) > 0 ? `${d.ambiguos} linha(s) não foram importadas porque o telefone/e-mail apontava para mais de um cadastro.` : '',
+        Number(d?.semIdentificador ?? 0) > 0 ? `${d.semIdentificador} cadastro(s) sem telefone/e-mail foram tratados como novos, sem tentar unir pelo nome.` : '',
+      ].filter(Boolean).join(' ');
+      setAviso(`${d.importados ?? linhasCsv.length} linhas importadas. As confirmações anteriores também foram sincronizadas.${avisosImportacao ? ` ${avisosImportacao}` : ''}`);
       setLinhasCsv([]); setNomeCsv(''); setCsvIgnoradas(0);
       await Promise.all([carregar(), carregarReconciliacao()]);
       avisarPresencasAtualizadas();
@@ -735,52 +808,61 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
           <table className="w-full table-fixed text-left text-sm">
             <colgroup><col className="w-[23%]"/><col className="w-[30%]"/><col className="w-[10%]"/><col className="w-[13%]"/><col className="w-[24%]"/></colgroup>
             <thead><tr className="border-b text-[#7c5560]"><th className="py-2 pr-3">Nome</th><th className="pr-3">Família</th><th>Tipo</th><th>Status</th><th className="text-right">Ações</th></tr></thead>
-            <tbody>{filtrados.map((p) => {
-              const f = familias.find((x) => x.id === p.familia_id);
-              const membros = f ? membrosFixos(f.id) : [p];
-              const principal = !f || filtrados.find((x) => x.familia_id === f.id)?.id === p.id;
+            <tbody>{gruposFiltrados.map((grupo, grupoIndex) => {
+              const f = grupo.familia;
+              const membros = f ? membrosFixos(f.id) : grupo.pessoas;
               const grupoConfirmado = membros.some((x) => x.status === 'confirmado');
-              const qr = f ? f.qr_token : p.qr_token;
-              const qrCheckin = qrModo === 'familia' && f ? f.qr_token : p.qr_token;
-              const qrNome = qrModo === 'familia' && f ? f.nome : p.nome;
-              return <tr key={p.id} className="border-b border-[#c0607818] align-middle">
-                <td className="py-3 pr-3"><span className="block truncate font-medium" title={p.nome}>{p.nome}</span>{p.rsvp_extra && <span className="mt-1 inline-block rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">extra RSVP</span>}</td>
-                <td className="pr-3"><span className="block truncate" title={f?.nome ?? ''}>{f?.nome ?? '—'}</span></td>
-                <td>{p.tipo === 'crianca' ? <span>Criança<span className="block text-[11px] text-[#9b7b84]">{p.idade ? `${p.idade} ${p.idade === 1 ? 'ano' : 'anos'}` : 'idade não informada'}</span></span> : 'Adulto'}</td>
-                <td><span className={`rounded-full px-2 py-1 text-xs ${p.status === 'confirmado' ? 'bg-emerald-50 text-emerald-700' : p.status === 'nao_vai' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{p.status === 'confirmado' ? 'Confirmado' : p.status === 'nao_vai' ? 'Não vai' : 'Pendente'}</span></td>
-                <td><div className="flex items-center justify-end gap-1.5">
-                  {principal && <button type="button" onClick={() => abrirConfirmacaoManual(f?.nome ?? p.nome, membros)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"><Check className="h-3.5 w-3.5" />{grupoConfirmado ? 'Revisar presença' : 'Confirmar presença'}</button>}
-                  <div className="relative">
-                    <button type="button" onClick={() => setAcoesAberta((atual) => atual === p.id ? null : p.id)} className="rounded-lg p-2 text-[#7c5560] hover:bg-[#fff5f8]" title="Mais ações"><MoreHorizontal className="h-4 w-4" /></button>
-                    {acoesAberta === p.id && <div className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-[#c0607833] bg-white p-1.5 shadow-xl">
-                      <button type="button" onClick={() => f ? editarFamilia(f) : editarPessoa(p)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Pencil className="h-3.5 w-3.5" />{f ? 'Editar grupo e membros' : 'Editar convidado'}</button>
-                      <button type="button" onClick={() => { setAcoesAberta(null); void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.'); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Copy className="h-3.5 w-3.5" />Copiar link de confirmação</button>
-                      <button type="button" onClick={() => { setAcoesAberta(null); void baixarQr(qrCheckin, qrNome); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Download className="h-3.5 w-3.5" />Baixar arte de check-in</button>
-                      <button type="button" onClick={() => { setAcoesAberta(null); void excluir('convidado', p.id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" />Excluir pessoa</button>
-                    </div>}
-                  </div>
-                </div></td>
-              </tr>;
+              const fundoGrupo = grupoIndex % 2 === 0 ? '#ffffff' : '#fff5f8';
+              return grupo.pessoas.map((p, pessoaIndex) => {
+                const principal = !f || (membros.length > 0 && membros[0].id === p.id);
+                const qr = f ? f.qr_token : p.qr_token;
+                const qrCheckin = qrModo === 'familia' && f ? f.qr_token : p.qr_token;
+                const qrNome = qrModo === 'familia' && f ? f.nome : p.nome;
+                return <tr key={p.id} className="border-b border-[#c0607818] align-middle" style={{ backgroundColor: fundoGrupo }}>
+                  <td className="py-3 pr-3"><span className="block truncate font-medium" title={p.nome}>{p.nome}</span>{p.rsvp_extra && <span className="mt-1 inline-block rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">extra RSVP</span>}</td>
+                  {pessoaIndex === 0 && <td rowSpan={grupo.pessoas.length} className="pr-3 align-top" style={{ paddingTop: 12 }}><span className="block font-medium text-[#7c5560]" title={f?.nome ?? ''}>{f?.nome ?? 'Convidado individual'}</span>{f && <span className="mt-1 block text-[11px] text-[#9b7b84]">{grupo.pessoas.length} {grupo.pessoas.length === 1 ? 'pessoa' : 'pessoas'}</span>}</td>}
+                  <td>{p.tipo === 'crianca' ? <span>Criança<span className="block text-[11px] text-[#9b7b84]">{p.idade ? `${p.idade} ${p.idade === 1 ? 'ano' : 'anos'}` : 'idade não informada'}</span></span> : 'Adulto'}</td>
+                  <td><span className={`rounded-full px-2 py-1 text-xs ${p.status === 'confirmado' ? 'bg-emerald-50 text-emerald-700' : p.status === 'nao_vai' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{p.status === 'confirmado' ? 'Confirmado' : p.status === 'nao_vai' ? 'Não vai' : 'Pendente'}</span></td>
+                  <td><div className="flex items-center justify-end gap-1.5">
+                    {principal && <button type="button" onClick={() => abrirConfirmacaoManual(f?.nome ?? p.nome, membros)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"><Check className="h-3.5 w-3.5" />{grupoConfirmado ? 'Revisar presença' : 'Confirmar presença'}</button>}
+                    <div className="relative">
+                      <button type="button" onClick={() => setAcoesAberta((atual) => atual === p.id ? null : p.id)} className="rounded-lg p-2 text-[#7c5560] hover:bg-white/70" title="Mais ações"><MoreHorizontal className="h-4 w-4" /></button>
+                      {acoesAberta === p.id && <div className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-[#c0607833] bg-white p-1.5 shadow-xl">
+                        <button type="button" onClick={() => f ? editarFamilia(f) : editarPessoa(p)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Pencil className="h-3.5 w-3.5" />{f ? 'Editar grupo e membros' : 'Editar convidado'}</button>
+                        <button type="button" onClick={() => { setAcoesAberta(null); void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.'); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Copy className="h-3.5 w-3.5" />Copiar link de confirmação</button>
+                        <button type="button" onClick={() => { setAcoesAberta(null); void baixarQr(qrCheckin, qrNome); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Download className="h-3.5 w-3.5" />Baixar arte de check-in</button>
+                        <button type="button" onClick={() => { setAcoesAberta(null); void excluir('convidado', p.id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" />Excluir pessoa</button>
+                      </div>}
+                    </div>
+                  </div></td>
+                </tr>;
+              });
             })}</tbody>
           </table>
         </div>
 
-        <div className="mt-4 space-y-2 md:hidden">{filtrados.map((p) => {
-          const f = familias.find((x) => x.id === p.familia_id);
-          const membros = f ? membrosFixos(f.id) : [p];
-          const principal = !f || filtrados.find((x) => x.familia_id === f.id)?.id === p.id;
+        <div className="mt-4 space-y-3 md:hidden">{gruposFiltrados.map((grupo, grupoIndex) => {
+          const f = grupo.familia;
+          const membros = f ? membrosFixos(f.id) : grupo.pessoas;
           const grupoConfirmado = membros.some((x) => x.status === 'confirmado');
-          const qr = f ? f.qr_token : p.qr_token;
-          const qrCheckin = qrModo === 'familia' && f ? f.qr_token : p.qr_token;
-          const qrNome = qrModo === 'familia' && f ? f.nome : p.nome;
-          return <div key={p.id} className="rounded-xl border border-[#c0607820] p-3">
-            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-medium text-[#40232c]">{p.nome}</p><p className="mt-0.5 truncate text-xs text-[#7c5560]">{f?.nome ?? 'Convidado individual'} · {p.tipo === 'crianca' ? `Criança · ${p.idade ? `${p.idade} ${p.idade === 1 ? 'ano' : 'anos'}` : 'idade não informada'}` : 'Adulto'}</p></div><span className={`shrink-0 rounded-full px-2 py-1 text-[11px] ${p.status === 'confirmado' ? 'bg-emerald-50 text-emerald-700' : p.status === 'nao_vai' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{p.status === 'confirmado' ? 'Confirmado' : p.status === 'nao_vai' ? 'Não vai' : 'Pendente'}</span></div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {principal && <button type="button" onClick={() => abrirConfirmacaoManual(f?.nome ?? p.nome, membros)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700"><Check className="h-3.5 w-3.5" />{grupoConfirmado ? 'Revisar presença' : 'Confirmar presença'}</button>}
-              <button type="button" onClick={() => f ? editarFamilia(f) : editarPessoa(p)} className="inline-flex items-center gap-1 rounded-lg bg-[#fff5f8] px-2.5 py-1.5 text-xs font-semibold text-[#a04a63]"><Pencil className="h-3.5 w-3.5" />Editar</button>
-              <button type="button" onClick={() => void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.')} className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs text-[#7c5560]"><Copy className="h-3.5 w-3.5" />Confirmação</button>
-              <button type="button" onClick={() => void baixarQr(qrCheckin, qrNome)} className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs text-[#7c5560]"><Download className="h-3.5 w-3.5" />Arte QR</button>
-            </div>
+          const fundoGrupo = grupoIndex % 2 === 0 ? '#ffffff' : '#fff5f8';
+          return <div key={grupo.chave} className="overflow-hidden rounded-xl border border-[#c0607820]" style={{ backgroundColor: fundoGrupo }}>
+            <div className="border-b border-[#c0607818] px-3 py-2"><p className="text-xs font-semibold text-[#a04a63]">{f?.nome ?? 'Convidado individual'}</p>{f && <p className="mt-0.5 text-[11px] text-[#9b7b84]">{grupo.pessoas.length} {grupo.pessoas.length === 1 ? 'pessoa' : 'pessoas'}</p>}</div>
+            <div className="divide-y divide-[#c0607818]">{grupo.pessoas.map((p) => {
+              const principal = !f || (membros.length > 0 && membros[0].id === p.id);
+              const qr = f ? f.qr_token : p.qr_token;
+              const qrCheckin = qrModo === 'familia' && f ? f.qr_token : p.qr_token;
+              const qrNome = qrModo === 'familia' && f ? f.nome : p.nome;
+              return <div key={p.id} className="p-3">
+                <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-medium text-[#40232c]">{p.nome}</p><p className="mt-0.5 truncate text-xs text-[#7c5560]">{p.tipo === 'crianca' ? `Criança · ${p.idade ? `${p.idade} ${p.idade === 1 ? 'ano' : 'anos'}` : 'idade não informada'}` : 'Adulto'}{p.rsvp_extra ? ' · extra RSVP' : ''}</p></div><span className={`shrink-0 rounded-full px-2 py-1 text-[11px] ${p.status === 'confirmado' ? 'bg-emerald-50 text-emerald-700' : p.status === 'nao_vai' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{p.status === 'confirmado' ? 'Confirmado' : p.status === 'nao_vai' ? 'Não vai' : 'Pendente'}</span></div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {principal && <button type="button" onClick={() => abrirConfirmacaoManual(f?.nome ?? p.nome, membros)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700"><Check className="h-3.5 w-3.5" />{grupoConfirmado ? 'Revisar presença' : 'Confirmar presença'}</button>}
+                  <button type="button" onClick={() => f ? editarFamilia(f) : editarPessoa(p)} className="inline-flex items-center gap-1 rounded-lg bg-white/80 px-2.5 py-1.5 text-xs font-semibold text-[#a04a63]"><Pencil className="h-3.5 w-3.5" />Editar</button>
+                  <button type="button" onClick={() => void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.')} className="inline-flex items-center gap-1 rounded-lg border bg-white/70 px-2.5 py-1.5 text-xs text-[#7c5560]"><Copy className="h-3.5 w-3.5" />Confirmação</button>
+                  <button type="button" onClick={() => void baixarQr(qrCheckin, qrNome)} className="inline-flex items-center gap-1 rounded-lg border bg-white/70 px-2.5 py-1.5 text-xs text-[#7c5560]"><Download className="h-3.5 w-3.5" />Arte QR</button>
+                </div>
+              </div>;
+            })}</div>
           </div>;
         })}</div>
         {filtrados.length === 0 && <div className="py-10 text-center text-sm text-[#7c5560]"><Users className="mx-auto mb-2 h-7 w-7" />Nenhum convidado encontrado.</div>}
@@ -813,7 +895,11 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
           <div className="mt-2 flex flex-wrap justify-between gap-2">{familia.id ? <button type="button" onClick={() => { const id = familia.id; setModalCadastro(null); void excluir('familia', id); }} className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-600"><Trash2 className="h-4 w-4" />Excluir grupo</button> : <span/>}<div className="flex gap-2"><button type="button" onClick={() => setModalCadastro(null)} className="rounded-xl border px-4 py-2.5 text-sm font-semibold text-[#7c5560]">Cancelar</button><button type="button" onClick={salvarFamilia} disabled={salvando} className="inline-flex items-center gap-2 rounded-xl bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{familia.id ? 'Salvar alterações' : 'Adicionar grupo'}</button></div></div>
         </div> : <div className="mt-4 grid gap-2">
           <input placeholder="Nome completo" value={pessoa.nome} onChange={(e) => setPessoa({ ...pessoa, nome: e.target.value })} className="rounded-xl border px-3 py-2" />
-          <select value={pessoa.familiaId} onChange={(e) => setPessoa({ ...pessoa, familiaId: e.target.value })} className="rounded-xl border px-3 py-2"><option value="">Sem família/grupo</option>{familias.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select>
+          <select value={pessoa.familiaId} disabled={pessoa.criarNovaFamilia} onChange={(e) => setPessoa({ ...pessoa, familiaId: e.target.value, criarNovaFamilia: false, novaFamiliaNome: '' })} className="rounded-xl border px-3 py-2 disabled:bg-[#f8f2f4] disabled:text-[#9b7b84]"><option value="">Sem família/grupo</option>{familias.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select>
+          {!pessoa.familiaId && <div className="rounded-xl border border-[#c0607822] bg-[#fff9fb] p-3">
+            <label className="flex cursor-pointer items-start gap-3 text-sm text-[#40232c]"><input type="checkbox" checked={pessoa.criarNovaFamilia} onChange={(e) => setPessoa({ ...pessoa, criarNovaFamilia: e.target.checked, novaFamiliaNome: e.target.checked ? (pessoa.novaFamiliaNome || (pessoa.nome.trim() ? `Família / grupo de ${pessoa.nome.trim()}` : '')) : '' })} className="mt-0.5 h-4 w-4 accent-[#c06078]"/><span><strong className="block">Criar uma nova família/grupo para esta pessoa</strong><small className="mt-0.5 block text-[#7c5560]">Use quando este convidado era individual e passará a representar um novo grupo.</small></span></label>
+            {pessoa.criarNovaFamilia && <input placeholder={`Família / grupo de ${pessoa.nome.trim() || 'nome do convidado'}`} value={pessoa.novaFamiliaNome} onChange={(e) => setPessoa({ ...pessoa, novaFamiliaNome: e.target.value })} className="mt-3 w-full rounded-xl border bg-white px-3 py-2" />}
+          </div>}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><input placeholder="Telefone" value={pessoa.telefone} onChange={(e) => setPessoa({ ...pessoa, telefone: e.target.value })} className="rounded-xl border px-3 py-2" /><input placeholder="E-mail" value={pessoa.email} onChange={(e) => setPessoa({ ...pessoa, email: e.target.value })} className="rounded-xl border px-3 py-2" /></div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3"><select value={pessoa.tipo} onChange={(e) => setPessoa({ ...pessoa, tipo: e.target.value as 'adulto' | 'crianca', idade: e.target.value === 'crianca' ? (pessoa.idade ?? null) : null })} className="rounded-xl border px-3 py-2"><option value="adulto">Adulto</option><option value="crianca">Criança</option></select>{pessoa.tipo === 'crianca' ? <select value={pessoa.idade ?? ''} onChange={(e) => setPessoa({ ...pessoa, idade: e.target.value ? Number(e.target.value) : null })} className="rounded-xl border px-3 py-2"><option value="">Idade</option>{Array.from({ length: 12 }, (_, n) => n + 1).map((idade) => <option key={idade} value={idade}>{idade} {idade === 1 ? 'ano' : 'anos'}</option>)}</select> : <div className="hidden sm:block"/>}<select value={pessoa.lado} onChange={(e) => setPessoa({ ...pessoa, lado: e.target.value })} className="rounded-xl border px-3 py-2"><option value="ambos">Ambos</option><option value="noiva">Lado da noiva</option><option value="noivo">Lado do noivo</option><option value="outro">Outro</option></select></div>
           <textarea placeholder="Observações" value={pessoa.observacoes} onChange={(e) => setPessoa({ ...pessoa, observacoes: e.target.value })} className="rounded-xl border px-3 py-2" />

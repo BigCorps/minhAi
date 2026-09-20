@@ -47,5 +47,10 @@ export async function GET(
   const slug = await buscarSlug(token);
   if (!slug) return NextResponse.redirect(new URL('/convite', req.url));
 
-  return NextResponse.redirect(`https://${slug}.conviteia.com`, 307);
+  // O botão "Ver convite" continua abrindo o convite completo, mas preserva
+  // a identificação daquele convidado. Ao tocar em "Confirmar presença" no
+  // próprio convite, a família é localizada sem pedir o contato novamente.
+  const destino = new URL(`https://${slug}.conviteia.com`);
+  destino.searchParams.set('convite', token);
+  return NextResponse.redirect(destino, 307);
 }

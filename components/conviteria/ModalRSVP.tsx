@@ -6,7 +6,9 @@ import { CalendarDays, CheckCircle2, Loader2, MailCheck, Plus, Search, Trash2, X
 import { tokensDoConvite } from '@/lib/conviteria/tokens';
 
 type EmailStatus = 'enviado' | 'sem_google' | 'falhou' | null;
-type PessoaRestrita = { id: string; nome: string; tipo: 'adulto' | 'crianca'; status: string };
+type PessoaRestrita = { id: string; nome: string; tipo: 'adulto' | 'crianca'; idade?: number | null; status: string };
+type PessoaAdicional = { nome: string; tipo: 'adulto' | 'crianca'; idade: number | null };
+const novaPessoaAdicional = (): PessoaAdicional => ({ nome: '', tipo: 'adulto', idade: null });
 
 export default function ModalRSVP({
   eventoId,
@@ -28,13 +30,15 @@ export default function ModalRSVP({
   const [mensagemEncerrado, setMensagemEncerrado] = useState('');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
-  const [familia, setFamilia] = useState<string[]>([]);
+  const [telefone, setTelefone] = useState('');
+  const [familia, setFamilia] = useState<PessoaAdicional[]>([]);
   const [contato, setContato] = useState('');
   const [grupoTitulo, setGrupoTitulo] = useState('');
   const [pessoas, setPessoas] = useState<PessoaRestrita[]>([]);
   const [selecionados, setSelecionados] = useState<string[]>([]);
+  const [idadesCriancas, setIdadesCriancas] = useState<Record<string, number | null>>({});
   const [extrasPermitidos, setExtrasPermitidos] = useState(0);
-  const [extras, setExtras] = useState<string[]>([]);
+  const [extras, setExtras] = useState<PessoaAdicional[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   const [confirmado, setConfirmado] = useState<number | null>(null);
@@ -54,7 +58,7 @@ export default function ModalRSVP({
     (async () => {
       try {
         const cfg = await fetch(`/api/conviteria/rsvp?eventoId=${encodeURIComponent(eventoId)}`, { cache: 'no-store' }).then((r) => r.json());
-        setRestrito(porLink ? true : !!cfg?.restrito);
+        setRestrito(porLink ? true : Boolean(cfg?.identificado ?? cfg?.restrito));
         setPrazoRsvp(typeof cfg?.prazo === 'string' ? cfg.prazo : null);
         setPrazoEncerrado(Boolean(cfg?.encerrado));
         setMensagemEncerrado(typeof cfg?.mensagemEncerrado === 'string' ? cfg.mensagemEncerrado : '');
@@ -86,18 +90,24 @@ export default function ModalRSVP({
     setMensagemEncerrado(d?.erro || 'O prazo de confirmação deste evento foi encerrado.');
   }
 
-  function adicionar() { if (familia.length < 20) setFamilia((f) => [...f, '']); }
-  function alterar(i: number, valor: string) { setFamilia((f) => f.map((v, idx) => idx === i ? valor : v)); }
+  function adicionar() { if (familia.length < 20) setFamilia((f) => [...f, novaPessoaAdicional()]); }
+  function alterar(i: number, patch: Partial<PessoaAdicional>) {
+    setFamilia((f) => f.map((v, idx) => idx === i ? { ...v, ...patch, ...(patch.tipo === 'adulto' ? { idade: null } : {}) } : v));
+  }
   function remover(i: number) { setFamilia((f) => f.filter((_, idx) => idx !== i)); }
 
   function adicionarExtra() {
-    if (extras.length < extrasPermitidos) setExtras((atuais) => [...atuais, '']);
+    if (extras.length < extrasPermitidos) setExtras((atuais) => [...atuais, novaPessoaAdicional()]);
   }
-  function alterarExtra(i: number, valor: string) {
-    setExtras((atuais) => atuais.map((v, idx) => idx === i ? valor : v));
+  function alterarExtra(i: number, patch: Partial<PessoaAdicional>) {
+    setExtras((atuais) => atuais.map((v, idx) => idx === i ? { ...v, ...patch, ...(patch.tipo === 'adulto' ? { idade: null } : {}) } : v));
   }
   function removerExtra(i: number) {
     setExtras((atuais) => atuais.filter((_, idx) => idx !== i));
+  }
+
+  function idadeValida(p: PessoaAdicional) {
+    return p.tipo !== 'crianca' || (Number.isInteger(p.idade) && Number(p.idade) >= 1 && Number(p.idade) <= 12);
   }
 
   function aplicarGrupo(d: any) {
@@ -106,10 +116,17 @@ export default function ModalRSVP({
     setPessoas(grupo.pessoas ?? []);
     setContato(grupo.contatoPrincipal ?? contato);
     setExtrasPermitidos(Math.max(0, Number(grupo.extrasPermitidos ?? 0)));
-    setExtras((grupo.extrasAtuais ?? []).map((x: any) => String(x?.nome ?? '')).filter(Boolean));
+    setExtras((grupo.extrasAtuais ?? []).map((x: any) => ({
+      nome: String(x?.nome ?? ''),
+      tipo: x?.tipo === 'crianca' ? 'crianca' : 'adulto',
+      idade: x?.tipo === 'crianca' && Number(x?.idade) >= 1 && Number(x?.idade) <= 12 ? Number(x.idade) : null,
+    })).filter((x: PessoaAdicional) => x.nome));
     setSelecionados((grupo.pessoas ?? [])
       .filter((p: PessoaRestrita) => p.status !== 'nao_vai')
       .map((p: PessoaRestrita) => p.id));
+    setIdadesCriancas(Object.fromEntries((grupo.pessoas ?? [])
+      .filter((p: PessoaRestrita) => p.tipo === 'crianca')
+      .map((p: PessoaRestrita) => [p.id, p.idade ?? null])));
   }
 
   async function buscarPorToken(token: string) {
@@ -162,11 +179,21 @@ export default function ModalRSVP({
     if (modoLista) {
       if (!pessoas.length) return setErro('Não foi possível localizar os nomes deste convite.');
       if (!selecionados.length) return setErro('Selecione ao menos uma pessoa convidada que irá ao evento.');
-      const extrasPreenchidos = extras.map((x) => x.trim()).filter(Boolean);
+      const criancaFixaSemIdade = pessoas.find((p) => p.tipo === 'crianca' && selecionados.includes(p.id) && (!Number.isInteger(idadesCriancas[p.id]) || Number(idadesCriancas[p.id]) < 1 || Number(idadesCriancas[p.id]) > 12));
+      if (criancaFixaSemIdade) return setErro(`Informe a idade de ${criancaFixaSemIdade.nome} (de 1 a 12 anos).`);
+      const extrasPreenchidos = extras.map((x) => ({ ...x, nome: x.nome.trim() })).filter((x) => x.nome);
       if (extrasPreenchidos.length > extrasPermitidos) return setErro(`Este convite permite até ${extrasPermitidos} acompanhante(s) extra(s).`);
+      const criancaSemIdade = extrasPreenchidos.find((x) => !idadeValida(x));
+      if (criancaSemIdade) return setErro(`Informe a idade de ${criancaSemIdade.nome} (de 1 a 12 anos).`);
     } else {
       if (nome.trim().length < 2) return setErro('Informe seu nome.');
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setErro('Informe um e-mail válido.');
+      if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setErro('Informe um e-mail válido ou deixe o campo vazio.');
+      const digitos = telefone.replace(/\D/g, '');
+      if (telefone.trim() && digitos.length < 8) return setErro('Informe um telefone/WhatsApp válido ou deixe o campo vazio.');
+      if (!email.trim() && !telefone.trim()) return setErro('Informe seu e-mail ou telefone/WhatsApp.');
+      const familiares = familia.map((x) => ({ ...x, nome: x.nome.trim() })).filter((x) => x.nome);
+      const criancaSemIdade = familiares.find((x) => !idadeValida(x));
+      if (criancaSemIdade) return setErro(`Informe a idade de ${criancaSemIdade.nome} (de 1 a 12 anos).`);
     }
 
     setEnviando(true);
@@ -180,7 +207,8 @@ export default function ModalRSVP({
             acao: 'confirmar_token',
             tokenConvite: tokenInicial,
             convidadoIds: selecionados,
-            acompanhantesExtras: extras.map((x) => x.trim()).filter(Boolean),
+            idadesCriancas,
+            acompanhantesExtras: extras.map((x) => ({ ...x, nome: x.nome.trim() })).filter((x) => x.nome),
             solicitacaoId: id,
           }
         : restrito
@@ -189,14 +217,16 @@ export default function ModalRSVP({
               acao: 'confirmar_restrito',
               contato,
               convidadoIds: selecionados,
-              acompanhantesExtras: extras.map((x) => x.trim()).filter(Boolean),
+              idadesCriancas,
+              acompanhantesExtras: extras.map((x) => ({ ...x, nome: x.nome.trim() })).filter((x) => x.nome),
               solicitacaoId: id,
             }
           : {
               eventoId,
               nome: nome.trim(),
               email: email.trim(),
-              acompanhantes: familia.map((x) => x.trim()).filter(Boolean),
+              telefone: telefone.trim(),
+              acompanhantes: familia.map((x) => ({ ...x, nome: x.nome.trim() })).filter((x) => x.nome),
               solicitacaoId: id,
             };
 
@@ -270,6 +300,7 @@ export default function ModalRSVP({
                             setExtras([]);
                             setExtrasPermitidos(0);
                             setGrupoTitulo('');
+                            setIdadesCriancas({});
                           }}
                         />
                       </label>
@@ -290,7 +321,10 @@ export default function ModalRSVP({
                               checked={selecionados.includes(p.id)}
                               onChange={(e) => setSelecionados((s) => e.target.checked ? [...s, p.id] : s.filter((id) => id !== p.id))}
                             />
-                            <span>{p.nome}{p.tipo === 'crianca' ? ' · criança' : ''}</span>
+                            <span style={{ flex: 1 }}>{p.nome}<small style={{ display: 'block', opacity: .75 }}>{p.tipo === 'crianca' ? 'Criança' : 'Adulto'}</small></span>
+                            {p.tipo === 'crianca' && selecionados.includes(p.id) && <select value={idadesCriancas[p.id] ?? ''} onChange={(e) => setIdadesCriancas((atuais) => ({ ...atuais, [p.id]: e.target.value ? Number(e.target.value) : null }))} aria-label={`Idade de ${p.nome}`} style={{ minHeight: 40 }}>
+                              <option value="">Idade</option>{Array.from({ length: 12 }, (_, n) => n + 1).map((idade) => <option key={idade} value={idade}>{idade} {idade === 1 ? 'ano' : 'anos'}</option>)}
+                            </select>}
                           </label>
                         ))}
                       </div>
@@ -306,8 +340,14 @@ export default function ModalRSVP({
                       {extras.length === 0 && <p className="cv-rsvp-sozinho">Este campo é opcional. Os membros já cadastrados ficam separados dos acompanhantes extras.</p>}
                       <div className="cv-rsvp-pessoas">
                         {extras.map((extra, i) => (
-                          <div className="cv-rsvp-pessoa" key={i}>
-                            <input type="text" maxLength={120} placeholder={`Acompanhante extra ${i + 1}`} value={extra} onChange={(e) => alterarExtra(i, e.target.value)} />
+                          <div className="cv-rsvp-pessoa" key={i} style={{ alignItems: 'stretch', flexWrap: 'wrap' }}>
+                            <input type="text" maxLength={120} placeholder={`Acompanhante extra ${i + 1}`} value={extra.nome} onChange={(e) => alterarExtra(i, { nome: e.target.value })} style={{ minWidth: 180, flex: '1 1 220px' }} />
+                            <select value={extra.tipo} onChange={(e) => alterarExtra(i, { tipo: e.target.value === 'crianca' ? 'crianca' : 'adulto' })} aria-label={`Tipo do acompanhante ${i + 1}`} style={{ minHeight: 44 }}>
+                              <option value="adulto">Adulto</option><option value="crianca">Criança</option>
+                            </select>
+                            {extra.tipo === 'crianca' && <select value={extra.idade ?? ''} onChange={(e) => alterarExtra(i, { idade: e.target.value ? Number(e.target.value) : null })} aria-label={`Idade do acompanhante ${i + 1}`} style={{ minHeight: 44 }}>
+                              <option value="">Idade</option>{Array.from({ length: 12 }, (_, n) => n + 1).map((idade) => <option key={idade} value={idade}>{idade} {idade === 1 ? 'ano' : 'anos'}</option>)}
+                            </select>}
                             <button type="button" onClick={() => removerExtra(i)} aria-label="Remover acompanhante extra"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         ))}
@@ -317,9 +357,10 @@ export default function ModalRSVP({
                 </>
               ) : (
                 <>
-                  <p className="cv-rsvp-intro">Informe quem irá ao evento. Se precisar corrigir depois, envie novamente usando o mesmo e-mail.</p>
+                  <p className="cv-rsvp-intro">Informe quem irá ao evento. Use seu e-mail ou telefone/WhatsApp para que a confirmação possa ser localizada e atualizada depois.</p>
                   <label>Seu nome<input type="text" maxLength={120} autoComplete="name" placeholder="Ex.: Ana Silva" value={nome} onChange={(e) => setNome(e.target.value)} /></label>
-                  <label>Seu e-mail<input type="email" maxLength={180} autoComplete="email" placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+                  <label>Seu e-mail <small>(opcional se informar WhatsApp)</small><input type="email" maxLength={180} autoComplete="email" placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+                  <label>Seu telefone / WhatsApp <small>(opcional se informar e-mail)</small><input type="tel" maxLength={40} autoComplete="tel" placeholder="(11) 99999-9999" value={telefone} onChange={(e) => setTelefone(e.target.value)} /></label>
                   <div className="cv-rsvp-familia">
                     <div className="cv-rsvp-familia-topo">
                       <div><strong>Pessoas da sua família que também irão</strong><small>Não repita seu próprio nome.</small></div>
@@ -328,8 +369,14 @@ export default function ModalRSVP({
                     {familia.length === 0 && <p className="cv-rsvp-sozinho">Se for somente você, pode confirmar assim mesmo.</p>}
                     <div className="cv-rsvp-pessoas">
                       {familia.map((pessoa, i) => (
-                        <div className="cv-rsvp-pessoa" key={i}>
-                          <input type="text" maxLength={120} placeholder={`Pessoa ${i + 2}`} value={pessoa} onChange={(e) => alterar(i, e.target.value)} />
+                        <div className="cv-rsvp-pessoa" key={i} style={{ alignItems: 'stretch', flexWrap: 'wrap' }}>
+                          <input type="text" maxLength={120} placeholder={`Pessoa ${i + 2}`} value={pessoa.nome} onChange={(e) => alterar(i, { nome: e.target.value })} style={{ minWidth: 180, flex: '1 1 220px' }} />
+                          <select value={pessoa.tipo} onChange={(e) => alterar(i, { tipo: e.target.value === 'crianca' ? 'crianca' : 'adulto' })} aria-label={`Tipo da pessoa ${i + 2}`} style={{ minHeight: 44 }}>
+                            <option value="adulto">Adulto</option><option value="crianca">Criança</option>
+                          </select>
+                          {pessoa.tipo === 'crianca' && <select value={pessoa.idade ?? ''} onChange={(e) => alterar(i, { idade: e.target.value ? Number(e.target.value) : null })} aria-label={`Idade da pessoa ${i + 2}`} style={{ minHeight: 44 }}>
+                            <option value="">Idade</option>{Array.from({ length: 12 }, (_, n) => n + 1).map((idade) => <option key={idade} value={idade}>{idade} {idade === 1 ? 'ano' : 'anos'}</option>)}
+                          </select>}
                           <button type="button" onClick={() => remover(i)} aria-label="Remover pessoa"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       ))}

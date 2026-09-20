@@ -21,6 +21,16 @@ const STATUS = new Set(['pendente', 'confirmado', 'nao_vai']);
 const MAX_IMPORTACAO = 600;
 const MAX_MEMBROS = 50;
 
+function idadeCrianca(tipo: 'adulto' | 'crianca', valor: unknown, obrigatoria = true) {
+  if (tipo !== 'crianca') return { idade: null as number | null, erro: null as string | null };
+  if (valor === '' || valor == null) return obrigatoria
+    ? { idade: null, erro: 'Informe a idade da criança (de 1 a 12 anos).' }
+    : { idade: null, erro: null };
+  const idade = Number(valor);
+  if (!Number.isInteger(idade) || idade < 1 || idade > 12) return { idade: null, erro: 'A idade da criança deve ficar entre 1 e 12 anos.' };
+  return { idade, erro: null };
+}
+
 function nomeChave(valor: unknown) {
   return texto(valor, 120)
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -61,14 +71,22 @@ async function primeiraPessoaPorTelefone(admin: any, eventoId: string, telefone:
   return data ?? null;
 }
 
-async function registrarConfirmacaoManual(r: any, eventoId: string, ids: string[]) {
+async function registrarConfirmacaoManual(r: any, eventoId: string, ids: string[], idadesCriancas: Record<string, unknown> = {}) {
   const { data: pessoas } = await r.admin
     .from('convidados_lista')
-    .select('id,nome,email,email_normalizado,telefone,tipo,familia_id')
+    .select('id,nome,email,email_normalizado,telefone,tipo,idade,familia_id')
     .eq('evento_id', eventoId)
     .in('id', ids);
   if (!pessoas || pessoas.length !== ids.length) {
     return { erro: 'Há convidados inválidos na seleção.', status: 400 as const };
+  }
+  for (const pessoa of pessoas as any[]) {
+    if (pessoa.tipo !== 'crianca') continue;
+    const validacao = idadeCrianca('crianca', idadesCriancas[pessoa.id] ?? pessoa.idade, true);
+    if (validacao.erro) return { erro: `${pessoa.nome}: ${validacao.erro}`, status: 400 as const };
+    pessoa.idade = validacao.idade;
+    const { error } = await r.admin.from('convidados_lista').update({ idade: validacao.idade }).eq('evento_id', eventoId).eq('id', pessoa.id).eq('tipo', 'crianca');
+    if (error) return { erro: `Não foi possível salvar a idade de ${pessoa.nome}.`, status: 500 as const };
   }
 
   const familiaIds = [...new Set(pessoas.map((p: any) => p.familia_id).filter(Boolean))];
@@ -96,7 +114,7 @@ async function registrarConfirmacaoManual(r: any, eventoId: string, ids: string[
   let extrasConfirmados: any[] = [];
   if (familiaId) {
     const { data } = await r.admin.from('convidados_lista')
-      .select('id,nome,tipo')
+      .select('id,nome,tipo,idade')
       .eq('evento_id', eventoId)
       .eq('familia_id', familiaId)
       .eq('rsvp_extra', true)
@@ -104,10 +122,11 @@ async function registrarConfirmacaoManual(r: any, eventoId: string, ids: string[
     extrasConfirmados = data ?? [];
   }
 
-  const acompanhantes = [
-    ...pessoas.slice(1).map((p: any) => p.nome),
-    ...extrasConfirmados.map((p: any) => p.nome),
+  const acompanhantesDetalhes = [
+    ...pessoas.slice(1).map((p: any) => ({ nome: p.nome, tipo: p.tipo === 'crianca' ? 'crianca' : 'adulto', idade: p.tipo === 'crianca' ? (p.idade ?? null) : null })),
+    ...extrasConfirmados.map((p: any) => ({ nome: p.nome, tipo: p.tipo === 'crianca' ? 'crianca' : 'adulto', idade: p.tipo === 'crianca' ? (p.idade ?? null) : null })),
   ];
+  const acompanhantes = acompanhantesDetalhes.map((p) => p.nome);
   const adultos = pessoas.filter((p: any) => p.tipo !== 'crianca').length
     + extrasConfirmados.filter((p: any) => p.tipo !== 'crianca').length;
   const criancas = pessoas.filter((p: any) => p.tipo === 'crianca').length
@@ -121,6 +140,7 @@ async function registrarConfirmacaoManual(r: any, eventoId: string, ids: string[
     adultos,
     criancas,
     acompanhantes,
+    acompanhantes_detalhes: acompanhantesDetalhes,
     familia_lista_id: familiaId,
     convidado_lista_id: familiaId ? null : (ids.length === 1 ? ids[0] : null),
     teste_id: null,
@@ -320,6 +340,7 @@ export async function POST(req: NextRequest) {
           email,
           email_normalizado: emailN,
           tipo: 'adulto',
+          idade: null,
           lado: 'ambos',
           status: principal?.status ?? 'pendente',
           rsvp_extra: false,
@@ -346,6 +367,7 @@ export async function POST(req: NextRequest) {
             familia_id: familia.id,
             nome: dep,
             tipo: 'adulto',
+            idade: null,
             lado: 'ambos',
             status: 'pendente',
             rsvp_extra: false,
@@ -373,6 +395,7 @@ export async function POST(req: NextRequest) {
           email,
           email_normalizado: emailN,
           tipo: 'adulto',
+          idade: null,
           lado: 'ambos',
           status: pessoa?.status ?? 'pendente',
         };
@@ -413,11 +436,18 @@ export async function POST(req: NextRequest) {
       ? body.membros.slice(0, MAX_MEMBROS).map((m: any) => ({
           id: texto(m?.id, 80) || null,
           nome: texto(m?.nome, 120),
-          tipo: m?.tipo === 'crianca' ? 'crianca' : 'adulto',
+          tipo: (m?.tipo === 'crianca' ? 'crianca' : 'adulto') as 'adulto' | 'crianca',
+          idadeBruta: m?.idade,
+          idade: null as number | null,
         })).filter((m: any) => m.nome)
       : [];
     if (!membrosEntrada.length) {
       return NextResponse.json({ erro: 'Cadastre pelo menos uma pessoa neste grupo. O nome da família não cria membros automaticamente.' }, { status: 400 });
+    }
+    for (const membro of membrosEntrada) {
+      const validacao = idadeCrianca(membro.tipo, membro.idadeBruta, true);
+      if (validacao.erro) return NextResponse.json({ erro: `${membro.nome}: ${validacao.erro}` }, { status: 400 });
+      membro.idade = validacao.idade;
     }
 
     const nomes = new Set<string>();
@@ -477,7 +507,7 @@ export async function POST(req: NextRequest) {
 
     for (const m of membrosEntrada) {
       if (m.id) {
-        const { error } = await r.admin.from('convidados_lista').update({ nome: m.nome, tipo: m.tipo, lado })
+        const { error } = await r.admin.from('convidados_lista').update({ nome: m.nome, tipo: m.tipo, idade: m.idade, lado })
           .eq('evento_id', eventoId).eq('familia_id', familiaId).eq('id', m.id).eq('rsvp_extra', false);
         if (error) return NextResponse.json({ erro: `A família foi salva, mas não foi possível atualizar ${m.nome}.` }, { status: 500 });
       } else {
@@ -486,6 +516,7 @@ export async function POST(req: NextRequest) {
           familia_id: familiaId,
           nome: m.nome,
           tipo: m.tipo,
+          idade: m.idade,
           lado,
           status: 'pendente',
           rsvp_extra: false,
@@ -516,6 +547,9 @@ export async function POST(req: NextRequest) {
     }
     const telefone = texto(body?.telefone, 40) || null;
     const email = texto(body?.email, 180) || null;
+    const tipoPessoa: 'adulto' | 'crianca' = body?.tipo === 'crianca' ? 'crianca' : 'adulto';
+    const idadePessoa = idadeCrianca(tipoPessoa, body?.idade, true);
+    if (idadePessoa.erro) return NextResponse.json({ erro: idadePessoa.erro }, { status: 400 });
     const dados: any = {
       evento_id: eventoId,
       familia_id: familiaId,
@@ -524,7 +558,8 @@ export async function POST(req: NextRequest) {
       telefone_normalizado: normalizarTelefone(telefone),
       email,
       email_normalizado: normalizarEmail(email),
-      tipo: body?.tipo === 'crianca' ? 'crianca' : 'adulto',
+      tipo: tipoPessoa,
+      idade: idadePessoa.idade,
       lado: LADOS.has(body?.lado) ? body.lado : 'ambos',
       observacoes: texto(body?.observacoes, 1000) || null,
       status: STATUS.has(body?.status) ? body.status : 'pendente',
@@ -543,7 +578,10 @@ export async function POST(req: NextRequest) {
       ? Array.from(new Set<string>(body.convidadoIds.map((x: unknown) => texto(x, 80)).filter(Boolean))).slice(0, 50)
       : [];
     if (!ids.length) return NextResponse.json({ erro: 'Selecione ao menos uma pessoa.' }, { status: 400 });
-    const resultado = await registrarConfirmacaoManual(r, eventoId, ids);
+    const idadesCriancas = body?.idadesCriancas && typeof body.idadesCriancas === 'object'
+      ? body.idadesCriancas as Record<string, unknown>
+      : {};
+    const resultado = await registrarConfirmacaoManual(r, eventoId, ids, idadesCriancas);
     if ('erro' in resultado) return NextResponse.json({ erro: resultado.erro }, { status: resultado.status });
     return NextResponse.json(resultado);
   }

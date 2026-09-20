@@ -29,6 +29,7 @@ export default function PresencasPainel({
   const [totalFamilias, setTotalFamilias] = useState(0);
   const [totalPessoas, setTotalPessoas] = useState(0);
   const [carregando, setCarregando] = useState(false);
+  const [carregado, setCarregado] = useState(false);
   const [erro, setErro] = useState('');
 
   const token = useCallback(async () =>
@@ -51,19 +52,26 @@ export default function PresencasPainel({
       setErro(e.message || 'Falha ao carregar confirmações.');
     } finally {
       setCarregando(false);
+      setCarregado(true);
     }
   }, [eventoId, token]);
 
-  useEffect(() => { void carregar(); }, [carregar]);
+  useEffect(() => {
+    if (modoTeste || mostrarGoogle) void carregar();
+  }, [carregar, modoTeste, mostrarGoogle]);
+
+  useEffect(() => {
+    if (aberto && !carregado && !carregando) void carregar();
+  }, [aberto, carregado, carregando, carregar]);
 
   useEffect(() => {
     const atualizar = (event: Event) => {
       const detalhe = (event as CustomEvent<{ eventoId?: string }>).detail;
-      if (detalhe?.eventoId === eventoId) void carregar();
+      if (detalhe?.eventoId === eventoId && (carregado || aberto || modoTeste || mostrarGoogle)) void carregar();
     };
     window.addEventListener('conviteia:presencas-atualizadas', atualizar);
     return () => window.removeEventListener('conviteia:presencas-atualizadas', atualizar);
-  }, [carregar, eventoId]);
+  }, [aberto, carregado, carregar, eventoId, modoTeste, mostrarGoogle]);
 
   async function remover(confirmacaoId: string) {
     if (!window.confirm('Remover esta confirmação de presença?')) return;
@@ -81,8 +89,10 @@ export default function PresencasPainel({
         <span className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: '#a04a63' }}>
           <Users className="h-4 w-4" />
           Histórico de confirmações
-          {totalPessoas > 0 && (
-            <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ backgroundColor: '#c06078' }}>{totalPessoas}</span>
+          {carregado && (modoTeste || mostrarGoogle ? totalPessoas : confirmacoes.length) > 0 && (
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ backgroundColor: '#c06078' }}>
+              {modoTeste || mostrarGoogle ? totalPessoas : confirmacoes.length}
+            </span>
           )}
         </span>
         {aberto ? <ChevronUp className="h-4 w-4" style={{ color: '#9b7b84' }} /> : <ChevronDown className="h-4 w-4" style={{ color: '#9b7b84' }} />}
@@ -90,7 +100,7 @@ export default function PresencasPainel({
 
       {aberto && (
         <div className="mt-4 rounded-2xl border p-4" style={{ backgroundColor: '#fff9fb', borderColor: '#c0607833' }}>
-          <div className="mb-4 grid grid-cols-2 gap-3">
+          {(modoTeste || mostrarGoogle) && <div className="mb-4 grid grid-cols-2 gap-3">
             <div className="rounded-xl border bg-white p-3" style={{ borderColor: '#c0607828' }}>
               <p className="text-xs" style={{ color: '#7c5560' }}>Famílias confirmadas</p>
               <p className="mt-1 text-xl font-semibold" style={{ color: '#40232c' }}>{totalFamilias}</p>
@@ -99,7 +109,7 @@ export default function PresencasPainel({
               <p className="text-xs" style={{ color: '#7c5560' }}>Total de pessoas</p>
               <p className="mt-1 text-xl font-semibold" style={{ color: '#40232c' }}>{totalPessoas}</p>
             </div>
-          </div>
+          </div>}
 
           {modoTeste ? (
             <p className="mb-4 rounded-xl bg-white p-3 text-xs leading-5" style={{ color: '#7c5560' }}>
@@ -107,7 +117,7 @@ export default function PresencasPainel({
             </p>
           ) : (
             <p className="mb-4 text-xs leading-5" style={{ color: '#7c5560' }}>
-              Este histórico mostra as respostas recebidas. A lista operacional e os status de cada pessoa ficam na Central de convidados logo acima.
+              Este histórico mostra as respostas recebidas. Os totais oficiais e os status atuais ficam nos cards e na Central de convidados acima.
             </p>
           )}
 

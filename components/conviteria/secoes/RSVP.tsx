@@ -11,6 +11,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 export default function RSVP({ cfg, secao, modo }: PropsSecao) {
   const [aberto, setAberto] = useState(false);
   const [tokenInicial, setTokenInicial] = useState<string | null>(null);
+  const [tokenContexto, setTokenContexto] = useState<string | null>(null);
   const [prazo, setPrazo] = useState<string | null>(null);
   const [encerrado, setEncerrado] = useState(false);
   const c = secao.config ?? {};
@@ -26,9 +27,13 @@ export default function RSVP({ cfg, secao, modo }: PropsSecao) {
       })
       .catch(() => undefined);
 
-    const token = new URL(window.location.href).searchParams.get('rsvp')?.trim() ?? '';
-    if (!UUID_RE.test(token)) return;
-    setTokenInicial(token);
+    const urlAtual = new URL(window.location.href);
+    const tokenConvite = urlAtual.searchParams.get('convite')?.trim() ?? '';
+    if (UUID_RE.test(tokenConvite)) setTokenContexto(tokenConvite);
+
+    const tokenRsvp = urlAtual.searchParams.get('rsvp')?.trim() ?? '';
+    if (!UUID_RE.test(tokenRsvp)) return;
+    setTokenInicial(tokenRsvp);
     setAberto(true);
   }, [modo.eventoId, modo.previa]);
 
@@ -60,7 +65,7 @@ export default function RSVP({ cfg, secao, modo }: PropsSecao) {
           type="button"
           className="cv-botao"
           disabled={modo.previa || !modo.eventoId}
-          onClick={() => { setTokenInicial(null); setAberto(true); }}
+          onClick={() => { setTokenInicial(tokenContexto); setAberto(true); }}
         >
           {c.rotuloBotao ?? 'Confirmar presença'}
         </button>

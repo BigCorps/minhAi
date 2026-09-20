@@ -35,6 +35,16 @@ async function prazoRsvpDoEvento(admin: any, eventoId: string) {
   return normalizarDataRsvp(data?.rsvp_prazo);
 }
 
+async function confirmacoesNaoConciliadas(admin: any, eventoId: string) {
+  const { count } = await admin.from('convidados')
+    .select('id', { count: 'exact', head: true })
+    .eq('evento_id', eventoId)
+    .is('teste_id', null)
+    .is('familia_lista_id', null)
+    .is('convidado_lista_id', null);
+  return Number(count ?? 0);
+}
+
 function erroPrazoParaWhatsApp(prazo: string | null, programado?: string | null) {
   if (!prazo) return 'Defina o prazo de confirmação em Gestão → Convidados antes de usar o WhatsApp do Evento.';
   if (prazoRsvpEncerrado(prazo)) return 'O prazo de confirmação já foi encerrado. Altere a data em Gestão → Convidados antes de enviar.';
@@ -67,12 +77,14 @@ export async function GET(req: NextRequest) {
   const pendente = resumo.config?.status === 'aguardando_pagamento'
     ? await pixPendente(resumo.config.pix_transaction_id)
     : null;
+  const confirmacoesPendentesConciliacao = await confirmacoesNaoConciliadas(r.admin, eventoId);
 
   return NextResponse.json({
     ...resumo,
     telefonesTransmissao,
     precoCentavos: WHATSAPP_EVENTO_PRECO_CENTAVOS,
     limiteMensagens: WHATSAPP_EVENTO_LIMITE,
+    confirmacoesPendentesConciliacao,
     pixPendente: pendente ? {
       transactionId: pendente.id,
       copiaECola: pendente.pix_code,
@@ -197,6 +209,12 @@ export async function POST(req: NextRequest) {
   }
 
   if (acao === 'enviar_primeiro') {
+    const pendentesConciliacao = await confirmacoesNaoConciliadas(r.admin, eventoId);
+    if (pendentesConciliacao > 0) {
+      return NextResponse.json({
+        erro: `Existem ${pendentesConciliacao} confirmação(ões) antiga(s) ainda não vinculadas à Central de convidados. Conclua a sincronização em Gestão → Convidados antes do primeiro envio.`,
+      }, { status: 409 });
+    }
     try {
       const resultado = await processarRodada(eventoId, 1, 40);
       return NextResponse.json({ ok: true, ...resultado });

@@ -31,6 +31,7 @@ type Estado = {
   faltamSegundoEnvio: number;
   mensagensUsadas: number;
   mensagensRestantes: number;
+  confirmacoesPendentesConciliacao?: number;
   rsvpPrazo?: string | null;
   rsvpPrazoTexto?: string | null;
   rsvpEncerrado?: boolean;
@@ -40,12 +41,6 @@ type Estado = {
 };
 
 type Pix = { transactionId?: string; copiaECola?: string | null; qrcode?: string | null; expiresAt?: string | null } | null;
-
-const ROTULOS: Record<Modo, string> = {
-  '2_meses': '2 meses antes',
-  '1_mes': '1 mês antes',
-  '15_dias': '15 dias antes',
-};
 
 function brl(centavos: number) {
   return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -181,6 +176,8 @@ https://${slug}.conviteia.com`;
   const aguardando = status === 'aguardando_pagamento';
   const prazoConfigurado = Boolean(estado.rsvpPrazo);
   const bloqueadoPrazo = !prazoConfigurado || Boolean(estado.rsvpEncerrado);
+  const pendenciasConciliacao = Number(estado.confirmacoesPendentesConciliacao ?? 0);
+  const bloqueadoPrimeiroEnvio = bloqueadoPrazo || pendenciasConciliacao > 0;
 
   return <section className="space-y-5">
     <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
@@ -217,6 +214,11 @@ https://${slug}.conviteia.com`;
       </div>
     </div>
 
+    {pendenciasConciliacao > 0 && <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">
+      <strong>{pendenciasConciliacao} confirmação(ões) antiga(s) precisam ser sincronizadas.</strong>
+      <p className="mt-1 leading-6">Vá em <strong>Gestão → Convidados</strong> e conclua a conciliação antes do primeiro envio. Isso evita mandar pedido de confirmação para quem já respondeu anteriormente.</p>
+    </div>}
+
     {!ativo && <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
       <h3 className="font-semibold">Contratar por {brl(estado.precoCentavos)}</h3>
       <p className="mt-1 text-sm text-[#7c5560]">O primeiro comunicado é enviado quando você mandar. O segundo fica programado para uma única data.</p>
@@ -244,7 +246,7 @@ https://${slug}.conviteia.com`;
           <div className="flex items-center gap-2"><Send className="h-5 w-5 text-[#a04a63]"/><h3 className="font-semibold">1ª comunicação</h3></div>
           <p className="mt-2 text-sm text-[#7c5560]">Só recebe quem ainda está pendente e nunca recebeu a primeira mensagem. Quem já confirmou pelo convite, CSV sincronizado ou painel não recebe cobrança de confirmação novamente.</p>
           <p className="mt-3 text-sm"><strong>{estado.novosPrimeiroEnvio}</strong> contato(s) apto(s) agora.</p>
-          <button type="button" disabled={ocupado || bloqueadoPrazo || estado.novosPrimeiroEnvio===0} onClick={enviarPrimeiro} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{ocupado?<Loader2 className="h-4 w-4 animate-spin"/>:<Send className="h-4 w-4"/>}{estado.config?.primeiro_disparo_em?'Enviar para novos convidados':'Enviar primeira comunicação'}</button>
+          <button type="button" disabled={ocupado || bloqueadoPrimeiroEnvio || estado.novosPrimeiroEnvio===0} onClick={enviarPrimeiro} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{ocupado?<Loader2 className="h-4 w-4 animate-spin"/>:<Send className="h-4 w-4"/>}{estado.config?.primeiro_disparo_em?'Enviar para novos convidados':'Enviar primeira comunicação'}</button>
           {estado.config?.primeiro_disparo_em && <p className="mt-2 text-xs text-[#7c5560]">Primeiro envio iniciado em {dataBr(estado.config.primeiro_disparo_em)}.</p>}
         </div>
 
@@ -266,11 +268,11 @@ https://${slug}.conviteia.com`;
     <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
       <div className="flex items-center gap-2"><Smartphone className="h-5 w-5 text-[#a04a63]"/><h3 className="font-semibold">Opção gratuita · seu próprio WhatsApp</h3></div>
       <p className="mt-2 text-sm text-[#7c5560]">Para quem prefere não usar o número do ConviteIA: copie a mensagem e os números pendentes para organizar uma lista de transmissão no seu WhatsApp. O mesmo prazo do RSVP é respeitado aqui.</p>
-      <div className="mt-3 rounded-xl bg-[#fff9fb] p-3 text-sm whitespace-pre-line">{bloqueadoPrazo ? 'Defina ou reabra o prazo de confirmação em Convidados antes de preparar este envio.' : mensagemGratis}</div>
+      <div className="mt-3 rounded-xl bg-[#fff9fb] p-3 text-sm whitespace-pre-line">{pendenciasConciliacao > 0 ? 'Sincronize primeiro as confirmações antigas em Gestão → Convidados para preparar uma lista correta de pendentes.' : bloqueadoPrazo ? 'Defina ou reabra o prazo de confirmação em Convidados antes de preparar este envio.' : mensagemGratis}</div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" disabled={bloqueadoPrazo} onClick={()=>void copiar(mensagemGratis,'Mensagem copiada.')} className="inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-3 py-2 text-sm font-semibold text-[#a04a63] disabled:opacity-50"><Copy className="h-4 w-4"/>Copiar mensagem</button>
-        <button type="button" disabled={bloqueadoPrazo || !estado.telefonesTransmissao?.length} onClick={()=>void copiar((estado.telefonesTransmissao??[]).join('\n'),'Telefones pendentes copiados.')} className="inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-3 py-2 text-sm font-semibold text-[#a04a63] disabled:opacity-50"><Copy className="h-4 w-4"/>Copiar números ({estado.telefonesTransmissao?.length??0})</button>
-        {!bloqueadoPrazo ? <a href={`https://wa.me/?text=${encodeURIComponent(mensagemGratis)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white"><MessageCircle className="h-4 w-4"/>Abrir WhatsApp</a> : <span className="inline-flex items-center gap-2 rounded-xl bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-500"><MessageCircle className="h-4 w-4"/>Abrir WhatsApp</span>}
+        <button type="button" disabled={bloqueadoPrimeiroEnvio} onClick={()=>void copiar(mensagemGratis,'Mensagem copiada.')} className="inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-3 py-2 text-sm font-semibold text-[#a04a63] disabled:opacity-50"><Copy className="h-4 w-4"/>Copiar mensagem</button>
+        <button type="button" disabled={bloqueadoPrimeiroEnvio || !estado.telefonesTransmissao?.length} onClick={()=>void copiar((estado.telefonesTransmissao??[]).join('\n'),'Telefones pendentes copiados.')} className="inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-3 py-2 text-sm font-semibold text-[#a04a63] disabled:opacity-50"><Copy className="h-4 w-4"/>Copiar números ({estado.telefonesTransmissao?.length??0})</button>
+        {!bloqueadoPrimeiroEnvio ? <a href={`https://wa.me/?text=${encodeURIComponent(mensagemGratis)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white"><MessageCircle className="h-4 w-4"/>Abrir WhatsApp</a> : <span className="inline-flex items-center gap-2 rounded-xl bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-500"><MessageCircle className="h-4 w-4"/>Abrir WhatsApp</span>}
       </div>
     </div>
 

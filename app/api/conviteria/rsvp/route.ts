@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminConviteria, buscarEventoAcessivelPorId, hashIp, ipDaRequisicao } from '@/lib/conviteria/servidor';
-import { normalizarEmail, variantesTelefoneBusca } from '@/lib/conviteria/gestao-servidor';
+import { normalizarEmail, normalizarTelefone, variantesTelefoneBusca } from '@/lib/conviteria/gestao-servidor';
+import { normalizarPessoasRsvp, type PessoaRsvp } from '@/lib/conviteria/rsvp-pessoas';
 import { sincronizarConfirmacoesEvento } from '@/lib/conviteria/convidados-sync';
 import { urlGoogleAgenda } from '@/lib/conviteria/calendario';
 import type { ConviteConfig } from '@/lib/conviteria/tipos';
@@ -18,22 +19,6 @@ function nomeChave(valor: unknown) {
   return String(valor ?? '').trim().replace(/\s+/g, ' ')
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLocaleLowerCase('pt-BR');
-}
-
-function nomesFamilia(valor: unknown) {
-  if (!Array.isArray(valor)) return [] as string[];
-  const vistos = new Set<string>();
-  const nomes: string[] = [];
-  for (const item of valor) {
-    const nome = String(item ?? '').trim().replace(/\s+/g, ' ').slice(0, 120);
-    if (!nome) continue;
-    const chave = nomeChave(nome);
-    if (!chave || vistos.has(chave)) continue;
-    vistos.add(chave);
-    nomes.push(nome);
-    if (nomes.length >= MAX_FAMILIA) break;
-  }
-  return nomes;
 }
 
 async function enviarConfirmacaoGoogle({ eventoId, convidadoId, atualizado, idempotencyKey }: { eventoId: string; convidadoId: string; atualizado: boolean; idempotencyKey: string; }) {
@@ -56,13 +41,21 @@ async function enviarConfirmacaoGoogle({ eventoId, convidadoId, atualizado, idem
 
 async function configRsvp(eventoId: string) {
   const admin = adminConviteria();
-  const { data } = await admin.from('evento_gestao_config')
-    .select('rsvp_restrito,rsvp_prazo')
-    .eq('evento_id', eventoId)
-    .maybeSingle();
+  const [{ data }, { count: pessoasLista }] = await Promise.all([
+    admin.from('evento_gestao_config')
+      .select('rsvp_restrito,rsvp_prazo')
+      .eq('evento_id', eventoId)
+      .maybeSingle(),
+    admin.from('convidados_lista')
+      .select('id', { count: 'exact', head: true })
+      .eq('evento_id', eventoId),
+  ]);
   const prazo = normalizarDataRsvp(data?.rsvp_prazo);
+  const temLista = (pessoasLista ?? 0) > 0;
   return {
     restrito: !!data?.rsvp_restrito,
+    temLista,
+    identificado: !!data?.rsvp_restrito || temLista,
     prazo,
     encerrado: prazoRsvpEncerrado(prazo),
   };
@@ -70,7 +63,7 @@ async function configRsvp(eventoId: string) {
 
 async function pessoasDaFamilia(admin: any, eventoId: string, familiaId: string) {
   const { data } = await admin.from('convidados_lista')
-    .select('id,nome,tipo,status,email,telefone,rsvp_extra,lado,created_at')
+    .select('id,nome,tipo,idade,status,email,telefone,rsvp_extra,lado,created_at')
     .eq('evento_id', eventoId)
     .eq('familia_id', familiaId)
     .order('created_at');
@@ -85,7 +78,7 @@ async function grupoDaFamilia(admin: any, eventoId: string, familia: any, contat
     familiaId: familia.id as string,
     titulo: familia.nome as string,
     pessoas,
-    extrasAtuais: extrasAtuais.map((p: any) => ({ id: p.id, nome: p.nome })),
+    extrasAtuais: extrasAtuais.map((p: any) => ({ id: p.id, nome: p.nome, tipo: p.tipo, idade: p.idade ?? null })),
     extrasPermitidos: Math.max(0, Number(familia.extras_permitidos ?? 0)),
     contatoPrincipal: familia.email || familia.telefone || contatoFallback,
     lado: familia.lado || 'ambos',
@@ -110,7 +103,7 @@ async function primeiraPessoaPorTelefone(admin: any, eventoId: string, contato: 
   const variantes = variantesTelefoneBusca(contato);
   if (!variantes.length) return null;
   const { data } = await admin.from('convidados_lista')
-    .select('id,nome,tipo,status,familia_id,email,telefone,rsvp_extra')
+    .select('id,nome,tipo,idade,status,familia_id,email,telefone,rsvp_extra')
     .eq('evento_id', eventoId)
     .in('telefone_normalizado', variantes)
     .order('created_at')
@@ -139,7 +132,7 @@ async function buscarGrupo(eventoId: string, contato: string) {
   let pessoa: any = null;
   if (email) {
     const { data } = await admin.from('convidados_lista')
-      .select('id,nome,tipo,status,familia_id,email,telefone,rsvp_extra')
+      .select('id,nome,tipo,idade,status,familia_id,email,telefone,rsvp_extra')
       .eq('evento_id', eventoId).eq('email_normalizado', email)
       .order('created_at').limit(1).maybeSingle();
     pessoa = data;
@@ -179,7 +172,7 @@ async function buscarGrupoPorToken(eventoId: string, token: string) {
   if (familia) return grupoDaFamilia(admin, eventoId, familia);
 
   const { data: pessoa } = await admin.from('convidados_lista')
-    .select('id,nome,tipo,status,familia_id,email,telefone,rsvp_extra,lado')
+    .select('id,nome,tipo,idade,status,familia_id,email,telefone,rsvp_extra,lado')
     .eq('evento_id', eventoId)
     .eq('qr_token', token)
     .maybeSingle();
@@ -213,9 +206,9 @@ function respostaGrupo(grupo: any) {
   return NextResponse.json({ ok: true, grupo });
 }
 
-async function sincronizarExtrasRsvp(admin: any, eventoId: string, familiaId: string, nomes: string[], lado: string) {
+async function sincronizarExtrasRsvp(admin: any, eventoId: string, familiaId: string, pessoasExtras: PessoaRsvp[], lado: string) {
   const { data: existentes } = await admin.from('convidados_lista')
-    .select('id,nome,status')
+    .select('id,nome,tipo,idade,status')
     .eq('evento_id', eventoId)
     .eq('familia_id', familiaId)
     .eq('rsvp_extra', true)
@@ -228,11 +221,12 @@ async function sincronizarExtrasRsvp(admin: any, eventoId: string, familiaId: st
   }
 
   const ativos: string[] = [];
-  for (const nome of nomes) {
+  for (const pessoaExtra of pessoasExtras) {
+    const nome = pessoaExtra.nome;
     const existente = porNome.get(nomeChave(nome));
     if (existente) {
       const { error } = await admin.from('convidados_lista')
-        .update({ status: 'confirmado', nome, lado })
+        .update({ status: 'confirmado', nome, tipo: pessoaExtra.tipo, idade: pessoaExtra.tipo === 'crianca' ? pessoaExtra.idade : null, lado })
         .eq('evento_id', eventoId).eq('id', existente.id).eq('rsvp_extra', true);
       if (error) throw error;
       ativos.push(existente.id as string);
@@ -243,7 +237,8 @@ async function sincronizarExtrasRsvp(admin: any, eventoId: string, familiaId: st
       evento_id: eventoId,
       familia_id: familiaId,
       nome,
-      tipo: 'adulto',
+      tipo: pessoaExtra.tipo,
+      idade: pessoaExtra.tipo === 'crianca' ? pessoaExtra.idade : null,
       lado,
       status: 'confirmado',
       rsvp_extra: true,
@@ -267,6 +262,8 @@ export async function GET(req: NextRequest) {
   const cfg = await configRsvp(eventoId);
   return NextResponse.json({
     restrito: cfg.restrito,
+    temLista: cfg.temLista,
+    identificado: cfg.identificado,
     prazo: cfg.prazo,
     encerrado: cfg.encerrado,
     mensagemEncerrado: cfg.encerrado ? mensagemPrazoEncerrado(cfg.prazo) : null,
@@ -282,6 +279,7 @@ export async function POST(req: NextRequest) {
   if (!acesso) return NextResponse.json({ erro: 'Convite indisponível.' }, { status: 404 });
   const cfgRsvp = await configRsvp(eventoId);
   const restrito = cfgRsvp.restrito;
+  const identificado = cfgRsvp.identificado;
 
   if (cfgRsvp.encerrado) {
     return NextResponse.json({
@@ -292,7 +290,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (corpo?.acao === 'buscar_restrito') {
-    if (!restrito) return NextResponse.json({ erro: 'Este convite usa confirmação livre.' }, { status: 400 });
+    if (!identificado) return NextResponse.json({ erro: 'Este convite usa confirmação livre.' }, { status: 400 });
     const grupo = await buscarGrupo(eventoId, String(corpo?.contato ?? ''));
     return respostaGrupo(grupo);
   }
@@ -311,7 +309,7 @@ export async function POST(req: NextRequest) {
 
   if (corpo?.acao === 'confirmar_restrito' || corpo?.acao === 'confirmar_token') {
     const porToken = corpo?.acao === 'confirmar_token';
-    if (!porToken && !restrito) return NextResponse.json({ erro: 'Este convite usa confirmação livre.' }, { status: 400 });
+    if (!porToken && !identificado) return NextResponse.json({ erro: 'Este convite usa confirmação livre.' }, { status: 400 });
 
     const grupo = porToken
       ? await buscarGrupoPorToken(eventoId, String(corpo?.tokenConvite ?? '').trim())
@@ -326,19 +324,36 @@ export async function POST(req: NextRequest) {
       : [];
     if (!ids.length) return NextResponse.json({ erro: 'Selecione ao menos uma pessoa convidada que irá ao evento.' }, { status: 400 });
 
-    const extras = nomesFamilia(corpo?.acompanhantesExtras);
+    const extrasNormalizados = normalizarPessoasRsvp(corpo?.acompanhantesExtras, { max: 20, exigirIdadeCrianca: true });
+    if (extrasNormalizados.erro) return NextResponse.json({ erro: extrasNormalizados.erro }, { status: 400 });
+    const extras = extrasNormalizados.pessoas;
     if (extras.length > Number(grupo.extrasPermitidos ?? 0)) {
       return NextResponse.json({ erro: `Este convite permite até ${grupo.extrasPermitidos ?? 0} acompanhante(s) extra(s).` }, { status: 400 });
     }
     const nomesFixos = new Set((grupo.pessoas as any[]).map((p) => nomeChave(p.nome)));
-    if (extras.some((nome) => nomesFixos.has(nomeChave(nome)))) {
+    if (extras.some((pessoa) => nomesFixos.has(nomeChave(pessoa.nome)))) {
       return NextResponse.json({ erro: 'Não repita nos acompanhantes extras um nome que já está cadastrado no grupo.' }, { status: 400 });
     }
 
     const pessoasFixas = ids.map((id) => permitidos.get(id)!);
+    const idadesInformadas = corpo?.idadesCriancas && typeof corpo.idadesCriancas === 'object' ? corpo.idadesCriancas as Record<string, unknown> : {};
+    for (const pessoa of pessoasFixas as any[]) {
+      if (pessoa.tipo !== 'crianca') continue;
+      const idadeBruta = idadesInformadas[pessoa.id] ?? pessoa.idade;
+      const idade = Number(idadeBruta);
+      if (!Number.isInteger(idade) || idade < 1 || idade > 12) {
+        return NextResponse.json({ erro: `Informe a idade de ${pessoa.nome} (de 1 a 12 anos).` }, { status: 400 });
+      }
+      pessoa.idade = idade;
+      if (!emTeste) {
+        const { error } = await admin.from('convidados_lista').update({ idade }).eq('evento_id', eventoId).eq('id', pessoa.id).eq('tipo', 'crianca');
+        if (error) return NextResponse.json({ erro: `Não foi possível salvar a idade de ${pessoa.nome}.` }, { status: 500 });
+      }
+    }
     const principal = pessoasFixas[0];
     const contatoRaw = porToken ? String(grupo.contatoPrincipal ?? '') : String(corpo?.contato ?? '');
     const emailBusca = normalizarEmail(contatoRaw);
+    const telefoneBusca = normalizarTelefone(contatoRaw);
     let existente: any = null;
 
     if (grupo.familiaId) {
@@ -362,16 +377,24 @@ export async function POST(req: NextRequest) {
     }
 
     const idsConfirmados = [...ids, ...extraIds];
-    const acompanhantes = [...pessoasFixas.slice(1).map((p: any) => p.nome), ...extras];
+    const acompanhantesDetalhes = [
+      ...pessoasFixas.slice(1).map((p: any) => ({ nome: p.nome, tipo: p.tipo === 'crianca' ? 'crianca' : 'adulto', idade: p.tipo === 'crianca' ? (p.idade ?? null) : null })),
+      ...extras,
+    ];
+    const acompanhantes = acompanhantesDetalhes.map((p) => p.nome);
     const dados = {
       evento_id: eventoId,
       nome: principal.nome,
       email: emailBusca,
+      email_normalizado: emailBusca,
+      telefone: telefoneBusca ? contatoRaw.trim().slice(0, 40) : null,
+      telefone_normalizado: telefoneBusca,
       contato: contatoRaw.trim().slice(0, 180) || null,
       comparecera: true,
-      adultos: pessoasFixas.filter((p: any) => p.tipo !== 'crianca').length + extras.length,
-      criancas: pessoasFixas.filter((p: any) => p.tipo === 'crianca').length,
+      adultos: pessoasFixas.filter((p: any) => p.tipo !== 'crianca').length + extras.filter((p) => p.tipo !== 'crianca').length,
+      criancas: pessoasFixas.filter((p: any) => p.tipo === 'crianca').length + extras.filter((p) => p.tipo === 'crianca').length,
       acompanhantes,
+      acompanhantes_detalhes: acompanhantesDetalhes,
       ip_hash: ipHash,
       teste_id: testeId,
       familia_lista_id: grupo.familiaId,
@@ -414,15 +437,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, atualizado: !!existente, totalPessoas: pessoasFixas.length + extras.length, agendaUrl, emailStatus: google.emailStatus, modoTeste: emTeste });
   }
 
-  if (restrito) return NextResponse.json({ erro: 'Use a identificação do convidado para confirmar.' }, { status: 400 });
+  if (identificado) return NextResponse.json({ erro: 'Use seu e-mail ou telefone para localizar os nomes da lista antes de confirmar.' }, { status: 400 });
 
   const nome = String(corpo?.nome ?? '').trim().replace(/\s+/g, ' ').slice(0, 120);
   const email = String(corpo?.email ?? '').trim().toLowerCase().slice(0, 180);
-  const acompanhantes = nomesFamilia(corpo?.acompanhantes).filter((p) => nomeChave(p) !== nomeChave(nome));
+  const telefone = String(corpo?.telefone ?? '').trim().slice(0, 40);
+  const telefoneNormalizado = normalizarTelefone(telefone);
+  const familiaresNormalizados = normalizarPessoasRsvp(corpo?.acompanhantes, { max: MAX_FAMILIA, exigirIdadeCrianca: true });
+  if (familiaresNormalizados.erro) return NextResponse.json({ erro: familiaresNormalizados.erro }, { status: 400 });
+  const acompanhantesDetalhes = familiaresNormalizados.pessoas.filter((p) => nomeChave(p.nome) !== nomeChave(nome));
+  const acompanhantes = acompanhantesDetalhes.map((p) => p.nome);
   if (nome.length < 2) return NextResponse.json({ erro: 'Informe seu nome.' }, { status: 400 });
-  if (!EMAIL_RE.test(email)) return NextResponse.json({ erro: 'Informe um e-mail válido.' }, { status: 400 });
+  if (email && !EMAIL_RE.test(email)) return NextResponse.json({ erro: 'Informe um e-mail válido ou deixe o campo vazio.' }, { status: 400 });
+  if (telefone && !telefoneNormalizado) return NextResponse.json({ erro: 'Informe um telefone/WhatsApp válido ou deixe o campo vazio.' }, { status: 400 });
+  if (!email && !telefoneNormalizado) return NextResponse.json({ erro: 'Informe seu e-mail ou telefone/WhatsApp para identificar a confirmação.' }, { status: 400 });
 
-  const { data: existente } = await admin.from('convidados').select('id').eq('evento_id', eventoId).eq('email_normalizado', email).maybeSingle();
+  let existente: any = null;
+  if (email) {
+    const { data } = await admin.from('convidados').select('id').eq('evento_id', eventoId).eq('email_normalizado', email).maybeSingle();
+    existente = data;
+  }
+  if (!existente && telefoneNormalizado) {
+    const { data } = await admin.from('convidados').select('id').eq('evento_id', eventoId).eq('telefone_normalizado', telefoneNormalizado).order('updated_at', { ascending: false }).limit(1).maybeSingle();
+    existente = data;
+  }
   if (!existente) {
     const desde = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const { count } = await admin.from('convidados').select('id', { count: 'exact', head: true }).eq('evento_id', eventoId).eq('ip_hash', ipHash).gte('created_at', desde);
@@ -430,14 +468,17 @@ export async function POST(req: NextRequest) {
   }
 
   const dados = {
-    evento_id: eventoId, nome, email, contato: email, comparecera: true,
-    adultos: 1 + acompanhantes.length, criancas: 0, acompanhantes, ip_hash: ipHash,
+    evento_id: eventoId, nome, email: email || null, email_normalizado: email || null,
+    telefone: telefone || null, telefone_normalizado: telefoneNormalizado, contato: email || telefone || null, comparecera: true,
+    adultos: 1 + acompanhantesDetalhes.filter((p) => p.tipo !== 'crianca').length,
+    criancas: acompanhantesDetalhes.filter((p) => p.tipo === 'crianca').length,
+    acompanhantes, acompanhantes_detalhes: acompanhantesDetalhes, ip_hash: ipHash,
     teste_id: testeId, updated_at: new Date().toISOString(),
   };
   let resp = existente
     ? await admin.from('convidados').update(dados).eq('id', existente.id).select('id').single()
     : await admin.from('convidados').insert(dados).select('id').single();
-  if (resp.error?.code === '23505') {
+  if (resp.error?.code === '23505' && email) {
     resp = await admin.from('convidados').update(dados).eq('evento_id', eventoId).eq('email_normalizado', email).select('id').single();
   }
   if (resp.error || !resp.data) return NextResponse.json({ erro: 'Não foi possível confirmar sua presença.' }, { status: 500 });

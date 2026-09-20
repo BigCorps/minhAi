@@ -11,6 +11,7 @@ import {
   type LembreteWhatsApp,
   telefonesPendentesParaTransmissao,
 } from '@/lib/conviteria/whatsapp-servidor';
+import { agendamentoDepoisDoPrazo, normalizarDataRsvp, prazoRsvpEncerrado } from '@/lib/conviteria/rsvp-prazo';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -24,6 +25,23 @@ async function garantirConfig(admin: any, eventoId: string) {
     preco_centavos: WHATSAPP_EVENTO_PRECO_CENTAVOS,
     limite_mensagens: WHATSAPP_EVENTO_LIMITE,
   }, { onConflict: 'evento_id', ignoreDuplicates: true });
+}
+
+async function prazoRsvpDoEvento(admin: any, eventoId: string) {
+  const { data } = await admin.from('evento_gestao_config')
+    .select('rsvp_prazo')
+    .eq('evento_id', eventoId)
+    .maybeSingle();
+  return normalizarDataRsvp(data?.rsvp_prazo);
+}
+
+function erroPrazoParaWhatsApp(prazo: string | null, programado?: string | null) {
+  if (!prazo) return 'Defina o prazo de confirmação em Gestão → Convidados antes de usar o WhatsApp do Evento.';
+  if (prazoRsvpEncerrado(prazo)) return 'O prazo de confirmação já foi encerrado. Altere a data em Gestão → Convidados antes de enviar.';
+  if (programado && agendamentoDepoisDoPrazo(programado, prazo)) {
+    return 'O segundo comunicado ficaria depois do prazo de confirmação. Escolha uma opção anterior ao prazo.';
+  }
+  return null;
 }
 
 async function pixPendente(transactionId?: string | null) {
@@ -81,6 +99,10 @@ export async function POST(req: NextRequest) {
     const modo = MODOS.has(body?.lembreteModo) ? body.lembreteModo as LembreteWhatsApp : null;
     if (!modo) return NextResponse.json({ erro: 'Escolha quando o segundo comunicado será enviado.' }, { status: 400 });
 
+    const prazoRsvp = await prazoRsvpDoEvento(r.admin, eventoId);
+    const erroPrazo = erroPrazoParaWhatsApp(prazoRsvp);
+    if (erroPrazo) return NextResponse.json({ erro: erroPrazo }, { status: 400 });
+
     const atual = await reconciliarCompraWhatsApp(eventoId);
     if (atual?.status === 'ativo') return NextResponse.json({ semCobranca: true, ativo: true });
 
@@ -89,6 +111,8 @@ export async function POST(req: NextRequest) {
     if (new Date(segundo).getTime() <= Date.now()) {
       return NextResponse.json({ erro: 'Esse prazo de lembrete já passou. Escolha uma opção mais próxima da data do evento.' }, { status: 400 });
     }
+    const erroProgramacao = erroPrazoParaWhatsApp(prazoRsvp, segundo);
+    if (erroProgramacao) return NextResponse.json({ erro: erroProgramacao }, { status: 400 });
 
     if (atual?.status === 'aguardando_pagamento') {
       const existente = await pixPendente(atual.pix_transaction_id);
@@ -156,10 +180,15 @@ export async function POST(req: NextRequest) {
     if (cfg?.status !== 'ativo') return NextResponse.json({ erro: 'Ative o WhatsApp do Evento primeiro.' }, { status: 403 });
     const modo = MODOS.has(body?.lembreteModo) ? body.lembreteModo as LembreteWhatsApp : null;
     if (!modo) return NextResponse.json({ erro: 'Opção de lembrete inválida.' }, { status: 400 });
+    const prazoRsvp = await prazoRsvpDoEvento(r.admin, eventoId);
+    const erroPrazo = erroPrazoParaWhatsApp(prazoRsvp);
+    if (erroPrazo) return NextResponse.json({ erro: erroPrazo }, { status: 400 });
     const segundo = calcularSegundoEnvio(r.evento.data_evento as string | null, modo);
     if (!segundo || new Date(segundo).getTime() <= Date.now()) {
       return NextResponse.json({ erro: 'Esse prazo de lembrete já passou para a data deste evento.' }, { status: 400 });
     }
+    const erroProgramacao = erroPrazoParaWhatsApp(prazoRsvp, segundo);
+    if (erroProgramacao) return NextResponse.json({ erro: erroProgramacao }, { status: 400 });
     await r.admin.from('evento_whatsapp_config').update({
       lembrete_modo: modo,
       segundo_programado_em: segundo,

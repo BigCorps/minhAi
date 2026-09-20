@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminConviteria } from '@/lib/conviteria/servidor';
 import { calcularSegundoEnvio, processarRodada, type LembreteWhatsApp } from '@/lib/conviteria/whatsapp-servidor';
+import { agendamentoDepoisDoPrazo, normalizarDataRsvp, prazoRsvpEncerrado } from '@/lib/conviteria/rsvp-prazo';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -32,20 +33,32 @@ export async function GET(req: NextRequest) {
 
   let devido: { eventoId: string; programadoEm: string } | null = null;
   let recalculados = 0;
+  let invalidosPorPrazo = 0;
 
   // Recalcula a partir da data atual do evento. Assim, se o anfitrião mudou a
   // data depois de comprar o pacote, o lembrete acompanha o convite e não usa
   // um agendamento antigo.
   for (const item of candidatos ?? []) {
-    const { data: evento } = await admin.from('eventos')
-      .select('data_evento')
-      .eq('id', item.evento_id)
-      .maybeSingle();
+    const [{ data: evento }, { data: gestao }] = await Promise.all([
+      admin.from('eventos').select('data_evento').eq('id', item.evento_id).maybeSingle(),
+      admin.from('evento_gestao_config').select('rsvp_prazo').eq('evento_id', item.evento_id).maybeSingle(),
+    ]);
     const programado = calcularSegundoEnvio(
       evento?.data_evento as string | null,
       item.lembrete_modo as LembreteWhatsApp,
     );
-    if (!programado) continue;
+    const prazo = normalizarDataRsvp(gestao?.rsvp_prazo);
+    const invalidoPorPrazo = !prazo
+      || prazoRsvpEncerrado(prazo)
+      || (!!programado && agendamentoDepoisDoPrazo(programado, prazo));
+
+    if (!programado || invalidoPorPrazo) {
+      if (item.segundo_programado_em) {
+        await admin.from('evento_whatsapp_config').update({ segundo_programado_em: null }).eq('evento_id', item.evento_id);
+      }
+      invalidosPorPrazo += 1;
+      continue;
+    }
 
     if (programado !== item.segundo_programado_em) {
       await admin.from('evento_whatsapp_config').update({ segundo_programado_em: programado }).eq('evento_id', item.evento_id);
@@ -58,7 +71,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (!devido) {
-    return NextResponse.json({ ok: true, verificados: candidatos?.length ?? 0, recalculados, processado: null });
+    return NextResponse.json({ ok: true, verificados: candidatos?.length ?? 0, recalculados, invalidosPorPrazo, processado: null });
   }
 
   let enviados = 0;
@@ -76,6 +89,7 @@ export async function GET(req: NextRequest) {
       ok: true,
       verificados: candidatos?.length ?? 0,
       recalculados,
+      invalidosPorPrazo,
       processado: { eventoId: devido.eventoId, enviados, falhas, restantes },
     });
   } catch (e: any) {
@@ -84,6 +98,7 @@ export async function GET(req: NextRequest) {
       ok: false,
       verificados: candidatos?.length ?? 0,
       recalculados,
+      invalidosPorPrazo,
       processado: { eventoId: devido.eventoId, erro: String(e?.message ?? e) },
     }, { status: 500 });
   }

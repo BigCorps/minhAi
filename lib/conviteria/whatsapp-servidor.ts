@@ -3,6 +3,12 @@ import 'server-only';
 import { adminConviteria, adminPublic } from './servidor';
 import { acharTipo } from './tiposEvento';
 import { sincronizarConfirmacoesEvento } from './convidados-sync';
+import {
+  agendamentoDepoisDoPrazo,
+  normalizarDataRsvp,
+  prazoRsvpEncerrado,
+  prazoRsvpPorExtenso,
+} from './rsvp-prazo';
 
 export const WHATSAPP_EVENTO_PRECO_CENTAVOS = 1990;
 export const WHATSAPP_EVENTO_LIMITE = 600;
@@ -108,7 +114,7 @@ async function conexaoRemetente() {
 }
 
 async function enviarTemplate({
-  to, template, nome, tipo, anfitrioes, data, tokenConvite,
+  to, template, nome, tipo, anfitrioes, data, prazo, tokenConvite,
 }: {
   to: string;
   template: string;
@@ -116,6 +122,7 @@ async function enviarTemplate({
   tipo: string;
   anfitrioes: string;
   data: string;
+  prazo: string;
   tokenConvite: string;
 }) {
   const remetente = await conexaoRemetente();
@@ -138,6 +145,7 @@ async function enviarTemplate({
             { type: 'text', text: tipo },
             { type: 'text', text: anfitrioes },
             { type: 'text', text: data },
+            { type: 'text', text: prazo },
           ],
         },
         {
@@ -281,13 +289,25 @@ export async function resumoWhatsApp(eventoId: string) {
   const elegiveisPrimeiro = destinos.filter((d) => !d.respondido && podeEnviar(primeiroPorTel.get(d.telefone)));
   const elegiveisSegundo = destinos.filter((d) => podeEnviar(segundoPorTel.get(d.telefone)));
 
-  const { data: evento } = await admin.from('eventos').select('data_evento,config,tipo_evento_id').eq('id', eventoId).maybeSingle();
+  const [{ data: evento }, { data: gestao }] = await Promise.all([
+    admin.from('eventos').select('data_evento,config,tipo_evento_id').eq('id', eventoId).maybeSingle(),
+    admin.from('evento_gestao_config').select('rsvp_prazo').eq('evento_id', eventoId).maybeSingle(),
+  ]);
+  const rsvpPrazo = normalizarDataRsvp(gestao?.rsvp_prazo);
+  const rsvpEncerrado = prazoRsvpEncerrado(rsvpPrazo);
+  const rsvpPrazoTexto = prazoRsvpPorExtenso(rsvpPrazo);
+
   let configAtual = cfg;
   if (cfg?.lembrete_modo && !cfg.segundo_disparo_em && evento?.data_evento) {
     const recalculado = calcularSegundoEnvio(evento.data_evento as string, cfg.lembrete_modo as LembreteWhatsApp);
-    if (recalculado && recalculado !== cfg.segundo_programado_em) {
+    const programadoValido = !!recalculado
+      && !!rsvpPrazo
+      && !rsvpEncerrado
+      && !agendamentoDepoisDoPrazo(recalculado, rsvpPrazo);
+    const proximoProgramado = programadoValido ? recalculado : null;
+    if (proximoProgramado !== cfg.segundo_programado_em) {
       const { data: atualizado } = await admin.from('evento_whatsapp_config')
-        .update({ segundo_programado_em: recalculado })
+        .update({ segundo_programado_em: proximoProgramado })
         .eq('evento_id', eventoId)
         .select('*')
         .single();
@@ -302,6 +322,9 @@ export async function resumoWhatsApp(eventoId: string) {
     faltamSegundoEnvio: elegiveisSegundo.length,
     mensagensUsadas: usados,
     mensagensRestantes: Math.max(0, WHATSAPP_EVENTO_LIMITE - usados),
+    rsvpPrazo,
+    rsvpPrazoTexto,
+    rsvpEncerrado,
     evento: evento ? {
       dataEvento: evento.data_evento,
       anfitrioes: (evento.config as any)?.anfitrioes?.exibicao ?? 'Evento',
@@ -357,10 +380,24 @@ export async function processarRodada(eventoId: string, rodada: 1 | 2, limite = 
   if (!cfg || cfg.status !== 'ativo') throw new Error('O pacote WhatsApp ainda não está ativo.');
   if (rodada === 2 && !cfg.primeiro_disparo_em) throw new Error('Envie a primeira comunicação antes do lembrete.');
 
-  const { data: evento } = await admin.from('eventos')
-    .select('id,data_evento,config,tipo_evento_id,publicado_em')
-    .eq('id', eventoId).maybeSingle();
+  const [{ data: evento }, { data: gestao }] = await Promise.all([
+    admin.from('eventos')
+      .select('id,data_evento,config,tipo_evento_id,publicado_em')
+      .eq('id', eventoId).maybeSingle(),
+    admin.from('evento_gestao_config')
+      .select('rsvp_prazo')
+      .eq('evento_id', eventoId).maybeSingle(),
+  ]);
   if (!evento?.publicado_em) throw new Error('O convite precisa estar publicado.');
+
+  const rsvpPrazo = normalizarDataRsvp(gestao?.rsvp_prazo);
+  if (!rsvpPrazo) throw new Error('Defina o prazo de confirmação em Gestão → Convidados antes de enviar pelo WhatsApp.');
+  if (prazoRsvpEncerrado(rsvpPrazo)) throw new Error('O prazo de confirmação já foi encerrado. Altere o prazo em Gestão → Convidados antes de enviar.');
+  if (rodada === 2 && cfg.segundo_programado_em && agendamentoDepoisDoPrazo(cfg.segundo_programado_em, rsvpPrazo)) {
+    throw new Error('O lembrete está programado depois do prazo de confirmação. Escolha uma data anterior ao prazo.');
+  }
+  const prazo = prazoRsvpPorExtenso(rsvpPrazo);
+  if (!prazo) throw new Error('O prazo de confirmação é inválido. Revise a data em Gestão → Convidados.');
 
   const destinos = await destinatariosDoEvento(eventoId);
   const envios = await enviosDoEvento(eventoId, rodada);
@@ -397,6 +434,7 @@ export async function processarRodada(eventoId: string, rodada: 1 | 2, limite = 
         tipo,
         anfitrioes,
         data,
+        prazo,
         tokenConvite: d.token,
       });
       await admin.from('evento_whatsapp_envios').update({

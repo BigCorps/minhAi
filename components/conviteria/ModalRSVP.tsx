@@ -23,6 +23,9 @@ export default function ModalRSVP({
 }) {
   const [montado, setMontado] = useState(false);
   const [restrito, setRestrito] = useState<boolean | null>(null);
+  const [prazoRsvp, setPrazoRsvp] = useState<string | null>(null);
+  const [prazoEncerrado, setPrazoEncerrado] = useState(false);
+  const [mensagemEncerrado, setMensagemEncerrado] = useState('');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [familia, setFamilia] = useState<string[]>([]);
@@ -52,6 +55,10 @@ export default function ModalRSVP({
       try {
         const cfg = await fetch(`/api/conviteria/rsvp?eventoId=${encodeURIComponent(eventoId)}`, { cache: 'no-store' }).then((r) => r.json());
         setRestrito(porLink ? true : !!cfg?.restrito);
+        setPrazoRsvp(typeof cfg?.prazo === 'string' ? cfg.prazo : null);
+        setPrazoEncerrado(Boolean(cfg?.encerrado));
+        setMensagemEncerrado(typeof cfg?.mensagemEncerrado === 'string' ? cfg.mensagemEncerrado : '');
+        if (cfg?.encerrado) return;
         if (tokenInicial) await buscarPorToken(tokenInicial);
       } catch {
         setRestrito(porLink);
@@ -67,6 +74,17 @@ export default function ModalRSVP({
   }, [aoFechar, eventoId, tokenInicial]);
 
   if (!montado) return null;
+
+  const prazoFormatado = prazoRsvp
+    ? prazoRsvp.split('-').reverse().join('/')
+    : null;
+
+  function tratarErroPrazo(d: any) {
+    if (d?.codigo !== 'RSVP_PRAZO_ENCERRADO') return;
+    setPrazoEncerrado(true);
+    if (typeof d?.prazo === 'string') setPrazoRsvp(d.prazo);
+    setMensagemEncerrado(d?.erro || 'O prazo de confirmação deste evento foi encerrado.');
+  }
 
   function adicionar() { if (familia.length < 20) setFamilia((f) => [...f, '']); }
   function alterar(i: number, valor: string) { setFamilia((f) => f.map((v, idx) => idx === i ? valor : v)); }
@@ -104,7 +122,7 @@ export default function ModalRSVP({
         body: JSON.stringify({ eventoId, acao: 'buscar_token', tokenConvite: token }),
       });
       const d = await r.json().catch(() => null);
-      if (!r.ok) throw new Error(d?.erro || 'Este link de confirmação não foi encontrado.');
+      if (!r.ok) { tratarErroPrazo(d); throw new Error(d?.erro || 'Este link de confirmação não foi encontrado.'); }
       aplicarGrupo(d);
     } catch (e: any) {
       setPessoas([]);
@@ -126,7 +144,7 @@ export default function ModalRSVP({
         body: JSON.stringify({ eventoId, acao: 'buscar_restrito', contato }),
       });
       const d = await r.json().catch(() => null);
-      if (!r.ok) throw new Error(d?.erro || 'Não encontramos este contato.');
+      if (!r.ok) { tratarErroPrazo(d); throw new Error(d?.erro || 'Não encontramos este contato.'); }
       aplicarGrupo(d);
     } catch (e: any) {
       setPessoas([]);
@@ -188,7 +206,7 @@ export default function ModalRSVP({
         body: JSON.stringify(payload),
       });
       const d = await r.json().catch(() => null);
-      if (!r.ok) throw new Error(d?.erro || 'Não foi possível confirmar.');
+      if (!r.ok) { tratarErroPrazo(d); throw new Error(d?.erro || 'Não foi possível confirmar.'); }
 
       setConfirmado(Number(d.totalPessoas ?? 1));
       setAtualizado(Boolean(d.atualizado));
@@ -220,8 +238,18 @@ export default function ModalRSVP({
         <div className="cv-modal-corpo">
           {restrito == null ? (
             <div className="cv-modal-centro"><Loader2 className="w-7 h-7 animate-spin" /><p>Carregando…</p></div>
+          ) : prazoEncerrado ? (
+            <div className="cv-modal-centro">
+              <CalendarDays className="w-12 h-12" />
+              <p className="cv-modal-valor">Confirmações encerradas</p>
+              <p className="cv-modal-dica">{mensagemEncerrado || 'O prazo de confirmação deste evento foi encerrado. Em caso de dúvida, entre em contato com os anfitriões.'}</p>
+              <div className="cv-rsvp-acoes-sucesso">
+                <button type="button" className="cv-rsvp-voltar" onClick={aoFechar}>Voltar ao convite</button>
+              </div>
+            </div>
           ) : confirmado == null ? (
             <div className="cv-modal-form">
+              {prazoFormatado && <p className="cv-rsvp-intro"><strong>Confirme sua presença até {prazoFormatado}.</strong> Depois dessa data, a confirmação online será encerrada.</p>}
               {(restrito || porLink) ? (
                 <>
                   {porLink ? (

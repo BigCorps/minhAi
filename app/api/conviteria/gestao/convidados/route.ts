@@ -7,6 +7,12 @@ import {
   variantesTelefoneBusca,
 } from '@/lib/conviteria/gestao-servidor';
 import { sincronizarConfirmacoesEvento } from '@/lib/conviteria/convidados-sync';
+import {
+  agendamentoDepoisDoPrazo,
+  dataCalendarioSaoPaulo,
+  normalizarDataRsvp,
+  prazoRsvpEncerrado,
+} from '@/lib/conviteria/rsvp-prazo';
 
 export const runtime = 'nodejs';
 
@@ -131,13 +137,27 @@ export async function GET(req: NextRequest) {
   const r = await exigirEventoDoUsuario(req, eventoId);
   if ('erro' in r) return NextResponse.json({ erro: r.erro }, { status: r.status });
 
-  const [{ data: familias, error: ef }, { data: convidados, error: ec }, { data: confirmacoes }] = await Promise.all([
+  const [
+    { data: familias, error: ef },
+    { data: convidados, error: ec },
+    { data: confirmacoes },
+    { data: gestao },
+  ] = await Promise.all([
     r.admin.from('convidado_familias').select('*').eq('evento_id', eventoId).order('created_at'),
     r.admin.from('convidados_lista').select('*').eq('evento_id', eventoId).order('created_at'),
     r.admin.from('convidados').select('id,nome,email,contato,comparecera,adultos,criancas,acompanhantes,familia_lista_id,convidado_lista_id,created_at,teste_id').eq('evento_id', eventoId).order('created_at', { ascending: false }),
+    r.admin.from('evento_gestao_config').select('rsvp_prazo').eq('evento_id', eventoId).maybeSingle(),
   ]);
   if (ef || ec) return NextResponse.json({ erro: 'Não foi possível carregar os convidados.' }, { status: 500 });
-  return NextResponse.json({ familias: familias ?? [], convidados: convidados ?? [], confirmacoes: confirmacoes ?? [] });
+  const rsvpPrazo = normalizarDataRsvp(gestao?.rsvp_prazo);
+  return NextResponse.json({
+    familias: familias ?? [],
+    convidados: convidados ?? [],
+    confirmacoes: confirmacoes ?? [],
+    rsvpPrazo,
+    rsvpEncerrado: prazoRsvpEncerrado(rsvpPrazo),
+    dataEvento: dataCalendarioSaoPaulo(r.evento.data_evento as string | null),
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -147,6 +167,55 @@ export async function POST(req: NextRequest) {
   if (!eventoId || !acao) return NextResponse.json({ erro: 'Dados incompletos.' }, { status: 400 });
   const r = await exigirEventoDoUsuario(req, eventoId);
   if ('erro' in r) return NextResponse.json({ erro: r.erro }, { status: r.status });
+
+  if (acao === 'salvar_prazo_rsvp') {
+    const bruto = String(body?.prazo ?? '').trim();
+    const prazo = bruto ? normalizarDataRsvp(bruto) : null;
+    if (bruto && !prazo) {
+      return NextResponse.json({ erro: 'Informe uma data válida para o prazo de confirmação.' }, { status: 400 });
+    }
+
+    const dataEvento = dataCalendarioSaoPaulo(r.evento.data_evento as string | null);
+    if (prazo && dataEvento && prazo > dataEvento) {
+      return NextResponse.json({ erro: 'O prazo de confirmação não pode ficar depois da data do evento.' }, { status: 400 });
+    }
+
+    const { data: existente } = await r.admin.from('evento_gestao_config')
+      .select('evento_id')
+      .eq('evento_id', eventoId)
+      .maybeSingle();
+    const salvo = existente
+      ? await r.admin.from('evento_gestao_config').update({ rsvp_prazo: prazo }).eq('evento_id', eventoId)
+      : await r.admin.from('evento_gestao_config').insert({ evento_id: eventoId, rsvp_prazo: prazo });
+    if (salvo.error) {
+      return NextResponse.json({ erro: 'Não foi possível salvar o prazo de confirmação.' }, { status: 500 });
+    }
+
+    let agendamentoWhatsAppRemovido = false;
+    if (prazo) {
+      const { data: whatsapp } = await r.admin.from('evento_whatsapp_config')
+        .select('segundo_programado_em,segundo_disparo_em')
+        .eq('evento_id', eventoId)
+        .maybeSingle();
+      if (
+        whatsapp?.segundo_programado_em
+        && !whatsapp.segundo_disparo_em
+        && agendamentoDepoisDoPrazo(whatsapp.segundo_programado_em, prazo)
+      ) {
+        const { error } = await r.admin.from('evento_whatsapp_config')
+          .update({ segundo_programado_em: null })
+          .eq('evento_id', eventoId);
+        agendamentoWhatsAppRemovido = !error;
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      rsvpPrazo: prazo,
+      rsvpEncerrado: prazoRsvpEncerrado(prazo),
+      agendamentoWhatsAppRemovido,
+    });
+  }
 
   if (acao === 'importar_csv') {
     const linhas = Array.isArray(body?.linhas) ? body.linhas.slice(0, MAX_IMPORTACAO) : [];

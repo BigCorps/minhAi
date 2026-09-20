@@ -31,6 +31,9 @@ type Estado = {
   faltamSegundoEnvio: number;
   mensagensUsadas: number;
   mensagensRestantes: number;
+  rsvpPrazo?: string | null;
+  rsvpPrazoTexto?: string | null;
+  rsvpEncerrado?: boolean;
   telefonesTransmissao: string[];
   evento?: { dataEvento?: string | null; anfitrioes: string; tipo: string } | null;
   pixPendente?: { transactionId: string; copiaECola?: string | null; qrcode?: string | null; expiresAt?: string | null } | null;
@@ -156,8 +159,19 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
   const mensagemGratis = useMemo(() => {
     const ev = estado?.evento;
     if (!ev) return '';
-    return `Olá!\nPrecisamos da sua confirmação de presença para o ${ev.tipo} de ${ev.anfitrioes}.\nData: ${dataBr(ev.dataEvento)}\nAcesse o convite e confirme sua presença:\nhttps://${slug}.conviteia.com`;
-  }, [estado?.evento, slug]);
+    const prazo = estado?.rsvpPrazoTexto;
+    return `Olá!
+Precisamos da sua confirmação de presença para o ${ev.tipo} de ${ev.anfitrioes}.
+Data: ${dataBr(ev.dataEvento)}${prazo ? `
+Confirme sua presença até: ${prazo}` : ''}
+
+Para finalizarmos a lista de convidados e os preparativos do evento, pedimos que a confirmação seja realizada dentro desse prazo. Após a data limite, a confirmação online será encerrada e não será possível incluir novos participantes pelo convite.
+
+A entrada no evento será conferida com base na lista de convidados confirmados.
+
+Acesse o convite e confirme sua presença:
+https://${slug}.conviteia.com`;
+  }, [estado?.evento, estado?.rsvpPrazoTexto, slug]);
 
   if (carregando) return <div className="grid place-items-center py-16"><Loader2 className="h-7 w-7 animate-spin text-[#c06078]" /></div>;
   if (!estado) return <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{erro || 'Não foi possível carregar.'}</p>;
@@ -165,6 +179,8 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
   const status = estado.config?.status ?? 'nao_contratado';
   const ativo = status === 'ativo';
   const aguardando = status === 'aguardando_pagamento';
+  const prazoConfigurado = Boolean(estado.rsvpPrazo);
+  const bloqueadoPrazo = !prazoConfigurado || Boolean(estado.rsvpEncerrado);
 
   return <section className="space-y-5">
     <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
@@ -186,6 +202,21 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
       </div>
     </div>
 
+    <div className={`rounded-2xl border p-4 ${bloqueadoPrazo ? 'border-amber-300 bg-amber-50/70' : 'border-emerald-200 bg-emerald-50/50'}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-semibold text-[#40232c]">Prazo de confirmação</p>
+          {prazoConfigurado ? (
+            <p className="mt-1 text-sm text-[#7c5560]">Os templates usam automaticamente <strong>{estado.rsvpPrazoTexto}</strong> como a variável <strong>{'{{5}}'}</strong>.</p>
+          ) : (
+            <p className="mt-1 text-sm text-amber-800">Defina a data em <strong>Gestão → Convidados → Prazo para confirmação</strong> antes de contratar ou enviar mensagens.</p>
+          )}
+          {estado.rsvpEncerrado && <p className="mt-1 text-sm font-medium text-amber-800">Este prazo já terminou. Altere a data em Convidados para reabrir o RSVP e os envios.</p>}
+        </div>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${bloqueadoPrazo ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>{bloqueadoPrazo ? 'AÇÃO NECESSÁRIA' : 'CONFIGURADO'}</span>
+      </div>
+    </div>
+
     {!ativo && <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
       <h3 className="font-semibold">Contratar por {brl(estado.precoCentavos)}</h3>
       <p className="mt-1 text-sm text-[#7c5560]">O primeiro comunicado é enviado quando você mandar. O segundo fica programado para uma única data.</p>
@@ -195,7 +226,7 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
             <option value="2_meses">2 meses antes</option><option value="1_mes">1 mês antes</option><option value="15_dias">15 dias antes</option>
           </select>
         </label>
-        <div className="flex items-end"><button type="button" disabled={ocupado || !consentimento} onClick={contratar} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#c06078] px-5 py-2.5 font-semibold text-white disabled:opacity-50">{ocupado?<Loader2 className="h-4 w-4 animate-spin"/>:<CreditCard className="h-4 w-4"/>}{aguardando?'Ver / renovar PIX':'Gerar PIX'}</button></div>
+        <div className="flex items-end"><button type="button" disabled={ocupado || !consentimento || bloqueadoPrazo} onClick={contratar} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#c06078] px-5 py-2.5 font-semibold text-white disabled:opacity-50">{ocupado?<Loader2 className="h-4 w-4 animate-spin"/>:<CreditCard className="h-4 w-4"/>}{aguardando?'Ver / renovar PIX':'Gerar PIX'}</button></div>
       </div>
       <label className="mt-4 flex items-start gap-2 text-xs leading-5 text-[#7c5560]"><input type="checkbox" checked={consentimento} onChange={(e)=>setConsentimento(e.target.checked)} className="mt-1"/><span>Declaro que os contatos informados podem receber comunicações deste evento pelo WhatsApp e sou responsável pela lista enviada.</span></label>
 
@@ -213,7 +244,7 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
           <div className="flex items-center gap-2"><Send className="h-5 w-5 text-[#a04a63]"/><h3 className="font-semibold">1ª comunicação</h3></div>
           <p className="mt-2 text-sm text-[#7c5560]">Só recebe quem ainda está pendente e nunca recebeu a primeira mensagem. Quem já confirmou pelo convite, CSV sincronizado ou painel não recebe cobrança de confirmação novamente.</p>
           <p className="mt-3 text-sm"><strong>{estado.novosPrimeiroEnvio}</strong> contato(s) apto(s) agora.</p>
-          <button type="button" disabled={ocupado || estado.novosPrimeiroEnvio===0} onClick={enviarPrimeiro} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{ocupado?<Loader2 className="h-4 w-4 animate-spin"/>:<Send className="h-4 w-4"/>}{estado.config?.primeiro_disparo_em?'Enviar para novos convidados':'Enviar primeira comunicação'}</button>
+          <button type="button" disabled={ocupado || bloqueadoPrazo || estado.novosPrimeiroEnvio===0} onClick={enviarPrimeiro} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{ocupado?<Loader2 className="h-4 w-4 animate-spin"/>:<Send className="h-4 w-4"/>}{estado.config?.primeiro_disparo_em?'Enviar para novos convidados':'Enviar primeira comunicação'}</button>
           {estado.config?.primeiro_disparo_em && <p className="mt-2 text-xs text-[#7c5560]">Primeiro envio iniciado em {dataBr(estado.config.primeiro_disparo_em)}.</p>}
         </div>
 
@@ -225,7 +256,7 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
               <option value="2_meses">2 meses antes</option><option value="1_mes">1 mês antes</option><option value="15_dias">15 dias antes</option>
             </select>
           </label>
-          {!estado.config?.segundo_disparo_em && <button type="button" disabled={ocupado} onClick={salvarAgendamento} className="mt-3 inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-4 py-2.5 text-sm font-semibold text-[#a04a63]"><CalendarClock className="h-4 w-4"/>Salvar agendamento</button>}
+          {!estado.config?.segundo_disparo_em && <button type="button" disabled={ocupado || bloqueadoPrazo} onClick={salvarAgendamento} className="mt-3 inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-4 py-2.5 text-sm font-semibold text-[#a04a63]"><CalendarClock className="h-4 w-4"/>Salvar agendamento</button>}
           <p className="mt-2 text-xs text-[#7c5560]">Programado: {dataBr(estado.config?.segundo_programado_em)}</p>
           {estado.config?.segundo_disparo_em && <p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4"/>Lembrete enviado.</p>}
         </div>
@@ -234,12 +265,12 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
 
     <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
       <div className="flex items-center gap-2"><Smartphone className="h-5 w-5 text-[#a04a63]"/><h3 className="font-semibold">Opção gratuita · seu próprio WhatsApp</h3></div>
-      <p className="mt-2 text-sm text-[#7c5560]">Para quem prefere não usar o número do ConviteIA: copie a mensagem e os números pendentes para organizar uma lista de transmissão no seu WhatsApp.</p>
-      <div className="mt-3 rounded-xl bg-[#fff9fb] p-3 text-sm whitespace-pre-line">{mensagemGratis}</div>
+      <p className="mt-2 text-sm text-[#7c5560]">Para quem prefere não usar o número do ConviteIA: copie a mensagem e os números pendentes para organizar uma lista de transmissão no seu WhatsApp. O mesmo prazo do RSVP é respeitado aqui.</p>
+      <div className="mt-3 rounded-xl bg-[#fff9fb] p-3 text-sm whitespace-pre-line">{bloqueadoPrazo ? 'Defina ou reabra o prazo de confirmação em Convidados antes de preparar este envio.' : mensagemGratis}</div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={()=>void copiar(mensagemGratis,'Mensagem copiada.')} className="inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-3 py-2 text-sm font-semibold text-[#a04a63]"><Copy className="h-4 w-4"/>Copiar mensagem</button>
-        <button type="button" disabled={!estado.telefonesTransmissao?.length} onClick={()=>void copiar((estado.telefonesTransmissao??[]).join('\n'),'Telefones pendentes copiados.')} className="inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-3 py-2 text-sm font-semibold text-[#a04a63] disabled:opacity-50"><Copy className="h-4 w-4"/>Copiar números ({estado.telefonesTransmissao?.length??0})</button>
-        <a href={`https://wa.me/?text=${encodeURIComponent(mensagemGratis)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white"><MessageCircle className="h-4 w-4"/>Abrir WhatsApp</a>
+        <button type="button" disabled={bloqueadoPrazo} onClick={()=>void copiar(mensagemGratis,'Mensagem copiada.')} className="inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-3 py-2 text-sm font-semibold text-[#a04a63] disabled:opacity-50"><Copy className="h-4 w-4"/>Copiar mensagem</button>
+        <button type="button" disabled={bloqueadoPrazo || !estado.telefonesTransmissao?.length} onClick={()=>void copiar((estado.telefonesTransmissao??[]).join('\n'),'Telefones pendentes copiados.')} className="inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-3 py-2 text-sm font-semibold text-[#a04a63] disabled:opacity-50"><Copy className="h-4 w-4"/>Copiar números ({estado.telefonesTransmissao?.length??0})</button>
+        {!bloqueadoPrazo ? <a href={`https://wa.me/?text=${encodeURIComponent(mensagemGratis)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white"><MessageCircle className="h-4 w-4"/>Abrir WhatsApp</a> : <span className="inline-flex items-center gap-2 rounded-xl bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-500"><MessageCircle className="h-4 w-4"/>Abrir WhatsApp</span>}
       </div>
     </div>
 

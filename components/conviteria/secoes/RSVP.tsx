@@ -11,10 +11,21 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 export default function RSVP({ cfg, secao, modo }: PropsSecao) {
   const [aberto, setAberto] = useState(false);
   const [tokenInicial, setTokenInicial] = useState<string | null>(null);
+  const [prazo, setPrazo] = useState<string | null>(null);
+  const [encerrado, setEncerrado] = useState(false);
   const c = secao.config ?? {};
 
   useEffect(() => {
     if (modo.previa || !modo.eventoId || typeof window === 'undefined') return;
+
+    void fetch(`/api/conviteria/rsvp?eventoId=${encodeURIComponent(modo.eventoId)}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        setPrazo(typeof d?.prazo === 'string' ? d.prazo : null);
+        setEncerrado(Boolean(d?.encerrado));
+      })
+      .catch(() => undefined);
+
     const token = new URL(window.location.href).searchParams.get('rsvp')?.trim() ?? '';
     if (!UUID_RE.test(token)) return;
     setTokenInicial(token);
@@ -30,6 +41,8 @@ export default function RSVP({ cfg, secao, modo }: PropsSecao) {
     setTokenInicial(null);
   }
 
+  const prazoFormatado = prazo ? prazo.split('-').reverse().join('/') : null;
+
   return (
     <section className="cv-secao">
       <Broto className="cv-broto" />
@@ -37,14 +50,21 @@ export default function RSVP({ cfg, secao, modo }: PropsSecao) {
       <p className="cv-texto">
         {c.texto ?? 'Sua presença é muito importante para nós. Confirme seu nome e quem da sua família irá ao evento.'}
       </p>
-      <button
-        type="button"
-        className="cv-botao"
-        disabled={modo.previa || !modo.eventoId}
-        onClick={() => { setTokenInicial(null); setAberto(true); }}
-      >
-        {c.rotuloBotao ?? 'Confirmar presença'}
-      </button>
+      {prazoFormatado && !encerrado && (
+        <p className="cv-rsvp-previa"><strong>Confirme até {prazoFormatado}.</strong></p>
+      )}
+      {encerrado ? (
+        <p className="cv-rsvp-previa"><strong>O prazo de confirmação online foi encerrado.</strong> Em caso de dúvida, entre em contato com os anfitriões.</p>
+      ) : (
+        <button
+          type="button"
+          className="cv-botao"
+          disabled={modo.previa || !modo.eventoId}
+          onClick={() => { setTokenInicial(null); setAberto(true); }}
+        >
+          {c.rotuloBotao ?? 'Confirmar presença'}
+        </button>
+      )}
 
       {modo.previa && <p className="cv-rsvp-previa">O formulário fica disponível depois que o convite é publicado.</p>}
 

@@ -5,6 +5,7 @@ import { normalizarEmail, variantesTelefoneBusca } from '@/lib/conviteria/gestao
 import { sincronizarConfirmacoesEvento } from '@/lib/conviteria/convidados-sync';
 import { urlGoogleAgenda } from '@/lib/conviteria/calendario';
 import type { ConviteConfig } from '@/lib/conviteria/tipos';
+import { mensagemPrazoEncerrado, normalizarDataRsvp, prazoRsvpEncerrado } from '@/lib/conviteria/rsvp-prazo';
 
 export const runtime = 'nodejs';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -53,10 +54,18 @@ async function enviarConfirmacaoGoogle({ eventoId, convidadoId, atualizado, idem
   finally { clearTimeout(timer); }
 }
 
-async function configRestrito(eventoId: string) {
+async function configRsvp(eventoId: string) {
   const admin = adminConviteria();
-  const { data } = await admin.from('evento_gestao_config').select('rsvp_restrito').eq('evento_id', eventoId).maybeSingle();
-  return !!data?.rsvp_restrito;
+  const { data } = await admin.from('evento_gestao_config')
+    .select('rsvp_restrito,rsvp_prazo')
+    .eq('evento_id', eventoId)
+    .maybeSingle();
+  const prazo = normalizarDataRsvp(data?.rsvp_prazo);
+  return {
+    restrito: !!data?.rsvp_restrito,
+    prazo,
+    encerrado: prazoRsvpEncerrado(prazo),
+  };
 }
 
 async function pessoasDaFamilia(admin: any, eventoId: string, familiaId: string) {
@@ -255,7 +264,13 @@ async function sincronizarExtrasRsvp(admin: any, eventoId: string, familiaId: st
 export async function GET(req: NextRequest) {
   const eventoId = new URL(req.url).searchParams.get('eventoId')?.trim();
   if (!eventoId || !(await buscarEventoAcessivelPorId(eventoId))) return NextResponse.json({ erro: 'Convite indisponível.' }, { status: 404 });
-  return NextResponse.json({ restrito: await configRestrito(eventoId) });
+  const cfg = await configRsvp(eventoId);
+  return NextResponse.json({
+    restrito: cfg.restrito,
+    prazo: cfg.prazo,
+    encerrado: cfg.encerrado,
+    mensagemEncerrado: cfg.encerrado ? mensagemPrazoEncerrado(cfg.prazo) : null,
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -265,7 +280,16 @@ export async function POST(req: NextRequest) {
   if (!eventoId) return NextResponse.json({ erro: 'Convite não informado.' }, { status: 400 });
   const acesso = await buscarEventoAcessivelPorId(eventoId);
   if (!acesso) return NextResponse.json({ erro: 'Convite indisponível.' }, { status: 404 });
-  const restrito = await configRestrito(eventoId);
+  const cfgRsvp = await configRsvp(eventoId);
+  const restrito = cfgRsvp.restrito;
+
+  if (cfgRsvp.encerrado) {
+    return NextResponse.json({
+      erro: mensagemPrazoEncerrado(cfgRsvp.prazo),
+      codigo: 'RSVP_PRAZO_ENCERRADO',
+      prazo: cfgRsvp.prazo,
+    }, { status: 410 });
+  }
 
   if (corpo?.acao === 'buscar_restrito') {
     if (!restrito) return NextResponse.json({ erro: 'Este convite usa confirmação livre.' }, { status: 400 });

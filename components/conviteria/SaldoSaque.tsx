@@ -10,7 +10,13 @@ const campo =
   '!bg-white !text-[#40232c] placeholder:!text-[#9b7b84] ' +
   'focus:!border-[#c06078] focus:!ring-2 focus:!ring-[#c0607820]';
 
-export default function SaldoSaque({ eventoId }: { eventoId: string }) {
+export default function SaldoSaque({
+  eventoId,
+  sempreAberto = false,
+}: {
+  eventoId: string;
+  sempreAberto?: boolean;
+}) {
   const [aberto, setAberto] = useState(false);
   const [dados, setDados] = useState<any>(null);
   const [erro, setErro] = useState('');
@@ -45,8 +51,8 @@ export default function SaldoSaque({ eventoId }: { eventoId: string }) {
   }, [eventoId, token, valor]);
 
   useEffect(() => {
-    if (aberto && !dados) void carregar();
-  }, [aberto, dados, carregar]);
+    if ((sempreAberto || aberto) && !dados) void carregar();
+  }, [sempreAberto, aberto, dados, carregar]);
 
   async function solicitar() {
     setEnviando(true);
@@ -81,130 +87,133 @@ export default function SaldoSaque({ eventoId }: { eventoId: string }) {
     }
   }
 
+  const conteudo = (
+    <section className="rounded-2xl border border-[#c0607833] bg-white p-4 sm:p-5">
+      {sempreAberto && (
+        <div className="mb-4 flex items-center gap-2">
+          <Banknote className="h-5 w-5 text-[#a04a63]" />
+          <h3 className="font-semibold text-[#40232c]">Saldo e saque</h3>
+        </div>
+      )}
+
+      {!dados && !erro ? (
+        <div className="flex items-center justify-center gap-2 py-8 text-sm" style={{ color: '#7c5560' }}>
+          <Loader2 className="h-5 w-5 animate-spin" /> Carregando saldo…
+        </div>
+      ) : dados && (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl border bg-[#fff9fb] p-4" style={{ borderColor: '#c0607828' }}>
+              <p className="text-xs" style={{ color: '#7c5560' }}>Disponível para saque (líquido)</p>
+              <p className="mt-1 text-lg font-semibold" style={{ color: '#40232c' }}>
+                {brlSaque(dados.saldo.disponivelCentavos)}
+              </p>
+            </div>
+            <div className="rounded-xl border bg-[#fff9fb] p-4" style={{ borderColor: '#c0607828' }}>
+              <p className="text-xs" style={{ color: '#7c5560' }}>Já repassado</p>
+              <p className="mt-1 text-lg font-semibold" style={{ color: '#40232c' }}>
+                {brlSaque(dados.saldo.repassadoCentavos)}
+              </p>
+            </div>
+          </div>
+
+          <div
+            className="my-4 rounded-xl px-4 py-3 text-xs leading-5"
+            style={{ backgroundColor: '#fdf0f3', color: '#7c5560' }}
+          >
+            <strong style={{ color: '#40232c' }}>
+              O valor disponível acima já é líquido.
+            </strong>{' '}
+            O ConviteIA desconta 1% dos presentes antes de creditar o saldo.
+            Nos pagamentos com cartão, quando os anfitriões assumem a taxa
+            de processamento, ela também já vem descontada deste saldo.
+            Quando a taxa é repassada ao convidado, ela não reduz o valor
+            dos presentes creditado aos anfitriões.
+            <br />
+            Saque mínimo: <strong style={{ color: '#40232c' }}>
+              {brlSaque(dados.saqueMinimoCentavos)}
+            </strong>. O repasse será realizado via PIX em até 24 horas.
+          </div>
+
+          <div className="grid gap-3">
+            <input className={campo} style={{ borderColor: '#c0607840' }}
+              placeholder="Nome completo do titular"
+              value={nomeCompleto} onChange={e => setNomeCompleto(e.target.value)} />
+            <input className={campo} style={{ borderColor: '#c0607840' }}
+              placeholder="CPF do titular" inputMode="numeric"
+              value={cpf} onChange={e => setCpf(e.target.value)} />
+            <input className={campo} style={{ borderColor: '#c0607840' }}
+              placeholder="E-mail do beneficiário/casal" type="email"
+              value={emailRecebedor} onChange={e => setEmailRecebedor(e.target.value)} />
+            <input className={campo} style={{ borderColor: '#c0607840' }}
+              placeholder="Chave PIX"
+              value={chavePix} onChange={e => setChavePix(e.target.value)} />
+            <input className={campo} style={{ borderColor: '#c0607840' }}
+              placeholder="Valor do saque (R$)" inputMode="decimal"
+              value={valor} onChange={e => setValor(e.target.value)} />
+
+            <button
+              type="button"
+              disabled={enviando || dados.saldo.disponivelCentavos < dados.saqueMinimoCentavos}
+              onClick={solicitar}
+              className="mt-1 rounded-full px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45"
+              style={{ backgroundColor: '#c06078' }}
+            >
+              {enviando ? 'Solicitando…' : 'Solicitar saque'}
+            </button>
+          </div>
+
+          {mensagem && (
+            <div className="mt-4 flex items-start gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-xs text-emerald-800">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+              {mensagem}
+            </div>
+          )}
+
+          {dados.repasses?.length > 0 && (
+            <div className="mt-5">
+              <p className="mb-2 text-xs font-semibold" style={{ color: '#40232c' }}>
+                Últimas solicitações
+              </p>
+              <ul className="space-y-2">
+                {dados.repasses.map((r: any) => (
+                  <li
+                    key={r.id}
+                    className="flex items-center justify-between rounded-xl border bg-[#fff9fb] px-3 py-2 text-xs"
+                    style={{ borderColor: '#c0607828', color: '#40232c' }}
+                  >
+                    <span>{brlSaque(r.valorCentavos)}</span>
+                    <strong style={{ color: '#a04a63' }}>{r.status}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
+      )}
+
+      {erro && <p className="mt-3 text-xs text-red-700">{erro}</p>}
+    </section>
+  );
+
+  if (sempreAberto) return conteudo;
+
   return (
     <div className="mt-3 border-t pt-3" style={{ borderColor: '#c0607822' }}>
       <button
         type="button"
-        onClick={() => setAberto(v => !v)}
+        onClick={() => setAberto((v) => !v)}
         className="flex w-full items-center justify-between gap-3 text-left"
       >
-        <span
-          className="inline-flex items-center gap-2 text-sm font-medium"
-          style={{ color: '#a04a63' }}
-        >
+        <span className="inline-flex items-center gap-2 text-sm font-medium text-[#a04a63]">
           <Banknote className="h-4 w-4" />
-          {aberto ? 'Fechar saldo' : 'Saldo e saque'}
+          Saldo e saque
         </span>
-
         {aberto
-          ? <ChevronUp className="h-4 w-4" style={{ color: '#9b7b84' }} />
-          : <ChevronDown className="h-4 w-4" style={{ color: '#9b7b84' }} />}
+          ? <ChevronUp className="h-4 w-4 text-[#9b7b84]" />
+          : <ChevronDown className="h-4 w-4 text-[#9b7b84]" />}
       </button>
-
-      {aberto && (
-        <div
-          className="mt-4 rounded-2xl border p-4 sm:p-5"
-          style={{ backgroundColor: '#fff9fb', borderColor: '#c0607833' }}
-        >
-          {!dados && !erro ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-sm" style={{ color: '#7c5560' }}>
-              <Loader2 className="h-5 w-5 animate-spin" /> Carregando saldo…
-            </div>
-          ) : dados && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border bg-white p-4" style={{ borderColor: '#c0607828' }}>
-                  <p className="text-xs" style={{ color: '#7c5560' }}>Disponível para saque (líquido)</p>
-                  <p className="mt-1 text-lg font-semibold" style={{ color: '#40232c' }}>
-                    {brlSaque(dados.saldo.disponivelCentavos)}
-                  </p>
-                </div>
-                <div className="rounded-xl border bg-white p-4" style={{ borderColor: '#c0607828' }}>
-                  <p className="text-xs" style={{ color: '#7c5560' }}>Já repassado</p>
-                  <p className="mt-1 text-lg font-semibold" style={{ color: '#40232c' }}>
-                    {brlSaque(dados.saldo.repassadoCentavos)}
-                  </p>
-                </div>
-              </div>
-
-              <div
-                className="my-4 rounded-xl px-4 py-3 text-xs leading-5"
-                style={{ backgroundColor: '#fdf0f3', color: '#7c5560' }}
-              >
-                <strong style={{ color: '#40232c' }}>
-                  O valor disponível acima já é líquido.
-                </strong>{' '}
-                O ConviteIA desconta 1% dos presentes antes de creditar o saldo.
-                Nos pagamentos com cartão, quando os anfitriões assumem a taxa
-                de processamento, ela também já vem descontada deste saldo.
-                Quando a taxa é repassada ao convidado, ela não reduz o valor
-                dos presentes creditado aos anfitriões.
-                <br />
-                Saque mínimo: <strong style={{ color: '#40232c' }}>
-                  {brlSaque(dados.saqueMinimoCentavos)}
-                </strong>. O repasse será realizado via PIX em até 24 horas.
-              </div>
-
-              <div className="grid gap-3">
-                <input className={campo} style={{ borderColor: '#c0607840' }}
-                  placeholder="Nome completo do titular"
-                  value={nomeCompleto} onChange={e => setNomeCompleto(e.target.value)} />
-                <input className={campo} style={{ borderColor: '#c0607840' }}
-                  placeholder="CPF do titular" inputMode="numeric"
-                  value={cpf} onChange={e => setCpf(e.target.value)} />
-                <input className={campo} style={{ borderColor: '#c0607840' }}
-                  placeholder="E-mail do beneficiário/casal" type="email"
-                  value={emailRecebedor} onChange={e => setEmailRecebedor(e.target.value)} />
-                <input className={campo} style={{ borderColor: '#c0607840' }}
-                  placeholder="Chave PIX"
-                  value={chavePix} onChange={e => setChavePix(e.target.value)} />
-                <input className={campo} style={{ borderColor: '#c0607840' }}
-                  placeholder="Valor do saque (R$)" inputMode="decimal"
-                  value={valor} onChange={e => setValor(e.target.value)} />
-
-                <button
-                  type="button"
-                  disabled={enviando || dados.saldo.disponivelCentavos < dados.saqueMinimoCentavos}
-                  onClick={solicitar}
-                  className="mt-1 rounded-full px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45"
-                  style={{ backgroundColor: '#c06078' }}
-                >
-                  {enviando ? 'Solicitando…' : 'Solicitar saque'}
-                </button>
-              </div>
-
-              {mensagem && (
-                <div className="mt-4 flex items-start gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-xs text-emerald-800">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                  {mensagem}
-                </div>
-              )}
-
-              {dados.repasses?.length > 0 && (
-                <div className="mt-5">
-                  <p className="mb-2 text-xs font-semibold" style={{ color: '#40232c' }}>
-                    Últimas solicitações
-                  </p>
-                  <ul className="space-y-2">
-                    {dados.repasses.map((r: any) => (
-                      <li
-                        key={r.id}
-                        className="flex items-center justify-between rounded-xl border bg-white px-3 py-2 text-xs"
-                        style={{ borderColor: '#c0607828', color: '#40232c' }}
-                      >
-                        <span>{brlSaque(r.valorCentavos)}</span>
-                        <strong style={{ color: '#a04a63' }}>{r.status}</strong>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </>
-          )}
-
-          {erro && <p className="mt-3 text-xs text-red-700">{erro}</p>}
-        </div>
-      )}
+      {aberto && <div className="mt-4">{conteudo}</div>}
     </div>
   );
 }

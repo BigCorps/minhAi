@@ -62,7 +62,16 @@ function formatarData(iso: string) {
   catch { return ''; }
 }
 
-export default function MemoriasPainel({ eventoId, titulo }: { eventoId: string; slug: string; titulo: string }) {
+export default function MemoriasPainel({
+  eventoId,
+  titulo,
+  sempreAberto = false,
+}: {
+  eventoId: string;
+  slug: string;
+  titulo: string;
+  sempreAberto?: boolean;
+}) {
   const [aberto, setAberto] = useState(false);
   const [dados, setDados] = useState<Dados | null>(null);
   const [erro, setErro] = useState('');
@@ -91,7 +100,7 @@ export default function MemoriasPainel({ eventoId, titulo }: { eventoId: string;
     finally { setCarregando(false); }
   }, [buscarDados]);
 
-  useEffect(() => { if (aberto && !dados) void carregar(); }, [aberto, dados, carregar]);
+  useEffect(() => { if ((sempreAberto || aberto) && !dados) void carregar(); }, [sempreAberto, aberto, dados, carregar]);
   useEffect(() => {
     if (!dados?.urlMemorias) return;
     QRCode.toDataURL(dados.urlMemorias, { width: 1600, margin: 4, errorCorrectionLevel: 'H' })
@@ -215,82 +224,110 @@ export default function MemoriasPainel({ eventoId, titulo }: { eventoId: string;
     </div>
   );
 
-  return (
-    <section className="mt-3 border-t pt-3" style={{ borderColor: '#c0607822' }}>
-      <button type="button" onClick={() => setAberto((v) => !v)} className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold" style={{ background:'#fff5f8', color:'#a04a63' }}>
-        <span className="flex items-center gap-2"><ImageIcon className="h-4 w-4" /> Memórias do Evento</span><span>{aberto ? '−' : '+'}</span>
-      </button>
-      {!aberto ? null : carregando && !dados ? <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin" style={{ color:'#c06078' }} /></div> : erro && !dados ? <p className="p-3 text-sm text-red-700">{erro}</p> : dados && !dados.ativo ? (
-        <div className="mt-3 rounded-2xl border p-4" style={{ borderColor:'#c0607833', background:'#fff' }}>
-          <p className="font-semibold" style={{ color:'#40232c' }}>Álbum colaborativo + slideshow ao vivo</p>
-          <p className="mt-1 text-sm" style={{ color:'#7c5560' }}>Até 300 fotos, 30 vídeos e modo telão em tempo real por R$ 19,90 neste convite.</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Link href={`/convite/pagar?evento=${eventoId}&memorias=1`} className="rounded-full px-4 py-2 text-sm font-semibold text-white" style={{ background:'#c06078' }}>Ativar por R$ 19,90</Link>
-            <a href="/memorias" target="_blank" className="rounded-full border px-4 py-2 text-sm font-medium" style={{ borderColor:'#c0607844', color:'#a04a63' }}>Conhecer</a>
-          </div>
+  const envolver = (conteudo: any) => {
+    if (sempreAberto) return conteudo;
+    return (
+      <section className="mt-3 border-t pt-3" style={{ borderColor: '#c0607822' }}>
+        <button
+          type="button"
+          onClick={() => setAberto((v) => !v)}
+          className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold"
+          style={{ background:'#fff5f8', color:'#a04a63' }}
+        >
+          <span className="flex items-center gap-2"><ImageIcon className="h-4 w-4" /> Memórias do Evento</span>
+          <span>{aberto ? '−' : '+'}</span>
+        </button>
+        {aberto && <div className="mt-3">{conteudo}</div>}
+      </section>
+    );
+  };
+
+  if (!sempreAberto && !aberto) return envolver(null);
+
+  if (carregando && !dados) {
+    return envolver(<div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-[#c06078]" /></div>);
+  }
+
+  if (erro && !dados) {
+    return envolver(<p className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{erro}</p>);
+  }
+
+  if (dados && !dados.ativo) {
+    return envolver(
+      <section className="rounded-2xl border p-5" style={{ borderColor:'#c0607833', background:'#fff' }}>
+        {sempreAberto && <div className="flex items-center gap-2"><ImageIcon className="h-5 w-5 text-[#a04a63]" /><h2 className="font-semibold" style={{ color:'#40232c' }}>Memórias do Evento</h2></div>}
+        <p className={`${sempreAberto ? 'mt-3 ' : ''}font-semibold`} style={{ color:'#40232c' }}>Álbum colaborativo + slideshow ao vivo</p>
+        <p className="mt-1 text-sm" style={{ color:'#7c5560' }}>Até 300 fotos, 30 vídeos e modo telão em tempo real por R$ 19,90 neste convite.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link href={`/convite/pagar?evento=${eventoId}&memorias=1`} className="rounded-full px-4 py-2 text-sm font-semibold text-white" style={{ background:'#c06078' }}>Ativar por R$ 19,90</Link>
+          <a href="/memorias" target="_blank" className="rounded-full border px-4 py-2 text-sm font-medium" style={{ borderColor:'#c0607844', color:'#a04a63' }}>Conhecer</a>
         </div>
-      ) : dados ? (
-        <div className="mt-3 space-y-3">
-          <div className="rounded-2xl border bg-white p-4" style={{ borderColor:'#c0607830' }}>
-            <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-semibold" style={{ color:'#40232c' }}>Memórias ativas</p>{dados.expiraEm && <p className="text-xs" style={{ color:'#7c5560' }}>Disponíveis até {new Date(dados.expiraEm).toLocaleDateString('pt-BR')}{diasRestantes != null && diasRestantes <= 15 ? ` · ${diasRestantes} dia${diasRestantes === 1 ? '' : 's'} restante${diasRestantes === 1 ? '' : 's'}` : ''}</p>}</div><span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Ativo</span></div>
-            <div className="mt-3 flex justify-between text-xs" style={{ color:'#7c5560' }}><span>{dados.uso.fotos}/{dados.limites.fotos} fotos · {dados.uso.videos}/{dados.limites.videos} vídeos</span><span>{mb(dados.uso.bytes)} / {mb(dados.limites.bytes)}</span></div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#f7e2e6]"><div className="h-full bg-[#c06078]" style={{ width:`${pct}%` }} /></div>{diasRestantes != null && diasRestantes <= 15 && <p className={`mt-3 rounded-xl px-3 py-2 text-xs ${diasRestantes <= 1 ? 'bg-red-50 text-red-700' : diasRestantes <= 7 ? 'bg-amber-50 text-amber-800' : 'bg-[#fff5f8] text-[#7c5560]'}`}>{diasRestantes <= 1 ? 'As Memórias expiram em até 24 horas. Baixe seus arquivos agora.' : `Faltam ${diasRestantes} dias para as Memórias expirarem. Recomendamos baixar o ZIP.`}</p>}
-            <label className="mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-xl bg-[#fff9fb] px-3 py-3 text-sm"><span><strong className="block" style={{ color:'#40232c' }}>Aprovar antes de exibir</strong><span className="text-xs" style={{ color:'#7c5560' }}>Desligado por padrão: novos envios entram direto no álbum.</span></span><input type="checkbox" checked={dados.aprovacaoManual} onChange={(e) => void patch({ aprovacaoManual:e.target.checked }).catch((x) => setErro(x.message))} className="h-5 w-5 accent-[#c06078]" /></label>
+      </section>
+    );
+  }
+
+  if (!dados) return envolver(null);
+
+  return envolver(
+    <section className="space-y-3">
+      <div className="rounded-2xl border bg-white p-4" style={{ borderColor:'#c0607830' }}>
+        <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-semibold" style={{ color:'#40232c' }}>Memórias ativas</p>{dados.expiraEm && <p className="text-xs" style={{ color:'#7c5560' }}>Disponíveis até {new Date(dados.expiraEm).toLocaleDateString('pt-BR')}{diasRestantes != null && diasRestantes <= 15 ? ` · ${diasRestantes} dia${diasRestantes === 1 ? '' : 's'} restante${diasRestantes === 1 ? '' : 's'}` : ''}</p>}</div><span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Ativo</span></div>
+        <div className="mt-3 flex justify-between text-xs" style={{ color:'#7c5560' }}><span>{dados.uso.fotos}/{dados.limites.fotos} fotos · {dados.uso.videos}/{dados.limites.videos} vídeos</span><span>{mb(dados.uso.bytes)} / {mb(dados.limites.bytes)}</span></div>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#f7e2e6]"><div className="h-full bg-[#c06078]" style={{ width:`${pct}%` }} /></div>{diasRestantes != null && diasRestantes <= 15 && <p className={`mt-3 rounded-xl px-3 py-2 text-xs ${diasRestantes <= 1 ? 'bg-red-50 text-red-700' : diasRestantes <= 7 ? 'bg-amber-50 text-amber-800' : 'bg-[#fff5f8] text-[#7c5560]'}`}>{diasRestantes <= 1 ? 'As Memórias expiram em até 24 horas. Baixe seus arquivos agora.' : `Faltam ${diasRestantes} dias para as Memórias expirarem. Recomendamos baixar o ZIP.`}</p>}
+        <label className="mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-xl bg-[#fff9fb] px-3 py-3 text-sm"><span><strong className="block" style={{ color:'#40232c' }}>Aprovar antes de exibir</strong><span className="text-xs" style={{ color:'#7c5560' }}>Desligado por padrão: novos envios entram direto no álbum.</span></span><input type="checkbox" checked={dados.aprovacaoManual} onChange={(e) => void patch({ aprovacaoManual:e.target.checked }).catch((x) => setErro(x.message))} className="h-5 w-5 accent-[#c06078]" /></label>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
+        <div className="rounded-2xl border bg-white p-3 text-center" style={{ borderColor:'#c0607830' }}>{qr ? <img src={qr} alt="QR Code das Memórias" className="mx-auto w-full max-w-36" /> : <QrCode className="mx-auto h-20 w-20 text-[#c06078]" />}<button onClick={() => void baixarQr()} className="mt-2 text-xs font-semibold" style={{ color:'#a04a63' }}>Baixar QR em PNG</button></div>
+        <div className="rounded-2xl border bg-white p-4" style={{ borderColor:'#c0607830' }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color:'#a04a63' }}>Compartilhar com convidados</p><p className="mt-1 break-all text-sm" style={{ color:'#40232c' }}>{dados.urlMemorias}</p><p className="mt-1 text-xs text-[#7c5560]">No dia do evento este QR também aparece automaticamente no canto do slideshow.</p><div className="mt-3 flex flex-wrap gap-2"><a href={dados.urlMemorias} target="_blank" className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium" style={{ borderColor:'#c0607844',color:'#a04a63' }}>Abrir envios <ExternalLink className="h-3 w-3" /></a><a href={dados.urlAlbum} target="_blank" className="inline-flex items-center gap-1 rounded-full bg-[#c06078] px-3 py-2 text-xs font-semibold text-white">Abrir álbum/telão <ExternalLink className="h-3 w-3" /></a><button onClick={() => void baixarTudo()} disabled={baixando || !dados.midias.length} className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium disabled:opacity-50" style={{ borderColor:'#c0607844',color:'#a04a63' }}>{baixando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />} Baixar tudo (.zip)</button></div></div>
+      </div>
+
+      {qr && <MateriaisMemorias
+        titulo={titulo}
+        urlMemorias={dados.urlMemorias}
+        qrDataUrl={qr}
+        ornamentoInicial={dados.ornamentoId ?? undefined}
+        desafiosInicial={dados.desafios}
+        onSalvarDesafios={salvarDesafios}
+      />}
+
+      {erro && <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{erro}</p>}
+
+      {midiasAtivas.length > 0 && (
+        <div className="rounded-2xl border bg-white p-4" style={{ borderColor:'#c0607830' }}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div><p className="font-semibold" style={{ color:'#40232c' }}>Arquivos recebidos</p><p className="text-xs text-[#7c5560]">Veja cada arquivo ou organize os envios pelo nome do convidado.</p></div>
+            <button onClick={() => void carregar()} className="text-xs" style={{ color:'#a04a63' }}>Atualizar</button>
+          </div>
+          <div className="mb-4 inline-flex rounded-xl bg-[#fff5f8] p-1">
+            <button onClick={() => setVisao('arquivos')} className={`rounded-lg px-3 py-2 text-xs font-semibold ${visao === 'arquivos' ? 'bg-white text-[#a04a63] shadow-sm' : 'text-[#7c5560]'}`}><ImageIcon className="mr-1 inline h-3.5 w-3.5" />Arquivos</button>
+            <button onClick={() => setVisao('pessoas')} className={`rounded-lg px-3 py-2 text-xs font-semibold ${visao === 'pessoas' ? 'bg-white text-[#a04a63] shadow-sm' : 'text-[#7c5560]'}`}><Users className="mr-1 inline h-3.5 w-3.5" />Por pessoa ({grupos.length})</button>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
-            <div className="rounded-2xl border bg-white p-3 text-center" style={{ borderColor:'#c0607830' }}>{qr ? <img src={qr} alt="QR Code das Memórias" className="mx-auto w-full max-w-36" /> : <QrCode className="mx-auto h-20 w-20 text-[#c06078]" />}<button onClick={() => void baixarQr()} className="mt-2 text-xs font-semibold" style={{ color:'#a04a63' }}>Baixar QR em PNG</button></div>
-            <div className="rounded-2xl border bg-white p-4" style={{ borderColor:'#c0607830' }}><p className="text-xs font-semibold uppercase tracking-wide" style={{ color:'#a04a63' }}>Compartilhar com convidados</p><p className="mt-1 break-all text-sm" style={{ color:'#40232c' }}>{dados.urlMemorias}</p><p className="mt-1 text-xs text-[#7c5560]">No dia do evento este QR também aparece automaticamente no canto do slideshow.</p><div className="mt-3 flex flex-wrap gap-2"><a href={dados.urlMemorias} target="_blank" className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium" style={{ borderColor:'#c0607844',color:'#a04a63' }}>Abrir envios <ExternalLink className="h-3 w-3" /></a><a href={dados.urlAlbum} target="_blank" className="inline-flex items-center gap-1 rounded-full bg-[#c06078] px-3 py-2 text-xs font-semibold text-white">Abrir álbum/telão <ExternalLink className="h-3 w-3" /></a><button onClick={() => void baixarTudo()} disabled={baixando || !dados.midias.length} className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium disabled:opacity-50" style={{ borderColor:'#c0607844',color:'#a04a63' }}>{baixando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />} Baixar tudo (.zip)</button></div></div>
-          </div>
-
-          {qr && <MateriaisMemorias
-            titulo={titulo}
-            urlMemorias={dados.urlMemorias}
-            qrDataUrl={qr}
-            ornamentoInicial={dados.ornamentoId ?? undefined}
-            desafiosInicial={dados.desafios}
-            onSalvarDesafios={salvarDesafios}
-          />}
-
-          {erro && <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{erro}</p>}
-
-          {midiasAtivas.length > 0 && (
-            <div className="rounded-2xl border bg-white p-4" style={{ borderColor:'#c0607830' }}>
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <div><p className="font-semibold" style={{ color:'#40232c' }}>Arquivos recebidos</p><p className="text-xs text-[#7c5560]">Veja cada arquivo ou organize os envios pelo nome do convidado.</p></div>
-                <button onClick={() => void carregar()} className="text-xs" style={{ color:'#a04a63' }}>Atualizar</button>
-              </div>
-              <div className="mb-4 inline-flex rounded-xl bg-[#fff5f8] p-1">
-                <button onClick={() => setVisao('arquivos')} className={`rounded-lg px-3 py-2 text-xs font-semibold ${visao === 'arquivos' ? 'bg-white text-[#a04a63] shadow-sm' : 'text-[#7c5560]'}`}><ImageIcon className="mr-1 inline h-3.5 w-3.5" />Arquivos</button>
-                <button onClick={() => setVisao('pessoas')} className={`rounded-lg px-3 py-2 text-xs font-semibold ${visao === 'pessoas' ? 'bg-white text-[#a04a63] shadow-sm' : 'text-[#7c5560]'}`}><Users className="mr-1 inline h-3.5 w-3.5" />Por pessoa ({grupos.length})</button>
-              </div>
-
-              {visao === 'arquivos' ? (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{midiasAtivas.map(cartaoMidia)}</div>
-              ) : (
-                <div className="space-y-3">
-                  {grupos.map((grupo) => {
-                    const expandido = pessoaAberta === grupo.chave;
-                    return (
-                      <div key={grupo.chave} className="overflow-hidden rounded-2xl border border-[#c0607828]">
-                        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#fffafc] p-3">
-                          <button type="button" onClick={() => setPessoaAberta(expandido ? null : grupo.chave)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f5dce3] text-[#a04a63]"><UserRound className="h-5 w-5" /></span>
-                            <span className="min-w-0"><strong className="block truncate text-sm text-[#40232c]">{grupo.nome}</strong><span className="block text-xs text-[#7c5560]">{grupo.fotos} foto{grupo.fotos === 1 ? '' : 's'} · {grupo.videos} vídeo{grupo.videos === 1 ? '' : 's'} · {mb(grupo.bytes)} · último {formatarData(grupo.ultimoEnvio)}</span></span>
-                            {expandido ? <ChevronUp className="ml-auto h-4 w-4 shrink-0 text-[#a04a63]" /> : <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-[#a04a63]" />}
-                          </button>
-                          <button disabled={excluindoGrupo === grupo.chave} onClick={() => void excluirGrupo(grupo)} className="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 disabled:opacity-50">{excluindoGrupo === grupo.chave ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Excluir todos</button>
-                        </div>
-                        {expandido && <div className="grid grid-cols-2 gap-3 border-t border-[#c0607820] p-3 sm:grid-cols-4">{grupo.midias.map(cartaoMidia)}</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+          {visao === 'arquivos' ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{midiasAtivas.map(cartaoMidia)}</div>
+          ) : (
+            <div className="space-y-3">
+              {grupos.map((grupo) => {
+                const expandido = pessoaAberta === grupo.chave;
+                return (
+                  <div key={grupo.chave} className="overflow-hidden rounded-2xl border border-[#c0607828]">
+                    <div className="flex flex-wrap items-center justify-between gap-3 bg-[#fffafc] p-3">
+                      <button type="button" onClick={() => setPessoaAberta(expandido ? null : grupo.chave)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f5dce3] text-[#a04a63]"><UserRound className="h-5 w-5" /></span>
+                        <span className="min-w-0"><strong className="block truncate text-sm text-[#40232c]">{grupo.nome}</strong><span className="block text-xs text-[#7c5560]">{grupo.fotos} foto{grupo.fotos === 1 ? '' : 's'} · {grupo.videos} vídeo{grupo.videos === 1 ? '' : 's'} · {mb(grupo.bytes)} · último {formatarData(grupo.ultimoEnvio)}</span></span>
+                        {expandido ? <ChevronUp className="ml-auto h-4 w-4 shrink-0 text-[#a04a63]" /> : <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-[#a04a63]" />}
+                      </button>
+                      <button disabled={excluindoGrupo === grupo.chave} onClick={() => void excluirGrupo(grupo)} className="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 disabled:opacity-50">{excluindoGrupo === grupo.chave ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Excluir todos</button>
+                    </div>
+                    {expandido && <div className="grid grid-cols-2 gap-3 border-t border-[#c0607820] p-3 sm:grid-cols-4">{grupo.midias.map(cartaoMidia)}</div>}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
-      ) : null}
+      )}
     </section>
   );
 }

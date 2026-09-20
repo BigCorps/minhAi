@@ -8,7 +8,13 @@ type Recado = {
   id: string; nome: string; mensagem: string; aprovado: boolean; created_at: string;
 };
 
-export default function RecadosPainel({ eventoId }: { eventoId: string }) {
+export default function RecadosPainel({
+  eventoId,
+  sempreAberto = false,
+}: {
+  eventoId: string;
+  sempreAberto?: boolean;
+}) {
   const [aberto, setAberto] = useState(false);
   const [recados, setRecados] = useState<Recado[]>([]);
   const [pendentes, setPendentes] = useState(0);
@@ -61,6 +67,74 @@ export default function RecadosPainel({ eventoId }: { eventoId: string }) {
     if (r.ok) await carregar();
   }
 
+  const conteudo = (
+    <section className="rounded-2xl border border-[#c0607833] bg-white p-4 sm:p-5">
+      {sempreAberto && (
+        <div className="mb-4 flex items-center gap-2">
+          <MessageSquareText className="h-5 w-5 text-[#a04a63]" />
+          <h2 className="font-semibold text-[#40232c]">Recados</h2>
+          {pendentes > 0 && (
+            <span className="grid min-w-5 place-items-center rounded-full bg-[#c06078] px-1.5 py-0.5 text-[10px] font-bold text-white">
+              {pendentes}
+            </span>
+          )}
+        </div>
+      )}
+
+      {carregando && recados.length === 0 ? (
+        <div className="flex justify-center py-5"><Loader2 className="h-5 w-5 animate-spin text-[#c06078]" /></div>
+      ) : recados.length === 0 ? (
+        <p className="text-sm text-[#7c5560]">Nenhum recado recebido ainda.</p>
+      ) : (
+        <ul className="space-y-3">
+          {recados.map(r => (
+            <li key={r.id} className="rounded-xl border bg-[#fff9fb] p-3" style={{ borderColor:'#c0607828' }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[#40232c]">{r.nome}</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-5 text-[#7c5560]">{r.mensagem}</p>
+                  <p className="mt-2 text-[11px] text-[#9b7b84]">{new Date(r.created_at).toLocaleString('pt-BR')}</p>
+                </div>
+                <span
+                  className="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold"
+                  style={{
+                    backgroundColor: r.aprovado ? '#ecfdf3' : '#fff4e5',
+                    color: r.aprovado ? '#087443' : '#9a5b00',
+                  }}
+                >
+                  {r.aprovado ? 'Publicado' : 'Pendente'}
+                </span>
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => atualizar(r.id, !r.aprovado)}
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium"
+                  style={{ borderColor:'#c0607840', color:'#a04a63' }}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  {r.aprovado ? 'Ocultar' : 'Aprovar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => excluir(r.id)}
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs"
+                  style={{ borderColor:'#e5c1c8', color:'#9b3a4c' }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Excluir
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {erro && <p className="mt-3 text-xs text-red-700">{erro}</p>}
+    </section>
+  );
+
+  if (sempreAberto) return conteudo;
+
   return (
     <div className="mt-3 border-t pt-3" style={{ borderColor:'#c0607822' }}>
       <button
@@ -68,74 +142,20 @@ export default function RecadosPainel({ eventoId }: { eventoId: string }) {
         onClick={() => setAberto(v => !v)}
         className="flex w-full items-center justify-between gap-3 text-left"
       >
-        <span
-          className="inline-flex items-center gap-2 text-sm font-medium"
-          style={{ color:'#a04a63' }}
-        >
+        <span className="inline-flex items-center gap-2 text-sm font-medium text-[#a04a63]">
           <MessageSquareText className="h-4 w-4" />
           Recados
           {pendentes > 0 && (
-            <span className="grid min-w-5 place-items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white"
-              style={{ backgroundColor:'#c06078' }}>
+            <span className="grid min-w-5 place-items-center rounded-full bg-[#c06078] px-1.5 py-0.5 text-[10px] font-bold text-white">
               {pendentes}
             </span>
           )}
         </span>
-
         {aberto
-          ? <ChevronUp className="h-4 w-4" style={{ color: '#9b7b84' }} />
-          : <ChevronDown className="h-4 w-4" style={{ color: '#9b7b84' }} />}
+          ? <ChevronUp className="h-4 w-4 text-[#9b7b84]" />
+          : <ChevronDown className="h-4 w-4 text-[#9b7b84]" />}
       </button>
-
-      {aberto && (
-        <div className="mt-4 rounded-2xl border p-4" style={{ backgroundColor:'#fff9fb', borderColor:'#c0607833' }}>
-          {carregando && recados.length === 0 ? (
-            <div className="flex justify-center py-5"><Loader2 className="h-5 w-5 animate-spin" /></div>
-          ) : recados.length === 0 ? (
-            <p className="text-sm" style={{ color:'#7c5560' }}>Nenhum recado recebido ainda.</p>
-          ) : (
-            <ul className="space-y-3">
-              {recados.map(r => (
-                <li key={r.id} className="rounded-xl border bg-white p-3" style={{ borderColor:'#c0607828' }}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold" style={{ color:'#40232c' }}>{r.nome}</p>
-                      <p className="mt-1 whitespace-pre-wrap text-sm leading-5" style={{ color:'#7c5560' }}>
-                        {r.mensagem}
-                      </p>
-                      <p className="mt-2 text-[11px]" style={{ color:'#9b7b84' }}>
-                        {new Date(r.created_at).toLocaleString('pt-BR')}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold"
-                      style={{
-                        backgroundColor: r.aprovado ? '#ecfdf3' : '#fff4e5',
-                        color: r.aprovado ? '#087443' : '#9a5b00'
-                      }}>
-                      {r.aprovado ? 'Publicado' : 'Pendente'}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 flex gap-2">
-                    <button type="button" onClick={() => atualizar(r.id, !r.aprovado)}
-                      className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium"
-                      style={{ borderColor:'#c0607840', color:'#a04a63' }}>
-                      <Check className="h-3.5 w-3.5" />
-                      {r.aprovado ? 'Ocultar' : 'Aprovar'}
-                    </button>
-                    <button type="button" onClick={() => excluir(r.id)}
-                      className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs"
-                      style={{ borderColor:'#e5c1c8', color:'#9b3a4c' }}>
-                      <Trash2 className="h-3.5 w-3.5" /> Excluir
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          {erro && <p className="mt-3 text-xs text-red-700">{erro}</p>}
-        </div>
-      )}
+      {aberto && <div className="mt-4">{conteudo}</div>}
     </div>
   );
 }

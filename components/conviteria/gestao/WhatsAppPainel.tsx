@@ -207,7 +207,7 @@ https://${slug}.conviteia.com`;
         <div>
           <p className="font-semibold text-[#40232c]">Prazo de confirmação</p>
           {prazoConfigurado ? (
-            <p className="mt-1 text-sm text-[#7c5560]">Os templates usam automaticamente <strong>{estado.rsvpPrazoTexto}</strong> como a variável <strong>{'{{5}}'}</strong>.</p>
+            <p className="mt-1 text-sm text-[#7c5560]">O WhatsApp do Evento usará automaticamente <strong>{estado.rsvpPrazoTexto}</strong> como data limite para confirmação de presença.</p>
           ) : (
             <p className="mt-1 text-sm text-amber-800">Defina a data em <strong>Gestão → Convidados → Prazo para confirmação</strong> antes de contratar ou enviar mensagens.</p>
           )}

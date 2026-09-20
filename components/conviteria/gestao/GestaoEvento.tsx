@@ -188,10 +188,6 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
 
         {aba === 'convidados' && (
           <section className="space-y-5">
-            <div className="rounded-2xl border border-[#c0607833] bg-white p-4">
-              <h2 className="font-semibold">Lista e confirmações</h2>
-              <p className="mt-1 text-sm text-[#7c5560]">Cadastre famílias e pessoas, importe CSV, acompanhe o RSVP e prepare os QR Codes de entrada. Esta é a fonte única da lista do evento.</p>
-            </div>
             <ConvidadosPainel eventoId={eventoId} token={token} slug={slug} qrModo={gestao.qrModo} />
             <PresencasPainel eventoId={eventoId} mostrarGoogle={false} />
           </section>
@@ -215,16 +211,16 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
         {aba === 'padrinhos' && <PadrinhosPainel eventoId={eventoId} token={token} slug={slug} />}
         {aba === 'mesas' && <MesasPainel eventoId={eventoId} token={token} />}
         {aba === 'checkin' && <CheckinPainel eventoId={eventoId} token={token} />}
-        {aba === 'memorias' && <MemoriasPainel eventoId={eventoId} slug={slug} titulo={cfg.anfitrioes.exibicao} />}
-        {aba === 'recados' && <RecadosPainel eventoId={eventoId} />}
+        {aba === 'memorias' && <MemoriasPainel eventoId={eventoId} slug={slug} titulo={cfg.anfitrioes.exibicao} sempreAberto />}
+        {aba === 'recados' && <RecadosPainel eventoId={eventoId} sempreAberto />}
         {aba === 'financeiro' && (
           <section className="space-y-4">
             <div className="rounded-2xl border border-[#c0607833] bg-white p-4">
               <h2 className="font-semibold">Presentes e recebimentos</h2>
               <p className="mt-1 text-sm text-[#7c5560]">Pagamentos dos presentes, saldo disponível e solicitações de saque ficam concentrados nesta área.</p>
             </div>
-            <PagamentosPresentesPainel eventoId={eventoId} />
-            <SaldoSaque eventoId={eventoId} />
+            <PagamentosPresentesPainel eventoId={eventoId} sempreAberto />
+            <SaldoSaque eventoId={eventoId} sempreAberto />
           </section>
         )}
         {aba === 'papelaria' && <PapelariaPainel cfg={cfg} slug={slug} />}

@@ -73,6 +73,11 @@ async function registrarConfirmacaoManual(r: any, eventoId: string, ids: string[
 
   const familiaIds = [...new Set(pessoas.map((p: any) => p.familia_id).filter(Boolean))];
   const familiaId = familiaIds.length === 1 ? familiaIds[0] : null;
+  if (ids.length > 1) {
+    if (!familiaId || !pessoas.every((p: any) => p.familia_id === familiaId)) {
+      return { erro: 'Confirme pessoas de uma única família por vez.', status: 400 as const };
+    }
+  }
   const principal = pessoas[0] as any;
   const email = principal.email_normalizado || null;
   let existente: any = null;
@@ -88,9 +93,25 @@ async function registrarConfirmacaoManual(r: any, eventoId: string, ids: string[
     existente = data;
   }
 
-  const acompanhantes = pessoas.slice(1).map((p: any) => p.nome);
-  const adultos = pessoas.filter((p: any) => p.tipo !== 'crianca').length;
-  const criancas = pessoas.filter((p: any) => p.tipo === 'crianca').length;
+  let extrasConfirmados: any[] = [];
+  if (familiaId) {
+    const { data } = await r.admin.from('convidados_lista')
+      .select('id,nome,tipo')
+      .eq('evento_id', eventoId)
+      .eq('familia_id', familiaId)
+      .eq('rsvp_extra', true)
+      .eq('status', 'confirmado');
+    extrasConfirmados = data ?? [];
+  }
+
+  const acompanhantes = [
+    ...pessoas.slice(1).map((p: any) => p.nome),
+    ...extrasConfirmados.map((p: any) => p.nome),
+  ];
+  const adultos = pessoas.filter((p: any) => p.tipo !== 'crianca').length
+    + extrasConfirmados.filter((p: any) => p.tipo !== 'crianca').length;
+  const criancas = pessoas.filter((p: any) => p.tipo === 'crianca').length
+    + extrasConfirmados.filter((p: any) => p.tipo === 'crianca').length;
   const dados = {
     evento_id: eventoId,
     nome: principal.nome,
@@ -118,14 +139,32 @@ async function registrarConfirmacaoManual(r: any, eventoId: string, ids: string[
   if (resp.error || !resp.data) return { erro: 'Não foi possível registrar a confirmação.', status: 500 as const };
 
   await r.admin.from('convidado_confirmacoes_membros').delete().eq('confirmacao_id', resp.data.id);
+  const idsDaConfirmacao = [...ids, ...extrasConfirmados.map((p: any) => p.id)];
   await r.admin.from('convidado_confirmacoes_membros').insert(
-    ids.map((id: string) => ({ evento_id: eventoId, confirmacao_id: resp.data.id, convidado_lista_id: id })),
+    idsDaConfirmacao.map((id: string) => ({
+      evento_id: eventoId,
+      confirmacao_id: resp.data.id,
+      convidado_lista_id: id,
+    })),
   );
 
   if (familiaId) {
-    const { data: todos } = await r.admin.from('convidados_lista').select('id').eq('evento_id', eventoId).eq('familia_id', familiaId);
-    const todosIds = (todos ?? []).map((p: any) => p.id);
-    if (todosIds.length) await r.admin.from('convidados_lista').update({ status: 'nao_vai' }).eq('evento_id', eventoId).in('id', todosIds);
+    // A confirmação manual controla somente os membros fixos do grupo.
+    // Acompanhantes extras já materializados pelo RSVP não são apagados nem
+    // marcados como "não vai" por uma revisão feita pelos anfitriões.
+    const { data: todos } = await r.admin.from('convidados_lista')
+      .select('id,rsvp_extra')
+      .eq('evento_id', eventoId)
+      .eq('familia_id', familiaId);
+    const membrosFixosIds = (todos ?? [])
+      .filter((p: any) => !p.rsvp_extra)
+      .map((p: any) => p.id);
+    if (membrosFixosIds.length) {
+      await r.admin.from('convidados_lista')
+        .update({ status: 'nao_vai' })
+        .eq('evento_id', eventoId)
+        .in('id', membrosFixosIds);
+    }
   }
   await r.admin.from('convidados_lista').update({ status: 'confirmado' }).eq('evento_id', eventoId).in('id', ids);
   return { ok: true, confirmacaoId: resp.data.id };
@@ -140,12 +179,10 @@ export async function GET(req: NextRequest) {
   const [
     { data: familias, error: ef },
     { data: convidados, error: ec },
-    { data: confirmacoes },
     { data: gestao },
   ] = await Promise.all([
     r.admin.from('convidado_familias').select('*').eq('evento_id', eventoId).order('created_at'),
     r.admin.from('convidados_lista').select('*').eq('evento_id', eventoId).order('created_at'),
-    r.admin.from('convidados').select('id,nome,email,contato,comparecera,adultos,criancas,acompanhantes,familia_lista_id,convidado_lista_id,created_at,teste_id').eq('evento_id', eventoId).order('created_at', { ascending: false }),
     r.admin.from('evento_gestao_config').select('rsvp_prazo').eq('evento_id', eventoId).maybeSingle(),
   ]);
   if (ef || ec) return NextResponse.json({ erro: 'Não foi possível carregar os convidados.' }, { status: 500 });
@@ -153,7 +190,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     familias: familias ?? [],
     convidados: convidados ?? [],
-    confirmacoes: confirmacoes ?? [],
     rsvpPrazo,
     rsvpEncerrado: prazoRsvpEncerrado(rsvpPrazo),
     dataEvento: dataCalendarioSaoPaulo(r.evento.data_evento as string | null),

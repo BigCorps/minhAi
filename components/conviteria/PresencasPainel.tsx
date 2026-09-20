@@ -56,6 +56,15 @@ export default function PresencasPainel({
 
   useEffect(() => { void carregar(); }, [carregar]);
 
+  useEffect(() => {
+    const atualizar = (event: Event) => {
+      const detalhe = (event as CustomEvent<{ eventoId?: string }>).detail;
+      if (detalhe?.eventoId === eventoId) void carregar();
+    };
+    window.addEventListener('conviteia:presencas-atualizadas', atualizar);
+    return () => window.removeEventListener('conviteia:presencas-atualizadas', atualizar);
+  }, [carregar, eventoId]);
+
   async function remover(confirmacaoId: string) {
     if (!window.confirm('Remover esta confirmação de presença?')) return;
     const r = await fetch('/api/conviteria/presencas-painel', {

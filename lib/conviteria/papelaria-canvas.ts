@@ -3,9 +3,12 @@
 import type { ConviteConfig } from './tipos';
 import { acharTema } from './temas';
 import { acharFonte } from './fontes';
+import { familiasGoogle, urlGoogleFonts } from './tokens';
+import { ORNAMENTOS_ASSETS } from './ornamentos';
 
 export type FormatoPapelariaId = 'a3' | 'a4' | 'a5' | '15x21' | '10x15' | 'a4-horizontal';
 export type PecaEventoId = 'boas-vindas' | 'numero-mesa' | 'cartao-mesa' | 'qr-convite' | 'menu' | 'agradecimento';
+export type PaletaPapelariaId = 'convite' | 'rose' | 'sage' | 'noite';
 
 export type FormatoPapelaria = {
   id: FormatoPapelariaId;
@@ -13,6 +16,11 @@ export type FormatoPapelaria = {
   detalhe: string;
   larguraMm: number;
   alturaMm: number;
+};
+
+export type EstiloPapelaria = {
+  paletaId?: PaletaPapelariaId;
+  ornamentoId?: string;
 };
 
 export const FORMATOS_PAPELARIA: FormatoPapelaria[] = [
@@ -32,6 +40,15 @@ export const PECAS_EVENTO: Record<PecaEventoId, { nome: string; descricao: strin
   menu: { nome: 'Menu', descricao: 'Cardápio no mesmo visual do convite.', formato: '15x21' },
   agradecimento: { nome: 'Agradecimento', descricao: 'Uma lembrança impressa para convidados e mesas.', formato: '10x15' },
 };
+
+export const MODELOS_PAPELARIA = ORNAMENTOS_ASSETS;
+
+export const PALETAS_PAPELARIA: Array<{ id: PaletaPapelariaId; nome: string; descricao: string }> = [
+  { id: 'convite', nome: 'Cores do convite', descricao: 'Usa exatamente a paleta escolhida no convite.' },
+  { id: 'rose', nome: 'Rosé clássico', descricao: 'Rosé suave e elegante, como nas artes de Memórias.' },
+  { id: 'sage', nome: 'Sálvia & creme', descricao: 'Verde sálvia com fundo creme e leitura delicada.' },
+  { id: 'noite', nome: 'Noite elegante', descricao: 'Fundo escuro com detalhes dourados e contraste alto.' },
+];
 
 export function formatoPapelaria(id: FormatoPapelariaId) {
   return FORMATOS_PAPELARIA.find((f) => f.id === id) ?? FORMATOS_PAPELARIA[1];
@@ -56,28 +73,110 @@ type Visual = {
   folha: string;
   display: string;
   corpo: string;
+  displayFamilia: string;
+  corpoFamilia: string;
   pesoDisplay: number;
   escalaDisplay: number;
   ornamentoId: string;
 };
 
-function visualDoConvite(cfg: ConviteConfig): Visual {
+const PALETAS_FIXAS: Record<Exclude<PaletaPapelariaId, 'convite'>, {
+  fundo: string; papelQr: string; tinta: string; suave: string; acento: string; detalhe: string; folha: string;
+}> = {
+  rose: { fundo: '#fffaf8', papelQr: '#ffffff', tinta: '#40232c', suave: '#7c5560', acento: '#b75d78', detalhe: '#e8bdc9', folha: '#74806b' },
+  sage: { fundo: '#fbfaf5', papelQr: '#ffffff', tinta: '#3f4436', suave: '#66705a', acento: '#7d8b6a', detalhe: '#cdd0bb', folha: '#718062' },
+  noite: { fundo: '#171416', papelQr: '#fffdf8', tinta: '#fff8ec', suave: '#d3c7b7', acento: '#c9a86a', detalhe: '#66553a', folha: '#9c885f' },
+};
+
+function primeiraFamilia(css: string) {
+  return css.split(',')[0].replace(/["']/g, '').trim();
+}
+
+function pilhaCanvas(css: string, fallback: string) {
+  const principal = css.split(',')[0].trim();
+  return `${principal}, ${fallback}`;
+}
+
+function modeloValido(id?: string | null) {
+  return Boolean(id && ORNAMENTOS_ASSETS.some((o) => o.id === id));
+}
+
+function visualDoConvite(cfg: ConviteConfig, estilo?: EstiloPapelaria): Visual {
   const tema = acharTema(cfg.temaId);
   const fonte = acharFonte(cfg.fonteId);
+  const paletaId = estilo?.paletaId ?? 'convite';
+  const fixa = paletaId === 'convite' ? null : PALETAS_FIXAS[paletaId];
+  const ornamentoPadrao = cfg.ornamentoId || tema.ornamentoSugerido || 'floral';
+  const ornamentoId = modeloValido(estilo?.ornamentoId)
+    ? estilo!.ornamentoId!
+    : (modeloValido(ornamentoPadrao) ? ornamentoPadrao : 'floral');
+
   return {
-    fundo: tema.papel,
-    papelQr: '#ffffff',
-    tinta: tema.tinta,
-    suave: tema.tintaSuave,
-    acento: tema.acento,
-    detalhe: tema.floral.petalaClara,
-    folha: tema.floral.folha,
-    display: fonte.display,
-    corpo: fonte.corpo,
+    fundo: fixa?.fundo ?? tema.papel,
+    papelQr: fixa?.papelQr ?? '#ffffff',
+    tinta: fixa?.tinta ?? tema.tinta,
+    suave: fixa?.suave ?? tema.tintaSuave,
+    acento: fixa?.acento ?? tema.acento,
+    detalhe: fixa?.detalhe ?? tema.floral.petalaClara,
+    folha: fixa?.folha ?? tema.floral.folha,
+    // Não usamos mais o fallback genérico "cursive" no canvas. Em Android ele
+    // frequentemente vira uma fonte parecida com Comic Sans. A fonte real do
+    // convite é carregada abaixo; caso a rede falhe, o fallback continua elegante.
+    display: pilhaCanvas(fonte.display, 'Georgia, serif'),
+    corpo: pilhaCanvas(fonte.corpo, 'Arial, sans-serif'),
+    displayFamilia: primeiraFamilia(fonte.display),
+    corpoFamilia: primeiraFamilia(fonte.corpo),
     pesoDisplay: fonte.pesoDisplay,
     escalaDisplay: fonte.escalaDisplay,
-    ornamentoId: cfg.ornamentoId || tema.ornamentoSugerido || 'floral',
+    ornamentoId,
   };
+}
+
+const fontesCarregadas = new Map<string, Promise<void>>();
+
+async function garantirFontesPapelaria(fonteId: string, v: Visual) {
+  if (typeof document === 'undefined' || !('fonts' in document)) return;
+  if (fontesCarregadas.has(fonteId)) return fontesCarregadas.get(fonteId)!;
+
+  const promessa = (async () => {
+    const familias = familiasGoogle(fonteId);
+    if (familias.length) {
+      const id = `cv-papelaria-fontes-${fonteId.replace(/[^a-z0-9_-]/gi, '-')}`;
+      let link = document.getElementById(id) as HTMLLinkElement | null;
+      if (!link) {
+        link = document.createElement('link');
+        link.id = id;
+        link.rel = 'stylesheet';
+        link.href = urlGoogleFonts(familias);
+        document.head.appendChild(link);
+      }
+      if (!link.sheet) {
+        await new Promise<void>((resolve) => {
+          let finalizado = false;
+          const terminar = () => { if (!finalizado) { finalizado = true; resolve(); } };
+          link!.addEventListener('load', terminar, { once: true });
+          link!.addEventListener('error', terminar, { once: true });
+          window.setTimeout(terminar, 4500);
+        });
+      }
+    }
+
+    try {
+      await Promise.all([
+        document.fonts.load(`${v.pesoDisplay} 32px "${v.displayFamilia}"`),
+        document.fonts.load(`400 18px "${v.corpoFamilia}"`),
+        document.fonts.load(`500 18px "${v.corpoFamilia}"`),
+        document.fonts.load(`600 18px "${v.corpoFamilia}"`),
+        document.fonts.load(`700 18px "${v.corpoFamilia}"`),
+        document.fonts.ready,
+      ]);
+    } catch {
+      // O canvas usa os fallbacks seguros definidos em visualDoConvite.
+    }
+  })();
+
+  fontesCarregadas.set(fonteId, promessa);
+  return promessa;
 }
 
 function rounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -235,14 +334,7 @@ function divisor(ctx: CanvasRenderingContext2D, v: Visual, x: number, y: number,
   ctx.restore();
 }
 
-function texturaDoConvite(
-  ctx: CanvasRenderingContext2D,
-  texturaId: string | undefined,
-  v: Visual,
-  largura: number,
-  altura: number,
-  base: number,
-) {
+function texturaDoConvite(ctx: CanvasRenderingContext2D, texturaId: string | undefined, v: Visual, largura: number, altura: number, base: number) {
   const id = texturaId || 'nenhuma';
   if (id === 'nenhuma') return;
   const passo = Math.max(52, base * .105);
@@ -261,7 +353,6 @@ function texturaDoConvite(
       ctx.rotate(8 * Math.PI / 180);
       ctx.scale(escala, escala);
       ctx.lineWidth = .7;
-
       if (id === 'renda') {
         ctx.beginPath();
         ctx.moveTo(0, 12); ctx.arc(10, 12, 10, Math.PI, 0); ctx.arc(30, 12, 10, Math.PI, 0); ctx.stroke();
@@ -289,7 +380,7 @@ function texturaDoConvite(
   ctx.restore();
 }
 
-function prepararBase(cfg: ConviteConfig, formato: FormatoPapelaria, dpi: number) {
+function prepararBase(cfg: ConviteConfig, formato: FormatoPapelaria, dpi: number, estilo?: EstiloPapelaria) {
   const pxMm = dpi / 25.4;
   const largura = Math.round(formato.larguraMm * pxMm);
   const altura = Math.round(formato.alturaMm * pxMm);
@@ -298,7 +389,7 @@ function prepararBase(cfg: ConviteConfig, formato: FormatoPapelaria, dpi: number
   canvas.height = altura;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Seu navegador não conseguiu montar a arte.');
-  const v = visualDoConvite(cfg);
+  const v = visualDoConvite(cfg, estilo);
   const base = Math.min(largura, altura);
   const margem = base * .07;
 
@@ -344,19 +435,6 @@ function fonteCorpo(v: Visual, peso: number, px: number) {
   return `${peso} ${Math.round(px)}px ${v.corpo}`;
 }
 
-async function aguardarFontes(v: Visual) {
-  if (!('fonts' in document)) return;
-  try {
-    await Promise.all([
-      document.fonts.load(`${v.pesoDisplay} 32px ${v.display}`),
-      document.fonts.load(`400 18px ${v.corpo}`),
-      document.fonts.ready,
-    ]);
-  } catch {
-    // Canvas continua com fallback de sistema caso a fonte ainda não esteja disponível.
-  }
-}
-
 function rodapeEvento(ctx: CanvasRenderingContext2D, cfg: ConviteConfig, v: Visual, largura: number, altura: number, base: number, margem: number) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -378,6 +456,7 @@ export async function renderizarArteCheckin({
   nome,
   formato = formatoPapelaria('10x15'),
   dpi = 300,
+  estilo,
 }: {
   cfg: ConviteConfig;
   slug: string;
@@ -385,10 +464,11 @@ export async function renderizarArteCheckin({
   nome: string;
   formato?: FormatoPapelaria;
   dpi?: number;
+  estilo?: EstiloPapelaria;
 }) {
-  const baseDados = prepararBase(cfg, formato, dpi);
+  const baseDados = prepararBase(cfg, formato, dpi, estilo);
   const { canvas, ctx, v, largura, altura, base, margem } = baseDados;
-  await aguardarFontes(v);
+  await garantirFontesPapelaria(cfg.fonteId, v);
   const vertical = altura >= largura;
   const url = `https://${slug}.conviteia.com/entrada/${qrToken}`;
   const qr = await imagemQr(url);
@@ -413,7 +493,7 @@ export async function renderizarArteCheckin({
   ctx.shadowColor = 'rgba(25,15,18,.14)';
   ctx.shadowBlur = base * .022;
   ctx.shadowOffsetY = base * .009;
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = v.papelQr;
   rounded(ctx, qrX - base * .03, qrY - base * .03, qrTam + base * .06, qrTam + base * .06, base * .025);
   ctx.fill();
   ctx.restore();
@@ -439,6 +519,7 @@ export async function renderizarPecaEvento({
   numero,
   menu,
   dpi = 300,
+  estilo,
 }: {
   cfg: ConviteConfig;
   slug: string;
@@ -449,16 +530,17 @@ export async function renderizarPecaEvento({
   numero: string;
   menu: string;
   dpi?: number;
+  estilo?: EstiloPapelaria;
 }) {
-  const { canvas, ctx, v, largura, altura, base, margem } = prepararBase(cfg, formato, dpi);
-  await aguardarFontes(v);
+  const { canvas, ctx, v, largura, altura, base, margem } = prepararBase(cfg, formato, dpi, estilo);
+  await garantirFontesPapelaria(cfg.fonteId, v);
   const vertical = altura >= largura;
   const centro = largura / 2;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
   let chamada = titulo.trim() || 'Sejam bem-vindos';
-  let corpo = texto.trim();
+  const corpo = texto.trim();
   if (peca === 'numero-mesa') chamada = 'Mesa';
   if (peca === 'cartao-mesa') chamada = `Mesa ${numero || '01'}`;
   if (peca === 'menu') chamada = 'Menu';
@@ -481,7 +563,7 @@ export async function renderizarPecaEvento({
     ctx.shadowColor = 'rgba(25,15,18,.13)';
     ctx.shadowBlur = base * .02;
     ctx.shadowOffsetY = base * .008;
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = v.papelQr;
     rounded(ctx, centro - qrTam / 2 - base * .025, qrY - base * .025, qrTam + base * .05, qrTam + base * .05, base * .022);
     ctx.fill();
     ctx.restore();

@@ -1,3 +1,74 @@
+.cv-modal-fundo {
+  /*
+   * ConviteIA usa apenas interface clara.
+   * O modal e renderizado via portal no <body>, fora de .cv-fora; por isso o
+   * color-scheme precisa ser aplicado aqui para impedir que Android/Chrome
+   * escurecam selects e outros controles nativos quando o aparelho esta em
+   * modo escuro.
+   */
+  color-scheme: light !important;
+}
+
+.cv-modal-fundo input,
+.cv-modal-fundo select,
+.cv-modal-fundo textarea,
+.cv-modal-fundo button {
+  color-scheme: light !important;
+}
+
+.cv-modal-form input:not([type='checkbox']):not([type='radio']),
+.cv-modal-form textarea,
+.cv-modal-form select {
+  background-color: #fff !important;
+  color: var(--cv-tinta, #40232c) !important;
+  -webkit-text-fill-color: var(--cv-tinta, #40232c) !important;
+}
+
+.cv-modal-form select,
+.cv-modal-form option,
+.cv-modal-form optgroup {
+  background-color: #fff !important;
+  color: var(--cv-tinta, #40232c) !important;
+}
+
+/*
+ * O CSS base da modal aplica width: 100% em todo input. Isso inclui checkbox
+ * e fazia cada checkbox ocupar a largura da linha, empurrando o nome para a
+ * direita. No RSVP, checkbox deve ser um controle compacto ancorado a esquerda.
+ */
+.cv-rsvp-pessoas > label {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.cv-rsvp-pessoas > label > input[type='checkbox'] {
+  width: 18px !important;
+  min-width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--cv-acento);
+}
+
+.cv-rsvp-pessoas > label > span {
+  min-width: 0;
+  text-align: left;
+}
+
+.cv-rsvp-pessoas > label > select {
+  width: auto;
+  min-width: 82px;
+  flex: 0 0 auto;
+  padding: 9px 28px 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--cv-acento) 30%, transparent);
+  border-radius: 10px;
+  background-color: #fff !important;
+  color: var(--cv-tinta, #40232c) !important;
+  -webkit-text-fill-color: var(--cv-tinta, #40232c) !important;
+}
+
 .cv-rsvp-intro {
   margin: 0 0 1rem;
   font-size: .8rem;

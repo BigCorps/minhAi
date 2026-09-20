@@ -65,7 +65,7 @@ const nextConfig = {
         // /api e /_next ficam fora porque são infraestrutura compartilhada.
         {
           source:
-            '/:adminPath((?!api(?:/|$)|_next(?:/|$)|login$|logout$|auth/callback$|usuarios(?:/|$)|financeiro$|custos$|margem$|atencao$|agora$|dashboard(?:/|$)|robots\\.txt$|favicon\\.ico$).+)',
+            '/:adminPath((?!api(?:/|$)|_next(?:/|$)|login$|logout$|auth/callback$|usuarios(?:/|$)|financeiro$|custos$|margem$|atencao$|agora$|whatsapp$|dashboard(?:/|$)|robots\\.txt$|favicon\\.ico$).+)',
           has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
           destination: '/admin/not-found',
         },
@@ -122,6 +122,11 @@ const nextConfig = {
           source: '/agora',
           has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
           destination: '/admin/agora',
+        },
+        {
+          source: '/whatsapp',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin/whatsapp',
         },
         {
           source: '/auth/callback',

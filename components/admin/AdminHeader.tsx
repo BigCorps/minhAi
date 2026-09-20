@@ -4,6 +4,7 @@ import {
   CircleDollarSign,
   Gauge,
   LogOut,
+  MessageCircle,
   ShieldCheck,
   TrendingUp,
   UsersRound,
@@ -18,7 +19,8 @@ export type AdminSection =
   | 'costs'
   | 'margin'
   | 'attention'
-  | 'now';
+  | 'now'
+  | 'whatsapp';
 
 type Props = {
   admin: AdminIdentity;
@@ -34,6 +36,7 @@ const NAV = [
   { key: 'margin', label: 'Margem', suffix: '/margem', icon: TrendingUp },
   { key: 'attention', label: 'Atenção', suffix: '/atencao', icon: AlertTriangle },
   { key: 'now', label: 'Agora', suffix: '/agora', icon: Activity },
+  { key: 'whatsapp', label: 'WhatsApp', suffix: '/whatsapp', icon: MessageCircle },
 ] as const;
 
 function hrefFor(basePath: '' | '/admin', suffix: string) {

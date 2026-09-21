@@ -17,6 +17,45 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MODOS = new Set<LembreteWhatsApp>(['2_meses', '1_mes', '15_dias']);
+const MODO_PERSONALIZADO = 'personalizado';
+
+function dataPersonalizadaIso(valor: unknown) {
+  const data = texto(valor, 10);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(data);
+  if (!match) return null;
+  const ano = Number(match[1]);
+  const mes = Number(match[2]);
+  const dia = Number(match[3]);
+  const alvo = new Date(Date.UTC(ano, mes - 1, dia, 12, 0, 0, 0));
+  if (
+    alvo.getUTCFullYear() !== ano
+    || alvo.getUTCMonth() !== mes - 1
+    || alvo.getUTCDate() !== dia
+  ) return null;
+  return alvo.toISOString();
+}
+
+function resolverProgramacaoSegundo(dataEvento: string | null, body: any) {
+  const escolha = texto(body?.lembreteModo, 30);
+  if (escolha === MODO_PERSONALIZADO) {
+    const segundo = dataPersonalizadaIso(body?.segundoData);
+    if (!segundo) return { erro: 'Escolha uma data válida para o segundo comunicado.' } as const;
+    if (!dataEvento || Number.isNaN(new Date(dataEvento).getTime())) {
+      return { erro: 'O evento precisa ter uma data válida para programar o lembrete.' } as const;
+    }
+    const diaEvento = String(dataEvento).slice(0, 10);
+    if (segundo.slice(0, 10) >= diaEvento) {
+      return { erro: 'Escolha uma data anterior à data do evento.' } as const;
+    }
+    return { modo: null, segundo } as const;
+  }
+
+  const modo = MODOS.has(escolha as LembreteWhatsApp) ? escolha as LembreteWhatsApp : null;
+  if (!modo) return { erro: 'Escolha quando o segundo comunicado será enviado.' } as const;
+  const segundo = calcularSegundoEnvio(dataEvento, modo);
+  if (!segundo) return { erro: 'O evento precisa ter uma data válida para programar o lembrete.' } as const;
+  return { modo, segundo } as const;
+}
 
 async function garantirConfig(admin: any, eventoId: string) {
   await admin.from('evento_whatsapp_config').upsert({
@@ -50,7 +89,7 @@ function erroPrazoParaWhatsApp(prazo: string | null, programado?: string | null)
   if (!prazo) return 'Defina o prazo de confirmação em Gestão → Convidados antes de usar o WhatsApp do Evento.';
   if (prazoRsvpEncerrado(prazo)) return 'O prazo de confirmação já foi encerrado. Altere a data em Gestão → Convidados antes de enviar.';
   if (programado && agendamentoDepoisDoPrazo(programado, prazo)) {
-    return 'O segundo comunicado ficaria depois do prazo de confirmação. Escolha uma opção anterior ao prazo.';
+    return 'O segundo comunicado ficaria depois do prazo de confirmação. Escolha uma data anterior ou igual ao prazo.';
   }
   return null;
 }
@@ -109,8 +148,9 @@ export async function POST(req: NextRequest) {
     if (body?.consentimento !== true) {
       return NextResponse.json({ erro: 'Confirme a autorização para envio aos contatos antes de contratar.' }, { status: 400 });
     }
-    const modo = MODOS.has(body?.lembreteModo) ? body.lembreteModo as LembreteWhatsApp : null;
-    if (!modo) return NextResponse.json({ erro: 'Escolha quando o segundo comunicado será enviado.' }, { status: 400 });
+    const programacao = resolverProgramacaoSegundo(r.evento.data_evento as string | null, body);
+    if ('erro' in programacao) return NextResponse.json({ erro: programacao.erro }, { status: 400 });
+    const { modo, segundo } = programacao;
 
     const prazoRsvp = await prazoRsvpDoEvento(r.admin, eventoId);
     const erroPrazo = erroPrazoParaWhatsApp(prazoRsvp);
@@ -119,10 +159,8 @@ export async function POST(req: NextRequest) {
     const atual = await reconciliarCompraWhatsApp(eventoId);
     if (atual?.status === 'ativo') return NextResponse.json({ semCobranca: true, ativo: true });
 
-    const segundo = calcularSegundoEnvio(r.evento.data_evento as string | null, modo);
-    if (!segundo) return NextResponse.json({ erro: 'O evento precisa ter uma data válida para programar o lembrete.' }, { status: 400 });
     if (new Date(segundo).getTime() <= Date.now()) {
-      return NextResponse.json({ erro: 'Esse prazo de lembrete já passou. Escolha uma opção mais próxima da data do evento.' }, { status: 400 });
+      return NextResponse.json({ erro: 'A data do segundo comunicado precisa estar no futuro.' }, { status: 400 });
     }
     const erroProgramacao = erroPrazoParaWhatsApp(prazoRsvp, segundo);
     if (erroProgramacao) return NextResponse.json({ erro: erroProgramacao }, { status: 400 });
@@ -191,14 +229,14 @@ export async function POST(req: NextRequest) {
   if (acao === 'agendar') {
     const cfg = await reconciliarCompraWhatsApp(eventoId);
     if (cfg?.status !== 'ativo') return NextResponse.json({ erro: 'Ative o WhatsApp do Evento primeiro.' }, { status: 403 });
-    const modo = MODOS.has(body?.lembreteModo) ? body.lembreteModo as LembreteWhatsApp : null;
-    if (!modo) return NextResponse.json({ erro: 'Opção de lembrete inválida.' }, { status: 400 });
+    const programacao = resolverProgramacaoSegundo(r.evento.data_evento as string | null, body);
+    if ('erro' in programacao) return NextResponse.json({ erro: programacao.erro }, { status: 400 });
+    const { modo, segundo } = programacao;
     const prazoRsvp = await prazoRsvpDoEvento(r.admin, eventoId);
     const erroPrazo = erroPrazoParaWhatsApp(prazoRsvp);
     if (erroPrazo) return NextResponse.json({ erro: erroPrazo }, { status: 400 });
-    const segundo = calcularSegundoEnvio(r.evento.data_evento as string | null, modo);
-    if (!segundo || new Date(segundo).getTime() <= Date.now()) {
-      return NextResponse.json({ erro: 'Esse prazo de lembrete já passou para a data deste evento.' }, { status: 400 });
+    if (new Date(segundo).getTime() <= Date.now()) {
+      return NextResponse.json({ erro: 'A data do segundo comunicado precisa estar no futuro.' }, { status: 400 });
     }
     const erroProgramacao = erroPrazoParaWhatsApp(prazoRsvp, segundo);
     if (erroProgramacao) return NextResponse.json({ erro: erroProgramacao }, { status: 400 });

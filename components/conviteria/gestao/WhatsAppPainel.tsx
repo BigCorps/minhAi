@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 type Modo = '2_meses' | '1_mes' | '15_dias';
+type EscolhaAgendamento = Modo | 'personalizado';
 type Estado = {
   config: null | {
     status: 'nao_contratado' | 'aguardando_pagamento' | 'ativo';
@@ -77,7 +78,23 @@ function dataHoraBr(data?: string | null) {
 function modoLabel(modo?: Modo | null) {
   if (modo === '2_meses') return '2 meses antes';
   if (modo === '1_mes') return '1 mês antes';
-  return '15 dias antes';
+  if (modo === '15_dias') return '15 dias antes';
+  return 'Data escolhida';
+}
+
+function diaAnterior(data?: string | null) {
+  if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data)) return '';
+  const [ano, mes, dia] = data.split('-').map(Number);
+  const d = new Date(Date.UTC(ano, mes - 1, dia));
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function dataInputLocal(data: Date) {
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, '0');
+  const dia = String(data.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
 }
 
 export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: string; token: string; slug: string }) {
@@ -87,7 +104,8 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState('');
   const [consentimento, setConsentimento] = useState(false);
-  const [modo, setModo] = useState<Modo>('15_dias');
+  const [modo, setModo] = useState<EscolhaAgendamento>('15_dias');
+  const [dataSegundo, setDataSegundo] = useState('');
   const [pix, setPix] = useState<Pix>(null);
   const [editandoAgendamento, setEditandoAgendamento] = useState(false);
   const [telefoneComprovante, setTelefoneComprovante] = useState('');
@@ -103,7 +121,13 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
       const d = await r.json().catch(() => null);
       if (!r.ok) throw new Error(d?.erro || 'Não foi possível carregar o WhatsApp do Evento.');
       setEstado(d);
-      if (d?.config?.lembrete_modo) setModo(d.config.lembrete_modo);
+      if (d?.config?.segundo_programado_em && !d?.config?.lembrete_modo) {
+        setModo('personalizado');
+        setDataSegundo(String(d.config.segundo_programado_em).slice(0, 10));
+      } else if (d?.config?.lembrete_modo) {
+        setModo(d.config.lembrete_modo);
+        setDataSegundo('');
+      }
       if (d?.config?.consentimento_declarado_em) setConsentimento(true);
       if (d?.config?.comprovante_telefone) setTelefoneComprovante(d.config.comprovante_telefone);
       if (d?.pixPendente) setPix(d.pixPendente);
@@ -147,7 +171,7 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
   async function contratar() {
     setAcaoOcupada('contratar'); setErro(''); setAviso('');
     try {
-      const d = await post({ acao: 'criar_pix', consentimento, lembreteModo: modo });
+      const d = await post({ acao: 'criar_pix', consentimento, lembreteModo: modo, segundoData: modo === 'personalizado' ? dataSegundo : undefined });
       if (d.ativo || d.semCobranca) {
         setAviso('WhatsApp do Evento já está ativo.');
         await carregar(true);
@@ -163,7 +187,7 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
   async function salvarAgendamento() {
     setAcaoOcupada('agendar'); setErro(''); setAviso('');
     try {
-      const d = await post({ acao: 'agendar', lembreteModo: modo });
+      const d = await post({ acao: 'agendar', lembreteModo: modo, segundoData: modo === 'personalizado' ? dataSegundo : undefined });
       setAviso(`Lembrete programado para ${dataBr(d.segundoProgramadoEm)}.`);
       setEditandoAgendamento(false);
       await carregar(true);
@@ -263,6 +287,42 @@ https://${slug}.conviteia.com`;
   const primeiraConcluida = Boolean(estado.config?.primeiro_disparo_em) && estado.novosPrimeiroEnvio === 0;
   const segundaConcluida = Boolean(estado.config?.segundo_disparo_em);
   const agendamentoSalvo = Boolean(estado.config?.segundo_programado_em) && !estado.config?.segundo_disparo_em;
+  const dataEventoDia = estado.evento?.dataEvento?.slice(0, 10) || '';
+  const maxPorEvento = diaAnterior(dataEventoDia);
+  const maxDataSegundo = [estado.rsvpPrazo || '', maxPorEvento].filter(Boolean).sort()[0] || undefined;
+  const amanha = dataInputLocal(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const programacaoIncompleta = modo === 'personalizado' && !dataSegundo;
+
+  function restaurarAgendamentoSalvo() {
+    if (estado.config?.lembrete_modo) {
+      setModo(estado.config.lembrete_modo);
+      setDataSegundo('');
+    } else if (estado.config?.segundo_programado_em) {
+      setModo('personalizado');
+      setDataSegundo(String(estado.config.segundo_programado_em).slice(0, 10));
+    } else {
+      setModo('15_dias');
+      setDataSegundo('');
+    }
+    setEditandoAgendamento(false);
+  }
+
+  const seletorSegundoComunicado = (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <label className={`text-sm font-medium ${modo === 'personalizado' ? '' : 'sm:col-span-2'}`}>Quando enviar
+        <select value={modo} onChange={(e)=>setModo(e.target.value as EscolhaAgendamento)} className="mt-1 block w-full rounded-xl border px-3 py-2.5">
+          <option value="2_meses">2 meses antes</option>
+          <option value="1_mes">1 mês antes</option>
+          <option value="15_dias">15 dias antes</option>
+          <option value="personalizado">Escolher uma data</option>
+        </select>
+      </label>
+      {modo === 'personalizado' && <label className="text-sm font-medium">Data do segundo comunicado
+        <input type="date" value={dataSegundo} min={amanha} max={maxDataSegundo} onChange={(e)=>setDataSegundo(e.target.value)} className="mt-1 block w-full rounded-xl border px-3 py-2.5" />
+        <span className="mt-1 block text-[11px] font-normal leading-4 text-[#9b7b84]">A data precisa ser futura e respeitar o prazo de confirmação e a data do evento.</span>
+      </label>}
+    </div>
+  );
 
   return <section className="space-y-5">
     <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
@@ -307,14 +367,8 @@ https://${slug}.conviteia.com`;
     {!ativo && <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
       <h3 className="font-semibold">Contratar por {brl(estado.precoCentavos)}</h3>
       <p className="mt-1 text-sm text-[#7c5560]">O primeiro comunicado é enviado quando você mandar. O segundo fica programado para uma única data.</p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
-        <label className="text-sm font-medium">Segundo comunicado
-          <select value={modo} onChange={(e)=>setModo(e.target.value as Modo)} className="mt-1 block w-full rounded-xl border px-3 py-2.5">
-            <option value="2_meses">2 meses antes</option><option value="1_mes">1 mês antes</option><option value="15_dias">15 dias antes</option>
-          </select>
-        </label>
-        <div className="flex items-end"><button type="button" disabled={ocupado || !consentimento || bloqueadoPrazo} onClick={contratar} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#c06078] px-5 py-2.5 font-semibold text-white disabled:opacity-50">{acaoOcupada==='contratar'?<Loader2 className="h-4 w-4 animate-spin"/>:<CreditCard className="h-4 w-4"/>}{aguardando?'Ver / renovar PIX':'Gerar PIX'}</button></div>
-      </div>
+      <div className="mt-4">{seletorSegundoComunicado}</div>
+      <div className="mt-3 flex justify-stretch sm:justify-end"><button type="button" disabled={ocupado || !consentimento || bloqueadoPrazo || programacaoIncompleta} onClick={contratar} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#c06078] px-5 py-2.5 font-semibold text-white disabled:opacity-50 sm:w-auto">{acaoOcupada==='contratar'?<Loader2 className="h-4 w-4 animate-spin"/>:<CreditCard className="h-4 w-4"/>}{aguardando?'Ver / renovar PIX':'Gerar PIX'}</button></div>
       <label className="mt-4 flex items-start gap-2 text-xs leading-5 text-[#7c5560]"><input type="checkbox" checked={consentimento} onChange={(e)=>setConsentimento(e.target.checked)} className="mt-1"/><span>Declaro que os contatos informados podem receber comunicações deste evento pelo WhatsApp e sou responsável pela lista enviada.</span></label>
 
       {(pix?.copiaECola || aguardando) && <div className="mt-5 rounded-xl bg-[#fff9fb] p-4 text-center">
@@ -390,24 +444,20 @@ https://${slug}.conviteia.com`;
           {estado.config?.segundo_disparo_em ? (
             <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
               <p className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4"/>Lembrete enviado.</p>
-              <p className="mt-1 text-xs text-[#7c5560]">Programação utilizada: {modoLabel(estado.config.lembrete_modo)}.</p>
+              <p className="mt-1 text-xs text-[#7c5560]">{estado.config.lembrete_modo ? `Programação utilizada: ${modoLabel(estado.config.lembrete_modo)}.` : `Data escolhida: ${dataBr(estado.config.segundo_programado_em)}.`}</p>
             </div>
           ) : agendamentoSalvo && !editandoAgendamento ? (
             <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3">
               <p className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-800"><CheckCircle2 className="h-4 w-4"/>Lembrete agendado para {dataBr(estado.config?.segundo_programado_em)}.</p>
-              <p className="mt-1 text-xs text-[#7c5560]">{modoLabel(estado.config?.lembrete_modo)} da data do evento.</p>
+              <p className="mt-1 text-xs text-[#7c5560]">{estado.config?.lembrete_modo ? `${modoLabel(estado.config.lembrete_modo)} da data do evento.` : 'Data escolhida manualmente.'}</p>
               <button type="button" disabled={ocupado} onClick={()=>setEditandoAgendamento(true)} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 disabled:opacity-50"><Pencil className="h-3.5 w-3.5"/>Alterar agendamento</button>
             </div>
           ) : (
             <>
-              <label className="mt-3 block text-sm font-medium">Enviar
-                <select value={modo} onChange={(e)=>setModo(e.target.value as Modo)} className="mt-1 block w-full rounded-xl border px-3 py-2.5">
-                  <option value="2_meses">2 meses antes</option><option value="1_mes">1 mês antes</option><option value="15_dias">15 dias antes</option>
-                </select>
-              </label>
+              <div className="mt-3">{seletorSegundoComunicado}</div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" disabled={ocupado || bloqueadoPrazo} onClick={salvarAgendamento} className="inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-4 py-2.5 text-sm font-semibold text-[#a04a63] disabled:opacity-50">{acaoOcupada==='agendar'?<Loader2 className="h-4 w-4 animate-spin"/>:<CalendarClock className="h-4 w-4"/>}{agendamentoSalvo?'Salvar alteração':'Salvar agendamento'}</button>
-                {agendamentoSalvo && <button type="button" disabled={ocupado} onClick={()=>{setModo((estado.config?.lembrete_modo as Modo) || '15_dias');setEditandoAgendamento(false);}} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-[#7c5560] disabled:opacity-50">Cancelar</button>}
+                <button type="button" disabled={ocupado || bloqueadoPrazo || programacaoIncompleta} onClick={salvarAgendamento} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-[#c0607833] bg-white px-4 py-2.5 text-sm font-semibold text-[#a04a63] disabled:opacity-50 sm:flex-none">{acaoOcupada==='agendar'?<Loader2 className="h-4 w-4 animate-spin"/>:<CalendarClock className="h-4 w-4"/>}{agendamentoSalvo?'Salvar alteração':'Salvar agendamento'}</button>
+                {agendamentoSalvo && <button type="button" disabled={ocupado} onClick={restaurarAgendamentoSalvo} className="min-h-11 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#7c5560] disabled:opacity-50">Cancelar</button>}
               </div>
             </>
           )}

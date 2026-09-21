@@ -22,8 +22,8 @@ export async function GET(req: NextRequest) {
     .select('evento_id,lembrete_modo,segundo_programado_em')
     .eq('status', 'ativo')
     .not('primeiro_disparo_em', 'is', null)
-    .not('lembrete_modo', 'is', null)
     .is('segundo_disparo_em', null)
+    .or('lembrete_modo.not.is.null,segundo_programado_em.not.is.null')
     .order('segundo_programado_em', { nullsFirst: true })
     .limit(25);
 
@@ -36,24 +36,33 @@ export async function GET(req: NextRequest) {
   let recalculados = 0;
   let invalidosPorPrazo = 0;
 
-  // Recalcula a partir da data atual do evento. Assim, se o anfitrião mudou a
-  // data depois de comprar o pacote, o lembrete acompanha o convite e não usa
-  // um agendamento antigo.
+  // Modos rápidos continuam acompanhando a data atual do evento. Datas
+  // personalizadas ficam fixas e só são invalidadas se deixarem de respeitar
+  // o evento ou o prazo de RSVP.
   for (const item of candidatos ?? []) {
     const [{ data: evento }, { data: gestao }] = await Promise.all([
       admin.from('eventos').select('data_evento').eq('id', item.evento_id).maybeSingle(),
       admin.from('evento_gestao_config').select('rsvp_prazo').eq('evento_id', item.evento_id).maybeSingle(),
     ]);
-    const programado = calcularSegundoEnvio(
-      evento?.data_evento as string | null,
-      item.lembrete_modo as LembreteWhatsApp,
-    );
+    const ehPersonalizado = !item.lembrete_modo;
+    const programado = ehPersonalizado
+      ? (item.segundo_programado_em as string | null)
+      : calcularSegundoEnvio(
+        evento?.data_evento as string | null,
+        item.lembrete_modo as LembreteWhatsApp,
+      );
     const prazo = normalizarDataRsvp(gestao?.rsvp_prazo);
+    const diaEvento = evento?.data_evento ? String(evento.data_evento).slice(0, 10) : null;
+    const personalizadoForaDoEvento = ehPersonalizado && (
+      !programado
+      || !diaEvento
+      || programado.slice(0, 10) >= diaEvento
+    );
     const invalidoPorPrazo = !prazo
       || prazoRsvpEncerrado(prazo)
       || (!!programado && agendamentoDepoisDoPrazo(programado, prazo));
 
-    if (!programado || invalidoPorPrazo) {
+    if (!programado || invalidoPorPrazo || personalizadoForaDoEvento) {
       if (item.segundo_programado_em) {
         await admin.from('evento_whatsapp_config').update({ segundo_programado_em: null }).eq('evento_id', item.evento_id);
       }
@@ -61,7 +70,7 @@ export async function GET(req: NextRequest) {
       continue;
     }
 
-    if (programado !== item.segundo_programado_em) {
+    if (!ehPersonalizado && programado !== item.segundo_programado_em) {
       await admin.from('evento_whatsapp_config').update({ segundo_programado_em: programado }).eq('evento_id', item.evento_id);
       recalculados += 1;
     }

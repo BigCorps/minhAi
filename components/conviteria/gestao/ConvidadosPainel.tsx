@@ -10,6 +10,8 @@ import {
   Download,
   FileDown,
   FileUp,
+  LayoutGrid,
+  List,
   Loader2,
   MoreHorizontal,
   Pencil,
@@ -59,6 +61,9 @@ type Convidado = {
 
 type MembroForm = { id?: string; nome: string; tipo: 'adulto' | 'crianca'; idade: number | null };
 type LinhaCsv = LinhaCsvConvidado;
+type AgrupamentoLista = 'familias' | 'convidados';
+type VisualizacaoLista = 'lista' | 'grade';
+type OrdenacaoLista = 'az' | 'za' | 'recentes' | 'antigos' | 'pendentes' | 'confirmados' | 'nao_vai' | 'lado';
 type FamiliaForm = {
   id: string;
   nome: string;
@@ -138,6 +143,37 @@ const vazioPessoa: PessoaForm = {
   criarNovaFamilia: false, novaFamiliaNome: '',
 };
 
+function compararTexto(a: string, b: string) {
+  return a.localeCompare(b, 'pt-BR', { sensitivity: 'base', numeric: true });
+}
+
+function statusDasPessoas(lista: Convidado[]) {
+  if (lista.some((p) => p.status === 'pendente')) return 'pendente' as const;
+  if (lista.some((p) => p.status === 'confirmado')) return 'confirmado' as const;
+  return 'nao_vai' as const;
+}
+
+function prioridadeStatus(status: Convidado['status'], ordenacao: OrdenacaoLista) {
+  const alvo = ordenacao === 'confirmados' ? 'confirmado' : ordenacao === 'nao_vai' ? 'nao_vai' : 'pendente';
+  if (status === alvo) return 0;
+  if (status === 'pendente') return 1;
+  if (status === 'confirmado') return 2;
+  return 3;
+}
+
+function statusLabel(status: Convidado['status']) {
+  if (status === 'confirmado') return 'Confirmado';
+  if (status === 'nao_vai') return 'Não vai';
+  return 'Pendente';
+}
+
+function ladoLabel(lado?: string | null) {
+  if (lado === 'noiva') return 'Lado da noiva';
+  if (lado === 'noivo') return 'Lado do noivo';
+  if (lado === 'ambos') return 'Ambos';
+  return lado ? 'Outro' : '—';
+}
+
 export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
   eventoId: string;
   token: string;
@@ -147,6 +183,10 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
   const [familias, setFamilias] = useState<Familia[]>([]);
   const [pessoas, setPessoas] = useState<Convidado[]>([]);
   const [busca, setBusca] = useState('');
+  const [agruparPor, setAgruparPor] = useState<AgrupamentoLista>('familias');
+  const [visualizacao, setVisualizacao] = useState<VisualizacaoLista>('lista');
+  const [ordenacao, setOrdenacao] = useState<OrdenacaoLista>('antigos');
+  const [preferenciasCarregadas, setPreferenciasCarregadas] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState('');
@@ -224,6 +264,33 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
 
   useEffect(() => { void carregarReconciliacao(); }, [carregarReconciliacao]);
 
+  useEffect(() => {
+    try {
+      const salvo = window.localStorage.getItem(`conviteia:convidados:preferencias:${eventoId}`);
+      if (salvo) {
+        const prefs = JSON.parse(salvo) as Partial<{ agruparPor: AgrupamentoLista; visualizacao: VisualizacaoLista; ordenacao: OrdenacaoLista }>;
+        if (prefs.agruparPor === 'familias' || prefs.agruparPor === 'convidados') setAgruparPor(prefs.agruparPor);
+        if (prefs.visualizacao === 'lista' || prefs.visualizacao === 'grade') setVisualizacao(prefs.visualizacao);
+        if (['az','za','recentes','antigos','pendentes','confirmados','nao_vai','lado'].includes(String(prefs.ordenacao))) setOrdenacao(prefs.ordenacao as OrdenacaoLista);
+      }
+    } catch {
+      // Preferências locais são opcionais; a Central continua funcionando sem elas.
+    } finally {
+      setPreferenciasCarregadas(true);
+    }
+  }, [eventoId]);
+
+  useEffect(() => {
+    if (!preferenciasCarregadas) return;
+    try {
+      window.localStorage.setItem(`conviteia:convidados:preferencias:${eventoId}`, JSON.stringify({ agruparPor, visualizacao, ordenacao }));
+    } catch {
+      // Sem armazenamento local, apenas mantemos a preferência nesta sessão.
+    }
+  }, [agruparPor, eventoId, ordenacao, preferenciasCarregadas, visualizacao]);
+
+  const familiaPorId = useMemo(() => new Map(familias.map((f) => [f.id, f])), [familias]);
+
   const gruposLista = useMemo(() => {
     const gruposFamilia = familias.map((f) => {
       const membros = pessoas
@@ -249,25 +316,56 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
         ordem: p.created_at ?? '',
       }));
 
-    return [...gruposFamilia, ...individuais].sort((a, b) => {
-      const porData = String(a.ordem).localeCompare(String(b.ordem));
-      if (porData !== 0) return porData;
-      return a.chave.localeCompare(b.chave);
-    });
+    return [...gruposFamilia, ...individuais];
   }, [familias, pessoas]);
 
   const gruposFiltrados = useMemo(() => {
     const q = busca.trim().toLocaleLowerCase('pt-BR');
-    if (!q) return gruposLista;
-    return gruposLista.filter((grupo) => {
+    const lista = gruposLista.filter((grupo) => {
+      if (!q) return true;
       if (grupo.familia?.nome.toLocaleLowerCase('pt-BR').includes(q)) return true;
       return grupo.pessoas.some((p) => [p.nome, p.email, p.telefone]
         .filter(Boolean)
         .some((v) => String(v).toLocaleLowerCase('pt-BR').includes(q)));
     });
-  }, [busca, gruposLista]);
 
-  const filtrados = useMemo(() => gruposFiltrados.flatMap((grupo) => grupo.pessoas), [gruposFiltrados]);
+    return [...lista].sort((a, b) => {
+      const nomeA = a.familia?.nome || a.pessoas[0]?.nome || '';
+      const nomeB = b.familia?.nome || b.pessoas[0]?.nome || '';
+      if (ordenacao === 'az') return compararTexto(nomeA, nomeB);
+      if (ordenacao === 'za') return compararTexto(nomeB, nomeA);
+      if (ordenacao === 'recentes') return String(b.ordem).localeCompare(String(a.ordem)) || compararTexto(nomeA, nomeB);
+      if (ordenacao === 'antigos') return String(a.ordem).localeCompare(String(b.ordem)) || compararTexto(nomeA, nomeB);
+      if (ordenacao === 'lado') {
+        const ladoA = a.familia?.lado || a.pessoas[0]?.lado || '';
+        const ladoB = b.familia?.lado || b.pessoas[0]?.lado || '';
+        return compararTexto(ladoA, ladoB) || compararTexto(nomeA, nomeB);
+      }
+      return prioridadeStatus(statusDasPessoas(a.pessoas), ordenacao) - prioridadeStatus(statusDasPessoas(b.pessoas), ordenacao) || compararTexto(nomeA, nomeB);
+    });
+  }, [busca, gruposLista, ordenacao]);
+
+  const convidadosFiltrados = useMemo(() => {
+    const q = busca.trim().toLocaleLowerCase('pt-BR');
+    const lista = pessoas.filter((p) => {
+      const familiaNome = p.familia_id ? familiaPorId.get(p.familia_id)?.nome ?? '' : '';
+      if (!q) return true;
+      return [p.nome, p.email, p.telefone, familiaNome]
+        .filter(Boolean)
+        .some((v) => String(v).toLocaleLowerCase('pt-BR').includes(q));
+    });
+
+    return [...lista].sort((a, b) => {
+      if (ordenacao === 'az') return compararTexto(a.nome, b.nome);
+      if (ordenacao === 'za') return compararTexto(b.nome, a.nome);
+      if (ordenacao === 'recentes') return String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')) || compararTexto(a.nome, b.nome);
+      if (ordenacao === 'antigos') return String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')) || compararTexto(a.nome, b.nome);
+      if (ordenacao === 'lado') return compararTexto(a.lado, b.lado) || compararTexto(a.nome, b.nome);
+      return prioridadeStatus(a.status, ordenacao) - prioridadeStatus(b.status, ordenacao) || compararTexto(a.nome, b.nome);
+    });
+  }, [busca, familiaPorId, ordenacao, pessoas]);
+
+  const quantidadeVisivel = agruparPor === 'familias' ? gruposFiltrados.length : convidadosFiltrados.length;
 
   function membrosFixos(familiaId: string) {
     return pessoas.filter((p) => p.familia_id === familiaId && !p.rsvp_extra);
@@ -796,82 +894,179 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
     <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h2 className="font-semibold">Central de convidados</h2><p className="text-sm text-[#7c5560]">{pessoas.length} pessoas · {familias.length} grupos · QR de check-in {qrModo === 'familia' ? 'por família' : 'individual'}</p></div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-[#7c5560]" /><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar convidado" className="w-[210px] rounded-xl border py-2 pl-9 pr-3 text-sm" /></div>
-          <button type="button" onClick={abrirNovaFamilia} className="inline-flex items-center gap-1.5 rounded-xl border border-[#c0607833] bg-white px-3 py-2 text-sm font-semibold text-[#a04a63]"><Users className="h-4 w-4" />Família/grupo</button>
-          <button type="button" onClick={abrirNovaPessoa} className="inline-flex items-center gap-1.5 rounded-xl bg-[#c06078] px-3 py-2 text-sm font-semibold text-white"><UserPlus className="h-4 w-4" />Convidado</button>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <button type="button" onClick={abrirNovaFamilia} className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#c0607833] bg-white px-3 py-2 text-sm font-semibold text-[#a04a63] sm:flex-none"><Users className="h-4 w-4" />Família/grupo</button>
+          <button type="button" onClick={abrirNovaPessoa} className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#c06078] px-3 py-2 text-sm font-semibold text-white sm:flex-none"><UserPlus className="h-4 w-4" />Convidado</button>
         </div>
       </div>
 
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_auto_auto_minmax(190px,auto)] xl:items-end">
+        <label className="relative block"><span className="sr-only">Buscar</span><Search className="absolute left-3 top-3 h-4 w-4 text-[#7c5560]" /><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={agruparPor === 'familias' ? 'Buscar família ou convidado' : 'Buscar convidado ou família'} className="min-h-11 w-full rounded-xl border py-2.5 pl-9 pr-3 text-sm" /></label>
+        <div>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#9b7b84]">Visualizar</p>
+          <div className="grid grid-cols-2 rounded-xl border border-[#c0607833] bg-[#fff9fb] p-1">
+            <button type="button" onClick={() => { setAgruparPor('familias'); setAcoesAberta(null); }} aria-pressed={agruparPor === 'familias'} className={`min-h-9 rounded-lg px-3 text-xs font-semibold transition ${agruparPor === 'familias' ? 'bg-white text-[#a04a63] shadow-sm' : 'text-[#7c5560]'}`}>Famílias</button>
+            <button type="button" onClick={() => { setAgruparPor('convidados'); setAcoesAberta(null); }} aria-pressed={agruparPor === 'convidados'} className={`min-h-9 rounded-lg px-3 text-xs font-semibold transition ${agruparPor === 'convidados' ? 'bg-white text-[#a04a63] shadow-sm' : 'text-[#7c5560]'}`}>Convidados</button>
+          </div>
+        </div>
+        <div>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#9b7b84]">Exibição</p>
+          <div className="grid grid-cols-2 rounded-xl border border-[#c0607833] bg-[#fff9fb] p-1">
+            <button type="button" onClick={() => { setVisualizacao('lista'); setAcoesAberta(null); }} aria-pressed={visualizacao === 'lista'} className={`inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition ${visualizacao === 'lista' ? 'bg-white text-[#a04a63] shadow-sm' : 'text-[#7c5560]'}`}><List className="h-3.5 w-3.5" />Lista</button>
+            <button type="button" onClick={() => { setVisualizacao('grade'); setAcoesAberta(null); }} aria-pressed={visualizacao === 'grade'} className={`inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition ${visualizacao === 'grade' ? 'bg-white text-[#a04a63] shadow-sm' : 'text-[#7c5560]'}`}><LayoutGrid className="h-3.5 w-3.5" />Grade</button>
+          </div>
+        </div>
+        <label className="text-xs font-semibold text-[#7c5560]">Ordenar por
+          <select value={ordenacao} onChange={(e) => { setOrdenacao(e.target.value as OrdenacaoLista); setAcoesAberta(null); }} className="mt-1 block min-h-11 w-full rounded-xl border bg-white px-3 py-2 text-sm font-normal text-[#40232c]">
+            <option value="az">A–Z</option>
+            <option value="za">Z–A</option>
+            <option value="recentes">Mais recentes</option>
+            <option value="antigos">Mais antigos</option>
+            <option value="pendentes">Pendentes primeiro</option>
+            <option value="confirmados">Confirmados primeiro</option>
+            <option value="nao_vai">Não irão primeiro</option>
+            <option value="lado">Lado do evento</option>
+          </select>
+        </label>
+      </div>
+      <p className="mt-2 text-xs text-[#9b7b84]">{quantidadeVisivel} {agruparPor === 'familias' ? (quantidadeVisivel === 1 ? 'família/grupo visível' : 'famílias/grupos visíveis') : (quantidadeVisivel === 1 ? 'convidado visível' : 'convidados visíveis')}. Sua preferência de visualização fica salva neste dispositivo.</p>
+
       {carregando ? <div className="grid place-items-center py-10"><Loader2 className="h-6 w-6 animate-spin" /></div> : <>
-        <div className="mt-4 hidden md:block">
-          <table className="w-full table-fixed text-left text-sm">
-            <colgroup><col className="w-[23%]"/><col className="w-[30%]"/><col className="w-[10%]"/><col className="w-[13%]"/><col className="w-[24%]"/></colgroup>
-            <thead><tr className="border-b text-[#7c5560]"><th className="py-2 pr-3">Nome</th><th className="pr-3">Família</th><th>Tipo</th><th>Status</th><th className="text-right">Ações</th></tr></thead>
-            <tbody>{gruposFiltrados.map((grupo, grupoIndex) => {
-              const f = grupo.familia;
-              const membros = f ? membrosFixos(f.id) : grupo.pessoas;
-              const grupoConfirmado = membros.some((x) => x.status === 'confirmado');
-              const fundoGrupo = grupoIndex % 2 === 0 ? '#ffffff' : '#fff5f8';
-              return grupo.pessoas.map((p, pessoaIndex) => {
+        {agruparPor === 'familias' && visualizacao === 'lista' && <>
+          <div className="mt-4 hidden md:block">
+            <table className="w-full table-fixed text-left text-sm">
+              <colgroup><col className="w-[23%]"/><col className="w-[30%]"/><col className="w-[10%]"/><col className="w-[13%]"/><col className="w-[24%]"/></colgroup>
+              <thead><tr className="border-b text-[#7c5560]"><th className="py-2 pr-3">Nome</th><th className="pr-3">Família</th><th>Tipo</th><th>Status</th><th className="text-right">Ações</th></tr></thead>
+              <tbody>{gruposFiltrados.map((grupo, grupoIndex) => {
+                const f = grupo.familia;
+                const membros = f ? membrosFixos(f.id) : grupo.pessoas;
+                const grupoConfirmado = membros.some((x) => x.status === 'confirmado');
+                const fundoGrupo = grupoIndex % 2 === 0 ? '#ffffff' : '#fff5f8';
+                return grupo.pessoas.map((p, pessoaIndex) => {
+                  const principal = !f || (membros.length > 0 && membros[0].id === p.id);
+                  const qr = f ? f.qr_token : p.qr_token;
+                  const qrCheckin = qrModo === 'familia' && f ? f.qr_token : p.qr_token;
+                  const qrNome = qrModo === 'familia' && f ? f.nome : p.nome;
+                  return <tr key={p.id} className="border-b border-[#c0607818] align-middle" style={{ backgroundColor: fundoGrupo }}>
+                    <td className="py-3 pr-3"><span className="block truncate font-medium" title={p.nome}>{p.nome}</span>{p.rsvp_extra && <span className="mt-1 inline-block rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">extra RSVP</span>}</td>
+                    {pessoaIndex === 0 && <td rowSpan={grupo.pessoas.length} className="pr-3 align-top" style={{ paddingTop: 12 }}><span className="block font-medium text-[#7c5560]" title={f?.nome ?? ''}>{f?.nome ?? 'Convidado individual'}</span>{f && <span className="mt-1 block text-[11px] text-[#9b7b84]">{grupo.pessoas.length} {grupo.pessoas.length === 1 ? 'pessoa' : 'pessoas'}</span>}</td>}
+                    <td>{p.tipo === 'crianca' ? <span>Criança<span className="block text-[11px] text-[#9b7b84]">{p.idade ? `${p.idade} ${p.idade === 1 ? 'ano' : 'anos'}` : 'idade não informada'}</span></span> : 'Adulto'}</td>
+                    <td><span className={`rounded-full px-2 py-1 text-xs ${p.status === 'confirmado' ? 'bg-emerald-50 text-emerald-700' : p.status === 'nao_vai' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{statusLabel(p.status)}</span></td>
+                    <td><div className="flex items-center justify-end gap-1.5">
+                      {principal && <button type="button" onClick={() => abrirConfirmacaoManual(f?.nome ?? p.nome, membros)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"><Check className="h-3.5 w-3.5" />{grupoConfirmado ? 'Revisar presença' : 'Confirmar presença'}</button>}
+                      <div className="relative">
+                        <button type="button" onClick={() => setAcoesAberta((atual) => atual === p.id ? null : p.id)} className="rounded-lg p-2 text-[#7c5560] hover:bg-white/70" title="Mais ações"><MoreHorizontal className="h-4 w-4" /></button>
+                        {acoesAberta === p.id && <div className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-[#c0607833] bg-white p-1.5 shadow-xl">
+                          <button type="button" onClick={() => f ? editarFamilia(f) : editarPessoa(p)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Pencil className="h-3.5 w-3.5" />{f ? 'Editar grupo e membros' : 'Editar convidado'}</button>
+                          <button type="button" onClick={() => { setAcoesAberta(null); void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.'); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Copy className="h-3.5 w-3.5" />Copiar link de confirmação</button>
+                          <button type="button" onClick={() => { setAcoesAberta(null); void baixarQr(qrCheckin, qrNome); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Download className="h-3.5 w-3.5" />Baixar arte de check-in</button>
+                          <button type="button" onClick={() => { setAcoesAberta(null); void excluir('convidado', p.id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" />Excluir pessoa</button>
+                        </div>}
+                      </div>
+                    </div></td>
+                  </tr>;
+                });
+              })}</tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 space-y-3 md:hidden">{gruposFiltrados.map((grupo, grupoIndex) => {
+            const f = grupo.familia;
+            const membros = f ? membrosFixos(f.id) : grupo.pessoas;
+            const grupoConfirmado = membros.some((x) => x.status === 'confirmado');
+            const fundoGrupo = grupoIndex % 2 === 0 ? '#ffffff' : '#fff5f8';
+            return <div key={grupo.chave} className="overflow-visible rounded-xl border border-[#c0607820]" style={{ backgroundColor: fundoGrupo }}>
+              <div className="border-b border-[#c0607818] px-3 py-2"><p className="text-xs font-semibold text-[#a04a63]">{f?.nome ?? 'Convidado individual'}</p>{f && <p className="mt-0.5 text-[11px] text-[#9b7b84]">{grupo.pessoas.length} {grupo.pessoas.length === 1 ? 'pessoa' : 'pessoas'}</p>}</div>
+              <div className="divide-y divide-[#c0607818]">{grupo.pessoas.map((p) => {
                 const principal = !f || (membros.length > 0 && membros[0].id === p.id);
                 const qr = f ? f.qr_token : p.qr_token;
                 const qrCheckin = qrModo === 'familia' && f ? f.qr_token : p.qr_token;
                 const qrNome = qrModo === 'familia' && f ? f.nome : p.nome;
-                return <tr key={p.id} className="border-b border-[#c0607818] align-middle" style={{ backgroundColor: fundoGrupo }}>
-                  <td className="py-3 pr-3"><span className="block truncate font-medium" title={p.nome}>{p.nome}</span>{p.rsvp_extra && <span className="mt-1 inline-block rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">extra RSVP</span>}</td>
-                  {pessoaIndex === 0 && <td rowSpan={grupo.pessoas.length} className="pr-3 align-top" style={{ paddingTop: 12 }}><span className="block font-medium text-[#7c5560]" title={f?.nome ?? ''}>{f?.nome ?? 'Convidado individual'}</span>{f && <span className="mt-1 block text-[11px] text-[#9b7b84]">{grupo.pessoas.length} {grupo.pessoas.length === 1 ? 'pessoa' : 'pessoas'}</span>}</td>}
-                  <td>{p.tipo === 'crianca' ? <span>Criança<span className="block text-[11px] text-[#9b7b84]">{p.idade ? `${p.idade} ${p.idade === 1 ? 'ano' : 'anos'}` : 'idade não informada'}</span></span> : 'Adulto'}</td>
-                  <td><span className={`rounded-full px-2 py-1 text-xs ${p.status === 'confirmado' ? 'bg-emerald-50 text-emerald-700' : p.status === 'nao_vai' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{p.status === 'confirmado' ? 'Confirmado' : p.status === 'nao_vai' ? 'Não vai' : 'Pendente'}</span></td>
-                  <td><div className="flex items-center justify-end gap-1.5">
-                    {principal && <button type="button" onClick={() => abrirConfirmacaoManual(f?.nome ?? p.nome, membros)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"><Check className="h-3.5 w-3.5" />{grupoConfirmado ? 'Revisar presença' : 'Confirmar presença'}</button>}
-                    <div className="relative">
-                      <button type="button" onClick={() => setAcoesAberta((atual) => atual === p.id ? null : p.id)} className="rounded-lg p-2 text-[#7c5560] hover:bg-white/70" title="Mais ações"><MoreHorizontal className="h-4 w-4" /></button>
-                      {acoesAberta === p.id && <div className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-[#c0607833] bg-white p-1.5 shadow-xl">
-                        <button type="button" onClick={() => f ? editarFamilia(f) : editarPessoa(p)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Pencil className="h-3.5 w-3.5" />{f ? 'Editar grupo e membros' : 'Editar convidado'}</button>
-                        <button type="button" onClick={() => { setAcoesAberta(null); void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.'); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Copy className="h-3.5 w-3.5" />Copiar link de confirmação</button>
-                        <button type="button" onClick={() => { setAcoesAberta(null); void baixarQr(qrCheckin, qrNome); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Download className="h-3.5 w-3.5" />Baixar arte de check-in</button>
-                        <button type="button" onClick={() => { setAcoesAberta(null); void excluir('convidado', p.id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" />Excluir pessoa</button>
-                      </div>}
-                    </div>
-                  </div></td>
-                </tr>;
-              });
-            })}</tbody>
-          </table>
-        </div>
+                return <div key={p.id} className="p-3">
+                  <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-medium text-[#40232c]">{p.nome}</p><p className="mt-0.5 truncate text-xs text-[#7c5560]">{p.tipo === 'crianca' ? `Criança · ${p.idade ? `${p.idade} ${p.idade === 1 ? 'ano' : 'anos'}` : 'idade não informada'}` : 'Adulto'}{p.rsvp_extra ? ' · extra RSVP' : ''}</p></div><div className="flex shrink-0 items-start gap-1"><span className={`rounded-full px-2 py-1 text-[11px] ${p.status === 'confirmado' ? 'bg-emerald-50 text-emerald-700' : p.status === 'nao_vai' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{statusLabel(p.status)}</span><button type="button" onClick={() => setAcoesAberta((atual) => atual === p.id ? null : p.id)} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[#7c5560] hover:bg-white/80" title="Mais ações" aria-label={`Mais ações para ${p.nome}`} aria-expanded={acoesAberta === p.id}><MoreHorizontal className="h-4 w-4" /></button></div></div>
+                  {acoesAberta === p.id && <div className="mt-2 grid gap-1 rounded-xl border border-[#c0607833] bg-white p-1.5 shadow-sm">
+                    <button type="button" onClick={() => f ? editarFamilia(f) : editarPessoa(p)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-[#40232c] hover:bg-[#fff5f8]"><Pencil className="h-3.5 w-3.5" />{f ? 'Editar grupo e membros' : 'Editar convidado'}</button>
+                    <button type="button" onClick={() => { setAcoesAberta(null); void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.'); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-[#40232c] hover:bg-[#fff5f8]"><Copy className="h-3.5 w-3.5" />Copiar link de confirmação</button>
+                    <button type="button" onClick={() => { setAcoesAberta(null); void baixarQr(qrCheckin, qrNome); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-[#40232c] hover:bg-[#fff5f8]"><Download className="h-3.5 w-3.5" />Baixar arte de check-in</button>
+                    <button type="button" onClick={() => { setAcoesAberta(null); void excluir('convidado', p.id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" />Excluir pessoa</button>
+                  </div>}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {principal && <button type="button" onClick={() => abrirConfirmacaoManual(f?.nome ?? p.nome, membros)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700"><Check className="h-3.5 w-3.5" />{grupoConfirmado ? 'Revisar presença' : 'Confirmar presença'}</button>}
+                    <button type="button" onClick={() => f ? editarFamilia(f) : editarPessoa(p)} className="inline-flex items-center gap-1 rounded-lg bg-white/80 px-2.5 py-1.5 text-xs font-semibold text-[#a04a63]"><Pencil className="h-3.5 w-3.5" />Editar</button>
+                    <button type="button" onClick={() => void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.')} className="inline-flex items-center gap-1 rounded-lg border bg-white/70 px-2.5 py-1.5 text-xs text-[#7c5560]"><Copy className="h-3.5 w-3.5" />Confirmação</button>
+                    <button type="button" onClick={() => void baixarQr(qrCheckin, qrNome)} className="inline-flex items-center gap-1 rounded-lg border bg-white/70 px-2.5 py-1.5 text-xs text-[#7c5560]"><Download className="h-3.5 w-3.5" />Arte QR</button>
+                  </div>
+                </div>;
+              })}</div>
+            </div>;
+          })}</div>
+        </>}
 
-        <div className="mt-4 space-y-3 md:hidden">{gruposFiltrados.map((grupo, grupoIndex) => {
+        {agruparPor === 'familias' && visualizacao === 'grade' && <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{gruposFiltrados.map((grupo) => {
           const f = grupo.familia;
           const membros = f ? membrosFixos(f.id) : grupo.pessoas;
-          const grupoConfirmado = membros.some((x) => x.status === 'confirmado');
-          const fundoGrupo = grupoIndex % 2 === 0 ? '#ffffff' : '#fff5f8';
-          return <div key={grupo.chave} className="overflow-hidden rounded-xl border border-[#c0607820]" style={{ backgroundColor: fundoGrupo }}>
-            <div className="border-b border-[#c0607818] px-3 py-2"><p className="text-xs font-semibold text-[#a04a63]">{f?.nome ?? 'Convidado individual'}</p>{f && <p className="mt-0.5 text-[11px] text-[#9b7b84]">{grupo.pessoas.length} {grupo.pessoas.length === 1 ? 'pessoa' : 'pessoas'}</p>}</div>
-            <div className="divide-y divide-[#c0607818]">{grupo.pessoas.map((p) => {
-              const principal = !f || (membros.length > 0 && membros[0].id === p.id);
-              const qr = f ? f.qr_token : p.qr_token;
-              const qrCheckin = qrModo === 'familia' && f ? f.qr_token : p.qr_token;
-              const qrNome = qrModo === 'familia' && f ? f.nome : p.nome;
-              return <div key={p.id} className="p-3">
-                <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-medium text-[#40232c]">{p.nome}</p><p className="mt-0.5 truncate text-xs text-[#7c5560]">{p.tipo === 'crianca' ? `Criança · ${p.idade ? `${p.idade} ${p.idade === 1 ? 'ano' : 'anos'}` : 'idade não informada'}` : 'Adulto'}{p.rsvp_extra ? ' · extra RSVP' : ''}</p></div><div className="flex shrink-0 items-start gap-1"><span className={`rounded-full px-2 py-1 text-[11px] ${p.status === 'confirmado' ? 'bg-emerald-50 text-emerald-700' : p.status === 'nao_vai' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{p.status === 'confirmado' ? 'Confirmado' : p.status === 'nao_vai' ? 'Não vai' : 'Pendente'}</span><button type="button" onClick={() => setAcoesAberta((atual) => atual === p.id ? null : p.id)} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[#7c5560] hover:bg-white/80" title="Mais ações" aria-label={`Mais ações para ${p.nome}`} aria-expanded={acoesAberta === p.id}><MoreHorizontal className="h-4 w-4" /></button></div></div>
-                {acoesAberta === p.id && <div className="mt-2 grid gap-1 rounded-xl border border-[#c0607833] bg-white p-1.5 shadow-sm">
-                  <button type="button" onClick={() => f ? editarFamilia(f) : editarPessoa(p)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-[#40232c] hover:bg-[#fff5f8]"><Pencil className="h-3.5 w-3.5" />{f ? 'Editar grupo e membros' : 'Editar convidado'}</button>
-                  <button type="button" onClick={() => { setAcoesAberta(null); void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.'); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-[#40232c] hover:bg-[#fff5f8]"><Copy className="h-3.5 w-3.5" />Copiar link de confirmação</button>
-                  <button type="button" onClick={() => { setAcoesAberta(null); void baixarQr(qrCheckin, qrNome); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-[#40232c] hover:bg-[#fff5f8]"><Download className="h-3.5 w-3.5" />Baixar arte de check-in</button>
-                  <button type="button" onClick={() => { setAcoesAberta(null); void excluir('convidado', p.id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" />Excluir pessoa</button>
-                </div>}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {principal && <button type="button" onClick={() => abrirConfirmacaoManual(f?.nome ?? p.nome, membros)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700"><Check className="h-3.5 w-3.5" />{grupoConfirmado ? 'Revisar presença' : 'Confirmar presença'}</button>}
-                  <button type="button" onClick={() => f ? editarFamilia(f) : editarPessoa(p)} className="inline-flex items-center gap-1 rounded-lg bg-white/80 px-2.5 py-1.5 text-xs font-semibold text-[#a04a63]"><Pencil className="h-3.5 w-3.5" />Editar</button>
-                  <button type="button" onClick={() => void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.')} className="inline-flex items-center gap-1 rounded-lg border bg-white/70 px-2.5 py-1.5 text-xs text-[#7c5560]"><Copy className="h-3.5 w-3.5" />Confirmação</button>
-                  <button type="button" onClick={() => void baixarQr(qrCheckin, qrNome)} className="inline-flex items-center gap-1 rounded-lg border bg-white/70 px-2.5 py-1.5 text-xs text-[#7c5560]"><Download className="h-3.5 w-3.5" />Arte QR</button>
-                </div>
-              </div>;
-            })}</div>
-          </div>;
-        })}</div>
-        {filtrados.length === 0 && <div className="py-10 text-center text-sm text-[#7c5560]"><Users className="mx-auto mb-2 h-7 w-7" />Nenhum convidado encontrado.</div>}
+          const base = membros.length ? membros : grupo.pessoas;
+          const grupoStatus = statusDasPessoas(base);
+          const confirmados = base.filter((p) => p.status === 'confirmado').length;
+          const pendentes = base.filter((p) => p.status === 'pendente').length;
+          const primeiro = grupo.pessoas[0];
+          const qr = f ? f.qr_token : primeiro.qr_token;
+          const qrCheckin = qrModo === 'familia' && f ? f.qr_token : primeiro.qr_token;
+          const qrNome = qrModo === 'familia' && f ? f.nome : primeiro.nome;
+          return <article key={grupo.chave} className="relative rounded-2xl border border-[#c0607828] bg-[#fffdfd] p-4">
+            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold text-[#40232c]" title={f?.nome ?? primeiro.nome}>{f?.nome ?? primeiro.nome}</p><p className="mt-1 text-xs text-[#7c5560]">{f ? `${grupo.pessoas.length} ${grupo.pessoas.length === 1 ? 'pessoa' : 'pessoas'} · ${ladoLabel(f.lado)}` : `Convidado individual · ${ladoLabel(primeiro.lado)}`}</p></div><span className={`shrink-0 rounded-full px-2 py-1 text-[11px] ${grupoStatus === 'confirmado' ? 'bg-emerald-50 text-emerald-700' : grupoStatus === 'nao_vai' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{statusLabel(grupoStatus)}</span></div>
+            {f && <p className="mt-2 text-[11px] text-[#9b7b84]">{confirmados} confirmado(s) · {pendentes} pendente(s)</p>}
+            <div className="mt-3 divide-y divide-[#c0607818] rounded-xl border border-[#c0607818] bg-white">{grupo.pessoas.map((p) => <div key={p.id} className="relative flex items-center justify-between gap-2 px-3 py-2.5"><div className="min-w-0"><p className="truncate text-sm font-medium text-[#40232c]">{p.nome}</p><p className="text-[11px] text-[#7c5560]">{p.tipo === 'crianca' ? `Criança${p.idade ? ` · ${p.idade} ${p.idade === 1 ? 'ano' : 'anos'}` : ''}` : 'Adulto'}{p.rsvp_extra ? ' · extra RSVP' : ''}</p></div><div className="flex shrink-0 items-center gap-1"><span className={`rounded-full px-2 py-0.5 text-[10px] ${p.status === 'confirmado' ? 'bg-emerald-50 text-emerald-700' : p.status === 'nao_vai' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{statusLabel(p.status)}</span>{f && <button type="button" onClick={() => setAcoesAberta((atual) => atual === p.id ? null : p.id)} className="grid h-8 w-8 place-items-center rounded-lg text-[#7c5560]" aria-label={`Ações de ${p.nome}`}><MoreHorizontal className="h-4 w-4" /></button>}</div>{f && acoesAberta === p.id && <div className="absolute right-2 top-10 z-30 w-48 rounded-xl border border-[#c0607833] bg-white p-1.5 shadow-xl"><button type="button" onClick={() => editarPessoa(p)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Pencil className="h-3.5 w-3.5" />Editar convidado</button><button type="button" onClick={() => { setAcoesAberta(null); void excluir('convidado', p.id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" />Excluir pessoa</button></div>}</div>)}</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={() => abrirConfirmacaoManual(f?.nome ?? primeiro.nome, base)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700"><Check className="h-3.5 w-3.5" />{base.some((p) => p.status === 'confirmado') ? 'Revisar presença' : 'Confirmar presença'}</button>
+              <button type="button" onClick={() => f ? editarFamilia(f) : editarPessoa(primeiro)} className="inline-flex items-center gap-1 rounded-lg bg-[#fff5f8] px-2.5 py-1.5 text-xs font-semibold text-[#a04a63]"><Pencil className="h-3.5 w-3.5" />Editar</button>
+              <button type="button" onClick={() => void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.')} className="inline-flex items-center gap-1 rounded-lg border bg-white px-2.5 py-1.5 text-xs text-[#7c5560]"><Copy className="h-3.5 w-3.5" />Confirmação</button>
+              <button type="button" onClick={() => void baixarQr(qrCheckin, qrNome)} className="inline-flex items-center gap-1 rounded-lg border bg-white px-2.5 py-1.5 text-xs text-[#7c5560]"><Download className="h-3.5 w-3.5" />Arte QR</button>
+            </div>
+          </article>;
+        })}</div>}
+
+        {agruparPor === 'convidados' && visualizacao === 'lista' && <>
+          <div className="mt-4 hidden md:block">
+            <table className="w-full table-fixed text-left text-sm">
+              <colgroup><col className="w-[27%]"/><col className="w-[25%]"/><col className="w-[12%]"/><col className="w-[13%]"/><col className="w-[23%]"/></colgroup>
+              <thead><tr className="border-b text-[#7c5560]"><th className="py-2 pr-3">Nome</th><th className="pr-3">Família</th><th>Tipo</th><th>Status</th><th className="text-right">Ações</th></tr></thead>
+              <tbody>{convidadosFiltrados.map((p, index) => {
+                const f = p.familia_id ? familiaPorId.get(p.familia_id) ?? null : null;
+                const membros = f ? membrosFixos(f.id) : [p];
+                const qr = f ? f.qr_token : p.qr_token;
+                const qrCheckin = qrModo === 'familia' && f ? f.qr_token : p.qr_token;
+                const qrNome = qrModo === 'familia' && f ? f.nome : p.nome;
+                return <tr key={p.id} className="border-b border-[#c0607818] align-middle" style={{ backgroundColor: index % 2 === 0 ? '#ffffff' : '#fff9fb' }}>
+                  <td className="py-3 pr-3"><span className="block truncate font-medium" title={p.nome}>{p.nome}</span><span className="mt-0.5 block text-[11px] text-[#9b7b84]">{ladoLabel(p.lado)}{p.rsvp_extra ? ' · extra RSVP' : ''}</span></td>
+                  <td className="pr-3"><span className="block truncate text-[#7c5560]" title={f?.nome ?? 'Individual'}>{f?.nome ?? 'Individual'}</span></td>
+                  <td>{p.tipo === 'crianca' ? <span>Criança<span className="block text-[11px] text-[#9b7b84]">{p.idade ? `${p.idade} ${p.idade === 1 ? 'ano' : 'anos'}` : 'idade não informada'}</span></span> : 'Adulto'}</td>
+                  <td><span className={`rounded-full px-2 py-1 text-xs ${p.status === 'confirmado' ? 'bg-emerald-50 text-emerald-700' : p.status === 'nao_vai' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{statusLabel(p.status)}</span></td>
+                  <td><div className="flex items-center justify-end gap-1.5"><button type="button" onClick={() => abrirConfirmacaoManual(f?.nome ?? p.nome, membros)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"><Check className="h-3.5 w-3.5" />{membros.some((x) => x.status === 'confirmado') ? 'Revisar' : 'Confirmar'}</button><div className="relative"><button type="button" onClick={() => setAcoesAberta((atual) => atual === p.id ? null : p.id)} className="rounded-lg p-2 text-[#7c5560] hover:bg-white/70" title="Mais ações"><MoreHorizontal className="h-4 w-4" /></button>{acoesAberta === p.id && <div className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-[#c0607833] bg-white p-1.5 shadow-xl"><button type="button" onClick={() => editarPessoa(p)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Pencil className="h-3.5 w-3.5" />Editar convidado</button><button type="button" onClick={() => { setAcoesAberta(null); void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.'); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Copy className="h-3.5 w-3.5" />Copiar link de confirmação</button><button type="button" onClick={() => { setAcoesAberta(null); void baixarQr(qrCheckin, qrNome); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Download className="h-3.5 w-3.5" />Baixar arte de check-in</button><button type="button" onClick={() => { setAcoesAberta(null); void excluir('convidado', p.id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" />Excluir pessoa</button></div>}</div></div></td>
+                </tr>;
+              })}</tbody>
+            </table>
+          </div>
+          <div className="mt-4 space-y-2 md:hidden">{convidadosFiltrados.map((p) => {
+            const f = p.familia_id ? familiaPorId.get(p.familia_id) ?? null : null;
+            const membros = f ? membrosFixos(f.id) : [p];
+            const qr = f ? f.qr_token : p.qr_token;
+            const qrCheckin = qrModo === 'familia' && f ? f.qr_token : p.qr_token;
+            const qrNome = qrModo === 'familia' && f ? f.nome : p.nome;
+            return <div key={p.id} className="rounded-xl border border-[#c0607820] bg-white p-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-medium text-[#40232c]">{p.nome}</p><p className="mt-0.5 truncate text-xs text-[#7c5560]">{f?.nome ?? 'Individual'} · {p.tipo === 'crianca' ? `Criança${p.idade ? ` · ${p.idade} ${p.idade === 1 ? 'ano' : 'anos'}` : ''}` : 'Adulto'}</p><p className="mt-0.5 text-[11px] text-[#9b7b84]">{ladoLabel(p.lado)}{p.rsvp_extra ? ' · extra RSVP' : ''}</p></div><div className="flex shrink-0 items-start gap-1"><span className={`rounded-full px-2 py-1 text-[11px] ${p.status === 'confirmado' ? 'bg-emerald-50 text-emerald-700' : p.status === 'nao_vai' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{statusLabel(p.status)}</span><button type="button" onClick={() => setAcoesAberta((atual) => atual === p.id ? null : p.id)} className="grid h-8 w-8 place-items-center rounded-lg text-[#7c5560]" aria-label={`Mais ações para ${p.nome}`}><MoreHorizontal className="h-4 w-4" /></button></div></div>{acoesAberta === p.id && <div className="mt-2 grid gap-1 rounded-xl border border-[#c0607833] bg-white p-1.5 shadow-sm"><button type="button" onClick={() => editarPessoa(p)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs"><Pencil className="h-3.5 w-3.5" />Editar convidado</button><button type="button" onClick={() => { setAcoesAberta(null); void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.'); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs"><Copy className="h-3.5 w-3.5" />Copiar link de confirmação</button><button type="button" onClick={() => { setAcoesAberta(null); void baixarQr(qrCheckin, qrNome); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs"><Download className="h-3.5 w-3.5" />Baixar arte de check-in</button><button type="button" onClick={() => { setAcoesAberta(null); void excluir('convidado', p.id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-600"><Trash2 className="h-3.5 w-3.5" />Excluir pessoa</button></div>}<div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => abrirConfirmacaoManual(f?.nome ?? p.nome, membros)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700"><Check className="h-3.5 w-3.5" />{membros.some((x) => x.status === 'confirmado') ? 'Revisar presença' : 'Confirmar presença'}</button><button type="button" onClick={() => editarPessoa(p)} className="inline-flex items-center gap-1 rounded-lg bg-[#fff5f8] px-2.5 py-1.5 text-xs font-semibold text-[#a04a63]"><Pencil className="h-3.5 w-3.5" />Editar</button></div></div>;
+          })}</div>
+        </>}
+
+        {agruparPor === 'convidados' && visualizacao === 'grade' && <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{convidadosFiltrados.map((p) => {
+          const f = p.familia_id ? familiaPorId.get(p.familia_id) ?? null : null;
+          const membros = f ? membrosFixos(f.id) : [p];
+          const qr = f ? f.qr_token : p.qr_token;
+          const qrCheckin = qrModo === 'familia' && f ? f.qr_token : p.qr_token;
+          const qrNome = qrModo === 'familia' && f ? f.nome : p.nome;
+          return <article key={p.id} className="relative rounded-2xl border border-[#c0607828] bg-white p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold text-[#40232c]">{p.nome}</p><p className="mt-1 truncate text-xs text-[#7c5560]">{f?.nome ?? 'Convidado individual'}</p></div><div className="flex shrink-0 items-start gap-1"><span className={`rounded-full px-2 py-1 text-[11px] ${p.status === 'confirmado' ? 'bg-emerald-50 text-emerald-700' : p.status === 'nao_vai' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{statusLabel(p.status)}</span><button type="button" onClick={() => setAcoesAberta((atual) => atual === p.id ? null : p.id)} className="grid h-8 w-8 place-items-center rounded-lg text-[#7c5560]" aria-label={`Mais ações para ${p.nome}`}><MoreHorizontal className="h-4 w-4" /></button></div></div>{acoesAberta === p.id && <div className="absolute right-4 top-12 z-30 w-52 rounded-xl border border-[#c0607833] bg-white p-1.5 shadow-xl"><button type="button" onClick={() => editarPessoa(p)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Pencil className="h-3.5 w-3.5" />Editar convidado</button><button type="button" onClick={() => { setAcoesAberta(null); void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.'); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Copy className="h-3.5 w-3.5" />Copiar link de confirmação</button><button type="button" onClick={() => { setAcoesAberta(null); void baixarQr(qrCheckin, qrNome); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-[#fff5f8]"><Download className="h-3.5 w-3.5" />Baixar arte de check-in</button><button type="button" onClick={() => { setAcoesAberta(null); void excluir('convidado', p.id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" />Excluir pessoa</button></div>}<div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-[#fff9fb] p-3 text-xs"><div><span className="block text-[#9b7b84]">Tipo</span><strong className="text-[#40232c]">{p.tipo === 'crianca' ? `Criança${p.idade ? ` · ${p.idade}` : ''}` : 'Adulto'}</strong></div><div><span className="block text-[#9b7b84]">Lado</span><strong className="text-[#40232c]">{ladoLabel(p.lado)}</strong></div></div><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => abrirConfirmacaoManual(f?.nome ?? p.nome, membros)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700"><Check className="h-3.5 w-3.5" />{membros.some((x) => x.status === 'confirmado') ? 'Revisar presença' : 'Confirmar presença'}</button><button type="button" onClick={() => editarPessoa(p)} className="inline-flex items-center gap-1 rounded-lg bg-[#fff5f8] px-2.5 py-1.5 text-xs font-semibold text-[#a04a63]"><Pencil className="h-3.5 w-3.5" />Editar</button><button type="button" onClick={() => void copiar(linkConfirmacao(qr), 'Link de confirmação copiado.')} className="inline-flex items-center gap-1 rounded-lg border bg-white px-2.5 py-1.5 text-xs text-[#7c5560]"><Copy className="h-3.5 w-3.5" />Confirmação</button><button type="button" onClick={() => void baixarQr(qrCheckin, qrNome)} className="inline-flex items-center gap-1 rounded-lg border bg-white px-2.5 py-1.5 text-xs text-[#7c5560]"><Download className="h-3.5 w-3.5" />Arte QR</button></div></article>;
+        })}</div>}
+
+        {quantidadeVisivel === 0 && <div className="py-10 text-center text-sm text-[#7c5560]"><Users className="mx-auto mb-2 h-7 w-7" />Nenhum convidado encontrado.</div>}
       </>}
     </div>
 

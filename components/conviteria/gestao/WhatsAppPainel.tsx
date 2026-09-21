@@ -337,8 +337,6 @@ https://${slug}.conviteia.com`;
             {acaoOcupada==='salvar_comprovante'?<Loader2 className="h-4 w-4 animate-spin"/>:<Save className="h-4 w-4"/>}Salvar número
           </button>
         </div>
-        <p className="mt-2 text-xs text-[#7c5560]">O template usado é <strong>conviteia_envio_concluido</strong>. Se ele ainda estiver em análise na Meta, o envio aos convidados continua normalmente e o comprovante pode ser reenviado depois.</p>
-
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           <div className="rounded-xl bg-[#fff9fb] p-4">
             <p className="text-sm font-semibold">1ª comunicação</p>

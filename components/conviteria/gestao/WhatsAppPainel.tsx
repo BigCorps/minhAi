@@ -8,7 +8,9 @@ import {
   CreditCard,
   Loader2,
   MessageCircle,
+  Pencil,
   RefreshCw,
+  Save,
   Send,
   Smartphone,
 } from 'lucide-react';
@@ -22,6 +24,13 @@ type Estado = {
     primeiro_disparo_em?: string | null;
     segundo_disparo_em?: string | null;
     consentimento_declarado_em?: string | null;
+    comprovante_telefone?: string | null;
+    primeiro_comprovante_em?: string | null;
+    primeiro_comprovante_wamid?: string | null;
+    primeiro_comprovante_erro?: string | null;
+    segundo_comprovante_em?: string | null;
+    segundo_comprovante_wamid?: string | null;
+    segundo_comprovante_erro?: string | null;
   };
   precoCentavos: number;
   limiteMensagens: number;
@@ -41,6 +50,7 @@ type Estado = {
 };
 
 type Pix = { transactionId?: string; copiaECola?: string | null; qrcode?: string | null; expiresAt?: string | null } | null;
+type AcaoOcupada = 'contratar' | 'agendar' | 'enviar_primeiro' | 'salvar_comprovante' | 'comprovante_1' | 'comprovante_2' | null;
 
 function brl(centavos: number) {
   return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -53,15 +63,36 @@ function dataBr(data?: string | null) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long', timeZone: 'America/Sao_Paulo' }).format(d);
 }
 
+function dataHoraBr(data?: string | null) {
+  if (!data) return '—';
+  const d = new Date(data);
+  if (Number.isNaN(d.getTime())) return '—';
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+    timeZone: 'America/Sao_Paulo',
+  }).format(d);
+}
+
+function modoLabel(modo?: Modo | null) {
+  if (modo === '2_meses') return '2 meses antes';
+  if (modo === '1_mes') return '1 mês antes';
+  return '15 dias antes';
+}
+
 export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: string; token: string; slug: string }) {
   const [estado, setEstado] = useState<Estado | null>(null);
   const [carregando, setCarregando] = useState(true);
-  const [ocupado, setOcupado] = useState(false);
+  const [acaoOcupada, setAcaoOcupada] = useState<AcaoOcupada>(null);
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState('');
   const [consentimento, setConsentimento] = useState(false);
   const [modo, setModo] = useState<Modo>('15_dias');
   const [pix, setPix] = useState<Pix>(null);
+  const [editandoAgendamento, setEditandoAgendamento] = useState(false);
+  const [telefoneComprovante, setTelefoneComprovante] = useState('');
+
+  const ocupado = Boolean(acaoOcupada);
 
   const carregar = useCallback(async (silencioso = false) => {
     if (!silencioso) setCarregando(true);
@@ -74,6 +105,7 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
       setEstado(d);
       if (d?.config?.lembrete_modo) setModo(d.config.lembrete_modo);
       if (d?.config?.consentimento_declarado_em) setConsentimento(true);
+      if (d?.config?.comprovante_telefone) setTelefoneComprovante(d.config.comprovante_telefone);
       if (d?.pixPendente) setPix(d.pixPendente);
       setErro('');
     } catch (e: any) {
@@ -101,8 +133,19 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
     return d;
   }
 
+  async function postComprovante(body: any) {
+    const r = await fetch('/api/conviteria/gestao/whatsapp-comprovante', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ eventoId, ...body }),
+    });
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.erro || 'Não foi possível concluir a operação.');
+    return d;
+  }
+
   async function contratar() {
-    setOcupado(true); setErro(''); setAviso('');
+    setAcaoOcupada('contratar'); setErro(''); setAviso('');
     try {
       const d = await post({ acao: 'criar_pix', consentimento, lembreteModo: modo });
       if (d.ativo || d.semCobranca) {
@@ -114,35 +157,74 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
       setAviso('PIX gerado. Assim que o pagamento for confirmado, o pacote será ativado automaticamente.');
       await carregar(true);
     } catch (e: any) { setErro(e.message); }
-    finally { setOcupado(false); }
+    finally { setAcaoOcupada(null); }
   }
 
   async function salvarAgendamento() {
-    setOcupado(true); setErro(''); setAviso('');
+    setAcaoOcupada('agendar'); setErro(''); setAviso('');
     try {
       const d = await post({ acao: 'agendar', lembreteModo: modo });
       setAviso(`Lembrete programado para ${dataBr(d.segundoProgramadoEm)}.`);
+      setEditandoAgendamento(false);
       await carregar(true);
     } catch (e: any) { setErro(e.message); }
-    finally { setOcupado(false); }
+    finally { setAcaoOcupada(null); }
+  }
+
+  async function salvarTelefoneComprovante() {
+    setAcaoOcupada('salvar_comprovante'); setErro(''); setAviso('');
+    try {
+      const d = await postComprovante({ acao: 'salvar_telefone', telefone: telefoneComprovante });
+      setTelefoneComprovante(d.telefone || '');
+      setAviso(d.telefone
+        ? 'WhatsApp para comprovantes salvo. Os próximos envios concluídos serão avisados neste número.'
+        : 'WhatsApp para comprovantes removido.');
+      await carregar(true);
+    } catch (e: any) { setErro(e.message); }
+    finally { setAcaoOcupada(null); }
+  }
+
+  async function enviarComprovante(rodada: 1 | 2) {
+    setAcaoOcupada(rodada === 1 ? 'comprovante_1' : 'comprovante_2');
+    setErro(''); setAviso('');
+    try {
+      const d = await postComprovante({ acao: 'enviar', rodada });
+      setAviso(d.jaEnviado
+        ? `O comprovante da ${rodada}ª comunicação já havia sido enviado.`
+        : `Comprovante da ${rodada}ª comunicação enviado para o WhatsApp configurado.`);
+      await carregar(true);
+    } catch (e: any) { setErro(e.message); }
+    finally { setAcaoOcupada(null); }
   }
 
   async function enviarPrimeiro() {
     if (!confirm('Enviar agora a primeira comunicação somente para os contatos pendentes que ainda não receberam?')) return;
-    setOcupado(true); setErro(''); setAviso('Enviando…');
-    let total = 0; let falhas = 0;
+    setAcaoOcupada('enviar_primeiro'); setErro(''); setAviso('Enviando…');
+    let total = 0; let falhas = 0; let concluiu = false;
     try {
       for (let i = 0; i < 15; i += 1) {
         const d = await post({ acao: 'enviar_primeiro' });
         total += Number(d.enviados ?? 0);
         falhas += Number(d.falhas ?? 0);
+        const restantes = Number(d.restantes ?? 0);
         setAviso(`Enviando… ${total} mensagem(ns) aceita(s) pela Meta.`);
-        if (Number(d.restantes ?? 0) === 0 || Number(d.processados ?? 0) === 0) break;
+        if (restantes === 0) concluiu = true;
+        if (restantes === 0 || Number(d.processados ?? 0) === 0) break;
       }
-      setAviso(`${total} mensagem(ns) enviada(s) nesta operação${falhas ? ` · ${falhas} falha(s)` : ''}.`);
+
+      let textoFinal = `${total} mensagem(ns) enviada(s) nesta operação${falhas ? ` · ${falhas} falha(s)` : ''}.`;
+      if (concluiu && estado?.config?.comprovante_telefone && !estado.config.primeiro_comprovante_em) {
+        try {
+          const comprovante = await postComprovante({ acao: 'enviar', rodada: 1 });
+          if (comprovante.jaEnviado || comprovante.enviado) textoFinal += ' Comprovante enviado ao anfitrião.';
+        } catch (e: any) {
+          textoFinal += ` O envio aos convidados terminou, mas o comprovante ao anfitrião ficou pendente: ${e.message}`;
+        }
+      }
+      setAviso(textoFinal);
       await carregar(true);
     } catch (e: any) { setErro(e.message); }
-    finally { setOcupado(false); }
+    finally { setAcaoOcupada(null); }
   }
 
   async function copiar(valor: string, textoOk: string) {
@@ -178,6 +260,9 @@ https://${slug}.conviteia.com`;
   const bloqueadoPrazo = !prazoConfigurado || Boolean(estado.rsvpEncerrado);
   const pendenciasConciliacao = Number(estado.confirmacoesPendentesConciliacao ?? 0);
   const bloqueadoPrimeiroEnvio = bloqueadoPrazo || pendenciasConciliacao > 0;
+  const primeiraConcluida = Boolean(estado.config?.primeiro_disparo_em) && estado.novosPrimeiroEnvio === 0;
+  const segundaConcluida = Boolean(estado.config?.segundo_disparo_em);
+  const agendamentoSalvo = Boolean(estado.config?.segundo_programado_em) && !estado.config?.segundo_disparo_em;
 
   return <section className="space-y-5">
     <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
@@ -228,7 +313,7 @@ https://${slug}.conviteia.com`;
             <option value="2_meses">2 meses antes</option><option value="1_mes">1 mês antes</option><option value="15_dias">15 dias antes</option>
           </select>
         </label>
-        <div className="flex items-end"><button type="button" disabled={ocupado || !consentimento || bloqueadoPrazo} onClick={contratar} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#c06078] px-5 py-2.5 font-semibold text-white disabled:opacity-50">{ocupado?<Loader2 className="h-4 w-4 animate-spin"/>:<CreditCard className="h-4 w-4"/>}{aguardando?'Ver / renovar PIX':'Gerar PIX'}</button></div>
+        <div className="flex items-end"><button type="button" disabled={ocupado || !consentimento || bloqueadoPrazo} onClick={contratar} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#c06078] px-5 py-2.5 font-semibold text-white disabled:opacity-50">{acaoOcupada==='contratar'?<Loader2 className="h-4 w-4 animate-spin"/>:<CreditCard className="h-4 w-4"/>}{aguardando?'Ver / renovar PIX':'Gerar PIX'}</button></div>
       </div>
       <label className="mt-4 flex items-start gap-2 text-xs leading-5 text-[#7c5560]"><input type="checkbox" checked={consentimento} onChange={(e)=>setConsentimento(e.target.checked)} className="mt-1"/><span>Declaro que os contatos informados podem receber comunicações deste evento pelo WhatsApp e sou responsável pela lista enviada.</span></label>
 
@@ -241,26 +326,93 @@ https://${slug}.conviteia.com`;
     </div>}
 
     {ativo && <>
+      <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
+        <div className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-[#a04a63]"/><h3 className="font-semibold">Comprovantes dos envios</h3></div>
+        <p className="mt-2 text-sm leading-6 text-[#7c5560]">Informe o WhatsApp do criador do convite. Quando cada comunicação terminar, o ConviteIA envia um comprovante separado para este número. Esse número não entra na lista de convidados.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <label className="text-sm font-medium">WhatsApp para receber os comprovantes
+            <input value={telefoneComprovante} onChange={(e)=>setTelefoneComprovante(e.target.value)} inputMode="tel" placeholder="(11) 99999-9999" className="mt-1 block w-full rounded-xl border px-3 py-2.5" />
+          </label>
+          <button type="button" disabled={ocupado} onClick={salvarTelefoneComprovante} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#c0607833] bg-white px-4 py-2.5 text-sm font-semibold text-[#a04a63] disabled:opacity-50">
+            {acaoOcupada==='salvar_comprovante'?<Loader2 className="h-4 w-4 animate-spin"/>:<Save className="h-4 w-4"/>}Salvar número
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-[#7c5560]">O template usado é <strong>conviteia_envio_concluido</strong>. Se ele ainda estiver em análise na Meta, o envio aos convidados continua normalmente e o comprovante pode ser reenviado depois.</p>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          <div className="rounded-xl bg-[#fff9fb] p-4">
+            <p className="text-sm font-semibold">1ª comunicação</p>
+            {estado.config?.primeiro_comprovante_em ? (
+              <p className="mt-1 text-xs font-medium text-emerald-700">✓ Comprovante enviado em {dataHoraBr(estado.config.primeiro_comprovante_em)}.</p>
+            ) : primeiraConcluida ? (
+              <>
+                <p className="mt-1 text-xs text-[#7c5560]">A rodada está concluída, mas ainda não há comprovante enviado.</p>
+                {estado.config?.primeiro_comprovante_erro && <p className="mt-1 text-xs text-amber-700">Última tentativa: {estado.config.primeiro_comprovante_erro}</p>}
+                <button type="button" disabled={ocupado || !estado.config?.comprovante_telefone} onClick={()=>void enviarComprovante(1)} className="mt-3 inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-3 py-2 text-xs font-semibold text-[#a04a63] disabled:opacity-50">
+                  {acaoOcupada==='comprovante_1'?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Send className="h-3.5 w-3.5"/>}Enviar comprovante
+                </button>
+              </>
+            ) : (
+              <p className="mt-1 text-xs text-[#7c5560]">Será enviado quando a primeira comunicação terminar.</p>
+            )}
+          </div>
+
+          <div className="rounded-xl bg-[#fff9fb] p-4">
+            <p className="text-sm font-semibold">2ª comunicação</p>
+            {estado.config?.segundo_comprovante_em ? (
+              <p className="mt-1 text-xs font-medium text-emerald-700">✓ Comprovante enviado em {dataHoraBr(estado.config.segundo_comprovante_em)}.</p>
+            ) : segundaConcluida ? (
+              <>
+                <p className="mt-1 text-xs text-[#7c5560]">O lembrete foi concluído, mas ainda não há comprovante enviado.</p>
+                {estado.config?.segundo_comprovante_erro && <p className="mt-1 text-xs text-amber-700">Última tentativa: {estado.config.segundo_comprovante_erro}</p>}
+                <button type="button" disabled={ocupado || !estado.config?.comprovante_telefone} onClick={()=>void enviarComprovante(2)} className="mt-3 inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-3 py-2 text-xs font-semibold text-[#a04a63] disabled:opacity-50">
+                  {acaoOcupada==='comprovante_2'?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Send className="h-3.5 w-3.5"/>}Enviar comprovante
+                </button>
+              </>
+            ) : (
+              <p className="mt-1 text-xs text-[#7c5560]">Será enviado quando o lembrete programado terminar.</p>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
           <div className="flex items-center gap-2"><Send className="h-5 w-5 text-[#a04a63]"/><h3 className="font-semibold">1ª comunicação</h3></div>
           <p className="mt-2 text-sm text-[#7c5560]">Só recebe quem ainda está pendente e nunca recebeu a primeira mensagem. Quem já confirmou pelo convite, CSV sincronizado ou painel não recebe cobrança de confirmação novamente.</p>
           <p className="mt-3 text-sm"><strong>{estado.novosPrimeiroEnvio}</strong> contato(s) apto(s) agora.</p>
-          <button type="button" disabled={ocupado || bloqueadoPrimeiroEnvio || estado.novosPrimeiroEnvio===0} onClick={enviarPrimeiro} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{ocupado?<Loader2 className="h-4 w-4 animate-spin"/>:<Send className="h-4 w-4"/>}{estado.config?.primeiro_disparo_em?'Enviar para novos convidados':'Enviar primeira comunicação'}</button>
+          <button type="button" disabled={ocupado || bloqueadoPrimeiroEnvio || estado.novosPrimeiroEnvio===0} onClick={enviarPrimeiro} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{acaoOcupada==='enviar_primeiro'?<Loader2 className="h-4 w-4 animate-spin"/>:<Send className="h-4 w-4"/>}{estado.config?.primeiro_disparo_em?'Enviar para novos convidados':'Enviar primeira comunicação'}</button>
           {estado.config?.primeiro_disparo_em && <p className="mt-2 text-xs text-[#7c5560]">Primeiro envio iniciado em {dataBr(estado.config.primeiro_disparo_em)}.</p>}
         </div>
 
         <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
           <div className="flex items-center gap-2"><CalendarClock className="h-5 w-5 text-[#a04a63]"/><h3 className="font-semibold">2ª comunicação · lembrete</h3></div>
           <p className="mt-2 text-sm text-[#7c5560]">Uma única rodada para a lista vigente na data programada, inclusive quem já confirmou, para revisar presença e informações atualizadas.</p>
-          <label className="mt-3 block text-sm font-medium">Enviar
-            <select value={modo} onChange={(e)=>setModo(e.target.value as Modo)} disabled={Boolean(estado.config?.segundo_disparo_em)} className="mt-1 block w-full rounded-xl border px-3 py-2.5">
-              <option value="2_meses">2 meses antes</option><option value="1_mes">1 mês antes</option><option value="15_dias">15 dias antes</option>
-            </select>
-          </label>
-          {!estado.config?.segundo_disparo_em && <button type="button" disabled={ocupado || bloqueadoPrazo} onClick={salvarAgendamento} className="mt-3 inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-4 py-2.5 text-sm font-semibold text-[#a04a63]"><CalendarClock className="h-4 w-4"/>Salvar agendamento</button>}
-          <p className="mt-2 text-xs text-[#7c5560]">Programado: {dataBr(estado.config?.segundo_programado_em)}</p>
-          {estado.config?.segundo_disparo_em && <p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4"/>Lembrete enviado.</p>}
+
+          {estado.config?.segundo_disparo_em ? (
+            <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+              <p className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4"/>Lembrete enviado.</p>
+              <p className="mt-1 text-xs text-[#7c5560]">Programação utilizada: {modoLabel(estado.config.lembrete_modo)}.</p>
+            </div>
+          ) : agendamentoSalvo && !editandoAgendamento ? (
+            <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3">
+              <p className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-800"><CheckCircle2 className="h-4 w-4"/>Lembrete agendado para {dataBr(estado.config?.segundo_programado_em)}.</p>
+              <p className="mt-1 text-xs text-[#7c5560]">{modoLabel(estado.config?.lembrete_modo)} da data do evento.</p>
+              <button type="button" disabled={ocupado} onClick={()=>setEditandoAgendamento(true)} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 disabled:opacity-50"><Pencil className="h-3.5 w-3.5"/>Alterar agendamento</button>
+            </div>
+          ) : (
+            <>
+              <label className="mt-3 block text-sm font-medium">Enviar
+                <select value={modo} onChange={(e)=>setModo(e.target.value as Modo)} className="mt-1 block w-full rounded-xl border px-3 py-2.5">
+                  <option value="2_meses">2 meses antes</option><option value="1_mes">1 mês antes</option><option value="15_dias">15 dias antes</option>
+                </select>
+              </label>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" disabled={ocupado || bloqueadoPrazo} onClick={salvarAgendamento} className="inline-flex items-center gap-2 rounded-xl border border-[#c0607833] bg-white px-4 py-2.5 text-sm font-semibold text-[#a04a63] disabled:opacity-50">{acaoOcupada==='agendar'?<Loader2 className="h-4 w-4 animate-spin"/>:<CalendarClock className="h-4 w-4"/>}{agendamentoSalvo?'Salvar alteração':'Salvar agendamento'}</button>
+                {agendamentoSalvo && <button type="button" disabled={ocupado} onClick={()=>{setModo((estado.config?.lembrete_modo as Modo) || '15_dias');setEditandoAgendamento(false);}} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-[#7c5560] disabled:opacity-50">Cancelar</button>}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </>}

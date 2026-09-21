@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminConviteria } from '@/lib/conviteria/servidor';
 import { calcularSegundoEnvio, processarRodada, type LembreteWhatsApp } from '@/lib/conviteria/whatsapp-servidor';
+import { enviarComprovanteRodada } from '@/lib/conviteria/whatsapp-comprovante-servidor';
 import { agendamentoDepoisDoPrazo, normalizarDataRsvp, prazoRsvpEncerrado } from '@/lib/conviteria/rsvp-prazo';
 
 export const runtime = 'nodejs';
@@ -85,12 +86,25 @@ export async function GET(req: NextRequest) {
       restantes = r.restantes;
       if (r.restantes === 0 || r.processados === 0) break;
     }
+
+    let comprovante: Record<string, unknown> | null = null;
+    if (restantes === 0) {
+      try {
+        comprovante = await enviarComprovanteRodada(devido.eventoId, 2);
+      } catch (error: any) {
+        // O lembrete dos convidados já terminou. Falha no comprovante do
+        // anfitrião nunca transforma a rodada em falha; o painel permite retry.
+        console.warn('ConviteIA WhatsApp cron — comprovante pendente:', devido.eventoId, error);
+        comprovante = { enviado: false, erro: String(error?.message ?? error).slice(0, 500) };
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       verificados: candidatos?.length ?? 0,
       recalculados,
       invalidosPorPrazo,
-      processado: { eventoId: devido.eventoId, enviados, falhas, restantes },
+      processado: { eventoId: devido.eventoId, enviados, falhas, restantes, comprovante },
     });
   } catch (e: any) {
     console.error('ConviteIA WhatsApp cron evento:', devido.eventoId, e);

@@ -147,6 +147,28 @@ function compararTexto(a: string, b: string) {
   return a.localeCompare(b, 'pt-BR', { sensitivity: 'base', numeric: true });
 }
 
+function nomeChaveVisual(valor: string) {
+  return valor
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR');
+}
+
+function sugestaoPessoaPeloNomeDoGrupo(valor: string) {
+  let nome = valor.trim();
+  if (!nome) return null;
+
+  const prefixado = nome.match(/^(?:fam[ií]lia\s*\/\s*grupo\s+de|fam[ií]lia\s+de|grupo\s+de)\s+(.+)$/i);
+  if (prefixado?.[1]) nome = prefixado[1].trim();
+
+  if (!nome) return null;
+  if (/^(?:fam[ií]lia|grupo|equipe|banda|fornecedores?|convidados?)\b/i.test(nome)) return null;
+  if (/[&,/]/.test(nome) || /\s+e\s+/i.test(nome)) return null;
+  if (nome.split(/\s+/).filter(Boolean).length < 2) return null;
+  return nome.slice(0, 120);
+}
+
 function statusDasPessoas(lista: Convidado[]) {
   if (lista.some((p) => p.status === 'pendente')) return 'pendente' as const;
   if (lista.some((p) => p.status === 'confirmado')) return 'confirmado' as const;
@@ -191,6 +213,8 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState('');
   const [familia, setFamilia] = useState<FamiliaForm>(() => novaFamilia());
+  const [nomeGrupoAutomatico, setNomeGrupoAutomatico] = useState(true);
+  const [ignorarAvisoNomeGrupo, setIgnorarAvisoNomeGrupo] = useState(false);
   const [pessoa, setPessoa] = useState<PessoaForm>(vazioPessoa);
   const [salvando, setSalvando] = useState(false);
   const [linhasCsv, setLinhasCsv] = useState<LinhaCsv[]>([]);
@@ -366,6 +390,14 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
   }, [busca, familiaPorId, ordenacao, pessoas]);
 
   const quantidadeVisivel = agruparPor === 'familias' ? gruposFiltrados.length : convidadosFiltrados.length;
+  const pessoasPreenchidasNoGrupo = familia.membros.filter((m) => m.nome.trim()).length;
+  const sugestaoNomePessoaGrupo = useMemo(() => {
+    if (!familia.id || ignorarAvisoNomeGrupo) return null;
+    const candidato = sugestaoPessoaPeloNomeDoGrupo(familia.nome);
+    if (!candidato) return null;
+    const chave = nomeChaveVisual(candidato);
+    return familia.membros.some((m) => nomeChaveVisual(m.nome) === chave) ? null : candidato;
+  }, [familia.id, familia.membros, familia.nome, ignorarAvisoNomeGrupo]);
 
   function membrosFixos(familiaId: string) {
     return pessoas.filter((p) => p.familia_id === familiaId && !p.rsvp_extra);
@@ -390,6 +422,8 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
 
   function resetFamilia() {
     setFamilia(novaFamilia());
+    setNomeGrupoAutomatico(true);
+    setIgnorarAvisoNomeGrupo(false);
   }
 
   function editarFamilia(f: Familia) {
@@ -405,6 +439,8 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
       membros: membros.length ? membros : [{ nome: '', tipo: 'adulto', idade: null }],
       removerMembroIds: [],
     });
+    setNomeGrupoAutomatico(false);
+    setIgnorarAvisoNomeGrupo(false);
     setModalCadastro('familia');
     setAcoesAberta(null);
   }
@@ -440,6 +476,27 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
     setAcoesAberta(null);
   }
 
+  function alterarConvidadoPrincipal(nome: string) {
+    setFamilia((f) => {
+      const membros = f.membros.length ? [...f.membros] : [{ nome: '', tipo: 'adulto' as const, idade: null }];
+      membros[0] = { ...membros[0], nome };
+      return {
+        ...f,
+        membros,
+        nome: nomeGrupoAutomatico ? (nome.trim() ? `Família / grupo de ${nome.trim()}` : '') : f.nome,
+      };
+    });
+  }
+
+  function adicionarNomeDoGrupoComoPessoa() {
+    if (!sugestaoNomePessoaGrupo || familia.membros.length >= 50) return;
+    setFamilia((f) => ({
+      ...f,
+      membros: [{ nome: sugestaoNomePessoaGrupo, tipo: 'adulto', idade: null }, ...f.membros],
+    }));
+    setIgnorarAvisoNomeGrupo(true);
+  }
+
   function adicionarMembro() {
     if (familia.membros.length >= 50) return;
     setFamilia((f) => ({ ...f, membros: [...f.membros, { nome: '', tipo: 'adulto', idade: null }] }));
@@ -465,15 +522,16 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
     const membros = familia.membros
       .map((m) => ({ ...m, nome: m.nome.trim() }))
       .filter((m) => m.nome);
+    if (!familia.id && !familia.membros[0]?.nome.trim()) return setErro('Informe o convidado principal deste grupo.');
     if (!familia.nome.trim()) return setErro('Informe o nome da família ou grupo.');
-    if (!membros.length) return setErro('Cadastre pelo menos uma pessoa neste grupo. O nome da família não cria membros automaticamente.');
+    if (!membros.length) return setErro('Cadastre pelo menos uma pessoa neste grupo.');
     setSalvando(true); setErro(''); setAviso('');
     try {
       await acao({ acao: 'salvar_familia', ...familia, membros });
       setAviso(familia.id ? 'Família e membros atualizados.' : 'Família e membros cadastrados.');
       resetFamilia();
       setModalCadastro(null);
-      await carregar();
+      await Promise.all([carregar(), carregarReconciliacao()]);
     } catch (e: any) { setErro(e.message); }
     finally { setSalvando(false); }
   }
@@ -1085,13 +1143,54 @@ export default function ConvidadosPainel({ eventoId, token, slug, qrModo }: {
 
     {modalCadastro && <div className="fixed inset-0 z-[80] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" onMouseDown={(e) => { if (e.target === e.currentTarget && !salvando) setModalCadastro(null); }}>
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between gap-3"><div><h3 className="text-lg font-semibold text-[#40232c]">{modalCadastro === 'familia' ? (familia.id ? 'Editar família / grupo' : 'Adicionar família / grupo') : (pessoa.id ? 'Editar convidado' : 'Adicionar convidado')}</h3><p className="mt-1 text-sm text-[#7c5560]">{modalCadastro === 'familia' ? 'Contato principal, membros do grupo e acompanhantes extras ficam reunidos aqui.' : 'Os dados de contato ficam disponíveis somente nesta edição, sem ocupar espaço na tabela.'}</p></div><button type="button" onClick={() => setModalCadastro(null)} className="rounded-lg p-2 text-[#7c5560]"><X className="h-4 w-4" /></button></div>
+        <div className="flex items-start justify-between gap-3"><div><h3 className="text-lg font-semibold text-[#40232c]">{modalCadastro === 'familia' ? (familia.id ? 'Editar família / grupo' : 'Adicionar família / grupo') : (pessoa.id ? 'Editar convidado' : 'Adicionar convidado')}</h3><p className="mt-1 text-sm text-[#7c5560]">{modalCadastro === 'familia' ? (familia.id ? 'Edite o nome do grupo e confira quem realmente conta como pessoa no evento.' : 'Comece pelo convidado principal. Ele já contará como pessoa no evento; depois adicione os demais integrantes.') : 'Os dados de contato ficam disponíveis somente nesta edição, sem ocupar espaço na tabela.'}</p></div><button type="button" onClick={() => setModalCadastro(null)} className="rounded-lg p-2 text-[#7c5560]"><X className="h-4 w-4" /></button></div>
 
-        {modalCadastro === 'familia' ? <div className="mt-4 grid gap-2">
-          <input placeholder="Ex.: Thais e Bruno" value={familia.nome} onChange={(e) => setFamilia({ ...familia, nome: e.target.value })} className="rounded-xl border px-3 py-2" />
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><input placeholder="Telefone principal" value={familia.telefone} onChange={(e) => setFamilia({ ...familia, telefone: e.target.value })} className="rounded-xl border px-3 py-2" /><input placeholder="E-mail principal" value={familia.email} onChange={(e) => setFamilia({ ...familia, email: e.target.value })} className="rounded-xl border px-3 py-2" /></div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><select value={familia.lado} onChange={(e) => setFamilia({ ...familia, lado: e.target.value })} className="rounded-xl border px-3 py-2"><option value="ambos">Ambos</option><option value="noiva">Lado da noiva</option><option value="noivo">Lado do noivo</option><option value="outro">Outro</option></select><label className="grid gap-1 text-xs text-[#7c5560]">Acompanhantes extras permitidos<input type="number" min={0} max={50} value={familia.extrasPermitidos} onChange={(e) => setFamilia({ ...familia, extrasPermitidos: Math.max(0, Math.min(50, Number(e.target.value) || 0)) })} className="rounded-xl border px-3 py-2 text-sm text-[#40232c]" /></label></div>
-          <div className="mt-1 rounded-xl border border-[#c0607822] bg-[#fff9fb] p-3"><div className="flex items-center justify-between gap-2"><div><p className="text-sm font-semibold">Membros do grupo</p><p className="text-xs text-[#7c5560]">São as pessoas que aparecerão no RSVP. Para crianças, a idade é opcional aqui e será confirmada pelo convidado no RSVP.</p></div><button type="button" onClick={adicionarMembro} className="inline-flex items-center gap-1 rounded-lg bg-white px-2 py-1.5 text-xs font-semibold text-[#a04a63]"><UserPlus className="h-3.5 w-3.5" />Adicionar</button></div><div className="mt-3 space-y-2">{familia.membros.map((m, i) => <div key={m.id ?? `novo-${i}`} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_108px_108px_36px]"><input placeholder={`Nome da pessoa ${i + 1}`} value={m.nome} onChange={(e) => alterarMembro(i, { nome: e.target.value })} className="min-w-0 rounded-lg border bg-white px-2.5 py-2 text-sm" /><select value={m.tipo} onChange={(e) => alterarMembro(i, { tipo: e.target.value as 'adulto' | 'crianca', idade: e.target.value === 'crianca' ? (m.idade ?? null) : null })} className="rounded-lg border bg-white px-2 py-2 text-xs"><option value="adulto">Adulto</option><option value="crianca">Criança</option></select>{m.tipo === 'crianca' ? <select value={m.idade ?? ''} onChange={(e) => alterarMembro(i, { idade: e.target.value ? Number(e.target.value) : null })} className="rounded-lg border bg-white px-2 py-2 text-xs"><option value="">Idade</option>{Array.from({ length: 12 }, (_, n) => n + 1).map((idade) => <option key={idade} value={idade}>{idade} {idade === 1 ? 'ano' : 'anos'}</option>)}</select> : <div className="hidden sm:block"/>}<button type="button" onClick={() => removerMembro(i)} title="Remover membro" className="grid place-items-center rounded-lg text-red-500"><Trash2 className="h-4 w-4" /></button></div>)}</div></div>
+        {modalCadastro === 'familia' ? <div className="mt-4 grid gap-3">
+          {!familia.id && <div className="rounded-2xl border border-[#c0607833] bg-[#fff9fb] p-4">
+            <div className="flex items-start gap-3">
+              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-sm font-bold text-[#a04a63] shadow-sm">1</div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-[#40232c]">Convidado principal</p>
+                <p className="mt-1 text-xs leading-5 text-[#7c5560]">Digite a pessoa que está criando este grupo. Ela será cadastrada de verdade e contará nos totais, RSVP, mesas e check-in.</p>
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_108px_108px]">
+                  <input placeholder="Nome do convidado principal" value={familia.membros[0]?.nome ?? ''} onChange={(e) => alterarConvidadoPrincipal(e.target.value)} className="min-w-0 rounded-lg border bg-white px-3 py-2.5 text-sm" />
+                  <select value={familia.membros[0]?.tipo ?? 'adulto'} onChange={(e) => alterarMembro(0, { tipo: e.target.value as 'adulto' | 'crianca', idade: e.target.value === 'crianca' ? (familia.membros[0]?.idade ?? null) : null })} className="rounded-lg border bg-white px-2 py-2 text-xs"><option value="adulto">Adulto</option><option value="crianca">Criança</option></select>
+                  {(familia.membros[0]?.tipo ?? 'adulto') === 'crianca' ? <select value={familia.membros[0]?.idade ?? ''} onChange={(e) => alterarMembro(0, { idade: e.target.value ? Number(e.target.value) : null })} className="rounded-lg border bg-white px-2 py-2 text-xs"><option value="">Idade</option>{Array.from({ length: 12 }, (_, n) => n + 1).map((idade) => <option key={idade} value={idade}>{idade} {idade === 1 ? 'ano' : 'anos'}</option>)}</select> : <div className="hidden sm:block"/>}
+                </div>
+              </div>
+            </div>
+          </div>}
+
+          <div className="rounded-2xl border border-[#c0607822] bg-white p-4">
+            <div className="flex items-start gap-3">
+              {!familia.id && <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#fff5f8] text-sm font-bold text-[#a04a63]">2</div>}
+              <div className="min-w-0 flex-1">
+                <label className="block text-sm font-semibold text-[#40232c]">Nome da família / grupo
+                  <input placeholder="Ex.: Família / grupo de Maria Silva" value={familia.nome} onChange={(e) => { setNomeGrupoAutomatico(false); setIgnorarAvisoNomeGrupo(false); setFamilia({ ...familia, nome: e.target.value }); }} className="mt-1 block w-full rounded-xl border px-3 py-2.5 font-normal" />
+                </label>
+                {!familia.id && <p className="mt-1 text-xs text-[#9b7b84]">Preenchemos este nome automaticamente a partir do convidado principal. Você pode alterar apenas o nome do grupo sem mudar a pessoa.</p>}
+
+                {familia.id && sugestaoNomePessoaGrupo && <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700"/><div className="min-w-0"><p className="text-sm font-semibold text-amber-900">O nome deste grupo não aparece entre as pessoas cadastradas.</p><p className="mt-1 text-xs leading-5 text-amber-800">Se <strong>{sugestaoNomePessoaGrupo}</strong> também é convidado(a), adicione essa pessoa para que ela conte nos totais, RSVP, mesas e check-in.</p></div></div>
+                  <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={adicionarNomeDoGrupoComoPessoa} className="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-amber-900 shadow-sm">Adicionar {sugestaoNomePessoaGrupo} como pessoa</button><button type="button" onClick={() => setIgnorarAvisoNomeGrupo(true)} className="rounded-lg px-3 py-2 text-xs font-semibold text-amber-800">Manter somente como nome do grupo</button></div>
+                </div>}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><label className="text-xs font-medium text-[#7c5560]">Telefone principal<input placeholder="(11) 99999-9999" value={familia.telefone} onChange={(e) => setFamilia({ ...familia, telefone: e.target.value })} className="mt-1 block w-full rounded-xl border px-3 py-2.5 text-sm text-[#40232c]" /></label><label className="text-xs font-medium text-[#7c5560]">E-mail principal<input placeholder="nome@exemplo.com" value={familia.email} onChange={(e) => setFamilia({ ...familia, email: e.target.value })} className="mt-1 block w-full rounded-xl border px-3 py-2.5 text-sm text-[#40232c]" /></label></div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><label className="text-xs font-medium text-[#7c5560]">Lado do evento<select value={familia.lado} onChange={(e) => setFamilia({ ...familia, lado: e.target.value })} className="mt-1 block w-full rounded-xl border px-3 py-2.5 text-sm text-[#40232c]"><option value="ambos">Ambos</option><option value="noiva">Lado da noiva</option><option value="noivo">Lado do noivo</option><option value="outro">Outro</option></select></label><label className="grid gap-1 text-xs font-medium text-[#7c5560]">Acompanhantes extras permitidos<input type="number" min={0} max={50} value={familia.extrasPermitidos} onChange={(e) => setFamilia({ ...familia, extrasPermitidos: Math.max(0, Math.min(50, Number(e.target.value) || 0)) })} className="rounded-xl border px-3 py-2.5 text-sm text-[#40232c]" /></label></div>
+
+          <div className="rounded-xl border border-[#c0607822] bg-[#fff9fb] p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">Pessoas deste grupo · {pessoasPreenchidasNoGrupo} {pessoasPreenchidasNoGrupo === 1 ? 'pessoa' : 'pessoas'}</p><p className="text-xs leading-5 text-[#7c5560]">Somente quem aparece aqui é contado como convidado. O nome do grupo, sozinho, nunca aumenta o total.</p></div><button type="button" onClick={adicionarMembro} className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-2 text-xs font-semibold text-[#a04a63]"><UserPlus className="h-3.5 w-3.5" />Adicionar pessoa</button></div>
+
+            {!familia.id && familia.membros[0]?.nome.trim() && <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2.5"><div className="min-w-0"><p className="truncate text-sm font-semibold text-[#40232c]">{familia.membros[0].nome}</p><p className="text-[11px] text-emerald-700">Convidado principal · já será contado</p></div><Check className="h-4 w-4 shrink-0 text-emerald-700" /></div>}
+
+            <div className="mt-3 space-y-2">{familia.membros.map((m, i) => {
+              if (!familia.id && i === 0) return null;
+              return <div key={m.id ?? `novo-${i}`} className="grid grid-cols-1 gap-2 rounded-xl border border-[#c0607818] bg-white p-2 sm:grid-cols-[minmax(0,1fr)_108px_108px_36px]"><input placeholder={familia.id ? `Nome da pessoa ${i + 1}` : `Outra pessoa ${i}`} value={m.nome} onChange={(e) => alterarMembro(i, { nome: e.target.value })} className="min-w-0 rounded-lg border bg-white px-2.5 py-2 text-sm" /><select value={m.tipo} onChange={(e) => alterarMembro(i, { tipo: e.target.value as 'adulto' | 'crianca', idade: e.target.value === 'crianca' ? (m.idade ?? null) : null })} className="rounded-lg border bg-white px-2 py-2 text-xs"><option value="adulto">Adulto</option><option value="crianca">Criança</option></select>{m.tipo === 'crianca' ? <select value={m.idade ?? ''} onChange={(e) => alterarMembro(i, { idade: e.target.value ? Number(e.target.value) : null })} className="rounded-lg border bg-white px-2 py-2 text-xs"><option value="">Idade</option>{Array.from({ length: 12 }, (_, n) => n + 1).map((idade) => <option key={idade} value={idade}>{idade} {idade === 1 ? 'ano' : 'anos'}</option>)}</select> : <div className="hidden sm:block"/>}<button type="button" onClick={() => removerMembro(i)} title="Remover pessoa" className="grid min-h-9 place-items-center rounded-lg text-red-500"><Trash2 className="h-4 w-4" /></button></div>;
+            })}</div>
+          </div>
           <textarea placeholder="Observações" value={familia.observacoes} onChange={(e) => setFamilia({ ...familia, observacoes: e.target.value })} className="rounded-xl border px-3 py-2" />
           <div className="mt-2 flex flex-wrap justify-between gap-2">{familia.id ? <button type="button" onClick={() => { const id = familia.id; setModalCadastro(null); void excluir('familia', id); }} className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-600"><Trash2 className="h-4 w-4" />Excluir grupo</button> : <span/>}<div className="flex gap-2"><button type="button" onClick={() => setModalCadastro(null)} className="rounded-xl border px-4 py-2.5 text-sm font-semibold text-[#7c5560]">Cancelar</button><button type="button" onClick={salvarFamilia} disabled={salvando} className="inline-flex items-center gap-2 rounded-xl bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{familia.id ? 'Salvar alterações' : 'Adicionar grupo'}</button></div></div>
         </div> : <div className="mt-4 grid gap-2">

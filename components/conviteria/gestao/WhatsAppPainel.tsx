@@ -6,6 +6,8 @@ import {
   CheckCircle2,
   Copy,
   CreditCard,
+  ExternalLink,
+  Eye,
   Loader2,
   MessageCircle,
   Pencil,
@@ -13,6 +15,7 @@ import {
   Save,
   Send,
   Smartphone,
+  X,
 } from 'lucide-react';
 
 type Modo = '2_meses' | '1_mes' | '15_dias';
@@ -97,6 +100,80 @@ function dataInputLocal(data: Date) {
   return `${ano}-${mes}-${dia}`;
 }
 
+function WhatsAppTemplatePreview({
+  rodada,
+  nome,
+  tipo,
+  anfitrioes,
+  data,
+  prazo,
+  contratado,
+  onClose,
+}: {
+  rodada: 1 | 2;
+  nome: string;
+  tipo: string;
+  anfitrioes: string;
+  data: string;
+  prazo: string;
+  contratado: boolean;
+  onClose: () => void;
+}) {
+  return <div className="fixed inset-0 z-[100] grid place-items-center bg-black/45 p-3 sm:p-5" role="dialog" aria-modal="true" aria-label={`Prévia da ${rodada}ª comunicação`} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="flex max-h-[94vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="flex items-start justify-between gap-3 border-b px-4 py-3.5 sm:px-5">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-semibold text-[#202c33]">Prévia da {rodada}ª comunicação</h3>
+            {!contratado && <span className="rounded-full bg-[#fff0f4] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#a04a63]">Prévia do serviço</span>}
+          </div>
+          <p className="mt-0.5 text-xs text-[#667781]">Exemplo preenchido com os dados deste evento.</p>
+        </div>
+        <button type="button" onClick={onClose} aria-label="Fechar prévia" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[#667781] transition hover:bg-[#f0f2f5]"><X className="h-5 w-5" /></button>
+      </div>
+
+      <div className="min-h-0 overflow-y-auto bg-[#f7f7f7] p-3 sm:p-5">
+        <div className="mx-auto max-w-[500px] overflow-hidden rounded-xl border border-[#d8dfe2] bg-white shadow-sm">
+          <div className="px-4 py-3 text-lg font-semibold text-[#202c33]">Seu modelo</div>
+          <div
+            className="p-3 sm:p-5"
+            style={{
+              backgroundColor: '#efeae2',
+              backgroundImage: 'radial-gradient(circle at 16px 20px, rgba(90,100,95,.08) 1.2px, transparent 1.5px), radial-gradient(circle at 50px 54px, rgba(90,100,95,.07) 1.2px, transparent 1.5px), linear-gradient(45deg, rgba(255,255,255,.18) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.18) 75%)',
+              backgroundSize: '72px 72px, 72px 72px, 96px 96px',
+            }}
+          >
+            <div className="overflow-hidden rounded-xl bg-white shadow-[0_1px_1px_rgba(11,20,26,.13)]">
+              <div className="space-y-4 px-4 pb-3 pt-4 text-[15px] leading-[1.42] text-[#111b21] sm:px-5 sm:text-[16px]">
+                <p>Olá, <strong>{nome}</strong>!</p>
+                {rodada === 1 ? <>
+                  <p>Precisamos da sua confirmação de presença para o {tipo} de <strong>{anfitrioes}</strong><br/><strong>Data: {data}</strong><br/><strong>Confirme sua presença até: {prazo}</strong></p>
+                  <p>Para que os anfitriões possam finalizar a lista de convidados e os preparativos do evento, pedimos que a confirmação seja realizada dentro desse prazo. Após essa data, a confirmação online será encerrada e não será possível realizar novas confirmações ou incluir participantes pelo convite.</p>
+                  <p>A entrada no evento será conferida com base na lista de convidados confirmados.</p>
+                  <p>Acesse abaixo para consultar o convite e informar quem estará presente.</p>
+                </> : <>
+                  <p>Este é um lembrete sobre o {tipo} de <strong>{anfitrioes}</strong><br/><strong>Data: {data}</strong><br/><strong>Prazo para confirmação: {prazo}</strong></p>
+                  <p>Se você ainda não confirmou, faça isso até a data acima. Se já confirmou, acesse para revisar os nomes e as informações da sua confirmação.</p>
+                  <p>Após o prazo, a confirmação online será encerrada e não será possível incluir novos participantes pelo convite.</p>
+                  <p>A entrada no evento será conferida com base na lista de convidados confirmados.</p>
+                  <p>Acesse abaixo para consultar as informações atualizadas e revisar sua confirmação de presença.</p>
+                </>}
+                <div className="flex items-end justify-between gap-3 pt-1 text-xs text-[#667781]"><span>ConviteIA.com</span><span>12:00</span></div>
+              </div>
+              <div className="border-t border-[#e9edef]">
+                <div className="flex min-h-12 items-center justify-center gap-2 px-3 text-sm font-medium text-[#00a884]"><ExternalLink className="h-4 w-4"/>Ver Convite</div>
+                <div className="flex min-h-12 items-center justify-center gap-2 border-t border-[#e9edef] px-3 text-sm font-medium text-[#00a884]"><ExternalLink className="h-4 w-4"/>Confirmar Presença</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {!contratado && <p className="mx-auto mt-3 max-w-[500px] rounded-xl bg-white px-4 py-3 text-center text-xs leading-5 text-[#667781]">Esta é uma prévia de como seus convidados receberão as comunicações ao contratar o WhatsApp do Evento.</p>}
+      </div>
+    </div>
+  </div>;
+}
+
 export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: string; token: string; slug: string }) {
   const [estado, setEstado] = useState<Estado | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -109,6 +186,7 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
   const [pix, setPix] = useState<Pix>(null);
   const [editandoAgendamento, setEditandoAgendamento] = useState(false);
   const [telefoneComprovante, setTelefoneComprovante] = useState('');
+  const [previewAberta, setPreviewAberta] = useState<1 | 2 | null>(null);
 
   const ocupado = Boolean(acaoOcupada);
 
@@ -145,6 +223,23 @@ export default function WhatsAppPainel({ eventoId, token, slug }: { eventoId: st
     const id = window.setInterval(() => void carregar(true), 6000);
     return () => window.clearInterval(id);
   }, [estado?.config?.status, carregar]);
+
+  useEffect(() => {
+    if (!previewAberta) return;
+    const anterior = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const fecharEsc = (event: KeyboardEvent) => { if (event.key === 'Escape') setPreviewAberta(null); };
+    window.addEventListener('keydown', fecharEsc);
+    return () => {
+      document.body.style.overflow = anterior;
+      window.removeEventListener('keydown', fecharEsc);
+    };
+  }, [previewAberta]);
+
+  function abrirPreviewNoHover(rodada: 1 | 2) {
+    if (typeof window === 'undefined') return;
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) setPreviewAberta(rodada);
+  }
 
   async function post(body: any) {
     const r = await fetch('/api/conviteria/gestao/whatsapp', {
@@ -292,6 +387,11 @@ https://${slug}.conviteia.com`;
   const maxDataSegundo = [estado.rsvpPrazo || '', maxPorEvento].filter(Boolean).sort()[0] || undefined;
   const amanha = dataInputLocal(new Date(Date.now() + 24 * 60 * 60 * 1000));
   const programacaoIncompleta = modo === 'personalizado' && !dataSegundo;
+  const nomePreview = (estado.evento?.anfitrioes || 'Convidado').split(/\s+(?:e|&)\s+/i)[0]?.trim() || 'Convidado';
+  const tipoPreview = estado.evento?.tipo || 'Evento';
+  const anfitrioesPreview = estado.evento?.anfitrioes || 'Anfitriões';
+  const dataPreview = dataBr(estado.evento?.dataEvento);
+  const prazoPreview = estado.rsvpPrazoTexto || 'data definida na Gestão do Evento';
 
   function restaurarAgendamentoSalvo() {
     if (estado.config?.lembrete_modo) {
@@ -367,6 +467,10 @@ https://${slug}.conviteia.com`;
     {!ativo && <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
       <h3 className="font-semibold">Contratar por {brl(estado.precoCentavos)}</h3>
       <p className="mt-1 text-sm text-[#7c5560]">O primeiro comunicado é enviado quando você mandar. O segundo fica programado para uma única data.</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" title="Ver prévia da 1ª mensagem" onMouseEnter={()=>abrirPreviewNoHover(1)} onClick={()=>setPreviewAberta(1)} className="inline-flex items-center gap-1.5 rounded-xl border border-[#c0607833] bg-[#fff9fb] px-3 py-2 text-xs font-semibold text-[#a04a63] transition hover:bg-[#fff0f4]"><Eye className="h-4 w-4"/>Ver 1ª mensagem</button>
+        <button type="button" title="Ver prévia do lembrete" onMouseEnter={()=>abrirPreviewNoHover(2)} onClick={()=>setPreviewAberta(2)} className="inline-flex items-center gap-1.5 rounded-xl border border-[#c0607833] bg-[#fff9fb] px-3 py-2 text-xs font-semibold text-[#a04a63] transition hover:bg-[#fff0f4]"><Eye className="h-4 w-4"/>Ver lembrete</button>
+      </div>
       <div className="mt-4">{seletorSegundoComunicado}</div>
       <div className="mt-3 flex justify-stretch sm:justify-end"><button type="button" disabled={ocupado || !consentimento || bloqueadoPrazo || programacaoIncompleta} onClick={contratar} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#c06078] px-5 py-2.5 font-semibold text-white disabled:opacity-50 sm:w-auto">{acaoOcupada==='contratar'?<Loader2 className="h-4 w-4 animate-spin"/>:<CreditCard className="h-4 w-4"/>}{aguardando?'Ver / renovar PIX':'Gerar PIX'}</button></div>
       <label className="mt-4 flex items-start gap-2 text-xs leading-5 text-[#7c5560]"><input type="checkbox" checked={consentimento} onChange={(e)=>setConsentimento(e.target.checked)} className="mt-1"/><span>Declaro que os contatos informados podem receber comunicações deste evento pelo WhatsApp e sou responsável pela lista enviada.</span></label>
@@ -430,7 +534,7 @@ https://${slug}.conviteia.com`;
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
-          <div className="flex items-center gap-2"><Send className="h-5 w-5 text-[#a04a63]"/><h3 className="font-semibold">1ª comunicação</h3></div>
+          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><Send className="h-5 w-5 text-[#a04a63]"/><h3 className="font-semibold">1ª comunicação</h3></div><button type="button" title="Ver prévia da 1ª mensagem" aria-label="Ver prévia da 1ª mensagem" onMouseEnter={()=>abrirPreviewNoHover(1)} onClick={()=>setPreviewAberta(1)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#c0607833] bg-[#fff9fb] text-[#a04a63] transition hover:bg-[#fff0f4]"><Eye className="h-4 w-4"/></button></div>
           <p className="mt-2 text-sm text-[#7c5560]">Só recebe quem ainda está pendente e nunca recebeu a primeira mensagem. Quem já confirmou pelo convite, CSV sincronizado ou painel não recebe cobrança de confirmação novamente.</p>
           <p className="mt-3 text-sm"><strong>{estado.novosPrimeiroEnvio}</strong> contato(s) apto(s) agora.</p>
           <button type="button" disabled={ocupado || bloqueadoPrimeiroEnvio || estado.novosPrimeiroEnvio===0} onClick={enviarPrimeiro} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#c06078] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{acaoOcupada==='enviar_primeiro'?<Loader2 className="h-4 w-4 animate-spin"/>:<Send className="h-4 w-4"/>}{estado.config?.primeiro_disparo_em?'Enviar para novos convidados':'Enviar primeira comunicação'}</button>
@@ -438,7 +542,7 @@ https://${slug}.conviteia.com`;
         </div>
 
         <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
-          <div className="flex items-center gap-2"><CalendarClock className="h-5 w-5 text-[#a04a63]"/><h3 className="font-semibold">2ª comunicação · lembrete</h3></div>
+          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><CalendarClock className="h-5 w-5 text-[#a04a63]"/><h3 className="font-semibold">2ª comunicação · lembrete</h3></div><button type="button" title="Ver prévia do lembrete" aria-label="Ver prévia do lembrete" onMouseEnter={()=>abrirPreviewNoHover(2)} onClick={()=>setPreviewAberta(2)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#c0607833] bg-[#fff9fb] text-[#a04a63] transition hover:bg-[#fff0f4]"><Eye className="h-4 w-4"/></button></div>
           <p className="mt-2 text-sm text-[#7c5560]">Uma única rodada para a lista vigente na data programada, inclusive quem já confirmou, para revisar presença e informações atualizadas.</p>
 
           {estado.config?.segundo_disparo_em ? (
@@ -475,6 +579,17 @@ https://${slug}.conviteia.com`;
         {!bloqueadoPrimeiroEnvio ? <a href={`https://wa.me/?text=${encodeURIComponent(mensagemGratis)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white"><MessageCircle className="h-4 w-4"/>Abrir WhatsApp</a> : <span className="inline-flex items-center gap-2 rounded-xl bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-500"><MessageCircle className="h-4 w-4"/>Abrir WhatsApp</span>}
       </div>
     </div>
+
+    {previewAberta && <WhatsAppTemplatePreview
+      rodada={previewAberta}
+      nome={nomePreview}
+      tipo={tipoPreview}
+      anfitrioes={anfitrioesPreview}
+      data={dataPreview}
+      prazo={prazoPreview}
+      contratado={ativo}
+      onClose={()=>setPreviewAberta(null)}
+    />}
 
     {erro && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{erro}</p>}
     {aviso && <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{aviso}</p>}

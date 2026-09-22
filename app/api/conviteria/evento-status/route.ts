@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   const u = new URL(req.url);
   const eventoId = u.searchParams.get('eventoId');
   const esperaMemorias = u.searchParams.get('memorias') === '1';
+  const esperaWhatsApp = u.searchParams.get('whatsapp') === '1';
   if (!eventoId) return NextResponse.json({ erro: 'Evento não informado.' }, { status: 400 });
 
   const admin = adminConviteria();
@@ -24,14 +25,23 @@ export async function GET(req: NextRequest) {
   const dono = (evento as unknown as { contas: { user_id: string } }).contas?.user_id;
   if (dono !== auth.user.id) return NextResponse.json({ erro: 'Convite não encontrado.' }, { status: 404 });
 
-  const { data: pacote } = await admin.from('evento_memorias_config')
-    .select('status,expira_em,pix_transaction_id')
-    .eq('evento_id', eventoId).maybeSingle();
+  const [{ data: pacote }, { data: whatsapp }] = await Promise.all([
+    admin.from('evento_memorias_config')
+      .select('status,expira_em,pix_transaction_id')
+      .eq('evento_id', eventoId).maybeSingle(),
+    admin.from('evento_whatsapp_config')
+      .select('status,pix_transaction_id')
+      .eq('evento_id', eventoId).maybeSingle(),
+  ]);
 
   const memoriasAtivasAgora = pacote?.status === 'ativo' && (!pacote.expira_em || new Date(pacote.expira_em) > new Date());
-  const transactionId = esperaMemorias && !memoriasAtivasAgora && pacote?.pix_transaction_id
-    ? pacote.pix_transaction_id
-    : (!evento.publicado_em ? evento.pix_transaction_id : null);
+  const whatsappAtivoAgora = whatsapp?.status === 'ativo';
+
+  const transactionId = esperaWhatsApp && !whatsappAtivoAgora && whatsapp?.pix_transaction_id
+    ? whatsapp.pix_transaction_id
+    : esperaMemorias && !memoriasAtivasAgora && pacote?.pix_transaction_id
+      ? pacote.pix_transaction_id
+      : (!evento.publicado_em ? evento.pix_transaction_id : null);
 
   if (transactionId) {
     try {
@@ -49,19 +59,22 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const [{ data: atual }, { data: pacoteAtual }] = await Promise.all([
+  const [{ data: atual }, { data: pacoteAtual }, { data: whatsappAtual }] = await Promise.all([
     admin.from('eventos').select('slug,publicado_em').eq('id', eventoId).maybeSingle(),
     admin.from('evento_memorias_config').select('status,expira_em').eq('evento_id', eventoId).maybeSingle(),
+    admin.from('evento_whatsapp_config').select('status').eq('evento_id', eventoId).maybeSingle(),
   ]);
 
   const publicado = Boolean(atual?.publicado_em);
   const memoriasAtivas = pacoteAtual?.status === 'ativo' && (!pacoteAtual.expira_em || new Date(pacoteAtual.expira_em) > new Date());
+  const whatsappAtivo = whatsappAtual?.status === 'ativo';
   const slug = (atual?.slug ?? evento.slug) as string;
 
   return NextResponse.json({
     publicado,
     memoriasAtivas,
-    concluido: publicado && (!esperaMemorias || memoriasAtivas),
+    whatsappAtivo,
+    concluido: publicado && (!esperaMemorias || memoriasAtivas) && (!esperaWhatsApp || whatsappAtivo),
     slug,
     url: urlDoConvite(slug),
   });

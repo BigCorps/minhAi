@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { timingSafeEqual } from 'node:crypto';
-import { adminConviteria } from '@/lib/conviteria/servidor';
+import { adminConviteria, adminPublic } from '@/lib/conviteria/servidor';
 import { ativarMemorias } from '@/lib/conviteria/memorias-servidor';
 import { limparDadosDoTeste } from '@/lib/conviteria/teste-servidor';
 
@@ -13,6 +13,32 @@ function segredoConfere(recebido: string | null) {
   const a = Buffer.from(recebido);
   const b = Buffer.from(esperado);
   return a.length === b.length && timingSafeEqual(a, b);
+}
+
+async function ativarWhatsAppPago(eventoId: string, txid?: string | null) {
+  const admin = adminConviteria();
+  const { data: whatsapp } = await admin.from('evento_whatsapp_config')
+    .select('evento_id,status,pix_transaction_id,pix_txid')
+    .eq('evento_id', eventoId)
+    .eq('status', 'aguardando_pagamento')
+    .maybeSingle();
+  if (!whatsapp?.pix_transaction_id) return false;
+
+  const { data: transacao } = await adminPublic().from('pix_transactions')
+    .select('id,status,txid')
+    .eq('id', whatsapp.pix_transaction_id)
+    .maybeSingle();
+  if (!transacao || transacao.status !== 'confirmed') return false;
+  if (txid && transacao.txid && transacao.txid !== txid) return false;
+  if (whatsapp.pix_txid && transacao.txid && whatsapp.pix_txid !== transacao.txid) return false;
+
+  const { data: ativado } = await admin.from('evento_whatsapp_config').update({
+    status: 'ativo',
+    comprado_em: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).eq('evento_id', eventoId).eq('status', 'aguardando_pagamento').select('evento_id').maybeSingle();
+
+  return Boolean(ativado);
 }
 
 export async function POST(req: NextRequest) {
@@ -46,8 +72,6 @@ export async function POST(req: NextRequest) {
       slug = evento?.slug as string | undefined;
     }
 
-    // Se a compra aconteceu durante/depois do trial, remove exclusivamente os
-    // dados marcados como demonstração antes de liberar o uso definitivo.
     const { data: teste } = await admin.from('evento_testes')
       .select('id,convertido_em')
       .eq('evento_id', corpo.referenciaId)
@@ -60,12 +84,12 @@ export async function POST(req: NextRequest) {
           convertido: true,
         });
       } catch (e) {
-        // O pagamento/publicação nunca pode ser revertido por uma limpeza.
         console.error('ConviteIA: falha ao limpar dados do trial na conversão:', e);
       }
     }
 
     const memoriasAtivadas = await ativarMemorias(corpo.referenciaId, corpo.txid ?? null);
+    const whatsappAtivado = await ativarWhatsAppPago(corpo.referenciaId, corpo.txid ?? null);
 
     if (slug) revalidatePath(`/convite/${slug}`);
 
@@ -73,25 +97,13 @@ export async function POST(req: NextRequest) {
       ok: true,
       publicado: Boolean(publicado),
       memoriasAtivadas,
+      whatsappAtivado,
       slug,
     });
   }
 
-  // WhatsApp do Evento usa o mesmo gerador/confirmador PIX já existente do
-  // ConviteIA, mas continua sendo um adicional separado. O `referenciaId` é o
-  // ID do evento; o txid impede que um PIX antigo ative uma compra nova.
-  const { data: whatsapp } = await admin.from('evento_whatsapp_config')
-    .select('evento_id,status,pix_txid')
-    .eq('evento_id', corpo.referenciaId)
-    .eq('status', 'aguardando_pagamento')
-    .maybeSingle();
-
-  if (whatsapp && (!whatsapp.pix_txid || !corpo.txid || whatsapp.pix_txid === corpo.txid)) {
-    await admin.from('evento_whatsapp_config').update({
-      status: 'ativo',
-      comprado_em: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }).eq('evento_id', corpo.referenciaId).eq('status', 'aguardando_pagamento');
+  // WhatsApp comprado separadamente em Gestão → Comunicações usa tipo=presente.
+  if (await ativarWhatsAppPago(corpo.referenciaId, corpo.txid ?? null)) {
     return NextResponse.json({ ok: true, whatsappAtivado: true, eventoId: corpo.referenciaId });
   }
 

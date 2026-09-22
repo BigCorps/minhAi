@@ -1,13 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminConviteria, adminPublic } from '@/lib/conviteria/servidor';
 import { PLANOS } from '@/lib/conviteria/precos';
+import { MEMORIAS_PRECO_CENTAVOS } from '@/lib/conviteria/memorias-config';
+import { garantirPacote, pacoteDoEvento } from '@/lib/conviteria/memorias-servidor';
 import {
-  MEMORIAS_PRECO_CENTAVOS,
-} from '@/lib/conviteria/memorias-config';
-import {
-  garantirPacote,
-  pacoteDoEvento,
-} from '@/lib/conviteria/memorias-servidor';
+  WHATSAPP_EVENTO_LIMITE,
+  WHATSAPP_EVENTO_PRECO_CENTAVOS,
+} from '@/lib/conviteria/whatsapp-servidor';
 
 export const runtime = 'nodejs';
 
@@ -16,7 +15,7 @@ function qrDoPix(copiaECola: string) {
   return `/api/qrcode?size=400&data=${encodeURIComponent(copiaECola)}&color=%23a04a63&logo_url=${encodeURIComponent(logo)}`;
 }
 
-async function pixPendente(transactionId: string | null | undefined, valorCentavos: number) {
+async function pixPendente(transactionId: string | null | undefined) {
   if (!transactionId) return null;
   const { data } = await adminPublic()
     .from('pix_transactions')
@@ -24,15 +23,10 @@ async function pixPendente(transactionId: string | null | undefined, valorCentav
     .eq('id', transactionId)
     .maybeSingle();
 
-  if (!data || data.status !== 'pending' || Number(data.amount_cents) !== valorCentavos) return null;
+  if (!data || data.status !== 'pending') return null;
   if (data.expires_at && new Date(data.expires_at).getTime() <= Date.now()) return null;
   if (!data.pix_code || data.pix_code === 'pending') return null;
-  return {
-    transactionId: data.id as string,
-    txid: data.txid as string | null,
-    copiaECola: data.pix_code as string,
-    qrcode: qrDoPix(data.pix_code as string),
-  };
+  return data;
 }
 
 export async function POST(req: NextRequest) {
@@ -46,6 +40,8 @@ export async function POST(req: NextRequest) {
   const corpo = (await req.json().catch(() => null)) as {
     eventoId?: string;
     incluirMemorias?: boolean;
+    incluirWhatsApp?: boolean;
+    consentimentoWhatsApp?: boolean;
   } | null;
   if (!corpo?.eventoId) return NextResponse.json({ erro: 'Evento não informado.' }, { status: 400 });
 
@@ -68,9 +64,22 @@ export async function POST(req: NextRequest) {
       .eq('evento_id', evento.id).eq('status', 'ativo');
     pacote = { ...pacote, status: 'expirado' };
   }
+
+  const { data: whatsappAtual } = await admin.from('evento_whatsapp_config')
+    .select('*')
+    .eq('evento_id', evento.id)
+    .maybeSingle();
+  const whatsappAtivo = whatsappAtual?.status === 'ativo';
+
   const incluirMemorias = Boolean(corpo.incluirMemorias) && !memoriasAtivas;
+  const incluirWhatsApp = Boolean(corpo.incluirWhatsApp) && !whatsappAtivo;
+  if (incluirWhatsApp && corpo.consentimentoWhatsApp !== true) {
+    return NextResponse.json({ erro: 'Confirme a autorização para envio de mensagens antes de adicionar o WhatsApp do Evento.' }, { status: 400 });
+  }
+
   const memoriasCentavos = incluirMemorias ? MEMORIAS_PRECO_CENTAVOS : 0;
-  const total = conviteCentavos + memoriasCentavos;
+  const whatsappCentavos = incluirWhatsApp ? WHATSAPP_EVENTO_PRECO_CENTAVOS : 0;
+  const total = conviteCentavos + memoriasCentavos + whatsappCentavos;
 
   if (total === 0) {
     return NextResponse.json({
@@ -78,79 +87,58 @@ export async function POST(req: NextRequest) {
       valorCentavos: 0,
       publicado: Boolean(evento.publicado_em),
       memoriasAtivas,
+      whatsappAtivo,
     });
   }
 
-  // Idempotência entre abas/reloads: se já existe um PIX de Memórias válido,
-  // ele sempre vence a escolha enviada pelo browser. Isso impede uma aba
-  // antiga de gerar um segundo PIX só do convite enquanto o combinado está
-  // aguardando pagamento.
-  if (pacote?.status === 'aguardando_pagamento') {
-    const totalPendente = conviteCentavos + MEMORIAS_PRECO_CENTAVOS;
-    const existente = await pixPendente(pacote.pix_transaction_id, totalPendente);
-    if (existente) {
-      return NextResponse.json({
-        eventoId: evento.id,
-        valorCentavos: totalPendente,
-        conviteCentavos,
-        memoriasCentavos: MEMORIAS_PRECO_CENTAVOS,
-        incluiMemorias: true,
-        reutilizado: true,
-        ...existente,
-      });
+  // Um único PIX pendente sempre vence novas escolhas. Isso evita que duas abas
+  // gerem cobranças diferentes para o mesmo convite enquanto uma delas ainda é pagável.
+  const candidatos = Array.from(new Set([
+    evento.pix_transaction_id as string | null,
+    pacote?.status === 'aguardando_pagamento' ? pacote.pix_transaction_id : null,
+    whatsappAtual?.status === 'aguardando_pagamento' ? whatsappAtual.pix_transaction_id : null,
+  ].filter(Boolean) as string[]));
+
+  for (const transactionId of candidatos) {
+    const existente = await pixPendente(transactionId);
+    if (!existente) continue;
+
+    const incluiConviteExistente = conviteCentavos > 0 && evento.pix_transaction_id === transactionId;
+    const incluiMemoriasExistente = pacote?.status === 'aguardando_pagamento' && pacote.pix_transaction_id === transactionId;
+    const incluiWhatsAppExistente = whatsappAtual?.status === 'aguardando_pagamento' && whatsappAtual.pix_transaction_id === transactionId;
+
+    if (conviteCentavos > 0 && !incluiConviteExistente) {
+      return NextResponse.json({ erro: 'Já existe outro PIX válido para este evento. Conclua ou aguarde a expiração antes de publicar o convite.' }, { status: 409 });
     }
-  }
-
-  // Também bloqueia a situação inversa: um PIX antigo somente do convite
-  // ainda está válido e uma aba nova tenta trocar para Convite + Memórias.
-  // Como os dois QR continuariam pagáveis, gerar outro poderia cobrar o
-  // convite duas vezes. O cliente conclui o PIX existente e compra o add-on
-  // no painel em seguida.
-  if (incluirMemorias && conviteCentavos > 0) {
-    const convitePendente = await pixPendente(
-      evento.pix_transaction_id as string | null,
-      conviteCentavos,
-    );
-    if (convitePendente) {
-      return NextResponse.json(
-        { erro: 'Já existe um PIX válido somente do convite. Conclua esse pagamento e depois adicione Memórias pelo painel.' },
-        { status: 409 },
-      );
+    if (incluirMemorias && !incluiMemoriasExistente) {
+      return NextResponse.json({ erro: 'Já existe um PIX válido sem Memórias. Conclua esse pagamento e ative Memórias depois pela Gestão do Evento.' }, { status: 409 });
     }
-  }
-
-  if (incluirMemorias) {
-    pacote = pacote ?? await garantirPacote(evento.id as string);
-  } else if (conviteCentavos > 0) {
-    const existente = await pixPendente(evento.pix_transaction_id as string | null, total);
-    if (existente) {
-      return NextResponse.json({
-        eventoId: evento.id,
-        valorCentavos: total,
-        conviteCentavos,
-        memoriasCentavos: 0,
-        incluiMemorias: false,
-        reutilizado: true,
-        ...existente,
-      });
+    if (incluirWhatsApp && !incluiWhatsAppExistente) {
+      return NextResponse.json({ erro: 'Já existe um PIX válido sem WhatsApp do Evento. Conclua esse pagamento e ative o WhatsApp depois em Gestão → Comunicações.' }, { status: 409 });
     }
+
+    return NextResponse.json({
+      eventoId: evento.id,
+      valorCentavos: Number(existente.amount_cents),
+      conviteCentavos: incluiConviteExistente ? avulso.centavos : 0,
+      memoriasCentavos: incluiMemoriasExistente ? MEMORIAS_PRECO_CENTAVOS : 0,
+      whatsappCentavos: incluiWhatsAppExistente ? WHATSAPP_EVENTO_PRECO_CENTAVOS : 0,
+      incluiMemorias: incluiMemoriasExistente,
+      incluiWhatsApp: incluiWhatsAppExistente,
+      reutilizado: true,
+      transactionId: existente.id,
+      txid: existente.txid,
+      copiaECola: existente.pix_code,
+      qrcode: qrDoPix(existente.pix_code),
+    });
   }
 
-  if (incluirMemorias) {
-    await admin.from('evento_memorias_config').update({
-      status: 'aguardando_pagamento',
-      compra_valor_centavos: MEMORIAS_PRECO_CENTAVOS,
-      pix_transaction_id: null,
-      pix_txid: null,
-      updated_at: new Date().toISOString(),
-    }).eq('evento_id', evento.id).neq('status', 'ativo');
-  }
+  if (incluirMemorias) pacote = pacote ?? await garantirPacote(evento.id as string);
 
-  const descricao = conviteCentavos > 0 && memoriasCentavos > 0
-    ? `Convite ${evento.slug} + Memórias do Evento`
-    : memoriasCentavos > 0
-      ? `Memórias do Evento - ${evento.slug}`
-      : `Convite ${evento.slug}`;
+  const partesDescricao = [`Convite ${evento.slug}`];
+  if (memoriasCentavos > 0) partesDescricao.push('Memórias do Evento');
+  if (whatsappCentavos > 0) partesDescricao.push('WhatsApp do Evento');
+  const descricao = partesDescricao.join(' + ');
 
   const r = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/gerar-pix-assistente`, {
     method: 'POST',
@@ -160,8 +148,7 @@ export async function POST(req: NextRequest) {
     },
     body: JSON.stringify({
       origem: 'conviteria',
-      // Continua como conviteria_convite. O webhook decide se precisa apenas
-      // publicar, apenas ativar Memórias, ou fazer as duas coisas.
+      // O webhook de convite também ativa os adicionais ligados ao mesmo PIX.
       tipo: 'convite',
       referencia_id: evento.id,
       valor_centavos: total,
@@ -176,6 +163,7 @@ export async function POST(req: NextRequest) {
     transaction_id?: string;
     qrcode?: string;
     copia_e_cola?: string;
+    expires_at?: string;
   } | null;
 
   if (!r.ok || !pix?.transaction_id || !pix.copia_e_cola) {
@@ -186,12 +174,28 @@ export async function POST(req: NextRequest) {
   if (conviteCentavos > 0) {
     await admin.from('eventos').update({ pix_transaction_id: pix.transaction_id }).eq('id', evento.id);
   }
+
   if (incluirMemorias) {
     await admin.from('evento_memorias_config').update({
+      status: 'aguardando_pagamento',
+      compra_valor_centavos: MEMORIAS_PRECO_CENTAVOS,
       pix_transaction_id: pix.transaction_id,
       pix_txid: pix.txid ?? null,
       updated_at: new Date().toISOString(),
-    }).eq('evento_id', evento.id).eq('status', 'aguardando_pagamento');
+    }).eq('evento_id', evento.id).neq('status', 'ativo');
+  }
+
+  if (incluirWhatsApp) {
+    await admin.from('evento_whatsapp_config').upsert({
+      evento_id: evento.id,
+      status: 'aguardando_pagamento',
+      preco_centavos: WHATSAPP_EVENTO_PRECO_CENTAVOS,
+      limite_mensagens: WHATSAPP_EVENTO_LIMITE,
+      consentimento_declarado_em: new Date().toISOString(),
+      pix_transaction_id: pix.transaction_id,
+      pix_txid: pix.txid ?? null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'evento_id' });
   }
 
   return NextResponse.json({
@@ -199,10 +203,13 @@ export async function POST(req: NextRequest) {
     valorCentavos: total,
     conviteCentavos,
     memoriasCentavos,
-    incluiMemorias: incluirMemorias,
+    whatsappCentavos,
+    incluiMemorias,
+    incluiWhatsApp,
     txid: pix.txid,
     transactionId: pix.transaction_id,
     qrcode: pix.qrcode ?? qrDoPix(pix.copia_e_cola),
     copiaECola: pix.copia_e_cola,
+    expiresAt: pix.expires_at ?? null,
   });
 }

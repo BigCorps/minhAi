@@ -9,6 +9,7 @@ import {
   Loader2,
   MessageCircle,
   MessageSquareText,
+  Pencil,
   QrCode,
   Settings2,
   Shirt,
@@ -35,26 +36,26 @@ import estilos from './gestao-light.module.css';
 
 type Aba =
   | 'convidados'
+  | 'memorias'
   | 'comunicacoes'
+  | 'financeiro'
   | 'padrinhos'
   | 'mesas'
   | 'checkin'
   | 'papelaria'
-  | 'memorias'
   | 'recados'
-  | 'financeiro'
   | 'configuracoes';
 
 const ABAS: Array<{ id: Aba; nome: string; Icon: typeof Users }> = [
   { id: 'convidados', nome: 'Convidados', Icon: Users },
+  { id: 'memorias', nome: 'Memórias', Icon: Images },
   { id: 'comunicacoes', nome: 'Comunicações', Icon: MessageCircle },
+  { id: 'financeiro', nome: 'Financeiro', Icon: WalletCards },
   { id: 'padrinhos', nome: 'Padrinhos', Icon: Shirt },
   { id: 'mesas', nome: 'Mesas', Icon: LayoutGrid },
   { id: 'checkin', nome: 'Check-in', Icon: QrCode },
   { id: 'papelaria', nome: 'Papelaria', Icon: Sparkles },
-  { id: 'memorias', nome: 'Memórias', Icon: Images },
   { id: 'recados', nome: 'Recados', Icon: MessageSquareText },
-  { id: 'financeiro', nome: 'Financeiro', Icon: WalletCards },
   { id: 'configuracoes', nome: 'Configurações', Icon: Settings2 },
 ];
 
@@ -170,14 +171,17 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
   return (
     <main className={`${estilos.root} min-h-screen bg-[#fff9fb] px-4 py-6 text-[#40232c]`}>
       <div className="mx-auto max-w-5xl">
-        <header className="mb-5 flex items-center justify-between gap-3">
-          <div>
+        <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <Link href="/convite/painel" className="inline-flex items-center gap-1 text-sm text-[#7c5560]"><ArrowLeft className="h-4 w-4" />Meus convites</Link>
             <h1 className="mt-2 text-2xl font-semibold">Gestão do Evento</h1>
-            <p className="text-sm text-[#7c5560]">{cfg.anfitrioes.exibicao} · {slug}.conviteia.com</p>
+            <p className="truncate text-sm text-[#7c5560]">{cfg.anfitrioes.exibicao} · {slug}.conviteia.com</p>
             <p className="mt-1 text-xs text-[#9b7b84]">Tudo que acontece depois da publicação fica organizado aqui.</p>
           </div>
-          <a href={`https://${slug}.conviteia.com`} target="_blank" rel="noreferrer" className="rounded-xl border border-[#c0607844] bg-white px-4 py-2 text-sm font-semibold text-[#a04a63]">Ver convite</a>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Link href={`/convite/editar/${eventoId}`} className="inline-flex items-center gap-1.5 rounded-xl border border-[#c0607844] bg-white px-4 py-2 text-sm font-semibold text-[#7c5560]"><Pencil className="h-4 w-4" />Editar convite</Link>
+            <a href={`https://${slug}.conviteia.com`} target="_blank" rel="noreferrer" className="rounded-xl border border-[#c0607844] bg-white px-4 py-2 text-sm font-semibold text-[#a04a63]">Ver convite</a>
+          </div>
         </header>
 
         <nav className="mb-5 flex gap-2 overflow-x-auto pb-2">
@@ -200,6 +204,16 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
           </section>
         )}
 
+        {aba === 'memorias' && (
+          <MemoriasPainel
+            eventoId={eventoId}
+            slug={slug}
+            titulo={cfg.anfitrioes.exibicao}
+            sempreAberto
+            onAbrirPapelaria={() => abrirPapelaria('memorias')}
+          />
+        )}
+
         {aba === 'comunicacoes' && (
           <section className="space-y-5">
             <div className="rounded-2xl border border-[#c0607833] bg-white p-4">
@@ -215,20 +229,6 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
           </section>
         )}
 
-        {aba === 'padrinhos' && <PadrinhosPainel eventoId={eventoId} token={token} slug={slug} />}
-        {aba === 'mesas' && <MesasPainel eventoId={eventoId} token={token} />}
-        {aba === 'checkin' && <CheckinPainel eventoId={eventoId} token={token} />}
-        {aba === 'papelaria' && <PapelariaPainel cfg={cfg} slug={slug} eventoId={eventoId} token={token} qrModo={gestao.qrModo} categoriaInicial={papelariaCategoria} />}
-        {aba === 'memorias' && (
-          <MemoriasPainel
-            eventoId={eventoId}
-            slug={slug}
-            titulo={cfg.anfitrioes.exibicao}
-            sempreAberto
-            onAbrirPapelaria={() => abrirPapelaria('memorias')}
-          />
-        )}
-        {aba === 'recados' && <RecadosPainel eventoId={eventoId} sempreAberto />}
         {aba === 'financeiro' && (
           <section className="space-y-4">
             <div className="rounded-2xl border border-[#c0607833] bg-white p-4">
@@ -239,11 +239,17 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
             <SaldoSaque eventoId={eventoId} sempreAberto />
           </section>
         )}
+
+        {aba === 'padrinhos' && <PadrinhosPainel eventoId={eventoId} token={token} slug={slug} />}
+        {aba === 'mesas' && <MesasPainel eventoId={eventoId} token={token} />}
+        {aba === 'checkin' && <CheckinPainel eventoId={eventoId} token={token} />}
+        {aba === 'papelaria' && <PapelariaPainel cfg={cfg} slug={slug} eventoId={eventoId} token={token} qrModo={gestao.qrModo} categoriaInicial={papelariaCategoria} />}
+        {aba === 'recados' && <RecadosPainel eventoId={eventoId} sempreAberto />}
         {aba === 'configuracoes' && (
           <section className="space-y-4">
             <div className="rounded-2xl border border-[#c0607833] bg-white p-4">
               <h2 className="font-semibold">Configurações operacionais</h2>
-              <p className="mt-1 text-sm text-[#7c5560]">Ajustes de RSVP, QR e informações complementares do evento. Para aparência, fotos, textos e seções do convite, use “Editar” em Meus convites.</p>
+              <p className="mt-1 text-sm text-[#7c5560]">Ajustes de RSVP, QR e informações complementares do evento. Para aparência, fotos, textos e seções do convite, use “Editar convite” no topo.</p>
             </div>
             <DetalhesPainel eventoId={eventoId} token={token} cfg={cfg} gestao={gestao} aoSalvar={(novoCfg, novaGestao) => { setCfg(novoCfg); setGestao(novaGestao); }} />
           </section>

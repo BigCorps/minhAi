@@ -5,9 +5,21 @@ import { MEMORIAS_PRECO_CENTAVOS } from '@/lib/conviteria/memorias-config';
 import { dataEventoElegivelParaTeste, expiracaoEfetivaTeste } from '@/lib/conviteria/teste';
 import { PLANOS } from '@/lib/conviteria/precos';
 import { urlDoConvite } from '@/lib/conviteria/marca';
+import { WHATSAPP_EVENTO_PRECO_CENTAVOS } from '@/lib/conviteria/whatsapp-servidor';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+async function transacaoPendente(transactionId: string | null | undefined) {
+  if (!transactionId) return null;
+  const { data } = await adminPublic().from('pix_transactions')
+    .select('id,status,expires_at,amount_cents')
+    .eq('id', transactionId)
+    .maybeSingle();
+  if (!data || data.status !== 'pending') return null;
+  if (data.expires_at && new Date(data.expires_at).getTime() <= Date.now()) return null;
+  return data;
+}
 
 export async function GET(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -18,13 +30,21 @@ export async function GET(req: NextRequest) {
   const evento = await buscarEventoDoDono(token, eventoId);
   if (!evento) return NextResponse.json({ erro: 'Convite não encontrado.' }, { status: 404 });
 
-  const pacote = await pacoteDoEvento(evento.id as string);
+  const admin = adminConviteria();
+  const [pacote, { data: whatsapp }] = await Promise.all([
+    pacoteDoEvento(evento.id as string),
+    admin.from('evento_whatsapp_config')
+      .select('status,pix_transaction_id,pix_txid,comprado_em')
+      .eq('evento_id', evento.id)
+      .maybeSingle(),
+  ]);
+
   const publicado = Boolean(evento.publicado_em);
   const avulso = PLANOS.find((p) => p.id === 'avulso')!;
   const conviteCentavos = !publicado && evento.origem_plano === 'avulso' ? avulso.centavos : 0;
   const memoriasAtivas = pacote?.status === 'ativo' && (!pacote.expira_em || new Date(pacote.expira_em).getTime() > Date.now());
+  const whatsappAtivo = whatsapp?.status === 'ativo';
 
-  const admin = adminConviteria();
   const { data: testeRow } = await admin.from('evento_testes')
     .select('id,evento_id,iniciado_em,expira_em,convertido_em,limpo_em')
     .eq('conta_id', evento.conta_id)
@@ -54,23 +74,12 @@ export async function GET(req: NextRequest) {
     else if (!dataEventoElegivelParaTeste(evento.data_evento as string | null)) motivoTeste = 'O evento precisa estar a pelo menos 48 horas de distância para iniciar o teste.';
   }
 
-  const publicAdmin = adminPublic();
-  let pixMemoriasPendente = false;
-  if (pacote?.status === 'aguardando_pagamento' && pacote.pix_transaction_id) {
-    const { data: tx } = await publicAdmin.from('pix_transactions')
-      .select('status,expires_at,amount_cents')
-      .eq('id', pacote.pix_transaction_id)
-      .maybeSingle();
-    const totalEsperado = conviteCentavos + MEMORIAS_PRECO_CENTAVOS;
-    pixMemoriasPendente = Boolean(
-      tx?.status === 'pending' &&
-      Number(tx.amount_cents) === totalEsperado &&
-      (!tx.expires_at || new Date(tx.expires_at).getTime() > Date.now())
-    );
-  }
+  const pixMemoriasPendente = pacote?.status === 'aguardando_pagamento'
+    ? Boolean(await transacaoPendente(pacote.pix_transaction_id))
+    : false;
 
   const memoriasEmTeste = ['teste', 'aguardando_pagamento'].includes(String(pacote?.status)) && testeAtivo &&
-    (!pacote.expira_em || new Date(pacote.expira_em).getTime() > Date.now());
+    (!pacote?.expira_em || new Date(pacote.expira_em).getTime() > Date.now());
 
   const memoriasStatus = memoriasAtivas
     ? 'ativo'
@@ -82,18 +91,18 @@ export async function GET(req: NextRequest) {
           ? 'nao_contratado'
           : (pacote?.status ?? 'nao_contratado');
 
-  let pixConvitePendente = false;
-  if (!publicado && evento.pix_transaction_id) {
-    const { data: tx } = await publicAdmin.from('pix_transactions')
-      .select('status,expires_at,amount_cents')
-      .eq('id', evento.pix_transaction_id)
-      .maybeSingle();
-    pixConvitePendente = Boolean(
-      tx?.status === 'pending' &&
-      Number(tx.amount_cents) === avulso.centavos &&
-      (!tx.expires_at || new Date(tx.expires_at).getTime() > Date.now())
-    );
-  }
+  const whatsappPendente = whatsapp?.status === 'aguardando_pagamento'
+    ? Boolean(await transacaoPendente(whatsapp.pix_transaction_id))
+    : false;
+  const whatsappStatus = whatsappAtivo
+    ? 'ativo'
+    : whatsapp?.status === 'aguardando_pagamento' && whatsappPendente
+      ? 'aguardando_pagamento'
+      : 'nao_contratado';
+
+  const pixConvitePendente = !publicado
+    ? Boolean(await transacaoPendente(evento.pix_transaction_id as string | null))
+    : false;
 
   return NextResponse.json({
     eventoId: evento.id,
@@ -117,6 +126,11 @@ export async function GET(req: NextRequest) {
       ativas: memoriasAtivas,
       emTeste: memoriasEmTeste,
       expiraEm: pacote?.expira_em ?? null,
+    },
+    whatsapp: {
+      precoCentavos: WHATSAPP_EVENTO_PRECO_CENTAVOS,
+      status: whatsappStatus,
+      ativo: whatsappAtivo,
     },
   });
 }

@@ -35,7 +35,10 @@ const SKILLS: Skill[] = [
     color: CMYK.cyan,
     desc: 'Edite imagem (PSD) ou vetor (AI/SVG) online',
     credits: 0,
-    triggers: ['editar', 'editor', 'photoshop', 'editar psd', 'editar vetor', 'vetor', 'camadas', 'retocar', 'avançado', 'photopea'],
+    triggers: [
+      'editar', 'editor', 'photoshop', 'editar psd', 'editar vetor', 'vetor', 'camadas', 'retocar', 'avançado', 'photopea',
+      'advanced editor', 'edit psd', 'edit svg', 'edit vector', 'vector editor', 'layers', 'retouch',
+    ],
     modal: 'PhotopeaEditorDisplay',
   },
   {
@@ -48,6 +51,8 @@ const SKILLS: Skill[] = [
       'editar imagem', 'editar foto', 'cortar imagem', 'cortar foto',
       'recortar imagem', 'recortar foto', 'rotacionar imagem',
       'ajustar imagem', 'brilho e contraste', 'girar imagem', 'crop',
+      'quick editor', 'edit image', 'edit photo', 'crop image', 'crop photo',
+      'rotate image', 'rotate photo', 'adjust image', 'brightness contrast',
     ],
     modal: 'EditarImagemDisplay',
   },
@@ -57,7 +62,12 @@ const SKILLS: Skill[] = [
     color: CMYK.cyan,
     desc: 'PDF pronto pra gráfica (medida + sangria)',
     credits: 5,
-    triggers: ['arte final', 'arquivo pra grafica', 'arquivo para grafica', 'sangria', 'corte', 'cartões', 'folhetos', 'fechar arquivo', 'gerar pdf', 'pdf de producao'],
+    triggers: [
+      'arte final', 'arquivo pra grafica', 'arquivo para grafica', 'sangria', 'corte', 'cartões', 'folhetos',
+      'fechar arquivo', 'gerar pdf', 'pdf de producao',
+      'margin and bleed', 'bleed', 'crop marks', 'print ready pdf', 'print ready',
+      'prepare for print', 'print preparation', 'print file',
+    ],
     modal: 'ArteFinalDisplay',
   },
   {
@@ -70,6 +80,7 @@ const SKILLS: Skill[] = [
       'foto documento', 'foto para documento', 'foto 3x4', '3x4', 'foto 2x2', '2x2',
       'foto 5x7', '5x7', 'foto passaporte', 'remover fundo foto', 'foto identidade',
       'foto cnh', 'foto rg', 'foto carteira', 'fotos documento',
+      'document photo', 'passport photo', 'id photo', 'photo id', 'identity photo',
     ],
     modal: 'foto_documento',
   },
@@ -82,6 +93,7 @@ const SKILLS: Skill[] = [
     triggers: [
       'polaroid', 'polaroids', 'foto polaroid', 'montagem de fotos',
       'grid de fotos', 'colagem de fotos', 'mural de fotos', 'fotos a4',
+      'photo grid', 'photo collage', 'polaroid sheet',
     ],
     modal: 'polaroid',
   },
@@ -91,7 +103,11 @@ const SKILLS: Skill[] = [
     color: CMYK.cyan,
     desc: 'Grid de cópias da imagem em PDF A4 para impressão',
     credits: 2,
-    triggers: ['duplicar', 'duplicar imagem', 'copiar imagem', 'grid de imagem', 'multiplas copias', 'varias copias', 'repetir imagem', 'imagem em grade'],
+    triggers: [
+      'duplicar', 'duplicar imagem', 'copiar imagem', 'grid de imagem', 'multiplas copias',
+      'varias copias', 'repetir imagem', 'imagem em grade',
+      'duplicate image', 'repeat image', 'image grid', 'multiple copies', 'copy image',
+    ],
     modal: 'DuplicarImagemDisplay',
   },
   {
@@ -100,7 +116,10 @@ const SKILLS: Skill[] = [
     color: CMYK.cyan,
     desc: 'PDF com arte + linha de corte (die-cut)',
     credits: 5,
-    triggers: ['adesivo', 'sticker', 'recorte', 'corte de contorno', 'die cut', 'die-cut'],
+    triggers: [
+      'adesivo', 'sticker', 'recorte', 'corte de contorno', 'die cut', 'die-cut',
+      'sticker cutline', 'cut contour', 'contour cut', 'sticker outline',
+    ],
     modal: 'AdesivoContornoDisplay',
   },
   {
@@ -109,7 +128,10 @@ const SKILLS: Skill[] = [
     color: CMYK.cyan,
     desc: 'Transforma imagem em SVG (silhueta ou contorno)',
     credits: 1,
-    triggers: ['vetorizar', 'vetorizar imagem', 'svg', 'transformar em vetor', 'contorno vetorial', 'silhueta'],
+    triggers: [
+      'vetorizar', 'vetorizar imagem', 'svg', 'transformar em vetor', 'contorno vetorial', 'silhueta',
+      'vectorize', 'vectorize image', 'convert to vector', 'vector outline', 'vector silhouette',
+    ],
     modal: 'VetorizarImagemDisplay',
   },
   {
@@ -118,7 +140,11 @@ const SKILLS: Skill[] = [
     color: CMYK.cyan,
     desc: 'Várias cópias com arte + corte em uma folha (A4 ou personalizada)',
     credits: 10,
-    triggers: ['folha de recorte', 'folha recorte', 'grade de adesivo', 'grade de corte', 'varios adesivos', 'varias pecas', 'multiplos adesivos', 'repetir adesivo', 'repetir corte', 'folha completa de adesivo'],
+    triggers: [
+      'folha de recorte', 'folha recorte', 'grade de adesivo', 'grade de corte', 'varios adesivos',
+      'varias pecas', 'multiplos adesivos', 'repetir adesivo', 'repetir corte', 'folha completa de adesivo',
+      'cut sheet', 'sticker sheet', 'multiple stickers', 'sticker grid', 'cut grid',
+    ],
     modal: 'FolhaRecorteDisplay',
   },
   {
@@ -130,6 +156,8 @@ const SKILLS: Skill[] = [
     triggers: [
       'juntar pdf', 'juntar pdfs', 'unir pdf', 'mesclar pdf', 'dividir pdf',
       'separar pdf', 'separar paginas', 'extrair paginas', 'dividir paginas',
+      'merge pdf', 'merge pdfs', 'combine pdf', 'combine pdfs',
+      'split pdf', 'extract pages', 'separate pdf',
     ],
     modal: 'JuntarDividirPdfsDisplay',
   },
@@ -141,7 +169,7 @@ const SKILLS: Skill[] = [
     credits: 1,
     triggers: [
       'qr', 'qr code', 'qrcode', 'gerar qr', 'criar qr',
-      'link qr', 'código qr', 'código de barras 2d',
+      'link qr', 'código qr', 'código de barras 2d', 'generate qr', 'create qr',
     ],
     modal: 'gerar_qr_code',
   },
@@ -154,6 +182,7 @@ const SKILLS: Skill[] = [
     triggers: [
       'codigo de barras', 'código de barras', 'barcode', 'ean', 'ean13', 'ean-13',
       'code 128', 'code128', 'code 39', 'code39', 'gerar codigo', 'gerar código',
+      'generate barcode', 'create barcode',
     ],
     modal: 'codigo_barras',
   },
@@ -167,6 +196,7 @@ const SKILLS: Skill[] = [
       'orcamento', 'orçamento', 'gerar orcamento', 'gerar orçamento',
       'proposta', 'proposta comercial', 'pdf orcamento', 'cotacao', 'cotação',
       'nota de servico', 'nota de serviço', 'precificacao', 'precificação',
+      'quote pdf', 'estimate pdf', 'quotation', 'proposal pdf', 'commercial proposal',
     ],
     modal: 'orcamento_pdf',
   },
@@ -180,10 +210,12 @@ const SKILLS: Skill[] = [
       'converter arquivo', 'converter imagem', 'mudar formato',
       'converter pdf', 'transformar em pdf', 'transformar em imagem',
       'jpg para pdf', 'pdf para jpg', 'png para jpg',
+      'convert file', 'convert image', 'change format', 'convert pdf',
+      'image to pdf', 'pdf to image', 'jpg to pdf', 'pdf to jpg', 'png to jpg',
     ],
     modal: 'ConversorArquivoDisplay',
   },
-{
+  {
     key: 'remover_fundo',
     label: 'Remover Fundo',
     color: CMYK.cyan,
@@ -192,21 +224,24 @@ const SKILLS: Skill[] = [
     triggers: [
       'remover fundo', 'tirar fundo', 'apagar fundo', 'fundo transparente',
       'remover background', 'sem fundo', 'isolar imagem', 'recortar fundo',
+      'remove background', 'background removal', 'transparent background',
+      'erase background', 'cut out background',
     ],
     modal: 'RemoverFundoDisplay',
   },
-{
-  key: 'imagem_3d',
-  label: 'Imagem para 3D',
-  color: CMYK.cyan,
-  desc: 'Transforma uma imagem em modelo 3D (.STL/.3MF) para impressão 3D',
-  credits: 2,
-  triggers: [
-    'imagem 3d', 'imagem para 3d', 'modelo 3d', 'gerar stl', 'arquivo stl',
-    'converter para 3d', 'lithophane', '3mf', 'imprimir em 3d', 'impressao 3d',
-  ],
-  modal: 'Imagem3DDisplay',
-},
+  {
+    key: 'imagem_3d',
+    label: 'Imagem para 3D',
+    color: CMYK.cyan,
+    desc: 'Transforma uma imagem em modelo 3D (.STL/.3MF) para impressão 3D',
+    credits: 2,
+    triggers: [
+      'imagem 3d', 'imagem para 3d', 'modelo 3d', 'gerar stl', 'arquivo stl',
+      'converter para 3d', 'lithophane', '3mf', 'imprimir em 3d', 'impressao 3d',
+      'image to 3d', '3d model', 'generate stl', 'stl file', 'convert to 3d', '3d print',
+    ],
+    modal: 'Imagem3DDisplay',
+  },
 ];
 
 const norm = (s: string) =>
@@ -218,10 +253,8 @@ const norm = (s: string) =>
 // Match por palavras, com janela de distância — todas as palavras do trigger
 // precisam aparecer na frase, em qualquer ordem, mas sem ficar espalhadas
 // pela sentença inteira (evita falso positivo em frases longas e ambíguas).
-// Os triggers continuam exatamente os mesmos já cadastrados em cada skill —
-// essa mudança é só na forma de comparar, não exige adicionar frase nova.
 function triggerMatches(trigger: string, normalizedText: string, maxGapWords = 3): boolean {
-  const triggerWords = trigger.split(' ').filter(Boolean);
+  const triggerWords = norm(trigger).split(' ').filter(Boolean);
   const textWords = normalizedText.split(' ').filter(Boolean);
   const positions = triggerWords.map((tw) => textWords.indexOf(tw));
   if (positions.some((p) => p === -1)) return false;
@@ -241,6 +274,55 @@ function detectSkill(text: string): Skill | null {
     }
   }
   return best;
+}
+
+// ── Assistente de tarefas ─────────────────────────────────────────────────
+// A entrada de texto do ArteFinal é um roteador de ferramentas, não um chat
+// geral. O fallback deve SEMPRE orientar o usuário e nunca dizer que o recurso
+// está "indisponível" — isso causou a reprovação Microsoft Store 10.1.2.10.
+const GREETINGS_PT = ['oi', 'ola', 'bom dia', 'boa tarde', 'boa noite'];
+const GREETINGS_EN = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening'];
+const HELP_PT = ['ajuda', 'me ajuda', 'o que voce faz', 'como funciona', 'quais ferramentas', 'o que posso fazer'];
+const HELP_EN = ['help', 'what can you do', 'how does this work', 'which tools', 'what tools', 'features'];
+
+function matchesAnyIntent(text: string, intents: string[]): boolean {
+  const t = norm(text);
+  return intents.some((intent) => triggerMatches(intent, t, 4));
+}
+
+function likelyEnglish(text: string): boolean {
+  const t = norm(text);
+  const words = new Set(t.split(' ').filter(Boolean));
+  const englishHints = [
+    'hi', 'hello', 'hey', 'help', 'what', 'how', 'please', 'remove', 'background',
+    'vectorize', 'convert', 'merge', 'split', 'image', 'photo', 'file', 'print',
+    'bleed', 'sticker', 'crop', 'rotate', 'edit', 'barcode', 'layers',
+  ];
+  return englishHints.some((word) => words.has(word));
+}
+
+function assistantHelpMessage(english: boolean): string {
+  return english
+    ? 'I am ArteFinal’s task assistant. I help you choose and open graphic-production tools. Try: “remove background”, “vectorize image”, “convert file”, “merge PDF”, “split PDF”, “margin and bleed”, “QR code”, or select any tool below.'
+    : 'Sou o assistente de tarefas do ArteFinal. Posso ajudar você a escolher e abrir ferramentas de produção gráfica. Tente: “remover fundo”, “vetorizar imagem”, “converter arquivo”, “juntar PDF”, “dividir PDF”, “margem e sangria”, “QR Code” ou escolha uma ferramenta abaixo.';
+}
+
+function assistantGreetingMessage(english: boolean): string {
+  return english
+    ? `Hello! ${assistantHelpMessage(true)}`
+    : `Olá! ${assistantHelpMessage(false)}`;
+}
+
+function assistantFallbackMessage(english: boolean, hasFile: boolean): string {
+  if (hasFile) {
+    return english
+      ? 'I received your file, but I could not identify which operation you want yet. Tell me what you want to do, for example: “remove background”, “vectorize image”, “convert file”, “margin and bleed”, or choose a tool below.'
+      : 'Recebi seu arquivo, mas ainda não identifiquei qual operação você quer fazer. Diga o que precisa, por exemplo: “remover fundo”, “vetorizar imagem”, “converter arquivo”, “margem e sangria” ou escolha uma ferramenta abaixo.';
+  }
+
+  return english
+    ? 'I could not match that request to an ArteFinal tool yet, but I can help you choose one. Try “help”, “remove background”, “vectorize image”, “convert file”, “merge PDF”, “margin and bleed”, or select a tool below.'
+    : 'Ainda não identifiquei qual ferramenta do ArteFinal corresponde ao seu pedido, mas posso ajudar você a escolher. Tente “ajuda”, “remover fundo”, “vetorizar imagem”, “converter arquivo”, “juntar PDF”, “margem e sangria” ou escolha uma ferramenta abaixo.';
 }
 
 // ── Carrossel infinito de habilidades ─────────────────────────────────────
@@ -387,19 +469,52 @@ const openSkill = useCallback((sk: Skill, file?: File) => {
 const handleSubmit = useCallback(() => {
   const text = input.trim();
   if (!text) return;
-  setInput('');
-  setMessages((p) => [...p, { id: `u-${Date.now()}`, role: 'user', content: pendingFile ? `📎 ${pendingFile.name} — ${text}` : text }]);
 
+  setInput('');
+  setMessages((p) => [
+    ...p,
+    {
+      id: `u-${Date.now()}`,
+      role: 'user',
+      content: pendingFile ? `📎 ${pendingFile.name} — ${text}` : text,
+    },
+  ]);
+
+  // Primeiro tenta abrir uma ferramenta real. Assim, frases como
+  // "hi, remove background" continuam executando a tarefa em vez de só saudar.
   const sk = detectSkill(text);
   if (sk) {
     openSkill(sk, pendingFile ?? undefined);
     setPendingFile(null);
-  } else {
-    const disponiveis = SKILLS.map((s) => s.label).join(', ');
-    setMessages((p) => [...p, { id: `a-${Date.now()}`, role: 'assistant', content: pendingFile
-      ? `Recebi o arquivo, mas não identifiquei o que você quer fazer com ele. Por enquanto eu faço: ${disponiveis}. Diga uma dessas opções ou toque na habilidade abaixo.`
-      : `Essa ferramenta ainda não está disponível. Por enquanto eu faço: ${disponiveis}. Toque na habilidade abaixo para começar.` }]);
+    return;
   }
+
+  const english = likelyEnglish(text);
+
+  if (matchesAnyIntent(text, GREETINGS_PT) || matchesAnyIntent(text, GREETINGS_EN)) {
+    setMessages((p) => [
+      ...p,
+      { id: `a-${Date.now()}`, role: 'assistant', content: assistantGreetingMessage(english) },
+    ]);
+    return;
+  }
+
+  if (matchesAnyIntent(text, HELP_PT) || matchesAnyIntent(text, HELP_EN)) {
+    setMessages((p) => [
+      ...p,
+      { id: `a-${Date.now()}`, role: 'assistant', content: assistantHelpMessage(english) },
+    ]);
+    return;
+  }
+
+  setMessages((p) => [
+    ...p,
+    {
+      id: `a-${Date.now()}`,
+      role: 'assistant',
+      content: assistantFallbackMessage(english, Boolean(pendingFile)),
+    },
+  ]);
 }, [input, pendingFile, openSkill]);
 
   const closeModal = useCallback(async () => {
@@ -587,7 +702,7 @@ const handleSubmit = useCallback(() => {
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); } }}
-        placeholder={pendingFile ? 'O que você quer fazer com esse arquivo?' : 'Ex: cartões e folhetos, converter, corte…'}
+        placeholder={pendingFile ? 'O que você quer fazer com esse arquivo?' : 'Ex: remover fundo / remove background, converter PDF…'}
         className="flex-1 bg-transparent outline-none text-sm"
         style={{ color: '#1e293b' }}
       />

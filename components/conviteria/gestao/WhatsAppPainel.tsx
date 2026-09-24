@@ -429,19 +429,24 @@ https://${slug}.conviteia.com`;
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-2xl">
           <div className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-[#a04a63]"/><h2 className="text-lg font-semibold">WhatsApp do Evento</h2></div>
-          <p className="mt-2 text-sm leading-6 text-[#7c5560]">Até <strong>600 mensagens</strong>, com no máximo 2 comunicações por família/contato. O botão de confirmação usa a mesma lista do convite, CSV, mesas e check-in.</p>
+          <p className="mt-2 text-sm leading-6 text-[#7c5560]">São no máximo <strong>2 comunicações por família/contato</strong>: a primeira mensagem e um lembrete. O botão de confirmação usa a mesma lista do convite, CSV, mesas e check-in.</p>
         </div>
         <div className={`rounded-full px-3 py-1.5 text-xs font-bold ${ativo?'bg-emerald-50 text-emerald-700':aguardando?'bg-amber-50 text-amber-700':'bg-[#fff0f4] text-[#a04a63]'}`}>
           {ativo ? 'ATIVO' : aguardando ? 'AGUARDANDO PIX' : brl(estado.precoCentavos)}
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-4">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl bg-[#fff9fb] p-3"><p className="text-xs text-[#7c5560]">Contatos com WhatsApp</p><p className="mt-1 text-xl font-semibold">{estado.contatosComWhatsApp}</p></div>
         <div className="rounded-xl bg-[#fff9fb] p-3"><p className="text-xs text-[#7c5560]">Aguardando RSVP</p><p className="mt-1 text-xl font-semibold">{estado.pendentesRsvp}</p></div>
-        <div className="rounded-xl bg-[#fff9fb] p-3"><p className="text-xs text-[#7c5560]">Mensagens usadas</p><p className="mt-1 text-xl font-semibold">{estado.mensagensUsadas}</p></div>
-        <div className="rounded-xl bg-[#fff9fb] p-3"><p className="text-xs text-[#7c5560]">Restantes</p><p className="mt-1 text-xl font-semibold">{estado.mensagensRestantes}</p></div>
       </div>
+
+      {estado.mensagensRestantes <= 0 && (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <strong>Limite técnico de mensagens atingido.</strong>
+          <p className="mt-1 leading-5">Se ainda houver contatos pendentes em uma das duas comunicações previstas, entre em contato com o suporte. Este limite não libera comunicações adicionais.</p>
+        </div>
+      )}
     </div>
 
     <div className={`rounded-2xl border p-4 ${bloqueadoPrazo ? 'border-amber-300 bg-amber-50/70' : 'border-emerald-200 bg-emerald-50/50'}`}>

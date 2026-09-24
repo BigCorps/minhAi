@@ -5,15 +5,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   FileText,
-  Palette,
   Plus,
   Sparkles,
-  UsersRound,
 } from 'lucide-react';
 import RendaBackground from '@/components/conviteria/RendaBackground';
-import RodapeMarca from '@/components/conviteria/RodapeMarca';
-import SuporteWhatsapp from '@/components/conviteria/SuporteWhatsapp';
 import BriefingInteligente from '@/components/conviteria/BriefingInteligente';
+import LandingExplicativa from '@/components/conviteria/LandingExplicativa';
 import { createClient } from '@/lib/supabase-browser';
 
 export default function PaginaInicialConvite() {
@@ -204,53 +201,8 @@ export default function PaginaInicialConvite() {
         </div>
       </section>
 
-      {/* A partir daqui só aparece quando o usuário rolar. */}
-      <section className="cv-landing-abaixo" aria-label="Conheça a ConviteIA">
-        <div className="cv-landing-beneficios-cabecalho">
-          <span>Do primeiro texto ao convite publicado</span>
-          <h2>Você dá a ideia. A ConviteIA organiza o resto.</h2>
-        </div>
-
-        <div className="cv-landing-beneficios-grid">
-          <article>
-            <span className="cv-landing-beneficio-icone">
-              <Sparkles className="h-6 w-6" />
-            </span>
-            <h3>Comece com IA</h3>
-            <p>
-              Conte sua ideia naturalmente. A IA adianta tipo, estilo, nomes,
-              data, recursos e outras informações que conseguir identificar.
-            </p>
-          </article>
-
-          <article>
-            <span className="cv-landing-beneficio-icone">
-              <Palette className="h-6 w-6" />
-            </span>
-            <h3>Personalize tudo</h3>
-            <p>
-              Escolha cores, fontes, textura, envelope, foto, música, selo,
-              presentes e a ordem das seções.
-            </p>
-          </article>
-
-          <article>
-            <span className="cv-landing-beneficio-icone">
-              <UsersRound className="h-6 w-6" />
-            </span>
-            <h3>Cuide dos convidados</h3>
-            <p>
-              Centralize confirmações de presença, lista de presentes e recados
-              em um único convite e acompanhe tudo pelo painel.
-            </p>
-          </article>
-        </div>
-
-        <div className="cv-landing-pos-beneficios">
-          <SuporteWhatsapp assunto="Tenho uma dúvida sobre a ConviteIA" />
-          <RodapeMarca />
-        </div>
-      </section>
+      {/* A primeira dobra acima permanece intocada. Toda a explicação nova começa daqui. */}
+      <LandingExplicativa />
     </main>
   );
 }

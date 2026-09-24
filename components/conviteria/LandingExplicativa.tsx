@@ -140,14 +140,13 @@ export default function LandingExplicativa() {
                   <Image src="/brands/convite/icone-512.png" alt="" width={88} height={88} aria-hidden="true" />
                 </span>
                 <span className={styles.videoTexto}>
-                  <strong>Veja o ConviteIA funcionando</strong>
-                  <small>O vídeo se adapta automaticamente à orientação da sua tela.</small>
+                  <strong>Assista o vídeo de apresentação da ConviteIA.</strong>
                 </span>
                 <span className={styles.play}><Play className="h-7 w-7" fill="currentColor" /></span>
               </button>
             )}
           </div>
-          <p className={styles.videoNota}>Celular em pé usa a versão vertical. Desktop, tablet largo ou celular deitado usam a versão horizontal.</p>
+          <p className={styles.videoNota}>O vídeo se adapta automaticamente à orientação da sua tela.</p>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from 'next';
 import JsonLd from '@/components/JsonLd';
 import { buildBrandMetadata, melhoriaGraph, resolveSeo } from '@/lib/seo';
 import EscalaTexto from '@/components/melhoria/EscalaTexto';
+import MelhoriaMetaPixel from '@/components/analytics/MelhoriaMetaPixel';
 
 export const dynamic = 'force-dynamic';
 
@@ -130,6 +131,7 @@ export default async function MelhoriaLayout({
       />
 
       {brand === 'melhoria' && <JsonLd data={melhoriaGraph()} />}
+      {brand === 'melhoria' && <MelhoriaMetaPixel />}
 
       {/*
         O tamanho de letra escolhido pela pessoa vale para TODAS as telas.

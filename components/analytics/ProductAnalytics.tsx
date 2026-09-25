@@ -9,6 +9,11 @@ import {
   trackEvent,
   trackEventOnce,
 } from '@/lib/analytics';
+import {
+  trackMelhoriaMetaActivation,
+  trackMelhoriaMetaInitiateCheckout,
+  trackMelhoriaMetaPurchase,
+} from '@/lib/meta-pixel-melhoria';
 
 type ProductKey =
   | 'artefinal'
@@ -293,6 +298,7 @@ function inspectMelhoria(text: string, url: URL) {
     trackSessionOnce('melhoria:account_activated', 'account_activated', {
       product: 'melhoria',
     });
+    trackMelhoriaMetaActivation();
     safeSessionRemove(MELHORIA_ACTIVATION_KEY);
   }
 
@@ -311,6 +317,7 @@ function inspectMelhoria(text: string, url: URL) {
         item_category: existing.itemCategory,
         purchase_type: 'credits',
       });
+      trackMelhoriaMetaPurchase(existing.transactionId, existing.value);
       safeSessionRemove(MELHORIA_CHECKOUT_KEY);
     }
     return;
@@ -336,6 +343,7 @@ function inspectMelhoria(text: string, url: URL) {
         item_category: checkout.itemCategory,
         purchase_type: checkout.purchaseType,
       });
+      trackMelhoriaMetaInitiateCheckout(transactionId, value);
     }
     return;
   }

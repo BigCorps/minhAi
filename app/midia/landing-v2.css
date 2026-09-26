@@ -3124,14 +3124,14 @@ html {
   .mp-float-screen-left {
     width: 112px;
     height: 199px;
-    left: 4%;
-    top: 22%;
+    left: 9%;
+    top: 23%;
   }
 
   .mp-float-screen-right {
     width: 124px;
     height: 220px;
-    right: 1%;
-    top: 16%;
+    right: 7%;
+    top: 17%;
   }
 }

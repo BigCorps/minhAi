@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Building2, Check, Copy, Download, ExternalLink, FileImage, Loader2, MapPin, MonitorPlay,
+  Building2, Check, CircleDollarSign, Copy, Download, ExternalLink, FileImage, Loader2, MapPin, Megaphone, MonitorPlay,
   MonitorSmartphone, Plus, QrCode, RefreshCw, Trash2, Upload, Video, Wifi, WifiOff,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
@@ -32,7 +32,9 @@ type PlaylistItem = {
 type DashboardState = { publisher: Publisher | null; locations: Location[]; screens: Screen[]; plans: Plan[]; devices: Device[]; playlist: PlaylistItem[]; campaigns: MidiaCampaignSummary[]; finance: MidiaFinanceState | null };
 type PairInfo = { code: string; expiresAt: string; playerUrl: string; activationPending: boolean };
 
-export default function MidiaDashboard() {
+export type MidiaDashboardSection = 'overview' | 'screens' | 'ads' | 'media' | 'finance';
+
+export default function MidiaDashboard({ section = 'overview' }: { section?: MidiaDashboardSection }) {
   const [data, setData] = useState<DashboardState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,26 +61,119 @@ export default function MidiaDashboard() {
   if (loading && !data) return <div className="flex min-h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" style={{ color: MIDIA_BRAND.blue }} /></div>;
   if (error && !data) return <div className="mx-auto max-w-xl rounded-3xl border border-red-200 bg-white p-7 text-center shadow-sm"><p className="font-bold text-red-700">{error}</p><button onClick={() => void load()} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white"><RefreshCw className="h-4 w-4" /> Tentar novamente</button></div>;
   if (!data) return null;
-  if (!data.publisher) return <PublisherSetup onCreated={load} action={action} setAction={setAction} />;
+
+  if (!data.publisher) {
+    return (
+      <div>
+        <div className="mb-7 rounded-[30px] border border-blue-100 bg-white p-6 shadow-sm sm:p-8">
+          <div className="text-xs font-black uppercase tracking-[.18em]" style={{ color: MIDIA_BRAND.red }}>Bem-vindo à Midia.Pro</div>
+          <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Sua central de mídia começa aqui.</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">Depois do cadastro você poderá controlar telas e conteúdos, receber anúncios pagos da rede e acompanhar saldo e repasses. O menu acima continuará disponível em todas as páginas.</p>
+        </div>
+        <PublisherSetup onCreated={load} action={action} setAction={setAction} />
+      </div>
+    );
+  }
+
+  const onlineScreens = data.screens.filter((screen) => {
+    const device = data.devices.find((item) => item.screenId === screen.id);
+    if (!device?.lastSeenAt) return false;
+    const lastSeen = new Date(device.lastSeenAt).getTime();
+    return Number.isFinite(lastSeen) && Date.now() - lastSeen < 2 * 60_000;
+  }).length;
+  const pendingAds = (data.campaigns ?? []).filter((campaign) => campaign.status === 'under_review').length;
+
+  const header = (
+    <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+      <div>
+        <div className="text-xs font-black uppercase tracking-[.18em]" style={{ color: MIDIA_BRAND.red }}>Central Midia.Pro</div>
+        <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{data.publisher.displayName}</h1>
+        <a href={data.publisher.publicUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-sm font-black hover:underline" style={{ color: MIDIA_BRAND.blue }}>{data.publisher.slug}.midia.pro <ExternalLink className="h-3.5 w-3.5" /></a>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:flex"><Stat value={String(data.locations.length)} label="locais" /><Stat value={String(data.screens.length)} label="telas" /></div>
+    </div>
+  );
 
   return (
     <div>
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div><div className="text-xs font-black uppercase tracking-[.18em]" style={{ color: MIDIA_BRAND.red }}>Minha rede de telas</div><h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{data.publisher.displayName}</h1><a href={data.publisher.publicUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-sm font-black hover:underline" style={{ color: MIDIA_BRAND.blue }}>{data.publisher.slug}.midia.pro <ExternalLink className="h-3.5 w-3.5" /></a></div>
-        <div className="grid grid-cols-2 gap-3 sm:flex"><Stat value={String(data.locations.length)} label="locais" /><Stat value={String(data.screens.length)} label="telas" /></div>
-      </div>
-
+      {header}
       {error && <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</div>}
 
-      <section className="mt-8 grid gap-6 xl:grid-cols-[.8fr_1.2fr]">
-        <LocationPanel locations={data.locations} onCreated={load} action={action} setAction={setAction} />
-        <ScreenPanel publisherSlug={data.publisher.slug} locations={data.locations} screens={data.screens} plans={data.plans} devices={data.devices} pairing={pairing} setPairing={setPairing} onCreated={load} action={action} setAction={setAction} />
+      {section === 'overview' && (
+        <DashboardOverview
+          locations={data.locations.length}
+          screens={data.screens.length}
+          onlineScreens={onlineScreens}
+          pendingAds={pendingAds}
+          mediaCount={data.playlist.length}
+          availableCents={data.finance?.wallet.availableCents ?? 0}
+        />
+      )}
+
+      {section === 'screens' && (
+        <section className="mt-8 grid gap-6 xl:grid-cols-[.8fr_1.2fr]">
+          <LocationPanel locations={data.locations} onCreated={load} action={action} setAction={setAction} />
+          <ScreenPanel publisherSlug={data.publisher.slug} locations={data.locations} screens={data.screens} plans={data.plans} devices={data.devices} pairing={pairing} setPairing={setPairing} onCreated={load} action={action} setAction={setAction} />
+        </section>
+      )}
+
+      {section === 'ads' && (
+        <div className="mt-8">
+          <div className="mb-5 rounded-2xl border border-blue-100 bg-white p-5">
+            <div className="flex items-center gap-2 font-black"><Megaphone className="h-5 w-5" style={{ color: MIDIA_BRAND.red }} /> Anúncios na sua rede</div>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Aprove, devolva para ajuste e acompanhe as campanhas compradas para suas telas. O QR individual de cada tela fica em <strong>Telas e locais</strong>.</p>
+          </div>
+          <MidiaCampaignReviewPanel campaigns={data.campaigns ?? []} onChanged={load} />
+        </div>
+      )}
+
+      {section === 'media' && (
+        <div className="mt-8">
+          <MediaPanel screens={data.screens} playlist={data.playlist} onChanged={load} />
+        </div>
+      )}
+
+      {section === 'finance' && (
+        <div className="mt-8">
+          {data.finance ? <MidiaFinancePanel finance={data.finance} onChanged={load} /> : <Empty text="O financeiro aparecerá depois que sua conta estiver configurada." />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DashboardOverview({ locations, screens, onlineScreens, pendingAds, mediaCount, availableCents }: { locations: number; screens: number; onlineScreens: number; pendingAds: number; mediaCount: number; availableCents: number }) {
+  return (
+    <div className="mt-8">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <OverviewCard href="/dashboard/telas" icon={<MonitorSmartphone className="h-6 w-6" />} title="Telas e locais" value={`${screens} tela${screens === 1 ? '' : 's'}`} description={`${onlineScreens} online agora · ${locations} local${locations === 1 ? '' : 'is'}`} />
+        <OverviewCard href="/dashboard/anuncios" icon={<Megaphone className="h-6 w-6" />} title="Anúncios" value={pendingAds ? `${pendingAds} aguardando` : 'Tudo em dia'} description="Campanhas pagas e aprovações da sua rede." />
+        <OverviewCard href="/dashboard/midias" icon={<FileImage className="h-6 w-6" />} title="Minhas mídias" value={`${mediaCount} ativa${mediaCount === 1 ? '' : 's'}`} description="Imagens e vídeos próprios exibidos nas telas." />
+        <OverviewCard href="/dashboard/financeiro" icon={<CircleDollarSign className="h-6 w-6" />} title="Financeiro" value={formatBrlCents(availableCents)} description="Saldo disponível para saque e histórico." />
       </section>
 
-      {data.finance && <MidiaFinancePanel finance={data.finance} onChanged={load} />}
-      <MidiaCampaignReviewPanel campaigns={data.campaigns ?? []} onChanged={load} />
-      <MediaPanel screens={data.screens} playlist={data.playlist} onChanged={load} />
+      <section className="mt-6 rounded-[28px] border border-blue-100 bg-white p-6 sm:p-7">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="text-xs font-black uppercase tracking-[.16em]" style={{ color: MIDIA_BRAND.blue }}>Comece por onde precisar</div>
+            <h2 className="mt-2 text-2xl font-black">O painel agora está separado por função.</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Cadastre e pareie telas em <strong>Telas e locais</strong>, acompanhe publicidade paga em <strong>Anúncios</strong>, gerencie sua programação própria em <strong>Minhas mídias</strong> e consulte repasses em <strong>Financeiro</strong>.</p>
+          </div>
+          <a href="/dashboard/telas" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-black text-white" style={{ backgroundColor: MIDIA_BRAND.blue }}><Plus className="h-4 w-4" /> Cadastrar ou gerenciar tela</a>
+        </div>
+      </section>
     </div>
+  );
+}
+
+function OverviewCard({ href, icon, title, value, description }: { href: string; icon: React.ReactNode; title: string; value: string; description: string }) {
+  return (
+    <a href={href} className="group rounded-[24px] border border-blue-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-950/5">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 transition group-hover:bg-blue-100" style={{ color: MIDIA_BRAND.blue }}>{icon}</div>
+      <div className="mt-4 text-xs font-black uppercase tracking-[.13em] text-slate-400">{title}</div>
+      <div className="mt-1 text-2xl font-black text-slate-950">{value}</div>
+      <p className="mt-2 text-xs leading-5 text-slate-500">{description}</p>
+    </a>
   );
 }
 

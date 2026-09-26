@@ -19,7 +19,13 @@ export async function GET() {
 
   if (plansError) {
     console.error('[midia/dashboard] plan catalog:', plansError);
-    return NextResponse.json({ error: 'Não foi possível carregar os planos.' }, { status: 500 });
+    const message = String(plansError.message || '').toLowerCase();
+    const schemaNotExposed = plansError.code === 'PGRST106' || message.includes('schema must be one of') || message.includes('schema is not exposed');
+    return NextResponse.json({
+      error: schemaNotExposed
+        ? 'Configuração pendente no Supabase: adicione o schema midia aos Exposed schemas em Data API.'
+        : 'Não foi possível carregar os planos.',
+    }, { status: 500 });
   }
 
   const { data: publisher, error: publisherError } = await admin

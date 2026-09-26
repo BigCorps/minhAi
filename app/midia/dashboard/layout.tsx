@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { getUser } from '@/lib/supabase-server';
 import MidiaLogoutButton from '@/components/midia/MidiaLogoutButton';
+import MidiaDashboardNav from '@/components/midia/MidiaDashboardNav';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
@@ -33,12 +34,13 @@ export default async function MidiaDashboardLayout({ children }: { children: Rea
           <div className="flex min-w-0 items-center gap-3">
             <div className="hidden min-w-0 text-right sm:block">
               <div className="truncate text-xs font-black text-slate-700">{user.email}</div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Painel do proprietário</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Central Midia.Pro</div>
             </div>
             <MidiaLogoutButton />
           </div>
         </div>
       </header>
+      <MidiaDashboardNav basePath={dashboardHref} />
       <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-10">{children}</div>
     </main>
   );

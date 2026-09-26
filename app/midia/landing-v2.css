@@ -632,20 +632,17 @@ html {
 
 
 .mp-float-screen-image {
-  padding: 18px;
-  background: #08101f;
+  padding: 10px;
+  background: #f8fbff;
 }
 
 .mp-float-screen-image::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: linear-gradient(to top, rgba(3,8,20,.84), rgba(3,8,20,.2) 52%, transparent);
+  display: none;
 }
 
 .mp-float-screen-media {
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 
 .mp-hero-money,
@@ -1337,14 +1334,10 @@ html {
   width: 260px;
   aspect-ratio: 9/12;
   flex: none;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,.09);
   border-radius: 26px;
-  padding: 22px;
-  color: #fff;
+  background: rgba(255,255,255,.04);
   box-shadow: 0 20px 45px rgba(0,0,0,.18);
 }
 
@@ -1370,22 +1363,15 @@ html {
 
 
 .mp-product-card-image {
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 
-.mp-product-card-shade {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(to top, rgba(3,8,20,.92) 0%, rgba(3,8,20,.6) 28%, rgba(3,8,20,.18) 58%, rgba(3,8,20,.1) 100%),
-    linear-gradient(120deg, rgba(255,255,255,.1), transparent 38%);
-}
-
+.mp-product-card-shade,
 .mp-product-card-top,
 .mp-product-card-foot,
 .mp-product-card > strong {
-  position: relative;
-  z-index: 2;
+  display: none;
 }
 
 .mp-product-card > strong {
@@ -3124,4 +3110,11 @@ html {
     transform: none !important;
     transition: none !important;
   }
+}
+
+
+.mp-float-screen-image span,
+.mp-float-screen-image b,
+.mp-float-screen-image small {
+  display: none;
 }

@@ -802,7 +802,7 @@ function HeroNetwork({ creativeIndex }: { creativeIndex: number }) {
       <div className="mp-network-orbit mp-network-orbit-one" aria-hidden="true" />
       <div className="mp-network-orbit mp-network-orbit-two" aria-hidden="true" />
 
-      <div className="mp-float-screen mp-float-screen-left mp-float-screen-image">
+      <div className="mp-float-screen mp-float-screen-left mp-float-screen-image" aria-label={`Criativo ${leftCreative.name}`}>
         <Image
           src={leftCreative.src}
           alt={`Criativo ${leftCreative.name}`}
@@ -810,12 +810,9 @@ function HeroNetwork({ creativeIndex }: { creativeIndex: number }) {
           sizes="220px"
           className="mp-float-screen-media"
         />
-        <span>LOJA</span>
-        <b>{leftCreative.name}</b>
-        <small>campanha BigCorps</small>
       </div>
 
-      <div className="mp-float-screen mp-float-screen-right mp-float-screen-image">
+      <div className="mp-float-screen mp-float-screen-right mp-float-screen-image" aria-label={`Criativo ${rightCreative.name}`}>
         <Image
           src={rightCreative.src}
           alt={`Criativo ${rightCreative.name}`}
@@ -823,9 +820,6 @@ function HeroNetwork({ creativeIndex }: { creativeIndex: number }) {
           sizes="240px"
           className="mp-float-screen-media"
         />
-        <span>EM EXIBIÇÃO</span>
-        <b>{rightCreative.name}</b>
-        <small>mídia da rede</small>
       </div>
 
       <div className="mp-main-device">
@@ -982,10 +976,7 @@ function StoryScreen({ active }: { active: number }) {
 
 function ProductCreative({
   name,
-  text,
-  tone,
   src,
-  domain,
 }: {
   name: string;
   text: string;
@@ -994,7 +985,7 @@ function ProductCreative({
   domain: string;
 }) {
   return (
-    <article className={`mp-product-card mp-product-${tone}`}>
+    <article className="mp-product-card" aria-label={`Criativo ${name}`}>
       <Image
         src={src}
         alt={`Criativo ${name}`}
@@ -1002,19 +993,10 @@ function ProductCreative({
         sizes="260px"
         className="mp-product-card-image"
       />
-      <div className="mp-product-card-shade" aria-hidden="true" />
-      <div className="mp-product-card-top">
-        <span>{name}</span>
-        <Play />
-      </div>
-      <strong>{text}</strong>
-      <div className="mp-product-card-foot">
-        <small>BIGCORPS</small>
-        <b>{domain}</b>
-      </div>
     </article>
   );
 }
+
 
 function PathCard({
   number,

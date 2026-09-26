@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import MidiaSessionRouteGuard from '@/components/midia/MidiaSessionRouteGuard';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://midia.pro'),
@@ -41,5 +42,5 @@ export const viewport: Viewport = {
 };
 
 export default function MidiaLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <MidiaSessionRouteGuard>{children}</MidiaSessionRouteGuard>;
 }

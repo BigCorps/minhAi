@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { getUser } from '@/lib/supabase-server';
 import MidiaLogoutButton from '@/components/midia/MidiaLogoutButton';
-import MidiaDashboardNav from '@/components/midia/MidiaDashboardNav';
+import './dashboard-light.css';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
@@ -25,7 +25,7 @@ export default async function MidiaDashboardLayout({ children }: { children: Rea
   if (!user) redirect(loginHref);
 
   return (
-    <main className="min-h-screen bg-[#F7F9FF] text-slate-950">
+    <main className="midia-dashboard-light min-h-screen bg-[#F7F9FF] text-slate-950">
       <header className="border-b border-blue-100 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <Link href={dashboardHref} className="flex items-center gap-3">
@@ -34,13 +34,12 @@ export default async function MidiaDashboardLayout({ children }: { children: Rea
           <div className="flex min-w-0 items-center gap-3">
             <div className="hidden min-w-0 text-right sm:block">
               <div className="truncate text-xs font-black text-slate-700">{user.email}</div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Central Midia.Pro</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Painel do proprietário</div>
             </div>
             <MidiaLogoutButton />
           </div>
         </div>
       </header>
-      <MidiaDashboardNav basePath={dashboardHref} />
       <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-10">{children}</div>
     </main>
   );

@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   CircleDollarSign,
   Gauge,
+  Images,
   LogOut,
   MessageCircle,
   MonitorPlay,
@@ -22,7 +23,8 @@ export type AdminSection =
   | 'attention'
   | 'now'
   | 'whatsapp'
-  | 'midia';
+  | 'midia'
+  | 'midia-creatives';
 
 type Props = {
   admin: AdminIdentity;
@@ -40,6 +42,7 @@ const NAV = [
   { key: 'now', label: 'Agora', suffix: '/agora', icon: Activity },
   { key: 'whatsapp', label: 'WhatsApp', suffix: '/whatsapp', icon: MessageCircle },
   { key: 'midia', label: 'Midia.Pro', suffix: '/midia', icon: MonitorPlay },
+  { key: 'midia-creatives', label: 'Criativos', suffix: '/midia?view=criativos', icon: Images },
 ] as const;
 
 function hrefFor(basePath: '' | '/admin', suffix: string) {

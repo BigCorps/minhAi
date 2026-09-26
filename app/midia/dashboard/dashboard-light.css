@@ -1,0 +1,49 @@
+/*
+ * Midia.Pro é um produto exclusivamente light.
+ * O projeto minhAi compartilha a classe `dark` no documento em alguns
+ * dispositivos/preferências; por isso os controles nativos do dashboard
+ * precisam ser explicitamente claros, sem depender do tema global.
+ */
+
+.midia-dashboard-light {
+  color-scheme: light !important;
+}
+
+.midia-dashboard-light input:not([type='checkbox']):not([type='radio']):not([type='file']),
+.midia-dashboard-light select,
+.midia-dashboard-light textarea {
+  color-scheme: light !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+  -webkit-text-fill-color: #0f172a !important;
+}
+
+.midia-dashboard-light input::placeholder,
+.midia-dashboard-light textarea::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+
+.midia-dashboard-light select option {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.midia-dashboard-light input:-webkit-autofill,
+.midia-dashboard-light input:-webkit-autofill:hover,
+.midia-dashboard-light input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #0f172a !important;
+}
+
+.midia-dashboard-light input:disabled,
+.midia-dashboard-light select:disabled,
+.midia-dashboard-light textarea:disabled {
+  background-color: #f8fafc !important;
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}

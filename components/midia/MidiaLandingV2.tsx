@@ -54,19 +54,19 @@ const RED = '#EA0D16';
 const heroCreatives = [
   {
     name: 'MonitorIA',
-    badge: 'CAMPANHA BIGCORPS',
+    badge: 'ANUNCIANTE PARCEIRO',
     src: '/brands/midia/ads/monitoria.png',
     alt: 'Criativo vertical da MonitorIA',
   },
   {
     name: 'ConviteIA',
-    badge: 'CAMPANHA BIGCORPS',
+    badge: 'ANUNCIANTE PARCEIRO',
     src: '/brands/midia/ads/conviteia.png',
     alt: 'Criativo vertical do ConviteIA',
   },
   {
     name: 'PixWiki',
-    badge: 'CAMPANHA BIGCORPS',
+    badge: 'ANUNCIANTE PARCEIRO',
     src: '/brands/midia/ads/pixwiki.png',
     alt: 'Criativo vertical do PixWiki',
   },
@@ -432,7 +432,7 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
 
             <p>
               Quando não houver campanha paga, a rede pode preencher o inventário disponível
-              com campanhas BigCorps e parceiros. Campanhas pagas sempre têm prioridade.
+              com campanhas de parceiros e anunciantes. Campanhas pagas sempre têm prioridade.
             </p>
           </div>
         </div>
@@ -747,7 +747,7 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
         <div className="mp-shell">
           <div>
             <Image src="/brands/midia/logo.png" alt="Midia.Pro" width={120} height={120} />
-            <span>Tecnologia BigCorps</span>
+            <span>Desenvolvido por BigCorps | Tecnologia minhAi</span>
           </div>
           <div>
             <Link href={loginHref}>Entrar</Link>
@@ -802,7 +802,7 @@ function HeroNetwork({ creativeIndex }: { creativeIndex: number }) {
       <div className="mp-network-orbit mp-network-orbit-one" aria-hidden="true" />
       <div className="mp-network-orbit mp-network-orbit-two" aria-hidden="true" />
 
-      <div className="mp-float-screen mp-float-screen-left mp-float-screen-image" aria-label={`Criativo ${leftCreative.name}`}>
+      <div className="mp-float-screen mp-float-screen-left mp-float-screen-image">
         <Image
           src={leftCreative.src}
           alt={`Criativo ${leftCreative.name}`}
@@ -810,9 +810,12 @@ function HeroNetwork({ creativeIndex }: { creativeIndex: number }) {
           sizes="220px"
           className="mp-float-screen-media"
         />
+        <span>LOJA</span>
+        <b>{leftCreative.name}</b>
+        <small>campanha parceira</small>
       </div>
 
-      <div className="mp-float-screen mp-float-screen-right mp-float-screen-image" aria-label={`Criativo ${rightCreative.name}`}>
+      <div className="mp-float-screen mp-float-screen-right mp-float-screen-image">
         <Image
           src={rightCreative.src}
           alt={`Criativo ${rightCreative.name}`}
@@ -820,6 +823,9 @@ function HeroNetwork({ creativeIndex }: { creativeIndex: number }) {
           sizes="240px"
           className="mp-float-screen-media"
         />
+        <span>EM EXIBIÇÃO</span>
+        <b>{rightCreative.name}</b>
+        <small>mídia da rede</small>
       </div>
 
       <div className="mp-main-device">
@@ -976,7 +982,10 @@ function StoryScreen({ active }: { active: number }) {
 
 function ProductCreative({
   name,
+  text,
+  tone,
   src,
+  domain,
 }: {
   name: string;
   text: string;
@@ -985,7 +994,7 @@ function ProductCreative({
   domain: string;
 }) {
   return (
-    <article className="mp-product-card" aria-label={`Criativo ${name}`}>
+    <article className={`mp-product-card mp-product-${tone}`}>
       <Image
         src={src}
         alt={`Criativo ${name}`}
@@ -993,10 +1002,19 @@ function ProductCreative({
         sizes="260px"
         className="mp-product-card-image"
       />
+      <div className="mp-product-card-shade" aria-hidden="true" />
+      <div className="mp-product-card-top">
+        <span>{name}</span>
+        <Play />
+      </div>
+      <strong>{text}</strong>
+      <div className="mp-product-card-foot">
+        <small>PARCEIRO</small>
+        <b>{domain}</b>
+      </div>
     </article>
   );
 }
-
 
 function PathCard({
   number,

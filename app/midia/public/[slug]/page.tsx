@@ -125,7 +125,7 @@ export default async function MidiaPublisherPublicPage({ params }: { params: Pro
           )}
         </section>
 
-        <p className="mt-6 text-center text-xs font-bold text-slate-400">Midia.Pro · Tecnologia BigCorps</p>
+        <p className="mt-6 text-center text-xs font-bold text-slate-400">Desenvolvido por BigCorps | Tecnologia minhAi</p>
       </div>
     </main>
   );

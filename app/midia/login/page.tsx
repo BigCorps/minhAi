@@ -207,7 +207,7 @@ export default function MidiaLoginPage() {
             <Link href="https://www.minhai.app/termos" className="hover:text-slate-600">Termos</Link>
             <span className="mx-2">•</span>
             <Link href="https://www.minhai.app/aviso" className="hover:text-slate-600">Privacidade</Link>
-            <p className="mt-3">Midia.Pro · Tecnologia BigCorps</p>
+            <p className="mt-3">Desenvolvido por BigCorps | Tecnologia minhAi</p>
           </footer>
         </section>
       </div>

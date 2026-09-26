@@ -1,0 +1,23 @@
+# Midia.Pro
+
+Midia.Pro é uma plataforma da BigCorps para gerenciamento e monetização de telas de mídia digital.
+
+## Para proprietários de telas
+- Gerencie TVs, tablets, painéis LED, telas em veículos, elevadores e outros pontos.
+- Exiba suas próprias imagens e vídeos.
+- No modo Parceiro, disponibilize parte da programação para anúncios da rede e participe da receita.
+- Cada proprietário recebe um endereço próprio no formato `slug.midia.pro`.
+
+## Para anunciantes
+- Anuncie em telas participantes da rede Midia.Pro.
+- A entrada comercial parte de R$ 4,90 para uma exibição simples.
+- Frequência, duração, horário e categoria da tela alteram o preço.
+
+## Modelo comercial inicial
+- Parceiro Midia.Pro: sem mensalidade e com parte da programação disponível para a rede.
+- Uso Próprio: a partir de R$ 19,90 por tela/mês, sem anúncios da rede.
+- Venda originada pela própria tela: divisão comercial prevista de 80% para o parceiro e 20% para Midia.Pro, após custos aplicáveis.
+- Campanha vendida pela rede: divisão comercial prevista de 50% para o parceiro e 50% para Midia.Pro, proporcional à entrega efetiva.
+
+Site oficial: https://midia.pro
+Empresa: BigCorps

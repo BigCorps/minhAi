@@ -1,16 +1,10 @@
 'use client';
 // components/CookieConsentBanner.tsx
 //
-// Banner de consentimento de cookies (LGPD). Não inicializa o Clarity —
-// isso já é feito em outro lugar (ClarityInit.tsx, conforme o relatório
-// de implementação). Esse componente informa a escolha ao Clarity, ao
-// Google Consent Mode v2 e aos pixels publicitários das marcas.
-//
-// Guarda a escolha em localStorage — o banner não aparece de novo depois
-// que o usuário decide, em nenhum dos dois casos (aceitar ou recusar).
-//
-// As cores vêm de `BRANDS[marca]`, não são fixas: o mesmo banner aparece na
-// minhAi, no Convite IA, no ArteFinal, no Pix Wiki e no ConsultaTec.
+// Banner compartilhado de consentimento (LGPD). A Midia.Pro usa o mesmo
+// mecanismo de consentimento da plataforma, mas aplica sua identidade azul /
+// vermelha sem obrigar o restante do monorepo a conhecer a marca nesta fase.
+
 import { useEffect, useState } from 'react';
 import Clarity from '@microsoft/clarity';
 import { useMarca } from '@/lib/useMarca';
@@ -20,6 +14,12 @@ import {
 } from '@/lib/analytics';
 import { announceAnalyticsConsent } from '@/lib/meta-pixel';
 
+const MIDIA_COOKIE_BRAND = {
+  cor: '#003295',
+  corTextoBotao: '#ffffff',
+  corTexto: '#003295',
+} as const;
+
 function applyConsent(granted: boolean) {
   try {
     Clarity.consentV2({
@@ -27,38 +27,37 @@ function applyConsent(granted: boolean) {
       analytics_Storage: granted ? 'granted' : 'denied',
     });
   } catch {
-    // Clarity pode não estar inicializado ainda (ex: bloqueador de anúncios,
-    // ou script ainda carregando) — falha silenciosa, não quebra a página.
+    // Analytics nunca interfere no produto.
   }
 
-  // O GTM pode não existir neste host (ex.: minhAi principal). A função é
-  // segura nesses casos e apenas prepara/atualiza o estado quando necessário.
   applyGoogleConsent(granted ? 'granted' : 'denied');
-
-  // Avisa integrações client-side (ex.: Meta Pixel da ConviteIA) imediatamente
-  // na mesma aba. O evento `storage` do browser não é disparado na aba que fez
-  // a própria alteração, por isso usamos um CustomEvent explícito.
   announceAnalyticsConsent(granted);
 }
 
 export default function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
+  const [midiaHost, setMidiaHost] = useState(false);
   const { marca } = useMarca();
+  const visual = midiaHost ? MIDIA_COOKIE_BRAND : marca;
 
   useEffect(() => {
     const hostname = window.location.hostname.toLowerCase();
     const pathname = window.location.pathname;
+    const isMidia =
+      hostname === 'midia.pro' ||
+      hostname === 'www.midia.pro' ||
+      hostname.endsWith('.midia.pro');
+    setMidiaHost(isMidia);
 
-    // Convites públicos: qualquer subdomínio de conviteia.com (exceto www)
-    // e também os links individuais /c/TOKEN e /r/TOKEN usados pelo WhatsApp.
+    // Experiências de tela cheia não podem receber overlays de consentimento:
+    // convite público e player físico do Midia.Pro. Sem escolha prévia,
+    // analytics não essenciais permanecem negados.
     const convitePublico =
       (hostname.endsWith('.conviteia.com') && hostname !== 'www.conviteia.com') ||
       ((hostname === 'conviteia.com' || hostname === 'www.conviteia.com') && /^\/(?:c|r)\//.test(pathname));
+    const playerMidia = hostname.endsWith('.midia.pro') && pathname === '/play';
 
-    if (convitePublico) {
-      // Nunca mostra o banner dentro do convite público ou confirmação direta.
-      // Se já houve consentimento nesta origem, respeita; caso contrário,
-      // mantém analytics não essenciais negados.
+    if (convitePublico || playerMidia) {
       const stored = localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY);
       applyConsent(stored === 'granted');
       setVisible(false);
@@ -66,14 +65,9 @@ export default function CookieConsentBanner() {
     }
 
     const stored = localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY);
-
-    if (stored === 'granted') {
-      applyConsent(true);
-    } else if (stored === 'denied') {
-      applyConsent(false);
-    } else {
-      setVisible(true);
-    }
+    if (stored === 'granted') applyConsent(true);
+    else if (stored === 'denied') applyConsent(false);
+    else setVisible(true);
   }, []);
 
   const handleChoice = (granted: boolean) => {
@@ -88,38 +82,32 @@ export default function CookieConsentBanner() {
     <div
       role="dialog"
       aria-label="Consentimento de cookies"
-      className="fixed bottom-4 left-4 right-4 sm:right-auto sm:max-w-sm z-[60] rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-2xl p-4 sm:p-5"
+      className="fixed bottom-4 left-4 right-4 z-[60] rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-2xl backdrop-blur-xl sm:right-auto sm:max-w-sm sm:p-5"
     >
-      <p className="text-xs sm:text-sm text-slate-700 leading-relaxed mb-3">
+      <p className="mb-3 text-xs leading-relaxed text-slate-700 sm:text-sm">
         Usamos cookies para entender como você usa o site e melhorar sua experiência.
         Você pode aceitar ou recusar os cookies não essenciais a qualquer momento.
         Saiba mais no nosso{' '}
-        {/* corTexto, não cor: link é texto pequeno e exige 4,5:1 sobre o
-            fundo claro, contraste maior que o do botão preenchido. */}
         <a
-          href="/aviso"
+          href={midiaHost ? 'https://www.minhai.app/aviso' : '/aviso'}
           className="font-semibold hover:underline"
-          style={{ color: marca.corTexto }}
+          style={{ color: visual.corTexto }}
         >
           Aviso de Privacidade
         </a>
         .
       </p>
       <div className="flex items-center gap-2">
-        {/* `style` inline e não classe do Tailwind: o Tailwind gera CSS em
-            build a partir das classes que encontra no código-fonte. Uma
-            classe montada em runtime — bg-[${marca.cor}] — não existiria no
-            CSS final e o botão sairia transparente. */}
         <button
           onClick={() => handleChoice(true)}
-          className="flex-1 px-4 py-2 rounded-full text-xs sm:text-sm font-bold leading-none hover:brightness-110 transition-all duration-300 active:scale-95"
-          style={{ backgroundColor: marca.cor, color: marca.corTextoBotao }}
+          className="flex-1 rounded-full px-4 py-2 text-xs font-bold leading-none transition-all duration-300 hover:brightness-110 active:scale-95 sm:text-sm"
+          style={{ backgroundColor: visual.cor, color: visual.corTextoBotao }}
         >
           Aceitar
         </button>
         <button
           onClick={() => handleChoice(false)}
-          className="flex-1 px-4 py-2 rounded-full border border-slate-300 text-slate-600 text-xs sm:text-sm font-bold leading-none hover:bg-slate-100 hover:text-slate-900 transition-all duration-300 active:scale-95"
+          className="flex-1 rounded-full border border-slate-300 px-4 py-2 text-xs font-bold leading-none text-slate-600 transition-all duration-300 hover:bg-slate-100 hover:text-slate-900 active:scale-95 sm:text-sm"
         >
           Recusar
         </button>

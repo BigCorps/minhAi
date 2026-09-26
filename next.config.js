@@ -59,13 +59,111 @@ const nextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
+        // ── Midia.Pro ───────────────────────────────────────────────────────
+        // O domínio público mantém URLs limpas. Internamente, todo o produto
+        // vive em /midia para continuar isolado no monorepo.
+        // ZIP 01 só publica a raiz do subdomínio. Bloqueamos outras rotas do
+        // monorepo para que slug.midia.pro nunca exponha páginas da minhAi.
+        // Infra compartilhada e assets ficam de fora deste bloqueio.
+        {
+          source:
+            '/:midiaPath((?!_next(?:/|$)|api(?:/|$)|auth(?:/|$)|brands(?:/|$)|favicon\\.ico$|manifest\\.json$|manifest\\.webmanifest$|robots\\.txt$|sitemap\\.xml$|llms\\.txt$|midia-sw\\.js$|play$|anuncie(?:/|$)).+)',
+          has: [{ type: 'host', value: '(?<midiaSlug>[^.]+)\\.midia\\.pro' }],
+          destination: '/midia/not-found',
+        },
+
+        {
+          source: '/favicon.ico',
+          has: [{ type: 'host', value: '(?:[^.]+\\.)?midia\\.pro' }],
+          destination: '/brands/midia/icon-192.png',
+        },
+        // Em subdomínios o PWA abre diretamente o player; na raiz abre a landing.
+        {
+          source: '/manifest.webmanifest',
+          has: [{ type: 'host', value: '(?<midiaSlug>[^.]+)\\.midia\\.pro' }],
+          destination: '/brands/midia/player-manifest.webmanifest',
+        },
+        {
+          source: '/manifest.json',
+          has: [{ type: 'host', value: '(?<midiaSlug>[^.]+)\\.midia\\.pro' }],
+          destination: '/brands/midia/player-manifest.webmanifest',
+        },
+        {
+          source: '/manifest.webmanifest',
+          has: [{ type: 'host', value: '(?:www\\.)?midia\\.pro' }],
+          destination: '/brands/midia/manifest.webmanifest',
+        },
+        {
+          source: '/manifest.json',
+          has: [{ type: 'host', value: '(?:www\\.)?midia\\.pro' }],
+          destination: '/brands/midia/manifest.webmanifest',
+        },
+        {
+          source: '/llms.txt',
+          has: [{ type: 'host', value: '(?:[^.]+\\.)?midia\\.pro' }],
+          destination: '/brands/midia/llms.txt',
+        },
+        {
+          source: '/robots.txt',
+          has: [{ type: 'host', value: '(?:[^.]+\\.)?midia\\.pro' }],
+          destination: '/midia/robots.txt',
+        },
+        {
+          source: '/sitemap.xml',
+          has: [{ type: 'host', value: '(?:[^.]+\\.)?midia\\.pro' }],
+          destination: '/midia/sitemap.xml',
+        },
+
+        // slug.midia.pro/play — player pareado da tela física. O slug identifica
+        // o proprietário; o token opaco do dispositivo identifica a tela exata.
+        {
+          source: '/play',
+          has: [{ type: 'host', value: '(?<midiaSlug>[^.]+)\\.midia\\.pro' }],
+          destination: '/midia/player/:midiaSlug',
+        },
+
+        // QR individual da tela: slug.midia.pro/anuncie/CODIGO
+        {
+          source: '/anuncie/:code',
+          has: [{ type: 'host', value: '(?<midiaSlug>[^.]+)\\.midia\\.pro' }],
+          destination: '/midia/public/:midiaSlug/anuncie/:code',
+        },
+
+        // slug.midia.pro é o endereço público de cada proprietário.
+        {
+          source: '/',
+          has: [{ type: 'host', value: '(?<midiaSlug>[^.]+)\\.midia\\.pro' }],
+          destination: '/midia/public/:midiaSlug',
+        },
+        // midia.pro — landing, autenticação e dashboard.
+        {
+          source: '/',
+          has: [{ type: 'host', value: 'midia\\.pro' }],
+          destination: '/midia',
+        },
+        {
+          source: '/login',
+          has: [{ type: 'host', value: 'midia\\.pro' }],
+          destination: '/midia/login',
+        },
+        {
+          source: '/dashboard',
+          has: [{ type: 'host', value: 'midia\\.pro' }],
+          destination: '/midia/dashboard',
+        },
+        {
+          source: '/dashboard/:path*',
+          has: [{ type: 'host', value: 'midia\\.pro' }],
+          destination: '/midia/dashboard/:path*',
+        },
+
         // Admin BigCorps / minhAi.
         // Isolamento por host: qualquer página que NÃO pertença à pequena
         // superfície pública do Admin é reescrita para o 404 administrativo.
         // /api e /_next ficam fora porque são infraestrutura compartilhada.
         {
           source:
-            '/:adminPath((?!api(?:/|$)|_next(?:/|$)|login$|logout$|auth/callback$|usuarios(?:/|$)|financeiro$|custos$|margem$|atencao$|agora$|whatsapp$|dashboard(?:/|$)|robots\\.txt$|favicon\\.ico$).+)',
+            '/:adminPath((?!api(?:/|$)|_next(?:/|$)|login$|logout$|auth/callback$|usuarios(?:/|$)|financeiro$|custos$|margem$|atencao$|agora$|whatsapp$|midia$|dashboard(?:/|$)|robots\\.txt$|favicon\\.ico$).+)',
           has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
           destination: '/admin/not-found',
         },
@@ -127,6 +225,11 @@ const nextConfig = {
           source: '/whatsapp',
           has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
           destination: '/admin/whatsapp',
+        },
+        {
+          source: '/midia',
+          has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],
+          destination: '/admin/midia',
         },
         {
           source: '/auth/callback',
@@ -212,6 +315,7 @@ const nextConfig = {
 
   async redirects() {
     return [
+      { source: '/:path*', has: [{ type: 'host', value: 'www\\.midia\\.pro' }], destination: 'https://midia.pro/:path*', permanent: true },
       { source: '/:path*', has: [{ type: 'host', value: 'minhai.app'        }], destination: 'https://www.minhai.app/:path*', permanent: true },
       { source: '/:path*', has: [{ type: 'host', value: 'minhai.com.br'     }], destination: 'https://www.minhai.app/:path*', permanent: true },
       { source: '/:path*', has: [{ type: 'host', value: 'www.minhai.com.br' }], destination: 'https://www.minhai.app/:path*', permanent: true },
@@ -223,6 +327,13 @@ const nextConfig = {
 
   async headers() {
     return [
+      {
+        source: '/midia-sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'admin\\.minhai\\.app' }],

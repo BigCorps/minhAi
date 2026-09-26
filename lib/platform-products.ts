@@ -7,6 +7,7 @@ export const PLATFORM_APP_KEYS = [
   'conviteia',
   'melhoria',
   'funcionaria',
+  'midia',
 ] as const;
 
 export type PlatformAppKey = (typeof PLATFORM_APP_KEYS)[number];
@@ -25,6 +26,7 @@ export const PLATFORM_APPS: Record<
   conviteia: { label: 'Convite IA', shortLabel: 'ConviteIA' },
   melhoria: { label: 'MelhorIA', shortLabel: 'MelhorIA' },
   funcionaria: { label: 'FuncionarIA', shortLabel: 'FuncionarIA' },
+  midia: { label: 'Midia.Pro', shortLabel: 'Midia.Pro' },
 };
 
 export function normalizePlatformHostname(hostname: string): string {
@@ -69,6 +71,14 @@ export function resolvePlatformApp(
   // Hosts dedicados têm precedência. Isso permite URLs limpas como
   // funcionaria.net/dashboard e pix.wiki/dashboard sem depender do rewrite
   // interno usado pelo Next.js.
+  if (
+    host === 'midia.pro' ||
+    host === 'www.midia.pro' ||
+    host.endsWith('.midia.pro')
+  ) {
+    return 'midia';
+  }
+
   if (
     host === 'funcionaria.net' ||
     host === 'www.funcionaria.net' ||
@@ -120,6 +130,10 @@ export function resolvePlatformApp(
 
   // Rotas internas/preview/local. São importantes porque os mesmos apps
   // podem ser testados em localhost e em previews da Vercel.
+  if (path === '/midia' || path.startsWith('/midia/')) {
+    return 'midia';
+  }
+
   if (path === '/funcionaria' || path.startsWith('/funcionaria/')) {
     return 'funcionaria';
   }

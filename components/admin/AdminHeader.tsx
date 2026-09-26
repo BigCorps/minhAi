@@ -5,6 +5,7 @@ import {
   Gauge,
   LogOut,
   MessageCircle,
+  MonitorPlay,
   ShieldCheck,
   TrendingUp,
   UsersRound,
@@ -20,7 +21,8 @@ export type AdminSection =
   | 'margin'
   | 'attention'
   | 'now'
-  | 'whatsapp';
+  | 'whatsapp'
+  | 'midia';
 
 type Props = {
   admin: AdminIdentity;
@@ -37,6 +39,7 @@ const NAV = [
   { key: 'attention', label: 'Atenção', suffix: '/atencao', icon: AlertTriangle },
   { key: 'now', label: 'Agora', suffix: '/agora', icon: Activity },
   { key: 'whatsapp', label: 'WhatsApp', suffix: '/whatsapp', icon: MessageCircle },
+  { key: 'midia', label: 'Midia.Pro', suffix: '/midia', icon: MonitorPlay },
 ] as const;
 
 function hrefFor(basePath: '' | '/admin', suffix: string) {

@@ -592,19 +592,19 @@ html {
 }
 
 .mp-float-screen-left {
-  width: 190px;
-  height: 235px;
-  left: 3%;
-  top: 22%;
+  width: 148px;
+  height: 263px;
+  left: 5%;
+  top: 18%;
   transform: rotateY(18deg) rotateZ(-6deg);
   animation: mp-float-one 7s ease-in-out infinite;
 }
 
 .mp-float-screen-right {
-  width: 205px;
-  height: 270px;
-  right: 0;
-  top: 14%;
+  width: 164px;
+  height: 292px;
+  right: 2%;
+  top: 12%;
   transform: rotateY(-22deg) rotateZ(5deg);
   animation: mp-float-two 8s ease-in-out infinite;
 }
@@ -632,7 +632,7 @@ html {
 
 
 .mp-float-screen-image {
-  padding: 10px;
+  padding: 0;
   background: #f8fbff;
 }
 
@@ -641,7 +641,7 @@ html {
 }
 
 .mp-float-screen-media {
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
 }
 
@@ -1325,18 +1325,18 @@ html {
 .mp-product-track {
   width: max-content;
   display: flex;
-  gap: 14px;
+  gap: 18px;
   animation: mp-product-marquee 40s linear infinite;
 }
 
 .mp-product-card {
   position: relative;
-  width: 260px;
-  aspect-ratio: 9/12;
+  width: 220px;
+  aspect-ratio: 9/16;
   flex: none;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,.09);
-  border-radius: 26px;
+  border-radius: 24px;
   background: rgba(255,255,255,.04);
   box-shadow: 0 20px 45px rgba(0,0,0,.18);
 }
@@ -1363,7 +1363,7 @@ html {
 
 
 .mp-product-card-image {
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
 }
 
@@ -2861,7 +2861,7 @@ html {
   }
 
   .mp-product-card {
-    width: 215px;
+    width: 176px;
   }
 
   .mp-venues-grid {
@@ -3117,4 +3117,21 @@ html {
 .mp-float-screen-image b,
 .mp-float-screen-image small {
   display: none;
+}
+
+
+@media (max-width: 900px) {
+  .mp-float-screen-left {
+    width: 112px;
+    height: 199px;
+    left: 4%;
+    top: 22%;
+  }
+
+  .mp-float-screen-right {
+    width: 124px;
+    height: 220px;
+    right: 1%;
+    top: 16%;
+  }
 }

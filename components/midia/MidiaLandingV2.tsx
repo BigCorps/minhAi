@@ -53,27 +53,25 @@ const RED = '#EA0D16';
 
 const heroCreatives = [
   {
-    kicker: 'CAFÉ AURORA',
-    title: 'Seu café + croissant',
-    price: 'R$ 14,90',
-    tone: 'cream',
-    badge: 'CONTEÚDO PRÓPRIO',
+    name: 'MonitorIA',
+    badge: 'CAMPANHA BIGCORPS',
+    src: '/brands/midia/ads/monitoria.png',
+    alt: 'Criativo vertical da MonitorIA',
   },
   {
-    kicker: 'MONITORIA',
-    title: 'Sua câmera pode lembrar.',
-    price: 'Teste grátis',
-    tone: 'dark',
-    badge: 'REDE BIGCORPS',
+    name: 'ConviteIA',
+    badge: 'CAMPANHA BIGCORPS',
+    src: '/brands/midia/ads/conviteia.png',
+    alt: 'Criativo vertical do ConviteIA',
   },
   {
-    kicker: 'SUA MARCA',
-    title: 'Seu anúncio pode estar aqui.',
-    price: 'a partir de R$ 4,90',
-    tone: 'red',
-    badge: 'ANÚNCIO PAGO',
+    name: 'PixWiki',
+    badge: 'CAMPANHA BIGCORPS',
+    src: '/brands/midia/ads/pixwiki.png',
+    alt: 'Criativo vertical do PixWiki',
   },
 ] as const;
+
 
 const storySteps = [
   {
@@ -173,14 +171,57 @@ const allPrices = [
 ] as const;
 
 const productFillers = [
-  ['MonitorIA', 'Câmeras que entendem e lembram', 'blue'],
-  ['ConviteIA', 'Convites, convidados e memórias', 'red'],
-  ['ArteFinal.app', 'Arte final direto no navegador', 'cream'],
-  ['PixWiki', 'Confirmação real do PIX', 'navy'],
-  ['ConsultaTec', 'Consultas para vender com mais segurança', 'red'],
-  ['MelhorIA', 'Tecnologia simples para famílias', 'blue'],
-  ['minhAi', 'Uma IA pra chamar de sua', 'navy'],
+  {
+    name: 'MonitorIA',
+    text: 'Segurança com memória e pesquisa por IA',
+    tone: 'blue',
+    src: '/brands/midia/ads/monitoria.png',
+    domain: 'monitoria.com',
+  },
+  {
+    name: 'ConviteIA',
+    text: 'Convites, presentes e memórias em um só lugar',
+    tone: 'rose',
+    src: '/brands/midia/ads/conviteia.png',
+    domain: 'conviteia.com',
+  },
+  {
+    name: 'PixWiki',
+    text: 'Não dependa de print. Confirme o pagamento real',
+    tone: 'navy',
+    src: '/brands/midia/ads/pixwiki.png',
+    domain: 'pix.wiki',
+  },
+  {
+    name: 'minhAi',
+    text: 'Atendimento, vendas e automações em um só lugar',
+    tone: 'blue',
+    src: '/brands/midia/ads/minhai.png',
+    domain: 'minhai.app',
+  },
+  {
+    name: 'ConsultaTec',
+    text: 'Consulte CPF e CNPJ com mais informação',
+    tone: 'cream',
+    src: '/brands/midia/ads/consultatec.png',
+    domain: 'consultatec.br',
+  },
+  {
+    name: 'MelhorIA',
+    text: 'Mais cuidado em cada detalhe',
+    tone: 'mint',
+    src: '/brands/midia/ads/melhoria.png',
+    domain: 'melhoria.org',
+  },
+  {
+    name: 'ArteFinal.app',
+    text: 'Seu arte-finalista com IA',
+    tone: 'light',
+    src: '/brands/midia/ads/artefinal.png',
+    domain: 'artefinal.app',
+  },
 ] as const;
+
 
 const techCards = [
   {
@@ -398,8 +439,15 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
 
         <div className="mp-product-rail">
           <div className="mp-product-track">
-            {[...productFillers, ...productFillers].map(([name, text, tone], index) => (
-              <ProductCreative key={`${name}-${index}`} name={name} text={text} tone={tone} />
+            {[...productFillers, ...productFillers].map((creative, index) => (
+              <ProductCreative
+                key={`${creative.name}-${index}`}
+                name={creative.name}
+                text={creative.text}
+                tone={creative.tone}
+                src={creative.src}
+                domain={creative.domain}
+              />
             ))}
           </div>
         </div>
@@ -745,28 +793,39 @@ function LandingHeader({ loginHref, signupHref }: Props) {
 }
 
 function HeroNetwork({ creativeIndex }: { creativeIndex: number }) {
-  const creative = heroCreatives[creativeIndex];
+  const creative = heroCreatives[creativeIndex % heroCreatives.length];
+  const leftCreative = productFillers[(creativeIndex + 1) % productFillers.length];
+  const rightCreative = productFillers[(creativeIndex + 4) % productFillers.length];
 
   return (
     <div className="mp-hero-network" aria-label="Exemplo de uma rede de telas Midia.Pro">
       <div className="mp-network-orbit mp-network-orbit-one" aria-hidden="true" />
       <div className="mp-network-orbit mp-network-orbit-two" aria-hidden="true" />
 
-      <div className="mp-float-screen mp-float-screen-left mp-float-screen-shop">
+      <div className="mp-float-screen mp-float-screen-left mp-float-screen-image">
+        <Image
+          src={leftCreative.src}
+          alt={`Criativo ${leftCreative.name}`}
+          fill
+          sizes="220px"
+          className="mp-float-screen-media"
+        />
         <span>LOJA</span>
-        <b>OFERTA<br />DO DIA</b>
-        <small>conteúdo próprio</small>
+        <b>{leftCreative.name}</b>
+        <small>campanha BigCorps</small>
       </div>
 
-      <div className="mp-float-screen mp-float-screen-right mp-float-screen-car">
-        <span>NO CARRO</span>
-        <b>SUA MARCA<br />EM MOVIMENTO</b>
-        <small>mídia local</small>
-      </div>
-
-      <div className="mp-float-screen mp-float-screen-bottom mp-float-screen-elevator">
-        <span>ELEVADOR</span>
-        <b>30s<br />DE ATENÇÃO</b>
+      <div className="mp-float-screen mp-float-screen-right mp-float-screen-image">
+        <Image
+          src={rightCreative.src}
+          alt={`Criativo ${rightCreative.name}`}
+          fill
+          sizes="240px"
+          className="mp-float-screen-media"
+        />
+        <span>EM EXIBIÇÃO</span>
+        <b>{rightCreative.name}</b>
+        <small>mídia da rede</small>
       </div>
 
       <div className="mp-main-device">
@@ -775,11 +834,16 @@ function HeroNetwork({ creativeIndex }: { creativeIndex: number }) {
           <span>9:16</span>
         </div>
 
-        <div className={`mp-main-creative mp-main-creative-${creative.tone}`} key={creative.title}>
-          <span>{creative.badge}</span>
-          <small>{creative.kicker}</small>
-          <strong>{creative.title}</strong>
-          <b>{creative.price}</b>
+        <div className="mp-main-creative mp-main-creative-media" key={creative.name}>
+          <Image
+            src={creative.src}
+            alt={creative.alt}
+            fill
+            priority={creativeIndex === 0}
+            sizes="260px"
+            className="mp-main-creative-image"
+          />
+          <div className="mp-main-creative-chip">{creative.badge}</div>
         </div>
 
         <div className="mp-main-device-bottom">
@@ -916,9 +980,29 @@ function StoryScreen({ active }: { active: number }) {
   );
 }
 
-function ProductCreative({ name, text, tone }: { name: string; text: string; tone: string }) {
+function ProductCreative({
+  name,
+  text,
+  tone,
+  src,
+  domain,
+}: {
+  name: string;
+  text: string;
+  tone: string;
+  src: string;
+  domain: string;
+}) {
   return (
     <article className={`mp-product-card mp-product-${tone}`}>
+      <Image
+        src={src}
+        alt={`Criativo ${name}`}
+        fill
+        sizes="260px"
+        className="mp-product-card-image"
+      />
+      <div className="mp-product-card-shade" aria-hidden="true" />
       <div className="mp-product-card-top">
         <span>{name}</span>
         <Play />
@@ -926,7 +1010,7 @@ function ProductCreative({ name, text, tone }: { name: string; text: string; ton
       <strong>{text}</strong>
       <div className="mp-product-card-foot">
         <small>BIGCORPS</small>
-        <b>30s</b>
+        <b>{domain}</b>
       </div>
     </article>
   );

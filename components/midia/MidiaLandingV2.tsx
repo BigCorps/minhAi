@@ -105,8 +105,8 @@ const storySteps = [
     visual: 'campaign',
   },
   {
-    eyebrow: '05 · PROOF-OF-PLAY',
-    title: 'Você recebe pelo que foi exibido.',
+    eyebrow: '05 · ACOMPANHAMENTO',
+    title: 'Pagou? Veja as exibições acontecendo.',
     description:
       'Cada reprodução paga é registrada. O saldo do parceiro é liberado conforme as exibições realmente são entregues.',
     visual: 'money',
@@ -203,8 +203,8 @@ const techCards = [
   },
   {
     icon: ScanLine,
-    title: 'Proof-of-play',
-    text: 'Exibições pagas são registradas para formar o saldo do parceiro.',
+    title: 'Acompanhe cada exibição',
+    text: 'Veja quantas exibições pagas já foram entregues e quanto ainda falta na campanha.',
     className: '',
   },
   {
@@ -301,7 +301,7 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
               ESSA TELA
               <span className="mp-hero-title-blue"> PODE</span>
               <br />
-              <span className="mp-hero-title-outline">PAGAR</span>{' '}
+              <span className="mp-hero-title-pay">PAGAR</span>{' '}
               <span className="mp-hero-title-red">A SI MESMA.</span>
             </h1>
 
@@ -324,7 +324,7 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
             <div className="mp-hero-trust">
               <span><CheckCircle2 /> Parceiro pode começar por R$ 0</span>
               <span><CheckCircle2 /> Conteúdo próprio + publicidade</span>
-              <span><CheckCircle2 /> PIX + proof-of-play</span>
+              <span><CheckCircle2 /> PIX + acompanhe as exibições</span>
             </div>
           </div>
 
@@ -602,8 +602,8 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
           <div className="mp-proof-strip">
             <ScanLine />
             <div>
-              <strong>Proof-of-play</strong>
-              <span>O saldo é liberado conforme as exibições realmente são entregues.</span>
+              <strong>Exibições confirmadas</strong>
+              <span>Você acompanha a entrega e o saldo só é liberado conforme as exibições realmente acontecem.</span>
             </div>
           </div>
         </div>
@@ -901,7 +901,7 @@ function StoryScreen({ active }: { active: number }) {
             <span>SALDO DISPONÍVEL</span>
             <strong>R$ 184,72</strong>
             <div>
-              <small>proof-of-play</small>
+              <small>exibições confirmadas</small>
               <b>✓ 127 exibições entregues</b>
             </div>
           </div>

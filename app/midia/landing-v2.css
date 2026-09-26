@@ -229,10 +229,9 @@ html {
   color: var(--mp-red);
 }
 
-.mp-hero-title-outline {
-  color: #fff;
-  -webkit-text-stroke: 2px var(--mp-blue);
-  text-shadow: 0 8px 26px rgba(0,50,149,.08);
+.mp-hero-title-pay {
+  color: var(--mp-blue);
+  text-shadow: 0 12px 30px rgba(0,50,149,.10);
 }
 
 .mp-hero-subtitle {
@@ -2707,8 +2706,8 @@ html {
     font-size: clamp(3.35rem, 15vw, 6rem);
   }
 
-  .mp-hero-title-outline {
-    -webkit-text-stroke-width: 1.4px;
+  .mp-hero-title-pay {
+    text-shadow: 0 10px 22px rgba(0,50,149,.08);
   }
 
   .mp-hero-subtitle {

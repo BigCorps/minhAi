@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import MidiaCampaignCheckout from '@/components/midia/MidiaCampaignCheckout';
+import MidiaAvailabilityCalendar from '@/components/midia/MidiaAvailabilityCalendar';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   CalendarDays, Check, CheckCircle2, Clock3, FileImage, Loader2, MapPin,
@@ -243,7 +244,21 @@ export default function MidiaAdvertiseFlow({ slug, code }: { slug: string; code:
 
             <CardSection number="2" title="Duração e agenda" icon={<CalendarDays className="h-5 w-5" />}>
               <div className="grid gap-4 sm:grid-cols-3">{data.durations.map((seconds) => { const lockedByVideo = mode === 'upload' && meta?.kind === 'video'; return <button type="button" key={seconds} disabled={lockedByVideo} onClick={() => setDuration(seconds)} className={`rounded-2xl border px-4 py-4 text-center disabled:cursor-not-allowed disabled:opacity-55 ${duration === seconds ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-200'}`}><div className="text-xl font-black">{seconds}s</div><div className="mt-1 text-[11px] font-bold text-slate-400">{seconds === 30 ? 'preço base' : seconds === 45 ? '× 1,5' : '× 2'}</div></button>; })}</div>{mode === 'upload' && meta?.kind === 'video' && <div className="mt-3 text-xs font-semibold text-slate-500">O vídeo de {meta.duration.toFixed(1)} s foi enquadrado automaticamente na faixa de {duration} s.</div>}
-              {product && product.scheduleKind !== 'flexible_once' && <div className="mt-5 grid gap-4 sm:grid-cols-2">{['date_once','window_once'].includes(product.scheduleKind) ? <Field label="Data"><input type="date" min={today} max={maxDate} value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} required className="input" /></Field> : <Field label="Início dos 30 dias"><input type="date" min={today} max={maxDate} value={startDate} onChange={(e) => setStartDate(e.target.value)} required className="input" /></Field>}{product.requiresTime && <Field label={product.windowMinutes === 15 ? 'Início da janela de 15 min' : 'Horário'}><input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} required className="input" /></Field>}</div>}
+              {product && product.scheduleKind !== 'flexible_once' && <div className="mt-5 space-y-4">
+                <MidiaAvailabilityCalendar
+                  slug={slug}
+                  code={code}
+                  minDate={today}
+                  maxDate={maxDate}
+                  campaignDays={['recurring_fixed','recurring_interval'].includes(product.scheduleKind) ? product.campaignDays : 1}
+                  value={['date_once','window_once'].includes(product.scheduleKind) ? scheduleDate : startDate}
+                  onChange={(date) => {
+                    if (['date_once','window_once'].includes(product.scheduleKind)) setScheduleDate(date);
+                    else setStartDate(date);
+                  }}
+                />
+                {product.requiresTime && <div className="max-w-sm"><Field label={product.windowMinutes === 15 ? 'Início da janela de 15 min' : 'Horário'}><input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} required className="input" /></Field></div>}
+              </div>}
               {product?.scheduleKind === 'flexible_once' && <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500"><Clock3 className="mr-2 inline h-4 w-4" />A Midia.Pro escolherá um espaço disponível dentro dos próximos 30 dias.</div>}
               <div className="mt-4 min-h-10">{quoteLoading ? <div className="flex items-center gap-2 text-sm font-bold text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Conferindo inventário e preço…</div> : quoteError ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">{quoteError}</div> : quote ? <div className="flex items-center gap-2 text-sm font-black text-emerald-700"><CheckCircle2 className="h-5 w-5" /> Espaço disponível · {formatBrlCents(quote.totalPriceCents)}</div> : null}</div>
             </CardSection>

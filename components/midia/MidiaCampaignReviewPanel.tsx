@@ -40,7 +40,7 @@ export default function MidiaCampaignReviewPanel({ campaigns, onChanged }: { cam
   if (!campaigns.length) return null;
   return (
     <section className="mt-8 rounded-[30px] border border-blue-100 bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-red-50" style={{ color: MIDIA_BRAND.red }}><Megaphone className="h-5 w-5" /></div><div><div className="text-xs font-black uppercase tracking-[.16em]" style={{ color: MIDIA_BRAND.red }}>Publicidade da rede</div><h2 className="mt-1 text-xl font-black">Campanhas das suas telas</h2><p className="mt-1 text-sm text-slate-500">Depois da aprovação, cada exibição válida gera proof-of-play e libera a sua participação no saldo.</p></div></div>
+      <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-red-50" style={{ color: MIDIA_BRAND.red }}><Megaphone className="h-5 w-5" /></div><div><div className="text-xs font-black uppercase tracking-[.16em]" style={{ color: MIDIA_BRAND.red }}>Publicidade da rede</div><h2 className="mt-1 text-xl font-black">Campanhas das suas telas</h2><p className="mt-1 text-sm text-slate-500">Depois da aprovação, cada exibição confirmada libera a sua participação correspondente no saldo.</p></div></div>
       {error && <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">{error}</div>}
       <div className="mt-5 grid gap-4 xl:grid-cols-2">
         {campaigns.map((campaign) => {

@@ -47,3 +47,32 @@
   color: #94a3b8 !important;
   -webkit-text-fill-color: #94a3b8 !important;
 }
+
+
+/* Navegação horizontal persistente do dashboard, especialmente no celular. */
+.midia-dashboard-nav-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: #b8c8e6 #f1f5fb;
+}
+
+.midia-dashboard-nav-scroll::-webkit-scrollbar {
+  height: 5px;
+}
+
+.midia-dashboard-nav-scroll::-webkit-scrollbar-track {
+  background: #f1f5fb;
+}
+
+.midia-dashboard-nav-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #b8c8e6;
+}
+
+.midia-dashboard-nav-item {
+  scroll-snap-align: center;
+}

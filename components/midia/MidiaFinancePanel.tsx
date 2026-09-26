@@ -89,7 +89,7 @@ export default function MidiaFinancePanel({ finance, onChanged }: { finance: Mid
 
   return (
     <section className="mt-8 rounded-[30px] border border-blue-100 bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-blue-50" style={{ color: MIDIA_BRAND.blue }}><WalletCards className="h-5 w-5" /></div><div><div className="text-xs font-black uppercase tracking-[.16em]" style={{ color: MIDIA_BRAND.blue }}>Financeiro</div><h2 className="mt-1 text-xl font-black">Receita das suas telas</h2><p className="mt-1 text-sm text-slate-500">A participação fica pendente quando a campanha é contratada e só vira saldo disponível depois do proof-of-play validado.</p></div></div>
+      <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-blue-50" style={{ color: MIDIA_BRAND.blue }}><WalletCards className="h-5 w-5" /></div><div><div className="text-xs font-black uppercase tracking-[.16em]" style={{ color: MIDIA_BRAND.blue }}>Financeiro</div><h2 className="mt-1 text-xl font-black">Receita das suas telas</h2><p className="mt-1 text-sm text-slate-500">A participação fica pendente quando a campanha é contratada e só vira saldo disponível depois que as exibições forem confirmadas.</p></div></div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Money value={finance.wallet.availableCents} label="Disponível" strong />

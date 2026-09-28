@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bot, Send, LogOut, Sparkles, Paperclip, X, Menu, Star } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Bot, Send, LogOut, Sparkles, Paperclip, X, Menu, Star, Flag, CheckCircle2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import ArteFinalDisplay from '@/components/arte/ArteFinalDisplay';
 import DuplicarImagemDisplay from '@/components/arte/DuplicarImagemDisplay';
@@ -333,6 +334,20 @@ function calcScrollDuration(count: number, isMobile: boolean): number {
 }
 
 interface Msg { id: string; role: 'user' | 'assistant'; content: string }
+
+interface ReportState {
+  msgId: string;
+  msgText: string;
+}
+
+const REPORT_REASONS: { key: string; label: string }[] = [
+  { key: 'ofensivo',     label: 'Conteúdo ofensivo ou prejudicial' },
+  { key: 'incorreto',    label: 'Informação incorreta ou enganosa' },
+  { key: 'inapropriado', label: 'Conteúdo inapropriado' },
+  { key: 'spam',         label: 'Spam ou conteúdo repetitivo' },
+  { key: 'outro',        label: 'Outro motivo' },
+];
+
 type ActiveModal = { type: string; data: { companyId: string; prefillFile?: File } } | null;
 
 export default function ArtePage() {
@@ -349,6 +364,9 @@ export default function ArtePage() {
   const [input, setInput] = useState('');
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [reporting, setReporting] = useState<ReportState | null>(null);
+  const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   const [isMobile, setIsMobile] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -385,6 +403,35 @@ export default function ArtePage() {
       return next;
     });
   }, [userId, favKey]);
+
+  // Mesmo fluxo de denúncia já usado e validado na min.IA.
+  // Grava em public.ai_content_reports com source='artefinal'.
+  const handleSubmitReport = useCallback(async (reason: string) => {
+    if (!reporting) return;
+    setReportSubmitting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { error } = await supabase.from('ai_content_reports').insert({
+        user_id:      session?.user?.id ?? null,
+        company_id:   companyId ?? null,
+        message_id:   reporting.msgId,
+        message_text: reporting.msgText,
+        reason,
+        source:       'artefinal',
+      });
+      if (error) throw error;
+      setReportSubmitted(true);
+      setTimeout(() => {
+        setReporting(null);
+        setReportSubmitted(false);
+      }, 2000);
+    } catch {
+      // Mantém o mesmo comportamento discreto da min.IA: denúncia não bloqueia o uso.
+      setReporting(null);
+    } finally {
+      setReportSubmitting(false);
+    }
+  }, [reporting, supabase, companyId]);
 
   useEffect(() => {
     (async () => {
@@ -609,11 +656,23 @@ const handleSubmit = useCallback(() => {
         ) : (
           <div className="space-y-3 max-w-4xl mx-auto">
             {messages.map((m) => (
-              <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={m.id} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
                 <div className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow"
                   style={m.role === 'user' ? { background: BRAND_GRADIENT, color: '#fff' } : { background: 'rgba(255,255,255,0.95)', color: '#1e293b' }}>
                   {m.content}
                 </div>
+                {/* Mesmo botão de denúncia da min.IA: mesmo tamanho e mesma opacidade. */}
+                {m.role === 'assistant' && (
+                  <button
+                    onClick={() => setReporting({ msgId: m.id, msgText: m.content })}
+                    className="mt-1 flex items-center gap-1 text-[10px] opacity-30 hover:opacity-70 transition-opacity"
+                    style={{ color: '#64748b' }}
+                    title="Denunciar conteúdo / Report content"
+                  >
+                    <Flag size={10} />
+                    Denunciar / Report
+                  </button>
+                )}
               </div>
             ))}
             <div ref={endRef} />
@@ -805,6 +864,77 @@ const handleSubmit = useCallback(() => {
           </div>
         </aside>
       </div>
+
+      {/* Modal de denúncia de conteúdo — mesmo padrão da min.IA */}
+      {reporting && createPortal(
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 10001,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24,
+            background: 'rgba(241,245,249,0.85)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              border: '1px solid rgba(0,0,0,0.08)',
+              borderRadius: 16, padding: '24px', maxWidth: 340, width: '100%',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
+            }}
+          >
+            {reportSubmitted ? (
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                <CheckCircle2 size={40} style={{ color: '#10B981', margin: '0 auto 12px' }} />
+                <p style={{ fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>
+                  Denúncia enviada / Report submitted
+                </p>
+                <p style={{ fontSize: 13, color: '#64748b' }}>
+                  Obrigado pelo feedback. Usaremos isso para revisar e melhorar o conteúdo apresentado.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <p style={{ fontWeight: 700, fontSize: 15, color: '#0f172a' }}>
+                    Denunciar conteúdo / Report content
+                  </p>
+                  <button
+                    onClick={() => setReporting(null)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4 }}
+                    aria-label="Fechar denúncia"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
+                  Por que este conteúdo é problemático? / Why is this content problematic?
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {REPORT_REASONS.map((r) => (
+                    <button
+                      key={r.key}
+                      onClick={() => handleSubmitReport(r.key)}
+                      disabled={reportSubmitting}
+                      style={{
+                        textAlign: 'left', padding: '10px 14px', borderRadius: 10, fontSize: 13,
+                        fontWeight: 500, cursor: 'pointer', border: '1px solid #e5e7eb',
+                        background: '#f8fafc', color: '#1e293b',
+                        opacity: reportSubmitting ? 0.5 : 1,
+                        transition: 'background 0.15s',
+                      }}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Modais */}
       {activeModal?.type === 'ArteFinalDisplay' && (

@@ -20,7 +20,9 @@ export default function PaginaInicialConvite() {
   const [supabase] = useState(() => createClient());
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setLogado(!!data.user));
+    // getSession() lê a sessão salva no navegador, sem ida ao servidor.
+    // Só decide qual tela mostrar; a segurança continua no servidor.
+    supabase.auth.getSession().then(({ data }) => setLogado(!!data.session?.user));
 
     const { data: sub } = supabase.auth.onAuthStateChange((_e, sessao) => {
       setLogado(!!sessao?.user);
@@ -30,22 +32,9 @@ export default function PaginaInicialConvite() {
     return () => sub.subscription.unsubscribe();
   }, [supabase]);
 
-  if (logado === null) {
-    return (
-      <main className="min-h-screen grid place-items-center p-6">
-        <RendaBackground />
-        <Image
-          src="/brands/convite/icone-512.png"
-          alt="Convite IA"
-          width={72}
-          height={72}
-          className="animate-pulse"
-          priority
-        />
-      </main>
-    );
-  }
-
+  // Visitante novo (a maioria dos cliques de anúncio) vê a landing na hora,
+  // sem esperar a checagem de login. Quem está logado troca para o painel
+  // assim que a sessão local é lida.
   if (logado) {
     if (criando) {
       return (

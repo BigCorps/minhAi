@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import RodapeMarca from '@/components/conviteria/RodapeMarca';
 import SuporteWhatsapp from '@/components/conviteria/SuporteWhatsapp';
+import InstagramConviteia from '@/components/conviteria/InstagramConviteia';
 import styles from './LandingExplicativa.module.css';
 
 const VIDEO_HORIZONTAL = 'SZISbf_KfGU';
@@ -261,7 +262,10 @@ export default function LandingExplicativa() {
       </div>
 
       <div className={styles.rodape}>
-        <SuporteWhatsapp assunto="Tenho uma dúvida sobre a ConviteIA" />
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <SuporteWhatsapp assunto="Tenho uma dúvida sobre a ConviteIA" />
+          <InstagramConviteia />
+        </div>
         <RodapeMarca />
       </div>
     </section>

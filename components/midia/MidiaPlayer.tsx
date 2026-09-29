@@ -7,12 +7,17 @@ import { createClient } from '@/lib/supabase-browser';
 import { MIDIA_BRAND } from '@/lib/midia/constants';
 import { objectUrlForMidiaItem, syncMidiaMediaCache, type MidiaManifestItem } from '@/lib/midia/player-cache';
 
-const APP_VERSION = 'web-4';
+const APP_VERSION = 'web-5';
 const TOKEN_KEY_PREFIX = 'midiapro:device:';
 const MANIFEST_KEY_PREFIX = 'midiapro:manifest:';
 const PLAYED_KEY_PREFIX = 'midiapro:paid-played:';
 const PROOF_QUEUE_KEY_PREFIX = 'midiapro:proof-queue:';
 const MIN_PROOF_RATIO = 0.8;
+
+// Transição curta para não consumir tempo relevante da campanha.
+// O conteúdo atual desaparece, o próximo já vem do cache local e entra suavemente.
+const TRANSITION_OUT_MS = 220;
+const TRANSITION_IN_MS = 420;
 
 type PaidOccurrence = {
   id: string;
@@ -46,7 +51,6 @@ type PlayTarget =
   | { kind: 'house'; index: number }
   | { kind: 'paid'; occurrenceId: string }
   | null;
-
 
 type ProofQueueEvent = {
   eventId: string; occurrenceId: string; proofToken: string; startedAt: string; endedAt: string;
@@ -97,7 +101,10 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
   const [target, setTarget] = useState<PlayTarget>(null);
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   const [playbackRevocable, setPlaybackRevocable] = useState(false);
+  const [mediaVisible, setMediaVisible] = useState(false);
   const timerRef = useRef<number | null>(null);
+  const transitionTimerRef = useRef<number | null>(null);
+  const transitionRef = useRef(false);
   const paidPlaybackRef = useRef<ActivePaidPlayback | null>(null);
   const proofSyncingRef = useRef(false);
   const ownSinceNetworkRef = useRef(0);
@@ -120,6 +127,10 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
       try { setManifest(JSON.parse(savedManifest) as Manifest); } catch { localStorage.removeItem(manifestKey); }
     }
   }, [manifestKey, storageKey]);
+
+  useEffect(() => () => {
+    if (transitionTimerRef.current) window.clearTimeout(transitionTimerRef.current);
+  }, []);
 
   const flushProofQueue = useCallback(async (token = deviceToken) => {
     if (!token || !navigator.onLine || proofSyncingRef.current) return;
@@ -159,9 +170,6 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     if (!token) return;
     setSyncing(true);
     try {
-      // Entrega primeiro os proofs que ficaram na fila offline. Só depois o
-      // servidor avalia janelas vencidas e cria eventuais reposições; assim uma
-      // exibição legítima feita sem internet não é marcada como perdida por engano.
       await flushProofQueue(token);
       const response = await fetch('/api/midia/player/manifest', { cache: 'no-store', headers: { Authorization: `Bearer ${token}` } });
       const json = await response.json().catch(() => null);
@@ -238,7 +246,6 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     return () => window.clearInterval(timer);
   }, [deviceToken, flushProofQueue, online]);
 
-  // Mesmo sem alteração de playlist, a janela móvel de 48h precisa avançar.
   useEffect(() => {
     if (!deviceToken) return;
     const timer = window.setInterval(() => { if (navigator.onLine) void loadManifest(); }, 6 * 60 * 60 * 1000);
@@ -272,7 +279,7 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     return { ...creative, id: occurrence.id, displaySeconds: occurrence.displaySeconds, source: 'network' } as MidiaManifestItem & { source: string };
   }, [manifest, paidCreativeById, target]);
 
-  const advance = useCallback((completed = true) => {
+  const advanceNow = useCallback((completed = true) => {
     if (!manifest) { setTarget(null); return; }
     let excluded: string | undefined;
 
@@ -291,7 +298,6 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
       ownSinceNetworkRef.current += 1;
     }
 
-    // Campanha paga sempre vence filler institucional e conteúdo próprio.
     const due = pickDuePaid(excluded);
     if (due) { setTarget({ kind: 'paid', occurrenceId: due.id }); return; }
 
@@ -324,8 +330,19 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     setTarget(null);
   }, [enqueueProof, manifest, pickDuePaid, playedKey, target]);
 
-  // Se não existe conteúdo próprio, desperta a tela quando uma ocorrência paga
-  // entrar na janela. Se há conteúdo próprio, ela entra na próxima transição.
+  const advance = useCallback((completed = true) => {
+    if (transitionRef.current) return;
+
+    transitionRef.current = true;
+    setMediaVisible(false);
+
+    if (transitionTimerRef.current) window.clearTimeout(transitionTimerRef.current);
+    transitionTimerRef.current = window.setTimeout(() => {
+      transitionTimerRef.current = null;
+      advanceNow(completed);
+    }, TRANSITION_OUT_MS);
+  }, [advanceNow]);
+
   useEffect(() => {
     if (!manifest) return;
     const check = () => {
@@ -353,20 +370,67 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = null;
     if (playbackUrl && playbackRevocable) URL.revokeObjectURL(playbackUrl);
-    setPlaybackUrl(null); setPlaybackRevocable(false);
+    setPlaybackUrl(null);
+    setPlaybackRevocable(false);
+    setMediaVisible(false);
     paidPlaybackRef.current = null;
-    if (!current) return;
+
+    if (!current) {
+      transitionRef.current = false;
+      return;
+    }
 
     void objectUrlForMidiaItem(current).then((result) => {
-      if (cancelled) { if (result?.revoke) URL.revokeObjectURL(result.url); return; }
-      if (!result) { advance(false); return; }
-      setPlaybackUrl(result.url); setPlaybackRevocable(result.revoke);
-      if (target?.kind === 'paid' && currentOccurrence) paidPlaybackRef.current = { occurrenceId: currentOccurrence.id, startedAt: new Date().toISOString(), perfStarted: performance.now() };
-      if (current.kind === 'image') timerRef.current = window.setTimeout(() => advance(true), current.displaySeconds * 1000);
-      else timerRef.current = window.setTimeout(() => advance(true), Math.max(35, current.displaySeconds + 5) * 1000);
+      if (cancelled) {
+        if (result?.revoke) URL.revokeObjectURL(result.url);
+        return;
+      }
+
+      if (!result) {
+        transitionRef.current = false;
+        advance(false);
+        return;
+      }
+
+      setPlaybackUrl(result.url);
+      setPlaybackRevocable(result.revoke);
+
+      if (target?.kind === 'paid' && currentOccurrence) {
+        paidPlaybackRef.current = {
+          occurrenceId: currentOccurrence.id,
+          startedAt: new Date().toISOString(),
+          perfStarted: performance.now(),
+        };
+      }
+
+      // Duplo RAF garante que o browser pinte primeiro a mídia com opacity 0.
+      // Na pintura seguinte ela entra suavemente até opacity 1.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (cancelled) return;
+          setMediaVisible(true);
+          transitionRef.current = false;
+        });
+      });
+
+      if (current.kind === 'image') {
+        timerRef.current = window.setTimeout(
+          () => advance(true),
+          current.displaySeconds * 1000 + TRANSITION_IN_MS,
+        );
+      } else {
+        timerRef.current = window.setTimeout(
+          () => advance(true),
+          Math.max(35, current.displaySeconds + 5) * 1000 + TRANSITION_IN_MS,
+        );
+      }
     });
 
-    return () => { cancelled = true; if (timerRef.current) window.clearTimeout(timerRef.current); timerRef.current = null; };
+    return () => {
+      cancelled = true;
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    };
   }, [advance, current?.cacheKey, current?.creativeId, current?.displaySeconds, current?.kind, currentOccurrence?.id, targetKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function pair(event: FormEvent<HTMLFormElement>) {
@@ -389,12 +453,34 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
 
   if (!manifest.screen.canPlay) return <main className="min-h-screen grid place-items-center bg-[#07152f] p-6 text-white"><div className="max-w-lg text-center"><AlertTriangle className="mx-auto h-12 w-12 text-amber-400" /><h1 className="mt-5 text-3xl font-black">Tela aguardando ativação</h1><p className="mt-3 text-sm leading-6 text-white/60">O player está pareado corretamente, mas o plano desta tela ainda não está ativo.</p></div></main>;
 
+  const mediaTransitionStyle = {
+    opacity: mediaVisible ? 1 : 0,
+    transition: `opacity ${mediaVisible ? TRANSITION_IN_MS : TRANSITION_OUT_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+  };
+
   return (
     <main className="fixed inset-0 overflow-hidden bg-black text-white select-none" onDoubleClick={() => void fullscreen()}>
       {current && playbackUrl ? current.kind === 'video' ? (
-        <video key={`${current.cacheKey}:${targetKey}`} src={playbackUrl} autoPlay muted playsInline className="h-full w-full object-contain bg-black" onEnded={() => advance(true)} onError={() => advance(false)} />
+        <video
+          key={`${current.cacheKey}:${targetKey}`}
+          src={playbackUrl}
+          autoPlay
+          muted
+          playsInline
+          className="h-full w-full object-contain bg-black"
+          style={mediaTransitionStyle}
+          onEnded={() => advance(true)}
+          onError={() => advance(false)}
+        />
       ) : (
-        <img key={`${current.cacheKey}:${targetKey}`} src={playbackUrl} alt="" className="h-full w-full object-contain bg-black" onError={() => advance(false)} />
+        <img
+          key={`${current.cacheKey}:${targetKey}`}
+          src={playbackUrl}
+          alt=""
+          className="h-full w-full object-contain bg-black"
+          style={mediaTransitionStyle}
+          onError={() => advance(false)}
+        />
       ) : (
         <div className="absolute inset-0 grid place-items-center bg-gradient-to-b from-[#06235f] to-[#020817]"><div className="px-8 text-center"><Image src="/brands/midia/logo.png" alt="Midia.Pro" width={300} height={300} className="mx-auto h-auto w-64 brightness-0 invert" /><h1 className="mt-6 text-3xl font-black">Tela pronta.</h1><p className="mt-3 text-sm font-bold text-white/55">Aguardando a próxima mídia ou campanha programada.</p></div></div>
       )}

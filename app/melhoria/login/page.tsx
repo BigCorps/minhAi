@@ -14,6 +14,8 @@ import { useTurnstile } from '@/hooks/useTurnstile';
 import { BotaoGoogle, Rodape } from '@/components/melhoria/Chrome';
 import { cor, fonte, px, toque, raio, espaco } from '@/lib/melhoria/tema';
 import { R } from '@/lib/melhoria/rotas';
+import { useNavegadorInterno } from '@/lib/navegador-interno';
+import AvisoNavegadorInterno from '@/components/AvisoNavegadorInterno';
 
 function destinoInterno(valor: string | null): string {
   if (!valor) return R.app();
@@ -28,6 +30,7 @@ function destinoInterno(valor: string | null): string {
 }
 
 function LoginConteudo() {
+  const navegadorInterno = useNavegadorInterno();
   const router   = useRouter();
   const params   = useSearchParams();
   const supabase = melhoriaAuth();
@@ -144,7 +147,22 @@ function LoginConteudo() {
       </div>
 
       <div style={{ marginBottom: espaco.md }}>
-        <BotaoGoogle onClick={entrarComGoogle} carregando={carregando} />
+        {navegadorInterno ? (
+          <AvisoNavegadorInterno
+            info={navegadorInterno}
+            grande
+            cores={{
+              texto: cor.tinta,
+              textoSuave: cor.tintaMuted,
+              borda: cor.borda,
+              fundo: cor.fundoSuave,
+              botao: cor.destaque,
+              botaoTexto: '#FFFFFF',
+            }}
+          />
+        ) : (
+          <BotaoGoogle onClick={entrarComGoogle} carregando={carregando} />
+        )}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: espaco.sm, margin: `${espaco.md}px 0` }}>

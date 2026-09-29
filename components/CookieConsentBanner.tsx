@@ -78,36 +78,46 @@ export default function CookieConsentBanner() {
 
   if (!visible) return null;
 
+  // Mobile: cartão compacto (texto curto, uma linha de botões) para não
+  // cobrir a primeira tela. Botões com 44px de altura, o mínimo
+  // recomendado para toque. Aceitar e Recusar têm o mesmo tamanho (LGPD).
   return (
     <div
       role="dialog"
       aria-label="Consentimento de cookies"
-      className="fixed bottom-4 left-4 right-4 z-[60] rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-2xl backdrop-blur-xl sm:right-auto sm:max-w-sm sm:p-5"
+      className="fixed left-3 right-3 z-[60] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-2xl backdrop-blur-xl sm:left-4 sm:right-auto sm:max-w-sm sm:p-5"
+      style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
     >
-      <p className="mb-3 text-xs leading-relaxed text-slate-700 sm:text-sm">
-        Usamos cookies para entender como você usa o site e melhorar sua experiência.
-        Você pode aceitar ou recusar os cookies não essenciais a qualquer momento.
-        Saiba mais no nosso{' '}
+      <p className="mb-2.5 text-[13px] leading-snug text-slate-700 sm:mb-3 sm:text-sm sm:leading-relaxed">
+        <span className="sm:hidden">Usamos cookies para melhorar sua experiência.</span>
+        <span className="hidden sm:inline">
+          Usamos cookies para entender como você usa o site e melhorar sua experiência.
+          Você pode aceitar ou recusar os cookies não essenciais a qualquer momento.
+          Saiba mais no nosso
+        </span>{' '}
         <a
           href={midiaHost ? 'https://www.minhai.app/aviso' : '/aviso'}
-          className="font-semibold hover:underline"
+          className="font-semibold underline-offset-2 hover:underline"
           style={{ color: visual.corTexto }}
         >
-          Aviso de Privacidade
+          <span className="sm:hidden">Saiba mais</span>
+          <span className="hidden sm:inline">Aviso de Privacidade</span>
         </a>
-        .
+        <span className="hidden sm:inline">.</span>
       </p>
       <div className="flex items-center gap-2">
         <button
+          type="button"
           onClick={() => handleChoice(true)}
-          className="flex-1 rounded-full px-4 py-2 text-xs font-bold leading-none transition-all duration-300 hover:brightness-110 active:scale-95 sm:text-sm"
+          className="min-h-[44px] flex-1 rounded-full px-4 text-sm font-bold leading-none transition-all duration-300 hover:brightness-110 active:scale-95"
           style={{ backgroundColor: visual.cor, color: visual.corTextoBotao }}
         >
           Aceitar
         </button>
         <button
+          type="button"
           onClick={() => handleChoice(false)}
-          className="flex-1 rounded-full border border-slate-300 px-4 py-2 text-xs font-bold leading-none text-slate-600 transition-all duration-300 hover:bg-slate-100 hover:text-slate-900 active:scale-95 sm:text-sm"
+          className="min-h-[44px] flex-1 rounded-full border border-slate-300 px-4 text-sm font-bold leading-none text-slate-600 transition-all duration-300 hover:bg-slate-100 hover:text-slate-900 active:scale-95"
         >
           Recusar
         </button>

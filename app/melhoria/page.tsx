@@ -180,17 +180,33 @@ export default function LandingMelhorIA() {
           fontSize: 40, fontWeight: 800, color: cor.tinta,
           margin: `0 0 ${espaco.md}px`, lineHeight: 1.15,
         }}>
-          Você, seus pais ou avós esqueceram o remédio ou cairam num golpe de novo?
+          Você, seus pais ou avós esqueceram o remédio ou caíram num golpe de novo?
         </h1>
 
-        <p style={{
-          fontSize: 23, color: cor.tintaMuted, lineHeight: 1.5,
+        {/* Só 2,8% chegam ao fim da página no celular (Clarity): os três
+            argumentos mais fortes ficam aqui, antes do botão, em linhas curtas. */}
+        <ul style={{
+          listStyle: 'none', padding: 0,
           margin: `0 0 ${espaco.lg}px`,
+          display: 'grid', gap: espaco.sm,
         }}>
-          A <strong style={{ color: cor.tinta }}>MelhorIA</strong> avisa na hora
-          certa, registra o que foi tomado e chama você quando algo falha.
-          Feito para quem já não tem paciência com aplicativo complicado.
-        </p>
+          {[
+            'Avisa na hora certa, mesmo com o celular guardado',
+            'Chama a família se a dose não for confirmada',
+            'Confere boleto e link de graça, contra golpes',
+          ].map((beneficio) => (
+            <li
+              key={beneficio}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: espaco.xs,
+                fontSize: 22, color: cor.tinta, lineHeight: 1.35, fontWeight: 600,
+              }}
+            >
+              <Check size={28} color={cor.destaque} strokeWidth={3} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
+              {beneficio}
+            </li>
+          ))}
+        </ul>
 
         <button
           type="button"

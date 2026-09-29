@@ -92,6 +92,16 @@ function escolherVideoAtual() {
 }
 
 export default function LandingExplicativa() {
+  const irParaCriacao = () => {
+    const alvo = document.getElementById('cv-landing-titulo');
+    alvo?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Foca a caixa de texto da IA sem rolar de novo; se não achar, só rola.
+    window.setTimeout(() => {
+      const campo = document.querySelector<HTMLTextAreaElement>('.cv-landing-hero textarea');
+      campo?.focus({ preventScroll: true });
+    }, 450);
+  };
+
   const [videoId, setVideoId] = useState<string | null>(null);
 
   const iniciarVideo = useCallback(() => {
@@ -162,13 +172,29 @@ export default function LandingExplicativa() {
 
         <div className={styles.recursosGrid}>
           {recursos.map(({ Icon, titulo, texto, itens }) => (
-            <article key={titulo} className={styles.recursoCard}>
+            // O Clarity mostrou cliques mortos nos cards: as pessoas tocam
+            // achando que são botões. O card inteiro vira atalho para a caixa
+            // de criação no topo, e o link no fim mantém acesso por teclado.
+            <article
+              key={titulo}
+              className={styles.recursoCard}
+              onClick={irParaCriacao}
+              style={{ cursor: 'pointer' }}
+            >
               <span className={styles.icone}><Icon className="h-6 w-6" /></span>
               <h3>{titulo}</h3>
               <p>{texto}</p>
               <ul>
                 {itens.map((item) => <li key={item}><Check className="h-3.5 w-3.5" />{item}</li>)}
               </ul>
+              <a
+                href="#cv-landing-titulo"
+                onClick={(evento) => { evento.stopPropagation(); evento.preventDefault(); irParaCriacao(); }}
+                className="mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-semibold"
+                style={{ color: '#a04a63' }}
+              >
+                Criar meu convite <ArrowRight className="h-4 w-4" />
+              </a>
             </article>
           ))}
         </div>

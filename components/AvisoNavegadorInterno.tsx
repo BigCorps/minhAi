@@ -23,11 +23,14 @@ export default function AvisoNavegadorInterno({
   info,
   cores,
   grande = false,
+  emailAcima = false,
 }: {
   info: NavegadorInterno;
   cores: Cores;
   /** Letras e botões maiores (MelhorIA). */
   grande?: boolean;
+  /** true quando o formulário de e-mail fica acima do aviso (Mídia.Pro). */
+  emailAcima?: boolean;
 }) {
   const [copiado, setCopiado] = useState(false);
 
@@ -75,7 +78,7 @@ export default function AvisoNavegadorInterno({
       </p>
       <p style={{ margin: 0, fontSize: fonteTexto, color: cores.textoSuave, lineHeight: 1.5 }}>
         O Google não permite entrar com a conta Google aqui dentro.
-        {' '}<strong style={{ color: cores.texto }}>Use seu e-mail logo abaixo</strong>
+        {' '}<strong style={{ color: cores.texto }}>{emailAcima ? 'Use o cadastro com e-mail acima' : 'Use seu e-mail logo abaixo'}</strong>
         {info.android
           ? ', ou abra esta página no Chrome para usar o Google.'
           : ', ou toque em ··· no canto da tela e escolha “Abrir no navegador” para usar o Google.'}

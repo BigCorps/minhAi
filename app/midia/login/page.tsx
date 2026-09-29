@@ -7,6 +7,9 @@ import { useRouter } from 'next/navigation';
 import { AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { MIDIA_BRAND } from '@/lib/midia/constants';
+import { trackMidiaMetaCompleteRegistration } from '@/lib/meta-pixel-midia';
+import { useNavegadorInterno } from '@/lib/navegador-interno';
+import AvisoNavegadorInterno from '@/components/AvisoNavegadorInterno';
 
 function dashboardPath() {
   if (typeof window === 'undefined') return '/dashboard';
@@ -21,6 +24,7 @@ function loginPath() {
 export default function MidiaLoginPage() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const navegadorInterno = useNavegadorInterno();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -61,6 +65,8 @@ export default function MidiaLoginPage() {
           },
         });
         if (signUpError) throw signUpError;
+        // Conta criada (com ou sem confirmação de e-mail pendente).
+        trackMidiaMetaCompleteRegistration();
 
         if (data.session) {
           router.replace(dashboardPath());
@@ -181,9 +187,24 @@ export default function MidiaLoginPage() {
           <Divider />
 
           <div className="space-y-3">
-            <button onClick={handleGoogleOAuth} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">
-              <GoogleIcon /> Continuar com Google
-            </button>
+            {navegadorInterno ? (
+              <AvisoNavegadorInterno
+                info={navegadorInterno}
+                emailAcima
+                cores={{
+                  texto: '#0f172a',
+                  textoSuave: '#475569',
+                  borda: '#e2e8f0',
+                  fundo: '#f8fafc',
+                  botao: '#003295',
+                  botaoTexto: '#ffffff',
+                }}
+              />
+            ) : (
+              <button onClick={handleGoogleOAuth} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">
+                <GoogleIcon /> Continuar com Google
+              </button>
+            )}
           </div>
 
           <div className="mt-5 text-center">

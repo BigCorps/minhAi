@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Wallet, LogOut, Search } from 'lucide-react';
 import AdicionarSaldoModal from '@/components/consultatec/AdicionarSaldoModal';
+import EmpresaBrandingCard from '@/components/consultatec/EmpresaBrandingCard';
 import Footer from '@/components/consultatec/Footer';
 
 const cor = {
@@ -223,7 +224,7 @@ function ConsultaTecDashboardContent() {
 
         {bemVindo && (
           <div className="mb-4 px-4 py-3 rounded-xl border text-sm text-center" style={{ backgroundColor: cor.fundoCard, borderColor: cor.destaque, color: cor.destaque }}>
-            Sua conta foi criada!
+            Sua conta foi criada! Se sua empresa faz consultas com frequência, você pode manter saldo e personalizar os PDFs com sua própria marca.
           </div>
         )}
 
@@ -295,6 +296,7 @@ function ConsultaTecDashboardContent() {
           </div>
 
           <div className="flex flex-col gap-4 min-w-0">
+            {companyId && <EmpresaBrandingCard companyId={companyId} />}
             <MinhaiPromoCard />
           </div>
         </div>

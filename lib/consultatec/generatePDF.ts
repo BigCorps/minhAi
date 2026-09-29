@@ -1,14 +1,16 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { ResultadoFormatado } from '@/types/consultatec';
+import type { ConsultaTecBranding, ResultadoFormatado } from '@/types/consultatec';
 
-const RGB = {
-  fundo: [242, 234, 211] as [number, number, number],
-  card: [251, 246, 233] as [number, number, number],
-  borda: [201, 191, 160] as [number, number, number],
-  tinta: [28, 26, 20] as [number, number, number],
-  muted: [107, 99, 80] as [number, number, number],
-  destaque: [122, 97, 66] as [number, number, number],
+type Rgb = [number, number, number];
+
+const DEFAULT_RGB = {
+  fundo: [242, 234, 211] as Rgb,
+  card: [251, 246, 233] as Rgb,
+  borda: [201, 191, 160] as Rgb,
+  tinta: [28, 26, 20] as Rgb,
+  muted: [107, 99, 80] as Rgb,
+  destaque: [122, 97, 66] as Rgb,
 };
 
 const str = (value: any, fallback = 'Não informado') => {
@@ -47,13 +49,94 @@ function nonZeroRestriction(item: any) {
   return quantidade > 0 || (Number.isFinite(valor) && Math.abs(valor) > 0) || detalhes.length > 0;
 }
 
-export function generateConsultaTecPDF(input: {
+function hexToRgb(hex: string | null | undefined, fallback: Rgb): Rgb {
+  const clean = String(hex ?? '').trim().replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(clean)) return fallback;
+  return [
+    parseInt(clean.slice(0, 2), 16),
+    parseInt(clean.slice(2, 4), 16),
+    parseInt(clean.slice(4, 6), 16),
+  ];
+}
+
+function mix(a: Rgb, b: Rgb, amountOfB: number): Rgb {
+  const p = Math.max(0, Math.min(1, amountOfB));
+  return [
+    Math.round(a[0] * (1 - p) + b[0] * p),
+    Math.round(a[1] * (1 - p) + b[1] * p),
+    Math.round(a[2] * (1 - p) + b[2] * p),
+  ];
+}
+
+function textOnColor(rgb: Rgb): Rgb {
+  const luminance = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
+  return luminance > 0.62 ? [28, 26, 20] : [255, 255, 255];
+}
+
+function formatIssuerCnpj(cnpj?: string | null) {
+  const digits = String(cnpj ?? '').replace(/\D/g, '');
+  if (digits.length !== 14) return '';
+  return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+}
+
+async function fetchLogo(url?: string | null): Promise<{ dataUrl: string; width: number; height: number; format: 'PNG' | 'JPEG' } | null> {
+  if (!url || typeof window === 'undefined') return null;
+  try {
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    if (!['image/png', 'image/jpeg'].includes(blob.type)) return null;
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+
+    const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+
+    return {
+      dataUrl,
+      width: dimensions.width || 1,
+      height: dimensions.height || 1,
+      format: blob.type === 'image/jpeg' ? 'JPEG' : 'PNG',
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function generateConsultaTecPDF(input: {
   titulo: string;
   documento: string;
   action: string;
   result: any;
   resultadoFormatado?: ResultadoFormatado[] | [string, string][];
-}): string {
+  branding?: ConsultaTecBranding | null;
+}): Promise<string> {
+  const branding = input.branding?.enabled ? input.branding : null;
+  const primary = branding ? hexToRgb(branding.primary_color, DEFAULT_RGB.destaque) : DEFAULT_RGB.destaque;
+  const secondary = branding ? hexToRgb(branding.secondary_color, DEFAULT_RGB.fundo) : DEFAULT_RGB.fundo;
+  const white: Rgb = [255, 255, 255];
+  const palette = branding
+    ? {
+        fundo: mix(secondary, white, 0.78),
+        card: mix(secondary, white, 0.9),
+        borda: mix(primary, white, 0.68),
+        tinta: DEFAULT_RGB.tinta,
+        muted: DEFAULT_RGB.muted,
+        destaque: primary,
+        headerText: textOnColor(primary),
+      }
+    : { ...DEFAULT_RGB, headerText: white };
+
+  const logo = branding?.logo_url ? await fetchLogo(branding.logo_url) : null;
   const doc = new jsPDF({ compress: true, unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -67,25 +150,76 @@ export function generateConsultaTecPDF(input: {
     footerDrawnPages.add(pageNumber);
 
     doc.setFontSize(7.5);
-    doc.setTextColor(...RGB.muted);
-    doc.text('Relatório informativo ConsultaTec. Consulte os avisos e condições de uso ao final do documento.', margin, pageHeight - 7);
+    doc.setTextColor(...palette.muted);
+    const footerText = branding
+      ? `${branding.company_name} · Tecnologia ConsultaTec · Consulte os avisos e condições de uso ao final.`
+      : 'Relatório informativo ConsultaTec. Consulte os avisos e condições de uso ao final do documento.';
+    doc.text(footerText, margin, pageHeight - 7, { maxWidth: pageWidth - margin * 2 - 18 });
     doc.text(`Página ${pageNumber}`, pageWidth - margin, pageHeight - 7, { align: 'right' });
   };
 
   const addHeader = () => {
-    doc.setFillColor(...RGB.fundo);
-    doc.rect(0, 0, pageWidth, 32, 'F');
-    doc.setTextColor(...RGB.tinta);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.text('ConsultaTec', margin, 14);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(...RGB.muted);
-    doc.text(input.titulo, margin, 21);
-    doc.text(`Documento: ${input.documento}`, margin, 27);
-    doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, pageWidth - margin, 27, { align: 'right' });
-    y = 40;
+    if (branding) {
+      doc.setFillColor(...palette.destaque);
+      doc.rect(0, 0, pageWidth, 3.5, 'F');
+      doc.setFillColor(...palette.fundo);
+      doc.rect(0, 3.5, pageWidth, 34.5, 'F');
+
+      let textX = margin;
+      if (logo) {
+        const maxW = 22;
+        const maxH = 18;
+        const ratio = logo.width / logo.height;
+        let w = maxW;
+        let h = w / ratio;
+        if (h > maxH) {
+          h = maxH;
+          w = h * ratio;
+        }
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(margin, 8, 24, 22, 2, 2, 'F');
+        doc.addImage(logo.dataUrl, logo.format, margin + (24 - w) / 2, 10 + (18 - h) / 2, w, h, undefined, 'FAST');
+        textX = margin + 29;
+      }
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(...palette.tinta);
+      const brandName = branding.company_name.length > 48 ? `${branding.company_name.slice(0, 45)}…` : branding.company_name;
+      doc.text(brandName, textX, 14);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...palette.muted);
+      const issuerCnpj = formatIssuerCnpj(branding.cnpj);
+      if (issuerCnpj) doc.text(`Empresa emissora · CNPJ ${issuerCnpj}`, textX, 19);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(...palette.destaque);
+      doc.text(input.titulo, textX, 25);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...palette.muted);
+      doc.text(`Documento consultado: ${input.documento}`, textX, 31);
+      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, pageWidth - margin, 31, { align: 'right' });
+      y = 45;
+    } else {
+      doc.setFillColor(...palette.fundo);
+      doc.rect(0, 0, pageWidth, 32, 'F');
+      doc.setTextColor(...palette.tinta);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.text('ConsultaTec', margin, 14);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...palette.muted);
+      doc.text(input.titulo, margin, 21);
+      doc.text(`Documento: ${input.documento}`, margin, 27);
+      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, pageWidth - margin, 27, { align: 'right' });
+      y = 40;
+    }
   };
 
   const newPage = () => {
@@ -99,7 +233,7 @@ export function generateConsultaTecPDF(input: {
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.setTextColor(...RGB.destaque);
+    doc.setTextColor(...palette.destaque);
     doc.text(title, margin, y);
     y += 3;
 
@@ -109,9 +243,9 @@ export function generateConsultaTecPDF(input: {
       body,
       theme: 'grid',
       margin: { left: margin, right: margin, bottom: 13 },
-      styles: { fontSize: 8.5, cellPadding: 2.2, textColor: RGB.tinta, lineColor: RGB.borda, lineWidth: 0.15 },
-      headStyles: { fillColor: RGB.destaque, textColor: [255, 255, 255], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: RGB.card },
+      styles: { fontSize: 8.5, cellPadding: 2.2, textColor: palette.tinta, lineColor: palette.borda, lineWidth: 0.15 },
+      headStyles: { fillColor: palette.destaque, textColor: palette.headerText, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: palette.card },
       didDrawPage: footer,
     });
 
@@ -123,16 +257,16 @@ export function generateConsultaTecPDF(input: {
     const needed = 11 + lines.length * 4.2;
     if (y + needed > pageHeight - 16) newPage();
 
-    doc.setFillColor(...RGB.card);
-    doc.setDrawColor(...RGB.borda);
+    doc.setFillColor(...palette.card);
+    doc.setDrawColor(...palette.borda);
     doc.roundedRect(margin, y, pageWidth - margin * 2, needed, 2, 2, 'FD');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
-    doc.setTextColor(...RGB.destaque);
+    doc.setTextColor(...palette.destaque);
     doc.text(title, margin + 4, y + 6);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.2);
-    doc.setTextColor(...RGB.tinta);
+    doc.setTextColor(...palette.tinta);
     doc.text(lines, margin + 4, y + 11);
     y += needed + 4;
   };
@@ -239,7 +373,7 @@ export function generateConsultaTecPDF(input: {
   if (y > pageHeight - 75) newPage();
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.setTextColor(...RGB.destaque);
+  doc.setTextColor(...palette.destaque);
   doc.text('Informações importantes', margin, y);
   y += 5;
 

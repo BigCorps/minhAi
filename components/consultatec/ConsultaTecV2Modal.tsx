@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, CheckCircle2, Clipboard, Download, FileSearch, Loader2, ShieldCheck, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { confirmarPixConsulta, executarConsulta, gerarPixConsulta } from '@/lib/consultatec/api';
 import { generateConsultaTecPDF } from '@/lib/consultatec/generatePDF';
-import type { ConsultaAction, ResultadoFormatado } from '@/types/consultatec';
+import type { ConsultaAction, ConsultaTecBranding, ResultadoFormatado } from '@/types/consultatec';
 import ConsultaCompletaCnpjResult from './ConsultaCompletaCnpjResult';
 
 interface Props {
@@ -38,6 +38,16 @@ const formatDoc = (doc: string) => doc.length === 11
   ? doc.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
   : doc.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
 
+function readableText(hex: string) {
+  const clean = hex.replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(clean)) return '#1C1A14';
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.62 ? '#1C1A14' : '#FFFFFF';
+}
+
 function normalizeRows(input: any): ResultadoFormatado[] {
   if (!Array.isArray(input)) return [];
   return input
@@ -63,6 +73,8 @@ export default function ConsultaTecV2Modal({
   const [resultado, setResultado] = useState<any>(null);
   const [rows, setRows] = useState<ResultadoFormatado[]>([]);
   const [copiado, setCopiado] = useState(false);
+  const [baixandoPdf, setBaixandoPdf] = useState(false);
+  const [branding, setBranding] = useState<ConsultaTecBranding | null>(null);
   const [pix, setPix] = useState<{
     transactionId: string;
     qrCodeUrl: string;
@@ -70,6 +82,26 @@ export default function ConsultaTecV2Modal({
     amountBrl: string;
     expiresAt?: string;
   } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user || cancelled) return;
+
+      const { data } = await supabase
+        .from('consultatec_branding')
+        .select('company_id, cnpj, company_name, logo_url, primary_color, secondary_color, enabled')
+        .eq('company_id', companyId)
+        .eq('enabled', true)
+        .maybeSingle();
+
+      if (!cancelled && data) setBranding(data as ConsultaTecBranding);
+    })();
+
+    return () => { cancelled = true; };
+  }, [companyId, supabase]);
 
   const concluir = (res: any) => {
     setResultado(res?.result ?? {});
@@ -145,21 +177,31 @@ export default function ConsultaTecV2Modal({
     setTimeout(() => setCopiado(false), 1800);
   };
 
-  const baixarPDF = () => {
-    if (!resultado) return;
-    const dataUri = generateConsultaTecPDF({
-      titulo,
-      documento: formatDoc(documento),
-      action,
-      result: resultado,
-      resultadoFormatado: rows,
-    });
-    const link = document.createElement('a');
-    link.href = dataUri;
-    link.download = `consultatec-${action}-${documento}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const baixarPDF = async () => {
+    if (!resultado || baixandoPdf) return;
+    setError(null);
+    setBaixandoPdf(true);
+
+    try {
+      const dataUri = await generateConsultaTecPDF({
+        titulo,
+        documento: formatDoc(documento),
+        action,
+        result: resultado,
+        resultadoFormatado: rows,
+        branding,
+      });
+      const link = document.createElement('a');
+      link.href = dataUri;
+      link.download = `consultatec-${action}-${documento}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err: any) {
+      setError(err?.message || 'Não foi possível gerar o PDF.');
+    } finally {
+      setBaixandoPdf(false);
+    }
   };
 
   return createPortal(
@@ -204,6 +246,11 @@ export default function ConsultaTecV2Modal({
                   </div>
                 </div>
               </div>
+              {branding && (
+                <div className="text-xs rounded-xl border px-3 py-2" style={{ color: cor.muted, borderColor: cor.borda }}>
+                  O PDF será gerado com a identidade visual de <strong style={{ color: cor.tinta }}>{branding.company_name}</strong>.
+                </div>
+              )}
               {action === 'completa_cnpj' && (
                 <div className="text-xs leading-relaxed" style={{ color: cor.muted }}>
                   A consulta completa reúne cadastro enriquecido, quadro societário, score ou faixa de risco quando disponível, restrições e protestos. A ConsultaTec não estima pontuação ausente.
@@ -248,13 +295,39 @@ export default function ConsultaTecV2Modal({
 
           {step === 'resultado' && resultado && (
             <div className="space-y-4">
+              {branding && (
+                <div
+                  className="rounded-xl border overflow-hidden"
+                  style={{ borderColor: branding.primary_color }}
+                >
+                  <div className="h-1.5" style={{ backgroundColor: branding.primary_color }} />
+                  <div className="px-4 py-3 flex items-center gap-3" style={{ backgroundColor: branding.secondary_color }}>
+                    {branding.logo_url && (
+                      <div className="w-10 h-10 rounded-lg bg-white/90 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <img src={branding.logo_url} alt={branding.company_name} className="max-w-full max-h-full object-contain" />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm truncate" style={{ color: readableText(branding.secondary_color) }}>{branding.company_name}</p>
+                      <p className="text-[10px]" style={{ color: readableText(branding.secondary_color), opacity: 0.78 }}>Relatório personalizado · Tecnologia ConsultaTec</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5" style={{ color: cor.destaque }} />
                   <span className="font-semibold text-sm" style={{ color: cor.tinta }}>Consulta realizada com sucesso</span>
                 </div>
-                <button onClick={baixarPDF} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold" style={{ backgroundColor: cor.destaque, color: cor.fundo }}>
-                  <Download className="w-4 h-4" /> Baixar PDF
+                <button
+                  onClick={baixarPDF}
+                  disabled={baixandoPdf}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-60"
+                  style={{ backgroundColor: cor.destaque, color: cor.fundo }}
+                >
+                  {baixandoPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {baixandoPdf ? 'Gerando PDF...' : 'Baixar PDF'}
                 </button>
               </div>
 

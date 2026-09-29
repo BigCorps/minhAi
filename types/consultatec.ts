@@ -22,6 +22,17 @@ export interface ResultadoFormatado {
   value: string;
 }
 
+export interface ConsultaTecBranding {
+  company_id?: string;
+  cnpj: string;
+  company_name: string;
+  logo_url?: string | null;
+  primary_color: string;
+  secondary_color: string;
+  enabled: boolean;
+  attested_at?: string | null;
+}
+
 export interface ConsultaTecApiResponse {
   success: boolean;
   error?: string;

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { LogIn, Wallet } from 'lucide-react';
+import { Building2, LogIn, Wallet } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { detectarTipoDocumento, documentoValido, formatarDocumento, TipoDocumento } from '@/lib/validateDocumento';
 import ConsultaTecV2Modal from '@/components/consultatec/ConsultaTecV2Modal';
@@ -79,8 +79,6 @@ const OPCOES_CNPJ: ConsultaOpcao[] = [
 const formatBRL = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 const GUEST_COMPANY_ID = process.env.NEXT_PUBLIC_CONSULTATEC_GUEST_COMPANY_ID || '';
 
-// Link da ficha na Play Store. O id é o package_name declarado no Play Console
-// e no app/.well-known/assetlinks.json — os três precisam ser idênticos.
 const CONSULTATEC_PLAY_URL =
   'https://play.google.com/store/apps/details?id=br.tec.consulta.twa';
 
@@ -121,8 +119,6 @@ export default function ConsultaTecPage() {
   const garantirCompanyId = useCallback(async (): Promise<string | null> => {
     if (companyId) return companyId;
 
-    // A company separa histórico/configurações do ConsultaTec; o saldo é compartilhado
-    // entre os aplicativos que usam a carteira minhAi.
     const { data, error } = await supabase.rpc('ensure_my_consultatec_company_v2');
     if (error || !data) {
       setErroAcesso('Não foi possível abrir sua conta ConsultaTec. Tente sair e entrar novamente.');
@@ -200,10 +196,6 @@ export default function ConsultaTecPage() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            {/* Selo da Play Store — mesmo padrão e mesmas medidas do PixWiki
-                (62px no mobile, 108px no desktop, arte em /cards/play.png).
-                Aqui não é preciso portal: o header da ConsultaTec é renderizado
-                nesta própria página, então o selo entra direto no JSX. */}
             <a
               href={CONSULTATEC_PLAY_URL}
               target="_blank"
@@ -274,6 +266,25 @@ export default function ConsultaTecPage() {
           {erroAcesso && <p className="text-center text-sm mt-2" style={{ color: cor.erroTexto }}>{erroAcesso}</p>}
         </div>
 
+        {!userId && (
+          <div className="w-full max-w-md mt-4 rounded-xl border px-4 py-3 flex items-start gap-3" style={{ backgroundColor: cor.fundoCard, borderColor: cor.borda }}>
+            <Building2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: cor.destaque }} />
+            <div className="text-left">
+              <p className="text-xs font-bold" style={{ color: cor.tinta }}>Sua empresa faz consultas com frequência?</p>
+              <p className="text-xs mt-1 leading-relaxed" style={{ color: cor.tintaMuted }}>
+                O cadastro continua opcional. Com uma conta empresarial você pode manter saldo e gerar PDFs com o logo, nome e cores da sua empresa.
+              </p>
+              <button
+                onClick={() => router.push('/consultatec/login')}
+                className="text-xs font-bold underline mt-2"
+                style={{ color: cor.destaque }}
+              >
+                Criar conta / entrar
+              </button>
+            </div>
+          </div>
+        )}
+
         {documentoOk && (
           <>
             <div className={`w-full mt-10 grid grid-cols-1 gap-4 ${tipo === 'cnpj' ? 'max-w-4xl sm:grid-cols-3' : 'max-w-2xl sm:grid-cols-2'}`}>
@@ -310,7 +321,7 @@ export default function ConsultaTecPage() {
           <p className="text-center text-xs mt-14" style={{ color: cor.tintaMuted }}>
             Já tem saldo?{' '}
             <button onClick={() => router.push('/consultatec/dashboard')} className="underline font-medium" style={{ color: cor.destaque }}>
-              Veja seu histórico e saldo
+              Veja seu histórico, saldo e identidade visual
             </button>
           </p>
         )}

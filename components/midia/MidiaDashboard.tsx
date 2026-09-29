@@ -194,9 +194,36 @@ function PublisherSetup({ onCreated, action, setAction }: { onCreated: () => Pro
 function LocationPanel({ locations, onCreated, action, setAction }: { locations: Location[]; onCreated: () => Promise<void>; action: string | null; setAction: (value: string | null) => void }) {
   const [error, setError] = useState<string | null>(null);
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const form = new FormData(event.currentTarget); setAction('location'); setError(null);
-    try { const response = await fetch('/api/midia/locations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.get('name'), venueType: form.get('venueType'), city: form.get('city'), state: form.get('state') }) }); const json = await response.json().catch(() => null); if (!response.ok) throw new Error(json?.error || 'Não foi possível cadastrar o local.'); event.currentTarget.reset(); await onCreated(); }
-    catch (err: any) { setError(err?.message || 'Não foi possível cadastrar o local.'); } finally { setAction(null); }
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    setAction('location');
+    setError(null);
+
+    try {
+      const response = await fetch('/api/midia/locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.get('name'),
+          venueType: form.get('venueType'),
+          city: form.get('city'),
+          state: form.get('state'),
+        }),
+      });
+      const json = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(json?.error || 'Não foi possível cadastrar o local.');
+
+      // Capture the element before the await. React may clear event.currentTarget
+      // after the asynchronous request, which caused "reading reset of null"
+      // even though the location had already been created successfully.
+      formElement.reset();
+      await onCreated();
+    } catch (err: any) {
+      setError(err?.message || 'Não foi possível cadastrar o local.');
+    } finally {
+      setAction(null);
+    }
   }
   return <div className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm sm:p-6"><div className="flex items-center gap-3"><MapPin className="h-6 w-6" style={{ color: MIDIA_BRAND.red }} /><div><h2 className="text-xl font-black">Locais</h2><p className="text-xs font-bold text-slate-400">Onde suas telas estão instaladas</p></div></div><div className="mt-5 space-y-2">{locations.length === 0 ? <Empty text="Cadastre o primeiro local para depois adicionar uma tela." /> : locations.map((location) => <div key={location.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4"><div className="font-black">{location.name}</div><div className="mt-1 text-xs font-bold text-slate-400">{venueLabel(location.venueType)}{location.city ? ` · ${location.city}${location.state ? `/${location.state}` : ''}` : ''}</div></div>)}</div><form onSubmit={submit} className="mt-5 space-y-3 border-t border-slate-100 pt-5"><div className="text-xs font-black uppercase tracking-[.14em]" style={{ color: MIDIA_BRAND.blue }}>Adicionar local</div><input name="name" required placeholder="Nome do local" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm" /><select name="venueType" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">{MIDIA_VENUE_TYPES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select><div className="grid grid-cols-[1fr_90px] gap-3"><input name="city" placeholder="Cidade" className="min-w-0 rounded-xl border border-slate-200 px-4 py-3 text-sm" /><input name="state" maxLength={2} placeholder="UF" className="rounded-xl border border-slate-200 px-4 py-3 text-sm uppercase" /></div>{error && <p className="text-xs font-bold text-red-700">{error}</p>}<button disabled={action === 'location'} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black disabled:opacity-50" style={{ color: MIDIA_BRAND.blue }}>{action === 'location' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Adicionar local</button></form></div>;
 }
@@ -207,9 +234,34 @@ function ScreenPanel({ publisherSlug, locations, screens, plans, devices, pairin
   const deviceByScreen = useMemo(() => { const map = new Map<string, Device>(); for (const device of devices) if (device.pairedAt && !map.has(device.screenId)) map.set(device.screenId, device); return map; }, [devices]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const form = new FormData(event.currentTarget); setAction('screen'); setError(null);
-    try { const response = await fetch('/api/midia/screens', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ locationId: form.get('locationId'), name: form.get('name'), screenType: form.get('screenType'), planKey: form.get('planKey') }) }); const json = await response.json().catch(() => null); if (!response.ok) throw new Error(json?.error || 'Não foi possível cadastrar a tela.'); event.currentTarget.reset(); await onCreated(); }
-    catch (err: any) { setError(err?.message || 'Não foi possível cadastrar a tela.'); } finally { setAction(null); }
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    setAction('screen');
+    setError(null);
+
+    try {
+      const response = await fetch('/api/midia/screens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          locationId: form.get('locationId'),
+          name: form.get('name'),
+          screenType: form.get('screenType'),
+          planKey: form.get('planKey'),
+        }),
+      });
+      const json = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(json?.error || 'Não foi possível cadastrar a tela.');
+
+      // Same issue as the location form: do not access event.currentTarget after await.
+      formElement.reset();
+      await onCreated();
+    } catch (err: any) {
+      setError(err?.message || 'Não foi possível cadastrar a tela.');
+    } finally {
+      setAction(null);
+    }
   }
 
   async function generatePairing(screenId: string) {

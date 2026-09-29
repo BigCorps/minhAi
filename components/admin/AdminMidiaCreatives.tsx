@@ -81,6 +81,7 @@ export default function AdminMidiaCreatives({ admin, basePath }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -188,6 +189,7 @@ export default function AdminMidiaCreatives({ admin, basePath }: Props) {
       await post('/api/admin/midia/house/complete', { id: prepared.id });
 
       element.reset();
+      setSelectedFileName(null);
       setNotice('Criativo publicado. Os players elegíveis receberão a atualização da programação.');
       await load();
     } catch (err: any) {
@@ -343,17 +345,33 @@ export default function AdminMidiaCreatives({ admin, basePath }: Props) {
               <input name="endsAt" type="datetime-local" className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white" />
             </label>
 
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black transition hover:bg-blue-500 md:col-span-2 xl:col-span-3">
+            <div className="md:col-span-2 xl:col-span-3">
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-200 transition hover:bg-blue-500/15">
+                <Upload className="h-4 w-4" />
+                {selectedFileName ? 'Trocar arquivo' : 'Escolher imagem ou vídeo'}
+                <input
+                  name="file"
+                  required
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
+                  className="hidden"
+                  disabled={busy === 'upload'}
+                  onChange={(event) => setSelectedFileName(event.target.files?.[0]?.name || null)}
+                />
+              </label>
+              <div className="mt-2 min-h-5 truncate text-center text-[11px] font-bold text-slate-500">
+                {selectedFileName || 'Nenhum arquivo selecionado'}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={busy === 'upload'}
+              className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2 xl:col-span-3"
+            >
               {busy === 'upload' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {busy === 'upload' ? 'Enviando…' : 'Escolher e publicar criativo'}
-              <input
-                name="file"
-                required
-                type="file"
-                accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
-                className="hidden"
-              />
-            </label>
+              {busy === 'upload' ? 'Enviando criativo…' : 'Publicar criativo'}
+            </button>
           </form>
         </section>
 

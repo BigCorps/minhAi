@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Building2, Check, CircleDollarSign, Copy, Download, ExternalLink, FileImage, Loader2, MapPin, Megaphone, MonitorPlay,
+  Building2, CalendarDays, Check, CircleDollarSign, Copy, Download, ExternalLink, FileImage, Loader2, MapPin, Megaphone, MonitorPlay,
   MonitorSmartphone, Plus, QrCode, RefreshCw, Trash2, Upload, Video, Wifi, WifiOff,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
@@ -10,6 +10,7 @@ import { formatBrlCents, MIDIA_BRAND, MIDIA_SCREEN_TYPES, MIDIA_VENUE_TYPES } fr
 import { normalizeMidiaSlug } from '@/lib/midia/slug';
 import MidiaCampaignReviewPanel, { type MidiaCampaignSummary } from '@/components/midia/MidiaCampaignReviewPanel';
 import MidiaFinancePanel, { type MidiaFinanceState } from '@/components/midia/MidiaFinancePanel';
+import MidiaSchedulePanel from '@/components/midia/MidiaSchedulePanel';
 
 type Plan = {
   plan_key: string; name: string; description: string; monthly_price_cents: number;
@@ -32,7 +33,7 @@ type PlaylistItem = {
 type DashboardState = { publisher: Publisher | null; locations: Location[]; screens: Screen[]; plans: Plan[]; devices: Device[]; playlist: PlaylistItem[]; campaigns: MidiaCampaignSummary[]; finance: MidiaFinanceState | null };
 type PairInfo = { code: string; expiresAt: string; playerUrl: string; activationPending: boolean };
 
-export type MidiaDashboardSection = 'overview' | 'screens' | 'ads' | 'media' | 'finance';
+export type MidiaDashboardSection = 'overview' | 'screens' | 'schedule' | 'ads' | 'media' | 'finance';
 
 export default function MidiaDashboard({ section = 'overview' }: { section?: MidiaDashboardSection }) {
   const [data, setData] = useState<DashboardState | null>(null);
@@ -117,6 +118,10 @@ export default function MidiaDashboard({ section = 'overview' }: { section?: Mid
         </section>
       )}
 
+      {section === 'schedule' && (
+        <MidiaSchedulePanel />
+      )}
+
       {section === 'ads' && (
         <div className="mt-8">
           <div className="mb-5 rounded-2xl border border-blue-100 bg-white p-5">
@@ -145,8 +150,9 @@ export default function MidiaDashboard({ section = 'overview' }: { section?: Mid
 function DashboardOverview({ locations, screens, onlineScreens, pendingAds, mediaCount, availableCents }: { locations: number; screens: number; onlineScreens: number; pendingAds: number; mediaCount: number; availableCents: number }) {
   return (
     <div className="mt-8">
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <OverviewCard href="/dashboard/telas" icon={<MonitorSmartphone className="h-6 w-6" />} title="Telas e locais" value={`${screens} tela${screens === 1 ? '' : 's'}`} description={`${onlineScreens} online agora · ${locations} local${locations === 1 ? '' : 'is'}`} />
+        <OverviewCard href="/dashboard/programacao" icon={<CalendarDays className="h-6 w-6" />} title="Programação" value="Ver calendário" description="Mês, semana e dia das exibições da sua rede." />
         <OverviewCard href="/dashboard/anuncios" icon={<Megaphone className="h-6 w-6" />} title="Anúncios" value={pendingAds ? `${pendingAds} aguardando` : 'Tudo em dia'} description="Campanhas pagas e aprovações da sua rede." />
         <OverviewCard href="/dashboard/midias" icon={<FileImage className="h-6 w-6" />} title="Minhas mídias" value={`${mediaCount} ativa${mediaCount === 1 ? '' : 's'}`} description="Imagens e vídeos próprios exibidos nas telas." />
         <OverviewCard href="/dashboard/financeiro" icon={<CircleDollarSign className="h-6 w-6" />} title="Financeiro" value={formatBrlCents(availableCents)} description="Saldo disponível para saque e histórico." />
@@ -157,7 +163,7 @@ function DashboardOverview({ locations, screens, onlineScreens, pendingAds, medi
           <div>
             <div className="text-xs font-black uppercase tracking-[.16em]" style={{ color: MIDIA_BRAND.blue }}>Comece por onde precisar</div>
             <h2 className="mt-2 text-2xl font-black">O painel agora está separado por função.</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Cadastre e pareie telas em <strong>Telas e locais</strong>, acompanhe publicidade paga em <strong>Anúncios</strong>, gerencie sua programação própria em <strong>Minhas mídias</strong> e consulte repasses em <strong>Financeiro</strong>.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Cadastre e pareie telas em <strong>Telas e locais</strong>, visualize horários e ocupação em <strong>Programação</strong>, acompanhe publicidade paga em <strong>Anúncios</strong>, gerencie sua programação própria em <strong>Minhas mídias</strong> e consulte repasses em <strong>Financeiro</strong>.</p>
           </div>
           <a href="/dashboard/telas" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-black text-white" style={{ backgroundColor: MIDIA_BRAND.blue }}><Plus className="h-4 w-4" /> Cadastrar ou gerenciar tela</a>
         </div>

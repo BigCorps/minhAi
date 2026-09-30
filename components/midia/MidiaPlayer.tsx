@@ -2,16 +2,17 @@
 
 import Image from 'next/image';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Expand, Loader2, MonitorPlay, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, Expand, Loader2, MonitorPlay, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { MIDIA_BRAND } from '@/lib/midia/constants';
-import { objectUrlForMidiaItem, syncMidiaMediaCache, type MidiaManifestItem } from '@/lib/midia/player-cache';
+import { inspectMidiaMediaCache, objectUrlForMidiaItem, syncMidiaMediaCache, uniqueMidiaItems, type MidiaManifestItem } from '@/lib/midia/player-cache';
 
-const APP_VERSION = 'web-5';
+const APP_VERSION = 'web-6';
 const TOKEN_KEY_PREFIX = 'midiapro:device:';
 const MANIFEST_KEY_PREFIX = 'midiapro:manifest:';
 const PLAYED_KEY_PREFIX = 'midiapro:paid-played:';
 const PROOF_QUEUE_KEY_PREFIX = 'midiapro:proof-queue:';
+const OFFLINE_DAY_KEY_PREFIX = 'midiapro:offline-day:';
 const MIN_PROOF_RATIO = 0.8;
 
 // Transição curta para não consumir tempo relevante da campanha.
@@ -59,6 +60,41 @@ type ProofQueueEvent = {
 
 type ActivePaidPlayback = { occurrenceId: string; startedAt: string; perfStarted: number };
 
+type OfflineDayState = {
+  date: string;
+  screenId: string;
+  preparedAt: string;
+  total: number;
+  cached: number;
+  failed: number;
+  bytes: number;
+  playlistVersion: number;
+};
+
+function localIsoDate(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function itemsForOfflineDay(manifest: Manifest, date: string) {
+  const paidIds = new Set(
+    (manifest.paidOccurrences ?? [])
+      .filter((occurrence) => localIsoDate(new Date(occurrence.plannedAt)) === date)
+      .map((occurrence) => occurrence.creativeId),
+  );
+  const paid = (manifest.paidCreatives ?? []).filter((item) => paidIds.has(item.creativeId));
+  return uniqueMidiaItems([...(manifest.items ?? []), ...(manifest.houseItems ?? []), ...paid]);
+}
+
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 MB';
+  const mb = bytes / 1024 / 1024;
+  if (mb < 1024) return `${mb.toFixed(mb >= 100 ? 0 : 1)} MB`;
+  return `${(mb / 1024).toFixed(1)} GB`;
+}
+
 function readPlayed(key: string) {
   try {
     const raw = localStorage.getItem(key);
@@ -90,6 +126,7 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
   const manifestKey = `${MANIFEST_KEY_PREFIX}${publisherSlug}`;
   const playedKey = `${PLAYED_KEY_PREFIX}${publisherSlug}`;
   const proofQueueKey = `${PROOF_QUEUE_KEY_PREFIX}${publisherSlug}`;
+  const offlineDayKey = `${OFFLINE_DAY_KEY_PREFIX}${publisherSlug}`;
   const supabase = useMemo(() => createClient(), []);
 
   const [deviceToken, setDeviceToken] = useState<string | null>(null);
@@ -102,6 +139,9 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   const [playbackRevocable, setPlaybackRevocable] = useState(false);
   const [mediaVisible, setMediaVisible] = useState(false);
+  const [offlineDay, setOfflineDay] = useState<OfflineDayState | null>(null);
+  const [offlinePreparing, setOfflinePreparing] = useState(false);
+  const [offlineProgress, setOfflineProgress] = useState({ current: 0, total: 0, bytes: 0, failed: 0 });
   const timerRef = useRef<number | null>(null);
   const transitionTimerRef = useRef<number | null>(null);
   const transitionRef = useRef(false);
@@ -126,7 +166,11 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     if (savedManifest) {
       try { setManifest(JSON.parse(savedManifest) as Manifest); } catch { localStorage.removeItem(manifestKey); }
     }
-  }, [manifestKey, storageKey]);
+    const savedOffline = localStorage.getItem(offlineDayKey);
+    if (savedOffline) {
+      try { setOfflineDay(JSON.parse(savedOffline) as OfflineDayState); } catch { localStorage.removeItem(offlineDayKey); }
+    }
+  }, [manifestKey, offlineDayKey, storageKey]);
 
   useEffect(() => () => {
     if (transitionTimerRef.current) window.clearTimeout(transitionTimerRef.current);
@@ -166,6 +210,65 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     return true;
   }, [flushProofQueue, proofQueueKey]);
 
+  const prepareOfflineDay = useCallback(async (next: Manifest, explicit = false) => {
+    const date = localIsoDate();
+    const items = itemsForOfflineDay(next, date);
+    if (!items.length) {
+      const empty: OfflineDayState = {
+        date, screenId: next.screen.id, preparedAt: new Date().toISOString(), total: 0, cached: 0,
+        failed: 0, bytes: 0, playlistVersion: next.screen.playlistVersion,
+      };
+      setOfflineDay(empty);
+      localStorage.setItem(offlineDayKey, JSON.stringify(empty));
+      return empty;
+    }
+
+    if (!navigator.onLine) {
+      const status = await inspectMidiaMediaCache(items);
+      const local: OfflineDayState = {
+        date, screenId: next.screen.id, preparedAt: offlineDay?.preparedAt || new Date().toISOString(),
+        total: status.total, cached: status.cached, failed: status.missing, bytes: status.bytes,
+        playlistVersion: next.screen.playlistVersion,
+      };
+      setOfflineDay(local);
+      return local;
+    }
+
+    setOfflinePreparing(true);
+    setOfflineProgress({ current: 0, total: items.length, bytes: 0, failed: 0 });
+    try {
+      // Solicita armazenamento persistente quando o navegador permitir. Isso reduz
+      // a chance de o sistema apagar os vídeos do cache durante o dia.
+      try { await navigator.storage?.persist?.(); } catch { /* opcional */ }
+
+      const result = await syncMidiaMediaCache(items, {
+        prune: true,
+        onProgress: (progress) => setOfflineProgress({
+          current: progress.current,
+          total: progress.total,
+          bytes: progress.bytes,
+          failed: progress.failed,
+        }),
+      });
+      const prepared: OfflineDayState = {
+        date,
+        screenId: next.screen.id,
+        preparedAt: new Date().toISOString(),
+        total: result.total,
+        cached: result.cached,
+        failed: result.failed,
+        bytes: result.bytes,
+        playlistVersion: next.screen.playlistVersion,
+      };
+      setOfflineDay(prepared);
+      localStorage.setItem(offlineDayKey, JSON.stringify(prepared));
+      if (explicit && result.failed > 0) setError(`${result.failed} mídia(s) não puderam ser baixadas. Tente novamente antes de sair do Wi-Fi.`);
+      return prepared;
+    } finally {
+      setOfflinePreparing(false);
+    }
+  }, [offlineDay?.preparedAt, offlineDayKey]);
+
   const loadManifest = useCallback(async (token = deviceToken) => {
     if (!token) return;
     setSyncing(true);
@@ -181,7 +284,7 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
       const next = json as Manifest;
       setManifest(next);
       localStorage.setItem(manifestKey, JSON.stringify(next));
-      await syncMidiaMediaCache([...(next.items ?? []), ...(next.paidCreatives ?? []), ...(next.houseItems ?? [])]);
+      await prepareOfflineDay(next);
       setTarget((current) => {
         if (current?.kind === 'own' && current.index < next.items.length) return current;
         if (current?.kind === 'house' && current.index < (next.houseItems ?? []).length) return current;
@@ -195,12 +298,12 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     } catch (err: any) {
       if (!manifest) setError(err?.message || 'Sem programação disponível.');
     } finally { setSyncing(false); }
-  }, [deviceToken, flushProofQueue, manifest, manifestKey, storageKey]);
+  }, [deviceToken, flushProofQueue, manifest, manifestKey, prepareOfflineDay, storageKey]);
 
   useEffect(() => { if (deviceToken) void loadManifest(deviceToken); }, [deviceToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!manifest?.screen.id || !deviceToken) return;
+    if (!manifest?.screen.id || !deviceToken || !online) return;
     const screenChannel = supabase.channel(`midia-screen:${manifest.screen.id}`)
       .on('broadcast', { event: 'playlist' }, () => void loadManifest())
       .subscribe();
@@ -211,7 +314,7 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
       void supabase.removeChannel(screenChannel);
       void supabase.removeChannel(houseChannel);
     };
-  }, [deviceToken, loadManifest, manifest?.screen.id, supabase]);
+  }, [deviceToken, loadManifest, manifest?.screen.id, online, supabase]);
 
   useEffect(() => {
     if (!deviceToken) return;
@@ -251,6 +354,19 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     const timer = window.setInterval(() => { if (navigator.onLine) void loadManifest(); }, 6 * 60 * 60 * 1000);
     return () => window.clearInterval(timer);
   }, [deviceToken, loadManifest]);
+
+  useEffect(() => {
+    if (!manifest) return;
+    const checkDay = () => {
+      const today = localIsoDate();
+      if (navigator.onLine && (offlineDay?.date !== today || offlineDay.screenId !== manifest.screen.id || offlineDay.playlistVersion !== manifest.screen.playlistVersion)) {
+        void prepareOfflineDay(manifest);
+      }
+    };
+    checkDay();
+    const timer = window.setInterval(checkDay, 15 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [manifest, offlineDay?.date, offlineDay?.playlistVersion, offlineDay?.screenId, prepareOfflineDay]);
 
   const paidCreativeById = useMemo(() => new Map((manifest?.paidCreatives ?? []).map((item) => [item.creativeId, item])), [manifest?.paidCreatives]);
 
@@ -458,6 +574,13 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     transition: `opacity ${mediaVisible ? TRANSITION_IN_MS : TRANSITION_OUT_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
   };
 
+  const todayKey = localIsoDate();
+  const offlineReady = offlineDay?.date === todayKey && offlineDay.screenId === manifest.screen.id && offlineDay.failed === 0 && offlineDay.cached >= offlineDay.total;
+  const pendingProofs = readProofQueue(proofQueueKey).length;
+  const connectionLabel = online
+    ? (syncing ? 'Sincronizando' : `Online · Realtime${offlineReady ? ' · offline pronto até 23:59' : ''}`)
+    : `${offlineReady ? 'Offline · sem Realtime · programação local até 23:59' : 'Offline · sem Realtime · programação local desatualizada'}${pendingProofs ? ` · ${pendingProofs} exibição(ões) pendente(s)` : ''}`;
+
   return (
     <main className="fixed inset-0 overflow-hidden bg-black text-white select-none" onDoubleClick={() => void fullscreen()}>
       {current && playbackUrl ? current.kind === 'video' ? (
@@ -486,8 +609,15 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
       )}
 
       {(target?.kind === 'paid' || target?.kind === 'house') && <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-black/55 px-3 py-2 text-[10px] font-black uppercase tracking-wider backdrop-blur sm:left-6 sm:top-6">{target.kind === 'house' ? `Publicidade · ${(current as HouseItem | null)?.advertiserLabel || 'Midia.Pro'}` : 'Publicidade · Midia.Pro'}</div>}
-      <div className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full bg-black/55 px-3 py-2 text-[11px] font-black backdrop-blur sm:bottom-6 sm:left-6">{online ? <Wifi className="h-4 w-4 text-emerald-400" /> : <WifiOff className="h-4 w-4 text-amber-400" />}{online ? (syncing ? 'Sincronizando' : 'Online') : 'Offline · reprodução local'}</div>
-      <div className="absolute bottom-4 right-4 flex gap-2 sm:bottom-6 sm:right-6"><button onClick={() => void loadManifest()} className="rounded-full bg-black/55 p-3 backdrop-blur" aria-label="Atualizar"><RefreshCw className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} /></button><button onClick={() => void fullscreen()} className="rounded-full bg-black/55 p-3 backdrop-blur" aria-label="Tela cheia"><Expand className="h-5 w-5" /></button></div>
+      <div className="absolute bottom-4 left-4 max-w-[70vw] rounded-2xl bg-black/60 px-3 py-2 text-[10px] font-black backdrop-blur sm:bottom-6 sm:left-6 sm:text-[11px]">
+        <div className="flex items-center gap-2">{online ? <Wifi className="h-4 w-4 shrink-0 text-emerald-400" /> : <WifiOff className="h-4 w-4 shrink-0 text-amber-400" />}<span>{connectionLabel}</span></div>
+        {offlinePreparing && <div className="mt-1 text-white/60">Baixando o dia: {offlineProgress.current}/{offlineProgress.total}{offlineProgress.bytes ? ` · ${formatBytes(offlineProgress.bytes)}` : ''}</div>}
+      </div>
+      <div className="absolute bottom-4 right-4 flex gap-2 sm:bottom-6 sm:right-6">
+        <button onClick={() => void prepareOfflineDay(manifest, true)} disabled={!online || offlinePreparing} className="rounded-full bg-black/55 p-3 backdrop-blur disabled:opacity-40" aria-label="Baixar programação de hoje" title={offlineReady ? `Programação de hoje pronta · ${formatBytes(offlineDay?.bytes || 0)}` : 'Baixar programação de hoje'}>{offlinePreparing ? <Loader2 className="h-5 w-5 animate-spin" /> : offlineReady ? <CheckCircle2 className="h-5 w-5 text-emerald-400" /> : <Download className="h-5 w-5" />}</button>
+        <button onClick={() => void loadManifest()} className="rounded-full bg-black/55 p-3 backdrop-blur" aria-label="Atualizar"><RefreshCw className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} /></button>
+        <button onClick={() => void fullscreen()} className="rounded-full bg-black/55 p-3 backdrop-blur" aria-label="Tela cheia"><Expand className="h-5 w-5" /></button>
+      </div>
     </main>
   );
 }

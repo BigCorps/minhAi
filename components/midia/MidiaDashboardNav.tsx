@@ -2,12 +2,13 @@
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
-import { CircleDollarSign, FileImage, LayoutDashboard, Megaphone, MonitorSmartphone } from 'lucide-react';
+import { CalendarDays, CircleDollarSign, FileImage, LayoutDashboard, Megaphone, MonitorSmartphone } from 'lucide-react';
 import { MIDIA_BRAND } from '@/lib/midia/constants';
 
 const items = [
   { suffix: '', label: 'Início', icon: LayoutDashboard },
   { suffix: '/telas', label: 'Telas e locais', icon: MonitorSmartphone },
+  { suffix: '/programacao', label: 'Programação', icon: CalendarDays },
   { suffix: '/anuncios', label: 'Anúncios', icon: Megaphone },
   { suffix: '/midias', label: 'Minhas mídias', icon: FileImage },
   { suffix: '/financeiro', label: 'Financeiro', icon: CircleDollarSign },

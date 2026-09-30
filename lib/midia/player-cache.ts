@@ -10,6 +10,20 @@ export type MidiaManifestItem = {
   sortOrder: number;
   cacheKey: string;
   signedUrl: string;
+  sizeBytes?: number;
+  durationSeconds?: number | null;
+  width?: number | null;
+  height?: number | null;
+  source?: string;
+};
+
+export type MidiaCacheProgress = {
+  current: number;
+  total: number;
+  cached: number;
+  failed: number;
+  bytes: number;
+  item?: MidiaManifestItem;
 };
 
 const CACHE_NAME = 'midia-pro-media-v1';
@@ -20,37 +34,75 @@ function cacheRequest(cacheKey: string) {
   return new Request(`${base}${CACHE_PREFIX}${encodeURIComponent(cacheKey)}`);
 }
 
-export async function syncMidiaMediaCache(items: MidiaManifestItem[]) {
-  if (typeof caches === 'undefined') return { cached: 0, failed: items.length };
+export function uniqueMidiaItems(items: MidiaManifestItem[]) {
+  const byKey = new Map<string, MidiaManifestItem>();
+  for (const item of items) if (item?.cacheKey) byKey.set(item.cacheKey, item);
+  return [...byKey.values()];
+}
+
+export async function syncMidiaMediaCache(
+  rawItems: MidiaManifestItem[],
+  options?: {
+    prune?: boolean;
+    onProgress?: (progress: MidiaCacheProgress) => void;
+  },
+) {
+  const items = uniqueMidiaItems(rawItems);
+  if (typeof caches === 'undefined') return { cached: 0, failed: items.length, bytes: 0, total: items.length };
   const cache = await caches.open(CACHE_NAME);
   const keep = new Set(items.map((item) => cacheRequest(item.cacheKey).url));
   let cached = 0;
   let failed = 0;
+  let bytes = 0;
 
-  for (const item of items) {
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
     const request = cacheRequest(item.cacheKey);
     const existing = await cache.match(request);
     if (existing) {
       cached += 1;
+      bytes += Math.max(0, Number(item.sizeBytes || existing.headers.get('content-length') || 0));
+      options?.onProgress?.({ current: index + 1, total: items.length, cached, failed, bytes, item });
       continue;
     }
 
     try {
       const response = await fetch(item.signedUrl, { cache: 'no-store' });
       if (!response.ok) throw new Error(`asset_http_${response.status}`);
-      await cache.put(request, response.clone());
+      const cloned = response.clone();
+      await cache.put(request, cloned);
       cached += 1;
+      bytes += Math.max(0, Number(item.sizeBytes || response.headers.get('content-length') || 0));
     } catch {
       failed += 1;
     }
+
+    options?.onProgress?.({ current: index + 1, total: items.length, cached, failed, bytes, item });
   }
 
-  // Remove versões que não pertencem mais ao manifesto atual. Outros caches
-  // do app continuam intocados porque usamos um cache dedicado.
-  const keys = await cache.keys();
-  await Promise.all(keys.map((request) => keep.has(request.url) ? Promise.resolve(false) : cache.delete(request)));
+  if (options?.prune !== false) {
+    // Remove versões que não pertencem mais ao manifesto preparado.
+    // Outros caches do app continuam intocados porque usamos um cache dedicado.
+    const keys = await cache.keys();
+    await Promise.all(keys.map((request) => keep.has(request.url) ? Promise.resolve(false) : cache.delete(request)));
+  }
 
-  return { cached, failed };
+  return { cached, failed, bytes, total: items.length };
+}
+
+export async function inspectMidiaMediaCache(rawItems: MidiaManifestItem[]) {
+  const items = uniqueMidiaItems(rawItems);
+  if (typeof caches === 'undefined') return { cached: 0, missing: items.length, bytes: 0, total: items.length };
+  const cache = await caches.open(CACHE_NAME);
+  let cached = 0;
+  let bytes = 0;
+  for (const item of items) {
+    const response = await cache.match(cacheRequest(item.cacheKey));
+    if (!response) continue;
+    cached += 1;
+    bytes += Math.max(0, Number(item.sizeBytes || response.headers.get('content-length') || 0));
+  }
+  return { cached, missing: items.length - cached, bytes, total: items.length };
 }
 
 export async function objectUrlForMidiaItem(item: MidiaManifestItem) {

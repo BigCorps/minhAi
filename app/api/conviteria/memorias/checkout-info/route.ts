@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { adminConviteria, adminPublic } from '@/lib/conviteria/servidor';
 import { buscarEventoDoDono, pacoteDoEvento } from '@/lib/conviteria/memorias-servidor';
 import { MEMORIAS_PRECO_CENTAVOS } from '@/lib/conviteria/memorias-config';
+import { HORA_GRAVATA_PRECO_CENTAVOS } from '@/lib/conviteria/gravata-config';
+import { pacoteHoraGravata } from '@/lib/conviteria/gravata-servidor';
 import { dataEventoElegivelParaTeste, expiracaoEfetivaTeste } from '@/lib/conviteria/teste';
 import { PLANOS } from '@/lib/conviteria/precos';
 import { urlDoConvite } from '@/lib/conviteria/marca';
@@ -31,12 +33,13 @@ export async function GET(req: NextRequest) {
   if (!evento) return NextResponse.json({ erro: 'Convite não encontrado.' }, { status: 404 });
 
   const admin = adminConviteria();
-  const [pacote, { data: whatsapp }] = await Promise.all([
+  const [pacote, { data: whatsapp }, gravata] = await Promise.all([
     pacoteDoEvento(evento.id as string),
     admin.from('evento_whatsapp_config')
       .select('status,pix_transaction_id,pix_txid,comprado_em')
       .eq('evento_id', evento.id)
       .maybeSingle(),
+    pacoteHoraGravata(evento.id as string),
   ]);
 
   const publicado = Boolean(evento.publicado_em);
@@ -44,6 +47,7 @@ export async function GET(req: NextRequest) {
   const conviteCentavos = !publicado && evento.origem_plano === 'avulso' ? avulso.centavos : 0;
   const memoriasAtivas = pacote?.status === 'ativo' && (!pacote.expira_em || new Date(pacote.expira_em).getTime() > Date.now());
   const whatsappAtivo = whatsapp?.status === 'ativo';
+  const gravataAtiva = gravata?.status === 'ativo';
 
   const { data: testeRow } = await admin.from('evento_testes')
     .select('id,evento_id,iniciado_em,expira_em,convertido_em,limpo_em')
@@ -100,6 +104,15 @@ export async function GET(req: NextRequest) {
       ? 'aguardando_pagamento'
       : 'nao_contratado';
 
+  const gravataPendente = gravata?.status === 'aguardando_pagamento'
+    ? Boolean(await transacaoPendente(gravata.pix_transaction_id))
+    : false;
+  const gravataStatus = gravataAtiva
+    ? 'ativo'
+    : gravata?.status === 'aguardando_pagamento' && gravataPendente
+      ? 'aguardando_pagamento'
+      : 'nao_contratado';
+
   const pixConvitePendente = !publicado
     ? Boolean(await transacaoPendente(evento.pix_transaction_id as string | null))
     : false;
@@ -131,6 +144,12 @@ export async function GET(req: NextRequest) {
       precoCentavos: WHATSAPP_EVENTO_PRECO_CENTAVOS,
       status: whatsappStatus,
       ativo: whatsappAtivo,
+    },
+    gravata: {
+      precoCentavos: HORA_GRAVATA_PRECO_CENTAVOS,
+      status: gravataStatus,
+      ativa: gravataAtiva,
+      nomeAcao: gravata?.nome_acao ?? 'Hora da Gravata',
     },
   });
 }

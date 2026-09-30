@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
 import RendaBackground from '@/components/conviteria/RendaBackground';
 import {
-  AlertCircle, Check, CheckCircle2, Clock3, Copy, ExternalLink, Images, Loader2,
+  AlertCircle, Check, CheckCircle2, Clock3, Copy, ExternalLink, Gift, Images, Loader2,
   MessageCircle, MonitorPlay, QrCode, Send, Users, Video,
 } from 'lucide-react';
 import { MARCA } from '@/lib/conviteria/marca';
@@ -50,6 +50,12 @@ type Info = {
     status: string;
     ativo: boolean;
   };
+  gravata: {
+    precoCentavos: number;
+    status: string;
+    ativa: boolean;
+    nomeAcao: string;
+  };
 };
 type Cobranca = {
   transactionId: string;
@@ -57,8 +63,10 @@ type Cobranca = {
   conviteCentavos: number;
   memoriasCentavos: number;
   whatsappCentavos: number;
+  gravataCentavos: number;
   incluiMemorias: boolean;
   incluiWhatsApp: boolean;
+  incluiGravata: boolean;
   qrcode: string;
   copiaECola: string;
 };
@@ -72,11 +80,13 @@ function PagarConteudo() {
   const eventoId = params.get('evento');
   const querMemoriasPorUrl = params.get('memorias') === '1';
   const querWhatsAppPorUrl = params.get('whatsapp') === '1';
+  const querGravataPorUrl = params.get('gravata') === '1';
   const [supabase] = useState(() => createClient());
   const [passo, setPasso] = useState<Passo>('carregando');
   const [info, setInfo] = useState<Info | null>(null);
   const [incluirMemorias, setIncluirMemorias] = useState(querMemoriasPorUrl);
   const [incluirWhatsApp, setIncluirWhatsApp] = useState(querWhatsAppPorUrl);
+  const [incluirGravata, setIncluirGravata] = useState(querGravataPorUrl);
   const [consentimentoWhatsApp, setConsentimentoWhatsApp] = useState(false);
   const [cobranca, setCobranca] = useState<Cobranca | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -114,8 +124,12 @@ function PagarConteudo() {
       setIncluirWhatsApp(true);
     }
 
+    if (j.gravata?.status === 'aguardando_pagamento') setIncluirGravata(true);
+    else if (j.pixConvitePendente) setIncluirGravata(false);
+    else if (querGravataPorUrl) setIncluirGravata(true);
+
     return j as Info;
-  }, [autorizacao, eventoId, querMemoriasPorUrl, querWhatsAppPorUrl]);
+  }, [autorizacao, eventoId, querMemoriasPorUrl, querWhatsAppPorUrl, querGravataPorUrl]);
 
   useEffect(() => {
     let cancelado = false;
@@ -123,7 +137,7 @@ function PagarConteudo() {
       try {
         const i = await carregarInfo();
         if (cancelado) return;
-        if (i.publicado && i.memorias.ativas && i.whatsapp.ativo) {
+        if (i.publicado && i.memorias.ativas && i.whatsapp.ativo && i.gravata.ativa) {
           setUrlConvite(i.url); setPasso('sucesso');
         } else setPasso('oferta');
       } catch (e: any) {
@@ -139,9 +153,11 @@ function PagarConteudo() {
     if (!acesso) return false;
     const esperaMemorias = Boolean(cobranca?.incluiMemorias || incluirMemorias);
     const esperaWhatsApp = Boolean(cobranca?.incluiWhatsApp || incluirWhatsApp);
+    const esperaGravata = Boolean(cobranca?.incluiGravata || incluirGravata);
     const qs = new URLSearchParams({ eventoId });
     if (esperaMemorias) qs.set('memorias', '1');
     if (esperaWhatsApp) qs.set('whatsapp', '1');
+    if (esperaGravata) qs.set('gravata', '1');
     const r = await fetch(`/api/conviteria/evento-status?${qs.toString()}`, {
       headers: { Authorization: `Bearer ${acesso}` }, cache: 'no-store',
     });
@@ -150,14 +166,23 @@ function PagarConteudo() {
     if (j.concluido) {
       if (cobranca) {
         const value = cobranca.valorCentavos / 100;
-        const adicionais = [cobranca.incluiMemorias ? 'Memórias' : '', cobranca.incluiWhatsApp ? 'WhatsApp' : ''].filter(Boolean).join(' + ');
+        const adicionais = [
+          cobranca.incluiMemorias ? 'Memórias' : '',
+          cobranca.incluiWhatsApp ? 'WhatsApp' : '',
+          cobranca.incluiGravata ? 'Hora da Gravata' : '',
+        ].filter(Boolean).join(' + ');
         const itemName = adicionais ? `Convite + ${adicionais}` : 'ConviteIA';
         trackEventOnce(`conviteia:purchase:${eventoId}`, 'purchase', {
           product: 'conviteia', currency: 'BRL', value, item_name: itemName,
           item_category: adicionais ? 'invite_with_addons' : 'invite',
           transaction_id: cobranca.transactionId,
+          includes_gravata: cobranca.incluiGravata,
         });
-        trackConviteIAMetaPurchase({ transactionId: cobranca.transactionId, value, includesMemories: cobranca.incluiMemorias });
+        trackConviteIAMetaPurchase({
+          transactionId: cobranca.transactionId,
+          value,
+          includesMemories: cobranca.incluiMemorias,
+        });
       }
       localStorage.removeItem('conviteia:rascunho');
       setUrlConvite(j.url);
@@ -166,7 +191,7 @@ function PagarConteudo() {
       return true;
     }
     return false;
-  }, [autorizacao, eventoId, cobranca, incluirMemorias, incluirWhatsApp, carregarInfo]);
+  }, [autorizacao, eventoId, cobranca, incluirMemorias, incluirWhatsApp, incluirGravata, carregarInfo]);
 
   async function iniciarTeste() {
     if (!info || !eventoId || iniciandoTeste) return;
@@ -201,7 +226,8 @@ function PagarConteudo() {
 
     const totalPrevisto = info.conviteCentavos
       + (incluirMemorias && !info.memorias.ativas ? info.memorias.precoCentavos : 0)
-      + (incluirWhatsApp && !info.whatsapp.ativo ? info.whatsapp.precoCentavos : 0);
+      + (incluirWhatsApp && !info.whatsapp.ativo ? info.whatsapp.precoCentavos : 0)
+      + (incluirGravata && !info.gravata.ativa ? info.gravata.precoCentavos : 0);
     if (totalPrevisto === 0) {
       localStorage.removeItem('conviteia:rascunho');
       setUrlConvite(info.url); setPasso('sucesso'); return;
@@ -213,17 +239,30 @@ function PagarConteudo() {
     const r = await fetch('/api/conviteria/cobrar-convite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${acesso}` },
-      body: JSON.stringify({ eventoId, incluirMemorias, incluirWhatsApp, consentimentoWhatsApp }),
+      body: JSON.stringify({
+        eventoId,
+        incluirMemorias,
+        incluirWhatsApp,
+        incluirGravata,
+        consentimentoWhatsApp,
+      }),
     });
     const j = await r.json().catch(() => null);
     if (!r.ok) { setErro(j?.erro ?? 'Não foi possível gerar o PIX.'); setPasso('oferta'); return; }
     if (j.semCobranca) { setUrlConvite(info.url); setPasso('sucesso'); return; }
 
     const proximaCobranca: Cobranca = {
-      transactionId: String(j.transactionId), valorCentavos: Number(j.valorCentavos),
-      conviteCentavos: Number(j.conviteCentavos || 0), memoriasCentavos: Number(j.memoriasCentavos || 0),
-      whatsappCentavos: Number(j.whatsappCentavos || 0), incluiMemorias: Boolean(j.incluiMemorias),
-      incluiWhatsApp: Boolean(j.incluiWhatsApp), qrcode: j.qrcode, copiaECola: j.copiaECola,
+      transactionId: String(j.transactionId),
+      valorCentavos: Number(j.valorCentavos),
+      conviteCentavos: Number(j.conviteCentavos || 0),
+      memoriasCentavos: Number(j.memoriasCentavos || 0),
+      whatsappCentavos: Number(j.whatsappCentavos || 0),
+      gravataCentavos: Number(j.gravataCentavos || 0),
+      incluiMemorias: Boolean(j.incluiMemorias),
+      incluiWhatsApp: Boolean(j.incluiWhatsApp),
+      incluiGravata: Boolean(j.incluiGravata),
+      qrcode: j.qrcode,
+      copiaECola: j.copiaECola,
     };
     setCobranca(proximaCobranca);
     trackConviteIAMetaInitiateCheckout({
@@ -265,10 +304,17 @@ function PagarConteudo() {
     ? info.conviteCentavos
       + (incluirMemorias && !info.memorias.ativas ? info.memorias.precoCentavos : 0)
       + (incluirWhatsApp && !info.whatsapp.ativo ? info.whatsapp.precoCentavos : 0)
+      + (incluirGravata && !info.gravata.ativa ? info.gravata.precoCentavos : 0)
     : 0;
   const memoriaPendente = info?.memorias.status === 'aguardando_pagamento';
   const whatsappPendente = info?.whatsapp.status === 'aguardando_pagamento';
-  const algumPixPendente = Boolean(info?.pixConvitePendente || memoriaPendente || whatsappPendente);
+  const gravataPendente = info?.gravata.status === 'aguardando_pagamento';
+  const algumPixPendente = Boolean(
+    info?.pixConvitePendente ||
+    memoriaPendente ||
+    whatsappPendente ||
+    gravataPendente
+  );
 
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-10">
@@ -340,6 +386,27 @@ function PagarConteudo() {
               </div>}
 
               {info.whatsapp.ativo && <div className="rounded-2xl border bg-emerald-50 p-4 text-sm text-emerald-800"><CheckCircle2 className="mb-2 h-5 w-5" /><strong>WhatsApp do Evento já está ativo neste convite.</strong><p className="mt-1 text-xs">Configure a lista, o prazo e o segundo envio em Gestão → Comunicações.</p></div>}
+
+              {!info.gravata.ativa && <button type="button" disabled={algumPixPendente} onClick={() => setIncluirGravata((v) => !v)} className="w-full rounded-2xl border-2 p-4 text-left transition disabled:cursor-default" style={{ borderColor: incluirGravata ? cor.acento : cor.acento + '32', backgroundColor: incluirGravata ? cor.papel : '#fff' }}>
+                <div className="flex items-start gap-3">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl" style={{ backgroundColor: cor.acento + '18', color: cor.acentoTexto }}><Gift className="h-5 w-5" /></div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2"><strong style={{ color: cor.tinta }}>Hora da Gravata</strong><strong style={{ color: cor.acentoTexto }}>+ {brl(info.gravata.precoCentavos)}</strong></div>
+                    <p className="mt-1 text-sm leading-5" style={{ color: cor.tintaSuave }}>Receba contribuições por PIX durante a festa, mostre cada participação no telão e acompanhe tudo pelo dashboard.</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs" style={{ color: cor.tintaSuave }}>
+                      <span className="flex items-center gap-1"><QrCode className="h-3.5 w-3.5" />QR para contribuir</span>
+                      <span className="flex items-center gap-1"><MonitorPlay className="h-3.5 w-3.5" />Telão ao vivo</span>
+                      <span className="flex items-center gap-1"><Gift className="h-3.5 w-3.5" />Nome personalizável</span>
+                      <span className="flex items-center gap-1"><MessageCircle className="h-3.5 w-3.5" />Aviso se tiver WhatsApp</span>
+                    </div>
+                    <p className="mt-3 rounded-lg bg-white/80 px-3 py-2 text-xs">Funciona sozinho. Se o WhatsApp do Evento também estiver ativo, você poderá agendar no dia da festa uma comunicação específica para os convidados confirmados.</p>
+                  </div>
+                  <span className="mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-md border" style={{ borderColor: incluirGravata ? cor.acento : cor.acento + '55', backgroundColor: incluirGravata ? cor.acento : '#fff', color:'#fff' }}>{incluirGravata && <Check className="h-4 w-4" />}</span>
+                </div>
+                {gravataPendente && <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">Há um PIX pendente que já inclui Hora da Gravata. Ele será reutilizado.</p>}
+              </button>}
+
+              {info.gravata.ativa && <div className="rounded-2xl border bg-emerald-50 p-4 text-sm text-emerald-800"><CheckCircle2 className="mb-2 h-5 w-5" /><strong>Hora da Gravata já está ativa neste convite.</strong><p className="mt-1 text-xs">As configurações da experiência ficarão em Gestão → Hora da Gravata.</p></div>}
             </div>
 
             {!info.memorias.ativas && <a href="/memorias" target="_blank" className="mx-auto mt-3 flex w-fit items-center gap-1 text-xs font-semibold" style={{ color: cor.acentoTexto }}>Ver detalhes de Memórias <ExternalLink className="h-3 w-3" /></a>}
@@ -351,11 +418,12 @@ function PagarConteudo() {
               {info.origemPlano === 'mensal' && info.conviteCentavos === 0 && <div className="flex justify-between"><span style={{ color: cor.tintaSuave }}>Convite · plano mensal</span><span className="font-medium text-emerald-700">Incluído</span></div>}
               {incluirMemorias && !info.memorias.ativas && <div className="mt-2 flex justify-between"><span style={{ color: cor.tintaSuave }}>Memórias do Evento</span><span style={{ color: cor.tinta }}>{brl(info.memorias.precoCentavos)}</span></div>}
               {incluirWhatsApp && !info.whatsapp.ativo && <div className="mt-2 flex justify-between"><span style={{ color: cor.tintaSuave }}>WhatsApp do Evento</span><span style={{ color: cor.tinta }}>{brl(info.whatsapp.precoCentavos)}</span></div>}
+              {incluirGravata && !info.gravata.ativa && <div className="mt-2 flex justify-between"><span style={{ color: cor.tintaSuave }}>Hora da Gravata</span><span style={{ color: cor.tinta }}>{brl(info.gravata.precoCentavos)}</span></div>}
               <div className="mt-3 flex justify-between border-t pt-3 text-base font-semibold" style={{ borderColor: cor.acento + '22', color: cor.tinta }}><span>Total agora</span><span>{total > 0 ? brl(total) : 'R$ 0,00'}</span></div>
             </div>
 
             <button onClick={() => void continuar()} className="mt-5 w-full rounded-lg py-3 font-semibold" style={{ backgroundColor: cor.acento, color: cor.blocoTexto }}>{total > 0 ? 'Continuar para o PIX' : 'Continuar sem adicionais'}</button>
-            {(!incluirMemorias && !info.memorias.ativas) || (!incluirWhatsApp && !info.whatsapp.ativo) ? <p className="mt-2 text-center text-xs" style={{ color: cor.tintaSuave }}>Os adicionais que não forem escolhidos agora poderão ser ativados depois pela Gestão do Evento.</p> : null}
+            {(!incluirMemorias && !info.memorias.ativas) || (!incluirWhatsApp && !info.whatsapp.ativo) || (!incluirGravata && !info.gravata.ativa) ? <p className="mt-2 text-center text-xs" style={{ color: cor.tintaSuave }}>Os adicionais que não forem escolhidos agora poderão ser ativados depois pela Gestão do Evento.</p> : null}
 
             {!info.publicado && !info.teste.ativo && info.teste.elegivel && (
               <div className="mt-6 border-t pt-5" style={{ borderColor: cor.acento + '22' }}>
@@ -382,6 +450,7 @@ function PagarConteudo() {
               {cobranca.conviteCentavos > 0 && <div className="mt-1 flex justify-between text-xs" style={{ color: cor.tintaSuave }}><span>Convite</span><span>{brl(cobranca.conviteCentavos)}</span></div>}
               {cobranca.memoriasCentavos > 0 && <div className="mt-1 flex justify-between text-xs" style={{ color: cor.tintaSuave }}><span>Memórias</span><span>{brl(cobranca.memoriasCentavos)}</span></div>}
               {cobranca.whatsappCentavos > 0 && <div className="mt-1 flex justify-between text-xs" style={{ color: cor.tintaSuave }}><span>WhatsApp do Evento</span><span>{brl(cobranca.whatsappCentavos)}</span></div>}
+              {cobranca.gravataCentavos > 0 && <div className="mt-1 flex justify-between text-xs" style={{ color: cor.tintaSuave }}><span>Hora da Gravata</span><span>{brl(cobranca.gravataCentavos)}</span></div>}
             </div>
             <img src={cobranca.qrcode} alt="QR Code do PIX" className="h-56 w-56 rounded-lg border" style={{ borderColor: cor.acento + '44' }} />
             <p className="text-center text-sm" style={{ color: cor.tintaSuave }}>Escaneie no app do seu banco. A tela avança automaticamente quando o PIX for confirmado.</p>

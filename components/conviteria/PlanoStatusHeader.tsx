@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarClock, Images, MessageCircle, Plus, Ticket, X } from 'lucide-react';
+import { CalendarClock, Gift, Images, MessageCircle, Plus, Ticket, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import PlanoMensalCard from '@/components/conviteria/PlanoMensalCard';
 import { PLANOS, brl } from '@/lib/conviteria/precos';
 import { MEMORIAS_PRECO_CENTAVOS } from '@/lib/conviteria/memorias-config';
+import { HORA_GRAVATA_PRECO_CENTAVOS } from '@/lib/conviteria/gravata-config';
 
 const WHATSAPP_EVENTO_PRECO_CENTAVOS = 1990;
 
@@ -164,6 +165,16 @@ export default function PlanoStatusHeader() {
                     </div>
                     <p className="mt-3 text-sm font-semibold text-[#40232c]">WhatsApp do Evento</p>
                     <p className="mt-1 text-xs leading-5 text-[#7c5560]">Até 600 mensagens, com primeira comunicação e lembrete para confirmação de presença.</p>
+                  </div>
+
+                  <div className="rounded-2xl border bg-[#fff9fb] p-4 sm:col-span-2" style={{ borderColor: '#c0607828' }}>
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#a04a63]"><Gift className="h-4 w-4" /></span>
+                      <strong className="whitespace-nowrap text-sm text-[#a04a63]">+ {brl(HORA_GRAVATA_PRECO_CENTAVOS)}</strong>
+                    </div>
+                    <p className="mt-3 text-sm font-semibold text-[#40232c]">Hora da Gravata</p>
+                    <p className="mt-1 text-xs leading-5 text-[#7c5560]">Contribuições por PIX, QR Code e participação exibida ao vivo no telão. O nome da ação pode ser personalizado para cada festa.</p>
+                    <p className="mt-2 text-[11px] leading-5 text-[#8b6872]">Com WhatsApp do Evento ativo, o anfitrião também poderá agendar o aviso aos convidados confirmados no dia do evento.</p>
                   </div>
                 </div>
               </section>

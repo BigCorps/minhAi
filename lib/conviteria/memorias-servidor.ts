@@ -28,13 +28,23 @@ export interface EventoMemoriasPublico {
   testeId: string | null;
   testeExpiraEm: string | null;
   memorias: {
+    ativa: boolean;
     status: string;
     aprovacaoManual: boolean;
     expiraEm: string | null;
     desafios: { ativo: boolean; titulo: string; ids: string[] };
   };
+  gravata: {
+    ativa: boolean;
+    nomeAcao: string;
+  };
 }
 
+/**
+ * Experiência pública compartilhada de Memórias/Hora da Gravata.
+ * Mantém o nome histórico da função para não quebrar os endpoints de upload,
+ * mas libera a página quando pelo menos um dos dois módulos está ativo.
+ */
 export async function buscarEventoMemoriasPublicado(slug: string): Promise<EventoMemoriasPublico | null> {
   const admin = adminConviteria();
   const { data: evento } = await admin
@@ -48,18 +58,33 @@ export async function buscarEventoMemoriasPublicado(slug: string): Promise<Event
   const acesso = await buscarEventoAcessivelPorId(evento.id as string);
   if (!acesso) return null;
 
-  const { data: pacote } = await admin
-    .from('evento_memorias_config')
-    .select('status,aprovacao_manual,expira_em,desafios_ativos,desafios_titulo,desafios_ids')
-    .eq('evento_id', evento.id)
-    .maybeSingle();
+  const [{ data: pacote }, { data: gravata }] = await Promise.all([
+    admin
+      .from('evento_memorias_config')
+      .select('status,aprovacao_manual,expira_em,desafios_ativos,desafios_titulo,desafios_ids')
+      .eq('evento_id', evento.id)
+      .maybeSingle(),
+    admin
+      .from('evento_gravata_config')
+      .select('status,nome_acao')
+      .eq('evento_id', evento.id)
+      .maybeSingle(),
+  ]);
 
   const modoTeste = acesso.acesso.modo === 'teste';
-  const statusPermitido = pacote?.status === 'ativo' || (modoTeste && ['teste', 'aguardando_pagamento'].includes(String(pacote?.status)));
-  if (!pacote || !statusPermitido) return null;
-  if (pacote.expira_em && new Date(pacote.expira_em) <= new Date()) return null;
+  const memoriasStatusPermitido = pacote?.status === 'ativo'
+    || (modoTeste && ['teste', 'aguardando_pagamento'].includes(String(pacote?.status)));
+  const memoriasNaoExpiraram = !pacote?.expira_em || new Date(pacote.expira_em) > new Date();
+  const memoriasAtivas = Boolean(pacote && memoriasStatusPermitido && memoriasNaoExpiraram);
+  const gravataAtiva = gravata?.status === 'ativo';
+
+  if (!memoriasAtivas && !gravataAtiva) return null;
 
   const cfg = (evento.config ?? {}) as Record<string, any>;
+  const desafios = memoriasAtivas
+    ? configDesafiosPublica(pacote)
+    : { ativo: false, titulo: '', ids: [] as string[] };
+
   return {
     id: evento.id as string,
     slug: evento.slug as string,
@@ -70,10 +95,15 @@ export async function buscarEventoMemoriasPublicado(slug: string): Promise<Event
     testeId: modoTeste ? acesso.acesso.testeId : null,
     testeExpiraEm: modoTeste ? acesso.acesso.testeExpiraEm : null,
     memorias: {
-      status: pacote.status as string,
-      aprovacaoManual: Boolean(pacote.aprovacao_manual),
-      expiraEm: (pacote.expira_em as string | null) ?? null,
-      desafios: configDesafiosPublica(pacote),
+      ativa: memoriasAtivas,
+      status: String(pacote?.status ?? 'nao_contratado'),
+      aprovacaoManual: memoriasAtivas && Boolean(pacote?.aprovacao_manual),
+      expiraEm: memoriasAtivas ? ((pacote?.expira_em as string | null) ?? null) : null,
+      desafios,
+    },
+    gravata: {
+      ativa: gravataAtiva,
+      nomeAcao: String(gravata?.nome_acao || 'Hora da Gravata'),
     },
   };
 }
@@ -234,10 +264,15 @@ export function resumoPublico(evento: EventoMemoriasPublico) {
     modoFestaAtivo: evento.modoTeste || festaEstaAtiva(evento.dataEvento),
     urlMemorias: urlMemorias(evento.slug),
     urlAlbum: urlAlbum(evento.slug),
+    experiencia: {
+      memoriasAtivas: evento.memorias.ativa,
+      gravataAtiva: evento.gravata.ativa,
+      nomeAcao: evento.gravata.nomeAcao,
+    },
     desafios: {
-      ativo: desafios.ativo,
+      ativo: evento.memorias.ativa && desafios.ativo,
       titulo: desafios.titulo,
-      itens: desafios.ativo ? textosDosDesafios(desafios.ids) : [],
+      itens: evento.memorias.ativa && desafios.ativo ? textosDosDesafios(desafios.ids) : [],
     },
   };
 }

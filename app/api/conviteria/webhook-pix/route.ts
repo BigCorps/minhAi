@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { timingSafeEqual } from 'node:crypto';
 import { adminConviteria, adminPublic } from '@/lib/conviteria/servidor';
 import { ativarMemorias } from '@/lib/conviteria/memorias-servidor';
+import { ativarHoraGravata } from '@/lib/conviteria/gravata-servidor';
 import { limparDadosDoTeste } from '@/lib/conviteria/teste-servidor';
 
 export const runtime = 'nodejs';
@@ -88,8 +89,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const memoriasAtivadas = await ativarMemorias(corpo.referenciaId, corpo.txid ?? null);
-    const whatsappAtivado = await ativarWhatsAppPago(corpo.referenciaId, corpo.txid ?? null);
+    const [memoriasAtivadas, whatsappAtivado, gravataAtivada] = await Promise.all([
+      ativarMemorias(corpo.referenciaId, corpo.txid ?? null),
+      ativarWhatsAppPago(corpo.referenciaId, corpo.txid ?? null),
+      ativarHoraGravata(corpo.referenciaId, corpo.txid ?? null),
+    ]);
 
     if (slug) revalidatePath(`/convite/${slug}`);
 
@@ -98,6 +102,7 @@ export async function POST(req: NextRequest) {
       publicado: Boolean(publicado),
       memoriasAtivadas,
       whatsappAtivado,
+      gravataAtivada,
       slug,
     });
   }
@@ -119,6 +124,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ erro: 'Falha ao processar presentes.' }, { status: 500 });
     }
     return NextResponse.json({ ok: true, checkout: true, jaProcessado: processado !== true });
+  }
+
+  // Hora da Gravata reutiliza purpose=conviteria_presente nas Edge Functions
+  // existentes. O UUID de referencia aponta para esta tabela, então o webhook
+  // consegue processar a contribuição sem alterar/deployar Functions do Supabase.
+  const { data: contribuicao } = await admin.from('evento_gravata_contribuicoes')
+    .select('id,txid')
+    .eq('id', corpo.referenciaId)
+    .maybeSingle();
+
+  if (contribuicao) {
+    if (corpo.txid && contribuicao.txid && corpo.txid !== contribuicao.txid) {
+      return NextResponse.json({ erro: 'TXID não confere.' }, { status: 409 });
+    }
+    const { data: processado, error } = await admin.rpc('processar_contribuicao_gravata', {
+      p_contribuicao_id: contribuicao.id,
+    });
+    if (error) {
+      console.error('Erro ao processar contribuição da Hora da Gravata:', error);
+      return NextResponse.json({ erro: 'Falha ao processar contribuição.' }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, gravata: true, jaProcessado: processado !== true });
   }
 
   const { data: pg } = await admin.from('presente_pagamentos')

@@ -33,18 +33,29 @@ async function dono(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const d = await dono(req);
   if (!d) return NextResponse.json({ erro: 'Convite não encontrado.' }, { status: 404 });
-  const pacote = await pacoteDoEvento(d.eventoId);
-  const teste = await buscarTesteAtivoEvento(d.eventoId);
+  const admin = adminConviteria();
+  const [pacote, teste, { data: gravata }] = await Promise.all([
+    pacoteDoEvento(d.eventoId),
+    buscarTesteAtivoEvento(d.eventoId),
+    admin.from('evento_gravata_config')
+      .select('status,nome_acao')
+      .eq('evento_id', d.eventoId)
+      .maybeSingle(),
+  ]);
   const emTeste = ['teste', 'aguardando_pagamento'].includes(String(pacote?.status)) && Boolean(teste) &&
-    (!pacote.expira_em || new Date(pacote.expira_em) > new Date());
+    (!pacote?.expira_em || new Date(pacote.expira_em) > new Date());
   const ativoPago = pacote?.status === 'ativo' && (!pacote.expira_em || new Date(pacote.expira_em) > new Date());
   const ativo = Boolean(ativoPago || emTeste);
+  const gravataAtiva = gravata?.status === 'ativo';
   const uso = ativo ? await usoMemorias(d.eventoId) : { fotos: 0, videos: 0, bytes: 0 };
   const midias = ativo ? await midiasAssinadas(d.eventoId, false, 3600) : [];
   const cfg = (d.evento.config ?? {}) as Record<string, any>;
 
   return NextResponse.json({
     ativo,
+    gravataAtiva,
+    experienciaAtiva: ativo || gravataAtiva,
+    nomeAcao: gravata?.nome_acao || 'Hora da Gravata',
     emTeste,
     testeExpiraEm: emTeste ? teste?.expiraEm ?? null : null,
     status: pacote?.status ?? 'nao_contratado',
@@ -52,7 +63,7 @@ export async function GET(req: NextRequest) {
     aprovacaoManual: Boolean(pacote?.aprovacao_manual),
     expiraEm: pacote?.expira_em ?? null,
     ornamentoId: typeof cfg.ornamentoId === 'string' ? cfg.ornamentoId : 'casamento-original',
-    desafios: configDesafiosPublica(pacote),
+    desafios: ativo ? configDesafiosPublica(pacote) : { ativo: false, titulo: '', ids: [] },
     limites: pacote ? {
       fotos: Number(pacote.limite_fotos),
       videos: Number(pacote.limite_videos),

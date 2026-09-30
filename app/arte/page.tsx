@@ -341,11 +341,11 @@ interface ReportState {
 }
 
 const REPORT_REASONS: { key: string; label: string }[] = [
-  { key: 'ofensivo',     label: 'Conteúdo ofensivo ou prejudicial' },
-  { key: 'incorreto',    label: 'Informação incorreta ou enganosa' },
-  { key: 'inapropriado', label: 'Conteúdo inapropriado' },
-  { key: 'spam',         label: 'Spam ou conteúdo repetitivo' },
-  { key: 'outro',        label: 'Outro motivo' },
+  { key: 'ofensivo',     label: 'Offensive or harmful / Ofensivo ou prejudicial' },
+  { key: 'incorreto',    label: 'Incorrect or misleading / Incorreto ou enganoso' },
+  { key: 'inapropriado', label: 'Inappropriate content / Conteúdo inapropriado' },
+  { key: 'spam',         label: 'Spam or repetitive / Spam ou conteúdo repetitivo' },
+  { key: 'outro',        label: 'Other / Outro motivo' },
 ];
 
 type ActiveModal = { type: string; data: { companyId: string; prefillFile?: File } } | null;
@@ -432,6 +432,24 @@ export default function ArtePage() {
       setReportSubmitting(false);
     }
   }, [reporting, supabase, companyId]);
+
+  // Acesso permanente exigido para deixar o mecanismo de denúncia explícito
+  // mesmo antes de o usuário gerar uma nova resposta nesta sessão.
+  const openPersistentReport = useCallback(() => {
+    if (!hasUser) {
+      window.location.href = LOGIN_URL;
+      return;
+    }
+
+    const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
+
+    setReportSubmitted(false);
+    setReporting({
+      msgId: lastAssistant?.id ?? `manual-${Date.now()}`,
+      msgText: lastAssistant?.content
+        ?? 'Manual AI content report opened from the permanent ArteFinal reporting action.',
+    });
+  }, [hasUser, messages]);
 
   useEffect(() => {
     (async () => {
@@ -667,7 +685,7 @@ const handleSubmit = useCallback(() => {
                     onClick={() => setReporting({ msgId: m.id, msgText: m.content })}
                     className="mt-1 flex items-center gap-1 text-[10px] opacity-30 hover:opacity-70 transition-opacity"
                     style={{ color: '#64748b' }}
-                    title="Denunciar conteúdo / Report content"
+                    title="Report AI content / Denunciar conteúdo de IA"
                   >
                     <Flag size={10} />
                     Denunciar / Report
@@ -769,10 +787,24 @@ const handleSubmit = useCallback(() => {
         <Send className="w-4 h-4 text-white" />
       </button>
     </div>
-          <p className="text-center text-[10px] mt-2" style={{ color: '#94a3b8' }}>
-            Powered by{' '}
-            <a href="https://minhai.app" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: CMYK.cyan, fontWeight: 600 }}>minhAi.app</a>
-          </p>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10px]" style={{ color: '#94a3b8' }}>
+            <span>
+              Powered by{' '}
+              <a href="https://minhai.app" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: CMYK.cyan, fontWeight: 600 }}>minhAi.app</a>
+            </span>
+            <span aria-hidden="true">•</span>
+            <button
+              type="button"
+              onClick={openPersistentReport}
+              className="inline-flex items-center gap-1 font-semibold hover:underline"
+              style={{ color: '#475569' }}
+              aria-label="Report AI content / Denunciar conteúdo de IA"
+              title="Report AI content / Denunciar conteúdo de IA"
+            >
+              <Flag size={10} />
+              Report AI content / Denunciar conteúdo de IA
+            </button>
+          </div>
         </div>
       )}
 
@@ -888,10 +920,10 @@ const handleSubmit = useCallback(() => {
               <div style={{ textAlign: 'center', padding: '16px 0' }}>
                 <CheckCircle2 size={40} style={{ color: '#10B981', margin: '0 auto 12px' }} />
                 <p style={{ fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>
-                  Denúncia enviada / Report submitted
+                  Report submitted / Denúncia enviada
                 </p>
                 <p style={{ fontSize: 13, color: '#64748b' }}>
-                  Obrigado pelo feedback. Usaremos isso para revisar e melhorar o conteúdo apresentado.
+                  Thank you. The report was sent to BigCorps for review and appropriate action. / Obrigado. A denúncia foi enviada à BigCorps para análise e providências adequadas.
                 </p>
               </div>
             ) : (
@@ -908,8 +940,11 @@ const handleSubmit = useCallback(() => {
                     <X size={18} />
                   </button>
                 </div>
-                <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
-                  Por que este conteúdo é problemático? / Why is this content problematic?
+                <p style={{ fontSize: 13, color: '#64748b', marginBottom: 8 }}>
+                  Why are you reporting this content? / Por que você está denunciando este conteúdo?
+                </p>
+                <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 16, lineHeight: 1.5 }}>
+                  Reports are sent to BigCorps for review and appropriate action. / As denúncias são enviadas à BigCorps para análise e providências adequadas.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {REPORT_REASONS.map((r) => (

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
+  HandCoins,
   Images,
   LayoutGrid,
   Loader2,
@@ -32,6 +33,9 @@ import MesasPainel from './MesasPainel';
 import CheckinPainel from './CheckinPainel';
 import PapelariaPainel, { type CategoriaPapelaria } from './PapelariaPainel';
 import WhatsAppPainel from './WhatsAppPainel';
+import HoraGravataPainel from './HoraGravataPainel';
+import HoraGravataFinanceiro from './HoraGravataFinanceiro';
+import HoraGravataCrossSell from './HoraGravataCrossSell';
 import estilos from './gestao-light.module.css';
 
 type Aba =
@@ -39,6 +43,7 @@ type Aba =
   | 'memorias'
   | 'comunicacoes'
   | 'financeiro'
+  | 'gravata'
   | 'padrinhos'
   | 'mesas'
   | 'checkin'
@@ -51,6 +56,7 @@ const ABAS: Array<{ id: Aba; nome: string; Icon: typeof Users }> = [
   { id: 'memorias', nome: 'Memórias', Icon: Images },
   { id: 'comunicacoes', nome: 'Comunicações', Icon: MessageCircle },
   { id: 'financeiro', nome: 'Financeiro', Icon: WalletCards },
+  { id: 'gravata', nome: 'Hora da Gravata', Icon: HandCoins },
   { id: 'padrinhos', nome: 'Padrinhos', Icon: Shirt },
   { id: 'mesas', nome: 'Mesas', Icon: LayoutGrid },
   { id: 'checkin', nome: 'Check-in', Icon: QrCode },
@@ -205,13 +211,16 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
         )}
 
         {aba === 'memorias' && (
-          <MemoriasPainel
-            eventoId={eventoId}
-            slug={slug}
-            titulo={cfg.anfitrioes.exibicao}
-            sempreAberto
-            onAbrirPapelaria={() => abrirPapelaria('memorias')}
-          />
+          <section className="space-y-4">
+            <MemoriasPainel
+              eventoId={eventoId}
+              slug={slug}
+              titulo={cfg.anfitrioes.exibicao}
+              sempreAberto
+              onAbrirPapelaria={() => abrirPapelaria('memorias')}
+            />
+            <HoraGravataCrossSell eventoId={eventoId} token={token} contexto="memorias" onAbrirGravata={() => setAba('gravata')} />
+          </section>
         )}
 
         {aba === 'comunicacoes' && (
@@ -221,6 +230,7 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
               <p className="mt-1 text-sm text-[#7c5560]">WhatsApp oficial, envio manual, Gmail e lembretes ficam juntos aqui para evitar canais duplicados em outras telas.</p>
             </div>
             <WhatsAppPainel eventoId={eventoId} token={token} slug={slug} />
+            <HoraGravataCrossSell eventoId={eventoId} token={token} contexto="comunicacoes" onAbrirGravata={() => setAba('gravata')} />
             <div className="rounded-2xl border border-[#c0607833] bg-white p-5">
               <h3 className="font-semibold">E-mail e Google</h3>
               <p className="mt-1 mb-3 text-sm text-[#7c5560]">Conecte o Gmail deste convite e escolha os lembretes automáticos por e-mail.</p>
@@ -232,14 +242,16 @@ export default function GestaoEvento({ eventoId }: { eventoId: string }) {
         {aba === 'financeiro' && (
           <section className="space-y-4">
             <div className="rounded-2xl border border-[#c0607833] bg-white p-4">
-              <h2 className="font-semibold">Presentes e recebimentos</h2>
-              <p className="mt-1 text-sm text-[#7c5560]">Pagamentos dos presentes, saldo disponível e solicitações de saque ficam concentrados nesta área.</p>
+              <h2 className="font-semibold">Presentes, Hora da Gravata e recebimentos</h2>
+              <p className="mt-1 text-sm text-[#7c5560]">Presentes, contribuições da atividade, saldo disponível e solicitações de saque ficam concentrados nesta área.</p>
             </div>
             <PagamentosPresentesPainel eventoId={eventoId} sempreAberto />
+            <HoraGravataFinanceiro eventoId={eventoId} token={token} />
             <SaldoSaque eventoId={eventoId} sempreAberto />
           </section>
         )}
 
+        {aba === 'gravata' && <HoraGravataPainel eventoId={eventoId} token={token} slug={slug} onAbrirPapelaria={() => abrirPapelaria('memorias')} />}
         {aba === 'padrinhos' && <PadrinhosPainel eventoId={eventoId} token={token} slug={slug} />}
         {aba === 'mesas' && <MesasPainel eventoId={eventoId} token={token} />}
         {aba === 'checkin' && <CheckinPainel eventoId={eventoId} token={token} />}

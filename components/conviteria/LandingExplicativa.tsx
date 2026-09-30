@@ -9,6 +9,7 @@ import {
   Check,
   CheckCircle2,
   Gift,
+  HandCoins,
   Images,
   LayoutGrid,
   MessageCircle,
@@ -46,13 +47,19 @@ const recursos = [
     Icon: MessageCircle,
     titulo: 'WhatsApp do Evento',
     texto: 'Envie a primeira comunicação e programe um lembrete usando a mesma lista de convidados e a confirmação do próprio convite.',
-    itens: ['1ª comunicação', 'Lembrete programado', 'Até 2 comunicações por contato/família', 'Confirmação pelo convite'],
+    itens: ['1ª comunicação', 'Lembrete programado', 'Até 2 comunicações por contato/família', 'Integração com Hora da Gravata'],
   },
   {
     Icon: Images,
     titulo: 'Memórias do Evento',
     texto: 'Transforme os celulares dos convidados em parte do evento com fotos e vídeos enviados por QR Code para um álbum em tempo real.',
     itens: ['QR para fotos e vídeos', 'Até 300 fotos e 30 vídeos', 'Álbum em tempo real', 'Slideshow e Modo Festa'],
+  },
+  {
+    Icon: HandCoins,
+    titulo: 'Hora da Gravata',
+    texto: 'Digitalize a Hora da Gravata, sapato ou outra contribuição da festa com PIX, QR Code e participação aparecendo no telão em tempo real.',
+    itens: ['PIX pelo celular', 'Mesmo QR da experiência da festa', 'Meta e total opcionais', 'Animação ao vivo no telão'],
   },
   {
     Icon: QrCode,
@@ -63,7 +70,7 @@ const recursos = [
   {
     Icon: Gift,
     titulo: 'Papelaria, presentes e financeiro',
-    texto: 'Complete a experiência antes e durante o evento com materiais para impressão, padrinhos, recados e presentes reunidos no mesmo painel.',
+    texto: 'Complete a experiência antes e durante o evento com materiais para impressão, padrinhos, recados e recebimentos reunidos no mesmo painel.',
     itens: ['Papelaria com QR', 'Padrinhos e recados', 'Lista de presentes', 'PIX, saldo e saques'],
   },
 ];
@@ -82,7 +89,7 @@ const passos = [
   {
     numero: '03',
     titulo: 'Gerencie',
-    texto: 'Acompanhe convidados, confirmações, comunicações, Memórias, financeiro, mesas, check-in, Papelaria, padrinhos e recados em um só lugar.',
+    texto: 'Acompanhe convidados, confirmações, comunicações, Memórias, Hora da Gravata, financeiro, mesas, check-in, Papelaria, padrinhos e recados em um só lugar.',
   },
 ];
 
@@ -95,7 +102,6 @@ export default function LandingExplicativa() {
   const irParaCriacao = () => {
     const alvo = document.getElementById('cv-landing-titulo');
     alvo?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    // Foca a caixa de texto da IA sem rolar de novo; se não achar, só rola.
     window.setTimeout(() => {
       const campo = document.querySelector<HTMLTextAreaElement>('.cv-landing-hero textarea');
       campo?.focus({ preventScroll: true });
@@ -103,17 +109,11 @@ export default function LandingExplicativa() {
   };
 
   const [videoId, setVideoId] = useState<string | null>(null);
-
-  const iniciarVideo = useCallback(() => {
-    setVideoId(escolherVideoAtual());
-  }, []);
+  const iniciarVideo = useCallback(() => setVideoId(escolherVideoAtual()), []);
 
   useEffect(() => {
     const media = window.matchMedia(QUERY_VERTICAL);
-    const aoMudar = () => {
-      setVideoId((atual) => (atual ? escolherVideoAtual() : atual));
-    };
-
+    const aoMudar = () => setVideoId((atual) => (atual ? escolherVideoAtual() : atual));
     media.addEventListener?.('change', aoMudar);
     window.addEventListener('orientationchange', aoMudar);
     return () => {
@@ -128,9 +128,7 @@ export default function LandingExplicativa() {
         <div className={styles.cabecalho}>
           <span>Veja na prática</span>
           <h2>Seu convite é só o começo.</h2>
-          <p>
-            Veja como a ConviteIA transforma a criação do convite em uma experiência completa para organizar o evento e cuidar dos convidados.
-          </p>
+          <p>Veja como a ConviteIA transforma a criação do convite em uma experiência completa para organizar o evento e cuidar dos convidados.</p>
         </div>
 
         <div className={styles.videoPalco}>
@@ -147,12 +145,8 @@ export default function LandingExplicativa() {
               />
             ) : (
               <button type="button" className={styles.videoCapa} onClick={iniciarVideo} aria-label="Reproduzir vídeo de demonstração da ConviteIA">
-                <span className={styles.videoMarca}>
-                  <Image src="/brands/convite/icone-512.png" alt="" width={88} height={88} aria-hidden="true" />
-                </span>
-                <span className={styles.videoTexto}>
-                  <strong>Assista o vídeo de apresentação da ConviteIA.</strong>
-                </span>
+                <span className={styles.videoMarca}><Image src="/brands/convite/icone-512.png" alt="" width={88} height={88} aria-hidden="true" /></span>
+                <span className={styles.videoTexto}><strong>Assista o vídeo de apresentação da ConviteIA.</strong></span>
                 <span className={styles.play}><Play className="h-7 w-7" fill="currentColor" /></span>
               </button>
             )}
@@ -165,34 +159,17 @@ export default function LandingExplicativa() {
         <div className={styles.cabecalho}>
           <span>Do convite à gestão do evento</span>
           <h2>Mais do que criar uma página bonita.</h2>
-          <p>
-            A ConviteIA reúne criação, convidados, comunicação, organização do dia e lembranças do evento sem obrigar você a montar vários sistemas separados.
-          </p>
+          <p>A ConviteIA reúne criação, convidados, comunicação, organização do dia, experiência ao vivo e lembranças do evento sem obrigar você a montar vários sistemas separados.</p>
         </div>
 
         <div className={styles.recursosGrid}>
           {recursos.map(({ Icon, titulo, texto, itens }) => (
-            // O Clarity mostrou cliques mortos nos cards: as pessoas tocam
-            // achando que são botões. O card inteiro vira atalho para a caixa
-            // de criação no topo, e o link no fim mantém acesso por teclado.
-            <article
-              key={titulo}
-              className={styles.recursoCard}
-              onClick={irParaCriacao}
-              style={{ cursor: 'pointer' }}
-            >
+            <article key={titulo} className={styles.recursoCard} onClick={irParaCriacao} style={{ cursor: 'pointer' }}>
               <span className={styles.icone}><Icon className="h-6 w-6" /></span>
               <h3>{titulo}</h3>
               <p>{texto}</p>
-              <ul>
-                {itens.map((item) => <li key={item}><Check className="h-3.5 w-3.5" />{item}</li>)}
-              </ul>
-              <a
-                href="#cv-landing-titulo"
-                onClick={(evento) => { evento.stopPropagation(); evento.preventDefault(); irParaCriacao(); }}
-                className="mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-semibold"
-                style={{ color: '#a04a63' }}
-              >
+              <ul>{itens.map((item) => <li key={item}><Check className="h-3.5 w-3.5" />{item}</li>)}</ul>
+              <a href="#cv-landing-titulo" onClick={(evento) => { evento.stopPropagation(); evento.preventDefault(); irParaCriacao(); }} className="mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-semibold" style={{ color: '#a04a63' }}>
                 Criar meu convite <ArrowRight className="h-4 w-4" />
               </a>
             </article>
@@ -205,22 +182,13 @@ export default function LandingExplicativa() {
         <span><CalendarDays className="h-4 w-4" />Data, contagem, calendário e mapa</span>
         <span><Shirt className="h-4 w-4" />Padrinhos e dress code</span>
         <span><LayoutGrid className="h-4 w-4" />Mesas e operação do evento</span>
-        <span><WalletCards className="h-4 w-4" />Presentes e financeiro</span>
+        <span><WalletCards className="h-4 w-4" />Presentes, contribuições e financeiro</span>
       </div>
 
       <div className={styles.comoFunciona}>
-        <div className={styles.cabecalho}>
-          <span>Simples do começo ao fim</span>
-          <h2>Crie. Publique. Gerencie.</h2>
-        </div>
+        <div className={styles.cabecalho}><span>Simples do começo ao fim</span><h2>Crie. Publique. Gerencie.</h2></div>
         <div className={styles.passosGrid}>
-          {passos.map((passo) => (
-            <article key={passo.numero}>
-              <span>{passo.numero}</span>
-              <h3>{passo.titulo}</h3>
-              <p>{passo.texto}</p>
-            </article>
-          ))}
+          {passos.map((passo) => <article key={passo.numero}><span>{passo.numero}</span><h3>{passo.titulo}</h3><p>{passo.texto}</p></article>)}
         </div>
       </div>
 
@@ -228,50 +196,33 @@ export default function LandingExplicativa() {
         <div className={styles.cabecalho}>
           <span>Escolha só o que fizer sentido</span>
           <h2>Um convite completo, com adicionais opcionais.</h2>
-          <p>Você pode publicar apenas o convite ou acrescentar Memórias e WhatsApp ao evento.</p>
+          <p>Você pode publicar apenas o convite ou acrescentar Memórias, WhatsApp e Hora da Gravata ao evento. Com todos os adicionais, o total é R$ 89,60.</p>
         </div>
 
         <div className={styles.precosGrid}>
           <article className={`${styles.precoCard} ${styles.precoPrincipal}`}>
-            <span>Convite completo</span>
-            <strong>R$ 29,90</strong>
-            <p>Pagamento único por convite. Publicado para sempre.</p>
-            <ul>
-              <li><CheckCircle2 className="h-4 w-4" />Criação e personalização</li>
-              <li><CheckCircle2 className="h-4 w-4" />RSVP, presentes e recados</li>
-              <li><CheckCircle2 className="h-4 w-4" />Gestão do Evento</li>
-            </ul>
+            <span>Convite completo</span><strong>R$ 29,90</strong><p>Pagamento único por convite. Publicado para sempre.</p>
+            <ul><li><CheckCircle2 className="h-4 w-4" />Criação e personalização</li><li><CheckCircle2 className="h-4 w-4" />RSVP, presentes e recados</li><li><CheckCircle2 className="h-4 w-4" />Gestão do Evento</li></ul>
           </article>
 
           <article className={styles.precoCard}>
-            <span>Memórias do Evento</span>
-            <strong>+ R$ 19,90</strong>
-            <p>Adicional por convite.</p>
-            <ul>
-              <li><CheckCircle2 className="h-4 w-4" />Fotos e vídeos por QR</li>
-              <li><CheckCircle2 className="h-4 w-4" />Álbum e slideshow</li>
-              <li><CheckCircle2 className="h-4 w-4" />Modo Festa</li>
-            </ul>
+            <span>Memórias do Evento</span><strong>+ R$ 19,90</strong><p>Adicional por convite.</p>
+            <ul><li><CheckCircle2 className="h-4 w-4" />Fotos e vídeos por QR</li><li><CheckCircle2 className="h-4 w-4" />Álbum e slideshow</li><li><CheckCircle2 className="h-4 w-4" />Modo Festa</li></ul>
           </article>
 
           <article className={styles.precoCard}>
-            <span>WhatsApp do Evento</span>
-            <strong>+ R$ 19,90</strong>
-            <p>Adicional por convite.</p>
-            <ul>
-              <li><CheckCircle2 className="h-4 w-4" />Primeira comunicação</li>
-              <li><CheckCircle2 className="h-4 w-4" />Lembrete programado</li>
-              <li><CheckCircle2 className="h-4 w-4" />Até 2 comunicações por contato/família</li>
-            </ul>
+            <span>WhatsApp do Evento</span><strong>+ R$ 19,90</strong><p>Adicional por convite.</p>
+            <ul><li><CheckCircle2 className="h-4 w-4" />Primeira comunicação</li><li><CheckCircle2 className="h-4 w-4" />Lembrete programado</li><li><CheckCircle2 className="h-4 w-4" />Aviso da Hora da Gravata quando os dois estão ativos</li></ul>
+          </article>
+
+          <article className={styles.precoCard}>
+            <span>Hora da Gravata</span><strong>+ R$ 19,90</strong><p>Adicional por convite. Funciona mesmo sem Memórias ou WhatsApp.</p>
+            <ul><li><CheckCircle2 className="h-4 w-4" />PIX pelo celular e QR único</li><li><CheckCircle2 className="h-4 w-4" />Participações no telão em tempo real</li><li><CheckCircle2 className="h-4 w-4" />Meta, total e nome da atividade configuráveis</li></ul>
           </article>
         </div>
 
         <div className={styles.mensal}>
-          <div>
-            <span>Cria convites com frequência?</span>
-            <strong>Convites à vontade · R$ 149,90/mês</strong>
-            <p>Convites ilimitados enquanto o plano estiver ativo. Os convites já publicados continuam no ar mesmo se o plano for cancelado.</p>
-          </div>
+          <div><span>Cria convites com frequência?</span><strong>Convites à vontade · R$ 149,90/mês</strong><p>Convites ilimitados enquanto o plano estiver ativo. Os convites já publicados continuam no ar mesmo se o plano for cancelado. Adicionais continuam sendo contratados por evento.</p></div>
           <Link href="/convite/criar" className={styles.botaoSecundario}>Criar convite <ArrowRight className="h-4 w-4" /></Link>
         </div>
       </div>
@@ -279,7 +230,7 @@ export default function LandingExplicativa() {
       <div className={styles.ctaFinal}>
         <Image src="/brands/convite/icone-512.png" alt="Convite IA" width={74} height={74} />
         <span>Seu evento começa antes da festa.</span>
-        <h2>Crie o convite. Organize o evento. Guarde as memórias.</h2>
+        <h2>Crie o convite. Organize o evento. Viva cada momento.</h2>
         <p>Comece contando sua ideia para a IA ou monte cada detalhe do zero.</p>
         <div className={styles.ctaBotoes}>
           <a href="#cv-landing-titulo" className={styles.botaoPrincipal}><Sparkles className="h-4 w-4" />Começar com IA</a>
@@ -288,10 +239,7 @@ export default function LandingExplicativa() {
       </div>
 
       <div className={styles.rodape}>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <SuporteWhatsapp assunto="Tenho uma dúvida sobre a ConviteIA" />
-          <InstagramConviteia />
-        </div>
+        <div className="flex flex-wrap items-center justify-center gap-2"><SuporteWhatsapp assunto="Tenho uma dúvida sobre a ConviteIA" /><InstagramConviteia /></div>
         <RodapeMarca />
       </div>
     </section>

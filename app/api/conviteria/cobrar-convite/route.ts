@@ -3,6 +3,8 @@ import { adminConviteria, adminPublic } from '@/lib/conviteria/servidor';
 import { PLANOS } from '@/lib/conviteria/precos';
 import { MEMORIAS_PRECO_CENTAVOS } from '@/lib/conviteria/memorias-config';
 import { garantirPacote, pacoteDoEvento } from '@/lib/conviteria/memorias-servidor';
+import { HORA_GRAVATA_PRECO_CENTAVOS } from '@/lib/conviteria/gravata-config';
+import { garantirPacoteHoraGravata, pacoteHoraGravata } from '@/lib/conviteria/gravata-servidor';
 import {
   WHATSAPP_EVENTO_LIMITE,
   WHATSAPP_EVENTO_PRECO_CENTAVOS,
@@ -41,6 +43,7 @@ export async function POST(req: NextRequest) {
     eventoId?: string;
     incluirMemorias?: boolean;
     incluirWhatsApp?: boolean;
+    incluirGravata?: boolean;
     consentimentoWhatsApp?: boolean;
   } | null;
   if (!corpo?.eventoId) return NextResponse.json({ erro: 'Evento não informado.' }, { status: 400 });
@@ -65,21 +68,26 @@ export async function POST(req: NextRequest) {
     pacote = { ...pacote, status: 'expirado' };
   }
 
-  const { data: whatsappAtual } = await admin.from('evento_whatsapp_config')
-    .select('*')
-    .eq('evento_id', evento.id)
-    .maybeSingle();
+  const [{ data: whatsappAtual }, gravataAtualInicial] = await Promise.all([
+    admin.from('evento_whatsapp_config').select('*').eq('evento_id', evento.id).maybeSingle(),
+    pacoteHoraGravata(evento.id as string),
+  ]);
   const whatsappAtivo = whatsappAtual?.status === 'ativo';
+  let gravataAtual = gravataAtualInicial;
+  const gravataAtiva = gravataAtual?.status === 'ativo';
 
   const incluirMemorias = Boolean(corpo.incluirMemorias) && !memoriasAtivas;
   const incluirWhatsApp = Boolean(corpo.incluirWhatsApp) && !whatsappAtivo;
+  const incluirGravata = Boolean(corpo.incluirGravata) && !gravataAtiva;
+
   if (incluirWhatsApp && corpo.consentimentoWhatsApp !== true) {
     return NextResponse.json({ erro: 'Confirme a autorização para envio de mensagens antes de adicionar o WhatsApp do Evento.' }, { status: 400 });
   }
 
   const memoriasCentavos = incluirMemorias ? MEMORIAS_PRECO_CENTAVOS : 0;
   const whatsappCentavos = incluirWhatsApp ? WHATSAPP_EVENTO_PRECO_CENTAVOS : 0;
-  const total = conviteCentavos + memoriasCentavos + whatsappCentavos;
+  const gravataCentavos = incluirGravata ? HORA_GRAVATA_PRECO_CENTAVOS : 0;
+  const total = conviteCentavos + memoriasCentavos + whatsappCentavos + gravataCentavos;
 
   if (total === 0) {
     return NextResponse.json({
@@ -88,15 +96,15 @@ export async function POST(req: NextRequest) {
       publicado: Boolean(evento.publicado_em),
       memoriasAtivas,
       whatsappAtivo,
+      gravataAtiva,
     });
   }
 
-  // Um único PIX pendente sempre vence novas escolhas. Isso evita que duas abas
-  // gerem cobranças diferentes para o mesmo convite enquanto uma delas ainda é pagável.
   const candidatos = Array.from(new Set([
     evento.pix_transaction_id as string | null,
     pacote?.status === 'aguardando_pagamento' ? pacote.pix_transaction_id : null,
     whatsappAtual?.status === 'aguardando_pagamento' ? whatsappAtual.pix_transaction_id : null,
+    gravataAtual?.status === 'aguardando_pagamento' ? gravataAtual.pix_transaction_id : null,
   ].filter(Boolean) as string[]));
 
   for (const transactionId of candidatos) {
@@ -106,6 +114,7 @@ export async function POST(req: NextRequest) {
     const incluiConviteExistente = conviteCentavos > 0 && evento.pix_transaction_id === transactionId;
     const incluiMemoriasExistente = pacote?.status === 'aguardando_pagamento' && pacote.pix_transaction_id === transactionId;
     const incluiWhatsAppExistente = whatsappAtual?.status === 'aguardando_pagamento' && whatsappAtual.pix_transaction_id === transactionId;
+    const incluiGravataExistente = gravataAtual?.status === 'aguardando_pagamento' && gravataAtual.pix_transaction_id === transactionId;
 
     if (conviteCentavos > 0 && !incluiConviteExistente) {
       return NextResponse.json({ erro: 'Já existe outro PIX válido para este evento. Conclua ou aguarde a expiração antes de publicar o convite.' }, { status: 409 });
@@ -116,6 +125,9 @@ export async function POST(req: NextRequest) {
     if (incluirWhatsApp && !incluiWhatsAppExistente) {
       return NextResponse.json({ erro: 'Já existe um PIX válido sem WhatsApp do Evento. Conclua esse pagamento e ative o WhatsApp depois em Gestão → Comunicações.' }, { status: 409 });
     }
+    if (incluirGravata && !incluiGravataExistente) {
+      return NextResponse.json({ erro: 'Já existe um PIX válido sem Hora da Gravata. Conclua esse pagamento e ative a Hora da Gravata depois pela Gestão do Evento.' }, { status: 409 });
+    }
 
     return NextResponse.json({
       eventoId: evento.id,
@@ -123,8 +135,10 @@ export async function POST(req: NextRequest) {
       conviteCentavos: incluiConviteExistente ? avulso.centavos : 0,
       memoriasCentavos: incluiMemoriasExistente ? MEMORIAS_PRECO_CENTAVOS : 0,
       whatsappCentavos: incluiWhatsAppExistente ? WHATSAPP_EVENTO_PRECO_CENTAVOS : 0,
+      gravataCentavos: incluiGravataExistente ? HORA_GRAVATA_PRECO_CENTAVOS : 0,
       incluiMemorias: incluiMemoriasExistente,
       incluiWhatsApp: incluiWhatsAppExistente,
+      incluiGravata: incluiGravataExistente,
       reutilizado: true,
       transactionId: existente.id,
       txid: existente.txid,
@@ -134,10 +148,12 @@ export async function POST(req: NextRequest) {
   }
 
   if (incluirMemorias) pacote = pacote ?? await garantirPacote(evento.id as string);
+  if (incluirGravata) gravataAtual = gravataAtual ?? await garantirPacoteHoraGravata(evento.id as string);
 
   const partesDescricao = [`Convite ${evento.slug}`];
   if (memoriasCentavos > 0) partesDescricao.push('Memórias do Evento');
   if (whatsappCentavos > 0) partesDescricao.push('WhatsApp do Evento');
+  if (gravataCentavos > 0) partesDescricao.push('Hora da Gravata');
   const descricao = partesDescricao.join(' + ');
 
   const r = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/gerar-pix-assistente`, {
@@ -148,7 +164,6 @@ export async function POST(req: NextRequest) {
     },
     body: JSON.stringify({
       origem: 'conviteria',
-      // O webhook de convite também ativa os adicionais ligados ao mesmo PIX.
       tipo: 'convite',
       referencia_id: evento.id,
       valor_centavos: total,
@@ -198,14 +213,26 @@ export async function POST(req: NextRequest) {
     }, { onConflict: 'evento_id' });
   }
 
+  if (incluirGravata) {
+    await admin.from('evento_gravata_config').update({
+      status: 'aguardando_pagamento',
+      preco_centavos: HORA_GRAVATA_PRECO_CENTAVOS,
+      pix_transaction_id: pix.transaction_id,
+      pix_txid: pix.txid ?? null,
+      updated_at: new Date().toISOString(),
+    }).eq('evento_id', evento.id).neq('status', 'ativo');
+  }
+
   return NextResponse.json({
     eventoId: evento.id,
     valorCentavos: total,
     conviteCentavos,
     memoriasCentavos,
     whatsappCentavos,
-    incluiMemorias,
-    incluiWhatsApp,
+    gravataCentavos,
+    incluiMemorias: incluirMemorias,
+    incluiWhatsApp: incluirWhatsApp,
+    incluiGravata: incluirGravata,
     txid: pix.txid,
     transactionId: pix.transaction_id,
     qrcode: pix.qrcode ?? qrDoPix(pix.copia_e_cola),

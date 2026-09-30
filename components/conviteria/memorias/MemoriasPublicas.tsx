@@ -11,6 +11,7 @@ import {
   nomeConvidadoValido,
   normalizarNomeConvidado,
 } from '@/lib/conviteria/memorias-nome';
+import HoraGravataPublica, { type OrigemHoraGravata } from '@/components/conviteria/gravata/HoraGravataPublica';
 
 type Info = {
   eventoId: string;
@@ -19,6 +20,11 @@ type Info = {
   fotoCapa: string | null;
   aprovacaoManual: boolean;
   expiraEm: string | null;
+  experiencia?: {
+    memoriasAtivas?: boolean;
+    gravataAtiva?: boolean;
+    nomeAcao?: string | null;
+  };
   desafios: { ativo: boolean; titulo: string; itens: string[] };
 };
 
@@ -77,16 +83,23 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
   const [nomeTocado, setNomeTocado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [progresso, setProgresso] = useState('');
+  const [origemGravata, setOrigemGravata] = useState<OrigemHoraGravata>('memorias');
+  const [linkToken, setLinkToken] = useState('');
+  const [acaoContribuir, setAcaoContribuir] = useState(false);
   const fotosRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
+  const gravataRef = useRef<HTMLDivElement>(null);
 
   const nomeNormalizado = normalizarNomeConvidado(nome);
   const nomeValido = nomeConvidadoValido(nomeNormalizado);
+  const memoriasAtivas = info?.experiencia?.memoriasAtivas !== false;
+  const gravataAtiva = Boolean(info?.experiencia?.gravataAtiva);
+  const nomeAcao = info?.experiencia?.nomeAcao?.trim() || 'Hora da Gravata';
 
   const carregar = useCallback(async () => {
     const r = await fetch(`/api/conviteria/memorias/publico?slug=${encodeURIComponent(slug)}`, { cache: 'no-store' });
     const j = await r.json().catch(() => null);
-    if (!r.ok) throw new Error(j?.erro ?? 'Memórias indisponíveis.');
+    if (!r.ok) throw new Error(j?.erro ?? 'Experiência do evento indisponível.');
     setInfo(j);
   }, [slug]);
 
@@ -97,7 +110,36 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
       const salvo = window.sessionStorage.getItem(`conviteia-memorias-nome:${slug}`);
       if (salvo && nomeConvidadoValido(salvo)) setNome(normalizarNomeConvidado(salvo));
     } catch { /* storage pode estar indisponível */ }
+
+    const qs = new URLSearchParams(window.location.search);
+    const origem = qs.get('origem');
+    const token = qs.get('t')?.trim() || '';
+    const acao = qs.get('acao');
+    if (origem === 'whatsapp') setOrigemGravata('whatsapp');
+    else if (origem === 'qr') setOrigemGravata('qr');
+    else if (origem === 'link') setOrigemGravata('link');
+    if (acao === 'contribuir') setAcaoContribuir(true);
+    if (!token) return;
+
+    setLinkToken(token);
+    void fetch(`/api/conviteria/gravata/link?t=${encodeURIComponent(token)}`, { cache: 'no-store' })
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        if (!r.ok || !d?.nome) return;
+        const nomeLink = normalizarNomeConvidado(String(d.nome));
+        if (!nomeConvidadoValido(nomeLink)) return;
+        setNome(nomeLink);
+        setOrigemGravata('whatsapp');
+        try { window.sessionStorage.setItem(`conviteia-memorias-nome:${slug}`, nomeLink); } catch { /* best effort */ }
+      })
+      .catch(() => undefined);
   }, [slug]);
+
+  useEffect(() => {
+    if (!info || !acaoContribuir || !gravataAtiva) return;
+    const id = window.setTimeout(() => gravataRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350);
+    return () => window.clearTimeout(id);
+  }, [info, acaoContribuir, gravataAtiva]);
 
   const garantirNome = useCallback(() => {
     setNomeTocado(true);
@@ -151,9 +193,7 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
     let fim: any = null;
     let ultimoStatus = 0;
     for (let tentativa = 0; tentativa < 4; tentativa++) {
-      if (tentativa > 0) {
-        await new Promise((resolve) => window.setTimeout(resolve, 500 * tentativa));
-      }
+      if (tentativa > 0) await new Promise((resolve) => window.setTimeout(resolve, 500 * tentativa));
       const fimR = await fetch('/api/conviteria/memorias/finalizar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -176,7 +216,7 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
   }, [nomeNormalizado, nomeValido, slug]);
 
   async function enviarFotos(files: FileList | null) {
-    if (!files?.length || enviando) return;
+    if (!files?.length || enviando || !memoriasAtivas) return;
     if (!garantirNome()) {
       if (fotosRef.current) fotosRef.current.value = '';
       return;
@@ -206,7 +246,7 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
   }
 
   async function enviarVideo(file: File | undefined) {
-    if (!file || enviando) return;
+    if (!file || enviando || !memoriasAtivas) return;
     if (!garantirNome()) {
       if (videoRef.current) videoRef.current.value = '';
       return;
@@ -240,18 +280,23 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
   }
 
   if (!info) {
-    return <main className="min-h-screen grid place-items-center bg-[#fff9fb] px-6 text-center"><div><XCircle className="mx-auto mb-3 h-10 w-10 text-[#a04a63]" /><h1 className="text-xl font-semibold text-[#40232c]">Memórias indisponíveis</h1><p className="mt-2 text-sm text-[#7c5560]">{erro}</p></div></main>;
+    return <main className="min-h-screen grid place-items-center bg-[#fff9fb] px-6 text-center"><div><XCircle className="mx-auto mb-3 h-10 w-10 text-[#a04a63]" /><h1 className="text-xl font-semibold text-[#40232c]">Experiência indisponível</h1><p className="mt-2 text-sm text-[#7c5560]">{erro}</p></div></main>;
   }
 
+  const subtitulo = memoriasAtivas && gravataAtiva
+    ? `Envie fotos e vídeos ou participe da ${nomeAcao}.`
+    : gravataAtiva
+      ? `Participe da ${nomeAcao} pelo celular.`
+      : 'Compartilhe as fotos e os vídeos que você fez deste momento.';
 
   return (
     <main className="min-h-screen bg-[#fff9fb] px-4 py-8 text-[#40232c]">
       <div className="mx-auto max-w-lg">
         <header className="mb-6 text-center">
           {info.fotoCapa && <img src={info.fotoCapa} alt="" className="mx-auto mb-4 h-24 w-24 rounded-full object-cover shadow-sm" />}
-          <p className="text-xs font-semibold uppercase tracking-[.2em] text-[#a04a63]">Memórias do Evento</p>
+          <p className="text-xs font-semibold uppercase tracking-[.2em] text-[#a04a63]">Experiência do Evento</p>
           <h1 className="mt-2 text-3xl font-semibold">{info.titulo}</h1>
-          <p className="mt-2 text-sm text-[#7c5560]">Compartilhe as fotos e os vídeos que você fez deste momento.</p>
+          <p className="mt-2 text-sm text-[#7c5560]">{subtitulo}</p>
         </header>
 
         <section className="rounded-3xl border border-[#c0607830] bg-white p-5 shadow-sm">
@@ -260,12 +305,17 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
               <UserRound className="h-4 w-4 text-[#a04a63]" />
               Seu nome e sobrenome <span className="text-red-600">*</span>
             </label>
-            <p className="mt-1 text-xs text-[#7c5560]">Os anfitriões verão quem enviou cada foto e vídeo.</p>
+            <p className="mt-1 text-xs text-[#7c5560]">Você informa o nome uma única vez para participar desta experiência.</p>
             <input
               id="memorias-nome"
               value={nome}
               onChange={(e) => { setNome(e.target.value); if (nomeTocado) setErro(''); }}
-              onBlur={() => setNomeTocado(true)}
+              onBlur={() => {
+                setNomeTocado(true);
+                if (nomeConvidadoValido(normalizarNomeConvidado(nome))) {
+                  try { window.sessionStorage.setItem(`conviteia-memorias-nome:${slug}`, normalizarNomeConvidado(nome)); } catch { /* best effort */ }
+                }
+              }}
               maxLength={MEMORIAS_NOME_MAX}
               autoComplete="name"
               placeholder="Ex.: Ana Souza"
@@ -275,27 +325,42 @@ export default function MemoriasPublicas({ slug }: { slug: string }) {
             {nomeTocado && !nomeValido && <p className="mt-2 text-xs font-medium text-red-700">{MEMORIAS_NOME_ERRO}</p>}
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <button disabled={enviando} onClick={() => { if (garantirNome()) fotosRef.current?.click(); }} className="flex min-h-32 flex-col items-center justify-center rounded-2xl bg-[#c06078] p-5 font-semibold text-white disabled:opacity-45">
-              <Camera className="mb-2 h-8 w-8" />Enviar fotos
-              <span className="mt-1 text-xs font-normal opacity-90">até 50 por vez</span>
-            </button>
-            <button disabled={enviando} onClick={() => { if (garantirNome()) videoRef.current?.click(); }} className="flex min-h-32 flex-col items-center justify-center rounded-2xl border-2 border-[#c0607855] bg-[#fff5f8] p-5 font-semibold text-[#a04a63] disabled:opacity-45">
-              <Film className="mb-2 h-8 w-8" />Enviar vídeo
-              <span className="mt-1 text-xs font-normal">até 30 s · compactação automática</span>
-            </button>
-          </div>
+          {memoriasAtivas && <>
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button disabled={enviando} onClick={() => { if (garantirNome()) fotosRef.current?.click(); }} className="flex min-h-32 flex-col items-center justify-center rounded-2xl bg-[#c06078] p-5 font-semibold text-white disabled:opacity-45">
+                <Camera className="mb-2 h-8 w-8" />Enviar fotos
+                <span className="mt-1 text-xs font-normal opacity-90">até 50 por vez</span>
+              </button>
+              <button disabled={enviando} onClick={() => { if (garantirNome()) videoRef.current?.click(); }} className="flex min-h-32 flex-col items-center justify-center rounded-2xl border-2 border-[#c0607855] bg-[#fff5f8] p-5 font-semibold text-[#a04a63] disabled:opacity-45">
+                <Film className="mb-2 h-8 w-8" />Enviar vídeo
+                <span className="mt-1 text-xs font-normal">até 30 s · compactação automática</span>
+              </button>
+            </div>
 
-          <input ref={fotosRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => void enviarFotos(e.target.files)} />
-          <input ref={videoRef} type="file" accept="video/mp4,video/quicktime,video/webm,video/*" className="hidden" onChange={(e) => void enviarVideo(e.target.files?.[0])} />
+            <input ref={fotosRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => void enviarFotos(e.target.files)} />
+            <input ref={videoRef} type="file" accept="video/mp4,video/quicktime,video/webm,video/*" className="hidden" onChange={(e) => void enviarVideo(e.target.files?.[0])} />
 
-          {enviando && <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-[#fff5f8] px-4 py-3 text-sm text-[#7c5560]"><Loader2 className="h-4 w-4 animate-spin" />{progresso || 'Enviando…'}</div>}
-          {sucesso && <div className="mt-4 flex items-start gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />{sucesso}</div>}
+            {enviando && <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-[#fff5f8] px-4 py-3 text-sm text-[#7c5560]"><Loader2 className="h-4 w-4 animate-spin" />{progresso || 'Enviando…'}</div>}
+            {sucesso && <div className="mt-4 flex items-start gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />{sucesso}</div>}
+            {info.aprovacaoManual && <p className="mt-4 rounded-xl bg-[#fff8fa] px-4 py-3 text-xs text-[#7c5560]">Os anfitriões escolheram revisar as memórias antes de elas aparecerem no álbum.</p>}
+          </>}
+
           {erro && <div className="mt-4 flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800"><XCircle className="mt-0.5 h-4 w-4 shrink-0" />{erro}</div>}
-          {info.aprovacaoManual && <p className="mt-4 rounded-xl bg-[#fff8fa] px-4 py-3 text-xs text-[#7c5560]">Os anfitriões escolheram revisar as memórias antes de elas aparecerem no álbum.</p>}
         </section>
 
-        {info.desafios?.ativo && info.desafios.itens.length > 0 && (
+        {gravataAtiva && (
+          <div ref={gravataRef} className="mt-4">
+            <HoraGravataPublica
+              eventoId={info.eventoId}
+              origem={origemGravata}
+              nomeInicial={nomeNormalizado}
+              ocultarNome
+              linkToken={linkToken}
+            />
+          </div>
+        )}
+
+        {memoriasAtivas && info.desafios?.ativo && info.desafios.itens.length > 0 && (
           <section className="mt-4 overflow-hidden rounded-3xl border border-[#c0607830] bg-white shadow-sm">
             <div className="bg-[#fff5f8] px-5 py-4 text-center">
               <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[.16em] text-[#a04a63]"><Sparkles className="h-4 w-4" /> Desafio do evento</p>

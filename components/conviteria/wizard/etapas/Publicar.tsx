@@ -20,8 +20,6 @@ export default function Publicar({ estado: wz, despachar }: PropsEtapa) {
   const [plano, setPlano] = useState<'avulso' | 'mensal'>('avulso');
   const requisicao = useRef(0);
 
-  // Debounce + numero de sequencia: sem ele, uma resposta lenta de uma
-  // digitacao antiga sobrescreve o resultado da digitacao atual.
   useEffect(() => {
     if (!slug) { setSituacao('ocioso'); return; }
     setSituacao('checando');
@@ -100,9 +98,10 @@ export default function Publicar({ estado: wz, despachar }: PropsEtapa) {
           ✨ E depois de publicar?
         </p>
         <p className="mb-0 mt-1 text-xs leading-5 text-[#7c5560]">
-          No painel do evento você poderá organizar convidados, padrinhos, mesas,
-          check-in com QR Code e criar sua papelaria personalizada. Nada disso
-          precisa ser configurado agora.
+          Na próxima etapa você poderá escolher os adicionais Memórias do Evento,
+          WhatsApp do Evento e Hora da Gravata, todos opcionais e cobrados por
+          evento. Depois, no painel, poderá organizar convidados, padrinhos,
+          mesas, check-in com QR Code e criar sua papelaria personalizada.
         </p>
       </section>
 

@@ -7,7 +7,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient }              from '@/lib/supabase-server'
 import Groq                          from 'groq-sdk'
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+function getGroq() {
+  const apiKey = process.env.GROQ_API_KEY
+  if (!apiKey) throw new Error('GROQ_API_KEY_not_configured')
+  return new Groq({ apiKey })
+}
 
 // ── Lista de funções MCP disponíveis no widget ─────────────────────────────
 // Formato idêntico ao functionsContext do classify — "label | key | quando usar"
@@ -97,6 +101,8 @@ export async function POST(req: NextRequest) {
     const contextNote = assistantName
       ? `\nAssistente ativo no dashboard: "${assistantName}"`
       : ''
+
+    const groq = getGroq()
 
     const classification = await groq.chat.completions.create({
       model: 'openai/gpt-oss-20b',

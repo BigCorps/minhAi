@@ -7,7 +7,6 @@ import {
   ArrowRight,
   CalendarDays,
   Check,
-  CheckCircle2,
   Gift,
   HandCoins,
   Images,
@@ -189,41 +188,6 @@ export default function LandingExplicativa() {
         <div className={styles.cabecalho}><span>Simples do começo ao fim</span><h2>Crie. Publique. Gerencie.</h2></div>
         <div className={styles.passosGrid}>
           {passos.map((passo) => <article key={passo.numero}><span>{passo.numero}</span><h3>{passo.titulo}</h3><p>{passo.texto}</p></article>)}
-        </div>
-      </div>
-
-      <div className={styles.precosSecao}>
-        <div className={styles.cabecalho}>
-          <span>Escolha só o que fizer sentido</span>
-          <h2>Um convite completo, com adicionais opcionais.</h2>
-          <p>Você pode publicar apenas o convite ou acrescentar Memórias, WhatsApp e Hora da Gravata ao evento. Com todos os adicionais, o total é R$ 89,60.</p>
-        </div>
-
-        <div className={styles.precosGrid}>
-          <article className={`${styles.precoCard} ${styles.precoPrincipal}`}>
-            <span>Convite completo</span><strong>R$ 29,90</strong><p>Pagamento único por convite. Publicado para sempre.</p>
-            <ul><li><CheckCircle2 className="h-4 w-4" />Criação e personalização</li><li><CheckCircle2 className="h-4 w-4" />RSVP, presentes e recados</li><li><CheckCircle2 className="h-4 w-4" />Gestão do Evento</li></ul>
-          </article>
-
-          <article className={styles.precoCard}>
-            <span>Memórias do Evento</span><strong>+ R$ 19,90</strong><p>Adicional por convite.</p>
-            <ul><li><CheckCircle2 className="h-4 w-4" />Fotos e vídeos por QR</li><li><CheckCircle2 className="h-4 w-4" />Álbum e slideshow</li><li><CheckCircle2 className="h-4 w-4" />Modo Festa</li></ul>
-          </article>
-
-          <article className={styles.precoCard}>
-            <span>WhatsApp do Evento</span><strong>+ R$ 19,90</strong><p>Adicional por convite.</p>
-            <ul><li><CheckCircle2 className="h-4 w-4" />Primeira comunicação</li><li><CheckCircle2 className="h-4 w-4" />Lembrete programado</li><li><CheckCircle2 className="h-4 w-4" />Aviso da Hora da Gravata quando os dois estão ativos</li></ul>
-          </article>
-
-          <article className={styles.precoCard}>
-            <span>Hora da Gravata</span><strong>+ R$ 19,90</strong><p>Adicional por convite. Funciona mesmo sem Memórias ou WhatsApp.</p>
-            <ul><li><CheckCircle2 className="h-4 w-4" />PIX pelo celular e QR único</li><li><CheckCircle2 className="h-4 w-4" />Participações no telão em tempo real</li><li><CheckCircle2 className="h-4 w-4" />Meta, total e nome da atividade configuráveis</li></ul>
-          </article>
-        </div>
-
-        <div className={styles.mensal}>
-          <div><span>Cria convites com frequência?</span><strong>Convites à vontade · R$ 149,90/mês</strong><p>Convites ilimitados enquanto o plano estiver ativo. Os convites já publicados continuam no ar mesmo se o plano for cancelado. Adicionais continuam sendo contratados por evento.</p></div>
-          <Link href="/convite/criar" className={styles.botaoSecundario}>Criar convite <ArrowRight className="h-4 w-4" /></Link>
         </div>
       </div>
 

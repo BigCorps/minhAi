@@ -8,7 +8,7 @@ import { BusinessError, BusinessLoading, BusinessMetric, money, pct, usd } from 
 import { MarginProductsChart } from './AdminBusinessCharts';
 
 type Props={admin:AdminIdentity;basePath:''|'/admin'};
-const LABELS:Record<FinanceProductKey,string>={minhai:'minhAi',minia:'min.IA',artefinal:'ArteFinal',pixwiki:'PixWiki',consultatec:'ConsultaTec',conviteia:'ConviteIA',melhoria:'MelhorIA',funcionaria:'FuncionarIA',shared_credits:'Créditos compartilhados'};
+const LABELS:Record<FinanceProductKey,string>={minhai:'minhAi',minia:'min.IA',artefinal:'ArteFinal',pixwiki:'PixWiki',consultatec:'ConsultaTec',conviteia:'ConviteIA',melhoria:'MelhorIA',funcionaria:'FuncionarIA',midia:'Mídia.Pro',desafia:'DesafIA',shared_credits:'Créditos compartilhados'};
 export default function AdminMargin({admin,basePath}:Props){
  const [data,setData]=useState<AdminMarginSnapshot|null>(null);const[loading,setLoading]=useState(true);const[error,setError]=useState<string|null>(null);const loginPath=`${basePath}/login`;
  const load=useCallback(async()=>{setLoading(true);setError(null);try{const r=await fetch('/api/admin/margem',{cache:'no-store',credentials:'same-origin'});if(r.status===401||r.status===403){window.location.assign(loginPath);return}if(!r.ok)throw new Error(r.status===503?'A estrutura de margem ainda não está disponível no banco.':'Não foi possível carregar margem.');const p=await r.json();if(!p?.ok||!p.data)throw new Error('Resposta de margem inválida.');setData(p.data)}catch(e){setError(e instanceof Error?e.message:'Falha ao carregar.')}finally{setLoading(false)}},[loginPath]);useEffect(()=>{void load()},[load]);

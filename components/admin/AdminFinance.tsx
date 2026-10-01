@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { Banknote, CircleDollarSign, CreditCard, Receipt, RefreshCw, UsersRound, WalletCards } from 'lucide-react';
 
 import type { AdminFinanceSnapshot, AdminIdentity, FinanceProductKey } from '@/types/platform-admin-business';
-import { PLATFORM_APPS } from '@/lib/platform-products';
 import AdminHeader from './AdminHeader';
 import { BusinessError, BusinessLoading, BusinessMetric, money, number, relative } from './AdminBusinessUi';
 import { ProductRevenueChart, RevenueDailyChart } from './AdminBusinessCharts';
@@ -12,7 +11,17 @@ import { ProductRevenueChart, RevenueDailyChart } from './AdminBusinessCharts';
 type Props = { admin: AdminIdentity; basePath: '' | '/admin' };
 
 const LABELS: Record<FinanceProductKey, string> = {
-  minhai: 'minhAi', minia: 'min.IA', artefinal: 'ArteFinal', pixwiki: 'PixWiki', consultatec: 'ConsultaTec', conviteia: 'ConviteIA', melhoria: 'MelhorIA', funcionaria: 'FuncionarIA', shared_credits: 'Créditos compartilhados',
+  minhai: 'minhAi',
+  minia: 'min.IA',
+  artefinal: 'ArteFinal',
+  pixwiki: 'PixWiki',
+  consultatec: 'ConsultaTec',
+  conviteia: 'ConviteIA',
+  melhoria: 'MelhorIA',
+  funcionaria: 'FuncionarIA',
+  midia: 'Mídia.Pro',
+  desafia: 'DesafIA',
+  shared_credits: 'Créditos compartilhados',
 };
 
 export default function AdminFinance({ admin, basePath }: Props) {
@@ -62,7 +71,7 @@ export default function AdminFinance({ admin, basePath }: Props) {
         </section>
 
         <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-          {data.products.map((p) => <article key={p.productKey} className="rounded-2xl border border-white/10 bg-white/[.035] p-4"><p className="font-bold">{LABELS[p.productKey]}</p><p className="mt-3 text-2xl font-black">{money(p.revenueMonthCents)}</p><div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500"><span>{p.paymentsMonth} pagamentos</span><span className="text-right">MRR {money(p.mrrCents)}</span></div></article>)}
+          {data.products.map((p) => <article key={p.productKey} className="rounded-2xl border border-white/10 bg-white/[.035] p-4"><p className="font-bold">{LABELS[p.productKey]}</p><p className="mt-3 text-2xl font-black">{money(p.revenueMonthCents)}</p><div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-500"><span>{p.paymentsMonth} pagamentos</span><span className="text-center">{p.activeSubscriptions} assinaturas</span><span className="text-right">MRR {money(p.mrrCents)}</span></div></article>)}
         </section>
 
         <section className="mt-5 grid gap-5 xl:grid-cols-[1.3fr_.7fr]">

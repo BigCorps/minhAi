@@ -8,6 +8,7 @@ export const PLATFORM_APP_KEYS = [
   'melhoria',
   'funcionaria',
   'midia',
+  'desafia',
 ] as const;
 
 export type PlatformAppKey = (typeof PLATFORM_APP_KEYS)[number];
@@ -26,7 +27,8 @@ export const PLATFORM_APPS: Record<
   conviteia: { label: 'Convite IA', shortLabel: 'ConviteIA' },
   melhoria: { label: 'MelhorIA', shortLabel: 'MelhorIA' },
   funcionaria: { label: 'FuncionarIA', shortLabel: 'FuncionarIA' },
-  midia: { label: 'Midia.Pro', shortLabel: 'Midia.Pro' },
+  midia: { label: 'Mídia.Pro', shortLabel: 'Mídia.Pro' },
+  desafia: { label: 'DesafIA', shortLabel: 'DesafIA' },
 };
 
 export function normalizePlatformHostname(hostname: string): string {
@@ -71,6 +73,14 @@ export function resolvePlatformApp(
   // Hosts dedicados têm precedência. Isso permite URLs limpas como
   // funcionaria.net/dashboard e pix.wiki/dashboard sem depender do rewrite
   // interno usado pelo Next.js.
+  if (
+    host === 'desafia.app' ||
+    host === 'www.desafia.app' ||
+    host.endsWith('.desafia.app')
+  ) {
+    return 'desafia';
+  }
+
   if (
     host === 'midia.pro' ||
     host === 'www.midia.pro' ||

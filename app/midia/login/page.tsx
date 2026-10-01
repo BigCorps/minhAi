@@ -225,9 +225,9 @@ export default function MidiaLoginPage() {
           </div>
 
           <footer className="mt-6 border-t border-slate-100 pt-5 text-center text-xs font-bold text-slate-400">
-            <Link href="https://www.minhai.app/termos" className="hover:text-slate-600">Termos</Link>
+            <Link href="https://www.midia.pro/termos" className="hover:text-slate-600">Termos</Link>
             <span className="mx-2">•</span>
-            <Link href="https://www.minhai.app/aviso" className="hover:text-slate-600">Privacidade</Link>
+            <Link href="https://www.midia.pro/aviso" className="hover:text-slate-600">Privacidade</Link>
             <p className="mt-3">Desenvolvido por BigCorps | Tecnologia minhAi</p>
           </footer>
         </section>

@@ -146,6 +146,26 @@ const nextConfig = {
           has: [{ type: 'host', value: 'midia\\.pro' }],
           destination: '/midia/login',
         },
+
+        // Páginas legais. O Google Play valida estas URLs automaticamente —
+        // /aviso dando 404 (ou servindo a página da minhAi) reprova o envio.
+        // Só na raiz: em slug.midia.pro o bloqueio acima manda para
+        // /midia/not-found, que é o comportamento desejado.
+        {
+          source: '/aviso',
+          has: [{ type: 'host', value: '(?:www\\.)?midia\\.pro' }],
+          destination: '/midia/aviso',
+        },
+        {
+          source: '/termos',
+          has: [{ type: 'host', value: '(?:www\\.)?midia\\.pro' }],
+          destination: '/midia/termos',
+        },
+        {
+          source: '/exclusao',
+          has: [{ type: 'host', value: '(?:www\\.)?midia\\.pro' }],
+          destination: '/midia/exclusao',
+        },
         {
           source: '/dashboard',
           has: [{ type: 'host', value: 'midia\\.pro' }],

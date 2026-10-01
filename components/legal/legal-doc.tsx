@@ -54,9 +54,32 @@ export type LegalTheme = {
 };
 
 export const LEGAL_THEMES: Record<
-  'conviteia' | 'consultatec' | 'pix' | 'melhoria' | 'funcionaria',
+  'conviteia' | 'consultatec' | 'pix' | 'melhoria' | 'funcionaria' | 'midia',
   LegalTheme
 > = {
+
+  // Midia.Pro — azul institucional do manifest (#003295), fundo claro.
+  // Sem dark mode, no padrão do ConsultaTec e da MelhorIA.
+  midia: {
+    pageBg: 'min-h-screen bg-gradient-to-br from-blue-50 via-white to-slate-50',
+    title: 'text-[#002169]',
+    backBtn: 'text-[#002169] hover:bg-[#002169]/5',
+    card: 'bg-white border border-blue-100 shadow-xl',
+    body: 'text-slate-700',
+    muted: 'text-slate-500',
+    heading: 'text-[#002169]',
+    marker: 'text-[#003295]',
+    link: 'text-[#003295] underline underline-offset-2 hover:text-[#002169]',
+    primaryBtn: 'bg-[#003295] text-white hover:bg-[#002169]',
+    ghostBtn: 'bg-white border border-blue-200 text-[#002169] hover:bg-blue-50',
+    dangerBtn: 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100',
+    infoBox: 'bg-blue-50 border border-blue-200',
+    warnBox: 'bg-amber-50 border border-amber-200',
+    dangerBox: 'bg-red-50 border border-red-200',
+    neutralBox: 'bg-slate-50 border border-slate-200',
+    input: 'bg-white border border-blue-200 text-[#002169] focus:ring-2 focus:ring-[#003295]',
+    spinner: 'text-[#003295]',
+  },
   // FuncionarIA — violeta da paleta do manifest (#6D28D9 / #F8FAFC / #3B0764).
   // Produto B2B: fundo claro, sem dark mode, igual ao ConsultaTec e MelhorIA.
   funcionaria: {

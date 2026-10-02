@@ -13,6 +13,8 @@ import PixWikiFastWatch from '@/components/pix/PixWikiFastWatch';
 const FUNCTIONS_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1`;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+type ReceiptItem = { id:string; amount_cents:number; fee_amount_cents:number; net_amount_cents:number; source:string; received_at:string; checkout_id:string|null; external_id:string|null };
+
 type Snapshot = {
   company: { id:string; name:string; slug:string; logo_url:string|null; role:string };
   companies: Array<{ id:string; name:string; slug:string; logo_url:string|null; role:string }>;
@@ -22,7 +24,7 @@ type Snapshot = {
   notifications: { notification_email:string|null; notification_phone:string|null; email_enabled:boolean; push_enabled:boolean; whatsapp_enabled:boolean };
   setup: { mp_connected:boolean; pix_key_configured:boolean; pix_key_type:string|null; pix_key_masked:string|null; onboarding_completed:boolean };
   stats: { last_hour_count:number; last_hour_cents:number; today_count:number; today_cents:number; month_count:number; month_cents:number };
-  recent_receipts: Array<{ id:string; amount_cents:number; fee_amount_cents:number; net_amount_cents:number; source:string; received_at:string; checkout_id:string|null; external_id:string|null }>;
+  recent_receipts: ReceiptItem[];
   generated_at:string;
 };
 
@@ -31,6 +33,17 @@ function number(value:number|null|undefined) { return new Intl.NumberFormat('pt-
 function dateTime(value:string) { return new Date(value).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
 function sourceLabel(source:string) { return ({pix_key:'Chave Pix',pix_link:'Pix Link',checkout:'Checkout',api:'API'} as Record<string,string>)[source] || 'Pix'; }
 function digits(value:string) { return value.replace(/\D/g,'').slice(0,15); }
+function receiptDayKey(value:string) {
+  return new Date(value).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');
+}
+function receiptDayLabel(dayKey:string) {
+  const today=receiptDayKey(new Date().toISOString());
+  const yesterday=receiptDayKey(new Date(Date.now()-86400000).toISOString());
+  if(dayKey===today)return 'Hoje';
+  if(dayKey===yesterday)return 'Ontem';
+  const [year,month,day]=dayKey.split('-');
+  return `${day}/${month}/${year}`;
+}
 
 export default function PixWikiDashboardPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -49,6 +62,15 @@ export default function PixWikiDashboardPage() {
   const [notice,setNotice] = useState('');
   const [error,setError] = useState('');
   const [companyMenuOpen,setCompanyMenuOpen] = useState(false);
+  const [receiptHistory,setReceiptHistory] = useState<ReceiptItem[]>([]);
+  const [receiptFilter,setReceiptFilter] = useState<'all'|'pix_key'|'pix_link'|'checkout'|'api'>('all');
+  const [visibleReceiptDays,setVisibleReceiptDays] = useState(1);
+
+  const loadReceiptHistory = useCallback(async (companyId:string) => {
+    const {data,error:historyError}=await supabase.rpc('pixwiki_v2_recent_receipts',{p_company_id:companyId,p_limit:200});
+    if(historyError) throw historyError;
+    setReceiptHistory((Array.isArray(data)?data:[]) as ReceiptItem[]);
+  },[supabase]);
 
   const loadSnapshot = useCallback(async (companyId?:string|null, quiet=false) => {
     if (!quiet) setLoading(true);
@@ -92,6 +114,17 @@ export default function PixWikiDashboardPage() {
     return () => { cancelled=true; window.clearInterval(timer); };
   },[snapshot?.company.id,loadSnapshot]);
 
+  useEffect(() => {
+    if(!snapshot?.company.id)return;
+    setVisibleReceiptDays(1);
+    void loadReceiptHistory(snapshot.company.id).catch(()=>undefined);
+  },[snapshot?.company.id,loadReceiptHistory]);
+
+  useEffect(() => {
+    if(!snapshot?.company.id || !snapshot.recent_receipts?.[0]?.id)return;
+    void loadReceiptHistory(snapshot.company.id).catch(()=>undefined);
+  },[snapshot?.company.id,snapshot?.recent_receipts?.[0]?.id,loadReceiptHistory]);
+
   async function refreshNow() {
     if (!snapshot?.company.id || refreshing) return;
     setRefreshing(true); setError(''); setNotice('');
@@ -105,7 +138,7 @@ export default function PixWikiDashboardPage() {
           }).catch(()=>undefined);
         }
       }
-      await loadSnapshot(snapshot.company.id,true);
+      await Promise.all([loadSnapshot(snapshot.company.id,true),loadReceiptHistory(snapshot.company.id)]);
       setNotice('Painel atualizado.');
     } finally { setRefreshing(false); }
   }
@@ -147,6 +180,16 @@ export default function PixWikiDashboardPage() {
   const input=isDark?'border-white/10 bg-white/[0.05] text-white':'border-black/10 bg-white text-slate-900';
   const usagePct=Math.max(0,Math.min(100,Number(snapshot.usage.used_percent||0)));
   const thresholdClass=snapshot.usage.threshold==='limit'?'bg-red-500':snapshot.usage.threshold==='critical'?'bg-orange-500':snapshot.usage.threshold==='warning'?'bg-amber-400':'bg-emerald-500';
+  const filteredReceipts=receiptHistory.filter(r=>receiptFilter==='all'||r.source===receiptFilter);
+  const receiptGroups=(Object.values(filteredReceipts.reduce<Record<string,{dayKey:string;totalNet:number;items:ReceiptItem[]}>>((groups,r)=>{
+    const dayKey=receiptDayKey(r.received_at);
+    if(!groups[dayKey])groups[dayKey]={dayKey,totalNet:0,items:[]};
+    groups[dayKey].totalNet+=Number(r.net_amount_cents||r.amount_cents||0);
+    groups[dayKey].items.push(r);
+    return groups;
+  },{})) as Array<{dayKey:string;totalNet:number;items:ReceiptItem[]}>).sort((a,b)=>b.dayKey.localeCompare(a.dayKey));
+  const visibleReceiptGroups=receiptGroups.slice(0,visibleReceiptDays);
+  const hasMoreReceiptDays=receiptGroups.length>visibleReceiptDays;
 
   return (
     <main className={`min-h-screen pb-28 ${page}`}>
@@ -178,38 +221,55 @@ export default function PixWikiDashboardPage() {
           ].map(([label,value,sub])=><div key={label} className={`rounded-2xl border p-5 ${card}`}><p className={`text-xs font-semibold ${muted}`}>{label}</p><p className="mt-2 text-2xl font-black tracking-tight">{value}</p><p className={`mt-1 text-xs ${faint}`}>{sub}</p></div>)}
         </section>
 
-        <section className={`mt-4 rounded-3xl border p-5 sm:p-6 ${card}`}>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-2xl">
+        <details className={`group mt-4 rounded-3xl border ${card}`}>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 sm:p-6">
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-black">Uso deste mês</h2><span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${snapshot.usage.threshold==='limit'?'bg-red-500/15 text-red-300':snapshot.usage.threshold==='critical'?'bg-orange-500/15 text-orange-300':snapshot.usage.threshold==='warning'?'bg-amber-500/15 text-amber-300':'bg-emerald-500/15 text-emerald-300'}`}>{snapshot.usage.threshold==='limit'?'FRANQUIA ATINGIDA':snapshot.usage.threshold==='critical'?'85%+':snapshot.usage.threshold==='warning'?'70%+':'NORMAL'}</span></div>
-              <p className={`mt-2 text-sm leading-6 ${muted}`}>1 recebimento automatizado consome no máximo 1 unidade, mesmo com mais de um canal. Push e acompanhamento no dashboard continuam gratuitos.</p>
+              <p className={`mt-1 text-xs ${muted}`}>{number(snapshot.usage.used_units)} de {number(snapshot.usage.included_automations)} automações usadas</p>
             </div>
-            <Link href="/dashboard/uso" className={`rounded-xl border px-4 py-2.5 text-xs font-black ${card}`}>Ver detalhes de uso</Link>
+            <span className={`shrink-0 text-2xl transition group-open:rotate-45 ${faint}`} aria-hidden="true">+</span>
+          </summary>
+          <div className="border-t border-white/5 p-5 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><p className={`max-w-2xl text-sm leading-6 ${muted}`}>1 recebimento automatizado consome no máximo 1 unidade, mesmo com mais de um canal. Push e acompanhamento no dashboard continuam gratuitos.</p><Link href="/dashboard/uso" className={`rounded-xl border px-4 py-2.5 text-xs font-black ${card}`}>Ver detalhes de uso</Link></div>
+            <div className={`mt-5 h-3 overflow-hidden rounded-full ${isDark?'bg-white/10':'bg-slate-200'}`}><div className={`h-full rounded-full transition-all ${thresholdClass}`} style={{width:`${usagePct}%`}} /></div>
+            <div className={`mt-2 flex justify-between text-xs ${muted}`}><span>{number(snapshot.usage.used_units)} usadas</span><span>{number(snapshot.usage.included_automations)} incluídas</span></div>
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              <div className={`rounded-2xl border p-4 ${inner}`}><p className={`text-xs ${muted}`}>Projeção do mês</p><p className="mt-1 text-xl font-black">{number(snapshot.projection.projected_units)}</p><p className={`mt-1 text-[11px] ${faint}`}>Com base no ritmo até hoje.</p></div>
+              <div className={`rounded-2xl border p-4 ${inner}`}><p className={`text-xs ${muted}`}>Faixa mais econômica projetada</p><p className="mt-1 text-xl font-black text-emerald-400">{snapshot.projection.best_plan_name}</p><p className={`mt-1 text-[11px] ${faint}`}>Estimativa: {money(snapshot.projection.best_cost_cents)}/mês</p></div>
+              <div className={`rounded-2xl border p-4 ${inner}`}><p className={`text-xs ${muted}`}>Excedente</p><p className="mt-1 text-xl font-black">{snapshot.billing.allow_overage?'Ativado':'Desativado'}</p><p className={`mt-1 text-[11px] ${faint}`}>{snapshot.billing.allow_overage?'Uso pode seguir dentro do limite definido.':'Ao acabar a franquia, automações pagas pausam.'}</p></div>
+            </div>
           </div>
-          <div className={`mt-5 h-3 overflow-hidden rounded-full ${isDark?'bg-white/10':'bg-slate-200'}`}><div className={`h-full rounded-full transition-all ${thresholdClass}`} style={{width:`${usagePct}%`}} /></div>
-          <div className={`mt-2 flex justify-between text-xs ${muted}`}><span>{number(snapshot.usage.used_units)} usadas</span><span>{number(snapshot.usage.included_automations)} incluídas</span></div>
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <div className={`rounded-2xl border p-4 ${inner}`}><p className={`text-xs ${muted}`}>Projeção do mês</p><p className="mt-1 text-xl font-black">{number(snapshot.projection.projected_units)}</p><p className={`mt-1 text-[11px] ${faint}`}>Com base no ritmo até hoje.</p></div>
-            <div className={`rounded-2xl border p-4 ${inner}`}><p className={`text-xs ${muted}`}>Faixa mais econômica projetada</p><p className="mt-1 text-xl font-black text-emerald-400">{snapshot.projection.best_plan_name}</p><p className={`mt-1 text-[11px] ${faint}`}>Estimativa: {money(snapshot.projection.best_cost_cents)}/mês</p></div>
-            <div className={`rounded-2xl border p-4 ${inner}`}><p className={`text-xs ${muted}`}>Excedente</p><p className="mt-1 text-xl font-black">{snapshot.billing.allow_overage?'Ativado':'Desativado'}</p><p className={`mt-1 text-[11px] ${faint}`}>{snapshot.billing.allow_overage?'Uso pode seguir dentro do limite definido.':'Ao acabar a franquia, automações pagas pausam.'}</p></div>
+        </details>
+
+        <section className="mt-4">
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div><h2 className="text-lg font-black">Recebimentos</h2><p className={`mt-1 text-xs ${muted}`}>Recebimentos confirmados, organizados por dia.</p></div>
+            <div className={`flex w-max rounded-xl border p-1 ${card}`}>
+              {([['all','Todos'],['pix_key','Chave Pix'],['pix_link','Pix Link'],['checkout','Checkout'],['api','API']] as const).map(([key,label])=><button key={key} type="button" onClick={()=>{setReceiptFilter(key);setVisibleReceiptDays(1)}} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${receiptFilter===key?'bg-emerald-500 text-slate-950':muted}`}>{label}</button>)}
+            </div>
           </div>
+          <div className={`overflow-hidden rounded-3xl border ${card}`}>
+            {filteredReceipts.length===0?<div className="p-8 text-center"><p className="font-semibold">Nenhum recebimento neste filtro.</p><p className={`mt-1 text-sm ${muted}`}>Quando um Pix for identificado, ele aparece aqui.</p></div>:<div>
+              {visibleReceiptGroups.map((group,groupIndex)=>{
+                const itemBorder=isDark?'border-white/5':'border-black/5'; const dayHeader=isDark?'border-white/5 bg-white/[0.025]':'border-black/5 bg-slate-50'; const rowDivider=isDark?'divide-white/5':'divide-black/5';
+                return <details key={group.dayKey} className={`${groupIndex>0?`border-t ${itemBorder} `:''}group`} open={groupIndex===0}>
+                  <summary className={`flex cursor-pointer list-none items-center justify-between gap-4 border-b px-4 py-3 sm:px-5 ${dayHeader}`}>
+                    <div><p className="text-sm font-black">{receiptDayLabel(group.dayKey)}</p><p className={`mt-0.5 text-[11px] ${muted}`}>{group.items.length} {group.items.length===1?'recebimento':'recebimentos'}</p></div>
+                    <div className="ml-auto flex items-center gap-3 text-right"><div><p className={`text-[10px] font-bold uppercase tracking-wide ${faint}`}>Total do dia</p><p className="mt-0.5 text-lg font-black text-emerald-400">{money(group.totalNet)}</p></div><span className={`text-xl transition group-open:rotate-180 ${faint}`}>⌄</span></div>
+                  </summary>
+                  <div className={`divide-y ${rowDivider}`}>{group.items.map(r=><div key={r.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"><div><div className="flex flex-wrap items-center gap-2"><p className="text-xl font-black">{money(r.net_amount_cents||r.amount_cents)}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${r.source==='pix_link'?'bg-sky-500/10 text-sky-400':r.source==='checkout'?'bg-violet-500/10 text-violet-300':r.source==='api'?'bg-amber-500/10 text-amber-300':'bg-emerald-500/10 text-emerald-400'}`}>{sourceLabel(r.source).toUpperCase()}</span></div><p className={`mt-1 text-xs ${muted}`}>{new Date(r.received_at).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'})}{r.external_id?` · ${r.external_id}`:''}</p></div><div className="text-left sm:text-right"><p className={`text-[10px] font-bold uppercase tracking-wide ${faint}`}>Recebido</p><p className="text-sm font-black text-emerald-400">Confirmado</p></div></div>)}</div>
+                </details>;
+              })}
+              {(hasMoreReceiptDays||visibleReceiptDays>1)&&<div className={`flex flex-wrap justify-center gap-2 border-t px-4 py-4 ${isDark?'border-white/5 bg-white/[0.015]':'border-black/5 bg-slate-50/80'}`}>{hasMoreReceiptDays&&<button type="button" onClick={()=>setVisibleReceiptDays(v=>Math.min(v+7,receiptGroups.length))} className={`rounded-xl border px-4 py-2 text-xs font-black ${card}`}>Ver mais dias</button>}{visibleReceiptDays>1&&<button type="button" onClick={()=>setVisibleReceiptDays(1)} className={`rounded-xl border px-4 py-2 text-xs font-black ${card}`}>Mostrar menos</button>}</div>}
+            </div>}
+          </div>
+          <div className="mt-3 text-right"><Link href="/dashboard/relatorios" className="text-xs font-black text-emerald-400">Abrir relatório completo →</Link></div>
         </section>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1.25fr_.75fr]">
-          <section className={`rounded-3xl border p-5 ${card}`}>
-            <div className="flex items-center justify-between gap-3"><div><h2 className="text-lg font-black">Últimos Pix</h2><p className={`mt-1 text-xs ${muted}`}>Recebimentos reais desta empresa.</p></div><Link href="/dashboard/relatorios" className="text-xs font-black text-emerald-400">Ver relatório</Link></div>
-            <div className="mt-4 space-y-2">
-              {snapshot.recent_receipts.length===0 ? <div className={`rounded-2xl border p-7 text-center text-sm ${inner} ${muted}`}>Seu primeiro Pix aparecerá aqui automaticamente.</div> : snapshot.recent_receipts.map(r=><div key={r.id} className={`flex items-center justify-between gap-3 rounded-2xl border p-4 ${inner}`}><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-black">{money(r.amount_cents)}</p><span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black text-emerald-400">{sourceLabel(r.source)}</span></div><p className={`mt-1 truncate text-xs ${muted}`}>{r.external_id?`${r.external_id} · `:''}{dateTime(r.received_at)}</p></div><span className="text-lg text-emerald-400">✓</span></div>)}
-            </div>
-          </section>
-
-          <section className={`rounded-3xl border p-5 ${card}`}>
-            <h2 className="text-lg font-black">Como cobrar</h2><p className={`mt-1 text-xs ${muted}`}>Todos os caminhos usam o mesmo recebimento e histórico.</p>
-            <div className="mt-4 space-y-2">
-              {[['Chave Pix','Receba normalmente pela sua própria chave.','/dashboard/pagamentos'],['Pix Link',`${snapshot.company.slug}.pix.wiki`,'/dashboard/pagamentos'],['Checkout','Pedido identificado + metadata.','/dashboard/pagamentos'],['API','Para ERP, e-commerce e sistemas.','/dashboard/api']].map(([title,desc,href])=><Link key={title} href={href} className={`block rounded-2xl border p-4 transition hover:border-emerald-500/30 ${inner}`}><p className="text-sm font-black">{title}</p><p className={`mt-1 text-xs ${muted}`}>{desc}</p></Link>)}
-            </div>
-          </section>
-        </div>
+        <section className={`mt-4 rounded-3xl border p-5 ${card}`}>
+          <h2 className="text-lg font-black">Como cobrar</h2><p className={`mt-1 text-xs ${muted}`}>Todos os caminhos usam o mesmo recebimento e histórico.</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{[['Chave Pix','Receba normalmente pela sua própria chave.','/dashboard/pagamentos'],['Pix Link',`${snapshot.company.slug}.pix.wiki`,'/dashboard/pagamentos'],['Checkout','Pedido identificado + metadata.','/dashboard/pagamentos'],['API','Para ERP, e-commerce e sistemas.','/dashboard/api']].map(([title,desc,href])=><Link key={title} href={href} className={`block rounded-2xl border p-4 transition hover:border-emerald-500/30 ${inner}`}><p className="text-sm font-black">{title}</p><p className={`mt-1 text-xs ${muted}`}>{desc}</p></Link>)}</div>
+        </section>
 
         <section className={`mt-4 rounded-3xl border p-5 sm:p-6 ${card}`}>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="text-lg font-black">Avisos de recebimento</h2><p className={`mt-1 text-sm ${muted}`}>Escolha cada canal separadamente. Push é gratuito; E-mail, WhatsApp e Webhook compartilham a automação do mesmo Pix.</p></div></div>

@@ -2,102 +2,32 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase-browser';
-import PixWikiHeader from '@/components/pix/PixWikiHeader';
+import PixWikiHeader, { type PixWikiPlanKey } from '@/components/pix/PixWikiHeader';
 import PixWikiDashboardNav from '@/components/pix/PixWikiDashboardNav';
-import PixPaymentModeSettings from '@/components/pix/PixPaymentModeSettings';
 
-type Company = { id: string; name: string; plan_access: boolean; mp_connected: boolean; pix_key: string | null };
+const FUNCTIONS_URL=`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1`;
+const ANON_KEY=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+type Snap={company:{id:string;name:string;slug:string};billing:{plan:PixWikiPlanKey};setup:{pix_key_masked:string|null;pix_key_type:string|null;mp_connected:boolean;pix_key_configured:boolean}};
+function cents(v:string){const n=Number(v.replace(',','.'));return Number.isFinite(n)&&n>0?Math.round(n*100):0}
 
-export default function PixWikiPagamentosPage() {
-  const supabase = useMemo(() => createClient(), []);
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [dark, setDark] = useState(true);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [company, setCompany] = useState<Company | null>(null);
-  const [plan, setPlan] = useState<'free' | 'link' | 'pro'>('free');
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('pixWikiTheme');
-    setDark(savedTheme ? savedTheme !== 'light' : !window.matchMedia('(prefers-color-scheme: light)').matches);
-
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace('/pix/login'); return; }
-      const [{ data: list }, { data: ent }] = await Promise.all([
-        supabase.rpc('pixwiki_list_my_companies'),
-        supabase.rpc('pixwiki_my_entitlements'),
-      ]);
-      const rows = (list || []) as Company[];
-      setCompanies(rows);
-      const requested = new URL(window.location.href).searchParams.get('company') || localStorage.getItem('pixWikiActiveCompanyId');
-      const selected = rows.find(c => c.id === requested) || rows.find((c: any) => c.is_primary) || rows[0] || null;
-      setCompany(selected);
-      if (selected) localStorage.setItem('pixWikiActiveCompanyId', selected.id);
-      const e = Array.isArray(ent) ? ent[0] : ent;
-      const effective = String(e?.effective_plan || e?.plan || 'free');
-      setPlan(effective === 'pro' ? 'pro' : effective === 'link' ? 'link' : 'free');
-      setLoading(false);
-    })();
-  }, [router, supabase]);
-
-  function changeCompany(id: string) {
-    const next = companies.find(c => c.id === id) || null;
-    setCompany(next);
-    if (next) {
-      localStorage.setItem('pixWikiActiveCompanyId', next.id);
-      const url = new URL(window.location.href);
-      url.searchParams.set('company', next.id);
-      window.history.replaceState({}, '', url.toString());
-    }
-  }
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') localStorage.setItem('pixWikiTheme', dark ? 'dark' : 'light');
-  }, [dark]);
-
-  const page = dark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900';
-  const card = dark ? 'border-white/10 bg-white/[0.035]' : 'border-black/10 bg-white';
-  const muted = dark ? 'text-white/50' : 'text-slate-500';
-
-  if (loading) return <div className={`min-h-screen ${page} flex items-center justify-center`}>Carregando…</div>;
-
-  return (
-    <main className={`min-h-screen pb-28 ${page}`}>
-      <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
-        <PixWikiHeader plan={plan} dark={dark} onThemeChange={setDark} />
-
-        <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-black">Pagamentos Pix</h1>
-            <p className={`mt-1 text-sm ${muted}`}>Escolha a confirmação padrão de cada recebedor sem alterar o histórico ou a conta Mercado Pago.</p>
-          </div>
-          {companies.length > 1 && (
-            <select value={company?.id || ''} onChange={e => changeCompany(e.target.value)} className={`rounded-xl border px-3 py-2.5 text-sm outline-none ${card}`}>
-              {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          )}
-        </div>
-
-        {company ? (
-          <div className="mt-5 space-y-4">
-            {!company.plan_access && <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm text-amber-300">Esta empresa está pausada pelo plano atual. A configuração fica preservada e volta a valer quando a empresa for reativada.</div>}
-            <PixPaymentModeSettings companyId={company.id} product="pixwiki" />
-            <div className={`rounded-2xl border p-5 ${card}`}>
-              <h2 className="font-black">Como os dois modos funcionam</h2>
-              <div className={`mt-3 space-y-2 text-sm leading-6 ${muted}`}>
-                <p><strong className={dark ? 'text-white' : 'text-slate-900'}>Pix Grátis:</strong> o dinheiro vai direto para sua chave. O PixWiki identifica o recebimento pela conta Mercado Pago conectada. O valor só muda em centavos quando há outra cobrança simultânea de mesmo valor.</p>
-                <p><strong className={dark ? 'text-white' : 'text-slate-900'}>Pix pelo Mercado Pago:</strong> a cobrança é criada pelo próprio Mercado Pago e mantém o valor exato. Podem existir tarifas do provedor.</p>
-                <p>As empresas que já usam o PixWiki não são migradas automaticamente. A mudança só acontece quando você salvar uma nova opção aqui.</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className={`mt-5 rounded-2xl border p-6 ${card}`}>Nenhuma empresa PixWiki encontrada.</div>
-        )}
-      </div>
-      <PixWikiDashboardNav dark={dark} />
-    </main>
-  );
+export default function PixWikiPagamentosPage(){
+ const supabase=useMemo(()=>createClient(),[]);const router=useRouter();
+ const [dark,setDark]=useState(true);const[loading,setLoading]=useState(true);const[snap,setSnap]=useState<Snap|null>(null);
+ const[amount,setAmount]=useState('10,00');const[description,setDescription]=useState('Pedido PixWiki');const[externalId,setExternalId]=useState('');const[customerName,setCustomerName]=useState('');
+ const[checkoutUrl,setCheckoutUrl]=useState('');const[busy,setBusy]=useState(false);const[notice,setNotice]=useState('');const[error,setError]=useState('');
+ useEffect(()=>{const saved=localStorage.getItem('publicTheme');setDark(saved?saved==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches);(async()=>{const{data:{user}}=await supabase.auth.getUser();if(!user){router.replace('/pix/login');return}const active=localStorage.getItem('pixWikiActiveCompanyId');const{data,error}=await supabase.rpc('pixwiki_v2_dashboard_snapshot',{p_company_id:active||null});if(error)throw error;setSnap(data as Snap);setLoading(false)})().catch(()=>{setError('Não foi possível carregar os meios de cobrança.');setLoading(false)})},[router,supabase]);
+ async function createCheckout(){if(!snap)return;const value=cents(amount);if(!value){setError('Informe um valor válido.');return}setBusy(true);setError('');setNotice('');setCheckoutUrl('');try{const{data:{session}}=await supabase.auth.getSession();if(!session?.access_token)throw new Error('session');const response=await fetch(`${FUNCTIONS_URL}/pixwiki-v2-checkout`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:ANON_KEY},body:JSON.stringify({action:'create_owner',company_id:snap.company.id,origin:'checkout',amount_cents:value,description:description.trim()||'Pagamento PixWiki',external_id:externalId.trim()||null,customer_name:customerName.trim()||null,metadata:{created_from:'dashboard'}})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data?.error||'checkout_failed');setCheckoutUrl(String(data.checkout_url||''));setNotice('Checkout criado. O link já pode ser enviado ao cliente.')}catch{setError('Não foi possível criar o Checkout agora.')}finally{setBusy(false)}}
+ async function copy(v:string){await navigator.clipboard.writeText(v);setNotice('Link copiado.');}
+ if(loading||!snap)return <main className="min-h-screen bg-[#020617] text-white flex items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-emerald-400"/></main>;
+ const page=dark?'bg-[#020617] text-white':'bg-[#f7f8fa] text-slate-900';const card=dark?'border-white/10 bg-white/[0.035]':'border-black/10 bg-white shadow-sm';const inner=dark?'border-white/10 bg-black/15':'border-black/10 bg-slate-50';const muted=dark?'text-white/55':'text-slate-500';const input=dark?'border-white/10 bg-white/[0.05] text-white':'border-black/10 bg-white text-slate-900';const base=`https://${snap.company.slug}.pix.wiki`;const fixed=cents(amount)?`${base}/${(cents(amount)/100).toFixed(2)}`:base;
+ return <main className={`min-h-screen pb-28 ${page}`}><div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6"><PixWikiHeader plan={snap.billing.plan} dark={dark} onThemeChange={setDark}/><div className="mt-6"><h1 className="text-3xl font-black">Como cobrar</h1><p className={`mt-2 text-sm ${muted}`}>Chave, Link, Checkout e API entram no mesmo histórico. A diferença é o nível de identificação do pagamento.</p></div>{(notice||error)&&<div className={`mt-4 rounded-2xl border p-4 text-sm ${error?'border-red-500/25 bg-red-500/10 text-red-300':'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'}`}>{error||notice}</div>}
+ <section className="mt-6 grid gap-4 md:grid-cols-2">
+  <div className={`rounded-3xl border p-6 ${card}`}><span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black text-emerald-400">CHAVE PIX</span><h2 className="mt-4 text-xl font-black">Receba como já recebe hoje</h2><p className={`mt-2 text-sm leading-6 ${muted}`}>O dinheiro continua indo direto para sua conta Mercado Pago. A PixWiki detecta e organiza o recebimento.</p><div className={`mt-4 rounded-2xl border p-4 ${inner}`}><p className={`text-xs ${muted}`}>Chave configurada</p><p className="mt-1 font-black">{snap.setup.pix_key_masked||'Não configurada'}</p><p className={`mt-1 text-xs ${muted}`}>{snap.setup.mp_connected?'Mercado Pago conectado':'Mercado Pago ainda não conectado'}</p></div></div>
+  <div className={`rounded-3xl border p-6 ${card}`}><span className="rounded-full bg-sky-500/10 px-2.5 py-1 text-[10px] font-black text-sky-400">PIX LINK</span><h2 className="mt-4 text-xl font-black">Um endereço para cobrar</h2><p className={`mt-2 text-sm leading-6 ${muted}`}>Use sem valor ou já preencha o total. O pagador vê sua identidade e o QR Pix.</p><div className={`mt-4 rounded-2xl border p-4 text-sm break-all ${inner}`}>{base}</div><div className="mt-3 flex gap-2"><button onClick={()=>copy(base)} className={`rounded-xl border px-4 py-2.5 text-xs font-black ${card}`}>Copiar link</button><a href={base} target="_blank" rel="noreferrer" className="rounded-xl bg-sky-500 px-4 py-2.5 text-xs font-black text-white">Abrir</a></div></div>
+ </section>
+ <section className={`mt-4 rounded-3xl border p-6 ${card}`}><div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between"><div><span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-black text-violet-300">CHECKOUT</span><h2 className="mt-3 text-xl font-black">Crie uma cobrança identificada</h2><p className={`mt-2 text-sm ${muted}`}>Ideal para pedido, cliente, referência externa e integração com sistema.</p></div><Link href="/dashboard/api" className={`rounded-xl border px-4 py-2.5 text-xs font-black ${card}`}>Automatizar pela API</Link></div><div className="mt-5 grid gap-3 md:grid-cols-2"><label><span className={`text-xs font-bold ${muted}`}>Valor</span><input value={amount} onChange={e=>setAmount(e.target.value)} inputMode="decimal" className={`mt-1 w-full rounded-xl border px-3 py-3 text-sm outline-none ${input}`}/></label><label><span className={`text-xs font-bold ${muted}`}>Descrição</span><input value={description} onChange={e=>setDescription(e.target.value)} className={`mt-1 w-full rounded-xl border px-3 py-3 text-sm outline-none ${input}`}/></label><label><span className={`text-xs font-bold ${muted}`}>Referência externa</span><input value={externalId} onChange={e=>setExternalId(e.target.value)} placeholder="PEDIDO-123" className={`mt-1 w-full rounded-xl border px-3 py-3 text-sm outline-none ${input}`}/></label><label><span className={`text-xs font-bold ${muted}`}>Cliente</span><input value={customerName} onChange={e=>setCustomerName(e.target.value)} placeholder="Opcional" className={`mt-1 w-full rounded-xl border px-3 py-3 text-sm outline-none ${input}`}/></label></div><button onClick={createCheckout} disabled={busy} className="mt-4 rounded-xl bg-violet-500 px-5 py-3 text-sm font-black text-white disabled:opacity-50">{busy?'Criando…':'Criar Checkout'}</button>{checkoutUrl&&<div className={`mt-4 rounded-2xl border p-4 ${inner}`}><p className={`text-xs ${muted}`}>Checkout pronto</p><p className="mt-2 break-all text-sm font-bold">{checkoutUrl}</p><div className="mt-3 flex gap-2"><button onClick={()=>copy(checkoutUrl)} className={`rounded-xl border px-4 py-2 text-xs font-black ${card}`}>Copiar</button><a href={checkoutUrl} target="_blank" rel="noreferrer" className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-black text-slate-950">Abrir</a></div></div>}</section>
+ <section className={`mt-4 rounded-3xl border p-6 ${card}`}><h2 className="text-lg font-black">Link com valor rápido</h2><p className={`mt-1 text-sm ${muted}`}>O mesmo valor do formulário acima pode virar um link simples sem criar Checkout manualmente.</p><div className={`mt-4 rounded-2xl border p-4 text-sm break-all ${inner}`}>{fixed}</div><button onClick={()=>copy(fixed)} className={`mt-3 rounded-xl border px-4 py-2.5 text-xs font-black ${card}`}>Copiar link com valor</button></section>
+ </div><PixWikiDashboardNav dark={dark}/></main>
 }

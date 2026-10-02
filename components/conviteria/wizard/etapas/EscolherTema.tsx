@@ -11,6 +11,7 @@ import Textura, { TEXTURAS, TEXTURA_PADRAO } from '../../Texturas';
 import { acharFonte } from '@/lib/conviteria/fontes';
 import { Cartoes } from '../Campos';
 import { BotaoIA, useSugestao } from '../AjudaIA';
+import ReportAIContent from '../../ReportAIContent';
 import type { PropsEtapa } from '../Wizard';
 
 const NOME_ORNAMENTO: Record<string, string> = {
@@ -149,7 +150,18 @@ export default function EscolherTema({ estado, despachar }: PropsEtapa) {
         />
 
         {ia.erro && <p className="wz-ia-erro">{ia.erro}</p>}
-        {porque && <p className="wz-ia-porque">{porque}</p>}
+        {porque && (
+          <>
+            <p className="wz-ia-porque">{porque}</p>
+            <div className="mt-1 flex justify-end">
+              <ReportAIContent
+                messageId="conviteia-style-suggestion"
+                messageText={porque}
+                variant="inline"
+              />
+            </div>
+          </>
+        )}
       </div>
 
       <p className="wz-intro">

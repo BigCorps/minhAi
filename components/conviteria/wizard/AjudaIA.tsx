@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ReportAIContent from '../ReportAIContent';
 
 /**
  * Botao de sugestao por IA. Falha silenciosa por design: se a API cair, o
@@ -43,6 +44,14 @@ export function useSugestao<T>() {
       });
       const j = await r.json();
       if (!r.ok) { setErro(j.erro ?? 'Não deu certo agora.'); return null; }
+
+      // Guarda a última saída da IA na sessão. O botão permanente de denúncia
+      // consegue reportar exatamente a saída mais recente, inclusive no fluxo
+      // anônimo anterior ao cadastro.
+      try {
+        sessionStorage.setItem('conviteia:last-ai-output', JSON.stringify(j));
+      } catch {}
+
       return j as T;
     } catch {
       setErro('Não deu certo agora.');
@@ -74,6 +83,13 @@ export function ListaSugestoes({
           {t}
         </button>
       ))}
+      <div className="flex justify-end border-t border-[#e4e4e7] bg-white px-3 py-1.5">
+        <ReportAIContent
+          messageId="conviteia-wizard-suggestions"
+          messageText={itens.join('\n')}
+          variant="inline"
+        />
+      </div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-browser';
 import Convite from '../Convite';
 import Capa from '../Capa';
 import FontesGoogle from '../FontesGoogle';
+import ReportAIContent from '../ReportAIContent';
 import { acharTipo } from '@/lib/conviteria/tiposEvento';
 import { familiasDoGrupo, tokensDoConvite } from '@/lib/conviteria/tokens';
 import { FAMILIAS_LACRE } from '../LacreArte';
@@ -157,6 +158,15 @@ export default function Wizard({
           >
             {logado ? 'Minha conta' : 'Entrar'}
           </a>
+        </div>
+
+        {/* Acesso permanente: o reviewer da Store não depende de encontrar uma
+            sugestão específica para localizar o mecanismo exigido pela 11.16. */}
+        <div className="flex justify-end px-5 pt-2">
+          <ReportAIContent
+            messageId="conviteia-wizard-last-ai-output"
+            variant="persistent"
+          />
         </div>
 
         <header className="wz-cabecalho">

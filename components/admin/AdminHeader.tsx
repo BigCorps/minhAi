@@ -8,6 +8,7 @@ import {
   MessageCircle,
   MonitorPlay,
   ShieldCheck,
+  Target,
   TrendingUp,
   UsersRound,
   WalletCards,
@@ -23,6 +24,7 @@ export type AdminSection =
   | 'attention'
   | 'now'
   | 'whatsapp'
+  | 'pixwiki-leads'
   | 'midia'
   | 'midia-creatives';
 
@@ -41,6 +43,7 @@ const NAV = [
   { key: 'attention', label: 'Atenção', suffix: '/atencao', icon: AlertTriangle },
   { key: 'now', label: 'Agora', suffix: '/agora', icon: Activity },
   { key: 'whatsapp', label: 'WhatsApp', suffix: '/whatsapp', icon: MessageCircle },
+  { key: 'pixwiki-leads', label: 'Leads PixWiki', suffix: '/pixwiki-leads', icon: Target },
   { key: 'midia', label: 'Midia.Pro', suffix: '/midia', icon: MonitorPlay },
   { key: 'midia-creatives', label: 'Criativos', suffix: '/midia?view=criativos', icon: Images },
 ] as const;

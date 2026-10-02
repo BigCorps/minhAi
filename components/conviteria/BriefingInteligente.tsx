@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
+import ReportAIContent from './ReportAIContent';
 import './briefing.css';
 
 const EXEMPLOS = [
@@ -71,6 +72,9 @@ export default function BriefingInteligente({
       }
 
       sessionStorage.setItem('conviteia:briefing', JSON.stringify(j));
+      // A saída estruturada também fica disponível para o mecanismo permanente
+      // de denúncia dentro do wizard que será aberto em seguida.
+      sessionStorage.setItem('conviteia:last-ai-output', JSON.stringify(j));
       window.location.href = '/convite/criar?origem=ia';
     } catch (e: any) {
       setErro(e.message || 'Não consegui interpretar sua ideia agora.');
@@ -184,6 +188,15 @@ export default function BriefingInteligente({
             <div className="cv-briefing-pensando" aria-live="polite">
               <span />
               Estou separando o que já consigo preencher e o que é melhor você escolher.
+            </div>
+          )}
+
+          {(modo === 'landing' || modo === 'completo') && (
+            <div className="mt-3 flex justify-center">
+              <ReportAIContent
+                messageId="conviteia-briefing-ai"
+                variant="persistent"
+              />
             </div>
           )}
         </>

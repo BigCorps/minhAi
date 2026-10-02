@@ -1,0 +1,87 @@
+path	final_source	source_package
+PIXWIKI_V2_FINAL_PROVENANCE.tsv	final	generated
+PIXWIKI_V2_FINAL_README.md	final	generated
+app/admin/pixwiki-leads/page.tsx	gate9	PixWiki_V2_GATE9_Calculadora_Leads.zip
+app/api/admin/pixwiki-leads/route.ts	gate9	PixWiki_V2_GATE9_Calculadora_Leads.zip
+app/api/pixwiki/v1/[...path]/route.ts	gate4	PixWiki_V2_GATE4_API_Webhooks.zip
+app/api/pixwiki/v1/route.ts	gate4	PixWiki_V2_GATE4_API_Webhooks.zip
+app/pix/aviso/page.tsx	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+app/pix/c/[token]/page.tsx	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+app/pix/caixa/page.tsx	gate7	PixWiki_V2_GATE7_Equipe_Caixa.zip
+app/pix/calculadora/page.tsx	gate9	PixWiki_V2_GATE9_Calculadora_Leads.zip
+app/pix/dashboard/api/page.tsx	gate6	PixWiki_V2_GATE6_Dashboard_Uso.zip
+app/pix/dashboard/equipe/page.tsx	gate7	PixWiki_V2_GATE7_Equipe_Caixa.zip
+app/pix/dashboard/pagamentos/page.tsx	gate6	PixWiki_V2_GATE6_Dashboard_Uso.zip
+app/pix/dashboard/page.tsx	gate7	PixWiki_V2_GATE7_Equipe_Caixa.zip
+app/pix/dashboard/planos/page.tsx	gate8	PixWiki_V2_GATE8_Billing.zip
+app/pix/dashboard/relatorios/page.tsx	gate6	PixWiki_V2_GATE6_Dashboard_Uso.zip
+app/pix/dashboard/uso/page.tsx	gate6	PixWiki_V2_GATE6_Dashboard_Uso.zip
+app/pix/docs/page.tsx	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+app/pix/equipe/aceitar/page.tsx	gate7	PixWiki_V2_GATE7_Equipe_Caixa.zip
+app/pix/exclusao/page.tsx	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+app/pix/layout.tsx	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+app/pix/login/page.tsx	gate7	PixWiki_V2_GATE7_Equipe_Caixa.zip
+app/pix/not-found/page.tsx	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+app/pix/onboarding/page.tsx	gate9	PixWiki_V2_GATE9_Calculadora_Leads.zip
+app/pix/page.tsx	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+app/pix/seguranca/page.tsx	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+app/pix/termos/page.tsx	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+app/robots.ts	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+app/sitemap.ts	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+components/admin/AdminHeader.tsx	gate9	PixWiki_V2_GATE9_Calculadora_Leads.zip
+components/admin/AdminPixWikiLeads.tsx	gate9	PixWiki_V2_GATE9_Calculadora_Leads.zip
+components/pix/PixWikiBrandFooter.tsx	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+components/pix/PixWikiDashboardNav.tsx	gate8	PixWiki_V2_GATE8_Billing.zip
+components/pix/PixWikiHeader.tsx	gate6	PixWiki_V2_GATE6_Dashboard_Uso.zip
+components/pix/PixWikiLinkPage.tsx	gate3	PixWiki_V2_GATE3_Checkout_Publico.zip
+components/pix/PixWikiPublicPage.tsx	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+components/pix/PixWikiV2PaymentPage.tsx	gate3	PixWiki_V2_GATE3_Checkout_Publico.zip
+docs/PIXWIKI_V2_PRODUCTION_QA.md	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+docs/PIXWIKI_V2_ROLLOUT.md	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+docs/pixwiki/API-V2.md	gate4	PixWiki_V2_GATE4_API_Webhooks.zip
+docs/pixwiki/PIXWIKI_V2_COLLISION_RESOLUTION.md	final	generated
+docs/pixwiki/PIXWIKI_V2_FINAL_BUILD_REPORT.md	final	generated
+docs/pixwiki/gates/GATE_01_README.md	gate1+final	historical note corrected
+docs/pixwiki/gates/GATE_02_README.md	final	relocated historical documentation
+docs/pixwiki/gates/GATE_03_README.md	final	relocated historical documentation
+docs/pixwiki/gates/GATE_04_README.md	final	relocated historical documentation
+docs/pixwiki/gates/GATE_05_README.md	final	relocated historical documentation
+docs/pixwiki/gates/GATE_06_README.md	final	relocated historical documentation
+docs/pixwiki/gates/GATE_07_README.md	final	relocated historical documentation
+docs/pixwiki/gates/GATE_08_README.md	final	relocated historical documentation
+docs/pixwiki/gates/GATE_09_README.md	final	relocated historical documentation
+docs/pixwiki/gates/GATE_10_README.md	final	relocated historical documentation
+next.config.js	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+public/brands/pix/llms.txt	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+public/brands/pix/manifest.webmanifest	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+supabase/PIXWIKI_V2_SQL_ORDER.txt	final	generated
+supabase/functions/pixwiki-api-admin/index.ts	gate4	PixWiki_V2_GATE4_API_Webhooks.zip
+supabase/functions/pixwiki-api/index.ts	gate4	PixWiki_V2_GATE4_API_Webhooks.zip
+supabase/functions/pixwiki-notify/index.ts	gate6	PixWiki_V2_GATE6_Dashboard_Uso.zip
+supabase/functions/pixwiki-plan/index.ts	gate8	PixWiki_V2_GATE8_Billing.zip
+supabase/functions/pixwiki-reconcile-subscriptions/index.ts	gate8	PixWiki_V2_GATE8_Billing.zip
+supabase/functions/pixwiki-team-admin/index.ts	gate7	PixWiki_V2_GATE7_Equipe_Caixa.zip
+supabase/functions/pixwiki-v2-checkout/index.ts	gate2	PixWiki_V2_GATE2_Motor_Pagamentos.zip
+supabase/functions/pixwiki-webhook-dispatch/index.ts	gate4	PixWiki_V2_GATE4_API_Webhooks.zip
+supabase/migrations/pixwiki_v2_gate10_security_hardening.sql	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+supabase/migrations/pixwiki_v2_gate1_foundation.sql	gate1	PixWiki_V2_GATE1_Fundacao.zip
+supabase/migrations/pixwiki_v2_gate2_payment_engine.sql	gate2	PixWiki_V2_GATE2_Motor_Pagamentos.zip
+supabase/migrations/pixwiki_v2_gate3_public_checkout.sql	gate3	PixWiki_V2_GATE3_Checkout_Publico.zip
+supabase/migrations/pixwiki_v2_gate4_api_webhooks.sql	gate4	PixWiki_V2_GATE4_API_Webhooks.zip
+supabase/migrations/pixwiki_v2_gate5_onboarding.sql	gate5	PixWiki_V2_GATE5_Onboarding.zip
+supabase/migrations/pixwiki_v2_gate6_dashboard_usage.sql	gate6	PixWiki_V2_GATE6_Dashboard_Uso.zip
+supabase/migrations/pixwiki_v2_gate7_team_cashier.sql	gate7	PixWiki_V2_GATE7_Equipe_Caixa.zip
+supabase/migrations/pixwiki_v2_gate8_billing.sql	gate8	PixWiki_V2_GATE8_Billing.zip
+supabase/migrations/pixwiki_v2_gate9_leads_calculator.sql	gate9	PixWiki_V2_GATE9_Calculadora_Leads.zip
+supabase/validation/PIXWIKI_V2_FINAL_VALIDATE.sql	final	generated
+supabase/validation/pixwiki_v2_gate10_validate.sql	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip
+supabase/validation/pixwiki_v2_gate1_validate.sql	gate1+final	historical comment corrected
+supabase/validation/pixwiki_v2_gate2_validate.sql	gate2	PixWiki_V2_GATE2_Motor_Pagamentos.zip
+supabase/validation/pixwiki_v2_gate3_validate.sql	gate3	PixWiki_V2_GATE3_Checkout_Publico.zip
+supabase/validation/pixwiki_v2_gate4_validate.sql	gate4	PixWiki_V2_GATE4_API_Webhooks.zip
+supabase/validation/pixwiki_v2_gate5_validate.sql	gate5	PixWiki_V2_GATE5_Onboarding.zip
+supabase/validation/pixwiki_v2_gate6_validate.sql	gate6	PixWiki_V2_GATE6_Dashboard_Uso.zip
+supabase/validation/pixwiki_v2_gate7_validate.sql	gate7	PixWiki_V2_GATE7_Equipe_Caixa.zip
+supabase/validation/pixwiki_v2_gate8_validate.sql	gate8	PixWiki_V2_GATE8_Billing.zip
+supabase/validation/pixwiki_v2_gate9_validate.sql	gate9	PixWiki_V2_GATE9_Calculadora_Leads.zip
+vercel.json	gate10	PixWiki_V2_GATE10_Finalizacao_QA.zip

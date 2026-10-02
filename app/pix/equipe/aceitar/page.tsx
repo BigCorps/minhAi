@@ -1,0 +1,31 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
+import { createClient } from '@/lib/supabase-browser';
+
+type Invite={invite_id:string;company_id:string;company_name:string;company_slug:string;role:'manager'|'cashier';invited_by_email:string|null;expires_at:string;created_at:string};
+function roleLabel(role:string){return role==='manager'?'Gerente':'Caixa';}
+function date(v:string){return new Date(v).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+
+export default function AceitarEquipePage(){
+  const supabase=useMemo(()=>createClient(),[]);
+  const [dark,setDark]=useState(true);const [loading,setLoading]=useState(true);const [invites,setInvites]=useState<Invite[]>([]);const [busy,setBusy]=useState('');const [error,setError]=useState('');const [needsPassword,setNeedsPassword]=useState(false);const [password,setPassword]=useState('');
+  async function load(){
+    let {data:{user}}=await supabase.auth.getUser();
+    if(!user && typeof window!=='undefined' && window.location.hash.includes('access_token=')){
+      const hash=new URLSearchParams(window.location.hash.replace(/^#/,''));
+      const accessToken=hash.get('access_token');const refreshToken=hash.get('refresh_token');
+      if(accessToken&&refreshToken){await supabase.auth.setSession({access_token:accessToken,refresh_token:refreshToken});window.history.replaceState({},'',window.location.pathname+window.location.search);({data:{user}}=await supabase.auth.getUser());}
+    }
+    if(!user){window.location.replace('/login');return;}
+    setNeedsPassword(Boolean((user as any).invited_at));
+    const {data,error}=await supabase.rpc('pixwiki_v2_pending_team_invites');
+    if(error)throw error;setInvites((data||[]) as Invite[]);setLoading(false);
+  }
+  useEffect(()=>{const saved=localStorage.getItem('publicTheme');setDark(saved?saved==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches);load().catch(()=>{setError('Não foi possível carregar seus convites.');setLoading(false);});},[]);// eslint-disable-line react-hooks/exhaustive-deps
+  async function accept(invite:Invite){setBusy(invite.invite_id);setError('');try{if(needsPassword){if(password.length<6)throw new Error('password_required');const {error:passwordError}=await supabase.auth.updateUser({password});if(passwordError)throw new Error('password_update_failed');setNeedsPassword(false);}const {data,error}=await supabase.rpc('pixwiki_v2_accept_team_invite',{p_invite_id:invite.invite_id});if(error)throw error;const role=String(data?.role||invite.role);const company=String(data?.company_id||invite.company_id);localStorage.setItem(role==='cashier'?'pixWikiCashierCompanyId':'pixWikiActiveCompanyId',company);window.location.replace(role==='cashier'?`/caixa?company=${encodeURIComponent(company)}`:`/dashboard?company=${encodeURIComponent(company)}`);}catch(e:any){const msg=String(e?.message||'');if(msg==='password_required')setError('Crie uma senha com pelo menos 6 caracteres para continuar.');else if(msg==='password_update_failed')setError('Não foi possível salvar sua senha agora.');else setError('Não foi possível aceitar este convite. Ele pode ter expirado ou sido cancelado.');setBusy('');}}
+  if(loading)return <main className="min-h-screen bg-[#020617] flex items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-emerald-400"/></main>;
+  const page=dark?'bg-[#020617] text-white':'bg-[#f7f8fa] text-slate-900';const card=dark?'border-white/10 bg-white/[0.035]':'border-black/10 bg-white shadow-sm';const muted=dark?'text-white/55':'text-slate-500';
+  return <main className={`min-h-screen px-4 py-12 ${page}`}><div className="mx-auto max-w-2xl"><div className="flex items-center justify-center gap-3"><Image src="/brands/pix/pixwiki.png" alt="PixWiki" width={96} height={40} className="h-10 w-auto"/><span className={muted}>Equipe</span></div><h1 className="mt-7 text-center text-3xl font-black">Convites de acesso</h1><p className={`mx-auto mt-2 max-w-lg text-center text-sm ${muted}`}>Você escolhe quais empresas deseja acessar. O papel e as permissões ficam vinculados à sua conta PixWiki.</p>{error&&<div className="mt-5 rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-300">{error}</div>}{needsPassword&&invites.length>0&&<div className={`mt-6 rounded-3xl border p-5 ${card}`}><h2 className="font-black">Crie sua senha de acesso</h2><p className={`mt-1 text-xs ${muted}`}>Sua conta foi criada por convite. Defina uma senha para conseguir entrar novamente depois.</p><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Mínimo de 6 caracteres" className={`mt-4 w-full rounded-xl border px-4 py-3 text-sm outline-none ${dark?'border-white/10 bg-white/[0.05] text-white':'border-black/10 bg-white text-slate-900'}`}/></div>}<div className="mt-6 space-y-3">{invites.length===0?<div className={`rounded-3xl border p-8 text-center ${card}`}><h2 className="font-black">Nenhum convite pendente</h2><p className={`mt-2 text-sm ${muted}`}>Se você já aceitou o acesso, pode seguir para sua área.</p><div className="mt-5 flex justify-center gap-2"><a href="/dashboard" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold">Dashboard</a><a href="/caixa" className="rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-black text-slate-950">Área Caixa</a></div></div>:invites.map(i=><div key={i.invite_id} className={`rounded-3xl border p-5 sm:p-6 ${card}`}><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-lg font-black">{i.company_name}</p><p className={`mt-1 text-sm ${muted}`}>Acesso como <strong>{roleLabel(i.role)}</strong>{i.invited_by_email?` · convite de ${i.invited_by_email}`:''}</p><p className={`mt-1 text-xs ${muted}`}>Expira em {date(i.expires_at)}</p></div><button onClick={()=>accept(i)} disabled={busy===i.invite_id} className="rounded-xl bg-emerald-500 px-5 py-3 text-sm font-black text-slate-950 disabled:opacity-50">{busy===i.invite_id?'Aceitando…':'Aceitar acesso'}</button></div></div>)}</div></div></main>;
+}

@@ -1,0 +1,3 @@
+export default function PixWikiHostNotFound() {
+  return <main className="flex min-h-screen items-center justify-center bg-[#020617] px-5 text-white"><div className="max-w-md text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-xl">404</div><h1 className="mt-5 text-2xl font-black">Página não disponível</h1><p className="mt-2 text-sm leading-6 text-white/50">Este subdomínio PixWiki serve apenas a cobrança pública do recebedor.</p><a href="https://pix.wiki" className="mt-6 inline-flex rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-slate-950">Ir para PixWiki</a></div></main>;
+}

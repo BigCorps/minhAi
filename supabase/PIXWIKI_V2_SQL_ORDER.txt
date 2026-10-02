@@ -1,0 +1,14 @@
+PixWiki V2 — ordem obrigatória das migrations
+
+01 pixwiki_v2_gate1_foundation.sql
+02 pixwiki_v2_gate2_payment_engine.sql
+03 pixwiki_v2_gate3_public_checkout.sql
+04 pixwiki_v2_gate4_api_webhooks.sql
+05 pixwiki_v2_gate5_onboarding.sql
+06 pixwiki_v2_gate6_dashboard_usage.sql
+07 pixwiki_v2_gate7_team_cashier.sql
+08 pixwiki_v2_gate8_billing.sql
+09 pixwiki_v2_gate9_leads_calculator.sql
+10 pixwiki_v2_gate10_security_hardening.sql
+
+Não aplique por ordem alfabética de nome.

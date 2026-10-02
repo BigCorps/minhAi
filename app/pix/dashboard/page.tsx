@@ -91,12 +91,16 @@ export default function PixWikiDashboardPage() {
     const next = data as Snapshot;
     setSnapshot(next);
     localStorage.setItem('pixWikiActiveCompanyId',next.company.id);
-    setEmail(next.notifications.notification_email || auth.user.email || '');
-    setPhone(next.notifications.notification_phone || '');
-    setEmailEnabled(next.notifications.email_enabled === true);
-    setPushEnabled(next.notifications.push_enabled !== false);
-    setWhatsappEnabled(next.notifications.whatsapp_enabled === true);
-    if (!quiet) setLoading(false);
+    // Refresh silencioso (polling/Realtime) atualiza dados operacionais, mas nunca
+    // sobrescreve uma edição de canais que o usuário ainda não salvou.
+    if (!quiet) {
+      setEmail(next.notifications.notification_email || auth.user.email || '');
+      setPhone(next.notifications.notification_phone || '');
+      setEmailEnabled(next.notifications.email_enabled === true);
+      setPushEnabled(next.notifications.push_enabled !== false);
+      setWhatsappEnabled(next.notifications.whatsapp_enabled === true);
+      setLoading(false);
+    }
   },[router,supabase]);
 
   useEffect(() => {
@@ -124,6 +128,34 @@ export default function PixWikiDashboardPage() {
     if(!snapshot?.company.id || !snapshot.recent_receipts?.[0]?.id)return;
     void loadReceiptHistory(snapshot.company.id).catch(()=>undefined);
   },[snapshot?.company.id,snapshot?.recent_receipts?.[0]?.id,loadReceiptHistory]);
+
+  // Realtime principal: recebe mudanças assim que Supabase grava um recebimento.
+  // FastWatch (2 s) e o refresh silencioso de 5 s permanecem como fallback.
+  useEffect(() => {
+    if(!snapshot?.company.id)return;
+    const companyId=snapshot.company.id;
+    let refreshTimer:number|null=null;
+    const refreshFromRealtime=()=>{
+      if(refreshTimer!==null)window.clearTimeout(refreshTimer);
+      refreshTimer=window.setTimeout(()=>{
+        void Promise.all([
+          loadSnapshot(companyId,true),
+          loadReceiptHistory(companyId),
+        ]).catch(()=>undefined);
+      },120);
+    };
+
+    const channel=supabase
+      .channel(`pixwiki-dashboard-realtime-${companyId}`)
+      .on('postgres_changes',{event:'*',schema:'public',table:'mp_received_payments',filter:`company_id=eq.${companyId}`},refreshFromRealtime)
+      .on('postgres_changes',{event:'*',schema:'public',table:'pix_transactions',filter:`company_id=eq.${companyId}`},refreshFromRealtime)
+      .subscribe();
+
+    return ()=>{
+      if(refreshTimer!==null)window.clearTimeout(refreshTimer);
+      void supabase.removeChannel(channel);
+    };
+  },[snapshot?.company.id,loadSnapshot,loadReceiptHistory,supabase]);
 
   async function refreshNow() {
     if (!snapshot?.company.id || refreshing) return;
@@ -158,7 +190,19 @@ export default function PixWikiDashboardPage() {
         p_push_enabled:pushEnabled,p_phone:digits(phone)||null,p_whatsapp_enabled:whatsappEnabled,
       });
       if (rpcError) throw rpcError;
-      setPhone(String(data?.notification_phone||''));
+      const savedNotifications={
+        notification_email:String(data?.notification_email||''),
+        notification_phone:String(data?.notification_phone||''),
+        email_enabled:data?.email_enabled===true,
+        push_enabled:data?.push_enabled!==false,
+        whatsapp_enabled:data?.whatsapp_enabled===true,
+      };
+      setEmail(savedNotifications.notification_email);
+      setPhone(savedNotifications.notification_phone);
+      setEmailEnabled(savedNotifications.email_enabled);
+      setPushEnabled(savedNotifications.push_enabled);
+      setWhatsappEnabled(savedNotifications.whatsapp_enabled);
+      setSnapshot(current=>current?{...current,notifications:savedNotifications}:current);
       setNotice('Canais de notificação atualizados.');
       await loadSnapshot(snapshot.company.id,true);
     } catch (e:any) {

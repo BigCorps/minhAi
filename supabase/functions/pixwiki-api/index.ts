@@ -8,7 +8,7 @@ function responseHeaders(requestId: string) {
   return {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, content-type, idempotency-key',
+    'Access-Control-Allow-Headers': 'authorization, apikey, x-client-info, content-type, idempotency-key',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Expose-Headers': 'X-Request-Id, X-PixWiki-Version',
     'X-Request-Id': requestId,
@@ -65,6 +65,41 @@ function metadataValue(value: unknown) {
   return value as Record<string, unknown>
 }
 
+function orderItems(value: unknown) {
+  if (value == null) return []
+  if (!Array.isArray(value)) throw new Error('invalid_items')
+  if (value.length > 100) throw new Error('too_many_items')
+  return value.map((raw: any, index: number) => {
+    const quantity = Math.floor(Number(raw?.quantity ?? 1))
+    const price = normalizeAmount(raw?.price ?? raw?.unit_amount_cents ?? raw?.price_cents)
+    const description = textValue(raw?.description ?? raw?.name, 240)
+    if (!Number.isFinite(quantity) || quantity < 1 || quantity > 999 || !price || !description) {
+      throw new Error(`invalid_item_${index}`)
+    }
+    return {
+      quantity,
+      price,
+      description,
+      sku: textValue(raw?.sku, 120),
+    }
+  })
+}
+
+function addressValue(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const raw = value as Record<string, unknown>
+  const out = {
+    cep: textValue(raw.cep ?? raw.postal_code, 16),
+    street: textValue(raw.street, 200),
+    neighborhood: textValue(raw.neighborhood, 120),
+    city: textValue(raw.city, 120),
+    state: textValue(raw.state, 80),
+    number: textValue(raw.number, 40),
+    complement: textValue(raw.complement, 160),
+  }
+  return Object.values(out).some(Boolean) ? out : null
+}
+
 function successUrl(value: unknown) {
   const raw = String(value ?? '').trim()
   if (!raw) return null
@@ -117,13 +152,18 @@ function checkout(row: any) {
     discount_cents: Number(row.discount_cents || 0),
     description: row.description || null,
     external_id: row.external_id || null,
+    order_nsu: row.external_id || null,
     customer: {
       name: row.customer_name || null,
       email: row.customer_email || null,
       phone: row.customer_phone || null,
+      phone_number: row.customer_phone || null,
     },
+    items: Array.isArray(row.metadata?.items) ? row.metadata.items : [],
+    address: row.metadata?.address || null,
     metadata: row.metadata || {},
     success_url: row.success_url || null,
+    redirect_url: row.success_url || null,
     checkout_url: `https://pix.wiki/c/${row.public_token}`,
     payment: {
       receipt_id: row.receipt_id || null,
@@ -210,8 +250,18 @@ async function createApiCheckout(supabase: any, key: any, req: Request, body: an
   const company = await companyAllowed(supabase, key.user_id, companyId)
   if (!company) return { status: 403, body: { error: 'company_not_allowed' } }
 
-  const cents = normalizeAmount(body?.amount_cents)
+  const items = orderItems(body?.items)
+  const itemsTotal = items.reduce((sum: number, item: any) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0)
+  const cents = normalizeAmount(body?.amount_cents) ?? (itemsTotal > 0 ? itemsTotal : null)
   if (!cents) return { status: 400, body: { error: 'invalid_amount' } }
+  if (itemsTotal > 0 && Number(cents) !== Number(itemsTotal)) {
+    return { status: 400, body: { error: 'items_total_mismatch', expected_amount_cents: itemsTotal } }
+  }
+  const metadata = metadataValue(body?.metadata)
+  if (items.length) metadata.items = items
+  const address = addressValue(body?.address)
+  if (address) metadata.address = address
+  if (JSON.stringify(metadata).length > 16_000) throw new Error('metadata_too_large')
 
   const isTest = body?.test === true
   if (!isTest) {
@@ -233,13 +283,13 @@ async function createApiCheckout(supabase: any, key: any, req: Request, body: an
     origin: 'api',
     status: 'created',
     amount_cents: cents,
-    description: textValue(body?.description, 255),
-    external_id: textValue(body?.external_id, 200),
+    description: textValue(body?.description ?? body?.comment, 255),
+    external_id: textValue(body?.external_id ?? body?.order_nsu ?? body?.order_id, 200),
     customer_name: textValue(body?.customer?.name ?? body?.customer_name, 160),
     customer_email: textValue(body?.customer?.email ?? body?.customer_email, 320),
-    customer_phone: textValue(body?.customer?.phone ?? body?.customer_phone, 40),
-    metadata: metadataValue(body?.metadata),
-    success_url: successUrl(body?.success_url),
+    customer_phone: textValue(body?.customer?.phone ?? body?.customer?.phone_number ?? body?.customer_phone, 40),
+    metadata,
+    success_url: successUrl(body?.success_url ?? body?.redirect_url),
     api_key_id: key.id,
     api_idempotency_key: idempotency,
     is_test: isTest,
@@ -442,7 +492,7 @@ Deno.serve(async (req: Request) => {
       const companyId = url.searchParams.get('company_id')
       const status = url.searchParams.get('status') || 'all'
       const origin = url.searchParams.get('origin') || 'all'
-      const externalId = url.searchParams.get('external_id')
+      const externalId = url.searchParams.get('external_id') || url.searchParams.get('order_nsu')
       const limit = intParam(url.searchParams.get('limit'), 50, 1, 100)
       const offset = intParam(url.searchParams.get('offset'), 0, 0, 100000)
       if (!['all', 'created', 'queued', 'slot_reserved', 'payment_ready', 'paid', 'cancelled', 'expired', 'failed'].includes(status)) {
@@ -515,7 +565,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'internal_error'
     console.error('[pixwiki-api]', requestId, message)
-    const status = message === 'invalid_date' || message.includes('metadata_') || message.includes('success_url') ? 400 : 500
+    const status = message === 'invalid_date' || message.includes('metadata_') || message.includes('success_url') || message.includes('invalid_item') || message.includes('too_many_items') || message.includes('invalid_items') ? 400 : 500
     return await finish(status, { error: message })
   }
 })

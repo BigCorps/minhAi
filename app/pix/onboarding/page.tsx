@@ -369,17 +369,27 @@ function OnboardingContent() {
     if (!company) return;
     setBusy(kind); setError('');
     try {
+      // Pix Link é um endereço público simples e permanente. A sessão protegida
+      // só é criada internamente quando o cliente abre o link e paga.
+      if (kind === 'link') {
+        const url = `https://${company.slug}.pix.wiki/1,00`;
+        await supabase.rpc('pixwiki_v2_onboarding_mark_test', { p_company_id:company.id, p_kind:'link' });
+        setTestResults(r=>({...r,link:{url}}));
+        await loadSnapshot(company.id);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error('session_expired');
       const response = await fetch(`${FUNCTIONS_URL}/pixwiki-v2-checkout`, {
         method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:ANON_KEY},
-        body:JSON.stringify({ action:'create_owner', company_id:company.id, origin:kind==='link'?'pix_link':'checkout', amount_cents:100, description:`Demonstração ${kind} do onboarding`, external_id:`ONBOARDING-${kind.toUpperCase()}`, metadata:{onboarding:true}, is_test:true, expires_in_seconds:1800 }),
+        body:JSON.stringify({ action:'create_owner', company_id:company.id, origin:'checkout', amount_cents:100, description:'Demonstração checkout do onboarding', external_id:'ONBOARDING-CHECKOUT', metadata:{onboarding:true}, is_test:true, expires_in_seconds:1800 }),
       });
       const body = await response.json().catch(()=>({}));
       if (!response.ok) throw new Error(body?.error || 'test_create_failed');
       const url = String(body?.checkout_url || '');
-      await supabase.rpc('pixwiki_v2_onboarding_mark_test', { p_company_id:company.id, p_kind:kind });
-      setTestResults(r=>({...r,[kind]:{url,id:body?.checkout?.checkout_id}}));
+      await supabase.rpc('pixwiki_v2_onboarding_mark_test', { p_company_id:company.id, p_kind:'checkout' });
+      setTestResults(r=>({...r,checkout:{url,id:body?.checkout?.checkout_id}}));
       await loadSnapshot(company.id);
     } catch { setError(`Não foi possível gerar o exemplo de ${kind === 'link' ? 'Pix Link' : 'Checkout'}.`); }
     finally { setBusy(''); }
@@ -419,6 +429,12 @@ function OnboardingContent() {
       }
       setBusy('');
     }
+  }
+
+  function goExploreStep(step: 0|1|2|3) {
+    setError('');
+    setNotice('');
+    setExploreStep(step);
   }
 
   async function calculate() {
@@ -486,7 +502,7 @@ function OnboardingContent() {
           : 'Você já ativou o essencial. Agora pode conhecer, uma etapa por vez, outras formas de usar a PixWiki — ou ir direto para o Dashboard.';
     return shell(<div><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-400">Exploração opcional</p><h1 className="mt-2 text-3xl font-black">{stepTitle}</h1><p className={`mt-3 leading-relaxed ${muted}`}>{stepIntro}</p>
       {exploreStep===0&&<div className="mt-6 space-y-3">
-        {[{n:1,t:'Pix Link',d:'Aprenda a gerar um link de cobrança e abrir a página do cliente.'},{n:2,t:'Checkout',d:'Veja como identificar um pedido e acompanhar o pagamento.'},{n:3,t:'API',d:'Entenda como conectar um sistema externo, se você precisar.'}].map(x=><button key={x.n} type="button" onClick={()=>setExploreStep(x.n as 1|2|3)} className={`flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition hover:border-emerald-500/30 ${card}`}><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-black text-emerald-400">{x.n}</span><span><b>{x.t}</b><span className={`mt-1 block text-xs ${muted}`}>{x.d}</span></span><span className="ml-auto text-emerald-400">→</span></button>)}
+        {[{n:1,t:'Pix Link',d:'Aprenda a gerar um link de cobrança e abrir a página do cliente.'},{n:2,t:'Checkout',d:'Veja como identificar um pedido e acompanhar o pagamento.'},{n:3,t:'API',d:'Entenda como conectar um sistema externo, se você precisar.'}].map(x=><button key={x.n} type="button" onClick={()=>goExploreStep(x.n as 1|2|3)} className={`flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition hover:border-emerald-500/30 ${card}`}><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-black text-emerald-400">{x.n}</span><span><b>{x.t}</b><span className={`mt-1 block text-xs ${muted}`}>{x.d}</span></span><span className="ml-auto text-emerald-400">→</span></button>)}
       </div>}
 
       {exploreStep===1&&<div className="mt-6"><div className={`rounded-2xl border p-5 ${card}`}><p className="font-black">Como funciona</p><ol className={`mt-3 space-y-2 text-sm ${muted}`}><li><b className={dark?'text-white':'text-slate-900'}>1.</b> Você informa o valor.</li><li><b className={dark?'text-white':'text-slate-900'}>2.</b> A PixWiki cria um link seguro.</li><li><b className={dark?'text-white':'text-slate-900'}>3.</b> O cliente abre, vê o QR Code e paga direto para sua conta.</li></ol></div><button onClick={()=>void createOwnerTest('link')} disabled={busy==='link'} className="mt-4 w-full rounded-xl bg-emerald-500 px-4 py-3 font-black text-slate-950 disabled:opacity-50">{busy==='link'?'Gerando…':testResults.link?.url?'Gerar outro exemplo':'Gerar um exemplo de Pix Link'}</button>{testResults.link?.url&&<div className="mt-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4"><p className="text-sm font-black text-emerald-300">Pronto. Este é o link do cliente.</p><a href={testResults.link.url} target="_blank" rel="noreferrer" className="mt-2 block break-all text-xs text-emerald-300 underline">{testResults.link.url} ↗</a></div>}</div>}
@@ -495,8 +511,8 @@ function OnboardingContent() {
 
       {exploreStep===3&&<div className="mt-6"><div className={`rounded-2xl border p-5 ${card}`}><div className="flex items-center gap-2"><p className="font-black">Integração para sistemas</p><span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-black text-amber-300">TÉCNICO · OPCIONAL</span></div><p className={`mt-2 text-sm leading-6 ${muted}`}>Se sua empresa usa ERP, e-commerce ou software próprio, uma chave API permite criar cobranças automaticamente. Se isso não faz parte da sua rotina, pode pular.</p><ol className={`mt-4 space-y-2 text-xs ${muted}`}><li><b>1.</b> O sistema recebe uma chave API.</li><li><b>2.</b> Envia o pedido para a PixWiki.</li><li><b>3.</b> Recebe o Checkout e acompanha a confirmação.</li></ol></div><button onClick={()=>void testApi()} disabled={busy==='api'} className="mt-4 w-full rounded-xl bg-emerald-500 px-4 py-3 font-black text-slate-950 disabled:opacity-50">{busy==='api'?'Executando demonstração…':snapshot.api_tested_at?'Executar novamente':'Executar demonstração automática'}</button>{testResults.api?.response&&<details className={`mt-4 rounded-2xl border p-4 ${card}`}><summary className="cursor-pointer text-sm font-bold">Ver detalhes técnicos da resposta</summary><pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap break-all text-[11px] text-emerald-300">{testResults.api.response}</pre></details>}</div>}
 
-      <div className="mt-7 flex flex-col gap-3 sm:flex-row">{exploreStep>0&&<button onClick={()=>setExploreStep((Math.max(0,exploreStep-1)) as 0|1|2|3)} className={`rounded-xl border px-5 py-3 font-bold ${card}`}>← Voltar</button>}<button onClick={()=>void finish(false)} className={`flex-1 rounded-xl border px-5 py-3 font-bold ${card}`}>Ir para o Dashboard</button>{exploreStep<3?<button onClick={()=>setExploreStep((Math.min(3,exploreStep+1)) as 0|1|2|3)} className="flex-1 rounded-xl bg-emerald-500 px-5 py-3 font-black text-slate-950">{exploreStep===0?'Começar pelo Pix Link':'Próxima etapa →'}</button>:<button onClick={()=>setScreen('calculator')} className="flex-1 rounded-xl bg-emerald-500 px-5 py-3 font-black text-slate-950">Calcular minha economia →</button>}</div>
-      {exploreStep>0&&<button type="button" onClick={()=>{if(exploreStep<3)setExploreStep((exploreStep+1) as 1|2|3);else setScreen('calculator')}} className={`mt-3 w-full text-center text-xs font-bold ${faint}`}>{exploreStep<3?'Pular esta etapa':'Pular API e continuar'}</button>}
+      <div className="mt-7 flex flex-col gap-3 sm:flex-row">{exploreStep>0&&<button onClick={()=>goExploreStep((Math.max(0,exploreStep-1)) as 0|1|2|3)} className={`rounded-xl border px-5 py-3 font-bold ${card}`}>← Voltar</button>}<button onClick={()=>void finish(false)} className={`flex-1 rounded-xl border px-5 py-3 font-bold ${card}`}>Ir para o Dashboard</button>{exploreStep<3?<button onClick={()=>goExploreStep((Math.min(3,exploreStep+1)) as 0|1|2|3)} className="flex-1 rounded-xl bg-emerald-500 px-5 py-3 font-black text-slate-950">{exploreStep===0?'Começar pelo Pix Link':'Próxima etapa →'}</button>:<button onClick={()=>setScreen('calculator')} className="flex-1 rounded-xl bg-emerald-500 px-5 py-3 font-black text-slate-950">Calcular minha economia →</button>}</div>
+      {exploreStep>0&&<button type="button" onClick={()=>{setError('');setNotice('');if(exploreStep<3)goExploreStep((exploreStep+1) as 1|2|3);else setScreen('calculator')}} className={`mt-3 w-full text-center text-xs font-bold ${faint}`}>{exploreStep<3?'Pular esta etapa':'Pular API e continuar'}</button>}
     </div>,false);
   }
 

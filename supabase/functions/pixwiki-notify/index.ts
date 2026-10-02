@@ -65,39 +65,81 @@ async function sendEmail(receipt: any, secret: string): Promise<ChannelResult> {
   return { channel: 'email', status: 'sent', recipient: payload?.recipient ?? null, provider_message_id: payload?.provider_message_id ?? null }
 }
 
+function invalidSubscriptionIds(payload: any): string[] {
+  const candidates = payload?.errors?.invalid_player_ids ?? payload?.invalid_player_ids ?? []
+  return Array.isArray(candidates) ? candidates.map(String).filter(Boolean) : []
+}
+
+async function deactivateInvalidPushSubscriptions(supabase: any, ids: string[]) {
+  if (!ids.length) return
+  await supabase.from('pixwiki_push_subscriptions')
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .in('subscription_id', ids)
+}
+
 async function sendPush(supabase: any, receipt: any, companyName: string, canonicalSource: string): Promise<ChannelResult> {
   if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) return { channel: 'push', status: 'waiting_config', error: 'OneSignal PixWiki ainda não configurado' }
 
-  // Gate 6: Push pertence à empresa, não apenas ao proprietário. Isso prepara
-  // owner/manager/cashier sem multiplicar unidades de automação.
   const { data: deviceRows } = await supabase.from('pixwiki_push_subscriptions')
-    .select('subscription_id').eq('company_id', receipt.company_id).eq('is_active', true)
-  const subscriptionIds = (deviceRows ?? []).map((row: any) => String(row.subscription_id)).filter(Boolean)
+    .select('subscription_id,last_seen_at,updated_at')
+    .eq('company_id', receipt.company_id)
+    .eq('is_active', true)
+    .order('last_seen_at', { ascending: false, nullsFirst: false })
+
+  const subscriptionIds = Array.from(new Set((deviceRows ?? []).map((row: any) => String(row.subscription_id || '')).filter(Boolean)))
   if (!subscriptionIds.length) return { channel: 'push', status: 'skipped', recipient: companyName, error: 'Nenhum dispositivo Push ativo para esta empresa' }
 
   const labels: Record<string,string> = { pix_key: 'Chave Pix', pix_link: 'Pix Link', checkout: 'Checkout', api: 'API' }
   const amount = money(receipt.amount_cents)
-  const response = await fetch('https://api.onesignal.com/notifications', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Key ${ONESIGNAL_API_KEY}` },
-    body: JSON.stringify({
-      app_id: ONESIGNAL_APP_ID,
-      include_subscription_ids: subscriptionIds,
-      headings: { pt: 'Pix recebido ✅', en: 'Pix recebido ✅' },
-      contents: { pt: `${amount} · ${companyName} · ${labels[canonicalSource] || 'Pix'}`, en: `${amount} · ${companyName} · ${labels[canonicalSource] || 'Pix'}` },
-      url: 'https://pix.wiki/dashboard',
-      data: { receipt_id: receipt.id, company_id: receipt.company_id, source: canonicalSource },
-      idempotency_key: String(receipt.id),
-    }),
-  })
-  const payload = await response.json().catch(() => ({}))
-  const errorText = JSON.stringify(payload?.errors ?? payload ?? { http: response.status })
-  if (!response.ok || payload?.errors) {
-    if (errorText.includes('All included players are not subscribed')) return { channel: 'push', status: 'skipped', recipient: `${subscriptionIds.length} dispositivo(s)`, error: 'Subscriptions não estão mais inscritas no OneSignal' }
-    return { channel: 'push', status: 'failed', recipient: `${subscriptionIds.length} dispositivo(s)`, error: errorText.slice(0, 1200) }
+  let sent = 0
+  const providerIds: string[] = []
+  const failures: string[] = []
+
+  for (const subscriptionId of subscriptionIds) {
+    const response = await fetch('https://api.onesignal.com/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Key ${ONESIGNAL_API_KEY}` },
+      body: JSON.stringify({
+        app_id: ONESIGNAL_APP_ID,
+        include_subscription_ids: [subscriptionId],
+        headings: { pt: 'Pix recebido ✅', en: 'Pix recebido ✅' },
+        contents: { pt: `${amount} · ${companyName} · ${labels[canonicalSource] || 'Pix'}`, en: `${amount} · ${companyName} · ${labels[canonicalSource] || 'Pix'}` },
+        url: 'https://pix.wiki/dashboard',
+        data: { receipt_id: receipt.id, company_id: receipt.company_id, source: canonicalSource },
+        idempotency_key: `${receipt.id}:${subscriptionId}`,
+      }),
+    })
+    const payload = await response.json().catch(() => ({}))
+    const invalid = invalidSubscriptionIds(payload)
+    const invalidThis = invalid.includes(subscriptionId)
+      || JSON.stringify(payload?.errors ?? '').includes('All included players are not subscribed')
+
+    if (invalidThis) {
+      await deactivateInvalidPushSubscriptions(supabase, [subscriptionId])
+      continue
+    }
+
+    if (response.ok && payload?.id && !payload?.errors) {
+      sent += 1
+      providerIds.push(String(payload.id))
+      continue
+    }
+
+    failures.push(JSON.stringify(payload?.errors ?? payload ?? { http: response.status }).slice(0, 500))
   }
-  if (!payload?.id) return { channel: 'push', status: 'skipped', recipient: `${subscriptionIds.length} dispositivo(s)`, error: 'Nenhuma assinatura Push válida' }
-  return { channel: 'push', status: 'sent', provider_message_id: String(payload.id), recipient: `${subscriptionIds.length} dispositivo(s)` }
+
+  if (sent > 0) {
+    return {
+      channel: 'push',
+      status: 'sent',
+      provider_message_id: providerIds.join(',').slice(0, 1000),
+      recipient: `${sent} dispositivo(s)`,
+      error: failures.length ? `${failures.length} dispositivo(s) não receberam` : null,
+    }
+  }
+
+  if (!failures.length) return { channel: 'push', status: 'skipped', recipient: companyName, error: 'Nenhuma assinatura Push válida' }
+  return { channel: 'push', status: 'failed', recipient: `${subscriptionIds.length} dispositivo(s)`, error: failures.join(' | ').slice(0, 1200) }
 }
 
 async function sendWhatsApp(receipt: any, secret: string): Promise<ChannelResult> {
@@ -135,8 +177,6 @@ async function checkoutContext(supabase: any, receipt: any) {
   return byProvider || null
 }
 
-// Reserva uma única unidade para E-mail + WhatsApp do mesmo recebimento.
-// Push nunca passa aqui. Webhook (Gate 4) reutiliza a mesma unidade por receipt.
 async function paidAutomationAllowance(supabase: any, receipt: any, session: any) {
   if (session) {
     const { error } = await supabase.rpc('pixwiki_v2_record_usage', {

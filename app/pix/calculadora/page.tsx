@@ -70,6 +70,7 @@ export default function PixWikiCalculatorPage() {
   const [monthlyPix, setMonthlyPix] = useState('1000');
   const [ticket, setTicket] = useState('200');
   const [feeType, setFeeType] = useState<FeeType>('percent');
+  const [feeMenuOpen, setFeeMenuOpen] = useState(false);
   const [feeValue, setFeeValue] = useState('1');
   const [catalog, setCatalog] = useState<Catalog[]>([]);
   const [result, setResult] = useState<Result | null>(null);
@@ -234,15 +235,42 @@ export default function PixWikiCalculatorPage() {
                 <span className={`text-xs font-bold ${muted}`}>Ticket médio (R$)</span>
                 <input value={ticket} onChange={e => setTicket(e.target.value)} inputMode="decimal" placeholder="200" className={`mt-2 w-full rounded-xl border px-4 py-3.5 outline-none ${input}`} />
               </label>
-              <label>
+              <div>
                 <span className={`text-xs font-bold ${muted}`}>Como você paga pelo Pix hoje?</span>
-                <select value={feeType} onChange={e => setFeeType(e.target.value as FeeType)} className={`mt-2 w-full rounded-xl border px-4 py-3.5 outline-none ${input}`}>
-                  <option value="percent">Percentual sobre cada Pix</option>
-                  <option value="fixed">Valor fixo por Pix</option>
-                  <option value="free">Não pago taxa</option>
-                  <option value="unknown">Não sei minha taxa</option>
-                </select>
-              </label>
+                <div className="relative mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setFeeMenuOpen(v => !v)}
+                    aria-haspopup="listbox"
+                    aria-expanded={feeMenuOpen}
+                    className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3.5 text-left outline-none ${input}`}
+                  >
+                    <span>{({ percent:'Percentual sobre cada Pix', fixed:'Valor fixo por Pix', free:'Não pago taxa', unknown:'Não sei minha taxa' } as Record<FeeType,string>)[feeType]}</span>
+                    <span className={`text-xs transition-transform ${feeMenuOpen ? 'rotate-180' : ''}`}>⌄</span>
+                  </button>
+                  {feeMenuOpen && (
+                    <div role="listbox" className={`absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-xl border p-1 shadow-2xl ${dark ? 'border-white/10 bg-slate-900 text-white' : 'border-black/10 bg-white text-slate-900'}`}>
+                      {([
+                        ['percent','Percentual sobre cada Pix'],
+                        ['fixed','Valor fixo por Pix'],
+                        ['free','Não pago taxa'],
+                        ['unknown','Não sei minha taxa'],
+                      ] as Array<[FeeType,string]>).map(([value,label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          role="option"
+                          aria-selected={feeType===value}
+                          onClick={() => { setFeeType(value); setFeeMenuOpen(false); }}
+                          className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm transition ${feeType===value ? 'bg-emerald-500/15 font-black text-emerald-400' : dark ? 'hover:bg-white/10' : 'hover:bg-slate-100'}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
               {(feeType === 'percent' || feeType === 'fixed') && (
                 <label>
                   <span className={`text-xs font-bold ${muted}`}>{feeType === 'percent' ? 'Taxa atual (%)' : 'Taxa atual por Pix (R$)'}</span>

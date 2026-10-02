@@ -48,6 +48,7 @@ export default function PixWikiDashboardPage() {
   const [savingChannels,setSavingChannels] = useState(false);
   const [notice,setNotice] = useState('');
   const [error,setError] = useState('');
+  const [companyMenuOpen,setCompanyMenuOpen] = useState(false);
 
   const loadSnapshot = useCallback(async (companyId?:string|null, quiet=false) => {
     if (!quiet) setLoading(true);
@@ -154,7 +155,14 @@ export default function PixWikiDashboardPage() {
         <PixWikiHeader plan={snapshot.billing.plan||'free'} dark={dark} onThemeChange={setDark} />
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          {snapshot.companies.length>1 ? <select value={snapshot.company.id} onChange={e=>switchCompany(e.target.value)} className={`min-w-0 flex-1 appearance-none rounded-xl border px-3 py-2.5 text-sm outline-none sm:max-w-sm ${input}`} style={{colorScheme:isDark?'dark':'light'}}>{snapshot.companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select> : <div className={`rounded-xl border px-3 py-2.5 text-sm ${card}`}>{snapshot.company.name}</div>}
+          {snapshot.companies.length>1 ? <div className="relative min-w-0 flex-1 sm:max-w-sm">
+            <button type="button" onClick={()=>setCompanyMenuOpen(v=>!v)} aria-haspopup="listbox" aria-expanded={companyMenuOpen} className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left text-sm outline-none ${input}`}>
+              <span className="truncate">{snapshot.company.name}</span><span className={`text-xs transition-transform ${companyMenuOpen?'rotate-180':''}`}>⌄</span>
+            </button>
+            {companyMenuOpen&&<div role="listbox" className={`absolute left-0 right-0 top-full z-50 mt-2 max-h-64 overflow-auto rounded-xl border p-1 shadow-2xl ${isDark?'border-white/10 bg-slate-900 text-white':'border-black/10 bg-white text-slate-900'}`}>
+              {snapshot.companies.map(c=><button type="button" role="option" aria-selected={c.id===snapshot.company.id} key={c.id} onClick={()=>{setCompanyMenuOpen(false);if(c.id!==snapshot.company.id)switchCompany(c.id)}} className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm transition ${c.id===snapshot.company.id?'bg-emerald-500/15 font-black text-emerald-400':isDark?'hover:bg-white/10':'hover:bg-slate-100'}`}>{c.name}</button>)}
+            </div>}
+          </div> : <div className={`rounded-xl border px-3 py-2.5 text-sm ${card}`}>{snapshot.company.name}</div>}
           <button onClick={refreshNow} disabled={refreshing} className={`rounded-xl border px-3 py-2.5 text-xs font-black ${card} disabled:opacity-50`}>{refreshing?'Atualizando…':'Atualizar'}</button>
           {!snapshot.setup.mp_connected && <button onClick={()=>connectMercadoPago(snapshot.company.id,`/dashboard?company=${encodeURIComponent(snapshot.company.id)}`)} className="rounded-xl bg-sky-500 px-3 py-2.5 text-xs font-black text-white">Conectar Mercado Pago</button>}
         </div>

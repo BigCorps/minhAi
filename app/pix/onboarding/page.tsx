@@ -131,6 +131,7 @@ function OnboardingContent() {
   const [notificationEmail, setNotificationEmail] = useState('');
   const [notificationPhone, setNotificationPhone] = useState('');
   const [testStarted, setTestStarted] = useState(false);
+  const [firstPixWaitSeconds, setFirstPixWaitSeconds] = useState(0);
   const [firstReceipt, setFirstReceipt] = useState<FirstReceipt | null>(null);
   const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
   const [monthlyPix, setMonthlyPix] = useState('1000');
@@ -140,6 +141,7 @@ function OnboardingContent() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [currentCost, setCurrentCost] = useState(0);
   const pollRef = useRef<number | null>(null);
+  const firstPixStartedAtRef = useRef<number | null>(null);
 
   const page = dark ? 'bg-[#020617] text-white' : 'bg-[#f7f8fa] text-slate-900';
   const card = dark ? 'border-white/10 bg-white/[0.035]' : 'border-black/10 bg-white shadow-sm';
@@ -331,11 +333,14 @@ function OnboardingContent() {
       const { data } = await supabase.rpc('pixwiki_v2_onboarding_detect_first_receipt', { p_company_id: company.id });
       const row = (Array.isArray(data)?data[0]:data) as FirstReceipt | null;
       if (row?.detected) {
-        setFirstReceipt(row); setTestStarted(false);
+        setFirstReceipt(row); setTestStarted(false); setFirstPixWaitSeconds(0); firstPixStartedAtRef.current=null;
         const s = await loadSnapshot(company.id); setSnapshot(s); setScreen('success');
         return;
       }
     } catch { /* fallback: próxima tentativa */ }
+    if (firstPixStartedAtRef.current) {
+      setFirstPixWaitSeconds(Math.max(0,Math.floor((Date.now()-firstPixStartedAtRef.current)/1000)));
+    }
     pollRef.current = window.setTimeout(()=>void pollFirstReceipt(), 2000);
   }, [company, loadSnapshot, supabase]);
 
@@ -345,7 +350,7 @@ function OnboardingContent() {
     const { error: rpcError } = await supabase.rpc('pixwiki_v2_onboarding_start_receipt_test', { p_company_id: company.id });
     setBusy('');
     if (rpcError) return setError('Não foi possível iniciar o teste. Confira Mercado Pago e chave Pix.');
-    setTestStarted(true); setNotice('Aguardando um novo Pix nessa chave…');
+    firstPixStartedAtRef.current=Date.now(); setFirstPixWaitSeconds(0); setTestStarted(true); setNotice('Aguardando um novo Pix nessa chave…');
     if (pollRef.current !== null) window.clearTimeout(pollRef.current);
     pollRef.current = window.setTimeout(()=>void pollFirstReceipt(), 600);
   }
@@ -465,7 +470,7 @@ function OnboardingContent() {
     <label className={`block rounded-2xl border p-4 ${card}`}><div className="flex gap-3"><input type="checkbox" checked={whatsappEnabled} onChange={e=>setWhatsappEnabled(e.target.checked)}/><div><b>WhatsApp</b><p className={`mt-1 text-xs ${muted}`}>Use quando quiser a confirmação também pelo WhatsApp.</p></div></div>{whatsappEnabled&&<input value={notificationPhone} onChange={e=>setNotificationPhone(e.target.value)} placeholder="5511999999999" inputMode="tel" className={`mt-3 w-full rounded-xl border px-3 py-2.5 text-sm ${input}`}/>}</label>
   </div><button onClick={saveChannels} disabled={busy==='channels'} className="mt-6 w-full rounded-xl bg-emerald-500 px-5 py-3.5 font-black text-slate-950 disabled:opacity-50">{busy==='channels'?'Salvando…':'Salvar e testar meu primeiro Pix'}</button></div>);
 
-  if (screen==='firstpix') return shell(<div><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-400">Etapa 4 de 4</p><h1 className="mt-2 text-3xl font-black">Veja a PixWiki funcionando</h1><p className={`mt-3 ${muted}`}>Faça um pequeno Pix usando outra conta ou banco para a chave abaixo. Sugerimos R$ 1,00. Assim que o Mercado Pago identificar, esta tela muda sozinha.</p><div className={`mt-6 rounded-2xl border p-5 ${card}`}><p className={`text-xs font-bold ${muted}`}>Sua chave Pix</p><div className="mt-2 flex items-center gap-2"><code className="min-w-0 flex-1 break-all text-sm font-bold">{pixKey}</code><button onClick={()=>copyText(pixKey)} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-bold">Copiar</button></div><div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4"><span className={muted}>Valor sugerido</span><b className="text-xl text-emerald-400">R$ 1,00</b></div></div>{!testStarted?<button onClick={startFirstPixTest} disabled={busy==='firstpix'} className="mt-6 w-full rounded-xl bg-emerald-500 px-5 py-3.5 font-black text-slate-950">Estou pronto — aguardar meu Pix</button>:<div className="mt-6 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5 text-center"><div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-emerald-400/20 border-t-emerald-400"/><p className="mt-3 font-black text-emerald-300">Aguardando seu primeiro Pix…</p><p className={`mt-1 text-xs ${muted}`}>Você não precisa atualizar a página.</p></div>}</div>);
+  if (screen==='firstpix') return shell(<div><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-400">Etapa 4 de 4</p><h1 className="mt-2 text-3xl font-black">Veja a PixWiki funcionando</h1><p className={`mt-3 ${muted}`}>Faça um pequeno Pix usando outra conta ou banco para a chave abaixo. Sugerimos R$ 1,00. Assim que o Mercado Pago identificar, esta tela muda sozinha.</p><div className={`mt-6 rounded-2xl border p-5 ${card}`}><p className={`text-xs font-bold ${muted}`}>Sua chave Pix</p><div className="mt-2 flex items-center gap-2"><code className="min-w-0 flex-1 break-all text-sm font-bold">{pixKey}</code><button onClick={()=>copyText(pixKey)} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-bold">Copiar</button></div><div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4"><span className={muted}>Valor sugerido</span><b className="text-xl text-emerald-400">R$ 1,00</b></div></div>{!testStarted?<button onClick={startFirstPixTest} disabled={busy==='firstpix'} className="mt-6 w-full rounded-xl bg-emerald-500 px-5 py-3.5 font-black text-slate-950">Estou pronto — aguardar meu Pix</button>:<div className="mt-6 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5 text-center"><div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-emerald-400/20 border-t-emerald-400"/><p className="mt-3 font-black text-emerald-300">Aguardando seu primeiro Pix…</p><p className={`mt-1 text-xs ${muted}`}>{firstPixWaitSeconds<20?'Você não precisa atualizar a página.':'Ainda não encontramos esse Pix na conta Mercado Pago conectada.'}</p>{firstPixWaitSeconds>=20&&<div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-left"><p className="text-sm font-black text-amber-200">Pix ainda não encontrado</p><p className={`mt-1 text-xs leading-5 ${muted}`}>Confira se o pagamento aparece no extrato da conta Mercado Pago que você acabou de conectar. Se não aparecer, revise a chave Pix ou reconecte a conta correta.</p><div className="mt-3 grid gap-2 sm:grid-cols-3"><button type="button" onClick={()=>{if(pollRef.current!==null)window.clearTimeout(pollRef.current);void pollFirstReceipt();}} className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-black text-slate-950">Verificar agora</button><button type="button" onClick={()=>{if(pollRef.current!==null)window.clearTimeout(pollRef.current);setTestStarted(false);setFirstPixWaitSeconds(0);firstPixStartedAtRef.current=null;setScreen('pixkey');}} className={`rounded-lg border px-3 py-2 text-xs font-black ${card}`}>Trocar chave Pix</button><button type="button" onClick={()=>{if(pollRef.current!==null)window.clearTimeout(pollRef.current);setTestStarted(false);setFirstPixWaitSeconds(0);firstPixStartedAtRef.current=null;void connectMp();}} className={`rounded-lg border px-3 py-2 text-xs font-black ${card}`}>Reconectar Mercado Pago</button></div></div>}</div>}</div>);
 
   if (screen==='success') return shell(<div className="text-center"><div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-4xl text-emerald-400">✓</div><p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-emerald-400">Ativação concluída</p><h1 className="mt-2 text-3xl font-black">Sua PixWiki está funcionando.</h1><p className={`mx-auto mt-3 max-w-xl ${muted}`}>{firstReceipt?.amount_cents ? `Acabamos de identificar ${brl(firstReceipt.amount_cents)} na sua conta.` : 'Seu primeiro recebimento foi identificado automaticamente.'} A partir daqui os novos Pix podem aparecer no dashboard sem você conferir comprovantes.</p><div className="mt-7 grid gap-3 sm:grid-cols-2"><button onClick={()=>void finish(true)} disabled={busy==='finish'} className={`rounded-xl border px-5 py-3.5 font-bold ${card}`}>Ir para meu Dashboard</button><button onClick={()=>setScreen('explore')} className="rounded-xl bg-emerald-500 px-5 py-3.5 font-black text-slate-950">Continuar conhecendo →</button></div></div>);
 

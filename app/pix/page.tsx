@@ -22,10 +22,30 @@ const PLANS = [
   { key: 'vip', name: 'PIX VIP', price: 'R$ 19.000/mês', annual: 'R$ 190.000/ano', quota: '100.000 automações/mês', overage: 'R$ 0,19 excedente' },
 ] as const;
 
+const MARKET_FEES = [
+  { key: 'mercado_pago', name: 'Mercado Pago', detail: 'Pix no Checkout online', display: '0,99%', feeType: 'percent', feeValue: 0.99 },
+  { key: 'pagbank', name: 'PagBank', detail: 'Pix em vendas online', display: '1,89%', feeType: 'percent', feeValue: 1.89 },
+  { key: 'woovi_percent', name: 'Woovi', detail: 'Plano percentual', display: '0,80%', feeType: 'percent', feeValue: 0.8, minCents: 50, maxCents: 500 },
+  { key: 'asaas', name: 'Asaas', detail: 'Pix · tarifa padrão', display: 'R$ 1,99', feeType: 'fixed', feeValue: 1.99, note: 'Oferta pública: R$ 0,99 nos 3 primeiros meses' },
+] as const;
+
+const LANDING_CALC_OPTIONS = [
+  ...MARKET_FEES,
+  { key: 'free_pix', name: 'Já recebo por chave Pix', detail: 'Não pago taxa hoje', display: 'R$ 0', feeType: 'free', feeValue: 0 },
+] as const;
+
+const CALC_PLANS = [
+  { key: 'free', name: 'PIX GRÁTIS', included: 100, baseCents: 0, overageCents: 79 },
+  { key: 'link', name: 'PIX LINK', included: 1000, baseCents: 49000, overageCents: 49 },
+  { key: 'pro', name: 'PIX PRO', included: 10000, baseCents: 290000, overageCents: 29 },
+  { key: 'vip', name: 'PIX VIP', included: 100000, baseCents: 1900000, overageCents: 19 },
+] as const;
+
 const FAQ = [
   ['O dinheiro passa pela PixWiki?', 'Não. O dinheiro continua indo diretamente para a conta Mercado Pago conectada. A PixWiki atua na confirmação, automação e conciliação.'],
   ['Preciso escolher um plano para testar?', 'Não. Você começa grátis, conecta sua conta, faz um Pix real para você mesmo e pode testar Link, Checkout e API antes de decidir.'],
-  ['A PixWiki cobra percentual sobre a venda?', 'Não. A PixWiki não fica com uma porcentagem do valor vendido. Eventuais tarifas do Mercado Pago ou da instituição financeira são independentes da PixWiki.'],
+  ['A PixWiki cobra percentual sobre a venda?', 'Não. A PixWiki usa sua própria chave Pix como base do recebimento e cobra pelas automações utilizadas, não uma porcentagem do valor vendido. O Mercado Pago é usado para identificar e conciliar os recebimentos. Condições específicas da sua conta podem variar.'],
+  ['Mas o Mercado Pago não cobra pelo Pix?', 'O Mercado Pago informa recebimentos por chave Pix sem taxa na Conta Negócio, enquanto o Pix no Checkout online é publicado com tarifa. A proposta da PixWiki é manter a sua chave como base do recebimento e acrescentar Checkout, API e automação sem descontar uma porcentagem de cada venda.'],
   ['O Push continua grátis?', 'Sim. Recebimentos pela sua própria chave podem continuar aparecendo no dashboard e gerar Push sem consumir automação paga.'],
   ['O que conta como uma Automação PixWiki?', 'Um pagamento identificado que aciona recursos pagos — como e-mail, WhatsApp, webhook, Pix Link, Checkout ou API — consome no máximo uma automação, mesmo quando mais de um canal é usado.'],
   ['Como funciona a faixa mais econômica?', 'No fechamento mensal, a PixWiki compara o custo da sua faixa com as demais faixas mensais. Se outra faixa resultar em custo menor para aquele volume, a cobrança usa o menor valor aplicável, sem mudar seu plano no meio do ciclo.'],
@@ -67,6 +87,9 @@ export default function PixWikiPage() {
   const [authPassword, setAuthPassword] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [landingMonthlyPix, setLandingMonthlyPix] = useState('1000');
+  const [landingTicket, setLandingTicket] = useState('200');
+  const [landingProvider, setLandingProvider] = useState('mercado_pago');
 
   useEffect(() => {
     const saved = localStorage.getItem('publicTheme');
@@ -112,7 +135,6 @@ export default function PixWikiPage() {
       version: 2,
     };
     localStorage.setItem('pixWikiPendingSignupV2', JSON.stringify(payload));
-    // Mantém uma marca simples para fluxos antigos saberem que existe cadastro pendente.
     localStorage.removeItem('pixWikiPendingSignup');
     return payload;
   }
@@ -175,6 +197,33 @@ export default function PixWikiPage() {
     }
   }
 
+  const landingComparison = useMemo(() => {
+    const units = Math.max(0, Math.floor(Number(landingMonthlyPix.replace(/\D/g, '')) || 0));
+    const cleanTicket = landingTicket.trim().replace(/\s/g, '');
+    const ticketNumber = Number(cleanTicket.includes(',') ? cleanTicket.replace(/\./g, '').replace(',', '.') : cleanTicket) || 0;
+    const ticketCents = Math.max(0, Math.round(ticketNumber * 100));
+    const provider: any = LANDING_CALC_OPTIONS.find(item => item.key === landingProvider) || LANDING_CALC_OPTIONS[0];
+    const plan = CALC_PLANS
+      .map(item => ({ ...item, totalCents: item.baseCents + Math.max(units - item.included, 0) * item.overageCents }))
+      .sort((a, b) => a.totalCents - b.totalCents)[0];
+
+    let currentCostCents = 0;
+    if (provider.feeType === 'percent') {
+      let perPayment = Math.round(ticketCents * Number(provider.feeValue || 0) / 100);
+      if (provider.minCents) perPayment = Math.max(perPayment, provider.minCents);
+      if (provider.maxCents) perPayment = Math.min(perPayment, provider.maxCents);
+      currentCostCents = perPayment * units;
+    } else if (provider.feeType === 'fixed') {
+      currentCostCents = Math.round(Number(provider.feeValue || 0) * 100) * units;
+    }
+
+    return { units, ticketCents, provider, plan, currentCostCents, savingsCents: currentCostCents - plan.totalCents };
+  }, [landingMonthlyPix, landingTicket, landingProvider]);
+
+  function brl(cents: number) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+  }
+
   return (
     <main className={`min-h-screen transition-colors ${page}`}>
       <header className="sticky top-0 z-40 border-b border-white/5 bg-[#020617]/85 backdrop-blur-xl">
@@ -188,13 +237,13 @@ export default function PixWikiPage() {
         <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-[480px] max-w-5xl bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.18),transparent_65%)]" />
         <div className="relative mx-auto grid max-w-6xl gap-10 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:pb-24 lg:pt-20">
           <div>
-            <div className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300">0% de taxa PixWiki sobre o valor recebido</div>
-            <h1 className="mt-5 text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">A infraestrutura Pix da <span className="text-emerald-400">sua empresa.</span></h1>
-            <p className={`mt-5 max-w-2xl text-base leading-relaxed sm:text-lg ${muted}`}>Conecte seu Mercado Pago, acompanhe Pix recebidos na sua própria chave e automatize Link, Checkout, API e notificações. O dinheiro continua direto na sua conta.</p>
+            <div className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300">Sua chave Pix + Checkout + automação</div>
+            <h1 className="mt-5 text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">Transforme sua chave Pix em um Checkout completo, <span className="text-emerald-400">sem descontar porcentagem de cada venda.</span></h1>
+            <p className={`mt-5 max-w-2xl text-base leading-relaxed sm:text-lg ${muted}`}>Continue recebendo direto na sua própria conta Mercado Pago. A PixWiki acrescenta Link, Checkout, API, Webhooks, equipe e avisos por Push, E-mail e WhatsApp — cobrando pela automação, não pelo valor que você vende.</p>
             <div className={`mt-7 grid max-w-2xl gap-2 text-sm sm:grid-cols-2 ${muted}`}>
-              <p>✓ 100 automações por mês para começar</p><p>✓ Push e dashboard para Pix direto</p><p>✓ Checkout e API antes de contratar</p><p>✓ Sem percentual da PixWiki sobre a venda</p>
+              <p>✓ Pix direto na sua própria chave</p><p>✓ Link e Checkout sem percentual PixWiki</p><p>✓ Push grátis para recebimentos diretos</p><p>✓ API e Webhooks para qualquer sistema</p>
             </div>
-            <div className="mt-6 flex flex-wrap gap-3"><a href={pixPath('/calculadora')} className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-black text-emerald-300">Calcular minha economia</a><button onClick={()=>document.getElementById('comecar')?.scrollIntoView({behavior:'smooth'})} className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-slate-950">Testar grátis</button></div>
+            <div className="mt-6 flex flex-wrap gap-3"><button onClick={()=>document.getElementById('taxas')?.scrollIntoView({behavior:'smooth'})} className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-black text-emerald-300">Ver quanto posso economizar</button><button onClick={()=>document.getElementById('comecar')?.scrollIntoView({behavior:'smooth'})} className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-slate-950">Começar grátis</button></div>
           </div>
 
           <div id="comecar" className={`rounded-[28px] border p-5 sm:p-6 ${card}`}>
@@ -248,12 +297,87 @@ export default function PixWikiPage() {
         </div>
       </section>
 
+      <section id="taxas" className={`border-y ${dark?'border-white/5 bg-white/[0.02]':'border-black/5 bg-white'}`}>
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-400">Compare antes de escolher</p>
+            <h2 className="mt-2 text-3xl font-black sm:text-4xl">O Pix pode ser grátis. O Checkout nem sempre é.</h2>
+            <p className={`mx-auto mt-3 max-w-2xl text-sm leading-7 ${muted}`}>Receber pela sua chave Pix pode custar zero, mas plataformas de cobrança normalmente aplicam tarifa quando entram Checkout, QR dinâmico ou automação. A PixWiki faz o caminho inverso: mantém sua chave como base e cobra pelas automações.</p>
+          </div>
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {MARKET_FEES.map(item => <article key={item.key} className={`rounded-3xl border p-5 ${card}`}><p className="text-sm font-black">{item.name}</p><p className={`mt-1 text-xs ${muted}`}>{item.detail}</p><p className="mt-5 text-3xl font-black">{item.display}</p>{'note' in item && item.note ? <p className={`mt-2 text-[11px] leading-5 ${faint}`}>{item.note}</p> : null}{'minCents' in item && item.minCents ? <p className={`mt-2 text-[11px] leading-5 ${faint}`}>mín. R$ 0,50 · máx. R$ 5,00 por Pix</p> : null}</article>)}
+          </div>
+          <div className="mt-5 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.08] p-5 sm:flex sm:items-center sm:justify-between sm:gap-6">
+            <div><p className="font-black text-emerald-300">No próprio Mercado Pago, receber por chave Pix é informado como sem taxa.</p><p className={`mt-1 text-sm leading-6 ${muted}`}>A tarifa pública de 0,99% aparece no Pix do Checkout online. Com a PixWiki, sua própria chave continua sendo a base do recebimento; Mercado Pago entra para identificar e conciliar.</p></div>
+            <div className="mt-4 shrink-0 rounded-2xl bg-emerald-500 px-5 py-3 text-center text-slate-950 sm:mt-0"><p className="text-[10px] font-black uppercase">PixWiki sobre a venda</p><p className="text-3xl font-black">0%</p></div>
+          </div>
+          <p className={`mt-4 text-center text-[11px] leading-5 ${faint}`}>Taxas públicas de referência consultadas em outubro de 2026. Condições, promoções e negociações comerciais podem variar por conta e produto.</p>
+
+          <div id="calculadora" className={`mt-10 rounded-[30px] border p-5 sm:p-7 ${card}`}>
+            <div className="grid gap-8 lg:grid-cols-[.9fr_1.1fr] lg:items-start">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-400">Faça a conta agora</p>
+                <h3 className="mt-2 text-2xl font-black sm:text-3xl">Quanto uma tarifa por venda pesa no seu mês?</h3>
+                <p className={`mt-2 text-sm leading-6 ${muted}`}>Escolha uma referência pública ou diga que já recebe sem taxa. A PixWiki compara o custo da automação sem fingir economia onde ela não existe.</p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                  <label><span className={`text-xs font-bold ${muted}`}>Pix recebidos por mês</span><input value={landingMonthlyPix} onChange={e=>setLandingMonthlyPix(e.target.value)} inputMode="numeric" className={`mt-1 w-full rounded-xl border px-4 py-3 outline-none ${input}`} /></label>
+                  <label><span className={`text-xs font-bold ${muted}`}>Ticket médio (R$)</span><input value={landingTicket} onChange={e=>setLandingTicket(e.target.value)} inputMode="decimal" className={`mt-1 w-full rounded-xl border px-4 py-3 outline-none ${input}`} /></label>
+                </div>
+                <p className={`mt-4 text-xs font-bold ${muted}`}>Como você recebe hoje?</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                  {LANDING_CALC_OPTIONS.map(item=><button key={item.key} type="button" onClick={()=>setLandingProvider(item.key)} className={`rounded-xl border px-3 py-2.5 text-left text-xs transition ${landingProvider===item.key?'border-emerald-500/40 bg-emerald-500/10 text-emerald-300':dark?'border-white/10 hover:bg-white/5':'border-black/10 hover:bg-slate-50'}`}><span className="font-black">{item.name}</span><span className={`ml-1 ${landingProvider===item.key?'text-emerald-300/75':faint}`}>· {item.detail}</span></button>)}
+                </div>
+                <a href={pixPath('/calculadora')} className="mt-4 inline-flex text-xs font-black text-emerald-400 hover:underline">Abrir calculadora completa e editar minha taxa →</a>
+              </div>
+              <div>
+                {landingComparison.provider.feeType === 'free' ? (
+                  <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/[0.08] p-6">
+                    <p className="text-xs font-black uppercase tracking-[.14em] text-emerald-300">Você já recebe Pix sem tarifa? Ótimo.</p>
+                    <h3 className="mt-2 text-2xl font-black">Não troque taxa zero por outra taxa.</h3>
+                    <p className={`mt-3 text-sm leading-7 ${muted}`}>Use a PixWiki para adicionar o que normalmente falta no Pix por chave: Checkout, Link, API, Webhooks, conciliação, equipe e notificações por Push, E-mail e WhatsApp.</p>
+                    <p className="mt-4 text-sm font-bold text-emerald-300">Confira apenas se sua solução atual também mantém custo zero quando entram Pix dinâmico, Checkout e integrações.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className={`rounded-2xl border p-4 ${card}`}><p className={`text-xs ${muted}`}>Volume estimado</p><p className="mt-2 text-xl font-black">{brl(landingComparison.units * landingComparison.ticketCents)}</p></div>
+                      <div className={`rounded-2xl border p-4 ${card}`}><p className={`text-xs ${muted}`}>Tarifa atual estimada</p><p className="mt-2 text-xl font-black">{brl(landingComparison.currentCostCents)}</p></div>
+                      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4"><p className="text-xs text-emerald-300">Melhor faixa PixWiki</p><p className="mt-2 text-xl font-black text-emerald-300">{brl(landingComparison.plan.totalCents)}</p></div>
+                    </div>
+                    <div className={`mt-4 rounded-2xl border p-5 ${landingComparison.savingsCents>0?'border-emerald-500/30 bg-emerald-500/10':card}`}>
+                      <p className="text-sm font-black">{landingComparison.savingsCents>0?`Economia estimada: ${brl(landingComparison.savingsCents)} por mês`:'O diferencial aqui é a automação, não prometer uma economia artificial.'}</p>
+                      <p className={`mt-2 text-xs leading-5 ${muted}`}>A PixWiki não desconta percentual de cada venda. O custo mostrado é pela faixa de automações para o volume informado.</p>
+                    </div>
+                  </>
+                )}
+                <button onClick={()=>document.getElementById('comecar')?.scrollIntoView({behavior:'smooth'})} className="mt-5 w-full rounded-xl bg-emerald-500 px-5 py-3.5 text-sm font-black text-slate-950">Começar grátis e testar com um Pix real</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <div className="mx-auto max-w-3xl text-center"><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-400">Uma infraestrutura, muitos tamanhos</p><h2 className="mt-2 text-3xl font-black sm:text-4xl">Do pequeno empreendedor ao grande marketplace.</h2><p className={`mx-auto mt-3 max-w-2xl text-sm leading-7 ${muted}`}>Você pode começar enviando um link pelo WhatsApp e crescer até uma integração completa por API. A mesma PixWiki acompanha a operação.</p></div>
+        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[
+            ['Pequeno empreendedor','Envie um Pix Link, receba direto na sua conta e saiba na hora quando o cliente pagar.'],
+            ['Loja e e-commerce','Use Checkout Pix, identifique pedidos automaticamente e pare de conferir comprovante manualmente.'],
+            ['Desenvolvedor','API, Webhooks, external_id, metadata e idempotência para integrar ao seu próprio sistema.'],
+            ['Sistema criado com IA','Está construindo com ChatGPT, Claude, Cursor ou outro agente? Adicione cobrança Pix sem criar uma infraestrutura financeira do zero.'],
+            ['Empresas, ERPs e operações','Conciliação, equipe, área Caixa e milhares de recebimentos mensais no mesmo fluxo.'],
+            ['Marketplaces e alto volume','Quando o faturamento cresce, uma porcentagem de cada venda cresce junto. A PixWiki escala cobrando pela automação.'],
+          ].map(([title,desc])=><article key={title} className={`rounded-3xl border p-6 ${card}`}><h3 className="text-lg font-black">{title}</h3><p className={`mt-2 text-sm leading-6 ${muted}`}>{desc}</p></article>)}
+        </div>
+        <div className="mt-6 rounded-3xl bg-emerald-500 p-6 text-slate-950 sm:flex sm:items-center sm:justify-between sm:gap-6"><div><p className="text-2xl font-black">R$ 50 ou R$ 500 mil: porcentagem cresce com a venda.</p><p className="mt-1 text-sm font-semibold">Na PixWiki, você paga pela automação que usa — não uma fatia do seu faturamento.</p></div><button onClick={()=>document.getElementById('comecar')?.scrollIntoView({behavior:'smooth'})} className="mt-4 shrink-0 rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white sm:mt-0">Testar agora</button></div>
+      </section>
+
       <section className={`border-y ${dark?'border-white/5 bg-white/[0.02]':'border-black/5 bg-white'}`}>
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-400">Ativação em minutos</p>
-          <h2 className="mt-2 text-3xl font-black">Não explicamos apenas. Você vê funcionando.</h2>
+          <h2 className="mt-2 text-3xl font-black">Você vê o primeiro pagamento funcionando antes de decidir.</h2>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {[['1','Conecte o Mercado Pago','Autorize sua própria conta. A PixWiki não recebe nem guarda seu dinheiro.'],['2','Faça um Pix real','Envie um pequeno Pix para sua chave usando outra conta e veja a confirmação aparecer.'],['3','Teste as automações','Crie Link, Checkout e até uma chamada de API de teste antes de contratar.']].map(([n,t,d])=><article key={n} className={`rounded-3xl border p-6 ${card}`}><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 font-black text-slate-950">{n}</div><h3 className="mt-5 text-lg font-black">{t}</h3><p className={`mt-2 text-sm leading-relaxed ${muted}`}>{d}</p></article>)}
+            {[['1','Conecte sua conta','Autorize seu Mercado Pago. O dinheiro continua chegando diretamente para você.'],['2','Use sua própria chave Pix','Faça um Pix real e veja a confirmação aparecer no dashboard em tempo real.'],['3','Escolha até onde automatizar','Comece com Link e notificações. Quando precisar, avance para Checkout, API, Webhooks e equipe.']].map(([n,t,d])=><article key={n} className={`rounded-3xl border p-6 ${card}`}><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 font-black text-slate-950">{n}</div><h3 className="mt-5 text-lg font-black">{t}</h3><p className={`mt-2 text-sm leading-relaxed ${muted}`}>{d}</p></article>)}
           </div>
         </div>
       </section>
@@ -262,7 +386,7 @@ export default function PixWikiPage() {
         <div className="text-center"><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-400">Planos V2</p><h2 className="mt-2 text-3xl font-black">Pague pela automação, não pelo dinheiro que recebe.</h2><p className={`mx-auto mt-3 max-w-2xl ${muted}`}>Todas as faixas usam o mesmo produto. O que muda é a quantidade de automações incluídas e o preço do excedente.</p></div>
         <div className="mt-8 grid gap-4 lg:grid-cols-4">{PLANS.map(plan=><article key={plan.key} className={`rounded-3xl border p-5 ${plan.key==='pro'?'border-emerald-500/35 bg-emerald-500/[0.06]':card}`}><p className="text-xs font-black text-emerald-400">{plan.name}</p><p className="mt-3 text-2xl font-black">{plan.price}</p>{plan.annual && <p className={`mt-1 text-xs font-bold ${faint}`}>{plan.annual} · equivalente a 10 mensalidades</p>}<p className={`mt-4 text-sm ${muted}`}>{plan.quota}</p><p className={`mt-1 text-xs ${faint}`}>{plan.overage}</p><button onClick={()=>document.getElementById('comecar')?.scrollIntoView({behavior:'smooth'})} className="mt-5 w-full rounded-xl bg-emerald-500 px-3 py-2.5 text-xs font-black text-slate-950">Testar primeiro</button></article>)}</div>
         <p className={`mt-4 text-center text-xs ${faint}`}>Você pode controlar excedente e limite mensal. No fechamento, a proteção de faixa econômica evita cobrar mais do que uma faixa mensal mais vantajosa para o mesmo volume.</p>
-        <div className="mt-5 text-center"><a href={pixPath('/calculadora')} className="inline-flex rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-300">Comparar com a taxa que pago hoje →</a></div>
+        <div className="mt-5 text-center"><a href={pixPath('/calculadora')} className="inline-flex rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-300">Abrir calculadora completa →</a></div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">

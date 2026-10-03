@@ -6,6 +6,18 @@ import { createClient } from '@/lib/supabase-browser';
 
 type FeeType = 'percent' | 'fixed' | 'free' | 'unknown';
 type PlanKey = 'free' | 'link' | 'pro' | 'vip';
+type ProviderKey = 'mercado_pago' | 'pagbank' | 'woovi_percent' | 'woovi_fixed' | 'asaas' | 'custom_percent' | 'custom_fixed' | 'free' | 'unknown';
+
+type Provider = {
+  key: ProviderKey;
+  name: string;
+  detail: string;
+  feeType: FeeType;
+  feeValue: number;
+  minCents?: number;
+  maxCents?: number;
+  note?: string;
+};
 
 type Quote = {
   plan: PlanKey;
@@ -43,6 +55,18 @@ type Result = {
   } | null;
 };
 
+const PROVIDERS: Provider[] = [
+  { key: 'mercado_pago', name: 'Mercado Pago', detail: 'Pix no Checkout online · 0,99%', feeType: 'percent', feeValue: 0.99 },
+  { key: 'pagbank', name: 'PagBank', detail: 'Pix em vendas online · 1,89%', feeType: 'percent', feeValue: 1.89 },
+  { key: 'woovi_percent', name: 'Woovi', detail: '0,80% · mín. R$ 0,50 · máx. R$ 5,00', feeType: 'percent', feeValue: 0.8, minCents: 50, maxCents: 500 },
+  { key: 'woovi_fixed', name: 'Woovi', detail: 'Plano fixo · R$ 0,85 por Pix', feeType: 'fixed', feeValue: 0.85 },
+  { key: 'asaas', name: 'Asaas', detail: 'R$ 1,99 padrão por Pix', feeType: 'fixed', feeValue: 1.99, note: 'Oferta pública atual: R$ 0,99 por 3 meses.' },
+  { key: 'custom_percent', name: 'Outra empresa', detail: 'Informar percentual que pago', feeType: 'percent', feeValue: 1 },
+  { key: 'custom_fixed', name: 'Outra empresa', detail: 'Informar valor fixo por Pix', feeType: 'fixed', feeValue: 0.99 },
+  { key: 'free', name: 'Não pago taxa', detail: 'Já recebo Pix sem tarifa', feeType: 'free', feeValue: 0 },
+  { key: 'unknown', name: 'Não sei minha taxa', detail: 'Calcular apenas o custo PixWiki', feeType: 'unknown', feeValue: 0 },
+];
+
 function pixPath(path: string) {
   if (typeof window === 'undefined') return `/pix${path}`;
   const host = window.location.hostname.toLowerCase();
@@ -69,9 +93,10 @@ export default function PixWikiCalculatorPage() {
   const [dark, setDark] = useState(true);
   const [monthlyPix, setMonthlyPix] = useState('1000');
   const [ticket, setTicket] = useState('200');
+  const [providerKey, setProviderKey] = useState<ProviderKey>('mercado_pago');
   const [feeType, setFeeType] = useState<FeeType>('percent');
   const [feeMenuOpen, setFeeMenuOpen] = useState(false);
-  const [feeValue, setFeeValue] = useState('1');
+  const [feeValue, setFeeValue] = useState('0,99');
   const [catalog, setCatalog] = useState<Catalog[]>([]);
   const [result, setResult] = useState<Result | null>(null);
   const [loading, setLoading] = useState(false);
@@ -101,6 +126,7 @@ export default function PixWikiCalculatorPage() {
   const muted = dark ? 'text-white/60' : 'text-slate-600';
   const faint = dark ? 'text-white/40' : 'text-slate-500';
   const input = dark ? 'border-white/10 bg-white/[0.055] text-white' : 'border-black/10 bg-white text-slate-900';
+  const selectedProvider = PROVIDERS.find(item => item.key === providerKey) || PROVIDERS[0];
 
   function toggleTheme() {
     setDark(value => {
@@ -108,6 +134,15 @@ export default function PixWikiCalculatorPage() {
       localStorage.setItem('publicTheme', next ? 'dark' : 'light');
       return next;
     });
+  }
+
+  function chooseProvider(provider: Provider) {
+    setProviderKey(provider.key);
+    setFeeType(provider.feeType);
+    setFeeValue(String(provider.feeValue).replace('.', ','));
+    setFeeMenuOpen(false);
+    setResult(null);
+    setError('');
   }
 
   async function calculate() {
@@ -142,8 +177,12 @@ export default function PixWikiCalculatorPage() {
 
       let currentCostCents = 0;
       let currentKnown = feeType !== 'unknown';
-      if (feeType === 'percent') currentCostCents = Math.round(units * ticketCents * (fee / 100));
-      else if (feeType === 'fixed') currentCostCents = Math.round(units * fee * 100);
+      if (feeType === 'percent') {
+        let perPayment = Math.round(ticketCents * (fee / 100));
+        if (selectedProvider.minCents) perPayment = Math.max(perPayment, selectedProvider.minCents);
+        if (selectedProvider.maxCents) perPayment = Math.min(perPayment, selectedProvider.maxCents);
+        currentCostCents = perPayment * units;
+      } else if (feeType === 'fixed') currentCostCents = Math.round(units * fee * 100);
       else if (feeType === 'free') currentCostCents = 0;
       else currentKnown = false;
 
@@ -172,9 +211,10 @@ export default function PixWikiCalculatorPage() {
       };
       setResult(next);
 
-      const savings = currentKnown ? currentCostCents - Number(best.total_price_cents || 0) : 0;
+      const savings = currentKnown && feeType !== 'free' ? currentCostCents - Number(best.total_price_cents || 0) : 0;
       localStorage.setItem('pixWikiCalculatorLead', JSON.stringify({
-        version: 1,
+        version: 2,
+        provider: providerKey,
         monthlyPix: units,
         ticketCents,
         feeType,
@@ -196,8 +236,8 @@ export default function PixWikiCalculatorPage() {
     window.location.href = `${pixPath('/')}#comecar`;
   }
 
-  const savings = result?.currentKnown ? result.currentCostCents - Number(result.best.total_price_cents || 0) : null;
-  const annualSavings = result?.currentKnown && result.bestAnnual
+  const savings = result?.currentKnown && feeType !== 'free' ? result.currentCostCents - Number(result.best.total_price_cents || 0) : null;
+  const annualSavings = result?.currentKnown && feeType !== 'free' && result.bestAnnual
     ? result.currentCostCents * 12 - result.bestAnnual.totalAnnualCents
     : null;
 
@@ -218,9 +258,9 @@ export default function PixWikiCalculatorPage() {
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:py-16">
         <div className="max-w-3xl">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-400">Calculadora PixWiki</p>
-          <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">Quanto sua empresa gasta para receber Pix?</h1>
+          <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">Veja quanto a porcentagem de cada venda pode custar.</h1>
           <p className={`mt-4 max-w-2xl leading-7 ${muted}`}>
-            Use a taxa que você realmente paga hoje. A comparação não depende de preço de concorrente e a PixWiki não cobra percentual sobre o valor recebido.
+            Escolha uma taxa pública de referência ou informe a condição que você realmente paga. A PixWiki usa sua chave Pix como base do recebimento e cobra pela automação — não uma porcentagem do valor vendido.
           </p>
         </div>
 
@@ -236,7 +276,7 @@ export default function PixWikiCalculatorPage() {
                 <input value={ticket} onChange={e => setTicket(e.target.value)} inputMode="decimal" placeholder="200" className={`mt-2 w-full rounded-xl border px-4 py-3.5 outline-none ${input}`} />
               </label>
               <div>
-                <span className={`text-xs font-bold ${muted}`}>Como você paga pelo Pix hoje?</span>
+                <span className={`text-xs font-bold ${muted}`}>Como você recebe Pix hoje?</span>
                 <div className="relative mt-2">
                   <button
                     type="button"
@@ -245,33 +285,29 @@ export default function PixWikiCalculatorPage() {
                     aria-expanded={feeMenuOpen}
                     className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3.5 text-left outline-none ${input}`}
                   >
-                    <span>{({ percent:'Percentual sobre cada Pix', fixed:'Valor fixo por Pix', free:'Não pago taxa', unknown:'Não sei minha taxa' } as Record<FeeType,string>)[feeType]}</span>
+                    <span><strong>{selectedProvider.name}</strong> · {selectedProvider.detail}</span>
                     <span className={`text-xs transition-transform ${feeMenuOpen ? 'rotate-180' : ''}`}>⌄</span>
                   </button>
                   {feeMenuOpen && (
-                    <div role="listbox" className={`absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-xl border p-1 shadow-2xl ${dark ? 'border-white/10 bg-slate-900 text-white' : 'border-black/10 bg-white text-slate-900'}`}>
-                      {([
-                        ['percent','Percentual sobre cada Pix'],
-                        ['fixed','Valor fixo por Pix'],
-                        ['free','Não pago taxa'],
-                        ['unknown','Não sei minha taxa'],
-                      ] as Array<[FeeType,string]>).map(([value,label]) => (
+                    <div role="listbox" className={`absolute left-0 right-0 top-full z-40 mt-2 max-h-80 overflow-y-auto rounded-xl border p-1 shadow-2xl ${dark ? 'border-white/10 bg-slate-900 text-white' : 'border-black/10 bg-white text-slate-900'}`}>
+                      {PROVIDERS.map(provider => (
                         <button
-                          key={value}
+                          key={provider.key}
                           type="button"
                           role="option"
-                          aria-selected={feeType===value}
-                          onClick={() => { setFeeType(value); setFeeMenuOpen(false); }}
-                          className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm transition ${feeType===value ? 'bg-emerald-500/15 font-black text-emerald-400' : dark ? 'hover:bg-white/10' : 'hover:bg-slate-100'}`}
+                          aria-selected={providerKey===provider.key}
+                          onClick={() => chooseProvider(provider)}
+                          className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm transition ${providerKey===provider.key ? 'bg-emerald-500/15 font-black text-emerald-400' : dark ? 'hover:bg-white/10' : 'hover:bg-slate-100'}`}
                         >
-                          {label}
+                          <span className="font-bold">{provider.name}</span><span className="ml-1 opacity-70">· {provider.detail}</span>
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
+                {selectedProvider.note && <p className={`mt-2 text-[11px] leading-5 ${faint}`}>{selectedProvider.note}</p>}
               </div>
-              {(feeType === 'percent' || feeType === 'fixed') && (
+              {(providerKey === 'custom_percent' || providerKey === 'custom_fixed') && (
                 <label>
                   <span className={`text-xs font-bold ${muted}`}>{feeType === 'percent' ? 'Taxa atual (%)' : 'Taxa atual por Pix (R$)'}</span>
                   <input value={feeValue} onChange={e => setFeeValue(e.target.value)} inputMode="decimal" placeholder={feeType === 'percent' ? '1,00' : '0,99'} className={`mt-2 w-full rounded-xl border px-4 py-3.5 outline-none ${input}`} />
@@ -280,9 +316,9 @@ export default function PixWikiCalculatorPage() {
             </div>
             {error && <div className="mt-4 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
             <button onClick={() => void calculate()} disabled={loading} className="mt-5 w-full rounded-xl bg-emerald-500 px-5 py-3.5 font-black text-slate-950 disabled:opacity-50">
-              {loading ? 'Calculando…' : 'Calcular minha economia'}
+              {loading ? 'Calculando…' : feeType === 'free' ? 'Ver o que a PixWiki acrescenta' : 'Calcular minha economia'}
             </button>
-            <p className={`mt-3 text-center text-[11px] leading-5 ${faint}`}>A estimativa usa apenas os dados que você informar. Tarifas bancárias e do Mercado Pago são independentes da PixWiki.</p>
+            <p className={`mt-3 text-center text-[11px] leading-5 ${faint}`}>Referências públicas consultadas em outubro de 2026. Taxas podem variar por promoção, negociação, conta e produto. Você pode informar sua própria condição.</p>
           </div>
 
           <div className={`rounded-[28px] border p-5 sm:p-6 ${card}`}>
@@ -310,23 +346,27 @@ export default function PixWikiCalculatorPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <Metric label="Custo atual estimado" value={result.currentKnown ? money(result.currentCostCents) : 'Não informado'} muted={muted} />
-                  <Metric label="Economia mensal estimada" value={savings == null ? 'Informe sua taxa' : savings > 0 ? money(savings) : savings === 0 ? 'Sem diferença de taxa' : `PixWiki custa ${money(Math.abs(savings))} a mais`} muted={muted} highlight={savings != null && savings > 0} />
-                </div>
-
-                {feeType === 'free' && (
-                  <div className={`mt-4 rounded-2xl border p-4 text-sm leading-6 ${card}`}>
-                    Você informou que hoje não paga taxa Pix. Nesse caso não há economia de tarifa para prometer; o ganho da PixWiki é automação, conciliação, equipe, Link, Checkout, API e notificações.
+                {feeType === 'free' ? (
+                  <div className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.08] p-5">
+                    <p className="text-sm font-black text-emerald-300">Você já recebe Pix sem taxa. Preserve essa vantagem.</p>
+                    <p className={`mt-2 text-sm leading-6 ${muted}`}>A pergunta deixa de ser “quanto economizo na tarifa?” e passa a ser “o que consigo automatizar sem entregar uma porcentagem da venda?”.</p>
+                    <div className={`mt-4 grid gap-2 text-sm sm:grid-cols-2 ${muted}`}><p>✓ Pix Link</p><p>✓ Checkout Pix</p><p>✓ API + Webhooks</p><p>✓ Confirmação automática</p><p>✓ Push gratuito</p><p>✓ E-mail + WhatsApp</p><p>✓ Equipe + Área Caixa</p><p>✓ Conciliação no dashboard</p></div>
+                    <p className="mt-4 text-sm font-bold text-emerald-300">Confira apenas se o seu serviço atual continua sem taxa quando você usa Pix dinâmico, Checkout ou integração por API.</p>
+                  </div>
+                ) : (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <Metric label="Custo atual estimado" value={result.currentKnown ? money(result.currentCostCents) : 'Não informado'} muted={muted} />
+                    <Metric label={savings != null && savings >= 0 ? 'Economia mensal estimada' : 'Diferença para automação completa'} value={savings == null ? 'Informe sua taxa' : savings > 0 ? money(savings) : savings === 0 ? 'Mesmo custo estimado' : money(Math.abs(savings))} muted={muted} highlight={savings != null && savings > 0} />
                   </div>
                 )}
+
                 {feeType === 'unknown' && (
                   <div className={`mt-4 rounded-2xl border p-4 text-sm leading-6 ${card}`}>
                     A faixa PixWiki já está calculada. Quando você souber sua taxa atual, volte e informe para comparar a economia financeira.
                   </div>
                 )}
 
-                {result.bestAnnual && (
+                {result.bestAnnual && feeType !== 'free' && (
                   <div className={`mt-4 rounded-2xl border p-5 ${card}`}>
                     <p className={`text-xs font-bold uppercase tracking-[.12em] ${faint}`}>Melhor cenário anual para esse volume</p>
                     <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
@@ -336,6 +376,11 @@ export default function PixWikiCalculatorPage() {
                     {annualSavings != null && annualSavings > 0 && <p className="mt-3 text-sm font-bold text-emerald-400">Economia anual estimada vs. sua taxa atual: {money(annualSavings)}</p>}
                   </div>
                 )}
+
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+                  <p className="text-sm font-black">O dinheiro continua direto na sua conta.</p>
+                  <p className={`mt-1 text-xs leading-5 ${muted}`}>A PixWiki acrescenta Checkout, Link, API, Webhooks, equipe e notificações usando sua chave Pix como base. Ela não desconta uma porcentagem do pagamento.</p>
+                </div>
 
                 <button onClick={startFree} className="mt-5 w-full rounded-xl bg-emerald-500 px-5 py-3.5 font-black text-slate-950">Criar conta grátis e testar com um Pix real</button>
                 <p className={`mt-2 text-center text-[11px] ${faint}`}>Os dados desta simulação ficam no navegador e são associados ao seu funil somente se você criar a conta.</p>

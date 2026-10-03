@@ -226,38 +226,38 @@ const productFillers = [
 const techCards = [
   {
     icon: CloudOff,
-    title: 'Continua offline',
-    text: 'O player mantém a programação já baixada e segue exibindo mesmo quando a conexão cai.',
+    title: 'Se a internet cair, a tela continua',
+    text: 'O player usa a programação já baixada e segue exibindo. Quando a conexão voltar, sincroniza novamente.',
     className: 'mp-bento-wide',
   },
   {
     icon: Radio,
-    title: 'Atualização em tempo real',
-    text: 'Campanha nova entra sem precisar tocar no dispositivo.',
+    title: 'Atualize sem ir até a tela',
+    text: 'Mudou a campanha? A programação online recebe a atualização sem trocar pendrive nem visitar o local.',
     className: '',
   },
   {
     icon: QrCode,
-    title: 'QR por tela',
-    text: 'Cada ponto pode originar sua própria venda e atribuição.',
+    title: 'A própria tela pode vender',
+    text: 'Cada ponto pode ter seu QR para levar o anunciante direto à página de compra daquela tela.',
     className: '',
   },
   {
     icon: ScanLine,
-    title: 'Acompanhe cada exibição',
-    text: 'Veja quantas exibições pagas já foram entregues e quanto ainda falta na campanha.',
+    title: 'Saiba o que foi exibido',
+    text: 'Campanhas pagas ficam ligadas às exibições registradas para acompanhar entrega e saldo.',
     className: '',
   },
   {
     icon: Network,
-    title: 'Vários locais, uma conta',
-    text: 'Loja, carro, elevador, tablet e painel podem ser gerenciados juntos.',
+    title: 'Todas as telas no mesmo painel',
+    text: 'Loja, carro, elevador, tablet e painel podem ser acompanhados em uma única conta.',
     className: 'mp-bento-wide',
   },
   {
     icon: Images,
-    title: 'Baixe suas mídias',
-    text: 'Também funciona com equipamentos totalmente offline por download manual.',
+    title: 'Pendrive quando precisar',
+    text: 'Para equipamentos sem internet, você pode preparar a programação do dia e levar os arquivos manualmente.',
     className: '',
   },
 ] as const;
@@ -266,6 +266,10 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
   const [heroCreative, setHeroCreative] = useState(0);
   const [storyIndex, setStoryIndex] = useState(0);
   const [showAllPrices, setShowAllPrices] = useState(false);
+  const [simScreens, setSimScreens] = useState(1);
+  const [simAdsPerDay, setSimAdsPerDay] = useState(3);
+  const [simPrice, setSimPrice] = useState(9.9);
+  const [simOrigin, setSimOrigin] = useState<'direct' | 'network'>('direct');
   const storyRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
@@ -321,6 +325,10 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
     storyRefs.current.forEach((node) => node && observer.observe(node));
     return () => observer.disconnect();
   }, []);
+
+  const simGross = Math.max(0, simScreens) * Math.max(0, simAdsPerDay) * Math.max(0, simPrice) * 30;
+  const simShareRate = simOrigin === 'direct' ? 0.8 : 0.5;
+  const simPartner = simGross * simShareRate;
 
   return (
     <main className="mp-landing">
@@ -380,75 +388,148 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
 
       <Marquee />
 
-      <section id="como-funciona" className="mp-story-section">
+      <section id="como-funciona" className="mp-sales-problem-section">
         <div className="mp-shell">
           <SectionHeading
-            eyebrow="A IDEIA EM 30 SEGUNDOS"
-            title="A tela deixa de ser só custo. Ela vira inventário."
-            text="Você controla a programação. A Midia.Pro conecta o espaço disponível a anunciantes, registra o que foi exibido e organiza a receita."
+            eyebrow="ANTES DE FALAR EM PUBLICIDADE"
+            title="Ter uma tela é fácil. Manter ela útil é outra história."
+            text="A parte difícil não é ligar uma TV. É manter conteúdo atualizado, organizar horários, vender espaços, cobrar, receber criativos e saber se o anúncio realmente passou."
           />
 
-          <div className="mp-story-grid">
-            <div className="mp-story-stage">
-              <div className="mp-story-stage-inner">
-                <StoryScreen active={storyIndex} />
-              </div>
-            </div>
+          <div className="mp-sales-problem-grid">
+            {[
+              ['01', 'Criar e trocar conteúdo', 'Sem uma ferramenta, cada atualização vira pendrive, mensagem, visita ao local ou alguém lembrando de trocar a mídia.'],
+              ['02', 'Organizar datas e horários', 'Quando entram campanhas próprias e de terceiros, uma planilha já começa a ficar pequena.'],
+              ['03', 'Encontrar anunciantes', 'Vender espaço é outro trabalho: apresentar a tela, negociar valor, receber arte e confirmar pagamento.'],
+              ['04', 'Provar que entregou', 'Depois da venda vem a pergunta inevitável: o anúncio realmente passou quantas vezes?'],
+              ['05', 'Repassar o que é do parceiro', 'Se a tela pertence a outra pessoa, ainda existe saldo, participação e repasse para organizar.'],
+            ].map(([no, title, text]) => (
+              <article key={no} className="mp-sales-problem-card" data-mp-reveal>
+                <span>{no}</span>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </article>
+            ))}
+          </div>
 
-            <div className="mp-story-copy">
-              {storySteps.map((step, index) => (
-                <div
-                  key={step.title}
-                  ref={(node) => {
-                    storyRefs.current[index] = node;
-                  }}
-                  data-story-index={index}
-                  className={`mp-story-step ${storyIndex === index ? 'is-active' : ''}`}
-                >
-                  <span>{step.eyebrow}</span>
-                  <h3>{step.title}</h3>
-                  <p>{step.description}</p>
-                </div>
-              ))}
+          <div className="mp-sales-bridge" data-mp-reveal>
+            <div>
+              <strong>A Midia.Pro junta tudo isso em um só lugar.</strong>
+              <span>Programação, anúncios, PIX, calendário, player, offline e participação na receita.</span>
             </div>
+            <Link href={signupHref} className="mp-button mp-button-primary">
+              Quero simplificar minha tela
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </section>
 
-      <section className="mp-filler-section">
+      <section className="mp-sales-compare-section">
         <div className="mp-shell">
-          <div className="mp-filler-head" data-mp-reveal>
-            <div>
-              <div className="mp-kicker mp-kicker-inverse">
-                <Sparkles className="h-4 w-4" />
-                Espaço livre nunca precisa ficar vazio
+          <SectionHeading
+            eyebrow="COMPARE O TRABALHO, NÃO SÓ O PLAYER"
+            title="Gerenciar uma tela é uma coisa. Transformá-la em mídia vendável é outra."
+            text="Softwares tradicionais de digital signage resolvem muito bem publicação e playlists. A Midia.Pro acrescenta a camada comercial para quem também quer vender espaço e participar da receita."
+          />
+
+          <div className="mp-sales-compare-wrap" data-mp-reveal>
+            <div className="mp-sales-compare-table">
+              <div className="mp-sales-compare-row is-head">
+                <strong>O que você precisa</strong>
+                <b>Pendrive / manual</b>
+                <b>Digital signage tradicional</b>
+                <b className="is-midia">Midia.Pro</b>
               </div>
-              <h2>
-                NÃO TEM ANÚNCIO?
-                <br />
-                <span>SUA TELA NÃO PARA.</span>
-              </h2>
+              {[
+                ['Exibir suas próprias mídias', 'Sim', 'Sim', 'Sim'],
+                ['Atualizar sem ir até a tela', 'Não', 'Sim', 'Sim'],
+                ['Agenda e horários', 'Manual', 'Sim', 'Sim'],
+                ['Continuar sem internet', 'Pendrive', 'Depende da solução', 'Sim'],
+                ['QR para vender espaço da tela', 'Não', 'Não é o foco', 'Sim'],
+                ['PIX e compra pelo anunciante', 'Não', 'Não é o foco', 'Sim'],
+                ['Calendário de campanhas vendidas', 'Planilha', 'Programação interna', 'Sim'],
+                ['Participação na receita', 'Você organiza', 'Não é o foco', 'Sim'],
+                ['Registro das exibições pagas', 'Não', 'Varia por fornecedor', 'Sim'],
+              ].map(([feature, manual, signage, midia]) => (
+                <div className="mp-sales-compare-row" key={feature}>
+                  <strong>{feature}</strong>
+                  <span>{manual}</span>
+                  <span>{signage}</span>
+                  <span className="is-midia">{midia}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="mp-sales-fineprint">“Digital signage tradicional” representa a categoria de softwares de gestão de telas; recursos e condições variam conforme o fornecedor e o plano.</p>
+        </div>
+      </section>
+
+      <section className="mp-sales-simulator-section">
+        <div className="mp-shell mp-sales-simulator-grid">
+          <div className="mp-sales-simulator-copy" data-mp-reveal>
+            <div className="mp-kicker mp-kicker-inverse">
+              <CircleDollarSign className="h-4 w-4" />
+              Faça uma simulação
+            </div>
+            <h2>E SE SUA TELA COMEÇASSE A PAGAR PELO PRÓPRIO USO?</h2>
+            <p>Não é promessa de faturamento. É uma forma simples de visualizar o que acontece quando um espaço que hoje vale zero começa a ser vendido.</p>
+            <div className="mp-sales-simulator-note">
+              <strong>A tela continua sendo sua.</strong>
+              <span>Você pode usar suas próprias mídias e abrir somente a parte da programação destinada à rede.</span>
+            </div>
+          </div>
+
+          <div className="mp-sales-simulator-card" data-mp-reveal>
+            <div className="mp-sales-simulator-fields">
+              <label>
+                <span>Quantas telas?</span>
+                <input type="number" min="1" max="100" value={simScreens} onChange={(event) => setSimScreens(Math.max(1, Number(event.target.value) || 1))} />
+              </label>
+              <label>
+                <span>Anúncios vendidos por dia</span>
+                <select value={simAdsPerDay} onChange={(event) => setSimAdsPerDay(Number(event.target.value))}>
+                  <option value={1}>1 por dia</option>
+                  <option value={3}>3 por dia</option>
+                  <option value={5}>5 por dia</option>
+                  <option value={10}>10 por dia</option>
+                </select>
+              </label>
+              <label>
+                <span>Valor médio por venda</span>
+                <select value={simPrice} onChange={(event) => setSimPrice(Number(event.target.value))}>
+                  <option value={4.9}>R$ 4,90</option>
+                  <option value={7.9}>R$ 7,90</option>
+                  <option value={14.9}>R$ 14,90</option>
+                  <option value={24.9}>R$ 24,90</option>
+                </select>
+              </label>
             </div>
 
-            <p>
-              Quando não houver campanha paga, a rede pode preencher o inventário disponível
-              com campanhas de parceiros e anunciantes. Campanhas pagas sempre têm prioridade.
-            </p>
-          </div>
-        </div>
+            <div className="mp-sales-origin">
+              <span>Origem das vendas simuladas</span>
+              <div>
+                <button type="button" className={simOrigin === 'direct' ? 'active' : ''} onClick={() => setSimOrigin('direct')}>
+                  QR da minha tela · 80%
+                </button>
+                <button type="button" className={simOrigin === 'network' ? 'active' : ''} onClick={() => setSimOrigin('network')}>
+                  Rede Midia.Pro · 50%
+                </button>
+              </div>
+            </div>
 
-        <div className="mp-product-rail">
-          <div className="mp-product-track">
-            {[...productFillers, ...productFillers].map((creative, index) => (
-              <ProductCreative
-                key={`${creative.name}-${index}`}
-                name={creative.name}
-                text={creative.text}
-                tone={creative.tone}
-                src={creative.src}
-                domain={creative.domain}
-              />
-            ))}
+            <div className="mp-sales-simulator-results">
+              <div>
+                <span>Vendas simuladas no mês</span>
+                <strong>{formatBRL(simGross)}</strong>
+              </div>
+              <div className="featured">
+                <span>Participação simulada do parceiro</span>
+                <strong>{formatBRL(simPartner)}</strong>
+                <small>{Math.round(simShareRate * 100)}% neste cenário</small>
+              </div>
+            </div>
+            <p className="mp-sales-simulator-disclaimer">Simulação matemática, não garantia de renda. O resultado real depende de demanda, localização, preço, disponibilidade, aprovação e exibições efetivamente entregues.</p>
           </div>
         </div>
       </section>
@@ -456,53 +537,129 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
       <section className="mp-paths-section">
         <div className="mp-shell">
           <SectionHeading
-            eyebrow="TRÊS JEITOS DE ENTRAR"
-            title="Escolha o seu lado da rede."
-            text="A Midia.Pro atende quem tem uma tela, quem quer apenas gerenciá-la e quem quer comprar mídia."
+            eyebrow="TRÊS FORMAS FÁCEIS DE USAR"
+            title="Escolha o que você quer fazer com a tela."
+            text="Você não precisa entender de mídia programática. Comece pelo objetivo que faz sentido para você."
           />
 
           <div className="mp-path-grid">
             <PathCard
               number="01"
               icon={<BadgeDollarSign />}
-              title="TENHO UMA TELA"
-              lead="Quero usar e monetizar."
+              title="QUERO GANHAR COM MINHA TELA"
+              lead="Continuo usando e abro espaço para anúncios."
               price="R$ 0"
               suffix="/mês"
-              text="Use suas próprias mídias e disponibilize parte da programação para campanhas da rede."
-              cta="Cadastrar minha tela"
+              text="Suas próprias mídias continuam rodando. No plano Parceiro, parte da programação fica disponível para campanhas."
+              cta="Quero monetizar minha tela"
               href={signupHref}
               tone="blue"
-              bullets={['Até 80% da programação para você', 'Participação na receita', 'QR próprio para vender anúncios']}
+              bullets={['80% da programação continua com você', 'QR próprio para vender anúncios', 'Participação nas campanhas exibidas']}
             />
 
             <PathCard
               number="02"
               icon={<Tv />}
-              title="QUERO SÓ PARA MIM"
-              lead="Quero controlar minhas propagandas."
+              title="QUERO SÓ CONTROLAR MINHAS TELAS"
+              lead="Sem publicidade de terceiros."
               price="R$ 19,90"
               suffix="/tela/mês"
-              text="Use a Midia.Pro como painel digital privado, sem publicidade externa."
-              cta="Usar como painel digital"
+              text="Transforme TV, tablet ou painel em mídia digital privada e atualize tudo pelo painel."
+              cta="Usar minhas próprias mídias"
               href={signupHref}
               tone="light"
-              bullets={['100% da programação é sua', 'Gerenciamento remoto', 'Player online e offline']}
+              bullets={['100% da programação é sua', 'Agenda e atualização remota', 'Online, cache offline e pendrive']}
             />
 
             <PathCard
               number="03"
               icon={<Rocket />}
               title="QUERO ANUNCIAR"
-              lead="Quero aparecer em telas."
+              lead="Escolho uma tela, data e frequência."
               price="R$ 4,90"
               suffix="para começar"
-              text="Compre uma exibição ou escolha frequências maiores quando quiser presença constante."
-              cta="Ver como anunciar"
+              text="Envie sua arte, pague por PIX e acompanhe as exibições sem precisar negociar manualmente com o ponto."
+              cta="Quero anunciar"
               href="#anuncie"
               tone="red"
-              bullets={['Escolha quando aparecer', 'Imagem ou vídeo vertical', 'Pagamento por PIX']}
+              bullets={['Data e frequência escolhidas', 'Imagem ou vídeo vertical', 'Compra por PIX']}
             />
+          </div>
+        </div>
+      </section>
+
+      <section className="mp-sales-agency-section">
+        <div className="mp-shell">
+          <SectionHeading
+            eyebrow="A PARTE DIFÍCIL JÁ VEM ORGANIZADA"
+            title="Você não precisa virar uma agência de publicidade."
+            text="A Midia.Pro transforma um processo que normalmente depende de mensagens, planilhas e cobrança manual em um fluxo único."
+          />
+
+          <div className="mp-sales-flow" data-mp-reveal>
+            {[
+              ['01', 'Anunciante encontra a tela'],
+              ['02', 'Escolhe quando aparecer'],
+              ['03', 'Envia o criativo'],
+              ['04', 'Paga por PIX'],
+              ['05', 'Campanha passa pela aprovação'],
+              ['06', 'Programação é atualizada'],
+              ['07', 'Exibição é registrada'],
+              ['08', 'Saldo aparece para o parceiro'],
+            ].map(([no, text]) => (
+              <div key={no}><span>{no}</span><strong>{text}</strong></div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mp-sales-calendar-section">
+        <div className="mp-shell mp-sales-calendar-grid">
+          <CalendarSalesMock />
+          <div className="mp-sales-calendar-copy" data-mp-reveal>
+            <div className="mp-kicker">
+              <Clock3 className="h-4 w-4" />
+              Programação visual
+            </div>
+            <h2>VOCÊ VÊ O DIA DA SUA TELA ANTES DE ELE ACONTECER.</h2>
+            <p>Calendário, horários e campanhas ficam visíveis no dashboard. Assim você sabe o que é conteúdo próprio, o que é publicidade e o que ainda está aguardando exibição.</p>
+            <ul>
+              <li><Check /> Filtre por tela</li>
+              <li><Check /> Veja mês, semana, dia ou lista</li>
+              <li><Check /> Identifique períodos mais ocupados</li>
+              <li><Check /> Acompanhe campanhas já entregues e pendentes</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="mp-sales-offline-section">
+        <div className="mp-shell">
+          <SectionHeading
+            eyebrow="SEM INTERNET? A TELA NÃO PRECISA PARAR."
+            title="Escolha o tipo de offline que combina com o seu ponto."
+            text="Offline não é Realtime: enquanto a tela estiver sem internet, ela usa a programação já carregada. Alterações entram na próxima sincronização."
+          />
+
+          <div className="mp-sales-offline-grid">
+            <article data-mp-reveal>
+              <WifiOff />
+              <span>LOJA / RECEPÇÃO</span>
+              <h3>A internet caiu? Continue exibindo.</h3>
+              <p>O player usa as mídias já baixadas e volta a sincronizar automaticamente quando a conexão retornar.</p>
+            </article>
+            <article data-mp-reveal>
+              <TabletSmartphone />
+              <span>UBER / TELA MÓVEL</span>
+              <h3>Carregue o dia antes de sair.</h3>
+              <p>Baixe a programação no Wi-Fi. O aparelho reproduz localmente e envia os registros quando ficar online novamente.</p>
+            </article>
+            <article data-mp-reveal>
+              <Images />
+              <span>TV SEM INTERNET</span>
+              <h3>Leve a programação no pendrive.</h3>
+              <p>Gere o pacote do dia para equipamentos totalmente offline. Nesse modo não existe Realtime nem confirmação automática enquanto estiver desconectado.</p>
+            </article>
           </div>
         </div>
       </section>
@@ -545,25 +702,22 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
           <div className="mp-advertise-copy" data-mp-reveal>
             <div className="mp-kicker mp-kicker-inverse">
               <QrCode className="h-4 w-4" />
-              Venda direto da própria tela
+              Comprar mídia sem trocar mensagens
             </div>
             <h2>
-              VIU A TELA?
+              ESCOLHA A TELA.
               <br />
-              <span>VOCÊ PODE ESTAR NELA.</span>
+              <span>ESCOLHA QUANDO APARECER.</span>
             </h2>
-            <p>
-              O QR individual leva o anunciante direto para aquela tela. Ele escolhe
-              frequência, horário, envia a peça e paga por PIX.
-            </p>
+            <p>O anunciante entra pela página da tela, escolhe frequência, data ou janela de horário, envia a peça e paga por PIX.</p>
 
             <div className="mp-advertise-steps">
               {[
-                ['01', 'Escaneie', 'o QR daquela tela'],
-                ['02', 'Escolha', 'quando e quantas vezes aparecer'],
+                ['01', 'Encontre', 'a tela onde quer aparecer'],
+                ['02', 'Escolha', 'data, frequência ou horário'],
                 ['03', 'Envie', 'imagem ou vídeo vertical'],
                 ['04', 'Pague', 'com PIX'],
-                ['05', 'Apareça', 'na programação após aprovação'],
+                ['05', 'Acompanhe', 'as exibições da campanha'],
               ].map(([no, title, text]) => (
                 <div key={no}>
                   <span>{no}</span>
@@ -580,9 +734,9 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
       <section id="precos" className="mp-pricing-section">
         <div className="mp-shell">
           <SectionHeading
-            eyebrow="PREÇO DE ENTRADA BAIXO. PRESENÇA VALE MAIS."
-            title="Comece com R$ 4,90. Cresça conforme a frequência."
-            text="Uma exibição serve para experimentar. Frequência, horário reservado e ocupação maior do inventário custam mais."
+            eyebrow="TESTE BARATO. PRESENÇA FORTE CUSTA MAIS."
+            title="Comece com R$ 4,90. Reserve mais espaço quando precisar aparecer mais."
+            text="Uma exibição serve para experimentar. Frequência, horário reservado e ocupação maior da programação têm preços maiores."
           />
 
           <div className="mp-price-featured">
@@ -595,15 +749,10 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
             <span>30s = preço base</span>
             <span>45s = ×1,5</span>
             <span>60s = ×2</span>
-            <span>Telas premium podem ter fator próprio</span>
+            <span>Telas e horários mais disputados podem ter preço próprio</span>
           </div>
 
-          <button
-            type="button"
-            className="mp-price-toggle"
-            onClick={() => setShowAllPrices((current) => !current)}
-            aria-expanded={showAllPrices}
-          >
+          <button type="button" className="mp-price-toggle" onClick={() => setShowAllPrices((current) => !current)} aria-expanded={showAllPrices}>
             {showAllPrices ? 'Ocultar tabela completa' : 'Ver todas as frequências'}
             <ChevronDown className={showAllPrices ? 'is-open' : ''} />
           </button>
@@ -624,35 +773,66 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
       <section className="mp-split-section">
         <div className="mp-shell">
           <div className="mp-split-header" data-mp-reveal>
-            <span>RECEITA TRANSPARENTE</span>
-            <h2>QUEM AJUDA A REDE A VENDER, PARTICIPA MAIS.</h2>
-            <p>
-              A Midia.Pro diferencia a venda originada pela própria tela das campanhas
-              vendidas pela rede.
-            </p>
+            <span>RECEITA FÁCIL DE ENTENDER</span>
+            <h2>A MIDIA.PRO SÓ PARTICIPA MAIS QUANDO TAMBÉM TROUXE A VENDA.</h2>
+            <p>Se o anunciante chegou pelo QR da sua própria tela, sua participação é maior. Se a campanha veio da rede, a Midia.Pro fez a venda e divide a receita com você.</p>
           </div>
 
           <div className="mp-split-grid">
-            <RevenueSplit
-              title="Venda gerada pela sua tela"
-              subtitle="Anunciante chegou pelo QR daquele ponto"
-              partner={80}
-              midia={20}
-            />
-            <RevenueSplit
-              title="Campanha vendida pela rede"
-              subtitle="Midia.Pro trouxe o anunciante"
-              partner={50}
-              midia={50}
-            />
+            <RevenueSplit title="Anunciante veio pela sua tela" subtitle="Venda originada pelo QR daquele ponto" partner={80} midia={20} />
+            <RevenueSplit title="Campanha veio pela rede" subtitle="Midia.Pro encontrou o anunciante" partner={50} midia={50} />
           </div>
 
           <div className="mp-proof-strip">
             <ScanLine />
             <div>
-              <strong>Exibições confirmadas</strong>
-              <span>Você acompanha a entrega e o saldo só é liberado conforme as exibições realmente acontecem.</span>
+              <strong>Saldo acompanha a entrega</strong>
+              <span>As campanhas pagas ficam ligadas às exibições registradas. O parceiro acompanha o que já foi entregue e o que ainda falta.</span>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mp-network-section">
+        <div className="mp-shell mp-network-grid">
+          <div data-mp-reveal>
+            <div className="mp-kicker">
+              <Sparkles className="h-4 w-4" />
+              Útil desde o primeiro dia
+            </div>
+            <h2>VOCÊ NÃO PRECISA ESPERAR A REDE CRESCER PARA COMEÇAR.</h2>
+            <p>No primeiro dia, a Midia.Pro já serve para organizar e exibir suas próprias mídias. Quando campanhas de parceiros e anunciantes entrarem, elas ocupam os espaços destinados à rede.</p>
+            <div className="mp-network-pills">
+              <span>Conteúdo próprio</span>
+              <span>Agenda</span>
+              <span>Offline</span>
+              <span>QR da tela</span>
+              <span>Campanhas</span>
+              <span>Saldo</span>
+            </div>
+          </div>
+          <NetworkVisual />
+        </div>
+      </section>
+
+      <section className="mp-filler-section">
+        <div className="mp-shell">
+          <div className="mp-filler-head" data-mp-reveal>
+            <div>
+              <div className="mp-kicker mp-kicker-inverse">
+                <Sparkles className="h-4 w-4" />
+                Sua tela continua trabalhando
+              </div>
+              <h2>NÃO TEM CAMPANHA PAGA?<br /><span>SUA PROGRAMAÇÃO CONTINUA.</span></h2>
+            </div>
+            <p>Suas próprias mídias seguem normalmente. Nos espaços reservados à rede, campanhas de parceiros e anunciantes podem entrar conforme disponibilidade e aprovação.</p>
+          </div>
+        </div>
+        <div className="mp-product-rail">
+          <div className="mp-product-track">
+            {[...productFillers, ...productFillers].map((creative, index) => (
+              <ProductCreative key={`${creative.name}-${index}`} name={creative.name} text={creative.text} tone={creative.tone} src={creative.src} domain={creative.domain} />
+            ))}
           </div>
         </div>
       </section>
@@ -660,21 +840,15 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
       <section className="mp-tech-section">
         <div className="mp-shell">
           <SectionHeading
-            eyebrow="TECNOLOGIA QUE VOCÊ NÃO PRECISA ENTENDER"
-            title="Por trás da tela, tudo continua trabalhando."
-            text="O produto foi pensado para operação real: internet instável, vários locais, atualização remota e prestação de contas."
+            eyebrow="SEM LINGUAGEM TÉCNICA"
+            title="Você cuida da tela. A Midia.Pro cuida do resto."
+            text="O que importa para quem opera é simples: atualizar sem visitar o ponto, não parar quando a internet falha e saber o que foi exibido."
           />
-
           <div className="mp-bento-grid">
             {techCards.map((card, index) => {
               const Icon = card.icon;
               return (
-                <article
-                  key={card.title}
-                  className={`mp-bento-card ${card.className}`}
-                  data-mp-reveal
-                  style={{ '--delay': `${index * 55}ms` } as CSSProperties}
-                >
+                <article key={card.title} className={`mp-bento-card ${card.className}`} data-mp-reveal style={{ '--delay': `${index * 55}ms` } as CSSProperties}>
                   <div className="mp-bento-icon"><Icon /></div>
                   <h3>{card.title}</h3>
                   <p>{card.text}</p>
@@ -685,60 +859,44 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
         </div>
       </section>
 
-      <section className="mp-network-section">
-        <div className="mp-shell mp-network-grid">
-          <div data-mp-reveal>
-            <div className="mp-kicker">
-              <Network className="h-4 w-4" />
-              Rede em expansão
-            </div>
-            <h2>UMA REDE QUE CRESCE COM CADA TELA.</h2>
-            <p>
-              Hoje estamos construindo os primeiros pontos. Amanhã, o anunciante poderá
-              comprar presença em grupos de telas, cidades, tipos de local e faixas de horário.
-            </p>
-
-            <div className="mp-network-pills">
-              <span>Lojas</span>
-              <span>Motoristas</span>
-              <span>Elevadores</span>
-              <span>Painéis LED</span>
-              <span>Clínicas</span>
-              <span>Academias</span>
-            </div>
+      <section className="mp-sales-faq-section">
+        <div className="mp-shell mp-sales-faq-grid">
+          <div className="mp-sales-faq-copy" data-mp-reveal>
+            <span>DÚVIDAS QUE NORMALMENTE TRAVAM A DECISÃO</span>
+            <h2>Antes de cadastrar sua tela, responda tudo.</h2>
+            <p>Sem letras pequenas escondendo o funcionamento básico do produto.</p>
           </div>
-
-          <NetworkVisual />
+          <div className="mp-sales-faq-list">
+            {[
+              ['Preciso comprar equipamento?', 'Não necessariamente. Você pode usar TV, tablet, computador ou painel compatível com o player. Algumas TVs podem precisar de um dispositivo externo para abrir o player com estabilidade.'],
+              ['Posso usar só minhas próprias propagandas?', 'Sim. No modo de uso próprio, 100% da programação fica com você e não entram campanhas externas.'],
+              ['E se a internet cair?', 'O player continua com a programação já armazenada. Enquanto estiver offline não existe Realtime; as atualizações entram quando a conexão voltar.'],
+              ['Sou motorista. Preciso gastar internet móvel o dia inteiro?', 'Não é a ideia. Você pode carregar a programação do dia no Wi-Fi e reproduzir localmente durante o trajeto.'],
+              ['E se ninguém comprar anúncio na minha tela?', 'Ela continua útil para suas próprias mídias. A monetização é uma camada extra, não uma dependência para o produto funcionar.'],
+              ['Quanto da programação fica disponível para a rede?', 'No Parceiro grátis, 20% do inventário fica reservado à rede e 80% continua com você. No uso próprio, 100% é seu.'],
+              ['Como sei se o anúncio realmente passou?', 'Campanhas pagas ficam vinculadas aos registros de exibição do player. No modo offline sincronizável, os registros são enviados quando a internet volta.'],
+              ['Como recebo o dinheiro?', 'O saldo disponível fica no painel e o repasse é solicitado por PIX, seguindo o fluxo de saque da plataforma.'],
+              ['Posso usar pendrive?', 'Sim. Para equipamentos totalmente offline, a Midia.Pro pode preparar um pacote diário para pendrive. Esse modo não tem Realtime enquanto estiver desconectado.'],
+              ['A Midia.Pro cobra mensalidade do parceiro?', 'O plano Parceiro pode começar por R$ 0/mês ao disponibilizar parte da programação para a rede. Quem quer 100% da tela para uso próprio pode contratar o modo privado por tela.'],
+            ].map(([question, answer]) => (
+              <details key={question} className="mp-sales-faq-item" data-mp-reveal>
+                <summary>{question}<span>+</span></summary>
+                <p>{answer}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 
       <section className="mp-final-section">
         <div className="mp-final-lines" aria-hidden="true" />
         <div className="mp-shell mp-final-inner" data-mp-reveal>
-          <Image
-            src="/brands/midia/logo.png"
-            alt="Midia.Pro"
-            width={260}
-            height={260}
-            className="mp-final-logo"
-          />
-          <h2>
-            A TELA JÁ ESTÁ AÍ.
-            <br />
-            <span>FAÇA ELA TRABALHAR.</span>
-          </h2>
-          <p>
-            Cadastre seu primeiro ponto, publique sua própria mídia e prepare a tela
-            para fazer parte de uma nova rede de publicidade.
-          </p>
+          <Image src="/brands/midia/logo.png" alt="Midia.Pro" width={260} height={260} className="mp-final-logo" />
+          <h2>A TELA JÁ ESTÁ AÍ.<br /><span>FAÇA ELA TRABALHAR.</span></h2>
+          <p>Cadastre sua primeira tela, publique sua própria mídia e veja a programação funcionando antes de decidir até onde quer monetizar.</p>
           <div className="mp-final-actions">
-            <Link href={signupHref} className="mp-button mp-button-white">
-              Cadastrar minha tela
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <a href="#anuncie" className="mp-button mp-button-outline-white">
-              Quero anunciar
-            </a>
+            <Link href={signupHref} className="mp-button mp-button-white">Cadastrar minha tela<ArrowRight className="h-4 w-4" /></Link>
+            <a href="#anuncie" className="mp-button mp-button-outline-white">Quero anunciar</a>
           </div>
         </div>
       </section>
@@ -757,6 +915,46 @@ export default function MidiaLandingV2({ loginHref, signupHref }: Props) {
         </div>
       </footer>
     </main>
+  );
+}
+
+function formatBRL(value: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function CalendarSalesMock() {
+  const days = [
+    ['28', 'Livre', ''], ['29', '42%', 'mid'], ['30', '78%', 'hot'], ['01', '55%', 'mid'],
+    ['02', '91%', 'hot'], ['03', '36%', ''], ['04', 'Livre', ''], ['05', '68%', 'mid'],
+    ['06', '84%', 'hot'], ['07', '47%', 'mid'], ['08', '72%', 'mid'], ['09', '95%', 'hot'],
+    ['10', '51%', 'mid'], ['11', 'Livre', ''],
+  ] as const;
+
+  return (
+    <div className="mp-sales-calendar-card" data-mp-reveal>
+      <div className="mp-sales-calendar-head">
+        <div><span>PROGRAMAÇÃO</span><strong>Outubro</strong></div>
+        <div><button type="button">Mês</button><button type="button" className="active">Semana</button><button type="button">Dia</button></div>
+      </div>
+      <div className="mp-sales-calendar-days">
+        {['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'].map((day) => <span key={day}>{day}</span>)}
+        {days.map(([day, load, tone], index) => (
+          <div key={`${day}-${index}`} className={tone ? `is-${tone}` : ''}>
+            <strong>{day}</strong><small>{load}</small>
+          </div>
+        ))}
+      </div>
+      <div className="mp-sales-calendar-timeline">
+        <div><span>09:00</span><b className="own">Conteúdo próprio</b></div>
+        <div><span>10:15</span><b className="paid">Anúncio pago</b></div>
+        <div><span>12:30</span><b className="network">Campanha da rede</b></div>
+        <div><span>14:00</span><b className="reserved">Horário reservado</b></div>
+      </div>
+    </div>
   );
 }
 

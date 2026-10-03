@@ -1,11 +1,5 @@
 'use client';
 
-// app/melhoria/app/page.tsx — "Meu dia"
-// - cliente único da MelhorIA;
-// - exige consentimento de saúde antes de mostrar dados sensíveis;
-// - filtra o dia pelo timezone do perfil (sem tratar meia-noite local como UTC);
-// - inicializa o OneSignal específico do MelhorIA após autenticação.
-
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -15,7 +9,9 @@ import { melhoriaAuth, createMelhoriaClient } from '@/lib/melhoria/supabase';
 import CartaoDose, { type DoseDoDia } from '@/components/melhoria/CartaoDose';
 import { Pagina, IconeCentral, Carregando } from '@/components/melhoria/Chrome';
 import PushNotificationSetup from '@/components/melhoria/PushNotificationSetup';
+import PrimeirosSeteDias from '@/components/melhoria/PrimeirosSeteDias';
 import { R } from '@/lib/melhoria/rotas';
+import { melhoriaAnalyticsOnce } from '@/lib/melhoria/analytics';
 import {
   cor, fonte, px, toque, raio, espaco, diaPorExtenso,
   type TamanhoFonte,
@@ -29,7 +25,16 @@ interface Perfil {
   falar_confirmacoes: boolean;
   onboarding_completo: boolean;
   consentiu_saude_em: string | null;
+  created_at: string;
+  lembrete_diario_ativo?: boolean;
+  lembrete_diario_horario?: string | null;
 }
+
+type Progresso = {
+  temMedicamento: boolean;
+  temContato: boolean;
+  temAgendamento: boolean;
+};
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -41,23 +46,34 @@ function dataNoFuso(iso: string, timezone: string): string {
 }
 
 export default function MeuDiaPage() {
-  const router   = useRouter();
+  const router = useRouter();
   const supabase = melhoriaAuth();
-  const mel      = createMelhoriaClient();
+  const mel = createMelhoriaClient();
 
   const [carregando, setCarregando] = useState(true);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [doses, setDoses] = useState<DoseDoDia[]>([]);
   const [erro, setErro] = useState<string | null>(null);
+  const [notificacoesAtivas, setNotificacoesAtivas] = useState(false);
+  const [progresso, setProgresso] = useState<Progresso>({
+    temMedicamento: false,
+    temContato: false,
+    temAgendamento: false,
+  });
 
   const escala: TamanhoFonte = perfil?.tamanho_fonte ?? 'grande';
   const tz = perfil?.timezone ?? 'America/Sao_Paulo';
 
   const carregar = useCallback(async () => {
     const { data: sessao } = await supabase.auth.getUser();
-    if (!sessao?.user) { router.replace(R.login()); return; }
+    if (!sessao?.user) {
+      const jaEntrou = typeof window !== 'undefined' && localStorage.getItem('melhoria:ja-entrou') === '1';
+      router.replace(jaEntrou ? R.login() : `${R.login()}?mode=cadastro`);
+      return;
+    }
     setUserId(sessao.user.id);
+    try { localStorage.setItem('melhoria:ja-entrou', '1'); } catch {}
 
     const { error: erroRpc } = await supabase.rpc('ensure_my_melhoria_company');
     if (erroRpc) {
@@ -67,13 +83,11 @@ export default function MeuDiaPage() {
     }
 
     let p: Perfil | null = null;
-
     for (let tentativa = 1; tentativa <= 3 && !p; tentativa++) {
       const { data } = await mel
         .from('perfis')
-        .select('id, nome, timezone, tamanho_fonte, falar_confirmacoes, onboarding_completo, consentiu_saude_em')
+        .select('id, nome, timezone, tamanho_fonte, falar_confirmacoes, onboarding_completo, consentiu_saude_em, created_at, lembrete_diario_ativo, lembrete_diario_horario')
         .limit(1);
-
       if (data?.length) { p = data[0] as Perfil; break; }
       if (tentativa < 3) await espera(400 * tentativa);
     }
@@ -84,7 +98,6 @@ export default function MeuDiaPage() {
       return;
     }
 
-    // Sem consentimento específico não carregamos medicamentos nem agenda.
     if (!p.consentiu_saude_em) {
       router.replace(R.consentimento());
       return;
@@ -93,11 +106,25 @@ export default function MeuDiaPage() {
     setPerfil(p);
     setErro(null);
 
+    const [{ data: meds }, { data: contatos }, { data: agenda }] = await Promise.all([
+      mel.from('medicamentos').select('id').eq('perfil_id', p.id).eq('ativo', true).limit(1),
+      mel.from('contatos_emergencia').select('id').eq('perfil_id', p.id).limit(1),
+      mel.from('agendamentos').select('id').eq('perfil_id', p.id).limit(1),
+    ]);
+
+    const novoProgresso = {
+      temMedicamento: Boolean(meds?.length),
+      temContato: Boolean(contatos?.length),
+      temAgendamento: Boolean(agenda?.length),
+    };
+    setProgresso(novoProgresso);
+
+    if (typeof Notification !== 'undefined') {
+      setNotificacoesAtivas(Notification.permission === 'granted');
+    }
+
     const agora = new Date();
     const hojeLocal = dataNoFuso(agora.toISOString(), p.timezone);
-
-    // Busca uma janela UTC larga e faz o corte final pelo timezone do perfil.
-    // Isso evita o bug de usar "YYYY-MM-DDT00:00:00" como se fosse UTC.
     const de = new Date(agora.getTime() - 36 * 60 * 60_000).toISOString();
     const ate = new Date(agora.getTime() + 36 * 60 * 60_000).toISOString();
 
@@ -135,6 +162,10 @@ export default function MeuDiaPage() {
       medicamento_forma: d.doses?.medicamentos?.forma ?? null,
     })));
 
+    if (novoProgresso.temMedicamento) {
+      melhoriaAnalyticsOnce('first-reminder-created', 'first_reminder_created');
+    }
+
     setCarregando(false);
   }, [supabase, mel, router]);
 
@@ -157,21 +188,28 @@ export default function MeuDiaPage() {
       if (error) {
         setDoses(antes);
         setErro('Não consegui salvar. Verifique a internet e tente de novo.');
+      } else if (status === 'tomado') {
+        melhoriaAnalyticsOnce('first-dose-confirmed', 'first_dose_confirmed');
       }
     },
     [doses, mel]
   );
 
-  if (carregando) {
-    return <Pagina semRodape><Carregando /></Pagina>;
-  }
+  if (carregando) return <Pagina semRodape><Carregando /></Pagina>;
 
   const pendentes = doses.filter((d) => d.status === 'pendente' || d.status === 'notificado');
   const tomadas = doses.filter((d) => d.status === 'tomado');
 
   return (
     <Pagina>
-      {userId && <PushNotificationSetup userId={userId} />}
+      {userId && (
+        <PushNotificationSetup
+          userId={userId}
+          perfilId={perfil?.id}
+          mostrarConvite={progresso.temMedicamento}
+          onPermissionChange={setNotificacoesAtivas}
+        />
+      )}
 
       <p style={{ fontSize: px(fonte.rotulo, escala), color: cor.tintaMuted, margin: 0 }}>
         Olá{perfil?.nome && perfil.nome !== 'Meu perfil' ? `, ${perfil.nome.split(' ')[0]}` : ''}
@@ -195,12 +233,9 @@ export default function MeuDiaPage() {
           border: '2px solid #D97706', borderRadius: raio.card,
           padding: espaco.md, marginBottom: espaco.md,
         }}>
-          <p style={{ fontSize: px(fonte.corpo, escala), fontWeight: 600, margin: 0, lineHeight: 1.45 }}>
-            {erro}
-          </p>
+          <p style={{ fontSize: px(fonte.corpo, escala), fontWeight: 600, margin: 0, lineHeight: 1.45 }}>{erro}</p>
           <button
-            type="button"
-            onClick={() => { setCarregando(true); carregar(); }}
+            type="button" onClick={() => { setCarregando(true); carregar(); }}
             style={{
               minHeight: toque.min, width: '100%', marginTop: espaco.sm,
               borderRadius: raio.botao, border: `2px solid ${cor.atencaoTexto}`,
@@ -225,7 +260,7 @@ export default function MeuDiaPage() {
         </section>
       )}
 
-      {doses.length === 0 && !erro && (
+      {!progresso.temMedicamento && !erro && (
         <section style={{
           background: cor.fundoCard, border: `2px dashed ${cor.borda}`,
           borderRadius: raio.card, padding: espaco.xl, textAlign: 'center',
@@ -236,28 +271,27 @@ export default function MeuDiaPage() {
             fontSize: px(fonte.titulo, escala), fontWeight: 700,
             color: cor.tinta, margin: `${espaco.md}px 0 ${espaco.xs}px`,
           }}>
-            Nenhum remédio cadastrado
+            Vamos fazer seu primeiro lembrete funcionar
           </p>
           <p style={{
             fontSize: px(fonte.corpo, escala), color: cor.tintaMuted,
             margin: `0 0 ${espaco.lg}px`, lineHeight: 1.4,
           }}>
-            Cadastre um remédio e eu aviso na hora certa, mesmo com o aplicativo fechado.
+            Para começar, precisamos apenas do nome do remédio e do horário. O resto você completa depois, se quiser.
           </p>
           <button
             type="button"
-            onClick={() => router.push(R.remedioNovo())}
+            onClick={() => router.push(`${R.remedioNovo()}?primeiro=1`)}
             style={{
               minHeight: toque.critico, width: '100%',
               borderRadius: raio.botao, border: 'none',
               background: cor.destaque, color: '#FFFFFF',
               fontSize: px(fonte.titulo, escala), fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: espaco.xs,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: espaco.xs,
             }}
           >
             <Plus size={36} strokeWidth={3} aria-hidden="true" />
-            Cadastrar remédio
+            Criar meu primeiro lembrete
           </button>
         </section>
       )}
@@ -269,6 +303,24 @@ export default function MeuDiaPage() {
             <CartaoDose key={d.id} dose={d} timezone={tz} escala={escala} aoConfirmar={confirmar} />
           ))}
         </section>
+      )}
+
+      {perfil && (
+        <PrimeirosSeteDias
+          perfilId={perfil.id}
+          criadoEm={perfil.created_at}
+          temMedicamento={progresso.temMedicamento}
+          temContato={progresso.temContato}
+          temAgendamento={progresso.temAgendamento}
+          notificacoesAtivas={notificacoesAtivas}
+          lembreteDiarioAtivo={Boolean(perfil.lembrete_diario_ativo)}
+          lembreteDiarioHorario={perfil.lembrete_diario_horario || '09:00'}
+          aoSalvarLembrete={(ativo, horario) => setPerfil((atual) => atual ? {
+            ...atual,
+            lembrete_diario_ativo: ativo,
+            lembrete_diario_horario: horario,
+          } : atual)}
+        />
       )}
 
       <nav aria-label="Atalhos" style={{ display: 'grid', gap: espaco.sm }}>
@@ -284,29 +336,20 @@ export default function MeuDiaPage() {
   );
 }
 
-function Atalho({
-  icone, rotulo, destino, escala,
-}: {
+function Atalho({ icone, rotulo, destino, escala }: {
   icone: React.ReactNode; rotulo: string; destino: string; escala: TamanhoFonte;
 }) {
   const router = useRouter();
   return (
     <button
-      type="button"
-      onClick={() => router.push(destino)}
+      type="button" onClick={() => router.push(destino)}
       style={{
         minHeight: toque.confortavel,
         display: 'flex', alignItems: 'center', gap: espaco.md,
-        padding: `${espaco.sm}px ${espaco.md}px`,
-        borderRadius: raio.botao,
-        border: `2px solid ${cor.borda}`,
-        background: cor.fundo,
-        color: cor.tinta,
-        fontSize: px(fonte.corpo, escala),
-        fontWeight: 700,
-        textAlign: 'left',
-        cursor: 'pointer',
-        width: '100%',
+        padding: `${espaco.sm}px ${espaco.md}px`, borderRadius: raio.botao,
+        border: `2px solid ${cor.borda}`, background: cor.fundo, color: cor.tinta,
+        fontSize: px(fonte.corpo, escala), fontWeight: 700, textAlign: 'left',
+        cursor: 'pointer', width: '100%',
       }}
     >
       <span style={{ color: cor.destaque, display: 'flex' }} aria-hidden="true">{icone}</span>
@@ -317,9 +360,7 @@ function Atalho({
 
 function estiloSecao(escala: TamanhoFonte): React.CSSProperties {
   return {
-    fontSize: px(fonte.titulo, escala),
-    fontWeight: 700,
-    color: cor.tinta,
-    margin: `0 0 ${espaco.md}px`,
+    fontSize: px(fonte.titulo, escala), fontWeight: 700,
+    color: cor.tinta, margin: `0 0 ${espaco.md}px`,
   };
 }

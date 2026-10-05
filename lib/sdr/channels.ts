@@ -33,9 +33,7 @@ async function graph(path: string, method = "GET", payload?: unknown) {
   });
 }
 export async function seedTemplates() {
-  const rows = (Object.keys(PRODUCTS) as Product[])
-    .filter((p) => PRODUCTS[p].lane !== "silva")
-    .map(templateFor);
+  const rows = (Object.keys(PRODUCTS) as Product[]).map(templateFor);
   checked(
     await db()
       .from("sdr_templates")

@@ -54,7 +54,7 @@ export const PRODUCTS = {
   pixwiki: {
     name: "PixWiki",
     url: "https://pix.wiki",
-    lane: "silva",
+    lane: "high_ticket",
     audience:
       "Operações com volume de Pix e necessidade de checkout e integrações",
     pitch: "checkout, confirmação de Pix e automações de cobrança",
@@ -64,7 +64,7 @@ export const PRODUCTS = {
   monitoria_vip: {
     name: "MonitorIA VIP",
     url: "https://vip.monitoria.cam",
-    lane: "silva",
+    lane: "high_ticket",
     audience: "Operações com múltiplas câmeras e acompanhamento assistido",
     pitch: "monitoramento de operações com câmeras e implantação assistida",
     question: "Quantas câmeras e locais sua operação precisa acompanhar?",

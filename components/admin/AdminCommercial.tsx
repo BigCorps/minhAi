@@ -347,7 +347,7 @@ export default function AdminCommercial({
                     disabled={busy}
                     onClick={() => void action({ action: "seed_templates" })}
                   >
-                    Preparar seis templates
+                    Preparar oito templates
                   </button>
                 </div>
                 <div className="grid gap-4 lg:grid-cols-2">
@@ -465,7 +465,7 @@ export default function AdminCommercial({
                           <tr key={m.id} className="border-t border-white/10">
                             {[
                               m.name,
-                              m.provider || "Parceiro",
+                              m.provider || "A configurar",
                               m.leads,
                               m.verified,
                               m.contacted,
@@ -642,129 +642,117 @@ function Campaign({ c, busy, action }: any) {
       <p className="mt-2 text-sm text-slate-400">
         {PRODUCTS[c.product as Product]?.audience}
       </p>
-      {c.lane === "silva" ? (
-        <p className="mt-4 text-sm text-amber-100">
-          Operação do parceiro. Contatos sob responsabilidade Silva ficam fora
-          dos envios automáticos. Comissão deve seguir o contrato e o valor
-          efetivamente recebido.
+      <>
+        <label className="mt-4 block text-xs">
+          Fornecedor
+          <select
+            name="provider"
+            defaultValue={c.provider || ""}
+            className={input}
+          >
+            <option value="">Escolha após configurar a chave</option>
+            {PROVIDERS.map((p) => (
+              <option key={p}>{p}</option>
+            ))}
+          </select>
+        </label>
+        <label className="mt-3 block text-xs">
+          Filtros da API
+          <textarea
+            aria-label="Filtros JSON"
+            className={input + " mt-1 font-mono"}
+            rows={5}
+            value={filters}
+            onChange={(e) => setFilters(e.target.value)}
+          />
+        </label>
+        <p className="mt-1 text-xs text-slate-400">
+          Exemplos por fornecedor estão no guia do pacote. Cada busca importa no
+          máximo cinco contatos.
         </p>
-      ) : (
-        <>
-          <label className="mt-4 block text-xs">
-            Fornecedor
-            <select
-              name="provider"
-              defaultValue={c.provider || ""}
-              className={input}
-            >
-              <option value="">Escolha após configurar a chave</option>
-              {PROVIDERS.map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
-          </label>
-          <label className="mt-3 block text-xs">
-            Filtros da API
-            <textarea
-              aria-label="Filtros JSON"
-              className={input + " mt-1 font-mono"}
-              rows={5}
-              value={filters}
-              onChange={(e) => setFilters(e.target.value)}
-            />
-          </label>
-          <p className="mt-1 text-xs text-slate-400">
-            Exemplos por fornecedor estão no guia do pacote. Cada busca importa
-            no máximo cinco contatos.
-          </p>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <label className="text-xs">
-              Fim do trial (Brasília)
-              <input
-                name="ends"
-                type="datetime-local"
-                required
-                defaultValue={localDate(c.trial_ends_at)}
-                className={input}
-              />
-            </label>
-            <label className="text-xs">
-              Envios por dia
-              <input
-                name="daily"
-                type="number"
-                min="1"
-                max="100"
-                defaultValue={c.daily_limit}
-                className={input}
-              />
-            </label>
-            <label className="text-xs">
-              Máximo de buscas
-              <input
-                name="runs"
-                type="number"
-                min="1"
-                max="1000"
-                defaultValue={c.max_runs}
-                className={input}
-              />
-            </label>
-            <label className="text-xs">
-              Toques por email
-              <input
-                name="touches"
-                type="number"
-                min="1"
-                max="3"
-                defaultValue={c.max_touches}
-                className={input}
-              />
-            </label>
-            <label className="text-xs">
-              Custo total informado (R$)
-              <input
-                name="cost"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={c.cost_cents / 100}
-                className={input}
-              />
-            </label>
-          </div>
-          <label className="mt-4 flex gap-2 text-sm">
-            <input type="checkbox" name="enabled" defaultChecked={c.enabled} />
-            Ativar campanha
-          </label>
-          <label className="mt-2 flex gap-2 text-sm">
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <label className="text-xs">
+            Fim do trial (Brasília)
             <input
-              type="checkbox"
-              name="auto"
-              defaultChecked={c.auto_discover}
+              name="ends"
+              type="datetime-local"
+              required
+              defaultValue={localDate(c.trial_ends_at)}
+              className={input}
             />
-            Buscar diariamente até o limite
           </label>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button className={button} disabled={busy}>
-              Salvar campanha
-            </button>
-            <button
-              type="button"
-              className={button}
-              disabled={busy}
-              onClick={() =>
-                void action(
-                  { action: "discover", id: c.id },
-                  "Busca concluída. Revise os contatos no funil.",
-                )
-              }
-            >
-              Buscar até 5 contatos
-            </button>
-          </div>
-        </>
-      )}
+          <label className="text-xs">
+            Envios por dia
+            <input
+              name="daily"
+              type="number"
+              min="1"
+              max="100"
+              defaultValue={c.daily_limit}
+              className={input}
+            />
+          </label>
+          <label className="text-xs">
+            Máximo de buscas
+            <input
+              name="runs"
+              type="number"
+              min="1"
+              max="1000"
+              defaultValue={c.max_runs}
+              className={input}
+            />
+          </label>
+          <label className="text-xs">
+            Toques por email
+            <input
+              name="touches"
+              type="number"
+              min="1"
+              max="3"
+              defaultValue={c.max_touches}
+              className={input}
+            />
+          </label>
+          <label className="text-xs">
+            Custo total informado (R$)
+            <input
+              name="cost"
+              type="number"
+              min="0"
+              step="0.01"
+              defaultValue={c.cost_cents / 100}
+              className={input}
+            />
+          </label>
+        </div>
+        <label className="mt-4 flex gap-2 text-sm">
+          <input type="checkbox" name="enabled" defaultChecked={c.enabled} />
+          Ativar campanha
+        </label>
+        <label className="mt-2 flex gap-2 text-sm">
+          <input type="checkbox" name="auto" defaultChecked={c.auto_discover} />
+          Buscar diariamente até o limite
+        </label>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button className={button} disabled={busy}>
+            Salvar campanha
+          </button>
+          <button
+            type="button"
+            className={button}
+            disabled={busy}
+            onClick={() =>
+              void action(
+                { action: "discover", id: c.id },
+                "Busca concluída. Revise os contatos no funil.",
+              )
+            }
+          >
+            Buscar até 5 contatos
+          </button>
+        </div>
+      </>
     </form>
   );
 }
@@ -838,8 +826,7 @@ function Opportunity({ o, action, busy, monitoria }: any) {
         <div>
           <h2 className="font-bold">{l.company_name}</h2>
           <p className="mt-1 text-sm text-slate-400">
-            {PRODUCTS[o.product as Product]?.name} ·{" "}
-            {l.owner === "silva" ? "Grupo Silva" : "SDR minhAi"} ·{" "}
+            {PRODUCTS[o.product as Product]?.name} · {"SDR minhAi"} ·{" "}
             {STAGES[o.stage]}
           </p>
         </div>
@@ -901,7 +888,7 @@ function Opportunity({ o, action, busy, monitoria }: any) {
             !!l.suppressed_at ||
             !!l.human_at ||
             !l.outreach_reviewed ||
-            l.owner === "silva"
+            l.owner !== "minhai"
           }
           onClick={() =>
             void action(
@@ -932,7 +919,7 @@ function Opportunity({ o, action, busy, monitoria }: any) {
             !!l.suppressed_at ||
             !!l.human_at ||
             !l.outreach_reviewed ||
-            l.owner === "silva"
+            l.owner !== "minhai"
           }
           onClick={() =>
             void action(
@@ -949,19 +936,6 @@ function Opportunity({ o, action, busy, monitoria }: any) {
           onClick={() => void action({ action: "handoff", id: l.id })}
         >
           Assumir atendimento
-        </button>
-        <button
-          className={button}
-          disabled={busy}
-          onClick={() =>
-            void action({
-              action: "owner",
-              id: l.id,
-              owner: l.owner === "silva" ? "minhai" : "silva",
-            })
-          }
-        >
-          Transferir para {l.owner === "silva" ? "minhAi" : "Silva"}
         </button>
         <button
           className={button}

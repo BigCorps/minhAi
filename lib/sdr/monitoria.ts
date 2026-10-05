@@ -79,3 +79,46 @@ export async function includeMonitoria(snapshot: AdminFinanceSnapshot) {
     .slice(0, 50);
   return result;
 }
+
+export async function monitoriaDirectory(
+  params: {
+    view?: "users" | "billing" | "summary";
+    search?: string;
+    product?: "all" | "standard" | "vip";
+    page?: number;
+  } = {},
+): Promise<{
+  available: boolean;
+  error: string | null;
+  data: import("@/types/monitoria-admin").MonitoriaDirectory | null;
+}> {
+  const url = process.env.MONITORIA_SUPABASE_URL;
+  const key = process.env.MONITORIA_SUPABASE_SECRET_KEY;
+  if (!url || !key)
+    return { available: false, error: "not_configured", data: null };
+  try {
+    const client = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (url, init) =>
+          fetch(url, {
+            ...init,
+            signal: AbortSignal.timeout(8000),
+            cache: "no-store",
+          }),
+      },
+    });
+    const { data, error } = await client.rpc("bigcorps_admin_directory", {
+      p_view: params.view || "users",
+      p_search: params.search || "",
+      p_product: params.product || "all",
+      p_page: params.page || 1,
+      p_per_page: 25,
+    });
+    if (error || !data || !Array.isArray(data.items) || !data.pagination)
+      throw new Error("directory_unavailable");
+    return { available: true, error: null, data };
+  } catch {
+    return { available: false, error: "directory_unavailable", data: null };
+  }
+}

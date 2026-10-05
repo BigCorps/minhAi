@@ -1,3 +1,4 @@
+import { monitoriaDirectory } from "@/lib/sdr/monitoria";
 import {
   getPlatformAdminAccess,
 } from '@/lib/platform-admin';
@@ -19,6 +20,7 @@ export async function GET() {
   }
 
   const admin = createAdminClient();
+  const monitoriaPromise = monitoriaDirectory({ view: "summary" });
 
   const { data, error } = await admin.rpc(
     'admin_platform_dashboard_snapshot',
@@ -98,11 +100,13 @@ export async function GET() {
     lastSeenAt,
   });
 
+  const monitoria = await monitoriaPromise;
   return platformAdminJson({
     ok: true,
     data: {
       ...snapshot,
       apps,
+      external: { monitoria: { available: monitoria.available, error: monitoria.error, summary: monitoria.data?.summary || null } },
     },
   });
 }

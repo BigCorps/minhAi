@@ -148,7 +148,8 @@ export default function AdminUsersTable({
           <div>
             <div className="flex items-center gap-2">
               <UsersRound className="h-5 w-5 text-lime-300" />
-              <h2 className="text-xl font-bold">Usuários</h2>
+              <h2 className="text-xl font-bold">Usuários da minhAi</h2>
+              <a href="#usuarios-monitoria" className="mt-2 inline-block text-sm font-semibold text-lime-300 underline underline-offset-4">Ver também usuários da MonitorIA</a>
             </div>
             <p className="mt-1 text-sm text-slate-400">
               {total

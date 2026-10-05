@@ -30,6 +30,7 @@ import {
 } from './AdminOverviewCharts';
 import AdminHeader from './AdminHeader';
 import AdminHomeBusinessPulse from './AdminHomeBusinessPulse';
+import AdminMonitoriaAccounts from './AdminMonitoriaAccounts';
 import AdminUsersTable, {
   type UsersFilters,
 } from './AdminUsersTable';
@@ -227,6 +228,8 @@ export default function AdminDashboard({ admin, basePath }: Props) {
     formatGeneratedAt(users?.generatedAt ?? null);
 
   const summary = snapshot?.summary;
+  const monitoria = snapshot?.external?.monitoria;
+  const monitoriaSummary = monitoria?.available ? monitoria.summary : null;
 
   const appRanking = useMemo(() => {
     return [...(snapshot?.apps ?? [])].sort((a, b) => b.users - a.users);
@@ -291,15 +294,15 @@ export default function AdminDashboard({ admin, basePath }: Props) {
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
           <MetricCard
             title="Usuários"
-            value={summary ? formatNumber(summary.totalUsers) : '—'}
-            subtitle="Contas cadastradas"
+            value={summary ? formatNumber(summary.totalUsers + (monitoriaSummary?.totalUsers ?? 0)) : '—'}
+            subtitle={monitoriaSummary ? `${formatNumber(summary?.totalUsers ?? 0)} minhAi + ${formatNumber(monitoriaSummary.totalUsers)} MonitorIA` : "Contas minhAi · total parcial"}
             icon={<UsersRound className="h-5 w-5" />}
             loading={dashboardLoading}
           />
           <MetricCard
             title="Online"
             value={summary ? formatNumber(summary.onlineNow) : '—'}
-            subtitle="Ativos agora"
+            subtitle="minhAi · ativos agora"
             icon={<Wifi className="h-5 w-5" />}
             loading={dashboardLoading}
             emphasized
@@ -307,45 +310,54 @@ export default function AdminDashboard({ admin, basePath }: Props) {
           <MetricCard
             title="24 horas"
             value={summary ? formatNumber(summary.active24h) : '—'}
-            subtitle="Ativos no período"
+            subtitle="minhAi · ativos no período"
             icon={<Clock3 className="h-5 w-5" />}
             loading={dashboardLoading}
           />
           <MetricCard
             title="7 dias"
             value={summary ? formatNumber(summary.active7d) : '—'}
-            subtitle="Usuários ativos"
+            subtitle="minhAi · usuários ativos"
             icon={<CalendarClock className="h-5 w-5" />}
             loading={dashboardLoading}
           />
           <MetricCard
             title="30 dias"
             value={summary ? formatNumber(summary.active30d) : '—'}
-            subtitle="Usuários ativos"
+            subtitle="minhAi · usuários ativos"
             icon={<Activity className="h-5 w-5" />}
             loading={dashboardLoading}
           />
           <MetricCard
             title="Inativos"
             value={summary ? formatNumber(summary.inactive30d) : '—'}
-            subtitle="Mais de 30 dias"
+            subtitle="minhAi · mais de 30 dias"
             icon={<CircleUserRound className="h-5 w-5" />}
             loading={dashboardLoading}
           />
           <MetricCard
             title="Novos"
-            value={summary ? formatNumber(summary.newUsers7d) : '—'}
-            subtitle="Últimos 7 dias"
+            value={summary ? formatNumber(summary.newUsers7d + (monitoriaSummary?.newUsers7d ?? 0)) : '—'}
+            subtitle={monitoriaSummary ? "Contas nas duas bases · 7 dias" : "Contas minhAi · 7 dias"}
             icon={<UserPlus className="h-5 w-5" />}
             loading={dashboardLoading}
           />
           <MetricCard
             title="Sem uso"
             value={summary ? formatNumber(summary.neverUsed) : '—'}
-            subtitle="Nenhum app detectado"
+            subtitle="minhAi · nenhum app detectado"
             icon={<Sparkles className="h-5 w-5" />}
             loading={dashboardLoading}
           />
+        </section>
+
+        <section className="mt-5 rounded-2xl border border-lime-300/15 bg-white/[.035] p-5">
+          <h2 className="font-bold">MonitorIA na visão geral</h2>
+          {monitoriaSummary ? <>
+            <p className="mt-2 text-sm text-slate-300">{formatNumber(monitoriaSummary.totalUsers)} contas · {formatNumber(monitoriaSummary.organizations)} organizações · {formatNumber(monitoriaSummary.cameras)} câmeras</p>
+            <p className="mt-2 text-sm text-slate-400">{formatNumber(monitoriaSummary.standardUsers)} contas com Standard · {formatNumber(monitoriaSummary.vipUsers)} com VIP · {formatNumber(monitoriaSummary.signedIn30d)} com login nos últimos 30 dias</p>
+            <p className="mt-2 text-xs text-slate-400">Uma conta pode usar Standard e VIP. O total reúne contas das duas bases; uma mesma pessoa pode ter uma conta em cada uma. Atividade e presença online abaixo referem-se aos produtos da minhAi.</p>
+          </> : <p role="status" className="mt-2 text-sm text-amber-200">{dashboardLoading ? 'Carregando MonitorIA…' : 'MonitorIA indisponível. O total de contas inclui somente a base minhAi; confira a conexão e o SQL 02.'}</p>}
         </section>
 
         <section className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,.85fr)]">
@@ -432,6 +444,7 @@ export default function AdminDashboard({ admin, basePath }: Props) {
             onRefresh={() => void loadUsers()}
             basePath={basePath}
           />
+          <AdminMonitoriaAccounts basePath={basePath} />
         </div>
       </div>
     </main>

@@ -190,22 +190,6 @@ export async function POST(req: Request) {
         });
         return {};
       }
-      case "owner": {
-        if (!["minhai", "silva"].includes(input.owner))
-          throw new Error("invalid_owner");
-        checked(
-          await d.rpc("sdr_stop", {
-            p_lead: id,
-            p_reason: "owner_changed",
-            p_suppress: false,
-          }),
-        );
-        checked(
-          await d.from("sdr_leads").update({ owner: input.owner }).eq("id", id),
-        );
-        await event(actor, "owner_changed", id, null, { owner: input.owner });
-        return {};
-      }
       case "handoff":
         checked(
           await d.rpc("sdr_stop", {

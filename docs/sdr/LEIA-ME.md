@@ -1,3 +1,5 @@
+> Atualização: para bases que já aplicaram o primeiro pacote, siga `ATUALIZACAO-02.md`. Não reaplique a migração inicial.
+
 # Admin minhAi — piloto comercial, MonitorIA e MRR
 
 Pacote cumulativo de 05/10/2026. Sobrepor os arquivos de `minhai/` ao repositório minhAi e os de `monitoria/` ao repositório MonitorIA. Aplicar somente este pacote, seguindo os gates abaixo. Não substituir o repositório inteiro por estas pastas: são arquivos novos/alterados, não um clone completo.
@@ -9,7 +11,7 @@ Base conferida: minhAi `1455cd19c9cf3d37a4893fc3a49597f72f687b29`; MonitorIA `9c
 - Nova aba **Comercial** em `admin.minhai.app/comercial`, com campanhas, contatos, qualificação, mensagens, MonitorIA e resultados.
 - Conectores Econodata, Apollo e Hunter; importação manual; deduplicação global por email, telefone, CNPJ ou domínio; limites e validade de trial. A API encontra aderência empresarial potencial, não comprova necessidade individual.
 - Qualificação guiada em três etapas, pontuação e encaminhamento para o produto. Não usa API de LLM nesta versão.
-- Abordagem por email/Gmail ou WhatsApp oficial. Seis apresentações de marketing prontas para submissão à Meta. Contato do WhatsApp exige opt-in documentado, além do template aprovado.
+- Abordagem por email/Gmail ou WhatsApp oficial. Oito apresentações de marketing prontas para submissão à Meta. Contato do WhatsApp exige opt-in documentado, além do template aprovado.
 - Pausa após resposta, descadastro, pagamento ou atendimento humano. Fila com reserva e proteção contra reenvio quando o resultado do envio é incerto.
 - Conciliação de pagamentos já existentes e identificação de conta pelo link comercial. Fechamento significa **pagamento confirmado + ativação**; reunião, clique ou proposta não vira venda.
 - MonitorIA padrão e VIP no Financeiro e no Comercial, mantendo o segundo Supabase separado. Não traz vídeos nem conteúdo dos eventos das câmeras.
@@ -21,12 +23,12 @@ Base conferida: minhAi `1455cd19c9cf3d37a4893fc3a49597f72f687b29`; MonitorIA `9c
 
 | Frente | Produtos | Responsável |
 | --- | --- | --- |
-| Grupo Silva | PixWiki alto ticket/anual; MonitorIA VIP | Parceiro / atendimento humano |
+| SDR próprio · alto ticket | PixWiki alto ticket/anual; MonitorIA VIP | API selecionável / fechamento humano |
 | API 1 | ConviteIA; MelhorIA | SDR minhAi |
 | API 2 | Mídia.Pro; ArteFinal | SDR minhAi |
 | API 3 | ConsultaTec; FuncionarIA | SDR minhAi |
 
-As frentes não fixam um fornecedor: escolher Econodata/Apollo/Hunter em cada campanha após configurar as chaves. Para o primeiro comparativo, usar um fornecedor por frente e manter isso registrado. Depois cruzar fornecedores em públicos equivalentes: comparar produtos diferentes não isola a qualidade da API. O contrato do Grupo Silva, inclusive a regra de 10%, permanece externo ao sistema. O campo responsável impede abordagem automática de contatos entregues ao parceiro.
+As frentes não fixam um fornecedor: escolher Econodata/Apollo/Hunter em cada campanha após configurar as chaves. Para o primeiro comparativo, usar um fornecedor por frente e manter isso registrado. Depois cruzar fornecedores em públicos equivalentes: comparar produtos diferentes não isola a qualidade da API. PixWiki e MonitorIA VIP usam o SDR próprio, com fornecedor configurável por campanha e os mesmos limites e controles das demais frentes.
 
 ## Gate 1 — banco minhAi e MRR
 
@@ -71,10 +73,10 @@ Sem MonitorIA configurada ou se a leitura falhar, o painel exibe indisponibilida
 2. Conferir login Admin Google e `/comercial`. Conta comum não deve acessar `/api/admin/comercial`.
 3. Publicar as duas Edge Functions do diretório `supabase/functions`: `enviar-whatsapp` e `reativar-janelas-whatsapp`, **somente depois do SQL minhAi**. A janela de 24h passa a usar mensagem recebida no mesmo número da Meta. Envio de template/alteração de `updated_at` não renova a janela.
 4. A função de reativação exige JWT de usuário dono da empresa ou credencial de servidor; conferir os chamadores existentes. Chamador usando apenas anon key passa a ser recusado. O template utilitário existente dessa função não foi transformado em template comercial.
-5. Na aba Mensagens, “Preparar seis templates”, depois enviar cada um para aprovação e consultar o estado. Submeter não envia mensagens aos contatos. O envio do SDR consulta a aprovação e o conteúdo antes de enviar.
+5. Na aba Mensagens, “Preparar oito templates”, depois enviar cada um para aprovação e consultar o estado. Submeter não envia mensagens aos contatos. O envio do SDR consulta a aprovação e o conteúdo antes de enviar.
 6. Gmail precisa de `gmail.send`; os follow-ups e a detecção de resposta também exigem `gmail.readonly`, `gmail.modify` ou escopo completo equivalente. A integração só examina threads que o SDR enviou. O remetente é a conta Google configurada.
 
-Se a política de envio ou o escopo da conta não estiver correto, parar no gate. Aprovação de template não substitui autorização da pessoa. Um telefone retornado pela API não é opt-in. Os seis textos estão no catálogo de código e têm nome/versionamento próprio; mudar texto exige nova versão/aprovação.
+Se a política de envio ou o escopo da conta não estiver correto, parar no gate. Aprovação de template não substitui autorização da pessoa. Um telefone retornado pela API não é opt-in. Os oito textos estão no catálogo de código e têm nome/versionamento próprio; mudar texto exige nova versão/aprovação.
 
 ## Gate 4 — primeiro teste efetivo
 
@@ -97,8 +99,8 @@ Cada campanha tem prazo, teto de buscas, limite diário e máximo de toques. Wha
 - O link `bc_ref` vincula a oportunidade à conta autenticada apenas se o email confirmado for igual ao lead. O token tem validade de 30 dias. A sessão e o email importam: trocar de dispositivo/conta pode impedir a atribuição automática.
 - A conciliação lê os eventos financeiros existentes dos últimos 90 dias. Só atribui pagamento do mesmo usuário, produto e posterior ao vínculo. Taxas de presentes de convidados da ConviteIA não são aquisição de cliente. Créditos compartilhados sem produto identificável não são atribuídos artificialmente ao ArteFinal/ConsultaTec/outro produto.
 - Produtos que usam compras compartilhadas podem ter venda real sem atribuição automática neste piloto. Conciliar esses casos manualmente no relatório comercial; não declarar uma API vencedora só pelo contador de vendas do painel. MelhorIA com pacote identificado e demais eventos com produto explícito podem conciliar normalmente.
-- Fora da MonitorIA VIP, a ativação é confirmada pelo Admin com evidência após o pagamento. Na MonitorIA VIP, vincular o projeto correto à oportunidade; conciliação usa a fatura efetivamente paga e a ativação do contrato. Sem vínculo do projeto não existe atribuição ao parceiro.
-- O Grupo Silva recebe a responsabilidade do contato no painel, mas este pacote não cria uma área de login para eles. O Admin continua restrito a você e aos administradores autorizados.
+- Fora da MonitorIA VIP, a ativação é confirmada pelo Admin com evidência após o pagamento. Na MonitorIA VIP, vincular o projeto correto à oportunidade; conciliação usa a fatura efetivamente paga e a ativação do contrato. Sem vínculo do projeto não existe atribuição à oportunidade.
+- O Admin continua restrito a você e aos administradores autorizados. O fechamento permanece humano após a qualificação.
 - Avaliar custo por contato válido, resposta, qualificado e **pago/ativado**. Informar no custo da campanha gastos de API, canal e comissão; o campo é manual e cumulativo, não importa faturas de terceiros.
 - Desabilitar fornecedores perdedores e campanhas ao terminar; cancelar eventual renovação diretamente no fornecedor. O software não cancela planos externos nem garante que um trial ofereça todos os endpoints.
 

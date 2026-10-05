@@ -5,6 +5,7 @@ import { Banknote, CircleDollarSign, CreditCard, Receipt, RefreshCw, UsersRound,
 
 import type { AdminFinanceSnapshot, AdminIdentity, FinanceProductKey } from '@/types/platform-admin-business';
 import AdminHeader from './AdminHeader';
+import AdminMonitoriaAccounts from './AdminMonitoriaAccounts';
 import { BusinessError, BusinessLoading, BusinessMetric, money, number, relative } from './AdminBusinessUi';
 import { ProductRevenueChart, RevenueDailyChart } from './AdminBusinessCharts';
 
@@ -81,6 +82,7 @@ export default function AdminFinance({ admin, basePath }: Props) {
           <article className="rounded-3xl border border-sky-300/15 bg-sky-300/[.04] p-5 sm:p-6"><div className="flex items-center gap-2"><WalletCards className="h-5 w-5 text-sky-300"/><h2 className="font-black">Movimentação dos clientes</h2></div><p className="mt-2 text-xs leading-5 text-slate-500">Estes valores passaram pelos produtos, mas não são faturamento da BigCorps.</p><div className="mt-5 space-y-3"><BusinessMetric title="PixWiki" value={money(data.processed.pixwikiVolumeMonthCents)} subtitle={`${number(data.processed.pixwikiReceiptsMonth)} recebimentos no mês`} /><BusinessMetric title="Presentes ConviteIA" value={money(data.processed.conviteiaGiftVolumeMonthCents)} subtitle={`${number(data.processed.conviteiaGiftPaymentsMonth)} pagamentos no mês`} /></div></article>
         </section>
       </> : null}
+      <AdminMonitoriaAccounts view="billing" basePath={basePath} />
     </div>
   </main>;
 }

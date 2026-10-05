@@ -45,6 +45,7 @@ export type AdminDailyActivity = {
 };
 
 export type AdminDashboardSnapshot = {
+  external?: { monitoria: import("./monitoria-admin").MonitoriaOverview };
   summary: AdminDashboardSummary;
   apps: AdminAppSummary[];
   daily: AdminDailyActivity[];

@@ -1,3 +1,5 @@
+import CommercialPrivacyBoundary from '@/components/analytics/CommercialPrivacyBoundary';
+import SdrAttribution from '@/components/analytics/SdrAttribution';
 // app/layout.tsx
 import type { Metadata } from 'next';
 import { Nunito } from 'next/font/google';
@@ -5,12 +7,7 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AssistantProvider } from '@/contexts/AssistantContext';
 import RegisterSW from '@/components/RegisterSW';
 import './globals.css';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import 'react-image-crop/dist/ReactCrop.css';
-import ClarityInit from '@/components/analytics/ClarityInit';
-import ProductAnalytics from '@/components/analytics/ProductAnalytics';
-import PlatformActivityTracker from '@/components/analytics/PlatformActivityTracker';
 import CookieConsentBanner from '@/components/CookieConsentBanner';
 import { SEO } from '@/lib/seo';
 
@@ -125,11 +122,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </AssistantProvider>
         </ThemeProvider>
         <RegisterSW />
-        <Analytics />
-        <SpeedInsights />
-        <ClarityInit />
-        <ProductAnalytics />
-        <PlatformActivityTracker />
+        <CommercialPrivacyBoundary />
+          <SdrAttribution />
         <CookieConsentBanner />
       </body>
     </html>

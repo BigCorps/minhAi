@@ -51,7 +51,7 @@ const nextConfig = {
 
         // Admin BigCorps. Gate 10 acrescenta apenas pixwiki-leads.
         {
-          source: '/:adminPath((?!api(?:/|$)|_next(?:/|$)|login$|logout$|auth/callback$|usuarios(?:/|$)|financeiro$|custos$|margem$|atencao$|agora$|whatsapp$|midia$|pixwiki-leads$|dashboard(?:/|$)|robots\\.txt$|favicon\\.ico$).+)',
+          source: '/:adminPath((?!api(?:/|$)|_next(?:/|$)|login$|logout$|auth/callback$|usuarios(?:/|$)|financeiro$|custos$|margem$|atencao$|agora$|whatsapp$|midia$|comercial$|pixwiki-leads$|dashboard(?:/|$)|robots\\.txt$|favicon\\.ico$).+)',
           has: [{ type: 'host', value: 'admin\\.minhai\\.app' }], destination: '/admin/not-found',
         },
         { source: '/', has: [{ type: 'host', value: 'admin\\.minhai\\.app' }], destination: '/admin' },
@@ -59,6 +59,7 @@ const nextConfig = {
         { source: '/login', has: [{ type: 'host', value: 'admin\\.minhai\\.app' }], destination: '/admin/login' },
         { source: '/logout', has: [{ type: 'host', value: 'admin\\.minhai\\.app' }], destination: '/admin/logout' },
         { source: '/usuarios/:path*', has: [{ type: 'host', value: 'admin\\.minhai\\.app' }], destination: '/admin/usuarios/:path*' },
+        { source: '/comercial', has: [{ type: 'host', value: 'admin\\.minhai\\.app' }], destination: '/admin/comercial' },
         { source: '/financeiro', has: [{ type: 'host', value: 'admin\\.minhai\\.app' }], destination: '/admin/financeiro' },
         { source: '/custos', has: [{ type: 'host', value: 'admin\\.minhai\\.app' }], destination: '/admin/custos' },
         { source: '/margem', has: [{ type: 'host', value: 'admin\\.minhai\\.app' }], destination: '/admin/margem' },

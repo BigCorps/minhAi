@@ -1,6 +1,6 @@
 import type { PlatformAppKey } from '@/lib/platform-products';
 
-export type FinanceProductKey = PlatformAppKey | 'shared_credits';
+export type FinanceProductKey = PlatformAppKey | 'shared_credits' | 'monitoria' | 'monitoria_vip';
 
 export type AdminIdentity = {
   id: string;
@@ -10,6 +10,7 @@ export type AdminIdentity = {
 };
 
 export type AdminFinanceSnapshot = {
+  external?: { monitoria: { available: boolean; error: string | null; generatedAt: string | null } };
   summary: {
     revenueTodayCents: number;
     revenueMonthCents: number;

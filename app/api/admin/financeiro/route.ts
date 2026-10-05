@@ -1,3 +1,4 @@
+import { includeMonitoria } from '@/lib/sdr/monitoria';
 import { getPlatformAdminAccess } from '@/lib/platform-admin';
 import { platformAdminAccessError, platformAdminJson, platformAdminUnavailable } from '@/lib/platform-admin-http';
 import { createAdminClient } from '@/lib/supabase-admin';
@@ -20,6 +21,6 @@ export async function GET() {
     return platformAdminUnavailable('admin_finance_unavailable');
   }
 
-  const payload = data;
+  const payload = await includeMonitoria(data);
   return platformAdminJson({ ok: true, data: payload });
 }

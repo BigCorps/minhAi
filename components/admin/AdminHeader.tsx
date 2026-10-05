@@ -17,6 +17,7 @@ import {
 import type { AdminIdentity } from '@/types/platform-admin-business';
 
 export type AdminSection =
+  | 'commercial'
   | 'overview'
   | 'finance'
   | 'costs'
@@ -35,6 +36,7 @@ type Props = {
 };
 
 const NAV = [
+  { key: 'commercial', label: 'Comercial & MonitorIA', suffix: '/comercial', icon: Target },
   { key: 'overview', label: 'Visão Geral', suffix: '', icon: Gauge },
   { key: 'users', label: 'Usuários', suffix: '#usuarios', icon: UsersRound },
   { key: 'finance', label: 'Financeiro', suffix: '/financeiro', icon: CircleDollarSign },

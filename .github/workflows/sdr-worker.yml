@@ -1,0 +1,24 @@
+name: SDR minhAi — fila comercial
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 12-20 * * 1-5'
+permissions: {}
+concurrency:
+  group: sdr-commercial-worker
+  cancel-in-progress: false
+jobs:
+  run:
+    if: ${{ vars.SDR_WORKER_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Processar fila autorizada
+        env:
+          SDR_WORKER_URL: ${{ vars.SDR_WORKER_URL }}
+          SDR_WORKER_SECRET: ${{ secrets.SDR_WORKER_SECRET }}
+        run: |
+          test -n "$SDR_WORKER_URL" && test -n "$SDR_WORKER_SECRET"
+          curl --fail --silent --show-error --max-time 290 \
+            -X POST -H "Authorization: Bearer $SDR_WORKER_SECRET" \
+            "$SDR_WORKER_URL/api/internal/sdr/run"

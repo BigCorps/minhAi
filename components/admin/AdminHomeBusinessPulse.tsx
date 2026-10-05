@@ -56,10 +56,10 @@ export default function AdminHomeBusinessPulse({ basePath }: Props) {
       icon: CircleDollarSign,
     },
     {
-      href: `${basePath}/margem`,
+      href: `${basePath}/financeiro`,
       label: 'MRR atual',
       value: pulse.finance ? money(pulse.finance.summary.mrrCents) : '—',
-      detail: pulse.finance ? `${number(pulse.finance.summary.payingCustomers)} pagantes no mês` : 'Margem',
+      detail: pulse.finance ? `${number(pulse.finance.summary.payingCustomers)} pagantes na base minhAi` : 'Margem',
       icon: TrendingUp,
     },
     {
@@ -80,6 +80,7 @@ export default function AdminHomeBusinessPulse({ basePath }: Props) {
 
   return (
     <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {pulse.finance?.external?.monitoria && !pulse.finance.external.monitoria.available && <p className="col-span-full text-xs text-amber-200">MonitorIA indisponível nesta atualização. Os totais financeiros abaixo incluem somente a base minhAi.</p>}
       {cards.map((card) => {
         const Icon = card.icon;
         return (

@@ -19,6 +19,7 @@ import { money } from './AdminBusinessUi';
 const LABELS: Record<FinanceProductKey, string> = {
   ...Object.fromEntries(Object.entries(PLATFORM_APPS).map(([key, value]) => [key, value.label])),
   shared_credits: 'Créditos compartilhados',
+  monitoria: 'MonitorIA', monitoria_vip: 'MonitorIA VIP',
 } as Record<FinanceProductKey, string>;
 
 export function RevenueDailyChart({ daily }: { daily: AdminFinanceSnapshot['daily'] }) {

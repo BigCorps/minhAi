@@ -76,25 +76,20 @@ let janelaAberta = false
 if (force_template) {
   console.log('🔁 force_template=true — pulando checagem de janela (retry pós-falha de entrega)')
 } else {
-  // Verificar janela de 24h — busca em QUALQUER page_id da empresa
-  const { data: controls } = await supabase
-    .from('conversation_ai_control')
-    .select('updated_at, page_id')
-    .eq('conversation_id', toNormalized)
-    .eq('company_id', notifyCompanyId)
+  // Only an inbound user message on this exact sending number opens the window.
+  const { data: lastInbound, error: inboundError } = await supabase.rpc('sdr_whatsapp_last_inbound', {
+    p_phone: toNormalized, p_page: phoneNumberId,
+  })
+  const timestamp = lastInbound ? new Date(lastInbound).getTime() : 0
+  janelaAberta = !inboundError && timestamp > Date.now() - 24 * 60 * 60 * 1000 && timestamp <= Date.now()
 
-  const agora = new Date()
-  const limite24h = new Date(agora.getTime() - 24 * 60 * 60 * 1000)
-  janelaAberta = controls?.some(c => new Date(c.updated_at) > limite24h) ?? false
-
-  console.log(`🔍 Janela aberta: ${janelaAberta} (controles encontrados: ${controls?.length ?? 0}) - page_id atual: ${phoneNumberId}`)
 }
 
     // --- JANELA ABERTA: Mensagem DIRETA (GRÁTIS) ---
     if (janelaAberta) {
       console.log(`📤 Enviando mensagem direta (janela aberta)...`);
       
-      const res = await fetch(`https://graph.facebook.com/v19.0/${phoneNumberId}/messages`, {
+      const res = await fetch(`https://graph.facebook.com/${Deno.env.get('META_GRAPH_VERSION') || 'v23.0'}/${phoneNumberId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
         body: JSON.stringify({
@@ -173,7 +168,7 @@ components: [
 
       console.log(`📦 Template:`, JSON.stringify(templatePayload, null, 2));
 
-      const res = await fetch(`https://graph.facebook.com/v19.0/${phoneNumberId}/messages`, {
+      const res = await fetch(`https://graph.facebook.com/${Deno.env.get('META_GRAPH_VERSION') || 'v23.0'}/${phoneNumberId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
         body: JSON.stringify(templatePayload),
@@ -210,7 +205,7 @@ components: [
 
     // Fallback: mensagem direta (vai falhar se janela fechada, mas tentamos)
     console.warn('⚠️ Sem dados estruturados de PIX. Tentando mensagem direta como fallback...');
-    const res = await fetch(`https://graph.facebook.com/v19.0/${phoneNumberId}/messages`, {
+    const res = await fetch(`https://graph.facebook.com/${Deno.env.get('META_GRAPH_VERSION') || 'v23.0'}/${phoneNumberId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
       body: JSON.stringify({

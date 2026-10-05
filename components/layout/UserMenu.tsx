@@ -121,6 +121,8 @@ export function UserMenu({ user, theme }: UserMenuProps) {
 </div>
 
 
+            </div>
+
             {/* Menu Items */}
             <div className="py-2">
               <Link

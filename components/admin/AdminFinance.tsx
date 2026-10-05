@@ -22,6 +22,7 @@ const LABELS: Record<FinanceProductKey, string> = {
   midia: 'Mídia.Pro',
   desafia: 'DesafIA',
   shared_credits: 'Créditos compartilhados',
+  monitoria: 'MonitorIA', monitoria_vip: 'MonitorIA VIP',
 };
 
 export default function AdminFinance({ admin, basePath }: Props) {
@@ -52,13 +53,14 @@ export default function AdminFinance({ admin, basePath }: Props) {
         <div><p className="text-xs font-black uppercase tracking-[.18em] text-lime-300">Receita BigCorps</p><h1 className="mt-2 text-3xl font-black">Financeiro</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Receita da plataforma separada da movimentação financeira que pertence aos clientes.</p></div>
         <button onClick={() => void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm font-bold text-slate-300"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Atualizar</button>
       </div>
+      {data?.external && !data.external.monitoria.available ? <p role="status" className="mb-4 rounded-xl border border-amber-400/30 p-3 text-sm text-amber-200">MonitorIA indisponível. Os totais abaixo incluem somente os produtos no banco minhAi.</p> : null}
       {error ? <BusinessError message={error} onRetry={() => void load()} /> : null}
       {loading && !data ? <BusinessLoading text="Calculando receita e assinaturas..." /> : data ? <>
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
           <BusinessMetric title="Hoje" value={money(data.summary.revenueTodayCents)} subtitle="receita confirmada" icon={<CircleDollarSign className="h-5 w-5" />} emphasized />
           <BusinessMetric title="Este mês" value={money(data.summary.revenueMonthCents)} subtitle="receita confirmada" icon={<Banknote className="h-5 w-5" />} />
           <BusinessMetric title="MRR" value={money(data.summary.mrrCents)} subtitle="recorrência ativa" icon={<Receipt className="h-5 w-5" />} />
-          <BusinessMetric title="Pagantes" value={number(data.summary.payingCustomers)} subtitle="clientes no mês" icon={<UsersRound className="h-5 w-5" />} />
+          <BusinessMetric title="Pagantes" value={number(data.summary.payingCustomers)} subtitle="contas minhAi no mês" icon={<UsersRound className="h-5 w-5" />} />
           <BusinessMetric title="Ticket médio" value={money(data.summary.avgTicketCents)} subtitle="pagamentos do mês" icon={<CreditCard className="h-5 w-5" />} />
           <BusinessMetric title="Pagamentos" value={number(data.summary.paidPaymentsMonth)} subtitle="confirmados no mês" />
           <BusinessMetric title="Pendentes" value={number(data.summary.pendingPayments)} subtitle="recentes / não expirados" />

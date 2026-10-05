@@ -1,8 +1,17 @@
 'use client';
 
-import Image from 'next/image';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { createClient } from '@/lib/supabase-browser';
+
+// Mesma correção aplicada na landing da ConviteIA (set/2026):
+// antes, a landing e o login ficavam escondidos atrás de um logo pulsando
+// até o servidor do Supabase responder se havia sessão. Quem chegava pelo
+// anúncio (navegador do Instagram, 4G) via tela vazia e saía antes de a
+// página aparecer, e o pixel da Meta nem chegava a carregar.
+//
+// Agora a página aparece na hora. A checagem usa getSession(), que lê a
+// sessão salva no navegador sem ida ao servidor, e só redireciona quem já
+// está logado. A segurança do painel continua sendo validada no servidor.
 
 function routeContext() {
   if (typeof window === 'undefined') {
@@ -27,60 +36,28 @@ function routeContext() {
 
 export default function MidiaSessionRouteGuard({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
-  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     let mounted = true;
     const ctx = routeContext();
-
-    if (!ctx.shouldCheck) {
-      setChecking(false);
-      return () => {
-        mounted = false;
-      };
-    }
+    if (!ctx.shouldCheck) return () => { mounted = false; };
 
     supabase.auth
-      .getUser()
-      .then(({ data, error }) => {
+      .getSession()
+      .then(({ data }) => {
         if (!mounted) return;
-
-        if (!error && data.user) {
+        if (data.session?.user) {
           // replace evita que "voltar" leve o usuário autenticado novamente
-          // para a landing/login. É o mesmo princípio usado no ConviteIA:
-          // usuário logado nunca recebe a experiência pública de aquisição.
+          // para a landing/login: usuário logado vai direto ao painel.
           window.location.replace(ctx.destination);
-          return;
         }
-
-        setChecking(false);
       })
-      .catch(() => {
-        if (mounted) setChecking(false);
-      });
+      .catch(() => {});
 
     return () => {
       mounted = false;
     };
   }, [supabase]);
 
-  if (checking) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-white">
-        <div className="text-center">
-          <Image
-            src="/brands/midia/logo.png"
-            alt="Midia.Pro"
-            width={120}
-            height={120}
-            priority
-            className="mx-auto h-20 w-auto animate-pulse object-contain"
-          />
-          <p className="mt-3 text-xs font-bold text-slate-400">Carregando Midia.Pro…</p>
-        </div>
-      </main>
-    );
-  }
-
-  return children;
+  return <>{children}</>;
 }

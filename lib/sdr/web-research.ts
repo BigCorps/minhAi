@@ -86,7 +86,7 @@ export function eligibleBusinessResearch(lead: Record<string, any>, opportunity:
     !opportunity.qualification?.web_research && Object.hasOwn(PRODUCTS, opportunity.product));
 }
 const leadershipRole = /\b(proprietario|proprietaria|fundador|fundadora|socio|socia|idealizador|idealizadora|owner|founder|ceo|presidente|diretor|diretora|director|gerente|manager|head)\b/g;
-function leadershipAssociation(quote: string, name: string, role: string) {
+function leadershipAssociation(quote: string, name: string, role: string, official = false, companyName = "") {
   const text = normalized(quote), person = normalized(name), title = normalized(role);
   if (role.length > 120 || /[<>@]|https?:|ignore|instru[cç]|execute|api.?key|secret|password/i.test(role) || /\b(assistente|assistant|estagiario|estagiaria|intern|funcionario|funcionaria|employee|ex|former|aposentado|retired)\b/.test(`${title} ${text}`)) return false;
   const personIndex = text.indexOf(person);
@@ -97,7 +97,25 @@ function leadershipAssociation(quote: string, name: string, role: string) {
       const roleIndex = match.index!;
       if (roleIndex < personIndex + person.length && personIndex < roleIndex + word.length) continue;
       const between = personIndex < roleIndex ? text.slice(personIndex + person.length, roleIndex) : text.slice(roleIndex + word.length, personIndex);
-      if (Math.abs(personIndex - roleIndex) <= 160 && between.split(/[^a-z0-9]+/).filter(Boolean).every((part) => labels.has(part))) return true;
+      if (!official) {
+        if (Math.abs(personIndex - roleIndex) <= 160 && between.split(/[^a-z0-9]+/).filter(Boolean).every((part) => labels.has(part))) return true;
+        continue;
+      }
+      if (Math.abs(personIndex - roleIndex) > 250) continue;
+      // Official biographies may include education/professional prose. Reported speech and
+      // another named subject must never lend that person's leadership to the candidate.
+      if (/\b(entrevist\w*|convers\w*|conhec\w*|apresent\w*|cit\w*|convid\w*|homenage\w*|agradec\w*|acompanh\w*)\b/.test(text)) continue;
+      const descriptiveWords = new Set(["bacharel", "relacoes", "publicas", "publicos", "graduado", "graduada", "formado", "formada", "mestre", "doutor", "doutora", "engenheiro", "engenheira", "administracao", "direito", "engenharia", "arquitetura", "comunicacao", "social", "jornalismo", "gestao", "empresas", "marketing", "publicidade", "propaganda", "tecnico", "tecnica", "negocios", "educacao", "pedagogia", "artes", "ciencia", "ciencias", "computacao", "tecnologia", "sistemas", "informacao", "turismo", "hotelaria", "eventos", "producao", "projetos", "economia", "contabilidade", "psicologia", "fundador", "fundadora", "socio", "socia", "proprietario", "proprietaria", "idealizador", "idealizadora", "diretor", "diretora", "presidente", "gerente", "head", "ceo", "founder", "owner", "manager", "director", "responsavel", "desde", "atualmente", "profissional", "especialista", "especializado", "especializada", "experiencia", "mba", "phd", "rp", "pr"]);
+      const originalCase = quote.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+      const start = Math.min(personIndex, roleIndex), end = Math.max(personIndex + person.length, roleIndex + word.length) + 120;
+      const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      let context = originalCase.slice(start, end).replace(new RegExp(escape(person), "gi"), " ");
+      if (companyName.trim()) context = context.replace(new RegExp(escape(normalized(companyName)), "gi"), " ");
+      const otherName = (context.match(/\b(?:[A-Z][a-z]{2,}|[A-Z]{2,})\b/g) || []).some((token) => !descriptiveWords.has(token.toLowerCase()));
+      // Coordinated people are ambiguous even if their names were written in lowercase.
+      const coordinatedSubject = /\be\s+([a-z]{2,})\s+([a-z]{2,})\b/.exec(between);
+      if (otherName || (coordinatedSubject && !descriptiveWords.has(coordinatedSubject[1]))) continue;
+      return true;
     }
     return false;
   });
@@ -203,7 +221,12 @@ export async function evaluateWebResearch(payload: Record<string, any>, lead: Re
     const fullName = candidate.length <= 120 && /^[\p{L}][\p{L}'’.-]*(?:\s+[\p{L}][\p{L}'’.-]*)+$/u.test(candidate);
     // Official identity is already established by Web Discovery. A readable literal role quote is still mandatory.
     decisionSourceValid = !!(sourceUrl && urls.has(sourceUrl) && sources.some((source: { url: string }) => source.url === sourceUrl) && !socialSource(sourceUrl) && (official || await sourceRepresentsCompany(sourceUrl, lead)));
-    if (fullName && decisionSourceValid && result.confidence >= 0.85 && leadershipAssociation(relationQuote, candidate, role) &&
+    // Detect other names from the document's casing, not casing chosen by the model.
+    const officialPage = official && decisionSourceValid ? await sourcePage(sourceUrl) : null;
+    const documentText = officialPage?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+    const quoteOffset = documentText ? normalized(documentText).indexOf(normalized(relationQuote)) : -1;
+    const associationQuote = documentText && quoteOffset >= 0 ? documentText.slice(quoteOffset, quoteOffset + normalized(relationQuote).length) : relationQuote;
+    if (fullName && decisionSourceValid && result.confidence >= 0.85 && leadershipAssociation(associationQuote, candidate, role, official, lead.company_name) &&
         await quoteConfirmed(sourceUrl, relationQuote)) {
       selectedDecisionMaker = { name: candidate, source: "web_research", role, validated: true, sourceUrl: sourceUrl!,
         confidence: result.confidence, selectedAt: new Date().toISOString() };

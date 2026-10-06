@@ -593,3 +593,68 @@ test('an existing contact is never replaced by a different web-selected person',
   const r = await simulate(options); assert.equal(r.lead.contact_name, 'Pessoa Existente');
   assert.ok(!r.opportunity.qualification.decision_maker); assert.equal(r.lead.email, null);
 });
+
+function officialBiographyOptions(quote) {
+  const options = webSelectionOptions('Fundador');
+  const officialUrl = 'https://brcerimonial.com.br/sobre/';
+  options.lead.company_name = 'BR Cerimonial'; options.lead.domain = 'brcerimonial.com.br'; options.lead.source_ref = officialUrl;
+  options.result.domain = 'brcerimonial.com.br'; options.result.companyEvidence = { sourceUrl: officialUrl, quote: 'BR Cerimonial.' };
+  options.result.decisionMaker.evidence.sourceUrl = officialUrl;
+  options.result.sources = [{ url: officialUrl, title: 'Página oficial', supports: 'decision_maker' }]; options.toolSources = [{ url: officialUrl }];
+  options.result.decisionMaker.name = 'Ricardo Tavares';
+  options.result.decisionMaker.evidence.quote = quote;
+  options.result.confidence = 0.98;
+  options.page = `BR Cerimonial. ${quote}`;
+  return options;
+}
+
+test('official biography associates name with leadership across educational prose, without loosening email', async () => {
+  const quote = 'Ricardo Tavares\nBacharel em Relações Públicas, fundador e responsável técnico da BR Cerimonial';
+  const r = await simulate(officialBiographyOptions(quote)); assert.equal(r.error, undefined);
+  assert.equal(r.lead.contact_name, 'Ricardo Tavares'); assert.equal(r.lead.email, null);
+  assert.equal(r.opportunity.qualification.decision_maker.validated, true);
+  assert.equal(r.opportunity.qualification.decision_maker.source, 'web_research');
+  assert.equal(r.opportunity.qualification.web_research.decisionMakerConfirmed, true);
+});
+
+test('official leadership proximity never attributes another person role or former/junior employment', async () => {
+  for (const quote of [
+    'Ricardo Tavares entrevistou a fundadora Maria Silva',
+    'Ricardo Tavares — Maria Silva — fundador',
+    'Ricardo Tavares — MARIA SILVA — fundador',
+    'Ricardo Tavares e maria silva — fundador',
+    'Ricardo Tavares — ex-diretor e fundador',
+    'Ricardo Tavares — former founder',
+    'Ricardo Tavares — fundador aposentado',
+    'Ricardo Tavares — assistente do fundador',
+    `Ricardo Tavares ${'texto '.repeat(50)} fundador`,
+  ]) {
+    const options = officialBiographyOptions(quote);
+    if (quote.includes('fundadora')) options.result.decisionMaker.role = 'Fundadora';
+    if (quote.includes('founder')) options.result.decisionMaker.role = 'Founder';
+    const r = await simulate(options); assert.equal(r.lead.contact_name, null, quote);
+    assert.equal(r.lead.email, null);
+  }
+});
+
+test('biography relaxation is exclusive to official, readable, tool-cited pages, never third parties/social snippets', async () => {
+  const quote = 'Ricardo Tavares Bacharel em Relações Públicas, fundador e responsável técnico da BR Cerimonial';
+  for (const url of ['https://third.example/empresa', 'https://linkedin.com/company/br', 'https://instagram.com/br']) {
+    const options = officialBiographyOptions(quote);
+    options.result.decisionMaker.evidence.sourceUrl = url;
+    options.result.sources.push({ url, title: 'Terceiro', supports: 'decision_maker' }); options.toolSources = [{ url: options.result.companyEvidence.sourceUrl }, { url }];
+    options.pages = { [options.result.companyEvidence.sourceUrl]: 'BR Cerimonial', [url]: options.page };
+    assert.equal((await simulate(options)).lead.contact_name, null, url);
+  }
+  for (const changes of [{ page: null }, { page: 'BR Cerimonial sem biografia' }, { toolSources: [] }]) {
+    assert.equal((await simulate({ ...officialBiographyOptions(quote), ...changes })).lead.contact_name, null);
+  }
+});
+
+
+test('model lowercasing cannot hide another named person in the authoritative official document', async () => {
+  const original = 'Ricardo Tavares — Maria Silva — fundador';
+  const options = officialBiographyOptions(original);
+  options.result.decisionMaker.evidence.quote = original.toLowerCase();
+  assert.equal((await simulate(options)).lead.contact_name, null);
+});

@@ -131,11 +131,20 @@ export async function discover(campaignId: string) {
       if (!Array.isArray(found.payload.data))
         throw new Error("provider_schema_changed");
       for (const company of found.payload.data.slice(0, LIMIT)) {
+        const params = new URLSearchParams({
+          domain: company.domain,
+          limit: "1",
+          type: "personal",
+          decision_maker: "true",
+          verification_status: "valid",
+          required_field: "full_name,position",
+        });
         const foundEmail = await api(
           p,
-          `/domain-search?domain=${encodeURIComponent(company.domain)}&limit=1`,
+          `/domain-search?${params}`,
         );
         const contact = foundEmail.payload.data?.emails?.[0];
+        if (!contact?.value || contact.verification?.status !== "valid") continue;
         leads.push({
           company_name: company.organization || company.domain,
           domain: company.domain,
@@ -147,7 +156,7 @@ export async function discover(campaignId: string) {
             contact?.verification?.status === "valid" ? "verified" : "unknown",
           source: p,
           source_ref: company.domain,
-          evidence: `Empresa retornada pelo Hunter Discover; email profissional encontrado em domínio. Filtro: ${JSON.stringify(filters)}`,
+          evidence: `Empresa retornada pelo Hunter Discover; email profissional pessoal retornado pelo Domain Search com filtro decision_maker=true.${contact.position ? ` Cargo profissional: ${contact.position}.` : ""} Filtro da campanha: ${JSON.stringify(filters)}`,
         });
       }
       cursor = { searched: true, exhausted: true };

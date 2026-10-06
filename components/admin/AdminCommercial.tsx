@@ -10,6 +10,7 @@ import { RefreshCw, Target, ArrowUpRight } from "lucide-react";
 import AdminHeader from "./AdminHeader";
 import { money } from "./AdminBusinessUi";
 import type { AdminIdentity } from "@/types/platform-admin-business";
+import { commercialSuggestion, COMMERCIAL_TYPES, COMMERCIAL_LABELS, COMMERCIAL_ROUTE_LABELS } from "@/lib/sdr/commercial-classification";
 import { PRODUCTS, PROVIDERS, STAGES, businessHostname, isValidatedWebDecisionMaker, type Product } from "@/lib/sdr/catalog";
 const input =
   "w-full rounded-xl border border-white/15 bg-slate-900 p-3 text-sm text-white";
@@ -859,6 +860,8 @@ function Opportunity({ o, action, busy, monitoria }: any) {
   const l = o.lead;
   const decisionMaker = o.qualification?.decision_maker;
   const research = o.qualification?.web_research;
+  const commercial = commercialSuggestion(o.product, l, o.qualification);
+  const commercialSaved = !!o.qualification?.commercial_classification;
   const businessIdentity = /^\d{14}$/.test(String(l.cnpj || "").replace(/\D/g, "")) ||
     (["econodata", "hunter", "apollo", "web_research"].includes(l.source) && businessHostname(l.domain));
   const canResearch = !l.email && l.company_name?.trim() && !/^CNPJ\s/i.test(l.company_name.trim()) && businessIdentity && !research &&
@@ -882,6 +885,27 @@ function Opportunity({ o, action, busy, monitoria }: any) {
           Qualificação {o.score}/100 · {money(Number(o.paid_cents))} recebidos
         </span>
       </div>
+      {commercial && (
+        <section className="mt-3 rounded-xl bg-white/5 p-3 text-sm">
+          <span className="rounded-full bg-lime-400/15 px-3 py-1 text-lime-200">{COMMERCIAL_LABELS[commercial.type]}</span>
+          <p className="mt-2">Rota recomendada: {COMMERCIAL_ROUTE_LABELS[commercial.recommendedRoute as keyof typeof COMMERCIAL_ROUTE_LABELS]}</p>
+          <p className="mt-1 text-xs text-slate-400">{commercial.source === "manual" ? "Ajuste manual prevalece sobre sugestões automáticas." : commercialSaved ? "Sugestão atual com base nos dados empresariais. Salve para atualizar a classificação." : "Sugestão automática ainda não salva."} Nenhum contato será enviado.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button className={button} disabled={busy} onClick={() => void action({ action: "commercial_classification", id: o.id, mode: "automatic" }, "Classificação salva; ajustes manuais preservados.")}>Salvar classificação</button>
+            <button className={button} disabled={busy} onClick={() => void action({ action: "commercial_classification", id: o.id, mode: "recalculate" }, "Classificação recalculada com os dados atuais.")}>{commercial.source === "manual" ? "Recalcular e remover ajuste manual" : "Recalcular classificação"}</button>
+          </div>
+          <form className="mt-3 flex flex-wrap items-center gap-2" onSubmit={(e: FormEvent<HTMLFormElement>) => {
+            e.preventDefault();
+            const form = new FormData(e.currentTarget);
+            void action({ action: "commercial_classification", id: o.id, mode: "manual", type: form.get("type") }, "Ajuste manual salvo.");
+          }}>
+            <label>Classificação manual <select key={commercial.classifiedAt} name="type" defaultValue={commercial.type} disabled={busy} className={input}>
+              {COMMERCIAL_TYPES.map((type) => <option key={type} value={type}>{COMMERCIAL_LABELS[type]}</option>)}
+            </select></label>
+            <button className={button} disabled={busy}>Aplicar ajuste manual</button>
+          </form>
+        </section>
+      )}
       <p className="mt-3 break-words text-sm">
         {l.contact_name} · {l.email || "Email pendente"} ({l.email_status === "verified" ? "Verificado" : l.email_status === "public_source" ? "Fonte pública · sem verificação técnica" : l.email_status}) ·{" "}
         {l.phone || "Telefone pendente"}

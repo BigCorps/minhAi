@@ -565,6 +565,7 @@ test('Admin UI accepts web business identity, labels identification and shows va
   runInNewContext(code, { exports, URL, Date, console, require(id) {
     if (id === 'react' || id === 'react/jsx-runtime' || id === 'lucide-react') return require(id);
     if (id === '@/lib/sdr/catalog') return catalog;
+    if (id === '@/lib/sdr/commercial-classification') return compile('commercial-classification', { './catalog': catalog });
     if (id === './AdminHeader') return { default: () => null };
     if (id === './AdminBusinessUi') return { money: () => 'R$ 0' };
     throw new Error('unexpected_dependency');

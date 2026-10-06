@@ -15,6 +15,7 @@ import {
   PRODUCTS,
 } from "@/lib/sdr/catalog";
 import { discover, verifyEmail, enrichEconodataDecisionMaker, findHunterDecisionMakerEmail } from "@/lib/sdr/providers";
+import { saveCommercialClassification } from "@/lib/sdr/commercial-classification-server";
 import { discoverWebCompanies } from "@/lib/sdr/web-discovery";
 import { researchBusinessContact } from "@/lib/sdr/web-research";
 import {
@@ -118,6 +119,8 @@ export async function POST(req: Request) {
       d = db();
     const id = text(input.id, 100);
     switch (input.action) {
+      case "commercial_classification":
+        return saveCommercialClassification(id, input.mode, input.type);
       case "web_discover_companies":
         return discoverWebCompanies(id);
       case "web_research_contact":

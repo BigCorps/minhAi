@@ -21,6 +21,7 @@ const button =
   "rounded-xl border border-white/15 px-3 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-40";
 const card = "rounded-2xl border border-white/10 bg-white/[.025] p-5";
 const errors: Record<string, string> = {
+  decision_maker_not_found: "Nenhum decisor foi encontrado para esta empresa.",
   provider_missing: "Escolha o fornecedor da campanha.",
   provider_budget: "Configure o orçamento e a validade do fornecedor. (provider_budget)",
   provider_http_401: "A chave da API foi rejeitada ou expirou. (provider_http_401)",
@@ -832,6 +833,9 @@ function ManualLead({ campaigns, action, busy }: any) {
 }
 function Opportunity({ o, action, busy, monitoria }: any) {
   const l = o.lead;
+  const decisionMaker = o.qualification?.decision_maker;
+  const decisionRole = Array.isArray(decisionMaker?.cargos)
+    ? decisionMaker.cargos.find((role: unknown) => typeof role === "string" && role.trim()) : null;
   return (
     <article className={card}>
       <div className="flex flex-wrap justify-between gap-3">
@@ -853,6 +857,12 @@ function Opportunity({ o, action, busy, monitoria }: any) {
       <p className="mt-2 text-xs leading-5 text-slate-400">
         Origem: {l.source} · {l.evidence}
       </p>
+      {decisionMaker?.source === "econodata" && (
+        <p className="mt-2 text-sm text-slate-300">
+          {l.contact_name} · {decisionRole || "Cargo não informado"} · Nível de decisão: {decisionMaker.nivelDecisao || "não informado"}
+          {l.contact_name && l.email === null && <span className="ml-2 text-lime-200">Pronto para localizar email</span>}
+        </p>
+      )}
       {(l.suppressed_at || l.human_at) && (
         <p className="mt-3 text-sm text-amber-200">
           {l.suppressed_at
@@ -861,12 +871,11 @@ function Opportunity({ o, action, busy, monitoria }: any) {
         </p>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
-        {l.source === "econodata" && l.cnpj && !["lost", "won", "paid"].includes(o.stage) && (
+        {l.source === "econodata" && l.cnpj && decisionMaker?.source !== "econodata" && !["lost", "won", "paid"].includes(o.stage) && (
           <div>
             <button className={button} disabled={busy}
-              onClick={() => void action({ action: "econodata_people_probe", id: o.id }, "Estrutura do organograma capturada para diagnóstico.")}
-            >Testar decisor</button>
-            <p className="mt-1 text-xs text-slate-400">Diagnóstico: consulta somente 1 decisor e não altera o contato.</p>
+              onClick={() => void action({ action: "econodata_decision_maker", id: o.id }, "Decisor selecionado. Próxima etapa: localizar e validar email profissional.")}
+            >Buscar decisor</button>
           </div>
         )}
         <button

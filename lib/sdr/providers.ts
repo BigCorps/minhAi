@@ -1,7 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { db, checked, fetchJson, required } from "./server";
-import { describeJsonShape } from "./json-shape";
 import {
   normalizeLead,
   identityKeys,
@@ -10,7 +9,7 @@ import {
 } from "./catalog";
 const LIMIT = 5;
 const ECONODATA_PILOT_RESERVE = 5000;
-const ECONODATA_PEOPLE_PROBE_RESERVE = 500;
+const ECONODATA_DECISION_MAKER_RESERVE = 1000;
 const key = (p: Provider) => required(`${p.toUpperCase()}_API_KEY`);
 type HunterContact = {
   value?: string;
@@ -82,41 +81,95 @@ async function api(
     { provider: p, path: path.split("?")[0] },
   );
 }
-export async function econodataPeopleProbe(opportunityId: string) {
+type EconodataPerson = {
+  nome: string;
+  cargos: string[];
+  tipo: string;
+  nivelDecisao: string;
+  classificacaoMacro: string[];
+  classificacaoMicro: string[];
+  dataDado: string;
+};
+const normalizedRole = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const econodataDecisionScore = (person: EconodataPerson) => {
+  const roles = person.cargos.map(normalizedRole);
+  const text = roles.join(" ");
+  const groups: [RegExp, number][] = [
+    [/\b(proprietario|proprietaria|socio|socia|fundador|fundadora|owner|founder|presidente|ceo)\b/, 80],
+    [/\b(diretor|diretora|director)\b/, 60],
+    [/\b(gerente|manager)\b/, 40],
+    [/\b(coordenador|coordenadora|head|lider)\b/, 25],
+  ];
+  const cargo = groups.find(([pattern]) => pattern.test(text))?.[1] || 0;
+  const affinity = normalizedRole([...person.cargos, ...person.classificacaoMacro, ...person.classificacaoMicro].join(" "));
+  const junior = roles.filter((role) => /\b(assistente|assistant|estagiario|estagiaria|intern|trainee|junior)\b/.test(role)).length;
+  return (person.nivelDecisao.toUpperCase() === "C-LEVEL" ? 100 : 0) + cargo +
+    (/\b(evento|eventos|comercial|vendas|sales|marketing)\b/.test(affinity) ? 20 : 0) -
+    (junior > roles.length / 2 ? 50 : 0);
+};
+const selectEconodataDecisionMaker = (items: unknown[]): EconodataPerson | undefined => {
+  const strings = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && !!item.trim()) : [];
+  return items.slice(0, LIMIT).flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const value = item as Record<string, unknown>;
+    if (typeof value.nome !== "string" || !value.nome.trim()) return [];
+    return [{
+      nome: value.nome.trim(), cargos: strings(value.cargos),
+      tipo: typeof value.tipo === "string" ? value.tipo : "",
+      nivelDecisao: typeof value.nivelDecisao === "string" ? value.nivelDecisao : "",
+      classificacaoMacro: strings(value.classificacaoMacro), classificacaoMicro: strings(value.classificacaoMicro),
+      dataDado: typeof value.dataDado === "string" ? value.dataDado : "",
+    }];
+  }).sort((a, b) => econodataDecisionScore(b) - econodataDecisionScore(a))[0];
+};
+export async function enrichEconodataDecisionMaker(opportunityId: string) {
   const d = db();
   const opportunity = checked(await d.from("sdr_opportunities").select("*").eq("id", opportunityId).single())!;
-  if (["lost", "won", "paid"].includes(opportunity.stage)) throw new Error("lead_not_eligible");
+  if (["lost", "won", "paid"].includes(opportunity.stage) || opportunity.qualification?.decision_maker?.source === "econodata")
+    throw new Error("lead_not_eligible");
   const lead = checked(await d.from("sdr_leads").select("source,cnpj").eq("id", opportunity.lead_id).single())!;
   const campaign = checked(await d.from("sdr_campaigns").select("provider").eq("id", opportunity.campaign_id).single())!;
   const cnpj = String(lead.cnpj || "").replace(/\D/g, "");
   if (lead.source !== "econodata" || campaign.provider !== "econodata" || !/^\d{14}$/.test(cnpj))
     throw new Error("lead_not_eligible");
-  const params = new URLSearchParams({ papel: "decisores", pagina: "1", tamanho: "1" });
+  const params = new URLSearchParams({ papel: "decisores", pagina: "1", tamanho: "5" });
   const fingerprint = createHash("sha256").update(JSON.stringify({
-    action: "econodata_people_probe", lead: opportunity.lead_id,
-    campaign: opportunity.campaign_id, papel: "decisores", pagina: 1, tamanho: 1,
+    action: "econodata_decision_maker", lead: opportunity.lead_id,
+    campaign: opportunity.campaign_id, papel: "decisores", pagina: 1, tamanho: 5,
   })).digest("hex");
   const run = checked(await d.rpc("sdr_reserve_run", {
-    p_campaign: opportunity.campaign_id, p_units: ECONODATA_PEOPLE_PROBE_RESERVE, p_fingerprint: fingerprint,
+    p_campaign: opportunity.campaign_id, p_units: ECONODATA_DECISION_MAKER_RESERVE, p_fingerprint: fingerprint,
   }));
+  let tokensCharged: number | null = null;
   try {
     const result = await api("econodata", `/companies/${cnpj}/people?${params}`);
     const header = result.headers.get("x-tokens-charged");
     const actual = header?.trim() ? Number(header) : NaN;
-    const tokensCharged = Number.isFinite(actual) && actual >= 0 ? actual : null;
-    const shape = describeJsonShape(result.payload);
-    console.info("[SDR_ECONODATA_PEOPLE_SCHEMA]", JSON.stringify({
-      status: 200, shape, tokensCharged,
-    }));
+    tokensCharged = Number.isFinite(actual) && actual >= 0 ? actual : null;
+    if (!Array.isArray(result.payload?.itens)) throw new Error("provider_schema_changed");
+    const selected = selectEconodataDecisionMaker(result.payload.itens);
+    if (!selected) throw new Error("decision_maker_not_found");
+    checked(await d.from("sdr_leads").update({
+      contact_name: selected.nome,
+      evidence: `Decisor selecionado no organograma Econodata. Cargos: ${selected.cargos.join(", ") || "não informados"}. Nível de decisão: ${selected.nivelDecisao || "não informado"}. Próxima etapa: localizar e validar email profissional.`,
+    }).eq("id", opportunity.lead_id));
+    const { nome: _name, ...attributes } = selected;
+    checked(await d.from("sdr_opportunities").update({
+      qualification: {
+        ...(opportunity.qualification || {}),
+        decision_maker: { source: "econodata", ...attributes, selectedAt: new Date().toISOString() },
+      },
+    }).eq("id", opportunityId));
     checked(await d.from("sdr_runs").update({
       status: "completed", imported: 0, duplicates: 0,
       credits_charged: tokensCharged, finished_at: new Date().toISOString(),
     }).eq("id", run));
-    return { message: "Estrutura do organograma capturada para diagnóstico." };
+    return { message: "Decisor selecionado. Próxima etapa: localizar e validar email profissional." };
   } catch (error) {
     const message = error instanceof Error ? error.message : "operation_failed";
     checked(await d.from("sdr_runs").update({
       status: "failed", imported: 0, duplicates: 0,
+      credits_charged: tokensCharged,
       error_code: /^[a-z0-9_]+$/.test(message) ? message : "operation_failed",
       finished_at: new Date().toISOString(),
     }).eq("id", run));

@@ -106,6 +106,9 @@ Cada campanha tem prazo, teto de buscas, limite diário e máximo de toques. Wha
 
 ## Limites e recuperação
 
+- Dívida técnica: `max_runs` atualmente é compartilhado entre descoberta e enriquecimentos, incluindo probes e runs falhos; antes de ativar operação automática em escala, separar limites por tipo de operação.
+- Buscar decisor Econodata consulta somente a primeira página de `/companies/{cnpj}/people`, com `papel=decisores` e `tamanho=5`. Reserva interna: 1000 unidades, sem representar cobrança real; o run registra `X-Tokens-Charged`, com zero importações/duplicados. A reconciliação continua manual. Salva nome no lead e atributos permitidos em `qualification.decision_maker`, sem emails, fotos, redes sociais ou payload bruto. Hunter permanece uma etapa posterior.
+
 - A reserva local de tokens/créditos é conservadora e não substitui o saldo do fornecedor. Erro/timeout não devolve reserva automaticamente, pois pode ter havido cobrança. Econodata reserva 5000 unidades internamente no piloto; Apollo/Hunter reservam por lote. Não misturar unidades entre APIs.
 - Econodata é a fonte prioritária para descobrir empresas brasileiras. O piloto REST faz uma única chamada a `/companies/search_list`, enviando somente `filtros`, sem buckets, paginação ou `estimar`. O dry-run `estimar: true` pertence ao contrato da tool MCP e não é usado neste fluxo REST. Antes de qualquer chamada externa, `sdr_reserve_run` deve aprovar a reserva conservadora de 5000 unidades; orçamento desabilitado interrompe com `provider_budget`. Essa reserva não representa cobrança real. `credits_charged` usa somente o header oficial `X-Tokens-Charged` quando numérico, finito e não negativo, ou fica `null`.
 - Não há RPC SDR apropriada para devolver atomicamente a diferença entre reserva e cobrança. Manter a reserva e registrar o consumo real, sem atualização presumida do budget ou novo SQL; a reconciliação será manual via MCP durante o piloto.

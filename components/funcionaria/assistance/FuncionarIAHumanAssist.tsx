@@ -1,8 +1,7 @@
 'use client';
 
 import { AlertCircle, Bell, Check, Loader2, Send, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { createClient } from '@/lib/supabase-browser';
+import { useEffect, useState } from 'react';
 
 type Props = {
   companyId: string;
@@ -12,41 +11,37 @@ type Props = {
 };
 
 export default function FuncionarIAHumanAssist({ companyId, reason = '', onClose, playText }: Props) {
-  const supabase = useMemo(() => createClient(), []);
   const [motivo, setMotivo] = useState(reason);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [manager, setManager] = useState({ nome: 'Responsável', email: '', telefone: '' });
+  const [managerName, setManagerName] = useState('Responsável');
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifySms, setNotifySms] = useState(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   useEffect(() => {
     let active = true;
     async function load() {
       setLoading(true);
-      const [{ data: functionSettings }, { data: profile }, { data: company }] = await Promise.all([
-        supabase.from('company_function_settings').select('config').eq('company_id', companyId).eq('function_key', 'chamar_gerente').maybeSingle(),
-        supabase.from('company_profiles').select('nome,email,telefone').eq('company_id', companyId).eq('tipo', 'gerente').eq('is_active', true).limit(1).maybeSingle(),
-        supabase.from('companies').select('email_contato').eq('id', companyId).maybeSingle(),
-      ]);
-      if (!active) return;
-      const config = (functionSettings?.config || {}) as Record<string, unknown>;
-      setNotifyEmail(config.notificar_email !== false);
-      setNotifySms(config.notificar_sms === true);
-      setManager({
-        nome: profile?.nome || 'Responsável',
-        email: profile?.email || company?.email_contato || '',
-        telefone: profile?.telefone || '',
-      });
-      setLoading(false);
+      setNotifyEmail(false);
+      setNotifySms(false);
+      try {
+        const response = await fetch(`/api/public/manager-assistance?company_id=${encodeURIComponent(companyId)}`, { cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error('configuration_unavailable');
+        if (!active) return;
+        setManagerName(data.manager_name || 'Responsável');
+        setNotifyEmail(data.channels?.email === true);
+        setNotifySms(data.channels?.sms === true);
+      } catch {
+        if (active) setNotice({ type: 'error', text: 'Não foi possível carregar os canais do responsável.' });
+      } finally {
+        if (active) setLoading(false);
+      }
     }
     void load();
     return () => { active = false; };
-  }, [companyId, supabase]);
+  }, [companyId]);
 
   async function send() {
     if (!motivo.trim()) {
@@ -57,60 +52,27 @@ export default function FuncionarIAHumanAssist({ companyId, reason = '', onClose
       setNotice({ type: 'error', text: 'Nenhum canal de aviso está configurado para o responsável.' });
       return;
     }
-    if (notifyEmail && !manager.email && notifySms && !manager.telefone) {
-      setNotice({ type: 'error', text: 'Os dados de contato do responsável ainda não estão configurados.' });
-      return;
-    }
 
     setSending(true);
     setNotice(null);
     try {
-      const tasks: Array<Promise<{ channel: string; ok: boolean; detail?: string }>> = [];
-
-      if (notifyEmail && manager.email) {
-        tasks.push((async () => {
-          const response = await fetch(`${SUPABASE_URL}/functions/v1/enviar-email-google`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-            body: JSON.stringify({
-              company_id: companyId,
-              to: manager.email,
-              subject: '🔔 Cliente aguardando — FuncionarIA',
-              body: `Olá ${manager.nome},\n\nUm cliente pediu ajuda pela FuncionarIA.\n\nMotivo:\n${motivo.trim()}\n\nPor favor, verifique o atendimento.\n\n---\nEnviado pela FuncionarIA`,
-            }),
-          });
-          return { channel: 'e-mail', ok: response.ok, detail: response.ok ? undefined : await response.text().catch(() => '') };
-        })());
+      const response = await fetch('/api/public/manager-assistance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_id: companyId, reason: motivo.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok || !data.notified?.length) {
+        const messages: Record<string, string> = {
+          rate_limited: 'Limite temporário de notificações atingido. Tente novamente mais tarde.',
+          no_channel: 'Nenhum canal de aviso está configurado para o responsável.',
+          insufficient_credits: 'Créditos de uso insuficientes para SMS.',
+          reason_too_long: 'O motivo deve ter no máximo 500 caracteres.',
+        };
+        throw new Error(messages[data.reason] || 'Não foi possível notificar o responsável.');
       }
-
-      if (notifySms && manager.telefone) {
-        const usageKey = crypto.randomUUID();
-        tasks.push((async () => {
-          const response = await fetch(`${SUPABASE_URL}/functions/v1/send-sms-gerente`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-            body: JSON.stringify({
-              company_id: companyId,
-              number: manager.telefone.replace(/\D/g, ''),
-              gerente_nome: manager.nome,
-              motivo: motivo.trim(),
-              usage_idempotency_key: `funcionaria-manager-sms:${companyId}:${usageKey}`,
-            }),
-          });
-          const body = await response.json().catch(() => ({}));
-          if (response.status === 402) return { channel: 'SMS', ok: false, detail: 'Créditos de uso insuficientes para SMS.' };
-          return { channel: 'SMS', ok: response.ok, detail: response.ok ? undefined : body?.error || 'Falha no SMS' };
-        })());
-      }
-
-      const results = await Promise.all(tasks);
-      const successes = results.filter(result => result.ok).map(result => result.channel);
-      if (!successes.length) {
-        const detail = results.find(result => result.detail)?.detail;
-        throw new Error(detail || 'Não foi possível notificar o responsável.');
-      }
-
-      const text = `Responsável notificado via ${successes.join(' e ')}.`;
+      const channels = data.notified.map((channel: string) => channel === 'sms' ? 'SMS' : 'e-mail');
+      const text = `Responsável notificado via ${channels.join(' e ')}.`;
       setNotice({ type: 'success', text });
       if (playText) await playText('Responsável notificado com sucesso.');
       setTimeout(onClose, 1400);
@@ -141,9 +103,9 @@ export default function FuncionarIAHumanAssist({ companyId, reason = '', onClose
             <>
               <div className="rounded-2xl bg-slate-50 p-4">
                 <div className="text-xs font-black uppercase tracking-wide text-slate-400">Responsável</div>
-                <div className="mt-1 font-black">{manager.nome}</div>
+                <div className="mt-1 font-black">{managerName}</div>
                 <div className="mt-1 text-xs font-semibold text-slate-500">
-                  {[notifyEmail && manager.email ? 'E-mail' : null, notifySms && manager.telefone ? 'SMS' : null].filter(Boolean).join(' + ') || 'Contato não configurado'}
+                  {[notifyEmail ? 'E-mail' : null, notifySms ? 'SMS' : null].filter(Boolean).join(' + ') || 'Contato não configurado'}
                 </div>
               </div>
 

@@ -13,6 +13,49 @@ const brazilPhone = (value: unknown) => {
   return /^\d{10,11}$/.test(n) ? "55" + n : /^55\d{10,11}$/.test(n) ? n : null;
 };
 const key = (p: Provider) => required(`${p.toUpperCase()}_API_KEY`);
+type HunterContact = {
+  value?: string;
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+  verification?: { status?: string };
+  decision_maker?: boolean;
+  seniority?: string;
+  confidence?: number;
+};
+const hunterContactName = (contact: HunterContact) =>
+  [contact.first_name, contact.last_name].filter(Boolean).join(" ").trim();
+const hunterContactRank = (contact: HunterContact) => {
+  const position = (contact.position || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  return [
+    Number(contact.decision_maker === true),
+    Number(contact.seniority === "executive"),
+    Number(/\b(owner|founder|fundador|fundadora|socio|socia|ceo|chief|president|presidente|head)\b/.test(position)),
+    Number(/\b(director|diretor|diretora|manager|gerente)\b/.test(position)),
+    Number(/\b(commercial|comercial|sales|vendas|marketing)\b/.test(position)),
+    Number.isFinite(contact.confidence) ? contact.confidence! : 0,
+  ];
+};
+const selectHunterContact = (contacts: HunterContact[]) =>
+  contacts
+    .filter(
+      (contact) =>
+        contact.value?.trim() &&
+        contact.verification?.status === "valid" &&
+        hunterContactName(contact) &&
+        contact.position?.trim(),
+    )
+    .sort((a, b) => {
+      const aRank = hunterContactRank(a);
+      const bRank = hunterContactRank(b);
+      for (let i = 0; i < aRank.length; i++) {
+        if (aRank[i] !== bRank[i]) return bRank[i] - aRank[i];
+      }
+      return 0;
+    })[0];
 async function api(
   p: Provider,
   path: string,
@@ -130,12 +173,18 @@ export async function discover(campaignId: string) {
       const found = await api(p, "/discover", request);
       if (!Array.isArray(found.payload.data))
         throw new Error("provider_schema_changed");
-      for (const company of found.payload.data.slice(0, LIMIT)) {
+      charged = 0;
+      const companies = found.payload.data
+        .filter((company: any) => company.domain && company.emails_count?.personal !== 0)
+        .sort((a: any, b: any) =>
+          Number(b.emails_count?.personal > 0) - Number(a.emails_count?.personal > 0),
+        )
+        .slice(0, LIMIT);
+      for (const company of companies) {
         const params = new URLSearchParams({
           domain: company.domain,
-          limit: "1",
+          limit: "10",
           type: "personal",
-          decision_maker: "true",
           verification_status: "valid",
           required_field: "full_name,position",
         });
@@ -143,20 +192,21 @@ export async function discover(campaignId: string) {
           p,
           `/domain-search?${params}`,
         );
-        const contact = foundEmail.payload.data?.emails?.[0];
-        if (!contact?.value || contact.verification?.status !== "valid") continue;
+        const emails = foundEmail.payload.data?.emails;
+        if (!Array.isArray(emails) || !emails.length) continue;
+        charged++;
+        const contact = selectHunterContact(emails);
+        if (!contact) continue;
         leads.push({
           company_name: company.organization || company.domain,
           domain: company.domain,
           email: contact?.value,
-          contact_name: [contact?.first_name, contact?.last_name]
-            .filter(Boolean)
-            .join(" "),
+          contact_name: hunterContactName(contact),
           email_status:
             contact?.verification?.status === "valid" ? "verified" : "unknown",
           source: p,
           source_ref: company.domain,
-          evidence: `Empresa retornada pelo Hunter Discover; email profissional pessoal retornado pelo Domain Search com filtro decision_maker=true.${contact.position ? ` Cargo profissional: ${contact.position}.` : ""} Filtro da campanha: ${JSON.stringify(filters)}`,
+          evidence: `Empresa retornada pelo Hunter Discover; contato profissional pessoal selecionado localmente pelo Domain Search. Cargo: ${contact.position}. Decision maker: ${contact.decision_maker === true ? "true" : "false"}.${contact.seniority ? ` Seniority: ${contact.seniority}.` : ""}${contact.confidence != null ? ` Confidence: ${contact.confidence}.` : ""} Filtro da campanha: ${JSON.stringify(filters)}`,
         });
       }
       cursor = { searched: true, exhausted: true };

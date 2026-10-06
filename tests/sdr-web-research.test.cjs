@@ -306,7 +306,7 @@ test('another person email never belongs to this representative, even in the sam
 });
 
 test('v2 keeps personal and generic addresses outside individual email', async () => {
-  for (const value of ['pessoa@gmail.com', 'pessoa@hotmail.com', 'contato@espacolagoesmeralda.com.br']) {
+  for (const value of ['pessoa@gmail.com', 'pessoa@hotmail.com', 'contato@espacolagoesmeralda.com.br', 'administrativo@espacolagoesmeralda.com.br']) {
     const result = fixture(); result.professionalEmail.value = value; result.professionalEmail.quote = `${name} — ${value}`;
     const r = await simulate({ result, page: `${companyQuote} ${relationQuote} ${result.professionalEmail.quote}` });
     assert.equal(r.lead.email, null);
@@ -373,7 +373,7 @@ test('company contacts require their own company page even without company confi
   result.companyContacts = [{ type: 'email', value: 'contato@espacolagoesmeralda.com.br', sourceUrl, quote: generalQuote }];
   const r = await simulate({ result });
   assert.equal(r.lead.email, null); assert.equal(r.opportunity.qualification.web_research.outcome, 'company_contact_found');
-  const rejected = await simulate({ result, page: generalQuote });
+  const rejected = await simulate({ result, page: generalQuote, lead: { source: "manual" } });
   assert.equal(rejected.opportunity.qualification.web_research.companyContacts.length, 0);
 });
 
@@ -396,4 +396,56 @@ test('Econodata authority does not accept a different returned person, personal 
   }
   const result = fixture(); result.decisionMaker.name = 'Outra pessoa';
   assert.equal((await simulate({ result })).lead.email, null);
+});
+
+
+function officialCompanyFixture(url = 'https://oxfordeventos.com.br/contato/', address = 'administrativo@oxfordeventos.com.br') {
+  const result = fixture(); result.companyConfirmed = false; result.domain = 'oxfordeventos.com.br';
+  result.companyEvidence = { sourceUrl: null, quote: null };
+  result.professionalEmail = { value: null, publiclyPublished: false, sourceUrl: null, quote: null };
+  result.companyContacts = [{ type: 'email', value: address, sourceUrl: url, quote: '' }];
+  result.sources = [{ url, title: 'Contato oficial', supports: 'company_contact' }];
+  return { result, lead: { company_name: 'Oxford Eventos', domain: 'oxfordeventos.com.br' }, page: null,
+    toolSources: [{ url, title: 'Contato oficial' }] };
+}
+
+test('official Econodata company contact is accepted without HTTP evidence, never as individual email', async () => {
+  for (const url of ['https://oxfordeventos.com.br/contato/', 'https://contato.oxfordeventos.com.br/']) {
+    const r = await simulate(officialCompanyFixture(url)); const research = r.opportunity.qualification.web_research;
+    assert.equal(r.error, undefined); assert.equal(research.outcome, 'company_contact_found');
+    assert.equal(research.companyContacts[0].value, 'administrativo@oxfordeventos.com.br');
+    assert.equal(research.companyContacts[0].sourceUrl, url); assert.equal(r.lead.email, null);
+    assert.equal(research.companyKnown, true); assert.equal(research.companySource, 'econodata');
+    assert.equal(research.companyWebCorroborated, false); assert.equal(r.reads.length, 0);
+    assert.ok(r.updates.every(update => update.table === 'sdr_opportunities'));
+  }
+});
+
+test('official contact exception rejects lookalike hosts, foreign/personal/individual addresses, conflicts and invented sources', async () => {
+  const cases = [
+    officialCompanyFixture('https://oxfordeventos.com.br.evil.example/'),
+    officialCompanyFixture('https://fakeoxfordeventos.com.br/'),
+    officialCompanyFixture(undefined, 'administrativo@other.example'),
+    officialCompanyFixture(undefined, 'administrativo@gmail.com'),
+    officialCompanyFixture(undefined, 'pessoa@oxfordeventos.com.br'),
+    officialCompanyFixture(undefined, 'invalid-address'),
+    { ...officialCompanyFixture(), toolSources: [] },
+    { ...officialCompanyFixture(), lead: { company_name: 'Oxford Eventos', domain: 'oxfordeventos.com.br', cnpj: null } },
+  ];
+  const conflict = officialCompanyFixture(); conflict.result.conflictingEvidence = true; cases.push(conflict);
+  for (const options of cases) {
+    const r = await simulate(options); assert.equal(r.lead.email, null);
+    assert.equal(r.opportunity.qualification.web_research.companyContacts.length, 0);
+    assert.equal(r.opportunity.qualification.web_research.outcome, 'validation_inconclusive');
+  }
+});
+
+test('third-party company contact still requires company identity and literal quote in the fetched page', async () => {
+  const options = officialCompanyFixture('https://cadastro.example.com/oxford');
+  options.result.companyContacts[0].quote = 'Contato: administrativo@oxfordeventos.com.br';
+  for (const page of [null, 'Oxford Eventos sem contato publicado.', options.result.companyContacts[0].quote]) {
+    const r = await simulate({ ...options, page }); assert.equal(r.opportunity.qualification.web_research.companyContacts.length, 0);
+  }
+  const r = await simulate({ ...options, page: `Oxford Eventos. ${options.result.companyContacts[0].quote}` });
+  assert.equal(r.opportunity.qualification.web_research.outcome, 'company_contact_found'); assert.equal(r.lead.email, null);
 });

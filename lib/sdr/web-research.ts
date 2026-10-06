@@ -60,7 +60,7 @@ function conforms(value: unknown, schema: Schema): boolean {
 }
 const normalized = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 const emailSyntax = (value: unknown): value is string => typeof value === "string" && value.length <= 254 && /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value);
-const generalEmail = (email: string) => /^(contato|contact|info|hello|ola|comercial|sales|vendas|atendimento|suporte|support|admin|office|financeiro|marketing|reservas|eventos|booking|recepcao|faleconosco)([._+-]|@)/i.test(email);
+const generalEmail = (email: string) => /^(contato|contact|info|hello|ola|comercial|sales|vendas|atendimento|suporte|support|admin|administrativo|office|financeiro|marketing|reservas|eventos|booking|recepcao|faleconosco)([._+-]|@)/i.test(email);
 const personalDomains = /^(gmail\.com|hotmail\.com|outlook\.com|yahoo\.[a-z.]+|icloud\.com|proton\.(me|mail\.com)|aol\.com|live\.com)$/;
 function personEmailAssociation(quote: string, name: string, email: string): boolean {
   const text = normalized(quote), person = normalized(name), address = normalized(email);
@@ -187,8 +187,17 @@ export async function evaluateWebResearch(payload: Record<string, any>, lead: Re
   const companyContacts: { type: string; value: string; sourceUrl: string }[] = [];
   const knownEconodataCompany = lead.source === "econodata" && /^\d{14}$/.test(String(lead.cnpj || "").replace(/\D/g, ""));
   if (!result.conflictingEvidence && (companyConfirmed || knownEconodataCompany)) for (const contact of result.companyContacts) {
-    if (corporateEmail(contact.value) && generalEmail(contact.value) && normalized(contact.quote).includes(normalized(contact.value)) &&
-        await sourceRepresentsCompany(contact.sourceUrl, lead) && await quoteConfirmed(contact.sourceUrl, contact.quote)) companyContacts.push({ type: "email", value: contact.value.trim().toLowerCase(), sourceUrl: publicSourceUrl(contact.sourceUrl)! });
+    const safeUrl = publicSourceUrl(contact.sourceUrl);
+    const knownDomain = businessDomain(lead.domain);
+    const sourceHost = safeUrl ? new URL(safeUrl).hostname.toLowerCase() : null;
+    const officialContact = !!(knownEconodataCompany && knownDomain && safeUrl && urls.has(safeUrl) && sourceHost &&
+      (sourceHost === knownDomain || sourceHost.endsWith(`.${knownDomain}`)) &&
+      emailSyntax(contact.value) && contact.value.split("@")[1].toLowerCase() === knownDomain && generalEmail(contact.value));
+    // This exception proves only a general company contact, never an individual's email.
+    const documentedContact = !officialContact && corporateEmail(contact.value) && generalEmail(contact.value) &&
+      normalized(contact.quote).includes(normalized(contact.value)) &&
+      await sourceRepresentsCompany(contact.sourceUrl, lead) && await quoteConfirmed(contact.sourceUrl, contact.quote);
+    if (officialContact || documentedContact) companyContacts.push({ type: "email", value: contact.value.trim().toLowerCase(), sourceUrl: safeUrl! });
   }
   // An unsupported candidate is inconclusive; an inaccessible registry with no candidate is not.
   const contactClaimed = !!email.value || result.companyContacts.length > 0;
@@ -201,6 +210,8 @@ export async function evaluateWebResearch(payload: Record<string, any>, lead: Re
   return {
     validatorVersion: WEB_RESEARCH_VALIDATOR_VERSION,
     searchCount: calls.length, companyConfirmed, decisionMakerConfirmed,
+    companyKnown: knownEconodataCompany || companyConfirmed, companySource: knownEconodataCompany ? "econodata" : null,
+    companyWebCorroborated: companyConfirmed,
     decisionMakerKnown: decisionMakerKnown || decisionMakerConfirmed, decisionMakerSource,
     decisionMakerWebCorroborated: decisionMakerConfirmed, outcome,
     confidence: result.confidence, professionalEmail, companyContacts, sources,
@@ -239,6 +250,7 @@ export async function researchBusinessContact(opportunityId: string) {
       ...fresh.qualification, web_research: {
         status: "completed", model: WEB_RESEARCH_MODEL, validatorVersion: WEB_RESEARCH_VALIDATOR_VERSION, searchCount: result.searchCount,
         companyConfirmed: result.companyConfirmed, decisionMakerConfirmed: result.decisionMakerConfirmed,
+        companyKnown: result.companyKnown, companySource: result.companySource, companyWebCorroborated: result.companyWebCorroborated,
         decisionMakerKnown: result.decisionMakerKnown, decisionMakerSource: result.decisionMakerSource,
         decisionMakerWebCorroborated: result.decisionMakerWebCorroborated, outcome: result.outcome,
         professionalEmailFound: !!result.professionalEmail, companyContacts: result.companyContacts,

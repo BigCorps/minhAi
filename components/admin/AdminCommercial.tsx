@@ -26,6 +26,7 @@ const errors: Record<string, string> = {
   provider_http_401: "A chave da API foi rejeitada ou expirou. (provider_http_401)",
   provider_http_402: "O fornecedor informou saldo insuficiente. (provider_http_402)",
   provider_http_403: "A chave não possui permissão para esta operação. (provider_http_403)",
+  provider_http_404: "A Econodata não encontrou organograma para esta empresa. (provider_http_404)",
   provider_http_422: "O fornecedor rejeitou algum parâmetro da consulta. (provider_http_422)",
   provider_http_429: "Limite temporário de requisições atingido. (provider_http_429)",
   provider_http_503: "O fornecedor está temporariamente indisponível. (provider_http_503)",
@@ -860,6 +861,14 @@ function Opportunity({ o, action, busy, monitoria }: any) {
         </p>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
+        {l.source === "econodata" && l.cnpj && !["lost", "won", "paid"].includes(o.stage) && (
+          <div>
+            <button className={button} disabled={busy}
+              onClick={() => void action({ action: "econodata_people_probe", id: o.id }, "Estrutura do organograma capturada para diagnóstico.")}
+            >Testar decisor</button>
+            <p className="mt-1 text-xs text-slate-400">Diagnóstico: consulta somente 1 decisor e não altera o contato.</p>
+          </div>
+        )}
         <button
           className={button}
           disabled={busy}

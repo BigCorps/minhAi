@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { db, checked, fetchJson, required } from "./server";
+import { describeJsonShape } from "./json-shape";
 import {
   normalizeLead,
   identityKeys,
@@ -80,6 +81,47 @@ async function api(
     { provider: p, path: path.split("?")[0] },
   );
 }
+export async function econodataPeopleProbe(opportunityId: string) {
+  const d = db();
+  const opportunity = checked(await d.from("sdr_opportunities").select("*").eq("id", opportunityId).single())!;
+  if (["lost", "won", "paid"].includes(opportunity.stage)) throw new Error("lead_not_eligible");
+  const lead = checked(await d.from("sdr_leads").select("source,cnpj").eq("id", opportunity.lead_id).single())!;
+  const campaign = checked(await d.from("sdr_campaigns").select("provider").eq("id", opportunity.campaign_id).single())!;
+  const cnpj = String(lead.cnpj || "").replace(/\D/g, "");
+  if (lead.source !== "econodata" || campaign.provider !== "econodata" || !/^\d{14}$/.test(cnpj))
+    throw new Error("lead_not_eligible");
+  const params = new URLSearchParams({ papel: "decisores", pagina: "1", tamanho: "1" });
+  const fingerprint = createHash("sha256").update(JSON.stringify({
+    action: "econodata_people_probe", lead: opportunity.lead_id,
+    campaign: opportunity.campaign_id, papel: "decisores", pagina: 1, tamanho: 1,
+  })).digest("hex");
+  const run = checked(await d.rpc("sdr_reserve_run", {
+    p_campaign: opportunity.campaign_id, p_units: 4000, p_fingerprint: fingerprint,
+  }));
+  try {
+    const result = await api("econodata", `/companies/${cnpj}/people?${params}`);
+    const header = result.headers.get("x-tokens-charged");
+    const actual = header?.trim() ? Number(header) : NaN;
+    const tokensCharged = Number.isFinite(actual) && actual >= 0 ? actual : null;
+    console.info("[SDR_ECONODATA_PEOPLE_SCHEMA]", {
+      status: 200, shape: describeJsonShape(result.payload), tokensCharged,
+    });
+    checked(await d.from("sdr_runs").update({
+      status: "completed", imported: 0, duplicates: 0,
+      credits_charged: tokensCharged, finished_at: new Date().toISOString(),
+    }).eq("id", run));
+    return { message: "Estrutura do organograma capturada para diagnóstico." };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "operation_failed";
+    checked(await d.from("sdr_runs").update({
+      status: "failed", imported: 0, duplicates: 0,
+      error_code: /^[a-z0-9_]+$/.test(message) ? message : "operation_failed",
+      finished_at: new Date().toISOString(),
+    }).eq("id", run));
+    throw error;
+  }
+}
+
 export async function discover(campaignId: string) {
   const d = db();
   const c = checked(

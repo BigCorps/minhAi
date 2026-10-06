@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '@/lib/openai-models';
 // app/api/assistant/generate-prompt/route.ts
 // Gera o system_prompt via GPT-4o com base nas respostas do onboarding.
 // Chamado UMA ÚNICA VEZ na transição da etapa 5 → 6.
@@ -147,7 +148,7 @@ INSTRUÇÕES PARA O PROMPT:
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: OPENAI_MODELS.smart,
         messages: [
           {
             role: 'system',

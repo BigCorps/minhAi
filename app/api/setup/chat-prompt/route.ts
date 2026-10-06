@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '@/lib/openai-models';
 // app/api/setup/chat-prompt/route.ts
 // Recebe o prompt atual + pedido do usuário e devolve o prompt atualizado.
 // O GPT reescreve mantendo as informações da empresa e aplicando a mudança pedida.
@@ -87,7 +88,7 @@ Se for só uma explicação sem mudança no prompt, retorne "updatedPrompt": nul
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: OPENAI_MODELS.smart,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user',   content: message },

@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '../_shared/openai-models.ts';
 // supabase/functions/meta-flow-orcamento/index.ts
 // Máquina de estados para fluxo de orçamento conversacional no Meta
 // Mantém contexto acumulativo entre mensagens via meta_flow_state
@@ -339,7 +340,7 @@ INSTRUÇÕES:
         'Authorization': `Bearer ${openaiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: OPENAI_MODELS.smart,
         response_format: { type: 'json_object' },
         max_tokens: 600,
         temperature: 0.3,

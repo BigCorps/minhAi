@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '@/lib/openai-models';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import OpenAI from 'openai';
@@ -62,7 +63,7 @@ INSTRUÇÕES CRÍTICAS:
 - Nunca inclua texto fora do JSON.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: OPENAI_MODELS.smart,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: systemPrompt },

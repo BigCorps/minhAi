@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '@/lib/openai-models';
 // app/api/vision/extract-products/route.ts
 //
 // API route server-side para extração de produtos de PDF ou imagem via GPT-4o Vision.
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: OPENAI_MODELS.vision,
         max_tokens: 2000,
         messages: [
           {

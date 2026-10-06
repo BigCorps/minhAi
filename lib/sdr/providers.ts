@@ -428,6 +428,13 @@ export async function findHunterDecisionMakerEmail(opportunityId: string) {
   const email = typeof data?.email === "string" ? data.email.trim() : "";
   if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     checked(await d.rpc("sdr_release_units", { p_provider: "hunter", p_units: 1 }));
+    checked(await d.from("sdr_opportunities").update({ qualification: {
+      ...(opportunity.qualification || {}),
+      email_lookup: { ...(opportunity.qualification?.email_lookup || {}), hunter: {
+        status: "not_found", lookupMethod: params.has("domain") ? "domain" : "company",
+        attemptedAt: new Date().toISOString(),
+      } },
+    } }).eq("id", opportunityId));
     throw new Error("hunter_email_not_found");
   }
   if (data.verification?.status !== "valid") throw new Error("hunter_email_not_verified");
@@ -448,6 +455,86 @@ export async function findHunterDecisionMakerEmail(opportunityId: string) {
       },
     },
   }).eq("id", opportunityId));
+  return { status: "verified" };
+}
+
+const normalizedPersonName = (value: unknown) => typeof value === "string"
+  ? value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ").trim() : "";
+
+export async function findApolloDecisionMakerEmail(opportunityId: string) {
+  const d = db();
+  const opportunity = checked(await d.from("sdr_opportunities").select("*").eq("id", opportunityId).single())!;
+  const lead = checked(await d.from("sdr_leads").select("*").eq("id", opportunity.lead_id).single())!;
+  const qualification = opportunity.qualification || {};
+  const domain = hunterLookupDomain(lead.domain);
+  if (lead.source !== "econodata" || typeof lead.contact_name !== "string" || !lead.contact_name.trim() ||
+      !domain || qualification.decision_maker?.source !== "econodata" ||
+      qualification.email_lookup?.hunter?.status !== "not_found" ||
+      ["lost", "won", "paid"].includes(opportunity.stage)) throw new Error("lead_not_eligible");
+  if (lead.email) throw new Error("email_already_present");
+  if (qualification.email_lookup?.apollo) throw new Error("apollo_lookup_already_attempted");
+  const params = new URLSearchParams({
+    reveal_personal_emails: "false", reveal_phone_number: "false",
+    run_waterfall_email: "false", run_waterfall_phone: "false",
+  });
+  checked(await d.rpc("sdr_reserve_units", { p_provider: "apollo", p_units: 2 }));
+  const result = await api("apollo", `/people/bulk_match?${params}`, {
+    details: [{ name: lead.contact_name.trim(), domain }],
+  });
+  const payload = result.payload;
+  const rawCredits = payload?.credits_consumed;
+  const credits = typeof rawCredits === "number" ? rawCredits :
+    typeof rawCredits === "string" && /^\d+(?:\.\d+)?$/.test(rawCredits.trim()) ? Number(rawCredits) : NaN;
+  const attemptedAt = new Date().toISOString();
+  const recordAttempt = async (status: string, enrichment?: Record<string, unknown>) => {
+    checked(await d.from("sdr_opportunities").update({ qualification: {
+      ...qualification,
+      email_lookup: { ...(qualification.email_lookup || {}), apollo: {
+        status, attemptedAt, creditsConsumed: Number.isFinite(credits) && credits >= 0 ? credits : null,
+      } },
+      ...(enrichment ? { email_enrichment: enrichment } : {}),
+    } }).eq("id", opportunityId));
+  };
+  if (!Number.isFinite(credits) || credits < 0 || credits > 2) {
+    await recordAttempt("accounting_error");
+    throw new Error("apollo_accounting_invalid");
+  }
+  if (credits < 2) checked(await d.rpc("sdr_release_units", { p_provider: "apollo", p_units: 2 - credits }));
+  if (!Array.isArray(payload.matches)) {
+    await recordAttempt("schema_error");
+    throw new Error("provider_schema_changed");
+  }
+  const person = payload.matches[0];
+  if (Number(payload.missing_records) >= 1 || !person || (typeof person === "object" && Object.keys(person).length === 0)) {
+    await recordAttempt("not_found");
+    throw new Error("apollo_person_not_found");
+  }
+  const returnedName = typeof person.name === "string" ? person.name :
+    [person.first_name, person.last_name].filter((value) => typeof value === "string").join(" ");
+  const returnedDomain = person.organization?.primary_domain;
+  if ((person.match_confidence !== undefined && person.match_confidence !== "high") ||
+      !normalizedPersonName(returnedName) || normalizedPersonName(returnedName) !== normalizedPersonName(lead.contact_name) ||
+      (returnedDomain !== undefined && hunterLookupDomain(returnedDomain) !== domain)) {
+    await recordAttempt("person_mismatch");
+    throw new Error("apollo_person_mismatch");
+  }
+  const email = typeof person.email === "string" ? person.email.trim() : "";
+  if (person.email_status !== "verified" || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    await recordAttempt("email_not_found");
+    throw new Error("apollo_email_not_found");
+  }
+  checked(await d.from("sdr_leads").update({
+    email, email_status: "verified",
+    evidence: [lead.evidence, "Email profissional localizado e validado pelo Apollo para o decisor selecionado pela Econodata."].filter(Boolean).join(" "),
+  }).eq("id", opportunity.lead_id));
+  await recordAttempt("verified", {
+    source: "apollo", lookupMethod: "name_domain",
+    matchConfidence: person.match_confidence === "high" ? "high" : null,
+    position: typeof person.title === "string" ? person.title : null,
+    company: typeof person.organization?.name === "string" ? person.organization.name : null,
+    foundAt: attemptedAt,
+  });
   return { status: "verified" };
 }
 

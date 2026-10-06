@@ -23,6 +23,11 @@ const card = "rounded-2xl border border-white/10 bg-white/[.025] p-5";
 const errors: Record<string, string> = {
   decision_maker_not_found: "Nenhum decisor foi encontrado para esta empresa.",
   provider_missing: "Escolha o fornecedor da campanha.",
+  apollo_person_not_found: "O Apollo não encontrou o decisor.",
+  apollo_person_mismatch: "O Apollo retornou uma pessoa com identidade incompatível.",
+  apollo_email_not_found: "O Apollo não retornou email profissional verificado para o decisor.",
+  apollo_accounting_invalid: "O Apollo não informou um consumo seguro para reconciliação. A reserva foi mantida.",
+  apollo_lookup_already_attempted: "Esta oportunidade já teve uma tentativa Apollo.",
   company_identity_required: "Complete o nome da empresa antes de localizar o email.",
   email_already_present: "Este contato já possui email.",
   hunter_email_not_found: "O Hunter não encontrou email para este decisor.",
@@ -121,6 +126,7 @@ export default function AdminCommercial({
       return j.data;
     } catch (e) {
       const m = e instanceof Error ? e.message : "Falha";
+      if (payload.action === "apollo_find_email" || payload.action === "hunter_find_email") await load();
       setError(commercialError(m));
       return null;
     } finally {
@@ -838,6 +844,9 @@ function ManualLead({ campaigns, action, busy }: any) {
 function Opportunity({ o, action, busy, monitoria }: any) {
   const l = o.lead;
   const decisionMaker = o.qualification?.decision_maker;
+  const canTryApollo = l.source === "econodata" && l.contact_name && l.domain && !l.email &&
+    decisionMaker?.source === "econodata" && o.qualification?.email_lookup?.hunter?.status === "not_found" &&
+    !o.qualification?.email_lookup?.apollo && !["lost", "won", "paid"].includes(o.stage);
   const decisionRole = Array.isArray(decisionMaker?.cargos)
     ? decisionMaker.cargos.find((role: unknown) => typeof role === "string" && role.trim()) : null;
   return (
@@ -867,6 +876,7 @@ function Opportunity({ o, action, busy, monitoria }: any) {
           {l.contact_name && !l.email && <span className="ml-2 text-lime-200">Pronto para localizar email</span>}
         </p>
       )}
+      {canTryApollo && <p className="mt-2 text-xs text-slate-400">Hunter não encontrou. Tentar segunda fonte.</p>}
       {(l.suppressed_at || l.human_at) && (
         <p className="mt-3 text-sm text-amber-200">
           {l.suppressed_at
@@ -875,6 +885,11 @@ function Opportunity({ o, action, busy, monitoria }: any) {
         </p>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
+        {canTryApollo && (
+          <button className={button} disabled={busy}
+            onClick={() => void action({ action: "apollo_find_email", id: o.id }, "Email profissional localizado e verificado pelo Apollo.")}
+          >Tentar Apollo</button>
+        )}
         {l.source === "econodata" && l.cnpj && decisionMaker?.source !== "econodata" && !["lost", "won", "paid"].includes(o.stage) && (
           <div>
             <button className={button} disabled={busy}

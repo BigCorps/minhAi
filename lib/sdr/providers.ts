@@ -384,6 +384,34 @@ export async function discover(campaignId: string) {
     throw e;
   }
 }
+function hunterLookupDomain(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const input = value.trim();
+  try {
+    const isUrl = /^https?:\/\//i.test(input);
+    if (!isUrl && /[\s/:?#@]/.test(input)) return null;
+    const url = new URL(isUrl ? input : `https://${input}`);
+    if (url.username || url.password || url.port) return null;
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (hostname.length > 253 || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return null;
+    const labels = hostname.split(".");
+    return labels.length >= 2 && labels.every((label) =>
+      /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label)) ? hostname : null;
+  } catch {
+    return null;
+  }
+}
+export function buildHunterEmailFinderParams(lead: {
+  contact_name: string; domain?: unknown; company_name?: unknown;
+}) {
+  const full_name = lead.contact_name.trim();
+  const domain = hunterLookupDomain(lead.domain);
+  if (domain) return new URLSearchParams({ full_name, domain });
+  const company = typeof lead.company_name === "string" ? lead.company_name.trim() : "";
+  if (!company || /^cnpj\s/i.test(company)) throw new Error("company_identity_required");
+  return new URLSearchParams({ full_name, company });
+}
+
 export async function findHunterDecisionMakerEmail(opportunityId: string) {
   const d = db();
   const opportunity = checked(await d.from("sdr_opportunities").select("*").eq("id", opportunityId).single())!;
@@ -393,15 +421,15 @@ export async function findHunterDecisionMakerEmail(opportunityId: string) {
       opportunity.qualification?.decision_maker?.source !== "econodata" ||
       ["lost", "won", "paid"].includes(opportunity.stage)) throw new Error("lead_not_eligible");
   if (lead.email) throw new Error("email_already_present");
-  const company = typeof lead.company_name === "string" ? lead.company_name.trim() : "";
-  if (!company || /^cnpj\s/i.test(company)) throw new Error("company_identity_required");
-  const params = new URLSearchParams({ full_name: lead.contact_name.trim(), company });
+  const params = buildHunterEmailFinderParams(lead);
   checked(await d.rpc("sdr_reserve_units", { p_provider: "hunter", p_units: 1 }));
   const result = await api("hunter", `/email-finder?${params}`);
   const data = result.payload?.data;
   const email = typeof data?.email === "string" ? data.email.trim() : "";
-  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    checked(await d.rpc("sdr_release_units", { p_provider: "hunter", p_units: 1 }));
     throw new Error("hunter_email_not_found");
+  }
   if (data.verification?.status !== "valid") throw new Error("hunter_email_not_verified");
   checked(await d.from("sdr_leads").update({
     email, email_status: "verified",
@@ -412,6 +440,7 @@ export async function findHunterDecisionMakerEmail(opportunityId: string) {
       ...(opportunity.qualification || {}),
       email_enrichment: {
         source: "hunter",
+        lookupMethod: params.has("domain") ? "domain" : "company",
         score: typeof data.score === "number" && Number.isFinite(data.score) ? data.score : null,
         position: typeof data.position === "string" ? data.position : null,
         company: typeof data.company === "string" ? data.company : null,

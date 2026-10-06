@@ -125,6 +125,8 @@ const validationCodes = new Set([
   "invalid_format", "invalid_union", "unrecognized_keys", "too_small", "too_big",
   "required", "type", "enum", "minimum", "maximum", "minLength", "maxLength",
   "additionalProperties", "invalid_parameter", "validation_error",
+  "extra_forbidden", "missing", "string_type", "int_type", "int_parsing",
+  "bool_type", "bool_parsing", "list_type", "dict_type", "model_type",
 ]);
 const validationWords = new Set([
   ...validationFields,
@@ -141,13 +143,15 @@ const validationWords = new Set([
   "esperado", "permitido", "permitida", "valido", "valida", "menor", "maior",
   "que", "ou", "igual", "entre", "than", "to", "or", "equal", "format",
   "formato", "unsupported", "unexpected", "unrecognized", "key", "keys",
+  "extra", "inputs", "are", "permitted",
 ]);
 function sanitizeProviderValidation(payload: unknown) {
   const records: Record<string, unknown>[] = [];
   let visited = 0;
   const safeString = (value: unknown, kind: string): string | undefined => {
     if (typeof value !== "string" || !value.trim() || value.length > 300) return;
-    if (kind === "code") return validationCodes.has(value) ? value : undefined;
+    if (kind === "code" || kind === "type")
+      return validationCodes.has(value) ? value : undefined;
     if (kind === "field" || kind === "path") {
       if (!/^[a-zA-Z_][a-zA-Z0-9_.\[\]]*$/.test(value)) return;
       return value.split(/[.\[\]]/).filter(Boolean).every(
@@ -169,8 +173,22 @@ function sanitizeProviderValidation(payload: unknown) {
     }
     if (!value || typeof value !== "object") return;
     const record: Record<string, unknown> = {};
-    for (const name of ["message", "mensagem", "error", "errors", "detail", "details", "field", "path", "code"]) {
+    for (const name of ["message", "mensagem", "msg", "error", "errors", "detail", "details", "field", "path", "loc", "code", "type"]) {
       const entry = (value as Record<string, unknown>)[name];
+      if (name === "loc") {
+        if (Array.isArray(entry) && entry.length > 0 && entry.length <= 10 && entry.every(
+          (part) => typeof part === "number"
+            ? Number.isInteger(part) && part >= 0 && part < 1000
+            : typeof part === "string" && part.length > 0 && part.length <= 64 &&
+              /^[A-Za-z0-9_.-]+$/.test(part) &&
+              !/(authorization|cookie|secret|token|password|api[_.-]?key|bearer|^(sk|ek|pk)[_.-])/i.test(part) &&
+              !/[A-Za-z0-9_-]{32,}|\d{7,}/.test(part),
+        )) {
+          const location = entry.join(".");
+          if (location.length <= 300) record.loc = location;
+        }
+        continue;
+      }
       const safe = safeString(entry, name);
       if (safe) record[name] = safe;
       else if (name === "path" && Array.isArray(entry) && entry.length <= 10) {

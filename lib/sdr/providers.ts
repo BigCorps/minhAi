@@ -108,12 +108,14 @@ export async function discover(campaignId: string) {
       incluir: ["cadastro", "contatosBasicos"],
       limite: 1,
     };
-    const est = await api(p, "/companies/search_list", request, {
-      "X-Estimate-Only": "true",
+    const est = await api(p, "/companies/search_list", {
+      ...request,
+      estimar: true,
     });
-    reserve = Number(est.payload.tokensEstimados);
-    if (!Number.isFinite(reserve) || reserve <= 0)
+    const estimate = est.payload?.tokensEstimados;
+    if (typeof estimate !== "number" || !Number.isFinite(estimate) || estimate <= 0)
       throw new Error("estimate_unavailable");
+    reserve = estimate;
   } else if (p === "apollo") {
     request = {
       ...filters,
@@ -145,8 +147,11 @@ export async function discover(campaignId: string) {
       const rows = result.payload.resultados;
       if (!Array.isArray(rows)) throw new Error("provider_schema_changed");
       const h = result.headers.get("x-tokens-charged");
-      charged = h === null ? null : Number(h);
-      leads = rows.map((r: any) => {
+      // X-Tokens-Charged is documented by Econodata; missing/invalid is unknown.
+      const actual = h?.trim() ? Number(h) : NaN;
+      charged = Number.isFinite(actual) && actual >= 0 ? actual : null;
+      leads = rows.slice(0, LIMIT).map((r: any) => {
+        // Company discovery only: retain CNPJ for a later people/organogram lookup.
         const contact = r.contatosBasicos || {};
         const email =
           contact.emailsValidadosSetores?.[0] ||
@@ -162,7 +167,7 @@ export async function discover(campaignId: string) {
             : "unknown",
           source: p,
           source_ref: r.cnpj,
-          evidence: `Empresa retornada pela segmentação Econodata: ${JSON.stringify(filters)}. Adequação comercial ainda precisa ser confirmada.`,
+          evidence: `Empresa retornada pela segmentação Econodata. Cadastro disponível: ${JSON.stringify(r.cadastro || {})}. Filtros: ${JSON.stringify(filters)}. Contatos básicos são da empresa e não identificam automaticamente um decisor; consultar decisores/organograma por CNPJ somente após qualificação. Adequação comercial ainda precisa ser confirmada.`,
         };
       });
       cursor = {

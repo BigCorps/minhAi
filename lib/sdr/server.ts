@@ -114,13 +114,106 @@ export async function event(
       }),
   );
 }
-export async function fetchJson(url: string, init: RequestInit = {}) {
+const validationFields = new Set([
+  "filtros", "cnaePrimario", "cnaesSecundarios", "uf", "cidade", "porte",
+  "faturamento", "funcionarios", "de", "ate", "pagina", "tamanho", "cursor",
+  "incluir", "limite", "estimar", "cadastro", "contatosBasicos", "domain",
+  "limit", "type", "verification_status", "required_field", "full_name", "position",
+]);
+const validationCodes = new Set([
+  "invalid_type", "invalid_value", "invalid_enum_value", "invalid_string",
+  "invalid_format", "invalid_union", "unrecognized_keys", "too_small", "too_big",
+  "required", "type", "enum", "minimum", "maximum", "minLength", "maxLength",
+  "additionalProperties", "invalid_parameter", "validation_error",
+]);
+const validationWords = new Set([
+  ...validationFields,
+  "invalid", "invalidos", "invalido", "invalida", "invalidas", "validation",
+  "validacao", "error", "erro", "errors", "erros", "field", "campo", "fields",
+  "campos", "parameter", "parametro", "parameters", "parametros", "required",
+  "obrigatorio", "obrigatoria", "must", "be", "a", "an", "the", "is", "not",
+  "allowed", "expected", "received", "string", "number", "integer", "boolean",
+  "array", "object", "null", "undefined", "true", "false", "missing", "value",
+  "valor", "values", "valores", "enum", "one", "of", "at", "least", "most",
+  "minimum", "maximum", "minimo", "maximo", "length", "characters", "items",
+  "deve", "ser", "um", "uma", "o", "e", "de", "do", "da", "nao", "com",
+  "tipo", "texto", "numero", "inteiro", "lista", "objeto", "ausente",
+  "esperado", "permitido", "permitida", "valido", "valida", "menor", "maior",
+  "que", "ou", "igual", "entre", "than", "to", "or", "equal", "format",
+  "formato", "unsupported", "unexpected", "unrecognized", "key", "keys",
+]);
+function sanitizeProviderValidation(payload: unknown) {
+  const records: Record<string, unknown>[] = [];
+  let visited = 0;
+  const safeString = (value: unknown, kind: string): string | undefined => {
+    if (typeof value !== "string" || !value.trim() || value.length > 300) return;
+    if (kind === "code") return validationCodes.has(value) ? value : undefined;
+    if (kind === "field" || kind === "path") {
+      if (!/^[a-zA-Z_][a-zA-Z0-9_.\[\]]*$/.test(value)) return;
+      return value.split(/[.\[\]]/).filter(Boolean).every(
+        (part) => validationFields.has(part) || /^\d{1,3}$/.test(part),
+      ) ? value : undefined;
+    }
+    // Keep validation language only; never echo arbitrary values or provider prose.
+    if (!/^[a-zA-ZÀ-ÿ0-9_ .,:;'"()\[\]-]+$/.test(value)) return;
+    const words = value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return words.match(/[a-zA-Z0-9_]+/g)?.every(
+      (word) => validationWords.has(word) || validationWords.has(word.toLowerCase()) || /^\d{1,3}$/.test(word),
+    ) ? value : undefined;
+  };
+  const visit = (value: unknown, depth: number) => {
+    if (depth > 4 || ++visited > 50 || records.length >= 20) return;
+    if (Array.isArray(value)) {
+      value.slice(0, 20).forEach((item) => visit(item, depth + 1));
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    const record: Record<string, unknown> = {};
+    for (const name of ["message", "mensagem", "error", "errors", "detail", "details", "field", "path", "code"]) {
+      const entry = (value as Record<string, unknown>)[name];
+      const safe = safeString(entry, name);
+      if (safe) record[name] = safe;
+      else if (name === "path" && Array.isArray(entry) && entry.length <= 10) {
+        const path = entry.map((part) => typeof part === "number" && Number.isInteger(part) && part >= 0 && part < 1000 ? String(part) : part).join(".");
+        const safePath = safeString(path, "path");
+        if (safePath) record.path = safePath;
+      } else if (["error", "errors", "detail", "details"].includes(name)) visit(entry, depth + 1);
+    }
+    if (Object.keys(record).length) records.push(record);
+  };
+  visit(payload, 0);
+  return records.length ? records : "unrecognized_provider_validation";
+}
+type ProviderDiagnostic = {
+  provider: "econodata" | "hunter" | "apollo";
+  path: string;
+};
+export async function fetchJson(
+  url: string,
+  init: RequestInit = {},
+  diagnostic?: ProviderDiagnostic,
+) {
   const r = await fetch(url, {
     ...init,
     cache: "no-store",
     signal: AbortSignal.timeout(15000),
   });
-  if (!r.ok) throw new Error(`provider_http_${r.status}`);
+  if (!r.ok) {
+    if (r.status === 422) {
+      const payload = await r.json().catch(() => null);
+      const metadata = diagnostic &&
+        ["econodata", "hunter", "apollo"].includes(diagnostic.provider) &&
+        ["/companies/search_list", "/discover", "/domain-search", "/email-verifier", "/mixed_people/api_search", "/people/match"].includes(diagnostic.path)
+        ? { provider: diagnostic.provider, path: diagnostic.path } : {};
+      const validation = sanitizeProviderValidation(payload);
+      console.warn("[SDR_PROVIDER_VALIDATION]", {
+        ...(Array.isArray(validation) ? metadata : {}),
+        status: 422,
+        validation,
+      });
+    }
+    throw new Error(`provider_http_${r.status}`);
+  }
   const payload = await r.json().catch(() => null);
   if (!payload) throw new Error("provider_invalid_response");
   return { payload, headers: r.headers };

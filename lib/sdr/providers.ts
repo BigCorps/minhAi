@@ -73,11 +73,15 @@ async function api(
   };
   if (p === "apollo") headers["x-api-key"] = key(p);
   else headers.Authorization = `Bearer ${key(p)}`;
-  return fetchJson(base + path, {
-    method: payload ? "POST" : "GET",
-    headers,
-    ...(payload ? { body: JSON.stringify(payload) } : {}),
-  });
+  return fetchJson(
+    base + path,
+    {
+      method: payload ? "POST" : "GET",
+      headers,
+      ...(payload ? { body: JSON.stringify(payload) } : {}),
+    },
+    { provider: p, path: path.split("?")[0] },
+  );
 }
 export async function discover(campaignId: string) {
   const d = db();

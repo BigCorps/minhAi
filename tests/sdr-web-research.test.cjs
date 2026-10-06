@@ -252,7 +252,7 @@ test('v2 confirms company identity elsewhere on the registry page, without compa
     page: 'Empresa Teste · CNPJ 12.345.678/0001-99. Cadastro empresarial ativo. Outras informações. Pessoa Teste - Sócio' });
   assert.equal(r.error, undefined);
   const research = r.opportunity.qualification.web_research;
-  assert.equal(research.companyConfirmed, true); assert.equal(research.decisionMakerConfirmed, true); assert.equal(research.validatorVersion, 2);
+  assert.equal(research.companyConfirmed, true); assert.equal(research.decisionMakerConfirmed, true); assert.equal(research.validatorVersion, 3);
   assert.equal(r.reads.length, 1);
   // Exact CNPJ on a registry page is also sufficient when the name is in another form.
   const cnpjOnly = await simulate({ ...registryOptions, result: registryFixture(), page: 'CNPJ 12345678000199. Cadastro empresarial ativo. Pessoa Teste - Sócio' });
@@ -328,7 +328,7 @@ test('validation diagnostic contains only the fixed boolean allowlist and no per
   const r = await simulate({ result }); assert.equal(r.logs.length, 1);
   assert.equal(r.logs[0].marker, '[SDR_WEB_RESEARCH_VALIDATION]');
   const flags = r.logs[0].flags;
-  assert.deepEqual(Object.keys(flags).sort(), ['companyConfirmed', 'companySourceValid', 'decisionMakerConfirmed', 'decisionSourceValid', 'professionalEmailAccepted']);
+  assert.deepEqual(Object.keys(flags).sort(), ['companyConfirmed', 'companySourceValid', 'decisionMakerConfirmed', 'decisionSourceValid', 'leadershipAssociationAccepted', 'professionalEmailAccepted']);
   assert.ok(Object.values(flags).every((value) => typeof value === 'boolean'));
   assert.equal(flags.companySourceValid, true); assert.equal(flags.decisionSourceValid, true); assert.equal(flags.professionalEmailAccepted, false);
   const logged = JSON.stringify(r.logs);
@@ -657,4 +657,56 @@ test('model lowercasing cannot hide another named person in the authoritative of
   const options = officialBiographyOptions(original);
   options.result.decisionMaker.evidence.quote = original.toLowerCase();
   assert.equal((await simulate(options)).lead.contact_name, null);
+});
+
+
+const documentedFounderQuote = 'Ricardo Tavares. Bacharel em Relações Públicas, fundador e responsável técnico da BR Cerimonial.';
+function technicalRoleOptions() {
+  const options = officialBiographyOptions(documentedFounderQuote);
+  options.result.decisionMaker.role = 'Responsável técnico';
+  return options;
+}
+
+test('evaluateWebResearch derives official leadership from the document despite technical-only role metadata', async () => {
+  const options = technicalRoleOptions();
+  const setup = await simulate({ noKey: true }); // Load validator without any request or reservation.
+  const payload = { status: 'completed', output: [
+    { type: 'web_search_call', status: 'completed', action: { sources: options.toolSources } },
+    { type: 'message', content: [{ type: 'output_text', text: JSON.stringify(options.result) }] },
+  ] };
+  const evaluated = await setup.researchModule.evaluateWebResearch(payload,
+    { company_name: 'BR Cerimonial', source: 'web_research', domain: 'brcerimonial.com.br', contact_name: null },
+    async url => { assert.equal(url, 'https://brcerimonial.com.br/sobre/'); return options.page; }, {});
+  assert.equal(evaluated.selectedDecisionMaker.name, 'Ricardo Tavares'); assert.equal(evaluated.selectedDecisionMaker.validated, true);
+  assert.equal(evaluated.selectedDecisionMaker.role, 'Responsável técnico'); assert.equal(evaluated.validatorVersion, 3);
+  assert.equal(evaluated.professionalEmail, null); assert.equal(setup.calls.length, 0);
+});
+
+test('research flow persists documented founder with technical metadata and logs only safe acceptance flags', async () => {
+  const r = await simulate(technicalRoleOptions()); assert.equal(r.error, undefined);
+  assert.equal(r.lead.contact_name, 'Ricardo Tavares'); assert.equal(r.lead.email, null);
+  const dm = r.opportunity.qualification.decision_maker;
+  assert.equal(dm.source, 'web_research'); assert.equal(dm.validated, true); assert.equal(dm.role, 'Responsável técnico');
+  assert.equal(r.opportunity.qualification.web_research.validatorVersion, 3);
+  assert.equal(r.logs[0].flags.leadershipAssociationAccepted, true);
+  assert.ok(Object.values(r.logs[0].flags).every(value => typeof value === 'boolean'));
+  for (const value of ['Ricardo', 'Tavares', 'Cerimonial', 'https://', documentedFounderQuote, 'synthetic-key']) assert.ok(!JSON.stringify(r.logs).includes(value));
+});
+
+test('technical metadata alone, unverified quotes and third-party technical summaries never prove leadership', async () => {
+  for (const change of ['no_leadership', 'third_party', 'unreadable', 'invented_quote']) {
+    const options = technicalRoleOptions();
+    if (change === 'no_leadership') {
+      options.result.decisionMaker.evidence.quote = 'Ricardo Tavares. Bacharel em Relações Públicas e responsável técnico da BR Cerimonial.';
+      options.page = options.result.decisionMaker.evidence.quote;
+    }
+    if (change === 'third_party') {
+      const url = 'https://third.example/br'; options.result.decisionMaker.evidence.sourceUrl = url;
+      options.result.sources.push({ url, title: 'Terceiro', supports: 'decision_maker' }); options.toolSources.push({ url });
+    }
+    if (change === 'unreadable') options.page = null;
+    if (change === 'invented_quote') options.page = 'BR Cerimonial. Ricardo Tavares, responsável técnico.';
+    const r = await simulate(options); assert.equal(r.lead.contact_name, null, change); assert.equal(r.lead.email, null);
+    assert.equal(r.logs[0].flags.leadershipAssociationAccepted, false);
+  }
 });

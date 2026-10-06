@@ -5,7 +5,7 @@ import { publicSourceUrl, readPublicSource } from "./public-web-source";
 
 export const WEB_RESEARCH_MODEL = "gpt-5.6-luna";
 export const WEB_RESEARCH_LIMIT = 3;
-export const WEB_RESEARCH_VALIDATOR_VERSION = 2;
+export const WEB_RESEARCH_VALIDATOR_VERSION = 3;
 const short = { type: ["string", "null"], maxLength: 300 };
 const url = { type: ["string", "null"], maxLength: 2000 };
 const evidence = {
@@ -92,7 +92,9 @@ function leadershipAssociation(quote: string, name: string, role: string, offici
   const personIndex = text.indexOf(person);
   if (personIndex < 0) return false;
   const labels = new Set(["e", "o", "a", "nosso", "nossa", "seu", "sua", "como"]);
-  return [...title.matchAll(leadershipRole)].some(([word]) => {
+  // Official evidence proves leadership independently of the model's role summary.
+  const leadershipText = official ? text : title;
+  return [...leadershipText.matchAll(leadershipRole)].some(([word]) => {
     for (const match of text.matchAll(new RegExp(`\\b${word}\\b`, "g"))) {
       const roleIndex = match.index!;
       if (roleIndex < personIndex + person.length && personIndex < roleIndex + word.length) continue;
@@ -210,6 +212,7 @@ export async function evaluateWebResearch(payload: Record<string, any>, lead: Re
     decisionSourceValid &&
     /\b(socio|socia|diretor|diretora|gerente|representante|owner|founder|ceo|manager|director|presidente)\b/.test(normalized(relationQuote)) &&
     await quoteConfirmed(result.decisionMaker.evidence.sourceUrl, relationQuote));
+  let leadershipAssociationAccepted = false;
   let selectedDecisionMaker: { name: string; source: string; role: string; validated: boolean; sourceUrl: string; confidence: number; selectedAt: string } | null = null;
   if (knownWebCompany && !knownName && !result.conflictingEvidence && result.decisionMaker.relationshipConfirmed) {
     const candidate = typeof result.decisionMaker.name === "string" ? result.decisionMaker.name.trim() : "";
@@ -226,8 +229,9 @@ export async function evaluateWebResearch(payload: Record<string, any>, lead: Re
     const documentText = officialPage?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
     const quoteOffset = documentText ? normalized(documentText).indexOf(normalized(relationQuote)) : -1;
     const associationQuote = documentText && quoteOffset >= 0 ? documentText.slice(quoteOffset, quoteOffset + normalized(relationQuote).length) : relationQuote;
-    if (fullName && decisionSourceValid && result.confidence >= 0.85 && leadershipAssociation(associationQuote, candidate, role, official, lead.company_name) &&
-        await quoteConfirmed(sourceUrl, relationQuote)) {
+    leadershipAssociationAccepted = !!(fullName && decisionSourceValid && result.confidence >= 0.85 &&
+      await quoteConfirmed(sourceUrl, relationQuote) && leadershipAssociation(associationQuote, candidate, role, official, lead.company_name));
+    if (leadershipAssociationAccepted) {
       selectedDecisionMaker = { name: candidate, source: "web_research", role, validated: true, sourceUrl: sourceUrl!,
         confidence: result.confidence, selectedAt: new Date().toISOString() };
       knownName = normalized(candidate); decisionMakerKnown = true; decisionMakerSource = "web_research"; decisionMakerConfirmed = true;
@@ -269,7 +273,7 @@ export async function evaluateWebResearch(payload: Record<string, any>, lead: Re
       selectedDecisionMaker ? "decision_maker_found_no_contact" : "no_decision_maker_found" : "no_public_contact_found";
   console.info("[SDR_WEB_RESEARCH_VALIDATION]", {
     companySourceValid, companyConfirmed, decisionSourceValid, decisionMakerConfirmed,
-    professionalEmailAccepted: !!professionalEmail,
+    leadershipAssociationAccepted, professionalEmailAccepted: !!professionalEmail,
   });
   return {
     validatorVersion: WEB_RESEARCH_VALIDATOR_VERSION,

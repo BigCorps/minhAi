@@ -14,7 +14,8 @@ import {
   PROVIDERS,
   PRODUCTS,
 } from "@/lib/sdr/catalog";
-import { discover, verifyEmail, enrichEconodataDecisionMaker, findHunterDecisionMakerEmail, findApolloDecisionMakerEmail } from "@/lib/sdr/providers";
+import { discover, verifyEmail, enrichEconodataDecisionMaker, findHunterDecisionMakerEmail } from "@/lib/sdr/providers";
+import { researchBusinessContact } from "@/lib/sdr/web-research";
 import {
   seedTemplates,
   submitTemplate,
@@ -100,12 +101,12 @@ export async function GET(req: Request) {
         token: !!process.env.SDR_TOKEN_SECRET,
         email: !!process.env.SDR_GOOGLE_ACCOUNT_ID,
         whatsapp: !!process.env.SDR_WHATSAPP_NUMBER_ID,
-        providers: Object.fromEntries(
+        providers: { web_research: !!process.env.OPENAI_API_KEY, ...Object.fromEntries(
           PROVIDERS.map((p) => [
             p,
             !!process.env[`${p.toUpperCase()}_API_KEY`],
           ]),
-        ),
+        ) },
       },
     };
   });
@@ -116,8 +117,10 @@ export async function POST(req: Request) {
       d = db();
     const id = text(input.id, 100);
     switch (input.action) {
+      case "web_research_contact":
+        return researchBusinessContact(id);
       case "apollo_find_email":
-        return findApolloDecisionMakerEmail(id);
+        throw new Error("apollo_plan_unavailable");
       case "hunter_find_email":
         return findHunterDecisionMakerEmail(id);
       case "econodata_decision_maker":
@@ -146,7 +149,7 @@ export async function POST(req: Request) {
         return {};
       }
       case "budget": {
-        if (!PROVIDERS.includes(input.provider))
+        if (!PROVIDERS.includes(input.provider) && input.provider !== "web_research")
           throw new Error("invalid_provider");
         checked(
           await d

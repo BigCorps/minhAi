@@ -23,6 +23,12 @@ const card = "rounded-2xl border border-white/10 bg-white/[.025] p-5";
 const errors: Record<string, string> = {
   decision_maker_not_found: "Nenhum decisor foi encontrado para esta empresa.",
   provider_missing: "Escolha o fornecedor da campanha.",
+  apollo_plan_unavailable: "Apollo API enrichment indisponível no plano Free. Use a pesquisa na web.",
+  web_research_not_configured: "A pesquisa na web precisa da configuração OpenAI.",
+  web_research_already_attempted: "Este lead já teve uma pesquisa na web.",
+  web_research_invalid_response: "A pesquisa não retornou uma resposta estruturada válida.",
+  web_research_search_limit: "A pesquisa não cumpriu o limite de buscas.",
+  web_research_failed: "Não foi possível concluir a pesquisa na web.",
   apollo_person_not_found: "O Apollo não encontrou o decisor.",
   apollo_person_mismatch: "O Apollo retornou uma pessoa com identidade incompatível.",
   apollo_email_not_found: "O Apollo não retornou email profissional verificado para o decisor.",
@@ -126,7 +132,7 @@ export default function AdminCommercial({
       return j.data;
     } catch (e) {
       const m = e instanceof Error ? e.message : "Falha";
-      if (payload.action === "apollo_find_email" || payload.action === "hunter_find_email") await load();
+      if (payload.action === "apollo_find_email" || payload.action === "hunter_find_email" || payload.action === "web_research_contact") await load();
       setError(commercialError(m));
       return null;
     } finally {
@@ -589,8 +595,9 @@ function Budget({ b, configured, busy, action }: any) {
       }}
     >
       <h3 className="font-bold capitalize">
-        {b.provider} · {configured ? "chave configurada" : "sem chave"}
+        {b.provider === "web_research" ? "Pesquisa IA na web" : b.provider} · {configured ? "chave configurada" : "sem chave"}
       </h3>
+      {b.provider === "apollo" && <p className="mt-2 text-xs text-amber-200">Apollo API enrichment indisponível no plano Free.</p>}
       <p className="my-2 text-xs text-slate-400">
         Reservado: {b.used_units} unidades
       </p>
@@ -844,9 +851,11 @@ function ManualLead({ campaigns, action, busy }: any) {
 function Opportunity({ o, action, busy, monitoria }: any) {
   const l = o.lead;
   const decisionMaker = o.qualification?.decision_maker;
-  const canTryApollo = l.source === "econodata" && l.contact_name && l.domain && !l.email &&
-    decisionMaker?.source === "econodata" && o.qualification?.email_lookup?.hunter?.status === "not_found" &&
-    !o.qualification?.email_lookup?.apollo && !["lost", "won", "paid"].includes(o.stage);
+  const research = o.qualification?.web_research;
+  const businessIdentity = /^\d{14}$/.test(String(l.cnpj || "").replace(/\D/g, "")) ||
+    (["econodata", "hunter", "apollo"].includes(l.source) && l.domain);
+  const canResearch = !l.email && l.company_name?.trim() && !/^CNPJ\s/i.test(l.company_name.trim()) && businessIdentity && !research &&
+    !["lost", "won", "paid"].includes(o.stage);
   const decisionRole = Array.isArray(decisionMaker?.cargos)
     ? decisionMaker.cargos.find((role: unknown) => typeof role === "string" && role.trim()) : null;
   return (
@@ -864,7 +873,7 @@ function Opportunity({ o, action, busy, monitoria }: any) {
         </span>
       </div>
       <p className="mt-3 break-words text-sm">
-        {l.contact_name} · {l.email || "Email pendente"} ({l.email_status === "verified" ? "Verificado" : l.email_status}) ·{" "}
+        {l.contact_name} · {l.email || "Email pendente"} ({l.email_status === "verified" ? "Verificado" : l.email_status === "public_source" ? "Fonte pública · sem verificação técnica" : l.email_status}) ·{" "}
         {l.phone || "Telefone pendente"}
       </p>
       <p className="mt-2 text-xs leading-5 text-slate-400">
@@ -876,7 +885,23 @@ function Opportunity({ o, action, busy, monitoria }: any) {
           {l.contact_name && !l.email && <span className="ml-2 text-lime-200">Pronto para localizar email</span>}
         </p>
       )}
-      {canTryApollo && <p className="mt-2 text-xs text-slate-400">Hunter não encontrou. Tentar segunda fonte.</p>}
+      {research?.status === "completed" && (
+        <div className="mt-3 rounded-xl bg-white/5 p-3 text-sm text-slate-300">
+          <p>{research.companyConfirmed ? "Empresa confirmada" : "Empresa não confirmada"} · {research.decisionMakerConfirmed ? "Decisor confirmado" : "Decisor não confirmado"}</p>
+          <p>{research.professionalEmailFound ? "Email profissional encontrado em fonte pública" : "Email profissional não encontrado"} · {research.companyContacts?.length ? "Contato corporativo encontrado" : "Sem contato corporativo confirmado"}</p>
+          {research.companyContacts?.map((contact: any) => <p key={contact.value}>Contato da empresa: {contact.value}</p>)}
+          <details className="mt-2">
+            <summary className="cursor-pointer text-lime-200">Abrir fontes ({research.sources?.length || 0})</summary>
+            <ul className="mt-2 space-y-1">
+              {research.sources?.map((source: any) => typeof source.url === "string" && /^https:\/\//i.test(source.url) && (
+                <li key={source.url}><a className="underline" href={source.url} target="_blank" rel="noopener noreferrer">{source.title || "Abrir fonte"}</a></li>
+              ))}
+            </ul>
+          </details>
+        </div>
+      )}
+      {research?.status === "running" && <p className="mt-2 text-sm text-slate-400">Pesquisa na web em andamento.</p>}
+      {research?.status === "failed" && <p className="mt-2 text-sm text-amber-200">A pesquisa não foi concluída. Confira o orçamento e a configuração antes de uma nova etapa.</p>}
       {(l.suppressed_at || l.human_at) && (
         <p className="mt-3 text-sm text-amber-200">
           {l.suppressed_at
@@ -885,10 +910,10 @@ function Opportunity({ o, action, busy, monitoria }: any) {
         </p>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
-        {canTryApollo && (
+        {canResearch && (
           <button className={button} disabled={busy}
-            onClick={() => void action({ action: "apollo_find_email", id: o.id }, "Email profissional localizado e verificado pelo Apollo.")}
-          >Tentar Apollo</button>
+            onClick={() => void action({ action: "web_research_contact", id: o.id }, "Pesquisa empresarial concluída.")}
+          >Pesquisar contato na web</button>
         )}
         {l.source === "econodata" && l.cnpj && decisionMaker?.source !== "econodata" && !["lost", "won", "paid"].includes(o.stage) && (
           <div>

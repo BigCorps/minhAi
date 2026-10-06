@@ -12,7 +12,7 @@ const brazilPhone = (value: unknown) => {
   const n = String(value || "").replace(/\D/g, "");
   return /^\d{10,11}$/.test(n) ? "55" + n : /^55\d{10,11}$/.test(n) ? n : null;
 };
-const key = (p: Provider) => required(`SDR_${p.toUpperCase()}_API_KEY`);
+const key = (p: Provider) => required(`${p.toUpperCase()}_API_KEY`);
 async function api(
   p: Provider,
   path: string,

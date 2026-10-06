@@ -55,9 +55,9 @@ Configurar no servidor do projeto minhAi, mantendo as variáveis atuais:
 | `SDR_TOKEN_SECRET` | Segredo aleatório próprio, pelo menos 32 bytes |
 | `SDR_WORKER_SECRET` | Outro segredo aleatório, pelo menos 32 bytes |
 | `SDR_LIVE_SEND` | `false` durante instalação e conferência |
-| `SDR_ECONODATA_API_KEY` | Chave com acesso à API v4 |
-| `SDR_APOLLO_API_KEY` | Acesso a people search e people match |
-| `SDR_HUNTER_API_KEY` | Discover, Domain Search e Email Verifier |
+| `ECONODATA_API_KEY` | Chave com acesso à API v4 |
+| `APOLLO_API_KEY` | Acesso a people search e people match |
+| `HUNTER_API_KEY` | Discover, Domain Search e Email Verifier |
 | `SDR_GOOGLE_ACCOUNT_ID` | UUID da conta Gmail conectada em `google_accounts` |
 | `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` | Credenciais da integração Google já usada |
 | `SDR_WHATSAPP_NUMBER_ID` | Phone Number ID conectado em `meta_connections`; não é o telefone em texto |

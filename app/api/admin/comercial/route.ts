@@ -103,7 +103,7 @@ export async function GET(req: Request) {
         providers: Object.fromEntries(
           PROVIDERS.map((p) => [
             p,
-            !!process.env[`SDR_${p.toUpperCase()}_API_KEY`],
+            !!process.env[`${p.toUpperCase()}_API_KEY`],
           ]),
         ),
       },

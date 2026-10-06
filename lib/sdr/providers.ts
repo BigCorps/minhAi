@@ -8,6 +8,7 @@ import {
   type Provider,
 } from "./catalog";
 const LIMIT = 5;
+const ECONODATA_PILOT_RESERVE = 5000;
 const key = (p: Provider) => required(`${p.toUpperCase()}_API_KEY`);
 type HunterContact = {
   value?: string;
@@ -101,21 +102,9 @@ export async function discover(campaignId: string) {
   if (p === "econodata") {
     request = {
       filtros: filters,
-      incluir: ["cadastro"],
     };
-    const est = await api(p, "/companies/search_list", {
-      ...request,
-      estimar: true,
-    });
-    const estimate = est.payload?.tokensEstimados;
-    if (typeof estimate !== "number" || !Number.isFinite(estimate) || estimate <= 0)
-      throw new Error("estimate_unavailable");
-    console.info("[SDR_ECONODATA_ESTIMATE]", {
-      tokens: estimate,
-      maxImportedCompanies: LIMIT,
-      buckets: ["cadastro"],
-    });
-    reserve = estimate;
+    // Internal guardrail only; actual provider billing comes from X-Tokens-Charged.
+    reserve = ECONODATA_PILOT_RESERVE;
   } else if (p === "apollo") {
     request = {
       ...filters,
@@ -154,14 +143,14 @@ export async function discover(campaignId: string) {
         // Company discovery only: retain CNPJ for a later people/organogram lookup.
         return {
           company_name:
-            r.cadastro?.nomeFantasia || r.cadastro?.razaoSocial || r.cnpj,
+            r.cadastro?.nomeFantasia || r.cadastro?.razaoSocial || `CNPJ ${r.cnpj}`,
           cnpj: r.cnpj,
           email: null,
           phone: null,
           email_status: "unknown",
           source: p,
           source_ref: r.cnpj,
-          evidence: `Empresa descoberta pela Econodata, somente com dados cadastrais. Cadastro disponível: ${JSON.stringify(r.cadastro || {})}. Filtros: ${JSON.stringify(filters)}. Decisores e contatos ainda não foram consultados; qualificar a empresa antes de consultar decisores/organograma por CNPJ e complementar email/verificação com Hunter. Adequação comercial ainda precisa ser confirmada.`,
+          evidence: "Empresa descoberta pela segmentação Econodata; primeira etapa retornou somente identificação básica. Cadastro, decisores e contatos ainda não foram consultados.",
         };
       });
       cursor = { exhausted: true };

@@ -84,10 +84,7 @@ export async function adminRequest(
     return platformAdminJson(
       {
         ok: false,
-        error:
-          m.startsWith("configure_") || /^[a-z_]+$/.test(m)
-            ? m
-            : "operation_failed",
+        error: /^[a-z0-9_]+$/.test(m) ? m : "operation_failed",
       },
       400,
     );
@@ -123,8 +120,8 @@ export async function fetchJson(url: string, init: RequestInit = {}) {
     cache: "no-store",
     signal: AbortSignal.timeout(15000),
   });
-  const payload = await r.json().catch(() => null);
   if (!r.ok) throw new Error(`provider_http_${r.status}`);
+  const payload = await r.json().catch(() => null);
   if (!payload) throw new Error("provider_invalid_response");
   return { payload, headers: r.headers };
 }

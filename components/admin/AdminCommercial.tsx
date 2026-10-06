@@ -22,7 +22,14 @@ const button =
 const card = "rounded-2xl border border-white/10 bg-white/[.025] p-5";
 const errors: Record<string, string> = {
   provider_missing: "Escolha o fornecedor da campanha.",
-  provider_budget: "Configure o orçamento e a validade do fornecedor.",
+  provider_budget: "Configure o orçamento e a validade do fornecedor. (provider_budget)",
+  provider_http_401: "A chave da API foi rejeitada ou expirou. (provider_http_401)",
+  provider_http_402: "O fornecedor informou saldo insuficiente. (provider_http_402)",
+  provider_http_403: "A chave não possui permissão para esta operação. (provider_http_403)",
+  provider_http_422: "O fornecedor rejeitou algum parâmetro da consulta. (provider_http_422)",
+  provider_http_429: "Limite temporário de requisições atingido. (provider_http_429)",
+  provider_http_503: "O fornecedor está temporariamente indisponível. (provider_http_503)",
+  estimate_unavailable: "O fornecedor não retornou uma estimativa válida. (estimate_unavailable)",
   trial_not_active: "Informe a data final do trial.",
   filters_required: "Defina os filtros de busca.",
   search_exhausted: "Esta busca terminou. Salve novos filtros para recomeçar.",
@@ -41,6 +48,10 @@ const errors: Record<string, string> = {
   sensitive_targeting_rejected:
     "Use critérios empresariais, sem inferir condições de saúde.",
 };
+const commercialError = (code: string) =>
+  Object.prototype.hasOwnProperty.call(errors, code)
+    ? errors[code]
+    : "Não foi possível concluir a operação. Tente novamente ou revise a configuração.";
 export default function AdminCommercial({
   admin,
   basePath,
@@ -104,7 +115,7 @@ export default function AdminCommercial({
       return j.data;
     } catch (e) {
       const m = e instanceof Error ? e.message : "Falha";
-      setError(errors[m] || m);
+      setError(commercialError(m));
       return null;
     } finally {
       setBusy(false);
@@ -410,7 +421,7 @@ export default function AdminCommercial({
                           <tr key={q.id} className="border-t border-white/10">
                             <td className="py-3">{q.channel}</td>
                             <td>{q.status}</td>
-                            <td>{q.error_code || "—"}</td>
+                            <td>{q.error_code ? commercialError(q.error_code) : "—"}</td>
                             <td>
                               {new Date(q.due_at).toLocaleString("pt-BR")}
                             </td>
@@ -498,7 +509,7 @@ export default function AdminCommercial({
                       {r.error_code && (
                         <span className="text-amber-200">
                           {" "}
-                          · {r.error_code}
+                          · {commercialError(r.error_code)}
                         </span>
                       )}
                     </div>

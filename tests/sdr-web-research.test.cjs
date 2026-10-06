@@ -39,7 +39,7 @@ function fixture() {
   };
 }
 async function simulate(options = {}) {
-  const calls = [], reads = [], rpc = [], updates = [];
+  const calls = [], reads = [], rpc = [], updates = [], logs = [];
   const lead = { company_name: 'Espaço Lago Esmeralda', cnpj: '12345678000199', domain: 'espacolagoesmeralda.com.br',
     contact_name: name, email: null, source: 'econodata', phone: 'omit-phone', evidence: 'Histórico.', ...options.lead };
   const opportunity = { lead_id: 'lead', product: 'conviteia', stage: 'new', qualification: {
@@ -73,14 +73,15 @@ async function simulate(options = {}) {
   };
   const result = options.result || fixture();
   const response = { status: 'completed', output: [
-    ...Array.from({ length: options.searches ?? 2 }, () => ({ type: 'web_search_call', status: 'completed', action: { type: 'search', sources: [{ url: sourceUrl, title: 'Fonte da ferramenta' }] } })),
+    ...Array.from({ length: options.searches ?? 2 }, () => ({ type: 'web_search_call', status: 'completed', action: { type: 'search', sources: options.toolSources || [{ url: sourceUrl, title: 'Fonte da ferramenta' }] } })),
     { type: 'message', content: [{ type: 'output_text', text: JSON.stringify(result) }] },
   ] };
   const researchModule = compile('web-research', {
     './catalog': catalog,
     './server': { db: () => database, checked(result) { if (result.error) throw new Error(result.error.message); return result.data; } },
-    './public-web-source': { ...publicWeb, async readPublicSource(url) { reads.push(url); if (options.concurrentEmail) { lead.email = options.concurrentEmail; lead.email_status = "verified"; } return options.page === undefined ? page : options.page; } },
+    './public-web-source': { ...publicWeb, async readPublicSource(url) { reads.push(url); if (options.concurrentEmail) { lead.email = options.concurrentEmail; lead.email_status = "verified"; } return options.pages ? (options.pages[url] ?? null) : options.page === undefined ? page : options.page; } },
   }, {
+    console: { ...console, info(marker, flags) { logs.push({ marker, flags }); } },
     process: { env: { OPENAI_API_KEY: options.noKey ? undefined : 'synthetic-key' } },
     async fetch(url, init) {
       assert.equal(url, 'https://api.openai.com/v1/responses');
@@ -91,7 +92,7 @@ async function simulate(options = {}) {
   });
   let error;
   try { await researchModule.researchBusinessContact('opportunity'); } catch (exception) { error = exception.message; }
-  return { calls, reads, rpc, updates, lead, opportunity, error, researchModule };
+  return { calls, reads, rpc, updates, logs, lead, opportunity, error, researchModule };
 }
 
 test('confirmed professional email uses strict Luna search and public_source, preserving business identity', async () => {
@@ -229,4 +230,106 @@ test('research never overwrites an email verified concurrently by another enrich
   const r = await simulate({ concurrentEmail: 'previous@espacolagoesmeralda.com.br' });
   assert.equal(r.error, undefined); assert.equal(r.lead.email, 'previous@espacolagoesmeralda.com.br');
   assert.equal(r.lead.email_status, 'verified'); assert.ok(r.updates.every((u) => u.table === 'sdr_opportunities'));
+});
+
+const registryUrl = 'https://cadastro.example.com/empresa';
+function registryFixture(quote = 'Pessoa Teste - Sócio') {
+  const result = fixture();
+  result.companyEvidence = { sourceUrl: registryUrl, quote: 'Cadastro empresarial ativo.' };
+  result.decisionMaker = { name: 'Pessoa Teste', role: 'Sócio', relationshipConfirmed: true, evidence: { sourceUrl: registryUrl, quote } };
+  result.professionalEmail = { value: null, publiclyPublished: false, sourceUrl: null, quote: null };
+  result.sources = [{ url: registryUrl, title: 'Cadastro', supports: 'decision_maker' }];
+  return result;
+}
+const registryOptions = {
+  lead: { company_name: 'Empresa Teste', contact_name: 'Pessoa Teste' },
+  toolSources: [{ url: registryUrl, title: 'Cadastro empresarial' }],
+};
+
+test('v2 confirms company identity elsewhere on the registry page, without company in the person quote', async () => {
+  const r = await simulate({ ...registryOptions, result: registryFixture(),
+    page: 'Empresa Teste · CNPJ 12.345.678/0001-99. Cadastro empresarial ativo. Outras informações. Pessoa Teste - Sócio' });
+  assert.equal(r.error, undefined);
+  const research = r.opportunity.qualification.web_research;
+  assert.equal(research.companyConfirmed, true); assert.equal(research.decisionMakerConfirmed, true); assert.equal(research.validatorVersion, 2);
+  assert.equal(r.reads.length, 1);
+  // Exact CNPJ on a registry page is also sufficient when the name is in another form.
+  const cnpjOnly = await simulate({ ...registryOptions, result: registryFixture(), page: 'CNPJ 12345678000199. Cadastro empresarial ativo. Pessoa Teste - Sócio' });
+  assert.equal(cnpjOnly.opportunity.qualification.web_research.decisionMakerConfirmed, true);
+});
+
+test('another CNPJ page or a fabricated CNPJ assembled from unrelated numbers never identifies the company', async () => {
+  for (const page of [
+    'Outra Empresa CNPJ 98.765.432/0001-11. Cadastro empresarial ativo. Pessoa Teste - Sócio',
+    'Empresa diferente. Número 1234567. Outro número 8000199. Cadastro empresarial ativo. Pessoa Teste - Sócio',
+  ]) {
+    const r = await simulate({ ...registryOptions, result: registryFixture(), page });
+    assert.equal(r.opportunity.qualification.web_research.companyConfirmed, false);
+    assert.equal(r.opportunity.qualification.web_research.decisionMakerConfirmed, false);
+  }
+});
+
+test('company identity confirmed does not confirm an absent person or missing professional role', async () => {
+  let r = await simulate({ ...registryOptions, result: registryFixture(), page: 'Empresa Teste. Cadastro empresarial ativo. Nenhuma pessoa informada.' });
+  assert.equal(r.opportunity.qualification.web_research.companyConfirmed, true); assert.equal(r.opportunity.qualification.web_research.decisionMakerConfirmed, false);
+  r = await simulate({ ...registryOptions, result: registryFixture('Pessoa Teste - Informação cadastral'),
+    page: 'Empresa Teste. Cadastro empresarial ativo. Pessoa Teste - Informação cadastral' });
+  assert.equal(r.opportunity.qualification.web_research.companyConfirmed, true); assert.equal(r.opportunity.qualification.web_research.decisionMakerConfirmed, false);
+});
+
+test('official hostname requires company name in page content; CNPJ or snippet alone is not enough', async () => {
+  const result = fixture(); result.companyEvidence.quote = 'Atendimento para eventos.';
+  let r = await simulate({ result, page: `${companyQuote} Atendimento para eventos.` });
+  assert.equal(r.opportunity.qualification.web_research.companyConfirmed, true);
+  r = await simulate({ result, page: 'CNPJ 12.345.678/0001-99. Atendimento para eventos.' });
+  assert.equal(r.opportunity.qualification.web_research.companyConfirmed, false);
+});
+
+test('company confirmation cannot lend its identity to another registry page for the representative', async () => {
+  const result = registryFixture(); result.companyEvidence = { sourceUrl, quote: companyQuote };
+  result.sources.push({ url: sourceUrl, title: 'Oficial', supports: 'company' });
+  const r = await simulate({ ...registryOptions, lead: { contact_name: 'Pessoa Teste' }, result,
+    toolSources: [{ url: sourceUrl }, { url: registryUrl }],
+    pages: { [sourceUrl]: companyQuote, [registryUrl]: 'Outra Empresa CNPJ 98.765.432/0001-11. Pessoa Teste - Sócio' } });
+  assert.equal(r.opportunity.qualification.web_research.companyConfirmed, true);
+  assert.equal(r.opportunity.qualification.web_research.decisionMakerConfirmed, false);
+});
+
+test('another person email never belongs to this representative, even in the same nearby quote or companyContacts', async () => {
+  for (const quote of ['Fábio Silva — fabio@espacolagoesmeralda.com.br', `${name} - Sócia. Fábio Silva — fabio@espacolagoesmeralda.com.br`]) {
+    const result = fixture(); result.professionalEmail.value = 'fabio@espacolagoesmeralda.com.br'; result.professionalEmail.quote = quote;
+    result.companyContacts = [{ type: 'email', value: result.professionalEmail.value, sourceUrl, quote }];
+    const r = await simulate({ result, page: `${companyQuote} ${relationQuote} ${quote}` });
+    assert.equal(r.opportunity.qualification.web_research.decisionMakerConfirmed, true);
+    assert.equal(r.lead.email, null); assert.equal(r.opportunity.qualification.web_research.companyContacts.length, 0);
+  }
+});
+
+test('v2 keeps personal and generic addresses outside individual email', async () => {
+  for (const value of ['pessoa@gmail.com', 'pessoa@hotmail.com', 'contato@espacolagoesmeralda.com.br']) {
+    const result = fixture(); result.professionalEmail.value = value; result.professionalEmail.quote = `${name} — ${value}`;
+    const r = await simulate({ result, page: `${companyQuote} ${relationQuote} ${result.professionalEmail.quote}` });
+    assert.equal(r.lead.email, null);
+  }
+});
+
+test('instructions require a targeted second search while API enforces the absolute cap of three', async () => {
+  const r = await simulate({ searches: 3 });
+  const request = r.calls[0].body;
+  assert.match(request.instructions, /segunda web_search direcionada ao nome completo do decisor \+ empresa \+ domínio/);
+  assert.match(request.instructions, /terceira somente se realmente necessária/);
+  assert.equal(request.max_tool_calls, 3); assert.equal(r.opportunity.qualification.web_research.searchCount, 3);
+  assert.equal((await simulate({ searches: 4 })).error, 'web_research_search_limit');
+});
+
+test('validation diagnostic contains only the fixed boolean allowlist and no personal data', async () => {
+  const result = fixture(); result.professionalEmail = { value: null, publiclyPublished: false, sourceUrl: null, quote: null };
+  const r = await simulate({ result }); assert.equal(r.logs.length, 1);
+  assert.equal(r.logs[0].marker, '[SDR_WEB_RESEARCH_VALIDATION]');
+  const flags = r.logs[0].flags;
+  assert.deepEqual(Object.keys(flags).sort(), ['companyConfirmed', 'companySourceValid', 'decisionMakerConfirmed', 'decisionSourceValid', 'professionalEmailAccepted']);
+  assert.ok(Object.values(flags).every((value) => typeof value === 'boolean'));
+  assert.equal(flags.companySourceValid, true); assert.equal(flags.decisionSourceValid, true); assert.equal(flags.professionalEmailAccepted, false);
+  const logged = JSON.stringify(r.logs);
+  for (const privateValue of [name, email, sourceUrl, '12345678000199', companyQuote, 'synthetic-key']) assert.ok(!logged.includes(privateValue));
 });

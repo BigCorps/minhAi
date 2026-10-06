@@ -8,10 +8,6 @@ import {
   type Provider,
 } from "./catalog";
 const LIMIT = 5;
-const brazilPhone = (value: unknown) => {
-  const n = String(value || "").replace(/\D/g, "");
-  return /^\d{10,11}$/.test(n) ? "55" + n : /^55\d{10,11}$/.test(n) ? n : null;
-};
 const key = (p: Provider) => required(`${p.toUpperCase()}_API_KEY`);
 type HunterContact = {
   value?: string;
@@ -105,12 +101,7 @@ export async function discover(campaignId: string) {
   if (p === "econodata") {
     request = {
       filtros: filters,
-      pagina: {
-        tamanho: LIMIT,
-        ...(c.cursor?.cursor ? { cursor: c.cursor.cursor } : {}),
-      },
-      incluir: ["cadastro", "contatosBasicos"],
-      limite: 1,
+      incluir: ["cadastro"],
     };
     const est = await api(p, "/companies/search_list", {
       ...request,
@@ -119,6 +110,11 @@ export async function discover(campaignId: string) {
     const estimate = est.payload?.tokensEstimados;
     if (typeof estimate !== "number" || !Number.isFinite(estimate) || estimate <= 0)
       throw new Error("estimate_unavailable");
+    console.info("[SDR_ECONODATA_ESTIMATE]", {
+      tokens: estimate,
+      maxImportedCompanies: LIMIT,
+      buckets: ["cadastro"],
+    });
     reserve = estimate;
   } else if (p === "apollo") {
     request = {
@@ -156,28 +152,19 @@ export async function discover(campaignId: string) {
       charged = Number.isFinite(actual) && actual >= 0 ? actual : null;
       leads = rows.slice(0, LIMIT).map((r: any) => {
         // Company discovery only: retain CNPJ for a later people/organogram lookup.
-        const contact = r.contatosBasicos || {};
-        const email =
-          contact.emailsValidadosSetores?.[0] ||
-          contact.emailsPublicos?.[0]?.email;
         return {
           company_name:
             r.cadastro?.nomeFantasia || r.cadastro?.razaoSocial || r.cnpj,
           cnpj: r.cnpj,
-          email,
-          phone: brazilPhone(contact.telefones?.[0]?.numero),
-          email_status: contact.emailsValidadosSetores?.includes(email)
-            ? "verified"
-            : "unknown",
+          email: null,
+          phone: null,
+          email_status: "unknown",
           source: p,
           source_ref: r.cnpj,
-          evidence: `Empresa retornada pela segmentação Econodata. Cadastro disponível: ${JSON.stringify(r.cadastro || {})}. Filtros: ${JSON.stringify(filters)}. Contatos básicos são da empresa e não identificam automaticamente um decisor; consultar decisores/organograma por CNPJ somente após qualificação. Adequação comercial ainda precisa ser confirmada.`,
+          evidence: `Empresa descoberta pela Econodata, somente com dados cadastrais. Cadastro disponível: ${JSON.stringify(r.cadastro || {})}. Filtros: ${JSON.stringify(filters)}. Decisores e contatos ainda não foram consultados; qualificar a empresa antes de consultar decisores/organograma por CNPJ e complementar email/verificação com Hunter. Adequação comercial ainda precisa ser confirmada.`,
         };
       });
-      cursor = {
-        cursor: result.payload.pagina?.cursorProximo || null,
-        exhausted: !result.payload.pagina?.cursorProximo,
-      };
+      cursor = { exhausted: true };
     } else if (p === "hunter") {
       const found = await api(p, "/discover", request);
       if (!Array.isArray(found.payload.data))

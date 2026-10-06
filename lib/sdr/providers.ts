@@ -10,6 +10,7 @@ import {
 } from "./catalog";
 const LIMIT = 5;
 const ECONODATA_PILOT_RESERVE = 5000;
+const ECONODATA_PEOPLE_PROBE_RESERVE = 500;
 const key = (p: Provider) => required(`${p.toUpperCase()}_API_KEY`);
 type HunterContact = {
   value?: string;
@@ -96,16 +97,17 @@ export async function econodataPeopleProbe(opportunityId: string) {
     campaign: opportunity.campaign_id, papel: "decisores", pagina: 1, tamanho: 1,
   })).digest("hex");
   const run = checked(await d.rpc("sdr_reserve_run", {
-    p_campaign: opportunity.campaign_id, p_units: 4000, p_fingerprint: fingerprint,
+    p_campaign: opportunity.campaign_id, p_units: ECONODATA_PEOPLE_PROBE_RESERVE, p_fingerprint: fingerprint,
   }));
   try {
     const result = await api("econodata", `/companies/${cnpj}/people?${params}`);
     const header = result.headers.get("x-tokens-charged");
     const actual = header?.trim() ? Number(header) : NaN;
     const tokensCharged = Number.isFinite(actual) && actual >= 0 ? actual : null;
-    console.info("[SDR_ECONODATA_PEOPLE_SCHEMA]", {
-      status: 200, shape: describeJsonShape(result.payload), tokensCharged,
-    });
+    const shape = describeJsonShape(result.payload);
+    console.info("[SDR_ECONODATA_PEOPLE_SCHEMA]", JSON.stringify({
+      status: 200, shape, tokensCharged,
+    }));
     checked(await d.from("sdr_runs").update({
       status: "completed", imported: 0, duplicates: 0,
       credits_charged: tokensCharged, finished_at: new Date().toISOString(),

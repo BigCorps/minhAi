@@ -479,9 +479,23 @@ export async function findApolloDecisionMakerEmail(opportunityId: string) {
     run_waterfall_email: "false", run_waterfall_phone: "false",
   });
   checked(await d.rpc("sdr_reserve_units", { p_provider: "apollo", p_units: 2 }));
-  const result = await api("apollo", `/people/bulk_match?${params}`, {
-    details: [{ name: lead.contact_name.trim(), domain }],
-  });
+  let result: Awaited<ReturnType<typeof api>>;
+  try {
+    result = await api("apollo", `/people/bulk_match?${params}`, {
+      details: [{ name: lead.contact_name.trim(), domain }],
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "provider_http_403") {
+      checked(await d.rpc("sdr_release_units", { p_provider: "apollo", p_units: 2 }));
+      checked(await d.from("sdr_opportunities").update({ qualification: {
+        ...qualification,
+        email_lookup: { ...(qualification.email_lookup || {}), apollo: {
+          status: "permission_error", creditsConsumed: 0, attemptedAt: new Date().toISOString(),
+        } },
+      } }).eq("id", opportunityId));
+    }
+    throw error;
+  }
   const payload = result.payload;
   const rawCredits = payload?.credits_consumed;
   const credits = typeof rawCredits === "number" ? rawCredits :

@@ -23,6 +23,10 @@ const card = "rounded-2xl border border-white/10 bg-white/[.025] p-5";
 const errors: Record<string, string> = {
   decision_maker_not_found: "Nenhum decisor foi encontrado para esta empresa.",
   provider_missing: "Escolha o fornecedor da campanha.",
+  company_identity_required: "Complete o nome da empresa antes de localizar o email.",
+  email_already_present: "Este contato já possui email.",
+  hunter_email_not_found: "O Hunter não encontrou email para este decisor.",
+  hunter_email_not_verified: "O Hunter não retornou um email com verificação válida.",
   provider_budget: "Configure o orçamento e a validade do fornecedor. (provider_budget)",
   provider_http_401: "A chave da API foi rejeitada ou expirou. (provider_http_401)",
   provider_http_402: "O fornecedor informou saldo insuficiente. (provider_http_402)",
@@ -851,7 +855,7 @@ function Opportunity({ o, action, busy, monitoria }: any) {
         </span>
       </div>
       <p className="mt-3 break-words text-sm">
-        {l.contact_name} · {l.email || "Email pendente"} ({l.email_status}) ·{" "}
+        {l.contact_name} · {l.email || "Email pendente"} ({l.email_status === "verified" ? "Verificado" : l.email_status}) ·{" "}
         {l.phone || "Telefone pendente"}
       </p>
       <p className="mt-2 text-xs leading-5 text-slate-400">
@@ -860,7 +864,7 @@ function Opportunity({ o, action, busy, monitoria }: any) {
       {decisionMaker?.source === "econodata" && (
         <p className="mt-2 text-sm text-slate-300">
           {l.contact_name} · {decisionRole || "Cargo não informado"} · Nível de decisão: {decisionMaker.nivelDecisao || "não informado"}
-          {l.contact_name && l.email === null && <span className="ml-2 text-lime-200">Pronto para localizar email</span>}
+          {l.contact_name && !l.email && <span className="ml-2 text-lime-200">Pronto para localizar email</span>}
         </p>
       )}
       {(l.suppressed_at || l.human_at) && (
@@ -877,6 +881,11 @@ function Opportunity({ o, action, busy, monitoria }: any) {
               onClick={() => void action({ action: "econodata_decision_maker", id: o.id }, "Decisor selecionado. Próxima etapa: localizar e validar email profissional.")}
             >Buscar decisor</button>
           </div>
+        )}
+        {l.source === "econodata" && l.cnpj && l.contact_name && decisionMaker?.source === "econodata" && !l.email && !["lost", "won", "paid"].includes(o.stage) && (
+          <button className={button} disabled={busy}
+            onClick={() => void action({ action: "hunter_find_email", id: o.id }, "Email profissional localizado e verificado.")}
+          >Localizar email</button>
         )}
         <button
           className={button}
@@ -905,7 +914,7 @@ function Opportunity({ o, action, busy, monitoria }: any) {
         )}
         <button
           className={button}
-          disabled={busy || !l.email}
+          disabled={busy || !l.email || l.email_status === "verified"}
           onClick={() => void action({ action: "verify_email", id: l.id })}
         >
           Verificar email

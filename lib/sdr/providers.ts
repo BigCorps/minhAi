@@ -199,6 +199,7 @@ export async function discover(campaignId: string) {
   if (p === "econodata") {
     request = {
       filtros: filters,
+      incluir: ["cadastro"],
     };
     // Internal guardrail only; actual provider billing comes from X-Tokens-Charged.
     reserve = ECONODATA_PILOT_RESERVE;
@@ -383,6 +384,44 @@ export async function discover(campaignId: string) {
     throw e;
   }
 }
+export async function findHunterDecisionMakerEmail(opportunityId: string) {
+  const d = db();
+  const opportunity = checked(await d.from("sdr_opportunities").select("*").eq("id", opportunityId).single())!;
+  const lead = checked(await d.from("sdr_leads").select("*").eq("id", opportunity.lead_id).single())!;
+  if (lead.source !== "econodata" || !/^\d{14}$/.test(String(lead.cnpj || "").replace(/\D/g, "")) ||
+      typeof lead.contact_name !== "string" || !lead.contact_name.trim() ||
+      opportunity.qualification?.decision_maker?.source !== "econodata" ||
+      ["lost", "won", "paid"].includes(opportunity.stage)) throw new Error("lead_not_eligible");
+  if (lead.email) throw new Error("email_already_present");
+  const company = typeof lead.company_name === "string" ? lead.company_name.trim() : "";
+  if (!company || /^cnpj\s/i.test(company)) throw new Error("company_identity_required");
+  const params = new URLSearchParams({ full_name: lead.contact_name.trim(), company });
+  checked(await d.rpc("sdr_reserve_units", { p_provider: "hunter", p_units: 1 }));
+  const result = await api("hunter", `/email-finder?${params}`);
+  const data = result.payload?.data;
+  const email = typeof data?.email === "string" ? data.email.trim() : "";
+  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    throw new Error("hunter_email_not_found");
+  if (data.verification?.status !== "valid") throw new Error("hunter_email_not_verified");
+  checked(await d.from("sdr_leads").update({
+    email, email_status: "verified",
+    evidence: [lead.evidence, "Email profissional localizado e validado pelo Hunter Email Finder para o decisor selecionado pela Econodata."].filter(Boolean).join(" "),
+  }).eq("id", opportunity.lead_id));
+  checked(await d.from("sdr_opportunities").update({
+    qualification: {
+      ...(opportunity.qualification || {}),
+      email_enrichment: {
+        source: "hunter",
+        score: typeof data.score === "number" && Number.isFinite(data.score) ? data.score : null,
+        position: typeof data.position === "string" ? data.position : null,
+        company: typeof data.company === "string" ? data.company : null,
+        verificationStatus: "valid", foundAt: new Date().toISOString(),
+      },
+    },
+  }).eq("id", opportunityId));
+  return { status: "verified" };
+}
+
 export async function verifyEmail(leadId: string) {
   const d = db();
   const l = checked(

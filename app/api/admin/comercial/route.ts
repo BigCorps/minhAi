@@ -14,7 +14,7 @@ import {
   PROVIDERS,
   PRODUCTS,
 } from "@/lib/sdr/catalog";
-import { discover, verifyEmail, enrichEconodataDecisionMaker } from "@/lib/sdr/providers";
+import { discover, verifyEmail, enrichEconodataDecisionMaker, findHunterDecisionMakerEmail } from "@/lib/sdr/providers";
 import {
   seedTemplates,
   submitTemplate,
@@ -116,6 +116,8 @@ export async function POST(req: Request) {
       d = db();
     const id = text(input.id, 100);
     switch (input.action) {
+      case "hunter_find_email":
+        return findHunterDecisionMakerEmail(id);
       case "econodata_decision_maker":
         return enrichEconodataDecisionMaker(id);
       case "campaign": {

@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '@/lib/openai-models';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
       p_metadata: {
         phase: '5',
         billing_mode: 'prepaid_reservation',
-        model: 'gpt-4o-mini',
+        model: OPENAI_MODELS.fast,
       },
     });
 
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: OPENAI_MODELS.fast,
           temperature: 0.25,
           max_tokens: 350,
           messages: [

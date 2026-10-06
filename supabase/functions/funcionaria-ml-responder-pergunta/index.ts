@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '../_shared/openai-models.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -82,7 +83,7 @@ Deno.serve(async (req: Request) => {
           question_id: questionIdClean,
           ml_item_id: itemId,
           produto_nome: item.title || null,
-          model: 'gpt-4o-mini',
+          model: OPENAI_MODELS.fast,
         },
       })
       if (reservation?.ok) {
@@ -336,7 +337,7 @@ async function generateAiAnswer(supabase: any, companyId: string, question: stri
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'gpt-4o-mini', max_tokens: 250, temperature: .3, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
+    body: JSON.stringify({ model: OPENAI_MODELS.fast, max_tokens: 250, temperature: .3, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
   })
   if (!res.ok) return null
   const data = await res.json().catch(() => ({}))

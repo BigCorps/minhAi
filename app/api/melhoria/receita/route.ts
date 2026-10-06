@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '@/lib/openai-models';
 // app/api/melhoria/receita/route.ts
 // ─────────────────────────────────────────────────────────────────────────────
 // Leitura de receita por foto.
@@ -165,7 +166,7 @@ export async function POST(req: NextRequest) {
           Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: OPENAI_MODELS.fast,
           // temperatura 0: transcrever não é tarefa criativa. Variação aqui é
           // um número de dosagem mudando.
           temperature: 0,

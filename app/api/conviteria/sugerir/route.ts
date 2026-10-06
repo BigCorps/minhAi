@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '@/lib/openai-models';
 import { NextResponse, type NextRequest } from 'next/server';
 import {
   TEMAS,
@@ -74,7 +75,7 @@ async function chamarModelo(
           `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: OPENAI_MODELS.fast,
         max_tokens: maxTokens,
         temperature: 0.6,
         response_format: {

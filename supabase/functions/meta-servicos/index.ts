@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '../_shared/openai-models.ts';
 // supabase/functions/meta-servicos/index.ts
 // Clima, Notícias, Rastreio Correios, Tradução, Chamar Gerente,
 // Gerar QR Code, Criar Nota
@@ -428,7 +429,7 @@ async function callOpenAI(systemPrompt: string, userMessage: string): Promise<st
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: OPENAI_MODELS.fast,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: userMessage },

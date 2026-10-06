@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '@/lib/openai-models';
 // app/api/melhoria/conversa/route.ts
 // Conversa com a IA. 1 crédito por resposta.
 // Dados de saúde só entram no contexto se houver consentimento específico ativo.
@@ -189,7 +190,7 @@ Hoje é ${fmt.format(new Date())}.`;
           Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: OPENAI_MODELS.fast,
           temperature: 0.4,
           max_tokens: 400,
           messages: mensagens,

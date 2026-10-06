@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '@/lib/openai-models';
 // app/api/setup/recommend/route.ts
 // Recebe o ramo de atividade e retorna até 15 funções recomendadas
 // usando GPT para analisar as descrições da tabela assistant_functions
@@ -108,7 +109,7 @@ Selecione as mais relevantes para este ramo.`;
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: OPENAI_MODELS.fast,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },

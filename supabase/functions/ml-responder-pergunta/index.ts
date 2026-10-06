@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '../_shared/openai-models.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -201,7 +202,7 @@ Responda a pergunta acima de forma direta e simpática.`
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: OPENAI_MODELS.smart,
         max_tokens: 300,
         temperature: 0.7,
         messages: [

@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '../_shared/openai-models.ts';
 // supabase/functions/meta-flow-agenda/index.ts
 // Máquina de estados para agendamento conversacional no Meta
 //
@@ -874,7 +875,7 @@ INSTRUÇÕES:
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiKey}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: OPENAI_MODELS.fast,
         response_format: { type: 'json_object' },
         max_tokens: 500,
         temperature: 0.2,

@@ -15,6 +15,7 @@ import {
   PRODUCTS,
 } from "@/lib/sdr/catalog";
 import { discover, verifyEmail, enrichEconodataDecisionMaker, findHunterDecisionMakerEmail } from "@/lib/sdr/providers";
+import { discoverWebCompanies } from "@/lib/sdr/web-discovery";
 import { researchBusinessContact } from "@/lib/sdr/web-research";
 import {
   seedTemplates,
@@ -117,6 +118,8 @@ export async function POST(req: Request) {
       d = db();
     const id = text(input.id, 100);
     switch (input.action) {
+      case "web_discover_companies":
+        return discoverWebCompanies(id);
       case "web_research_contact":
         return researchBusinessContact(id);
       case "apollo_find_email":

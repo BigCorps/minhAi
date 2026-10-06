@@ -3,7 +3,7 @@ export const PRODUCTS = {
     name: "ConviteIA",
     url: "https://conviteia.com",
     lane: "api1",
-    audience: "Cerimonialistas, buffets e organizadores de eventos",
+    audience: "Cerimonialistas, buffets, espaços de eventos e organizadores de eventos",
     pitch: "convites digitais, confirmação de presença e memórias do evento",
     question: "Quantos eventos você organiza por mês?",
   },

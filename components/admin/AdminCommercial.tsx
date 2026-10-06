@@ -781,7 +781,14 @@ function Campaign({ c, busy, action }: any) {
           >
             Buscar até 5 contatos
           </button>
+          <button
+            type="button"
+            className={button}
+            disabled={busy}
+            onClick={() => void action({ action: "web_discover_companies", id: c.id }, "Descoberta de empresas concluída. Confira os leads no funil.")}
+          >Encontrar empresas com IA</button>
         </div>
+        <p className="mt-2 text-sm text-slate-400">Pesquisa IA: até 5 empresas · até 3 buscas · somente empresas · nenhum contato será enviado.</p>
       </>
     </form>
   );
@@ -877,7 +884,7 @@ function Opportunity({ o, action, busy, monitoria }: any) {
         {l.phone || "Telefone pendente"}
       </p>
       <p className="mt-2 text-xs leading-5 text-slate-400">
-        Origem: {l.source} · {l.evidence}
+        Fonte: {l.source === "web_research" ? "Pesquisa IA" : l.source} · {l.evidence}
       </p>
       {decisionMaker?.source === "econodata" && (
         <p className="mt-2 text-sm text-slate-300">

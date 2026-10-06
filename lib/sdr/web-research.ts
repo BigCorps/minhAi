@@ -44,7 +44,7 @@ type Schema = {
   type: string | string[]; properties?: Record<string, Schema>; required?: string[];
   items?: Schema; enum?: string[]; maxLength?: number; maxItems?: number; minimum?: number; maximum?: number;
 };
-function conforms(value: unknown, schema: Schema): boolean {
+export function conforms(value: unknown, schema: Schema): boolean {
   const type = value === null ? "null" : Array.isArray(value) ? "array" : typeof value;
   if (!(Array.isArray(schema.type) ? schema.type : [schema.type]).includes(type)) return false;
   if (schema.enum && !schema.enum.includes(value as string)) return false;
@@ -81,7 +81,7 @@ export function businessDomain(value: unknown) {
 export function eligibleBusinessResearch(lead: Record<string, any>, opportunity: Record<string, any>) {
   const cnpj = String(lead.cnpj || "").replace(/\D/g, "");
   const named = typeof lead.company_name === "string" && lead.company_name.trim() && !/^CNPJ\s/i.test(lead.company_name.trim());
-  const corporate = /^\d{14}$/.test(cnpj) || (["econodata", "hunter", "apollo"].includes(lead.source) && businessDomain(lead.domain));
+  const corporate = /^\d{14}$/.test(cnpj) || (["econodata", "hunter", "apollo", "web_research"].includes(lead.source) && businessDomain(lead.domain));
   return !!(named && corporate && !lead.email && !["lost", "won", "paid"].includes(opportunity.stage) &&
     !opportunity.qualification?.web_research && Object.hasOwn(PRODUCTS, opportunity.product));
 }
@@ -97,7 +97,7 @@ export function buildWebResearchRequest(context: Record<string, unknown>) {
     input: JSON.stringify(context), text: { format: { type: "json_schema", name: "business_contact_research", strict: true, schema: WEB_RESEARCH_SCHEMA } },
   };
 }
-async function responses(request: ReturnType<typeof buildWebResearchRequest>, apiKey: string) {
+export async function responses(request: Record<string, unknown>, apiKey: string) {
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST", cache: "no-store", signal: AbortSignal.timeout(120000),
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }, body: JSON.stringify(request),

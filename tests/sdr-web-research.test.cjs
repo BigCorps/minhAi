@@ -134,7 +134,7 @@ test('unconfirmed or different decision maker and conflicting sources never popu
     if (change === 'unconfirmed') result.decisionMaker.relationshipConfirmed = false;
     if (change === 'different') result.decisionMaker.name = 'Outra pessoa';
     if (change === 'conflicting') result.conflictingEvidence = true;
-    const r = await simulate({ result }); assert.equal(r.lead.email, null); assert.equal(r.opportunity.qualification.web_research.decisionMakerConfirmed, false);
+    const r = await simulate({ result, opportunity: { qualification: {} } }); assert.equal(r.lead.email, null); assert.equal(r.opportunity.qualification.web_research.decisionMakerConfirmed, false);
   }
   const r = await simulate({ page: `${page} A pessoa nao representa a empresa.` }); assert.equal(r.lead.email, null);
 });
@@ -332,4 +332,68 @@ test('validation diagnostic contains only the fixed boolean allowlist and no per
   assert.equal(flags.companySourceValid, true); assert.equal(flags.decisionSourceValid, true); assert.equal(flags.professionalEmailAccepted, false);
   const logged = JSON.stringify(r.logs);
   for (const privateValue of [name, email, sourceUrl, '12345678000199', companyQuote, 'synthetic-key']) assert.ok(!logged.includes(privateValue));
+});
+
+test('Econodata authority survives missing corroboration and inaccessible registry without a public contact', async () => {
+  for (const inaccessible of [false, true]) {
+    const result = fixture(); result.companyConfirmed = false; result.decisionMaker.relationshipConfirmed = false;
+    result.professionalEmail = { value: null, publiclyPublished: false, sourceUrl: null, quote: null };
+    const r = await simulate({ result, page: inaccessible ? null : companyQuote });
+    const research = r.opportunity.qualification.web_research;
+    assert.equal(r.error, undefined); assert.equal(research.status, 'completed');
+    assert.equal(research.decisionMakerKnown, true); assert.equal(research.decisionMakerSource, 'econodata');
+    assert.equal(research.decisionMakerWebCorroborated, false); assert.equal(research.companyConfirmed, false);
+    assert.equal(research.professionalEmailFound, false); assert.equal(research.outcome, 'no_public_contact_found');
+    assert.equal(r.lead.email, null);
+  }
+});
+
+test('known Econodata representative can receive documented email without re-proving role or company metadata', async () => {
+  const result = fixture(); result.companyConfirmed = false; result.decisionMaker.relationshipConfirmed = false;
+  const r = await simulate({ result, page: `${companyQuote} ${emailQuote}` });
+  const research = r.opportunity.qualification.web_research;
+  assert.equal(r.lead.email, email); assert.equal(research.decisionMakerKnown, true);
+  assert.equal(research.decisionMakerWebCorroborated, false); assert.equal(research.outcome, 'professional_email_found');
+  assert.equal(JSON.parse(r.calls[0].body.input).decisionMakerSource, 'econodata');
+  assert.match(r.calls[0].body.instructions, /Não gaste buscas tentando provar novamente/);
+});
+
+test('Econodata authority never bypasses documentary email validation or conflicting identity', async () => {
+  for (const options of [{ page: null }, { page: companyQuote }, { result: { ...fixture(), conflictingEvidence: true } }]) {
+    const r = await simulate(options); const research = r.opportunity.qualification.web_research;
+    assert.equal(r.lead.email, null); assert.equal(research.decisionMakerKnown, true);
+    assert.equal(research.outcome, 'validation_inconclusive');
+    assert.ok(r.updates.every((update) => update.table === 'sdr_opportunities'));
+  }
+});
+
+test('company contacts require their own company page even without company confirmation metadata', async () => {
+  const result = fixture(); result.companyConfirmed = false;
+  result.professionalEmail = { value: null, publiclyPublished: false, sourceUrl: null, quote: null };
+  result.companyContacts = [{ type: 'email', value: 'contato@espacolagoesmeralda.com.br', sourceUrl, quote: generalQuote }];
+  const r = await simulate({ result });
+  assert.equal(r.lead.email, null); assert.equal(r.opportunity.qualification.web_research.outcome, 'company_contact_found');
+  const rejected = await simulate({ result, page: generalQuote });
+  assert.equal(rejected.opportunity.qualification.web_research.companyContacts.length, 0);
+});
+
+test('known authority requires both server-loaded Econodata source and an existing contact name', async () => {
+  for (const options of [{ lead: { contact_name: null } }, { opportunity: { qualification: { decision_maker: { source: 'manual' } } } }]) {
+    const result = fixture(); result.decisionMaker.relationshipConfirmed = false;
+    const r = await simulate({ ...options, result });
+    assert.equal(r.opportunity.qualification.web_research.decisionMakerKnown, false); assert.equal(r.lead.email, null);
+  }
+});
+
+test('Econodata authority does not accept a different returned person, personal email or general individual address', async () => {
+  for (const value of ['pessoa@gmail.com', 'contato@espacolagoesmeralda.com.br', 'fabio@espacolagoesmeralda.com.br']) {
+    const result = fixture(); result.decisionMaker.relationshipConfirmed = false;
+    result.professionalEmail.value = value;
+    result.professionalEmail.quote = value.startsWith('fabio') ? `Fábio Silva — ${value}` : `${name} — ${value}`;
+    const r = await simulate({ result, page: `${companyQuote} ${result.professionalEmail.quote}` });
+    assert.equal(r.lead.email, null); assert.equal(r.opportunity.qualification.web_research.decisionMakerKnown, true);
+    assert.equal(r.opportunity.qualification.web_research.companyContacts.length, 0);
+  }
+  const result = fixture(); result.decisionMaker.name = 'Outra pessoa';
+  assert.equal((await simulate({ result })).lead.email, null);
 });

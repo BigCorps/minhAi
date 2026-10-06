@@ -887,7 +887,10 @@ function Opportunity({ o, action, busy, monitoria }: any) {
       )}
       {research?.status === "completed" && (
         <div className="mt-3 rounded-xl bg-white/5 p-3 text-sm text-slate-300">
-          <p>{research.companyConfirmed ? "Empresa confirmada" : "Empresa não confirmada"} · {research.decisionMakerConfirmed ? "Decisor confirmado" : "Decisor não confirmado"}</p>
+          <p>{research.companyConfirmed ? "Empresa confirmada na web" : "Empresa sem confirmação web"} · {research.decisionMakerKnown && research.decisionMakerSource === "econodata" ? "Decisor identificado pela Econodata" : research.decisionMakerConfirmed ? "Decisor confirmado na web" : "Decisor sem confirmação web"}</p>
+          {research.decisionMakerKnown && research.decisionMakerSource === "econodata" && <p>{research.decisionMakerWebCorroborated ? "Vínculo corroborado na web" : "Sem corroboração web do vínculo"}</p>}
+          {research.outcome === "validation_inconclusive" && <p>Validação documental inconclusiva; nenhum contato individual foi aceito.</p>}
+          {research.outcome === "no_public_contact_found" && <p>Nenhum contato público encontrado.</p>}
           <p>{research.professionalEmailFound ? "Email profissional encontrado em fonte pública" : "Email profissional não encontrado"} · {research.companyContacts?.length ? "Contato corporativo encontrado" : "Sem contato corporativo confirmado"}</p>
           {research.companyContacts?.map((contact: any) => <p key={contact.value}>Contato da empresa: {contact.value}</p>)}
           <details className="mt-2">

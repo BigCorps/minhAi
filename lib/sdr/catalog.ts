@@ -171,3 +171,21 @@ export function businessHours(now = new Date()) {
   const hour = Number(p.find((x) => x.type === "hour")?.value);
   return day !== "Sat" && day !== "Sun" && hour >= 9 && hour < 18;
 }
+
+// Shared by server validation and the Admin UI; no server dependencies or credentials.
+export function businessHostname(value: unknown): string | null {
+  const host = normalizeDomain(value);
+  if (!host || host.length > 253 || /^\d+\.\d+\.\d+\.\d+$/.test(host) ||
+      !host.split(".").every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label)) ||
+      /\.(localhost|local|internal|test|invalid)$/i.test(host) ||
+      /^(gmail\.com|hotmail\.com|outlook\.com|yahoo\.[a-z.]+|icloud\.com|proton\.(me|mail\.com)|aol\.com|live\.com)$/.test(host)) return null;
+  try {
+    const raw = String(value || "").trim();
+    const url = new URL(raw.includes("://") ? raw : `https://${raw}`);
+    return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password && !url.port ? host : null;
+  } catch { return null; }
+}
+export function isValidatedWebDecisionMaker(lead: { contact_name?: unknown; domain?: unknown }, qualification: any) {
+  return !!(typeof lead.contact_name === "string" && lead.contact_name.trim() && businessHostname(lead.domain) &&
+    qualification?.decision_maker?.source === "web_research" && qualification.decision_maker.validated === true);
+}

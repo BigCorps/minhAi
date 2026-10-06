@@ -10,7 +10,7 @@ import { RefreshCw, Target, ArrowUpRight } from "lucide-react";
 import AdminHeader from "./AdminHeader";
 import { money } from "./AdminBusinessUi";
 import type { AdminIdentity } from "@/types/platform-admin-business";
-import { PRODUCTS, PROVIDERS, STAGES, type Product } from "@/lib/sdr/catalog";
+import { PRODUCTS, PROVIDERS, STAGES, businessHostname, isValidatedWebDecisionMaker, type Product } from "@/lib/sdr/catalog";
 const input =
   "w-full rounded-xl border border-white/15 bg-slate-900 p-3 text-sm text-white";
 const localDate = (v: string | null) =>
@@ -860,9 +860,12 @@ function Opportunity({ o, action, busy, monitoria }: any) {
   const decisionMaker = o.qualification?.decision_maker;
   const research = o.qualification?.web_research;
   const businessIdentity = /^\d{14}$/.test(String(l.cnpj || "").replace(/\D/g, "")) ||
-    (["econodata", "hunter", "apollo"].includes(l.source) && l.domain);
+    (["econodata", "hunter", "apollo", "web_research"].includes(l.source) && businessHostname(l.domain));
   const canResearch = !l.email && l.company_name?.trim() && !/^CNPJ\s/i.test(l.company_name.trim()) && businessIdentity && !research &&
     !["lost", "won", "paid"].includes(o.stage);
+  const validatedWebDecisionMaker = isValidatedWebDecisionMaker(l, o.qualification);
+  const canFindHunterEmail = !!(l.contact_name && !l.email && businessHostname(l.domain) &&
+    (validatedWebDecisionMaker || (l.source === "econodata" && l.cnpj && decisionMaker?.source === "econodata")) && !["lost", "won", "paid"].includes(o.stage));
   const decisionRole = Array.isArray(decisionMaker?.cargos)
     ? decisionMaker.cargos.find((role: unknown) => typeof role === "string" && role.trim()) : null;
   return (
@@ -892,12 +895,15 @@ function Opportunity({ o, action, busy, monitoria }: any) {
           {l.contact_name && !l.email && <span className="ml-2 text-lime-200">Pronto para localizar email</span>}
         </p>
       )}
+      {validatedWebDecisionMaker && <p className="mt-2 text-sm text-slate-300">Decisor: {l.contact_name} · Fonte: Pesquisa IA · {decisionMaker.role}</p>}
       {research?.status === "completed" && (
         <div className="mt-3 rounded-xl bg-white/5 p-3 text-sm text-slate-300">
-          <p>{research.companyConfirmed ? "Empresa confirmada na web" : "Empresa sem confirmação web"} · {research.decisionMakerKnown && research.decisionMakerSource === "econodata" ? "Decisor identificado pela Econodata" : research.decisionMakerConfirmed ? "Decisor confirmado na web" : "Decisor sem confirmação web"}</p>
+          <p>{research.companyConfirmed ? "Empresa confirmada na web" : "Empresa sem confirmação web"} · {research.decisionMakerKnown && research.decisionMakerSource === "econodata" ? "Decisor identificado pela Econodata" : research.decisionMakerKnown && research.decisionMakerSource === "web_research" ? "Decisor identificado pela Pesquisa IA" : research.decisionMakerConfirmed ? "Decisor confirmado na web" : "Decisor sem confirmação web"}</p>
           {research.decisionMakerKnown && research.decisionMakerSource === "econodata" && <p>{research.decisionMakerWebCorroborated ? "Vínculo corroborado na web" : "Sem corroboração web do vínculo"}</p>}
           {research.outcome === "validation_inconclusive" && <p>Validação documental inconclusiva; nenhum contato individual foi aceito.</p>}
           {research.outcome === "no_public_contact_found" && <p>Nenhum contato público encontrado.</p>}
+          {research.outcome === "decision_maker_found_no_contact" && <p>Decisor identificado; nenhum contato público encontrado.</p>}
+          {research.outcome === "no_decision_maker_found" && <p>Nenhum decisor profissional pôde ser comprovado.</p>}
           <p>{research.professionalEmailFound ? "Email profissional encontrado em fonte pública" : "Email profissional não encontrado"} · {research.companyContacts?.length ? "Contato corporativo encontrado" : "Sem contato corporativo confirmado"}</p>
           {research.companyContacts?.map((contact: any) => <p key={contact.value}>Contato da empresa: {contact.value}</p>)}
           <details className="mt-2">
@@ -923,7 +929,7 @@ function Opportunity({ o, action, busy, monitoria }: any) {
         {canResearch && (
           <button className={button} disabled={busy}
             onClick={() => void action({ action: "web_research_contact", id: o.id }, "Pesquisa empresarial concluída.")}
-          >Pesquisar contato na web</button>
+          >{l.source === "web_research" && !l.contact_name?.trim() ? "Identificar decisor e contato" : "Pesquisar contato na web"}</button>
         )}
         {l.source === "econodata" && l.cnpj && decisionMaker?.source !== "econodata" && !["lost", "won", "paid"].includes(o.stage) && (
           <div>
@@ -932,7 +938,7 @@ function Opportunity({ o, action, busy, monitoria }: any) {
             >Buscar decisor</button>
           </div>
         )}
-        {l.source === "econodata" && l.cnpj && l.contact_name && decisionMaker?.source === "econodata" && !l.email && !["lost", "won", "paid"].includes(o.stage) && (
+        {canFindHunterEmail && (
           <button className={button} disabled={busy}
             onClick={() => void action({ action: "hunter_find_email", id: o.id }, "Email profissional localizado e verificado.")}
           >Localizar email</button>

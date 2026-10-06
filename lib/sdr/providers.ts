@@ -2,6 +2,8 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { db, checked, fetchJson, required } from "./server";
 import {
+  businessHostname,
+  isValidatedWebDecisionMaker,
   normalizeLead,
   identityKeys,
   type LeadInput,
@@ -416,12 +418,15 @@ export async function findHunterDecisionMakerEmail(opportunityId: string) {
   const d = db();
   const opportunity = checked(await d.from("sdr_opportunities").select("*").eq("id", opportunityId).single())!;
   const lead = checked(await d.from("sdr_leads").select("*").eq("id", opportunity.lead_id).single())!;
-  if (lead.source !== "econodata" || !/^\d{14}$/.test(String(lead.cnpj || "").replace(/\D/g, "")) ||
+  const domain = businessHostname(lead.domain);
+  const econodataDecisionMaker = lead.source === "econodata" && /^\d{14}$/.test(String(lead.cnpj || "").replace(/\D/g, "")) &&
+    opportunity.qualification?.decision_maker?.source === "econodata";
+  const webDecisionMaker = isValidatedWebDecisionMaker(lead, opportunity.qualification);
+  if (!domain || (!econodataDecisionMaker && !webDecisionMaker) ||
       typeof lead.contact_name !== "string" || !lead.contact_name.trim() ||
-      opportunity.qualification?.decision_maker?.source !== "econodata" ||
       ["lost", "won", "paid"].includes(opportunity.stage)) throw new Error("lead_not_eligible");
   if (lead.email) throw new Error("email_already_present");
-  const params = buildHunterEmailFinderParams(lead);
+  const params = new URLSearchParams({ full_name: lead.contact_name.trim(), domain });
   checked(await d.rpc("sdr_reserve_units", { p_provider: "hunter", p_units: 1 }));
   const result = await api("hunter", `/email-finder?${params}`);
   const data = result.payload?.data;
@@ -440,7 +445,7 @@ export async function findHunterDecisionMakerEmail(opportunityId: string) {
   if (data.verification?.status !== "valid") throw new Error("hunter_email_not_verified");
   checked(await d.from("sdr_leads").update({
     email, email_status: "verified",
-    evidence: [lead.evidence, "Email profissional localizado e validado pelo Hunter Email Finder para o decisor selecionado pela Econodata."].filter(Boolean).join(" "),
+    evidence: [lead.evidence, `Email profissional localizado e validado pelo Hunter Email Finder para o decisor selecionado ${webDecisionMaker ? "pela Pesquisa IA" : "pela Econodata"}.`].filter(Boolean).join(" "),
   }).eq("id", opportunity.lead_id));
   checked(await d.from("sdr_opportunities").update({
     qualification: {

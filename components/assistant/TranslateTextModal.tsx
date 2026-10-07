@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyEmail, CompanyEmailError } from '@/lib/company-email-client';
+
 import { useState, useEffect, useRef } from 'react';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
@@ -483,24 +485,16 @@ recognition.onend = () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('enviar-email-google', {
-        body: {
-          company_id: companyId,
-          to: recipientEmail,
-          subject: 'Tradução por minhAi',
-          body: `Texto Original:\n${inputText}\n\nTradução:\n${translatedText}`,
-        },
+      await sendCompanyEmail({
+        company_id: companyId,
+        to: recipientEmail,
+        subject: 'Tradução por minhAi',
+        body: `Texto Original:\n${inputText}\n\nTradução:\n${translatedText}`,
       });
-
-      if (error) throw error;
-      if (!data.success) {
-        showToast(data.speech_text || 'Erro ao enviar email', 'error');
-        return;
-      }
 
       showToast('✅ Email enviado com sucesso!', 'success');
     } catch (error: any) {
-      showToast('Erro ao enviar email', 'error');
+      showToast(error instanceof CompanyEmailError ? error.message : 'Erro ao enviar email', 'error');
     }
   };
 

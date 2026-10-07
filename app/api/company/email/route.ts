@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase-admin';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const PROFILE_TYPES = ['cliente', 'frentista', 'atendente', 'caixa', 'gerente', 'colaborador', 'administrador'];
+const PROFILE_TYPES = ['frentista', 'atendente', 'caixa', 'gerente', 'colaborador', 'administrador'];
 const MAX_PAYLOAD_BYTES = 3 * 1024 * 1024;
 const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
 const CONTROLS = /[\u0000-\u001f\u007f-\u009f]/;

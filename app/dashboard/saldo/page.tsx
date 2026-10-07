@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import {
   Loader2, TrendingUp, RefreshCw, Download, Wallet,
@@ -69,6 +69,18 @@ type WithdrawTab = 'withdraw' | 'buy' | 'auto';
 
 const PAGE_SIZE = 50;
 
+function parseWithdrawalCents(value: string): number | null {
+  const normalized = value.trim().replace(',', '.');
+  if (!/^\d+(?:\.\d{0,2})?$/.test(normalized)) return null;
+  const [whole, fraction = ''] = normalized.split('.');
+  const cents = Number(whole) * 100 + Number((fraction + '00').slice(0, 2));
+  return Number.isSafeInteger(cents) ? cents : null;
+}
+
+function wait(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 const THRESHOLD_OPTIONS = [1, 5, 10, 15];
 
 // Vendas fora do dashboard por enquanto — mesma flag usada em CreditsPage.tsx e PrecosSection.tsx.
@@ -133,6 +145,11 @@ export default function SaldoPage() {
   // ── Saque PIX ─────────────────────────────────────────────────────────────
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const withdrawalAttemptRef = useRef<{
+    amountCents: number;
+    idempotencyKey: string;
+    withdrawalId?: string;
+  } | null>(null);
 
   // ── Comprar créditos com saldo ────────────────────────────────────────────
   const [activeWithdrawTab, setActiveWithdrawTab] = useState<WithdrawTab>('withdraw');
@@ -665,28 +682,106 @@ export default function SaldoPage() {
     setMessage(null);
     const pixKey = userProfile?.withdrawal_pix_key;
 
-    if (!pixKey) { setMessage({ type: 'error', text: 'Configure sua chave Pix no Perfil antes de solicitar um saque.' }); return; }
-    if (!withdrawAmount) { setMessage({ type: 'error', text: 'Informe o valor do saque.' }); return; }
+    if (!pixKey) {
+      setMessage({ type: 'error', text: 'Configure sua chave Pix no Perfil antes de solicitar um saque.' });
+      return;
+    }
 
-    const amount = parseFloat(withdrawAmount);
-    const amountCents = Math.floor(amount * 100);
+    const amountCents = parseWithdrawalCents(withdrawAmount);
+    if (amountCents === null || amountCents < 100) {
+      setMessage({ type: 'error', text: 'Informe um valor válido de pelo menos R$ 1,00.' });
+      return;
+    }
+    if (amountCents > totalBalance.available_balance_cents) {
+      setMessage({ type: 'error', text: 'Saldo insuficiente.' });
+      return;
+    }
 
-    if (amountCents < 100) { setMessage({ type: 'error', text: 'O valor mínimo para saque é R$ 1,00.' }); return; }
-    if (amountCents > totalBalance.available_balance_cents) { setMessage({ type: 'error', text: 'Saldo insuficiente.' }); return; }
+    let attempt = withdrawalAttemptRef.current;
+    if (!attempt || attempt.amountCents !== amountCents) {
+      attempt = { amountCents, idempotencyKey: crypto.randomUUID() };
+      withdrawalAttemptRef.current = attempt;
+    }
 
     setIsWithdrawing(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const { error } = await supabase.functions.invoke('request-withdrawal', {
-        body: { amount, userId },
-        headers: { Authorization: `Bearer ${session?.access_token}` },
+      if (!session?.access_token) throw new Error('Sessão expirada. Entre novamente.');
+
+      const invoke = async (body: Record<string, unknown>) => {
+        const { data, error } = await supabase.functions.invoke('request-withdrawal', {
+          body,
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (error) throw error;
+        return data as any;
+      };
+
+      let result = await invoke({
+        action: 'request',
+        amount_cents: amountCents,
+        idempotency_key: attempt.idempotencyKey,
       });
-      if (error) throw error;
-      setMessage({ type: 'success', text: 'Solicitação de saque enviada! O valor será creditado em breve.' });
-      setWithdrawAmount('');
-      setTimeout(() => loadBalanceData(), 1000);
+
+      if (result?.withdrawal_id) {
+        attempt.withdrawalId = result.withdrawal_id;
+        withdrawalAttemptRef.current = attempt;
+      }
+
+      if (result?.error && !['withdrawal_reconciliation_required'].includes(result.error)) {
+        const messages: Record<string, string> = {
+          insufficient_balance: 'Saldo insuficiente.',
+          withdrawal_pix_key_required: 'Configure sua chave Pix no Perfil antes de solicitar um saque.',
+          withdrawal_net_nonpositive: 'O valor líquido ficou zerado após taxas e comissões pendentes.',
+          idempotency_conflict: 'A tentativa anterior não corresponde a este valor. Tente novamente.',
+          bank_not_configured: 'O saque está temporariamente indisponível.',
+        };
+        withdrawalAttemptRef.current = null;
+        setMessage({ type: 'error', text: messages[result.error] || 'Não foi possível iniciar o saque.' });
+        setTimeout(() => loadBalanceData(), 500);
+        return;
+      }
+
+      if (result?.withdrawal_id && ['processing', 'sending'].includes(String(result?.status))) {
+        for (let i = 0; i < 5; i += 1) {
+          await wait(2000);
+          try {
+            result = await invoke({ action: 'check', withdrawal_id: result.withdrawal_id });
+          } catch {
+            break;
+          }
+          if (['transferred', 'released', 'reconciliation_required'].includes(String(result?.status))) break;
+        }
+      }
+
+      if (result?.status === 'transferred') {
+        withdrawalAttemptRef.current = null;
+        setMessage({ type: 'success', text: '✅ Saque concluído e PIX confirmado.' });
+        setWithdrawAmount('');
+      } else if (result?.status === 'released') {
+        withdrawalAttemptRef.current = null;
+        setMessage({
+          type: 'error',
+          text: 'O PIX não foi concluído e o valor reservado já voltou para o seu saldo.',
+        });
+      } else if (result?.status === 'reconciliation_required') {
+        setMessage({
+          type: 'error',
+          text: 'O Banco Inter não confirmou a resposta. O valor está reservado para evitar pagamento duplicado. Não solicite outro saque deste mesmo valor enquanto a reconciliação estiver pendente.',
+        });
+      } else {
+        setMessage({
+          type: 'success',
+          text: 'Saque reservado e em processamento. O sistema continuará consultando este mesmo pedido sem reenviar o PIX.',
+        });
+      }
+
+      setTimeout(() => loadBalanceData(), 500);
     } catch (error: any) {
-      setMessage({ type: 'error', text: 'Erro ao processar saque: ' + (error.message || 'Tente novamente.') });
+      setMessage({
+        type: 'error',
+        text: 'Não foi possível confirmar o estado do saque. Tente novamente com o mesmo valor; o sistema reutilizará a mesma tentativa com segurança.',
+      });
     } finally {
       setIsWithdrawing(false);
     }
@@ -748,8 +843,11 @@ export default function SaldoPage() {
   }
 
   // ── Computed ──────────────────────────────────────────────────────────────
-  const fee = withdrawAmount ? parseFloat(withdrawAmount) * 0.01 : 0;
-  const netAmount = withdrawAmount ? parseFloat(withdrawAmount) - fee : 0;
+  const withdrawAmountCents = parseWithdrawalCents(withdrawAmount) ?? 0;
+  const feeCents = Math.floor(withdrawAmountCents / 100);
+  const netAmountCents = Math.max(0, withdrawAmountCents - feeCents - totalCommissionCents);
+  const fee = feeCents / 100;
+  const netAmount = netAmountCents / 100;
   const pixKey = userProfile?.withdrawal_pix_key;
   const autoRechargePkg = availablePackages.find(p => p.id === autoRecharge.package_id);
 
@@ -1203,6 +1301,12 @@ export default function SaldoPage() {
                           <span className="text-gray-500">Taxa de Serviço (1%)</span>
                           <span className="text-red-500 font-medium">-{fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                         </div>
+                        {totalCommissionCents > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Comissões pendentes</span>
+                            <span className="text-red-500 font-medium">-{(totalCommissionCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between text-base font-bold border-t border-gray-200 dark:border-white/10 pt-2">
                           <span className="text-gray-900 dark:text-white">Valor Líquido</span>
                           <span className="text-green-600 dark:text-green-400">{netAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
@@ -1212,7 +1316,7 @@ export default function SaldoPage() {
 
                     <button
                       onClick={handleWithdraw}
-                      disabled={isWithdrawing || !pixKey || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
+                      disabled={isWithdrawing || !pixKey || withdrawAmountCents < 100 || netAmountCents <= 0}
                       className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition disabled:opacity-50 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
                     >
                       {isWithdrawing ? <><Loader2 className="w-5 h-5 animate-spin" />Processando...</> : <><Download className="w-5 h-5" />Solicitar Saque</>}

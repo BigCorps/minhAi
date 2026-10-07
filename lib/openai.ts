@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from './openai-models';
 import OpenAI from 'openai';
 
 // Cliente OpenAI singleton
@@ -9,21 +10,21 @@ export const openai = new OpenAI({
 export const OPENAI_CONFIG = {
   // Whisper (Speech-to-Text)
   whisper: {
-    model: 'whisper-1',
+    model: OPENAI_MODELS.transcribe,
     language: 'pt', // Português
     temperature: 0,
   },
   
   // GPT-4o-mini (Processamento)
   gpt: {
-    model: 'gpt-4o-mini',
+    model: OPENAI_MODELS.fast,
     temperature: 0.7,
     max_tokens: 500, // Respostas concisas
   },
   
   // TTS (Text-to-Speech)
   tts: {
-    model: 'tts-1', // Mais rápido, boa qualidade
+    model: OPENAI_MODELS.tts, // Mais rápido, boa qualidade
     voice: 'onyx', // ← MUDANÇA: Voz masculina natural (melhor em PT-BR)
     speed: 1.0,
   },
@@ -121,7 +122,7 @@ export async function processWithGPTTools(
   const hasTools = tools.length > 0;
 
   const response = await openai.chat.completions.create({
-    model: OPENAI_CONFIG.gpt.model,
+    model: OPENAI_MODELS.tools,
     messages,
     temperature: OPENAI_CONFIG.gpt.temperature,
     max_tokens: OPENAI_CONFIG.gpt.max_tokens,

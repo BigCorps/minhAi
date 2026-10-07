@@ -61,9 +61,9 @@ async function notify(supabase: any, company: any, checkout: any, totalCents: nu
   const channels: string[] = []
   const tasks: Promise<void>[] = []
   if (config.notificar_email !== false && email) {
-    tasks.push(fetch(`${NOTIFY_URL}/enviar-email-google`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ANON_KEY}` },
-      body: JSON.stringify({ company_id: company.id, to: email, subject: changeCents > 0 ? '💵 Troco necessário — FuncionarIA' : '💵 Pagamento em dinheiro — FuncionarIA', body: `Olá ${name},\n\n${reason}\n\n---\nEnviado pela FuncionarIA` }),
+    tasks.push(fetch(`${NOTIFY_URL}/enviar-email-google-v2`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SERVICE_ROLE}` },
+      body: JSON.stringify({ email_type: 'funcionaria_cash', company_id: company.id, to: email, subject: changeCents > 0 ? '💵 Troco necessário — FuncionarIA' : '💵 Pagamento em dinheiro — FuncionarIA', body: `Olá ${name},\n\n${reason}\n\n---\nEnviado pela FuncionarIA` }),
     }).then(async r => {
       const b = await r.json().catch(() => ({}))
       if (r.ok && b?.success === true) channels.push('e-mail')

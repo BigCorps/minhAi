@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Download, Mail, Loader2, Mic } from 'lucide-react';
@@ -159,10 +161,7 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
     if (!contratoText) return;
     setIsSendingEmail(true);
     try {
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: { company_id: data.companyId, subject: 'Resultado: Contrato em Texto', body: contratoText },
-      });
-      if (error) throw error;
+      await sendCompanyResultEmail({ company_id: data.companyId, subject: 'Resultado: Contrato em Texto', body: contratoText });
       playText('enviado.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {

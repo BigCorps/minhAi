@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '@/lib/openai-models';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
@@ -220,7 +221,7 @@ async function fetchRAGContext(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'text-embedding-3-small',
+        model: OPENAI_MODELS.embedding,
         input: userMessage,
       }),
     });

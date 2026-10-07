@@ -995,10 +995,8 @@ const playText = useCallback(async (text: string) => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         const fd = new FormData();
         fd.append('file', blob, 'audio.webm');
-        fd.append('model', 'whisper-1');
-        fd.append('language', 'pt');
         try {
-        const res = await fetch('/api/voice/transcribe', {
+        const res = await fetch('/api/openai/transcribe', {
             method: 'POST',
             body: fd,
           });

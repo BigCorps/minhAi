@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Download, Mail, Loader2, Mic, Phone, MapPin } from 'lucide-react';
@@ -155,10 +157,7 @@ export default function ConsultarDDDDisplay({ data, onClose, theme = 'dark', pla
     try {
       const cidadesList = resultData.cidades?.join(', ') || '';
       const emailBody = `Consulta DDD: ${resultData.ddd}\n\nEstado: ${resultData.estado} (${resultData.uf})\n\nCidades Atendidas:\n${cidadesList}`;
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: { company_id: data.companyId, subject: `Consulta DDD: ${resultData.ddd}`, body: emailBody },
-      });
-      if (error) throw error;
+      await sendCompanyResultEmail({ company_id: data.companyId, subject: `Consulta DDD: ${resultData.ddd}`, body: emailBody });
       playText('Consulta enviada por email.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {

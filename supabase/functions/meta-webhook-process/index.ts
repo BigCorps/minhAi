@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '../_shared/openai-models.ts';
 // supabase/functions/meta-webhook-process/index.ts
 // Encapsula processMessage — chamado pelo meta-webhook e pelo meta-debounce-processor
 
@@ -721,7 +722,7 @@ async function transcribeWithWhisper(audioBuffer: Uint8Array): Promise<string> {
  
   const formData = new FormData()
   formData.append('file', new Blob([audioBuffer], { type: 'audio/ogg' }), 'audio.ogg')
-  formData.append('model', 'whisper-1')
+  formData.append('model', OPENAI_MODELS.transcribe)
   formData.append('language', 'pt')
  
   const res  = await fetch('https://api.openai.com/v1/audio/transcriptions', {

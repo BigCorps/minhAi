@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, CheckCircle, Loader2, AlertCircle, Calendar, Clock, User } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
+import { searchPublicAppointment, actOnPublicAppointment, listPublicCalendarAvailability } from '@/lib/calendar-client';
 
 interface ConfirmPresenceModalProps {
   data: {
@@ -18,10 +18,10 @@ interface ConfirmPresenceModalProps {
 type Step = 'search' | 'select' | 'success';
 
 interface Event {
-  id: string;
+  appointment_id: string;
+  capability: string;
   summary: string;
   start: { dateTime: string };
-  end: { dateTime: string };
 }
 
 export default function ConfirmPresenceModal({
@@ -84,81 +84,18 @@ export default function ConfirmPresenceModal({
     setError(null);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/listar-eventos-google`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            company_id: companyId,
-            time_min: `${searchDate}T00:00:00`,
-            time_max: `${searchDate}T23:59:59`,
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!result.success || !result.events || result.events.length === 0) {
-        setError('Nenhum agendamento encontrado para esta data');
-        setEvents([]);
-        if (playText) {
-          playText('Nenhum agendamento encontrado para esta data').catch(() => {});
-        }
-        return;
-      }
-
-      let filteredEvents = result.events;
-
-      // Filtrar por horário se informado
-      if (searchTime) {
-        filteredEvents = filteredEvents.filter((event: Event) => {
-          const eventTime = new Date(event.start.dateTime).toTimeString().substring(0, 5);
-          return eventTime === searchTime;
-        });
-      }
-
-      // Filtrar por nome se informado
-      if (searchName) {
-        const nameLower = searchName.toLowerCase();
-        filteredEvents = filteredEvents.filter((event: Event) =>
-          event.summary?.toLowerCase().includes(nameLower)
-        );
-      }
-
-      if (filteredEvents.length === 0) {
-        setError('Nenhum agendamento encontrado com os critérios informados');
-        setEvents([]);
-        if (playText) {
-          playText('Nenhum agendamento encontrado com os critérios informados').catch(() => {});
-        }
-        return;
-      }
-
-      setEvents(filteredEvents);
-      
-      if (filteredEvents.length === 1) {
-        setSelectedEvent(filteredEvents[0]);
-        setStep('select');
-        if (playText) {
-          const evt = filteredEvents[0];
-          const dateStr = new Date(evt.start.dateTime).toLocaleDateString('pt-BR');
-          const timeStr = new Date(evt.start.dateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-          playText(`Encontrei seu agendamento: ${evt.summary}, dia ${dateStr} às ${timeStr}.`).catch(() => {});
-        }
-      } else {
-        setStep('select');
-        if (playText) {
-          playText(`Encontrei ${filteredEvents.length} agendamentos. Por favor, selecione um.`).catch(() => {});
-        }
-      }
+      const appointment = await searchPublicAppointment({ company_id: companyId, action: 'confirm', date: searchDate, time: searchTime || undefined, name: searchName || undefined });
+      const start = `${appointment.date}T${appointment.time}:00-03:00`;
+      const event: Event = { appointment_id: appointment.appointment_id, capability: appointment.capability, summary: appointment.service_type,
+        start: { dateTime: start } };
+      setEvents([event]);
+      setSelectedEvent(event);
+      setStep('select');
+      if (playText) playText('Agendamento encontrado. Confira os dados antes de continuar.').catch(() => {});
 
     } catch (err) {
       console.error('Erro ao buscar eventos:', err);
-      setError('Erro ao buscar agendamentos. Tente novamente.');
+      setError(err instanceof Error ? err.message : 'Erro ao buscar agendamentos. Tente novamente.');
       if (playText) {
         playText('Erro ao buscar agendamentos. Tente novamente.').catch(() => {});
       }
@@ -174,11 +111,12 @@ export default function ConfirmPresenceModal({
     setError(null);
 
     try {
+      await actOnPublicAppointment({ company_id: companyId, appointment_id: selectedEvent.appointment_id, action: 'confirm', capability: selectedEvent.capability });
       const dateStr = new Date(selectedEvent.start.dateTime).toLocaleDateString('pt-BR');
       const timeStr = new Date(selectedEvent.start.dateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       
       if (playText) {
-        await playText(`Presença confirmada para ${selectedEvent.summary} no dia ${dateStr} às ${timeStr}.`);
+        await playText(`Presença confirmada para ${selectedEvent.summary} no dia ${dateStr} às ${timeStr}.`).catch(() => {});
       }
       
       setStep('success');
@@ -255,14 +193,14 @@ export default function ConfirmPresenceModal({
                   type="text"
                   value={searchName}
                   onChange={(e) => setSearchName(e.target.value)}
-                  placeholder="Ex: João, Reunião..."
+                  placeholder="Nome completo do cliente"
                   className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} placeholder-slate-500 focus:ring-2 focus:ring-green-500 transition`}
                 />
               </div>
 
               <button
                 onClick={handleSearch}
-                disabled={loading || !searchDate}
+                disabled={loading || !searchDate || (!searchTime && !searchName.trim())}
                 className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
               >
                 {loading ? (
@@ -280,40 +218,6 @@ export default function ConfirmPresenceModal({
           {/* STEP 2: SELEÇÃO/CONFIRMAÇÃO */}
           {step === 'select' && (
             <div className="space-y-4">
-              {events.length > 1 && !selectedEvent && (
-                <>
-                  <p className={`text-sm ${textMuted} mb-3`}>
-                    Encontramos {events.length} agendamentos. Selecione um:
-                  </p>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {events.map((event) => (
-                      <button
-                        key={event.id}
-                        onClick={() => setSelectedEvent(event)}
-                        className={`w-full p-4 ${isDark ? 'bg-slate-800 hover:bg-slate-750' : 'bg-gray-50 hover:bg-gray-100'} border ${border} rounded-lg text-left transition`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Calendar className="w-5 h-5 text-green-400 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className={`font-medium ${textPrimary} truncate`}>
-                              {event.summary || 'Sem título'}
-                            </div>
-                            <div className={`text-sm ${textMuted}`}>
-                              {new Date(event.start.dateTime).toLocaleString('pt-BR', {
-                                day: '2-digit',
-                                month: 'short',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-
               {selectedEvent && (
                 <>
                   <div className={`p-4 ${isDark ? 'bg-slate-800' : 'bg-gray-50'} border ${border} rounded-lg space-y-3`}>

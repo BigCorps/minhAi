@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, RefreshCw, Mail, Loader2, Mic, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
@@ -181,10 +183,7 @@ export default function ValidarCupomDisplay({ data, onClose, theme = 'dark', pla
       ? `Código: ${validation.cupom.code}\nStatus: Válido\nDesconto: ${formatDiscount(validation.cupom.discount_type, validation.cupom.discount_value)}\nUsos: ${validation.cupom.times_used}${validation.cupom.max_uses ? ` / ${validation.cupom.max_uses}` : ''}\nCliente: ${validation.cupom.referred_by_identifier ?? '—'}`
       : `Código: ${extractedCode}\nStatus: Inválido\nMotivo: ${validation?.reason ? REASON_TEXT[validation.reason] ?? validation.reason : 'Desconhecido'}`;
     try {
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: { company_id: data.companyId, subject: 'Resultado: Validar Cupom', body },
-      });
-      if (error) throw error;
+      await sendCompanyResultEmail({ company_id: data.companyId, subject: 'Resultado: Validar Cupom', body });
       playText('Enviado por email.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {

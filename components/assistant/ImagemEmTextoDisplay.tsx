@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Mail, Loader2, Mic } from 'lucide-react';
@@ -137,10 +139,7 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
     if (!extractedText) return;
     setIsSendingEmail(true);
     try {
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: { company_id: data.companyId, subject: 'Resultado: Imagem em Texto', body: extractedText },
-      });
-      if (error) throw error;
+      await sendCompanyResultEmail({ company_id: data.companyId, subject: 'Resultado: Imagem em Texto', body: extractedText });
       playText('enviado.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {

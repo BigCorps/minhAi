@@ -201,11 +201,8 @@ function AssistenteVendasChat({
       const audioBlob = await voiceRecorder.stopRecording();
       const formData = new FormData();
       formData.append('file', audioBlob, 'audio.webm');
-      formData.append('model', 'whisper-1');
-      formData.append('language', 'pt');
-      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      const response = await fetch('/api/openai/transcribe', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}` },
         body: formData,
       });
       if (response.ok) {

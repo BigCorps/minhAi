@@ -1,8 +1,10 @@
+import { OPENAI_MODELS } from '../_shared/openai-models.ts';
 // supabase/functions/meta-flow-agenda/index.ts
 // Máquina de estados para agendamento conversacional no Meta
 //
 // v5 — 1 crédito por mensagem respondida (padrão original); fuso horário Brasília corrigido
 
+import { uuid, validGoogleEventId } from '../_shared/calendar-security.ts'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -116,11 +118,11 @@ async function consultarDisponibilidadeProativa(
   let horariosOcupados: string[] = []
 
   try {
-    const { data: evResult } = await supabase.functions.invoke('listar-eventos-google', {
+    const { data: evResult } = await supabase.functions.invoke('listar-eventos-google-v2', {
       body: {
         company_id: companyId,
-        time_min: `${dateStr}T00:00:00`,
-        time_max: `${dateStr}T23:59:59`,
+        time_min: `${dateStr}T00:00:00-03:00`,
+        time_max: `${dateStr}T23:59:59-03:00`,
       },
     })
     if (evResult?.events?.length) {
@@ -435,8 +437,8 @@ async function criarEventoEIniciarCobranca(
 
     // Verifica conflito de horário
     try {
-      const { data: evCheck } = await supabase.functions.invoke('listar-eventos-google', {
-        body: { company_id: companyId, time_min: `${dados.data}T00:00:00`, time_max: `${dados.data}T23:59:59` },
+      const { data: evCheck } = await supabase.functions.invoke('listar-eventos-google-v2', {
+        body: { company_id: companyId, time_min: `${dados.data}T00:00:00-03:00`, time_max: `${dados.data}T23:59:59-03:00` },
       })
       if (evCheck?.events?.length) {
         const slotDt = new Date(`${dados.data}T${dados.hora}:00-03:00`)
@@ -472,39 +474,21 @@ async function criarEventoEIniciarCobranca(
 
     console.log(`📅 Criando evento: "${dados.nome_cliente || nomeServico}" em ${startTime.toISOString()}`)
 
-    const { data: evResult, error: evError } = await supabase.functions.invoke('criar-evento-calendario', {
+    const { data: evResult, error: evError } = await supabase.functions.invoke('criar-evento-calendario-v2', {
       body: {
-        company_id:  companyId,
-        summary:     dados.nome_cliente || nomeServico,
-        description: descricao,
-        start_time:  startTime.toISOString(),
-        end_time:    endTime.toISOString(),
+        company_id: companyId, summary: dados.nome_cliente || nomeServico, description: descricao,
+        start_time: startTime.toISOString(), end_time: endTime.toISOString(), ensure_available: true,
+        appointment: { customer_name: dados.nome_cliente || null, service_type: nomeServico,
+          notes: dados.observacoes && dados.observacoes !== 'Nenhuma' ? dados.observacoes : null },
       },
     })
-
-    console.log('📅 criar-evento-calendario:', JSON.stringify(evResult))
-    if (evError) console.error('❌ invoke error:', JSON.stringify(evError))
-
-    if (evError || evResult?.success === false) {
-      throw new Error(evResult?.speech_text || evResult?.error || evError?.message || 'Erro ao criar evento no Google Calendar')
+    if (evError || evResult?.success !== true || !validGoogleEventId(evResult.event_id) || !uuid(evResult.appointment_id)) {
+      throw new Error('Erro ao registrar o agendamento no Google Calendar')
     }
-
-    const eventId = evResult?.event_id ?? crypto.randomUUID()
-    console.log(`✅ Evento criado: ${eventId}`)
-
-    // customer_appointments
-    const { error: apptError } = await supabase.from('customer_appointments').insert({
-      company_id: companyId, google_event_id: eventId,
-      appointment_date: startTime.toISOString(), appointment_end: endTime.toISOString(),
-      customer_name: dados.nome_cliente || null, service_type: nomeServico,
-      status: 'scheduled',
-      notes: dados.observacoes && dados.observacoes !== 'Nenhuma' ? dados.observacoes : null,
-    }).maybeSingle()
-    if (apptError) console.warn('⚠️ customer_appointments:', apptError.message)
 
     // Envia emails de confirmação (fire-and-forget — não bloqueia o fluxo)
     enviarEmailsAgendamento(companyId, company, dados, startTime, endTime, supabase).catch(
-      (e: any) => console.warn('⚠️ Erro ao enviar emails (não-crítico):', e.message)
+      () => console.warn('appointment_email_failed')
     )
 
     // Registra commission_pending se tem produto/preço
@@ -874,7 +858,7 @@ INSTRUÇÕES:
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiKey}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: OPENAI_MODELS.fast,
         response_format: { type: 'json_object' },
         max_tokens: 500,
         temperature: 0.2,
@@ -913,6 +897,13 @@ INSTRUÇÕES:
 
 // ─── Envio de emails de confirmação ──────────────────────────────────────────
 
+function escapeEmailHtml(value: unknown): string {
+  const entities: Record<string, string> = {
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }
+  return String(value ?? '').replace(/[&<>"']/g, char => entities[char])
+}
+
 async function enviarEmailsAgendamento(
   companyId: string,
   company: any,
@@ -922,21 +913,15 @@ async function enviarEmailsAgendamento(
   supabase: any,
 ): Promise<void> {
 
-  // Busca access token do Google (com refresh automático via google_accounts)
+  // Apenas o destinatário da empresa; credenciais e Gmail pertencem à Edge V2.
   const { data: googleAccount } = await supabase
     .from('google_accounts')
-    .select('access_token, google_email')
+    .select('google_email')
     .eq('company_id', companyId)
     .eq('is_active', true)
     .maybeSingle()
 
-  if (!googleAccount?.access_token) {
-    console.warn('⚠️ Google Account não encontrada — emails não enviados')
-    return
-  }
-
-  const accessToken  = googleAccount.access_token
-  const empresaEmail = googleAccount.google_email
+  const empresaEmail = googleAccount?.google_email
   const companyName  = company?.name ?? 'Empresa'
 
   const dataFormatada = startTime.toLocaleDateString('pt-BR', {
@@ -950,7 +935,7 @@ async function enviarEmailsAgendamento(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${titulo}</title>
+  <title>${escapeEmailHtml(titulo)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f4f4f7; margin: 0; padding: 0; }
     .container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
@@ -970,20 +955,20 @@ async function enviarEmailsAgendamento(
 <body>
   <div class="container">
     <div class="header">
-      <h1>📅 ${titulo}</h1>
-      <p>${subtitulo}</p>
+      <h1>📅 ${escapeEmailHtml(titulo)}</h1>
+      <p>${escapeEmailHtml(subtitulo)}</p>
     </div>
     <div class="content">
       <div class="card">
-        ${dados.nome_cliente ? `<div class="row"><span class="label">👤 Cliente</span><span class="value">${dados.nome_cliente}</span></div>` : ''}
-        <div class="row"><span class="label">🔧 Serviço</span><span class="value">${dados.servico || 'Agendamento'}</span></div>
-        <div class="row"><span class="label">📅 Data</span><span class="value">${dataFormatada}</span></div>
-        <div class="row"><span class="label">🕐 Horário</span><span class="value">${horaInicio} – ${horaFim}</span></div>
-        ${dados.produto_preco ? `<div class="row"><span class="label">💰 Valor</span><span class="value">R$ ${dados.produto_preco.toFixed(2).replace('.', ',')}</span></div>` : ''}
-        ${dados.observacoes && dados.observacoes !== 'Nenhuma' ? `<div class="row"><span class="label">📝 Obs</span><span class="value">${dados.observacoes}</span></div>` : ''}
+        ${dados.nome_cliente ? `<div class="row"><span class="label">👤 Cliente</span><span class="value">${escapeEmailHtml(dados.nome_cliente)}</span></div>` : ''}
+        <div class="row"><span class="label">🔧 Serviço</span><span class="value">${escapeEmailHtml(dados.servico || 'Agendamento')}</span></div>
+        <div class="row"><span class="label">📅 Data</span><span class="value">${escapeEmailHtml(dataFormatada)}</span></div>
+        <div class="row"><span class="label">🕐 Horário</span><span class="value">${escapeEmailHtml(horaInicio)} – ${escapeEmailHtml(horaFim)}</span></div>
+        ${dados.produto_preco ? `<div class="row"><span class="label">💰 Valor</span><span class="value">R$ ${escapeEmailHtml(dados.produto_preco.toFixed(2).replace('.', ','))}</span></div>` : ''}
+        ${dados.observacoes && dados.observacoes !== 'Nenhuma' ? `<div class="row"><span class="label">📝 Obs</span><span class="value">${escapeEmailHtml(dados.observacoes)}</span></div>` : ''}
       </div>
       ${paraCliente
-        ? `<p style="font-size:14px;color:#64748b;margin:0">Em caso de dúvidas ou para remarcar, entre em contato com <strong>${companyName}</strong>.</p>`
+        ? `<p style="font-size:14px;color:#64748b;margin:0">Em caso de dúvidas ou para remarcar, entre em contato com <strong>${escapeEmailHtml(companyName)}</strong>.</p>`
         : `<p style="font-size:14px;color:#64748b;margin:0">Novo agendamento registrado no Google Calendar.</p>`
       }
     </div>
@@ -995,33 +980,23 @@ async function enviarEmailsAgendamento(
 </html>`
 
   const sendEmail = async (to: string, subject: string, html: string) => {
-    const subjectEncoded = `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`
-    const raw = [
-      `From: ${companyName} <${empresaEmail}>`,
-      `To: ${to}`,
-      `Subject: ${subjectEncoded}`,
-      `MIME-Version: 1.0`,
-      `Content-Type: text/html; charset=utf-8`,
-      '',
-      html,
-    ].join('\r\n')
-
-    const encoder  = new TextEncoder()
-    const base64   = btoa(String.fromCharCode(...encoder.encode(raw)))
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-
-    const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ raw: base64 }),
-    })
-
-    if (!res.ok) {
-      const err = await res.json()
-      throw new Error(err.error?.message || 'Erro Gmail API')
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/enviar-email-google-v2`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${serviceKey}`, apikey: serviceKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ company_id: companyId, to, subject, body: html, email_type: 'meta_manual' }),
+        signal: AbortSignal.timeout(40_000),
+      })
+      const result = await response.json().catch(() => null)
+      if (!response.ok || result?.success !== true) console.warn('appointment_email_failed')
+    } catch {
+      // O agendamento já foi criado. Falhas de email não devem desfazê-lo,
+      // impedir o outro destinatário, nem expor respostas do provedor.
+      console.warn('appointment_email_failed')
     }
-    const result = await res.json()
-    console.log(`✅ Email enviado para ${to}: messageId=${result.id}`)
   }
 
   // Email para o cliente
@@ -1034,7 +1009,7 @@ async function enviarEmailsAgendamento(
   }
 
   // Email para a empresa (mesmo remetente e destinatário — Gmail aceita)
-  await sendEmail(
+  if (empresaEmail) await sendEmail(
     empresaEmail,
     `📅 Novo agendamento — ${dados.nome_cliente || 'cliente'}`,
     buildHtml(

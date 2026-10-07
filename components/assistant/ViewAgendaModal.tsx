@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createPortal } from 'react-dom';
 import { X, Calendar as CalendarIcon, Loader2, AlertCircle, ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
+import { listCompanyCalendarEvents } from '@/lib/calendar-client';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -56,7 +56,6 @@ export default function ViewAgendaModal({
   const [calendarKey, setCalendarKey] = useState(0);
   
   const calendarRef = useRef<FullCalendar>(null);
-  const supabase = createClient();
   const isDark = theme === 'dark';
 
   useEffect(() => {
@@ -78,17 +77,7 @@ export default function ViewAgendaModal({
     try {
       setLoading(true);
       
-      const { data: result, error } = await supabase.functions.invoke('listar-eventos-google', {
-        body: { company_id: companyId },
-      });
-
-      if (error) throw error;
-
-      if (!result.success) {
-        showToast('Erro ao carregar eventos', 'error');
-        return;
-      }
-
+      const result = { events: await listCompanyCalendarEvents({ company_id: companyId }) };
       const calendarEvents: CalendarEvent[] = (result.events || []).map((event: any) => ({
         id: event.id,
         title: event.summary || 'Sem título',
@@ -108,7 +97,8 @@ export default function ViewAgendaModal({
       setEvents(calendarEvents);
     } catch (error) {
       console.error('Erro ao carregar eventos:', error);
-      showToast('Erro ao carregar eventos', 'error');
+      setEvents([]);
+      showToast(error instanceof Error ? error.message : 'Erro ao carregar eventos', 'error');
     } finally {
       setLoading(false);
     }

@@ -1,0 +1,165 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const ts = require('typescript');
+const crypto = require('node:crypto');
+const { spawnSync } = require('node:child_process');
+const root = path.resolve(__dirname, '..');
+const company = '11111111-1111-4111-8111-111111111111';
+const other = '22222222-2222-4222-8222-222222222222';
+const appointmentId = '33333333-3333-4333-8333-333333333333';
+const key = 'mock-service-only-secret';
+const day = new Date(Date.now() + 10 * 86400000).toISOString().slice(0,10);
+const start = `${day}T10:00:00-03:00`, end = `${day}T11:00:00-03:00`;
+let state, calls, queries, logs, handlers, modules, cases = 0, ipCounter = 0, clock = Date.now();
+class Clock extends Date { constructor(...args) { super(...(args.length ? args : [clock])); } static now() { return clock; } }
+function reset() {
+  clock = Date.now(); calls = []; queries = []; logs = []; handlers = {}; modules = new Map();
+  state = { companies: [{id:company,is_active:true,is_public:true,user_id:'owner'}], funcionaria_company_settings: [],
+    google_accounts: [{company_id:company,is_active:true,scopes:['https://www.googleapis.com/auth/calendar'],access_token:'private-google-token',expires_at:new Date(clock+3600000).toISOString()}],
+    customer_appointments: [{id:appointmentId,company_id:company,customer_name:'João Completo',customer_email:'secret@example.test',customer_phone:'secret-phone',appointment_date:start,appointment_end:end,google_event_id:'database-google-id',status:'scheduled',original_date:null,updated_at:null,service_type:'Consulta'}],
+    interaction_history: [], errors:{}, deleteStatus:204, patchStatus:200, readStatus:200, refreshStatus:200, edgeStatus:200, edgeResult:{success:true,events:[]},
+    events:[{id:'secret-event-id',summary:'secret-summary',description:'secret-description',attendees:[{email:'secret@example.test'}],start:{dateTime:start},end:{dateTime:end}}], createStatus:200,createResult:{id:'real-google-event-id',htmlLink:'https://calendar.google.com/calendar/event?eid=test',hangoutLink:'https://meet.google.com/abc-defg-hij',access_token:'private-google-token'},busy:[],freeBusyStatus:200,actor:'owner', extracted:{nome:'João Completo',data:day,hora:'10:00',nova_data:day,nova_hora:'12:00'},nextPage:false };
+}
+const admin = { auth:{ async getUser(token) { return {data:{user:token==='owner-token'?{id:'owner'}:token==='outsider-token'?{id:'outsider'}:null}}; } }, from(table) {
+  const q={table,filters:[],limit:Infinity}; queries.push(q);
+  const chain={ select(...args){q.select=args;return this;},eq(k,v){q.filters.push(['eq',k,v]);return this;},is(k,v){q.filters.push(['eq',k,v]);return this;},neq(k,v){q.filters.push(['neq',k,v]);return this;},in(k,v){q.filters.push(['in',k,v]);return this;},gte(k,v){q.filters.push(['gte',k,v]);return this;},gt(k,v){q.filters.push(['gt',k,v]);return this;},lt(k,v){q.filters.push(['lt',k,v]);return this;},order(){return this;},limit(v){q.limit=v;return this;},maybeSingle(){q.single=true;return this;},single(){q.single=true;return this;},update(v){q.update=v;return this;},insert(v){q.insert=v;return this;},then(resolve,reject){
+    if(state.errors[table] || q.update && state.updateError) return Promise.resolve({data:null,error:{message:'secret-db-error'}}).then(resolve,reject);
+    let rows=(state[table]||[]).filter(row=>q.filters.every(([op,k,v])=>op==='eq'?row[k]===v:op==='neq'?row[k]!==v:op==='in'?v.includes(row[k]):op==='gte'?Date.parse(row[k])>=Date.parse(v):op==='gt'?Date.parse(row[k])>Date.parse(v):op==='lt'?Date.parse(row[k])<Date.parse(v):false));
+    rows=rows.slice(0,q.limit); if(q.insert){const inserted={...q.insert,id:appointmentId,created_at:new Date(clock).toISOString()};(state[table] ||= []).push(inserted);rows=[inserted];} if(q.update) rows.forEach(row=>Object.assign(row,q.update));
+    return Promise.resolve({data:q.single?rows[0]||null:rows,error:null,...(q.select?.[1]?.count?{count:rows.length}:{})}).then(resolve,reject);
+  }};return chain;
+}};
+async function fakeFetch(url,options={}) {
+  url=String(url);const body=options.body?JSON.parse(options.body):null;calls.push({url,...options,body});
+  if(url.includes('openai.com')) return Response.json({choices:[{message:{content:JSON.stringify(state.extracted)}}]});
+  if(url.includes('/google-refresh-token')) {if(state.refreshStatus===200){state.google_accounts[0].access_token='updated-private-token';state.google_accounts[0].expires_at=new Date(clock+3600000).toISOString();}return Response.json({success:state.refreshStatus===200,secret:'private-refresh-payload'},{status:state.refreshStatus});}
+  if(url.endsWith('/freeBusy')) return Response.json(state.freeBusyStatus===200?{calendars:{primary:{busy:state.busy}}}:{secret:'private-google-error'},{status:state.freeBusyStatus});
+  if(options.method==='POST' && url.includes('/calendars/primary/events')) return Response.json(state.createStatus===200?state.createResult:{secret:'private-google-error'},{status:state.createStatus});
+  if(url.includes('/functions/v1/')) return Response.json(state.edgeResult,{status:state.edgeStatus});
+  if(options.method==='DELETE') return new Response(state.deleteStatus===204?null:JSON.stringify({secret:'private-google-error'}),{status:state.deleteStatus});
+  if(options.method==='PATCH') return Response.json({secret:'private-google-payload'},{status:state.patchStatus});
+  return Response.json(state.readStatus===200?{items:state.events,...(state.nextPage?{nextPageToken:'next'}:{})}:{secret:'private-google-error'},{status:state.readStatus});
+}
+function load(relative) {
+  const file=path.resolve(root,relative);if(modules.has(file))return modules.get(file);
+  const module={exports:{}};modules.set(file,module.exports);
+  const source=fs.readFileSync(file,'utf8');
+  const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022},reportDiagnostics:true});assert.equal(compiled.diagnostics.length,0,file);
+  const localRequire=name=>{
+    if(name==='server-only')return {};
+    if(name==='next/server')return {NextResponse:{json:(value,options={})=>Response.json(value,options)}};
+    if(name.includes('supabase-js'))return {createClient:()=>admin};
+    if(name==='@/lib/supabase-admin')return {createAdminClient:()=>admin};
+    if(name==='https://deno.land/std@0.168.0/http/server.ts')return {serve:handler=>handlers[file]=handler};
+    if(name.startsWith('node:'))return require(name);
+    const resolved=name.startsWith('@/')?path.resolve(root,name.slice(2)):path.resolve(path.dirname(file),name);
+    return load(path.relative(root,resolved.endsWith('.ts')?resolved:resolved+'.ts'));
+  };
+  vm.runInNewContext(compiled.outputText,{require:localRequire,exports:module.exports,module,Buffer,process:{env:{APPOINTMENT_ACTION_SECRET:key,SUPABASE_SERVICE_ROLE_KEY:key,NEXT_PUBLIC_SUPABASE_URL:'https://supabase.test'}},Deno:{env:{get:name=>name==='SUPABASE_URL'?'https://supabase.test':name==='OPENAI_API_KEY'?'mock-openai':key},serve:handler=>handlers[file]=handler},Date:Clock,Intl,crypto,TextEncoder,TextDecoder,Uint8Array,URL,URLSearchParams,Request,Response,AbortSignal,fetch:fakeFetch,console:{warn:(...a)=>logs.push(a.join(' ')),error:(...a)=>logs.push(a.join(' ')),log:()=>{}}},{filename:file});
+  return module.exports;
+}
+async function request(file,input,options={}) {
+  load(file);const fn=handlers[path.resolve(root,file)]||load(file).POST;
+  const req=new Request('https://app.test/api/test',{method:options.method||'POST',headers:{'content-type':'application/json',host:'app.test','x-forwarded-for':String(++ipCounter),...(options.edge?{Authorization:'Bearer '+key}:{}),...options.headers},...(options.method&&options.method!=='POST'?{}:{body:JSON.stringify(input)})});
+  const response=await fn(req),result=await response.json();if(!file.includes('meta-agenda')) assert.equal(response.headers.get('cache-control'),'no-store');
+  const serialized=JSON.stringify(result);for(const secret of ['private-google-token','updated-private-token','private-google-error','private-refresh-payload',...(file.includes('/public/') ? ['secret@example.test','secret-phone'] : [])])assert.ok(!serialized.includes(secret),serialized);
+  return {status:response.status,result};
+}
+const edge='supabase/functions/criar-evento-calendario-v2/index.ts',pub='app/api/public/appointments/create/route.ts',adm='app/api/calendar/events/create/route.ts',med='app/api/public/calendar/medication-reminder/route.ts';
+const input={company_id:company,summary:'Consulta',start_time:start,end_time:end};
+const publicInput={company_id:company,start_time:`${day}T12:00:00-03:00`,end_time:`${day}T13:00:00-03:00`,customer_name:'João Completo',service_type:'Consulta'};
+const medication={company_id:company,medicine_name:'Medicamento',daily_times:['08:30','16:30','00:30'],total_days:90};
+async function test(name,fn){reset();await fn();cases++;console.log('PASS '+name);}
+function send(payload=input,options={}){return request(edge,payload,{edge:true,...options});}
+function creations(){return calls.filter(c=>c.method==='POST'&&c.url.includes('/calendars/primary/events'));}
+(async()=>{
+ await test('01 missing auth',async()=>assert.equal((await request(edge,input)).status,401));
+ await test('02 anon/JWT rejected',async()=>{for(const token of ['anon','user-jwt'])assert.equal((await request(edge,input,{headers:{Authorization:'Bearer '+token}})).status,401);});
+ await test('03 exact service_role allowed',async()=>{assert.equal((await send()).status,200);assert.equal(creations()[0].headers.Authorization,'Bearer private-google-token');});
+ await test('04 invalid method',async()=>assert.equal((await send(input,{method:'GET'})).status,405));
+ await test('05 invalid/inactive/missing company',async()=>{assert.equal((await send({...input,company_id:'bad'})).status,400);state.companies=[];assert.equal((await send()).status,404);reset();state.companies[0].is_active=false;assert.equal((await send()).status,404);});
+ await test('06 account absent',async()=>{state.google_accounts=[];assert.equal((await send()).result.error,'google_account_unavailable');});
+ await test('07 writing scope required',async()=>{state.google_accounts[0].scopes=['https://www.googleapis.com/auth/calendar.readonly'];assert.equal((await send()).status,409);assert.equal(calls.length,0);});
+ await test('08 refresh shared service/requery + failure closed',async()=>{state.google_accounts[0].expires_at=new Date(clock+1000).toISOString();assert.equal((await send()).status,200);assert.equal(calls[0].headers.Authorization,'Bearer '+key);assert.equal(calls[0].headers.apikey,key);assert.deepEqual(calls[0].body,{company_id:company});assert.equal(creations()[0].headers.Authorization,'Bearer updated-private-token');assert.equal(queries.filter(q=>q.table==='google_accounts').length,2);reset();state.google_accounts[0].expires_at='expired';state.refreshStatus=500;assert.equal((await send()).result.error,'google_reconnect_required');assert.equal(creations().length,0);});
+ await test('09 invalid summary/unknown fields',async()=>{for(const summary of ['', '   ', 'x'.repeat(201),'a\nb','a\u0000b'])assert.equal((await send({...input,summary})).status,400);for(const extra of ['requestId','access_token','google_event_id','status'])assert.equal((await send({...input,[extra]:'bad'})).status,400);});
+ await test('10 invalid ISO/timezone/order/duration/future',async()=>{for(const value of [{start_time:`${day}T10:00:00`},{start_time:'2026-02-30T10:00:00Z'},{end_time:start},{start_time:'2099-01-01T00:00:00Z',end_time:'2099-01-01T01:00:00Z'},{end_time:new Date(Date.parse(start)+86400001).toISOString()}])assert.equal((await send({...input,...value})).status,400);});
+ await test('11 attendee shape/header validation + dedup',async()=>{for(const attendees of [['bad'],[{email:'x@example.test',responseStatus:'accepted'}],['a@example.test\r\nBcc:x'],{}])assert.equal((await send({...input,attendees})).status,400);await send({...input,attendees:['a@example.test',{email:'A@example.test'}]});assert.deepEqual(creations()[0].body.attendees,[{email:'a@example.test'}]);assert.ok(creations()[0].url.includes('sendUpdates=all'));});
+ await test('12 maximum 20 attendees',async()=>assert.equal((await send({...input,attendees:Array.from({length:21},(_,i)=>`${i}@example.test`)})).status,400));
+ await test('13 reminders allowlist/bounds',async()=>{for(const reminders of [{useDefault:'yes'},{overrides:[{method:'email',minutes:1}]},{overrides:[{method:'popup',minutes:-1}]},{overrides:[{method:'popup',minutes:40321}]},{overrides:Array(6).fill({method:'popup',minutes:1})},{useDefault:true,overrides:[]}])assert.equal((await send({...input,reminders})).status,400);assert.equal((await send({...input,reminders:{useDefault:false,overrides:[{method:'popup',minutes:0}]}})).status,200);});
+ await test('14 recurrence CRLF/unsafe/too many rejected',async()=>{for(const recurrence of [['RRULE:FREQ=DAILY\r\nATTENDEE:x'],['DTSTART:20261001'],Array(3).fill('RRULE:FREQ=DAILY;COUNT=3')])assert.equal((await send({...input,recurrence})).status,400);});
+ await test('15 conference requestId generated server-side',async()=>{await send({...input,create_conference:true});assert.ok(creations()[0].url.includes('conferenceDataVersion=1'));assert.ok(crypto.randomUUID&& /^[0-9a-f-]{36}$/.test(creations()[0].body.conferenceData.createRequest.requestId));assert.equal((await send({...input,conferenceData:{createRequest:{requestId:'chosen'}}})).status,400);});
+ await test('16 only safe fields/no secret responses/logs',async()=>{const result=await send();assert.deepEqual(Object.keys(result.result).sort(),['event_id','event_link','meet_url','success']);assert.ok(!JSON.stringify(result.result).includes(key));assert.equal(logs.length,0);});
+ await test('17 provider errors sanitized',async()=>{state.createStatus=500;assert.equal((await send()).result.error,'calendar_create_failed');assert.equal(logs.length,0);});
+ await test('18 no genuine event ID => failure',async()=>{for(const result of [{}, {id:''},{id:'invalid / id'},null]){state.createResult=result;assert.equal((await send()).status,502);}assert.ok(!queries.some(q=>q.insert));});
+ await test('19 busy -> 409, no event',async()=>{state.busy=[{start,end}];assert.equal((await send({...input,ensure_available:true})).result.error,'calendar_slot_unavailable');assert.equal(creations().length,0);});
+ await test('20 FreeBusy clear -> create, failures closed',async()=>{assert.equal((await send({...input,ensure_available:true})).status,200);assert.deepEqual(calls[0].body.items,[{id:'primary'}]);reset();state.freeBusyStatus=500;assert.equal((await send({...input,ensure_available:true})).status,502);assert.equal(creations().length,0);reset();state.busy=[{start:'invalid',end}];assert.equal((await send({...input,ensure_available:true})).status,502);});
+ await test('21 appointment structural fields derived',async()=>{await send({...input,appointment:{customer_name:'Cliente',service_type:'Consulta'}});const saved=queries.find(q=>q.insert).insert;assert.equal(saved.google_event_id,'real-google-event-id');assert.equal(saved.company_id,company);assert.equal(saved.appointment_date,new Date(start).toISOString());assert.equal(saved.status,'scheduled');for(const field of ['company_id','status','google_event_id','appointment_date'])assert.equal((await send({...input,appointment:{[field]:'chosen'}})).status,400);});
+ await test('22 DB failure -> DELETE real event rollback',async()=>{state.errors.customer_appointments=true;const result=await send({...input,appointment:{}});assert.equal(result.result.error,'appointment_record_failed');assert.ok(calls.at(-1).url.endsWith('/real-google-event-id'));assert.equal(calls.at(-1).method,'DELETE');});
+ await test('23 rollback failure safe warning',async()=>{state.errors.customer_appointments=true;state.deleteStatus=500;assert.equal((await send({...input,appointment:{}})).result.error,'appointment_record_failed');assert.deepEqual(logs,['[calendar-create-v2] appointment_record_failed','[calendar-create-v2] rollback_failed']);});
+ await test('24 appointment ID returned',async()=>assert.equal((await send({...input,appointment:{customer_name:'Cliente'}})).result.appointment_id,appointmentId));
+ await test('25 public rejects google ID',async()=>assert.equal((await request(pub,{...publicInput,google_event_id:'chosen'})).status,400));
+ await test('26 public rejects summary',async()=>assert.equal((await request(pub,{...publicInput,summary:'arbitrary'})).status,400));
+ await test('27 public rejects generic provider fields',async()=>{for(const field of ['attendees','create_conference','recurrence','location','reminders','appointment_id','status'])assert.equal((await request(pub,{...publicInput,[field]:'chosen'})).status,400);});
+ await test('28 public/FuncionarIA active allowed',async()=>{state.edgeResult={success:true,appointment_id:appointmentId,event_id:'real-google-id'};assert.equal((await request(pub,publicInput)).status,200);state.companies[0].is_public=false;state.funcionaria_company_settings=[{company_id:company}];assert.equal((await request(pub,publicInput)).status,200);});
+ await test('29 private without actor/cross company denied',async()=>{state.companies[0].is_public=false;assert.equal((await request(pub,publicInput)).status,403);assert.equal((await request(pub,publicInput,{headers:{Authorization:'Bearer outsider-token'}})).status,403);});
+ await test('30 appointment overlap correct + boundary non-overlap',async()=>{assert.equal((await request(pub,{...publicInput,start_time:start,end_time:end})).result.reason,'slot_unavailable');assert.equal(calls.length,0);state.edgeResult={success:true,appointment_id:appointmentId};assert.equal((await request(pub,{...publicInput,start_time:end,end_time:`${day}T12:00:00-03:00`})).status,200);const query=queries.find(q=>q.filters.some(f=>f[0]==='gt'));assert.ok(query.filters.some(f=>f[0]==='lt'&&f[1]==='appointment_date'));});
+ await test('31 persistent 30/10min limit + query failure closed',async()=>{state.customer_appointments=Array.from({length:30},(_,i)=>({company_id:company,id:String(i),created_at:new Date(clock).toISOString()}));assert.equal((await request(pub,publicInput)).status,429);assert.equal(calls.length,0);reset();state.errors.customer_appointments=true;assert.equal((await request(pub,publicInput)).status,503);assert.equal(calls.length,0);});
+ await test('32 public service role + availability mandatory',async()=>{state.edgeResult={success:true,appointment_id:appointmentId};await request(pub,publicInput);assert.ok(calls.at(-1).url.endsWith('/criar-evento-calendario-v2'));assert.equal(calls.at(-1).headers.Authorization,'Bearer '+key);assert.equal(calls.at(-1).body.ensure_available,true);assert.equal(calls.at(-1).body.summary,'João Completo');assert.ok(calls.at(-1).body.appointment);assert.ok(!calls.at(-1).body.profile_tokens);});
+ await test('33 public response only real appointment ID',async()=>{state.edgeResult={success:true,appointment_id:appointmentId,event_id:'hidden-google-id',access_token:'private-google-token',event_link:'https://google.test'};assert.deepEqual((await request(pub,publicInput)).result,{ok:true,appointment_id:appointmentId});});
+ await test('34 admin rejects anonymous/cliente/totem/other/expired',async()=>{assert.equal((await request(adm,input)).status,401);assert.equal((await request(adm,input,{headers:{Authorization:'Bearer outsider-token'}})).status,403);for(const tipo of ['cliente','totem']){state.profile_sessions=[{token:'profile',company_id:company,profile_id:other,expires_at:new Date(clock+60000).toISOString()}];state.company_profiles=[{id:other,company_id:company,tipo,is_active:true}];assert.equal((await request(adm,{...input,profile_tokens:['profile']})).status,403);}state.company_profiles[0].tipo='gerente';state.profile_sessions[0].expires_at=new Date(clock-1).toISOString();assert.equal((await request(adm,{...input,profile_tokens:['profile']})).status,403);});
+ await test('35 admin owner/admin/operational profiles allowed',async()=>{state.edgeResult={success:true,event_id:'real-google-id'};assert.equal((await request(adm,input,{headers:{Authorization:'Bearer owner-token'}})).status,200);state.company_admins=[{company_id:company,user_id:'outsider'}];assert.equal((await request(adm,input,{headers:{Authorization:'Bearer outsider-token'}})).status,200);for(const tipo of ['frentista','atendente','caixa','gerente','colaborador','administrador']){state.profile_sessions=[{token:'profile',company_id:company,profile_id:other,expires_at:new Date(clock+60000).toISOString()}];state.company_profiles=[{id:other,company_id:company,tipo,is_active:true}];assert.equal((await request(adm,{...input,profile_tokens:['profile']})).status,200);}});
+ await test('36 admin service role/no appointment/recurrence',async()=>{state.edgeResult={success:true,event_id:'real-google-id'};await request(adm,input,{headers:{Authorization:'Bearer owner-token'}});assert.equal(calls.at(-1).headers.Authorization,'Bearer '+key);assert.ok(!calls.at(-1).body.appointment);assert.ok(!calls.at(-1).body.profile_tokens);assert.equal((await request(adm,{...input,recurrence:['RRULE:FREQ=DAILY']},{headers:{Authorization:'Bearer owner-token'}})).status,400);});
+ await test('37 medication time validation/unique/same minute',async()=>{for(const daily_times of [[],['25:00'],['08:30','08:30'],['08:30','16:45'],Array(25).fill('08:30'),['08:30\r\nRRULE:']])assert.equal((await request(med,{...medication,daily_times})).status,400);});
+ await test('38 medication total days bounds/type',async()=>{for(const total_days of [0,366,2.5,'90'])assert.equal((await request(med,{...medication,total_days})).status,400);});
+ await test('39 medication makes exactly one creation',async()=>{state.edgeResult={success:true,event_id:'real-google-id'};assert.equal((await request(med,medication,{headers:{Authorization:'Bearer owner-token'}})).status,200);assert.equal(calls.length,1);assert.ok(calls[0].url.endsWith('/criar-evento-calendario-v2'));});
+ await test('40 medication RRULE server-built + timezone/next occurrence',async()=>{clock=Date.parse('2026-10-07T12:00:00-03:00');state.edgeResult={success:true,event_id:'real-google-id'};await request(med,medication,{headers:{Authorization:'Bearer owner-token'}});assert.equal(calls[0].body.recurrence[0],'RRULE:FREQ=DAILY;BYHOUR=0,8,16;BYMINUTE=30;BYSECOND=0;COUNT=270');assert.equal(calls[0].body.start_time,'2026-10-07T19:30:00.000Z');assert.equal(Date.parse(calls[0].body.end_time)-Date.parse(calls[0].body.start_time),15*60000);assert.equal(calls[0].body.ensure_available,false);});
+ await test('41 medication COUNT/days*doses + midnight rollover',async()=>{clock=Date.parse('2026-10-07T23:59:00-03:00');state.edgeResult={success:true,event_id:'real-google-id'};await request(med,{...medication,total_days:365},{headers:{Authorization:'Bearer owner-token'}});assert.ok(calls[0].body.recurrence[0].endsWith('COUNT=1095'));assert.equal(calls[0].body.start_time,'2026-10-08T03:30:00.000Z');});
+ await test('42 browser cannot submit RRULE',async()=>assert.equal((await request(med,{...medication,recurrence:['RRULE:FREQ=DAILY']})).status,400));
+ await test('43 Meta actual start/end contract + no success before real appointment',async()=>{state.edgeResult={success:true,event_id:'real-google-id',appointment_id:appointmentId};state.extracted={nome:'João',servico:'Consulta',data:day,hora:'12:00'};const result=await request('supabase/functions/meta-agenda/index.ts',{companyId:company,company:{},connection:{agendar_enabled:true},msg:'quero agendar',msgLower:'quero agendar'},{edge:true});assert.equal(result.result.creditsUsed,2);const sent=calls.at(-1).body;assert.ok(sent.start_time&&sent.end_time);assert.ok(!sent.start_datetime&&!sent.duration_minutes);assert.equal(Date.parse(sent.end_time)-Date.parse(sent.start_time),3600000);state.edgeResult={success:true,event_id:'real-google-id'};const fail=await request('supabase/functions/meta-agenda/index.ts',{companyId:company,company:{},connection:{agendar_enabled:true},msg:'quero agendar',msgLower:'quero agendar'},{edge:true});assert.equal(fail.result.creditsUsed,0);});
+ await test('44 Meta appointment via V2',async()=>{const source=fs.readFileSync(path.join(root,'supabase/functions/meta-agenda/index.ts'),'utf8');assert.ok(source.includes('appointment: { customer_name: parsed.nome'));assert.ok(source.includes('ensure_available: true'));assert.ok(source.includes("/functions/v1/criar-evento-calendario-v2"));});
+ await test('45 Meta flow no duplicate insert',async()=>{const source=fs.readFileSync(path.join(root,'supabase/functions/meta-flow-agenda/index.ts'),'utf8');assert.ok(source.includes("invoke('criar-evento-calendario-v2'"));assert.ok(source.includes('appointment: { customer_name: dados.nome_cliente'));assert.ok(!/from\(['"]customer_appointments['"]\)\.insert/.test(source));assert.ok(source.includes('!uuid(evResult.appointment_id)'));});
+ await test('46 no fake Google ID in migrated clients/internal',async()=>{for(const file of ['components/assistant/CreateEventModal.tsx','supabase/functions/meta-flow-agenda/index.ts']){const source=fs.readFileSync(path.join(root,file),'utf8');assert.ok(!source.includes('crypto.randomUUID()'));assert.ok(!/from\(['"]customer_appointments['"]\)\.insert/.test(source));}});
+ await test('47 guardrail zero legacy + probes',async()=>{assert.equal(spawnSync(process.execPath,['scripts/check-calendar-edge-boundary.mjs'],{cwd:root}).status,0);const probe=path.join(root,'lib',`.calendar-create-probe-${process.pid}.ts`);try{fs.writeFileSync(probe,"export const edge='criar-evento-calendario';");assert.equal(spawnSync(process.execPath,['scripts/check-calendar-edge-boundary.mjs'],{cwd:root}).status,1);fs.writeFileSync(probe,"export const edge='criar-evento-calendario-v2';");assert.equal(spawnSync(process.execPath,['scripts/check-calendar-edge-boundary.mjs'],{cwd:root}).status,0);}finally{fs.rmSync(probe,{force:true});}});
+ await test('48 guardrail zero client V2',async()=>{const probe=path.join(root,'components',`.calendar-create-probe-${process.pid}.tsx`);try{fs.writeFileSync(probe,"'use client'; const edge='criar-evento-calendario-v2';");assert.equal(spawnSync(process.execPath,['scripts/check-calendar-edge-boundary.mjs'],{cwd:root}).status,1);}finally{fs.rmSync(probe,{force:true});}});
+ await test('49 guardrail zero client Meet',async()=>{const probe=path.join(root,'components',`.calendar-create-probe-${process.pid}.tsx`);try{fs.writeFileSync(probe,"'use client'; const edge='create-google-meet';");assert.equal(spawnSync(process.execPath,['scripts/check-calendar-edge-boundary.mjs'],{cwd:root}).status,1);}finally{fs.rmSync(probe,{force:true});}const source=fs.readFileSync(path.join(root,'components/assistant/VideoCallRequestDisplay.tsx'),'utf8');assert.ok(!source.includes('create-google-meet'));assert.ok(source.includes('createCompanyCalendarEvent'));assert.ok(source.includes('create-video-call'));});
+ await test('50 registry undefined guard + manual SQL only target policy',async()=>{const file=path.join(root,'lib/functions-registry.ts'),original=fs.readFileSync(file,'utf8');const entry=/agendar_compromisso:\s*\{[\s\S]*?edgeFunction: undefined/;assert.ok(entry.test(original));try{fs.writeFileSync(file,original.replace(entry,match=>match.replace('edgeFunction: undefined',"edgeFunction: 'criar-evento-calendario-v2'")));assert.equal(spawnSync(process.execPath,['scripts/check-calendar-edge-boundary.mjs'],{cwd:root}).status,1);}finally{fs.writeFileSync(file,original);}const sql=fs.readFileSync(path.join(root,'supabase/migrations-manual/20261007_security_calendar_appointments_insert.sql'),'utf8').replace(/--[^\n]*/g,'').trim();assert.equal(sql,'DROP POLICY IF EXISTS customer_appointments_public_insert\nON public.customer_appointments;');});
+ await test('medication rejects anonymous even public or FuncionarIA',async()=>{
+  assert.equal((await request(med,medication)).status,401);
+  state.companies[0].is_public=false;state.funcionaria_company_settings=[{company_id:company}];
+  assert.equal((await request(med,medication)).status,401);assert.equal(calls.length,0);
+ });
+ await test('medication rejects cliente/totem',async()=>{
+  for(const tipo of ['cliente','totem']){
+   state.profile_sessions=[{token:'profile',company_id:company,profile_id:other,expires_at:new Date(clock+60000).toISOString()}];
+   state.company_profiles=[{id:other,company_id:company,tipo,is_active:true}];
+   assert.equal((await request(med,{...medication,profile_tokens:['profile']})).status,403);
+  }assert.equal(calls.length,0);
+ });
+ await test('medication owner/company_admin/all operational profiles allowed',async()=>{
+  state.edgeResult={success:true,event_id:'real-google-id'};
+  assert.equal((await request(med,medication,{headers:{Authorization:'Bearer owner-token'}})).status,200);
+  state.company_admins=[{company_id:company,user_id:'outsider'}];
+  assert.equal((await request(med,medication,{headers:{Authorization:'Bearer outsider-token'}})).status,200);
+  for(const tipo of ['frentista','atendente','caixa','gerente','colaborador','administrador']){
+   state.profile_sessions=[{token:'profile',company_id:company,profile_id:other,expires_at:new Date(clock+60000).toISOString()}];
+   state.company_profiles=[{id:other,company_id:company,tipo,is_active:true}];
+   assert.equal((await request(med,{...medication,profile_tokens:['profile']})).status,200);
+  }assert.equal(calls.length,8);
+ });
+ await test('medication expired/cross-company session/profile/Supabase user denied',async()=>{
+  state.profile_sessions=[{token:'profile',company_id:company,profile_id:other,expires_at:new Date(clock-1).toISOString()}];
+  state.company_profiles=[{id:other,company_id:company,tipo:'gerente',is_active:true}];
+  assert.equal((await request(med,{...medication,profile_tokens:['profile']})).status,403);
+  state.profile_sessions[0].expires_at=new Date(clock+60000).toISOString();state.profile_sessions[0].company_id=other;
+  assert.equal((await request(med,{...medication,profile_tokens:['profile']})).status,403);
+  state.profile_sessions[0].company_id=company;state.company_profiles[0].company_id=other;
+  assert.equal((await request(med,{...medication,profile_tokens:['profile']})).status,403);
+  assert.equal((await request(med,medication,{headers:{Authorization:'Bearer outsider-token'}})).status,403);assert.equal(calls.length,0);
+ });
+ await test('extra description/location/appointment bounds + recurrence timezone',async()=>{for(const patch of [{description:'x'.repeat(10241)},{location:'x'.repeat(501)},{appointment:{customer_id:'not-uuid'}},{appointment:{customer_email:'bad'}},{appointment:{notes:'x'.repeat(5001)}},{appointment:{constructor:'chosen'}},{appointment:JSON.parse('{"__proto__":"chosen"}')}])assert.equal((await send({...input,...patch})).status,400);await send({...input,recurrence:['RRULE:FREQ=DAILY;COUNT=3']});assert.equal(creations()[0].body.start.timeZone,'America/Sao_Paulo');});
+ await test('extra public origin/time/body limits + private owner allowed',async()=>{assert.equal((await request(pub,publicInput,{headers:{Origin:'https://external.test'}})).status,403);assert.equal((await request(pub,{...publicInput,start_time:'2000-01-01T10:00:00Z'})).status,400);assert.equal((await request(pub,{...publicInput,start_time:new Date(clock+366*86400000).toISOString(),end_time:new Date(clock+366*86400000+60000).toISOString()})).status,400);state.companies[0].is_public=false;state.edgeResult={success:true,appointment_id:appointmentId};assert.equal((await request(pub,publicInput,{headers:{Authorization:'Bearer owner-token'}})).status,200);});
+ await test('extra public description is text, UTF-8 bounded',async()=>{state.edgeResult={success:true,appointment_id:appointmentId};await request(pub,{...publicInput,service_description:'é'.repeat(5000),notes:'<b>texto</b>'});assert.ok(Buffer.byteLength(calls.at(-1).body.description,'utf8')<=10240);assert.ok(!calls.at(-1).body.description.includes('<b>'));});
+ console.log(`PASS: ${cases} creation/security groups (50 required + extras), no real provider/DB calls.`);
+})().catch(error=>{console.error(error);process.exitCode=1});

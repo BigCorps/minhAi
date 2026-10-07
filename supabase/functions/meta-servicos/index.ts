@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '../_shared/openai-models.ts';
 // supabase/functions/meta-servicos/index.ts
 // Clima, Notícias, Rastreio Correios, Tradução, Chamar Gerente,
 // Gerar QR Code, Criar Nota
@@ -273,10 +274,10 @@ async function detectAndRun(
 
         if (notificarEmail && gerenteEmail) {
           promises.push(
-            fetch(`${supabaseUrl}/functions/v1/enviar-email-google`, {
+            fetch(`${supabaseUrl}/functions/v1/enviar-email-google-v2`, {
               method: 'POST',
               headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+              body: JSON.stringify({ email_type: 'manager_assistance',
                 company_id: companyId,
                 to:         gerenteEmail,
                 subject:    `🔔 Cliente solicitou gerente — ${company.name}`,
@@ -428,7 +429,7 @@ async function callOpenAI(systemPrompt: string, userMessage: string): Promise<st
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: OPENAI_MODELS.fast,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: userMessage },

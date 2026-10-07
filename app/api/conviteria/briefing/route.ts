@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '@/lib/openai-models';
 import {
   NextResponse,
   type NextRequest,
@@ -300,7 +301,7 @@ async function interpretar(
           `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: OPENAI_MODELS.fast,
         temperature: 0.1,
         max_tokens: 900,
         response_format: {

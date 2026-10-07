@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyEmail, CompanyEmailError } from '@/lib/company-email-client';
+
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
@@ -215,27 +217,24 @@ export default function GerarCodigoBarrasDisplay({ data, onClose, theme = 'dark'
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const email = user?.email;
-      if (!email) throw new Error('Usuário sem email cadastrado.');
+      if (!email) throw new CompanyEmailError('Entre na sua conta para enviar por e-mail.');
 
       const base64 = barcodeUrl.split(',')[1];
 
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: {
-          company_id: data.companyId,
-          to: email,
-          subject: 'Seu Código de Barras — minhAi',
-          body: `<p>Segue o código de barras gerado pelo assistente eAi.</p><p><strong>Formato:</strong> ${format}</p><p><strong>Conteúdo:</strong> ${inputText}</p><br><img src="${barcodeUrl}" alt="Código de barras" />`,
-          attachments: [
-            { filename: `barcode_${format}.png`, content: base64, encoding: 'base64', contentType: 'image/png' },
-          ],
-        },
+      await sendCompanyEmail({
+        company_id: data.companyId,
+        to: email,
+        subject: 'Seu Código de Barras — minhAi',
+        body: `<p>Segue o código de barras gerado pelo assistente eAi.</p><p><strong>Formato:</strong> ${format}</p><p><strong>Conteúdo:</strong> ${inputText}</p><br><img src="${barcodeUrl}" alt="Código de barras" />`,
+        attachments: [
+          { filename: `barcode_${format}.png`, content: base64, encoding: 'base64', contentType: 'image/png' },
+        ],
       });
-      if (error) throw new Error(error.message);
 
       setEmailSent(true);
       playText('Código de barras enviado para o seu email.').catch(() => {});
-    } catch {
-      playText('Não foi possível enviar o email. Tente novamente.').catch(() => {});
+    } catch (error) {
+      playText(error instanceof CompanyEmailError ? error.message : 'Não foi possível enviar o email. Tente novamente.').catch(() => {});
     } finally {
       setSendingEmail(false);
     }

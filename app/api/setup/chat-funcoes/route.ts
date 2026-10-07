@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '@/lib/openai-models';
 // app/api/setup/chat-funcoes/route.ts
 // GPT interpreta pedidos livres sobre funções:
 // - ativar / desativar por nome ou descrição
@@ -692,7 +693,7 @@ Se não há ações (só explicação, aguardando mais dados do usuário), retor
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: OPENAI_MODELS.smart,
         messages,
         max_tokens: 800,
         temperature: 0.3,

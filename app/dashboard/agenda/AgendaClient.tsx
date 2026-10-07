@@ -1,4 +1,5 @@
 'use client';
+import { listCompanyCalendarEvents, createCompanyCalendarEvent } from '@/lib/calendar-client';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
@@ -239,16 +240,12 @@ useEffect(() => {
   async function loadGoogleEvents(companyId: string) {
     try {
       setLoadingEvents(true);
-      const { data, error } = await supabase.functions.invoke('listar-eventos-google', {
-        body: {
-          company_id: companyId,
-          max_results: 500,
-          time_min: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
-          time_max: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        },
+      const incoming = await listCompanyCalendarEvents({
+        company_id: companyId, max_results: 500,
+        time_min: new Date(Date.now() - 364 * 86400000).toISOString(),
+        time_max: new Date(Date.now() + 365 * 86400000).toISOString(),
       });
-      if (error) throw error;
-      setEvents((data?.events || []).map((event: any) => ({
+      setEvents(incoming.map((event: any) => ({
         id: event.id, title: event.summary || 'Sem título',
         start: event.start.dateTime || event.start.date,
         end: event.end?.dateTime || event.end?.date,
@@ -1055,13 +1052,10 @@ const tabs: { key: ActiveTab; label: string; icon: React.ReactNode; count?: numb
                             try {
                               const startDateTime = new Date(`${meetDate}T${meetTime}:00`).toISOString();
                               const endDateTime   = new Date(new Date(`${meetDate}T${meetTime}:00`).getTime() + 60 * 60 * 1000).toISOString();
-                              const { data: eventData, error: eventError } = await supabase.functions.invoke('criar-evento-calendario', {
-                                body: { company_id: selectedCompanyId, summary: meetTitle || 'Reunião', start_time: startDateTime, end_time: endDateTime, attendees: [meetEmail], create_conference: true },
-                              });
-                              if (eventError || !eventData?.success) throw new Error(eventData?.error ?? 'Erro ao criar evento no calendário');
-                              const meetUrl = eventData?.meetUrl ?? eventData?.hangoutLink;
-                              if (!meetUrl) throw new Error('Link do Meet não retornado');
-                              setMeetSuccess(`Convite enviado para ${meetEmail}. Link: ${meetUrl}`);
+                              if (!selectedCompanyId) throw new Error('Selecione uma empresa.');
+                              const eventData = await createCompanyCalendarEvent({ company_id: selectedCompanyId, summary: meetTitle || 'Reunião', start_time: startDateTime, end_time: endDateTime, attendees: [meetEmail], create_conference: true });
+                              const meetUrl = eventData.meet_url;
+                              setMeetSuccess(`Convite enviado para ${meetEmail}.${meetUrl ? ` Link: ${meetUrl}` : ' O Google está gerando o link do Meet; consulte a agenda.'}`);
                               if (selectedCompanyId) loadGoogleEvents(selectedCompanyId);
                             } catch (err: any) {
                               setMeetError(err.message ?? 'Erro ao agendar reunião');

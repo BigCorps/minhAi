@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Calendar, Clock, User, Loader2, AlertCircle, XCircle, Trash2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
+import { searchPublicAppointment, actOnPublicAppointment, listPublicCalendarAvailability } from '@/lib/calendar-client';
 
 interface CancelAppointmentModalProps {
   data: {
@@ -18,10 +18,10 @@ interface CancelAppointmentModalProps {
 type Step = 'search' | 'select_event' | 'confirm' | 'success';
 
 interface Event {
-  id: string;
+  appointment_id: string;
+  capability: string;
   summary: string;
   start: { dateTime: string };
-  end: { dateTime: string };
 }
 
 export default function CancelAppointmentModal({
@@ -52,7 +52,6 @@ export default function CancelAppointmentModal({
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
 
-  const supabase = createClient();
 
   // Auto-extrair data/hora/nome do transcript
   useEffect(() => {
@@ -85,76 +84,18 @@ export default function CancelAppointmentModal({
     setError(null);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/listar-eventos-google`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            company_id: companyId,
-            time_min: `${searchDate}T00:00:00`,
-            time_max: `${searchDate}T23:59:59`,
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!result.success || !result.events || result.events.length === 0) {
-        setError('Nenhum agendamento encontrado para esta data');
-        setEvents([]);
-        if (playText) {
-          playText('Nenhum agendamento encontrado para esta data').catch(() => {});
-        }
-        return;
-      }
-
-      let filteredEvents = result.events;
-
-      if (searchTime) {
-        filteredEvents = filteredEvents.filter((event: Event) => {
-          const eventTime = new Date(event.start.dateTime).toTimeString().substring(0, 5);
-          return eventTime === searchTime;
-        });
-      }
-
-      if (searchName) {
-        const nameLower = searchName.toLowerCase();
-        filteredEvents = filteredEvents.filter((event: Event) =>
-          event.summary?.toLowerCase().includes(nameLower)
-        );
-      }
-
-      if (filteredEvents.length === 0) {
-        setError('Nenhum agendamento encontrado com os critérios informados');
-        setEvents([]);
-        if (playText) {
-          playText('Nenhum agendamento encontrado').catch(() => {});
-        }
-        return;
-      }
-
-      setEvents(filteredEvents);
-      
-      if (filteredEvents.length === 1) {
-        setSelectedEvent(filteredEvents[0]);
-        setStep('confirm');
-        if (playText) {
-          playText('Agendamento encontrado. Confirme o cancelamento.').catch(() => {});
-        }
-      } else {
-        setStep('select_event');
-        if (playText) {
-          playText(`Encontrei ${filteredEvents.length} agendamentos. Selecione qual deseja cancelar.`).catch(() => {});
-        }
-      }
+      const appointment = await searchPublicAppointment({ company_id: companyId, action: 'cancel', date: searchDate, time: searchTime || undefined, name: searchName || undefined });
+      const start = `${appointment.date}T${appointment.time}:00-03:00`;
+      const event: Event = { appointment_id: appointment.appointment_id, capability: appointment.capability, summary: appointment.service_type,
+        start: { dateTime: start } };
+      setEvents([event]);
+      setSelectedEvent(event);
+      setStep('confirm');
+      if (playText) playText('Agendamento encontrado. Confira os dados antes de continuar.').catch(() => {});
 
     } catch (err) {
       console.error('Erro ao buscar eventos:', err);
-      setError('Erro ao buscar agendamentos. Tente novamente.');
+      setError(err instanceof Error ? err.message : 'Erro ao buscar agendamentos. Tente novamente.');
       if (playText) {
         playText('Erro ao buscar agendamentos').catch(() => {});
       }
@@ -170,28 +111,12 @@ export default function CancelAppointmentModal({
     setError(null);
 
     try {
-      // Chamar Edge Function para cancelar
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/cancelar-agendamento`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            company_id: companyId,
-            event_id: selectedEvent.id,
-            cancel_reason: cancelReason || undefined,
-          }),
-        }
-      );
-
-      const result = await response.json();
+      await actOnPublicAppointment({ company_id: companyId, appointment_id: selectedEvent.appointment_id, action: 'cancel', capability: selectedEvent.capability, reason: cancelReason || undefined });
+      const result = { success: true, speech_text: '' };
 
       if (result.success) {
         if (playText) {
-          await playText('Agendamento cancelado com sucesso.');
+          await playText('Agendamento cancelado com sucesso.').catch(() => {});
         }
         
         setStep('success');
@@ -289,14 +214,14 @@ export default function CancelAppointmentModal({
                   type="text"
                   value={searchName}
                   onChange={(e) => setSearchName(e.target.value)}
-                  placeholder="Ex: João, Reunião..."
+                  placeholder="Nome completo do cliente"
                   className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} placeholder-slate-500 focus:ring-2 focus:ring-red-500 transition`}
                 />
               </div>
 
               <button
                 onClick={handleSearch}
-                disabled={loading || !searchDate}
+                disabled={loading || !searchDate || (!searchTime && !searchName.trim())}
                 className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
               >
                 {loading ? (
@@ -312,49 +237,6 @@ export default function CancelAppointmentModal({
           )}
 
           {/* STEP 2: SELEÇÃO DE EVENTO */}
-          {step === 'select_event' && (
-            <div className="space-y-4">
-              <p className={`text-sm ${textMuted} mb-3`}>
-                Encontramos {events.length} agendamentos. Selecione qual deseja cancelar:
-              </p>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {events.map((event) => (
-                  <button
-                    key={event.id}
-                    onClick={() => {
-                      setSelectedEvent(event);
-                      setStep('confirm');
-                    }}
-                    className={`w-full p-4 ${isDark ? 'bg-slate-800 hover:bg-slate-750' : 'bg-gray-50 hover:bg-gray-100'} border ${border} rounded-lg text-left transition`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Calendar className="w-5 h-5 text-red-400 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className={`font-medium ${textPrimary} truncate`}>
-                          {event.summary || 'Sem título'}
-                        </div>
-                        <div className={`text-sm ${textMuted}`}>
-                          {new Date(event.start.dateTime).toLocaleString('pt-BR', {
-                            day: '2-digit',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setStep('search')}
-                className={`w-full py-3 ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} rounded-lg font-semibold transition`}
-              >
-                Voltar à Busca
-              </button>
-            </div>
-          )}
-
           {/* STEP 3: CONFIRMAÇÃO */}
           {step === 'confirm' && selectedEvent && (
             <div className="space-y-4">

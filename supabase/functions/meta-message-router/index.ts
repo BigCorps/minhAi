@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '../_shared/openai-models.ts';
 // supabase/functions/meta-message-router/index.ts
 // Contém todo o routeMessage() — delega para edges especializadas
 
@@ -1319,7 +1320,7 @@ async function callOpenAI(systemPrompt: string, userMessage: string): Promise<st
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }], temperature: 0.7, max_tokens: 500 }),
+    body: JSON.stringify({ model: OPENAI_MODELS.fast, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }], temperature: 0.7, max_tokens: 500 }),
   })
   const d = await res.json()
   if (!res.ok) throw new Error(`OpenAI Error: ${d.error?.message || 'Unknown'}`)

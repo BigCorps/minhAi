@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '@/lib/openai-models';
 // =========================================================
 // Rota API: Processar Conversação com ChatGPT
 // Arquivo: app/api/voice/process-conversation/route.ts
@@ -207,7 +208,7 @@ INSTRUÇÃO: Se o usuário informou o nome do produto mas a ficha ainda não tem
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: OPENAI_MODELS.smart,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user',   content: userPrompt   },

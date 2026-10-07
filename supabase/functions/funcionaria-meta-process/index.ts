@@ -1,3 +1,4 @@
+import { OPENAI_MODELS } from '../_shared/openai-models.ts';
 // FuncionarIA — processador específico de WhatsApp, Instagram e Facebook.
 // Mantém a infraestrutura Meta da minhAi, mas separa a política de créditos:
 // FAQ/funções determinísticas são grátis; custos variáveis usam a carteira única.
@@ -237,7 +238,7 @@ async function processMessage(data: Incoming) {
       source: 'funcionaria_meta_ai',
       channel: data.platform,
       idempotencyKey: `meta-ai:${baseMessageId}`,
-      metadata: { user_input: text, legacy_router: true, model: 'gpt-4o-mini' },
+      metadata: { user_input: text, legacy_router: true, model: OPENAI_MODELS.fast },
     })
     if (!debit?.ok) {
       response = `Não consegui usar a IA agora por falta de créditos de uso. Você pode continuar em ${rootUrl} ou pedir atendimento de um responsável.`
@@ -323,10 +324,10 @@ async function notifyResponsible(supabase: any, companyId: string, company: any,
     const tasks: Promise<boolean>[] = []
 
     if (config.notificar_email !== false && managerEmail) {
-      tasks.push(fetch(`${SUPABASE_URL}/functions/v1/enviar-email-google`, {
+      tasks.push(fetch(`${SUPABASE_URL}/functions/v1/enviar-email-google-v2`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${SERVICE_ROLE}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify({ email_type: 'manager_assistance',
           company_id: companyId,
           to: managerEmail,
           subject: `🔔 Cliente aguardando — ${company?.name || 'FuncionarIA'}`,
@@ -603,7 +604,7 @@ async function transcribeMetaAudio(mediaId: string, connection: any): Promise<{ 
   if (!openaiKey) return null
   const form = new FormData()
   form.append('file', blob, 'audio.ogg')
-  form.append('model', 'whisper-1')
+  form.append('model', OPENAI_MODELS.transcribe)
   form.append('language', 'pt')
   form.append('response_format', 'verbose_json')
 

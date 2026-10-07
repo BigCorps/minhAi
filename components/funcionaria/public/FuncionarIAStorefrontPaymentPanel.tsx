@@ -176,16 +176,22 @@ export default function FuncionarIAStorefrontPaymentPanel({
           <div className="mt-1 text-xl font-black">{brlCents(payment.amount_cents)}</div>
         </div>
 
-        <a
-          href={payment.checkout_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-black text-white"
-          style={{ backgroundColor: primaryColor }}
-        >
-          <ExternalLink className="h-4 w-4" />
-          Abrir checkout do cartão
-        </a>
+        {payment.can_reopen !== false ? (
+          <a
+            href={payment.checkout_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-black text-white"
+            style={{ backgroundColor: primaryColor }}
+          >
+            <ExternalLink className="h-4 w-4" />
+            Abrir checkout do cartão
+          </a>
+        ) : (
+          <div className="mt-4 rounded-xl bg-amber-50 px-3 py-2.5 text-center text-xs font-bold text-amber-800">
+            Pagamento recebido pela InfinitePay. Estamos confirmando no servidor; não abra uma nova cobrança.
+          </div>
+        )}
 
         <button
           type="button"

@@ -59,8 +59,10 @@ begin
 end $$;
 
 create or replace function public.sdr_claim()
-returns setof public.sdr_queue language plpgsql security invoker set search_path=public,pg_catalog as $$
-declare q public.sdr_queue%rowtype;c public.sdr_campaigns%rowtype;
+returns setof public.sdr_queue language plpgsql security invoker set search_path=public,pg_catalog as $
+declare
+ q public.sdr_queue%rowtype;c public.sdr_campaigns%rowtype;ro public.sdr_product_rollouts%rowtype;
+ v_product text;v_product_count integer;
 begin
  update public.sdr_queue set status='unknown',error_code='expired_send_lease' where status='sending' and lease_at<now()-interval '10 minutes';
  update public.sdr_queue set status='queued',lease_at=null where status='processing' and lease_at<now()-interval '10 minutes';
@@ -69,23 +71,31 @@ begin
   join public.sdr_campaigns cam on cam.id=x.campaign_id
   join public.sdr_leads l on l.id=x.lead_id
   join public.sdr_opportunities o on o.id=x.opportunity_id
-  join public.sdr_product_rollouts ro on ro.product=o.product
+  join public.sdr_product_rollouts rr on rr.product=o.product
   where x.status='queued' and x.due_at<=now() and cam.enabled and cam.trial_ends_at>now()
    and l.owner='minhai' and l.outreach_reviewed and l.suppressed_at is null and l.human_at is null and l.last_inbound_at is null
    and o.stage in ('new','contacted')
-   and ro.status='active' and ro.auto_outreach_enabled and ro.live_send_enabled and ro.daily_send_cap>0
-   and (select count(*) from public.sdr_queue q2 join public.sdr_opportunities o2 on o2.id=q2.opportunity_id
-        where o2.product=o.product and (q2.sent_at>=date_trunc('day',now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo'
-          or q2.status in ('processing','sending'))) < ro.daily_send_cap
+   and rr.status='active' and rr.auto_outreach_enabled and rr.live_send_enabled and rr.daily_send_cap>0
   order by x.due_at for update of x skip locked limit 3
  loop
   select * into c from public.sdr_campaigns where id=q.campaign_id for update;
   if (select count(*) from public.sdr_queue where campaign_id=c.id and
    (sent_at>=date_trunc('day',now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo' or status in ('processing','sending'))) >= c.daily_limit then continue;end if;
+
+  select product into v_product from public.sdr_opportunities where id=q.opportunity_id;
+  select * into ro from public.sdr_product_rollouts where product=v_product for update;
+  if ro.product is null or ro.status<>'active' or not ro.auto_outreach_enabled or not ro.live_send_enabled or ro.daily_send_cap<1 then continue;end if;
+  select count(*) into v_product_count
+  from public.sdr_queue q2 join public.sdr_opportunities o2 on o2.id=q2.opportunity_id
+  where o2.product=v_product and
+   (q2.sent_at>=date_trunc('day',now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo'
+    or q2.status in ('processing','sending'));
+  if v_product_count>=ro.daily_send_cap then continue;end if;
+
   update public.sdr_queue set status='processing',lease_at=now() where id=q.id returning * into q;
   return next q;
  end loop;
-end $$;
+end $;
 
 create or replace function public.sdr_begin_send(p_queue uuid)
 returns void language plpgsql security invoker set search_path=public,pg_catalog as $$
@@ -96,7 +106,7 @@ begin
  select * into strict l from public.sdr_leads where id=q.lead_id for update;
  select * into strict c from public.sdr_campaigns where id=q.campaign_id;
  select * into strict o from public.sdr_opportunities where id=q.opportunity_id;
- select * into ro from public.sdr_product_rollouts where product=o.product;
+ select * into ro from public.sdr_product_rollouts where product=o.product for update;
  if q.status<>'processing' or not c.enabled or c.trial_ends_at<=now() or c.trial_ends_at is null
  or l.owner<>'minhai' or not l.outreach_reviewed or l.suppressed_at is not null or l.human_at is not null
  or l.last_inbound_at is not null or o.stage not in ('new','contacted')

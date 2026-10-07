@@ -76,6 +76,8 @@ if (api.includes('SUPABASE_SERVICE_ROLE_KEY')) fail('Next storefront boundary mu
 for (const required of [
   "action: 'signal_infinitepay'",
   "action: 'confirm_card'",
+  "after(async () =>",
+  "retry.status === 409",
   'transaction_nsu',
   'order_nsu',
 ]) if (!returned.includes(required)) fail('return route missing trigger/verification behavior: ' + required)

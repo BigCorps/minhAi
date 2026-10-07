@@ -113,7 +113,9 @@ export default function FuncionarIAMercadoLivrePanel() {
       let updated = 0;
       let linked = 0;
       let errors = 0;
-      for (let batch = 0; batch < 500; batch++) {
+      let finished = false;
+      let lastFingerprint = '';
+      for (let batch = 0; batch < 20000; batch++) {
         setImportProgress(`Importando catálogo… ${processed} processados`);
         const data = await invokeFuncionarIAEdge<any>('funcionaria-ml-importar-produtos', {
           action: 'import_all', company_id: companyId, scroll_id: scrollId,
@@ -126,9 +128,16 @@ export default function FuncionarIAMercadoLivrePanel() {
           else if (row.status === 'linked_local') linked++;
           else if (row.status === 'error') errors++;
         }
-        if (data.done === true || !data.next_scroll_id || !rows.length) break;
+        if (data.done === true || !data.next_scroll_id || !rows.length) {
+          finished = true;
+          break;
+        }
+        const fingerprint = `${String(data.next_scroll_id)}:${rows.map((row: any) => row.item_id).join(',')}`;
+        if (fingerprint === lastFingerprint) throw new Error('ml_scan_stalled');
+        lastFingerprint = fingerprint;
         scrollId = String(data.next_scroll_id);
       }
+      if (!finished) throw new Error('ml_import_safety_limit');
       setImportNotice(`Importação completa: ${imported} novos, ${updated} atualizados${linked ? `, ${linked} já vinculados localmente` : ''}${errors ? `, ${errors} com erro` : ''}.`);
       await loadCatalog(true);
     } catch (error: any) {

@@ -19,6 +19,9 @@ for(const required of [
   "sync_source in ('mercadolivre','local','bidirectional')",
   'revoke all on table public.funcionaria_ml_product_sync from public,anon,authenticated',
   'revoke all on table public.funcionaria_ml_option_links from public,anon,authenticated',
+  "check (source='mercadolivre')",
+  "'mercadolivre','mercadolivre'",
+  'revoke all on function public.funcionaria_import_ml_product_upsert(uuid,text,jsonb,jsonb)',
 ]) if(!sql.includes(required)) fail('SQL invariant missing: '+required)
 
 for(const forbidden of [
@@ -32,14 +35,13 @@ for(const required of [
   '/prices',
   '/user-products/',
   '/stock',
-  "source:'mercadolivre'",
-  "sync_source:'mercadolivre'",
   "status:'linked_local'",
   "const BATCH=10",
   "search_type','scan'",
   "funcionaria_ml_option_links",
   "ml_sync_hash",
   "seller_id",
+  "normalized.price<=0",
 ]) if(!edge.includes(required)) fail('Edge invariant missing: '+required)
 
 if(edge.includes('https://api.mercadolibre.com/items?ids=')) fail('deprecated /items?ids= multiget is forbidden')
@@ -57,6 +59,8 @@ for(const required of [
   'Importar selecionados',
   'Importar todos',
   'JÁ VINCULADO',
+  "ml_scan_stalled",
+  "ml_import_safety_limit",
 ]) if(!panel.includes(required)) fail('ML panel invariant missing: '+required)
 
 if(!process.exitCode) console.log('FuncionarIA 7H: ML bulk import + idempotency + internal sync metadata PASS')

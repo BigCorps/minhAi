@@ -295,7 +295,7 @@ async function importOne(admin:any,token:string,companyId:string,sellerId:string
   }
 
   const normalized=await hydrate(token,item)
-  if(!normalized.title || normalized.price<0)return {item_id:itemId,status:'invalid_data'}
+  if(!normalized.title || normalized.price<=0)return {item_id:itemId,status:'invalid_data'}
 
   const {data:claim,error:claimError}=await admin.rpc('funcionaria_import_ml_product_upsert',{
     p_company_id:companyId,

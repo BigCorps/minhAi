@@ -2856,7 +2856,7 @@ agendar_compromisso: {
     'Criar evento no calendário',
   ],
   
-  edgeFunction: 'criar-evento-calendario',
+  edgeFunction: undefined,
   requiresInput: false,
   
   description: 'Cria eventos no Google Calendar através de comando de voz',

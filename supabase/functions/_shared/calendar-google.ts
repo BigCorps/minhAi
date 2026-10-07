@@ -9,10 +9,10 @@ export function authorize(req: Request) {
   if (!SUPABASE_URL) return json('service_unavailable', 503);
   return null;
 }
-export async function readInput(req: Request) {
+export async function readInput(req: Request, maxBytes = 16384) {
   const reader = req.body?.getReader(); if (!reader) throw Error('invalid_request');
   const chunks: Uint8Array[] = []; let size = 0;
-  try { while (true) { const { value, done } = await reader.read(); if (done) break; size += value.length; if (size > 16384) { await reader.cancel(); throw Error('invalid_request'); } chunks.push(value); } } finally { reader.releaseLock(); }
+  try { while (true) { const { value, done } = await reader.read(); if (done) break; size += value.length; if (size > maxBytes) { await reader.cancel(); throw Error('invalid_request'); } chunks.push(value); } } finally { reader.releaseLock(); }
   const bytes = new Uint8Array(size); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
   return JSON.parse(new TextDecoder().decode(bytes));
 }

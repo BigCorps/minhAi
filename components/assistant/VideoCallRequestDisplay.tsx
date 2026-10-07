@@ -8,6 +8,7 @@
 // Seção 2: Agendar via Google Meet (se conta Google conectada)
 // ============================================================
 
+import { createCompanyCalendarEvent } from '@/lib/calendar-client';
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import DailyIframe, { type DailyCall } from '@daily-co/daily-js';
@@ -247,38 +248,11 @@ export default function VideoCallRequestDisplay({ data, onClose, theme = 'dark' 
     setMeetError(null);
     setMeetSuccess(null);
     try {
-      // 1. Criar espaço no Meet
-      const meetRes = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-google-meet`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ company_id: data.companyId }),
-        }
-      );
-      const meetData = await meetRes.json();
-      if (!meetRes.ok) throw new Error(meetData.error ?? 'Erro ao criar Meet');
-
-      // 2. Criar evento no Google Calendar com link do Meet
       const startDateTime = new Date(`${meetDate}T${meetTime}:00`).toISOString();
-      const endDateTime   = new Date(new Date(`${meetDate}T${meetTime}:00`).getTime() + 60 * 60 * 1000).toISOString();
-
-      const supabase = createClient();
-const { error: eventError } = await supabase.functions.invoke('criar-evento-calendario', {
-  body: {
-    company_id:  data.companyId,
-    summary:     meetTitle || 'Reunião',
-    description: `Reunião via Google Meet\nLink: ${meetData.url}`,
-    start_time:  startDateTime,   // ✅ corrigido
-    end_time:    endDateTime,     // ✅ corrigido
-    attendees:   [{ email: meetEmail }],
-    location:    meetData.url,
-  },
-});
-      if (eventError) throw new Error('Erro ao criar evento no calendário');
+      const endDateTime = new Date(Date.parse(startDateTime) + 60 * 60000).toISOString();
+      await createCompanyCalendarEvent({ company_id: data.companyId, summary: meetTitle || 'Reunião',
+        description: 'Reunião via Google Meet', start_time: startDateTime, end_time: endDateTime,
+        attendees: [meetEmail], create_conference: true });
 
       setMeetSuccess(`Reunião agendada! Convite enviado para ${meetEmail} com o link do Google Meet.`);
     } catch (err: any) {

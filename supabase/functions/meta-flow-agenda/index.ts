@@ -3,6 +3,7 @@
 //
 // v5 — 1 crédito por mensagem respondida (padrão original); fuso horário Brasília corrigido
 
+import { uuid, validGoogleEventId } from '../_shared/calendar-security.ts'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -472,35 +473,17 @@ async function criarEventoEIniciarCobranca(
 
     console.log(`📅 Criando evento: "${dados.nome_cliente || nomeServico}" em ${startTime.toISOString()}`)
 
-    const { data: evResult, error: evError } = await supabase.functions.invoke('criar-evento-calendario', {
+    const { data: evResult, error: evError } = await supabase.functions.invoke('criar-evento-calendario-v2', {
       body: {
-        company_id:  companyId,
-        summary:     dados.nome_cliente || nomeServico,
-        description: descricao,
-        start_time:  startTime.toISOString(),
-        end_time:    endTime.toISOString(),
+        company_id: companyId, summary: dados.nome_cliente || nomeServico, description: descricao,
+        start_time: startTime.toISOString(), end_time: endTime.toISOString(), ensure_available: true,
+        appointment: { customer_name: dados.nome_cliente || null, service_type: nomeServico,
+          notes: dados.observacoes && dados.observacoes !== 'Nenhuma' ? dados.observacoes : null },
       },
     })
-
-    console.log('📅 criar-evento-calendario:', JSON.stringify(evResult))
-    if (evError) console.error('❌ invoke error:', JSON.stringify(evError))
-
-    if (evError || evResult?.success === false) {
-      throw new Error(evResult?.speech_text || evResult?.error || evError?.message || 'Erro ao criar evento no Google Calendar')
+    if (evError || evResult?.success !== true || !validGoogleEventId(evResult.event_id) || !uuid(evResult.appointment_id)) {
+      throw new Error('Erro ao registrar o agendamento no Google Calendar')
     }
-
-    const eventId = evResult?.event_id ?? crypto.randomUUID()
-    console.log(`✅ Evento criado: ${eventId}`)
-
-    // customer_appointments
-    const { error: apptError } = await supabase.from('customer_appointments').insert({
-      company_id: companyId, google_event_id: eventId,
-      appointment_date: startTime.toISOString(), appointment_end: endTime.toISOString(),
-      customer_name: dados.nome_cliente || null, service_type: nomeServico,
-      status: 'scheduled',
-      notes: dados.observacoes && dados.observacoes !== 'Nenhuma' ? dados.observacoes : null,
-    }).maybeSingle()
-    if (apptError) console.warn('⚠️ customer_appointments:', apptError.message)
 
     // Envia emails de confirmação (fire-and-forget — não bloqueia o fluxo)
     enviarEmailsAgendamento(companyId, company, dados, startTime, endTime, supabase).catch(

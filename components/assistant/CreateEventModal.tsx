@@ -11,7 +11,7 @@
 // Step pagamento: checkout com opção de pagar agora ou depois
 // ============================================================
 
-import { listPublicCalendarAvailability } from '@/lib/calendar-client';
+import { listPublicCalendarAvailability, createPublicAppointment } from '@/lib/calendar-client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
@@ -986,33 +986,9 @@ const handleConfirmarData = useCallback(async () => {
         dados.observacoes,
       ].filter(Boolean).join('\n');
 
-      const { data: evResult, error: evError } = await supabase.functions.invoke('criar-evento-calendario', {
-        body: {
-          company_id: companyId,
-          summary: dados.nomeCliente || dados.produtoNome || 'Agendamento',
-          description: descricao,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
-        },
-      });
-
-      if (evError || evResult?.success === false) {
-        throw new Error(evResult?.speech_text || 'Erro ao criar evento no Google Calendar.');
-      }
-
-      const eventId = evResult?.event_id ?? crypto.randomUUID();
-
-      // Registra customer_appointments
-      await supabase.from('customer_appointments').insert({
-        company_id: companyId,
-        google_event_id: eventId,
-        appointment_date: startTime.toISOString(),
-        appointment_end: endTime.toISOString(),
-        customer_name: dados.nomeCliente || null,
-        service_type: dados.produtoNome || null,
-        status: 'scheduled',
-        notes: dados.observacoes || null,
-      }).maybeSingle();
+      await createPublicAppointment({ company_id: companyId, start_time: startTime.toISOString(), end_time: endTime.toISOString(),
+        customer_name: dados.nomeCliente || undefined, service_type: dados.produtoNome || undefined,
+        service_description: descricao || undefined, notes: dados.observacoes || undefined });
 
       // Sempre vai para pagamento (ambas as versões)
       setStep('pagamento');

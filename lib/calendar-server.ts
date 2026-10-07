@@ -9,11 +9,11 @@ export function originAllowed(req: Request) {
   const origin = req.headers.get('origin'); if (origin === null) return true;
   try { const parsed = new URL(origin); return ['http:', 'https:'].includes(parsed.protocol) && parsed.host === (req.headers.get('host') || new URL(req.url).host); } catch { return false; }
 }
-export async function calendarInput(req: Request, allowed: string[]) {
+export async function calendarInput(req: Request, allowed: string[], maxBytes = 16384) {
   if (!originAllowed(req)) throw { reason: 'origin_not_allowed', status: 403 };
   const reader = req.body?.getReader(); if (!reader) throw { reason: 'invalid_request', status: 400 };
   const chunks: Uint8Array[] = []; let size = 0;
-  try { while (true) { const { value, done } = await reader.read(); if (done) break; size += value.length; if (size > 16384) { await reader.cancel(); throw { reason: 'payload_too_large', status: 413 }; } chunks.push(value); } } finally { reader.releaseLock(); }
+  try { while (true) { const { value, done } = await reader.read(); if (done) break; size += value.length; if (size > maxBytes) { await reader.cancel(); throw { reason: 'payload_too_large', status: 413 }; } chunks.push(value); } } finally { reader.releaseLock(); }
   let input; try { input = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw { reason: 'invalid_request', status: 400 }; }
   if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(key => !allowed.includes(key))) throw { reason: 'invalid_request', status: 400 };
   return input;
@@ -34,8 +34,8 @@ export async function publicCompany(req: Request, input: any, id: string) {
   }
   return admin;
 }
-const SAFE_ERRORS = new Set(['company_not_found', 'google_account_unavailable', 'google_reconnect_required', 'calendar_scope_required', 'calendar_result_limit', 'appointment_not_found', 'invalid_appointment_state', 'slot_unavailable', 'invalid_dates', 'appointment_update_failed', 'calendar_delete_failed', 'calendar_update_failed']);
-export async function calendarEdge(name: 'listar-eventos-google-v2' | 'appointment-actions-v2', payload: any) {
+const SAFE_ERRORS = new Set(['company_not_found', 'google_account_unavailable', 'google_reconnect_required', 'calendar_scope_required', 'calendar_result_limit', 'appointment_not_found', 'invalid_appointment_state', 'slot_unavailable', 'invalid_dates', 'appointment_update_failed', 'calendar_delete_failed', 'calendar_update_failed', 'calendar_slot_unavailable', 'appointment_record_failed']);
+export async function calendarEdge(name: 'listar-eventos-google-v2' | 'appointment-actions-v2' | 'criar-evento-calendario-v2', payload: any) {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY, url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!key || !url) throw { reason: 'calendar_unavailable', status: 503 };
   const response = await fetch(`${url}/functions/v1/${name}`, { method: 'POST', headers: { Authorization: `Bearer ${key}`, apikey: key, 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(60000) });

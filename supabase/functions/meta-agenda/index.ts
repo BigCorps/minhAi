@@ -4,7 +4,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { findAppointment, actionTimes } from '../_shared/calendar-security.ts'
+import { findAppointment, actionTimes, creationTimes, uuid } from '../_shared/calendar-security.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -174,22 +174,24 @@ async function detectAndRun(
           }
         }
 
-        const res = await fetch(`${supabaseUrl}/functions/v1/criar-evento-calendario`, {
+        const startTime = `${parsed.data}T${parsed.hora}:00-03:00`
+        if (!Number.isFinite(Date.parse(startTime))) throw new Error('Data ou horário inválido')
+        const times = creationTimes({ start_time: startTime, end_time: new Date(Date.parse(startTime) + 60 * 60000).toISOString() }, 365, true)
+        if (!times) throw new Error('Data ou horário inválido')
+        const res = await fetch(`${supabaseUrl}/functions/v1/criar-evento-calendario-v2`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            company_id: companyId,
-            summary: parsed.servico || 'Agendamento via WhatsApp',
-            start_datetime: `${parsed.data}T${parsed.hora}:00`,
-            duration_minutes: 60,
+            company_id: companyId, summary: parsed.servico || 'Agendamento via WhatsApp',
+            start_time: times.start, end_time: times.end, ensure_available: true,
             description: `Agendado via Meta (minhAi).\nCliente: ${parsed.nome || 'não informado'}`,
+            appointment: { customer_name: parsed.nome || null, service_type: parsed.servico || null },
           })
         })
         const data = await res.json()
+        if (!res.ok || data.success !== true || !uuid(data.appointment_id)) throw new Error('Não foi possível registrar o agendamento')
 
-        if (!data.success) throw new Error(data.error || 'Erro ao criar evento na agenda')
-
-        const dataFormatada = new Date(`${parsed.data}T${parsed.hora}:00`)
+        const dataFormatada = new Date(times.start)
           .toLocaleString('pt-BR', {
             timeZone: 'America/Sao_Paulo',
             weekday: 'long', day: '2-digit', month: '2-digit',

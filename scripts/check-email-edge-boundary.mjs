@@ -21,6 +21,14 @@ function inspect(path, components = false) {
     const client = components || source.statements.some(node => ts.isExpressionStatement(node)
       && ts.isStringLiteral(node.expression) && node.expression.text === 'use client');
     function visit(node) {
+      // Meta Flow deve delegar OAuth/MIME/Gmail à Edge de email, sem bypass.
+      if (relative(root, file).replaceAll('\\', '/') === 'supabase/functions/meta-flow-agenda/index.ts'
+        && ((ts.isIdentifier(node) && ['access_token', 'refresh_token', 'accessToken', 'refreshToken'].includes(node.text))
+          || ((ts.isStringLiteralLike(node) || ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node))
+            && /access_token|refresh_token|gmail\.googleapis\.com|(?:www\.)?googleapis\.com\/gmail/.test(node.text)))) {
+        const { line } = source.getLineAndCharacterOfPosition(node.getStart(source));
+        violations.push(`${relative(root, file)}:${line + 1}: Meta Flow must use email V2`);
+      }
       // Verifica strings/templates/JSX, inclusive URLs e nomes de Edge.
       // Comentários históricos não são tratados como chamadas em runtime.
       if ((ts.isStringLiteralLike(node) || ts.isTemplateHead(node) || ts.isTemplateMiddle(node)

@@ -488,7 +488,7 @@ async function criarEventoEIniciarCobranca(
 
     // Envia emails de confirmação (fire-and-forget — não bloqueia o fluxo)
     enviarEmailsAgendamento(companyId, company, dados, startTime, endTime, supabase).catch(
-      (e: any) => console.warn('⚠️ Erro ao enviar emails (não-crítico):', e.message)
+      () => console.warn('appointment_email_failed')
     )
 
     // Registra commission_pending se tem produto/preço
@@ -906,21 +906,15 @@ async function enviarEmailsAgendamento(
   supabase: any,
 ): Promise<void> {
 
-  // Busca access token do Google (com refresh automático via google_accounts)
+  // Apenas o destinatário da empresa; credenciais e Gmail pertencem à Edge V2.
   const { data: googleAccount } = await supabase
     .from('google_accounts')
-    .select('access_token, google_email')
+    .select('google_email')
     .eq('company_id', companyId)
     .eq('is_active', true)
     .maybeSingle()
 
-  if (!googleAccount?.access_token) {
-    console.warn('⚠️ Google Account não encontrada — emails não enviados')
-    return
-  }
-
-  const accessToken  = googleAccount.access_token
-  const empresaEmail = googleAccount.google_email
+  const empresaEmail = googleAccount?.google_email
   const companyName  = company?.name ?? 'Empresa'
 
   const dataFormatada = startTime.toLocaleDateString('pt-BR', {
@@ -979,33 +973,23 @@ async function enviarEmailsAgendamento(
 </html>`
 
   const sendEmail = async (to: string, subject: string, html: string) => {
-    const subjectEncoded = `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`
-    const raw = [
-      `From: ${companyName} <${empresaEmail}>`,
-      `To: ${to}`,
-      `Subject: ${subjectEncoded}`,
-      `MIME-Version: 1.0`,
-      `Content-Type: text/html; charset=utf-8`,
-      '',
-      html,
-    ].join('\r\n')
-
-    const encoder  = new TextEncoder()
-    const base64   = btoa(String.fromCharCode(...encoder.encode(raw)))
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-
-    const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ raw: base64 }),
-    })
-
-    if (!res.ok) {
-      const err = await res.json()
-      throw new Error(err.error?.message || 'Erro Gmail API')
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/enviar-email-google-v2`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${serviceKey}`, apikey: serviceKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ company_id: companyId, to, subject, body: html, email_type: 'meta_manual' }),
+        signal: AbortSignal.timeout(40_000),
+      })
+      const result = await response.json().catch(() => null)
+      if (!response.ok || result?.success !== true) console.warn('appointment_email_failed')
+    } catch {
+      // O agendamento já foi criado. Falhas de email não devem desfazê-lo,
+      // impedir o outro destinatário, nem expor respostas do provedor.
+      console.warn('appointment_email_failed')
     }
-    const result = await res.json()
-    console.log(`✅ Email enviado para ${to}: messageId=${result.id}`)
   }
 
   // Email para o cliente
@@ -1018,7 +1002,7 @@ async function enviarEmailsAgendamento(
   }
 
   // Email para a empresa (mesmo remetente e destinatário — Gmail aceita)
-  await sendEmail(
+  if (empresaEmail) await sendEmail(
     empresaEmail,
     `📅 Novo agendamento — ${dados.nome_cliente || 'cliente'}`,
     buildHtml(

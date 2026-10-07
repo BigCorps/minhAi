@@ -94,6 +94,7 @@ async function setup(options = {}) {
   }
   await d.exec(read('supabase/migrations/20261007164922_sdr_institutional_recipients.sql'));
   await d.exec(read('supabase/migrations/20261007164923_sdr_manual_pilot_gate.sql'));
+  await d.exec(read('supabase/migrations/20261007190000_sdr_reviewed_queue_while_campaign_paused.sql'));
   const snapshot = { ...clean(outreach.recipientSnapshot(fixture().o, fixture().l, corporate)), message_variant: 'partner', message_subject: 'Reviewed subject', message_body: 'Reviewed body', enqueue_mode: 'manual_pilot' };
   const enqueue = (n, s = snapshot) => d.query('select sdr_enqueue_reviewed_email($1,$2,$3) id', [uuid(n), s, actor]);
   return { d, snapshot, enqueue };
@@ -113,6 +114,20 @@ sqlTest('SQL freezes corporate snapshot without touching lead; unsafe address/ev
     await assert.rejects(d.query("update sdr_queue set recipient_address='changed@empresa.com.br' where id=$1", [id]), /queue_snapshot_immutable/);
     await enqueue(2); await enqueue(3); await assert.rejects(enqueue(4), /pilot_opportunity_limit/);
     assert.equal((await d.query('select count(*)::int n from sdr_manual_pilot_opportunities')).rows[0].n, 3);
+  } finally { await d.close(); }
+});
+sqlTest('reviewed pilot can be prepared while campaign is paused but cannot be claimed until campaign is enabled', async () => {
+  const { d, enqueue } = await setup(); try {
+    await d.query("update sdr_campaigns set enabled=false");
+    const id = (await enqueue(1)).rows[0].id;
+    assert.ok(id);
+    assert.equal((await d.query("select status from sdr_queue where id=$1", [id])).rows[0].status, 'queued');
+    await d.query("select sdr_set_manual_pilot_gate('conviteia',true)");
+    assert.equal((await d.query('select * from sdr_claim()')).rows.length, 0);
+    await d.query("update sdr_campaigns set enabled=true");
+    const claimed = (await d.query('select * from sdr_claim()')).rows;
+    assert.equal(claimed.length, 1);
+    assert.equal(claimed[0].id, id);
   } finally { await d.close(); }
 });
 sqlTest('pilot starts blocked; only explicitly reviewed single-touch email is claimed; caps and disable-before-send hold', async () => {

@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       const signature = manager.isFuncionarIA ? 'Enviado pela FuncionarIA' : 'Enviado via minhAi';
       // Escapar inclusive o nome cadastrado: a Edge pode renderizar o corpo como HTML.
       const body = `Olá ${escapeHtml(manager.name)},\n\n${message}\n\nMotivo:\n${escapeHtml(reason)}\n\n---\n${signature}`;
-      tasks.push(notify('enviar-email-google', serviceRole!, {
+      tasks.push(notify('enviar-email-google-v2', serviceRole!, {
         company_id: id, to: manager.email, subject, body, email_type: 'manager_assistance',
       }).then(result => ({ channel: 'email' as const, ...result })));
     }

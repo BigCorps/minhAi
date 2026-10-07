@@ -274,10 +274,10 @@ async function detectAndRun(
 
         if (notificarEmail && gerenteEmail) {
           promises.push(
-            fetch(`${supabaseUrl}/functions/v1/enviar-email-google`, {
+            fetch(`${supabaseUrl}/functions/v1/enviar-email-google-v2`, {
               method: 'POST',
               headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+              body: JSON.stringify({ email_type: 'manager_assistance',
                 company_id: companyId,
                 to:         gerenteEmail,
                 subject:    `🔔 Cliente solicitou gerente — ${company.name}`,

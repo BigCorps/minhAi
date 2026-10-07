@@ -1,9 +1,7 @@
 'use client';
-// components/CookieConsentBanner.tsx
-//
-// Banner compartilhado de consentimento (LGPD). A Midia.Pro usa o mesmo
-// mecanismo de consentimento da plataforma, mas aplica sua identidade azul /
-// vermelha sem obrigar o restante do monorepo a conhecer a marca nesta fase.
+// Banner compartilhado de consentimento (LGPD).
+// Midia.Pro e o diagnóstico BigCorps usam o mesmo mecanismo da plataforma,
+// mudando apenas identidade e link de privacidade no host correspondente.
 
 import { useEffect, useState } from 'react';
 import Clarity from '@microsoft/clarity';
@@ -20,6 +18,12 @@ const MIDIA_COOKIE_BRAND = {
   corTexto: '#003295',
 } as const;
 
+const BIGCORPS_COOKIE_BRAND = {
+  cor: '#FD9219',
+  corTextoBotao: '#ffffff',
+  corTexto: '#A45100',
+} as const;
+
 function applyConsent(granted: boolean) {
   try {
     Clarity.consentV2({
@@ -34,11 +38,21 @@ function applyConsent(granted: boolean) {
   announceAnalyticsConsent(granted);
 }
 
+function readStoredConsent() {
+  try {
+    return localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export default function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
   const [midiaHost, setMidiaHost] = useState(false);
+  const [bigcorpsHelp, setBigcorpsHelp] = useState(false);
+  const [privacyHref, setPrivacyHref] = useState('/aviso');
   const { marca } = useMarca();
-  const visual = midiaHost ? MIDIA_COOKIE_BRAND : marca;
+  const visual = bigcorpsHelp ? BIGCORPS_COOKIE_BRAND : midiaHost ? MIDIA_COOKIE_BRAND : marca;
 
   useEffect(() => {
     const hostname = window.location.hostname.toLowerCase();
@@ -47,7 +61,18 @@ export default function CookieConsentBanner() {
       hostname === 'midia.pro' ||
       hostname === 'www.midia.pro' ||
       hostname.endsWith('.midia.pro');
+    const isBigCorpsHelp = hostname === 'ajuda.bigcorps.com.br' || pathname === '/ajuda' || pathname.startsWith('/ajuda/');
     setMidiaHost(isMidia);
+    setBigcorpsHelp(isBigCorpsHelp);
+    setPrivacyHref(
+      hostname === 'ajuda.bigcorps.com.br'
+        ? '/privacidade'
+        : isBigCorpsHelp
+          ? '/ajuda/privacidade'
+          : isMidia
+            ? 'https://www.minhai.app/aviso'
+            : '/aviso',
+    );
 
     // Experiências de tela cheia não podem receber overlays de consentimento:
     // convite público e player físico do Midia.Pro. Sem escolha prévia,
@@ -58,29 +83,30 @@ export default function CookieConsentBanner() {
     const playerMidia = hostname.endsWith('.midia.pro') && pathname === '/play';
 
     if (convitePublico || playerMidia) {
-      const stored = localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY);
+      const stored = readStoredConsent();
       applyConsent(stored === 'granted');
       setVisible(false);
       return;
     }
 
-    const stored = localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY);
+    const stored = readStoredConsent();
     if (stored === 'granted') applyConsent(true);
     else if (stored === 'denied') applyConsent(false);
     else setVisible(true);
   }, []);
 
   const handleChoice = (granted: boolean) => {
-    localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, granted ? 'granted' : 'denied');
+    try {
+      localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, granted ? 'granted' : 'denied');
+    } catch {
+      // O consentimento ainda vale para a página atual mesmo sem storage.
+    }
     applyConsent(granted);
     setVisible(false);
   };
 
   if (!visible) return null;
 
-  // Mobile: cartão compacto (texto curto, uma linha de botões) para não
-  // cobrir a primeira tela. Botões com 44px de altura, o mínimo
-  // recomendado para toque. Aceitar e Recusar têm o mesmo tamanho (LGPD).
   return (
     <div
       role="dialog"
@@ -96,7 +122,7 @@ export default function CookieConsentBanner() {
           Saiba mais no nosso
         </span>{' '}
         <a
-          href={midiaHost ? 'https://www.minhai.app/aviso' : '/aviso'}
+          href={privacyHref}
           className="font-semibold underline-offset-2 hover:underline"
           style={{ color: visual.corTexto }}
         >

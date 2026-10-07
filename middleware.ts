@@ -34,7 +34,7 @@ const CRAWLER_PASSTHROUGH = [
   '/llms.txt',
 ];
 
-// ── llms.txt por marca (GEO) ─────────────────────────────────────────────────
+// ── llms.txt por marca (GEO) ────────────────────────────────────────────────
 // public/llms.txt descreve a minhAi. Sem este mapa, cada host de marca poderia
 // entregar a descrição do produto errado para ChatGPT, Claude, Perplexity etc.
 const LLMS_TXT_BY_HOST: Record<string, string> = {
@@ -60,8 +60,9 @@ const CONSULTATEC_DOMAINS = ['consulta.tec.br', 'www.consulta.tec.br'];
 const PIX_DOMAINS = ['pix.wiki', 'www.pix.wiki'];
 const MELHORIA_DOMAINS = ['melhoria.org', 'www.melhoria.org'];
 const FUNCIONARIA_DOMAINS = ['funcionaria.net', 'www.funcionaria.net'];
+const BIGCORPS_HELP_DOMAINS = ['ajuda.bigcorps.com.br'];
 
-// ── Min.IA ───────────────────────────────────────────────────────────────────
+// ── Min.IA ──────────────────────────────────────────────────────────────────
 const MINIA_APP_DOMAINS = ['app.min.ia.br'];
 
 // ── Todos os domínios de subdomínio de cliente ───────────────────────────────
@@ -135,6 +136,37 @@ export async function middleware(request: NextRequest) {
       return NextResponse.rewrite(url);
     }
     return NextResponse.next();
+  }
+
+  // ── 0.B. AJUDA.BIGCORPS.COM.BR — diagnóstico público ─────────────────────
+  // Esta experiência nunca consulta sessão nem Supabase no middleware: a primeira
+  // tela precisa aparecer imediatamente, inclusive no navegador do Instagram.
+  if (BIGCORPS_HELP_DOMAINS.includes(hostname)) {
+    if (
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/_next/') ||
+      pathname.startsWith('/.well-known/') ||
+      pathname.startsWith('/brands/')
+    ) {
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+
+    if (pathname === '/favicon.ico') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/brands/bigcorps/logo-mark.png';
+      return NextResponse.rewrite(url);
+    }
+
+    // No host público, o prefixo /ajuda é apenas interno do App Router.
+    if (pathname === '/ajuda' || pathname.startsWith('/ajuda/')) {
+      const url = request.nextUrl.clone();
+      url.pathname = pathname.replace(/^\/ajuda/, '') || '/';
+      return NextResponse.redirect(url);
+    }
+
+    const url = request.nextUrl.clone();
+    url.pathname = pathname === '/' ? '/ajuda' : `/ajuda${pathname}`;
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
 
   // ── 0.F. FUNCIONARIA.NET ──────────────────────────────────────────────────
@@ -577,7 +609,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // ── 2. FLUXO NORMAL ────────────────────────────────────────────────────────
+  // ── 2. FLUXO NORMAL ───────────────────────────────────────────────────────
   let response = NextResponse.next({ request: { headers: requestHeaders } });
 
   const supabase = createServerClient(

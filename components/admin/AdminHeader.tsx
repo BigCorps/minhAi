@@ -2,6 +2,7 @@ import {
   Activity,
   AlertTriangle,
   CircleDollarSign,
+  ClipboardCheck,
   Gauge,
   Images,
   LogOut,
@@ -26,6 +27,7 @@ export type AdminSection =
   | 'now'
   | 'whatsapp'
   | 'pixwiki-leads'
+  | 'bigcorps-leads'
   | 'midia'
   | 'midia-creatives';
 
@@ -46,6 +48,7 @@ const NAV = [
   { key: 'now', label: 'Agora', suffix: '/agora', icon: Activity },
   { key: 'whatsapp', label: 'WhatsApp', suffix: '/whatsapp', icon: MessageCircle },
   { key: 'pixwiki-leads', label: 'Leads PixWiki', suffix: '/pixwiki-leads', icon: Target },
+  { key: 'bigcorps-leads', label: 'Leads BigCorps', suffix: '/bigcorps-leads', icon: ClipboardCheck },
   { key: 'midia', label: 'Midia.Pro', suffix: '/midia', icon: MonitorPlay },
   { key: 'midia-creatives', label: 'Criativos', suffix: '/midia?view=criativos', icon: Images },
 ] as const;

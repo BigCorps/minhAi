@@ -576,4 +576,3 @@ grant execute on function public.funcionaria_settle_storefront_commission(
   uuid,uuid,text,text,uuid,integer,timestamptz
 ) to service_role;
 
-commit;

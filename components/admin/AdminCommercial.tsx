@@ -76,7 +76,7 @@ const errors: Record<string, string> = {
     "O contato ainda não autorizou WhatsApp para este produto.",
   verified_email_required: "Verifique o email antes de enfileirar.",
   lead_not_eligible:
-    "Ative a campanha e revise o contato. Confira bloqueios e responsável.",
+    "Este contato não está elegível. Confira revisão, validade do trial, bloqueios e responsável.",
   company_already_contacted: "Esta empresa já possui uma abordagem registrada.",
   template_not_approved: "O template ainda não está aprovado pela Meta.",
   confirmed_payment_required: "Primeiro precisamos confirmar o pagamento.",
@@ -572,43 +572,48 @@ export default function AdminCommercial({
             onClick={(e) => {
               if (e.target === e.currentTarget) setPreview(null);
             }}
-            className="fixed inset-0 z-[60] m-auto border-0 bg-transparent p-4 text-slate-100 backdrop:bg-black/80"
+            className="fixed inset-0 z-[60] m-0 h-dvh w-dvw max-h-none max-w-none overflow-hidden border-0 bg-transparent p-0 text-slate-100 backdrop:bg-black/80"
             aria-label="Prévia da abordagem"
           >
-            <div
-              className={
-                card +
-                " max-h-[85vh] w-full max-w-2xl overflow-auto bg-slate-950"
-              }
-            >
-              <h2 className="font-bold">{preview.subject}</h2>
-              <p className="mt-3 text-sm">Destinatário: {preview.recipient_address}</p>
-              <p className="text-sm">Tipo: {preview.recipient_kind === "company_contact" ? "Contato corporativo" : "Contato individual"} · Variante: {preview.message_variant}</p>
-              <p className="text-sm">Modo: {preview.enqueue_mode === "manual_pilot" ? "Piloto manual" : "Envio revisado"}</p>
-              <p className="mt-2 text-xs text-slate-400">{preview.enqueue_mode === "manual_pilot" ? "Preparar a fila não libera o piloto." : "Este email continuará sujeito aos gates ativos de envio."}</p>
-              {preview.recipient_source_url && <a className="text-sm underline" href={preview.recipient_source_url} target="_blank" rel="noreferrer">Fonte do contato corporativo</a>}
-              <p className="my-5 whitespace-pre-wrap break-words text-sm leading-6">
-                {preview.body}
-              </p>
-              <a
-                className={button + " inline-block"}
-                href={preview.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Abrir qualificação
-              </a>
-              <label className="mt-4 flex gap-2 text-sm"><input type="checkbox" checked={previewReviewed} onChange={e => setPreviewReviewed(e.target.checked)} />Revisei destinatário, modo, variante e conteúdo. Preparar a fila não habilita envio.</label>
-              <button className={button + " mt-3"} disabled={busy || !previewReviewed} onClick={async () => {
-                const result = await action({ action: "enqueue", id: preview.id, channel: "email", reviewToken: preview.reviewToken }, "Email revisado enfileirado; os gates de envio continuam obrigatórios.");
-                if (result) setPreview(null);
-              }}>Enfileirar conteúdo revisado</button>
-              <button
-                className={button + " ml-2"}
-                onClick={() => setPreview(null)}
-              >
-                Fechar
-              </button>
+            <div className="flex h-full w-full items-center justify-center p-3 sm:p-6">
+              <section className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-2xl sm:max-h-[calc(100dvh-3rem)]">
+                <div className="shrink-0 border-b border-white/10 px-5 py-4">
+                  <h2 className="break-words pr-8 font-bold">{preview.subject}</h2>
+                  <p className="mt-3 text-sm">Destinatário: {preview.recipient_address}</p>
+                  <p className="text-sm">Tipo: {preview.recipient_kind === "company_contact" ? "Contato corporativo" : "Contato individual"} · Variante: {preview.message_variant}</p>
+                  <p className="text-sm">Modo: {preview.enqueue_mode === "manual_pilot" ? "Piloto manual" : "Envio revisado"}</p>
+                  <p className="mt-2 text-xs text-slate-400">{preview.enqueue_mode === "manual_pilot" ? "Preparar a fila não libera o piloto." : "Este email continuará sujeito aos gates ativos de envio."}</p>
+                  {preview.recipient_source_url && <a className="text-sm underline" href={preview.recipient_source_url} target="_blank" rel="noreferrer">Fonte do contato corporativo</a>}
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+                  <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                    {preview.body}
+                  </p>
+                  <a
+                    className={button + " mt-5 inline-block"}
+                    href={preview.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Abrir qualificação
+                  </a>
+                </div>
+                <div className="shrink-0 border-t border-white/10 bg-slate-950 px-5 py-4">
+                  <label className="flex gap-2 text-sm"><input type="checkbox" checked={previewReviewed} onChange={e => setPreviewReviewed(e.target.checked)} />Revisei destinatário, modo, variante e conteúdo. Preparar a fila não habilita envio.</label>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button className={button} disabled={busy || !previewReviewed} onClick={async () => {
+                      const result = await action({ action: "enqueue", id: preview.id, channel: "email", reviewToken: preview.reviewToken }, "Email revisado enfileirado; os gates de envio continuam obrigatórios.");
+                      if (result) setPreview(null);
+                    }}>Enfileirar conteúdo revisado</button>
+                    <button
+                      className={button}
+                      onClick={() => setPreview(null)}
+                    >
+                      Fechar
+                    </button>
+                  </div>
+                </div>
+              </section>
             </div>
           </dialog>
         )}

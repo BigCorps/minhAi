@@ -554,6 +554,7 @@ async function confirmCardByOrder(supabase: any, orderNsu: string) {
       provider_amount_cents: verified.amount,
       provider_paid_amount_cents: verified.paidAmount,
       provider_fee_cents: feeEvidence.providerFee,
+      provider_fee_source: feeEvidence.source,
       provider_surcharge_cents: feeEvidence.surcharge,
       verified_at: paidAt,
       paid_at: paidAt,
@@ -567,7 +568,8 @@ async function confirmCardByOrder(supabase: any, orderNsu: string) {
   if (error) throw error
   payment = marked || { ...payment, status: 'paid', paid_at: paidAt,
     provider_amount_cents: verified.amount, provider_paid_amount_cents: verified.paidAmount,
-    provider_fee_cents: feeEvidence.providerFee, provider_surcharge_cents: feeEvidence.surcharge,
+    provider_fee_cents: feeEvidence.providerFee, provider_fee_source: feeEvidence.source,
+    provider_surcharge_cents: feeEvidence.surcharge,
     capture_method: verified.captureMethod, installments: verified.installments }
 
   const settled = await settleCard(supabase, loaded, payment)

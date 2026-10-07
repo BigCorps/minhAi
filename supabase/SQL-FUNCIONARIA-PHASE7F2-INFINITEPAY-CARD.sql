@@ -6,8 +6,9 @@
 -- - evidencia autoritativa vem de payment_check e fica persistida nesta base;
 -- - settlement continua idempotente por pedido/provider_reference;
 -- - comissao BigCorps = 5% da mercadoria;
--- - taxa/sobretaxa InfinitePay do comprador fica separada da comissao;
--- - provider_fee_cents = 0 neste modo, pois a liberacao exige evidencia de repasse ao comprador.
+-- - taxa InfinitePay e sobretaxa paga pelo comprador ficam separadas da comissao;
+-- - quando a taxa e repassada, provider_fee_cents=0; quando e assumida, usamos
+--   uma tabela versionada por numero de parcelas.
 
 begin;
 
@@ -43,6 +44,7 @@ create table if not exists public.funcionaria_storefront_card_payments (
   provider_amount_cents integer,
   provider_paid_amount_cents integer,
   provider_fee_cents integer,
+  provider_fee_source text,
   provider_surcharge_cents integer,
   checkout_url text,
   signaled_at timestamptz,

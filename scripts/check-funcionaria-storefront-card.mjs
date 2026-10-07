@@ -23,6 +23,7 @@ for (const required of [
   "coalesce(v_card.provider_paid_amount_cents,0) <= v_card.provider_amount_cents",
   "card_provider_fee_evidence_mismatch",
   "funcionaria_storefront_card_fee_rates",
+  "provider_fee_source",
   "v_method := 'cartao'",
 ]) if (!sql.includes(required)) fail('SQL missing card settlement invariant: ' + required)
 

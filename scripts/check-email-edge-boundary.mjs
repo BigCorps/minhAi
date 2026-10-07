@@ -36,6 +36,21 @@ function inspect(path, components = false) {
   }
 }
 
+// enviar_email usa handler/SendEmailModal; nunca deve anunciar uma Edge interna.
+const registryPath = join(root, 'lib/functions-registry.ts');
+const registry = ts.createSourceFile(registryPath, readFileSync(registryPath, 'utf8'), ts.ScriptTarget.Latest, true);
+let emailEntryFound = false;
+function inspectRegistry(node) {
+  if (ts.isPropertyAssignment(node) && node.name.getText(registry).replace(/['"]/g, '') === 'enviar_email' && ts.isObjectLiteralExpression(node.initializer)) {
+    emailEntryFound = true;
+    const edge = node.initializer.properties.find(property => ts.isPropertyAssignment(property) && property.name.getText(registry) === 'edgeFunction');
+    if (edge && ts.isPropertyAssignment(edge) && edge.initializer.getText(registry) !== 'undefined') violations.push('lib/functions-registry.ts: enviar_email must not advertise an Edge');
+  }
+  ts.forEachChild(node, inspectRegistry);
+}
+inspectRegistry(registry);
+if (!emailEntryFound) violations.push('lib/functions-registry.ts: enviar_email entry missing');
+
 for (const directory of ['components', 'app', 'lib', 'hooks', 'utils', 'src', 'supabase/functions', 'scripts', 'public']) {
   try {
     inspect(join(root, directory), directory === 'components');

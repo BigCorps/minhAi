@@ -1,4 +1,5 @@
 'use client';
+import { listCompanyCalendarEvents } from '@/lib/calendar-client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, CheckCircle2, Clock, ExternalLink, Loader2, Plus, RefreshCw } from 'lucide-react';
@@ -58,16 +59,7 @@ export default function FuncionarIAAgendaPanel({ companyId }: Props) {
 
       const now = new Date();
       const max = new Date(now.getTime() + 120 * 24 * 60 * 60 * 1000);
-      const { data, error: eventsError } = await supabase.functions.invoke('listar-eventos-google', {
-        body: {
-          company_id: companyId,
-          max_results: 100,
-          time_min: now.toISOString(),
-          time_max: max.toISOString(),
-        },
-      });
-      if (eventsError) throw eventsError;
-      const incoming = Array.isArray(data?.events) ? data.events : [];
+      const incoming = await listCompanyCalendarEvents({ company_id: companyId, max_results: 100, time_min: now.toISOString(), time_max: max.toISOString() });
       incoming.sort((a: CalendarEvent, b: CalendarEvent) => {
         const aa = new Date(a.start?.dateTime || a.start?.date || 0).getTime();
         const bb = new Date(b.start?.dateTime || b.start?.date || 0).getTime();

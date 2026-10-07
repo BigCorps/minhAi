@@ -40,6 +40,8 @@ type Info = {
   };
   memorias: {
     precoCentavos: number;
+    precoOriginalCentavos?: number;
+    cortesiaParceiro?: boolean;
     status: string;
     ativas: boolean;
     emTeste?: boolean;
@@ -65,6 +67,7 @@ type Cobranca = {
   whatsappCentavos: number;
   gravataCentavos: number;
   incluiMemorias: boolean;
+  memoriasCortesiaParceiro?: boolean;
   incluiWhatsApp: boolean;
   incluiGravata: boolean;
   qrcode: string;
@@ -111,7 +114,8 @@ function PagarConteudo() {
     if (!r.ok) throw new Error(j?.erro ?? 'Não foi possível carregar o pagamento.');
     setInfo(j);
 
-    if (j.memorias?.status === 'aguardando_pagamento') setIncluirMemorias(true);
+    if (j.memorias?.cortesiaParceiro) setIncluirMemorias(true);
+    else if (j.memorias?.status === 'aguardando_pagamento') setIncluirMemorias(true);
     else if (j.pixConvitePendente) setIncluirMemorias(false);
     else if (querMemoriasPorUrl) setIncluirMemorias(true);
 
@@ -259,6 +263,7 @@ function PagarConteudo() {
       whatsappCentavos: Number(j.whatsappCentavos || 0),
       gravataCentavos: Number(j.gravataCentavos || 0),
       incluiMemorias: Boolean(j.incluiMemorias),
+      memoriasCortesiaParceiro: Boolean(j.memoriasCortesiaParceiro),
       incluiWhatsApp: Boolean(j.incluiWhatsApp),
       incluiGravata: Boolean(j.incluiGravata),
       qrcode: j.qrcode,
@@ -348,10 +353,10 @@ function PagarConteudo() {
             )}
 
             <div className="space-y-3">
-              {!info.memorias.ativas && <button type="button" disabled={algumPixPendente} onClick={() => setIncluirMemorias((v) => !v)} className="w-full rounded-2xl border-2 p-4 text-left transition disabled:cursor-default" style={{ borderColor: incluirMemorias ? cor.acento : cor.acento + '32', backgroundColor: incluirMemorias ? cor.papel : '#fff' }}>
+              {!info.memorias.ativas && <button type="button" disabled={algumPixPendente || info.memorias.cortesiaParceiro} onClick={() => { if (!info.memorias.cortesiaParceiro) setIncluirMemorias((v) => !v); }} className="w-full rounded-2xl border-2 p-4 text-left transition disabled:cursor-default" style={{ borderColor: incluirMemorias ? cor.acento : cor.acento + '32', backgroundColor: incluirMemorias ? cor.papel : '#fff' }}>
                 <div className="flex items-start gap-3">
                   <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl" style={{ backgroundColor: cor.acento + '18', color: cor.acentoTexto }}><Images className="h-5 w-5" /></div>
-                  <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><strong style={{ color: cor.tinta }}>Memórias do Evento</strong><strong style={{ color: cor.acentoTexto }}>+ {brl(info.memorias.precoCentavos)}</strong></div><p className="mt-1 text-sm leading-5" style={{ color: cor.tintaSuave }}>Seus convidados enviam fotos e vídeos por QR Code. Você recebe um álbum com slideshow ao vivo para TV, telão ou painel.</p><div className="mt-3 grid grid-cols-2 gap-2 text-xs" style={{ color: cor.tintaSuave }}><span className="flex items-center gap-1"><Images className="h-3.5 w-3.5" />300 fotos</span><span className="flex items-center gap-1"><Video className="h-3.5 w-3.5" />30 vídeos</span><span className="flex items-center gap-1"><QrCode className="h-3.5 w-3.5" />QR para convidados</span><span className="flex items-center gap-1"><MonitorPlay className="h-3.5 w-3.5" />Modo Festa</span></div>{info.memorias.emTeste && <p className="mt-3 rounded-lg bg-white/80 px-3 py-2 text-xs">No teste: 10 fotos, 2 vídeos e 30 MB. Ao contratar, os limites completos são liberados.</p>}</div>
+                  <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><strong style={{ color: cor.tinta }}>Memórias do Evento</strong>{info.memorias.cortesiaParceiro ? <strong className="text-emerald-700"><span className="mr-2 font-normal line-through opacity-60">{brl(info.memorias.precoOriginalCentavos ?? 1990)}</span>GRÁTIS</strong> : <strong style={{ color: cor.acentoTexto }}>+ {brl(info.memorias.precoCentavos)}</strong>}</div><p className="mt-1 text-sm leading-5" style={{ color: cor.tintaSuave }}>Seus convidados enviam fotos e vídeos por QR Code. Você recebe um álbum com slideshow ao vivo para TV, telão ou painel.</p>{info.memorias.cortesiaParceiro && <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">Benefício do parceiro: Memórias será ativado gratuitamente após a confirmação da compra do convite.</p>}<div className="mt-3 grid grid-cols-2 gap-2 text-xs" style={{ color: cor.tintaSuave }}><span className="flex items-center gap-1"><Images className="h-3.5 w-3.5" />300 fotos</span><span className="flex items-center gap-1"><Video className="h-3.5 w-3.5" />30 vídeos</span><span className="flex items-center gap-1"><QrCode className="h-3.5 w-3.5" />QR para convidados</span><span className="flex items-center gap-1"><MonitorPlay className="h-3.5 w-3.5" />Modo Festa</span></div>{info.memorias.emTeste && <p className="mt-3 rounded-lg bg-white/80 px-3 py-2 text-xs">No teste: 10 fotos, 2 vídeos e 30 MB. Ao contratar, os limites completos são liberados.</p>}</div>
                   <span className="mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-md border" style={{ borderColor: incluirMemorias ? cor.acento : cor.acento + '55', backgroundColor: incluirMemorias ? cor.acento : '#fff', color:'#fff' }}>{incluirMemorias && <Check className="h-4 w-4" />}</span>
                 </div>
                 {memoriaPendente && <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">Há um PIX pendente que já inclui Memórias. Ele será reutilizado.</p>}
@@ -416,7 +421,7 @@ function PagarConteudo() {
             <div className="mt-6 rounded-2xl bg-[#fff9fb] p-4 text-sm">
               {info.conviteCentavos > 0 && <div className="flex justify-between"><span style={{ color: cor.tintaSuave }}>Convite avulso</span><span style={{ color: cor.tinta }}>{brl(info.conviteCentavos)}</span></div>}
               {info.origemPlano === 'mensal' && info.conviteCentavos === 0 && <div className="flex justify-between"><span style={{ color: cor.tintaSuave }}>Convite · plano mensal</span><span className="font-medium text-emerald-700">Incluído</span></div>}
-              {incluirMemorias && !info.memorias.ativas && <div className="mt-2 flex justify-between"><span style={{ color: cor.tintaSuave }}>Memórias do Evento</span><span style={{ color: cor.tinta }}>{brl(info.memorias.precoCentavos)}</span></div>}
+              {incluirMemorias && !info.memorias.ativas && <div className="mt-2 flex justify-between"><span style={{ color: cor.tintaSuave }}>Memórias do Evento</span><span className={info.memorias.cortesiaParceiro ? "font-medium text-emerald-700" : ""} style={info.memorias.cortesiaParceiro ? undefined : { color: cor.tinta }}>{info.memorias.cortesiaParceiro ? 'Grátis por indicação' : brl(info.memorias.precoCentavos)}</span></div>}
               {incluirWhatsApp && !info.whatsapp.ativo && <div className="mt-2 flex justify-between"><span style={{ color: cor.tintaSuave }}>WhatsApp do Evento</span><span style={{ color: cor.tinta }}>{brl(info.whatsapp.precoCentavos)}</span></div>}
               {incluirGravata && !info.gravata.ativa && <div className="mt-2 flex justify-between"><span style={{ color: cor.tintaSuave }}>Hora da Gravata</span><span style={{ color: cor.tinta }}>{brl(info.gravata.precoCentavos)}</span></div>}
               <div className="mt-3 flex justify-between border-t pt-3 text-base font-semibold" style={{ borderColor: cor.acento + '22', color: cor.tinta }}><span>Total agora</span><span>{total > 0 ? brl(total) : 'R$ 0,00'}</span></div>
@@ -448,7 +453,7 @@ function PagarConteudo() {
             <div className="w-full rounded-xl bg-[#fff9fb] px-4 py-3 text-sm">
               <div className="flex justify-between font-semibold" style={{ color: cor.tinta }}><span>Total</span><span>{brl(cobranca.valorCentavos)}</span></div>
               {cobranca.conviteCentavos > 0 && <div className="mt-1 flex justify-between text-xs" style={{ color: cor.tintaSuave }}><span>Convite</span><span>{brl(cobranca.conviteCentavos)}</span></div>}
-              {cobranca.memoriasCentavos > 0 && <div className="mt-1 flex justify-between text-xs" style={{ color: cor.tintaSuave }}><span>Memórias</span><span>{brl(cobranca.memoriasCentavos)}</span></div>}
+              {cobranca.incluiMemorias && <div className="mt-1 flex justify-between text-xs" style={{ color: cor.tintaSuave }}><span>Memórias</span><span>{cobranca.memoriasCortesiaParceiro ? 'Grátis por indicação' : brl(cobranca.memoriasCentavos)}</span></div>}
               {cobranca.whatsappCentavos > 0 && <div className="mt-1 flex justify-between text-xs" style={{ color: cor.tintaSuave }}><span>WhatsApp do Evento</span><span>{brl(cobranca.whatsappCentavos)}</span></div>}
               {cobranca.gravataCentavos > 0 && <div className="mt-1 flex justify-between text-xs" style={{ color: cor.tintaSuave }}><span>Hora da Gravata</span><span>{brl(cobranca.gravataCentavos)}</span></div>}
             </div>

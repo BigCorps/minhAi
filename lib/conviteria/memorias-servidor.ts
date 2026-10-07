@@ -276,3 +276,42 @@ export function resumoPublico(evento: EventoMemoriasPublico) {
     },
   };
 }
+
+
+/** Concede Memórias como benefício de parceiro sem simular pagamento.
+ * Idempotente: só reconhece como cortesia uma ativação vinculada ao mesmo referral.
+ */
+export async function concederMemoriasCortesiaParceiro(eventoId: string, referralId: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(eventoId) || !/^[0-9a-f-]{36}$/i.test(referralId)) return false;
+  const admin = adminConviteria();
+  const { data: evento } = await admin.from('eventos').select('id,data_evento').eq('id', eventoId).maybeSingle();
+  if (!evento) return false;
+  let pacote = await pacoteDoEvento(eventoId);
+  if (!pacote) pacote = await garantirPacote(eventoId);
+  if (pacote?.status === 'ativo') {
+    return pacote.beneficio_codigo === 'memorias_free'
+      && pacote.beneficio_referral_id === referralId
+      && Number(pacote.compra_valor_centavos) === 0;
+  }
+  const agora = new Date();
+  const expiraEm = calcularExpiracaoMemorias(evento.data_evento as string | null, agora);
+  const { data, error } = await admin.from('evento_memorias_config').update({
+    status: 'ativo',
+    limite_fotos: MEMORIAS_LIMITE_FOTOS,
+    limite_videos: MEMORIAS_LIMITE_VIDEOS,
+    limite_bytes: MEMORIAS_LIMITE_BYTES,
+    video_max_segundos: MEMORIAS_VIDEO_MAX_SEGUNDOS,
+    video_max_bytes: MEMORIAS_VIDEO_MAX_BYTES,
+    compra_valor_centavos: 0,
+    beneficio_codigo: 'memorias_free',
+    beneficio_referral_id: referralId,
+    comprado_em: agora.toISOString(),
+    expira_em: expiraEm,
+    updated_at: agora.toISOString(),
+  }).eq('evento_id', eventoId).neq('status', 'ativo').select('evento_id').maybeSingle();
+  if (error) {
+    console.error('ConviteIA: falha ao conceder Memórias por parceiro.', error.code || 'benefit_grant_failed');
+    return false;
+  }
+  return Boolean(data);
+}

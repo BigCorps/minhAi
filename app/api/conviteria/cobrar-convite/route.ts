@@ -9,6 +9,7 @@ import {
   WHATSAPP_EVENTO_LIMITE,
   WHATSAPP_EVENTO_PRECO_CENTAVOS,
 } from '@/lib/conviteria/whatsapp-servidor';
+import { beneficioMemoriasParceiro } from '@/lib/conviteria/parceiros-servidor';
 
 export const runtime = 'nodejs';
 
@@ -76,7 +77,9 @@ export async function POST(req: NextRequest) {
   let gravataAtual = gravataAtualInicial;
   const gravataAtiva = gravataAtual?.status === 'ativo';
 
-  const incluirMemorias = Boolean(corpo.incluirMemorias) && !memoriasAtivas;
+  const beneficioParceiro = await beneficioMemoriasParceiro(evento.id as string);
+  const memoriasCortesiaParceiro = Boolean(conviteCentavos > 0 && beneficioParceiro.eligible && !memoriasAtivas);
+  const incluirMemorias = (memoriasCortesiaParceiro || Boolean(corpo.incluirMemorias)) && !memoriasAtivas;
   const incluirWhatsApp = Boolean(corpo.incluirWhatsApp) && !whatsappAtivo;
   const incluirGravata = Boolean(corpo.incluirGravata) && !gravataAtiva;
 
@@ -84,7 +87,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ erro: 'Confirme a autorização para envio de mensagens antes de adicionar o WhatsApp do Evento.' }, { status: 400 });
   }
 
-  const memoriasCentavos = incluirMemorias ? MEMORIAS_PRECO_CENTAVOS : 0;
+  const memoriasCentavos = incluirMemorias && !memoriasCortesiaParceiro ? MEMORIAS_PRECO_CENTAVOS : 0;
   const whatsappCentavos = incluirWhatsApp ? WHATSAPP_EVENTO_PRECO_CENTAVOS : 0;
   const gravataCentavos = incluirGravata ? HORA_GRAVATA_PRECO_CENTAVOS : 0;
   const total = conviteCentavos + memoriasCentavos + whatsappCentavos + gravataCentavos;
@@ -133,7 +136,8 @@ export async function POST(req: NextRequest) {
       eventoId: evento.id,
       valorCentavos: Number(existente.amount_cents),
       conviteCentavos: incluiConviteExistente ? avulso.centavos : 0,
-      memoriasCentavos: incluiMemoriasExistente ? MEMORIAS_PRECO_CENTAVOS : 0,
+      memoriasCentavos: incluiMemoriasExistente ? Number(pacote?.compra_valor_centavos ?? MEMORIAS_PRECO_CENTAVOS) : 0,
+      memoriasCortesiaParceiro: Boolean(incluiMemoriasExistente && Number(pacote?.compra_valor_centavos ?? MEMORIAS_PRECO_CENTAVOS) === 0 && pacote?.beneficio_referral_id),
       whatsappCentavos: incluiWhatsAppExistente ? WHATSAPP_EVENTO_PRECO_CENTAVOS : 0,
       gravataCentavos: incluiGravataExistente ? HORA_GRAVATA_PRECO_CENTAVOS : 0,
       incluiMemorias: incluiMemoriasExistente,
@@ -193,7 +197,9 @@ export async function POST(req: NextRequest) {
   if (incluirMemorias) {
     await admin.from('evento_memorias_config').update({
       status: 'aguardando_pagamento',
-      compra_valor_centavos: MEMORIAS_PRECO_CENTAVOS,
+      compra_valor_centavos: memoriasCentavos,
+      beneficio_codigo: memoriasCortesiaParceiro ? 'memorias_free' : null,
+      beneficio_referral_id: memoriasCortesiaParceiro ? beneficioParceiro.referralId : null,
       pix_transaction_id: pix.transaction_id,
       pix_txid: pix.txid ?? null,
       updated_at: new Date().toISOString(),
@@ -228,6 +234,7 @@ export async function POST(req: NextRequest) {
     valorCentavos: total,
     conviteCentavos,
     memoriasCentavos,
+    memoriasCortesiaParceiro,
     whatsappCentavos,
     gravataCentavos,
     incluiMemorias: incluirMemorias,

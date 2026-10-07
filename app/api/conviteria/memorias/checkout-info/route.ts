@@ -8,6 +8,7 @@ import { dataEventoElegivelParaTeste, expiracaoEfetivaTeste } from '@/lib/convit
 import { PLANOS } from '@/lib/conviteria/precos';
 import { urlDoConvite } from '@/lib/conviteria/marca';
 import { WHATSAPP_EVENTO_PRECO_CENTAVOS } from '@/lib/conviteria/whatsapp-servidor';
+import { beneficioMemoriasParceiro } from '@/lib/conviteria/parceiros-servidor';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -46,6 +47,10 @@ export async function GET(req: NextRequest) {
   const avulso = PLANOS.find((p) => p.id === 'avulso')!;
   const conviteCentavos = !publicado && evento.origem_plano === 'avulso' ? avulso.centavos : 0;
   const memoriasAtivas = pacote?.status === 'ativo' && (!pacote.expira_em || new Date(pacote.expira_em).getTime() > Date.now());
+  const beneficioParceiro = !publicado && evento.origem_plano === 'avulso'
+    ? await beneficioMemoriasParceiro(evento.id as string)
+    : { eligible: false, referralId: null as string | null };
+  const memoriasCortesiaParceiro = Boolean(conviteCentavos > 0 && !memoriasAtivas && beneficioParceiro.eligible);
   const whatsappAtivo = whatsapp?.status === 'ativo';
   const gravataAtiva = gravata?.status === 'ativo';
 
@@ -134,7 +139,9 @@ export async function GET(req: NextRequest) {
       motivo: motivoTeste,
     },
     memorias: {
-      precoCentavos: MEMORIAS_PRECO_CENTAVOS,
+      precoCentavos: memoriasCortesiaParceiro ? 0 : MEMORIAS_PRECO_CENTAVOS,
+      precoOriginalCentavos: MEMORIAS_PRECO_CENTAVOS,
+      cortesiaParceiro: memoriasCortesiaParceiro,
       status: memoriasStatus,
       ativas: memoriasAtivas,
       emTeste: memoriasEmTeste,

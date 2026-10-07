@@ -1258,8 +1258,8 @@ function PartnersPanel({ data, action, busy }: any) {
         return <article className="mt-4 rounded-xl border border-white/10 p-4" key={m.id}>
           <h3 className="font-bold">{m.partner.company_name} · {m.program.name}</h3>
           <p>Status: {statuses[m.status]} · Indicações: {referrals.length} · Conversões: {conversions.length} · Valor registrado: {money(conversions.reduce((n: number, r: any) => n + Number(r.converted_value_cents), 0))}</p>
-          {link && <p className="break-all">Código: {link.code} · Slug: {link.slug}{m.program.link_base_url && <> · Link planejado: {m.program.link_base_url}{link.slug}</>}</p>}
-          <p className="text-xs text-slate-400">A rota pública e a concessão de benefícios serão implementadas em uma etapa posterior.</p>
+          {link && <p className="break-all">Código: {link.code} · Slug: {link.slug}{m.program.link_base_url && <> · Link público: {m.program.link_base_url}{link.slug}</>}</p>}
+          <p className="text-xs text-slate-400">O link público funciona quando a participação estiver Ativa. No ConviteIA, uma compra avulsa indicada pode liberar Memórias grátis conforme o programa.</p>
           <PartnerStatusForm membership={m} statuses={statuses} action={action} busy={busy} />
         </article>;
       })}

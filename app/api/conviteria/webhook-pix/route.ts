@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { timingSafeEqual } from 'node:crypto';
 import { adminConviteria, adminPublic } from '@/lib/conviteria/servidor';
-import { ativarMemorias } from '@/lib/conviteria/memorias-servidor';
+import { ativarMemorias, concederMemoriasCortesiaParceiro } from '@/lib/conviteria/memorias-servidor';
+import { converterIndicacaoParceiroConvite, marcarBeneficioParceiroConcedido } from '@/lib/conviteria/parceiros-servidor';
 import { ativarHoraGravata } from '@/lib/conviteria/gravata-servidor';
 import { limparDadosDoTeste } from '@/lib/conviteria/teste-servidor';
 
@@ -95,6 +96,23 @@ export async function POST(req: NextRequest) {
       ativarHoraGravata(corpo.referenciaId, corpo.txid ?? null),
     ]);
 
+    let parceiroConvertido = false;
+    let memoriasParceiroAtivadas = false;
+    try {
+      const conversao = await converterIndicacaoParceiroConvite(corpo.referenciaId);
+      if (conversao?.referralId && ['pending', 'granted'].includes(String(conversao.benefitStatus))) {
+        memoriasParceiroAtivadas = await concederMemoriasCortesiaParceiro(corpo.referenciaId, conversao.referralId);
+        if (memoriasParceiroAtivadas) {
+          await marcarBeneficioParceiroConcedido(conversao.referralId);
+          parceiroConvertido = true;
+        }
+      } else if (conversao?.referralId) {
+        parceiroConvertido = true;
+      }
+    } catch (e) {
+      console.error('ConviteIA: falha segura ao finalizar referral de parceiro.', e instanceof Error ? e.message : 'partner_conversion_failed');
+    }
+
     if (slug) revalidatePath(`/convite/${slug}`);
 
     return NextResponse.json({
@@ -103,6 +121,8 @@ export async function POST(req: NextRequest) {
       memoriasAtivadas,
       whatsappAtivado,
       gravataAtivada,
+      parceiroConvertido,
+      memoriasParceiroAtivadas,
       slug,
     });
   }

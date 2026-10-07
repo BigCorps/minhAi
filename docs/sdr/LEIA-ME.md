@@ -201,3 +201,13 @@ Ver `VALIDACAO.md` para separar verificações locais concluídas dos gates de h
 - ConviteIA: link **planejado** `https://conviteia.com/p/<slug>`, público de eventos, possibilidade futura de diretório com categoria/região e benefício **Pacote Memórias gratuito** condicionado à contratação. Definição de benefício permanece desabilitada. Nenhuma rota `/p`, QR, concessão automática ou alteração no ConviteIA foi implementada.
 - Migration `20261007005406_sdr_partner_programs.sql` entregue para revisão, **não aplicada em produção**. Aplicar antes de usar a aba Parceiros. Enquanto as tabelas não existirem, a aba informa a pendência sem bloquear as demais áreas do Comercial. RPCs `partner_promote_opportunity`, `partner_set_membership_status` e `partner_record_referral`: SECURITY INVOKER, somente service_role. Todas as novas tabelas têm RLS e acesso restrito ao servidor. Nenhum budget existente é modificado.
 - Listagem inicial limitada a 200 candidatos e 200 participações; contadores exibem somente os até 1.000 referrals mais recentes carregados e não são um dashboard analítico completo. Histórico de estados e referrals preparam métricas por programa/produto/empresa e conversão.
+
+
+### Programa de Parceiros BigCorps · Etapa 6 — referral real do ConviteIA
+
+- `/p/<slug>` passa a resolver apenas links ConviteIA com programa, participação e link ativos. A rota grava um cookie opaco HttpOnly/Secure/SameSite=Lax por 30 dias e redireciona para a experiência ConviteIA; UUIDs internos não são expostos.
+- O cookie é somente transporte de primeiro toque. Ao criar o evento, o backend valida o código do link e persiste a atribuição em `conviteria.evento_partner_attributions`, ligada ao `partner_referrals`. Depois disso a atribuição não depende do navegador/cookie.
+- Para convite **avulso ainda não pago**, referral elegível inclui Memórias automaticamente por R$ 0,00 no mesmo checkout. O PIX continua cobrando apenas o convite e demais adicionais escolhidos. Memórias só é ativado após confirmação real da compra.
+- A conversão é idempotente via `partner_convert_referral`; a concessão é auditada separadamente por `partner_mark_benefit_granted`. Repetição de webhook não duplica conversão, valor ou benefício. Falha de benefício deixa estado recuperável.
+- O benefício `memorias_free` do programa ConviteIA passa a `enabled=true`, com `automaticGrant=true`, `grantOn=confirmed_invite_purchase` e uma concessão por evento. Convites de plano mensal não recebem a cortesia automaticamente nesta versão, pois não há compra avulsa do evento a confirmar.
+- Nenhum email/WhatsApp é enviado e nenhuma campanha SDR é ativada. A camada de parceiros continua independente da classificação comercial e dos budgets de providers.

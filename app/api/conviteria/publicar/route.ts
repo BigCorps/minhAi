@@ -5,6 +5,7 @@ import { PLANOS } from '@/lib/conviteria/precos';
 import { urlDoConvite } from '@/lib/conviteria/marca';
 import { normalizarPresentesEscolhidos } from '@/lib/conviteria/catalogo';
 import type { ConviteConfig } from '@/lib/conviteria/tipos';
+import { CONVITEIA_PARTNER_COOKIE, registrarAtribuicaoParceiroConvite } from '@/lib/conviteria/parceiros-servidor';
 
 export const runtime = 'nodejs';
 
@@ -106,6 +107,15 @@ export async function POST(req: NextRequest) {
     }))
   );
   if (erroSecoes) console.error('⚠️ Falha ao criar seções:', erroSecoes);
+
+  const parceiroCode = req.cookies.get(CONVITEIA_PARTNER_COOKIE)?.value?.trim();
+  if (parceiroCode) {
+    try {
+      await registrarAtribuicaoParceiroConvite(evento.id as string, parceiroCode);
+    } catch (e) {
+      console.error('ConviteIA: falha segura ao persistir atribuição de parceiro.', e instanceof Error ? e.message : 'partner_attribution_failed');
+    }
+  }
 
   if (corpo.rascunhoToken) await admin.from('rascunhos').delete().eq('token', corpo.rascunhoToken);
 

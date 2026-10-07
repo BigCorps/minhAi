@@ -23,6 +23,26 @@ const button =
   "rounded-xl border border-white/15 px-3 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-40";
 const card = "rounded-2xl border border-white/10 bg-white/[.025] p-5";
 const errors: Record<string, string> = {
+  outreach_review_invalid_or_expired: "A revisão expirou ou não é válida. Gere uma nova prévia. (outreach_review_invalid_or_expired)",
+  outreach_review_context_changed: "Os dados da oportunidade mudaram. Gere e revise uma nova prévia. (outreach_review_context_changed)",
+  outreach_recipient_changed: "O contato selecionado mudou. Escolha o destinatário novamente. (outreach_recipient_changed)",
+  explicit_recipient_required: "Escolha explicitamente um destinatário para o email. (explicit_recipient_required)",
+  explicit_variant_required: "Escolha uma abordagem Cliente ou Parceiro antes da prévia. (explicit_variant_required)",
+  classification_variant_mismatch: "A abordagem escolhida não corresponde à classificação salva. (classification_variant_mismatch)",
+  commercial_classification_required: "Salve uma classificação comercial antes de preparar o email. (commercial_classification_required)",
+  low_priority_outreach_blocked: "Oportunidades de baixa prioridade não podem receber esta abordagem. (low_priority_outreach_blocked)",
+  validated_company_contact_required: "Escolha um contato corporativo validado, com fonte e evidência válidas. (validated_company_contact_required)",
+  manual_contact_review_required: "Revise destinatário, fonte, variante e conteúdo antes de enfileirar. (manual_contact_review_required)",
+  queue_recipient_required: "A fila não possui um destinatário válido. Prepare uma nova revisão. (queue_recipient_required)",
+  manual_pilot_requires_single_touch_pilot: "O piloto manual exige status piloto e campanha com apenas um toque. (manual_pilot_requires_single_touch_pilot)",
+  pilot_opportunity_limit: "O piloto atingiu o limite de oportunidades distintas. (pilot_opportunity_limit)",
+  manual_gate_requires_pilot: "O gate de piloto manual só pode ser alterado em status piloto. (manual_gate_requires_pilot)",
+  invalid_manual_pilot_gate: "A configuração do gate de piloto manual é inválida. (invalid_manual_pilot_gate)",
+  manual_gate_requires_separate_pilot: "O piloto exige limite diário positivo e os gates de automação desligados. (manual_gate_requires_separate_pilot)",
+  manual_pilot_migration_required: "A infraestrutura SQL de pilot readiness ainda não está disponível. (manual_pilot_migration_required)",
+  reviewed_outreach_requires_pilot_or_active: "Emails revisados exigem rollout em piloto ou ativo. Rascunho, pronto e pausado estão bloqueados. (reviewed_outreach_requires_pilot_or_active)",
+  outreach_review_mode_changed: "O status do rollout mudou desde a revisão. Gere uma nova prévia. (outreach_review_mode_changed)",
+
   decision_maker_not_found: "Nenhum decisor foi encontrado para esta empresa.",
   provider_missing: "Escolha o fornecedor da campanha.",
   apollo_plan_unavailable: "Apollo API enrichment indisponível no plano Free. Use a pesquisa na web.",
@@ -564,6 +584,8 @@ export default function AdminCommercial({
               <h2 className="font-bold">{preview.subject}</h2>
               <p className="mt-3 text-sm">Destinatário: {preview.recipient_address}</p>
               <p className="text-sm">Tipo: {preview.recipient_kind === "company_contact" ? "Contato corporativo" : "Contato individual"} · Variante: {preview.message_variant}</p>
+              <p className="text-sm">Modo: {preview.enqueue_mode === "manual_pilot" ? "Piloto manual" : "Envio revisado"}</p>
+              <p className="mt-2 text-xs text-slate-400">{preview.enqueue_mode === "manual_pilot" ? "Preparar a fila não libera o piloto." : "Este email continuará sujeito aos gates ativos de envio."}</p>
               {preview.recipient_source_url && <a className="text-sm underline" href={preview.recipient_source_url} target="_blank" rel="noreferrer">Fonte do contato corporativo</a>}
               <p className="my-5 whitespace-pre-wrap break-words text-sm leading-6">
                 {preview.body}
@@ -576,9 +598,9 @@ export default function AdminCommercial({
               >
                 Abrir qualificação
               </a>
-              <label className="mt-4 flex gap-2 text-sm"><input type="checkbox" checked={previewReviewed} onChange={e => setPreviewReviewed(e.target.checked)} />Revisei destinatário, variante e conteúdo. Preparar apenas a fila do piloto manual.</label>
+              <label className="mt-4 flex gap-2 text-sm"><input type="checkbox" checked={previewReviewed} onChange={e => setPreviewReviewed(e.target.checked)} />Revisei destinatário, modo, variante e conteúdo. Preparar a fila não habilita envio.</label>
               <button className={button + " mt-3"} disabled={busy || !previewReviewed} onClick={async () => {
-                const result = await action({ action: "enqueue", id: preview.id, channel: "email", reviewToken: preview.reviewToken }, "Fila manual preparada; os gates de envio continuam obrigatórios.");
+                const result = await action({ action: "enqueue", id: preview.id, channel: "email", reviewToken: preview.reviewToken }, "Email revisado enfileirado; os gates de envio continuam obrigatórios.");
                 if (result) setPreview(null);
               }}>Enfileirar conteúdo revisado</button>
               <button
@@ -1353,9 +1375,9 @@ function OutreachReview({ o, action, busy }: any) {
   const selectedVariant = type === "customer" || type === "partner" ? type : variant;
   return <form className="mt-3 rounded-xl border border-amber-400/20 p-3 text-sm" onSubmit={e => {
     e.preventDefault();
-    void action({ action: "preview", id: o.id, recipient_kind: recipient === "individual" ? "individual" : "company_contact", recipient_address: recipient === "individual" ? undefined : recipient, message_variant: selectedVariant }, "Prévia do piloto manual pronta; nenhum envio realizado.");
+    void action({ action: "preview", id: o.id, recipient_kind: recipient === "individual" ? "individual" : "company_contact", recipient_address: recipient === "individual" ? undefined : recipient, message_variant: selectedVariant }, "Prévia do email revisado pronta; nenhum envio realizado.");
   }}>
-    <p className="font-semibold">Preparar piloto manual por email</p>
+    <p className="font-semibold">Preparar email revisado</p>
     <p className="text-xs text-slate-400">Contatos gerais ficam separados do email do decisor. Preparar uma fila não libera envio.</p>
     <label>Destinatário<select className={input} value={recipient} onChange={e => setRecipient(e.target.value)} disabled={busy}>
       <option value="">Escolha explicitamente</option>

@@ -2,13 +2,14 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { checked, db, required, origin, signToken } from "./server";
 import { emailContent } from "./channels";
-import { messageVariant, recipientSnapshot } from "./outreach";
+import { messageVariant, recipientSnapshot, reviewedEnqueueMode } from "./outreach";
 
 async function records(id: string) {
   const d = db();
   const o = checked(await d.from("sdr_opportunities").select("*").eq("id", id).single())!;
   const l = checked(await d.from("sdr_leads").select("*").eq("id", o.lead_id).single())!;
-  return { o, l };
+  const rollout = checked(await d.from("sdr_product_rollouts").select("status").eq("product", o.product).maybeSingle());
+  return { o, l, rollout };
 }
 function reviewContext(o: any, l: any) {
   return { product: o.product, leadId: o.lead_id, company: l.company_name, contact: l.contact_name ?? null, domain: l.domain ?? null };
@@ -31,17 +32,19 @@ export function readReview(token: unknown, id: string, actor: string) {
   } catch { throw new Error("outreach_review_invalid_or_expired"); }
 }
 export async function previewOutreach(id: string, input: any, actor: string) {
-  const { o, l } = await records(id);
+  const { o, l, rollout } = await records(id);
+  const mode = reviewedEnqueueMode(rollout?.status);
   const recipient = recipientSnapshot(o, l, input);
   const variant = messageVariant(o.qualification?.commercial_classification?.type, input.message_variant);
   const message = emailContent(o, l, 0, variant, recipient.recipient_kind);
   const snapshot = { id, actor, context: reviewContext(o, l), exp: Date.now() + 15 * 60000, ...recipient, message_variant: variant,
-    message_subject: message.subject, message_body: message.body, enqueue_mode: "manual_pilot" };
-  return { id, ...recipient, message_variant: variant, ...message, reviewToken: sealReview(snapshot), url: `${origin()}/comercial/conhecer/${signToken(id)}` };
+    message_subject: message.subject, message_body: message.body, enqueue_mode: mode };
+  return { id, enqueue_mode: mode, ...recipient, message_variant: variant, ...message, reviewToken: sealReview(snapshot), url: `${origin()}/comercial/conhecer/${signToken(id)}` };
 }
 export async function enqueueReviewedOutreach(id: string, token: unknown, actor: string) {
   const snapshot = readReview(token, id, actor);
-  const { o, l } = await records(id);
+  const { o, l, rollout } = await records(id);
+  if (snapshot.enqueue_mode !== reviewedEnqueueMode(rollout?.status)) throw new Error("outreach_review_mode_changed");
   if (JSON.stringify(snapshot.context) !== JSON.stringify(reviewContext(o, l))) throw new Error("outreach_review_context_changed");
   const current = recipientSnapshot(o, l, snapshot);
   messageVariant(o.qualification?.commercial_classification?.type, snapshot.message_variant);

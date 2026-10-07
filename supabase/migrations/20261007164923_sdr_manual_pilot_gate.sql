@@ -28,7 +28,10 @@ end $$;
 create function public.sdr_outreach_gate(q public.sdr_queue,ro public.sdr_product_rollouts,c public.sdr_campaigns)
 returns boolean language sql stable security invoker set search_path=public,pg_catalog as $$
  select coalesce(ro.daily_send_cap>0 and (
-  (q.enqueue_mode<>'manual_pilot' and ro.status='active' and ro.auto_outreach_enabled and ro.live_send_enabled)
+  (ro.status='active' and ro.auto_outreach_enabled and ro.live_send_enabled and (
+   q.enqueue_mode='automatic' or (q.enqueue_mode='manual_review' and q.channel='email'
+    and q.reviewed_by is not null and q.reviewed_at is not null and q.recipient_address is not null
+    and q.message_subject is not null and q.message_body is not null)))
   or (q.enqueue_mode='manual_pilot' and ro.status='pilot' and ro.manual_pilot_send_enabled
    and not ro.auto_outreach_enabled and not ro.live_send_enabled and q.channel='email' and q.step=0 and c.max_touches=1
    and q.reviewed_by is not null and q.reviewed_at is not null and q.recipient_address is not null and q.message_subject is not null and q.message_body is not null
@@ -78,18 +81,22 @@ begin
  if v_type is null then raise exception 'commercial_classification_required';end if;
  if v_type='low_priority' then raise exception 'low_priority_outreach_blocked';end if;
  if p_snapshot->>'message_variant' is null or p_snapshot->>'message_variant' not in ('customer','partner') or (v_type<>'customer_or_partner' and p_snapshot->>'message_variant'<>v_type) then raise exception 'explicit_variant_required';end if;
- if p_snapshot->>'enqueue_mode' is distinct from 'manual_pilot' or nullif(p_snapshot->>'message_subject','') is null or length(p_snapshot->>'message_subject')>300 or p_snapshot->>'message_subject' ~ '[\r\n]' or nullif(p_snapshot->>'message_body','') is null or length(p_snapshot->>'message_body')>12000 then raise exception 'manual_contact_review_required';end if;
+ if (p_snapshot->>'enqueue_mode' is null or p_snapshot->>'enqueue_mode' not in ('manual_pilot','manual_review')) or nullif(p_snapshot->>'message_subject','') is null or length(p_snapshot->>'message_subject')>300 or p_snapshot->>'message_subject' ~ '[\r\n]' or nullif(p_snapshot->>'message_body','') is null or length(p_snapshot->>'message_body')>12000 then raise exception 'manual_contact_review_required';end if;
  perform public.sdr_check_recipient(o.id,p_snapshot->>'recipient_kind',p_snapshot->>'recipient_address',p_snapshot->>'recipient_source_url');
  select * into ro from public.sdr_product_rollouts where product=o.product for update;
- if ro.product is null or ro.status<>'pilot' or c.max_touches<>1 then raise exception 'manual_pilot_requires_single_touch_pilot';end if;
- -- Allocate a distinct slot at enqueue, even with the send gate closed. Never reclaim a slot silently.
- if not exists(select 1 from public.sdr_manual_pilot_opportunities where product=o.product and opportunity_id=o.id) then
-  if (select count(*) from public.sdr_manual_pilot_opportunities where product=o.product)>=ro.pilot_limit then raise exception 'pilot_opportunity_limit';end if;
-  insert into public.sdr_manual_pilot_opportunities(product,opportunity_id,reviewed_by) values(o.product,o.id,p_actor);
+ if ro.product is null or ro.status not in ('pilot','active') then raise exception 'reviewed_outreach_requires_pilot_or_active';end if;
+ if (p_snapshot->>'enqueue_mode'='manual_pilot' and ro.status<>'pilot') or (p_snapshot->>'enqueue_mode'='manual_review' and ro.status<>'active') then raise exception 'outreach_review_mode_changed';end if;
+ if p_snapshot->>'enqueue_mode'='manual_pilot' then
+  if c.max_touches<>1 then raise exception 'manual_pilot_requires_single_touch_pilot';end if;
+  -- Only a pilot allocates a distinct slot. Active manual review never uses this ledger.
+  if not exists(select 1 from public.sdr_manual_pilot_opportunities where product=o.product and opportunity_id=o.id) then
+   if (select count(*) from public.sdr_manual_pilot_opportunities where product=o.product)>=ro.pilot_limit then raise exception 'pilot_opportunity_limit';end if;
+   insert into public.sdr_manual_pilot_opportunities(product,opportunity_id,reviewed_by) values(o.product,o.id,p_actor);
+  end if;
  end if;
  if exists(select 1 from public.sdr_queue where lead_id=l.id and status not in ('cancelled','blocked','failed')) then raise exception 'company_already_contacted';end if;
  insert into public.sdr_queue(opportunity_id,lead_id,campaign_id,channel,recipient_kind,recipient_address,recipient_source_url,recipient_evidence,message_variant,message_subject,message_body,enqueue_mode,reviewed_by,reviewed_at)
- values(o.id,l.id,c.id,'email',p_snapshot->>'recipient_kind',p_snapshot->>'recipient_address',p_snapshot->>'recipient_source_url',coalesce(p_snapshot->'recipient_evidence','{}'),p_snapshot->>'message_variant',p_snapshot->>'message_subject',p_snapshot->>'message_body','manual_pilot',p_actor,now()) returning id into v_id;
+ values(o.id,l.id,c.id,'email',p_snapshot->>'recipient_kind',p_snapshot->>'recipient_address',p_snapshot->>'recipient_source_url',coalesce(p_snapshot->'recipient_evidence','{}'),p_snapshot->>'message_variant',p_snapshot->>'message_subject',p_snapshot->>'message_body',p_snapshot->>'enqueue_mode',p_actor,now()) returning id into v_id;
  return v_id;
 end $$;
 

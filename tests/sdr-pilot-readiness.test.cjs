@@ -167,7 +167,7 @@ sqlTest('SQL RLS/grants restrict new RPCs, queue and pilot ledger; concurrent al
 test('signed preview enqueues exact reviewed content and rejects forgery, wrong admin, expiration and stale contact/context', async () => {
   const crypto = require('node:crypto'); const f = fixture(); f.o.lead_id = uuid(1);
   const calls = [];
-  const query = table => ({ select() { return this; }, eq() { return this; }, async single() { return { data: table === 'sdr_leads' ? f.l : f.o }; } });
+  const query = table => ({ select() { return this; }, eq() { return this; }, async single() { return { data: table === 'sdr_leads' ? f.l : f.o }; }, async maybeSingle() { return { data: { status: "pilot" } }; } });
   const server = { checked: r => r.data, db: () => ({ from: query, rpc: async (name, args) => { calls.push({ name, args }); return { data: 'queued' }; } }), required: () => 'test-only-signing-secret', origin: () => 'https://minhai.app', signToken: () => 'link-token' };
   const c = channels(server);
   const mod = compile('lib/sdr/outreach-server.ts', { './server': server, './channels': c, './outreach': outreach, 'node:crypto': crypto });
@@ -245,5 +245,147 @@ sqlTest('legacy individual queue survives migration and active gates with origin
     await d.query("update sdr_leads set email='different@empresa.com.br' where id=$1", [uuid(1)]);
     await assert.rejects(d.query('select sdr_begin_send($1)', [rows[0].id]), /verified_email_required/);
     assert.equal((await d.query('select recipient_address from sdr_queue')).rows[0].recipient_address,'original@empresa.com.br');
+  } finally { await d.close(); }
+});
+
+sqlTest('pilot rejects manual_review; active accepts reviewed snapshots without consuming pilot ledger and rejects manual_pilot', async () => {
+  const { d, snapshot, enqueue } = await setup(); try {
+    const review = { ...snapshot, enqueue_mode: 'manual_review' };
+    await assert.rejects(enqueue(1, review), /outreach_review_mode_changed/);
+    assert.equal((await d.query('select count(*)::int n from sdr_manual_pilot_opportunities')).rows[0].n,0);
+    await enqueue(1); // Existing pilot path still reserves its own slot.
+    await d.query("select sdr_set_product_rollout('conviteia','active',false,false,false,1,3)");
+    await assert.rejects(enqueue(2, snapshot), /outreach_review_mode_changed/);
+    const id = (await enqueue(2, review)).rows[0].id;
+    const q = (await d.query('select * from sdr_queue where id=$1',[id])).rows[0];
+    for (const key of ['recipient_kind','recipient_address','recipient_source_url','recipient_evidence','message_variant','message_subject','message_body','enqueue_mode']) assert.deepEqual(clean(q[key]),clean(review[key]));
+    assert.equal(q.reviewed_by,actor); assert.ok(q.reviewed_at);
+    assert.equal((await d.query('select count(*)::int n from sdr_manual_pilot_opportunities')).rows[0].n,1);
+    assert.equal((await d.query('select * from sdr_claim()')).rows.length,0);
+    await d.query("select sdr_set_product_rollout('conviteia','active',false,true,false,1,3)");
+    assert.equal((await d.query('select * from sdr_claim()')).rows.length,0);
+    await d.query("select sdr_set_product_rollout('conviteia','active',false,true,true,1,3)");
+    const claimed = (await d.query('select * from sdr_claim()')).rows; assert.equal(claimed.length,1); assert.equal(claimed[0].id,id);
+    await d.query('select sdr_begin_send($1)',[id]);
+    assert.equal((await d.query('select status from sdr_queue where opportunity_id=$1',[uuid(1)])).rows[0].status,'queued'); // A pilot row never silently becomes active/manual_review.
+    assert.equal((await d.query('select email from sdr_leads where id=$1',[uuid(2)])).rows[0].email,null);
+  } finally { await d.close(); }
+});
+sqlTest('active manual_review does not consume pilot_limit and remains subject to product/campaign caps and all contact guards', async () => {
+  const { d, snapshot, enqueue } = await setup(); try {
+    const review = { ...snapshot, enqueue_mode: 'manual_review' };
+    await d.query("select sdr_set_product_rollout('conviteia','active',false,false,false,1,3)");
+    for (let n=1;n<=4;n++) await enqueue(n,review);
+    assert.equal((await d.query('select count(*)::int n from sdr_queue')).rows[0].n,4);
+    assert.equal((await d.query('select count(*)::int n from sdr_manual_pilot_opportunities')).rows[0].n,0);
+    await d.query("select sdr_set_product_rollout('conviteia','active',false,true,true,1,1)");
+    let claimed=(await d.query('select * from sdr_claim()')).rows; assert.equal(claimed.length,1);
+    assert.equal((await d.query('select * from sdr_claim()')).rows.length,0);
+    await d.query("update sdr_queue set status='queued',lease_at=null");
+    await d.query("select sdr_set_product_rollout('conviteia','active',false,true,true,1,3)");
+    await d.query('update sdr_campaigns set daily_limit=1'); claimed=(await d.query('select * from sdr_claim()')).rows; assert.equal(claimed.length,1);
+    for (const field of ['suppressed_at','human_at','last_inbound_at']) {
+      await d.query(`update sdr_leads set ${field}=now() where id=$1`,[claimed[0].lead_id]);
+      await assert.rejects(d.query('select sdr_begin_send($1)',[claimed[0].id]), /send_no_longer_eligible/);
+      await d.query(`update sdr_leads set ${field}=null where id=$1`,[claimed[0].lead_id]);
+    }
+    await d.query('update sdr_leads set outreach_reviewed=false where id=$1',[claimed[0].lead_id]);
+    await assert.rejects(d.query('select sdr_begin_send($1)',[claimed[0].id]), /send_no_longer_eligible/);
+    await d.query('update sdr_leads set outreach_reviewed=true where id=$1',[claimed[0].lead_id]);
+    await d.query('update sdr_campaigns set enabled=false'); await assert.rejects(d.query('select sdr_begin_send($1)',[claimed[0].id]), /send_no_longer_eligible/);
+    await d.query("update sdr_campaigns set enabled=true,trial_ends_at=now()-interval '1 day'"); await assert.rejects(d.query('select sdr_begin_send($1)',[claimed[0].id]), /send_no_longer_eligible/);
+    await d.query("update sdr_campaigns set trial_ends_at=now()+interval '1 day'");
+    await d.query("select sdr_set_product_rollout('conviteia','active',false,true,false,1,3)"); await assert.rejects(d.query('select sdr_begin_send($1)',[claimed[0].id]), /send_no_longer_eligible/);
+  } finally { await d.close(); }
+});
+sqlTest('manual_review follow-up inherits the same recipient/content/review snapshot and never uses the pilot ledger', async () => {
+  const { d, snapshot, enqueue } = await setup(); try {
+    await d.query("select sdr_set_product_rollout('conviteia','active',false,true,true,3,3)");
+    await d.query('update sdr_campaigns set max_touches=2');
+    const id=(await enqueue(1,{...snapshot,enqueue_mode:'manual_review'})).rows[0].id;
+    const q=(await d.query('select * from sdr_claim()')).rows[0]; assert.equal(q.id,id); await d.query('select sdr_begin_send($1)',[id]);
+    await d.query("update sdr_queue set status='sent',sent_at=now() where id=$1",[id]);
+    const inherited=clean(outreach.followupSnapshot(q));
+    const row={ opportunity_id:q.opportunity_id, lead_id:q.lead_id, campaign_id:q.campaign_id, channel:'email',step:1,...inherited };
+    const keys=Object.keys(row); await d.query(`insert into sdr_queue(${keys.join(',')}) values(${keys.map((_,i)=>'$'+(i+1)).join(',')})`,Object.values(row));
+    const followup=(await d.query('select * from sdr_claim()')).rows[0]; assert.equal(followup.step,1); assert.equal(followup.enqueue_mode,'manual_review');
+    assert.deepEqual(clean(outreach.followupSnapshot(followup)),inherited); await d.query('select sdr_begin_send($1)',[followup.id]);
+    assert.equal((await d.query('select count(*)::int n from sdr_manual_pilot_opportunities')).rows[0].n,0);
+  } finally { await d.close(); }
+});
+sqlTest('draft, ready and paused reject reviewed enqueue with explicit safe errors; neither mode can masquerade as automatic', async () => {
+  const { d, snapshot, enqueue } = await setup(); try {
+    for (const status of ['draft','ready','paused']) {
+      await d.query('select sdr_set_product_rollout($1,$2,false,false,false,3,3)',['conviteia',status]);
+      for (const mode of ['manual_pilot','manual_review']) await assert.rejects(enqueue(1,{...snapshot,enqueue_mode:mode}), /reviewed_outreach_requires_pilot_or_active/);
+    }
+    await d.query("select sdr_set_product_rollout('conviteia','active',false,false,false,3,3)");
+    await assert.rejects(enqueue(1,{...snapshot,enqueue_mode:'automatic'}), /manual_contact_review_required/);
+    assert.equal((await d.query('select count(*)::int n from sdr_queue')).rows[0].n,0);
+  } finally { await d.close(); }
+});
+function reviewedServerHarness(status='pilot') {
+  const f=fixture(); f.o.lead_id=uuid(1); const rollout={ status },calls=[];
+  const query=table=>({select(){return this;},eq(){return this;},async single(){return {data:table==='sdr_leads'?f.l:f.o};},async maybeSingle(){return {data:rollout};}});
+  const server={checked:r=>r.data,db:()=>({from:query,rpc:async(name,args)=>{calls.push({name,args});return {data:'queue-id'};}}),required:()=> 'synthetic-review-key',origin:()=> 'https://minhai.app',signToken:()=> 'synthetic-link'};
+  const mod=compile('lib/sdr/outreach-server.ts',{'./server':server,'./channels':{emailContent:()=>({subject:'Reviewed subject',body:'Reviewed body'})},'./outreach':outreach,'node:crypto':require('node:crypto')});
+  return {f,rollout,calls,server,mod};
+}
+test('server derives and freezes mode from real rollout, ignores browser mode, and rejects pilot/active changes before any enqueue', async () => {
+  for (const [status,mode,next] of [['pilot','manual_pilot','active'],['active','manual_review','pilot']]) {
+    const h=reviewedServerHarness(status);
+    for (const browserMode of ['automatic','manual_pilot','manual_review','arbitrary']) {
+      const preview=await h.mod.previewOutreach(uuid(1),{...corporate,enqueue_mode:browserMode},actor);
+      assert.equal(preview.enqueue_mode,mode); assert.equal(h.mod.readReview(preview.reviewToken,uuid(1),actor).enqueue_mode,mode);
+    }
+    const preview=await h.mod.previewOutreach(uuid(1),corporate,actor);
+    h.rollout.status=next;
+    await assert.rejects(h.mod.enqueueReviewedOutreach(uuid(1),preview.reviewToken,actor), /outreach_review_mode_changed/); assert.equal(h.calls.length,0);
+  }
+  for (const status of ['draft','ready','paused']) {
+    const h=reviewedServerHarness(status); await assert.rejects(h.mod.previewOutreach(uuid(1),corporate,actor), /reviewed_outreach_requires_pilot_or_active/); assert.equal(h.calls.length,0);
+  }
+});
+test('browser enqueue route passes only the signed review; arbitrary enqueue_mode cannot replace server-selected mode', async () => {
+  const h=reviewedServerHarness('active'); const preview=await h.mod.previewOutreach(uuid(1),{...corporate,enqueue_mode:'manual_pilot'},actor);
+  const route=compile('app/api/admin/comercial/route.ts', {
+    '@/lib/sdr/server':{...h.server,adminRequest:async(req,fn)=>fn(actor),body:async req=>req.payload,event:async()=>{}},
+    '@/lib/sdr/catalog':catalog,'@/lib/sdr/outreach-server':h.mod,'@/lib/sdr/providers':{},'@/lib/sdr/partners':{},'@/lib/sdr/rollouts':{},
+    '@/lib/sdr/commercial-classification-server':{},'@/lib/sdr/web-discovery':{},'@/lib/sdr/web-research':{},'@/lib/sdr/channels':{},'@/lib/sdr/monitoria':{},'@/lib/sdr/sales':{},
+  });
+  await route.POST({payload:{action:'enqueue',id:uuid(1),channel:'email',reviewToken:preview.reviewToken,enqueue_mode:'automatic'}});
+  assert.equal(h.calls.length,1); assert.equal(h.calls[0].args.p_snapshot.enqueue_mode,'manual_review'); assert.equal(h.f.l.email,null);
+  const parts=preview.reviewToken.split('.'),payload=JSON.parse(Buffer.from(parts[0],'base64url'));
+  payload.enqueue_mode='automatic'; const forged=Buffer.from(JSON.stringify(payload)).toString('base64url')+'.'+parts[1];
+  await assert.rejects(route.POST({payload:{action:'enqueue',id:uuid(1),channel:'email',reviewToken:forged}}), /outreach_review_invalid/); assert.equal(h.calls.length,1);
+});
+test('Admin displays reviewed mode, neutral form title and safe actionable errors without echoing unknown messages', () => {
+  const react=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+  let slot=0,preview;
+  const hooks={...react,useState(initial){const n=slot++;return [n===7?preview:initial,()=>{}];},useEffect(){},useCallback:fn=>fn,useRef:()=>({current:null})};
+  const deps={react:hooks,'react/jsx-runtime':require('react/jsx-runtime'),'lucide-react':require('lucide-react'),'@/lib/sdr/catalog':catalog,'@/lib/sdr/commercial-classification':policy,'@/lib/sdr/playbooks':{},'./AdminHeader':{default:()=>null},'./AdminBusinessUi':{money:()=> 'R$ 0'}};
+  const exports={}; runInNewContext(ts.transpileModule(read('components/admin/AdminCommercial.tsx')+'\nexport { commercialError };',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:id=>deps[id]});
+  for (const [mode,label,hint] of [['manual_pilot','Piloto manual','Preparar a fila não libera o piloto.'],['manual_review','Envio revisado','Este email continuará sujeito aos gates ativos de envio.']]) {
+    slot=0; preview={id:uuid(1),enqueue_mode:mode,recipient_address:address,recipient_kind:'company_contact',message_variant:'partner',subject:'Subject',body:'Body',url:'https://minhai.app',recipient_source_url:source};
+    const html=renderToStaticMarkup(react.createElement(exports.default,{admin:{},basePath:'/admin'}));
+    for (const text of [label,hint,'Destinatário:','Tipo:','Variante:']) assert.ok(html.includes(text));
+  }
+  for (const code of ['outreach_review_invalid_or_expired','outreach_review_context_changed','outreach_recipient_changed','explicit_recipient_required','explicit_variant_required','classification_variant_mismatch','commercial_classification_required','low_priority_outreach_blocked','validated_company_contact_required','manual_contact_review_required','queue_recipient_required','manual_pilot_requires_single_touch_pilot','pilot_opportunity_limit','manual_gate_requires_pilot','invalid_manual_pilot_gate','outreach_review_mode_changed','reviewed_outreach_requires_pilot_or_active']) assert.match(exports.commercialError(code),new RegExp(`\\(${code}\\)`));
+  assert.doesNotMatch(exports.commercialError('https://secret.invalid/token=secret'),/secret|https/);
+  assert.match(read('components/admin/AdminCommercial.tsx'),/Preparar email revisado/); assert.doesNotMatch(read('components/admin/AdminCommercial.tsx'),/Preparar piloto manual por email/);
+});
+sqlTest('legacy sdr_enqueue signature still creates automatic individual rows and keeps normal active gates', async () => {
+  const { d } = await setup(); try {
+    const old=read('supabase/migrations/20261005183013_sdr_own_sales.sql');
+    const start=old.indexOf('create or replace function public.sdr_enqueue('),end=old.indexOf('create or replace function public.sdr_claim()',start);
+    assert.ok(start>=0 && end>start); await d.exec(old.slice(start,end));
+    await d.exec('revoke all on function public.sdr_enqueue(uuid,text) from public,anon,authenticated; grant execute on function public.sdr_enqueue(uuid,text) to service_role;');
+    await d.query("update sdr_leads set email='person@empresa.com.br',email_status='verified' where id=$1",[uuid(1)]);
+    const id=(await d.query("select sdr_enqueue($1,'email') id",[uuid(1)])).rows[0].id;
+    const q=(await d.query('select * from sdr_queue where id=$1',[id])).rows[0]; assert.equal(q.enqueue_mode,'automatic'); assert.equal(q.recipient_address,'person@empresa.com.br');
+    await d.query("select sdr_set_manual_pilot_gate('conviteia',true)"); assert.equal((await d.query('select * from sdr_claim()')).rows.length,0);
+    await d.query("select sdr_set_product_rollout('conviteia','active',false,false,false,3,3)"); assert.equal((await d.query('select * from sdr_claim()')).rows.length,0);
+    await d.query("select sdr_set_product_rollout('conviteia','active',false,true,true,3,3)"); assert.equal((await d.query('select * from sdr_claim()')).rows[0].id,id);
+    await d.query('select sdr_begin_send($1)',[id]); assert.equal((await d.query('select count(*)::int n from sdr_manual_pilot_opportunities')).rows[0].n,0);
   } finally { await d.close(); }
 });

@@ -1,6 +1,12 @@
 import { businessHostname } from "./catalog";
 import { eligibleCommercialBusiness } from "./commercial-classification";
 
+export type ReviewedEnqueueMode = "manual_pilot" | "manual_review";
+export function reviewedEnqueueMode(status: unknown): ReviewedEnqueueMode {
+  if (status === "pilot") return "manual_pilot";
+  if (status === "active") return "manual_review";
+  throw new Error("reviewed_outreach_requires_pilot_or_active");
+}
 export type MessageVariant = "customer" | "partner";
 export function safeEmail(value: unknown): value is string {
   return typeof value === "string" && value.length <= 254 && /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(value);

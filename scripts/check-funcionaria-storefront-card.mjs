@@ -20,7 +20,7 @@ for (const required of [
   "status='paid'",
   'v_card.provider_amount_cents <> v_gross',
   "coalesce(v_card.capture_method,'') <> 'credit_card'",
-  "coalesce(v_card.provider_paid_amount_cents,0) <= v_card.provider_amount_cents",
+  "coalesce(v_card.provider_paid_amount_cents,0) < v_card.provider_amount_cents",
   "card_provider_fee_evidence_mismatch",
   "funcionaria_storefront_card_fee_rates",
   "provider_fee_source",
@@ -44,7 +44,7 @@ for (const required of [
   "action === 'status'",
   "captureMethod !== 'credit_card'",
   'amount !== Number(payment.expected_amount_cents)',
-  'paidAmount <= amount',
+  'paidAmount < amount',
   "p_provider: 'infinitepay_bigcorps'",
   'p_provider_fee_cents: Number(payment.provider_fee_cents || 0)',
 ]) if (!edge.includes(required)) fail('Edge missing InfinitePay safety control: ' + required)
@@ -79,4 +79,4 @@ for (const required of [
   'can_reopen',
 ]) if (!panel.includes(required)) fail('storefront UI missing card behavior: ' + required)
 
-console.log('FuncionarIA 7F.2: InfinitePay evidence + 5% settlement guardrails PASS')
+if (!process.exitCode) console.log('FuncionarIA 7F.2: InfinitePay evidence + 5% settlement guardrails PASS')

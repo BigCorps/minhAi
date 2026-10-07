@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyStorefrontPaymentToken } from '@/lib/orders-server';
+import { internalServiceHeaders } from '@/lib/internal-service-headers';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -15,9 +16,14 @@ function json(body: unknown, status = 200) {
 
 async function invokeEdge(body: Record<string, unknown>) {
   const base = String(process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/+$/, '');
-  const serviceKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '');
+  if (!base) {
+    return { ok: false, status: 500, data: { error: 'server_not_configured' } };
+  }
 
-  if (!base || !serviceKey) {
+  let serviceHeaders: Record<string, string>;
+  try {
+    serviceHeaders = internalServiceHeaders();
+  } catch {
     return { ok: false, status: 500, data: { error: 'server_not_configured' } };
   }
 
@@ -25,8 +31,7 @@ async function invokeEdge(body: Record<string, unknown>) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${serviceKey}`,
-      apikey: serviceKey,
+      ...serviceHeaders,
     },
     body: JSON.stringify(body),
     cache: 'no-store',
@@ -42,19 +47,21 @@ export async function POST(request: NextRequest) {
   const token = verifyStorefrontPaymentToken(body?.payment_token);
 
   if (!token) return json({ error: 'invalid_or_expired_payment_token' }, 401);
-  if (!['create_pix', 'status'].includes(action)) return json({ error: 'invalid_action' }, 400);
+  if (!['create_pix', 'create_card', 'status'].includes(action)) {
+    return json({ error: 'invalid_action' }, 400);
+  }
 
-  const edge = await invokeEdge(
+  const edgeAction =
     action === 'create_pix'
-      ? {
-          action: 'create_pix',
-          checkout_id: token.checkoutId,
-        }
-      : {
-          action: 'check_pix',
-          checkout_id: token.checkoutId,
-        },
-  );
+      ? 'create_pix'
+      : action === 'create_card'
+        ? 'create_card'
+        : 'status';
+
+  const edge = await invokeEdge({
+    action: edgeAction,
+    checkout_id: token.checkoutId,
+  });
 
   if (!edge.ok) {
     return json(edge.data || { error: 'payment_provider_failed' }, edge.status || 502);

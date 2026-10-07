@@ -323,10 +323,10 @@ async function notifyResponsible(supabase: any, companyId: string, company: any,
     const tasks: Promise<boolean>[] = []
 
     if (config.notificar_email !== false && managerEmail) {
-      tasks.push(fetch(`${SUPABASE_URL}/functions/v1/enviar-email-google`, {
+      tasks.push(fetch(`${SUPABASE_URL}/functions/v1/enviar-email-google-v2`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${SERVICE_ROLE}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify({ email_type: 'manager_assistance',
           company_id: companyId,
           to: managerEmail,
           subject: `🔔 Cliente aguardando — ${company?.name || 'FuncionarIA'}`,

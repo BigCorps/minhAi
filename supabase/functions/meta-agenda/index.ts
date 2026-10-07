@@ -304,10 +304,10 @@ async function detectAndRun(
           }
         }
 
-        const res = await fetch(`${supabaseUrl}/functions/v1/enviar-email-google`, {
+        const res = await fetch(`${supabaseUrl}/functions/v1/enviar-email-google-v2`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          body: JSON.stringify({ email_type: 'meta_manual',
             company_id: companyId,
             to: parsed.para,
             subject: parsed.assunto || 'Mensagem via minhAi',

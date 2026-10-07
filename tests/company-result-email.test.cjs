@@ -99,7 +99,7 @@ async function main() {
     reset(); state.companies = company ? [company] : []; assert.equal((await post()).status, 404); assert.equal(calls.length, 0);
   }
   reset(); let response = await post(); assert.equal(response.status, 200); assert.equal(JSON.stringify(response.body), '{"ok":true}'); safe(response);
-  assert.equal(calls[0].url, 'https://supabase.test/functions/v1/enviar-email-google');
+  assert.equal(calls[0].url, 'https://supabase.test/functions/v1/enviar-email-google-v2');
   assert.equal(calls[0].headers.Authorization, 'Bearer mock-service-role');
   assert.deepEqual(calls[0].body, { ...input, to: 'destination@database.example', email_type: 'assistant_result' });
   const accountQuery = queries.find(q => q.table === 'google_accounts');

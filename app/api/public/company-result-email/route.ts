@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !serviceRole) return json({ ok: false, reason: 'email_unavailable' }, 503);
-    const response = await fetch(`${url}/functions/v1/enviar-email-google`, {
+    const response = await fetch(`${url}/functions/v1/enviar-email-google-v2`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceRole}` },
       body: JSON.stringify({ company_id: id, to, subject, body: input.body, email_type: 'assistant_result' }),

@@ -5112,7 +5112,7 @@ consultar_protestos: {
       'Envie um email',
     ],
     
-    edgeFunction: 'enviar-email-google',
+    edgeFunction: 'enviar-email-google-v2',
     requiresInput: false,
     
     description: 'Envia emails através da conta Google conectada usando Gmail API',

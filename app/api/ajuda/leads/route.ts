@@ -215,7 +215,7 @@ async function notifyGmailLead(
           <tr><td style="padding:7px 0;color:#6b7280">Porte</td><td style="padding:7px 0">${escapeHtml(input.porte)}</td></tr>
           <tr><td style="padding:7px 0;color:#6b7280">Faturamento</td><td style="padding:7px 0">${escapeHtml(input.faturamentoFaixa)}</td></tr>
           <tr><td style="padding:7px 0;color:#6b7280">Estrutura atual</td><td style="padding:7px 0">${escapeHtml(infraestrutura)}</td></tr>
-          <tr><td style="padding:7px 0;color:#6b7280">Checkout/pagamento</td><td style="padding:7px 0">${escapeHtml(input.checkoutProvider || 'Não usa / não informado')}</td></tr>
+          <tr><td style="padding:7px 0;color:#6b7280">Confirmação de pagamentos</td><td style="padding:7px 0">${escapeHtml(input.checkoutProvider || 'Não informado')}</td></tr>
           <tr><td style="padding:7px 0;color:#6b7280">Produtos com sinal</td><td style="padding:7px 0;font-weight:700;color:#A45100">${escapeHtml(products)}</td></tr>
           <tr><td style="padding:7px 0;color:#6b7280">Origem</td><td style="padding:7px 0">${escapeHtml(input.utmSource || 'Direto')}${input.utmCampaign ? ` · ${escapeHtml(input.utmCampaign)}` : ''}</td></tr>
           <tr><td style="padding:7px 0;color:#6b7280">Código</td><td style="padding:7px 0;font-family:monospace">${escapeHtml(input.id)}</td></tr>
@@ -394,7 +394,7 @@ export async function POST(request: Request) {
           .filter((item) => (INFRAESTRUTURA_OPTIONS as readonly string[]).includes(item))
           .slice(0, 5)
       : [];
-    const checkoutSelected = infraestrutura.includes('Checkout ou confirmação automática de pagamentos');
+    const checkoutSelected = infraestrutura.includes('Precisa confirmar pagamentos ou saber quando o Pix caiu');
     const checkoutProviderRaw = asNullableText(respostasRaw.checkout_provider, 100);
     const checkoutProvider = checkoutSelected && checkoutProviderRaw && isOneOf(checkoutProviderRaw, CHECKOUT_PROVIDER_OPTIONS)
       ? checkoutProviderRaw

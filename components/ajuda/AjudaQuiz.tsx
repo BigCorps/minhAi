@@ -311,16 +311,33 @@ export default function AjudaQuiz() {
       ...form.areas.map((area) => `sintoma:${area}` as ScreenKey),
       'gestao',
       'infraestrutura',
-      ...(form.infraestrutura.includes('Checkout ou confirmação automática de pagamentos') ? ['checkout' as ScreenKey] : []),
+      ...(form.infraestrutura.includes('Precisa confirmar pagamentos ou saber quando o Pix caiu') ? ['checkout' as ScreenKey] : []),
       'faturamento',
       'contato',
       'resultado',
     ];
   }, [form.areas, form.infraestrutura]);
 
-  const currentIndex = Math.max(0, sequence.indexOf(screen));
-  const questionCount = Math.max(1, sequence.length - 1);
-  const progress = screen === 'resultado' ? 100 : Math.round(((currentIndex + 1) / questionCount) * 100);
+  // Etapas visíveis do diagnóstico. As perguntas de sintomas pertencem à mesma
+  // etapa 6, mesmo quando o usuário escolhe até 3 áreas. A etapa 9 é condicional
+  // (confirmação de pagamentos), mas permanece reservada para manter o progresso
+  // estável e fácil de entender ao longo de todo o fluxo.
+  const TOTAL_STEPS = 11;
+  const logicalStep = (() => {
+    if (screen === 'tipo') return 1;
+    if (screen === 'segmento') return 2;
+    if (screen === 'porte') return 3;
+    if (screen === 'tempo') return 4;
+    if (screen === 'areas') return 5;
+    if (screen.startsWith('sintoma:')) return 6;
+    if (screen === 'gestao') return 7;
+    if (screen === 'infraestrutura') return 8;
+    if (screen === 'checkout') return 9;
+    if (screen === 'faturamento') return 10;
+    if (screen === 'contato') return 11;
+    return TOTAL_STEPS;
+  })();
+  const progress = screen === 'resultado' ? 100 : Math.round((logicalStep / TOTAL_STEPS) * 100);
 
   useEffect(() => {
     try {
@@ -337,7 +354,11 @@ export default function AjudaQuiz() {
           sintomas: savedForm.sintomas || {},
           gestao: Array.isArray(savedForm.gestao) ? savedForm.gestao.slice(0, 4) : [],
           infraestrutura: Array.isArray(savedForm.infraestrutura) ? savedForm.infraestrutura.slice(0, 5) : [],
-          checkoutProvider: typeof savedForm.checkoutProvider === 'string' ? savedForm.checkoutProvider : '',
+          checkoutProvider:
+            typeof savedForm.checkoutProvider === 'string' &&
+            (CHECKOUT_PROVIDER_OPTIONS as readonly string[]).includes(savedForm.checkoutProvider)
+              ? savedForm.checkoutProvider
+              : '',
           attribution: { ...EMPTY_ATTRIBUTION, ...(savedForm.attribution || {}) },
         };
         merged.attribution = captureAttribution(merged.attribution);
@@ -348,7 +369,7 @@ export default function AjudaQuiz() {
           const symptomArea = saved.screen.startsWith('sintoma:')
             ? saved.screen.slice('sintoma:'.length) as Area
             : null;
-          const checkoutAllowed = saved.screen === 'checkout' && merged.infraestrutura.includes('Checkout ou confirmação automática de pagamentos');
+          const checkoutAllowed = saved.screen === 'checkout' && merged.infraestrutura.includes('Precisa confirmar pagamentos ou saber quando o Pix caiu');
           if (staticScreens.includes(saved.screen) || checkoutAllowed || (symptomArea && merged.areas.includes(symptomArea))) {
             setScreen(saved.screen);
           }
@@ -450,7 +471,7 @@ export default function AjudaQuiz() {
       const nextInfra = withoutNone.includes(value)
         ? withoutNone.filter((item) => item !== value)
         : [...withoutNone, value];
-      const checkoutSelected = nextInfra.includes('Checkout ou confirmação automática de pagamentos');
+      const checkoutSelected = nextInfra.includes('Precisa confirmar pagamentos ou saber quando o Pix caiu');
       return {
         ...current,
         infraestrutura: nextInfra,
@@ -601,7 +622,10 @@ export default function AjudaQuiz() {
       {started && screen !== 'resultado' && (
         <div className="mx-auto w-full max-w-3xl px-4 pt-2 sm:px-6">
           <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[.12em] text-slate-400">
-            <span>Seu diagnóstico</span>
+            <span className="inline-flex items-center gap-2">
+              <span>Seu diagnóstico</span>
+              <span className="tracking-normal text-slate-500">{logicalStep}/{TOTAL_STEPS}</span>
+            </span>
             <span>{progress}%</span>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
@@ -723,8 +747,7 @@ export default function AjudaQuiz() {
           </QuestionShell>
         ) : screen === 'checkout' ? (
           <QuestionShell
-            title="Qual solução de checkout ou pagamento você usa principalmente?"
-            subtitle="A marca nos ajuda a comparar custos, confirmação de pagamentos e possibilidades de automação."
+            title="Como você costuma confirmar quando um pagamento caiu?"
             onBack={back}
             onNext={next}
             nextDisabled={!form.checkoutProvider}
@@ -744,13 +767,13 @@ export default function AjudaQuiz() {
             </div>
           </QuestionShell>
         ) : screen === 'contato' ? (
-          <QuestionShell title="Pronto. Para onde enviamos a análise?" subtitle="A BigCorps vai revisar suas respostas e falar com você pessoalmente." onBack={back} onNext={() => void submit()} nextDisabled={submitting} nextLabel="Ver meu diagnóstico" busy={submitting}>
-            <div className="grid gap-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+          <QuestionShell title="Para onde enviamos sua análise?" subtitle="A BigCorps vai revisar suas respostas e falar com você." onBack={back} onNext={() => void submit()} nextDisabled={submitting} nextLabel="Ver meu diagnóstico" busy={submitting}>
+            <div className="grid gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Seu nome *"><input value={form.nome} onChange={(e) => update('nome', e.target.value.slice(0, 100))} autoComplete="name" className="field" placeholder="Como podemos chamar você?" /></Field>
                 <Field label="Nome da empresa *"><input value={form.empresa} onChange={(e) => update('empresa', e.target.value.slice(0, 140))} autoComplete="organization" className="field" placeholder="Nome do negócio" /></Field>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="WhatsApp com DDD *"><input inputMode="tel" value={form.whatsapp} onChange={(e) => update('whatsapp', formatWhatsapp(e.target.value))} autoComplete="tel" className="field" placeholder="(11) 99999-9999" /></Field>
                 <Field label="E-mail (opcional)"><input inputMode="email" value={form.email} onChange={(e) => update('email', e.target.value.slice(0, 160))} autoComplete="email" className="field" placeholder="voce@empresa.com.br" /></Field>
               </div>
@@ -772,7 +795,7 @@ export default function AjudaQuiz() {
               <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center text-sm leading-6 text-slate-600">
                 <input type="checkbox" checked={form.consentimento} onChange={(e) => update('consentimento', e.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-[#FD9219]" />
                 <span>
-                  Concordo em receber o contato da BigCorps sobre esta análise e com a{' '}
+                  Concordo com o contato da BigCorps e com a{' '}
                   <Link href="/ajuda/privacidade" target="_blank" className="font-bold text-[#A45100] underline underline-offset-2">Política de Privacidade</Link>.
                 </span>
               </label>

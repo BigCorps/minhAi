@@ -21,7 +21,7 @@ export function isValidBrazilPhone(value: string) {
 }
 
 export const BIGCORPS_CONSENT_TEXT =
-  'Concordo em receber o contato da BigCorps sobre esta análise e com a Política de Privacidade.';
+  'Concordo com o contato da BigCorps e com a Política de Privacidade.';
 
 export const TIPO_EMPRESA_OPTIONS = [
   'Empresa física',
@@ -35,6 +35,12 @@ export const SEGMENTO_OPTIONS = [
   'Alimentação',
   'Saúde e beleza',
   'Indústria',
+  'Educação',
+  'Eventos',
+  'Tecnologia',
+  'Construção e engenharia',
+  'Logística e transporte',
+  'Imobiliário',
   'Outro',
 ] as const;
 
@@ -62,6 +68,7 @@ export const AREA_OPTIONS = [
   'Cobrança',
   'Operação',
   'Presença digital',
+  'Furtos e roubos',
 ] as const;
 
 export type Area = (typeof AREA_OPTIONS)[number];
@@ -77,6 +84,7 @@ export const AREA_QUESTIONS: Record<Area, string> = {
   Cobrança: 'Clientes atrasam pagamentos com frequência?',
   Operação: 'Erros, retrabalho ou falta de informação atrapalham a rotina da empresa?',
   'Presença digital': 'Você sente que seus clientes têm dificuldade para encontrar sua empresa no Google e na internet?',
+  'Furtos e roubos': 'Furtos, roubos ou perdas por segurança têm impactado sua empresa?',
 };
 
 export const AREA_RESULT_COPY: Record<Area, string> = {
@@ -89,6 +97,7 @@ export const AREA_RESULT_COPY: Record<Area, string> = {
   Cobrança: 'Lembretes, conciliação e automações podem reduzir atrasos e trabalho manual de cobrança.',
   Operação: 'Fluxos mais claros e informação centralizada podem diminuir retrabalho e gargalos do dia a dia.',
   'Presença digital': 'Melhorar descoberta, confiança e conversão online pode facilitar que novos clientes encontrem a empresa.',
+  'Furtos e roubos': 'Monitoramento e alertas inteligentes podem ajudar a reduzir perdas e reforçar a segurança do negócio.',
 };
 
 export const GESTAO_OPTIONS = [
@@ -103,7 +112,7 @@ export const INFRAESTRUTURA_OPTIONS = [
   'Sistema de câmeras ou monitoramento',
   'Loja virtual ou e-commerce',
   'Tela, TV ou painel para propaganda',
-  'Checkout ou confirmação automática de pagamentos',
+  'Precisa confirmar pagamentos ou saber quando o Pix caiu',
   'Nenhum destes',
 ] as const;
 
@@ -115,8 +124,9 @@ export const CHECKOUT_PROVIDER_OPTIONS = [
   'Stripe',
   'Pagar.me',
   'Asaas',
+  'Maquininha',
+  'WhatsApp',
   'Outro / sistema próprio',
-  'Não sei',
 ] as const;
 
 export const PRODUCT_LABELS = {
@@ -148,11 +158,11 @@ export function inferProductOpportunities(input: {
     keys.push('midia');
     reasons.midia = 'Já possui tela de propaganda: oportunidade de gerenciar conteúdo e monetizar espaços com a Midia.Pro.';
   }
-  if (selected.has('Checkout ou confirmação automática de pagamentos')) {
+  if (selected.has('Precisa confirmar pagamentos ou saber quando o Pix caiu')) {
     keys.push('pixwiki');
     reasons.pixwiki = input.checkoutProvider
-      ? `Usa ${input.checkoutProvider}: oportunidade de comparar custos e automações com a PixWiki.`
-      : 'Já usa checkout ou confirmação automática: oportunidade de comparar custos e automações com a PixWiki.';
+      ? `Hoje confirma pagamentos por ${input.checkoutProvider}: oportunidade de automatizar confirmações e comparar vantagens da PixWiki.`
+      : 'Precisa confirmar pagamentos recebidos: oportunidade de automatizar confirmações e comparar vantagens da PixWiki.';
   }
 
   return { keys, labels: keys.map((key) => PRODUCT_LABELS[key]), reasons };

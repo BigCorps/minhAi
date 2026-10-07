@@ -1,9 +1,10 @@
 'use client';
 
-import { CheckCircle2, ExternalLink, Loader2, RefreshCw, Store } from 'lucide-react';
+import { CheckCircle2, Download, ExternalLink, Loader2, PackageCheck, RefreshCw, Store } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useFuncionarIAState } from '@/components/funcionaria/FuncionarIADashboardShell';
+import { invokeFuncionarIAEdge } from '@/lib/funcionaria-api';
 
 export default function FuncionarIAMercadoLivrePanel() {
   const { state } = useFuncionarIAState();
@@ -13,6 +14,14 @@ export default function FuncionarIAMercadoLivrePanel() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [catalog, setCatalog] = useState<any[]>([]);
+  const [catalogTotal, setCatalogTotal] = useState(0);
+  const [nextOffset, setNextOffset] = useState<number | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState('');
+  const [importNotice, setImportNotice] = useState<string | null>(null);
 
   async function load() {
     if (!companyId) return;
@@ -36,6 +45,100 @@ export default function FuncionarIAMercadoLivrePanel() {
     if (!error) setConnection((c: any) => ({ ...c, [field]: value }));
   }
 
+  async function loadCatalog(reset = true) {
+    if (!companyId || !connection?.is_active) return;
+    setCatalogLoading(true);
+    setImportNotice(null);
+    try {
+      const offset = reset ? 0 : Number(nextOffset || 0);
+      const data = await invokeFuncionarIAEdge<any>('funcionaria-ml-importar-produtos', {
+        action: 'list', company_id: companyId, offset, limit: 50,
+      });
+      setCatalog(current => reset ? (data.items || []) : [...current, ...(data.items || [])]);
+      setCatalogTotal(Number(data.total || 0));
+      setNextOffset(data.next_offset == null ? null : Number(data.next_offset));
+      if (reset) setSelected([]);
+    } catch (error: any) {
+      setImportNotice(error?.message || 'Não foi possível listar os anúncios.');
+    } finally {
+      setCatalogLoading(false);
+    }
+  }
+
+  function toggleItem(id: string) {
+    setSelected(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
+  }
+
+  async function importSelected() {
+    if (!selected.length || importing) return;
+    setImporting(true);
+    setImportNotice(null);
+    try {
+      let imported = 0;
+      let updated = 0;
+      let linked = 0;
+      let errors = 0;
+      for (let i = 0; i < selected.length; i += 10) {
+        const chunk = selected.slice(i, i + 10);
+        setImportProgress(`Importando ${Math.min(i + 10, selected.length)} de ${selected.length}…`);
+        const data = await invokeFuncionarIAEdge<any>('funcionaria-ml-importar-produtos', {
+          action: 'import', company_id: companyId, item_ids: chunk,
+        });
+        for (const row of data.results || []) {
+          if (row.status === 'imported') imported++;
+          else if (row.status === 'updated' || row.status === 'unchanged') updated++;
+          else if (row.status === 'linked_local') linked++;
+          else if (row.status === 'error') errors++;
+        }
+      }
+      setImportNotice(`Concluído: ${imported} novos, ${updated} atualizados${linked ? `, ${linked} já vinculados localmente` : ''}${errors ? `, ${errors} com erro` : ''}.`);
+      setSelected([]);
+      await loadCatalog(true);
+    } catch (error: any) {
+      setImportNotice(error?.message || 'A importação não pôde ser concluída.');
+    } finally {
+      setImportProgress('');
+      setImporting(false);
+    }
+  }
+
+  async function importAll() {
+    if (importing) return;
+    setImporting(true);
+    setImportNotice(null);
+    try {
+      let scrollId: string | null = null;
+      let processed = 0;
+      let imported = 0;
+      let updated = 0;
+      let linked = 0;
+      let errors = 0;
+      for (let batch = 0; batch < 500; batch++) {
+        setImportProgress(`Importando catálogo… ${processed} processados`);
+        const data = await invokeFuncionarIAEdge<any>('funcionaria-ml-importar-produtos', {
+          action: 'import_all', company_id: companyId, scroll_id: scrollId,
+        });
+        const rows = data.results || [];
+        processed += Number(data.batch_count || rows.length || 0);
+        for (const row of rows) {
+          if (row.status === 'imported') imported++;
+          else if (row.status === 'updated' || row.status === 'unchanged') updated++;
+          else if (row.status === 'linked_local') linked++;
+          else if (row.status === 'error') errors++;
+        }
+        if (data.done === true || !data.next_scroll_id || !rows.length) break;
+        scrollId = String(data.next_scroll_id);
+      }
+      setImportNotice(`Importação completa: ${imported} novos, ${updated} atualizados${linked ? `, ${linked} já vinculados localmente` : ''}${errors ? `, ${errors} com erro` : ''}.`);
+      await loadCatalog(true);
+    } catch (error: any) {
+      setImportNotice(error?.message || 'Não foi possível importar todos os anúncios.');
+    } finally {
+      setImportProgress('');
+      setImporting(false);
+    }
+  }
+
   if (loading) return <div className="py-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-[#6D28D9]" /></div>;
   if (!companyId) return null;
 
@@ -45,7 +148,7 @@ export default function FuncionarIAMercadoLivrePanel() {
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <div className="flex items-center gap-2"><Store className="h-5 w-5 text-yellow-500" /><h2 className="text-lg font-black">Mercado Livre</h2>{connection?.is_active && <span className="inline-flex items-center gap-1 rounded-full bg-lime-100 px-2.5 py-1 text-[10px] font-black text-lime-800"><CheckCircle2 className="h-3 w-3" /> CONECTADO</span>}</div>
-            <p className="mt-2 text-sm leading-6 text-slate-500">A integração OAuth, token e webhook são os mesmos já usados pela minhAi. A FuncionarIA muda apenas a ordem da resposta: FAQ e dados do produto antes de IA.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-500">A integração OAuth, token e webhook são os mesmos já usados pela minhAi. A FuncionarIA usa essa conexão para importar produtos e responder compradores.</p>
           </div>
           <button type="button" onClick={() => void load()} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-500"><RefreshCw className="h-3.5 w-3.5" /> Atualizar</button>
         </div>
@@ -62,6 +165,46 @@ export default function FuncionarIAMercadoLivrePanel() {
 
         <div className="mt-4 rounded-2xl bg-violet-50 p-4 text-xs font-semibold leading-5 text-violet-800">IA da FuncionarIA: <strong>{state.settings?.ai_enabled ? 'ativada como fallback por créditos' : 'desativada'}</strong>. Respostas determinísticas do Mercado Livre não consomem créditos de IA.</div>
       </div>
+
+      {connection?.is_active ? (
+        <div className="rounded-3xl border border-yellow-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <div className="flex items-center gap-2"><Download className="h-5 w-5 text-yellow-500" /><h2 className="text-lg font-black">Importar produtos para sua loja</h2></div>
+              <p className="mt-2 text-sm leading-6 text-slate-500">Os anúncios entram no mesmo catálogo da FuncionarIA. Reimportar atualiza o produto sem criar duplicata.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => void loadCatalog(true)} disabled={catalogLoading || importing} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 disabled:opacity-50">{catalogLoading ? 'Carregando…' : 'Listar anúncios'}</button>
+              <button type="button" onClick={() => void importAll()} disabled={importing} className="rounded-xl bg-[#FFE600] px-3 py-2 text-xs font-black text-slate-900 disabled:opacity-50">Importar todos</button>
+            </div>
+          </div>
+
+          {importProgress ? <div className="mt-4 rounded-xl bg-yellow-50 px-4 py-3 text-xs font-black text-yellow-800"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{importProgress}</div> : null}
+          {importNotice ? <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-xs font-bold text-slate-600">{importNotice}</div> : null}
+
+          {catalog.length ? (
+            <>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs font-bold text-slate-400">{catalog.length} de {catalogTotal} anúncios carregados • {selected.length} selecionados</div>
+                <button type="button" onClick={() => void importSelected()} disabled={!selected.length || importing} className="inline-flex items-center gap-2 rounded-xl bg-[#6D28D9] px-3 py-2 text-xs font-black text-white disabled:opacity-40"><PackageCheck className="h-4 w-4" />Importar selecionados</button>
+              </div>
+              <div className="mt-3 max-h-[520px] space-y-2 overflow-y-auto pr-1">
+                {catalog.map(item => (
+                  <label key={item.id} className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-3 ${item.linked_local ? 'border-slate-100 bg-slate-50 opacity-70' : selected.includes(item.id) ? 'border-violet-300 bg-violet-50' : 'border-slate-100 bg-white'}`}>
+                    <input type="checkbox" checked={selected.includes(item.id)} disabled={item.linked_local || importing} onChange={() => toggleItem(item.id)} className="h-4 w-4 accent-[#6D28D9]" />
+                    {item.thumbnail ? <img src={item.thumbnail} alt="" className="h-12 w-12 rounded-xl object-cover" /> : <div className="h-12 w-12 rounded-xl bg-slate-100" />}
+                    <div className="min-w-0 flex-1"><div className="truncate text-sm font-black">{item.title}</div><div className="mt-1 text-[11px] font-bold text-slate-400">{item.id} • {String(item.status || '').toUpperCase()}</div></div>
+                    {item.linked_local ? <span className="rounded-full bg-slate-200 px-2 py-1 text-[10px] font-black text-slate-600">JÁ VINCULADO</span> : item.imported ? <span className="rounded-full bg-lime-100 px-2 py-1 text-[10px] font-black text-lime-800">IMPORTADO</span> : null}
+                  </label>
+                ))}
+              </div>
+              {nextOffset != null ? <button type="button" onClick={() => void loadCatalog(false)} disabled={catalogLoading || importing} className="mt-3 w-full rounded-xl border border-slate-200 py-2.5 text-xs font-black text-slate-600 disabled:opacity-50">Carregar mais</button> : null}
+            </>
+          ) : null}
+
+          <p className="mt-4 text-[11px] leading-5 text-slate-400">Preço é confirmado pela API de preços do Mercado Livre. Estoque com User Products usa o estoque por localização; quando isso não estiver disponível, a quantidade do anúncio é tratada como referência.</p>
+        </div>
+      ) : null}
 
       <div className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex items-center justify-between"><h2 className="text-lg font-black">Perguntas recentes</h2><span className="text-xs font-bold text-slate-400">{questions.length} exibidas</span></div>

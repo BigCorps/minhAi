@@ -1,7 +1,8 @@
 import 'server-only';
-import { uuid, validTime } from '@/supabase/functions/_shared/calendar-security';
+import { resolveCompanyActor } from '@/lib/orders-server';
+import { uuid, validTime, OPERATIONAL_PROFILES } from '@/supabase/functions/_shared/calendar-security';
 import { creationText, validGoogleEventId } from '@/supabase/functions/_shared/calendar-security';
-import { calendarInput, calendarJson, calendarEdge, publicCompany, searchRate, caught, fail, unsupported } from '@/lib/calendar-server';
+import { calendarInput, calendarJson, calendarEdge, searchRate, caught, fail, unsupported } from '@/lib/calendar-server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
@@ -15,7 +16,8 @@ export async function POST(req: Request) {
     if (!Number.isInteger(input.total_days) || input.total_days < 1 || input.total_days > 365) return fail('invalid_days');
     const times: string[] = [...input.daily_times].sort();
     if (new Set(times.map(time => time.slice(3))).size !== 1) return fail('invalid_times');
-    await publicCompany(req, input, id);
+    const resolved = await resolveCompanyActor(req, input, id, OPERATIONAL_PROFILES);
+    if (!resolved.actor) return fail(resolved.error === 'company_not_found' ? 'company_not_found' : 'forbidden', resolved.error === 'company_not_found' ? 404 : resolved.error?.endsWith('_failed') ? 503 : req.headers.get('authorization') || input.profile_tokens?.length ? 403 : 401);
     const now = new Date(), day = now.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
     let start = times.map(time => new Date(`${day}T${time}:00-03:00`)).find(date => date.getTime() > now.getTime());
     if (!start) start = new Date(Date.parse(`${day}T${times[0]}:00-03:00`) + 86400000);

@@ -59,7 +59,7 @@ begin
 end $$;
 
 create or replace function public.sdr_claim()
-returns setof public.sdr_queue language plpgsql security invoker set search_path=public,pg_catalog as $
+returns setof public.sdr_queue language plpgsql security invoker set search_path=public,pg_catalog as $$
 declare
  q public.sdr_queue%rowtype;c public.sdr_campaigns%rowtype;ro public.sdr_product_rollouts%rowtype;
  v_product text;v_product_count integer;
@@ -95,7 +95,7 @@ begin
   update public.sdr_queue set status='processing',lease_at=now() where id=q.id returning * into q;
   return next q;
  end loop;
-end $;
+end $$;
 
 create or replace function public.sdr_begin_send(p_queue uuid)
 returns void language plpgsql security invoker set search_path=public,pg_catalog as $$

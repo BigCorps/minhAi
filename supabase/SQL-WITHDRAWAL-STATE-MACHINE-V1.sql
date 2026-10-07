@@ -154,6 +154,8 @@ declare
   v_pix_key text;
   v_pix_key_type text;
   v_primary_company uuid;
+  v_company_ids uuid[] := '{}'::uuid[];
+  v_commission_ids uuid[] := '{}'::uuid[];
   v_balance record;
   v_commission_row record;
   v_debit integer;
@@ -190,18 +192,19 @@ begin
     );
   end if;
 
-  -- Lock all company balances first in deterministic order so concurrent credits,
-  -- purchases, or withdrawals cannot race this reservation.
-  perform 1
-  from public.company_balance
-  where user_id = p_user_id
-  order by company_id
-  for update;
-
-  select coalesce(sum(available_balance_cents), 0)::bigint
-  into v_total_available
-  from public.company_balance
-  where user_id = p_user_id;
+  -- Lock and snapshot the exact balance row IDs participating in this request.
+  -- Later statements only use this locked set, so a concurrently-created company
+  -- balance cannot enter the reservation after the total was calculated.
+  for v_balance in
+    select company_id, available_balance_cents
+    from public.company_balance
+    where user_id = p_user_id
+    order by company_id
+    for update
+  loop
+    v_company_ids := array_append(v_company_ids, v_balance.company_id);
+    v_total_available := v_total_available + v_balance.available_balance_cents;
+  end loop;
 
   if v_total_available < p_amount_cents then
     raise exception 'insufficient_balance';
@@ -217,16 +220,7 @@ begin
     raise exception 'withdrawal_pix_key_required';
   end if;
 
-  -- Reserve every pending commission visible at the instant of the withdrawal.
-  -- Rows are locked before the total is calculated.
-  perform 1
-  from public.commission_pending cp
-  join public.companies c on c.id = cp.company_id
-  where c.user_id = p_user_id
-    and cp.status = 'pendente'
-  order by cp.id
-  for update of cp;
-
+  -- Lock and snapshot the exact pending commissions included in this withdrawal.
   for v_commission_row in
     select cp.id, cp.valor_comissao
     from public.commission_pending cp
@@ -234,7 +228,9 @@ begin
     where c.user_id = p_user_id
       and cp.status = 'pendente'
     order by cp.id
+    for update of cp
   loop
+    v_commission_ids := array_append(v_commission_ids, v_commission_row.id);
     v_commission := v_commission
       + round(coalesce(v_commission_row.valor_comissao, 0) * 100)::integer;
   end loop;
@@ -255,21 +251,22 @@ begin
     v_pix_key, v_pix_key_type, 'reserved'
   );
 
-  update public.commission_pending cp
-     set status = 'reservado',
-         reserved_withdrawal_id = v_id,
-         reserved_at = now(),
-         descontado_at = null
-   where cp.status = 'pendente'
-     and cp.company_id in (
-       select c.id from public.companies c where c.user_id = p_user_id
-     );
+  if cardinality(v_commission_ids) > 0 then
+    update public.commission_pending cp
+       set status = 'reservado',
+           reserved_withdrawal_id = v_id,
+           reserved_at = now(),
+           descontado_at = null
+     where cp.id = any(v_commission_ids)
+       and cp.status = 'pendente';
+  end if;
 
   v_remaining := p_amount_cents;
   for v_balance in
     select company_id, available_balance_cents
     from public.company_balance
     where user_id = p_user_id
+      and company_id = any(v_company_ids)
       and available_balance_cents > 0
     order by available_balance_cents desc, company_id
   loop

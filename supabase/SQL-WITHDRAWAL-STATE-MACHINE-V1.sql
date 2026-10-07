@@ -48,6 +48,10 @@ create index if not exists idx_withdrawal_requests_user_created
 create index if not exists idx_withdrawal_requests_status
   on public.withdrawal_requests(status, created_at);
 
+create unique index if not exists ux_withdrawal_requests_one_active_per_user
+  on public.withdrawal_requests(user_id)
+  where status in ('reserved','sending','processing','reconciliation_required');
+
 drop trigger if exists update_withdrawal_requests_updated_at on public.withdrawal_requests;
 create trigger update_withdrawal_requests_updated_at
 before update on public.withdrawal_requests
@@ -189,6 +193,33 @@ begin
       'net_amount_cents', v_existing.net_amount_cents,
       'provider_txid', v_existing.provider_txid,
       'duplicate', true
+    );
+  end if;
+
+  -- Browser reloads can lose the client idempotency key. Resume the user's
+  -- existing non-terminal withdrawal instead of allowing a second payout.
+  select * into v_existing
+  from public.withdrawal_requests
+  where user_id = p_user_id
+    and status in ('reserved','sending','processing','reconciliation_required')
+  order by created_at
+  limit 1
+  for update;
+
+  if found then
+    if v_existing.requested_amount_cents <> p_amount_cents then
+      raise exception 'withdrawal_in_progress';
+    end if;
+    return jsonb_build_object(
+      'withdrawal_id', v_existing.id,
+      'status', v_existing.status,
+      'requested_amount_cents', v_existing.requested_amount_cents,
+      'fee_cents', v_existing.fee_cents,
+      'commission_cents', v_existing.commission_cents,
+      'net_amount_cents', v_existing.net_amount_cents,
+      'provider_txid', v_existing.provider_txid,
+      'duplicate', true,
+      'resumed_active', true
     );
   end if;
 

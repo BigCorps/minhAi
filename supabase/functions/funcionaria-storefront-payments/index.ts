@@ -349,6 +349,7 @@ async function createCard(supabase: any, checkoutId: string) {
     order_nsu: preparedOrderNsu,
     checkout_url: String(data?.checkout_url || checkoutUrl),
     amount_cents: amountCents,
+    can_reopen: preparedStatus === 'pending' && !data?.transaction_nsu,
     receipt_token: data?.receipt_token || null,
   })
 }

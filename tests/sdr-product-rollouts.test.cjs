@@ -22,7 +22,7 @@ test('every current SDR product has a conservative commercial playbook',()=>{
 test('rollout migration adds product-level double lock and daily cap to send RPCs',()=>{
   const sql=readFileSync(require.resolve('../supabase/migrations/20261007110000_sdr_product_rollouts.sql'),'utf8');
   assert.match(sql,/sdr_product_rollouts/);
-  assert.match(sql,/ro\.status='active'/);
+  assert.match(sql,/ro\.status<>'active'/);
   assert.match(sql,/ro\.auto_outreach_enabled/);
   assert.match(sql,/ro\.live_send_enabled/);
   assert.match(sql,/daily_send_cap/);

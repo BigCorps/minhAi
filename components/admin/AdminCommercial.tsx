@@ -23,6 +23,26 @@ const button =
   "rounded-xl border border-white/15 px-3 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-40";
 const card = "rounded-2xl border border-white/10 bg-white/[.025] p-5";
 const errors: Record<string, string> = {
+  outreach_review_invalid_or_expired: "A revisão expirou ou não é válida. Gere uma nova prévia. (outreach_review_invalid_or_expired)",
+  outreach_review_context_changed: "Os dados da oportunidade mudaram. Gere e revise uma nova prévia. (outreach_review_context_changed)",
+  outreach_recipient_changed: "O contato selecionado mudou. Escolha o destinatário novamente. (outreach_recipient_changed)",
+  explicit_recipient_required: "Escolha explicitamente um destinatário para o email. (explicit_recipient_required)",
+  explicit_variant_required: "Escolha uma abordagem Cliente ou Parceiro antes da prévia. (explicit_variant_required)",
+  classification_variant_mismatch: "A abordagem escolhida não corresponde à classificação salva. (classification_variant_mismatch)",
+  commercial_classification_required: "Salve uma classificação comercial antes de preparar o email. (commercial_classification_required)",
+  low_priority_outreach_blocked: "Oportunidades de baixa prioridade não podem receber esta abordagem. (low_priority_outreach_blocked)",
+  validated_company_contact_required: "Escolha um contato corporativo validado, com fonte e evidência válidas. (validated_company_contact_required)",
+  manual_contact_review_required: "Revise destinatário, fonte, variante e conteúdo antes de enfileirar. (manual_contact_review_required)",
+  queue_recipient_required: "A fila não possui um destinatário válido. Prepare uma nova revisão. (queue_recipient_required)",
+  manual_pilot_requires_single_touch_pilot: "O piloto manual exige status piloto e campanha com apenas um toque. (manual_pilot_requires_single_touch_pilot)",
+  pilot_opportunity_limit: "O piloto atingiu o limite de oportunidades distintas. (pilot_opportunity_limit)",
+  manual_gate_requires_pilot: "O gate de piloto manual só pode ser alterado em status piloto. (manual_gate_requires_pilot)",
+  invalid_manual_pilot_gate: "A configuração do gate de piloto manual é inválida. (invalid_manual_pilot_gate)",
+  manual_gate_requires_separate_pilot: "O piloto exige limite diário positivo e os gates de automação desligados. (manual_gate_requires_separate_pilot)",
+  manual_pilot_migration_required: "A infraestrutura SQL de pilot readiness ainda não está disponível. (manual_pilot_migration_required)",
+  reviewed_outreach_requires_pilot_or_active: "Emails revisados exigem rollout em piloto ou ativo. Rascunho, pronto e pausado estão bloqueados. (reviewed_outreach_requires_pilot_or_active)",
+  outreach_review_mode_changed: "O status do rollout mudou desde a revisão. Gere uma nova prévia. (outreach_review_mode_changed)",
+
   decision_maker_not_found: "Nenhum decisor foi encontrado para esta empresa.",
   provider_missing: "Escolha o fornecedor da campanha.",
   apollo_plan_unavailable: "Apollo API enrichment indisponível no plano Free. Use a pesquisa na web.",
@@ -86,8 +106,10 @@ export default function AdminCommercial({
     [page, setPage] = useState(0),
     [campaign, setCampaign] = useState(""),
     [preview, setPreview] = useState<any>(null);
+  const [previewReviewed, setPreviewReviewed] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
+    setPreviewReviewed(false);
     if (preview) dialogRef.current?.showModal();
     else dialogRef.current?.close();
   }, [preview]);
@@ -550,33 +572,48 @@ export default function AdminCommercial({
             onClick={(e) => {
               if (e.target === e.currentTarget) setPreview(null);
             }}
-            className="fixed inset-0 z-[60] m-auto border-0 bg-transparent p-4 text-slate-100 backdrop:bg-black/80"
+            className="fixed inset-0 z-[60] m-0 h-dvh w-dvw max-h-none max-w-none overflow-hidden border-0 bg-transparent p-0 text-slate-100 backdrop:bg-black/80"
             aria-label="Prévia da abordagem"
           >
-            <div
-              className={
-                card +
-                " max-h-[85vh] w-full max-w-2xl overflow-auto bg-slate-950"
-              }
-            >
-              <h2 className="font-bold">{preview.subject}</h2>
-              <p className="my-5 whitespace-pre-wrap break-words text-sm leading-6">
-                {preview.body}
-              </p>
-              <a
-                className={button + " inline-block"}
-                href={preview.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Abrir qualificação
-              </a>
-              <button
-                className={button + " ml-2"}
-                onClick={() => setPreview(null)}
-              >
-                Fechar
-              </button>
+            <div className="flex h-full w-full items-center justify-center p-3 sm:p-6">
+              <section className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-2xl sm:max-h-[calc(100dvh-3rem)]">
+                <div className="shrink-0 border-b border-white/10 px-5 py-4">
+                  <h2 className="break-words pr-8 font-bold">{preview.subject}</h2>
+                  <p className="mt-3 text-sm">Destinatário: {preview.recipient_address}</p>
+                  <p className="text-sm">Tipo: {preview.recipient_kind === "company_contact" ? "Contato corporativo" : "Contato individual"} · Variante: {preview.message_variant}</p>
+                  <p className="text-sm">Modo: {preview.enqueue_mode === "manual_pilot" ? "Piloto manual" : "Envio revisado"}</p>
+                  <p className="mt-2 text-xs text-slate-400">{preview.enqueue_mode === "manual_pilot" ? "Preparar a fila não libera o piloto." : "Este email continuará sujeito aos gates ativos de envio."}</p>
+                  {preview.recipient_source_url && <a className="text-sm underline" href={preview.recipient_source_url} target="_blank" rel="noreferrer">Fonte do contato corporativo</a>}
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+                  <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                    {preview.body}
+                  </p>
+                  <a
+                    className={button + " mt-5 inline-block"}
+                    href={preview.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Abrir qualificação
+                  </a>
+                </div>
+                <div className="shrink-0 border-t border-white/10 bg-slate-950 px-5 py-4">
+                  <label className="flex gap-2 text-sm"><input type="checkbox" checked={previewReviewed} onChange={e => setPreviewReviewed(e.target.checked)} />Revisei destinatário, modo, variante e conteúdo. Preparar a fila não habilita envio.</label>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button className={button} disabled={busy || !previewReviewed} onClick={async () => {
+                      const result = await action({ action: "enqueue", id: preview.id, channel: "email", reviewToken: preview.reviewToken }, "Email revisado enfileirado; os gates de envio continuam obrigatórios.");
+                      if (result) setPreview(null);
+                    }}>Enfileirar conteúdo revisado</button>
+                    <button
+                      className={button}
+                      onClick={() => setPreview(null)}
+                    >
+                      Fechar
+                    </button>
+                  </div>
+                </div>
+              </section>
             </div>
           </dialog>
         )}
@@ -899,6 +936,7 @@ function Opportunity({ o, action, busy, monitoria }: any) {
           Qualificação {o.score}/100 · {money(Number(o.paid_cents))} recebidos
         </span>
       </div>
+      <OutreachReview o={o} action={action} busy={busy} />
       {commercial && (
         <section className="mt-3 rounded-xl bg-white/5 p-3 text-sm">
           <span className="rounded-full bg-lime-400/15 px-3 py-1 text-lime-200">{COMMERCIAL_LABELS[commercial.type]}</span>
@@ -980,15 +1018,6 @@ function Opportunity({ o, action, busy, monitoria }: any) {
             onClick={() => void action({ action: "hunter_find_email", id: o.id }, "Email profissional localizado e verificado.")}
           >Localizar email</button>
         )}
-        <button
-          className={button}
-          disabled={busy}
-          onClick={() =>
-            void action({ action: "preview", id: o.id }, "Prévia pronta.")
-          }
-        >
-          Ver abordagem e link
-        </button>
         {!l.outreach_reviewed && (
           <button
             className={button}
@@ -1011,24 +1040,6 @@ function Opportunity({ o, action, busy, monitoria }: any) {
           onClick={() => void action({ action: "verify_email", id: l.id })}
         >
           Verificar email
-        </button>
-        <button
-          className={button}
-          disabled={
-            busy ||
-            !!l.suppressed_at ||
-            !!l.human_at ||
-            !l.outreach_reviewed ||
-            l.owner !== "minhai"
-          }
-          onClick={() =>
-            void action(
-              { action: "enqueue", id: o.id, channel: "email" },
-              "Email colocado na fila.",
-            )
-          }
-        >
-          Enfileirar email
         </button>
         <button
           className={button}
@@ -1343,7 +1354,44 @@ function RolloutForm({ rollout, live, action, busy }: any) {
       <label className="flex gap-2"><input type="checkbox" checked={autoOutreach} onChange={e=>setAutoOutreach(e.target.checked)} disabled={busy}/> Outreach automático</label>
       <label className="flex gap-2"><input type="checkbox" checked={liveSend} onChange={e=>setLiveSend(e.target.checked)} disabled={busy}/> Liberar envio deste produto</label>
     </div>
+    <section className="mt-4 rounded-xl border border-amber-400/30 p-3 text-sm">
+      <p className="font-bold">Piloto manual: {rollout.manual_pilot_send_enabled ? "LIBERADO" : "BLOQUEADO"}</p>
+      <p>Oportunidades distintas utilizadas: {rollout.manual_pilot_used ?? 0}/{rollout.pilot_limit}. Preparadas e canceladas também ocupam uma vaga.</p>
+      <p className="text-xs text-slate-400">Email, um toque e fila explicitamente revisada. Não libera automação. O cadeado global e todos os demais gates permanecem.</p>
+      {!rollout.manual_pilot_available && <p>Migration de pilot readiness pendente de revisão/aplicação.</p>}
+      <button type="button" className={button + " mt-2 border border-amber-400/50"} disabled={busy || rollout.status !== "pilot" || !rollout.manual_pilot_available} onClick={() => {
+        const enabled = !rollout.manual_pilot_send_enabled;
+        if (confirm(enabled ? "Liberar EXPLICITAMENTE apenas o piloto manual? Isso não libera automação; os demais gates continuam obrigatórios." : "Bloquear o piloto manual deste produto?"))
+          void action({ action: "manual_pilot_gate", product: rollout.product, enabled }, "Gate separado do piloto manual atualizado.");
+      }}>{rollout.manual_pilot_send_enabled ? "Bloquear piloto manual" : "Liberar somente piloto manual…"}</button>
+    </section>
     <p className="mt-3 text-xs text-slate-400">Canal inicial: email. WhatsApp somente após consentimento. {playbook.manualReviewRequired ? "Revisão humana obrigatória antes de outreach." : "Revisão comercial permanece recomendada no piloto."} {!live && liveSend ? "O cadeado global ainda impede qualquer envio." : ""}</p>
     <button className={button + " mt-4"} disabled={busy}>Salvar rollout</button>
+  </form>;
+}
+
+function OutreachReview({ o, action, busy }: any) {
+  const l = o.lead;
+  const type = o.qualification?.commercial_classification?.type;
+  const contacts = (Array.isArray(o.qualification?.web_research?.companyContacts) ? o.qualification.web_research.companyContacts : []).filter((c: any) => c.type === "email");
+  const [recipient, setRecipient] = useState("");
+  const [variant, setVariant] = useState("");
+  useEffect(() => { setRecipient(""); setVariant(""); }, [o.id]);
+  const selectedVariant = type === "customer" || type === "partner" ? type : variant;
+  return <form className="mt-3 rounded-xl border border-amber-400/20 p-3 text-sm" onSubmit={e => {
+    e.preventDefault();
+    void action({ action: "preview", id: o.id, recipient_kind: recipient === "individual" ? "individual" : "company_contact", recipient_address: recipient === "individual" ? undefined : recipient, message_variant: selectedVariant }, "Prévia do email revisado pronta; nenhum envio realizado.");
+  }}>
+    <p className="font-semibold">Preparar email revisado</p>
+    <p className="text-xs text-slate-400">Contatos gerais ficam separados do email do decisor. Preparar uma fila não libera envio.</p>
+    <label>Destinatário<select className={input} value={recipient} onChange={e => setRecipient(e.target.value)} disabled={busy}>
+      <option value="">Escolha explicitamente</option>
+      {l.email && l.email_status === "verified" && <option value="individual">Individual verificado: {l.email}</option>}
+      {contacts.map((c: any) => <option key={c.value} value={c.value}>Corporativo: {c.value}</option>)}
+    </select></label>
+    {type === "customer_or_partner" ? <label>Abordagem<select className={input} value={variant} onChange={e => setVariant(e.target.value)} disabled={busy}>
+      <option value="">Escolha Cliente ou Parceiro</option><option value="customer">Cliente</option><option value="partner">Parceiro</option>
+    </select></label> : <p>Abordagem: {type === "partner" ? "Parceiro" : type === "customer" ? "Cliente" : "Bloqueada: salve uma classificação elegível."}</p>}
+    <button className={button + " mt-2"} disabled={busy || !recipient || !["customer", "partner"].includes(selectedVariant) || !["customer", "partner", "customer_or_partner"].includes(type)}>Revisar destinatário e mensagem</button>
   </form>;
 }

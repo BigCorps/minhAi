@@ -4,6 +4,7 @@ export type CommercialMetadata = {
   partnerProfiles: readonly CommercialProfile[];
   exclusionSignals: readonly string[];
   partnerValueProposition: string;
+  partnerOutreachMessage?: string;
   customerValueProposition: string;
   futurePartnerProgram?: {
     exclusiveLinkAndQr: boolean; referredCustomerBenefit: string; directoryListing: boolean;
@@ -14,6 +15,8 @@ const BUSINESS_EXCLUSIONS = ["pessoa física", "consumidor particular", "perfil 
 export const PRODUCTS = {
   conviteia: {
     commercial: {
+      partnerOutreachMessage: "Gostaríamos de entender se uma parceria BigCorps / ConviteIA faz sentido para sua empresa. A proposta prevê um link exclusivo do parceiro: o cliente indicado que efetivamente contratar um convite avulso poderá receber o Pacote Memórias gratuitamente. Há também a possibilidade futura de presença como parceiro recomendado. Nesta fase não há promessa de comissão financeira. Podemos conversar sobre essa possibilidade?",
+
       "customerProfiles": [
           {
             "code": "own_events",

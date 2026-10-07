@@ -4,8 +4,6 @@ import {
   checked,
   db,
   event,
-  origin,
-  signToken,
 } from "@/lib/sdr/server";
 import {
   identityKeys,
@@ -16,7 +14,8 @@ import {
 } from "@/lib/sdr/catalog";
 import { discover, verifyEmail, enrichEconodataDecisionMaker, findHunterDecisionMakerEmail } from "@/lib/sdr/providers";
 import { partnerSnapshot, promotePartner, updatePartnerStatus } from "@/lib/sdr/partners";
-import { rolloutSnapshot, updateProductRollout } from "@/lib/sdr/rollouts";
+import { previewOutreach, enqueueReviewedOutreach } from "@/lib/sdr/outreach-server";
+import { rolloutSnapshot, updateProductRollout, updateManualPilotGate } from "@/lib/sdr/rollouts";
 import { saveCommercialClassification } from "@/lib/sdr/commercial-classification-server";
 import { discoverWebCompanies } from "@/lib/sdr/web-discovery";
 import { researchBusinessContact } from "@/lib/sdr/web-research";
@@ -24,7 +23,6 @@ import {
   seedTemplates,
   submitTemplate,
   syncTemplate,
-  emailContent,
 } from "@/lib/sdr/channels";
 import { monitoriaSnapshot } from "@/lib/sdr/monitoria";
 import { reconcileSales, recordActivation } from "@/lib/sdr/sales";
@@ -127,6 +125,11 @@ export async function POST(req: Request) {
       d = db();
     const id = text(input.id, 100);
     switch (input.action) {
+      case "manual_pilot_gate": {
+        const result = await updateManualPilotGate(input.product, input.enabled);
+        await event(actor, "manual_pilot_gate_changed", null, null, { product: input.product, enabled: input.enabled });
+        return result;
+      }
       case "product_rollout":
         return updateProductRollout(input.product, input);
       case "partner_promote":
@@ -271,29 +274,16 @@ export async function POST(req: Request) {
         return {};
       }
       case "enqueue": {
-        const result = checked(
-          await d.rpc("sdr_enqueue", {
-            p_opportunity: id,
-            p_channel: input.channel,
-          }),
-        );
+        const result = input.channel === "email"
+          ? await enqueueReviewedOutreach(id, input.reviewToken, actor)
+          : checked(await d.rpc("sdr_enqueue", { p_opportunity: id, p_channel: input.channel }));
         await event(actor, "outreach_queued", null, id, {
           channel: input.channel,
         });
         return { id: result };
       }
-      case "preview": {
-        const o = checked(
-          await d.from("sdr_opportunities").select("*").eq("id", id).single(),
-        )!;
-        const l = checked(
-          await d.from("sdr_leads").select("*").eq("id", o.lead_id).single(),
-        )!;
-        return {
-          ...emailContent(o, l, 0),
-          url: `${origin()}/comercial/conhecer/${signToken(id)}`,
-        };
-      }
+      case "preview":
+        return previewOutreach(id, input, actor);
       case "stage": {
         if (!["meeting", "proposal", "lost"].includes(input.stage))
           throw new Error("invalid_stage");

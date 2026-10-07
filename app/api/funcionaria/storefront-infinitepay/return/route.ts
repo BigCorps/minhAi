@@ -1,10 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { internalServiceHeaders } from '@/lib/internal-service-headers';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const FALLBACK = 'https://funcionaria.net';
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
 
 function safe(value: string | null, max = 1000) {
   return String(value || '').trim().slice(0, max);
@@ -74,6 +78,28 @@ export async function GET(request: NextRequest) {
     if (confirmed.ok && confirmed.data?.status === 'paid') {
       return NextResponse.redirect(target(companySlug, 'confirmado'), 303);
     }
+
+    if (confirmed.status === 409) {
+      return NextResponse.redirect(target(companySlug, 'erro'), 303);
+    }
+
+    // O redirect é apenas um gatilho. Se o payment_check ainda estiver propagando,
+    // continuamos algumas tentativas curtas depois de responder ao navegador.
+    after(async () => {
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        await delay(1500);
+        try {
+          const retry = await invokeEdge({
+            action: 'confirm_card',
+            order_nsu: orderNsu,
+          });
+          if (retry.ok && retry.data?.status === 'paid') return;
+          if (retry.status === 409) return;
+        } catch {
+          // A próxima tentativa cobre falhas transitórias.
+        }
+      }
+    });
 
     return NextResponse.redirect(target(companySlug, 'processando'), 303);
   } catch {

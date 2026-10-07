@@ -117,9 +117,20 @@ async function settleDirect(supabase:any,loaded:any,method:'pix'|'cartao',provid
   return {settlement,dispatch}
 }
 async function existingDirectPix(supabase:any,checkout:any) {
-  if (!checkout?.pix_transaction_id) return null
+  if (checkout?.pix_transaction_id) {
+    const { data }=await supabase.from('pix_transactions').select('*')
+      .eq('id',checkout.pix_transaction_id)
+      .eq('origem','funcionaria_storefront_monthly_direct')
+      .maybeSingle()
+    if (data) return data
+  }
   const { data }=await supabase.from('pix_transactions').select('*')
-    .eq('id',checkout.pix_transaction_id).eq('origem','funcionaria_storefront_monthly_direct').maybeSingle()
+    .eq('company_id',checkout.company_id)
+    .eq('pedido_id',checkout.pedido_id)
+    .eq('origem','funcionaria_storefront_monthly_direct')
+    .order('created_at',{ascending:false})
+    .limit(1)
+    .maybeSingle()
   return data || null
 }
 async function createDirectPix(supabase:any,checkoutId:string) {
@@ -141,6 +152,13 @@ async function createDirectPix(supabase:any,checkoutId:string) {
   }
 
   const existing=await existingDirectPix(supabase,loaded.checkout)
+  if (existing && loaded.checkout.pix_transaction_id!==existing.id) {
+    const { error:attachExistingError }=await supabase.rpc('funcionaria_attach_storefront_direct_pix',{
+      p_checkout_id:loaded.checkout.id,p_transaction_id:existing.id,
+    })
+    if (attachExistingError) throw attachExistingError
+    loaded.checkout.pix_transaction_id=existing.id
+  }
   if (existing?.status==='pending') return json(pixPayload(existing,loaded.checkout))
   if (existing?.status==='confirmed') {
     const settled=await settleDirect(

@@ -18,7 +18,7 @@ const skills=read('components/funcionaria/billing/FuncionarIASkillsManager.tsx')
 for(const required of [
   "pix_payment_mode in ('free','mercadopago','commission','monthly_direct')",
   'funcionaria_storefront_plan_catalog',
-  "monthly_price_cents,null,false",
+  "'monthly_direct','Loja sem comissão',null,false",
   'current_storefront_mode',
   'next_storefront_mode',
   'desired_storefront_mode',
@@ -29,10 +29,16 @@ for(const required of [
   'funcionaria_settle_storefront_direct',
   'funcionaria_apply_storefront_plan_invoice',
   'funcionaria_storefront_compare_30d',
+  "fc.origem='storefront'",
+  'direct_pix_checkout_evidence_mismatch',
+  'direct_card_checkout_evidence_mismatch',
   'funcionaria_storefront_direct_settlements',
 ]) if(!sql.replace(/\s+/g,'').includes(required.replace(/\s+/g,''))) fail('SQL invariant missing: '+required)
 
-if(sql.includes('company_balance') || sql.includes('commission_pending')) {
+const directSettlement = sql
+  .split('create or replace function public.funcionaria_settle_storefront_direct')[1]
+  ?.split('create or replace function public.funcionaria_apply_storefront_plan_invoice')[0] || ''
+if(directSettlement.includes('company_balance') || directSettlement.includes('commission_pending')) {
   fail('direct settlement must not credit BigCorps balance or create commission')
 }
 for(const fn of [
@@ -51,6 +57,8 @@ for(const required of [
   "funcionaria_apply_storefront_plan_invoice",
   "funcionaria_storefront_compare_30d",
   "funcionaria_storefront_entitlement",
+  "existingMonthlyEntitlement",
+  "currentStoreSnapshot",
 ]) if(!billing.includes(required)) fail('billing v2 missing: '+required)
 
 for(const required of [
@@ -60,6 +68,8 @@ for(const required of [
   "funcionaria_settle_storefront_direct",
   "X-Idempotency-Key",
   "funcionaria-storefront-direct-pix-",
+  "pedido_id',checkout.pedido_id",
+  "funcionaria_attach_storefront_direct_pix",
   "api.checkout.infinitepay.io/payment_check",
   "funcionaria-direct-",
   "payment_mode:'monthly_direct'",

@@ -264,21 +264,28 @@ Deno.serve(async(req:Request)=>{
       const desired=desiredRequested.filter(k=>allowed.has(k))
       const desiredMode=cleanMode(body.desired_storefront_mode ?? sub?.next_storefront_mode ?? sub?.current_storefront_mode)
 
+      const now=new Date()
+      const current=cleanKeys(sub?.current_skill_keys || [])
+      const currentMode=cleanMode(sub?.current_storefront_mode)
+      const currentStoreSnapshot=Number(sub?.storefront_monthly_price_cents_snapshot || 0)
+      const periodEnd=sub?.current_period_end ? new Date(sub.current_period_end) : null
+      const stillInPeriod=['active','past_due'].includes(String(sub?.status))
+        && periodEnd && periodEnd.getTime()>now.getTime()
+
       const p=await plan(supabase)
       const ent=await entitlement(supabase,companyId)
+      const existingMonthlyEntitlement=
+        currentMode==='monthly_direct'
+        && ent?.effective_mode==='monthly_direct'
+        && currentStoreSnapshot>0
       if (desiredMode==='monthly_direct') {
-        if (!p.available) return json({error:'storefront_monthly_plan_unavailable'},409)
+        if (!p.available && !existingMonthlyEntitlement) {
+          return json({error:'storefront_monthly_plan_unavailable'},409)
+        }
         if (ent?.direct_pix_configured!==true && ent?.direct_card_configured!==true) {
           return json({error:'storefront_direct_payment_not_configured'},409)
         }
       }
-
-      const now=new Date()
-      const current=cleanKeys(sub?.current_skill_keys || [])
-      const currentMode=cleanMode(sub?.current_storefront_mode)
-      const periodEnd=sub?.current_period_end ? new Date(sub.current_period_end) : null
-      const stillInPeriod=['active','past_due'].includes(String(sub?.status))
-        && periodEnd && periodEnd.getTime()>now.getTime()
       const added=diff(desired,current)
       const removed=diff(current,desired)
       const modeAdded=currentMode!=='monthly_direct' && desiredMode==='monthly_direct'
@@ -310,9 +317,10 @@ Deno.serve(async(req:Request)=>{
 
         const baseSkills=await quoteSkills(supabase,current)
         const expandedSkills=await quoteSkills(supabase,union(current,added))
-        const currentStorePrice=currentMode==='monthly_direct'
-          ? Number(sub?.storefront_monthly_price_cents_snapshot || 0) : 0
-        const desiredStorePrice=desiredMode==='monthly_direct' ? Number(p.monthly_price_cents || 0) : 0
+        const currentStorePrice=currentMode==='monthly_direct' ? currentStoreSnapshot : 0
+        const desiredStorePrice=desiredMode==='monthly_direct'
+          ? (currentMode==='monthly_direct' ? currentStoreSnapshot : Number(p.monthly_price_cents || 0))
+          : 0
         const baseTotal=Number(baseSkills.total_cents || 0)+currentStorePrice
         const expandedTotal=Number(expandedSkills.total_cents || 0)+desiredStorePrice
         const monthlyDelta=Math.max(0,expandedTotal-baseTotal)
@@ -366,7 +374,11 @@ Deno.serve(async(req:Request)=>{
       }
 
       const expiresAt=new Date(Date.now()+30*60_000).toISOString()
-      const fullPlanPrice=desiredMode==='monthly_direct' ? Number(p.monthly_price_cents || 0) : 0
+      const fullPlanPrice=desiredMode==='monthly_direct'
+        ? (stillInPeriod && currentMode==='monthly_direct'
+            ? currentStoreSnapshot
+            : Number(p.monthly_price_cents || 0))
+        : 0
       const { data:invoice,error:invErr }=await supabase.from('funcionaria_invoices').insert({
         company_id:companyId,user_id:company.user_id,invoice_type:invoiceType,
         desired_skill_keys:desired,activation_skill_keys:activation,deferred_remove_skill_keys:deferredRemove,

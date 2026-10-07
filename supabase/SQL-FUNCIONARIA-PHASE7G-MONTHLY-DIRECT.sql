@@ -262,7 +262,14 @@ begin
   where p.company_id=p_company_id
     and p.status='pago'
     and p.paid_at >= now()-interval '30 days'
-    and p.storefront_payment_mode_snapshot in ('commission','monthly_direct');
+    and p.storefront_payment_mode_snapshot in ('commission','monthly_direct')
+    and exists (
+      select 1
+      from public.funcionaria_checkouts fc
+      where fc.pedido_id=p.id
+        and fc.company_id=p.company_id
+        and fc.origem='storefront'
+    );
 
   v_estimated := round(v_merch*0.05)::bigint;
 
@@ -643,8 +650,14 @@ begin
       and payment_provider='mercadopago'
       and status='confirmed'
       and amount_cents=v_gross
+      and txid=trim(p_provider_reference)
     for update;
     if not found then raise exception 'confirmed_direct_pix_not_found'; end if;
+    if v_checkout.metodo_pagamento<>'pix'
+       or v_checkout.pix_payment_mode<>'monthly_direct'
+       or v_checkout.pix_transaction_id is distinct from v_tx.id then
+      raise exception 'direct_pix_checkout_evidence_mismatch';
+    end if;
   else
     if p_method<>'cartao' or p_payment_transaction_id is not null then
       raise exception 'direct_card_evidence_required';
@@ -660,6 +673,11 @@ begin
       and capture_method='credit_card'
     for update;
     if not found then raise exception 'confirmed_direct_card_not_found'; end if;
+    if v_checkout.metodo_pagamento<>'cartao'
+       or v_checkout.card_provider<>'infinitepay_direct'
+       or v_checkout.card_reference_id is distinct from v_card.order_nsu then
+      raise exception 'direct_card_checkout_evidence_mismatch';
+    end if;
   end if;
 
   insert into public.funcionaria_storefront_direct_settlements (
@@ -736,9 +754,10 @@ begin
 
   v_snapshot := case
     when v_current='monthly_direct' then
-      greatest(
-        coalesce(v_inv.storefront_monthly_price_cents_snapshot,0),
-        coalesce(v_sub.storefront_monthly_price_cents_snapshot,0)
+      coalesce(
+        nullif(v_inv.storefront_monthly_price_cents_snapshot,0),
+        nullif(v_sub.storefront_monthly_price_cents_snapshot,0),
+        0
       )
     else 0
   end;

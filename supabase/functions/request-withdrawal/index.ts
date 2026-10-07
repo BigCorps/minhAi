@@ -346,6 +346,37 @@ Deno.serve(async (req: Request) => {
       if (error) throw error
     } catch (error) {
       console.error('[request-withdrawal] record provider failed', rpcCode(error))
+
+      // The PIX has already been submitted, so never send it again. Try one
+      // single-row metadata fallback to preserve the provider txid. This does
+      // not touch balances or commissions.
+      const { data: recovered, error: recoveryError } = await admin
+        .from('withdrawal_requests')
+        .update({
+          status: 'processing',
+          provider_txid: providerTxid,
+          provider_status: 'SUBMITTED_RECOVERED',
+          provider_recorded_at: new Date().toISOString(),
+          reconciliation_required_at: null,
+          error_code: null,
+          error_detail: null,
+        })
+        .eq('id', withdrawalId)
+        .eq('user_id', user.id)
+        .in('status', ['sending', 'reconciliation_required'])
+        .is('provider_txid', null)
+        .select('id')
+        .maybeSingle()
+
+      if (!recoveryError && recovered?.id) return await check(withdrawalId)
+
+      try {
+        await markReconciliation(
+          withdrawalId,
+          'provider_txid_persist_failed',
+          `Provider txid received but not persisted: ${providerTxid}`,
+        )
+      } catch {}
       return json({ success: false, error: 'withdrawal_reconciliation_required', withdrawal_id: withdrawalId }, 202)
     }
     return await check(withdrawalId)

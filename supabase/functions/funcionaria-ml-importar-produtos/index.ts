@@ -294,81 +294,57 @@ async function importOne(admin:any,token:string,companyId:string,sellerId:string
     return {item_id:itemId,status:'seller_mismatch'}
   }
 
-  const [{data:existingProduct},{data:existingSync}]=await Promise.all([
-    admin.from('produtos_venda').select('id,company_id,nome,ml_item_id')
-      .eq('company_id',companyId).eq('ml_item_id',itemId).maybeSingle(),
-    admin.from('funcionaria_ml_product_sync').select('*')
-      .eq('company_id',companyId).eq('ml_item_id',itemId).maybeSingle(),
-  ])
-
-  if(existingProduct && !existingSync){
-    return {item_id:itemId,status:'linked_local',product_id:existingProduct.id}
-  }
-
   const normalized=await hydrate(token,item)
   if(!normalized.title || normalized.price<0)return {item_id:itemId,status:'invalid_data'}
 
-  const productPayload:any={
-    company_id:companyId,
-    nome:normalized.title,
-    descricao:normalized.description || null,
-    categoria:normalized.category || null,
-    imagem_url:normalized.image,
-    ean:normalized.ean,
-    marca:normalized.brand,
-    preco_venda:normalized.price,
-    unidade:'un',
-    estoque_atual:normalized.stock,
-    controla_estoque:true,
-    is_active:normalized.status==='active',
-    ml_item_id:itemId,
-    ml_category_id:normalized.categoryId || null,
-    ml_listing_type:normalized.listingType,
-    ml_status:normalized.status,
-    updated_at:new Date().toISOString(),
-  }
+  const {data:claim,error:claimError}=await admin.rpc('funcionaria_import_ml_product_upsert',{
+    p_company_id:companyId,
+    p_ml_item_id:itemId,
+    p_product:{
+      nome:normalized.title,
+      descricao:normalized.description || '',
+      categoria:normalized.category || '',
+      imagem_url:normalized.image || '',
+      ean:normalized.ean || '',
+      marca:normalized.brand || '',
+      preco_venda:normalized.price,
+      estoque_atual:normalized.stock,
+      is_active:normalized.status==='active',
+      ml_category_id:normalized.categoryId || '',
+      ml_listing_type:normalized.listingType,
+      ml_status:normalized.status,
+    },
+    p_sync:{
+      ml_sync_hash:normalized.hash,
+      ml_permalink:normalized.permalink || '',
+      ml_user_product_id:normalized.userProductId || '',
+      ml_stock_source:normalized.stockSource,
+      ml_variations:normalized.variations,
+      ml_attributes:normalized.attributes,
+      ml_status:normalized.status,
+    },
+  })
+  if(claimError)throw claimError
 
-  let product=existingProduct
-  let productStatus='updated'
-  if(existingSync && existingSync.ml_sync_hash===normalized.hash && existingProduct){
-    productStatus='unchanged'
-  }else if(existingProduct){
-    const {data,error}=await admin.from('produtos_venda').update(productPayload)
-      .eq('id',existingProduct.id).eq('company_id',companyId).select('id,company_id').single()
-    if(error)throw error
-    product=data
-  }else{
-    const {data,error}=await admin.from('produtos_venda').insert(productPayload)
-      .select('id,company_id').single()
-    if(error){
-      if(String(error.code)==='23505'){
-        const {data:raceProduct}=await admin.from('produtos_venda').select('id,company_id')
-          .eq('company_id',companyId).eq('ml_item_id',itemId).maybeSingle()
-        const {data:raceSync}=await admin.from('funcionaria_ml_product_sync').select('id')
-          .eq('company_id',companyId).eq('ml_item_id',itemId).maybeSingle()
-        if(raceProduct && !raceSync)return {item_id:itemId,status:'linked_local',product_id:raceProduct.id}
-      }
-      throw error
-    }
-    product=data
-    productStatus='imported'
+  const productStatus=String(claim?.status || '')
+  const product={id:String(claim?.product_id || ''),company_id:companyId}
+  const sync={id:String(claim?.sync_id || '')}
+  if(productStatus==='linked_local'){
+    return {item_id:itemId,status:'linked_local',product_id:product.id}
   }
-  if(!product?.id)throw new Error('product_upsert_failed')
-
-  const now=new Date().toISOString()
-  const {data:sync,error:syncError}=await admin.from('funcionaria_ml_product_sync').upsert({
-    company_id:companyId,product_id:product.id,ml_item_id:itemId,
-    source:'mercadolivre',sync_source:'mercadolivre',
-    ml_last_synced_at:now,ml_sync_hash:normalized.hash,
-    ml_permalink:normalized.permalink,ml_user_product_id:normalized.userProductId,
-    ml_stock_source:normalized.stockSource,ml_variations:normalized.variations,
-    ml_attributes:normalized.attributes,ml_status:normalized.status,last_error:null,
-    updated_at:now,
-  },{onConflict:'product_id'}).select('*').single()
-  if(syncError || !sync)throw syncError || new Error('sync_metadata_failed')
+  if(!product.id || !sync.id)throw new Error('product_sync_claim_failed')
 
   let options={mapped:false,count:0}
-  if(productStatus!=='unchanged')options=await syncOptions(admin,sync,product,item,normalized.price)
+  if(productStatus!=='unchanged'){
+    try{
+      options=await syncOptions(admin,sync,product,item,normalized.price)
+    }catch(error){
+      await admin.from('funcionaria_ml_product_sync')
+        .update({last_error:'option_sync_failed',updated_at:new Date().toISOString()})
+        .eq('id',sync.id)
+      throw error
+    }
+  }
 
   return {
     item_id:itemId,status:productStatus,product_id:product.id,

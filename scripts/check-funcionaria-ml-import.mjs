@@ -13,6 +13,9 @@ for(const required of [
   'ux_produtos_venda_company_ml_item',
   'funcionaria_ml_product_sync',
   'funcionaria_ml_option_links',
+  'funcionaria_import_ml_product_upsert',
+  'pg_advisory_xact_lock',
+  'security invoker',
   "sync_source in ('mercadolivre','local','bidirectional')",
   'revoke all on table public.funcionaria_ml_product_sync from public,anon,authenticated',
   'revoke all on table public.funcionaria_ml_option_links from public,anon,authenticated',
@@ -42,7 +45,9 @@ for(const required of [
 if(edge.includes('https://api.mercadolibre.com/items?ids=')) fail('deprecated /items?ids= multiget is forbidden')
 if(edge.includes("select('access_token")) fail('browser-facing importer must not return/read tokens directly')
 if(!edge.includes("String(item?.seller_id || '')!==String(sellerId)")) fail('seller ownership check missing')
-if(!edge.includes("existingProduct && !existingSync")) fail('local linked product preservation missing')
+if(!edge.includes("admin.rpc('funcionaria_import_ml_product_upsert'")) fail('atomic ML product+sync RPC missing')
+if(!edge.includes("last_error:'option_sync_failed'")) fail('option-sync recovery marker missing')
+if(!edge.includes("status:'linked_local'")) fail('local linked product preservation missing')
 
 for(const required of [
   "'funcionaria-ml-importar-produtos'",

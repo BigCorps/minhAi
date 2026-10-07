@@ -47,6 +47,9 @@ for (const required of [
   "captureMethod !== 'credit_card'",
   'amount !== Number(payment.expected_amount_cents)',
   'paidAmount < amount',
+  'paid_amount_invalid',
+  'card_reconciliation_required',
+  ".in('status', ['pending', 'signaled'])",
   "p_provider: 'infinitepay_bigcorps'",
   'p_provider_fee_cents: Number(payment.provider_fee_cents || 0)',
 ]) if (!edge.includes(required)) fail('Edge missing InfinitePay safety control: ' + required)

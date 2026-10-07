@@ -325,7 +325,7 @@ async function createCard(supabase: any, checkoutId: string) {
     const code = [
       'checkout_expired','checkout_not_payable','payment_in_progress',
       'storefront_not_commission_mode','card_expected_amount_mismatch',
-      'card_session_conflict',
+      'card_session_conflict','card_reconciliation_required','card_session_failed',
     ].find((value) => message.includes(value))
     if (code) return json({ error: code }, code === 'checkout_expired' ? 410 : 409)
     throw error
@@ -403,7 +403,7 @@ async function signalInfinitePay(
       error_code: null,
     })
     .eq('id', payment.id)
-    .in('status', ['pending', 'signaled', 'reconciliation_required'])
+    .in('status', ['pending', 'signaled'])
     .select('*')
     .maybeSingle()
 
@@ -514,7 +514,7 @@ async function confirmCardByOrder(supabase: any, orderNsu: string) {
 
   const verified = await verifyInfinitePay(payment)
   if (!verified.paid) {
-    if (['amount_mismatch','capture_method_mismatch','installments_invalid','fee_pass_through_not_confirmed'].includes(verified.reason)) {
+    if (['amount_mismatch','capture_method_mismatch','installments_invalid','paid_amount_invalid'].includes(verified.reason)) {
       await supabase
         .from('funcionaria_storefront_card_payments')
         .update({ status: 'reconciliation_required', error_code: verified.reason })

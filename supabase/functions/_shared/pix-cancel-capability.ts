@@ -66,6 +66,6 @@ export async function verifyPixCancelCapability(
   const now = Math.floor(nowMs / 1000)
   if (value.e < now || value.e > now + 60 * 60) return false
   const stored = typeof expiresAt === 'string' ? Date.parse(expiresAt) : NaN
-  if (Number.isFinite(stored) && Math.abs(value.e - Math.floor(stored / 1000)) > 2) return false
+  if (Number.isFinite(stored) && value.e > Math.floor(stored / 1000) + 2) return false
   try { return equal(provided, await signature(parts[0])) } catch { return false }
 }

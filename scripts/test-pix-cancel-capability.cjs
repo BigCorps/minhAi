@@ -13,7 +13,11 @@ const tx='11111111-1111-4111-8111-111111111111',company='22222222-2222-4222-8222
   assert.equal(await moduleExports.verifyPixCancelCapability(token,tx,company,expires),true)
   assert.equal(await moduleExports.verifyPixCancelCapability(token,other,company,expires),false)
   assert.equal(await moduleExports.verifyPixCancelCapability(token,tx,other,expires),false)
-  assert.equal(await moduleExports.verifyPixCancelCapability(token,tx,company,new Date(Date.parse(expires)+60_000).toISOString()),false)
+  assert.equal(await moduleExports.verifyPixCancelCapability(token,tx,company,new Date(Date.parse(expires)+60_000).toISOString()),true)
+  assert.equal(await moduleExports.verifyPixCancelCapability(token,tx,company,new Date(Date.parse(expires)-60_000).toISOString()),false)
+  const longExpiry=new Date(Date.now()+24*60*60_000).toISOString()
+  const shortToken=await moduleExports.issuePixCancelCapability(tx,company,longExpiry)
+  assert.equal(await moduleExports.verifyPixCancelCapability(shortToken,tx,company,longExpiry),true)
   assert.equal(await moduleExports.verifyPixCancelCapability(token+'x',tx,company,expires),false)
   assert.equal(await moduleExports.verifyPixCancelCapability(token,tx,company,expires,Date.parse(expires)+1000),false)
   env={PIX_CANCEL_CAPABILITY_SECRET:'short',SUPABASE_SERVICE_ROLE_KEY:'legacy-service-role-secret-that-is-long-enough'}

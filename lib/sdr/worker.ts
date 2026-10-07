@@ -172,7 +172,7 @@ export async function runWorker() {
   const campaigns = checked(
     await d
       .from("sdr_campaigns")
-      .select("id")
+      .select("id,product")
       .eq("enabled", true)
       .eq("auto_discover", true)
       .gt("trial_ends_at", new Date().toISOString())
@@ -183,6 +183,14 @@ export async function runWorker() {
   );
   for (const c of campaigns || []) {
     try {
+      const rollout = checked(
+        await d
+          .from("sdr_product_rollouts")
+          .select("status,auto_discovery_enabled")
+          .eq("product", c.product)
+          .maybeSingle(),
+      );
+      if (!rollout || !["pilot", "active"].includes(rollout.status) || !rollout.auto_discovery_enabled) continue;
       await discover(c.id);
     } catch {
       await event("worker", "discovery_failed", null, null, {

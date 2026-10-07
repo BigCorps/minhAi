@@ -12,6 +12,7 @@ import { money } from "./AdminBusinessUi";
 import type { AdminIdentity } from "@/types/platform-admin-business";
 import { commercialSuggestion, COMMERCIAL_TYPES, COMMERCIAL_LABELS, COMMERCIAL_ROUTE_LABELS, isCommercialType, type CommercialType } from "@/lib/sdr/commercial-classification";
 import { PRODUCTS, PROVIDERS, STAGES, businessHostname, isValidatedWebDecisionMaker, type Product } from "@/lib/sdr/catalog";
+import { commercialPlaybook } from "@/lib/sdr/playbooks";
 const input =
   "w-full rounded-xl border border-white/15 bg-slate-900 p-3 text-sm text-white";
 const localDate = (v: string | null) =>
@@ -228,6 +229,7 @@ export default function AdminCommercial({
             ["campaigns", "Campanhas"],
             ["leads", "Contatos & funil"],
             ["partners", "Parceiros"],
+            ["rollouts", "Rollout"],
             ["templates", "Mensagens"],
             ["monitoria", "MonitorIA"],
             ["results", "Resultados"],
@@ -246,6 +248,7 @@ export default function AdminCommercial({
         ) : (
           <>
             {tab === "partners" && <PartnersPanel data={data.partners} action={action} busy={busy} />}
+            {tab === "rollouts" && <RolloutsPanel data={data.rollouts} live={data.config.live} action={action} busy={busy} />}
             {tab === "campaigns" && (
               <div className="space-y-5">
                 <section className={card}>
@@ -1277,4 +1280,70 @@ function PartnerStatusForm({ membership, statuses, action, busy }: any) {
   }}><label>Status <select name="status" className={input} value={status} onChange={(e) => setStatus(e.target.value)} disabled={busy}>
     {Object.entries(statuses).map(([value, label]) => <option key={value} value={value}>{String(label)}</option>)}
   </select></label><button className={button} disabled={busy}>Salvar status</button></form>;
+}
+
+
+function RolloutsPanel({ data, live, action, busy }: any) {
+  if (data?.available === false) return <section className={card}>Gates por produto aguardando a migration de rollout. Nenhum produto é liberado por esta tela.</section>;
+  return <div className="space-y-5">
+    <section className={card}>
+      <h2 className="font-bold">Rollout por produto</h2>
+      <p className="mt-2 text-sm text-slate-400">Dois cadeados são exigidos para envio: o produto precisa estar ativo aqui e o SDR_LIVE_SEND global também precisa estar ligado. Discovery automático tem gate separado. Pilotos manuais continuam possíveis sem liberar outreach.</p>
+      <p className={"mt-3 text-sm font-semibold " + (live ? "text-amber-300" : "text-emerald-300")}>SDR_LIVE_SEND global: {live ? "LIGADO" : "DESLIGADO"}</p>
+    </section>
+    <div className="grid gap-4 xl:grid-cols-2">
+      {(data?.rows || []).map((r: any) => <RolloutForm key={r.product} rollout={r} live={live} action={action} busy={busy} />)}
+    </div>
+  </div>;
+}
+
+function RolloutForm({ rollout, live, action, busy }: any) {
+  const [status, setStatus] = useState(rollout.status);
+  const [autoDiscovery, setAutoDiscovery] = useState(Boolean(rollout.auto_discovery_enabled));
+  const [autoOutreach, setAutoOutreach] = useState(Boolean(rollout.auto_outreach_enabled));
+  const [liveSend, setLiveSend] = useState(Boolean(rollout.live_send_enabled));
+  const [pilotLimit, setPilotLimit] = useState(Number(rollout.pilot_limit || 3));
+  const [dailyCap, setDailyCap] = useState(Number(rollout.daily_send_cap || 0));
+  useEffect(() => {
+    setStatus(rollout.status);
+    setAutoDiscovery(Boolean(rollout.auto_discovery_enabled));
+    setAutoOutreach(Boolean(rollout.auto_outreach_enabled));
+    setLiveSend(Boolean(rollout.live_send_enabled));
+    setPilotLimit(Number(rollout.pilot_limit || 3));
+    setDailyCap(Number(rollout.daily_send_cap || 0));
+  }, [rollout.product, rollout.status, rollout.auto_discovery_enabled, rollout.auto_outreach_enabled, rollout.live_send_enabled, rollout.pilot_limit, rollout.daily_send_cap]);
+  const product = PRODUCTS[rollout.product as Product];
+  const playbook = commercialPlaybook(rollout.product as Product);
+  return <form className={card} onSubmit={(e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    void action({
+      action: "product_rollout",
+      product: rollout.product,
+      status,
+      auto_discovery_enabled: autoDiscovery,
+      auto_outreach_enabled: autoOutreach,
+      live_send_enabled: liveSend,
+      pilot_limit: pilotLimit,
+      daily_send_cap: dailyCap,
+    }, "Rollout do produto atualizado.");
+  }}>
+    <div className="flex items-start justify-between gap-3">
+      <div><h3 className="font-bold">{product?.name || rollout.product}</h3><p className="mt-1 text-xs text-slate-400">{playbook.customerMotion} · {playbook.partnerMotion}</p></div>
+      <span className="rounded-full border border-white/10 px-2 py-1 text-xs">{status}</span>
+    </div>
+    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <label>Status<select className={input} value={status} onChange={e=>setStatus(e.target.value)} disabled={busy}>
+        <option value="draft">Rascunho</option><option value="pilot">Piloto</option><option value="ready">Pronto</option><option value="active">Ativo</option><option value="paused">Pausado</option>
+      </select></label>
+      <label>Leads no piloto<input className={input} type="number" min={1} max={25} value={pilotLimit} onChange={e=>setPilotLimit(Number(e.target.value))} disabled={busy}/></label>
+      <label>Limite diário de envios<input className={input} type="number" min={0} max={100} value={dailyCap} onChange={e=>setDailyCap(Number(e.target.value))} disabled={busy}/></label>
+    </div>
+    <div className="mt-4 grid gap-2 text-sm">
+      <label className="flex gap-2"><input type="checkbox" checked={autoDiscovery} onChange={e=>setAutoDiscovery(e.target.checked)} disabled={busy}/> Discovery automático</label>
+      <label className="flex gap-2"><input type="checkbox" checked={autoOutreach} onChange={e=>setAutoOutreach(e.target.checked)} disabled={busy}/> Outreach automático</label>
+      <label className="flex gap-2"><input type="checkbox" checked={liveSend} onChange={e=>setLiveSend(e.target.checked)} disabled={busy}/> Liberar envio deste produto</label>
+    </div>
+    <p className="mt-3 text-xs text-slate-400">Canal inicial: email. WhatsApp somente após consentimento. {playbook.manualReviewRequired ? "Revisão humana obrigatória antes de outreach." : "Revisão comercial permanece recomendada no piloto."} {!live && liveSend ? "O cadeado global ainda impede qualquer envio." : ""}</p>
+    <button className={button + " mt-4"} disabled={busy}>Salvar rollout</button>
+  </form>;
 }

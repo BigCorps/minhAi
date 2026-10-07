@@ -7,13 +7,14 @@
     "check:email-edge-boundary": "node scripts/check-email-edge-boundary.mjs",
     "check:email-boundary": "node scripts/check-email-edge-boundary.mjs",
     "dev": "next dev --webpack",
-    "prebuild": "npm run check:pix-cancel-boundary && node scripts/test-pix-cancel-capability.cjs",
+    "prebuild": "npm run check:pix-cancel-boundary && npm run check:withdrawal-boundary && node scripts/test-pix-cancel-capability.cjs",
     "build": "NODE_OPTIONS=--max-old-space-size=6144 next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "tts:pregenerate": "NEXT_PUBLIC_BASE_URL=https://minhai.app ts-node --esm --project tsconfig.json scripts/pregenerate-tour-audio.ts",
     "check:calendar-boundary": "node scripts/check-calendar-edge-boundary.mjs",
-    "check:pix-cancel-boundary": "node scripts/check-pix-cancel-boundary.mjs"
+    "check:pix-cancel-boundary": "node scripts/check-pix-cancel-boundary.mjs",
+    "check:withdrawal-boundary": "node scripts/check-withdrawal-boundary.mjs"
   },
   "dependencies": {
     "@daily-co/daily-js": "^0.89.1",

@@ -10,7 +10,7 @@ import { RefreshCw, Target, ArrowUpRight } from "lucide-react";
 import AdminHeader from "./AdminHeader";
 import { money } from "./AdminBusinessUi";
 import type { AdminIdentity } from "@/types/platform-admin-business";
-import { commercialSuggestion, COMMERCIAL_TYPES, COMMERCIAL_LABELS, COMMERCIAL_ROUTE_LABELS } from "@/lib/sdr/commercial-classification";
+import { commercialSuggestion, COMMERCIAL_TYPES, COMMERCIAL_LABELS, COMMERCIAL_ROUTE_LABELS, isCommercialType, type CommercialType } from "@/lib/sdr/commercial-classification";
 import { PRODUCTS, PROVIDERS, STAGES, businessHostname, isValidatedWebDecisionMaker, type Product } from "@/lib/sdr/catalog";
 const input =
   "w-full rounded-xl border border-white/15 bg-slate-900 p-3 text-sm text-white";
@@ -861,7 +861,16 @@ function Opportunity({ o, action, busy, monitoria }: any) {
   const decisionMaker = o.qualification?.decision_maker;
   const research = o.qualification?.web_research;
   const commercial = commercialSuggestion(o.product, l, o.qualification);
-  const commercialSaved = !!o.qualification?.commercial_classification;
+  const persistedCommercial = o.qualification?.commercial_classification;
+  const commercialSaved = !!persistedCommercial;
+  const selectionType: CommercialType = isCommercialType(persistedCommercial?.type)
+    ? persistedCommercial.type : commercial?.type || "low_priority";
+  const [manualType, setManualType] = useState<CommercialType>(selectionType);
+  const persistedAt = persistedCommercial?.classifiedAt;
+  const persistedSource = persistedCommercial?.source;
+  useEffect(() => {
+    setManualType(selectionType);
+  }, [o.id, selectionType, persistedAt, persistedSource]);
   const businessIdentity = /^\d{14}$/.test(String(l.cnpj || "").replace(/\D/g, "")) ||
     (["econodata", "hunter", "apollo", "web_research"].includes(l.source) && businessHostname(l.domain));
   const canResearch = !l.email && l.company_name?.trim() && !/^CNPJ\s/i.test(l.company_name.trim()) && businessIdentity && !research &&
@@ -896,10 +905,9 @@ function Opportunity({ o, action, busy, monitoria }: any) {
           </div>
           <form className="mt-3 flex flex-wrap items-center gap-2" onSubmit={(e: FormEvent<HTMLFormElement>) => {
             e.preventDefault();
-            const form = new FormData(e.currentTarget);
-            void action({ action: "commercial_classification", id: o.id, mode: "manual", type: form.get("type") }, "Ajuste manual salvo.");
+            void action({ action: "commercial_classification", id: o.id, mode: "manual", type: manualType }, "Ajuste manual salvo.");
           }}>
-            <label>Classificação manual <select key={commercial.classifiedAt} name="type" defaultValue={commercial.type} disabled={busy} className={input}>
+            <label>Classificação manual <select name="type" value={manualType} onChange={(e) => { if (isCommercialType(e.target.value)) setManualType(e.target.value); }} disabled={busy} className={input}>
               {COMMERCIAL_TYPES.map((type) => <option key={type} value={type}>{COMMERCIAL_LABELS[type]}</option>)}
             </select></label>
             <button className={button} disabled={busy}>Aplicar ajuste manual</button>

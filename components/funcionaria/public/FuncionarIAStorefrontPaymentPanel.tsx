@@ -204,7 +204,7 @@ export default function FuncionarIAStorefrontPaymentPanel({
         </button>
 
         <p className="mt-3 text-center text-[11px] leading-4 text-slate-400">
-          A InfinitePay processa o cartão. Taxas da operadora são mostradas no checkout e ficam separadas da comissão da loja.
+          A InfinitePay processa o cartão. A taxa do meio de pagamento é contabilizada separadamente da comissão de 5% da loja.
         </p>
 
         {error ? <div className="mt-2 text-center text-xs font-bold text-red-600">{error}</div> : null}
@@ -217,7 +217,7 @@ export default function FuncionarIAStorefrontPaymentPanel({
       <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4 text-left">
         <div className="text-sm font-black text-slate-950">Escolha como pagar</div>
         <p className="mt-1 text-xs leading-5 text-slate-500">
-          Pix ou cartão pela infraestrutura BigCorps. A comissão da loja é calculada separadamente da taxa do meio de pagamento.
+          Pix ou cartão pela infraestrutura BigCorps. No cartão, a taxa InfinitePay e a comissão de 5% são contabilizadas separadamente.
         </p>
 
         <div className="mt-3 grid gap-2 sm:grid-cols-2">

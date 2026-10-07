@@ -21,7 +21,8 @@ for (const required of [
   'v_card.provider_amount_cents <> v_gross',
   "coalesce(v_card.capture_method,'') <> 'credit_card'",
   "coalesce(v_card.provider_paid_amount_cents,0) <= v_card.provider_amount_cents",
-  "raise exception 'infinitepay_provider_fee_must_be_zero'",
+  "card_provider_fee_evidence_mismatch",
+  "funcionaria_storefront_card_fee_rates",
   "v_method := 'cartao'",
 ]) if (!sql.includes(required)) fail('SQL missing card settlement invariant: ' + required)
 
@@ -44,7 +45,7 @@ for (const required of [
   'amount !== Number(payment.expected_amount_cents)',
   'paidAmount <= amount',
   "p_provider: 'infinitepay_bigcorps'",
-  'p_provider_fee_cents: 0',
+  'p_provider_fee_cents: Number(payment.provider_fee_cents || 0)',
 ]) if (!edge.includes(required)) fail('Edge missing InfinitePay safety control: ' + required)
 
 if (edge.includes('/api/verificar-por-ordem')) fail('legacy KV verifier must not be payment evidence')

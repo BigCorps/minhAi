@@ -286,7 +286,7 @@ async function settleCard(supabase: any, loaded: any, payment: any) {
       p_provider: 'infinitepay_bigcorps',
       p_provider_reference: String(payment.transaction_nsu),
       p_payment_transaction_id: null,
-      p_provider_fee_cents: 0,
+      p_provider_fee_cents: Number(payment.provider_fee_cents || 0),
       p_paid_at: payment.paid_at || new Date().toISOString(),
     },
   )
@@ -457,8 +457,8 @@ async function verifyInfinitePay(payment: any) {
   if (!Number.isInteger(installments) || installments < 1 || installments > 12) {
     return { paid: false, reason: 'installments_invalid', data }
   }
-  if (!Number.isFinite(paidAmount) || paidAmount <= amount) {
-    return { paid: false, reason: 'fee_pass_through_not_confirmed', data }
+  if (!Number.isFinite(paidAmount) || paidAmount < amount) {
+    return { paid: false, reason: 'paid_amount_invalid', data }
   }
 
   return {
@@ -469,6 +469,28 @@ async function verifyInfinitePay(payment: any) {
     paidAmount: Math.round(paidAmount),
     installments,
     captureMethod,
+  }
+}
+
+async function providerFeeEvidence(supabase: any, verified: any) {
+  const surcharge = Math.max(0, verified.paidAmount - verified.amount)
+  if (surcharge > 0) {
+    return { providerFee: 0, surcharge, source: 'buyer_pass_through' }
+  }
+
+  const { data: rate, error } = await supabase
+    .from('funcionaria_storefront_card_fee_rates')
+    .select('fee_bps,source')
+    .eq('installments', verified.installments)
+    .maybeSingle()
+  if (error || !rate || !Number.isInteger(Number(rate.fee_bps))) {
+    throw new Error('provider_fee_schedule_unavailable')
+  }
+
+  return {
+    providerFee: Math.max(0, Math.round(verified.amount * Number(rate.fee_bps) / 10000)),
+    surcharge: 0,
+    source: String(rate.source || 'configured'),
   }
 }
 
@@ -511,6 +533,17 @@ async function confirmCardByOrder(supabase: any, orderNsu: string) {
     })
   }
 
+  let feeEvidence
+  try {
+    feeEvidence = await providerFeeEvidence(supabase, verified)
+  } catch {
+    await supabase
+      .from('funcionaria_storefront_card_payments')
+      .update({ status: 'reconciliation_required', error_code: 'provider_fee_schedule_unavailable' })
+      .eq('id', payment.id)
+    return json({ error: 'provider_fee_schedule_unavailable', status: 'reconciliation_required', company_slug: loaded.company.slug }, 409)
+  }
+
   const paidAt = new Date().toISOString()
   const { data: marked, error } = await supabase
     .from('funcionaria_storefront_card_payments')
@@ -520,7 +553,8 @@ async function confirmCardByOrder(supabase: any, orderNsu: string) {
       installments: verified.installments,
       provider_amount_cents: verified.amount,
       provider_paid_amount_cents: verified.paidAmount,
-      provider_surcharge_cents: verified.paidAmount - verified.amount,
+      provider_fee_cents: feeEvidence.providerFee,
+      provider_surcharge_cents: feeEvidence.surcharge,
       verified_at: paidAt,
       paid_at: paidAt,
       error_code: null,
@@ -533,7 +567,7 @@ async function confirmCardByOrder(supabase: any, orderNsu: string) {
   if (error) throw error
   payment = marked || { ...payment, status: 'paid', paid_at: paidAt,
     provider_amount_cents: verified.amount, provider_paid_amount_cents: verified.paidAmount,
-    provider_surcharge_cents: verified.paidAmount - verified.amount,
+    provider_fee_cents: feeEvidence.providerFee, provider_surcharge_cents: feeEvidence.surcharge,
     capture_method: verified.captureMethod, installments: verified.installments }
 
   const settled = await settleCard(supabase, loaded, payment)

@@ -42,6 +42,7 @@ create table if not exists public.funcionaria_storefront_card_payments (
   installments integer,
   provider_amount_cents integer,
   provider_paid_amount_cents integer,
+  provider_fee_cents integer,
   provider_surcharge_cents integer,
   checkout_url text,
   signaled_at timestamptz,
@@ -57,11 +58,45 @@ create table if not exists public.funcionaria_storefront_card_payments (
     check (
       (provider_amount_cents is null or provider_amount_cents >= 0)
       and (provider_paid_amount_cents is null or provider_paid_amount_cents >= 0)
+      and (provider_fee_cents is null or provider_fee_cents >= 0)
       and (provider_surcharge_cents is null or provider_surcharge_cents >= 0)
     ),
   constraint funcionaria_storefront_card_installments_check
     check (installments is null or installments between 1 and 12)
 );
+
+create table if not exists public.funcionaria_storefront_card_fee_rates (
+  installments integer primary key check (installments between 1 and 12),
+  fee_bps integer not null check (fee_bps between 0 and 5000),
+  source text not null,
+  effective_from date not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.funcionaria_storefront_card_fee_rates enable row level security;
+revoke all on table public.funcionaria_storefront_card_fee_rates from public, anon, authenticated;
+grant select, insert, update, delete on table public.funcionaria_storefront_card_fee_rates to service_role;
+
+insert into public.funcionaria_storefront_card_fee_rates
+  (installments,fee_bps,source,effective_from)
+values
+  (1,420,'infinitepay_public_1d',date '2026-07-16'),
+  (2,609,'infinitepay_public_1d',date '2026-07-16'),
+  (3,701,'infinitepay_public_1d',date '2026-07-16'),
+  (4,791,'infinitepay_public_1d',date '2026-07-16'),
+  (5,880,'infinitepay_public_1d',date '2026-07-16'),
+  (6,967,'infinitepay_public_1d',date '2026-07-16'),
+  (7,1259,'infinitepay_public_1d',date '2026-07-16'),
+  (8,1342,'infinitepay_public_1d',date '2026-07-16'),
+  (9,1425,'infinitepay_public_1d',date '2026-07-16'),
+  (10,1506,'infinitepay_public_1d',date '2026-07-16'),
+  (11,1587,'infinitepay_public_1d',date '2026-07-16'),
+  (12,1666,'infinitepay_public_1d',date '2026-07-16')
+on conflict (installments) do update
+set fee_bps=excluded.fee_bps,
+    source=excluded.source,
+    effective_from=excluded.effective_from,
+    updated_at=now();
 
 create index if not exists funcionaria_storefront_card_status_idx
   on public.funcionaria_storefront_card_payments(status, created_at);
@@ -358,10 +393,6 @@ begin
     if p_payment_transaction_id is not null then
       raise exception 'card_payment_transaction_must_be_null';
     end if;
-    if v_provider_fee <> 0 then
-      raise exception 'infinitepay_provider_fee_must_be_zero';
-    end if;
-
     select * into v_card
     from public.funcionaria_storefront_card_payments
     where checkout_id=p_checkout_id
@@ -383,12 +414,15 @@ begin
     if coalesce(v_card.installments,0) < 1 or v_card.installments > 12 then
       raise exception 'invalid_card_installments';
     end if;
-    if coalesce(v_card.provider_paid_amount_cents,0) <= v_card.provider_amount_cents then
-      raise exception 'card_fee_pass_through_not_confirmed';
+    if coalesce(v_card.provider_paid_amount_cents,0) < v_card.provider_amount_cents then
+      raise exception 'card_paid_amount_invalid';
+    end if;
+    if coalesce(v_card.provider_fee_cents,-1) <> v_provider_fee then
+      raise exception 'card_provider_fee_evidence_mismatch';
     end if;
 
     v_provider_paid := v_card.provider_paid_amount_cents;
-    v_provider_surcharge := v_card.provider_paid_amount_cents-v_card.provider_amount_cents;
+    v_provider_surcharge := greatest(0,v_card.provider_paid_amount_cents-v_card.provider_amount_cents);
     v_method := 'cartao';
   else
     raise exception 'unsupported_storefront_provider';

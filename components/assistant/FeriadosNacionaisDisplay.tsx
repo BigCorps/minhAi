@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Download, Mail, Loader2, Mic, Calendar, PartyPopper } from 'lucide-react';
@@ -155,10 +157,7 @@ export default function FeriadosNacionaisDisplay({ data, onClose, theme = 'dark'
     try {
       const feriadosList = resultData.feriados?.map((f: any) => `${f.data} - ${f.nome} (${f.tipo})`).join('\n') || '';
       const emailBody = `Feriados Nacionais ${resultData.ano}\n\n${feriadosList}\n\nTotal: ${resultData.total} feriados`;
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: { company_id: data.companyId, subject: `Feriados Nacionais ${resultData.ano}`, body: emailBody },
-      });
-      if (error) throw error;
+      await sendCompanyResultEmail({ company_id: data.companyId, subject: `Feriados Nacionais ${resultData.ano}`, body: emailBody });
       playText('Feriados enviados por email.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {

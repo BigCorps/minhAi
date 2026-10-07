@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Mail, Loader2, Mic } from 'lucide-react';
@@ -183,10 +185,7 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
     if (!result) return;
     setIsSendingEmail(true);
     try {
-      const { error } = await supabaseEmail.functions.invoke('enviar-email-google', {
-        body: { company_id: data.companyId, subject: 'Resultado: Ler Código de Barras', body: result },
-      });
-      if (error) throw error;
+      await sendCompanyResultEmail({ company_id: data.companyId, subject: 'Resultado: Ler Código de Barras', body: result });
       playText('Enviado por email.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {

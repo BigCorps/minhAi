@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Download, Mail, Loader2, Mic } from 'lucide-react';
@@ -181,10 +183,7 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
     setIsSendingEmail(true);
     const content = viewMode === 'csv' ? csvResult : (markdownResult ?? csvResult);
     try {
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: { company_id: data.companyId, subject: 'Resultado: Tabela em Texto', body: content },
-      });
-      if (error) throw error;
+      await sendCompanyResultEmail({ company_id: data.companyId, subject: 'Resultado: Tabela em Texto', body: content });
       playText('enviado.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {

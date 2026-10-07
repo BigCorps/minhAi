@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, QrCode, Copy, ExternalLink, Check, RefreshCw, Mail, Loader2, Mic } from 'lucide-react';
@@ -177,10 +179,7 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
     if (!qrResult) return;
     setIsSendingEmail(true);
     try {
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: { company_id: data.companyId, subject: 'Resultado: Ler QR Code', body: qrResult },
-      });
-      if (error) throw error;
+      await sendCompanyResultEmail({ company_id: data.companyId, subject: 'Resultado: Ler QR Code', body: qrResult });
       playText('Enviado por email.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {

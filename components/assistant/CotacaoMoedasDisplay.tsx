@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Download, Mail, Loader2, Mic, TrendingUp, TrendingDown } from 'lucide-react';
@@ -162,10 +164,7 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
     setIsSendingEmail(true);
     try {
       const emailBody = `Cotação de ${resultData.name}\n\nCompra: R$ ${resultData.bid}\nVenda: R$ ${resultData.ask}\nVariação: ${resultData.variation}\nData: ${resultData.timestamp}`;
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: { company_id: data.companyId, subject: `Cotação: ${resultData.name}`, body: emailBody },
-      });
-      if (error) throw error;
+      await sendCompanyResultEmail({ company_id: data.companyId, subject: `Cotação: ${resultData.name}`, body: emailBody });
       playText('Cotação enviada por email.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {

@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, User, Loader2, AlertCircle, Download, CheckCircle, Mail } from 'lucide-react';
@@ -195,14 +197,11 @@ export default function ConsultarCpfModal({
         .map(r => (r.label === '---' ? `\n${r.value}` : `${r.label}: ${r.value}`))
         .join('\n');
 
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: {
+      await sendCompanyResultEmail({
           company_id: companyId,
           subject: `Resultado: Consulta CPF ${cpf}`,
           body: bodyText,
-        },
-      });
-      if (error) throw error;
+        });
       playText?.('E-mail enviado com sucesso.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {

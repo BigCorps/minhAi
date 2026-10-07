@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Car, Loader2, AlertCircle, FileText, Download, CheckCircle, Mail } from 'lucide-react';
@@ -184,14 +186,11 @@ export default function ConsultarPlacaModal({
         .map(r => (r.label === '---' ? `\n${r.value}` : `${r.label}: ${r.value}`))
         .join('\n');
 
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: {
+      await sendCompanyResultEmail({
           company_id: companyId,
           subject: `Resultado: Consulta Placa ${placa}`,
           body: bodyText,
-        },
-      });
-      if (error) throw error;
+        });
       playText('E-mail enviado com sucesso.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {

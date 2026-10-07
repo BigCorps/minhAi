@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Download, Mail, Loader2, Mic, MapPin, ExternalLink } from 'lucide-react';
@@ -184,10 +186,7 @@ export default function ConsultarCEPDisplay({ data, onClose, theme = 'dark', pla
     setIsSendingEmail(true);
     try {
       const emailBody = `Consulta CEP: ${resultData.cep}\n\nLogradouro: ${resultData.logradouro}\nBairro: ${resultData.bairro}\nCidade: ${resultData.localidade}\nUF: ${resultData.uf}\nComplemento: ${resultData.complemento || '-'}`;
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: { company_id: data.companyId, subject: `Consulta CEP: ${resultData.cep}`, body: emailBody },
-      });
-      if (error) throw error;
+      await sendCompanyResultEmail({ company_id: data.companyId, subject: `Consulta CEP: ${resultData.cep}`, body: emailBody });
       playText('Consulta enviada por email.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {

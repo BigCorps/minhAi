@@ -83,6 +83,129 @@ alter table public.funcionaria_storefront_settlements
   add column if not exists provider_paid_amount_cents integer not null default 0,
   add column if not exists provider_surcharge_cents integer not null default 0;
 
+create or replace function public.funcionaria_prepare_storefront_card(
+  p_checkout_id uuid,
+  p_expected_amount_cents integer,
+  p_checkout_url text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public','pg_temp'
+as $function$
+declare
+  v_checkout public.funcionaria_checkouts%rowtype;
+  v_pedido public.pedidos%rowtype;
+  v_payment public.funcionaria_storefront_card_payments%rowtype;
+  v_order_nsu text;
+  v_expected integer;
+begin
+  if p_checkout_id is null
+     or p_expected_amount_cents is null
+     or p_expected_amount_cents <= 0
+     or nullif(trim(coalesce(p_checkout_url,'')),'') is null then
+    raise exception 'invalid_card_request';
+  end if;
+
+  select * into v_checkout
+  from public.funcionaria_checkouts
+  where id=p_checkout_id and origem='storefront'
+  for update;
+
+  if not found then raise exception 'storefront_checkout_not_found'; end if;
+  if v_checkout.status='pago' then
+    return jsonb_build_object('checkout_id',v_checkout.id,'pedido_id',v_checkout.pedido_id,'status','paid','receipt_token',v_checkout.receipt_token);
+  end if;
+  if v_checkout.status in ('cancelado','expirado') then raise exception 'checkout_not_payable'; end if;
+  if v_checkout.expires_at <= now() then
+    update public.funcionaria_checkouts set status='expirado',updated_at=now() where id=v_checkout.id;
+    raise exception 'checkout_expired';
+  end if;
+  if v_checkout.pix_transaction_id is not null or v_checkout.cash_requested_at is not null then
+    raise exception 'payment_in_progress';
+  end if;
+  if v_checkout.card_provider is not null and v_checkout.card_provider <> 'infinitepay_bigcorps' then
+    raise exception 'payment_in_progress';
+  end if;
+
+  select * into v_pedido
+  from public.pedidos
+  where id=v_checkout.pedido_id and company_id=v_checkout.company_id
+  for update;
+
+  if not found then raise exception 'pedido_not_found'; end if;
+  if v_pedido.status='pago' then
+    update public.funcionaria_checkouts
+       set status='pago',completed_at=coalesce(completed_at,now()),updated_at=now()
+     where id=v_checkout.id;
+    return jsonb_build_object('checkout_id',v_checkout.id,'pedido_id',v_pedido.id,'status','paid','receipt_token',v_checkout.receipt_token);
+  end if;
+  if v_pedido.status not in ('aberto','aguardando_pagamento') then raise exception 'pedido_not_payable'; end if;
+  if coalesce(v_pedido.storefront_payment_mode_snapshot,'commission') <> 'commission'
+     or coalesce(v_pedido.storefront_commission_bps_snapshot,500) <> 500 then
+    raise exception 'storefront_not_commission_mode';
+  end if;
+
+  v_expected := round(coalesce(v_pedido.total,0)*100)::integer;
+  if v_expected <= 0 or v_expected <> p_expected_amount_cents then
+    raise exception 'card_expected_amount_mismatch';
+  end if;
+
+  v_order_nsu := 'funcionaria-storefront-'||v_checkout.id::text;
+
+  select * into v_payment
+  from public.funcionaria_storefront_card_payments
+  where checkout_id=v_checkout.id
+  for update;
+
+  if found then
+    if v_payment.order_nsu <> v_order_nsu
+       or v_payment.expected_amount_cents <> v_expected
+       or v_payment.company_id <> v_checkout.company_id
+       or v_payment.pedido_id <> v_checkout.pedido_id then
+      raise exception 'card_session_conflict';
+    end if;
+    update public.funcionaria_storefront_card_payments
+       set checkout_url=p_checkout_url,updated_at=now()
+     where id=v_payment.id
+     returning * into v_payment;
+  else
+    insert into public.funcionaria_storefront_card_payments (
+      checkout_id,company_id,pedido_id,provider,order_nsu,
+      expected_amount_cents,status,checkout_url
+    ) values (
+      v_checkout.id,v_checkout.company_id,v_checkout.pedido_id,
+      'infinitepay_bigcorps',v_order_nsu,v_expected,'pending',p_checkout_url
+    )
+    returning * into v_payment;
+  end if;
+
+  update public.funcionaria_checkouts
+     set status='em_pagamento',
+         metodo_pagamento='cartao',
+         card_provider='infinitepay_bigcorps',
+         card_reference_id=v_order_nsu,
+         metadata=coalesce(metadata,'{}'::jsonb) ||
+           jsonb_build_object('storefront_card_provider','infinitepay_bigcorps'),
+         updated_at=now()
+   where id=v_checkout.id;
+
+  return jsonb_build_object(
+    'checkout_id',v_checkout.id,'pedido_id',v_checkout.pedido_id,'company_id',v_checkout.company_id,
+    'status',v_payment.status,'order_nsu',v_payment.order_nsu,'checkout_url',v_payment.checkout_url,
+    'expected_amount_cents',v_payment.expected_amount_cents,'transaction_nsu',v_payment.transaction_nsu,
+    'invoice_slug',v_payment.invoice_slug,
+    'receipt_token',case when v_payment.status='paid' then v_checkout.receipt_token else null end
+  );
+end;
+$function$;
+
+revoke all on function public.funcionaria_prepare_storefront_card(uuid,integer,text)
+  from public, anon, authenticated;
+grant execute on function public.funcionaria_prepare_storefront_card(uuid,integer,text)
+  to service_role;
+
+
 do $$
 begin
   if not exists (

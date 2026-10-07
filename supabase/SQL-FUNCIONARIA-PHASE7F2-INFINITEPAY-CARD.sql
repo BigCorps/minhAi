@@ -10,7 +10,6 @@
 -- - quando a taxa e repassada, provider_fee_cents=0; quando e assumida, usamos
 --   uma tabela versionada por numero de parcelas.
 
-begin;
 
 -- Corrige a base 7F.1 antes da primeira venda storefront real.
 alter table public.funcionaria_checkouts
@@ -575,4 +574,3 @@ revoke all on function public.funcionaria_settle_storefront_commission(
 grant execute on function public.funcionaria_settle_storefront_commission(
   uuid,uuid,text,text,uuid,integer,timestamptz
 ) to service_role;
-

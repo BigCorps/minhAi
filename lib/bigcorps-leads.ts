@@ -98,6 +98,66 @@ export const GESTAO_OPTIONS = [
   'Nenhum',
 ] as const;
 
+
+export const INFRAESTRUTURA_OPTIONS = [
+  'Sistema de câmeras ou monitoramento',
+  'Loja virtual ou e-commerce',
+  'Tela, TV ou painel para propaganda',
+  'Checkout ou confirmação automática de pagamentos',
+  'Nenhum destes',
+] as const;
+
+export const CHECKOUT_PROVIDER_OPTIONS = [
+  'Mercado Pago',
+  'PagBank / PagSeguro',
+  'Stone',
+  'InfinitePay',
+  'Stripe',
+  'Pagar.me',
+  'Asaas',
+  'Outro / sistema próprio',
+  'Não sei',
+] as const;
+
+export const PRODUCT_LABELS = {
+  monitoria: 'MonitorIA',
+  funcionaria: 'FuncionarIA',
+  midia: 'Midia.Pro',
+  pixwiki: 'PixWiki',
+} as const;
+
+export type ProductOpportunityKey = keyof typeof PRODUCT_LABELS;
+
+export function inferProductOpportunities(input: {
+  infraestrutura: string[];
+  checkoutProvider?: string | null;
+}): { keys: ProductOpportunityKey[]; labels: string[]; reasons: Record<string, string> } {
+  const selected = new Set(input.infraestrutura);
+  const keys: ProductOpportunityKey[] = [];
+  const reasons: Record<string, string> = {};
+
+  if (selected.has('Sistema de câmeras ou monitoramento')) {
+    keys.push('monitoria');
+    reasons.monitoria = 'Já possui câmeras ou monitoramento: oportunidade de adicionar análise inteligente às imagens existentes.';
+  }
+  if (selected.has('Loja virtual ou e-commerce')) {
+    keys.push('funcionaria');
+    reasons.funcionaria = 'Opera uma loja virtual/e-commerce: oportunidade de automatizar atendimento e operação comercial.';
+  }
+  if (selected.has('Tela, TV ou painel para propaganda')) {
+    keys.push('midia');
+    reasons.midia = 'Já possui tela de propaganda: oportunidade de gerenciar conteúdo e monetizar espaços com a Midia.Pro.';
+  }
+  if (selected.has('Checkout ou confirmação automática de pagamentos')) {
+    keys.push('pixwiki');
+    reasons.pixwiki = input.checkoutProvider
+      ? `Usa ${input.checkoutProvider}: oportunidade de comparar custos e automações com a PixWiki.`
+      : 'Já usa checkout ou confirmação automática: oportunidade de comparar custos e automações com a PixWiki.';
+  }
+
+  return { keys, labels: keys.map((key) => PRODUCT_LABELS[key]), reasons };
+}
+
 export const FATURAMENTO_OPTIONS = [
   'Até R$ 10 mil',
   'R$ 10 a 50 mil',

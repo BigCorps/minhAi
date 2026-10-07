@@ -34,6 +34,10 @@ type Lead = {
   respostas: {
     sintomas?: Record<string, 'sim' | 'as_vezes' | 'nao'>;
     gestao?: string[];
+    infraestrutura?: string[];
+    checkout_provider?: string | null;
+    produtos_sugeridos?: string[];
+    produtos_sugeridos_motivos?: Record<string, string>;
     prioridade_score?: number;
     sintomas_sim?: number;
   } | null;
@@ -283,6 +287,15 @@ export default function AdminBigCorpsLeads({ admin, basePath }: Props) {
               <p className="mt-5 text-xs font-bold uppercase tracking-[.12em] text-slate-600">3 prioridades</p><p className="mt-2 text-sm leading-6 font-bold text-orange-200">{selected.areas_prioritarias.join(' · ')}</p>
               <div className="mt-5 space-y-2">{Object.entries(selected.respostas?.sintomas || {}).map(([area, answer]) => <div key={area} className="flex items-start justify-between gap-4 rounded-xl border border-white/10 bg-white/[.025] px-3 py-2.5"><span className="text-sm text-slate-300">{area}</span><span className="shrink-0 text-xs font-black text-orange-200">{answerLabel(answer)}</span></div>)}</div>
               <p className="mt-5 text-xs font-bold uppercase tracking-[.12em] text-slate-600">Gestão atual</p><p className="mt-2 text-sm text-slate-300">{selected.respostas?.gestao?.join(' · ') || '—'}</p>
+              <p className="mt-5 text-xs font-bold uppercase tracking-[.12em] text-slate-600">Estrutura e tecnologia</p><p className="mt-2 text-sm leading-6 text-slate-300">{selected.respostas?.infraestrutura?.join(' · ') || '—'}</p>
+              <p className="mt-5 text-xs font-bold uppercase tracking-[.12em] text-slate-600">Checkout / pagamentos</p><p className="mt-2 text-sm text-slate-300">{selected.respostas?.checkout_provider || 'Não usa / não informado'}</p>
+              <p className="mt-5 text-xs font-bold uppercase tracking-[.12em] text-slate-600">Produtos BigCorps com sinal</p>
+              {selected.respostas?.produtos_sugeridos?.length ? (
+                <div className="mt-2 flex flex-wrap gap-2">{selected.respostas.produtos_sugeridos.map((produto) => <span key={produto} className="rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-1 text-xs font-black text-orange-200">{produto}</span>)}</div>
+              ) : <p className="mt-2 text-sm text-slate-500">Nenhum sinal direto nestas respostas.</p>}
+              {selected.respostas?.produtos_sugeridos_motivos && Object.keys(selected.respostas.produtos_sugeridos_motivos).length > 0 && (
+                <div className="mt-3 space-y-2">{Object.entries(selected.respostas.produtos_sugeridos_motivos).map(([produto, motivo]) => <p key={produto} className="rounded-xl border border-white/10 bg-white/[.025] px-3 py-2 text-xs leading-5 text-slate-400">{motivo}</p>)}</div>
+              )}
             </DetailSection>
 
             <DetailSection title="Aquisição e medição">

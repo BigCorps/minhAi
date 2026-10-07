@@ -21,6 +21,8 @@ import {
   AREA_QUESTIONS,
   FATURAMENTO_OPTIONS,
   GESTAO_OPTIONS,
+  INFRAESTRUTURA_OPTIONS,
+  CHECKOUT_PROVIDER_OPTIONS,
   MELHOR_HORARIO_OPTIONS,
   PORTE_OPTIONS,
   SEGMENTO_OPTIONS,
@@ -58,6 +60,8 @@ type FormState = {
   areas: Area[];
   sintomas: Partial<Record<Area, SymptomAnswer>>;
   gestao: string[];
+  infraestrutura: string[];
+  checkoutProvider: string;
   faturamento: string;
   nome: string;
   empresa: string;
@@ -85,6 +89,8 @@ type ScreenKey =
   | 'areas'
   | `sintoma:${Area}`
   | 'gestao'
+  | 'infraestrutura'
+  | 'checkout'
   | 'faturamento'
   | 'contato'
   | 'resultado';
@@ -107,6 +113,8 @@ const INITIAL_FORM: FormState = {
   areas: [],
   sintomas: {},
   gestao: [],
+  infraestrutura: [],
+  checkoutProvider: '',
   faturamento: '',
   nome: '',
   empresa: '',
@@ -212,7 +220,7 @@ async function copyText(value: string) {
 }
 
 function selectionClass(selected: boolean) {
-  return `group flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left text-[15px] font-bold transition active:scale-[.99] ${
+  return `group grid min-h-14 w-full grid-cols-[24px_1fr_24px] items-center gap-3 rounded-2xl border px-4 py-3 text-center text-[15px] font-semibold transition active:scale-[.99] ${
     selected
       ? 'border-[#FD9219] bg-[#FFF7ED] text-[#7A3E00] shadow-[0_0_0_1px_rgba(253,146,25,.08)]'
       : 'border-slate-200 bg-white text-slate-700 hover:border-[#FD9219]/50 hover:bg-[#FFFBF5]'
@@ -222,7 +230,8 @@ function selectionClass(selected: boolean) {
 function SelectChip({ selected, children, onClick }: { selected: boolean; children: React.ReactNode; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} className={selectionClass(selected)} aria-pressed={selected}>
-      <span>{children}</span>
+      <span aria-hidden="true" className="h-6 w-6" />
+      <span className="text-center">{children}</span>
       <span
         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition ${
           selected ? 'border-[#FD9219] bg-[#FD9219] text-white' : 'border-slate-300 bg-white text-transparent'
@@ -254,25 +263,25 @@ function QuestionShell({
   busy?: boolean;
 }) {
   return (
-    <section className="mx-auto w-full max-w-xl animate-[fadeIn_.22s_ease-out]">
+    <section className="mx-auto w-full max-w-xl text-center animate-[fadeIn_.22s_ease-out]">
       <button
         type="button"
         onClick={onBack}
-        className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-full px-1 pr-3 text-sm font-extrabold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+        className="mx-auto mb-5 inline-flex min-h-11 items-center gap-2 rounded-full px-1 pr-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
       >
         <span className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white">
           <ArrowLeft className="h-4 w-4" />
         </span>
         Voltar
       </button>
-      <h1 className="text-[27px] font-black leading-[1.1] tracking-[-.03em] text-[#1F1F1F] sm:text-4xl">{title}</h1>
-      {subtitle && <p className="mt-3 text-[15px] leading-6 text-slate-500 sm:text-base">{subtitle}</p>}
+      <h1 className="text-center text-[27px] font-bold leading-[1.12] tracking-[-.02em] text-[#1F1F1F] sm:text-4xl">{title}</h1>
+      {subtitle && <p className="mt-3 text-center text-[15px] leading-6 text-slate-500 sm:text-base">{subtitle}</p>}
       <div className="mt-6">{children}</div>
       <button
         type="button"
         onClick={onNext}
         disabled={nextDisabled || busy}
-        className="mt-7 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#FD9219] px-5 text-base font-black text-white shadow-[0_12px_28px_rgba(253,146,25,.22)] transition hover:brightness-105 active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-40"
+        className="mt-7 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#FD9219] px-5 text-base font-bold text-white shadow-[0_12px_28px_rgba(253,146,25,.22)] transition hover:brightness-105 active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-40"
       >
         {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
         {busy ? 'Enviando...' : nextLabel}
@@ -301,11 +310,13 @@ export default function AjudaQuiz() {
       'areas',
       ...form.areas.map((area) => `sintoma:${area}` as ScreenKey),
       'gestao',
+      'infraestrutura',
+      ...(form.infraestrutura.includes('Checkout ou confirmação automática de pagamentos') ? ['checkout' as ScreenKey] : []),
       'faturamento',
       'contato',
       'resultado',
     ];
-  }, [form.areas]);
+  }, [form.areas, form.infraestrutura]);
 
   const currentIndex = Math.max(0, sequence.indexOf(screen));
   const questionCount = Math.max(1, sequence.length - 1);
@@ -325,17 +336,20 @@ export default function AjudaQuiz() {
             : [],
           sintomas: savedForm.sintomas || {},
           gestao: Array.isArray(savedForm.gestao) ? savedForm.gestao.slice(0, 4) : [],
+          infraestrutura: Array.isArray(savedForm.infraestrutura) ? savedForm.infraestrutura.slice(0, 5) : [],
+          checkoutProvider: typeof savedForm.checkoutProvider === 'string' ? savedForm.checkoutProvider : '',
           attribution: { ...EMPTY_ATTRIBUTION, ...(savedForm.attribution || {}) },
         };
         merged.attribution = captureAttribution(merged.attribution);
         setForm(merged);
         if (saved.started) setStarted(true);
         if (saved.screen && saved.screen !== 'resultado') {
-          const staticScreens: ScreenKey[] = ['tipo', 'segmento', 'porte', 'tempo', 'areas', 'gestao', 'faturamento', 'contato'];
+          const staticScreens: ScreenKey[] = ['tipo', 'segmento', 'porte', 'tempo', 'areas', 'gestao', 'infraestrutura', 'faturamento', 'contato'];
           const symptomArea = saved.screen.startsWith('sintoma:')
             ? saved.screen.slice('sintoma:'.length) as Area
             : null;
-          if (staticScreens.includes(saved.screen) || (symptomArea && merged.areas.includes(symptomArea))) {
+          const checkoutAllowed = saved.screen === 'checkout' && merged.infraestrutura.includes('Checkout ou confirmação automática de pagamentos');
+          if (staticScreens.includes(saved.screen) || checkoutAllowed || (symptomArea && merged.areas.includes(symptomArea))) {
             setScreen(saved.screen);
           }
         }
@@ -421,6 +435,30 @@ export default function AjudaQuiz() {
     });
   };
 
+
+  const toggleInfraestrutura = (value: string) => {
+    setForm((current) => {
+      if (value === 'Nenhum destes') {
+        return {
+          ...current,
+          infraestrutura: current.infraestrutura.includes('Nenhum destes') ? [] : ['Nenhum destes'],
+          checkoutProvider: '',
+        };
+      }
+
+      const withoutNone = current.infraestrutura.filter((item) => item !== 'Nenhum destes');
+      const nextInfra = withoutNone.includes(value)
+        ? withoutNone.filter((item) => item !== value)
+        : [...withoutNone, value];
+      const checkoutSelected = nextInfra.includes('Checkout ou confirmação automática de pagamentos');
+      return {
+        ...current,
+        infraestrutura: nextInfra,
+        checkoutProvider: checkoutSelected ? current.checkoutProvider : '',
+      };
+    });
+  };
+
   const submit = async () => {
     setSubmitError('');
     if (!form.nome.trim() || !form.empresa.trim()) {
@@ -466,6 +504,8 @@ export default function AjudaQuiz() {
           respostas: {
             sintomas: form.sintomas,
             gestao: form.gestao,
+            infraestrutura: form.infraestrutura,
+            checkout_provider: form.checkoutProvider || null,
           },
           ...form.attribution,
           website: form.website,
@@ -540,35 +580,27 @@ export default function AjudaQuiz() {
 
 
   return (
-    <main className="min-h-[100dvh] bg-white text-[#1F1F1F]">
+    <main className="flex min-h-[100dvh] flex-col bg-white text-[#1F1F1F]">
       <style>{`@keyframes fadeIn{from{opacity:.25;transform:translateY(5px)}to{opacity:1;transform:none}}`}</style>
-      <header className="mx-auto flex w-full max-w-3xl items-center justify-between px-4 pb-2 pt-5 sm:px-6 sm:pt-7">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <Image
-            src="/brands/bigcorps/logo-mark.png"
-            alt="BigCorps"
-            width={44}
-            height={44}
-            priority
-            className="h-10 w-10 shrink-0 object-contain"
-          />
-          <Image
-            src="/brands/bigcorps/logo-wordmark.png"
-            alt="BigCorps"
-            width={190}
-            height={42}
-            priority
-            className="h-8 w-auto max-w-[160px] object-contain sm:max-w-[190px]"
-          />
-        </div>
+      <header className={`mx-auto flex w-full max-w-3xl items-center px-4 pb-2 pt-5 sm:px-6 sm:pt-7 ${
+        started && screen !== 'resultado' ? 'justify-between' : 'justify-center'
+      }`}>
+        <Image
+          src="/brands/bigcorps/logo-wordmark.png"
+          alt="BigCorps"
+          width={220}
+          height={52}
+          priority
+          className="h-9 w-auto max-w-[190px] object-contain sm:h-10 sm:max-w-[220px]"
+        />
         {started && screen !== 'resultado' && (
-          <span className="rounded-full bg-[#FFF7ED] px-3 py-1.5 text-xs font-black text-[#A45100]">~2 min</span>
+          <span className="rounded-full bg-[#FFF7ED] px-3 py-1.5 text-xs font-semibold text-[#A45100]">~2 min</span>
         )}
       </header>
 
       {started && screen !== 'resultado' && (
         <div className="mx-auto w-full max-w-3xl px-4 pt-2 sm:px-6">
-          <div className="flex items-center justify-between text-[11px] font-extrabold uppercase tracking-[.12em] text-slate-400">
+          <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[.12em] text-slate-400">
             <span>Seu diagnóstico</span>
             <span>{progress}%</span>
           </div>
@@ -581,21 +613,21 @@ export default function AjudaQuiz() {
       <div className="mx-auto flex w-full max-w-3xl flex-1 px-4 pb-12 pt-7 sm:px-6 sm:pt-10">
         {!started ? (
           <section className="mx-auto w-full max-w-2xl py-4 text-center sm:py-8">
-            <div className="mx-auto inline-flex min-h-11 items-center gap-2 rounded-full border border-orange-100 bg-[#FFF7ED] px-4 text-sm font-extrabold text-[#A45100]">
+            <div className="mx-auto inline-flex min-h-11 items-center gap-2 rounded-full border border-orange-100 bg-[#FFF7ED] px-4 text-sm font-semibold text-[#A45100]">
               <Sparkles className="h-4 w-4 text-[#FD9219]" /> Diagnóstico gratuito BigCorps
             </div>
-            <h1 className="mx-auto mt-6 max-w-xl text-[38px] font-black leading-[.98] tracking-[-.045em] text-[#1F1F1F] sm:text-6xl">
+            <h1 className="mx-auto mt-6 max-w-xl text-[38px] font-bold leading-[1.02] tracking-[-.03em] text-[#1F1F1F] sm:text-6xl">
               Análise gratuita do seu negócio
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-[17px] leading-7 text-slate-600 sm:text-lg">
-              Responda 8 perguntas rápidas e descubra onde a tecnologia e a IA podem ajudar você a vender mais,
+              Responda algumas perguntas rápidas e descubra onde a tecnologia e a IA podem ajudar você a vender mais,
               gerar novas receitas e reduzir despesas.
             </p>
 
             <button
               type="button"
               onClick={start}
-              className="mx-auto mt-7 inline-flex min-h-14 w-full max-w-md items-center justify-center gap-2 rounded-2xl bg-[#FD9219] px-6 text-lg font-black text-white shadow-[0_16px_35px_rgba(253,146,25,.25)] transition hover:brightness-105 active:scale-[.99]"
+              className="mx-auto mt-7 inline-flex min-h-14 w-full max-w-md items-center justify-center gap-2 rounded-2xl bg-[#FD9219] px-6 text-lg font-bold text-white shadow-[0_16px_35px_rgba(253,146,25,.25)] transition hover:brightness-105 active:scale-[.99]"
             >
               Começar análise <ArrowRight className="h-5 w-5" />
             </button>
@@ -603,8 +635,8 @@ export default function AjudaQuiz() {
               <Clock3 className="h-4 w-4 text-[#FD9219]" /> Sem cadastro e sem login
             </div>
 
-            <aside className="mx-auto mt-9 max-w-xl rounded-3xl border border-slate-200 bg-slate-50/70 p-5 text-left">
-              <p className="text-2xl font-black tracking-tight text-[#1F1F1F]">25,4 milhões</p>
+            <aside className="mx-auto mt-9 max-w-xl rounded-3xl border border-slate-200 bg-slate-50/70 p-5 text-center">
+              <p className="text-2xl font-bold tracking-tight text-[#1F1F1F]">25,4 milhões</p>
               <p className="mt-1 text-sm leading-6 text-slate-600">
                 de empresas estão ativas no Brasil. Em julho de 2026, 485 mil novas empresas foram abertas.
               </p>
@@ -612,7 +644,7 @@ export default function AjudaQuiz() {
                 href="https://www.gov.br/empresas-e-negocios/pt-br/mapa-de-empresas"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-block text-xs font-bold text-[#A45100] underline underline-offset-2"
+                className="mt-3 inline-block text-xs font-semibold text-[#A45100] underline underline-offset-2"
               >
                 Fonte: Mapa de Empresas — Governo Federal
               </a>
@@ -644,7 +676,7 @@ export default function AjudaQuiz() {
           </QuestionShell>
         ) : screen === 'areas' ? (
           <QuestionShell title="Onde você sente que mais perde tempo ou dinheiro?" subtitle="Escolha até 3 áreas. Vamos aprofundar só no que importa para você." onBack={back} onNext={next} nextDisabled={form.areas.length === 0}>
-            <div className="mb-3 flex items-center justify-between text-xs font-bold text-slate-400"><span>Selecione de 1 a 3</span><span>{form.areas.length}/3</span></div>
+            <div className="mb-3 text-center text-xs font-semibold text-slate-400">Selecione de 1 a 3 · {form.areas.length}/3</div>
             <div className="grid gap-3 sm:grid-cols-2">
               {AREA_OPTIONS.map((area) => <SelectChip key={area} selected={form.areas.includes(area)} onClick={() => toggleArea(area)}>{area}</SelectChip>)}
             </div>
@@ -671,6 +703,38 @@ export default function AjudaQuiz() {
           <QuestionShell title="O que você usa hoje para gerir a empresa?" subtitle="Você pode marcar mais de uma opção." onBack={back} onNext={next} nextDisabled={form.gestao.length === 0}>
             <div className="grid gap-3">
               {GESTAO_OPTIONS.map((option) => <SelectChip key={option} selected={form.gestao.includes(option)} onClick={() => toggleGestao(option)}>{option}</SelectChip>)}
+            </div>
+          </QuestionShell>
+        ) : screen === 'infraestrutura' ? (
+          <QuestionShell
+            title="Quais destas estruturas sua empresa já possui?"
+            subtitle="Isso nos ajuda a identificar oportunidades específicas para o seu negócio. Você pode marcar mais de uma."
+            onBack={back}
+            onNext={next}
+            nextDisabled={form.infraestrutura.length === 0}
+          >
+            <div className="grid gap-3">
+              {INFRAESTRUTURA_OPTIONS.map((option) => (
+                <SelectChip key={option} selected={form.infraestrutura.includes(option)} onClick={() => toggleInfraestrutura(option)}>
+                  {option}
+                </SelectChip>
+              ))}
+            </div>
+          </QuestionShell>
+        ) : screen === 'checkout' ? (
+          <QuestionShell
+            title="Qual solução de checkout ou pagamento você usa principalmente?"
+            subtitle="A marca nos ajuda a comparar custos, confirmação de pagamentos e possibilidades de automação."
+            onBack={back}
+            onNext={next}
+            nextDisabled={!form.checkoutProvider}
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              {CHECKOUT_PROVIDER_OPTIONS.map((option) => (
+                <SelectChip key={option} selected={form.checkoutProvider === option} onClick={() => update('checkoutProvider', option)}>
+                  {option}
+                </SelectChip>
+              ))}
             </div>
           </QuestionShell>
         ) : screen === 'faturamento' ? (
@@ -705,7 +769,7 @@ export default function AjudaQuiz() {
                 <label>Website<input tabIndex={-1} autoComplete="off" value={form.website} onChange={(e) => update('website', e.target.value)} /></label>
               </div>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center text-sm leading-6 text-slate-600">
                 <input type="checkbox" checked={form.consentimento} onChange={(e) => update('consentimento', e.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-[#FD9219]" />
                 <span>
                   Concordo em receber o contato da BigCorps sobre esta análise e com a{' '}
@@ -719,19 +783,19 @@ export default function AjudaQuiz() {
         ) : result ? (
           <section className="mx-auto w-full max-w-2xl pb-8 pt-2 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#FFF0D9] text-[#FD9219]"><CheckCircle2 className="h-9 w-9" /></div>
-            <p className="mt-5 text-xs font-black uppercase tracking-[.18em] text-[#C76600]">Seu diagnóstico</p>
-            <h1 className="mt-2 text-4xl font-black tracking-[-.04em] sm:text-5xl">Encontramos 3 frentes para priorizar</h1>
+            <p className="mt-5 text-xs font-bold uppercase tracking-[.18em] text-[#C76600]">Seu diagnóstico</p>
+            <h1 className="mt-2 text-4xl font-bold tracking-[-.025em] sm:text-5xl">Encontramos 3 frentes para priorizar</h1>
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-slate-600">
               Este é um primeiro mapa. Um especialista da BigCorps vai te chamar no WhatsApp em até 1 dia útil para revisar as oportunidades com você.
             </p>
-            <span className="mt-5 inline-flex rounded-full bg-[#FFF7ED] px-4 py-2 text-sm font-black text-[#A45100]">{priorityLabel(result.prioridade)}</span>
+            <span className="mt-5 inline-flex rounded-full bg-[#FFF7ED] px-4 py-2 text-sm font-bold text-[#A45100]">{priorityLabel(result.prioridade)}</span>
 
-            <div className="mt-7 grid gap-3 text-left">
+            <div className="mt-7 grid gap-3 text-center">
               {result.areasPrioritarias.map((area, index) => (
                 <article key={area} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex items-start gap-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FD9219] text-sm font-black text-white">{index + 1}</span>
-                    <div><h2 className="text-lg font-black">{area}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{areaResultText(area, form.sintomas[area])}</p></div>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FD9219] text-sm font-bold text-white">{index + 1}</span>
+                    <div className="flex-1"><h2 className="text-lg font-bold">{area}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{areaResultText(area, form.sintomas[area])}</p></div>
                   </div>
                 </article>
               ))}
@@ -739,13 +803,13 @@ export default function AjudaQuiz() {
 
             <div className="mt-7 grid gap-3 sm:grid-cols-2">
               {whatsappHref ? (
-                <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#FD9219] px-5 text-base font-black text-white shadow-[0_12px_28px_rgba(253,146,25,.22)] transition hover:brightness-105">
+                <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#FD9219] px-5 text-base font-bold text-white shadow-[0_12px_28px_rgba(253,146,25,.22)] transition hover:brightness-105">
                   <MessageCircle className="h-5 w-5" /> Falar agora no WhatsApp
                 </a>
               ) : (
                 <div className="inline-flex min-h-14 items-center justify-center rounded-2xl bg-slate-100 px-5 text-sm font-bold text-slate-500">WhatsApp será enviado pelo especialista</div>
               )}
-              <button type="button" onClick={() => void share()} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-base font-black text-slate-700 transition hover:bg-slate-50">
+              <button type="button" onClick={() => void share()} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-base font-bold text-slate-700 transition hover:bg-slate-50">
                 {copied ? <Copy className="h-5 w-5 text-emerald-600" /> : <Share2 className="h-5 w-5" />}
                 {copied ? 'Link copiado' : 'Compartilhar com um amigo que tem empresa'}
               </button>
@@ -755,7 +819,7 @@ export default function AjudaQuiz() {
         ) : null}
       </div>
 
-      <footer className="border-t border-slate-100 px-4 py-5 text-center text-xs text-slate-400">
+      <footer className="mt-auto border-t border-slate-100 px-4 py-5 text-center text-xs text-slate-400">
         BigCorps · <Link href="/ajuda/privacidade" className="font-semibold hover:text-slate-600">Privacidade</Link>
       </footer>
     </main>
@@ -763,5 +827,5 @@ export default function AjudaQuiz() {
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block"><span className="mb-1.5 block text-sm font-extrabold text-slate-700">{label}</span>{children}</label>;
+  return <label className="block"><span className="mb-1.5 block text-center text-sm font-semibold text-slate-700">{label}</span>{children}</label>;
 }

@@ -7,6 +7,8 @@ import {
   BIGCORPS_CONSENT_TEXT,
   FATURAMENTO_OPTIONS,
   GESTAO_OPTIONS,
+  INFRAESTRUTURA_OPTIONS,
+  CHECKOUT_PROVIDER_OPTIONS,
   MELHOR_HORARIO_OPTIONS,
   PORTE_OPTIONS,
   SEGMENTO_OPTIONS,
@@ -14,6 +16,7 @@ import {
   TIPO_EMPRESA_OPTIONS,
   calculateLeadPriority,
   calculatePriorityAreas,
+  inferProductOpportunities,
   type Area,
   type SymptomAnswer,
   isValidBrazilPhone,
@@ -170,6 +173,9 @@ async function notifyGmailLead(
     segmento: string;
     porte: string;
     faturamentoFaixa: string;
+    infraestrutura: string[];
+    checkoutProvider: string | null;
+    productOpportunities: string[];
     utmSource: string | null;
     utmCampaign: string | null;
   },
@@ -186,6 +192,8 @@ async function notifyGmailLead(
   const priorityLabel = input.prioridade === 'alta' ? 'ALTA' : input.prioridade === 'media' ? 'MÉDIA' : 'BAIXA';
   const subject = `Novo lead BigCorps · ${priorityLabel} · ${input.empresa}`;
   const areas = input.areasPrioritarias.length ? input.areasPrioritarias.join(', ') : '—';
+  const infraestrutura = input.infraestrutura.length ? input.infraestrutura.join(', ') : '—';
+  const products = input.productOpportunities.length ? input.productOpportunities.join(', ') : 'Nenhum sinal direto';
 
   const html = `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f6f7f9;font-family:Arial,sans-serif;color:#1f1f1f">
     <div style="max-width:620px;margin:28px auto;background:#fff;border:1px solid #ececec;border-radius:18px;overflow:hidden">
@@ -206,6 +214,9 @@ async function notifyGmailLead(
           <tr><td style="padding:7px 0;color:#6b7280">Segmento</td><td style="padding:7px 0">${escapeHtml(input.segmento)}</td></tr>
           <tr><td style="padding:7px 0;color:#6b7280">Porte</td><td style="padding:7px 0">${escapeHtml(input.porte)}</td></tr>
           <tr><td style="padding:7px 0;color:#6b7280">Faturamento</td><td style="padding:7px 0">${escapeHtml(input.faturamentoFaixa)}</td></tr>
+          <tr><td style="padding:7px 0;color:#6b7280">Estrutura atual</td><td style="padding:7px 0">${escapeHtml(infraestrutura)}</td></tr>
+          <tr><td style="padding:7px 0;color:#6b7280">Checkout/pagamento</td><td style="padding:7px 0">${escapeHtml(input.checkoutProvider || 'Não usa / não informado')}</td></tr>
+          <tr><td style="padding:7px 0;color:#6b7280">Produtos com sinal</td><td style="padding:7px 0;font-weight:700;color:#A45100">${escapeHtml(products)}</td></tr>
           <tr><td style="padding:7px 0;color:#6b7280">Origem</td><td style="padding:7px 0">${escapeHtml(input.utmSource || 'Direto')}${input.utmCampaign ? ` · ${escapeHtml(input.utmCampaign)}` : ''}</td></tr>
           <tr><td style="padding:7px 0;color:#6b7280">Código</td><td style="padding:7px 0;font-family:monospace">${escapeHtml(input.id)}</td></tr>
         </table>
@@ -377,6 +388,18 @@ export async function POST(request: Request) {
           .slice(0, 4)
       : [];
 
+    const infraestrutura = Array.isArray(respostasRaw.infraestrutura)
+      ? respostasRaw.infraestrutura
+          .map((item) => String(item))
+          .filter((item) => (INFRAESTRUTURA_OPTIONS as readonly string[]).includes(item))
+          .slice(0, 5)
+      : [];
+    const checkoutSelected = infraestrutura.includes('Checkout ou confirmação automática de pagamentos');
+    const checkoutProviderRaw = asNullableText(respostasRaw.checkout_provider, 100);
+    const checkoutProvider = checkoutSelected && checkoutProviderRaw && isOneOf(checkoutProviderRaw, CHECKOUT_PROVIDER_OPTIONS)
+      ? checkoutProviderRaw
+      : null;
+
     if (
       !nome || !empresa || !phoneE164 || !isValidBrazilPhone(whatsapp) || !cidade || !(BR_UFS as readonly string[]).includes(uf) || !melhorHorario ||
       !isOneOf(tipoEmpresa, TIPO_EMPRESA_OPTIONS) ||
@@ -387,6 +410,8 @@ export async function POST(request: Request) {
       !isOneOf(melhorHorario, MELHOR_HORARIO_OPTIONS) ||
       areas.length < 1 || new Set(areas).size !== areas.length || Object.keys(sintomas).length !== areas.length ||
       gestao.length < 1 || (gestao.includes('Nenhum') && gestao.length > 1) ||
+      infraestrutura.length < 1 || (infraestrutura.includes('Nenhum destes') && infraestrutura.length > 1) ||
+      (checkoutSelected && !checkoutProvider) ||
       !validEmail(email) || !consentimento
     ) {
       return NextResponse.json({ ok: false, error: 'Confira os dados do diagnóstico e tente novamente.' }, { status: 400 });
@@ -410,6 +435,7 @@ export async function POST(request: Request) {
 
     const priority = calculateLeadPriority({ porte, faturamentoFaixa, sintomas });
     const areasPrioritarias = calculatePriorityAreas({ areas, sintomas });
+    const productOpportunities = inferProductOpportunities({ infraestrutura, checkoutProvider });
     const userAgent = asText(request.headers.get('user-agent'), 500);
     const pageUrl = safePageUrl(body.page_url, request.url);
 
@@ -430,6 +456,11 @@ export async function POST(request: Request) {
       respostas: {
         sintomas,
         gestao,
+        infraestrutura,
+        checkout_provider: checkoutProvider,
+        produtos_sugeridos: productOpportunities.labels,
+        produtos_sugeridos_chaves: productOpportunities.keys,
+        produtos_sugeridos_motivos: productOpportunities.reasons,
         prioridade_score: priority.score,
         sintomas_sim: priority.sintomasSim,
       },
@@ -471,6 +502,9 @@ export async function POST(request: Request) {
       email,
       cidade,
       uf,
+      infraestrutura,
+      checkout_provider: checkoutProvider,
+      produtos_sugeridos: productOpportunities.labels,
       admin_url: 'https://admin.minhai.app/bigcorps-leads',
       created_at: lead.created_at,
     };
@@ -489,6 +523,9 @@ export async function POST(request: Request) {
         segmento,
         porte,
         faturamentoFaixa,
+        infraestrutura,
+        checkoutProvider,
+        productOpportunities: productOpportunities.labels,
         utmSource: insert.utm_source,
         utmCampaign: insert.utm_campaign,
       }),

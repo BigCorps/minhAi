@@ -61,7 +61,7 @@ export default function ConsultarCpfModal({
   const [pdfFileName, setPdfFileName] = useState<string>('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  const [pixData, setPixData] = useState<{ qrCodeUrl: string; pixCode: string; transactionId: string } | null>(null);
+  const [pixData, setPixData] = useState<{ qrCodeUrl: string; pixCode: string; transactionId: string; cancelCapability?: string } | null>(null);
   const [pendingParams, setPendingParams] = useState<Record<string, any> | null>(null);
   const [pixAmountBrl, setPixAmountBrl] = useState<string>('0,00');
 
@@ -126,7 +126,7 @@ export default function ConsultarCpfModal({
         setPixAmountBrl(res.amount_brl ?? '3,00');
         setStep('input');
 
-        const pixRes = await supabase.functions.invoke('gerar-pix-assistente', {
+        const pixRes = await supabase.functions.invoke('gerar-pix-assistente-v2', {
           body: {
             company_id: companyId,
             amount_cents: res.amount_cents,
@@ -143,6 +143,7 @@ export default function ConsultarCpfModal({
           qrCodeUrl: pixRes.data.qr_code_url,
           pixCode: pixRes.data.pix_code,
           transactionId: pixRes.data.transaction_id,
+          cancelCapability: pixRes.data.cancel_capability,
         });
         playText?.(`Saldo insuficiente. Gerei um PIX de R$ ${res.amount_brl}. Escaneie para pagar e a consulta será liberada.`).catch(() => {});
         return;
@@ -243,6 +244,8 @@ export default function ConsultarCpfModal({
     return (
       <PIXConfirmationModal
         transactionId={pixData.transactionId}
+        cancelCapability={pixData.cancelCapability}
+        companyId={companyId}
         amount={pixAmountBrl}
         qrCodeUrl={pixData.qrCodeUrl}
         pixCode={pixData.pixCode}

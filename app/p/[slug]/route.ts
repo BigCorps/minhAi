@@ -16,7 +16,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ slug: s
   if (partner) target.searchParams.set('parceiro', partner.slug);
   const response = NextResponse.redirect(target, 307);
   response.headers.set('Cache-Control', 'no-store');
-  if (partner) {
+  const firstTouch = req.cookies.get(CONVITEIA_PARTNER_COOKIE)?.value?.trim();
+  if (partner && !firstTouch) {
     response.cookies.set(CONVITEIA_PARTNER_COOKIE, partner.code, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

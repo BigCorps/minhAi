@@ -47,6 +47,7 @@ test('referral integration keeps cookie opaque and free Memories tied to confirm
   const webhook=readFileSync(require.resolve('../app/api/conviteria/webhook-pix/route.ts'),'utf8');
   const ui=readFileSync(require.resolve('../app/convite/pagar/page.tsx'),'utf8');
   assert.match(route,/httpOnly:\s*true/); assert.match(route,/sameSite:\s*'lax'/); assert.match(route,/maxAge:\s*CONVITEIA_PARTNER_COOKIE_MAX_AGE/);
+  assert.match(route,/firstTouch/); assert.match(route,/partner\s*&&\s*!firstTouch/);
   assert.match(publicar,/registrarAtribuicaoParceiroConvite/);
   assert.match(cobrar,/memoriasCortesiaParceiro/); assert.match(cobrar,/compra_valor_centavos:\s*memoriasCentavos/);
   assert.match(webhook,/converterIndicacaoParceiroConvite/); assert.match(webhook,/concederMemoriasCortesiaParceiro/);

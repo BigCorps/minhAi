@@ -56,11 +56,13 @@ const admin = {
     };
   },
 };
+const auth = {};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root,'supabase/functions/_shared/internal-service-auth.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:auth,Deno:{env:{get:key=>key==='SUPABASE_SERVICE_ROLE_KEY'?serviceRole:undefined}}});
 vm.runInNewContext(compiled.outputText, {
   exports: {}, TextEncoder, TextDecoder, Uint8Array, URL, Date, Intl, Response, AbortSignal, atob, btoa,
   crypto: { randomUUID }, console: { warn: (...args) => warnings.push(args), log: (...args) => warnings.push(args), error: (...args) => warnings.push(args) },
   Deno: { env: { get: key => ({ SUPABASE_SERVICE_ROLE_KEY: serviceRole, SUPABASE_URL: 'https://supabase.test' })[key] }, serve: callback => { handler = callback; } },
-  require: () => ({ createClient: (url, key) => { assert.equal(key, serviceRole); return admin; } }),
+  require: name => name.includes('internal-service-auth') ? auth : ({ createClient: (url, key) => { assert.equal(key, serviceRole); return admin; } }),
   fetch: async (url, options = {}) => {
     calls.push({ url, headers: options.headers, body: options.body ? JSON.parse(options.body) : null });
     let status, body;

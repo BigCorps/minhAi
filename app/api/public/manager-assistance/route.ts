@@ -1,3 +1,4 @@
+import { internalServiceHeaders } from '@/lib/internal-service-headers';
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       try {
         const response = await fetch(`${url}/functions/v1/${edge}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+          headers: { 'Content-Type': 'application/json', ...(edge === 'enviar-email-google-v2' ? internalServiceHeaders(key) : { Authorization: `Bearer ${key}` }) },
           body: JSON.stringify(body),
           signal: AbortSignal.timeout(40_000),
         });

@@ -1,4 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),ts=require('typescript');
+function serviceHelper() { const exports={}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../lib/internal-service-headers.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,require:()=>({})}); return exports; }
 const root=path.resolve(__dirname,'..'),file='app/api/internal/release-probe-google-v2/route.ts';
 const source=fs.readFileSync(path.join(root,file),'utf8');
 const slugs=['enviar-email-google-v2','listar-eventos-google-v2','appointment-actions-v2','criar-evento-calendario-v2'];
@@ -9,13 +10,13 @@ const route={};
 vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{
  exports:route,process:{env},AbortSignal,
  console:{log:()=>assert.fail('No logs allowed'),warn:()=>assert.fail('No logs allowed'),error:()=>assert.fail('No logs allowed')},
- require:name=>name==='server-only'?{}:{NextResponse:{json:(body,options)=>({body:JSON.parse(JSON.stringify(body)),...options})}},
+ require:name=>name==='@/lib/internal-service-headers'?serviceHelper():name==='server-only'?{}:{NextResponse:{json:(body,options)=>({body:JSON.parse(JSON.stringify(body)),...options})}},
  fetch:async(url,options)=>{
   calls.push({url,...options});
   assert.ok(options.signal);assert.equal(options.cache,'no-store');assert.equal(options.redirect,'error');
   if(fail==='network')throw Error(secret);
   const slug=url.split('/').at(-1),token=options.headers.Authorization;
-  const status=options.method==='GET'?405:token===`Bearer ${secret}`?400:401;
+  const status=options.method==='GET'?405:(token===`Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` || options.headers.apikey===env.SUPABASE_SERVICE_ROLE_KEY)?400:401;
   const error=status===405?'method_not_allowed':status===401?'unauthorized':slug==='appointment-actions-v2'?'invalid_action':'invalid_company_id';
   return {status:fail==='status'?200:status,json:async()=>fail==='payload'?{error:secret,Authorization:secret,apikey:secret}:{error}};
  },
@@ -43,5 +44,9 @@ function safe(result){assert.equal(result.headers['Cache-Control'],'no-store');f
  fail=null;calls=[];assert.equal((await route.POST(poison)).status,405);assert.equal(calls.length,0);
  assert.ok(!/\bcompany_id\b/.test(source));assert.ok(!/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(source));
  assert.ok(!source.includes('console.'));
+ env.SUPABASE_SERVICE_ROLE_KEY='sb_secret_modern-test';calls=[];
+ const modern=await route.GET(poison);assert.equal(modern.status,200);safe(modern);assert.ok(!JSON.stringify(modern).includes(env.SUPABASE_SERVICE_ROLE_KEY));
+ for(const slug of slugs){const requests=calls.filter(c=>c.url.endsWith('/'+slug));for(const index of [2,3]){assert.equal(requests[index].headers.apikey,env.SUPABASE_SERVICE_ROLE_KEY);assert.equal(requests[index].headers.Authorization,undefined);}assert.equal(requests[0].headers.apikey,undefined);assert.equal(requests[1].headers.apikey,undefined);assert.equal(requests[3].body,'{}');}
+
  console.log('Release probe: Preview-only, fixed 16 requests, no input/secrets, no build calls, sanitized failures: PASS (offline only)');
 })().catch(error=>{console.error(error);process.exitCode=1;});

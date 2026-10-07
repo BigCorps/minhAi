@@ -1,3 +1,4 @@
+import { internalServiceHeaders } from '@/lib/internal-service-headers';
 import 'server-only';
 import { NextResponse } from 'next/server';
 
@@ -39,7 +40,8 @@ export async function GET() {
           method: test.method,
           headers: {
             'Content-Type': 'application/json',
-            ...(test.token ? { Authorization: `Bearer ${test.token}` } : {}),
+            ...(test.token === serviceRole ? internalServiceHeaders(serviceRole)
+              : test.token ? { Authorization: `Bearer ${test.token}` } : {}),
           },
           ...(test.method === 'POST' ? { body: '{}' } : {}),
           cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(5_000),

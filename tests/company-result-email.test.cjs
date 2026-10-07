@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
 const ts = require('typescript');
 
+function serviceHelper() { const exports={}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../lib/internal-service-headers.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,require:()=>({})}); return exports; }
 const root = path.resolve(__dirname, '..');
 const companyId = '11111111-1111-4111-8111-111111111111';
 const otherId = '22222222-2222-4222-8222-222222222222';
@@ -51,7 +52,7 @@ const admin = {
 const orders = {};
 vm.runInNewContext(transpile('lib/orders-server.ts'), {
   exports: orders, Date, Buffer, process: { env: {} },
-  require: name => name === 'server-only' ? {} : name === '@/lib/supabase-admin'
+  require: name => name === '@/lib/internal-service-headers' ? serviceHelper() : name === 'server-only' ? {} : name === '@/lib/supabase-admin'
     ? { createAdminClient: () => admin } : require(name),
 });
 
@@ -59,7 +60,7 @@ const route = {};
 vm.runInNewContext(transpile('app/api/public/company-result-email/route.ts'), {
   exports: route, Buffer, Date, URL, AbortSignal,
   process: { env: { NEXT_PUBLIC_SUPABASE_URL: 'https://supabase.test', SUPABASE_SERVICE_ROLE_KEY: 'mock-service-role' } },
-  require: name => name === 'server-only' ? {} : name === '@/lib/orders-server' ? orders
+  require: name => name === '@/lib/internal-service-headers' ? serviceHelper() : name === 'server-only' ? {} : name === '@/lib/orders-server' ? orders
     : name === '@/lib/supabase-admin' ? { createAdminClient: () => admin }
       : { NextResponse: { json: (body, options) => ({ body, ...options }) } },
   fetch: async (url, options) => {

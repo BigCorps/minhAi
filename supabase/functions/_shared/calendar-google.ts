@@ -1,3 +1,4 @@
+import { isInternalServiceRequest } from './internal-service-auth.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 export const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 export const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
@@ -5,7 +6,7 @@ export function json(error: string | null, status = 200, data: Record<string, un
 export function authorize(req: Request) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store', Allow: 'POST, OPTIONS' } });
   if (req.method !== 'POST') return json('method_not_allowed', 405);
-  if (!SERVICE_ROLE || req.headers.get('authorization') !== `Bearer ${SERVICE_ROLE}`) return json('unauthorized', 401);
+  if (!isInternalServiceRequest(req)) return json('unauthorized', 401);
   if (!SUPABASE_URL) return json('service_unavailable', 503);
   return null;
 }

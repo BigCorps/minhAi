@@ -1,4 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),ts=require('typescript');
+function serviceHelper() { const exports={}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../lib/internal-service-headers.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,require:()=>({})}); return exports; }
 const root=path.resolve(__dirname,'..'),id='11111111-1111-4111-8111-111111111111';
 let state,calls,queries;
 function reset(){state={companies:[{id,is_active:true,is_public:true,email_contato:'fallback@example.test'}],company_profiles:[{company_id:id,tipo:'gerente',is_active:true,nome:'Gerente',email:'manager@example.test',telefone:'5511999999999'}],company_function_settings:[],funcionaria_company_settings:[],count:0,errors:{},failEmail:false,failSms:false};calls=[];queries=[];}
@@ -8,7 +9,7 @@ const admin={from(table){const q={table,filters:[]};queries.push(q);return {
 };}};
 const route={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root,'app/api/public/manager-assistance/route.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{
  exports:route,Date,AbortSignal,process:{env:{NEXT_PUBLIC_SUPABASE_URL:'https://supabase.test',SUPABASE_SERVICE_ROLE_KEY:'service-secret',NEXT_PUBLIC_SUPABASE_ANON_KEY:'sms-public-key'}},
- require:name=>name==='server-only'?{}:name==='node:crypto'?require(name):name==='@/lib/supabase-admin'?{createAdminClient:()=>admin}:{NextResponse:{json:(body,options)=>({body:JSON.parse(JSON.stringify(body)),...options})}},
+ require:name=>name==='@/lib/internal-service-headers'?serviceHelper():name==='server-only'?{}:name==='node:crypto'?require(name):name==='@/lib/supabase-admin'?{createAdminClient:()=>admin}:{NextResponse:{json:(body,options)=>({body:JSON.parse(JSON.stringify(body)),...options})}},
  fetch:async(url,options)=>{calls.push({url,...options,body:JSON.parse(options.body)});const sms=url.endsWith('send-sms-gerente'),failed=sms?state.failSms:state.failEmail;return {ok:!failed,status:failed?(sms?402:502):200,json:async()=>failed?{error:'provider-secret'}:{success:true}};},
 });
 const post=extra=>route.POST({json:async()=>({company_id:id,reason:'Preciso de ajuda',...extra})});

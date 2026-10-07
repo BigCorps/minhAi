@@ -1,7 +1,8 @@
+import { isInternalServiceRequest } from '../_shared/internal-service-auth.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Exclusivamente server-to-server. Deploy futuro requer verify_jwt=false;
-// a autorização abaixo compara a credencial inteira, sem aceitar JWTs comuns.
+// a autorização compartilhada aceita apenas Bearer legado ou apikey secret configurada.
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const EMAIL_TYPES = new Set(['assistant_manual', 'assistant_result', 'manager_assistance', 'funcionaria_cash', 'meta_manual', 'pix', 'pedido', 'manual']);
@@ -99,8 +100,7 @@ async function readInput(req: Request): Promise<any> {
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: { Allow: 'POST, OPTIONS', 'Cache-Control': 'no-store' } });
   if (req.method !== 'POST') return json('method_not_allowed', 405);
-  const token = req.headers.get('authorization')?.match(/^Bearer\s+(\S+)$/i)?.[1];
-  if (!SERVICE_ROLE || token !== SERVICE_ROLE) return json('unauthorized', 401);
+  if (!isInternalServiceRequest(req)) return json('unauthorized', 401);
   if (!SUPABASE_URL) return json('service_unavailable', 503);
 
   let input;

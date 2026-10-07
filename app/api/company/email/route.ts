@@ -1,3 +1,4 @@
+import { internalServiceHeaders } from '@/lib/internal-service-headers';
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { cleanUuid, resolveCompanyActor } from '@/lib/orders-server';
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
     if (!url || !serviceRole) return json({ ok: false, reason: 'email_unavailable' }, 503);
     const response = await fetch(`${url}/functions/v1/enviar-email-google-v2`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceRole}` },
+      headers: { 'Content-Type': 'application/json', ...internalServiceHeaders(serviceRole) },
       body: JSON.stringify({
         company_id: id, to, subject, body: input.body,
         ...(attachments?.length ? { attachments } : {}), email_type: 'assistant_manual',

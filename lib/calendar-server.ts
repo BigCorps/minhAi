@@ -1,3 +1,4 @@
+import { internalServiceHeaders } from '@/lib/internal-service-headers';
 import 'server-only';
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-admin';
@@ -38,7 +39,7 @@ const SAFE_ERRORS = new Set(['company_not_found', 'google_account_unavailable', 
 export async function calendarEdge(name: 'listar-eventos-google-v2' | 'appointment-actions-v2' | 'criar-evento-calendario-v2', payload: any) {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY, url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!key || !url) throw { reason: 'calendar_unavailable', status: 503 };
-  const response = await fetch(`${url}/functions/v1/${name}`, { method: 'POST', headers: { Authorization: `Bearer ${key}`, apikey: key, 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(60000) });
+  const response = await fetch(`${url}/functions/v1/${name}`, { method: 'POST', headers: { ...internalServiceHeaders(key), 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(60000) });
   const result = await response.json().catch(() => null);
   if (!response.ok || result?.success !== true) throw { reason: SAFE_ERRORS.has(result?.error) ? result.error : 'calendar_unavailable', status: [404,409].includes(response.status) ? response.status : 502 };
   return result;

@@ -897,6 +897,13 @@ INSTRUÇÕES:
 
 // ─── Envio de emails de confirmação ──────────────────────────────────────────
 
+function escapeEmailHtml(value: unknown): string {
+  const entities: Record<string, string> = {
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }
+  return String(value ?? '').replace(/[&<>"']/g, char => entities[char])
+}
+
 async function enviarEmailsAgendamento(
   companyId: string,
   company: any,
@@ -928,7 +935,7 @@ async function enviarEmailsAgendamento(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${titulo}</title>
+  <title>${escapeEmailHtml(titulo)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f4f4f7; margin: 0; padding: 0; }
     .container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
@@ -948,20 +955,20 @@ async function enviarEmailsAgendamento(
 <body>
   <div class="container">
     <div class="header">
-      <h1>📅 ${titulo}</h1>
-      <p>${subtitulo}</p>
+      <h1>📅 ${escapeEmailHtml(titulo)}</h1>
+      <p>${escapeEmailHtml(subtitulo)}</p>
     </div>
     <div class="content">
       <div class="card">
-        ${dados.nome_cliente ? `<div class="row"><span class="label">👤 Cliente</span><span class="value">${dados.nome_cliente}</span></div>` : ''}
-        <div class="row"><span class="label">🔧 Serviço</span><span class="value">${dados.servico || 'Agendamento'}</span></div>
-        <div class="row"><span class="label">📅 Data</span><span class="value">${dataFormatada}</span></div>
-        <div class="row"><span class="label">🕐 Horário</span><span class="value">${horaInicio} – ${horaFim}</span></div>
-        ${dados.produto_preco ? `<div class="row"><span class="label">💰 Valor</span><span class="value">R$ ${dados.produto_preco.toFixed(2).replace('.', ',')}</span></div>` : ''}
-        ${dados.observacoes && dados.observacoes !== 'Nenhuma' ? `<div class="row"><span class="label">📝 Obs</span><span class="value">${dados.observacoes}</span></div>` : ''}
+        ${dados.nome_cliente ? `<div class="row"><span class="label">👤 Cliente</span><span class="value">${escapeEmailHtml(dados.nome_cliente)}</span></div>` : ''}
+        <div class="row"><span class="label">🔧 Serviço</span><span class="value">${escapeEmailHtml(dados.servico || 'Agendamento')}</span></div>
+        <div class="row"><span class="label">📅 Data</span><span class="value">${escapeEmailHtml(dataFormatada)}</span></div>
+        <div class="row"><span class="label">🕐 Horário</span><span class="value">${escapeEmailHtml(horaInicio)} – ${escapeEmailHtml(horaFim)}</span></div>
+        ${dados.produto_preco ? `<div class="row"><span class="label">💰 Valor</span><span class="value">R$ ${escapeEmailHtml(dados.produto_preco.toFixed(2).replace('.', ','))}</span></div>` : ''}
+        ${dados.observacoes && dados.observacoes !== 'Nenhuma' ? `<div class="row"><span class="label">📝 Obs</span><span class="value">${escapeEmailHtml(dados.observacoes)}</span></div>` : ''}
       </div>
       ${paraCliente
-        ? `<p style="font-size:14px;color:#64748b;margin:0">Em caso de dúvidas ou para remarcar, entre em contato com <strong>${companyName}</strong>.</p>`
+        ? `<p style="font-size:14px;color:#64748b;margin:0">Em caso de dúvidas ou para remarcar, entre em contato com <strong>${escapeEmailHtml(companyName)}</strong>.</p>`
         : `<p style="font-size:14px;color:#64748b;margin:0">Novo agendamento registrado no Google Calendar.</p>`
       }
     </div>

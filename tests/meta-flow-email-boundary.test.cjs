@@ -9,9 +9,11 @@ const file = path.join(root, 'supabase/functions/meta-flow-agenda/index.ts');
 const original = fs.readFileSync(file, 'utf8');
 const source = ts.createSourceFile(file, original, ts.ScriptTarget.Latest, true);
 const fn = source.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'enviarEmailsAgendamento');
+const escape = source.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'escapeEmailHtml');
 assert.ok(fn);
+assert.ok(escape);
 // Executar a função real; somente banco/fetch/console são substituídos.
-const compiled = ts.transpileModule(fn.getText(source) + '\nexports.send = enviarEmailsAgendamento;', {
+const compiled = ts.transpileModule(escape.getText(source) + '\n' + fn.getText(source) + '\nexports.send = enviarEmailsAgendamento; exports.escape = escapeEmailHtml;', {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 let calls, queries, logs, account, fail;
@@ -32,7 +34,7 @@ vm.runInNewContext(compiled, { exports: exported, supabaseUrl: 'https://supabase
 });
 function reset() { calls=[]; queries=[]; logs=[]; account={google_email:'company@example.test'}; fail=null; }
 const data = {nome_cliente:'Cliente',email_cliente:'customer@example.test',servico:'Consulta',observacoes:'Nenhuma'};
-async function send(dados=data) { await exported.send('company-id',{name:'Empresa'},dados,new Date('2026-10-07T12:00:00Z'),new Date('2026-10-07T13:00:00Z'),supabase); }
+async function send(dados=data, company={name:'Empresa'}) { await exported.send('company-id',company,dados,new Date('2026-10-07T12:00:00Z'),new Date('2026-10-07T13:00:00Z'),supabase); }
 (async()=>{
   reset(); await send(); assert.equal(calls.length,2);
   assert.deepEqual(calls.map(c=>c.body.to),['customer@example.test','company@example.test']);
@@ -50,6 +52,33 @@ async function send(dados=data) { await exported.send('company-id',{name:'Empres
     assert.ok(logs.length>0); assert.ok(logs.every(line=>line==='appointment_email_failed'));
     assert.equal(queries.length,1); // Nenhuma alteração/rollback de appointment por falha de email.
   }
+  assert.equal(exported.escape('&<>"\''), '&amp;&lt;&gt;&quot;&#39;');
+  const attacks = [
+    ['<script>alert(1)</script>', '&lt;script&gt;alert(1)&lt;/script&gt;'],
+    ['<img src=x onerror=alert(1)>', '&lt;img src=x onerror=alert(1)&gt;'],
+    ['<a href="https://evil.test">click</a>', '&lt;a href=&quot;https://evil.test&quot;&gt;click&lt;/a&gt;'],
+    ['& < > " \'', '&amp; &lt; &gt; &quot; &#39;'],
+  ];
+  for (const [attack, escaped] of attacks) {
+    for (const field of ['nome_cliente', 'servico', 'observacoes']) {
+      reset(); await send({...data, [field]: attack}); assert.equal(calls.length, 2);
+      for (const call of calls) {
+        assert.ok(!call.body.body.includes(attack), `${field}: raw HTML must not reach Edge`);
+        assert.ok(call.body.body.includes(escaped), `${field}: escaped text must remain visible`);
+        assert.ok(call.body.body.includes('<div class="container">')); // Markup/layout intacto.
+      }
+      if (field === 'nome_cliente') assert.ok(calls[0].body.body.includes(`<p>Olá ${escaped}, seu horário está reservado.</p>`));
+    }
+    reset(); await send(data, {name: attack});
+    assert.ok(!calls[0].body.body.includes(attack));
+    assert.ok(calls[0].body.body.includes(`<strong>${escaped}</strong>`));
+  }
+  // Verificar todo o template: valores escalares (inclusive título) só entram escapados.
+  const build = original.slice(original.indexOf('  const buildHtml ='), original.indexOf('  const sendEmail ='));
+  for (const value of ['titulo', 'subtitulo', 'dados.nome_cliente', "dados.servico || 'Agendamento'", 'dataFormatada', 'horaInicio', 'horaFim', "dados.produto_preco.toFixed(2).replace('.', ',')", 'dados.observacoes', 'companyName']) {
+    assert.ok(build.includes('${escapeEmailHtml(' + value + ')}'), value + ' must be escaped');
+    assert.ok(!build.includes('${' + value + '}'), value + ' must not be interpolated raw');
+  }
   assert.ok(/enviarEmailsAgendamento\([^]*?\.catch\(\s*\(\) => console.warn\('appointment_email_failed'\)/.test(original));
   assert.equal(spawnSync(process.execPath,['scripts/check-email-edge-boundary.mjs'],{cwd:root}).status,0);
   // Provar que o guardrail rejeita tanto endpoint Gmail quanto leitura de tokens.
@@ -59,5 +88,5 @@ async function send(dados=data) { await exported.send('company-id',{name:'Empres
       assert.equal(spawnSync(process.execPath,['scripts/check-email-edge-boundary.mjs'],{cwd:root}).status,1);
     }
   } finally { fs.writeFileSync(file,original); }
-  console.log('Meta Flow email boundary: 10 groups passed (no real Gmail)');
+  console.log('Meta Flow email boundary: HTML escaping + 10 existing groups passed (no real Gmail)');
 })().catch(error=>{console.error(error);process.exitCode=1;});

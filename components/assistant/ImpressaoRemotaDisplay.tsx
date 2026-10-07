@@ -46,6 +46,7 @@ interface PixData {
   qr_code: string;
   qr_code_url: string;
   transaction_id: string;
+  cancel_capability?: string;
   company_name?: string;
 }
 
@@ -230,7 +231,7 @@ if (manualPaymentEnabled) {
     try {
       await playText(`Gerando cobrança de ${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} via PIX...`);
 
-      const { data: pixResult, error } = await supabase.functions.invoke('gerar-pix-assistente', {
+      const { data: pixResult, error } = await supabase.functions.invoke('gerar-pix-assistente-v2', {
         body: {
           company_id: data.companyId,
           amount_cents: Math.round(amount * 100),
@@ -245,6 +246,7 @@ if (manualPaymentEnabled) {
         qr_code: pixResult.pix_code,
         qr_code_url: pixResult.qr_code_url,
         transaction_id: pixResult.transaction_id,
+        cancel_capability: pixResult.cancel_capability,
         company_name: pixResult.company_name,
       });
 
@@ -372,6 +374,8 @@ if (manualPaymentEnabled) {
       {stage === 'payment' && pixData?.qr_code && pixData?.qr_code_url && printJob && (
         <PIXConfirmationModal
           transactionId={pixData.transaction_id}
+          cancelCapability={pixData.cancel_capability}
+          companyId={data.companyId}
           amount={printJob.total_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           qrCodeUrl={pixData.qr_code_url}
           pixCode={pixData.qr_code}

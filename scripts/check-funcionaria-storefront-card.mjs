@@ -20,7 +20,7 @@ for (const required of [
   "status='paid'",
   'v_card.provider_amount_cents <> v_gross',
   "coalesce(v_card.capture_method,'') <> 'credit_card'",
-  'v_card.provider_paid_amount_cents <= v_card.provider_amount_cents',
+  "coalesce(v_card.provider_paid_amount_cents,0) <= v_card.provider_amount_cents",
   "raise exception 'infinitepay_provider_fee_must_be_zero'",
   "v_method := 'cartao'",
 ]) if (!sql.includes(required)) fail('SQL missing card settlement invariant: ' + required)

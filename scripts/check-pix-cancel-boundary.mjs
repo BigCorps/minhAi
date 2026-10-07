@@ -16,6 +16,14 @@ for (const required of [
 if (cancelV2.includes('proxyLegacy')) fail('V2 must not proxy to legacy cancellation')
 if (/select\([^)]*user_id/.test(cancelV2)) fail('transaction.user_id must not be used as payer ownership')
 
+
+const authIndex = cancelV2.indexOf("const internal = isInternalServiceRequest(req)")
+const lookupIndex = cancelV2.indexOf("from('pix_transactions')")
+if (authIndex < 0 || lookupIndex < 0 || authIndex > lookupIndex) fail('authorization must happen before transaction lookup')
+for (const required of ['SUPABASE_SECRET_KEYS', 'SUPABASE_PUBLISHABLE_KEYS']) {
+  if (!cancelV2.includes(required)) fail('V2 must support modern Supabase API keys: ' + required)
+}
+
 const legacy = read('supabase/functions/cancelar-pix-assistente/index.ts')
 if (!legacy.includes('/functions/v1/cancelar-pix-assistente-v2')) fail('legacy cancel must delegate to V2')
 for (const forbidden of ['SUPABASE_SERVICE_ROLE_KEY', "from('pix_transactions')"]) {

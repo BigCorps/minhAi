@@ -227,6 +227,7 @@ export default function AdminCommercial({
           {[
             ["campaigns", "Campanhas"],
             ["leads", "Contatos & funil"],
+            ["partners", "Parceiros"],
             ["templates", "Mensagens"],
             ["monitoria", "MonitorIA"],
             ["results", "Resultados"],
@@ -244,6 +245,7 @@ export default function AdminCommercial({
           <p>Carregando operação comercial…</p>
         ) : (
           <>
+            {tab === "partners" && <PartnersPanel data={data.partners} action={action} busy={busy} />}
             {tab === "campaigns" && (
               <div className="space-y-5">
                 <section className={card}>
@@ -1225,4 +1227,54 @@ function Monitoria({ value }: any) {
       </section>
     </div>
   );
+}
+
+function PartnersPanel({ data, action, busy }: any) {
+  if (data?.available === false) return <section className={card}>Programa de parceiros aguardando aplicação da migration revisada. As demais áreas do Comercial continuam disponíveis.</section>;
+  const statuses: Record<string, string> = { prospected: "Prospectado", contacted: "Contatado", interested: "Interessado", active: "Ativo", paused: "Pausado", closed: "Encerrado" };
+  return <div className="space-y-5">
+    <section className={card}>
+      <h2 className="font-bold">Candidatos do SDR</h2>
+      <p className="mt-2 text-sm text-slate-400">Promoção manual. Lead e classificação são preservados. Links preparados; nenhuma indicação, mensagem ou benefício será executado.</p>
+      <p className="text-xs text-slate-400">Até 200 candidatos e participações por consulta; contadores limitados aos 1.000 referrals mais recentes retornados.</p>
+      {(data?.candidates || []).map((o: any) => <form key={o.id} className="mt-4 flex flex-wrap items-end gap-3" onSubmit={(e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault(); const f = new FormData(e.currentTarget);
+        void action({ action: "partner_promote", id: o.id, programId: f.get("programId"), slug: f.get("slug") }, "Parceiro criado ou participação existente recuperada.");
+      }}>
+        <p>{o.lead.company_name} · {PRODUCTS[o.product as Product]?.name}</p>
+        <label>Programa <select name="programId" className={input} disabled={busy} required defaultValue={(data.programs || []).find((p: any) => p.product === o.product)?.id}>
+          {(data.programs || []).filter((p: any) => p.status === "active").map((p: any) => <option value={p.id} key={p.id}>{p.name}</option>)}
+        </select></label>
+        <label>Slug opcional <input name="slug" className={input} placeholder="espacoillumina" pattern="[a-z0-9][a-z0-9-]{2,63}" maxLength={64} disabled={busy} /></label>
+        <button className={button} disabled={busy || !data.programs?.some((p: any) => p.status === "active")}>Promover a parceiro</button>
+      </form>)}
+      {!data?.candidates?.length && <p className="mt-3">Nenhum candidato classificado como parceiro nesta consulta.</p>}
+    </section>
+    <section className={card}><h2 className="font-bold">Participações nos programas</h2>
+      {(data?.memberships || []).map((m: any) => {
+        const referrals = (data.referrals || []).filter((r: any) => r.membership_id === m.id);
+        const conversions = referrals.filter((r: any) => r.status === "converted");
+        const link = m.links?.[0];
+        return <article className="mt-4 rounded-xl border border-white/10 p-4" key={m.id}>
+          <h3 className="font-bold">{m.partner.company_name} · {m.program.name}</h3>
+          <p>Status: {statuses[m.status]} · Indicações: {referrals.length} · Conversões: {conversions.length} · Valor registrado: {money(conversions.reduce((n: number, r: any) => n + Number(r.converted_value_cents), 0))}</p>
+          {link && <p className="break-all">Código: {link.code} · Slug: {link.slug}{m.program.link_base_url && <> · Link planejado: {m.program.link_base_url}{link.slug}</>}</p>}
+          <p className="text-xs text-slate-400">A rota pública e a concessão de benefícios serão implementadas em uma etapa posterior.</p>
+          <PartnerStatusForm membership={m} statuses={statuses} action={action} busy={busy} />
+        </article>;
+      })}
+      {!data?.memberships?.length && <p className="mt-3">Nenhum parceiro promovido ainda.</p>}
+    </section>
+  </div>;
+}
+
+function PartnerStatusForm({ membership, statuses, action, busy }: any) {
+  const [status, setStatus] = useState(membership.status);
+  useEffect(() => { setStatus(membership.status); }, [membership.id, membership.status]);
+  return <form className="mt-3 flex gap-3" onSubmit={(e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    void action({ action: "partner_status", id: membership.id, status }, "Status do parceiro atualizado.");
+  }}><label>Status <select name="status" className={input} value={status} onChange={(e) => setStatus(e.target.value)} disabled={busy}>
+    {Object.entries(statuses).map(([value, label]) => <option key={value} value={value}>{String(label)}</option>)}
+  </select></label><button className={button} disabled={busy}>Salvar status</button></form>;
 }

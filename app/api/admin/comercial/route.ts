@@ -15,6 +15,7 @@ import {
   PRODUCTS,
 } from "@/lib/sdr/catalog";
 import { discover, verifyEmail, enrichEconodataDecisionMaker, findHunterDecisionMakerEmail } from "@/lib/sdr/providers";
+import { partnerSnapshot, promotePartner, updatePartnerStatus } from "@/lib/sdr/partners";
 import { saveCommercialClassification } from "@/lib/sdr/commercial-classification-server";
 import { discoverWebCompanies } from "@/lib/sdr/web-discovery";
 import { researchBusinessContact } from "@/lib/sdr/web-research";
@@ -69,6 +70,7 @@ export async function GET(req: Request) {
       queue,
       metrics,
       monitoria,
+      partners,
     ] = await Promise.all([
       d.from("sdr_campaigns").select("*").order("lane").order("product"),
       oq,
@@ -86,6 +88,7 @@ export async function GET(req: Request) {
         .limit(100),
       d.rpc("sdr_metrics"),
       monitoriaSnapshot(),
+      partnerSnapshot(),
     ]);
     return {
       campaigns: checked(campaigns),
@@ -98,6 +101,7 @@ export async function GET(req: Request) {
       queue: checked(queue),
       metrics: checked(metrics),
       monitoria,
+      partners,
       config: {
         live: process.env.SDR_LIVE_SEND === "true",
         token: !!process.env.SDR_TOKEN_SECRET,
@@ -119,6 +123,10 @@ export async function POST(req: Request) {
       d = db();
     const id = text(input.id, 100);
     switch (input.action) {
+      case "partner_promote":
+        return promotePartner(id, input.programId, input.slug);
+      case "partner_status":
+        return updatePartnerStatus(id, input.status);
       case "commercial_classification":
         return saveCommercialClassification(id, input.mode, input.type);
       case "web_discover_companies":

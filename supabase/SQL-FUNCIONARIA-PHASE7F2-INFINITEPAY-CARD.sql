@@ -165,6 +165,12 @@ begin
        or v_payment.pedido_id <> v_checkout.pedido_id then
       raise exception 'card_session_conflict';
     end if;
+    if v_payment.status='reconciliation_required' then
+      raise exception 'card_reconciliation_required';
+    end if;
+    if v_payment.status='failed' then
+      raise exception 'card_session_failed';
+    end if;
     update public.funcionaria_storefront_card_payments
        set checkout_url=p_checkout_url,updated_at=now()
      where id=v_payment.id

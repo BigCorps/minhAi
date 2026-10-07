@@ -260,6 +260,7 @@ function cardPayload(payment: any, checkout: any) {
     amount_cents: Number(payment?.expected_amount_cents || 0),
     provider_paid_amount_cents: Number(payment?.provider_paid_amount_cents || 0),
     provider_surcharge_cents: Number(payment?.provider_surcharge_cents || 0),
+    can_reopen: payment?.status === 'pending' && !payment?.transaction_nsu,
     receipt_token: checkout?.status === 'pago' || payment?.status === 'paid' ? checkout?.receipt_token || null : null,
   }
 }
@@ -335,13 +336,17 @@ async function createCard(supabase: any, checkoutId: string) {
     throw error
   }
 
+  const preparedStatus = String(data?.status || 'pending')
+  const preparedOrderNsu = String(data?.order_nsu || cardOrderNsu(checkout.id))
+  if (preparedStatus === 'paid') return await confirmCardByOrder(supabase, preparedOrderNsu)
+
   return json({
     success: true,
-    status: String(data?.status || 'pending'),
+    status: preparedStatus,
     payment_method: 'card',
     provider: 'infinitepay_bigcorps',
     checkout_id: checkout.id,
-    order_nsu: String(data?.order_nsu || cardOrderNsu(checkout.id)),
+    order_nsu: preparedOrderNsu,
     checkout_url: String(data?.checkout_url || checkoutUrl),
     amount_cents: amountCents,
     receipt_token: data?.receipt_token || null,
@@ -607,6 +612,9 @@ async function createPix(supabase: any, checkoutId: string) {
   }
 
   if (!['aguardando_pagamento', 'em_pagamento'].includes(String(checkout.status || ''))) {
+    return json({ error: 'payment_in_progress' }, 409)
+  }
+  if (checkout.card_provider || checkout.cash_requested_at) {
     return json({ error: 'payment_in_progress' }, 409)
   }
 

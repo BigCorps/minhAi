@@ -99,6 +99,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
       default: ({ data, onClose, theme, onConfirmPix, onCancelPix, printOnPayment, hasActivePlan }: any) => (
         <mod.default
           transactionId={data.transactionId}
+          cancelCapability={data.cancelCapability}
           amount={data.amount}
           qrCodeUrl={data.qrCodeUrl}
           pixCode={data.pixCode}

@@ -39,6 +39,7 @@ export async function handlePixCommand(
 
     const pixData: PixConfirmationData = {
       transactionId: data.transaction_id,
+      cancelCapability: data.cancel_capability,
       amount: data.amount_brl,
       qrCodeUrl: data.qr_code_url,
       pixCode: data.pix_code,
@@ -163,8 +164,12 @@ export async function handleCancelPix(
     await playText('Cancelando PIX...');
 
     const supabase = createClient();
-    const response = await supabase.functions.invoke('cancelar-pix-assistente', {
-      body: { transaction_id: pixConfirmationData.transactionId },
+    const response = await supabase.functions.invoke('cancelar-pix-assistente-v2', {
+      body: {
+        transaction_id: pixConfirmationData.transactionId,
+        company_id: companyId,
+        cancel_capability: pixConfirmationData.cancelCapability,
+      },
     });
 
     if (response.error) throw response.error;

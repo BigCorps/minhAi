@@ -48,14 +48,16 @@ export const pixCancelHandler: FunctionHandler = {
       // Feedback imediato
       await context.playText('Cancelando PIX...');
       
-      console.log('📤 Chamando Edge Function: cancelar-pix-assistente');
+      console.log('📤 Chamando Edge Function: cancelar-pix-assistente-v2');
       console.log('📦 Payload:', {
         transaction_id: currentData.transactionId
       });
       
-      const response = await context.supabase.functions.invoke('cancelar-pix-assistente', {
+      const response = await context.supabase.functions.invoke('cancelar-pix-assistente-v2', {
         body: {
-          transaction_id: currentData.transactionId
+          transaction_id: currentData.transactionId,
+          company_id: context.companyId,
+          cancel_capability: currentData.cancelCapability,
         }
       });
       

@@ -45,6 +45,7 @@ export const pixGenerateHandler: FunctionHandler = {
       const discount = Number(data.discount_cents || 0);
       context.setPixConfirmationData({
         transactionId: data.transaction_id,
+        cancelCapability: data.cancel_capability,
         amount: effective,
         qrCodeUrl: data.qr_code_url,
         pixCode: data.pix_code,

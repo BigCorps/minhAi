@@ -9,6 +9,7 @@ import { useTurnstile } from '@/hooks/useTurnstile';
 
 interface PIXConfirmationModalProps {
   transactionId: string;
+  cancelCapability?: string;
   amount: string;
   qrCodeUrl: string;
   pixCode: string;
@@ -25,6 +26,7 @@ interface PIXConfirmationModalProps {
 
 export default function PIXConfirmationModal({
   transactionId,
+  cancelCapability,
   amount,
   qrCodeUrl,
   pixCode,
@@ -176,8 +178,8 @@ const handleConfirm = async () => {
   const handleCancel = async () => {
     setIsCancelling(true);
     try {
-      const { data, error } = await supabase.functions.invoke('cancelar-pix-assistente', {
-        body: { transaction_id: transactionId },
+      const { data, error } = await supabase.functions.invoke('cancelar-pix-assistente-v2', {
+        body: { transaction_id: transactionId, company_id: companyId, cancel_capability: cancelCapability },
       });
       if (error) throw error;
       console.log('✅ PIX cancelado:', data);

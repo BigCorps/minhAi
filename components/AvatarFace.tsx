@@ -20,6 +20,7 @@ interface AvatarFaceProps {
   } | null;
   pixConfirmationData?: {
     transactionId: string;
+    cancelCapability?: string;
     amount: string;
     qrCodeUrl: string;
     pixCode: string;
@@ -603,6 +604,7 @@ export function AvatarFace({
         <div className="absolute inset-0 z-[100]">
           <PixConfirmationModal
             transactionId={pixConfirmationData.transactionId}
+            cancelCapability={pixConfirmationData.cancelCapability}
             amount={pixConfirmationData.amount}
             qrCodeUrl={pixConfirmationData.qrCodeUrl}
             pixCode={pixConfirmationData.pixCode}

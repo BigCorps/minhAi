@@ -26,6 +26,7 @@ export interface QRCodeData {
 }
 export interface PixConfirmationData {
   transactionId: string;
+  cancelCapability?: string;
   amount: string;
   qrCodeUrl: string;
   pixCode: string;
@@ -70,6 +71,7 @@ export interface ActiveModal {
 }
 export interface PIXConfirmationData {
   transactionId: string;
+  cancelCapability?: string;
   amount: string;
   qrCodeUrl: string;
   pixCode: string;

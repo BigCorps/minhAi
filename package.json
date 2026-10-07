@@ -7,7 +7,7 @@
     "check:email-edge-boundary": "node scripts/check-email-edge-boundary.mjs",
     "check:email-boundary": "node scripts/check-email-edge-boundary.mjs",
     "dev": "next dev --webpack",
-    "prebuild": "npm run check:pix-cancel-boundary && node tests/pix-cancel-capability.test.cjs",
+    "prebuild": "npm run check:pix-cancel-boundary && node scripts/test-pix-cancel-capability.cjs",
     "build": "NODE_OPTIONS=--max-old-space-size=6144 next build --webpack",
     "start": "next start",
     "lint": "next lint",

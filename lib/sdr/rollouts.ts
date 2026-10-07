@@ -7,7 +7,10 @@ export const ROLLOUT_STATUSES = ["draft", "pilot", "ready", "active", "paused"] 
 export async function rolloutSnapshot() {
   const result = await db().from("sdr_product_rollouts").select("*").order("product");
   if (result.error && ["42P01", "PGRST205"].includes(result.error.code)) return { available: false, rows: [] };
-  return { available: true, rows: checked(result) || [] };
+  const usage = await db().from("sdr_manual_pilot_opportunities").select("product,opportunity_id");
+  const migrationPending = !!usage.error && ["42P01", "PGRST205"].includes(usage.error.code);
+  const slots = migrationPending ? [] : checked(usage) || [];
+  return { available: true, manualPilotAvailable: !migrationPending, rows: (checked(result) || []).map(r => ({ ...r, manual_pilot_used: slots.filter(s => s.product === r.product).length, manual_pilot_available: !migrationPending })) };
 }
 
 function integer(v: unknown, min: number, max: number) {
@@ -35,4 +38,9 @@ export async function updateProductRollout(productValue: unknown, input: any) {
     p_pilot_limit: pilotLimit,
     p_daily_send_cap: dailyCap,
   }));
+}
+
+export async function updateManualPilotGate(product: unknown, enabled: unknown) {
+  if (!isProduct(product) || typeof enabled !== "boolean") throw new Error("invalid_manual_pilot_gate");
+  return checked(await db().rpc("sdr_set_manual_pilot_gate", { p_product: product, p_enabled: enabled }));
 }

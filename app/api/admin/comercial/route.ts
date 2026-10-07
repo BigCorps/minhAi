@@ -15,7 +15,7 @@ import {
 import { discover, verifyEmail, enrichEconodataDecisionMaker, findHunterDecisionMakerEmail } from "@/lib/sdr/providers";
 import { partnerSnapshot, promotePartner, updatePartnerStatus } from "@/lib/sdr/partners";
 import { previewOutreach, enqueueReviewedOutreach } from "@/lib/sdr/outreach-server";
-import { rolloutSnapshot, updateProductRollout } from "@/lib/sdr/rollouts";
+import { rolloutSnapshot, updateProductRollout, updateManualPilotGate } from "@/lib/sdr/rollouts";
 import { saveCommercialClassification } from "@/lib/sdr/commercial-classification-server";
 import { discoverWebCompanies } from "@/lib/sdr/web-discovery";
 import { researchBusinessContact } from "@/lib/sdr/web-research";
@@ -125,6 +125,11 @@ export async function POST(req: Request) {
       d = db();
     const id = text(input.id, 100);
     switch (input.action) {
+      case "manual_pilot_gate": {
+        const result = await updateManualPilotGate(input.product, input.enabled);
+        await event(actor, "manual_pilot_gate_changed", null, null, { product: input.product, enabled: input.enabled });
+        return result;
+      }
       case "product_rollout":
         return updateProductRollout(input.product, input);
       case "partner_promote":

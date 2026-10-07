@@ -1327,6 +1327,17 @@ function RolloutForm({ rollout, live, action, busy }: any) {
       <label className="flex gap-2"><input type="checkbox" checked={autoOutreach} onChange={e=>setAutoOutreach(e.target.checked)} disabled={busy}/> Outreach automático</label>
       <label className="flex gap-2"><input type="checkbox" checked={liveSend} onChange={e=>setLiveSend(e.target.checked)} disabled={busy}/> Liberar envio deste produto</label>
     </div>
+    <section className="mt-4 rounded-xl border border-amber-400/30 p-3 text-sm">
+      <p className="font-bold">Piloto manual: {rollout.manual_pilot_send_enabled ? "LIBERADO" : "BLOQUEADO"}</p>
+      <p>Oportunidades distintas utilizadas: {rollout.manual_pilot_used ?? 0}/{rollout.pilot_limit}. Preparadas e canceladas também ocupam uma vaga.</p>
+      <p className="text-xs text-slate-400">Email, um toque e fila explicitamente revisada. Não libera automação. O cadeado global e todos os demais gates permanecem.</p>
+      {!rollout.manual_pilot_available && <p>Migration de pilot readiness pendente de revisão/aplicação.</p>}
+      <button type="button" className={button + " mt-2 border border-amber-400/50"} disabled={busy || rollout.status !== "pilot" || !rollout.manual_pilot_available} onClick={() => {
+        const enabled = !rollout.manual_pilot_send_enabled;
+        if (confirm(enabled ? "Liberar EXPLICITAMENTE apenas o piloto manual? Isso não libera automação; os demais gates continuam obrigatórios." : "Bloquear o piloto manual deste produto?"))
+          void action({ action: "manual_pilot_gate", product: rollout.product, enabled }, "Gate separado do piloto manual atualizado.");
+      }}>{rollout.manual_pilot_send_enabled ? "Bloquear piloto manual" : "Liberar somente piloto manual…"}</button>
+    </section>
     <p className="mt-3 text-xs text-slate-400">Canal inicial: email. WhatsApp somente após consentimento. {playbook.manualReviewRequired ? "Revisão humana obrigatória antes de outreach." : "Revisão comercial permanece recomendada no piloto."} {!live && liveSend ? "O cadeado global ainda impede qualquer envio." : ""}</p>
     <button className={button + " mt-4"} disabled={busy}>Salvar rollout</button>
   </form>;

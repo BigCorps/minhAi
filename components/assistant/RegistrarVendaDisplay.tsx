@@ -26,6 +26,7 @@ interface RegistrarVendaDisplayProps {
 
 type PixData = {
   transactionId: string;
+  cancelCapability?: string;
   qrCodeUrl: string;
   pixCode: string;
   companyName: string;
@@ -193,7 +194,7 @@ export default function RegistrarVendaDisplay({
         const supabase = createClient();
         const descricao = produto.trim() || 'Venda rápida';
 
-        const { data: pixResult, error } = await supabase.functions.invoke('gerar-pix-assistente', {
+        const { data: pixResult, error } = await supabase.functions.invoke('gerar-pix-assistente-v2', {
           body: {
             company_id:   companyId,
             amount_cents: Math.round(valorNumerico * 100),
@@ -205,6 +206,7 @@ export default function RegistrarVendaDisplay({
 
         setPixData({
           transactionId: pixResult.transaction_id,
+          cancelCapability: pixResult.cancel_capability,
           qrCodeUrl:     pixResult.qr_code_url,
           pixCode:       pixResult.pix_code,
           companyName:   pixResult.company_name ?? '',
@@ -233,6 +235,8 @@ export default function RegistrarVendaDisplay({
     return (
       <PIXConfirmationModal
         transactionId={pixData.transactionId}
+        cancelCapability={pixData.cancelCapability}
+        companyId={companyId}
         amount={valorNumerico.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         qrCodeUrl={pixData.qrCodeUrl}
         pixCode={pixData.pixCode}

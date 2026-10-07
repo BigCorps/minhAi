@@ -1,3 +1,4 @@
+import { getSupabaseServerKey } from '@/lib/supabase-server-key';
 import { internalServiceHeaders } from '@/lib/internal-service-headers';
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
     }
 
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const serviceRole = getSupabaseServerKey();
     // SMS usa o caminho público existente da Edge, preservando também seu
     // limite legado (a autenticação service_role contornaria esse limite).
     const smsKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

@@ -1,3 +1,4 @@
+import { getSupabaseServerKey } from '@/lib/supabase-server-key';
 import { internalServiceHeaders } from '@/lib/internal-service-headers';
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
     if (count >= 20) return json({ ok: false, reason: 'rate_limited' }, 429);
 
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const serviceRole = getSupabaseServerKey();
     if (!url || !serviceRole) return json({ ok: false, reason: 'email_unavailable' }, 503);
     const response = await fetch(`${url}/functions/v1/enviar-email-google-v2`, {
       method: 'POST',

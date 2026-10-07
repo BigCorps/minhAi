@@ -1,3 +1,4 @@
+import { getSupabaseServerKey } from '@/lib/supabase-server-key';
 import { internalServiceHeaders } from '@/lib/internal-service-headers';
 import 'server-only';
 import { NextResponse } from 'next/server';
@@ -19,7 +20,10 @@ function json(body: unknown, status: number) {
 // Sem argumento Request: query, body e headers externos nunca definem os probes.
 export async function GET() {
   if (process.env.VERCEL_ENV !== 'preview') return json({ success: false }, 404);
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  let serviceRole: string;
+  try { serviceRole = getSupabaseServerKey(); } catch {
+    return json({ success: false, probes: {} }, 503);
+  }
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, '');
   if (!serviceRole || base !== 'https://qyonozbroekuqlotqcbm.supabase.co') {
     return json({ success: false, probes: {} }, 503);
@@ -58,7 +62,7 @@ export async function GET() {
     return { slug, statuses, passed };
   }));
   const success = results.every(result => result.passed);
-  return json({ success, probes: Object.fromEntries(results.map(result => [result.slug, result.statuses])) }, success ? 200 : 502);
+  return json({ success, credential_source: process.env.SUPABASE_SECRET_KEY !== undefined ? 'supabase_secret_key' : 'legacy_service_role', credential_family: serviceRole.startsWith('sb_secret_') ? 'sb_secret' : 'legacy', probes: Object.fromEntries(results.map(result => [result.slug, result.statuses])) }, success ? 200 : 502);
 }
 
 function unsupported() {

@@ -8,7 +8,8 @@ function load(file){file=path.resolve(root,file);if(!file.endsWith('.ts'))file+=
 const modules=['app/api/company/email/route.ts','app/api/public/company-result-email/route.ts','app/api/public/manager-assistance/route.ts'];
 (async()=>{
  for(const credential of ['legacy-service-jwt','sb_secret_modern']){
-  env.SUPABASE_SERVICE_ROLE_KEY=credential;
+  env.SUPABASE_SERVICE_ROLE_KEY='legacy-service-jwt';
+  if(credential.startsWith('sb_secret_'))env.SUPABASE_SECRET_KEY=credential;else delete env.SUPABASE_SECRET_KEY;
   for(const file of modules){calls=[];const req=new Request('https://app.test/api/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_id:id,to:'destination@example.test',subject:'Assunto',body:'Texto',reason:'Ajuda'})});
    // Result endpoint estrito não aceita recipient/body extras de outro contrato.
    const input=file.includes('company-result-email')?{company_id:id,subject:'Assunto',body:'Texto'}:file.includes('manager-assistance')?{company_id:id,reason:'Ajuda'}:{company_id:id,to:'destination@example.test',subject:'Assunto',body:'Texto'};
@@ -18,5 +19,7 @@ const modules=['app/api/company/email/route.ts','app/api/public/company-result-e
   calls=[];await load('lib/calendar-server.ts').calendarEdge('listar-eventos-google-v2',{});assert.equal(calls.length,1);check(calls[0],credential);
  }
  function check(call,credential){assert.equal(call.headers.apikey,credential);assert.equal(call.headers.Authorization,credential.startsWith('sb_secret_')?undefined:'Bearer '+credential);assert.ok(call.url.includes('-v2'));}
+ for(const invalid of ['', 'sb_secret_', 'bad', 'sb_secret_bad\n']){env.SUPABASE_SECRET_KEY=invalid;calls=[];assert.throws(()=>load('lib/supabase-server-key.ts').getSupabaseServerKey(),/supabase_server_key_unavailable/);await assert.rejects(()=>load('lib/calendar-server.ts').calendarEdge('listar-eventos-google-v2',{}));assert.equal(calls.length,0);for(const file of modules){const input=file.includes('manager-assistance')?{company_id:id,reason:'Ajuda'}:file.includes('company-result-email')?{company_id:id,subject:'Assunto',body:'Texto'}:{company_id:id,to:'destination@example.test',subject:'Assunto',body:'Texto'};const request=new Request('https://app.test/api/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input)});Object.defineProperty(request,'nextUrl',{value:new URL(request.url)});const result=await load(file).POST(request);assert.ok([502,503].includes(result.status));assert.equal(calls.length,0);}}
+ delete env.SUPABASE_SECRET_KEY;
  console.log('All four Next boundaries use actual server-only credential strategy; no real requests');
 })().catch(error=>{console.error(error);process.exitCode=1;});

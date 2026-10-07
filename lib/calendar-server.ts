@@ -1,3 +1,4 @@
+import { getSupabaseServerKey } from '@/lib/supabase-server-key';
 import { internalServiceHeaders } from '@/lib/internal-service-headers';
 import 'server-only';
 import { NextResponse } from 'next/server';
@@ -37,7 +38,7 @@ export async function publicCompany(req: Request, input: any, id: string) {
 }
 const SAFE_ERRORS = new Set(['company_not_found', 'google_account_unavailable', 'google_reconnect_required', 'calendar_scope_required', 'calendar_result_limit', 'appointment_not_found', 'invalid_appointment_state', 'slot_unavailable', 'invalid_dates', 'appointment_update_failed', 'calendar_delete_failed', 'calendar_update_failed', 'calendar_slot_unavailable', 'appointment_record_failed']);
 export async function calendarEdge(name: 'listar-eventos-google-v2' | 'appointment-actions-v2' | 'criar-evento-calendario-v2', payload: any) {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY, url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = getSupabaseServerKey(), url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!key || !url) throw { reason: 'calendar_unavailable', status: 503 };
   const response = await fetch(`${url}/functions/v1/${name}`, { method: 'POST', headers: { ...internalServiceHeaders(key), 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(60000) });
   const result = await response.json().catch(() => null);

@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Copy, Loader2, QrCode } from 'lucide-react';
+import { CheckCircle2, Copy, CreditCard, ExternalLink, Loader2, QrCode } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 function brlCents(cents: number) {
@@ -26,7 +26,7 @@ export default function FuncionarIAStorefrontPaymentPanel({
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  async function request(action: 'create_pix' | 'status') {
+  async function request(action: 'create_pix' | 'create_card' | 'status') {
     const response = await fetch('/api/funcionaria/storefront-payment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -96,6 +96,55 @@ export default function FuncionarIAStorefrontPaymentPanel({
     }
   }
 
+  async function createCard() {
+    if (loading) return;
+    setLoading(true);
+    setError(null);
+
+    const popup = window.open('about:blank', '_blank');
+    if (popup) popup.opener = null;
+
+    try {
+      const data = await request('create_card');
+      setPayment(data);
+
+      if (data?.status === 'paid') {
+        popup?.close();
+        onPaid?.(data);
+        return;
+      }
+
+      const checkoutUrl = String(data?.checkout_url || '');
+      if (!checkoutUrl.startsWith('https://checkout.bigcorps.com.br/')) {
+        popup?.close();
+        throw new Error('invalid_checkout_url');
+      }
+
+      if (popup) {
+        popup.location.replace(checkoutUrl);
+      } else {
+        window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+      }
+
+      stopPolling();
+      timer.current = setInterval(() => {
+        void checkStatus(true);
+      }, 4000);
+    } catch (err: any) {
+      popup?.close();
+      const code = String(err?.message || '');
+      setError(
+        code === 'checkout_expired'
+          ? 'Este pedido expirou. Faça um novo pedido.'
+          : code === 'payment_in_progress'
+            ? 'Já existe outra forma de pagamento em andamento para este pedido.'
+            : 'Não foi possível abrir o pagamento com cartão. Tente novamente.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => () => stopPolling(), []);
 
   async function copyPix() {
@@ -118,26 +167,78 @@ export default function FuncionarIAStorefrontPaymentPanel({
     );
   }
 
+  if (payment?.payment_method === 'card' && payment?.checkout_url) {
+    return (
+      <div className="mt-5 rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm">
+        <div className="text-center">
+          <CreditCard className="mx-auto h-7 w-7" style={{ color: primaryColor }} />
+          <div className="mt-2 text-sm font-black">Cartão aguardando confirmação</div>
+          <div className="mt-1 text-xl font-black">{brlCents(payment.amount_cents)}</div>
+        </div>
+
+        <a
+          href={payment.checkout_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-black text-white"
+          style={{ backgroundColor: primaryColor }}
+        >
+          <ExternalLink className="h-4 w-4" />
+          Abrir checkout do cartão
+        </a>
+
+        <button
+          type="button"
+          onClick={() => void checkStatus()}
+          disabled={checking}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-black text-slate-700 disabled:opacity-60"
+        >
+          {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+          Verificar pagamento
+        </button>
+
+        <p className="mt-3 text-center text-[11px] leading-4 text-slate-400">
+          A InfinitePay processa o cartão. Taxas da operadora são mostradas no checkout e ficam separadas da comissão da loja.
+        </p>
+
+        {error ? <div className="mt-2 text-center text-xs font-bold text-red-600">{error}</div> : null}
+      </div>
+    );
+  }
+
   if (!payment?.pix_code) {
     return (
       <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4 text-left">
-        <div className="flex items-center gap-2 text-sm font-black text-slate-950">
-          <QrCode className="h-4 w-4" style={{ color: primaryColor }} />
-          Pague com Pix
-        </div>
+        <div className="text-sm font-black text-slate-950">Escolha como pagar</div>
         <p className="mt-1 text-xs leading-5 text-slate-500">
-          Pagamento processado pela infraestrutura BigCorps. O valor mostrado no pedido não muda.
+          Pix ou cartão pela infraestrutura BigCorps. A comissão da loja é calculada separadamente da taxa do meio de pagamento.
         </p>
-        <button
-          type="button"
-          onClick={() => void createPix()}
-          disabled={loading}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-white disabled:opacity-60"
-          style={{ backgroundColor: primaryColor }}
-        >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
-          {loading ? 'Gerando Pix…' : 'Gerar Pix'}
-        </button>
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => void createPix()}
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-white disabled:opacity-60"
+            style={{ backgroundColor: primaryColor }}
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
+            Pix
+          </button>
+          <button
+            type="button"
+            onClick={() => void createCard()}
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-800 disabled:opacity-60"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+            Cartão
+          </button>
+        </div>
+
+        <p className="mt-2 text-[11px] leading-4 text-slate-400">
+          No cartão, a cobrança abre em uma nova aba e esta tela acompanha a confirmação automaticamente.
+        </p>
         {error ? <div className="mt-2 text-xs font-bold text-red-600">{error}</div> : null}
       </div>
     );

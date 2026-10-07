@@ -86,8 +86,10 @@ export default function AdminCommercial({
     [page, setPage] = useState(0),
     [campaign, setCampaign] = useState(""),
     [preview, setPreview] = useState<any>(null);
+  const [previewReviewed, setPreviewReviewed] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
+    setPreviewReviewed(false);
     if (preview) dialogRef.current?.showModal();
     else dialogRef.current?.close();
   }, [preview]);
@@ -560,6 +562,9 @@ export default function AdminCommercial({
               }
             >
               <h2 className="font-bold">{preview.subject}</h2>
+              <p className="mt-3 text-sm">Destinatário: {preview.recipient_address}</p>
+              <p className="text-sm">Tipo: {preview.recipient_kind === "company_contact" ? "Contato corporativo" : "Contato individual"} · Variante: {preview.message_variant}</p>
+              {preview.recipient_source_url && <a className="text-sm underline" href={preview.recipient_source_url} target="_blank" rel="noreferrer">Fonte do contato corporativo</a>}
               <p className="my-5 whitespace-pre-wrap break-words text-sm leading-6">
                 {preview.body}
               </p>
@@ -571,6 +576,11 @@ export default function AdminCommercial({
               >
                 Abrir qualificação
               </a>
+              <label className="mt-4 flex gap-2 text-sm"><input type="checkbox" checked={previewReviewed} onChange={e => setPreviewReviewed(e.target.checked)} />Revisei destinatário, variante e conteúdo. Preparar apenas a fila do piloto manual.</label>
+              <button className={button + " mt-3"} disabled={busy || !previewReviewed} onClick={async () => {
+                const result = await action({ action: "enqueue", id: preview.id, channel: "email", reviewToken: preview.reviewToken }, "Fila manual preparada; os gates de envio continuam obrigatórios.");
+                if (result) setPreview(null);
+              }}>Enfileirar conteúdo revisado</button>
               <button
                 className={button + " ml-2"}
                 onClick={() => setPreview(null)}
@@ -899,6 +909,7 @@ function Opportunity({ o, action, busy, monitoria }: any) {
           Qualificação {o.score}/100 · {money(Number(o.paid_cents))} recebidos
         </span>
       </div>
+      <OutreachReview o={o} action={action} busy={busy} />
       {commercial && (
         <section className="mt-3 rounded-xl bg-white/5 p-3 text-sm">
           <span className="rounded-full bg-lime-400/15 px-3 py-1 text-lime-200">{COMMERCIAL_LABELS[commercial.type]}</span>
@@ -980,15 +991,6 @@ function Opportunity({ o, action, busy, monitoria }: any) {
             onClick={() => void action({ action: "hunter_find_email", id: o.id }, "Email profissional localizado e verificado.")}
           >Localizar email</button>
         )}
-        <button
-          className={button}
-          disabled={busy}
-          onClick={() =>
-            void action({ action: "preview", id: o.id }, "Prévia pronta.")
-          }
-        >
-          Ver abordagem e link
-        </button>
         {!l.outreach_reviewed && (
           <button
             className={button}
@@ -1011,24 +1013,6 @@ function Opportunity({ o, action, busy, monitoria }: any) {
           onClick={() => void action({ action: "verify_email", id: l.id })}
         >
           Verificar email
-        </button>
-        <button
-          className={button}
-          disabled={
-            busy ||
-            !!l.suppressed_at ||
-            !!l.human_at ||
-            !l.outreach_reviewed ||
-            l.owner !== "minhai"
-          }
-          onClick={() =>
-            void action(
-              { action: "enqueue", id: o.id, channel: "email" },
-              "Email colocado na fila.",
-            )
-          }
-        >
-          Enfileirar email
         </button>
         <button
           className={button}
@@ -1345,5 +1329,31 @@ function RolloutForm({ rollout, live, action, busy }: any) {
     </div>
     <p className="mt-3 text-xs text-slate-400">Canal inicial: email. WhatsApp somente após consentimento. {playbook.manualReviewRequired ? "Revisão humana obrigatória antes de outreach." : "Revisão comercial permanece recomendada no piloto."} {!live && liveSend ? "O cadeado global ainda impede qualquer envio." : ""}</p>
     <button className={button + " mt-4"} disabled={busy}>Salvar rollout</button>
+  </form>;
+}
+
+function OutreachReview({ o, action, busy }: any) {
+  const l = o.lead;
+  const type = o.qualification?.commercial_classification?.type;
+  const contacts = (Array.isArray(o.qualification?.web_research?.companyContacts) ? o.qualification.web_research.companyContacts : []).filter((c: any) => c.type === "email");
+  const [recipient, setRecipient] = useState("");
+  const [variant, setVariant] = useState("");
+  useEffect(() => { setRecipient(""); setVariant(""); }, [o.id]);
+  const selectedVariant = type === "customer" || type === "partner" ? type : variant;
+  return <form className="mt-3 rounded-xl border border-amber-400/20 p-3 text-sm" onSubmit={e => {
+    e.preventDefault();
+    void action({ action: "preview", id: o.id, recipient_kind: recipient === "individual" ? "individual" : "company_contact", recipient_address: recipient === "individual" ? undefined : recipient, message_variant: selectedVariant }, "Prévia do piloto manual pronta; nenhum envio realizado.");
+  }}>
+    <p className="font-semibold">Preparar piloto manual por email</p>
+    <p className="text-xs text-slate-400">Contatos gerais ficam separados do email do decisor. Preparar uma fila não libera envio.</p>
+    <label>Destinatário<select className={input} value={recipient} onChange={e => setRecipient(e.target.value)} disabled={busy}>
+      <option value="">Escolha explicitamente</option>
+      {l.email && l.email_status === "verified" && <option value="individual">Individual verificado: {l.email}</option>}
+      {contacts.map((c: any) => <option key={c.value} value={c.value}>Corporativo: {c.value}</option>)}
+    </select></label>
+    {type === "customer_or_partner" ? <label>Abordagem<select className={input} value={variant} onChange={e => setVariant(e.target.value)} disabled={busy}>
+      <option value="">Escolha Cliente ou Parceiro</option><option value="customer">Cliente</option><option value="partner">Parceiro</option>
+    </select></label> : <p>Abordagem: {type === "partner" ? "Parceiro" : type === "customer" ? "Cliente" : "Bloqueada: salve uma classificação elegível."}</p>}
+    <button className={button + " mt-2"} disabled={busy || !recipient || !["customer", "partner"].includes(selectedVariant) || !["customer", "partner", "customer_or_partner"].includes(type)}>Revisar destinatário e mensagem</button>
   </form>;
 }

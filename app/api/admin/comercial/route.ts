@@ -4,8 +4,6 @@ import {
   checked,
   db,
   event,
-  origin,
-  signToken,
 } from "@/lib/sdr/server";
 import {
   identityKeys,
@@ -16,6 +14,7 @@ import {
 } from "@/lib/sdr/catalog";
 import { discover, verifyEmail, enrichEconodataDecisionMaker, findHunterDecisionMakerEmail } from "@/lib/sdr/providers";
 import { partnerSnapshot, promotePartner, updatePartnerStatus } from "@/lib/sdr/partners";
+import { previewOutreach, enqueueReviewedOutreach } from "@/lib/sdr/outreach-server";
 import { rolloutSnapshot, updateProductRollout } from "@/lib/sdr/rollouts";
 import { saveCommercialClassification } from "@/lib/sdr/commercial-classification-server";
 import { discoverWebCompanies } from "@/lib/sdr/web-discovery";
@@ -24,7 +23,6 @@ import {
   seedTemplates,
   submitTemplate,
   syncTemplate,
-  emailContent,
 } from "@/lib/sdr/channels";
 import { monitoriaSnapshot } from "@/lib/sdr/monitoria";
 import { reconcileSales, recordActivation } from "@/lib/sdr/sales";
@@ -271,29 +269,16 @@ export async function POST(req: Request) {
         return {};
       }
       case "enqueue": {
-        const result = checked(
-          await d.rpc("sdr_enqueue", {
-            p_opportunity: id,
-            p_channel: input.channel,
-          }),
-        );
+        const result = input.channel === "email"
+          ? await enqueueReviewedOutreach(id, input.reviewToken, actor)
+          : checked(await d.rpc("sdr_enqueue", { p_opportunity: id, p_channel: input.channel }));
         await event(actor, "outreach_queued", null, id, {
           channel: input.channel,
         });
         return { id: result };
       }
-      case "preview": {
-        const o = checked(
-          await d.from("sdr_opportunities").select("*").eq("id", id).single(),
-        )!;
-        const l = checked(
-          await d.from("sdr_leads").select("*").eq("id", o.lead_id).single(),
-        )!;
-        return {
-          ...emailContent(o, l, 0),
-          url: `${origin()}/comercial/conhecer/${signToken(id)}`,
-        };
-      }
+      case "preview":
+        return previewOutreach(id, input, actor);
       case "stage": {
         if (!["meeting", "proposal", "lost"].includes(input.stage))
           throw new Error("invalid_stage");

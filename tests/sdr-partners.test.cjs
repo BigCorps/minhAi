@@ -107,7 +107,7 @@ test('partner Admin displays candidates, explicit promotion, program/link/status
  const catalog = load('../lib/sdr/catalog.ts', {});
  const policy = load('../lib/sdr/commercial-classification.ts', { './catalog': catalog });
  const ui = load('../components/admin/AdminCommercial.tsx', { react, 'react/jsx-runtime': require('react/jsx-runtime'), 'lucide-react': require('lucide-react'),
- '@/lib/sdr/catalog': catalog, '@/lib/sdr/commercial-classification': policy, './AdminHeader': {}, './AdminBusinessUi': { money: n => `R$ ${n}` } }, '\nexport { PartnersPanel };');
+ '@/lib/sdr/playbooks': { commercialPlaybook: () => ({}) }, '@/lib/sdr/catalog': catalog, '@/lib/sdr/commercial-classification': policy, './AdminHeader': {}, './AdminBusinessUi': { money: n => `R$ ${n}` } }, '\nexport { PartnersPanel };');
  const html = renderToStaticMarkup(react.createElement(ui.PartnersPanel, { busy: false, action() { throw new Error('unexpected_action'); }, data: {
  programs: [{ id: uuid(20), product: 'conviteia', name: 'Parceiros ConviteIA', status: 'active' }],
  candidates: [{ id: uuid(1), product: 'conviteia', lead: { company_name: 'Buffet Teste' } }],

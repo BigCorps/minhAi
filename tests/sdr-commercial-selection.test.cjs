@@ -24,7 +24,7 @@ function harness() {
   };
   const jsx = (type, props) => ({ type, props });
   const component = compile(readFileSync(require.resolve('../components/admin/AdminCommercial.tsx'), 'utf8') + '\nexport { Opportunity };', {
-    react, 'react/jsx-runtime': { jsx, jsxs: jsx }, 'lucide-react': {}, '@/lib/sdr/catalog': catalog,
+    react, 'react/jsx-runtime': { jsx, jsxs: jsx }, 'lucide-react': {}, '@/lib/sdr/playbooks': { commercialPlaybook: () => ({}) }, '@/lib/sdr/catalog': catalog,
     '@/lib/sdr/commercial-classification': policy, './AdminHeader': {}, './AdminBusinessUi': { money: () => 'R$ 0' },
   });
   const calls = [];

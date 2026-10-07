@@ -1,5 +1,6 @@
 import "server-only";
 import { db, checked, event } from "./server";
+import { followupSnapshot } from "./outreach";
 import { businessHours } from "./catalog";
 import {
   sendEmail,
@@ -133,7 +134,7 @@ export async function runWorker() {
       );
       sent++;
       // At most one WhatsApp introduction. Follow-ups by email only; reply detection mandatory.
-      if (q.channel === "email" && q.step + 1 < c.max_touches)
+      if (q.channel === "email" && q.enqueue_mode !== "manual_pilot" && q.step + 1 < c.max_touches)
         checked(
           await d
             .from("sdr_queue")
@@ -143,6 +144,7 @@ export async function runWorker() {
                 lead_id: l.id,
                 campaign_id: c.id,
                 channel: "email",
+                ...followupSnapshot(q),
                 step: q.step + 1,
                 due_at: new Date(Date.now() + 3 * 86400000).toISOString(),
               },

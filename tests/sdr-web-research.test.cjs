@@ -564,6 +564,7 @@ test('Admin UI accepts web business identity, labels identification and shows va
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   runInNewContext(code, { exports, URL, Date, console, require(id) {
     if (id === 'react' || id === 'react/jsx-runtime' || id === 'lucide-react') return require(id);
+    if (id === '@/lib/sdr/playbooks') return { commercialPlaybook: () => ({}) };
     if (id === '@/lib/sdr/catalog') return catalog;
     if (id === '@/lib/sdr/commercial-classification') return compile('commercial-classification', { './catalog': catalog });
     if (id === './AdminHeader') return { default: () => null };

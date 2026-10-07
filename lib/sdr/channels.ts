@@ -1,4 +1,5 @@
 import "server-only";
+import { safeEmail } from "./outreach";
 import { db, checked, required, fetchJson, origin, signToken } from "./server";
 import { PRODUCTS, templateFor, type Product } from "./catalog";
 export async function metaConnection() {
@@ -177,23 +178,29 @@ export async function threadHasReply(threadId: string) {
     (m: any) => !m.labelIds?.includes("SENT") && !m.labelIds?.includes("DRAFT"),
   );
 }
-export function emailContent(o: any, l: any, step: number) {
+export function emailContent(o: any, l: any, step: number, variant: "customer" | "partner" = "customer", recipientKind = "individual") {
   const product = PRODUCTS[o.product as Product];
   const token = signToken(o.id);
   const link = `${origin()}/comercial/conhecer/${token}`;
   const out = `${origin()}/comercial/sair/${token}`;
+  const partnerMessage = "partnerOutreachMessage" in product.commercial
+    ? product.commercial.partnerOutreachMessage : product.commercial.partnerValueProposition + " Gostaríamos de entender se uma parceria com a BigCorps faz sentido para sua empresa, sem compromisso ou promessa de comissão financeira.";
+  const introduction = variant === "partner" ? partnerMessage : `O ${product.name} oferece ${product.pitch}. Gostaria de saber se isso faz sentido para sua empresa.\n\n${product.question}`;
   return {
-    subject: `${product.name} para ${String(l.company_name).slice(0, 90)}`,
-    body: `Olá${l.contact_name ? ", " + l.contact_name : ""}!\n\nSou o assistente comercial da BigCorps.${step ? " Retomo nosso contato." : ""}\n\nO ${product.name} oferece ${product.pitch}. Gostaria de saber se isso faz sentido para sua empresa.\n\n${product.question}\n\nConheça e conte o que precisa: ${link}\n\nSe preferir falar com uma pessoa, basta responder a este email.\n\nBigCorps Tecnologia · https://bigcorps.com.br\nNão deseja novos contatos? ${out}`,
+    subject: `${variant === "partner" ? "Possível parceria · " : ""}${product.name} para ${String(l.company_name).slice(0, 90)}`,
+    body: `Olá${recipientKind === "company_contact" ? ", equipe da " + l.company_name : l.contact_name ? ", " + l.contact_name : ""}!\n\nSou o assistente comercial da BigCorps.${step ? " Retomo nosso contato." : ""}\n\n${introduction}\n\nConheça e conte o que precisa: ${link}\n\nSe preferir falar com uma pessoa, basta responder a este email.\n\nBigCorps Tecnologia · https://bigcorps.com.br\nNão deseja novos contatos? ${out}`,
   };
 }
 export async function sendEmail(q: any, o: any, l: any) {
+  if (!safeEmail(q.recipient_address)) throw new Error("queue_recipient_required");
+  const message = q.message_subject && q.message_body
+    ? { subject: q.message_subject, body: q.message_body }
+    : emailContent(o, l, q.step, q.message_variant, q.recipient_kind);
   const g = await googleAccount();
-  const message = emailContent(o, l, q.step);
   const token = signToken(o.id);
   const out = `${origin()}/api/public/sdr/unsubscribe?token=${encodeURIComponent(token)}`;
   const mime = [
-    `To: ${l.email}`,
+    `To: ${q.recipient_address}`,
     `Subject: =?UTF-8?B?${Buffer.from(message.subject).toString("base64")}?=`,
     "MIME-Version: 1.0",
     "Content-Type: text/plain; charset=UTF-8",

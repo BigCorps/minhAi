@@ -24,6 +24,8 @@ for (const required of [
   "card_provider_fee_evidence_mismatch",
   "funcionaria_storefront_card_fee_rates",
   "provider_fee_source",
+  "card_provider_fee_source_missing",
+  "jsonb_build_object('source',v_provider_fee_source)",
   "v_method := 'cartao'",
 ]) if (!sql.includes(required)) fail('SQL missing card settlement invariant: ' + required)
 
@@ -56,6 +58,13 @@ if ((edge.match(/api\.checkout\.infinitepay\.io\/payment_check/g) || []).length 
 if (!edge.includes("if (checkout.card_provider || checkout.cash_requested_at)")) {
   fail('PIX must fail before generation when another payment method owns the checkout')
 }
+
+for (const forbidden of [
+  "params.set('nome'",
+  "params.set('telefone'",
+  "params.set('email'",
+  'cliente_nome,cliente_telefone,cliente_email',
+]) if (edge.includes(forbidden)) fail('card checkout URL must not carry optional customer PII: ' + forbidden)
 
 for (const required of [
   "internalServiceHeaders",

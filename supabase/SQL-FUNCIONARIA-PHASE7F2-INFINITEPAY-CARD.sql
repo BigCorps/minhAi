@@ -117,6 +117,7 @@ grant select, insert, update, delete on table public.funcionaria_storefront_card
 
 alter table public.funcionaria_storefront_settlements
   add column if not exists provider_paid_amount_cents integer not null default 0,
+  add column if not exists provider_fee_source text,
   add column if not exists provider_surcharge_cents integer not null default 0;
 
 create or replace function public.funcionaria_prepare_storefront_card(
@@ -294,6 +295,7 @@ declare
   v_delivery_charged integer;
   v_delivery_cost integer;
   v_provider_fee integer:=greatest(0,coalesce(p_provider_fee_cents,0));
+  v_provider_fee_source text;
   v_provider_paid integer:=0;
   v_provider_surcharge integer:=0;
   v_bps integer;
@@ -389,6 +391,10 @@ begin
 
     if not found then raise exception 'confirmed_payment_evidence_not_found'; end if;
 
+    v_provider_fee_source := case
+      when v_provider_fee > 0 then 'inter_env'
+      else 'inter_zero'
+    end;
     v_method := 'pix';
   elsif p_provider='infinitepay_bigcorps' then
     if p_payment_transaction_id is not null then
@@ -423,6 +429,10 @@ begin
     end if;
 
     v_provider_paid := v_card.provider_paid_amount_cents;
+    v_provider_fee_source := nullif(trim(coalesce(v_card.provider_fee_source,'')),'');
+    if v_provider_fee_source is null then
+      raise exception 'card_provider_fee_source_missing';
+    end if;
     v_provider_surcharge := greatest(0,v_card.provider_paid_amount_cents-v_card.provider_amount_cents);
     v_method := 'cartao';
   else
@@ -445,14 +455,14 @@ begin
     company_id,pedido_id,checkout_id,payment_mode,provider,provider_reference,
     payment_transaction_id,gross_received_cents,merchandise_cents,
     delivery_charged_cents,delivery_provider_cost_cents,provider_fee_cents,
-    provider_paid_amount_cents,provider_surcharge_cents,
+    provider_paid_amount_cents,provider_fee_source,provider_surcharge_cents,
     commission_bps,commission_cents,merchant_net_cents,bigcorps_margin_cents,
     status,paid_at
   ) values (
     v_pedido.company_id,v_pedido.id,v_checkout.id,'commission',p_provider,
     trim(p_provider_reference),p_payment_transaction_id,v_gross,v_merch,
     v_delivery_charged,v_delivery_cost,v_provider_fee,
-    v_provider_paid,v_provider_surcharge,
+    v_provider_paid,v_provider_fee_source,v_provider_surcharge,
     v_bps,v_commission,v_merchant_net,v_margin,'settled',v_paid
   )
   returning id into v_settlement_id;
@@ -500,6 +510,7 @@ begin
       'merchandise_cents',v_merch,
       'delivery_charged_cents',v_delivery_charged,
       'provider_fee_cents',v_provider_fee,
+      'provider_fee_source',v_provider_fee_source,
       'commission_cents',v_commission
     )
   );
@@ -528,7 +539,8 @@ begin
     (v_settlement_id,v_pedido.company_id,v_pedido.id,'merchandise',v_merch,'{}'),
     (v_settlement_id,v_pedido.company_id,v_pedido.id,'delivery_customer_charge',v_delivery_charged,'{}'),
     (v_settlement_id,v_pedido.company_id,v_pedido.id,'delivery_provider_cost',-v_delivery_cost,'{}'),
-    (v_settlement_id,v_pedido.company_id,v_pedido.id,'payment_provider_fee',-v_provider_fee,'{}'),
+    (v_settlement_id,v_pedido.company_id,v_pedido.id,'payment_provider_fee',-v_provider_fee,
+      jsonb_build_object('source',v_provider_fee_source)),
     (v_settlement_id,v_pedido.company_id,v_pedido.id,'bigcorps_commission',-v_commission,jsonb_build_object('bps',v_bps)),
     (v_settlement_id,v_pedido.company_id,v_pedido.id,'merchant_net',v_merchant_net,'{}');
 

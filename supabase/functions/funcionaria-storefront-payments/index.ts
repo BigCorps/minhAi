@@ -118,7 +118,7 @@ async function loadCheckout(supabase: any, checkoutId: string) {
 
   const { data: pedido } = await supabase
     .from('pedidos')
-    .select('id,company_id,subtotal,desconto,total,status,delivery_requested,cliente_nome,cliente_telefone,cliente_email')
+    .select('id,company_id,subtotal,desconto,total,status,delivery_requested')
     .eq('id', checkout.pedido_id)
     .eq('company_id', checkout.company_id)
     .maybeSingle()
@@ -228,7 +228,7 @@ function cardOrderNsu(checkoutId: string) {
 }
 
 function cardCheckoutUrl(loaded: any, amountCents: number) {
-  const { checkout, pedido } = loaded
+  const { checkout } = loaded
   const params = new URLSearchParams({
     valor_centavos: String(amountCents),
     order_id: cardOrderNsu(checkout.id),
@@ -238,13 +238,8 @@ function cardCheckoutUrl(loaded: any, amountCents: number) {
     result_url: FUNCIONARIA_CARD_RETURN_URL,
   })
 
-  const name = cleanOptional(pedido.cliente_nome, 120)
-  const phone = String(pedido.cliente_telefone || '').replace(/\D/g, '').slice(0, 13)
-  const email = cleanOptional(pedido.cliente_email, 160).toLowerCase()
-  if (name) params.set('nome', name)
-  if (phone) params.set('telefone', phone)
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) params.set('email', email)
-
+  // Dados pessoais são opcionais na InfinitePay e não precisam transitar
+  // na URL intermediária do checkout.
   return `${INFINITEPAY_BRIDGE_URL}?${params.toString()}`
 }
 

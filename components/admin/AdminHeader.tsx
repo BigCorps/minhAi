@@ -38,8 +38,8 @@ type Props = {
 };
 
 const NAV = [
-  { key: 'commercial', label: 'Comercial & MonitorIA', suffix: '/comercial', icon: Target },
   { key: 'overview', label: 'Visão Geral', suffix: '', icon: Gauge },
+  { key: 'commercial', label: 'Comercial', suffix: '/comercial', icon: Target },
   { key: 'users', label: 'Usuários', suffix: '#usuarios', icon: UsersRound },
   { key: 'finance', label: 'Financeiro', suffix: '/financeiro', icon: CircleDollarSign },
   { key: 'costs', label: 'Custos & APIs', suffix: '/custos', icon: WalletCards },

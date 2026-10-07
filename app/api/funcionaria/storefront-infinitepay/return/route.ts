@@ -25,7 +25,7 @@ async function invokeEdge(body: Record<string, unknown>) {
     return { ok: false, status: 500, data: { error: 'server_not_configured' } };
   }
 
-  const response = await fetch(`${base}/functions/v1/funcionaria-storefront-payments`, {
+  const response = await fetch(`${base}/functions/v1/funcionaria-storefront-payments-v2`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...serviceHeaders },
     body: JSON.stringify(body),
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
   const slug = safe(params.get('slug'), 255);
   const receiptUrl = safe(params.get('receipt_url'), 1000);
 
-  if (!/^funcionaria-storefront-[0-9a-f-]{36}$/i.test(orderNsu)
+  if (!/^funcionaria-(?:storefront|direct)-[0-9a-f-]{36}$/i.test(orderNsu)
       || !transactionNsu || !slug) {
     return NextResponse.redirect(target('', 'erro'), 303);
   }

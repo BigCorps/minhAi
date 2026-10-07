@@ -27,7 +27,7 @@ async function invokeEdge(body: Record<string, unknown>) {
     return { ok: false, status: 500, data: { error: 'server_not_configured' } };
   }
 
-  const response = await fetch(`${base}/functions/v1/funcionaria-storefront-payments`, {
+  const response = await fetch(`${base}/functions/v1/funcionaria-storefront-payments-v2`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

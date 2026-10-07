@@ -57,7 +57,7 @@ export default function FuncionarIASkillsManager() {
   async function loadStatus() {
     setLoading(true);
     try {
-      const data = await invokeFuncionarIAEdge<any>('funcionaria-billing', { action: 'status', company_id: companyId });
+      const data = await invokeFuncionarIAEdge<any>('funcionaria-billing-v2', { action: 'status', company_id: companyId });
       setBilling(data);
       const sub = data?.subscription;
       if (Array.isArray(sub?.next_skill_keys) && (sub?.status !== 'free' || (sub?.current_skill_keys?.length || 0) > 0 || sub.next_skill_keys.length > 0)) {
@@ -90,7 +90,7 @@ export default function FuncionarIASkillsManager() {
     if (!companyId) return;
     setSaving(true); setNotice(null);
     try {
-      const data = await invokeFuncionarIAEdge<any>('funcionaria-billing', { action: 'create', company_id: companyId, desired_skill_keys: desired });
+      const data = await invokeFuncionarIAEdge<any>('funcionaria-billing-v2', { action: 'create', company_id: companyId, desired_skill_keys: desired });
       if (!data.payment_required) {
         setNotice(data.scheduled ? 'Alteração programada. As habilidades removidas continuam ativas até o fim do período já pago.' : 'Sua seleção já está atualizada.');
         await loadStatus(); await reload();
@@ -113,7 +113,7 @@ export default function FuncionarIASkillsManager() {
     if (!invoice || !companyId) return;
     setChecking(true);
     try {
-      const data = await invokeFuncionarIAEdge<any>('funcionaria-billing', { action: 'check', company_id: companyId, invoice_id: invoice.id });
+      const data = await invokeFuncionarIAEdge<any>('funcionaria-billing-v2', { action: 'check', company_id: companyId, invoice_id: invoice.id });
       if (data?.status === 'paid') {
         setInvoice(null);
         setNotice('Pagamento confirmado. As novas habilidades já foram liberadas.');

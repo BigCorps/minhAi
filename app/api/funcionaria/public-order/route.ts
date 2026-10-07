@@ -71,10 +71,22 @@ export async function POST(request: NextRequest) {
 
   const { data: settings } = await supabase
     .from('funcionaria_company_settings')
-    .select('company_id,storefront_payment_mode,storefront_commission_bps')
+    .select('company_id')
     .eq('company_id', companyId)
     .maybeSingle();
   if (!settings) return NextResponse.json({ error: 'not_funcionaria' }, { status: 404 });
+
+  const { data: storefrontEntitlement, error: entitlementError } = await supabase.rpc(
+    'funcionaria_storefront_entitlement',
+    { p_company_id: companyId },
+  );
+  if (entitlementError) {
+    console.error('[funcionaria/public-order] storefront entitlement:', entitlementError.message);
+    return NextResponse.json({ error: 'storefront_payment_mode_unavailable' }, { status: 503 });
+  }
+  const effectivePaymentMode =
+    storefrontEntitlement?.effective_mode === 'monthly_direct' ? 'monthly_direct' : 'commission';
+  const effectiveCommissionBps = effectivePaymentMode === 'monthly_direct' ? 0 : 500;
 
   const productIds = items.map((item) => item.produto_id);
   const { data: products, error: productsError } = await supabase
@@ -155,8 +167,8 @@ export async function POST(request: NextRequest) {
       desconto: 0,
       total: orderTotal,
       status: 'aberto',
-      storefront_payment_mode_snapshot: settings.storefront_payment_mode || 'commission',
-      storefront_commission_bps_snapshot: Number(settings.storefront_commission_bps || 500),
+      storefront_payment_mode_snapshot: effectivePaymentMode,
+      storefront_commission_bps_snapshot: effectiveCommissionBps,
       ...(deliveryQuote ? {
         delivery_requested: true,
         delivery_address: deliveryQuote.address,

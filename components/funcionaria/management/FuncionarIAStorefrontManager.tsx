@@ -7,6 +7,7 @@ import type { FuncionarIASettings, FuncionarIAPublicHomeMode } from '@/lib/funci
 import FuncionarIAProductsPanel from '@/components/funcionaria/management/FuncionarIAProductsPanel';
 import FuncionarIAOrdersPanel from '@/components/funcionaria/management/FuncionarIAOrdersPanel';
 import FuncionarIADeliverySettings from '@/components/funcionaria/management/FuncionarIADeliverySettings';
+import FuncionarIAStorefrontPlanCard from '@/components/funcionaria/management/FuncionarIAStorefrontPlanCard';
 
 type Tab = 'products' | 'orders' | 'delivery';
 
@@ -81,7 +82,7 @@ export default function FuncionarIAStorefrontManager({
             <h2 className="mt-2 text-2xl font-black">Sua loja em {slug}.funcionaria.net</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
               Catálogo, carrinho e pedidos básicos fazem parte da base da FuncionarIA.
-              A entrega local já pode ser configurada. Pagamentos online entram na próxima etapa da Fase 7.
+              Você pode receber pelo plano grátis de 5% ou usar sua própria conta no plano mensal.
             </p>
           </div>
           <a
@@ -151,6 +152,7 @@ export default function FuncionarIAStorefrontManager({
 
       {enabled ? (
         <>
+          <FuncionarIAStorefrontPlanCard companyId={companyId} onChanged={onSaved} />
           <div className="flex flex-wrap gap-2">
             <button
               type="button"

@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "next lint",
     "tts:pregenerate": "NEXT_PUBLIC_BASE_URL=https://minhai.app ts-node --esm --project tsconfig.json scripts/pregenerate-tour-audio.ts",
-    "check:calendar-boundary": "node scripts/check-calendar-edge-boundary.mjs"
+    "check:calendar-boundary": "node scripts/check-calendar-edge-boundary.mjs",
+    "check:pix-cancel-boundary": "node scripts/check-pix-cancel-boundary.mjs"
   },
   "dependencies": {
     "@daily-co/daily-js": "^0.89.1",

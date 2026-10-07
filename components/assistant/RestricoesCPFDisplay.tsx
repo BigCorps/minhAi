@@ -75,7 +75,7 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  const [pixData, setPixData] = useState<{ qrCodeUrl: string; pixCode: string; transactionId: string } | null>(null);
+  const [pixData, setPixData] = useState<{ qrCodeUrl: string; pixCode: string; transactionId: string; cancelCapability?: string } | null>(null);
   const [pendingParams, setPendingParams] = useState<Record<string, any> | null>(null);
   const [pixAmountBrl, setPixAmountBrl] = useState<string>('0,00');
 
@@ -130,7 +130,7 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
         setPixAmountBrl(res.amount_brl ?? '3,00');
         setStage('input');
 
-        const pixRes = await supabase.functions.invoke('gerar-pix-assistente', {
+        const pixRes = await supabase.functions.invoke('gerar-pix-assistente-v2', {
           body: {
             company_id: data.companyId,
             amount_cents: res.amount_cents,
@@ -147,6 +147,7 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
           qrCodeUrl: pixRes.data.qr_code_url,
           pixCode: pixRes.data.pix_code,
           transactionId: pixRes.data.transaction_id,
+          cancelCapability: pixRes.data.cancel_capability,
         });
         playText(`Saldo insuficiente. Gerei um PIX de R$ ${res.amount_brl}. Escaneie para pagar e a consulta será liberada.`).catch(() => {});
         return;
@@ -275,6 +276,8 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
     return (
       <PIXConfirmationModal
         transactionId={pixData.transactionId}
+        cancelCapability={pixData.cancelCapability}
+        companyId={data.companyId}
         amount={pixAmountBrl}
         qrCodeUrl={pixData.qrCodeUrl}
         pixCode={pixData.pixCode}

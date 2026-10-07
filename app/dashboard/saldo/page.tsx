@@ -734,6 +734,7 @@ export default function SaldoPage() {
           withdrawal_pix_key_required: 'Configure sua chave Pix no Perfil antes de solicitar um saque.',
           withdrawal_net_nonpositive: 'O valor líquido ficou zerado após taxas e comissões pendentes.',
           idempotency_conflict: 'A tentativa anterior não corresponde a este valor. Tente novamente.',
+          withdrawal_in_progress: 'Já existe um saque em andamento. Aguarde a conclusão ou reconciliação antes de solicitar outro valor.',
           bank_not_configured: 'O saque está temporariamente indisponível.',
         };
         withdrawalAttemptRef.current = null;

@@ -71,6 +71,7 @@ function rpcCode(error: any): string {
     'withdrawal_pix_key_required',
     'withdrawal_net_nonpositive',
     'idempotency_conflict',
+    'withdrawal_in_progress',
     'withdrawal_not_found',
     'invalid_withdrawal_state',
     'provider_txid_conflict',
@@ -265,7 +266,7 @@ Deno.serve(async (req: Request) => {
     })
     if (error) {
       const code = rpcCode(error)
-      if (['insufficient_balance', 'withdrawal_pix_key_required', 'withdrawal_net_nonpositive', 'idempotency_conflict'].includes(code)) {
+      if (['insufficient_balance', 'withdrawal_pix_key_required', 'withdrawal_net_nonpositive', 'idempotency_conflict', 'withdrawal_in_progress'].includes(code)) {
         return json({ success: false, error: code })
       }
       throw error

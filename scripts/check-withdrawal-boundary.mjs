@@ -31,6 +31,8 @@ for (const required of [
   "revoke all privileges on table public.company_balance from anon",
   "revoke insert, update, delete, truncate, references, trigger",
   "status in ('reserved','sending','processing','transferred','released','reconciliation_required')",
+  "ux_withdrawal_requests_one_active_per_user",
+  "withdrawal_in_progress",
 ]) {
   if (!sql.toLowerCase().includes(required.toLowerCase())) fail('SQL missing safety invariant: ' + required)
 }

@@ -3229,7 +3229,7 @@ ver_agenda: {
     'O que tenho agendado?',
   ],
   
-  edgeFunction: 'listar-eventos-google',
+  edgeFunction: undefined,
   requiresInput: false,
   
   description: 'Visualiza eventos do Google Calendar',
@@ -5112,7 +5112,7 @@ consultar_protestos: {
       'Envie um email',
     ],
     
-    edgeFunction: 'enviar-email-google-v2',
+    edgeFunction: undefined,
     requiresInput: false,
     
     description: 'Envia emails através da conta Google conectada usando Gmail API',

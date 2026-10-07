@@ -116,11 +116,11 @@ async function consultarDisponibilidadeProativa(
   let horariosOcupados: string[] = []
 
   try {
-    const { data: evResult } = await supabase.functions.invoke('listar-eventos-google', {
+    const { data: evResult } = await supabase.functions.invoke('listar-eventos-google-v2', {
       body: {
         company_id: companyId,
-        time_min: `${dateStr}T00:00:00`,
-        time_max: `${dateStr}T23:59:59`,
+        time_min: `${dateStr}T00:00:00-03:00`,
+        time_max: `${dateStr}T23:59:59-03:00`,
       },
     })
     if (evResult?.events?.length) {
@@ -435,8 +435,8 @@ async function criarEventoEIniciarCobranca(
 
     // Verifica conflito de horário
     try {
-      const { data: evCheck } = await supabase.functions.invoke('listar-eventos-google', {
-        body: { company_id: companyId, time_min: `${dados.data}T00:00:00`, time_max: `${dados.data}T23:59:59` },
+      const { data: evCheck } = await supabase.functions.invoke('listar-eventos-google-v2', {
+        body: { company_id: companyId, time_min: `${dados.data}T00:00:00-03:00`, time_max: `${dados.data}T23:59:59-03:00` },
       })
       if (evCheck?.events?.length) {
         const slotDt = new Date(`${dados.data}T${dados.hora}:00-03:00`)

@@ -3,6 +3,9 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { findAppointment, actionTimes } from '../_shared/calendar-security.ts'
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
@@ -46,7 +49,7 @@ async function detectAndRun(
     if (verTriggers.some(t => msgLower.includes(t))) {
       console.log('📅 Rota: Ver Agenda')
       try {
-        const res = await fetch(`${supabaseUrl}/functions/v1/listar-eventos-google`, {
+        const res = await fetch(`${supabaseUrl}/functions/v1/listar-eventos-google-v2`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ company_id: companyId, max_results: 5 })
@@ -118,6 +121,14 @@ async function detectAndRun(
         return { responseText: `❌ Não foi possível verificar horários: ${e.message}`, functionKey: 'horarios_disponiveis', creditsUsed: 0 }
       }
     }
+  }
+
+  // Ações existentes são resolvidas ANTES do trigger genérico "agendar".
+  if (connection.agendar_enabled === true) {
+    const action = /cancelar|desmarcar|não vou mais|nao vou mais/.test(msgLower) ? 'cancel'
+      : /reagendar|remarcar|mudar horário|mudar horario|trocar data|outra data|outro horário|outro horario/.test(msgLower) ? 'reschedule'
+      : /confirmar presença|confirmar presenca|vou comparecer|confirmo.*presen|confirmo o agendamento/.test(msgLower) ? 'confirm' : null
+    if (action) return await runAppointmentAction(msg, companyId, action)
   }
 
   // ── AGENDAR COMPROMISSO ───────────────────────────────────────────────
@@ -204,69 +215,6 @@ async function detectAndRun(
     }
   }
 
-  // ── CANCELAR AGENDAMENTO ──────────────────────────────────────────────
-  if (connection.agendar_enabled === true) {
-    const cancelarTriggers = ['cancelar agendamento','cancelar consulta','desmarcar','não vou mais','nao vou mais','quero cancelar meu agendamento','cancelar minha consulta']
-    if (cancelarTriggers.some(t => msgLower.includes(t))) {
-      console.log('❌ Rota: Cancelar Agendamento')
-      try {
-        const res = await fetch(`${supabaseUrl}/functions/v1/cancelar-agendamento`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ company_id: companyId, message: msg })
-        })
-        const data = await res.json()
-
-        return {
-          responseText: data.success
-            ? `✅ *Agendamento cancelado com sucesso.*\n\nSe quiser remarcar, é só nos avisar! 😊`
-            : `❌ Não encontrei um agendamento para cancelar.\nVerifique a data ou entre em contato diretamente.`,
-          functionKey: 'cancelar_agendamento',
-          creditsUsed: data.success ? 1 : 0
-        }
-      } catch (e: any) {
-        return { responseText: `❌ Erro ao cancelar: ${e.message}`, functionKey: 'cancelar_agendamento', creditsUsed: 0 }
-      }
-    }
-  }
-
-  // ── CONFIRMAR PRESENÇA ────────────────────────────────────────────────
-  if (connection.agendar_enabled === true) {
-    const confirmarTriggers = ['confirmar presença','confirmar presenca','vou comparecer','confirmo minha presença','confirmo presenca','sim vou comparecer','confirmo o agendamento']
-    if (confirmarTriggers.some(t => msgLower.includes(t))) {
-      console.log('✅ Rota: Confirmar Presença')
-      return {
-        responseText: [
-          `✅ *Presença confirmada!*`,
-          ``,
-          `Obrigado por confirmar. Te esperamos! 😊`,
-          ``,
-          `Caso precise reagendar, nos avise com antecedência.`,
-        ].join('\n'),
-        functionKey: 'confirmar_presenca',
-        creditsUsed: 1
-      }
-    }
-  }
-
-  // ── REAGENDAR ─────────────────────────────────────────────────────────
-  if (connection.agendar_enabled === true) {
-    const reagendarTriggers = ['reagendar','remarcar','mudar horário','mudar horario','trocar data','outra data','outro horário','outro horario','preciso remarcar']
-    if (reagendarTriggers.some(t => msgLower.includes(t))) {
-      console.log('🔄 Rota: Reagendar')
-      return {
-        responseText: [
-          `📅 *Reagendamento*`,
-          ``,
-          `Para remarcar, informe a nova data e horário desejados.`,
-          `Ex: *Quero remarcar para sexta às 15h*`,
-        ].join('\n'),
-        functionKey: 'reagendar_compromisso',
-        creditsUsed: 0
-      }
-    }
-  }
-
   // ── ENVIAR EMAIL ──────────────────────────────────────────────────────
   if (connection.email_enabled === true) {
     const emailTriggers = ['enviar email','mandar email','enviar e-mail','mandar e-mail','quero enviar um email','me manda por email','envie um email']
@@ -330,6 +278,42 @@ async function detectAndRun(
   }
 
   return null
+}
+
+// Extração é apenas sugestão. Identidade/ambiguidade são decididas no banco.
+async function runAppointmentAction(msg: string, companyId: string, action: string) {
+  const functionKey = action === 'cancel' ? 'cancelar_agendamento' : action === 'confirm' ? 'confirmar_presenca' : 'reagendar_compromisso'
+  const reply = (responseText: string, success = false) => ({ responseText, functionKey, creditsUsed: success ? 1 : 0 })
+  try {
+    const extracted = await callOpenAI(
+      `Extraia SOMENTE informações explicitamente fornecidas para identificar o agendamento EXISTENTE e, se solicitado, a NOVA data/hora.
+       Referência hoje: ${new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })}.
+       Nunca invente nome, data ou hora. Não confunda data nova com data original.
+       JSON sem markdown: {"nome":null,"data":null,"hora":null,"nova_data":null,"nova_hora":null}.
+       Datas YYYY-MM-DD, horas HH:MM. Ausência = null.`, msg)
+    let parsed: any
+    try { parsed = JSON.parse(extracted.replace(/```json|```/g, '').trim()) } catch { return reply('Informe a data e o horário ou nome completo do agendamento existente.') }
+    if (!parsed?.data || (!parsed.hora && !parsed.nome)) return reply('Informe a data e o horário ou nome completo do agendamento existente. Para reagendar, informe também a nova data e horário.')
+    const admin = createClient(supabaseUrl, serviceKey)
+    const { appointment, error } = await findAppointment(admin, companyId, { date: parsed.data, time: parsed.hora || undefined, name: parsed.nome || undefined })
+    if (error) return reply(error === 'appointment_ambiguous' ? 'Mais de um agendamento corresponde. Informe o nome completo e horário para identificar apenas um.' : error === 'appointment_not_found' ? 'Agendamento não encontrado. Confira a data, horário e nome completo.' : 'Não foi possível identificar o agendamento. Informe a data, horário e nome completo.')
+    const payload: any = { company_id: companyId, appointment_id: appointment.id, action }
+    if (action === 'reschedule') {
+      if (!parsed.nova_data || !parsed.nova_hora) return reply('Informe a nova data e horário desejados, além dos dados do agendamento existente.')
+      const start = `${parsed.nova_data}T${parsed.nova_hora}:00-03:00`
+      const duration = Date.parse(appointment.appointment_end) - Date.parse(appointment.appointment_date)
+      if (!Number.isFinite(Date.parse(start)) || !Number.isFinite(duration) || duration <= 0) return reply('Informe uma nova data e horário válidos.')
+      const times = actionTimes({ new_start: start, new_end: new Date(Date.parse(start) + duration).toISOString() })
+      if (!times) return reply('Informe uma nova data e horário válidos.')
+      payload.new_start = times.start; payload.new_end = times.end
+    }
+    const response = await fetch(`${supabaseUrl}/functions/v1/appointment-actions-v2`, {
+      method: 'POST', headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(60000),
+    })
+    const result = await response.json().catch(() => null)
+    if (!response.ok || result?.success !== true) return reply(result?.error === 'slot_unavailable' ? 'Este horário não está disponível. Escolha outro.' : 'Não foi possível concluir a alteração do agendamento. Tente novamente.')
+    return reply(action === 'confirm' ? '✅ Presença confirmada! Te esperamos.' : action === 'cancel' ? '✅ Agendamento cancelado com sucesso.' : '✅ Agendamento reagendado com sucesso.', true)
+  } catch { return reply('Não foi possível concluir a operação. Confira os dados do agendamento e tente novamente.') }
 }
 
 // ── Helper OpenAI ─────────────────────────────────────────────────────────

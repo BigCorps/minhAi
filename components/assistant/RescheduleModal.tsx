@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Calendar, Clock, User, Loader2, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
+import { searchPublicAppointment, actOnPublicAppointment, listPublicCalendarAvailability } from '@/lib/calendar-client';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -22,10 +22,10 @@ interface RescheduleModalProps {
 type Step = 'search' | 'select_event' | 'select_date' | 'success';
 
 interface Event {
-  id: string;
+  appointment_id: string;
+  capability: string;
   summary: string;
   start: { dateTime: string };
-  end: { dateTime: string };
 }
 
 export default function RescheduleModal({
@@ -52,6 +52,7 @@ export default function RescheduleModal({
   // Nova data/hora
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState(60);
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
 
   const isDark = theme === 'dark';
@@ -60,7 +61,6 @@ export default function RescheduleModal({
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
 
-  const supabase = createClient();
 
   // Auto-extrair data/hora/nome do transcript
   useEffect(() => {
@@ -93,77 +93,19 @@ export default function RescheduleModal({
     setError(null);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/listar-eventos-google`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            company_id: companyId,
-            time_min: `${searchDate}T00:00:00`,
-            time_max: `${searchDate}T23:59:59`,
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!result.success || !result.events || result.events.length === 0) {
-        setError('Nenhum agendamento encontrado para esta data');
-        setEvents([]);
-        if (playText) {
-          playText('Nenhum agendamento encontrado para esta data').catch(() => {});
-        }
-        return;
-      }
-
-      let filteredEvents = result.events;
-
-      if (searchTime) {
-        filteredEvents = filteredEvents.filter((event: Event) => {
-          const eventTime = new Date(event.start.dateTime).toTimeString().substring(0, 5);
-          return eventTime === searchTime;
-        });
-      }
-
-      if (searchName) {
-        const nameLower = searchName.toLowerCase();
-        filteredEvents = filteredEvents.filter((event: Event) =>
-          event.summary?.toLowerCase().includes(nameLower)
-        );
-      }
-
-      if (filteredEvents.length === 0) {
-        setError('Nenhum agendamento encontrado com os critérios informados');
-        setEvents([]);
-        if (playText) {
-          playText('Nenhum agendamento encontrado').catch(() => {});
-        }
-        return;
-      }
-
-      setEvents(filteredEvents);
-      
-      if (filteredEvents.length === 1) {
-        setSelectedEvent(filteredEvents[0]);
-        setStep('select_date');
-        await loadCalendarEvents();
-        if (playText) {
-          playText('Agendamento encontrado. Escolha a nova data e horário.').catch(() => {});
-        }
-      } else {
-        setStep('select_event');
-        if (playText) {
-          playText(`Encontrei ${filteredEvents.length} agendamentos. Selecione um.`).catch(() => {});
-        }
-      }
+      const appointment = await searchPublicAppointment({ company_id: companyId, action: 'reschedule', date: searchDate, time: searchTime || undefined, name: searchName || undefined });
+      const start = `${appointment.date}T${appointment.time}:00-03:00`;
+      const event: Event = { appointment_id: appointment.appointment_id, capability: appointment.capability, summary: appointment.service_type,
+        start: { dateTime: start } };
+      setEvents([event]);
+      setSelectedEvent(event);
+      setStep('select_date');
+      await loadCalendarEvents();
+      if (playText) playText('Agendamento encontrado. Confira os dados antes de continuar.').catch(() => {});
 
     } catch (err) {
       console.error('Erro ao buscar eventos:', err);
-      setError('Erro ao buscar agendamentos. Tente novamente.');
+      setError(err instanceof Error ? err.message : 'Erro ao buscar agendamentos. Tente novamente.');
       if (playText) {
         playText('Erro ao buscar agendamentos').catch(() => {});
       }
@@ -174,38 +116,9 @@ export default function RescheduleModal({
 
   const loadCalendarEvents = async () => {
     try {
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      const endOfMonth = new Date(startOfMonth);
-      endOfMonth.setMonth(endOfMonth.getMonth() + 2);
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/listar-eventos-google`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            company_id: companyId,
-            time_min: startOfMonth.toISOString(),
-            time_max: endOfMonth.toISOString(),
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (result.success && result.events) {
-        const formatted = result.events.map((evt: Event) => ({
-          title: evt.summary || 'Evento',
-          start: evt.start.dateTime,
-          end: evt.end.dateTime,
-          color: '#3b82f6',
-        }));
-        setCalendarEvents(formatted);
-      }
+      const start = new Date();
+      const busy = await listPublicCalendarAvailability({ company_id: companyId, time_min: start.toISOString(), time_max: new Date(start.getTime() + 59 * 86400000).toISOString() });
+      setCalendarEvents(busy.map(block => ({ title: 'Ocupado', start: block.start, end: block.end, color: '#3b82f6' })));
     } catch (err) {
       console.error('Erro ao carregar eventos do calendário:', err);
     }
@@ -225,38 +138,20 @@ export default function RescheduleModal({
     setError(null);
 
     try {
-      const newDateTime = `${newDate}T${newTime}:00`;
-      const oldStart = new Date(selectedEvent.start.dateTime);
-      const oldEnd = new Date(selectedEvent.end.dateTime);
-      const duration = oldEnd.getTime() - oldStart.getTime();
+      const newDateTime = `${newDate}T${newTime}:00-03:00`;
+      if (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 1440) throw new Error('Informe uma duração entre 1 e 1440 minutos.');
+      const duration = durationMinutes * 60000;
       const newEndDateTime = new Date(new Date(newDateTime).getTime() + duration).toISOString();
 
-      // Chamar Edge Function para reagendar
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/reagendar-compromisso`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            company_id: companyId,
-            event_id: selectedEvent.id,
-            new_start_time: newDateTime,
-            new_end_time: newEndDateTime,
-          }),
-        }
-      );
-
-      const result = await response.json();
+      await actOnPublicAppointment({ company_id: companyId, appointment_id: selectedEvent.appointment_id, action: 'reschedule', capability: selectedEvent.capability, new_start: new Date(newDateTime).toISOString(), new_end: newEndDateTime });
+      const result = { success: true, speech_text: '' };
 
       if (result.success) {
         const dateStr = new Date(newDateTime).toLocaleDateString('pt-BR');
         const timeStr = new Date(newDateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         
         if (playText) {
-          await playText(`Agendamento reagendado com sucesso para o dia ${dateStr} às ${timeStr}.`);
+          await playText(`Agendamento reagendado com sucesso para o dia ${dateStr} às ${timeStr}.`).catch(() => {});
         }
         
         setStep('success');
@@ -363,14 +258,14 @@ export default function RescheduleModal({
                   type="text"
                   value={searchName}
                   onChange={(e) => setSearchName(e.target.value)}
-                  placeholder="Ex: João, Reunião..."
+                  placeholder="Nome completo do cliente"
                   className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} placeholder-slate-500 focus:ring-2 focus:ring-blue-500 transition`}
                 />
               </div>
 
               <button
                 onClick={handleSearch}
-                disabled={loading || !searchDate}
+                disabled={loading || !searchDate || (!searchTime && !searchName.trim())}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
               >
                 {loading ? (
@@ -386,50 +281,6 @@ export default function RescheduleModal({
           )}
 
           {/* STEP 2: SELEÇÃO DE EVENTO */}
-          {step === 'select_event' && (
-            <div className="space-y-4">
-              <p className={`text-sm ${textMuted} mb-3`}>
-                Encontramos {events.length} agendamentos. Selecione qual deseja reagendar:
-              </p>
-              <div className="grid gap-2 max-h-96 overflow-y-auto">
-                {events.map((event) => (
-                  <button
-                    key={event.id}
-                    onClick={() => {
-                      setSelectedEvent(event);
-                      setStep('select_date');
-                      loadCalendarEvents();
-                    }}
-                    className={`w-full p-4 ${isDark ? 'bg-slate-800 hover:bg-slate-750' : 'bg-gray-50 hover:bg-gray-100'} border ${border} rounded-lg text-left transition`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Calendar className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className={`font-medium ${textPrimary} truncate`}>
-                          {event.summary || 'Sem título'}
-                        </div>
-                        <div className={`text-sm ${textMuted}`}>
-                          {new Date(event.start.dateTime).toLocaleString('pt-BR', {
-                            day: '2-digit',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setStep('search')}
-                className={`w-full py-3 ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} rounded-lg font-semibold transition`}
-              >
-                Voltar à Busca
-              </button>
-            </div>
-          )}
-
           {/* STEP 3: SELEÇÃO DE NOVA DATA */}
           {step === 'select_date' && selectedEvent && (
             <div className="space-y-4">
@@ -500,6 +351,12 @@ export default function RescheduleModal({
                     </div>
                   )}
                 </div>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>Duração do novo agendamento (minutos)</label>
+                <input type="number" min={1} max={1440} value={durationMinutes} onChange={e => setDurationMinutes(Number(e.target.value))}
+                  className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary}`} />
               </div>
 
               {/* Resumo da Nova Data */}

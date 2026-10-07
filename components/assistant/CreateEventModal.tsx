@@ -11,6 +11,7 @@
 // Step pagamento: checkout com opção de pagar agora ou depois
 // ============================================================
 
+import { listPublicCalendarAvailability } from '@/lib/calendar-client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
@@ -890,14 +891,10 @@ useEffect(() => {
 
       try {
         const hoje = new Date();
-        const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 2, 0);
-        const { data: evResult } = await supabase.functions.invoke('listar-eventos-google', {
-          body: { company_id: companyId, time_min: hoje.toISOString(), time_max: fim.toISOString() },
-        });
-        if (evResult?.events) {
-          const ocupados = (evResult.events as any[]).map((ev: any) =>
-            new Date(ev.start.dateTime || ev.start.date).toISOString().split('T')[0]
-          );
+        const fim = new Date(hoje.getTime() + 59 * 86400000);
+        const busy = await listPublicCalendarAvailability({ company_id: companyId, time_min: hoje.toISOString(), time_max: fim.toISOString() });
+        if (busy) {
+          const ocupados = busy.map(ev => new Date(ev.start).toISOString().split('T')[0]);
           setEventosOcupados([...new Set(ocupados)] as string[]);
         }
       } catch {}
@@ -912,21 +909,19 @@ useEffect(() => {
     async function loadSlots() {
       try {
         const dateStr = dados.data!.toISOString().split('T')[0];
-        const { data: evResult } = await supabase.functions.invoke('listar-eventos-google', {
-          body: { company_id: companyId, time_min: `${dateStr}T00:00:00`, time_max: `${dateStr}T23:59:59` },
-        });
+        const busy = await listPublicCalendarAvailability({ company_id: companyId, time_min: `${dateStr}T00:00:00-03:00`, time_max: `${dateStr}T23:59:59-03:00` });
         const slotsGerados: SlotHorario[] = [];
         for (let h = 8; h < 18; h++) {
           for (let m = 0; m < 60; m += 30) {
             const hora = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
             let ocupado = false;
             let eventoNome: string | undefined;
-            if (evResult?.events) {
-              for (const ev of evResult.events as any[]) {
-                const inicio = new Date(ev.start.dateTime);
-                const fim = new Date(ev.end.dateTime);
-                const slotDt = new Date(`${dateStr}T${hora}:00`);
-                if (slotDt >= inicio && slotDt < fim) { ocupado = true; eventoNome = ev.summary; break; }
+            if (busy) {
+              for (const ev of busy) {
+                const inicio = new Date(ev.all_day ? `${ev.start}T00:00:00-03:00` : ev.start);
+                const fim = new Date(ev.all_day ? `${ev.end}T00:00:00-03:00` : ev.end);
+                const slotDt = new Date(`${dateStr}T${hora}:00-03:00`);
+                if (slotDt >= inicio && slotDt < fim) { ocupado = true; eventoNome = 'Ocupado'; break; }
               }
             }
             slotsGerados.push({ hora, ocupado, eventoNome });

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "check:openai-models": "node scripts/check-openai-model-registry.mjs",
+    "check:email-boundary": "node scripts/check-email-edge-boundary.mjs",
     "dev": "next dev --webpack",
     "build": "NODE_OPTIONS=--max-old-space-size=6144 next build --webpack",
     "start": "next start",

@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SegundaViaBoletoDisplay.tsx
 // Caminho: components/VoiceAssistant/modals/SegundaViaBoletoDisplay.tsx
@@ -341,8 +343,7 @@ export default function SegundaViaBoletoDisplay({ data, onClose, theme = 'dark',
     if (!boletoData) return;
     setIsSendingEmail(true);
     try {
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: {
+      await sendCompanyResultEmail({
           company_id: data.companyId,
           subject: `Segunda Via de Boleto — ${boletoData.banco}`,
           body: [
@@ -358,9 +359,7 @@ export default function SegundaViaBoletoDisplay({ data, onClose, theme = 'dark',
             'Codigo de Barras:',
             boletoData.codigoBarras,
           ].join('\n'),
-        },
-      });
-      if (error) throw error;
+        });
       playText('Email enviado com sucesso.').catch(() => {});
     } catch {
       playText('Erro ao enviar email.').catch(() => {});

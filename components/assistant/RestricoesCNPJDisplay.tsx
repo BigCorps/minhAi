@@ -1,5 +1,7 @@
 'use client';
 
+import { sendCompanyResultEmail } from '@/lib/company-result-email-client';
+
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Download, Mail, Loader2, Mic, AlertTriangle, ShieldAlert, CheckCircle2, Building2 } from 'lucide-react';
@@ -206,10 +208,7 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
     setIsSendingEmail(true);
     try {
       const emailBody = `Consulta de Restrições CNPJ: ${resultData.cnpj}\n\nStatus: ${resultData.status}\nTotal de pendências: ${resultData.total_restricoes}`;
-      const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: { company_id: data.companyId, subject: `Restrições CNPJ: ${resultData.cnpj}`, body: emailBody },
-      });
-      if (error) throw error;
+      await sendCompanyResultEmail({ company_id: data.companyId, subject: `Restrições CNPJ: ${resultData.cnpj}`, body: emailBody });
       playText('Consulta enviada por email.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {

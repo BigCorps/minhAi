@@ -2,10 +2,22 @@ import "server-only";
 import { safeEmail } from "./outreach";
 import { db, checked, required, fetchJson, origin, signToken } from "./server";
 import { PRODUCTS, templateFor, type Product } from "./catalog";
-export async function metaConnection() {
-  const pageId = required("SDR_WHATSAPP_NUMBER_ID");
+export async function metaConnection(requireWaba = false) {
+  const d = db();
+  let pageId = process.env.SDR_WHATSAPP_NUMBER_ID?.trim() || "";
+  if (!pageId) {
+    const settings = checked(
+      await d
+        .from("bigcorps_whatsapp_settings")
+        .select("whatsapp_number_id")
+        .eq("id", "shared")
+        .maybeSingle(),
+    );
+    pageId = settings?.whatsapp_number_id || "";
+  }
+  if (!pageId) throw new Error("whatsapp_number_not_configured");
   const c = checked(
-    await db()
+    await d
       .from("meta_connections")
       .select(
         "whatsapp_number_id,waba_id,user_access_token,encrypted_page_access_token",
@@ -14,10 +26,11 @@ export async function metaConnection() {
       .single(),
   )!;
   const token = c.user_access_token || c.encrypted_page_access_token;
-  if (!token || !c.waba_id) throw new Error("meta_connection_incomplete");
+  if (!token) throw new Error("meta_connection_incomplete");
+  if (requireWaba && !c.waba_id) throw new Error("whatsapp_waba_required");
   return {
     pageId,
-    wabaId: c.waba_id,
+    wabaId: c.waba_id || null,
     token,
     version: process.env.META_GRAPH_VERSION || "v23.0",
   };
@@ -42,7 +55,7 @@ export async function seedTemplates() {
   );
 }
 export async function submitTemplate(product: Product) {
-  const c = await metaConnection();
+  const c = await metaConnection(true);
   const t = templateFor(product);
   const r = await graph(`${c.wabaId}/message_templates`, "POST", {
     name: t.name,
@@ -71,7 +84,7 @@ export async function submitTemplate(product: Product) {
   return { status: r.payload.status || "PENDING" };
 }
 export async function syncTemplate(product: Product) {
-  const c = await metaConnection();
+  const c = await metaConnection(true);
   const t = templateFor(product);
   const r = await graph(
     `${c.wabaId}/message_templates?name=${encodeURIComponent(t.name)}&fields=id,name,status,category,language,components`,
@@ -97,17 +110,36 @@ export async function syncTemplate(product: Product) {
   );
   return { status: actual ? status : "NOT_FOUND" };
 }
-export async function sendWhatsapp(q: any, o: any, l: any) {
-  const c = await metaConnection();
+export async function sendWhatsapp(q: any, o: any, _l: any) {
+  const d = db();
+  const c = await metaConnection(false);
   const t = templateFor(o.product);
+  const saved = checked(
+    await d
+      .from("sdr_templates")
+      .select("name,language,body,category,status,meta_id")
+      .eq("product", o.product)
+      .maybeSingle(),
+  );
+  if (
+    !saved ||
+    String(saved.status || "").toUpperCase() !== "APPROVED" ||
+    !saved.meta_id ||
+    saved.name !== t.name ||
+    saved.language !== t.language ||
+    saved.category !== t.category ||
+    saved.body !== t.body
+  ) throw new Error("whatsapp_template_not_approved");
+  const recipient = String(q.recipient_address || "").replace(/\D/g, "");
+  if (!/^[1-9]\d{9,14}$/.test(recipient)) throw new Error("whatsapp_snapshot_required");
   const url = `${origin()}/comercial/conhecer/${signToken(o.id)}`;
   const r = await graph(`${c.pageId}/messages`, "POST", {
     messaging_product: "whatsapp",
-    to: l.phone,
+    to: recipient,
     type: "template",
     template: {
       name: t.name,
-      language: { code: "pt_BR" },
+      language: { code: t.language },
       components: [{ type: "body", parameters: [{ type: "text", text: url }] }],
     },
   });

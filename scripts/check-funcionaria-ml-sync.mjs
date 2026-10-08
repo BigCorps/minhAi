@@ -22,6 +22,7 @@ const checks = [
   [worker.includes('/prices'), 'authoritative price endpoint'],
   [worker.includes('/stock'), 'user product stock'],
   [worker.includes('ml_variations_changed'), 'variations review gate'],
+  [worker.includes('previous.length > 0 || current.length > 0'), 'new variations review gate'],
   [worker.includes('ml_status_unrecognized'), 'status fail closed'],
   [worker.includes("String(item.seller_id || '')!==String(conn.seller_id)"), 'seller ownership'],
   [worker.includes("if(!isService)return respond({error:'forbidden'},403)"), 'cron service boundary'],

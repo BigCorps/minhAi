@@ -102,7 +102,7 @@ async function exactStock(token:string,item:any){
   let total=0
   for(const id of ids){
     const data=await mlGet(`https://api.mercadolibre.com/user-products/${encodeURIComponent(id)}/stock`,token)
-    if(!Array.isArray(data?.locations))return {source:'unknown',quantity:null}
+    if(!Array.isArray(data?.locations) || data.locations.length===0)return {source:'unknown',quantity:null}
     for(const place of data.locations){
       const qty=Number(place?.quantity)
       if(!Number.isFinite(qty) || qty<0)return {source:'unknown',quantity:null}
@@ -206,7 +206,7 @@ async function syncRows(admin:any,rows:any[]){
           const optionsChanged=canonical(previous)!==canonical(current)
           const previousPrice=Number(row.sync_last_applied?.preco_venda)
           const priceChanged=previousPrice>0 && previousPrice!==Number(normalized.product.preco_venda)
-          if(previous.length && (optionsChanged || priceChanged))throw new Error('ml_variations_changed')
+          if((previous.length > 0 || current.length > 0) && (optionsChanged || priceChanged))throw new Error('ml_variations_changed')
           const {data,error}=await admin.rpc('funcionaria_apply_ml_sync',{
             p_company_id:companyId,p_ml_item_id:itemId,
             p_product:normalized.product,p_sync:normalized.sync,

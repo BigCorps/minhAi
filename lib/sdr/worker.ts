@@ -9,7 +9,7 @@ import {
   threadHasReply,
   googleAccount,
 } from "./channels";
-import { discover } from "./providers";
+import { discoverWebCompanies } from "./web-discovery";
 import { reconcileSales } from "./sales";
 import { prepareAutomaticFirstContacts } from "./auto-outreach";
 export async function runWorker() {
@@ -174,35 +174,49 @@ export async function runWorker() {
       results.push({ id: q.id, status: sending ? "unknown" : "blocked" });
     }
   }
-  // Discovery does not enqueue outreach; imported leads await campaign/fit review.
-  const campaigns = checked(
-    await d
-      .from("sdr_campaigns")
-      .select("id,product")
-      .eq("enabled", true)
-      .eq("auto_discover", true)
-      .gt("trial_ends_at", new Date().toISOString())
-      .or(
-        `next_search_at.is.null,next_search_at.lte.${new Date().toISOString()}`,
-      )
-      .limit(1),
-  );
-  for (const c of campaigns || []) {
-    try {
-      const rollout = checked(
-        await d
-          .from("sdr_product_rollouts")
-          .select("status,auto_discovery_enabled")
-          .eq("product", c.product)
-          .maybeSingle(),
-      );
-      if (!rollout || !["pilot", "active"].includes(rollout.status) || !rollout.auto_discovery_enabled) continue;
-      await discover(c.id);
-    } catch {
-      await event("worker", "discovery_failed", null, null, {
-        campaignId: c.id,
-      });
+  // Scheduled discovery is web-only and only runs after the current pool cannot
+  // produce or research another contact in this execution. Provider APIs remain manual.
+  let discovery: any = null;
+  if (automation.capacityRemaining > 0 && automation.queued === 0 && automation.researched === 0) {
+    const campaigns = checked(
+      await d
+        .from("sdr_campaigns")
+        .select("id,product")
+        .eq("enabled", true)
+        .eq("auto_discover", true)
+        .gt("trial_ends_at", new Date().toISOString())
+        .or(
+          `next_search_at.is.null,next_search_at.lte.${new Date().toISOString()}`,
+        )
+        .limit(1),
+    );
+    for (const campaign of campaigns || []) {
+      try {
+        const rollout = checked(
+          await d
+            .from("sdr_product_rollouts")
+            .select("status,auto_discovery_enabled")
+            .eq("product", campaign.product)
+            .maybeSingle(),
+        );
+        if (!rollout || rollout.status !== "active" || !rollout.auto_discovery_enabled) continue;
+        discovery = await discoverWebCompanies(campaign.id, "automatic");
+        await event("worker", "automatic_web_discovery_completed", null, null, {
+          campaignId: campaign.id,
+          imported: discovery.imported,
+          duplicates: discovery.duplicates,
+          creditsCharged: discovery.creditsCharged,
+        });
+      } catch (error) {
+        const code = error instanceof Error ? error.message : "automatic_web_discovery_failed";
+        if (!["search_not_due", "search_daily_limit", "provider_budget"].includes(code)) {
+          await event("worker", "automatic_web_discovery_failed", null, null, {
+            campaignId: campaign.id,
+            code,
+          });
+        }
+      }
     }
   }
-  return { mode: "live", sales, automation, sent, results };
+  return { mode: "live", sales, automation, discovery, sent, results };
 }

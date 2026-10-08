@@ -37,8 +37,9 @@ async function simulate(options = {}) {
     },
     async rpc(method, args) {
       rpc.push({ method, args });
-      assert.ok(['sdr_begin_web_discovery', 'sdr_release_units', 'sdr_import_web_discovery_lead'].includes(method));
-      if (method === 'sdr_begin_web_discovery') return options.budgetError ? { error: { message: 'provider_budget' } } : { data: 'run' };
+      assert.ok(['sdr_begin_web_discovery', 'sdr_begin_automatic_web_discovery', 'sdr_release_units', 'sdr_import_web_discovery_lead'].includes(method));
+      if (method === 'sdr_begin_web_discovery' || method === 'sdr_begin_automatic_web_discovery')
+        return options.budgetError ? { error: { message: 'provider_budget' } } : { data: 'run' };
       if (method === 'sdr_import_web_discovery_lead') { imports.push(args); return { data: { leadId: 'lead', duplicate: options.existingDomains?.includes(args.p_lead.domain) || false } }; }
       return { data: null };
     },
@@ -52,7 +53,7 @@ async function simulate(options = {}) {
   const research = compile('web-research', { './catalog': catalog, './server': { db: () => d, checked }, './public-web-source': publicWeb }, globals);
   const discovery = compile('web-discovery', { './catalog': catalog, './server': { db: () => d, checked }, './public-web-source': publicWeb, './web-research': research }, globals);
   let result, error;
-  try { result = await discovery.discoverWebCompanies('campaign'); } catch (e) { error = e.message; }
+  try { result = await discovery.discoverWebCompanies('campaign', options.mode || 'manual'); } catch (e) { error = e.message; }
   return { result, error, calls, rpc, imports, updates, research };
 }
 
@@ -131,4 +132,13 @@ test('web-discovered company follows stage 1 without CNPJ; authority of Econodat
   assert.equal(r.research.eligibleBusinessResearch(r.imports[0].p_lead, { stage: 'new', product: 'conviteia', qualification: {} }), true);
   assert.equal(r.imports[0].p_lead.contact_name, null);
   assert.ok(r.rpc.every(x => !/enqueue|send|reserve_run/.test(x.method)));
+});
+
+
+test('automatic mode uses the dedicated guarded claim and never provider discovery', async () => {
+  const r = await simulate({ mode: 'automatic', companies: [company()], searches: 1 });
+  assert.equal(r.error, undefined);
+  assert.equal(r.result.mode, 'automatic');
+  assert.equal(r.rpc[0].method, 'sdr_begin_automatic_web_discovery');
+  assert.ok(r.rpc.every(x => !/reserve_run|econodata|hunter|apollo/.test(x.method)));
 });

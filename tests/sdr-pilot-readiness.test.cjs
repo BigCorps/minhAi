@@ -211,7 +211,7 @@ test('worker performs no sends or claims while global kill switch or businessHou
   const calls = []; const throwing = () => { throw Error('unexpected_send_or_provider'); };
   const server = { db: () => ({ rpc: async name => { calls.push(name); throw Error('unexpected_claim'); } }) };
   for (const [live, hours] of [['false', true], ['true', false]]) {
-    const w = compile('lib/sdr/worker.ts', { './server': server, './outreach': outreach, './catalog': { businessHours: () => hours }, './channels': { sendEmail: throwing, sendWhatsapp: throwing, syncTemplate: throwing, threadHasReply: throwing, googleAccount: throwing }, './providers': { discover: throwing }, './sales': { reconcileSales: async () => ({}) }, './auto-outreach': { prepareAutomaticFirstContacts: throwing } }, { process: { env: { SDR_LIVE_SEND: live } } });
+    const w = compile('lib/sdr/worker.ts', { './server': server, './outreach': outreach, './catalog': { businessHours: () => hours }, './channels': { sendEmail: throwing, sendWhatsapp: throwing, syncTemplate: throwing, threadHasReply: throwing, googleAccount: throwing }, './web-discovery': { discoverWebCompanies: throwing }, './sales': { reconcileSales: async () => ({}) }, './auto-outreach': { prepareAutomaticFirstContacts: throwing } }, { process: { env: { SDR_LIVE_SEND: live } } });
     assert.equal((await w.runWorker()).mode, 'paused'); assert.equal(calls.length, 0);
   }
 });
@@ -414,6 +414,9 @@ test('automatic worker is single-touch without Gmail read permission and seller 
   assert.match(auto,/automation_policy: POLICY/);
   assert.match(auto,/researched < 1/);
   assert.match(auto,/sdr_enqueue_automatic_email/);
+  assert.match(auto,/sdr_automatic_outreach_capacity/);
+  assert.match(worker,/discoverWebCompanies\(campaign\.id, "automatic"\)/);
+  assert.doesNotMatch(worker,/from "\.\/providers"/);
   assert.match(sales,/sales_priority/);
   assert.doesNotMatch(sales,/sendEmail|sendWhatsapp|sdr_enqueue/);
 });

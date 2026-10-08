@@ -117,7 +117,18 @@ export async function prepareAutomaticFirstContacts() {
       .eq("max_touches", 1),
   ) || [];
   const campaigns = campaignRows.filter((c: any) => rolloutByProduct.has(c.product));
-  if (!campaigns.length) return { scanned: 0, researched: 0, queued: 0 };
+  if (!campaigns.length) return { scanned: 0, researched: 0, queued: 0, capacityRemaining: 0 };
+
+  const capacities = new Map<string, number>();
+  for (const campaign of campaigns) {
+    const capacity = Number(checked(await d.rpc("sdr_automatic_outreach_capacity", {
+      p_product: campaign.product,
+      p_campaign: campaign.id,
+    })) || 0);
+    capacities.set(campaign.id, capacity);
+  }
+  const activeCampaigns = campaigns.filter((campaign: any) => (capacities.get(campaign.id) || 0) > 0);
+  if (!activeCampaigns.length) return { scanned: 0, researched: 0, queued: 0, capacityRemaining: 0 };
 
   const budget = checked(
     await d
@@ -129,7 +140,7 @@ export async function prepareAutomaticFirstContacts() {
   let researchAvailable = readyBudget(budget);
   let researched = 0;
 
-  const campaignIds = campaigns.map((c: any) => c.id);
+  const campaignIds = activeCampaigns.map((c: any) => c.id);
   const opportunities = checked(
     await d
       .from("sdr_opportunities")
@@ -147,6 +158,8 @@ export async function prepareAutomaticFirstContacts() {
       continue;
     const rollout: any = rolloutByProduct.get(initial.product);
     if (!rollout) continue;
+    const remaining = capacities.get(initial.campaign_id) || 0;
+    if (remaining <= 0) continue;
 
     let o = await classifyIfNeeded(initial);
     let type = o.qualification?.commercial_classification?.type;
@@ -191,6 +204,7 @@ export async function prepareAutomaticFirstContacts() {
         }),
       );
       queued++;
+      capacities.set(initial.campaign_id, Math.max(0, (capacities.get(initial.campaign_id) || 0) - 1));
       await event("worker", "automatic_outreach_queued", o.lead_id, o.id, {
         queueId,
         policy: POLICY,
@@ -205,5 +219,10 @@ export async function prepareAutomaticFirstContacts() {
     }
   }
 
-  return { scanned: opportunities.length, researched, queued };
+  return {
+    scanned: opportunities.length,
+    researched,
+    queued,
+    capacityRemaining: [...capacities.values()].reduce((total, value) => total + Math.max(0, value), 0),
+  };
 }

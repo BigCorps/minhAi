@@ -68,13 +68,16 @@ export function evaluateWebDiscovery(payload: Record<string, any>, product: keyo
   }
   return { searchCount: calls.length, leads: leads.slice(0, WEB_DISCOVERY_LIMIT), repeated };
 }
-export async function discoverWebCompanies(campaignId: string) {
+export async function discoverWebCompanies(campaignId: string, mode: "manual" | "automatic" = "manual") {
   const d = db();
   const campaign = checked(await d.from("sdr_campaigns").select("id,product").eq("id", campaignId).single())!;
   if (!isProduct(campaign.product)) throw new Error("invalid_product");
   const key = process.env.OPENAI_API_KEY?.trim();
   if (!key) throw new Error("web_research_not_configured");
-  const run = checked(await d.rpc("sdr_begin_web_discovery", { p_campaign: campaignId }));
+  const run = checked(await d.rpc(
+    mode === "automatic" ? "sdr_begin_automatic_web_discovery" : "sdr_begin_web_discovery",
+    { p_campaign: campaignId },
+  ));
   let imported = 0, duplicates = 0, charged: number | null = null;
   try {
     const result = evaluateWebDiscovery(await responses(buildWebDiscoveryRequest(campaign.product), key), campaign.product);
@@ -88,7 +91,7 @@ export async function discoverWebCompanies(campaignId: string) {
       if (outcome.duplicate) duplicates++; else imported++;
     }
     checked(await d.from("sdr_runs").update({ status: "completed", credits_charged: charged, imported, duplicates, finished_at: new Date().toISOString() }).eq("id", run));
-    return { imported, duplicates, creditsReserved: WEB_RESEARCH_LIMIT, creditsCharged: charged };
+    return { mode, imported, duplicates, creditsReserved: WEB_RESEARCH_LIMIT, creditsCharged: charged };
   } catch (error) {
     const raw = error instanceof Error ? error.message : "web_research_failed";
     const code = /^[a-z0-9_]+$/.test(raw) ? raw : "web_research_failed";

@@ -243,3 +243,16 @@ Ver `VALIDACAO.md` para separar verificações locais concluídas dos gates de h
 - **Resposta recebida** registra `last_inbound_at`, move a oportunidade para `replied` e chama o handoff; **Assumir conversa** pausa a automação sem fingir resposta. Interessado/Reunião/Proposta/Perdido atualizam o funil e mantêm takeover humano.
 - O workflow usa `https://www.minhai.app` diretamente; o apex `https://minhai.app` redireciona e não deve ser usado pelo `curl` atual do Actions. `SDR_WORKER_ENABLED=false` pode pausar o agendamento sem depender do deploy.
 - Migration desta etapa: `20261008141000_sdr_automatic_first_contact.sql`. Aplicar somente após revisão/merge. Ela não ativa rollout, campanha, budget, `SDR_LIVE_SEND` nem dispara mensagens por conta própria.
+
+
+### Etapa 7C — descoberta web automática controlada
+
+- A descoberta agendada usa **somente Pesquisa IA na web**; Econodata, Hunter e Apollo permanecem manuais e seus budgets não são habilitados por esta etapa.
+- O worker só tenta descoberta quando ainda existe capacidade de envio no dia e a execução atual não conseguiu enfileirar nem pesquisar um contato existente. Assim, a base atual é esgotada antes de buscar novas empresas.
+- A função `sdr_automatic_outreach_capacity` calcula a menor capacidade restante entre limite diário da campanha e limite diário do produto, contando filas ativas e enviados no dia de Brasília. Quando chega a zero, novas pesquisas de contato param antes de consumir busca.
+- A descoberta automática exige simultaneamente: campanha habilitada + `auto_discover=true` + trial válido; rollout `active` + `auto_discovery_enabled=true`; budget `web_research` habilitado/válido; e `next_search_at` vencido.
+- `sdr_begin_automatic_web_discovery` reserva no máximo 3 unidades de Pesquisa IA, impede concorrência e limita a **uma descoberta automática por campanha por dia**. Após reservar, agenda a próxima janela para 09:00 de Brasília do dia seguinte.
+- Cada descoberta retorna no máximo cinco empresas com domínio oficial validado. Não pesquisa emails, telefones ou pessoas nessa etapa. O worker posterior pode pesquisar no máximo um contato empresarial por execução, e o primeiro contato automático continua sujeito a todos os gates de `first_contact_v1`.
+- O budget de `web_research` continua sendo o teto financeiro/técnico final. Se esgotado ou expirado, discovery e pesquisa de contato falham fechados sem chamar outras APIs como fallback.
+- A chave `OPENAI_API_KEY` é somente de servidor e deve ficar como secret/sensitive no Vercel. Nunca registrar ou expor seu valor.
+- Migration desta etapa: `20261008183000_sdr_controlled_web_discovery.sql`. Ela adiciona apenas gates/capacidade; ativação de campaign/rollout/budget continua uma decisão operacional separada.

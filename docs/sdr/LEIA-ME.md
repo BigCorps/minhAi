@@ -256,3 +256,18 @@ Ver `VALIDACAO.md` para separar verificações locais concluídas dos gates de h
 - O budget de `web_research` continua sendo o teto financeiro/técnico final. Se esgotado ou expirado, discovery e pesquisa de contato falham fechados sem chamar outras APIs como fallback.
 - A chave `OPENAI_API_KEY` é somente de servidor e deve ficar como secret/sensitive no Vercel. Nunca registrar ou expor seu valor.
 - Migration desta etapa: `20261008183000_sdr_controlled_web_discovery.sql`. Ela adiciona apenas gates/capacidade; ativação de campaign/rollout/budget continua uma decisão operacional separada.
+
+
+### Etapa 8 — WhatsApp com opt-in e resposta automática
+
+- WhatsApp comercial continua **proibido para contato frio**. Número encontrado em API/site não é consentimento.
+- O consentimento passa por `sdr_record_whatsapp_consent`, que normaliza o telefone, exige evidência explícita e mantém um único opt-in ativo por lead/produto/número. A qualificação pública usa a versão `public-qualification-v2`; o Admin usa `manual-reviewed-v2`.
+- O outbound usa `sdr_enqueue_optin_whatsapp`: somente rollout/campanha ativos, lead ainda elegível, opt-in vigente e template Meta `APPROVED`. O destinatário, consentimento e template são congelados no snapshot da fila antes do envio.
+- `sendWhatsapp` usa o telefone congelado da fila, nunca o telefone mutável do lead. Se o número mudar após o opt-in, o envio falha fechado e exige nova autorização.
+- Templates são comparados com o catálogo local (nome, idioma, categoria e corpo) antes do envio. Aprovação antiga com conteúdo diferente não é aceita.
+- O número de envio pode vir de `SDR_WHATSAPP_NUMBER_ID` ou, na ausência da env, da configuração compartilhada `bigcorps_whatsapp_settings.shared`.
+- Enviar template aprovado não exige leitura do WhatsApp. Criar/sincronizar templates exige `waba_id` salvo na conexão Meta; se estiver ausente, o Admin retorna `whatsapp_waba_required` em vez de adivinhar.
+- Mensagens recebidas no número compartilhado são associadas ao SDR por telefone normalizado. Uma resposta pausa a prospecção, move a oportunidade para `replied` e, quando a auto-resposta do inbox estiver habilitada, devolve uma confirmação contextual curta dentro da janela iniciada pelo usuário.
+- Pedidos `SAIR/PARAR/CANCELAR/STOP/REMOVER/NÃO QUERO` suprimem o lead e recebem apenas confirmação de remoção.
+- A auto-resposta comercial é determinística e não usa IA nem consome API externa. A negociação continua humana pelo Inbox/Admin.
+- Migration: `20261008193000_sdr_whatsapp_optin_inbound.sql`.

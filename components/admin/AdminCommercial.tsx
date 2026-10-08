@@ -78,6 +78,18 @@ const errors: Record<string, string> = {
   search_exhausted: "Esta busca terminou. Salve novos filtros para recomeçar.",
   whatsapp_optin_required:
     "O contato ainda não autorizou WhatsApp para este produto.",
+  whatsapp_template_not_approved:
+    "O template deste produto ainda não está aprovado pela Meta.",
+  whatsapp_snapshot_required:
+    "O WhatsApp não possui um snapshot seguro de destinatário/consentimento.",
+  whatsapp_number_changed:
+    "O telefone do lead mudou depois da autorização. Registre um novo opt-in.",
+  whatsapp_number_not_configured:
+    "Configure o número compartilhado do WhatsApp antes de usar o canal.",
+  whatsapp_waba_required:
+    "O número está conectado, mas falta o WABA ID para criar ou sincronizar templates.",
+  consent_evidence_required:
+    "Registre onde, quando e como o contato autorizou mensagens por WhatsApp.",
   verified_email_required: "Verifique o email antes de enfileirar.",
   lead_not_eligible:
     "Ative a campanha e revise o contato. Confira bloqueios e responsável.",

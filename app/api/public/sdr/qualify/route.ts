@@ -44,18 +44,15 @@ export async function POST(req: Request) {
         .eq("id", id),
     );
     if (input.whatsapp === true && l.phone) {
-      checked(
-        await d
-          .from("sdr_consents")
-          .insert({
-            lead_id: o.lead_id,
-            channel: "whatsapp",
-            address: l.phone,
-            product: o.product,
-            evidence:
-              "Checkbox explícito na página comercial autenticada por link individual; texto versão sdr-v1",
-          }),
+      const consentId = checked(
+        await d.rpc("sdr_record_whatsapp_consent", {
+          p_opportunity: o.id,
+          p_evidence:
+            "Checkbox explícito na página comercial autenticada por link individual; texto versão sdr-v2",
+          p_version: "public-qualification-v2",
+        }),
       );
+      await event("lead", "whatsapp_optin", o.lead_id, o.id, { consentId });
     }
     checked(
       await d.rpc("sdr_stop", {

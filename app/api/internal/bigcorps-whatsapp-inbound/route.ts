@@ -7,6 +7,10 @@ import {
   getBigCorpsWhatsappSettings,
   sendBigCorpsWhatsappText,
 } from '@/lib/bigcorps-whatsapp';
+import {
+  commercialWhatsappAutoReply,
+  findCommercialWhatsappContext,
+} from '@/lib/sdr/whatsapp-inbound';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -46,17 +50,29 @@ export async function POST(request: Request) {
   }
 
   try {
-    const source = await classifyBigCorpsWhatsappSource(admin, fromId);
+    const [source, commercial] = await Promise.all([
+      classifyBigCorpsWhatsappSource(admin, fromId),
+      findCommercialWhatsappContext(admin, fromId),
+    ]);
+    const sourceContext = commercial
+      ? {
+          ...source.context,
+          sdrCommercial: true,
+          sdrOpportunityId: commercial.opportunityId,
+          sdrLeadId: commercial.leadId,
+          sdrProduct: commercial.product,
+        }
+      : source.context;
 
     const { data: claim, error: claimError } = await admin.rpc(
       'bigcorps_whatsapp_record_inbound',
       {
         p_page_id: pageId,
         p_from_id: fromId,
-        p_sender_name: source.senderName,
+        p_sender_name: source.senderName ?? commercial?.contactName ?? commercial?.companyName ?? null,
         p_message_text: text,
         p_source: source.source,
-        p_source_context: source.context,
+        p_source_context: sourceContext,
       },
     );
 
@@ -70,7 +86,11 @@ export async function POST(request: Request) {
       return json({ ok: true, recorded: true, autoReply: false });
     }
 
-    const replyText = String(claim?.auto_reply_text ?? settings.auto_reply_text ?? '').trim();
+    const replyText = String(
+      commercial
+        ? commercialWhatsappAutoReply(commercial, text)
+        : claim?.auto_reply_text ?? settings.auto_reply_text ?? '',
+    ).trim();
     if (!replyText) {
       await admin
         .from('bigcorps_whatsapp_threads')

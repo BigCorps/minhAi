@@ -332,40 +332,29 @@ export async function POST(req: Request) {
       case "consent": {
         const evidence = text(input.evidence);
         if (evidence.length < 20) throw new Error("consent_evidence_required");
+        const consentId = checked(
+          await d.rpc("sdr_record_whatsapp_consent", {
+            p_opportunity: id,
+            p_evidence: evidence,
+            p_version: "manual-reviewed-v2",
+          }),
+        );
         const o = checked(
           await d
             .from("sdr_opportunities")
-            .select("product,lead_id")
+            .select("lead_id")
             .eq("id", id)
             .single(),
         )!;
-        const l = checked(
-          await d
-            .from("sdr_leads")
-            .select("phone,suppressed_at")
-            .eq("id", o.lead_id)
-            .single(),
-        )!;
-        if (!l.phone || l.suppressed_at) throw new Error("contact_blocked");
-        checked(
-          await d
-            .from("sdr_consents")
-            .insert({
-              lead_id: o.lead_id,
-              product: o.product,
-              channel: "whatsapp",
-              address: l.phone,
-              evidence,
-              version: "manual-reviewed-v1",
-            }),
-        );
-        await event(actor, "consent_recorded", o.lead_id, id, { evidence });
-        return {};
+        await event(actor, "consent_recorded", o.lead_id, id, { evidence, consentId });
+        return { id: consentId };
       }
       case "enqueue": {
         const result = input.channel === "email"
           ? await enqueueReviewedOutreach(id, input.reviewToken, actor)
-          : checked(await d.rpc("sdr_enqueue", { p_opportunity: id, p_channel: input.channel }));
+          : input.channel === "whatsapp"
+            ? checked(await d.rpc("sdr_enqueue_optin_whatsapp", { p_opportunity: id, p_actor: actor }))
+            : (() => { throw new Error("invalid_channel"); })();
         await event(actor, "outreach_queued", null, id, {
           channel: input.channel,
         });

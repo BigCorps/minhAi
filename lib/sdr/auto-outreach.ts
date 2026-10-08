@@ -79,16 +79,16 @@ async function classifyIfNeeded(o: any, force = false) {
 }
 
 async function maybeResearch(o: any, allowResearch: boolean) {
-  if (!allowResearch) return o;
+  if (!allowResearch) return { opportunity: o, attempted: false };
   const research = o.qualification?.web_research;
-  if (research?.status) return o;
+  if (research?.status) return { opportunity: o, attempted: false };
   try {
     await researchBusinessContact(o.id);
-    return loadOpportunity(o.id);
+    return { opportunity: await loadOpportunity(o.id), attempted: true };
   } catch (error) {
     const code = error instanceof Error ? error.message : "web_research_failed";
     await event("worker", "automatic_research_skipped", o.lead_id, o.id, { code });
-    return loadOpportunity(o.id);
+    return { opportunity: await loadOpportunity(o.id), attempted: true };
   }
 }
 

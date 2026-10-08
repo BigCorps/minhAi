@@ -15,7 +15,6 @@ function priority(o: any) {
   if (l.human_at) return 80;
   if (HIGH_TICKET.has(o.product) && ["new", "contacted"].includes(o.stage)) return 74;
   if (type === "customer_or_partner") return 68;
-  if (o.stage === "contacted") return 62;
   return 0;
 }
 

@@ -41,7 +41,7 @@ const checks = [
   [worker.includes("canAccess(admin,user.id,companyId)"), 'company ownership boundary'],
   [ui.includes('Sincronização Mercado Livre'), 'user controls and visibility'],
   [ui.includes('FuncionarIAMLQuestionsFunnel'), '7J mounted in product panel'],
-  [funnel.includes('Não integrado'), '7J no invented order conversions'],
+  [funnel.includes('Não há atribuição confiável de conversão'), '7J no invented order conversions'],
   [funnel.includes("action:'questions_preview'"), '7J no user-triggered automated reply'],
   [worker.includes("action==='orders_preview'"), '7J orders read only action'],
   [worker.includes("'https://api.mercadolibre.com/orders/search'"), '7J official orders API'],

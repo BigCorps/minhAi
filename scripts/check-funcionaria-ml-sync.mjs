@@ -29,7 +29,7 @@ const checks = [
   [importer.includes("if(managed?.sync_enabled)"), 'legacy import cannot overwrite managed sync'],
   [cron.includes("FUNCIONARIA_ML_SYNC_CRON_ENABLED !== 'true'"), 'cron disabled by default'],
   [cron.includes('process.env.CRON_SECRET'), 'cron authorization'],
-  [ui.includes('Sincronização contínua'), 'user controls and visibility'],
+  [ui.includes('Sincronização Mercado Livre'), 'user controls and visibility'],
   [vercel.crons.some(c => c.path === '/api/cron/funcionaria-ml-sync'), 'scheduled reconciliation'],
 ];
 for (const [condition, label] of checks) assert.ok(condition, `7I check: ${label}`);

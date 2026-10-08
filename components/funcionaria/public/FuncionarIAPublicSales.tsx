@@ -60,6 +60,19 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
   const [deliveryLoading, setDeliveryLoading] = useState(false);
   const [deliveryRequestId, setDeliveryRequestId] = useState(0);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
+  const [returnPaymentState, setReturnPaymentState] = useState<'confirmado' | 'processando' | 'erro' | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const state = params.get('pagamento');
+    if (state === 'confirmado' || state === 'processando' || state === 'erro') {
+      setReturnPaymentState(state);
+      params.delete('pagamento');
+      const query = params.toString();
+      window.history.replaceState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -272,6 +285,26 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
           </div>
         </div>
       </header>
+
+      {returnPaymentState ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`mx-auto mt-4 max-w-7xl rounded-2xl border px-4 py-3 text-sm font-bold sm:px-6 ${
+            returnPaymentState === 'confirmado'
+              ? 'border-lime-200 bg-lime-50 text-lime-800'
+              : returnPaymentState === 'processando'
+                ? 'border-amber-200 bg-amber-50 text-amber-800'
+                : 'border-red-200 bg-red-50 text-red-700'
+          }`}
+        >
+          {returnPaymentState === 'confirmado'
+            ? 'Pagamento confirmado. Seu pedido foi recebido com sucesso.'
+            : returnPaymentState === 'processando'
+              ? 'Pagamento recebido. A confirmação ainda está sendo processada; evite pagar novamente.'
+              : 'Não foi possível confirmar o pagamento. Verifique o pedido antes de tentar novamente.'}
+        </div>
+      ) : null}
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <section>

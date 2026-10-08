@@ -80,8 +80,18 @@ export default function FuncionarIAStorefrontPaymentPanel({
     }
   }
 
+  const terminalStatus=['expired','cancelled','canceled'].includes(String(payment?.status || ''));
   const direct=payment?.payment_mode==='monthly_direct';
   const caps=payment?.capabilities || {pix:true,card:true};
+
+  if(terminalStatus)return(
+    <div role="status" aria-live="polite" className="mt-5 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-center">
+      <div className="text-sm font-black text-amber-950">Pagamento não está mais disponível</div>
+      <p className="mt-1 text-xs font-semibold leading-5 text-amber-800">
+        Este pagamento expirou ou foi cancelado. Faça um novo pedido para gerar uma nova cobrança.
+      </p>
+    </div>
+  );
 
   if(payment?.status==='paid')return(
     <div className="mt-5 rounded-3xl border border-lime-200 bg-lime-50 p-5 text-center">
@@ -116,7 +126,7 @@ export default function FuncionarIAStorefrontPaymentPanel({
         {direct?'A InfinitePay confirma o cartão diretamente na conta do lojista; não há comissão BigCorps de 5%.'
           :'A InfinitePay processa o cartão; taxa do provedor e comissão BigCorps são contabilizadas separadamente.'}
       </p>
-      {error?<div className="mt-2 text-center text-xs font-bold text-red-600">{error}</div>:null}
+      {error?<div role="alert" aria-live="polite" className="mt-2 text-center text-xs font-bold text-red-600">{error}</div>:null}
     </div>
   );
 
@@ -136,7 +146,7 @@ export default function FuncionarIAStorefrontPaymentPanel({
           {loading?<Loader2 className="h-4 w-4 animate-spin" />:<CreditCard className="h-4 w-4" />}Cartão</button>
       </div>
       {direct && (!caps.pix || !caps.card)?<p className="mt-2 text-[11px] text-slate-400">Só aparecem ativos os meios configurados pelo lojista.</p>:null}
-      {error?<div className="mt-2 text-xs font-bold text-red-600">{error}</div>:null}
+      {error?<div role="alert" aria-live="polite" className="mt-2 text-xs font-bold text-red-600">{error}</div>:null}
     </div>
   );
 
@@ -163,7 +173,7 @@ export default function FuncionarIAStorefrontPaymentPanel({
         {direct?'A confirmação é feita server-side com a conta Mercado Pago do lojista.'
           :'A confirmação é feita no servidor diretamente com o Banco Inter.'}
       </p>
-      {error?<div className="mt-2 text-center text-xs font-bold text-red-600">{error}</div>:null}
+      {error?<div role="alert" aria-live="polite" className="mt-2 text-center text-xs font-bold text-red-600">{error}</div>:null}
     </div>
   );
 }

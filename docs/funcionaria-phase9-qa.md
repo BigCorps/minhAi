@@ -37,3 +37,9 @@ Nenhuma chamada de pagamento, entrega ou criação de pedido é feita pelo teste
 Foram agrupadas sem tocar banco ou provedores: acessibilidade/teclado e alvos de toque; proteção de ação duplicada na cotação; e resiliência do Pix quando a Clipboard API falha. Campos públicos receberam nomes acessíveis e autocomplete adequado, seletores de retirada/entrega expõem estado, erros relevantes usam região de alerta e controles do carrinho têm alvo mínimo. O Pix copia-e-cola permanece visível/selecionável como fallback manual.
 
 O gate 9C–9E é estrutural e não cria pedidos, pagamentos ou entregas.
+
+## Fases 9F–9H — retorno e recuperação de pagamento
+
+O retorno InfinitePay já emitia `pagamento=confirmado|processando|erro`, mas a loja pública não apresentava esse estado ao cliente. A interface agora consome o parâmetro uma vez, remove-o da URL e exibe uma mensagem clara. O estado `processando` orienta explicitamente a não pagar novamente.
+
+Pagamentos expirados/cancelados também passam a ter estado terminal próprio, sem deixar botões de cobrança ambíguos, com orientação para iniciar novo pedido. Erros do painel de pagamento são anunciados por regiões acessíveis. O gate permanece estrutural e não aciona provedor financeiro.

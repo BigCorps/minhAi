@@ -70,7 +70,15 @@ export default function FuncionarIAStorefrontPaymentPanel({
     }finally{setLoading(false);}
   }
   useEffect(()=>{void checkStatus(true);return()=>stopPolling();},[]); // eslint-disable-line react-hooks/exhaustive-deps
-  async function copyPix(){const code=String(payment?.pix_code || '');if(!code)return;await navigator.clipboard.writeText(code);setCopied(true);setTimeout(()=>setCopied(false),1800);}
+  async function copyPix(){
+    const code=String(payment?.pix_code || '');if(!code)return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);setError(null);setTimeout(()=>setCopied(false),1800);
+    } catch {
+      setCopied(false);setError('Não foi possível copiar automaticamente. Selecione o código Pix abaixo.');
+    }
+  }
 
   const direct=payment?.payment_mode==='monthly_direct';
   const caps=payment?.capabilities || {pix:true,card:true};
@@ -139,6 +147,10 @@ export default function FuncionarIAStorefrontPaymentPanel({
         <div className="mt-1 text-xl font-black">{brlCents(payment.amount_cents)}</div>
       </div>
       {payment.qr_code_url?<div className="mx-auto mt-4 w-fit rounded-2xl border border-slate-100 bg-white p-2"><img src={payment.qr_code_url} alt="QR Code Pix" className="h-52 w-52" /></div>:null}
+      <label className="sr-only" htmlFor="funcionaria-pix-code">Código Pix copia e cola</label>
+      <textarea id="funcionaria-pix-code" readOnly value={String(payment.pix_code || '')} rows={3}
+        className="mt-4 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] leading-4 text-slate-600"
+        onFocus={(event)=>event.currentTarget.select()} />
       <button type="button" onClick={()=>void copyPix()} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-black text-slate-700">
         <Copy className="h-4 w-4" />{copied?'Pix copiado':'Copiar Pix copia e cola'}
       </button>

@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';import{readFileSync}from'node:fs';
+const s=readFileSync('components/funcionaria/public/FuncionarIAPublicSales.tsx','utf8');
+const p=readFileSync('components/funcionaria/public/FuncionarIAStorefrontPaymentPanel.tsx','utf8');
+for(const x of ['aria-label="Buscar produto"','aria-pressed={deliveryMode === \'pickup\'}','autoComplete="street-address"','autoComplete="tel"','autoComplete="name"','role="alert"','min-h-11 min-w-11'])assert.ok(s.includes(x),x);
+assert.ok(s.includes('if (!profile?.company?.id || !cart.length || deliveryAddress.trim().length < 8 || deliveryLoading) return;'),'duplicate quote guard');
+assert.ok(s.includes('<button type="button" onClick={submit} disabled={submitting}'),'submit button contract');
+assert.ok(p.includes('funcionaria-pix-code'),'pix fallback missing');
+assert.ok(p.includes("setError('Não foi possível copiar automaticamente."),'clipboard fallback missing');
+assert.ok(p.includes("url.startsWith('https://checkout.bigcorps.com.br/')"),'checkout allowlist missing');
+console.log('FuncionarIA 9C-9E: accessibility + duplicate-action + resilient PIX UX PASS');

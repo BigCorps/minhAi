@@ -31,3 +31,9 @@ Correção: quando há itens no carrinho, a experiência standalone exibe um ata
 O gate 9B confirma ainda que permanecem intactos: cotação obrigatória antes de entrega, telefone com DDD, vínculo do token de entrega, idempotência do pedido, allowlist do checkout de cartão e estados de pagamento.
 
 Nenhuma chamada de pagamento, entrega ou criação de pedido é feita pelo teste.
+
+## Fases 9C–9E — lote único de UX segura
+
+Foram agrupadas sem tocar banco ou provedores: acessibilidade/teclado e alvos de toque; proteção de ação duplicada na cotação; e resiliência do Pix quando a Clipboard API falha. Campos públicos receberam nomes acessíveis e autocomplete adequado, seletores de retirada/entrega expõem estado, erros relevantes usam região de alerta e controles do carrinho têm alvo mínimo. O Pix copia-e-cola permanece visível/selecionável como fallback manual.
+
+O gate 9C–9E é estrutural e não cria pedidos, pagamentos ou entregas.

@@ -43,3 +43,11 @@ O gate 9C–9E é estrutural e não cria pedidos, pagamentos ou entregas.
 O retorno InfinitePay já emitia `pagamento=confirmado|processando|erro`, mas a loja pública não apresentava esse estado ao cliente. A interface agora consome o parâmetro uma vez, remove-o da URL e exibe uma mensagem clara. O estado `processando` orienta explicitamente a não pagar novamente.
 
 Pagamentos expirados/cancelados também passam a ter estado terminal próprio, sem deixar botões de cobrança ambíguos, com orientação para iniciar novo pedido. Erros do painel de pagamento são anunciados por regiões acessíveis. O gate permanece estrutural e não aciona provedor financeiro.
+
+## Fases 9I–9K — retorno real, carrinho incorporado e consistência de entrega
+
+1. **9I:** A URL de retorno InfinitePay passava por `funcionaria.net/vendas/<slug>`, mas o middleware do host principal reescrevia o caminho para a área interna, não para a loja. A URL agora aponta para `https://<slug>.funcionaria.net/vendas?pagamento=<estado>`, coberta pelo roteamento de subdomínio e pelo painel público que lê os três estados. O slug permanece validado antes do redirect; erro de validação continua usando fallback seguro.
+2. **9J:** Atalho mobile **Ver pedido** agora aparece também no catálogo incorporado aos modos online/ambos. O botão de conversar no modo online fica acima dele, sem sobreposição. Mensagens de erro do pedido aparecem perto do botão de finalização, em vez de ficar escondidas no topo do catálogo.
+3. **9K:** Resposta antiga de cotação Lalamove é ignorada quando produtos, endereço ou modalidade mudam. Cotações vencidas são recusadas antes de concluir o pedido. A chave de idempotência permanece estável para repetição da mesma solicitação e é renovada quando conteúdo do pedido muda; duplo envio síncrono é bloqueado por ref.
+
+**Escopo dos testes:** verificações estruturais no prebuild, sem gerar cotações, pagamentos, pedidos ou tráfego para provedores externos. Validação visual manual e E2E autenticado seguem pendentes e não são confundidos com os gates estruturais.

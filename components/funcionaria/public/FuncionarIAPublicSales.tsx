@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import FuncionarIAStorefrontPaymentPanel from '@/components/funcionaria/public/FuncionarIAStorefrontPaymentPanel';
 import {
@@ -52,13 +52,14 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [orderKey, setOrderKey] = useState('');
+  const orderAttemptRef = useRef<{ signature: string; key: string } | null>(null);
+  const submittingRef = useRef(false);
   const [deliveryMode, setDeliveryMode] = useState<'pickup' | 'delivery'>('pickup');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
-  const [deliveryRequestId, setDeliveryRequestId] = useState(0);
+  const deliveryQuoteGenerationRef = useRef(0);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
   const [returnPaymentState, setReturnPaymentState] = useState<'confirmado' | 'processando' | 'erro' | null>(null);
 
@@ -150,6 +151,9 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
   }
 
   useEffect(() => {
+    // Invalida qualquer resposta de cotação iniciada antes de mudar
+    // os produtos, endereço ou modo de recebimento.
+    deliveryQuoteGenerationRef.current += 1;
     setDeliveryQuote(null);
     setDeliveryError(null);
   }, [cart, deliveryAddress, deliveryMode]);
@@ -158,7 +162,7 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
   const secondary = profile?.settings?.secondary_color || '#A3E635';
 
   function add(product: Product) {
-    if (!product.disponivel) return;
+    if (!product.disponivel || submittingRef.current) return;
     setResult(null);
     setCart((current) => {
       const found = current.find((item) => item.product.id === product.id);
@@ -172,6 +176,7 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
   }
 
   function change(productId: string, delta: number) {
+    if (submittingRef.current) return;
     setCart((current) => current.flatMap((item) => {
       if (item.product.id !== productId) return [item];
       const quantity = item.quantity + delta;
@@ -181,8 +186,7 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
 
   async function calculateDelivery() {
     if (!profile?.company?.id || !cart.length || deliveryAddress.trim().length < 8 || deliveryLoading) return;
-    const requestId = deliveryRequestId + 1;
-    setDeliveryRequestId(requestId);
+    const requestId = ++deliveryQuoteGenerationRef.current;
     setDeliveryLoading(true);
     setDeliveryError(null);
     try {
@@ -191,28 +195,46 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
         deliveryAddress,
         items: cart.map((item) => ({ produto_id: item.product.id, quantidade: item.quantity })),
       });
-      if (requestId === deliveryRequestId + 1) setDeliveryQuote(quote);
+      if (requestId === deliveryQuoteGenerationRef.current) setDeliveryQuote(quote);
     } catch (error: any) {
       const map: Record<string,string> = {
         minimum_order_not_met: 'O pedido ainda não atingiu o valor mínimo para entrega.',
         delivery_outside_radius: 'Este endereço está fora do raio de entrega da loja.',
         delivery_outside_schedule: 'A entrega não está disponível neste horário.',
       };
-      if (requestId === deliveryRequestId + 1) setDeliveryError(map[error?.message] || error?.message || 'Não foi possível calcular o frete.');
+      if (requestId === deliveryQuoteGenerationRef.current) setDeliveryError(map[error?.message] || error?.message || 'Não foi possível calcular o frete.');
     } finally {
       setDeliveryLoading(false);
     }
   }
 
   async function submit() {
-    if (!profile?.company?.id || !cart.length || submitting) return;
+    if (!profile?.company?.id || !cart.length || submittingRef.current) return;
     if (deliveryMode === 'delivery') {
       if (!deliveryQuote) { setError('Calcule o frete antes de enviar o pedido.'); return; }
+      if (deliveryQuote.expires_at && Date.parse(deliveryQuote.expires_at) <= Date.now()) {
+        setDeliveryQuote(null);
+        setError('A cotação de entrega expirou. Calcule o frete novamente.');
+        return;
+      }
       const phone = customerPhone.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
       if (phone.length !== 10 && phone.length !== 11) { setError('Informe um telefone com DDD para a entrega.'); return; }
     }
-    const requestKey = orderKey || crypto.randomUUID();
-    if (!orderKey) setOrderKey(requestKey);
+    // Retries do mesmo pedido reutilizam a chave. Alterar qualquer dado
+    // relevante gera outra chave, evitando replay de uma compra anterior.
+    const signature = JSON.stringify({
+      company_id: profile.company.id,
+      items: cart.map(({ product, quantity }) => [product.id, quantity]),
+      delivery_mode: deliveryMode,
+      delivery_quote_token: deliveryMode === 'delivery' ? deliveryQuote?.quote_token : null,
+      customer_name: customerName,
+      customer_phone: deliveryMode === 'delivery' ? customerPhone : null,
+      notes,
+    });
+    const prior = orderAttemptRef.current;
+    const requestKey = prior?.signature === signature ? prior.key : crypto.randomUUID();
+    orderAttemptRef.current = { signature, key: requestKey };
+    submittingRef.current = true;
     setSubmitting(true);
     setError(null);
     try {
@@ -238,7 +260,7 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
       }
       setResult(data);
       setCart([]);
-      setOrderKey(crypto.randomUUID());
+      orderAttemptRef.current = null;
       setDeliveryMode('pickup');
       setDeliveryAddress('');
       setCustomerPhone('');
@@ -246,6 +268,7 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
     } catch (err: any) {
       setError(err?.message || 'Não foi possível concluir o pedido.');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -318,12 +341,6 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
             />
           </div>
 
-          {error && (
-            <div role="alert" aria-live="polite" className="mb-4 flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}
-            </div>
-          )}
-
           {filtered.length ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {filtered.map((product) => (
@@ -360,6 +377,11 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
         <aside id="funcionaria-public-order" className="scroll-mt-20 lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2"><ShoppingBag className="h-5 w-5" style={{ color: primary }} /><h2 className="text-lg font-black">Seu pedido</h2></div>
+            {error ? (
+              <div role="alert" aria-live="polite" className="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">
+                <AlertCircle className="h-4 w-4 shrink-0" />{error}
+              </div>
+            ) : null}
 
             {result ? (
               <div className="mt-5 text-center">
@@ -459,15 +481,15 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
           </div>
         </aside>
       </div>
-      {!embedded && !result && cartQuantity > 0 ? (
+      {!result && cartQuantity > 0 ? (
         <button
           type="button"
           onClick={scrollToOrder}
-          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-30 flex min-h-12 -translate-x-1/2 items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-xl shadow-slate-950/20 lg:hidden"
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-3 right-3 z-[75] flex min-h-12 items-center justify-center gap-2 rounded-full bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-xl shadow-slate-950/20 lg:hidden"
           aria-label={`Ver pedido com ${cartQuantity} ${cartQuantity === 1 ? 'item' : 'itens'}`}
         >
           <ShoppingBag className="h-4 w-4" />
-          Ver pedido · {cartQuantity} {cartQuantity === 1 ? 'item' : 'itens'} · {brl(displayTotal)}
+          <span className="min-w-0 truncate">Ver pedido · {cartQuantity} {cartQuantity === 1 ? 'item' : 'itens'} · {brl(displayTotal)}</span>
         </button>
       ) : null}
     </main>

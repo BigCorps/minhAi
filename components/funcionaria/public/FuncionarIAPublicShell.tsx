@@ -78,7 +78,7 @@ export default function FuncionarIAPublicShell({ slug }: { slug: string }) {
         <button
           type="button"
           onClick={() => setWidgetOpen(true)}
-          className="fixed bottom-4 right-4 z-[80] inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-black text-white shadow-2xl sm:bottom-6 sm:right-6"
+          className="fixed bottom-20 right-4 z-[80] inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-black text-white shadow-2xl sm:bottom-6 sm:right-6"
           style={{ backgroundColor: primary }}
           aria-label="Falar com a FuncionarIA"
         >

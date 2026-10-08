@@ -22,6 +22,70 @@ export default function FuncionarIAMercadoLivrePanel() {
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState('');
   const [importNotice, setImportNotice] = useState<string | null>(null);
+  const [syncMap, setSyncMap] = useState<Record<string, any>>({});
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+
+  async function loadSyncState() {
+    if (!companyId) return;
+    try {
+      const data = await invokeFuncionarIAEdge<any>('funcionaria-ml-sync', {
+        action: 'status', company_id: companyId,
+      });
+      setSyncMap(Object.fromEntries((data.items || []).map((item: any) => [item.ml_item_id, item])));
+    } catch {
+      // A Edge 7I pode ainda não estar publicada no rollout gradual.
+      setSyncMap({});
+    }
+  }
+
+  async function configureSelectedSync(enabled: boolean) {
+    const ids = selected.filter(id => catalog.some(item => item.id === id && item.imported));
+    if (!ids.length || syncBusy) return;
+    setSyncBusy(true);
+    setSyncNotice(null);
+    let changed = 0;
+    let errors = 0;
+    try {
+      for (const id of ids) {
+        try {
+          await invokeFuncionarIAEdge('funcionaria-ml-sync', {
+            action: 'configure', company_id: companyId, item_id: id, enabled,
+          });
+          changed++;
+        } catch { errors++; }
+      }
+      setSyncNotice(`${changed} produto(s) ${enabled ? 'habilitados' : 'desabilitados'} para sincronização.${errors ? ` ${errors} não alterados.` : ''}`);
+      await loadSyncState();
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
+  async function syncSelectedNow() {
+    const ids = selected.filter(id => !!syncMap[id]?.sync_enabled);
+    if (!ids.length || syncBusy) return;
+    setSyncBusy(true);
+    setSyncNotice(null);
+    try {
+      const results: any[] = [];
+      for (let i = 0; i < ids.length; i += 5) {
+        const data = await invokeFuncionarIAEdge<any>('funcionaria-ml-sync', {
+          action: 'run', company_id: companyId, item_ids: ids.slice(i, i + 5),
+        });
+        results.push(...(data.results || []));
+      }
+      const conflicts = results.filter(r => r.status === 'conflict').length;
+      const failed = results.filter(r => r.status === 'error').length;
+      const baselines = results.filter(r => r.status === 'baseline_created').length;
+      setSyncNotice(`Sincronização consultou ${results.length} produto(s): ${baselines} referências seguras criadas, ${conflicts} conflitos, ${failed} falhas. Nenhuma edição local conflitante é sobrescrita.`);
+      await loadSyncState();
+    } catch (error: any) {
+      setSyncNotice(error?.message || 'Falha ao consultar sincronização.');
+    } finally {
+      setSyncBusy(false);
+    }
+  }
 
   async function load() {
     if (!companyId) return;
@@ -58,6 +122,7 @@ export default function FuncionarIAMercadoLivrePanel() {
       setCatalogTotal(Number(data.total || 0));
       setNextOffset(data.next_offset == null ? null : Number(data.next_offset));
       if (reset) setSelected([]);
+      await loadSyncState();
     } catch (error: any) {
       setImportNotice(error?.message || 'Não foi possível listar os anúncios.');
     } finally {
@@ -70,7 +135,11 @@ export default function FuncionarIAMercadoLivrePanel() {
   }
 
   async function importSelected() {
-    if (!selected.length || importing) return;
+    const toImport = selected.filter(id => !syncMap[id]?.sync_enabled);
+    if (!toImport.length || importing || syncBusy) {
+      setImportNotice('Os anúncios com sincronização ativa devem ser atualizados pela função “Sincronizar agora”.');
+      return;
+    }
     setImporting(true);
     setImportNotice(null);
     try {
@@ -78,9 +147,10 @@ export default function FuncionarIAMercadoLivrePanel() {
       let updated = 0;
       let linked = 0;
       let errors = 0;
-      for (let i = 0; i < selected.length; i += 10) {
-        const chunk = selected.slice(i, i + 10);
-        setImportProgress(`Importando ${Math.min(i + 10, selected.length)} de ${selected.length}…`);
+      let protectedItems = 0;
+      for (let i = 0; i < toImport.length; i += 10) {
+        const chunk = toImport.slice(i, i + 10);
+        setImportProgress(`Importando ${Math.min(i + 10, toImport.length)} de ${toImport.length}…`);
         const data = await invokeFuncionarIAEdge<any>('funcionaria-ml-importar-produtos', {
           action: 'import', company_id: companyId, item_ids: chunk,
         });
@@ -88,10 +158,11 @@ export default function FuncionarIAMercadoLivrePanel() {
           if (row.status === 'imported') imported++;
           else if (row.status === 'updated' || row.status === 'unchanged') updated++;
           else if (row.status === 'linked_local') linked++;
+          else if (row.status === 'managed_by_sync') protectedItems++;
           else if (row.status === 'error') errors++;
         }
       }
-      setImportNotice(`Concluído: ${imported} novos, ${updated} atualizados${linked ? `, ${linked} já vinculados localmente` : ''}${errors ? `, ${errors} com erro` : ''}.`);
+      setImportNotice(`Concluído: ${imported} novos, ${updated} atualizados${linked ? `, ${linked} já vinculados localmente` : ''}${protectedItems ? `, ${protectedItems} sob sincronização protegida` : ''}${errors ? `, ${errors} com erro` : ''}.`);
       setSelected([]);
       await loadCatalog(true);
     } catch (error: any) {
@@ -113,6 +184,7 @@ export default function FuncionarIAMercadoLivrePanel() {
       let updated = 0;
       let linked = 0;
       let errors = 0;
+      let protectedItems = 0;
       let finished = false;
       let lastFingerprint = '';
       for (let batch = 0; batch < 20000; batch++) {
@@ -126,6 +198,7 @@ export default function FuncionarIAMercadoLivrePanel() {
           if (row.status === 'imported') imported++;
           else if (row.status === 'updated' || row.status === 'unchanged') updated++;
           else if (row.status === 'linked_local') linked++;
+          else if (row.status === 'managed_by_sync') protectedItems++;
           else if (row.status === 'error') errors++;
         }
         if (data.done === true || !data.next_scroll_id || !rows.length) {
@@ -138,7 +211,7 @@ export default function FuncionarIAMercadoLivrePanel() {
         scrollId = String(data.next_scroll_id);
       }
       if (!finished) throw new Error('ml_import_safety_limit');
-      setImportNotice(`Importação completa: ${imported} novos, ${updated} atualizados${linked ? `, ${linked} já vinculados localmente` : ''}${errors ? `, ${errors} com erro` : ''}.`);
+      setImportNotice(`Importação completa: ${imported} novos, ${updated} atualizados${linked ? `, ${linked} já vinculados localmente` : ''}${protectedItems ? `, ${protectedItems} sob sincronização protegida` : ''}${errors ? `, ${errors} com erro` : ''}.`);
       await loadCatalog(true);
     } catch (error: any) {
       setImportNotice(error?.message || 'Não foi possível importar todos os anúncios.');
@@ -195,7 +268,17 @@ export default function FuncionarIAMercadoLivrePanel() {
             <>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                 <div className="text-xs font-bold text-slate-400">{catalog.length} de {catalogTotal} anúncios carregados • {selected.length} selecionados</div>
-                <button type="button" onClick={() => void importSelected()} disabled={!selected.length || importing} className="inline-flex items-center gap-2 rounded-xl bg-[#6D28D9] px-3 py-2 text-xs font-black text-white disabled:opacity-40"><PackageCheck className="h-4 w-4" />Importar selecionados</button>
+                <button type="button" onClick={() => void importSelected()} disabled={!selected.length || importing || syncBusy} className="inline-flex items-center gap-2 rounded-xl bg-[#6D28D9] px-3 py-2 text-xs font-black text-white disabled:opacity-40"><PackageCheck className="h-4 w-4" />Importar selecionados</button>
+              </div>
+              <div className="mt-3 rounded-2xl border border-violet-100 bg-violet-50 p-3">
+                <div className="text-xs font-black text-violet-900">Sincronização Mercado Livre → FuncionarIA</div>
+                <p className="mt-1 text-[11px] leading-5 text-violet-700">Desligada por produto até você habilitar. A atualização imediata funciona pelos botões abaixo; a rotina programada depende da ativação geral da plataforma. Edições locais conflitantes e variações não são sobrescritas.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" disabled={syncBusy || importing || !selected.some(id => catalog.some(item => item.id === id && item.imported))} onClick={() => void configureSelectedSync(true)} className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-[11px] font-bold text-violet-800 disabled:opacity-40">Ativar selecionados</button>
+                  <button type="button" disabled={syncBusy || importing || !selected.some(id => syncMap[id]?.sync_enabled)} onClick={() => void configureSelectedSync(false)} className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-[11px] font-bold text-violet-800 disabled:opacity-40">Desativar selecionados</button>
+                  <button type="button" disabled={syncBusy || importing || !selected.some(id => syncMap[id]?.sync_enabled)} onClick={() => void syncSelectedNow()} className="rounded-lg bg-violet-700 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-40">{syncBusy ? 'Consultando…' : 'Sincronizar agora'}</button>
+                </div>
+                {syncNotice ? <div role="status" className="mt-2 text-[11px] font-semibold text-violet-900">{syncNotice}</div> : null}
               </div>
               <div className="mt-3 max-h-[520px] space-y-2 overflow-y-auto pr-1">
                 {catalog.map(item => (
@@ -203,7 +286,11 @@ export default function FuncionarIAMercadoLivrePanel() {
                     <input type="checkbox" checked={selected.includes(item.id)} disabled={item.linked_local || importing} onChange={() => toggleItem(item.id)} className="h-4 w-4 accent-[#6D28D9]" />
                     {item.thumbnail ? <img src={item.thumbnail} alt="" className="h-12 w-12 rounded-xl object-cover" /> : <div className="h-12 w-12 rounded-xl bg-slate-100" />}
                     <div className="min-w-0 flex-1"><div className="truncate text-sm font-black">{item.title}</div><div className="mt-1 text-[11px] font-bold text-slate-400">{item.id} • {String(item.status || '').toUpperCase()}</div></div>
-                    {item.linked_local ? <span className="rounded-full bg-slate-200 px-2 py-1 text-[10px] font-black text-slate-600">JÁ VINCULADO</span> : item.imported ? <span className="rounded-full bg-lime-100 px-2 py-1 text-[10px] font-black text-lime-800">IMPORTADO</span> : null}
+                    {item.linked_local ? <span className="rounded-full bg-slate-200 px-2 py-1 text-[10px] font-black text-slate-600">JÁ VINCULADO</span> : item.imported ? (
+                      <span className={`rounded-full px-2 py-1 text-[10px] font-black ${['conflict','variants_review'].includes(syncMap[item.id]?.sync_last_state) ? 'bg-red-100 text-red-800' : syncMap[item.id]?.sync_enabled ? 'bg-violet-100 text-violet-800' : 'bg-lime-100 text-lime-800'}`}>
+                        {syncMap[item.id]?.sync_last_state === 'variants_review' ? 'REVISAR VARIAÇÕES' : syncMap[item.id]?.sync_last_state === 'conflict' ? 'CONFLITO' : syncMap[item.id]?.sync_enabled ? 'SYNC CONFIGURADO' : 'IMPORTADO'}
+                      </span>
+                    ) : null}
                   </label>
                 ))}
               </div>

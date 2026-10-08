@@ -1,9 +1,24 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["iad1"],
+  "regions": [
+    "iad1"
+  ],
   "crons": [
-    { "path": "/api/conviteria/memorias/limpeza", "schedule": "15 8 * * *" },
-    { "path": "/api/conviteria/whatsapp/cron", "schedule": "17 * * * *" },
-    { "path": "/api/conviteria/gravata/whatsapp/cron", "schedule": "*/5 * * * *" }
+    {
+      "path": "/api/conviteria/memorias/limpeza",
+      "schedule": "15 8 * * *"
+    },
+    {
+      "path": "/api/conviteria/whatsapp/cron",
+      "schedule": "17 * * * *"
+    },
+    {
+      "path": "/api/conviteria/gravata/whatsapp/cron",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/funcionaria-ml-sync",
+      "schedule": "43 * * * *"
+    }
   ]
 }

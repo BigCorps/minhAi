@@ -294,6 +294,15 @@ async function importOne(admin:any,token:string,companyId:string,sellerId:string
     return {item_id:itemId,status:'seller_mismatch'}
   }
 
+  // 7I: reimportações antigas jamais contornam a proteção de sync opt-in.
+  // Migration 7I deve estar aplicada antes de publicar esta versão da Edge.
+  const {data:managed,error:managedError}=await admin.from('funcionaria_ml_product_sync')
+    .select('id,sync_enabled').eq('company_id',companyId).eq('ml_item_id',itemId).maybeSingle()
+  if(managedError)throw managedError
+  if(managed?.sync_enabled){
+    return {item_id:itemId,status:'managed_by_sync'}
+  }
+
   const normalized=await hydrate(token,item)
   if(!normalized.title || normalized.price<=0)return {item_id:itemId,status:'invalid_data'}
 

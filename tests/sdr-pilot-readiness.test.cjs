@@ -370,7 +370,7 @@ test('browser enqueue route passes only the signed review; arbitrary enqueue_mod
   const route=compile('app/api/admin/comercial/route.ts', {
     '@/lib/sdr/server':{...h.server,adminRequest:async(req,fn)=>fn(actor),body:async req=>req.payload,event:async()=>{}},
     '@/lib/sdr/catalog':catalog,'@/lib/sdr/outreach-server':h.mod,'@/lib/sdr/providers':{},'@/lib/sdr/partners':{},'@/lib/sdr/rollouts':{},
-    '@/lib/sdr/commercial-classification-server':{},'@/lib/sdr/web-discovery':{},'@/lib/sdr/web-research':{},'@/lib/sdr/channels':{},'@/lib/sdr/monitoria':{},'@/lib/sdr/sales':{},
+    '@/lib/sdr/commercial-classification-server':{},'@/lib/sdr/web-discovery':{},'@/lib/sdr/web-research':{},'@/lib/sdr/channels':{},'@/lib/sdr/monitoria':{},'@/lib/sdr/sales':{},'@/lib/sdr/sales-queue':{sellerQueueSnapshot:async()=>[]},
   });
   await route.POST({payload:{action:'enqueue',id:uuid(1),channel:'email',reviewToken:preview.reviewToken,enqueue_mode:'automatic'}});
   assert.equal(h.calls.length,1); assert.equal(h.calls[0].args.p_snapshot.enqueue_mode,'manual_review'); assert.equal(h.f.l.email,null);
@@ -393,19 +393,15 @@ test('Admin displays reviewed mode, neutral form title and safe actionable error
   assert.doesNotMatch(exports.commercialError('https://secret.invalid/token=secret'),/secret|https/);
   assert.match(read('components/admin/AdminCommercial.tsx'),/Preparar email revisado/); assert.doesNotMatch(read('components/admin/AdminCommercial.tsx'),/Preparar piloto manual por email/);
 });
-sqlTest('legacy sdr_enqueue signature still creates automatic individual rows and keeps normal active gates', async () => {
+sqlTest('legacy sdr_enqueue signature remains callable but automatic email without first_contact_v1 snapshot fails closed', async () => {
   const { d } = await setup(); try {
     const old=read('supabase/migrations/20261005183013_sdr_own_sales.sql');
     const start=old.indexOf('create or replace function public.sdr_enqueue('),end=old.indexOf('create or replace function public.sdr_claim()',start);
     assert.ok(start>=0 && end>start); await d.exec(old.slice(start,end));
     await d.exec('revoke all on function public.sdr_enqueue(uuid,text) from public,anon,authenticated; grant execute on function public.sdr_enqueue(uuid,text) to service_role;');
     await d.query("update sdr_leads set email='person@empresa.com.br',email_status='verified' where id=$1",[uuid(1)]);
-    const id=(await d.query("select sdr_enqueue($1,'email') id",[uuid(1)])).rows[0].id;
-    const q=(await d.query('select * from sdr_queue where id=$1',[id])).rows[0]; assert.equal(q.enqueue_mode,'automatic'); assert.equal(q.recipient_address,'person@empresa.com.br');
-    await d.query("select sdr_set_manual_pilot_gate('conviteia',true)"); assert.equal((await d.query('select * from sdr_claim()')).rows.length,0);
-    await d.query("select sdr_set_product_rollout('conviteia','active',false,false,false,3,3)"); assert.equal((await d.query('select * from sdr_claim()')).rows.length,0);
-    await d.query("select sdr_set_product_rollout('conviteia','active',false,true,true,3,3)"); assert.equal((await d.query('select * from sdr_claim()')).rows[0].id,id);
-    await d.query('select sdr_begin_send($1)',[id]); assert.equal((await d.query('select count(*)::int n from sdr_manual_pilot_opportunities')).rows[0].n,0);
+    await assert.rejects(d.query("select sdr_enqueue($1,'email') id",[uuid(1)]), /automatic_snapshot_required/);
+    assert.equal((await d.query('select count(*)::int n from sdr_queue')).rows[0].n,0);
   } finally { await d.close(); }
 });
 

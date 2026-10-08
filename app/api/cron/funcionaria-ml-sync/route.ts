@@ -13,17 +13,17 @@ export async function GET(req: NextRequest) {
   if (process.env.FUNCIONARIA_ML_SYNC_CRON_ENABLED !== 'true') {
     return NextResponse.json({ skipped: true, reason: 'feature_disabled' });
   }
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRole) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || 'https://qyonozbroekuqlotqcbm.supabase.co';
+  const serverKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serverKey) {
     return NextResponse.json({ error: 'configuration_missing' }, { status: 503 });
   }
   try {
     const response = await fetch(new URL('/functions/v1/funcionaria-ml-sync', supabaseUrl), {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${serviceRole}`,
-        apikey: serviceRole,
+        apikey: serverKey,
+        ...(process.env.SUPABASE_SECRET_KEY ? {} : { Authorization: `Bearer ${serverKey}` }),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ action: 'due' }),

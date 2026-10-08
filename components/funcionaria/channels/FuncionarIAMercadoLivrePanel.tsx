@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useFuncionarIAState } from '@/components/funcionaria/FuncionarIADashboardShell';
 import { invokeFuncionarIAEdge } from '@/lib/funcionaria-api';
+import FuncionarIAMLQuestionsFunnel from './FuncionarIAMLQuestionsFunnel';
 
 export default function FuncionarIAMercadoLivrePanel() {
   const { state } = useFuncionarIAState();
@@ -92,7 +93,7 @@ export default function FuncionarIAMercadoLivrePanel() {
     setLoading(true);
     const [{ data: conn }, { data: q }] = await Promise.all([
       supabase.from('ml_connections').select('id,seller_id,seller_nickname,is_active,ml_reply_enabled,ml_auto_reply,updated_at').eq('company_id', companyId).maybeSingle(),
-      supabase.from('ml_questions').select('id,ml_question_id,produto_nome,texto_pergunta,resposta_gerada,status,created_at').eq('company_id', companyId).order('created_at', { ascending: false }).limit(8),
+      supabase.from('ml_questions').select('id,ml_question_id,produto_nome,texto_pergunta,resposta_gerada,status,created_at').eq('company_id', companyId).order('created_at', { ascending: false }).limit(250),
     ]);
     setConnection(conn || null);
     setQuestions(q || []);
@@ -302,18 +303,10 @@ export default function FuncionarIAMercadoLivrePanel() {
         </div>
       ) : null}
 
-      <div className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex items-center justify-between"><h2 className="text-lg font-black">Perguntas recentes</h2><span className="text-xs font-bold text-slate-400">{questions.length} exibidas</span></div>
-        <div className="mt-4 space-y-3">
-          {questions.length === 0 ? <div className="rounded-2xl bg-slate-50 p-5 text-sm font-semibold text-slate-500">Nenhuma pergunta registrada ainda.</div> : questions.map(q => (
-            <div key={q.id} className="rounded-2xl border border-slate-100 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2"><div className="text-xs font-black text-slate-400">{q.produto_nome || 'Produto'}</div><span className={`rounded-full px-2 py-1 text-[10px] font-black ${q.status === 'sent' ? 'bg-lime-100 text-lime-800' : q.status === 'pending_manual' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>{String(q.status || 'pending').toUpperCase()}</span></div>
-              <div className="mt-2 text-sm font-black">{q.texto_pergunta}</div>
-              {q.resposta_gerada && <div className="mt-2 text-xs leading-5 text-slate-500">{q.resposta_gerada}</div>}
-            </div>
-          ))}
-        </div>
-      </div>
+      <FuncionarIAMLQuestionsFunnel
+        companyId={companyId}
+        saved={questions}
+      />
     </div>
   );
 }

@@ -51,6 +51,17 @@ async function companyConnection(admin:any,companyId:string){
   if(error)throw new Error('ml_connection_lookup_failed')
   return data || null
 }
+function trustedServer(req:Request){
+  const bearer=(req.headers.get('authorization') || '').replace(/^Bearer\s+/i,'').trim()
+  if(SERVICE_ROLE && bearer===SERVICE_ROLE)return true
+  const candidate=(req.headers.get('apikey') || '').trim()
+  if(!candidate.startsWith('sb_secret_'))return false
+  try{
+    const known=JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}')
+    if(!known || typeof known!=='object' || Array.isArray(known))return false
+    return Object.values(known).some(secret=>typeof secret==='string' && secret===candidate)
+  }catch{return false}
+}
 async function userFromRequest(req:Request,admin:any){
   const jwt=(req.headers.get('authorization') || '').replace(/^Bearer\s+/i,'').trim()
   if(!jwt || jwt===SERVICE_ROLE)return null
@@ -238,8 +249,7 @@ Deno.serve(async(req:Request)=>{
   try{
     const body=await req.json().catch(()=>({})) as Record<string,any>
     const action=value(body.action,40)
-    const token=(req.headers.get('authorization') || '').replace(/^Bearer\s+/i,'').trim()
-    const isService=token===SERVICE_ROLE
+    const isService=trustedServer(req)
 
     if(action==='due'){
       if(!isService)return respond({error:'forbidden'},403)
@@ -257,6 +267,29 @@ Deno.serve(async(req:Request)=>{
     const companyId=value(body.company_id,80)
     if(!/^[0-9a-fA-F-]{36}$/.test(companyId))return respond({error:'company_id_required'},400)
     if(!await canAccess(admin,user.id,companyId))return respond({error:'forbidden'},403)
+
+    if(action==='questions_preview'){
+      const conn=await companyConnection(admin,companyId)
+      if(!conn)return respond({error:'ml_connection_required'},409)
+      const token=await accessToken(companyId)
+      const offset=Math.min(1000,Math.max(0,Math.floor(Number(body.offset)||0)))
+      const limit=Math.min(50,Math.max(1,Math.floor(Number(body.limit)||50)))
+      const url=new URL('https://api.mercadolibre.com/questions/search')
+      url.searchParams.set('seller_id',String(conn.seller_id))
+      url.searchParams.set('api_version','4')
+      url.searchParams.set('offset',String(offset))
+      url.searchParams.set('limit',String(limit))
+      const page=await mlGet(url.toString(),token)
+      const source=Array.isArray(page?.questions)?page.questions:[]
+      const items=source.map((q:any)=>({
+        id:value(q?.id,30),
+        item_id:cleanId(q?.item_id),
+        text:value(q?.text,2000),
+        status:value(q?.status,50).toLowerCase(),
+        date_created:value(q?.date_created,60) || null,
+      })).filter((q:any)=>/^\d{1,30}$/.test(q.id))
+      return respond({success:true,items,limit,offset,total:Number(page?.total)||null,read_only:true})
+    }
 
     if(action==='status'){
       const {data,error}=await admin.from('funcionaria_ml_product_sync')

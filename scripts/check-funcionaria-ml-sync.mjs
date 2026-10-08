@@ -8,6 +8,7 @@ const worker = read('supabase/functions/funcionaria-ml-sync/index.ts');
 const importer = read('supabase/functions/funcionaria-ml-importar-produtos/index.ts');
 const cron = read('app/api/cron/funcionaria-ml-sync/route.ts');
 const ui = read('components/funcionaria/channels/FuncionarIAMercadoLivrePanel.tsx');
+const funnel = read('components/funcionaria/channels/FuncionarIAMLQuestionsFunnel.tsx');
 const vercel = JSON.parse(read('vercel.json'));
 
 const checks = [
@@ -30,7 +31,15 @@ const checks = [
   [importer.includes("if(managed?.sync_enabled)"), 'legacy import cannot overwrite managed sync'],
   [cron.includes("FUNCIONARIA_ML_SYNC_CRON_ENABLED !== 'true'"), 'cron disabled by default'],
   [cron.includes('process.env.CRON_SECRET'), 'cron authorization'],
+  [cron.includes('process.env.SUPABASE_SECRET_KEY'), 'cron supports current secret key'],
+  [worker.includes('SUPABASE_SECRET_KEYS'), 'worker validates secret keys server side'],
+  [worker.includes('questions_preview'), '7J read-only questions'],
+  [worker.includes('questions/search'), '7J official questions search'],
+  [worker.includes("canAccess(admin,user.id,companyId)"), 'company ownership boundary'],
   [ui.includes('Sincronização Mercado Livre'), 'user controls and visibility'],
+  [ui.includes('FuncionarIAMLQuestionsFunnel'), '7J mounted in product panel'],
+  [funnel.includes('Não integrado'), '7J no invented order conversions'],
+  [funnel.includes("action:'questions_preview'"), '7J no user-triggered automated reply'],
   [vercel.crons.some(c => c.path === '/api/cron/funcionaria-ml-sync'), 'scheduled reconciliation'],
 ];
 for (const [condition, label] of checks) assert.ok(condition, `7I check: ${label}`);

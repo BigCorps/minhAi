@@ -86,7 +86,7 @@ Se a política de envio ou o escopo da conta não estiver correto, parar no gate
 4. Revisar aderência e origem de cada empresa. Validar email (usa Hunter) quando necessário. Evitar contatos pessoais e inferência de condições de saúde na MelhorIA.
 5. Abrir a prévia e a página de qualificação. Para WhatsApp registrar a evidência de opt-in do número/produto correto. O formulário também permite autorização explícita, com os quatro últimos dígitos do número.
 6. Ativar somente a campanha de teste, com **1 toque e limite diário 1**. Enfileirar a abordagem escolhida.
-7. Configurar GitHub Actions: variável `SDR_WORKER_URL=https://www.minhai.app`, secret `SDR_WORKER_SECRET` igual ao servidor e variável `SDR_WORKER_ENABLED=true`. O workflow está em `.github/workflows/sdr-worker.yml` e também pode ser iniciado manualmente.
+7. Configurar GitHub Actions: manter o secret `SDR_WORKER_SECRET` igual ao servidor. O workflow usa `https://www.minhai.app` diretamente e roda por padrão; `SDR_WORKER_ENABLED=false` funciona como kill switch opcional no repositório. O workflow está em `.github/workflows/sdr-worker.yml` e também pode ser iniciado manualmente.
 8. Alterar `SDR_LIVE_SEND=true` e fazer redeploy. Rodar em dia útil, **9h–18h de Brasília**. O worker não envia fora desse horário. O agendamento ocorre a cada 15 min, sujeito à disponibilidade do GitHub Actions.
 9. Verificar chegada real, clicar o link, responder/qualificar e confirmar a pausa. Testar descadastro com outro contato de teste. Não confundir `sent` (aceitação pela API) com entregue/lido.
 10. Só depois aumentar para até cinco envios por dia/campanha e liberar os contatos revisados. Novos resultados das APIs sempre aguardam revisão e enfileiramento; não há disparo automático para toda lista encontrada.
@@ -241,5 +241,5 @@ Ver `VALIDACAO.md` para separar verificações locais concluídas dos gates de h
 - Claim/begin-send aceitam uma fila automática sem `outreach_reviewed=true` somente quando o snapshot cumpre integralmente `first_contact_v1`. Qualquer fila automática antiga/incompleta falha fechada.
 - A aba **Vendas do dia** é uma fila operacional para humanos/closers. Prioriza respostas registradas, qualificados, reuniões, propostas, atendimentos já assumidos, oportunidades `customer_or_partner` e alto ticket. Ela não envia mensagens.
 - **Resposta recebida** registra `last_inbound_at`, move a oportunidade para `replied` e chama o handoff; **Assumir conversa** pausa a automação sem fingir resposta. Interessado/Reunião/Proposta/Perdido atualizam o funil e mantêm takeover humano.
-- O workflow deve usar `SDR_WORKER_URL=https://www.minhai.app`; o apex `https://minhai.app` redireciona e não deve ser usado pelo `curl` atual do Actions.
+- O workflow usa `https://www.minhai.app` diretamente; o apex `https://minhai.app` redireciona e não deve ser usado pelo `curl` atual do Actions. `SDR_WORKER_ENABLED=false` pode pausar o agendamento sem depender do deploy.
 - Migration desta etapa: `20261008141000_sdr_automatic_first_contact.sql`. Aplicar somente após revisão/merge. Ela não ativa rollout, campanha, budget, `SDR_LIVE_SEND` nem dispara mensagens por conta própria.

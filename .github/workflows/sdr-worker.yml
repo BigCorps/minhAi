@@ -9,13 +9,13 @@ concurrency:
   cancel-in-progress: false
 jobs:
   run:
-    if: ${{ vars.SDR_WORKER_ENABLED == 'true' }}
+    if: ${{ vars.SDR_WORKER_ENABLED != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
       - name: Processar fila autorizada
         env:
-          SDR_WORKER_URL: ${{ vars.SDR_WORKER_URL }}
+          SDR_WORKER_URL: https://www.minhai.app
           SDR_WORKER_SECRET: ${{ secrets.SDR_WORKER_SECRET }}
         run: |
           test -n "$SDR_WORKER_URL" && test -n "$SDR_WORKER_SECRET"

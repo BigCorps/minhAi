@@ -415,6 +415,8 @@ test('automatic worker is single-touch without Gmail read permission and seller 
   assert.match(auto,/researched < 1/);
   assert.match(auto,/sdr_enqueue_automatic_email/);
   assert.match(auto,/sdr_automatic_outreach_capacity/);
+  assert.match(auto,/researchResult\.attempted/);
+  assert.match(auto,/attempted: false/);
   assert.match(worker,/discoverWebCompanies\(campaign\.id, "automatic"\)/);
   assert.doesNotMatch(worker,/from "\.\/providers"/);
   assert.match(sales,/sales_priority/);

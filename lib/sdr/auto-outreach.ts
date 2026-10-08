@@ -79,16 +79,16 @@ async function classifyIfNeeded(o: any, force = false) {
 }
 
 async function maybeResearch(o: any, allowResearch: boolean) {
-  if (!allowResearch) return o;
+  if (!allowResearch) return { opportunity: o, attempted: false };
   const research = o.qualification?.web_research;
-  if (research?.status) return o;
+  if (research?.status) return { opportunity: o, attempted: false };
   try {
     await researchBusinessContact(o.id);
-    return loadOpportunity(o.id);
+    return { opportunity: await loadOpportunity(o.id), attempted: true };
   } catch (error) {
     const code = error instanceof Error ? error.message : "web_research_failed";
     await event("worker", "automatic_research_skipped", o.lead_id, o.id, { code });
-    return loadOpportunity(o.id);
+    return { opportunity: await loadOpportunity(o.id), attempted: true };
   }
 }
 
@@ -169,21 +169,24 @@ export async function prepareAutomaticFirstContacts() {
 
     const needsMoreEvidence = !["customer", "partner"].includes(type) || !recipient;
     if (needsMoreEvidence && rollout.auto_discovery_enabled && researchAvailable && researched < 1) {
-      o = await maybeResearch(o, true);
-      researched++;
-      const refreshedBudget = checked(
-        await d
-          .from("sdr_provider_budgets")
-          .select("provider,enabled,limit_units,used_units,expires_at")
-          .eq("provider", "web_research")
-          .maybeSingle(),
-      );
-      researchAvailable = readyBudget(refreshedBudget);
-      o = await classifyIfNeeded(o, true);
-      type = o.qualification?.commercial_classification?.type;
-      recipient = ["customer", "partner"].includes(type)
-        ? automaticRecipient(o, o.lead)
-        : null;
+      const researchResult = await maybeResearch(o, true);
+      o = researchResult.opportunity;
+      if (researchResult.attempted) {
+        researched++;
+        const refreshedBudget = checked(
+          await d
+            .from("sdr_provider_budgets")
+            .select("provider,enabled,limit_units,used_units,expires_at")
+            .eq("provider", "web_research")
+            .maybeSingle(),
+        );
+        researchAvailable = readyBudget(refreshedBudget);
+        o = await classifyIfNeeded(o, true);
+        type = o.qualification?.commercial_classification?.type;
+        recipient = ["customer", "partner"].includes(type)
+          ? automaticRecipient(o, o.lead)
+          : null;
+      }
     }
     if (!["customer", "partner"].includes(type) || !recipient) continue;
 

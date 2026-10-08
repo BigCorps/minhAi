@@ -125,7 +125,15 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
     () => cart.reduce((sum, item) => sum + item.product.preco_venda * item.quantity, 0),
     [cart],
   );
+  const cartQuantity = useMemo(
+    () => cart.reduce((sum, item) => sum + item.quantity, 0),
+    [cart],
+  );
   const displayTotal = total + (deliveryMode === 'delivery' && deliveryQuote?.customer_pays ? deliveryQuote.price_cents / 100 : 0);
+
+  function scrollToOrder() {
+    document.getElementById('funcionaria-public-order')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   useEffect(() => {
     setDeliveryQuote(null);
@@ -257,7 +265,7 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
             </div>
           </div>
           <div className="rounded-full px-3 py-1.5 text-xs font-black" style={{ color: primary, backgroundColor: `${primary}12` }}>
-            {cart.length} {cart.length === 1 ? 'item' : 'itens'}
+            {cartQuantity} {cartQuantity === 1 ? 'item' : 'itens'}
           </div>
         </div>
       </header>
@@ -312,7 +320,7 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
           )}
         </section>
 
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+        <aside id="funcionaria-public-order" className="scroll-mt-20 lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2"><ShoppingBag className="h-5 w-5" style={{ color: primary }} /><h2 className="text-lg font-black">Seu pedido</h2></div>
 
@@ -414,6 +422,17 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
           </div>
         </aside>
       </div>
+      {!embedded && !result && cartQuantity > 0 ? (
+        <button
+          type="button"
+          onClick={scrollToOrder}
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-30 flex min-h-12 -translate-x-1/2 items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-xl shadow-slate-950/20 lg:hidden"
+          aria-label={`Ver pedido com ${cartQuantity} ${cartQuantity === 1 ? 'item' : 'itens'}`}
+        >
+          <ShoppingBag className="h-4 w-4" />
+          Ver pedido · {cartQuantity} {cartQuantity === 1 ? 'item' : 'itens'} · {brl(displayTotal)}
+        </button>
+      ) : null}
     </main>
   );
 }

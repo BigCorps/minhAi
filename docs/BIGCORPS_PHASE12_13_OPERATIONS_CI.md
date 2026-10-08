@@ -29,3 +29,7 @@ Não foi feita configuração de *branch protection* nem *required status check*
 ## Limites de validação
 
 O build `READY` não substitui E2E em navegador autenticado, dispositivos móveis reais, pagamentos reais ou revisão de conciliação. A main é preservada; não mover branch nem alterar produção antes de combinar integração com outros agentes.
+
+## Correção após primeira execução real da CI da PR
+
+A primeira execução GitHub Actions da PR #11 confirmou todos os gates estruturais, mas o último script `scripts/test-pix-cancel-capability.cjs` falhou ao importar `typescript` porque a CI não instala dependências. Ele **permanece no prebuild da Vercel**, onde o pacote já está disponível, e foi removido somente da suíte *zero-dependencies* do GitHub. Isso mantém o custo e a duração da CI baixos, sem reduzir a cobertura financeira do build Vercel. O gate 13 agora valida explicitamente essa separação.

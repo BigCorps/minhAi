@@ -48,4 +48,3 @@ jobs:
           node scripts/check-bigcorps-phase11.mjs
           node scripts/check-bigcorps-phase12.mjs
           node scripts/check-bigcorps-phase13.mjs
-          node scripts/test-pix-cancel-capability.cjs

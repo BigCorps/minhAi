@@ -1309,6 +1309,74 @@ function PartnerStatusForm({ membership, statuses, action, busy }: any) {
 }
 
 
+function SellerQueuePanel({ data, action, busy }: any) {
+  if (!data.length) return (
+    <section className={card}>
+      <h2 className="font-bold">Vendas do dia</h2>
+      <p className="mt-2 text-sm text-slate-400">Nenhuma oportunidade precisa de vendedor agora. Respostas, leads qualificados, propostas, atendimentos assumidos e oportunidades de alto ticket aparecem aqui automaticamente.</p>
+    </section>
+  );
+
+  return <div className="space-y-4">
+    <section className={card}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-bold">Vendas do dia · {data.length}</h2>
+          <p className="mt-2 text-sm text-slate-400">Fila priorizada para você ou um closer. O SDR continua responsável pela prospecção; o humano entra em respostas, negociação e oportunidades de maior valor.</p>
+        </div>
+      </div>
+    </section>
+    {data.map((o: any) => {
+      const l = o.lead || {};
+      const commercialType = o.qualification?.commercial_classification?.type;
+      const last = o.last_outreach;
+      return <article key={o.id} className={card}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-bold">{l.company_name}</h3>
+            <p className="mt-1 text-sm text-slate-400">
+              {PRODUCTS[o.product as Product]?.name || o.product} · {STAGES[o.stage] || o.stage}
+              {commercialType && isCommercialType(commercialType) ? <> · {COMMERCIAL_LABELS[commercialType]}</> : null}
+            </p>
+          </div>
+          <span className="rounded-full bg-lime-400/10 px-3 py-1 text-xs font-bold text-lime-200">Prioridade {o.sales_priority}</span>
+        </div>
+        <p className="mt-3 text-sm font-semibold">{o.recommended_action}</p>
+        <p className="mt-2 break-words text-sm text-slate-300">
+          {l.contact_name || "Contato não identificado"} · {l.email || "Email não disponível"} · {l.phone || "Telefone não disponível"}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-400">
+          {l.last_inbound_at && <span>Resposta registrada: {new Date(l.last_inbound_at).toLocaleString("pt-BR")}</span>}
+          {l.human_at && <span>Atendimento humano ativo</span>}
+          {last && <span>Último contato: {last.channel} · {last.status}{last.sent_at ? " · " + new Date(last.sent_at).toLocaleString("pt-BR") : ""}</span>}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button className={button} disabled={busy || o.stage === "replied"} onClick={() =>
+            void action({ action: "response_received", id: o.id }, "Resposta registrada; automação pausada.")
+          }>Resposta recebida</button>
+          <button className={button} disabled={busy || !!l.human_at} onClick={() =>
+            void action({ action: "sales_takeover", id: o.id }, "Atendimento assumido; automação pausada.")
+          }>Assumir conversa</button>
+          <button className={button} disabled={busy || ["qualified", "meeting", "proposal"].includes(o.stage)} onClick={() =>
+            void action({ action: "sales_stage", id: o.id, stage: "qualified" }, "Oportunidade marcada como interessada/qualificada.")
+          }>Interessado</button>
+          <button className={button} disabled={busy || ["meeting", "proposal"].includes(o.stage)} onClick={() =>
+            void action({ action: "sales_stage", id: o.id, stage: "meeting" }, "Reunião registrada.")
+          }>Reunião</button>
+          <button className={button} disabled={busy || o.stage === "proposal"} onClick={() => {
+            const note = prompt("Observação da proposta (opcional):") ?? "";
+            void action({ action: "sales_stage", id: o.id, stage: "proposal", note }, "Proposta registrada.");
+          }}>Proposta</button>
+          <button className={button} disabled={busy} onClick={() => {
+            const note = prompt("Motivo da perda (opcional):") ?? "";
+            void action({ action: "sales_stage", id: o.id, stage: "lost", note }, "Oportunidade encerrada sem venda.");
+          }}>Perdido</button>
+        </div>
+      </article>;
+    })}
+  </div>;
+}
+
 function RolloutsPanel({ data, live, action, busy }: any) {
   if (data?.available === false) return <section className={card}>Gates por produto aguardando a migration de rollout. Nenhum produto é liberado por esta tela.</section>;
   return <div className="space-y-5">

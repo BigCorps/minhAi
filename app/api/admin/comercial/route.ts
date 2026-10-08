@@ -110,6 +110,7 @@ export async function GET(req: Request) {
       sellerQueue,
       config: {
         live: process.env.SDR_LIVE_SEND === "true",
+        replyRead: process.env.SDR_EMAIL_REPLY_READ_ENABLED === "true",
         token: !!process.env.SDR_TOKEN_SECRET,
         email: !!process.env.SDR_GOOGLE_ACCOUNT_ID,
         whatsapp: !!process.env.SDR_WHATSAPP_NUMBER_ID,

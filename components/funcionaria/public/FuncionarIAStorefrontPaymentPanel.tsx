@@ -109,7 +109,7 @@ export default function FuncionarIAStorefrontPaymentPanel({
         <div className="mt-2 text-sm font-black">Cartão aguardando confirmação</div>
         <div className="mt-1 text-xl font-black">{brlCents(payment.amount_cents)}</div>
       </div>
-      {payment.can_reopen!==false?(
+      {payment.can_reopen!==false && String(payment.checkout_url || '').startsWith('https://checkout.bigcorps.com.br/')?(
         <a href={payment.checkout_url} target="_blank" rel="noopener noreferrer"
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-black text-white"
           style={{backgroundColor:primaryColor}}><ExternalLink className="h-4 w-4" />Abrir checkout do cartão</a>

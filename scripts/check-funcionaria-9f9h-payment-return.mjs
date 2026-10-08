@@ -4,7 +4,10 @@ const p=readFileSync('components/funcionaria/public/FuncionarIAStorefrontPayment
 const ret=readFileSync('app/api/funcionaria/storefront-infinitepay/return/route.ts','utf8');
 for(const state of ["'confirmado'","'processando'","'erro'"])assert.ok(s.includes(state),state);
 assert.ok(s.includes("params.delete('pagamento')"),'return query cleanup');
-assert.ok(s.includes('Pagamento recebido. A confirmação ainda está sendo processada; evite pagar novamente.'),'processing anti-double-pay message');
+assert.ok(s.includes('A confirmação do pagamento pode estar em processamento. Confira com a loja antes de tentar pagar novamente.'),'processing anti-double-pay message');
+assert.ok(s.includes('somente a verificação pelo servidor confirma o pagamento.'),'return query is untrusted, not proof of payment');
+assert.ok(!s.includes('Pagamento confirmado. Seu pedido foi recebido com sucesso.'),'forged return query cannot claim payment paid');
+assert.ok(p.includes("payment.can_reopen!==false && String(payment.checkout_url || '').startsWith('https://checkout.bigcorps.com.br/')"),'reopen card link must enforce checkout host');
 assert.ok(ret.includes("target(companySlug, 'confirmado')")&&ret.includes("target(companySlug, 'processando')")&&ret.includes("target(signaled.data?.company_slug, 'erro')"),'return route states');
 assert.ok(p.includes("terminalStatus=['expired','cancelled','canceled']"),'terminal payment states');
 assert.ok(p.includes('Faça um novo pedido para gerar uma nova cobrança.'),'terminal recovery guidance');

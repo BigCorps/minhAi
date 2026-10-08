@@ -314,18 +314,16 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
           role="status"
           aria-live="polite"
           className={`mx-auto mt-4 max-w-7xl rounded-2xl border px-4 py-3 text-sm font-bold sm:px-6 ${
-            returnPaymentState === 'confirmado'
-              ? 'border-lime-200 bg-lime-50 text-lime-800'
-              : returnPaymentState === 'processando'
-                ? 'border-amber-200 bg-amber-50 text-amber-800'
-                : 'border-red-200 bg-red-50 text-red-700'
+            returnPaymentState === 'erro'
+              ? 'border-red-200 bg-red-50 text-red-700'
+              : 'border-amber-200 bg-amber-50 text-amber-800'
           }`}
         >
           {returnPaymentState === 'confirmado'
-            ? 'Pagamento confirmado. Seu pedido foi recebido com sucesso.'
+            ? 'Você retornou do checkout. Consulte o status do pedido: somente a verificação pelo servidor confirma o pagamento.'
             : returnPaymentState === 'processando'
-              ? 'Pagamento recebido. A confirmação ainda está sendo processada; evite pagar novamente.'
-              : 'Não foi possível confirmar o pagamento. Verifique o pedido antes de tentar novamente.'}
+              ? 'A confirmação do pagamento pode estar em processamento. Confira com a loja antes de tentar pagar novamente.'
+              : 'Não foi possível validar o retorno do pagamento. Confira o pedido antes de tentar novamente.'}
         </div>
       ) : null}
 

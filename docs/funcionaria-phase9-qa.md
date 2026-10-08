@@ -51,3 +51,7 @@ Pagamentos expirados/cancelados também passam a ter estado terminal próprio, s
 3. **9K:** Resposta antiga de cotação Lalamove é ignorada quando produtos, endereço ou modalidade mudam. Cotações vencidas são recusadas antes de concluir o pedido. A chave de idempotência permanece estável para repetição da mesma solicitação e é renovada quando conteúdo do pedido muda; duplo envio síncrono é bloqueado por ref.
 
 **Escopo dos testes:** verificações estruturais no prebuild, sem gerar cotações, pagamentos, pedidos ou tráfego para provedores externos. Validação visual manual e E2E autenticado seguem pendentes e não são confundidos com os gates estruturais.
+
+## Revisão de segurança pré-integração — retorno de pagamento
+
+O parâmetro `?pagamento=confirmado` é manipulável pelo navegador; mesmo que a rota do provedor só produza esse estado após consultar a Edge Function, **a página que recebe o parâmetro não pode tratá-lo como prova de pagamento**. A mensagem de retorno é agora apenas informativa e orienta conferir o pedido; uma confirmação real só pode ser apresentada após resposta de status verificada pelo servidor, como a confirmação exibida pelo `FuncionarIAStorefrontPaymentPanel`. O cartão também aplica a mesma allowlist `checkout.bigcorps.com.br` ao botão de *reabrir* checkout, não só ao checkout inicial. Adicionado gate regressivo sem envolver pagamentos reais.

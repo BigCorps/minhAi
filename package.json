@@ -7,7 +7,7 @@
     "check:email-edge-boundary": "node scripts/check-email-edge-boundary.mjs",
     "check:email-boundary": "node scripts/check-email-edge-boundary.mjs",
     "dev": "next dev --webpack",
-    "prebuild": "npm run check:pix-cancel-boundary && npm run check:withdrawal-boundary && npm run check:funcionaria-storefront-card && npm run check:funcionaria-monthly-direct && npm run check:funcionaria-ml-import && npm run check:funcionaria-ml-sync && npm run check:funcionaria-7k && npm run check:funcionaria-7l && npm run check:funcionaria-9a && npm run check:funcionaria-9b && npm run check:funcionaria-9c9e && npm run check:funcionaria-9f9h && npm run check:funcionaria-9ijk && npm run check:bigcorps-10 && node scripts/test-pix-cancel-capability.cjs",
+    "prebuild": "npm run check:pix-cancel-boundary && npm run check:withdrawal-boundary && npm run check:funcionaria-storefront-card && npm run check:funcionaria-monthly-direct && npm run check:funcionaria-ml-import && npm run check:funcionaria-ml-sync && npm run check:funcionaria-7k && npm run check:funcionaria-7l && npm run check:funcionaria-9a && npm run check:funcionaria-9b && npm run check:funcionaria-9c9e && npm run check:funcionaria-9f9h && npm run check:funcionaria-9ijk && npm run check:bigcorps-10 && npm run check:bigcorps-11 && node scripts/test-pix-cancel-capability.cjs",
     "build": "NODE_OPTIONS=--max-old-space-size=6144 next build --webpack",
     "start": "next start",
     "lint": "next lint",
@@ -27,7 +27,8 @@
     "check:funcionaria-9f9h": "node scripts/check-funcionaria-9f9h-payment-return.mjs",
     "check:funcionaria-9ijk": "node scripts/check-funcionaria-9ijk-public-flow.mjs",
     "check:bigcorps-10": "node scripts/check-bigcorps-phase10.mjs",
-    "smoke:bigcorps-10": "node scripts/smoke-bigcorps-phase10.mjs"
+    "smoke:bigcorps-10": "node scripts/smoke-bigcorps-phase10.mjs",
+    "check:bigcorps-11": "node scripts/check-bigcorps-phase11.mjs"
   },
   "dependencies": {
     "@daily-co/daily-js": "^0.89.1",

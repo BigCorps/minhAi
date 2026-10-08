@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import FuncionarIAStorefrontPaymentPanel from '@/components/funcionaria/public/FuncionarIAStorefrontPaymentPanel';
 import {
@@ -52,13 +52,28 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [orderKey, setOrderKey] = useState('');
+  const orderAttemptRef = useRef<{ signature: string; key: string } | null>(null);
+  const submittingRef = useRef(false);
   const [deliveryMode, setDeliveryMode] = useState<'pickup' | 'delivery'>('pickup');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const deliveryQuoteGenerationRef = useRef(0);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
+  const [returnPaymentState, setReturnPaymentState] = useState<'confirmado' | 'processando' | 'erro' | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const state = params.get('pagamento');
+    if (state === 'confirmado' || state === 'processando' || state === 'erro') {
+      setReturnPaymentState(state);
+      params.delete('pagamento');
+      const query = params.toString();
+      window.history.replaceState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -125,9 +140,20 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
     () => cart.reduce((sum, item) => sum + item.product.preco_venda * item.quantity, 0),
     [cart],
   );
+  const cartQuantity = useMemo(
+    () => cart.reduce((sum, item) => sum + item.quantity, 0),
+    [cart],
+  );
   const displayTotal = total + (deliveryMode === 'delivery' && deliveryQuote?.customer_pays ? deliveryQuote.price_cents / 100 : 0);
 
+  function scrollToOrder() {
+    document.getElementById('funcionaria-public-order')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   useEffect(() => {
+    // Invalida qualquer resposta de cotação iniciada antes de mudar
+    // os produtos, endereço ou modo de recebimento.
+    deliveryQuoteGenerationRef.current += 1;
     setDeliveryQuote(null);
     setDeliveryError(null);
   }, [cart, deliveryAddress, deliveryMode]);
@@ -136,7 +162,7 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
   const secondary = profile?.settings?.secondary_color || '#A3E635';
 
   function add(product: Product) {
-    if (!product.disponivel) return;
+    if (!product.disponivel || submittingRef.current) return;
     setResult(null);
     setCart((current) => {
       const found = current.find((item) => item.product.id === product.id);
@@ -150,6 +176,7 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
   }
 
   function change(productId: string, delta: number) {
+    if (submittingRef.current) return;
     setCart((current) => current.flatMap((item) => {
       if (item.product.id !== productId) return [item];
       const quantity = item.quantity + delta;
@@ -158,7 +185,8 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
   }
 
   async function calculateDelivery() {
-    if (!profile?.company?.id || !cart.length || deliveryAddress.trim().length < 8) return;
+    if (!profile?.company?.id || !cart.length || deliveryAddress.trim().length < 8 || deliveryLoading) return;
+    const requestId = ++deliveryQuoteGenerationRef.current;
     setDeliveryLoading(true);
     setDeliveryError(null);
     try {
@@ -167,28 +195,46 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
         deliveryAddress,
         items: cart.map((item) => ({ produto_id: item.product.id, quantidade: item.quantity })),
       });
-      setDeliveryQuote(quote);
+      if (requestId === deliveryQuoteGenerationRef.current) setDeliveryQuote(quote);
     } catch (error: any) {
       const map: Record<string,string> = {
         minimum_order_not_met: 'O pedido ainda não atingiu o valor mínimo para entrega.',
         delivery_outside_radius: 'Este endereço está fora do raio de entrega da loja.',
         delivery_outside_schedule: 'A entrega não está disponível neste horário.',
       };
-      setDeliveryError(map[error?.message] || error?.message || 'Não foi possível calcular o frete.');
+      if (requestId === deliveryQuoteGenerationRef.current) setDeliveryError(map[error?.message] || error?.message || 'Não foi possível calcular o frete.');
     } finally {
       setDeliveryLoading(false);
     }
   }
 
   async function submit() {
-    if (!profile?.company?.id || !cart.length || submitting) return;
+    if (!profile?.company?.id || !cart.length || submittingRef.current) return;
     if (deliveryMode === 'delivery') {
       if (!deliveryQuote) { setError('Calcule o frete antes de enviar o pedido.'); return; }
+      if (deliveryQuote.expires_at && Date.parse(deliveryQuote.expires_at) <= Date.now()) {
+        setDeliveryQuote(null);
+        setError('A cotação de entrega expirou. Calcule o frete novamente.');
+        return;
+      }
       const phone = customerPhone.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
       if (phone.length !== 10 && phone.length !== 11) { setError('Informe um telefone com DDD para a entrega.'); return; }
     }
-    const requestKey = orderKey || crypto.randomUUID();
-    if (!orderKey) setOrderKey(requestKey);
+    // Retries do mesmo pedido reutilizam a chave. Alterar qualquer dado
+    // relevante gera outra chave, evitando replay de uma compra anterior.
+    const signature = JSON.stringify({
+      company_id: profile.company.id,
+      items: cart.map(({ product, quantity }) => [product.id, quantity]),
+      delivery_mode: deliveryMode,
+      delivery_quote_token: deliveryMode === 'delivery' ? deliveryQuote?.quote_token : null,
+      customer_name: customerName,
+      customer_phone: deliveryMode === 'delivery' ? customerPhone : null,
+      notes,
+    });
+    const prior = orderAttemptRef.current;
+    const requestKey = prior?.signature === signature ? prior.key : crypto.randomUUID();
+    orderAttemptRef.current = { signature, key: requestKey };
+    submittingRef.current = true;
     setSubmitting(true);
     setError(null);
     try {
@@ -214,7 +260,7 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
       }
       setResult(data);
       setCart([]);
-      setOrderKey(crypto.randomUUID());
+      orderAttemptRef.current = null;
       setDeliveryMode('pickup');
       setDeliveryAddress('');
       setCustomerPhone('');
@@ -222,6 +268,7 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
     } catch (err: any) {
       setError(err?.message || 'Não foi possível concluir o pedido.');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -257,10 +304,28 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
             </div>
           </div>
           <div className="rounded-full px-3 py-1.5 text-xs font-black" style={{ color: primary, backgroundColor: `${primary}12` }}>
-            {cart.length} {cart.length === 1 ? 'item' : 'itens'}
+            {cartQuantity} {cartQuantity === 1 ? 'item' : 'itens'}
           </div>
         </div>
       </header>
+
+      {returnPaymentState ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`mx-auto mt-4 max-w-7xl rounded-2xl border px-4 py-3 text-sm font-bold sm:px-6 ${
+            returnPaymentState === 'erro'
+              ? 'border-red-200 bg-red-50 text-red-700'
+              : 'border-amber-200 bg-amber-50 text-amber-800'
+          }`}
+        >
+          {returnPaymentState === 'confirmado'
+            ? 'Você retornou do checkout. Consulte o status do pedido: somente a verificação pelo servidor confirma o pagamento.'
+            : returnPaymentState === 'processando'
+              ? 'A confirmação do pagamento pode estar em processamento. Confira com a loja antes de tentar pagar novamente.'
+              : 'Não foi possível validar o retorno do pagamento. Confira o pedido antes de tentar novamente.'}
+        </div>
+      ) : null}
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <section>
@@ -269,16 +334,10 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar produto…"
+              placeholder="Buscar produto…" aria-label="Buscar produto"
               className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-4 text-sm font-semibold outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
             />
           </div>
-
-          {error && (
-            <div className="mb-4 flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}
-            </div>
-          )}
 
           {filtered.length ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -299,7 +358,8 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
                         type="button"
                         disabled={!product.disponivel}
                         onClick={() => add(product)}
-                        className="rounded-xl px-4 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                        aria-label={`Adicionar ${product.nome} ao pedido`}
+                        className="min-h-11 rounded-xl px-4 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                         style={product.disponivel ? { backgroundColor: primary } : undefined}
                       >Adicionar</button>
                     </div>
@@ -312,9 +372,14 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
           )}
         </section>
 
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+        <aside id="funcionaria-public-order" className="scroll-mt-20 lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2"><ShoppingBag className="h-5 w-5" style={{ color: primary }} /><h2 className="text-lg font-black">Seu pedido</h2></div>
+            {error ? (
+              <div role="alert" aria-live="polite" className="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">
+                <AlertCircle className="h-4 w-4 shrink-0" />{error}
+              </div>
+            ) : null}
 
             {result ? (
               <div className="mt-5 text-center">
@@ -362,12 +427,12 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
                     <div key={item.product.id} className="rounded-2xl bg-slate-50 p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0"><div className="truncate text-sm font-black">{item.product.nome}</div><div className="mt-1 text-xs font-bold text-slate-500">{brl(item.product.preco_venda * item.quantity)}</div></div>
-                        <button onClick={() => change(item.product.id, -item.quantity)} className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                        <button type="button" aria-label={`Remover ${item.product.nome} do pedido`} onClick={() => change(item.product.id, -item.quantity)} className="min-h-11 min-w-11 rounded-lg p-2 text-slate-400 hover:bg-white hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
                       </div>
                       <div className="mt-3 flex items-center gap-2">
-                        <button onClick={() => change(item.product.id, -1)} className="rounded-lg border border-slate-200 bg-white p-1.5"><Minus className="h-4 w-4" /></button>
+                        <button type="button" aria-label={`Diminuir quantidade de ${item.product.nome}`} onClick={() => change(item.product.id, -1)} className="min-h-11 min-w-11 rounded-lg border border-slate-200 bg-white p-2"><Minus className="h-4 w-4" /></button>
                         <span className="min-w-8 text-center text-sm font-black">{item.quantity}</span>
-                        <button onClick={() => change(item.product.id, 1)} className="rounded-lg border border-slate-200 bg-white p-1.5"><Plus className="h-4 w-4" /></button>
+                        <button type="button" aria-label={`Aumentar quantidade de ${item.product.nome}`} onClick={() => change(item.product.id, 1)} className="min-h-11 min-w-11 rounded-lg border border-slate-200 bg-white p-2"><Plus className="h-4 w-4" /></button>
                       </div>
                     </div>
                   ))}
@@ -378,15 +443,15 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
                     <div className="flex items-center gap-2 text-sm font-black"><Truck className="h-4 w-4" style={{ color: primary }} /> Como quer receber?</div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
-                      <button type="button" onClick={() => setDeliveryMode('pickup')} className={`rounded-xl border px-3 py-2 text-xs font-black ${deliveryMode === 'pickup' ? 'border-violet-300 bg-white text-violet-700' : 'border-slate-200 text-slate-500'}`}>Retirar no local</button>
-                      <button type="button" onClick={() => setDeliveryMode('delivery')} className={`rounded-xl border px-3 py-2 text-xs font-black ${deliveryMode === 'delivery' ? 'border-violet-300 bg-white text-violet-700' : 'border-slate-200 text-slate-500'}`}>Receber por entrega</button>
+                      <button type="button" aria-pressed={deliveryMode === 'pickup'} onClick={() => setDeliveryMode('pickup')} className={`rounded-xl border px-3 py-2 text-xs font-black ${deliveryMode === 'pickup' ? 'border-violet-300 bg-white text-violet-700' : 'border-slate-200 text-slate-500'}`}>Retirar no local</button>
+                      <button type="button" aria-pressed={deliveryMode === 'delivery'} onClick={() => setDeliveryMode('delivery')} className={`rounded-xl border px-3 py-2 text-xs font-black ${deliveryMode === 'delivery' ? 'border-violet-300 bg-white text-violet-700' : 'border-slate-200 text-slate-500'}`}>Receber por entrega</button>
                     </div>
                     {deliveryMode === 'delivery' && (
                       <div className="mt-3 space-y-2">
-                        <input value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} placeholder="Endereço completo para entrega" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none focus:border-violet-300" />
-                        <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Telefone com DDD" inputMode="tel" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none focus:border-violet-300" />
+                        <input value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} placeholder="Endereço completo para entrega" aria-label="Endereço completo para entrega" autoComplete="street-address" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none focus:border-violet-300" />
+                        <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Telefone com DDD" aria-label="Telefone com DDD" inputMode="tel" autoComplete="tel" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none focus:border-violet-300" />
                         <button type="button" onClick={() => void calculateDelivery()} disabled={deliveryLoading || deliveryAddress.trim().length < 8} className="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-xs font-black text-[#6D28D9] disabled:opacity-50">{deliveryLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />} Calcular entrega</button>
-                        {deliveryError && <div className="text-xs font-bold text-red-600">{deliveryError}</div>}
+                        {deliveryError && <div role="alert" aria-live="polite" className="text-xs font-bold text-red-600">{deliveryError}</div>}
                         {deliveryQuote && (
                           <div className="rounded-xl bg-white p-3 text-xs">
                             <div className="flex items-center justify-between gap-3"><span className="font-bold text-slate-500">Entrega</span><span className="font-black text-slate-900">{deliveryQuote.customer_pays ? brl(deliveryQuote.price_cents / 100) : 'Grátis'}</span></div>
@@ -398,9 +463,9 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
                   </div>
                 )}
 
-                <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Seu nome (opcional)" className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-violet-300" />
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observação (opcional)" rows={2} className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-violet-300" />
-                <button onClick={submit} disabled={submitting} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-black text-white disabled:opacity-60" style={{ backgroundColor: primary }}>
+                <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Seu nome (opcional)" aria-label="Seu nome" autoComplete="name" className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-violet-300" />
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observação (opcional)" aria-label="Observação do pedido" rows={2} className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-violet-300" />
+                <button type="button" onClick={submit} disabled={submitting} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-black text-white disabled:opacity-60" style={{ backgroundColor: primary }}>
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                   {submitting ? 'Enviando…' : 'Finalizar pedido'}
                 </button>
@@ -414,6 +479,17 @@ export default function FuncionarIAPublicSales({ slug, embedded = false }: Props
           </div>
         </aside>
       </div>
+      {!result && cartQuantity > 0 ? (
+        <button
+          type="button"
+          onClick={scrollToOrder}
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-3 right-3 z-[75] flex min-h-12 items-center justify-center gap-2 rounded-full bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-xl shadow-slate-950/20 lg:hidden"
+          aria-label={`Ver pedido com ${cartQuantity} ${cartQuantity === 1 ? 'item' : 'itens'}`}
+        >
+          <ShoppingBag className="h-4 w-4" />
+          <span className="min-w-0 truncate">Ver pedido · {cartQuantity} {cartQuantity === 1 ? 'item' : 'itens'} · {brl(displayTotal)}</span>
+        </button>
+      ) : null}
     </main>
   );
 }

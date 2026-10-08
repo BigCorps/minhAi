@@ -41,7 +41,9 @@ function target(slug: unknown, state: 'confirmado' | 'processando' | 'erro') {
   if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(clean)) {
     return `${FALLBACK}/?pagamento=${state}`;
   }
-  return `${FALLBACK}/vendas/${encodeURIComponent(clean)}?pagamento=${state}`;
+  // O domínio principal reescreve /vendas para a área interna da marca.
+  // A loja pública do cliente mora no subdomínio e precisa receber o status.
+  return `https://${clean}.funcionaria.net/vendas?pagamento=${state}`;
 }
 
 export async function GET(request: NextRequest) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { cleanUuid, signStorefrontPaymentToken, verifyDeliveryQuoteToken } from '@/lib/orders-server';
+import { logFuncionariaOperationalError } from '@/lib/funcionaria/operational-events';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,7 @@ async function prepareStorefrontPayment(
     p_pedido_id: pedidoId,
   });
   if (error || !data?.checkout_id) {
-    console.error('[funcionaria/public-order] storefront checkout:', error?.message || data);
+    logFuncionariaOperationalError('order_checkout_preparation_failed');
     throw new Error('storefront_checkout_failed');
   }
   return {
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     { p_company_id: companyId },
   );
   if (entitlementError) {
-    console.error('[funcionaria/public-order] storefront entitlement:', entitlementError.message);
+    logFuncionariaOperationalError('order_entitlement_failed');
     return NextResponse.json({ error: 'storefront_payment_mode_unavailable' }, { status: 503 });
   }
   const effectivePaymentMode =
@@ -213,7 +214,7 @@ export async function POST(request: NextRequest) {
     }
   }
   if (pedidoError || !pedido) {
-    console.error('[funcionaria/public-order] pedido:', pedidoError?.message);
+    logFuncionariaOperationalError('order_creation_failed');
     return NextResponse.json({ error: 'order_create_failed' }, { status: 500 });
   }
 
@@ -232,7 +233,7 @@ export async function POST(request: NextRequest) {
 
   const { error: itemsError } = await supabase.from('pedido_itens').insert(rows);
   if (itemsError) {
-    console.error('[funcionaria/public-order] itens:', itemsError.message);
+    logFuncionariaOperationalError('order_items_failed');
     await supabase.from('pedidos').delete().eq('id', pedido.id);
     return NextResponse.json({ error: 'order_items_create_failed' }, { status: 500 });
   }
@@ -250,7 +251,7 @@ export async function POST(request: NextRequest) {
       storefront_payment: storefrontPayment,
     });
   } catch (checkoutError) {
-    console.error('[funcionaria/public-order] storefront payment:', checkoutError);
+    logFuncionariaOperationalError('order_checkout_preparation_failed');
     return NextResponse.json({ error: 'storefront_checkout_failed' }, { status: 500 });
   }
 }

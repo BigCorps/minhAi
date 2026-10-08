@@ -1,0 +1,16 @@
+import assert from'node:assert/strict';import{readFileSync}from'node:fs';
+const s=readFileSync('components/funcionaria/public/FuncionarIAPublicSales.tsx','utf8');
+const p=readFileSync('components/funcionaria/public/FuncionarIAStorefrontPaymentPanel.tsx','utf8');
+const ret=readFileSync('app/api/funcionaria/storefront-infinitepay/return/route.ts','utf8');
+for(const state of ["'confirmado'","'processando'","'erro'"])assert.ok(s.includes(state),state);
+assert.ok(s.includes("params.delete('pagamento')"),'return query cleanup');
+assert.ok(s.includes('A confirmação do pagamento pode estar em processamento. Confira com a loja antes de tentar pagar novamente.'),'processing anti-double-pay message');
+assert.ok(s.includes('somente a verificação pelo servidor confirma o pagamento.'),'return query is untrusted, not proof of payment');
+assert.ok(!s.includes('Pagamento confirmado. Seu pedido foi recebido com sucesso.'),'forged return query cannot claim payment paid');
+assert.ok(p.includes("payment.can_reopen!==false && String(payment.checkout_url || '').startsWith('https://checkout.bigcorps.com.br/')"),'reopen card link must enforce checkout host');
+assert.ok(ret.includes("target(companySlug, 'confirmado')")&&ret.includes("target(companySlug, 'processando')")&&ret.includes("target(signaled.data?.company_slug, 'erro')"),'return route states');
+assert.ok(p.includes("terminalStatus=['expired','cancelled','canceled']"),'terminal payment states');
+assert.ok(p.includes('Faça um novo pedido para gerar uma nova cobrança.'),'terminal recovery guidance');
+assert.ok((p.match(/role="alert"/g)||[]).length>=2,'payment errors must be announced');
+assert.ok(p.includes("if(loading)return;setLoading(true)"),'payment duplicate action guard');
+console.log('FuncionarIA 9F-9H: payment return + terminal recovery + anti-double-pay UX PASS');

@@ -282,8 +282,7 @@ export async function POST(req: Request) {
           await d
             .from("sdr_opportunities")
             .update({ stage: "replied" })
-            .eq("id", id)
-            .not("stage", "in", "(paid,won,lost)"),
+            .eq("id", id),
         );
         await event(actor, "manual_reply_received", o.lead_id, id, { receivedAt });
         return {};

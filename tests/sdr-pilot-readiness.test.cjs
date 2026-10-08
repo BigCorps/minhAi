@@ -68,14 +68,14 @@ test('partner/customer preview uses different copy and institutional greeting; s
 test('follow-up snapshots inherit recipient/source/evidence/variant/content and manual pilot never schedules another touch', () => {
   const snapshot = { ...outreach.recipientSnapshot(fixture().o, fixture().l, corporate), message_variant: 'partner', message_subject: 'Subject', message_body: 'Reviewed', enqueue_mode: 'manual_review', reviewed_by: actor, reviewed_at: 'synthetic' };
   assert.deepEqual(clean(outreach.followupSnapshot(snapshot)), clean(snapshot));
-  const worker = read('lib/sdr/worker.ts'); assert.match(worker, /followupSnapshot\(q\)/); assert.match(worker, /q\.enqueue_mode !== "manual_pilot"/);
-  assert.match(worker, /process\.env\.SDR_LIVE_SEND !== "true" \|\| !businessHours\(\)/); assert.match(worker, /threadHasReply/);
+  const worker = read('lib/sdr/worker.ts'); assert.match(worker, /followupSnapshot\(q\)/); assert.match(worker, /q\.enqueue_mode !== "manual_pilot"/); assert.match(worker, /q\.enqueue_mode !== "automatic"/);
+  assert.match(worker, /SDR_EMAIL_REPLY_READ_ENABLED/); assert.match(worker, /process\.env\.SDR_LIVE_SEND !== "true" \|\| !businessHours\(\)/); assert.match(worker, /threadHasReply/);
 });
 async function setup(options = {}) {
   const d = new PGlite();
   await d.exec(`create role anon; create role authenticated; create role service_role;
     create table sdr_campaigns(id uuid primary key,enabled boolean not null default true,trial_ends_at timestamptz default now()+interval '1 day',daily_limit integer default 3,max_touches integer default 1);
-    create table sdr_leads(id uuid primary key,company_name text,domain text,cnpj text,source text,email text,email_status text default 'unknown',phone text,owner text default 'minhai',outreach_reviewed boolean default true,suppressed_at timestamptz,human_at timestamptz,last_inbound_at timestamptz);
+    create table sdr_leads(id uuid primary key,company_name text,domain text,cnpj text,source text,email text,email_status text default 'unknown',phone text,owner text default 'minhai',outreach_reviewed boolean default true,suppressed_at timestamptz,human_at timestamptz,last_inbound_at timestamptz,last_contact_at timestamptz);
     create table sdr_opportunities(id uuid primary key,lead_id uuid references sdr_leads,campaign_id uuid references sdr_campaigns,product text default 'conviteia',stage text default 'new',qualification jsonb);
     create table sdr_queue(id uuid primary key default gen_random_uuid(),opportunity_id uuid references sdr_opportunities,lead_id uuid references sdr_leads,campaign_id uuid references sdr_campaigns,channel text,step integer default 0,status text default 'queued',due_at timestamptz default now(),lease_at timestamptz,sent_at timestamptz,error_code text,unique(opportunity_id,channel,step));
     create table sdr_consents(lead_id uuid,product text,channel text,address text,revoked_at timestamptz);
@@ -94,6 +94,7 @@ async function setup(options = {}) {
   }
   await d.exec(read('supabase/migrations/20261007164922_sdr_institutional_recipients.sql'));
   await d.exec(read('supabase/migrations/20261007164923_sdr_manual_pilot_gate.sql'));
+  await d.exec(read('supabase/migrations/20261008141000_sdr_automatic_first_contact.sql'));
   const snapshot = { ...clean(outreach.recipientSnapshot(fixture().o, fixture().l, corporate)), message_variant: 'partner', message_subject: 'Reviewed subject', message_body: 'Reviewed body', enqueue_mode: 'manual_pilot' };
   const enqueue = (n, s = snapshot) => d.query('select sdr_enqueue_reviewed_email($1,$2,$3) id', [uuid(n), s, actor]);
   return { d, snapshot, enqueue };
@@ -135,18 +136,40 @@ sqlTest('pilot starts blocked; only explicitly reviewed single-touch email is cl
     await assert.rejects(d.query('select sdr_begin_send($1)', [next[0].id]), /send_no_longer_eligible/);
   } finally { await d.close(); }
 });
-sqlTest('automatic active keeps old gates; automatic queue cannot pass pilot; individual verification and WhatsApp opt-in preserved', async () => {
+sqlTest('automatic first contact requires active gates, one touch and a validated immutable snapshot without human review', async () => {
   const { d } = await setup(); try {
-    await d.query("update sdr_leads set email='person@empresa.com.br',email_status='verified' where id=$1", [uuid(1)]);
-    await d.query("insert into sdr_queue(opportunity_id,lead_id,campaign_id,channel) values($1,$1,$2,'email')", [uuid(1), uuid(20)]);
-    await d.query("select sdr_set_manual_pilot_gate('conviteia',true)"); assert.equal((await d.query('select * from sdr_claim()')).rows.length, 0);
-    await d.query("select sdr_set_product_rollout('conviteia','active',false,false,false,3,3)"); assert.equal((await d.query('select * from sdr_claim()')).rows.length, 0);
-    await d.query("select sdr_set_product_rollout('conviteia','active',false,true,true,3,3)"); const q = (await d.query('select * from sdr_claim()')).rows[0]; assert.ok(q);
-    await d.query("update sdr_leads set email_status='public_source' where id=$1", [uuid(1)]); await assert.rejects(d.query('select sdr_begin_send($1)', [q.id]), /verified_email_required/);
-    await d.query("update sdr_queue set status='cancelled' where id=$1", [q.id]);
-    await d.query("insert into sdr_queue(opportunity_id,lead_id,campaign_id,channel) values($1,$1,$2,'whatsapp')", [uuid(2), uuid(20)]);
-    const wa = (await d.query('select * from sdr_claim()')).rows[0]; assert.ok(wa); await assert.rejects(d.query('select sdr_begin_send($1)', [wa.id]), /whatsapp_optin_required/);
-    await d.query("update sdr_campaigns set enabled=false"); await assert.rejects(d.query('select sdr_begin_send($1)', [wa.id]), /send_no_longer_eligible/);
+    await d.query("update sdr_leads set email='person@empresa.com.br',email_status='verified',outreach_reviewed=false where id=$1", [uuid(1)]);
+    const individual = {
+      recipient_kind: 'individual', recipient_address: 'person@empresa.com.br', recipient_source_url: null,
+      recipient_evidence: { automation_policy: 'first_contact_v1' }, message_variant: 'partner',
+      message_subject: 'Automatic subject', message_body: 'Automatic body', enqueue_mode: 'automatic'
+    };
+    await assert.rejects(d.query('select sdr_enqueue_automatic_email($1,$2) id',[uuid(1),individual]), /automatic_outreach_not_active/);
+    await d.query("select sdr_set_product_rollout('conviteia','active',false,true,true,3,3)");
+    await d.query("update sdr_campaigns set max_touches=2");
+    await assert.rejects(d.query('select sdr_enqueue_automatic_email($1,$2) id',[uuid(1),individual]), /automatic_first_contact_requires_single_touch/);
+    await d.query("update sdr_campaigns set max_touches=1");
+    const id=(await d.query('select sdr_enqueue_automatic_email($1,$2) id',[uuid(1),individual])).rows[0].id;
+    let row=(await d.query('select * from sdr_queue where id=$1',[id])).rows[0];
+    assert.equal(row.enqueue_mode,'automatic'); assert.equal(row.step,0); assert.equal(row.reviewed_by,null);
+    assert.equal(row.recipient_evidence.automation_policy,'first_contact_v1');
+    const claimed=(await d.query('select * from sdr_claim()')).rows; assert.equal(claimed.length,1); assert.equal(claimed[0].id,id);
+    await d.query('select sdr_begin_send($1)',[id]);
+
+    await d.query("update sdr_queue set status='sent',sent_at=now() where id=$1",[id]);
+    await d.query("update sdr_leads set outreach_reviewed=false where id=$1",[uuid(2)]);
+    const corp = {
+      ...clean(outreach.recipientSnapshot(fixture().o, fixture().l, corporate)),
+      recipient_evidence: { validation: 'web_research_company_contact', validatorVersion: 3, automation_policy: 'first_contact_v1' },
+      message_variant: 'partner', message_subject: 'Corporate subject', message_body: 'Corporate body', enqueue_mode: 'automatic'
+    };
+    const id2=(await d.query('select sdr_enqueue_automatic_email($1,$2) id',[uuid(2),corp])).rows[0].id;
+    row=(await d.query('select * from sdr_queue where id=$1',[id2])).rows[0];
+    assert.equal(row.recipient_kind,'company_contact'); assert.equal(row.reviewed_by,null);
+    await assert.rejects(d.query("update sdr_queue set message_body='changed' where id=$1",[id2]), /queue_snapshot_immutable/);
+
+    await d.query("update sdr_opportunities set qualification=jsonb_set(qualification,'{commercial_classification,type}','\"customer_or_partner\"') where id=$1",[uuid(3)]);
+    await assert.rejects(d.query('select sdr_enqueue_automatic_email($1,$2) id',[uuid(3),corp]), /explicit_variant_required/);
   } finally { await d.close(); }
 });
 sqlTest('SQL RLS/grants restrict new RPCs, queue and pilot ledger; concurrent allocations cannot exceed cap', async () => {
@@ -157,7 +180,7 @@ sqlTest('SQL RLS/grants restrict new RPCs, queue and pilot ledger; concurrent al
       assert.equal((await d.query('select relrowsecurity from pg_class where relname=$1', [table])).rows[0].relrowsecurity, true);
       for (const role of ['anon', 'authenticated']) assert.equal((await d.query("select has_table_privilege($1,$2,'INSERT') ok", [role, table])).rows[0].ok, false);
     }
-    for (const fn of ['sdr_enqueue_reviewed_email(uuid,jsonb,uuid)', 'sdr_set_manual_pilot_gate(text,boolean)', 'sdr_claim()', 'sdr_begin_send(uuid)']) {
+    for (const fn of ['sdr_enqueue_reviewed_email(uuid,jsonb,uuid)', 'sdr_enqueue_automatic_email(uuid,jsonb)', 'sdr_automatic_queue_valid(sdr_queue)', 'sdr_set_manual_pilot_gate(text,boolean)', 'sdr_claim()', 'sdr_begin_send(uuid)']) {
       for (const role of ['anon', 'authenticated']) assert.equal((await d.query('select has_function_privilege($1,$2,\'EXECUTE\') ok', [role, fn])).rows[0].ok, false);
       assert.equal((await d.query('select prosecdef from pg_proc where oid=$1::regprocedure', [fn])).rows[0].prosecdef, false);
     }
@@ -188,7 +211,7 @@ test('worker performs no sends or claims while global kill switch or businessHou
   const calls = []; const throwing = () => { throw Error('unexpected_send_or_provider'); };
   const server = { db: () => ({ rpc: async name => { calls.push(name); throw Error('unexpected_claim'); } }) };
   for (const [live, hours] of [['false', true], ['true', false]]) {
-    const w = compile('lib/sdr/worker.ts', { './server': server, './outreach': outreach, './catalog': { businessHours: () => hours }, './channels': { sendEmail: throwing, sendWhatsapp: throwing, syncTemplate: throwing, threadHasReply: throwing, googleAccount: throwing }, './providers': { discover: throwing }, './sales': { reconcileSales: async () => ({}) } }, { process: { env: { SDR_LIVE_SEND: live } } });
+    const w = compile('lib/sdr/worker.ts', { './server': server, './outreach': outreach, './catalog': { businessHours: () => hours }, './channels': { sendEmail: throwing, sendWhatsapp: throwing, syncTemplate: throwing, threadHasReply: throwing, googleAccount: throwing }, './providers': { discover: throwing }, './sales': { reconcileSales: async () => ({}) }, './auto-outreach': { prepareAutomaticFirstContacts: throwing } }, { process: { env: { SDR_LIVE_SEND: live } } });
     assert.equal((await w.runWorker()).mode, 'paused'); assert.equal(calls.length, 0);
   }
 });
@@ -235,15 +258,11 @@ test('legacy individual queue migration backfills address without deletion or ve
   assert.match(sql, /queue_snapshot_immutable/);
   assert.match(sql, /manual_pilot_migration_required/);
 });
-sqlTest('legacy individual queue survives migration and active gates with original address; later lead change fails closed', async () => {
+sqlTest('legacy automatic email rows keep their address but fail closed without the new automation snapshot', async () => {
   const { d } = await setup({ legacy: true }); try {
     const before = (await d.query('select * from sdr_queue')).rows; assert.equal(before.length,1); assert.equal(before[0].recipient_address,'original@empresa.com.br'); assert.equal(before[0].recipient_kind,'individual');
     await d.query("select sdr_set_product_rollout('conviteia','active',false,true,true,3,3)");
-    const rows = (await d.query('select * from sdr_claim()')).rows; assert.equal(rows.length,1);
-    await d.query('select sdr_begin_send($1)', [rows[0].id]);
-    await d.query("update sdr_queue set status='processing' where id=$1", [rows[0].id]);
-    await d.query("update sdr_leads set email='different@empresa.com.br' where id=$1", [uuid(1)]);
-    await assert.rejects(d.query('select sdr_begin_send($1)', [rows[0].id]), /verified_email_required/);
+    assert.equal((await d.query('select * from sdr_claim()')).rows.length,0);
     assert.equal((await d.query('select recipient_address from sdr_queue')).rows[0].recipient_address,'original@empresa.com.br');
   } finally { await d.close(); }
 });
@@ -388,4 +407,17 @@ sqlTest('legacy sdr_enqueue signature still creates automatic individual rows an
     await d.query("select sdr_set_product_rollout('conviteia','active',false,true,true,3,3)"); assert.equal((await d.query('select * from sdr_claim()')).rows[0].id,id);
     await d.query('select sdr_begin_send($1)',[id]); assert.equal((await d.query('select count(*)::int n from sdr_manual_pilot_opportunities')).rows[0].n,0);
   } finally { await d.close(); }
+});
+
+test('automatic worker is single-touch without Gmail read permission and seller queue is human-only', () => {
+  const worker = read('lib/sdr/worker.ts');
+  const auto = read('lib/sdr/auto-outreach.ts');
+  const sales = read('lib/sdr/sales-queue.ts');
+  assert.match(worker,/SDR_EMAIL_REPLY_READ_ENABLED === "true"/);
+  assert.match(worker,/q\.enqueue_mode !== "automatic"/);
+  assert.match(auto,/automation_policy: POLICY/);
+  assert.match(auto,/researched < 1/);
+  assert.match(auto,/sdr_enqueue_automatic_email/);
+  assert.match(sales,/sales_priority/);
+  assert.doesNotMatch(sales,/sendEmail|sendWhatsapp|sdr_enqueue/);
 });

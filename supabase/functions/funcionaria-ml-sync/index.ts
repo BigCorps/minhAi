@@ -1,4 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { uniqueMLOrders } from './normalize-order.mjs'
 
 /**
  * FuncionarIA 7I: reconciliação incremental, ML -> catálogo único.
@@ -267,6 +268,31 @@ Deno.serve(async(req:Request)=>{
     const companyId=value(body.company_id,80)
     if(!/^[0-9a-fA-F-]{36}$/.test(companyId))return respond({error:'company_id_required'},400)
     if(!await canAccess(admin,user.id,companyId))return respond({error:'forbidden'},403)
+
+    if(action==='orders_preview'){
+      // 7J - consulta limitada, sem persistência, sem Buyer PII ou mutações no ML.
+      const conn=await companyConnection(admin,companyId)
+      if(!conn)return respond({error:'ml_connection_required'},409)
+      const token=await accessToken(companyId)
+      const offset=Math.min(1000,Math.max(0,Math.floor(Number(body.offset)||0)))
+      const limit=Math.min(30,Math.max(1,Math.floor(Number(body.limit)||20)))
+      const url=new URL('https://api.mercadolibre.com/orders/search')
+      url.searchParams.set('seller',String(conn.seller_id))
+      url.searchParams.set('order.status','paid')
+      url.searchParams.set('sort','date_desc')
+      url.searchParams.set('offset',String(offset))
+      url.searchParams.set('limit',String(limit))
+      const page=await mlGet(url.toString(),token)
+      if(!Array.isArray(page?.results))throw new Error('ml_orders_response_invalid')
+      const items=uniqueMLOrders(page.results,String(conn.seller_id))
+      // paging.total é apenas o número reportado pela API para o filtro, não receita.
+      const total=Number(page?.paging?.total)
+      const validTotal=Number.isSafeInteger(total) && total>=0 ? total : null
+      return respond({
+        success:true,read_only:true,items,offset,limit,
+        total:validTotal,next_offset:validTotal!==null && offset+limit<validTotal ? offset+limit : null,
+      })
+    }
 
     if(action==='questions_preview'){
       const conn=await companyConnection(admin,companyId)

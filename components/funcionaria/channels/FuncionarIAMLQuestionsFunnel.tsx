@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, MessageSquare, RefreshCw, ShoppingBag } from 'lucide-react';
 import { invokeFuncionarIAEdge } from '@/lib/funcionaria-api';
+import FuncionarIAMLOrdersPreview from './FuncionarIAMLOrdersPreview';
 
 type SavedQuestion = {
   id: string; ml_question_id: string; ml_item_id?: string | null;
@@ -117,7 +118,7 @@ export default function FuncionarIAMLQuestionsFunnel({
         <div className="rounded-xl bg-slate-50 p-3"><div className="text-[11px] text-slate-500">Perguntas observadas</div><div className="text-xl font-black">{questions.length}</div></div>
         <div className="rounded-xl bg-amber-50 p-3"><div className="text-[11px] text-amber-700">Precisam de atenção</div><div className="text-xl font-black text-amber-900">{attention}</div></div>
         <div className="rounded-xl bg-lime-50 p-3"><div className="text-[11px] text-lime-700">Respondidas</div><div className="text-xl font-black text-lime-900">{responded}</div></div>
-        <div className="rounded-xl bg-violet-50 p-3"><div className="flex items-center gap-1 text-[11px] text-violet-800"><ShoppingBag className="h-3 w-3"/> Pedidos ML confirmados</div><div className="mt-1 text-xs font-bold text-violet-800">Não integrado</div></div>
+        <div className="rounded-xl bg-violet-50 p-3"><div className="flex items-center gap-1 text-[11px] text-violet-800"><ShoppingBag className="h-3 w-3"/> Pedidos ML pagos</div><div className="mt-1 text-xs font-bold text-violet-800">Consulta separada abaixo</div></div>
       </div>
       <p className="mt-2 text-[11px] text-slate-500">
         Cada pergunta é uma oportunidade de contato, não um comprador único.
@@ -149,8 +150,9 @@ export default function FuncionarIAMLQuestionsFunnel({
           ))}
       </div>
       <p className="mt-3 text-[11px] text-slate-500">
-        Pedidos, receita e conversão só aparecerão quando houver vínculo comprovado com pedidos da API do Mercado Livre.
+        Perguntas e pedidos são apresentados separadamente. Não há atribuição confiável de conversão entre eles.
       </p>
+      <FuncionarIAMLOrdersPreview companyId={companyId} />
     </section>
   );
 }

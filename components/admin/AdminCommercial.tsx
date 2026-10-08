@@ -42,6 +42,10 @@ const errors: Record<string, string> = {
   manual_pilot_migration_required: "A infraestrutura SQL de pilot readiness ainda não está disponível. (manual_pilot_migration_required)",
   reviewed_outreach_requires_pilot_or_active: "Emails revisados exigem rollout em piloto ou ativo. Rascunho, pronto e pausado estão bloqueados. (reviewed_outreach_requires_pilot_or_active)",
   outreach_review_mode_changed: "O status do rollout mudou desde a revisão. Gere uma nova prévia. (outreach_review_mode_changed)",
+  automatic_outreach_not_active: "O primeiro contato automático exige rollout Ativo com outreach e envio do produto liberados. (automatic_outreach_not_active)",
+  automatic_first_contact_requires_single_touch: "O primeiro contato automático exige campanha ativa, trial válido e exatamente 1 toque. (automatic_first_contact_requires_single_touch)",
+  automatic_snapshot_required: "A fila automática não possui snapshot seguro de destinatário e mensagem. (automatic_snapshot_required)",
+  sales_stage_closed: "Esta oportunidade já está encerrada e não pode voltar para atendimento humano. (sales_stage_closed)",
 
   decision_maker_not_found: "Nenhum decisor foi encontrado para esta empresa.",
   provider_missing: "Escolha o fornecedor da campanha.",
@@ -197,7 +201,7 @@ export default function AdminCommercial({
               : "Envio pausado para configuração"}
           </span>
           <span className="rounded-full bg-white/5 px-3 py-2">
-            Campanhas começam pausadas · limite inicial de 5 contatos/dia
+            Primeiro contato automático: email, 1 toque, sem follow-up automático
           </span>
         </div>
         {error && (
@@ -250,6 +254,7 @@ export default function AdminCommercial({
           {[
             ["campaigns", "Campanhas"],
             ["leads", "Contatos & funil"],
+            ["sales", "Vendas do dia"],
             ["partners", "Parceiros"],
             ["rollouts", "Rollout"],
             ["templates", "Mensagens"],
@@ -383,6 +388,9 @@ export default function AdminCommercial({
                   </button>
                 </div>
               </div>
+            )}
+            {tab === "sales" && (
+              <SellerQueuePanel data={data.sellerQueue || []} action={action} busy={busy} />
             )}
             {tab === "templates" && (
               <div className="space-y-4">
@@ -1075,6 +1083,13 @@ function Opportunity({ o, action, busy, monitoria }: any) {
         <button
           className={button}
           disabled={busy}
+          onClick={() => void action({ action: "response_received", id: o.id }, "Resposta registrada; automação pausada e oportunidade movida para Respondido.")}
+        >
+          Resposta recebida
+        </button>
+        <button
+          className={button}
+          disabled={busy}
           onClick={() => void action({ action: "handoff", id: l.id })}
         >
           Assumir atendimento
@@ -1294,12 +1309,80 @@ function PartnerStatusForm({ membership, statuses, action, busy }: any) {
 }
 
 
+function SellerQueuePanel({ data, action, busy }: any) {
+  if (!data.length) return (
+    <section className={card}>
+      <h2 className="font-bold">Vendas do dia</h2>
+      <p className="mt-2 text-sm text-slate-400">Nenhuma oportunidade precisa de vendedor agora. Respostas, leads qualificados, propostas, atendimentos assumidos e oportunidades de alto ticket aparecem aqui automaticamente.</p>
+    </section>
+  );
+
+  return <div className="space-y-4">
+    <section className={card}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-bold">Vendas do dia · {data.length}</h2>
+          <p className="mt-2 text-sm text-slate-400">Fila priorizada para você ou um closer. O SDR continua responsável pela prospecção; o humano entra em respostas, negociação e oportunidades de maior valor.</p>
+        </div>
+      </div>
+    </section>
+    {data.map((o: any) => {
+      const l = o.lead || {};
+      const commercialType = o.qualification?.commercial_classification?.type;
+      const last = o.last_outreach;
+      return <article key={o.id} className={card}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-bold">{l.company_name}</h3>
+            <p className="mt-1 text-sm text-slate-400">
+              {PRODUCTS[o.product as Product]?.name || o.product} · {STAGES[o.stage] || o.stage}
+              {commercialType && isCommercialType(commercialType) ? <> · {COMMERCIAL_LABELS[commercialType]}</> : null}
+            </p>
+          </div>
+          <span className="rounded-full bg-lime-400/10 px-3 py-1 text-xs font-bold text-lime-200">Prioridade {o.sales_priority}</span>
+        </div>
+        <p className="mt-3 text-sm font-semibold">{o.recommended_action}</p>
+        <p className="mt-2 break-words text-sm text-slate-300">
+          {l.contact_name || "Contato não identificado"} · {l.email || "Email não disponível"} · {l.phone || "Telefone não disponível"}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-400">
+          {l.last_inbound_at && <span>Resposta registrada: {new Date(l.last_inbound_at).toLocaleString("pt-BR")}</span>}
+          {l.human_at && <span>Atendimento humano ativo</span>}
+          {last && <span>Último contato: {last.channel} · {last.status}{last.sent_at ? " · " + new Date(last.sent_at).toLocaleString("pt-BR") : ""}</span>}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button className={button} disabled={busy || o.stage === "replied"} onClick={() =>
+            void action({ action: "response_received", id: o.id }, "Resposta registrada; automação pausada.")
+          }>Resposta recebida</button>
+          <button className={button} disabled={busy || !!l.human_at} onClick={() =>
+            void action({ action: "sales_takeover", id: o.id }, "Atendimento assumido; automação pausada.")
+          }>Assumir conversa</button>
+          <button className={button} disabled={busy || ["qualified", "meeting", "proposal"].includes(o.stage)} onClick={() =>
+            void action({ action: "sales_stage", id: o.id, stage: "qualified" }, "Oportunidade marcada como interessada/qualificada.")
+          }>Interessado</button>
+          <button className={button} disabled={busy || ["meeting", "proposal"].includes(o.stage)} onClick={() =>
+            void action({ action: "sales_stage", id: o.id, stage: "meeting" }, "Reunião registrada.")
+          }>Reunião</button>
+          <button className={button} disabled={busy || o.stage === "proposal"} onClick={() => {
+            const note = prompt("Observação da proposta (opcional):") ?? "";
+            void action({ action: "sales_stage", id: o.id, stage: "proposal", note }, "Proposta registrada.");
+          }}>Proposta</button>
+          <button className={button} disabled={busy} onClick={() => {
+            const note = prompt("Motivo da perda (opcional):") ?? "";
+            void action({ action: "sales_stage", id: o.id, stage: "lost", note }, "Oportunidade encerrada sem venda.");
+          }}>Perdido</button>
+        </div>
+      </article>;
+    })}
+  </div>;
+}
+
 function RolloutsPanel({ data, live, action, busy }: any) {
   if (data?.available === false) return <section className={card}>Gates por produto aguardando a migration de rollout. Nenhum produto é liberado por esta tela.</section>;
   return <div className="space-y-5">
     <section className={card}>
       <h2 className="font-bold">Rollout por produto</h2>
-      <p className="mt-2 text-sm text-slate-400">Dois cadeados são exigidos para envio: o produto precisa estar ativo aqui e o SDR_LIVE_SEND global também precisa estar ligado. Discovery automático tem gate separado. Pilotos manuais continuam possíveis sem liberar outreach.</p>
+      <p className="mt-2 text-sm text-slate-400">Para envio automático, o produto precisa estar Ativo, com outreach + envio do produto liberados, campanha ativa com 1 toque e SDR_LIVE_SEND global ligado. Discovery automático tem gate separado. Sem leitura de respostas do Gmail, nenhum follow-up automático é criado.</p>
       <p className={"mt-3 text-sm font-semibold " + (live ? "text-amber-300" : "text-emerald-300")}>SDR_LIVE_SEND global: {live ? "LIGADO" : "DESLIGADO"}</p>
     </section>
     <div className="grid gap-4 xl:grid-cols-2">

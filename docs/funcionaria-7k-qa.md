@@ -33,13 +33,14 @@ Projeto `qyonozbroekuqlotqcbm`:
 - `real_payment_coverage='not_exercised'`
 
 ## Riscos para análise posterior
-1. Na RPC 7F.1 `funcionaria_settle_storefront_commission`, um retry sobre uma
-   liquidação existente retorna `duplicate=true` antes de comparar
-   `p_provider` e `p_provider_reference` ao comprovante original.
-   A unicidade previne segunda contabilização, mas a confirmação de retry com
-   comprovante conflitante pode induzir interpretações erradas. A RPC 7G
-   `funcionaria_settle_storefront_direct` rejeita explicitamente esse conflito.
-   **Não alterar este RPC financeiro sem um gate isolado e testes reais.**
+1. **Correção de auditoria 7L:** o SQL histórico 7F.1 admitia o retorno de
+   `duplicate=true` sem comparação explícita. Entretanto, a versão 7F.2
+   **já substituiu essa função em produção**: compara `provider` e
+   `provider_reference` e gera `settlement_evidence_conflict` antes de
+   retornar `duplicate=true`. O banco foi verificado por
+   `pg_get_functiondef` em modo somente leitura. **Não é necessária uma
+   migration adicional para esse ponto.** O checker 7K agora valida a função
+   autoritativa 7F.2, não confunde o SQL legado com o código ativo.
 2. Pedido local `funcionaria_web` sem checkout/settlement real significa
    ausência de histórico para testar concorrência, estorno efetivo e estoque.
 3. A fase de entrega não valida falhas reais do provedor Lalamove; só verifica

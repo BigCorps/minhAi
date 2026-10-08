@@ -31,7 +31,22 @@ function required(source,patterns,name) {
     assert.match(source,pattern,`${name}: ${description}`);
   }
 }
-const commission=section(f1,'funcionaria_settle_storefront_commission');
+// 7F.1 is a historic definition; 7F.2 REPLACES it in production.
+const commission=section(f2,'funcionaria_settle_storefront_commission');
+const historicalCommission=section(f1,'funcionaria_settle_storefront_commission');
+assert.ok(historicalCommission.includes("'duplicate',true"),'7F.1 historical baseline missing');
+const duplicateStart=commission.indexOf('if found then');
+const duplicateEnd=commission.indexOf('select * into v_checkout',duplicateStart);
+assert.ok(duplicateStart>=0 && duplicateEnd>duplicateStart,'7F.2 duplicate branch absent');
+const duplicateBranch=commission.slice(duplicateStart,duplicateEnd);
+for(const evidence of ['v_existing.provider <> p_provider',
+  'v_existing.provider_reference <> trim(p_provider_reference)',
+  "raise exception 'settlement_evidence_conflict'",
+  "'duplicate',true"])assert.ok(duplicateBranch.includes(evidence),
+   '7F.2 must reject mismatched settlement evidence: '+evidence);
+assert.ok(duplicateBranch.indexOf('settlement_evidence_conflict') <
+          duplicateBranch.indexOf("'duplicate',true"),
+  'conflicting evidence must be rejected before duplicate=true');
 const directSettle=section(g,'funcionaria_settle_storefront_direct');
 const mode=section(g,'funcionaria_storefront_guard_payment_mode');
 const delivery=section(e,'funcionaria_prepare_lalamove_dispatch');
@@ -47,7 +62,7 @@ required(commission,[
   [/negative_merchant_net/i,'non-negative net'],
   [/company_balance[\s\S]*?balance_transactions[\s\S]*?commission_pending/i,'ledger and commission journal'],
   [/baixar_estoque_pedido\(v_pedido.id\)/i,'stock decrement downstream'],
-], '5 percent commission');
+], '7F.2 authoritative 5 percent commission');
 required(f2,[
   [/v_card.provider_amount_cents <> v_gross/i,'card provider evidence must match gross'],
   [/card_provider_fee_evidence_mismatch/i,'provider fee documented'],
@@ -133,3 +148,4 @@ for(const [pattern,sql,description] of requiredUnique){
   assert.match(sql,pattern,`missing unique constraint: ${description}`);
 }
 console.log('FuncionarIA 7K: SQL and Edge financial / cancellation / stock / delivery contracts PASS');
+console.log('FuncionarIA 7L: 7F.2 authoritative settlement evidence mismatch gate PASS');

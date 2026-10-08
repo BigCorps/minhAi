@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const read = p => readFileSync(p, 'utf8');
+const emitter=read('lib/funcionaria/operational-events.ts');
+const payment=read('app/api/funcionaria/storefront-payment/route.ts');
+const order=read('app/api/funcionaria/public-order/route.ts');
+for(const x of ['financial_operation','payment_edge_configuration_missing','payment_edge_transport_failed','payment_edge_upstream_unavailable','order_checkout_preparation_failed','order_items_failed'])assert.ok(emitter.includes(x),'missing event: '+x);
+for(const x of ['fields.status >= 400','fields.status <= 599','fields.action ===','elapsed_ms: elapsedMs'])assert.ok(emitter.includes(x),'event allowlist: '+x);
+assert.ok(!/console\.(log|error|warn)\((?:.*companyId|.*checkoutId|.*payment_token|.*clienteTelefone|.*error\.message)/.test(payment+order),'sensitive raw logs must not be emitted');
+assert.ok(emitter.includes('Static keys and primitive allowlisted fields only.'),'emitter must contain strict payload policy');
+assert.ok(!emitter.includes('JSON.stringify(fields)'),'unfiltered fields must never be logged');
+assert.ok(payment.includes("logFuncionariaOperationalError('payment_edge_transport_failed'"),'network failure log missing');
+assert.ok(payment.includes("return { ok: false, status: 502, data: { error: 'payment_provider_unavailable' } }"),'failed upstream must give safe JSON response');
+assert.ok(payment.includes("if (response.status >= 500)"),'only exceptional provider responses should be logged');
+assert.ok(order.includes("logFuncionariaOperationalError('order_creation_failed')"),'order failure log missing');
+assert.ok(order.includes("public_order_idempotency_key"),'order idempotency boundary still present');
+assert.ok(payment.includes("verifyStorefrontPaymentToken"),'payment auth boundary still present');
+console.log('BigCorps 12: sanitised operation events + safe provider error handling PASS');

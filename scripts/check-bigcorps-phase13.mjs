@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const src=readFileSync('.github/workflows/bigcorps-contract-gates.yml','utf8');
+const pkg=JSON.parse(readFileSync('package.json','utf8'));
+for(const x of ['pull_request:', 'push:', 'branches: [main]', 'permissions:', 'contents: read', 'persist-credentials: false', 'timeout-minutes: 10','cancel-in-progress: true'])assert.ok(src.includes(x),'CI missing: '+x);
+for(const x of ['actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683','actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020', "node-version: '24'"])assert.ok(src.includes(x),'CI action pin/node missing: '+x);
+for(const x of ['node scripts/check-pix-cancel-boundary.mjs','node scripts/check-withdrawal-boundary.mjs','node scripts/check-funcionaria-7k.mjs','node scripts/check-bigcorps-phase10.mjs','node scripts/check-bigcorps-phase11.mjs','node scripts/check-bigcorps-phase12.mjs','node scripts/test-pix-cancel-capability.cjs'])assert.ok(src.includes(x),'CI shared check missing: '+x);
+assert.doesNotMatch(src,/(?:npm|pnpm|yarn)\s+(?:install|ci|run\s+build)|vercel\s+(?:build|deploy|promote)|SUPABASE_SERVICE_ROLE_KEY|VERCEL_TOKEN/i,'CI must not install/build/deploy or require secrets');
+for(const x of ['check:bigcorps-12','check:bigcorps-13'])assert.ok(pkg.scripts.prebuild.includes('npm run '+x),'Vercel prebuild gate missing: '+x);
+console.log('BigCorps 13: GitHub PR/main lightweight gate + Vercel prebuild consistency PASS');

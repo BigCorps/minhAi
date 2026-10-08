@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyStorefrontPaymentToken } from '@/lib/orders-server';
 import { internalServiceHeaders } from '@/lib/internal-service-headers';
+import { logFuncionariaOperationalError } from '@/lib/funcionaria/operational-events';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -15,8 +16,11 @@ function json(body: unknown, status = 200) {
 }
 
 async function invokeEdge(body: Record<string, unknown>) {
+  const started = Date.now();
+  const action = String(body.action || 'other');
   const base = String(process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/+$/, '');
   if (!base) {
+    logFuncionariaOperationalError('payment_edge_configuration_missing', { action, status: 500 });
     return { ok: false, status: 500, data: { error: 'server_not_configured' } };
   }
 
@@ -24,21 +28,35 @@ async function invokeEdge(body: Record<string, unknown>) {
   try {
     serviceHeaders = internalServiceHeaders();
   } catch {
+    logFuncionariaOperationalError('payment_edge_configuration_missing', { action, status: 500 });
     return { ok: false, status: 500, data: { error: 'server_not_configured' } };
   }
 
-  const response = await fetch(`${base}/functions/v1/funcionaria-storefront-payments-v2`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...serviceHeaders,
-    },
-    body: JSON.stringify(body),
-    cache: 'no-store',
-  });
+  try {
+    const response = await fetch(`${base}/functions/v1/funcionaria-storefront-payments-v2`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...serviceHeaders,
+      },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+    });
 
-  const data = await response.json().catch(() => ({}));
-  return { ok: response.ok, status: response.status, data };
+    const data = await response.json().catch(() => ({}));
+    if (response.status >= 500) {
+      logFuncionariaOperationalError('payment_edge_upstream_unavailable', {
+        action, status: response.status, elapsedMs: Date.now() - started,
+      });
+    }
+    return { ok: response.ok, status: response.status, data };
+  } catch {
+    // Never log raw provider/network errors; they can include credentials or URLs.
+    logFuncionariaOperationalError('payment_edge_transport_failed', {
+      action, status: 502, elapsedMs: Date.now() - started,
+    });
+    return { ok: false, status: 502, data: { error: 'payment_provider_unavailable' } };
+  }
 }
 
 export async function POST(request: NextRequest) {

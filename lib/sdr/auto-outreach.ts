@@ -64,9 +64,13 @@ async function loadOpportunity(id: string) {
   )!;
 }
 
-async function classifyIfNeeded(o: any) {
+async function classifyIfNeeded(o: any, force = false) {
   const current = o.qualification?.commercial_classification;
   if (current?.source === "manual") return o;
+  if (force) {
+    await saveCommercialClassification(o.id, "recalculate");
+    return loadOpportunity(o.id);
+  }
   if (!current?.type) {
     await saveCommercialClassification(o.id, "automatic");
     return loadOpportunity(o.id);
@@ -146,10 +150,12 @@ export async function prepareAutomaticFirstContacts() {
 
     let o = await classifyIfNeeded(initial);
     let type = o.qualification?.commercial_classification?.type;
-    if (!["customer", "partner"].includes(type)) continue;
+    let recipient = ["customer", "partner"].includes(type)
+      ? automaticRecipient(o, o.lead)
+      : null;
 
-    let recipient = automaticRecipient(o, o.lead);
-    if (!recipient && rollout.auto_discovery_enabled && researchAvailable && researched < 1) {
+    const needsMoreEvidence = !["customer", "partner"].includes(type) || !recipient;
+    if (needsMoreEvidence && rollout.auto_discovery_enabled && researchAvailable && researched < 1) {
       o = await maybeResearch(o, true);
       researched++;
       const refreshedBudget = checked(
@@ -160,12 +166,13 @@ export async function prepareAutomaticFirstContacts() {
           .maybeSingle(),
       );
       researchAvailable = readyBudget(refreshedBudget);
-      o = await classifyIfNeeded(o);
+      o = await classifyIfNeeded(o, true);
       type = o.qualification?.commercial_classification?.type;
-      if (!["customer", "partner"].includes(type)) continue;
-      recipient = automaticRecipient(o, o.lead);
+      recipient = ["customer", "partner"].includes(type)
+        ? automaticRecipient(o, o.lead)
+        : null;
     }
-    if (!recipient) continue;
+    if (!["customer", "partner"].includes(type) || !recipient) continue;
 
     try {
       const variant = messageVariant(type);

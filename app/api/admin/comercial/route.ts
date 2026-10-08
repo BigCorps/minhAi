@@ -26,6 +26,7 @@ import {
 } from "@/lib/sdr/channels";
 import { monitoriaSnapshot } from "@/lib/sdr/monitoria";
 import { reconcileSales, recordActivation } from "@/lib/sdr/sales";
+import { sellerQueueSnapshot } from "@/lib/sdr/sales-queue";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -71,6 +72,7 @@ export async function GET(req: Request) {
       monitoria,
       partners,
       rollouts,
+      sellerQueue,
     ] = await Promise.all([
       d.from("sdr_campaigns").select("*").order("lane").order("product"),
       oq,
@@ -90,6 +92,7 @@ export async function GET(req: Request) {
       monitoriaSnapshot(),
       partnerSnapshot(),
       rolloutSnapshot(),
+      sellerQueueSnapshot(),
     ]);
     return {
       campaigns: checked(campaigns),
@@ -104,6 +107,7 @@ export async function GET(req: Request) {
       monitoria,
       partners,
       rollouts,
+      sellerQueue,
       config: {
         live: process.env.SDR_LIVE_SEND === "true",
         token: !!process.env.SDR_TOKEN_SECRET,
@@ -231,6 +235,91 @@ export async function POST(req: Request) {
           }),
         );
         return {};
+      case "sales_takeover": {
+        const o = checked(
+          await d
+            .from("sdr_opportunities")
+            .select("lead_id,stage")
+            .eq("id", id)
+            .single(),
+        )!;
+        if (["paid", "won", "lost"].includes(o.stage)) throw new Error("sales_stage_closed");
+        checked(
+          await d.rpc("sdr_stop", {
+            p_lead: o.lead_id,
+            p_reason: "sales_takeover",
+            p_suppress: false,
+          }),
+        );
+        await event(actor, "sales_takeover", o.lead_id, id);
+        return {};
+      }
+      case "response_received": {
+        const o = checked(
+          await d
+            .from("sdr_opportunities")
+            .select("lead_id,stage")
+            .eq("id", id)
+            .single(),
+        )!;
+        if (["paid", "won", "lost"].includes(o.stage)) throw new Error("sales_stage_closed");
+        checked(
+          await d.rpc("sdr_stop", {
+            p_lead: o.lead_id,
+            p_reason: "manual_reply_received",
+            p_suppress: false,
+          }),
+        );
+        const receivedAt = new Date().toISOString();
+        checked(
+          await d
+            .from("sdr_leads")
+            .update({ last_inbound_at: receivedAt })
+            .eq("id", o.lead_id),
+        );
+        checked(
+          await d
+            .from("sdr_opportunities")
+            .update({ stage: "replied" })
+            .eq("id", id)
+            .not("stage", "in", "(paid,won,lost)"),
+        );
+        await event(actor, "manual_reply_received", o.lead_id, id, { receivedAt });
+        return {};
+      }
+      case "sales_stage": {
+        if (!["qualified", "meeting", "proposal", "lost"].includes(input.stage))
+          throw new Error("invalid_stage");
+        const o = checked(
+          await d
+            .from("sdr_opportunities")
+            .select("lead_id,stage")
+            .eq("id", id)
+            .single(),
+        )!;
+        if (["paid", "won"].includes(o.stage)) throw new Error("paid_stage_is_automatic");
+        checked(
+          await d
+            .from("sdr_opportunities")
+            .update({
+              stage: input.stage,
+              estimated_cents: integer(input.estimated_cents || 0, 0, 100000000),
+            })
+            .eq("id", id),
+        );
+        checked(
+          await d.rpc("sdr_stop", {
+            p_lead: o.lead_id,
+            p_reason: "sales_pipeline",
+            p_suppress: false,
+          }),
+        );
+        await event(actor, "sales_stage_updated", o.lead_id, id, {
+          stage: input.stage,
+          note: text(input.note),
+        });
+        return {};
+      }
       case "optout":
         checked(
           await d.rpc("sdr_stop", {

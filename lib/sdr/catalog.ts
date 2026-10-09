@@ -388,12 +388,26 @@ export function isProduct(v: unknown): v is Product {
   return typeof v === "string" && Object.hasOwn(PRODUCTS, v);
 }
 export function templateFor(p: Product) {
+  const body =
+    p === "conviteia"
+      ? `Olá!
+Aqui é o assistente comercial da *BigCorps | ConviteIA*.
+Estamos em busca de espaços de eventos, buffets e cerimonialistas para parcerias.
+
+Na *conviteia.com* seus clientes podem criar convites, gestão de eventos, confirmação de presença, memórias do evento e muito mais. Em troca da parceria, oferecemos vantagens para você e seus clientes
+
+Gostaria de saber mais informações?
+
+Acesse *{{1}}* ou responda aqui mesmo que te explico melhor.
+Para não receber mais mensagens, responda *SAIR*.`
+      : `Olá! Aqui é o assistente comercial da BigCorps. Você autorizou receber informações sobre ${PRODUCTS[p].name}. Podemos ajudar com ${PRODUCTS[p].pitch}. Quer conhecer? Acesse {{1}} ou responda aqui. Para não receber mais mensagens, responda SAIR.`;
+
   return {
     product: p,
     name: `bigcorps_${p}_apresentacao_v1`,
     language: "pt_BR",
     category: "MARKETING",
-    body: `Olá! Aqui é o assistente comercial da BigCorps. Você autorizou receber informações sobre ${PRODUCTS[p].name}. Podemos ajudar com ${PRODUCTS[p].pitch}. Quer conhecer? Acesse {{1}} ou responda aqui. Para não receber mais mensagens, responda SAIR.`,
+    body,
   };
 }
 export const STAGES: Record<string, string> = {

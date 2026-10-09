@@ -1,5 +1,6 @@
 import CommercialPrivacyBoundary from '@/components/analytics/CommercialPrivacyBoundary';
 import SdrAttribution from '@/components/analytics/SdrAttribution';
+import BigCorpsSupportWidget from '@/components/support/BigCorpsSupportWidget';
 // app/layout.tsx
 import type { Metadata } from 'next';
 import { Nunito } from 'next/font/google';
@@ -125,6 +126,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <CommercialPrivacyBoundary />
           <SdrAttribution />
         <CookieConsentBanner />
+        <BigCorpsSupportWidget />
       </body>
     </html>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Headphones, Loader2, MessageCircle, Send, UserRound, X } from 'lucide-react';
 import {
   resolveSupportProduct,
@@ -21,7 +21,6 @@ export default function BigCorpsSupportWidget() {
   const [hidden, setHidden] = useState(true);
   const [open, setOpen] = useState(false);
   const [product, setProduct] = useState<SupportProduct>('other');
-  const [token, setToken] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -34,20 +33,13 @@ export default function BigCorpsSupportWidget() {
     const p = resolveSupportProduct(host, path);
     setProduct(p);
     setHidden(supportWidgetHidden(host, path));
-    const stored = window.localStorage.getItem(`bigcorps:support:${host}:${p}`) || '';
-    setToken(stored);
     setReady(true);
   }, []);
 
   const info = SUPPORT_PRODUCTS[product];
-  const storageKey = useMemo(
-    () => (typeof window === 'undefined' ? '' : `bigcorps:support:${window.location.hostname}:${product}`),
-    [product],
-  );
 
-  async function refresh(currentToken = token) {
-    if (!currentToken) return;
-    const r = await fetch(`/api/support?token=${encodeURIComponent(currentToken)}`, { cache: 'no-store' });
+  async function refresh() {
+    const r = await fetch('/api/support', { cache: 'no-store', credentials: 'same-origin' });
     if (!r.ok) return;
     const j = await r.json();
     if (!j?.ok) return;
@@ -56,14 +48,14 @@ export default function BigCorpsSupportWidget() {
   }
 
   useEffect(() => {
-    if (open && token) void refresh(token);
-  }, [open, token]);
+    if (open) void refresh();
+  }, [open]);
 
   useEffect(() => {
-    if (!open || !token) return;
-    const timer = window.setInterval(() => void refresh(token), 8000);
+    if (!open) return;
+    const timer = window.setInterval(() => void refresh(), 8000);
     return () => window.clearInterval(timer);
-  }, [open, token]);
+  }, [open]);
 
   useEffect(() => {
     if (open) endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -79,21 +71,20 @@ export default function BigCorpsSupportWidget() {
     try {
       const r = await fetch('/api/support', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          token: token || undefined,
           message,
           path: window.location.pathname,
         }),
       });
       const j = await r.json();
       if (!r.ok || !j?.ok) throw new Error(j?.error || 'support_failed');
-      if (j.data.token && j.data.token !== token) {
-        setToken(j.data.token);
-        window.localStorage.setItem(storageKey, j.data.token);
+      if (j.data.reply) {
+        setMessages((v) => [...v, { role: 'assistant', content: j.data.reply }]);
       }
-      setMessages((v) => [...v, { role: 'assistant', content: j.data.reply }]);
       setHumanRequested(Boolean(j.data.humanRequested));
+      if (!j.data.reply) await refresh();
     } catch (err) {
       setMessages((v) => [
         ...v,
@@ -107,17 +98,18 @@ export default function BigCorpsSupportWidget() {
   }
 
   async function human() {
-    if (!token) {
-      setText('Quero falar com uma pessoa da equipe.');
-      return;
-    }
     setBusy(true);
     try {
       const r = await fetch('/api/support', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'human', token }),
+        body: JSON.stringify({ action: 'human' }),
       });
+      if (r.status === 404) {
+        setText('Quero falar com uma pessoa da equipe.');
+        return;
+      }
       if (r.ok) setHumanRequested(true);
     } finally {
       setBusy(false);

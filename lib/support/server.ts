@@ -5,9 +5,11 @@ import { createAdminClient, createClient } from '@/lib/supabase-server';
 import { OPENAI_MODELS } from '@/lib/openai-models';
 import { openai } from '@/lib/openai';
 import { resolveSupportProduct, SUPPORT_PRODUCTS, type SupportProduct } from './product-context';
+import { supportKnowledgeContext, supportKnowledgeReply } from './knowledge';
 
 const HUMAN_RE = /\b(humano|atendente|pessoa|suporte humano|falar com algu[eé]m|falar com uma pessoa)\b/i;
-const SENSITIVE_RE = /\b(senha|password|token|secret|chave privada|service[_ -]?role|api key)\b/i;
+const SENSITIVE_RE = /\b(senha|password|token|secret|chave privada|service[_ -]?role|api key|access[_ -]?token|refresh[_ -]?token)\b/i;
+const SENSITIVE_PLACEHOLDER = '[Mensagem omitida por conter possível credencial ou segredo.]';
 
 export function cleanSupportText(value: unknown, max = 4000) {
   return String(value || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max);
@@ -21,11 +23,16 @@ export function newSupportToken() {
   return randomBytes(32).toString('base64url');
 }
 
+function supportSecret() {
+  const secret = process.env.SUPPORT_TOKEN_SECRET || process.env.SDR_TOKEN_SECRET;
+  if (!secret) throw new Error('support_secret_missing');
+  return secret;
+}
+
 export function supportVisitorHash(req: Request) {
   const raw = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim();
   const ua = req.headers.get('user-agent') || '';
-  const secret = process.env.SUPPORT_TOKEN_SECRET || process.env.SDR_TOKEN_SECRET || 'bigcorps-support';
-  return createHmac('sha256', secret).update(`${raw}|${ua.slice(0, 180)}`).digest('hex');
+  return createHmac('sha256', supportSecret()).update(`${raw}|${ua.slice(0, 180)}`).digest('hex');
 }
 
 export function requestHost(req: Request) {
@@ -125,7 +132,12 @@ export async function supportMessages(threadId: string) {
   return data || [];
 }
 
-async function addMessage(threadId: string, role: 'user'|'assistant'|'human'|'system', source: 'widget'|'ai'|'admin'|'system', content: string) {
+async function addMessage(
+  threadId: string,
+  role: 'user'|'assistant'|'human'|'system',
+  source: 'widget'|'ai'|'admin'|'system',
+  content: string,
+) {
   const admin = createAdminClient();
   const { error } = await admin.from('bigcorps_support_messages').insert({
     thread_id: threadId,
@@ -140,13 +152,25 @@ async function addMessage(threadId: string, role: 'user'|'assistant'|'human'|'sy
     .eq('id', threadId);
 }
 
+async function reopenIfResolved(thread: any) {
+  if (thread.status !== 'resolved') return thread;
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from('bigcorps_support_threads')
+    .update({ status: 'open', human_requested: false, updated_at: new Date().toISOString() })
+    .eq('id', thread.id)
+    .select('*')
+    .single();
+  return data || { ...thread, status: 'open', human_requested: false };
+}
+
 function deterministicReply(product: SupportProduct, message: string) {
   const label = SUPPORT_PRODUCTS[product].label;
   const lower = message.toLowerCase();
 
   if (SENSITIVE_RE.test(message)) {
     return {
-      text: 'Por segurança, não envie senhas, tokens, chaves de API ou outros segredos aqui. Posso registrar o problema sem esses dados e encaminhar para a equipe.',
+      text: 'Por segurança, não envie senhas, tokens, chaves de API ou outros segredos aqui. O conteúdo sensível não foi armazenado. Posso encaminhar o caso para a equipe sem esses dados.',
       human: true,
     };
   }
@@ -171,18 +195,19 @@ function deterministicReply(product: SupportProduct, message: string) {
 async function aiReply(product: SupportProduct, message: string, history: Array<{role:string;content:string}>) {
   if (process.env.BIGCORPS_SUPPORT_AI_ENABLED !== 'true') return null;
   const label = SUPPORT_PRODUCTS[product].label;
+  const knowledge = supportKnowledgeContext(product);
   const safeHistory = history.slice(-8).map((m) => ({
     role: m.role === 'user' ? 'user' as const : 'assistant' as const,
     content: m.content.slice(0, 1200),
   }));
   const response = await openai.chat.completions.create({
-    model: OPENAI_MODELS.fast,
-    temperature: 0.2,
+    model: process.env.BIGCORPS_SUPPORT_AI_MODEL || OPENAI_MODELS.fast,
+    temperature: 0.1,
     max_tokens: 280,
     messages: [
       {
         role: 'system',
-        content: `Você é o suporte inicial da BigCorps para ${label}. Responda em português brasileiro, de forma curta e operacional. Nunca peça senha, token, chave privada, dados completos de cartão ou segredos. Não invente status de conta, pagamento ou recurso. Se faltar contexto ou a pergunta exigir acesso interno, diga que vai encaminhar para a equipe humana. Em MelhorIA, não forneça orientação médica, diagnóstico, dose ou interpretação clínica. Você só orienta o uso do produto.`,
+        content: `Você é o suporte inicial da BigCorps para ${label}. Responda em português brasileiro, de forma curta e operacional. Use somente os fatos do contexto de produto abaixo e o histórico da conversa. Se o contexto não sustentar a resposta, diga que precisa encaminhar para a equipe humana; não invente. Nunca peça senha, token, chave privada, dados completos de cartão ou segredos. Não afirme status de conta, pagamento ou incidente sem evidência interna. Em MelhorIA, não forneça orientação médica, diagnóstico, dose ou interpretação clínica. Contexto do produto:\n${knowledge || '- Sem base específica disponível; faça apenas triagem e encaminhamento.'}`,
       },
       ...safeHistory,
       { role: 'user', content: message.slice(0, 2000) },
@@ -191,7 +216,10 @@ async function aiReply(product: SupportProduct, message: string, history: Array<
   return cleanSupportText(response.choices[0]?.message?.content, 1800) || null;
 }
 
-export async function handleSupportMessage(req: Request, input: { token?: string; message?: string; path?: string }) {
+export async function handleSupportMessage(
+  req: Request,
+  input: { token?: string; message?: string; path?: string },
+) {
   const message = cleanSupportText(input.message, 4000);
   const path = cleanSupportText(input.path || '/', 500) || '/';
   if (!message) throw new Error('support_message_required');
@@ -203,11 +231,19 @@ export async function handleSupportMessage(req: Request, input: { token?: string
     thread = created.thread;
     token = created.token;
   }
+  thread = await reopenIfResolved(thread);
   if (!(await canSend(thread.id))) throw new Error('support_rate_limit');
 
-  await addMessage(thread.id, 'user', 'widget', message);
+  const sensitive = SENSITIVE_RE.test(message);
+  await addMessage(thread.id, 'user', 'widget', sensitive ? SENSITIVE_PLACEHOLDER : message);
+
+  if (thread.status === 'waiting_human' || thread.status === 'human') {
+    return { token, threadId: thread.id, reply: null, humanRequested: true };
+  }
+
   const deterministic = deterministicReply(thread.product as SupportProduct, message);
-  let reply = deterministic?.text || null;
+  const knowledgeReply = deterministic ? null : supportKnowledgeReply(thread.product as SupportProduct, message);
+  let reply = deterministic?.text || knowledgeReply || null;
   let human = deterministic?.human || false;
   let replySource: 'ai' | 'system' = 'system';
 

@@ -20,8 +20,6 @@ export default function PaginaInicialConvite() {
   const [supabase] = useState(() => createClient());
 
   useEffect(() => {
-    // getSession() lê a sessão salva no navegador, sem ida ao servidor.
-    // Só decide qual tela mostrar; a segurança continua no servidor.
     supabase.auth.getSession().then(({ data }) => setLogado(!!data.session?.user));
 
     const { data: sub } = supabase.auth.onAuthStateChange((_e, sessao) => {
@@ -32,9 +30,6 @@ export default function PaginaInicialConvite() {
     return () => sub.subscription.unsubscribe();
   }, [supabase]);
 
-  // Visitante novo (a maioria dos cliques de anúncio) vê a landing na hora,
-  // sem esperar a checagem de login. Quem está logado troca para o painel
-  // assim que a sessão local é lida.
   if (logado) {
     if (criando) {
       return (
@@ -144,7 +139,6 @@ export default function PaginaInicialConvite() {
     <main className="cv-landing text-[#40232c]">
       <RendaBackground />
 
-      {/* PRIMEIRA DOBRA: identidade + criação completa, sem os benefícios. */}
       <section className="cv-landing-hero" aria-labelledby="cv-landing-titulo">
         <div className="cv-landing-hero-conteudo">
           <Image
@@ -171,26 +165,9 @@ export default function PaginaInicialConvite() {
             texto={briefingTexto}
             aoTexto={setBriefingTexto}
           />
-
-          <a
-            href="https://play.google.com/store/apps/details?id=com.conviteia.twa"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Baixar Convite IA no Google Play"
-            className="mt-1 inline-flex rounded-xl transition duration-200 hover:-translate-y-0.5 hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c06078]/40"
-          >
-            <Image
-              src="/brands/convite/google-play-badge.png"
-              alt="Disponível no Google Play"
-              width={1760}
-              height={537}
-              className="h-auto w-[138px] sm:w-[142px] md:w-[142px]"
-            />
-          </a>
         </div>
       </section>
 
-      {/* A primeira dobra acima permanece intocada. Toda a explicação nova começa daqui. */}
       <LandingExplicativa />
     </main>
   );

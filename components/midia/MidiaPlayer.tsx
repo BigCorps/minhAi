@@ -32,6 +32,7 @@ type PaidOccurrence = {
 };
 
 type HouseItem = MidiaManifestItem & { advertiserLabel?: string };
+type RenderItem = MidiaManifestItem & { advertiserLabel?: string };
 
 type Manifest = {
   screen: {
@@ -139,12 +140,13 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
   const [online, setOnline] = useState(true);
   const [target, setTarget] = useState<PlayTarget>(null);
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
-  const [playbackRevocable, setPlaybackRevocable] = useState(false);
+  const [playbackItem, setPlaybackItem] = useState<RenderItem | null>(null);
+  const [playbackTargetKey, setPlaybackTargetKey] = useState('none');
   const [mediaVisible, setMediaVisible] = useState(false);
   const [offlineDay, setOfflineDay] = useState<OfflineDayState | null>(null);
   const [offlinePreparing, setOfflinePreparing] = useState(false);
   const [offlineProgress, setOfflineProgress] = useState({ current: 0, total: 0, bytes: 0, failed: 0 });
-  const [chromeVisible, setChromeVisible] = useState(true);
+  const [chromeVisible, setChromeVisible] = useState(false);
   const [clockText, setClockText] = useState('');
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -155,6 +157,8 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
   const ownSinceNetworkRef = useRef(0);
   const houseCursorRef = useRef(0);
   const chromeHideTimerRef = useRef<number | null>(null);
+  const playbackUrlRef = useRef<string | null>(null);
+  const playbackRevocableRef = useRef(false);
 
   const revealChrome = useCallback(() => {
     setChromeVisible(true);
@@ -162,12 +166,10 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     chromeHideTimerRef.current = window.setTimeout(() => setChromeVisible(false), 6000);
   }, []);
 
-  useEffect(() => {
-    revealChrome();
-    return () => {
-      if (chromeHideTimerRef.current) window.clearTimeout(chromeHideTimerRef.current);
-    };
-  }, [revealChrome]);
+  useEffect(() => () => {
+    if (chromeHideTimerRef.current) window.clearTimeout(chromeHideTimerRef.current);
+    if (playbackUrlRef.current && playbackRevocableRef.current) URL.revokeObjectURL(playbackUrlRef.current);
+  }, []);
 
   useEffect(() => {
     const updateClock = () => setClockText(new Date().toLocaleTimeString('pt-BR', { hour12: false }));
@@ -178,12 +180,12 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
 
   useEffect(() => {
     setOnline(navigator.onLine);
-    const onOnline = () => { setOnline(true); revealChrome(); };
-    const onOffline = () => { setOnline(false); revealChrome(); };
+    const onOnline = () => setOnline(true);
+    const onOffline = () => setOnline(false);
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
     return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); };
-  }, [revealChrome]);
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem(storageKey);
@@ -423,7 +425,7 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
 
   useEffect(() => {
     let cancelled = false;
-    const destination = String(current?.destinationUrl || '').trim();
+    const destination = String(playbackItem?.destinationUrl || '').trim();
     if (!/^https?:\/\//i.test(destination)) {
       setQrDataUrl(null);
       return () => { cancelled = true; };
@@ -436,7 +438,7 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     }).then((value) => { if (!cancelled) setQrDataUrl(value); })
       .catch(() => { if (!cancelled) setQrDataUrl(null); });
     return () => { cancelled = true; };
-  }, [current?.destinationUrl]);
+  }, [playbackItem?.destinationUrl]);
 
   const advanceNow = useCallback((completed = true) => {
     if (!manifest) { setTarget(null); return; }
@@ -525,24 +527,27 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
         : 'none';
 
   useEffect(() => {
-    revealChrome();
-  }, [manifest?.screen.playlistVersion, offlinePreparing, offlineProgress.current, online, revealChrome, syncing, targetKey]);
-
-  useEffect(() => {
     let cancelled = false;
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = null;
-    if (playbackUrl && playbackRevocable) URL.revokeObjectURL(playbackUrl);
-    setPlaybackUrl(null);
-    setPlaybackRevocable(false);
     setMediaVisible(false);
     paidPlaybackRef.current = null;
 
     if (!current) {
+      const previousUrl = playbackUrlRef.current;
+      const previousRevocable = playbackRevocableRef.current;
+      playbackUrlRef.current = null;
+      playbackRevocableRef.current = false;
+      setPlaybackUrl(null);
+      setPlaybackItem(null);
+      setPlaybackTargetKey('none');
+      if (previousUrl && previousRevocable) URL.revokeObjectURL(previousUrl);
       transitionRef.current = false;
       return;
     }
 
+    // Mantém a mídia anterior montada enquanto a próxima é obtida do cache.
+    // Isso evita que o fallback "Tela pronta" apareça por alguns frames entre vídeos.
     void objectUrlForMidiaItem(current).then((result) => {
       if (cancelled) {
         if (result?.revoke) URL.revokeObjectURL(result.url);
@@ -555,8 +560,14 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
         return;
       }
 
+      const previousUrl = playbackUrlRef.current;
+      const previousRevocable = playbackRevocableRef.current;
+      playbackUrlRef.current = result.url;
+      playbackRevocableRef.current = result.revoke;
       setPlaybackUrl(result.url);
-      setPlaybackRevocable(result.revoke);
+      setPlaybackItem(current as RenderItem);
+      setPlaybackTargetKey(targetKey);
+      if (previousUrl && previousRevocable && previousUrl !== result.url) URL.revokeObjectURL(previousUrl);
 
       if (target?.kind === 'paid' && currentOccurrence) {
         paidPlaybackRef.current = {
@@ -653,10 +664,10 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
   };
 
   return (
-    <main className="fixed overflow-hidden bg-black text-white select-none" style={playerRotationStyle} onPointerMove={revealChrome} onPointerDown={revealChrome} onDoubleClick={() => void fullscreen()}>
-      {current && playbackUrl ? current.kind === 'video' ? (
+    <main className="fixed overflow-hidden bg-black text-white select-none" style={playerRotationStyle} onPointerMove={revealChrome} onDoubleClick={() => void fullscreen()}>
+      {playbackItem && playbackUrl ? playbackItem.kind === 'video' ? (
         <video
-          key={`${current.cacheKey}:${targetKey}`}
+          key={`${playbackItem.cacheKey}:${playbackTargetKey}`}
           src={playbackUrl}
           autoPlay
           muted
@@ -668,7 +679,7 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
         />
       ) : (
         <img
-          key={`${current.cacheKey}:${targetKey}`}
+          key={`${playbackItem.cacheKey}:${playbackTargetKey}`}
           src={playbackUrl}
           alt=""
           className="h-full w-full object-contain bg-black"
@@ -680,7 +691,7 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
       )}
 
       <div style={transientStyle}>
-        {(target?.kind === 'paid' || target?.kind === 'house') && <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-black/55 px-3 py-2 text-[10px] font-black uppercase tracking-wider backdrop-blur sm:left-6 sm:top-6">{target.kind === 'house' ? `Publicidade · ${(current as HouseItem | null)?.advertiserLabel || 'Midia.Pro'}` : 'Publicidade · Midia.Pro'}</div>}
+        {(playbackItem?.source === 'network' || playbackItem?.source === 'house') && <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-black/55 px-3 py-2 text-[10px] font-black uppercase tracking-wider backdrop-blur sm:left-6 sm:top-6">{playbackItem.source === 'house' ? `Publicidade · ${playbackItem.advertiserLabel || 'Midia.Pro'}` : 'Publicidade · Midia.Pro'}</div>}
         <div className="absolute left-4 max-w-[70vw] rounded-2xl bg-black/60 px-3 py-2 text-[10px] font-black backdrop-blur sm:left-6 sm:text-[11px]" style={{ bottom: clockBottomOffset }}>
           <div className="flex items-center gap-2">{online ? <Wifi className="h-4 w-4 shrink-0 text-emerald-400" /> : <WifiOff className="h-4 w-4 shrink-0 text-amber-400" />}<span>{connectionLabel}</span></div>
           {offlinePreparing && <div className="mt-1 text-white/60">Baixando o dia: {offlineProgress.current}/{offlineProgress.total}{offlineProgress.bytes ? ` · ${formatBytes(offlineProgress.bytes)}` : ''}</div>}
@@ -696,7 +707,7 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
         {clockText}
       </div>
 
-      {qrDataUrl && current?.destinationUrl && <div className="pointer-events-none absolute bottom-4 right-4 z-30 rounded-2xl bg-white p-2 shadow-2xl sm:bottom-6 sm:right-6" title={current.destinationUrl}>
+      {qrDataUrl && playbackItem?.destinationUrl && <div className="pointer-events-none absolute bottom-4 right-4 z-30 rounded-2xl bg-white p-2 shadow-2xl sm:bottom-6 sm:right-6" title={playbackItem.destinationUrl}>
         <img src={qrDataUrl} alt="QR Code do anúncio" style={{ width: qrSize, height: qrSize }} />
       </div>}
     </main>

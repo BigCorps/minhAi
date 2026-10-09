@@ -15,6 +15,7 @@ export type MidiaManifestItem = {
   width?: number | null;
   height?: number | null;
   source?: string;
+  destinationUrl?: string | null;
 };
 
 export type MidiaCacheProgress = {

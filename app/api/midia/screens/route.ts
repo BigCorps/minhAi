@@ -88,3 +88,52 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ error: 'Não foi possível gerar o código da tela. Tente novamente.' }, { status: 503 });
 }
+
+
+export async function PATCH(request: Request) {
+  const user = await getUser();
+  if (!user) return NextResponse.json({ error: 'Faça login para continuar.' }, { status: 401 });
+
+  const body = await request.json().catch(() => null) as {
+    screenId?: string;
+    rotationDegrees?: number;
+  } | null;
+
+  const screenId = String(body?.screenId ?? '').trim();
+  const rotationDegrees = Number(body?.rotationDegrees);
+
+  if (!screenId) return NextResponse.json({ error: 'Tela não informada.' }, { status: 400 });
+  if (![0, 90, 270].includes(rotationDegrees)) {
+    return NextResponse.json({ error: 'Rotação inválida.' }, { status: 400 });
+  }
+
+  const admin = adminMidia();
+  const { data: publisher } = await admin
+    .from('publishers')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (!publisher) return NextResponse.json({ error: 'Conta Midia.Pro não encontrada.' }, { status: 404 });
+
+  const { data, error } = await admin.rpc('set_screen_rotation', {
+    p_screen_id: screenId,
+    p_publisher_id: publisher.id,
+    p_rotation: rotationDegrees,
+  });
+
+  if (error) {
+    console.error('[midia/screens] rotation:', error);
+    return NextResponse.json({ error: 'Não foi possível atualizar a rotação do player.' }, { status: 500 });
+  }
+
+  const updated = Array.isArray(data) ? data[0] : null;
+  if (!updated) return NextResponse.json({ error: 'Tela não encontrada.' }, { status: 404 });
+
+  return NextResponse.json({
+    ok: true,
+    rotationDegrees: Number(updated.rotation_degrees),
+    playlistVersion: Number(updated.playlist_version),
+  });
+}

@@ -169,6 +169,7 @@ export async function GET(request: Request) {
       commercialMode: ctx.screen.commercial_mode,
       networkInventoryPercent: ctx.screen.network_inventory_percent,
       inventoryClass: ctx.screen.inventory_class,
+      rotationDegrees: Number(ctx.screen.rotation_degrees ?? 0),
     },
     publisher: { slug: ctx.publisher.slug, displayName: ctx.publisher.display_name },
     generatedAt: new Date().toISOString(),

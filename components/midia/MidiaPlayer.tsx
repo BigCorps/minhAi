@@ -1,13 +1,13 @@
 'use client';
 
 import Image from 'next/image';
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { AlertTriangle, CheckCircle2, Download, Expand, Loader2, MonitorPlay, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { MIDIA_BRAND } from '@/lib/midia/constants';
 import { inspectMidiaMediaCache, objectUrlForMidiaItem, syncMidiaMediaCache, uniqueMidiaItems, type MidiaManifestItem } from '@/lib/midia/player-cache';
 
-const APP_VERSION = 'web-6';
+const APP_VERSION = 'web-7';
 const TOKEN_KEY_PREFIX = 'midiapro:device:';
 const MANIFEST_KEY_PREFIX = 'midiapro:manifest:';
 const PLAYED_KEY_PREFIX = 'midiapro:paid-played:';
@@ -36,7 +36,7 @@ type Manifest = {
   screen: {
     id: string; name: string; publicCode: string; playlistVersion: number; status: string;
     billingStatus: string; canPlay: boolean; commercialMode: string;
-    networkInventoryPercent: number; inventoryClass: string;
+    networkInventoryPercent: number; inventoryClass: string; rotationDegrees: number;
   };
   publisher: { slug: string; displayName: string };
   generatedAt: string;
@@ -581,8 +581,22 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     ? (syncing ? 'Sincronizando' : `Online · Realtime${offlineReady ? ' · offline pronto até 23:59' : ''}`)
     : `${offlineReady ? 'Offline · sem Realtime · programação local até 23:59' : 'Offline · sem Realtime · programação local desatualizada'}${pendingProofs ? ` · ${pendingProofs} exibição(ões) pendente(s)` : ''}`;
 
+  const rotationDegrees = [90, 270].includes(Number(manifest.screen.rotationDegrees))
+    ? Number(manifest.screen.rotationDegrees)
+    : 0;
+  const playerRotationStyle: CSSProperties = rotationDegrees === 0
+    ? { left: 0, top: 0, width: '100vw', height: '100vh' }
+    : {
+        left: '50%',
+        top: '50%',
+        width: '100vh',
+        height: '100vw',
+        transform: `translate(-50%, -50%) rotate(${rotationDegrees}deg)`,
+        transformOrigin: 'center center',
+      };
+
   return (
-    <main className="fixed inset-0 overflow-hidden bg-black text-white select-none" onDoubleClick={() => void fullscreen()}>
+    <main className="fixed overflow-hidden bg-black text-white select-none" style={playerRotationStyle} onDoubleClick={() => void fullscreen()}>
       {current && playbackUrl ? current.kind === 'video' ? (
         <video
           key={`${current.cacheKey}:${targetKey}`}

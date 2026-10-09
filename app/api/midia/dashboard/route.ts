@@ -51,7 +51,7 @@ export async function GET() {
       .order('created_at'),
     admin
       .from('screens')
-      .select('id,location_id,public_code,name,screen_type,orientation,aspect_ratio,plan_key,commercial_mode,network_inventory_percent,billing_status,billing_current_period_start,billing_current_period_end,inventory_class,price_factor,status,playlist_version,last_seen_at,created_at')
+      .select('id,location_id,public_code,name,screen_type,orientation,aspect_ratio,rotation_degrees,plan_key,commercial_mode,network_inventory_percent,billing_status,billing_current_period_start,billing_current_period_end,inventory_class,price_factor,status,playlist_version,last_seen_at,created_at')
       .eq('publisher_id', publisher.id)
       .order('created_at'),
   ]);
@@ -192,6 +192,7 @@ export async function GET() {
       screenType: screen.screen_type,
       orientation: screen.orientation,
       aspectRatio: screen.aspect_ratio,
+      rotationDegrees: Number(screen.rotation_degrees ?? 0),
       planKey: screen.plan_key,
       commercialMode: screen.commercial_mode,
       networkInventoryPercent: Number(screen.network_inventory_percent),

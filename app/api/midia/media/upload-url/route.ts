@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null) as {
     screenId?: string; fileName?: string; mimeType?: string; sizeBytes?: number;
-    durationSeconds?: number | null; width?: number; height?: number; displaySeconds?: number;
+    durationSeconds?: number | null; width?: number; height?: number; displaySeconds?: number; destinationUrl?: string | null;
   } | null;
 
   const screenId = String(body?.screenId ?? '').trim();
@@ -37,11 +37,13 @@ export async function POST(request: Request) {
   const height = Math.floor(Number(body?.height ?? 0));
   const durationSeconds = body?.durationSeconds == null ? null : Number(body.durationSeconds);
   const displaySeconds = Math.floor(Number(body?.displaySeconds ?? 30));
+  const destinationUrl = String(body?.destinationUrl ?? '').trim().slice(0, 1000) || null;
 
   if (!screenId || !fileName || !kind) return NextResponse.json({ error: 'Arquivo ou tela inválidos.' }, { status: 400 });
   if (!Number.isSafeInteger(sizeBytes) || sizeBytes <= 0 || sizeBytes > MAX_BYTES) return NextResponse.json({ error: 'O arquivo deve ter no máximo 50 MB.' }, { status: 400 });
   if (width <= 0 || height <= 0 || height <= width) return NextResponse.json({ error: 'Use uma mídia vertical (altura maior que a largura).' }, { status: 400 });
   if (displaySeconds < 30 || displaySeconds > 60) return NextResponse.json({ error: 'A exibição deve ter entre 30 e 60 segundos.' }, { status: 400 });
+  if (destinationUrl && !/^https?:\/\//i.test(destinationUrl)) return NextResponse.json({ error: 'Informe um link começando com http:// ou https://.' }, { status: 400 });
   if (kind === 'video' && (!Number.isFinite(durationSeconds) || Number(durationSeconds) < 29.5 || Number(durationSeconds) > 60.5)) {
     return NextResponse.json({ error: 'O vídeo deve ter entre 30 e 60 segundos.' }, { status: 400 });
   }
@@ -69,6 +71,7 @@ export async function POST(request: Request) {
     width,
     height,
     status: 'uploading',
+    destination_url: destinationUrl,
     metadata: { requested_screen_id: screen.id, display_seconds: displaySeconds },
   });
   if (insertError) {

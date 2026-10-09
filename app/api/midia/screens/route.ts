@@ -97,15 +97,23 @@ export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null) as {
     screenId?: string;
     rotationDegrees?: number;
+    clockSize?: 'small' | 'medium' | 'large';
+    qrSize?: 'small' | 'medium' | 'large';
   } | null;
 
   const screenId = String(body?.screenId ?? '').trim();
-  const rotationDegrees = Number(body?.rotationDegrees);
+  const hasRotation = body?.rotationDegrees !== undefined;
+  const hasClock = body?.clockSize !== undefined;
+  const hasQr = body?.qrSize !== undefined;
+  const rotationDegrees = hasRotation ? Number(body?.rotationDegrees) : null;
+  const clockSize = hasClock ? String(body?.clockSize) : null;
+  const qrSize = hasQr ? String(body?.qrSize) : null;
 
   if (!screenId) return NextResponse.json({ error: 'Tela não informada.' }, { status: 400 });
-  if (![0, 90, 270].includes(rotationDegrees)) {
-    return NextResponse.json({ error: 'Rotação inválida.' }, { status: 400 });
-  }
+  if (!hasRotation && !hasClock && !hasQr) return NextResponse.json({ error: 'Nenhuma configuração informada.' }, { status: 400 });
+  if (rotationDegrees !== null && ![0, 90, 270].includes(rotationDegrees)) return NextResponse.json({ error: 'Rotação inválida.' }, { status: 400 });
+  if (clockSize !== null && !['small','medium','large'].includes(clockSize)) return NextResponse.json({ error: 'Tamanho do relógio inválido.' }, { status: 400 });
+  if (qrSize !== null && !['small','medium','large'].includes(qrSize)) return NextResponse.json({ error: 'Tamanho do QR Code inválido.' }, { status: 400 });
 
   const admin = adminMidia();
   const { data: publisher } = await admin
@@ -117,15 +125,17 @@ export async function PATCH(request: Request) {
 
   if (!publisher) return NextResponse.json({ error: 'Conta Midia.Pro não encontrada.' }, { status: 404 });
 
-  const { data, error } = await admin.rpc('set_screen_rotation', {
+  const { data, error } = await admin.rpc('set_screen_player_settings', {
     p_screen_id: screenId,
     p_publisher_id: publisher.id,
     p_rotation: rotationDegrees,
+    p_clock_size: clockSize,
+    p_qr_size: qrSize,
   });
 
   if (error) {
-    console.error('[midia/screens] rotation:', error);
-    return NextResponse.json({ error: 'Não foi possível atualizar a rotação do player.' }, { status: 500 });
+    console.error('[midia/screens] player settings:', error);
+    return NextResponse.json({ error: 'Não foi possível atualizar as configurações do player.' }, { status: 500 });
   }
 
   const updated = Array.isArray(data) ? data[0] : null;
@@ -134,6 +144,8 @@ export async function PATCH(request: Request) {
   return NextResponse.json({
     ok: true,
     rotationDegrees: Number(updated.rotation_degrees),
+    clockSize: updated.player_clock_size,
+    qrSize: updated.player_qr_size,
     playlistVersion: Number(updated.playlist_version),
   });
 }

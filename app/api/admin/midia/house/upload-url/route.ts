@@ -52,6 +52,7 @@ export async function POST(request: Request) {
   const targetVenueTypes = Array.isArray(body?.targetVenueTypes)
     ? body.targetVenueTypes.map(String).filter((value: string) => VENUES.has(value))
     : [];
+  const destinationUrl = String(body?.destinationUrl || '').trim().slice(0, 1000) || null;
 
   if (name.length < 2 || advertiserLabel.length < 2 || !fileName || !kind) return platformAdminJson({ ok:false, error:'Dados da campanha institucional inválidos.' }, 400);
   if (startsAt === 'invalid' || endsAt === 'invalid') return platformAdminJson({ ok:false, error:'Data de veiculação inválida.' }, 400);
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
   if (kind === 'video' && (!Number.isFinite(durationSeconds) || durationSeconds < 29.5 || durationSeconds > 60.5)) return platformAdminJson({ ok:false, error:'O vídeo precisa ter entre 30 e 60 segundos.' }, 400);
   if (!Number.isSafeInteger(priority) || priority < 1 || priority > 10000) return platformAdminJson({ ok:false, error:'Prioridade inválida.' }, 400);
   if (!targetInventoryClasses.length) return platformAdminJson({ ok:false, error:'Selecione ao menos uma classe de tela.' }, 400);
+  if (destinationUrl && !/^https?:\/\//i.test(destinationUrl)) return platformAdminJson({ ok:false, error:'O link do QR precisa começar com http:// ou https://.' }, 400);
   if (startsAt && endsAt && endsAt <= startsAt) return platformAdminJson({ ok:false, error:'Período de veiculação inválido.' }, 400);
 
   const id = randomUUID();
@@ -72,6 +74,7 @@ export async function POST(request: Request) {
     duration_seconds: kind === 'video' ? durationSeconds : null,
     width, height, display_seconds: displaySeconds, priority,
     status: 'uploading', starts_at: startsAt, ends_at: endsAt,
+    destination_url: destinationUrl,
     target_inventory_classes: targetInventoryClasses,
     target_venue_types: targetVenueTypes.length ? targetVenueTypes : null,
     created_by_user_id: access.user.id,
@@ -88,6 +91,6 @@ export async function POST(request: Request) {
     return platformAdminJson({ ok:false, error:'Não foi possível preparar o upload.' }, 500);
   }
 
-  await auditMidiaAdmin({ adminUserId: access.user.id, action:'house_upload_prepared', entityType:'house_creative', entityId:id, after:{ name, advertiserLabel, displaySeconds, priority } });
+  await auditMidiaAdmin({ adminUserId: access.user.id, action:'house_upload_prepared', entityType:'house_creative', entityId:id, after:{ name, advertiserLabel, displaySeconds, priority, destinationUrl } });
   return platformAdminJson({ ok:true, id, bucket:'midia-assets', path:storagePath, token:signed.token });
 }

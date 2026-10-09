@@ -163,6 +163,7 @@ export default function AdminMidiaCreatives({ admin, basePath }: Props) {
       const prepared = await post('/api/admin/midia/house/upload-url', {
         name: String(form.get('name') || ''),
         advertiserLabel: String(form.get('advertiser') || 'BigCorps'),
+        destinationUrl: String(form.get('destinationUrl') || '').trim() || null,
         fileName: file.name,
         mimeType: file.type,
         sizeBytes: file.size,
@@ -306,6 +307,16 @@ export default function AdminMidiaCreatives({ admin, basePath }: Props) {
                 <option value="45">45 segundos</option>
                 <option value="60">60 segundos</option>
               </select>
+            </label>
+
+            <label className="md:col-span-2 xl:col-span-2">
+              <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Site do anúncio / QR (opcional)</span>
+              <input
+                name="destinationUrl"
+                type="url"
+                placeholder="https://monitoria.cam"
+                className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-500"
+              />
             </label>
 
             <label>

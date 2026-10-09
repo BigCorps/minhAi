@@ -67,6 +67,7 @@ export default function MidiaAdvertiseFlow({ slug, code }: { slug: string; code:
   const [buyerName, setBuyerName] = useState('');
   const [buyerEmail, setBuyerEmail] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
+  const [destinationUrl, setDestinationUrl] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -174,7 +175,7 @@ export default function MidiaAdvertiseFlow({ slug, code }: { slug: string; code:
         body: JSON.stringify({
           slug, code, productKey, durationSeconds: duration,
           scheduleDate: scheduleDate || null, scheduleTime: scheduleTime || null, startDate: startDate || null,
-          buyerName, buyerEmail, buyerPhone, acceptedContentTerms: accepted,
+          buyerName, buyerEmail, buyerPhone, destinationUrl: destinationUrl.trim() || null, acceptedContentTerms: accepted,
         }),
       });
       const campaignJson = await campaignResponse.json().catch(() => null);
@@ -269,7 +270,7 @@ export default function MidiaAdvertiseFlow({ slug, code }: { slug: string; code:
             </CardSection>
 
             <CardSection number="4" title="Seus dados e resumo" icon={<ShieldCheck className="h-5 w-5" />}>
-              <div className="grid gap-4 sm:grid-cols-2"><Field label="Nome / empresa"><input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} required maxLength={100} placeholder="Quem está anunciando" className="input" /></Field><Field label="E-mail"><input type="email" value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} required maxLength={254} placeholder="voce@empresa.com" className="input" /></Field></div><div className="mt-4"><Field label="WhatsApp (opcional)"><input value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} maxLength={30} placeholder="(11) 99999-9999" className="input" /></Field></div>
+              <div className="grid gap-4 sm:grid-cols-2"><Field label="Nome / empresa"><input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} required maxLength={100} placeholder="Quem está anunciando" className="input" /></Field><Field label="E-mail"><input type="email" value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} required maxLength={254} placeholder="voce@empresa.com" className="input" /></Field></div><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="WhatsApp (opcional)"><input value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} maxLength={30} placeholder="(11) 99999-9999" className="input" /></Field><Field label="Site para o QR Code (opcional)"><input type="url" value={destinationUrl} onChange={(e) => setDestinationUrl(e.target.value)} maxLength={1000} placeholder="https://seusite.com.br" className="input" /></Field></div><p className="mt-2 text-[11px] font-semibold text-slate-400">Quando informado, o QR Code aparece no canto inferior direito da tela enquanto sua propaganda estiver sendo exibida.</p>
               {quote && <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex items-center justify-between gap-4"><div><div className="font-black">{quote.productName} · {duration}s</div><div className="mt-1 text-xs font-semibold text-slate-500">{quote.estimatedOccurrences.toLocaleString('pt-BR')} exibição(ões) estimadas</div></div><div className="text-xl font-black">{formatBrlCents(quote.totalPriceCents)}</div></div></div>}
               <label className="mt-4 flex items-start gap-3 rounded-2xl border border-slate-200 p-4 text-xs font-semibold leading-5 text-slate-600"><input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} required className="mt-1 h-4 w-4" /><span>Declaro que tenho autorização para usar os textos, imagens, logos e vídeos enviados e entendo que a peça poderá passar por revisão antes de ser exibida.</span></label>
               {submitError && <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">{submitError}</div>}

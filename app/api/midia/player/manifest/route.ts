@@ -65,6 +65,15 @@ export async function GET(request: Request) {
   );
   const ownCreativeIds = [...new Set(activeItems.map((item) => item.creative_id))];
   const adCreativeIds = [...new Set((occurrences ?? []).map((item) => item.creative_id))];
+  const campaignIds = [...new Set((occurrences ?? []).map((item) => item.campaign_id))];
+  const { data: campaignLinks, error: campaignLinksError } = campaignIds.length
+    ? await admin.from('campaigns').select('id,destination_url').in('id', campaignIds)
+    : { data: [], error: null };
+  if (campaignLinksError) {
+    console.error('[midia/player/manifest] campaign links:', campaignLinksError);
+    return NextResponse.json({ error: 'manifest_unavailable' }, { status: 500 });
+  }
+  const destinationByCampaign = new Map((campaignLinks ?? []).map((campaign) => [campaign.id, campaign.destination_url || null]));
 
   const houseEnabled = canPlay
     && ['partner', 'hybrid'].includes(ctx.screen.commercial_mode)
@@ -72,13 +81,13 @@ export async function GET(request: Request) {
 
   const [{ data: creatives, error: creativesError }, { data: adCreatives, error: adCreativesError }, houseResult] = await Promise.all([
     ownCreativeIds.length
-      ? admin.from('creatives').select('id,kind,file_name,mime_type,storage_path,size_bytes,duration_seconds,width,height,status,updated_at').in('id', ownCreativeIds).eq('status', 'ready')
+      ? admin.from('creatives').select('id,kind,file_name,mime_type,storage_path,size_bytes,duration_seconds,width,height,status,destination_url,updated_at').in('id', ownCreativeIds).eq('status', 'ready')
       : Promise.resolve({ data: [], error: null }),
     adCreativeIds.length
-      ? admin.from('ad_creatives').select('id,kind,file_name,mime_type,storage_path,size_bytes,duration_seconds,width,height,status,updated_at').in('id', adCreativeIds).eq('status', 'ready')
+      ? admin.from('ad_creatives').select('id,campaign_id,kind,file_name,mime_type,storage_path,size_bytes,duration_seconds,width,height,status,updated_at').in('id', adCreativeIds).eq('status', 'ready')
       : Promise.resolve({ data: [], error: null }),
     houseEnabled
-      ? admin.from('house_creatives').select('id,name,advertiser_label,kind,file_name,mime_type,storage_path,size_bytes,duration_seconds,width,height,display_seconds,priority,starts_at,ends_at,target_inventory_classes,target_venue_types,updated_at').eq('status', 'ready').order('priority', { ascending: false }).order('created_at').limit(40)
+      ? admin.from('house_creatives').select('id,name,advertiser_label,kind,file_name,mime_type,storage_path,size_bytes,duration_seconds,width,height,display_seconds,priority,starts_at,ends_at,target_inventory_classes,target_venue_types,destination_url,updated_at').eq('status', 'ready').order('priority', { ascending: false }).order('created_at').limit(40)
       : Promise.resolve({ data: [], error: null }),
   ]);
 
@@ -129,6 +138,7 @@ export async function GET(request: Request) {
       width: creative.width, height: creative.height, displaySeconds: Number(item.display_seconds),
       sortOrder: Number(item.sort_order), source: item.source,
       cacheKey: `own:${creative.id}:${creative.updated_at}`, signedUrl,
+      destinationUrl: creative.destination_url || null,
     }];
   });
 
@@ -141,6 +151,7 @@ export async function GET(request: Request) {
       durationSeconds: creative.duration_seconds == null ? null : Number(creative.duration_seconds),
       width: creative.width, height: creative.height, displaySeconds: 30, sortOrder: 0,
       source: 'network', cacheKey: `ad:${creative.id}:${creative.updated_at}`, signedUrl,
+      destinationUrl: destinationByCampaign.get(creative.campaign_id) || null,
     }];
   });
 
@@ -154,6 +165,7 @@ export async function GET(request: Request) {
       width: creative.width, height: creative.height, displaySeconds: Number(creative.display_seconds),
       sortOrder: index, source: 'house', advertiserLabel: creative.advertiser_label,
       cacheKey: `house:${creative.id}:${creative.updated_at}`, signedUrl,
+      destinationUrl: creative.destination_url || null,
     }];
   });
 
@@ -170,6 +182,8 @@ export async function GET(request: Request) {
       networkInventoryPercent: ctx.screen.network_inventory_percent,
       inventoryClass: ctx.screen.inventory_class,
       rotationDegrees: Number(ctx.screen.rotation_degrees ?? 0),
+      clockSize: ctx.screen.player_clock_size || 'medium',
+      qrSize: ctx.screen.player_qr_size || 'medium',
     },
     publisher: { slug: ctx.publisher.slug, displayName: ctx.publisher.display_name },
     generatedAt: new Date().toISOString(),

@@ -17,11 +17,13 @@ export async function POST(request: Request) {
   const buyerName = cleanText(body.buyerName, 100);
   const buyerEmail = cleanText(body.buyerEmail, 254).toLowerCase();
   const buyerPhone = cleanText(body.buyerPhone, 30) || null;
+  const destinationUrl = cleanText(body.destinationUrl, 1000) || null;
   const acceptedContentTerms = body.acceptedContentTerms === true;
 
   if (buyerName.length < 2) return NextResponse.json({ error: 'Informe seu nome ou o nome da empresa.' }, { status: 400 });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail)) return NextResponse.json({ error: 'Informe um e-mail válido.' }, { status: 400 });
   if (!acceptedContentTerms) return NextResponse.json({ error: 'Confirme a declaração sobre o conteúdo do anúncio.' }, { status: 400 });
+  if (destinationUrl && !/^https?:\/\//i.test(destinationUrl)) return NextResponse.json({ error: 'O site do anúncio precisa começar com http:// ou https://.' }, { status: 400 });
 
   try {
     const preview = await calculatePublicMidiaQuote(body);
@@ -58,6 +60,17 @@ export async function POST(request: Request) {
     if (error) throw new Error(error.message);
     const row = Array.isArray(data) ? data[0] : data;
     if (!row) throw new Error('inventory_unavailable');
+
+    if (destinationUrl) {
+      const { error: destinationError } = await admin
+        .from('campaigns')
+        .update({ destination_url: destinationUrl })
+        .eq('id', row.campaign_id);
+      if (destinationError) {
+        console.error('[midia/public/campaign] destination:', destinationError);
+        return NextResponse.json({ error: 'A campanha foi reservada, mas não foi possível salvar o site do anúncio. Tente novamente.' }, { status: 500 });
+      }
+    }
 
     const response = NextResponse.json({
       ok: true,

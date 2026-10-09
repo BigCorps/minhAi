@@ -7,6 +7,7 @@ import {
   Images,
   LogOut,
   MessageCircle,
+  MessagesSquare,
   MonitorPlay,
   ShieldCheck,
   Target,
@@ -26,6 +27,7 @@ export type AdminSection =
   | 'attention'
   | 'now'
   | 'whatsapp'
+  | 'support'
   | 'pixwiki-leads'
   | 'bigcorps-leads'
   | 'midia'
@@ -47,6 +49,7 @@ const NAV = [
   { key: 'attention', label: 'Atenção', suffix: '/atencao', icon: AlertTriangle },
   { key: 'now', label: 'Agora', suffix: '/agora', icon: Activity },
   { key: 'whatsapp', label: 'WhatsApp', suffix: '/whatsapp', icon: MessageCircle },
+  { key: 'support', label: 'Suporte', suffix: '/suporte', icon: MessagesSquare },
   { key: 'pixwiki-leads', label: 'Leads PixWiki', suffix: '/pixwiki-leads', icon: Target },
   { key: 'bigcorps-leads', label: 'Leads BigCorps', suffix: '/bigcorps-leads', icon: ClipboardCheck },
   { key: 'midia', label: 'Midia.Pro', suffix: '/midia', icon: MonitorPlay },

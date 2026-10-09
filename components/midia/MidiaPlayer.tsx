@@ -1,13 +1,14 @@
 'use client';
 
 import Image from 'next/image';
+import QRCode from 'qrcode';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { AlertTriangle, CheckCircle2, Download, Expand, Loader2, MonitorPlay, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { MIDIA_BRAND } from '@/lib/midia/constants';
 import { inspectMidiaMediaCache, objectUrlForMidiaItem, syncMidiaMediaCache, uniqueMidiaItems, type MidiaManifestItem } from '@/lib/midia/player-cache';
 
-const APP_VERSION = 'web-7';
+const APP_VERSION = 'web-8';
 const TOKEN_KEY_PREFIX = 'midiapro:device:';
 const MANIFEST_KEY_PREFIX = 'midiapro:manifest:';
 const PLAYED_KEY_PREFIX = 'midiapro:paid-played:';
@@ -37,6 +38,7 @@ type Manifest = {
     id: string; name: string; publicCode: string; playlistVersion: number; status: string;
     billingStatus: string; canPlay: boolean; commercialMode: string;
     networkInventoryPercent: number; inventoryClass: string; rotationDegrees: number;
+    clockSize: 'small' | 'medium' | 'large'; qrSize: 'small' | 'medium' | 'large';
   };
   publisher: { slug: string; displayName: string };
   generatedAt: string;
@@ -142,6 +144,9 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
   const [offlineDay, setOfflineDay] = useState<OfflineDayState | null>(null);
   const [offlinePreparing, setOfflinePreparing] = useState(false);
   const [offlineProgress, setOfflineProgress] = useState({ current: 0, total: 0, bytes: 0, failed: 0 });
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const [clockText, setClockText] = useState('');
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const timerRef = useRef<number | null>(null);
   const transitionTimerRef = useRef<number | null>(null);
   const transitionRef = useRef(false);
@@ -149,15 +154,36 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
   const proofSyncingRef = useRef(false);
   const ownSinceNetworkRef = useRef(0);
   const houseCursorRef = useRef(0);
+  const chromeHideTimerRef = useRef<number | null>(null);
+
+  const revealChrome = useCallback(() => {
+    setChromeVisible(true);
+    if (chromeHideTimerRef.current) window.clearTimeout(chromeHideTimerRef.current);
+    chromeHideTimerRef.current = window.setTimeout(() => setChromeVisible(false), 6000);
+  }, []);
+
+  useEffect(() => {
+    revealChrome();
+    return () => {
+      if (chromeHideTimerRef.current) window.clearTimeout(chromeHideTimerRef.current);
+    };
+  }, [revealChrome]);
+
+  useEffect(() => {
+    const updateClock = () => setClockText(new Date().toLocaleTimeString('pt-BR', { hour12: false }));
+    updateClock();
+    const timer = window.setInterval(updateClock, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     setOnline(navigator.onLine);
-    const onOnline = () => setOnline(true);
-    const onOffline = () => setOnline(false);
+    const onOnline = () => { setOnline(true); revealChrome(); };
+    const onOffline = () => { setOnline(false); revealChrome(); };
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
     return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); };
-  }, []);
+  }, [revealChrome]);
 
   useEffect(() => {
     const stored = localStorage.getItem(storageKey);
@@ -395,6 +421,23 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
     return { ...creative, id: occurrence.id, displaySeconds: occurrence.displaySeconds, source: 'network' } as MidiaManifestItem & { source: string };
   }, [manifest, paidCreativeById, target]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const destination = String(current?.destinationUrl || '').trim();
+    if (!/^https?:\/\//i.test(destination)) {
+      setQrDataUrl(null);
+      return () => { cancelled = true; };
+    }
+    QRCode.toDataURL(destination, {
+      width: 512,
+      margin: 1,
+      errorCorrectionLevel: 'M',
+      color: { dark: '#07152F', light: '#FFFFFF' },
+    }).then((value) => { if (!cancelled) setQrDataUrl(value); })
+      .catch(() => { if (!cancelled) setQrDataUrl(null); });
+    return () => { cancelled = true; };
+  }, [current?.destinationUrl]);
+
   const advanceNow = useCallback((completed = true) => {
     if (!manifest) { setTarget(null); return; }
     let excluded: string | undefined;
@@ -480,6 +523,10 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
       : target?.kind === 'house'
         ? `house:${target.index}`
         : 'none';
+
+  useEffect(() => {
+    revealChrome();
+  }, [manifest?.screen.playlistVersion, offlinePreparing, offlineProgress.current, online, revealChrome, syncing, targetKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -595,8 +642,18 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
         transformOrigin: 'center center',
       };
 
+  const clockSize = ({ small: 24, medium: 36, large: 52 } as const)[manifest.screen.clockSize || 'medium'] ?? 36;
+  const qrSize = ({ small: 76, medium: 112, large: 156 } as const)[manifest.screen.qrSize || 'medium'] ?? 112;
+  const clockBottomOffset = clockSize + 42;
+  const qrBottomOffset = qrDataUrl ? qrSize + 42 : 16;
+  const transientStyle: CSSProperties = {
+    opacity: chromeVisible ? 1 : 0,
+    transition: 'opacity 420ms ease',
+    pointerEvents: chromeVisible ? 'auto' : 'none',
+  };
+
   return (
-    <main className="fixed overflow-hidden bg-black text-white select-none" style={playerRotationStyle} onDoubleClick={() => void fullscreen()}>
+    <main className="fixed overflow-hidden bg-black text-white select-none" style={playerRotationStyle} onPointerMove={revealChrome} onPointerDown={revealChrome} onDoubleClick={() => void fullscreen()}>
       {current && playbackUrl ? current.kind === 'video' ? (
         <video
           key={`${current.cacheKey}:${targetKey}`}
@@ -622,16 +679,26 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
         <div className="absolute inset-0 grid place-items-center bg-gradient-to-b from-[#06235f] to-[#020817]"><div className="px-8 text-center"><Image src="/brands/midia/logo.png" alt="Midia.Pro" width={300} height={300} className="mx-auto h-auto w-64 brightness-0 invert" /><h1 className="mt-6 text-3xl font-black">Tela pronta.</h1><p className="mt-3 text-sm font-bold text-white/55">Aguardando a próxima mídia ou campanha programada.</p></div></div>
       )}
 
-      {(target?.kind === 'paid' || target?.kind === 'house') && <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-black/55 px-3 py-2 text-[10px] font-black uppercase tracking-wider backdrop-blur sm:left-6 sm:top-6">{target.kind === 'house' ? `Publicidade · ${(current as HouseItem | null)?.advertiserLabel || 'Midia.Pro'}` : 'Publicidade · Midia.Pro'}</div>}
-      <div className="absolute bottom-4 left-4 max-w-[70vw] rounded-2xl bg-black/60 px-3 py-2 text-[10px] font-black backdrop-blur sm:bottom-6 sm:left-6 sm:text-[11px]">
-        <div className="flex items-center gap-2">{online ? <Wifi className="h-4 w-4 shrink-0 text-emerald-400" /> : <WifiOff className="h-4 w-4 shrink-0 text-amber-400" />}<span>{connectionLabel}</span></div>
-        {offlinePreparing && <div className="mt-1 text-white/60">Baixando o dia: {offlineProgress.current}/{offlineProgress.total}{offlineProgress.bytes ? ` · ${formatBytes(offlineProgress.bytes)}` : ''}</div>}
+      <div style={transientStyle}>
+        {(target?.kind === 'paid' || target?.kind === 'house') && <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-black/55 px-3 py-2 text-[10px] font-black uppercase tracking-wider backdrop-blur sm:left-6 sm:top-6">{target.kind === 'house' ? `Publicidade · ${(current as HouseItem | null)?.advertiserLabel || 'Midia.Pro'}` : 'Publicidade · Midia.Pro'}</div>}
+        <div className="absolute left-4 max-w-[70vw] rounded-2xl bg-black/60 px-3 py-2 text-[10px] font-black backdrop-blur sm:left-6 sm:text-[11px]" style={{ bottom: clockBottomOffset }}>
+          <div className="flex items-center gap-2">{online ? <Wifi className="h-4 w-4 shrink-0 text-emerald-400" /> : <WifiOff className="h-4 w-4 shrink-0 text-amber-400" />}<span>{connectionLabel}</span></div>
+          {offlinePreparing && <div className="mt-1 text-white/60">Baixando o dia: {offlineProgress.current}/{offlineProgress.total}{offlineProgress.bytes ? ` · ${formatBytes(offlineProgress.bytes)}` : ''}</div>}
+        </div>
+        <div className="absolute right-4 flex gap-2 sm:right-6" style={{ bottom: qrBottomOffset }}>
+          <button onClick={() => void prepareOfflineDay(manifest, true)} disabled={!online || offlinePreparing} className="rounded-full bg-black/55 p-3 backdrop-blur disabled:opacity-40" aria-label="Baixar programação de hoje" title={offlineReady ? `Programação de hoje pronta · ${formatBytes(offlineDay?.bytes || 0)}` : 'Baixar programação de hoje'}>{offlinePreparing ? <Loader2 className="h-5 w-5 animate-spin" /> : offlineReady ? <CheckCircle2 className="h-5 w-5 text-emerald-400" /> : <Download className="h-5 w-5" />}</button>
+          <button onClick={() => void loadManifest()} className="rounded-full bg-black/55 p-3 backdrop-blur" aria-label="Atualizar"><RefreshCw className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} /></button>
+          <button onClick={() => void fullscreen()} className="rounded-full bg-black/55 p-3 backdrop-blur" aria-label="Tela cheia"><Expand className="h-5 w-5" /></button>
+        </div>
       </div>
-      <div className="absolute bottom-4 right-4 flex gap-2 sm:bottom-6 sm:right-6">
-        <button onClick={() => void prepareOfflineDay(manifest, true)} disabled={!online || offlinePreparing} className="rounded-full bg-black/55 p-3 backdrop-blur disabled:opacity-40" aria-label="Baixar programação de hoje" title={offlineReady ? `Programação de hoje pronta · ${formatBytes(offlineDay?.bytes || 0)}` : 'Baixar programação de hoje'}>{offlinePreparing ? <Loader2 className="h-5 w-5 animate-spin" /> : offlineReady ? <CheckCircle2 className="h-5 w-5 text-emerald-400" /> : <Download className="h-5 w-5" />}</button>
-        <button onClick={() => void loadManifest()} className="rounded-full bg-black/55 p-3 backdrop-blur" aria-label="Atualizar"><RefreshCw className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} /></button>
-        <button onClick={() => void fullscreen()} className="rounded-full bg-black/55 p-3 backdrop-blur" aria-label="Tela cheia"><Expand className="h-5 w-5" /></button>
+
+      <div className="pointer-events-none absolute bottom-4 left-4 z-30 rounded-2xl bg-black/58 px-3 py-2 font-mono font-black tabular-nums tracking-[.04em] text-white shadow-lg backdrop-blur sm:bottom-6 sm:left-6" style={{ fontSize: clockSize, lineHeight: 1 }}>
+        {clockText}
       </div>
+
+      {qrDataUrl && current?.destinationUrl && <div className="pointer-events-none absolute bottom-4 right-4 z-30 rounded-2xl bg-white p-2 shadow-2xl sm:bottom-6 sm:right-6" title={current.destinationUrl}>
+        <img src={qrDataUrl} alt="QR Code do anúncio" style={{ width: qrSize, height: qrSize }} />
+      </div>}
     </main>
   );
 }

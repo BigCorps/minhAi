@@ -56,6 +56,7 @@ type DeviceContext = {
     commercial_mode: string;
     network_inventory_percent: number;
     inventory_class: string;
+    rotation_degrees: number;
   };
   publisher: {
     id: string;
@@ -85,7 +86,7 @@ export async function getMidiaDeviceContext(request: Request): Promise<DeviceCon
 
   const { data: screen } = await admin
     .from('screens')
-    .select('id,publisher_id,location_id,name,public_code,status,billing_status,billing_current_period_end,playlist_version,commercial_mode,network_inventory_percent,inventory_class')
+    .select('id,publisher_id,location_id,name,public_code,status,billing_status,billing_current_period_end,playlist_version,commercial_mode,network_inventory_percent,inventory_class,rotation_degrees')
     .eq('id', device.screen_id)
     .maybeSingle();
   if (!screen) return null;
@@ -117,6 +118,7 @@ export async function getMidiaDeviceContext(request: Request): Promise<DeviceCon
       commercial_mode: screen.commercial_mode,
       network_inventory_percent: Number(screen.network_inventory_percent ?? 0),
       inventory_class: screen.inventory_class,
+      rotation_degrees: Number(screen.rotation_degrees ?? 0),
     },
     publisher: {
       id: publisher.id,

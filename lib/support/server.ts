@@ -8,7 +8,7 @@ import { resolveSupportProduct, SUPPORT_PRODUCTS, type SupportProduct } from './
 import { supportKnowledgeContext, supportKnowledgeReply } from './knowledge';
 
 const HUMAN_RE = /\b(humano|atendente|pessoa|suporte humano|falar com algu[eé]m|falar com uma pessoa)\b/i;
-const SENSITIVE_RE = /\b(senha|password|token|secret|chave privada|service[_ -]?role|api key|access[_ -]?token|refresh[_ -]?token)\b/i;
+const SENSITIVE_RE = /\b(?:senha|password|token|secret|chave privada|service[_ -]?role|api[_ -]?key|access[_ -]?token|refresh[_ -]?token)\b\s*(?::|=|é|eh)\s*\S{4,}|\b(?:sk-(?:proj-)?|sb_secret_|gh[pousr]_|xox[baprs]-)[A-Za-z0-9_-]{10,}\b|\b(?:eyJ[A-Za-z0-9_-]{15,})\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b|\b(?:\d[ -]?){13,19}\b/i;
 const SENSITIVE_PLACEHOLDER = '[Mensagem omitida por conter possível credencial ou segredo.]';
 
 export function cleanSupportText(value: unknown, max = 4000) {
@@ -74,24 +74,26 @@ export async function findSupportThread(token: string) {
 async function canCreateThread(visitorHash: string) {
   const admin = createAdminClient();
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count } = await admin
+  const { count, error } = await admin
     .from('bigcorps_support_threads')
     .select('id', { count: 'exact', head: true })
     .eq('visitor_hash', visitorHash)
     .gte('created_at', since);
-  return (count || 0) < 5;
+  if (error || typeof count !== 'number') throw new Error('support_unavailable');
+  return count < 5;
 }
 
 async function canSend(threadId: string) {
   const admin = createAdminClient();
   const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { count } = await admin
+  const { count, error } = await admin
     .from('bigcorps_support_messages')
     .select('id', { count: 'exact', head: true })
     .eq('thread_id', threadId)
     .eq('role', 'user')
     .gte('created_at', since);
-  return (count || 0) < 30;
+  if (error || typeof count !== 'number') throw new Error('support_unavailable');
+  return count < 30;
 }
 
 export async function createSupportThread(req: Request, path: string) {

@@ -46,3 +46,23 @@ test('knowledge answers are grounded and AI remains feature-gated', () => {
   assert.match(knowledge, /Convites já publicados continuam no ar/);
   assert.match(knowledge, /dinheiro permanece na conta Mercado Pago/);
 });
+
+const { runInNewContext } = require('node:vm');
+
+test('support does not discard ordinary password help, but masks actual secrets', () => {
+  const server = read('lib/support/server.ts');
+  const literal = server.match(/const SENSITIVE_RE = (\/[^\r\n]+\/[a-z]*);/);
+  assert.ok(literal, 'expected simple inline sensitive-data regex');
+  const sensitive = runInNewContext(literal[1]);
+  assert.equal(sensitive.test('Esqueci minha senha e não consigo entrar'), false);
+  assert.equal(sensitive.test('Meu token expirou'), false);
+  assert.equal(sensitive.test('Minha senha: ExemploSecreto123'), true);
+  assert.equal(sensitive.test('sk-proj-abcdefghijklmnopqr'), true);
+  assert.equal(sensitive.test('4111111111111111'), true);
+});
+
+test('support rate limit fails closed when database count query fails', () => {
+  const server = read('lib/support/server.ts');
+  assert.equal((server.match(/if \(error \|\| typeof count !== 'number'\)/g) || []).length, 2);
+  assert.match(server, /throw new Error\('support_unavailable'\)/);
+});

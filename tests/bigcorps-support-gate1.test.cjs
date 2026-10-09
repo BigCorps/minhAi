@@ -7,7 +7,7 @@ test('support tables are service-role only and tokenized', () => {
   const sql = read('supabase/migrations/20261009150000_bigcorps_support_gate1.sql');
   assert.match(sql, /token_hash text not null unique/);
   assert.match(sql, /enable row level security/);
-  assert.match(sql, /revoke all .* anon,authenticated/s);
+  assert.match(sql, /revoke all .*from public,anon,authenticated/s);
   assert.match(sql, /grant select,insert,update,delete .* service_role/s);
 });
 
@@ -25,7 +25,9 @@ test('support widget hides on admin and has human handoff', () => {
   const widget = read('components/support/BigCorpsSupportWidget.tsx');
   assert.match(ctx, /admin\.minhai\.app/);
   assert.match(widget, /Falar com uma pessoa/);
-  assert.match(widget, /localStorage/);
+  assert.doesNotMatch(widget, /localStorage/);
+  const route = read('app/api/support/route.ts');
+  assert.match(route, /httpOnly:\s*true/);
 });
 
 test('ConviteIA template matches the approved Meta copy', () => {

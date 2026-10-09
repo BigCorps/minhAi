@@ -18,6 +18,7 @@ check(!widget.includes('localStorage'), 'support token is not stored in localSto
 check(server.includes('SUPPORT_TOKEN_SECRET || process.env.SDR_TOKEN_SECRET'), 'support hash requires server secret');
 check(server.includes('support_secret_missing'), 'support secret fails closed');
 check(server.includes('SENSITIVE_PLACEHOLDER'), 'possible credentials are redacted before persistence');
+check((server.match(/if \(error \|\| typeof count !== 'number'\)/g) || []).length === 2, 'support rate limits fail closed on DB errors');
 check(server.includes("thread.status === 'waiting_human' || thread.status === 'human'"), 'bot stays silent during human handoff');
 check(server.includes('reopenIfResolved'), 'resolved threads reopen on new inbound');
 check(server.includes('supportKnowledgeReply'), 'grounded knowledge answers are wired');

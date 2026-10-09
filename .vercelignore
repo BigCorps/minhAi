@@ -30,7 +30,9 @@ Thumbs.db
 coverage
 .nyc_output
 __tests__
-tests
+tests/*
+!tests/bigcorps-support-gate1.test.cjs
+!tests/bigcorps-support-gate2.test.cjs
 test-results
 playwright-report
 

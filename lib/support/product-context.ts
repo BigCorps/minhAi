@@ -42,7 +42,24 @@ export function resolveSupportProduct(host: string, path = '/'): SupportProduct 
 export function supportWidgetHidden(host: string, path: string) {
   const h = String(host || '').split(':')[0].toLowerCase();
   const p = String(path || '/').toLowerCase();
+  const clientSuffixes = [
+    '.minhai.com.br',
+    '.minhaia.app',
+    '.nossaia.app',
+    '.suaia.app',
+    '.minhai.app',
+    '.conviteia.com',
+    '.funcionaria.net',
+    '.midia.pro',
+  ];
+  const clientSubdomain = clientSuffixes.some((suffix) => {
+    if (!h.endsWith(suffix)) return false;
+    const apex = suffix.slice(1);
+    return h !== apex && h !== `www.${apex}` && h !== 'admin.minhai.app';
+  });
+
   return (
+    clientSubdomain ||
     h === 'admin.minhai.app' ||
     h === 'ajuda.bigcorps.com.br' ||
     p.startsWith('/admin') ||

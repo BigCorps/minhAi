@@ -209,10 +209,15 @@ export async function handleSupportMessage(req: Request, input: { token?: string
   const deterministic = deterministicReply(thread.product as SupportProduct, message);
   let reply = deterministic?.text || null;
   let human = deterministic?.human || false;
+  let replySource: 'ai' | 'system' = 'system';
 
   if (!reply) {
     const history = await supportMessages(thread.id);
-    reply = await aiReply(thread.product as SupportProduct, message, history);
+    const generated = await aiReply(thread.product as SupportProduct, message, history);
+    if (generated) {
+      reply = generated;
+      replySource = 'ai';
+    }
   }
 
   if (!reply) {
@@ -231,7 +236,7 @@ export async function handleSupportMessage(req: Request, input: { token?: string
       .eq('id', thread.id);
   }
 
-  await addMessage(thread.id, 'assistant', 'ai', reply);
+  await addMessage(thread.id, 'assistant', replySource, reply);
   return { token, threadId: thread.id, reply, humanRequested: human };
 }
 

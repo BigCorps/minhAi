@@ -66,7 +66,7 @@ export default function PixWikiPlayStoreBadge() {
       rel="noopener noreferrer"
       aria-label="Baixar PixWiki no Google Play"
       title="Disponível no Google Play"
-      className="order-first inline-flex shrink-0 items-center justify-center rounded-md transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
+      className="order-first inline-flex shrink-0 items-center justify-center rounded-md transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 md:hidden"
     >
       <Image
         src="/cards/play.png"

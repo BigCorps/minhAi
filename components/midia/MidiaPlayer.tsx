@@ -8,13 +8,14 @@ import { createClient } from '@/lib/supabase-browser';
 import { MIDIA_BRAND } from '@/lib/midia/constants';
 import { inspectMidiaMediaCache, objectUrlForMidiaItem, syncMidiaMediaCache, uniqueMidiaItems, type MidiaManifestItem } from '@/lib/midia/player-cache';
 
-const APP_VERSION = 'web-8';
+const APP_VERSION = 'web-9';
 const TOKEN_KEY_PREFIX = 'midiapro:device:';
 const MANIFEST_KEY_PREFIX = 'midiapro:manifest:';
 const PLAYED_KEY_PREFIX = 'midiapro:paid-played:';
 const PROOF_QUEUE_KEY_PREFIX = 'midiapro:proof-queue:';
 const OFFLINE_DAY_KEY_PREFIX = 'midiapro:offline-day:';
 const MIN_PROOF_RATIO = 0.8;
+const HEARTBEAT_INTERVAL_MS = 3 * 60 * 1000;
 
 // Transição curta para não consumir tempo relevante da campanha.
 // O conteúdo atual desaparece, o próximo já vem do cache local e entra suavemente.
@@ -345,7 +346,7 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
   }, [deviceToken, loadManifest, manifest?.screen.id, online, supabase]);
 
   useEffect(() => {
-    if (!deviceToken) return;
+    if (!deviceToken || !online) return;
     let cancelled = false;
     async function beat() {
       try {
@@ -366,9 +367,9 @@ export default function MidiaPlayer({ publisherSlug }: { publisherSlug: string }
       } catch { /* offline esperado */ }
     }
     void beat();
-    const timer = window.setInterval(beat, 60_000);
+    const timer = window.setInterval(beat, HEARTBEAT_INTERVAL_MS);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [deviceToken, flushProofQueue, loadManifest, manifest?.items.length, manifest?.paidCreatives.length, manifest?.houseItems?.length, manifest?.screen.playlistVersion, proofQueueKey, storageKey]);
+  }, [deviceToken, flushProofQueue, loadManifest, manifest?.items.length, manifest?.paidCreatives.length, manifest?.houseItems?.length, manifest?.screen.playlistVersion, online, proofQueueKey, storageKey]);
 
   useEffect(() => {
     if (!deviceToken || !online) return;

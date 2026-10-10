@@ -165,6 +165,40 @@ export default function PaginaInicialConvite() {
             texto={briefingTexto}
             aoTexto={setBriefingTexto}
           />
+
+          <div className="mt-3 flex justify-center">
+            <a
+              href="https://play.google.com/store/apps/details?id=com.conviteia.twa"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Baixar Convite IA no Google Play"
+              className="inline-flex rounded-xl transition duration-200 hover:-translate-y-0.5 hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c06078]/40 md:hidden"
+            >
+              <Image
+                src="/brands/convite/google-play-badge.png"
+                alt="Disponível no Google Play"
+                width={1760}
+                height={537}
+                className="h-auto w-[138px] sm:w-[142px]"
+              />
+            </a>
+
+            <a
+              href="https://apps.microsoft.com/detail/9P18W2QVHTMB"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Baixar Convite IA na Microsoft Store"
+              className="hidden rounded-xl transition duration-200 hover:-translate-y-0.5 hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c06078]/40 md:inline-flex"
+            >
+              <Image
+                src="/brands/convite/store.png"
+                alt="Disponível na Microsoft Store"
+                width={1760}
+                height={538}
+                className="h-auto w-[142px]"
+              />
+            </a>
+          </div>
         </div>
       </section>
 
